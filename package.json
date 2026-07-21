@@ -67,6 +67,7 @@
     "manifest:validate": "tsx scripts/manifest.ts",
     "manifest:check": "tsx scripts/manifest.ts --check",
     "parity:check": "tsx scripts/parity-check.ts",
+    "delegation:check": "tsx scripts/check-delegation.ts",
     "test:clean-install": "pnpm --filter @solvapay/server-native test:clean-install"
   },
   "devDependencies": {

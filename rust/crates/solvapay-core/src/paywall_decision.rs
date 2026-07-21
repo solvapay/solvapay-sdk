@@ -160,7 +160,15 @@ fn js_or_str(value: Option<&str>) -> Option<String> {
 /// Synthesize fallback limits when `lastLimitsCheck` is absent on a gate path.
 ///
 /// `checkout_url` is skip-absent (`Some` including empty string is preserved).
-fn resolve_fallback_gate_limits(checkout_url: Option<&str>) -> PaywallGateLimits {
+///
+/// # Arguments
+///
+/// * `checkout_url` - Optional checkout URL carried onto the synthesized limits.
+///
+/// # Returns
+///
+/// Minimal [`PaywallGateLimits`] suitable for [`build_paywall_gate`] on a gate path.
+pub fn resolve_fallback_gate_limits(checkout_url: Option<&str>) -> PaywallGateLimits {
     PaywallGateLimits {
         remaining: Some(0.0),
         plan: Some(String::new()),

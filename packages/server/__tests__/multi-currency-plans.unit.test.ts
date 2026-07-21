@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createSolvaPayClient } from '../src/client'
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -15,10 +15,26 @@ function getFetchBody(index = 0): Record<string, unknown> {
   return JSON.parse(String(call[1].body))
 }
 
+/**
+ * Forces `SOLVAPAY_IMPL=ts` — characterizes the retained TypeScript request
+ * body for multi-currency `createPaymentIntent` / plan helpers. Rust dispatch
+ * is covered by `client-native-dispatch.unit.test.ts` + Group B fixtures.
+ */
 describe('multi-currency client transport', () => {
+  const originalImpl = process.env.SOLVAPAY_IMPL
+
   beforeEach(() => {
+    process.env.SOLVAPAY_IMPL = 'ts'
     vi.restoreAllMocks()
     vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    if (originalImpl === undefined) {
+      delete process.env.SOLVAPAY_IMPL
+    } else {
+      process.env.SOLVAPAY_IMPL = originalImpl
+    }
   })
 
   it('createPaymentIntent includes currency in the SDK request body when provided', async () => {

@@ -1268,8 +1268,11 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "serde",
  "serde_json",
  "solvapay-core",
+ "solvapay-dto",
+ "solvapay-transport",
 ]
 
 [[package]]

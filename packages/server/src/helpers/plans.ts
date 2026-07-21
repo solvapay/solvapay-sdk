@@ -6,7 +6,8 @@
  * This is a public route - no authentication required.
  */
 
-import { getSolvaPayConfig, validateListPlansParams } from '@solvapay/core'
+import { getSolvaPayConfig } from '@solvapay/core'
+import { validateListPlansParams } from '../native-decisions'
 import type { ErrorResult } from './types'
 import type { components } from '../types/generated'
 import type { SolvaPay } from '../factory'

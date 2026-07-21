@@ -34,6 +34,8 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:unit": "vitest run",
+    "test:unit:rust": "SOLVAPAY_IMPL=rust pnpm run test:unit",
+    "test:unit:ts": "SOLVAPAY_IMPL=ts pnpm run test:unit",
     "test:watch": "vitest",
     "test:deno-edge-smoke": "deno run --allow-read=../..,../../rust/bindings/wasm,../../node_modules scripts/deno-edge-smoke.mjs",
     "lint": "eslint src",

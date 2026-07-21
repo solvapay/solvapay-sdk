@@ -5,7 +5,7 @@
  * Works with standard Web API Request (works everywhere).
  */
 
-import { resolveReturnUrl, validateCheckoutSessionParams } from '@solvapay/core'
+import { resolveReturnUrl, validateCheckoutSessionParams } from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'

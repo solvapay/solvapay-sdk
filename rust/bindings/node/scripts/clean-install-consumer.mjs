@@ -8,6 +8,7 @@
  */
 
 import assert from 'node:assert/strict'
+import { createServer } from 'node:http'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
@@ -19,6 +20,13 @@ import {
   WEBHOOK_SMOKE_SECRET,
   freshWebhookSmokeSigned,
 } from './webhook-smoke-fixture.mjs'
+import {
+  CUSTOMER_SMOKE_EXPECTED,
+  CUSTOMER_SMOKE_REF,
+  CUSTOMER_SMOKE_UPSTREAM,
+  PAYWALL_GATE_SMOKE_EXPECTED,
+  PAYWALL_GATE_SMOKE_INPUT,
+} from './client-smoke-fixture.mjs'
 import {
   LOADER_PACKAGE_NAME,
   NATIVE_TARGETS,
@@ -163,7 +171,13 @@ if (mode === 'native') {
 }
 
 const serverEntry = require.resolve('@solvapay/server')
-const { verifyWebhook } = await import(pathToFileURL(serverEntry).href)
+const {
+  verifyWebhook,
+  buildPaywallGate,
+  createSolvaPayClient,
+} = await import(pathToFileURL(serverEntry).href)
+
+// --- sync: verifyWebhook (Step 39) ---
 const signed = freshWebhookSmokeSigned()
 const event = verifyWebhook({
   body: signed.body,
@@ -183,9 +197,58 @@ try {
 }
 assert.ok(rejected, 'expected bad signature to throw')
 
+// --- sync: buildPaywallGate (Step 37R-e pure-logic surface) ---
+const gate = buildPaywallGate(
+  PAYWALL_GATE_SMOKE_INPUT.productRef,
+  PAYWALL_GATE_SMOKE_INPUT.limits,
+)
+assert.deepEqual(gate, PAYWALL_GATE_SMOKE_EXPECTED)
+
+// --- async: getCustomer against in-process stub (host-native only) ---
+// WASI builds omit NativeClient (no ReqwestTransport); sync surfaces above
+// still prove the extended 37R-e path under SOLVAPAY_IMPL=rust.
+let customerLabel = 'skipped-wasi'
+if (mode === 'native') {
+  const stub = createServer((req, res) => {
+    const url = req.url ?? ''
+    if (req.method === 'GET' && url === `/v1/sdk/customers/${CUSTOMER_SMOKE_REF}`) {
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(JSON.stringify(CUSTOMER_SMOKE_UPSTREAM))
+      return
+    }
+    res.writeHead(404, { 'content-type': 'application/json' })
+    res.end(JSON.stringify({ error: `unexpected ${req.method} ${url}` }))
+  })
+
+  await new Promise((resolveListen, rejectListen) => {
+    stub.once('error', rejectListen)
+    stub.listen(0, '127.0.0.1', () => resolveListen(undefined))
+  })
+
+  const address = stub.address()
+  if (address === null || typeof address === 'string') {
+    fail('stub server failed to bind a TCP port')
+  }
+  const apiBaseUrl = `http://127.0.0.1:${address.port}`
+
+  try {
+    const client = createSolvaPayClient({
+      apiKey: 'sk_test_clean_install_smoke',
+      apiBaseUrl,
+    })
+    const customer = await client.getCustomer({ customerRef: CUSTOMER_SMOKE_REF })
+    assert.deepEqual(customer, CUSTOMER_SMOKE_EXPECTED)
+    customerLabel = CUSTOMER_SMOKE_REF
+  } finally {
+    await new Promise((resolveClose, rejectClose) => {
+      stub.close(err => (err ? rejectClose(err) : resolveClose(undefined)))
+    })
+  }
+}
+
 const libcLabel = expectedLibc ?? 'n/a'
 console.log(
-  `CLEAN_INSTALL_OK mode=${mode} node=${nodeMajor} os=${process.platform} arch=${process.arch} libc=${libcLabel} target=${expectedPackage} event=${event.id}`,
+  `CLEAN_INSTALL_OK mode=${mode} node=${nodeMajor} os=${process.platform} arch=${process.arch} libc=${libcLabel} target=${expectedPackage} event=${event.id} gate=${gate.kind} customer=${customerLabel}`,
 )
 
 /**

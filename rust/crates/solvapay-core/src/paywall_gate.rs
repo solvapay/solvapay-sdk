@@ -27,7 +27,7 @@ use crate::paywall_state::{
 /// Every field is optional and defaults to absent. JSON `null` collapses to
 /// `None` at the serde boundary (null ≡ absent), matching the convention
 /// documented on [`crate::paywall_state`].
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaywallGateLimits {
     /// Explicit backend flag that no plan is live yet.

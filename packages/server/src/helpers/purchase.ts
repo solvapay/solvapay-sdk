@@ -2,7 +2,7 @@ import {
   isCachedCustomerRefValid,
   resolvePurchaseCustomerRef,
   selectActivePurchases,
-} from '@solvapay/core'
+} from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'

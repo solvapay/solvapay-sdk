@@ -1,3 +1,6 @@
+// Side-effect: Node installs mcp-core napi dispatch (edge uses ./fetch).
+import './native-install'
+
 /**
  * `@solvapay/mcp` — official `@modelcontextprotocol/sdk` +
  * `@modelcontextprotocol/ext-apps` adapter for the SolvaPay MCP

@@ -18,6 +18,24 @@ import type {
  */
 type McpContext = Record<string, unknown>
 
+type FormatGateNative = (gate: PaywallStructuredContent) => PaywallToolResult | null
+
+/**
+ * Install-gated rust path for `formatGate` (shares `paywallToolResult` napi fn).
+ * Never statically imports `./native` — keeps the edge/Deno graph safe.
+ */
+let formatGateNative: FormatGateNative | null = null
+
+/** @internal Node install from `index.ts` / vitest setup. */
+export function installMcpAdapterNative(api: { formatGate: FormatGateNative }): void {
+  formatGateNative = api.formatGate
+}
+
+/** @internal test helper */
+export function resetMcpAdapterNativeForTests(): void {
+  formatGateNative = null
+}
+
 /**
  * MCP Adapter implementation
  */
@@ -91,6 +109,11 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
    * before returning.
    */
   formatGate(gate: PaywallStructuredContent, _context: McpContext): PaywallToolResult {
+    // Dual-binding parity with mcp-core `paywallToolResult` (Step 34 / 37R-d).
+    const native = formatGateNative?.(gate)
+    if (native !== null && native !== undefined) {
+      return native
+    }
     return {
       content: [{ type: 'text', text: gate.message }],
       isError: false,

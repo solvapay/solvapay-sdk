@@ -1,4 +1,4 @@
-import { projectUsageSnapshot } from '@solvapay/core'
+import { projectUsageSnapshot } from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { TrackUsageResponse } from '../types'
 import type { ErrorResult } from './types'

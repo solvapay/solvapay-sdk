@@ -7,6 +7,15 @@
  * - Class-based and functional programming
  */
 
+import type {
+  LimitResponseWithPlan,
+  PaywallArgs,
+  PaywallDecision,
+  PaywallMetadata,
+  PaywallStructuredContent,
+  PaywallToolResult,
+  SolvaPayClient,
+} from './types'
 import {
   buildCreateCustomerParams,
   classifyCreateError,
@@ -17,17 +26,9 @@ import {
   evaluateFreshLimits,
   extractBackendCustomerRef,
   isEmailConflict,
+  paywallErrorToClientPayload as paywallErrorToClientPayloadDispatch,
   resolveProductRef,
-} from '@solvapay/core'
-import type {
-  LimitResponseWithPlan,
-  PaywallArgs,
-  PaywallDecision,
-  PaywallMetadata,
-  PaywallStructuredContent,
-  PaywallToolResult,
-  SolvaPayClient,
-} from './types'
+} from './native-decisions'
 import { buildPaywallGate } from './paywall-gate'
 import { withRetry, createRequestDeduplicator } from './utils'
 
@@ -112,26 +113,7 @@ export class PaywallError extends Error {
 
 /** JSON body shape for HTTP adapters and MCP text content (stable fields for clients). */
 export function paywallErrorToClientPayload(error: PaywallError): Record<string, unknown> {
-  const sc = error.structuredContent
-  const base: Record<string, unknown> = {
-    success: false,
-    error: sc.kind === 'activation_required' ? 'Activation required' : 'Payment required',
-    product: sc.product,
-    checkoutUrl: sc.checkoutUrl,
-    message: sc.message,
-  }
-  if (sc.kind === 'activation_required') {
-    base.kind = 'activation_required'
-    if (sc.plans !== undefined) base.plans = sc.plans
-    if (sc.balance !== undefined) base.balance = sc.balance
-    if (sc.productDetails !== undefined) base.productDetails = sc.productDetails
-    if (sc.confirmationUrl !== undefined) base.confirmationUrl = sc.confirmationUrl
-  } else {
-    base.kind = 'payment_required'
-    if (sc.balance !== undefined) base.balance = sc.balance
-    if (sc.productDetails !== undefined) base.productDetails = sc.productDetails
-  }
-  return base
+  return paywallErrorToClientPayloadDispatch(error)
 }
 
 /**

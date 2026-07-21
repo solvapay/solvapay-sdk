@@ -6,17 +6,19 @@
  */
 
 import {
+  validateBusinessDetails,
+  type BusinessDetailsInput,
+  type TaxBreakdown,
+} from '@solvapay/core'
+import {
   attachBusinessDetailsValidationError,
   projectPaymentIntentResult,
   projectTopupProcessOutcome,
   validateAttachBusinessDetailsParams,
-  validateBusinessDetails,
   validateCreatePaymentIntentParams,
   validateProcessPaymentIntentParams,
   validateTopupPaymentIntentParams,
-  type BusinessDetailsInput,
-  type TaxBreakdown,
-} from '@solvapay/core'
+} from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import type { TopupProcessResult } from '../types/client'

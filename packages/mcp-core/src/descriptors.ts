@@ -72,8 +72,9 @@ import {
   buildPromptDescriptorMetadata,
   buildPromptUserMessage,
   buildToolDescriptorMetadata,
+  deriveIcons,
   validatePublicBaseUrl,
-} from './descriptor-metadata'
+} from './native-mcp'
 import { MCP_TOOL_NAMES } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS, TOOL_FOR_VIEW } from './types'
 import type {
@@ -89,7 +90,7 @@ import type {
   SolvaPayToolDescriptor,
 } from './types'
 
-export { deriveIcons } from './descriptor-metadata'
+export { deriveIcons }
 
 const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
 

@@ -8,57 +8,23 @@
 
 import assert from 'node:assert/strict'
 import {
-  BUSINESS_COUNTRY_OPTIONS,
-  buildCreateCustomerParams,
-  classifyCreateError,
-  classifyCustomerRef,
-  classifyLookupError,
-  coerceCustomerOptions,
   creditsToDisplayMinorUnits,
   deriveTaxIdType,
-  extractBackendCustomerRef,
+  getBusinessCountryOptions,
   getSellerTaxIdentifierDisplayLabel,
+  getSellerTaxIdentifierDisplayLabelByType,
   getTaxIdExample,
   getTaxIdFieldLabel,
   getTaxIdHelperText,
-  isEmailConflict,
+  installNativeCoreApi,
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
   resolveSellerIdentityDisplay,
   resolveTaxBehavior,
   SolvaPayError,
-  attachBusinessDetailsValidationError,
-  classifyCancelError,
-  classifyReactivateError,
-  isCachedCustomerRefValid,
-  isErrorResult,
-  mapRouteError,
-  normalizeCancelResponse,
-  normalizeReactivateResponse,
-  projectPaymentIntentResult,
-  projectTopupProcessOutcome,
-  resolvePurchaseCustomerRef,
-  resolveReturnUrl,
-  decidePaywallOutcome,
-  evaluateCachedLimits,
-  evaluateFreshLimits,
-  projectUsageSnapshot,
-  resolveCheckLimitsParams,
-  resolveProductRef,
-  selectActivePurchases,
-  validateActivatePlanParams,
   type PaywallDecisionLimits,
-  validateAttachBusinessDetailsParams,
   validateBusinessDetails,
-  validateCheckoutSessionParams,
-  validateCreatePaymentIntentParams,
-  validateGetProductParams,
-  validateListPlansParams,
-  validateProcessPaymentIntentParams,
-  validatePurchaseRef,
-  validateTopupPaymentIntentParams,
   type UsageSnapshotPurchase,
-  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
   type BusinessDetailsInput,
   type SupportedBusinessCountry,
   type TaxBehavior,
@@ -69,12 +35,12 @@ import {
   buildPromptUserMessage,
   buildToolDescriptorMetadata,
   deriveIcons,
+  getMcpToolNamesTable,
+  installNativeMcpApi,
   makeResponseResult,
-  MCP_TOOL_NAMES,
+  mcpViewMaps,
   paywallToolResult,
-  TOOL_FOR_VIEW,
   validatePublicBaseUrl,
-  VIEW_FOR_TOOL,
   type ContentBlock,
   type McpToolName,
   type ResponseOptions,
@@ -82,18 +48,55 @@ import {
   type SolvaPayMcpViewKind,
 } from '@solvapay/mcp-core'
 import {
+  attachBusinessDetailsValidationError,
   BALANCE_RECONCILE_DELAYS_MS,
+  buildCreateCustomerParams,
   buildGateMessage,
   buildNudgeMessage,
   buildPaywallGate,
+  callNativeSync,
+  classifyCancelError,
+  classifyCreateError,
+  classifyCustomerRef,
+  classifyLookupError,
   classifyPaywallState,
+  classifyReactivateError,
+  coerceCustomerOptions,
   createSolvaPayClient,
+  decidePaywallOutcome,
+  evaluateCachedLimits,
+  evaluateFreshLimits,
+  extractBackendCustomerRef,
   getAuthenticatedUserCore,
+  isCachedCustomerRefValid,
+  isEmailConflict,
+  isErrorResult,
+  mapRouteError,
   McpAdapter,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
   PaywallError,
   paywallErrorToClientPayload,
   pollBalanceUntilIncreased,
+  projectPaymentIntentResult,
+  projectTopupProcessOutcome,
+  projectUsageSnapshot,
+  resolveCheckLimitsParams,
+  resolveImpl,
+  resolveProductRef,
+  resolvePurchaseCustomerRef,
+  resolveReturnUrl,
+  selectActivePurchases,
   TOPUP_BALANCE_POLL_DELAYS_MS,
+  validateActivatePlanParams,
+  validateAttachBusinessDetailsParams,
+  validateCheckoutSessionParams,
+  validateCreatePaymentIntentParams,
+  validateGetProductParams,
+  validateListPlansParams,
+  validateProcessPaymentIntentParams,
+  validatePurchaseRef,
+  validateTopupPaymentIntentParams,
   verifyWebhook,
   withRetry,
   type LimitResponseWithPlan,
@@ -102,6 +105,11 @@ import {
 } from '@solvapay/server'
 import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { Fixture, FixtureErrorExpect, FixtureWire } from './fixture-schema.js'
+
+// Server index installs core + formatGate; mcp-core needs an explicit install
+// (avoids a hard server↔mcp-core production cycle).
+installNativeCoreApi({ callNativeSync, resolveImpl })
+installNativeMcpApi({ callNativeSync, resolveImpl })
 
 export type FixtureBinding = {
   /** Distinguishes multiple bindings for the same `input.fn` (e.g. node vs edge). */
@@ -837,6 +845,35 @@ function constructSdkErrorFromArgs(args: Record<string, unknown>): never {
   )
 }
 
+/**
+ * Force `SOLVAPAY_IMPL` for bindings that still need the TS body under an
+ * ambient `rust` run (client wire fixtures use mocked `fetch`; webhook
+ * fixtures need `Date.now` clock injection which napi wall-clock ignores).
+ * Helper / paywall / retry bindings keep the ambient flag (Step 37R-c).
+ */
+function withForcedImpl<T>(impl: 'ts' | 'rust', fn: () => T | Promise<T>): T | Promise<T> {
+  const previous = process.env.SOLVAPAY_IMPL
+  process.env.SOLVAPAY_IMPL = impl
+  const restore = (): void => {
+    if (previous === undefined) {
+      delete process.env.SOLVAPAY_IMPL
+    } else {
+      process.env.SOLVAPAY_IMPL = previous
+    }
+  }
+  try {
+    const result = fn()
+    if (result !== null && typeof result === 'object' && 'then' in result) {
+      return Promise.resolve(result).finally(restore)
+    }
+    restore()
+    return result
+  } catch (err) {
+    restore()
+    throw err
+  }
+}
+
 /** Registers default SDK bindings (webhook, client, retry, paywall, core helpers). */
 export function createDefaultRegistry(): FixtureRegistry {
   const registry = new FixtureRegistry()
@@ -852,7 +889,7 @@ export function createDefaultRegistry(): FixtureRegistry {
       if (!isVerifyWebhookArgs(args)) {
         throw new Error('verifyWebhook args must include string body, signature, and secret')
       }
-      return verifyWebhook(args)
+      return withForcedImpl('ts', () => verifyWebhook(args))
     },
   })
 
@@ -862,7 +899,7 @@ export function createDefaultRegistry(): FixtureRegistry {
       if (!isVerifyWebhookArgs(args)) {
         throw new Error('verifyWebhook args must include string body, signature, and secret')
       }
-      return verifyWebhookEdge(args)
+      return withForcedImpl('ts', () => verifyWebhookEdge(args))
     },
   })
 
@@ -875,7 +912,10 @@ export function createDefaultRegistry(): FixtureRegistry {
     fn: string,
     invoke: (args: Record<string, unknown>) => unknown | Promise<unknown>,
   ): void => {
-    registry.register(fn, { id: 'client', invoke })
+    registry.register(fn, {
+      id: 'client',
+      invoke: args => withForcedImpl('ts', () => invoke(args)),
+    })
   }
 
   registerClient('checkLimits', args => {
@@ -1258,15 +1298,12 @@ export function createDefaultRegistry(): FixtureRegistry {
 
   registry.register('MCP_TOOL_NAMES', {
     id: 'mcp-core',
-    invoke: () => ({ ...MCP_TOOL_NAMES }),
+    invoke: () => getMcpToolNamesTable(),
   })
 
   registry.register('mcpViewMaps', {
     id: 'mcp-core',
-    invoke: () => ({
-      TOOL_FOR_VIEW: { ...TOOL_FOR_VIEW },
-      VIEW_FOR_TOOL: { ...VIEW_FOR_TOOL },
-    }),
+    invoke: () => mcpViewMaps(),
   })
 
   registry.register('deriveIcons', {
@@ -1389,7 +1426,7 @@ export function createDefaultRegistry(): FixtureRegistry {
 
   registry.register('getBusinessCountryOptions', {
     id: 'core',
-    invoke: () => BUSINESS_COUNTRY_OPTIONS,
+    invoke: () => getBusinessCountryOptions(),
   })
 
   registry.register('minorUnitsPerMajor', {
@@ -1426,7 +1463,7 @@ export function createDefaultRegistry(): FixtureRegistry {
 
   registry.register('SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE', {
     id: 'core',
-    invoke: () => SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+    invoke: () => getSellerTaxIdentifierDisplayLabelByType(),
   })
 
   registry.register('getSellerTaxIdentifierDisplayLabel', {

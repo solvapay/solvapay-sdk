@@ -112,7 +112,7 @@ export type { IntentTool, NarratorOutput } from './narrate'
 // stamping has no consumers. Downstream code that constructed its
 // own `_meta.ui` envelope with this helper should drop it outright —
 // the descriptor is the only trigger now.
-export { paywallToolResult } from './paywallToolResult'
+export { paywallToolResult } from './native-mcp'
 export type { PaywallToolResultContext } from './paywallToolResult'
 
 // ---- Response envelope helpers (adapter-internal) ----
@@ -120,7 +120,12 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 // Used by `ctx.respond(...)` / `buildPayableHandler`. Not part of the
 // merchant-facing `@solvapay/mcp` public entry — exported here so the
 // contract harness and adapters can share the same constructors.
-export { assertResponseResult, makeResponseResult } from './response-envelope'
+export { assertResponseResult, makeResponseResult } from './native-mcp'
+export {
+  getMcpToolNamesTable,
+  mcpViewMaps,
+  installNativeMcpApi,
+} from './native-mcp'
 
 // ---- CSP baseline ----
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
@@ -136,19 +141,22 @@ export type {
   ApplyHideToolsByAudienceOptions,
   HideToolsByAudienceBypass,
 } from './hideToolsByAudience'
-export { buildSolvaPayDescriptors, buildSolvaPayPrompts, deriveIcons } from './descriptors'
+export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
 export type {
   BuildSolvaPayDescriptorsOptions,
   SolvaPayDescriptorBundle,
 } from './descriptors'
 export {
+  deriveIcons,
   buildPromptDescriptorMetadata,
   buildPromptUserMessage,
   buildToolDescriptorMetadata,
+  validatePublicBaseUrl,
+} from './native-mcp'
+export {
   INTENT_TOOL_ANNOTATIONS,
   PUBLIC_BASE_URL_ERROR,
   solvapayTool,
-  validatePublicBaseUrl,
 } from './descriptor-metadata'
 export type {
   BuildPromptDescriptorMetadataOptions,

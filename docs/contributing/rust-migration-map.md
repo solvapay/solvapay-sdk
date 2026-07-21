@@ -7,7 +7,7 @@ Living **state / progress / handoff** layer for the Rust core SDK redesign. Comp
 
 Session workflow (redesign §14): pick the next incomplete step in redesign §9 → implement only that step → prove its "done when" → update **this map** (status + handoff bullets). At each phase close, finalize that phase's handoff entry before opening the next phase's first PR.
 
-**Current progress (2026-07-21):** Steps 1–38 **Done**; Step 39 **In progress** (local host-native + WASI clean-install green; awaiting full CI matrix 24+3). Phase 6 closes when Step 39 CI is green. **Next:** land Step 39 CI, then Step 40 (PyO3 scaffold).
+**Current progress (2026-07-21):** Steps 1–38 **Done**; Step **37R Done** (a–e); Step 39 **In progress** (local host-native + WASI clean-install green incl. 37R-e extension; awaiting full CI matrix 24+3). Full-surface Node napi cutover closed: server/core/mcp-core unit both flags, `test:contract` 1181 both flags, `pnpm delegation:check`, extended clean-install, `shadow:selftest` IDENTICAL, React 1083 unmodified (§15 notes 33–37). Phase 6 closes when Step 39 CI is green. **Next:** land Step 39 CI matrix green → Phase 6 close → Step 40 (PyO3 scaffold).
 
 ## Status legend
 
@@ -58,8 +58,10 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 34 | MCP payload builders | Phase 5 | Done | — | Dual-binding TS green (`mcp-core` + `server` `paywallToolResult`) + Rust `mcp/*` 19/19 + full corpus `executed=411 passed=411 failed=0` (was 392); step-8 gates + §15 note 26 | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
 | 35 | MCP names + descriptors | Phase 5 | Done | — | Descriptor fixtures `mcp/{tool-names,derive-icons,descriptors,prompts}` (20) + prior `mcp/` 19 → 39; TS harness + Rust fixture-runner `executed=431 passed=431 failed=0` (was 411); RED characterization + unit suite first; step-8 gates + §15 note 27 | [Phase 5](#phase-5--paywall-decision-engine-and-mcp-contracts) |
 | 36 | Scaffold napi-rs | Phase 6 | Done | — | `cargo test -p solvapay-node` + `node --test` smoke + `NAPI_RS_FORCE_WASI=error` + `check-artifacts.mjs` hard-fail; CI `node-binding` matrix (§7.7) + WASI + artifact gate | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
-| 37 | Wire conditional exports | Phase 6 | Done | — | `test:unit:rust` + `test:unit:ts` green (329 each); `NAPI_RS_FORCE_WASI=true` verify smoke; CI `node-binding-conformance`; `@solvapay/server` optionalDependency on `@solvapay/server-native` | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
+| 37 | Wire conditional exports | Phase 6 | Done (narrow scope; superseded by 37R) | — | `test:unit:rust` + `test:unit:ts` green (329 each); `NAPI_RS_FORCE_WASI=true` verify smoke; CI `node-binding-conformance`; `@solvapay/server` optionalDependency on `@solvapay/server-native` | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
+| 37R | Full-surface Node napi cutover | Phase 6 | Done | — | Per confirmed sub-step (37R-a…e, §15 notes 32–37): (a–d) ✅ NativeClient + sync helper/paywall/retry + core/MCP builders; (e) ✅ both-flags server/core/mcp-core + contract, `node-binding-delegation` grep gate, clean-install beyond `verifyWebhook`, `shadow:selftest` IDENTICAL; React unmodified throughout | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 38 | Edge/browser WASM cutover | Phase 6 | Done | — | CI `wasm-binding`: artifact drift + feature exclusivity + symbol audit + budgets + edge unit (70×2) + 18/18 edge corpus rust/ts + Deno smoke + fetch-runtime; browser gzip 6531 / cold ~12.7ms | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
+| 38R | Full-surface edge WASM cutover (placeholder) | Post-37R | Not started | — | Deliberately after 37R; not planned in detail yet (redesign §9 Step 38R) | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 39 | Clean-install smoke tests | Phase 6 | In progress | — | Local: `CLEAN_INSTALL_OK` native darwin-arm64 + WASI on Node 26; CI jobs `node clean install (native, <target>, Node <major>)` ×24 + `node clean install (WASI, Node <major>)` ×3 (pending green) | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 40 | Scaffold PyO3/maturin | Phase 7 | Not started | — | — | [Phase 7](#phase-7--python) |
 | 41 | Generate the Python facade | Phase 7 | Not started | — | — | [Phase 7](#phase-7--python) |
@@ -405,6 +407,14 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - Step 37 (Wire conditional exports): Node `verifyWebhook` dispatches via `SOLVAPAY_IMPL` through `@solvapay/server-native` (`webhook-native.ts` + `createRequire`); TS body retained as `verifyWebhookTs`; `edge.ts` untouched at this step; `pnpm-workspace` includes `rust/bindings/*`; CI `node-binding-conformance` runs `test:unit:rust` then `test:unit:ts` — "done when" verified: 329/329 green both flags + WASI-forced smoke
 - Step 38 (Edge/browser WASM cutover): `@solvapay/server-wasm` (wasm-bindgen) with `edge`/`browser` profiles; edge `verifyWebhook` defaults to WASM (`webhook-wasm.ts`); Web Crypto retained as `SOLVAPAY_IMPL=ts` rollback; CI `wasm-binding`; Deno smoke + §7.8 budgets recorded — "done when" verified: symbol audit, budgets `--check`, 70 edge unit tests ×2, 18/18 edge corpus rust/ts, Deno mcp-core smoke
 - Step 39 (Clean-install smoke tests): publish-shaped tarball bundle from Step 36 artifacts (`prepare-clean-install-packages.mjs` → artifact `server-clean-install-packages`); fresh `npm install` into empty temp + public `@solvapay/server` `verifyWebhook` with `SOLVAPAY_IMPL=rust`; native isolation (no WASI pkg) vs WASI isolation (`NAPI_RS_FORCE_WASI=error`, no `.node`); CI `node-clean-install-native` (8 targets × Node 22/24/26) + `node-clean-install-wasi` (×3); local GREEN on darwin-arm64 + WASI — "done when" pending full remote matrix green
+- Step 37R patch plan (2026-07-21): confirmed sub-steps 37R-a…e, JSON-envelope async boundary, per-surface `SOLVAPAY_IMPL` via `native.ts`, `node-binding-delegation` gate design — write-backs in redesign §9 / §10.3 / §13 / §15 note 32 + this map's Step 37R decisions
+- Step 37R-a (Binding foundation + client Group A): napi `NativeClient` over `ReqwestTransport` + JSON-envelope helpers; `packages/server/src/native.ts` loader/dispatch; Group A per-method dispatch in `client.ts` (dynamic import keeps edge free of `node:module`); `test:unit:rust` + `test:unit:ts` 351/351; §15 note 33
+- Step 37R-b (Client Groups B + C): 26 more `#[napi] async fn` methods + `split_path_refs`; `NativeClientMethod` / `client.ts` dispatch for all 36; fetch-mocked characterization suites pinned to `SOLVAPAY_IMPL=ts`; `test:unit:rust` + `test:unit:ts` 353/353; §15 note 34
+- Step 37R-c (Helper decision cores + paywall + retry): sync JSON-envelope `#[napi]` fns over existing `solvapay_core` decisions; `run_envelope_sync` + `decisions.rs`; `callNativeSync` + `native-decisions.ts` (install API keeps edge free of `node:module`); `withRetry` delegates only `retryNextDelayMs`; harness rewired to server wrappers; `test:unit:rust`/`ts` 359/359; `test:contract` 1178 both flags; §15 note 35
+- Step 37R-d (`@solvapay/core` pure logic + MCP builders): sync JSON-envelope `#[napi]` fns in `payload_builders.rs` over `business_details` / `credit_display` / `seller_identity` / `mcp`; shared `args.rs`; per-package `installNativeCoreApi` / `installNativeMcpApi` (no static `node:module`); `McpAdapter.formatGate` dual-binds `paywallToolResult` via install; React stays on TS via `@solvapay/core/business-details`; `test:contract` 1178 both flags; §15 note 36
+- Step 37R-e (Conformance + gates): `node-binding-delegation` grep gate (`scripts/check-delegation.ts` + `contract/delegation-allowlist.json` + CI job); widened `node-binding-conformance` (server+core+mcp-core unit + contract both flags + React); clean-install extended (`buildPaywallGate` + host-native `getCustomer` stub; WASI sync-only); shadow TS driver pins `SOLVAPAY_IMPL=ts`; `NativeClient` cfg'd out of WASI; §15 note 37
+
+**Phase-close criteria:** Phase 6 closes when Step 39's CI matrix is green (**Step 37R is done**). Step 38R (full-surface edge WASM) is a post-37R placeholder and does not gate the phase.
 
 #### Step 36 decisions for future handoffs
 
@@ -423,6 +433,7 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Edge stayed TS in this step:** Step 37 left `edge.ts` on Web Crypto. **Step 38 moved edge webhook to WASM**; the rest of the edge surface (client/factory/paywall/helpers/fetch) remains TypeScript. `edge.ts` must still never import `webhook-native` / `@solvapay/server-native`.
 - **Workspace / optionalDependency:** `pnpm-workspace.yaml` includes `rust/bindings/*`; `@solvapay/server` declares `"@solvapay/server-native": "workspace:*"` under `optionalDependencies`; tsup Node externals include `@solvapay/server-native` + `node:module` (`sideEffects: false` unchanged).
 - **Scope:** only Node sync `verifyWebhook` cut over this step; full-surface napi cutover stays later.
+- **Superseded scope (2026-07-21):** the narrow "verifyWebhook only" scope is superseded by **Step 37R** (redesign §9, §15 note 31). The flag semantics, `createRequire` loader pattern, optionalDependency layout, and `node-binding-conformance` gate all carry forward into 37R; nothing landed in Step 37 is reverted.
 
 #### Step 38 decisions for future handoffs
 
@@ -450,11 +461,64 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Deferred release-pipeline work:** wiring `prepare-clean-install-packages.mjs` (or equivalent) into `publish.yml` / `napi prepublish`; publishing the nine platform packages to npm; converting source `optionalDependencies` from `file:` to registry versions at first publish.
 - **Branch-protection interpretation:** workflow is PR-triggered (`pull_request` to `main`/`dev`); required checks on those jobs are the “green on main” gate — do not re-enable duplicate full `push` CI solely for Step 39.
 
+#### Step 37R decisions for future handoffs
+
+- **Binding async surface:** `#[napi] async fn` on `NativeClient` → JS `Promise` on per-addon `tokio_rt`. Every binding method (async client + sync pure-logic) uses a JSON-envelope `String` boundary `{"ok":true,"value":…}` | `{"ok":false,"error":<SdkError JSON>}` (≤1 encode; avoids napi-rs #3022 Promise-rejection pitfall; preserves `PaywallError` gate payload). TS `native.ts` reconstructs frozen error classes byte-identically. **No cancellation surface** — no public `AbortSignal`; dropped Promises do not cancel Rust futures (task runs to completion as today). See redesign §15 note 32.
+- **Per-surface `SOLVAPAY_IMPL` rollback:** generalized `packages/server/src/native.ts` (supersedes `webhook-native.ts` pattern): `resolveImpl(surface)` reads `SOLVAPAY_IMPL` per call (`ts` / `rust` / unset→prefer-rust-silent-TS-fallback); each public method becomes `resolveImpl(surface)==='rust' ? <native delegate> : <retained TS body>`. Test seams `setNativeBindingForTests` / `setNativeClientForTests` / `resetNativeCache`.
+- **Clean-install smoke extension:** **Resolved (37R-e)** — see Step 37R-e decisions (`buildPaywallGate` + host-native `getCustomer`; WASI sync-only).
+- **Sub-step breakdown as confirmed by the patch plan:** five steps kept with three amendments — (A1) 37R-a absorbs async-runtime + error-envelope + client-construction + Group A proof; (A2) JSON-envelope boundary for all surfaces; (A3) server `*Core` route helpers stay TS orchestration (decisions delegated via `@solvapay/core`) and are allowlisted as `host-orchestration-decisions-delegated`. Full scope + done-when in redesign §9 Step 37R / §15 note 32.
+
+#### Step 37R-a decisions for future handoffs
+
+- **Envelope helpers:** `ok_envelope` / `err_envelope` / `internal_error_envelope` in `rust/bindings/node/src/error.rs`; domain errors never throw from async client methods — only panic prep maps to `SdkError::Transport` envelopes. Webhook sync path still throws (`BindingError` → JS `Error.code`).
+- **NativeClient:** constructor `(apiKey, apiBaseUrl?)` → `ReqwestTransport` + `ClientShell` + `SolvaPayClient`; ten Group A `#[napi] async fn` methods take/return one JSON string. `updateCustomer` args are `{ customerRef, ...body }` (Rust splits path vs body). Regenerated `index.d.ts` committed.
+- **`cargo test -p solvapay-node`:** async/`tokio_rt` pulls N-API symbols that fail to link in standalone test binaries — workspace `rust/.cargo/config.toml` sets `-Wl,-undefined,dynamic_lookup` for apple-darwin (napi-rs#1005). Pure construction tested via `build_solvapay_client` (not the napi `Result` constructor).
+- **TS loader:** `packages/server/src/native.ts` owns `resolveImpl` / `loadNativeBinding` / `getNativeClient` / `callNative` + envelope reconstructor (`Api`→`SolvaPayError`, `Paywall`→`PaywallError`+gate as `structuredContent`, `Transport`/`Webhook`→`SolvaPayError`). `webhook-native.ts` is a thin shim. `client.ts` uses **dynamic** `import('./native')` after a Node-only guard so `edge.ts` never statically pulls `node:module`; tsup edge externals include `./native` + `node:module`.
+- **No TS re-normalization on rust path:** dispatch returns envelope `value` verbatim (Rust already applies Group A mapping). Fetch-mocked suites that characterize the TS body (`create-customer.unit.test.ts`, `credits-usage` assignCredits) force `SOLVAPAY_IMPL=ts`. Group A rust HTTP byte-parity remains in `client_group_a_fixtures.rs`; server unit rust-flag coverage uses `setNativeClientForTests` (same seam as Step 37 webhook).
+- **Gates:** `cargo test -p solvapay-node` green; `test:unit:rust` + `test:unit:ts` 351 each; `node --test` smoke green; next is **37R-b**.
+
+#### Step 37R-b decisions for future handoffs
+
+- **Mechanical extension of 37R-a:** no new HTTP/normalization — reuses `solvapay-transport::SolvaPayClient` Group B/C methods (wire parity already in `client_group_b_fixtures` / `client_group_c_fixtures`).
+- **`split_path_refs`:** one Rust helper extracts ordered path keys (`productRef` / `planRef` / `customerRef`) from the combined args JSON and returns the remaining body `Value`; used by `updateCustomer` + product/plan multi-arg methods (replaces one-off `parse_update_customer_args`).
+- **Delete void → null envelope:** `deleteProduct` / `deletePlan` return `Result<(), _>` → `ok_envelope(&())` → `{"ok":true,"value":null}`; TS rust path returns that `null` verbatim (TS fallback stays `void`/`undefined`).
+- **TS characterization pin:** fetch-mocked suites that assert the retained TS body (`bootstrap-mcp`, `credits-usage`, `client-topup`, `client-error`, `multi-currency-plans`, `create-customer`) force `SOLVAPAY_IMPL=ts` so `test:unit:rust` does not load the real binding for those paths.
+- **Gates:** `cargo test -p solvapay-node` green; `test:unit:rust` + `test:unit:ts` 353 each; `node --test` smoke green; step-8 fmt/clippy/no-unwrap/wasm green; next is **37R-c**.
+
+#### Step 37R-c decisions for future handoffs
+
+- **Sync JSON-envelope surface:** `run_envelope_sync` in `error.rs` + top-level `#[napi]` sync fns in `decisions.rs` (siblings of `verifyWebhook`, not throw-style). Args/results are one JSON string; domain failures rarely appear (pure cores return values / null / HelperErrorResult as the envelope **value**); parse/panic → Transport envelope.
+- **Delegation site = `@solvapay/server` (Node):** `native-decisions.ts` wraps `@solvapay/core` extracts + paywall/retry. Core TS bodies stay as portable fallback until 38R / Step 52. `*Core` helpers stay orchestration; they import decisions from `native-decisions`.
+- **Edge-safe install API:** `native-decisions` never statically imports `./native` / `node:module`. Node `index.ts` + `vitest.setup.ts` call `installNativeDecisionApi({ callNativeSync, resolveImpl })`; edge never installs → always TS fallback. Public `paywall-state` / `paywall-gate` re-export wrappers; pure bodies live in `*-ts.ts`.
+- **`withRetry` next_delay-only:** napi `retryNextDelayMs` over `RetryPolicy::next_delay`; host keeps `sleep` / `shouldRetry` / `onRetry` / error coercion. Exhaustion is `null` delay (same as Rust policy).
+- **Harness:** `createDefaultRegistry` binds 37R-c surfaces to server wrappers (ambient `SOLVAPAY_IMPL`). Client + webhook bindings force `SOLVAPAY_IMPL=ts` so ambient rust still exercises mocked fetch / `Date.now` clock injection.
+- **Gates:** `cargo test -p solvapay-node` (18); `test:unit:rust`/`ts` 359 each; `pnpm test:contract` 1178 both flags; helper/paywall/retry fixtures green under rust; edge-exports free of static `./native`; next is **37R-d**.
+
+#### Step 37R-d decisions for future handoffs
+
+- **Per-package install-gated delegation:** `@solvapay/core` (`native-core.ts`) and `@solvapay/mcp-core` (`native-mcp.ts`) own their own `installNative*Api({ callNativeSync, resolveImpl })` so package exports delegate without a static `node:module` / `@solvapay/server-native` import — required for React/browser and Deno/edge graphs, and for the eventual 37R-e `node-binding-delegation` grep gate.
+- **Who installs:** Node `@solvapay/server` `index.ts` installs core + `McpAdapter.formatGate` native, and **publishes** `Symbol.for('solvapay.nativeSyncApi')` so `@solvapay/mcp-core` can pick up napi dispatch without a hard server→mcp-core import (avoids the production cycle and the `createRequire` CJS/ESM dual-instance trap). `@solvapay/mcp` Node entry also calls `installNativeMcpApi` via `native-install.ts`. Fixture harness + package vitest setups install explicitly. mcp-core remains a server **devDependency** for vitest.
+- **Const tables stay TS identity:** `BUSINESS_COUNTRY_OPTIONS`, `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`, `MCP_TOOL_NAMES`, `TOOL_FOR_VIEW` / `VIEW_FOR_TOOL` keep `as const` / Record exports for types; fixture-visible accessors (`getBusinessCountryOptions`, `getSellerTaxIdentifierDisplayLabelByType`, `getMcpToolNamesTable`, `mcpViewMaps`) are the delegated surfaces.
+- **Dual-binding `paywallToolResult`:** mcp-core async wrapper + server `McpAdapter.formatGate` share the same napi fn; formatGate uses an install callback (no static `./native` import) so factory→edge stays free of `node:module`.
+- **React unmodified:** `@solvapay/core/business-details` still re-exports pure TS bodies; React never calls `installNativeCoreApi` → always TS fallback.
+- **Assert / Error name parity:** `assertResponseResult` rust Transport errors are rethrown as plain `Error` in the TS wrapper so fixtures expecting `name: "Error"` stay green.
+- **Gates:** `cargo test -p solvapay-node` (22); server `test:unit:rust`/`ts` 359 each; core 114/114; mcp-core 107/107; `pnpm test:contract` 1178 both flags; React 1083 unmodified; next is **37R-e**.
+- **Open handoff:** clean-install smoke extension beyond `verifyWebhook` — **Resolved (37R-e)**.
+
+#### Step 37R-e decisions for future handoffs
+
+- **Delegation gate design:** enumerate value exports of `@solvapay/server` + `@solvapay/core` via TS compiler API; follow re-export chains to the definition file only (never scan package `index.ts` alone — install wiring false-positives); require marker or allowlist. Allowlist reasons: `section-8-exclusion`, `host-orchestration-decisions-delegated`, `type-guard-or-const`, `binding-infra`, `portable-ts-fallback`. Root script `pnpm delegation:check`; CI job `node-binding-delegation`.
+- **Extended clean-install call list:** `verifyWebhook` + sync `buildPaywallGate` (payment-minimal golden) + async `getCustomer` via in-process `node:http` stub (`client-smoke-fixture.mjs`). Host-native exercises all three; WASI exercises sync only.
+- **WASI omits NativeClient:** `native_client.rs` is `#![cfg(not(target_arch = "wasm32"))]` — no `ReqwestTransport` on wasm32. Sync decision / payload / webhook surfaces remain on WASI. Documented as intentional until a WASI transport lands.
+- **Shadow TS pin:** `installTsDriverSession` forces `SOLVAPAY_IMPL=ts` for the session (restored on teardown) so fetch-based wire capture still works after 37R client cutover; rust driver stays on the Rust CLI.
+- **Both-flags CI:** `node-binding-conformance` runs server + core + mcp-core `test:unit:rust|ts`, `pnpm test:contract` both flags, and React unmodified.
+- **Gates:** `pnpm delegation:check` OK; server 359×2; core 114×2; mcp-core 107×2; contract 1181×2; React 1083; clean-install native+WASI `CLEAN_INSTALL_OK`; `pnpm shadow:selftest` 19/19; next is **Step 39 CI matrix**.
+
 **Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** … (complete after Step 39 CI matrix is green — Steps 36–39: napi scaffold + Node cutover + edge WASM + clean-install matrix)
+- **What was done:** … (complete after Step 39 CI matrix is green — Step 37R already done: napi scaffold + Node webhook cutover + edge WASM + clean-install harness + full-surface napi delegation + conformance gates)
 - **Why:** …
 - **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
-- **Pointers:** §7.7, §7.8, §9, §10.3, D9, Notes 28–30; diagrams updated: Phase 6 `EXP → SMOKE` (unchanged)
+- **Pointers:** §7.7, §7.8, §9, §10.3, D9, Notes 28–37; diagrams updated: Phase 6 `EXP → SMOKE` (unchanged)
 
 ### Phase 7 — Python — Not started
 
@@ -521,6 +585,9 @@ Mirrors redesign §13 "Unresolved implementation gates", plus blockers discovere
 | WASM instance-pool sizing strategy for Go | Step 49 | Open | SDK |
 | crates.io name reservation for `solvapay` (and whether internal crates are published) | Before step 46 | Open | SDK |
 | Whether the shared tokio runtime in napi-rs is per-addon or per-process | Step 36 | **Resolved (step 36):** per-addon via napi `tokio_rt` (see Step 36 decisions / §15 note 28) | SDK |
+| 37R binding async surface (Promise conversion, error mapping, cancellation for napi async methods) | Step 37R patch plan / 37R-a | **Resolved (37R patch plan):** JSON-envelope + Promise via `tokio_rt`; no cancellation (see Step 37R decisions / §15 note 32) | SDK |
+| 37R per-surface `SOLVAPAY_IMPL` rollback semantics (independent flag reads per cut-over surface) | Step 37R patch plan / 37R-a | **Resolved (37R patch plan):** per-call `resolveImpl(surface)` in `native.ts` (see Step 37R decisions / §15 note 32) | SDK |
+| 37R clean-install smoke extension beyond `verifyWebhook` | Step 37R-e | **Resolved (37R-e):** `buildPaywallGate` + host-native `getCustomer` stub; WASI sync-only (see Step 37R-e decisions / §15 note 37) | SDK |
 | Process-payment OpenAPI discriminator fix — backend republish vs manifest overlay | Before step 15 cutover | Open | Backend + SDK |
 | `includeCheckoutSession` OpenAPI republish | Before step 15 cutover | Open | Backend + SDK |
 | Free-threaded CPython: `gil_used = false` from day one, or after an audit? | Step 40 | Open | SDK |

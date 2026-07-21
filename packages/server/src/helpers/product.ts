@@ -10,7 +10,8 @@ import type { SdkProductResponse } from '../types/client'
 import type { SolvaPay } from '../factory'
 import { createSolvaPayClient } from '../client'
 import { handleRouteError } from './error'
-import { getSolvaPayConfig, validateGetProductParams } from '@solvapay/core'
+import { getSolvaPayConfig } from '@solvapay/core'
+import { validateGetProductParams } from '../native-decisions'
 
 export async function getProductCore(
   request: Request,

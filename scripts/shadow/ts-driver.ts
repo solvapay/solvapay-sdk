@@ -306,17 +306,33 @@ export function restoreGlobalFetch(previous: typeof fetch = fetch): void {
 // Ensure we can restore the original after createTsShadowDriver patches it.
 let _originalFetch: typeof fetch | undefined
 
+/**
+ * Install a TS shadow driver session.
+ *
+ * Pins `SOLVAPAY_IMPL=ts` for the session so the "TS" side actually executes
+ * the TypeScript client (fetch-recorded). After Step 37R client cutover, an
+ * unset/`rust` ambient flag would route through NativeClient/reqwest and leave
+ * `tsWire` empty — breaking the intentional-divergence control and live
+ * wire dumps.
+ */
 export function installTsDriverSession(options: TsDriverOptions): {
   driver: TsDriver
   restore: () => void
 } {
   _originalFetch = globalThis.fetch
+  const previousImpl = process.env.SOLVAPAY_IMPL
+  process.env.SOLVAPAY_IMPL = 'ts'
   const driver = createTsShadowDriver(options)
   return {
     driver,
     restore: () => {
       if (_originalFetch) {
         globalThis.fetch = _originalFetch
+      }
+      if (previousImpl === undefined) {
+        delete process.env.SOLVAPAY_IMPL
+      } else {
+        process.env.SOLVAPAY_IMPL = previousImpl
       }
     },
   }

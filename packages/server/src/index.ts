@@ -6,9 +6,30 @@
  */
 
 import crypto from 'node:crypto'
-import { SolvaPayError } from '@solvapay/core'
+import { installNativeCoreApi, SolvaPayError } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
+import { installMcpAdapterNative } from './adapters/mcp'
+import { callNativeSync, resolveImpl } from './native'
+import { installNativeDecisionApi } from './native-decisions'
+import { publishNativeSyncApi } from './native-registry'
 import { resolveWebhookImpl, verifyWebhookNative } from './webhook-native'
+import type { PaywallStructuredContent, PaywallToolResult } from './types'
+
+// Install sync decision + core dispatch for Node (edge never installs → TS fallback).
+installNativeDecisionApi({ callNativeSync, resolveImpl })
+installNativeCoreApi({ callNativeSync, resolveImpl })
+installMcpAdapterNative({
+  formatGate: (gate: PaywallStructuredContent): PaywallToolResult | null => {
+    if (resolveImpl('mcp') !== 'rust') return null
+    return callNativeSync(
+      'paywallToolResult',
+      JSON.stringify({ message: gate.message, structuredContent: gate }),
+    ) as PaywallToolResult
+  },
+})
+// Ambient registry for mcp-core (and peers) — avoids server→mcp-core cycle
+// and the createRequire CJS/ESM dual-instance trap.
+publishNativeSyncApi()
 
 // Main factory for unified API
 export { createSolvaPay } from './factory'
@@ -138,8 +159,14 @@ function verifyWebhookTs({
 // going through payable().mcp().
 export { McpAdapter } from './adapters'
 
+/** @internal Node native dispatch seams (fixture harness / package installs). */
+export { callNativeSync, resolveImpl } from './native'
+
 // Export PaywallError for error handling
-export { PaywallError, paywallErrorToClientPayload } from './paywall'
+export { PaywallError } from './paywall'
+// Payload builder delegates via native-decisions (Step 37R-c); keep the
+// re-export chain explicit so the node-binding-delegation gate sees markers.
+export { paywallErrorToClientPayload } from './native-decisions'
 export type { ProtectHandlerContext } from './paywall'
 export { isPaywallStructuredContent } from './types/paywall'
 
@@ -220,6 +247,46 @@ export type {
 
 // Export utilities for general use
 export { withRetry } from './utils'
+
+// Decision-core wrappers (Step 37R-c) — fixture harness + advanced integrators.
+export {
+  attachBusinessDetailsValidationError,
+  buildCreateCustomerParams,
+  classifyCancelError,
+  classifyCreateError,
+  classifyCustomerRef,
+  classifyLookupError,
+  classifyReactivateError,
+  coerceCustomerOptions,
+  decidePaywallOutcome,
+  evaluateCachedLimits,
+  evaluateFreshLimits,
+  extractBackendCustomerRef,
+  isCachedCustomerRefValid,
+  isEmailConflict,
+  mapRouteError,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  projectPaymentIntentResult,
+  projectTopupProcessOutcome,
+  projectUsageSnapshot,
+  resolveCheckLimitsParams,
+  resolveFallbackGateLimits,
+  resolveProductRef,
+  resolvePurchaseCustomerRef,
+  resolveReturnUrl,
+  retryNextDelayMs,
+  selectActivePurchases,
+  validateActivatePlanParams,
+  validateAttachBusinessDetailsParams,
+  validateCheckoutSessionParams,
+  validateCreatePaymentIntentParams,
+  validateGetProductParams,
+  validateListPlansParams,
+  validateProcessPaymentIntentParams,
+  validatePurchaseRef,
+  validateTopupPaymentIntentParams,
+} from './native-decisions'
 
 // Export route helpers (generic, framework-agnostic)
 export {

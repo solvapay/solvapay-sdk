@@ -1,8 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createSolvaPay, createSolvaPayClient } from '../src'
 
 const apiKey = 'sk_test_123'
 const apiBaseUrl = 'https://api.test.solvapay.com'
+
+/**
+ * `assignCredits` is Group A (napi-delegated under `SOLVAPAY_IMPL=rust`).
+ * This suite asserts the retained TypeScript fetch shape (URL / headers /
+ * body), so it forces the TS path. Native dispatch is covered by
+ * `client-native-dispatch.unit.test.ts`.
+ */
+const originalImpl = process.env.SOLVAPAY_IMPL
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -21,8 +29,17 @@ function getFetchCall(index = 0): [string, RequestInit] {
 
 describe('credits and usage client methods', () => {
   beforeEach(() => {
+    process.env.SOLVAPAY_IMPL = 'ts'
     vi.restoreAllMocks()
     vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    if (originalImpl === undefined) {
+      delete process.env.SOLVAPAY_IMPL
+    } else {
+      process.env.SOLVAPAY_IMPL = originalImpl
+    }
   })
 
   it('assignCredits posts grants with an idempotency key and returns the backend response', async () => {

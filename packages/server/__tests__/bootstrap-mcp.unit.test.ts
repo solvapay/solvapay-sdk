@@ -8,12 +8,25 @@ import type {
   ToolPlanMappingInput,
 } from '../src/types/client'
 
+/**
+ * Forces `SOLVAPAY_IMPL=ts` — this suite characterizes the retained TypeScript
+ * fetch body for `bootstrapMcpProduct` / MCP product helpers. Rust dispatch is
+ * covered by `client-native-dispatch.unit.test.ts` + Group C fixtures.
+ */
 describe('MCP bootstrap SDK wrapper', () => {
+  const originalImpl = process.env.SOLVAPAY_IMPL
+
   beforeEach(() => {
+    process.env.SOLVAPAY_IMPL = 'ts'
     vi.stubGlobal('fetch', vi.fn())
   })
 
   afterEach(() => {
+    if (originalImpl === undefined) {
+      delete process.env.SOLVAPAY_IMPL
+    } else {
+      process.env.SOLVAPAY_IMPL = originalImpl
+    }
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })

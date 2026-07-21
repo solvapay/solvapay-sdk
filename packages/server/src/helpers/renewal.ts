@@ -5,15 +5,14 @@
  * Works with standard Web API Request (works everywhere).
  */
 
+import { isRenewalError, SolvaPayError } from '@solvapay/core'
 import {
   classifyCancelError,
   classifyReactivateError,
-  isRenewalError,
   normalizeCancelResponse,
   normalizeReactivateResponse,
-  SolvaPayError,
   validatePurchaseRef,
-} from '@solvapay/core'
+} from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'

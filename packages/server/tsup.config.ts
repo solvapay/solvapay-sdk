@@ -11,7 +11,7 @@ export default defineConfig([
     // in webhook-native resolves correctly under require().
     shims: true,
     // Native binding stays external so the Node bundle does not embed it;
-    // `node:module` is needed for the sync createRequire loader in webhook-native.
+    // `node:module` is needed for the sync createRequire loader in native.ts.
     external: [
       '@solvapay/core',
       '@solvapay/auth',
@@ -28,11 +28,16 @@ export default defineConfig([
     tsconfig: 'tsconfig.build.json',
     clean: false,
     // WASM package stays external so the edge bundle does not embed the
-    // `.wasm` asset; Node napi / `node:module` must never enter this graph.
+    // `.wasm` asset; Node napi / `node:module` / `./native` must never
+    // enter this graph (client.ts may dynamic-import native on Node only).
     external: [
       '@solvapay/core',
       '@solvapay/auth',
       '@solvapay/server-wasm',
+      '@solvapay/server-native',
+      './native',
+      './webhook-native',
+      'node:module',
       'zod',
       'jose',
     ],

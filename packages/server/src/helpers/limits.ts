@@ -8,7 +8,7 @@
  * counter without reinventing the math client-side.
  */
 
-import { resolveCheckLimitsParams } from '@solvapay/core'
+import { resolveCheckLimitsParams } from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { LimitResponseWithPlan } from '../types/client'
 import type { ErrorResult } from './types'

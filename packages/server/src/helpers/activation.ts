@@ -1,4 +1,4 @@
-import { validateActivatePlanParams } from '@solvapay/core'
+import { validateActivatePlanParams } from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { ActivatePlanResult } from '../types/client'
 import type { ErrorResult } from './types'

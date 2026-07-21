@@ -573,7 +573,7 @@ jobs:
             --target wasm32-wasi \
             --node-major "${{ matrix.node }}"
 
-  # Step 37 — flag-reversible Node verifyWebhook cutover (rust ↔ ts).
+  # Step 37R-e — flag-reversible full-surface Node cutover (rust ↔ ts).
   node-binding-conformance:
     name: node-binding conformance (SOLVAPAY_IMPL rust/ts)
     runs-on: ubuntu-latest
@@ -617,6 +617,12 @@ jobs:
       - name: Build @solvapay/core (server unit deps)
         run: pnpm --filter @solvapay/core build
 
+      - name: Build @solvapay/mcp-core
+        run: pnpm --filter @solvapay/mcp-core build
+
+      - name: Build @solvapay/server
+        run: pnpm --filter @solvapay/server build
+
       - name: Build @solvapay/server-native (host)
         run: pnpm --filter @solvapay/server-native build
 
@@ -625,6 +631,67 @@ jobs:
 
       - name: Server unit suite forced back to TypeScript
         run: pnpm --filter @solvapay/server test:unit:ts
+
+      - name: Core unit suite on Rust binding
+        run: pnpm --filter @solvapay/core test:unit:rust
+
+      - name: Core unit suite forced back to TypeScript
+        run: pnpm --filter @solvapay/core test:unit:ts
+
+      - name: mcp-core unit suite on Rust binding
+        run: pnpm --filter @solvapay/mcp-core test:unit:rust
+
+      - name: mcp-core unit suite forced back to TypeScript
+        run: pnpm --filter @solvapay/mcp-core test:unit:ts
+
+      - name: Contract fixtures on Rust binding
+        run: SOLVAPAY_IMPL=rust pnpm test:contract
+
+      - name: Contract fixtures forced back to TypeScript
+        run: SOLVAPAY_IMPL=ts pnpm test:contract
+
+      - name: React package tests (unmodified, no SOLVAPAY_IMPL)
+        run: pnpm --filter @solvapay/react test
+
+  # Step 37R-e — every non-§8 server/core export delegates (or allowlisted).
+  node-binding-delegation:
+    name: node-binding delegation inventory
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.6.0
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Delegation inventory gate
+        run: pnpm delegation:check
 
   # Step 38 — edge/browser wasm-bindgen cutover (capability split + budgets + Deno).
   wasm-binding:

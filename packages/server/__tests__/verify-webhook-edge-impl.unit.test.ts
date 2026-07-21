@@ -192,6 +192,7 @@ describe('edge graph dependency assertions', () => {
     const forbiddenImport = [
       /from\s+['"]@solvapay\/server-native['"]/,
       /from\s+['"]\.\/webhook-native['"]/,
+      /from\s+['"]\.\/native['"]/,
       /from\s+['"]node:/,
       /import\s*\(\s*['"]node:/,
       /require\s*\(\s*['"]node:/,

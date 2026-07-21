@@ -83,8 +83,9 @@ pub use payment::{
     TopupProcessOutcome,
 };
 pub use paywall_decision::{
-    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits, resolve_product_ref,
-    CachedLimitsEvaluation, FreshLimitsEvaluation, PaywallOutcome,
+    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits,
+    resolve_fallback_gate_limits, resolve_product_ref, CachedLimitsEvaluation,
+    FreshLimitsEvaluation, PaywallOutcome,
 };
 pub use paywall_gate::{build_paywall_gate, PaywallGate, PaywallGateKind, PaywallGateLimits};
 pub use paywall_payload::{paywall_client_payload, PaywallClientPayload};

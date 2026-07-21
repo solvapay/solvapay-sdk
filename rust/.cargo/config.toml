@@ -2,3 +2,13 @@
 # `wasm-bindgen` crate pin in the workspace Cargo.toml (currently 0.2.126).
 [target.wasm32-unknown-unknown]
 runner = "wasm-bindgen-test-runner"
+
+# napi-rs: `cargo test` builds a standalone binary (not a Node addon), so N-API
+# symbols are unresolved at link time once async/`tokio_rt` pulls them in.
+# Allow undefined symbols at link; they resolve at runtime under Node, and unit
+# tests never call into N-API. See napi-rs#1005.
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]

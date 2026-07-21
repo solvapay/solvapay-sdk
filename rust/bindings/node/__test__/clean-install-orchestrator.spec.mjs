@@ -17,6 +17,7 @@ import {
   buildNpmInstallPlan,
   forbiddenNativeModePackages,
   runCaptured,
+  stageConsumerSmoke,
 } from '../scripts/clean-install-lib.mjs'
 import { WASI_TARGET } from '../scripts/targets.mjs'
 
@@ -155,6 +156,25 @@ describe('clean-install orchestrator', () => {
         assert.equal(pkg.dependencies[name], undefined)
       }
     }
+  })
+
+  it('stages client-smoke-fixture alongside the consumer script (37R-e)', () => {
+    /** @type {string[]} */
+    const copied = []
+    const consumerScript = stageConsumerSmoke('/tmp/consumer', {
+      mkdirSync: () => {},
+      copyFileSync: (src, dest) => {
+        copied.push(String(dest).split('/').pop() ?? '')
+        void src
+      },
+    })
+    assert.ok(consumerScript.endsWith('clean-install-consumer.mjs'))
+    assert.ok(
+      copied.includes('client-smoke-fixture.mjs'),
+      `expected client-smoke-fixture.mjs in staged files, got: ${copied.join(', ')}`,
+    )
+    assert.ok(copied.includes('webhook-smoke-fixture.mjs'))
+    assert.ok(copied.includes('targets.mjs'))
   })
 
   it('builds WASI consumer package.json without native target packages', () => {

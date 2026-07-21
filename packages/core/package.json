@@ -36,6 +36,8 @@
     "dev": "tsup src/index.ts src/business-details-public.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch",
     "test": "vitest run",
     "test:unit": "vitest run",
+    "test:unit:rust": "SOLVAPAY_IMPL=rust pnpm run test:unit",
+    "test:unit:ts": "SOLVAPAY_IMPL=ts pnpm run test:unit",
     "test:watch": "vitest",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"

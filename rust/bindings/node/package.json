@@ -45,10 +45,11 @@
     "@napi-rs/wasm-runtime": "^1.1.6"
   },
   "devDependencies": {
-    "@emnapi/core": "^1.7.1",
-    "@emnapi/runtime": "^1.7.1",
+    "@emnapi/core": "1.11.2",
+    "@emnapi/runtime": "1.11.2",
     "@napi-rs/cli": "3.7.3",
-    "@tybys/wasm-util": "^0.10.1"
+    "@tybys/wasm-util": "^0.10.1",
+    "emnapi": "1.11.2"
   },
   "optionalDependencies": {
     "@solvapay/server-native-darwin-arm64": "file:npm/darwin-arm64",

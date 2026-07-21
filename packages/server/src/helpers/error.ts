@@ -6,12 +6,8 @@
  * this shim owns `console.error` and `instanceof` narrowing.
  */
 
-import {
-  SolvaPayError,
-  isErrorResult,
-  mapRouteError,
-  type RouteErrorResult,
-} from '@solvapay/core'
+import { SolvaPayError, type RouteErrorResult } from '@solvapay/core'
+import { isErrorResult, mapRouteError } from '../native-decisions'
 
 export type { RouteErrorResult }
 export { isErrorResult }

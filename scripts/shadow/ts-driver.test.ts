@@ -19,7 +19,11 @@ describe('TS shadow driver', () => {
   })
 
   it('records request/response pairs via injected fetch', async () => {
-    const server = createServer((req, res) => {
+    // Shadow wire capture is fetch-based; pin TS so ambient SOLVAPAY_IMPL=rust
+    // does not route through napi Reqwest (Step 37R).
+    const previousImpl = process.env.SOLVAPAY_IMPL
+    process.env.SOLVAPAY_IMPL = 'ts'
+    const server = createServer((_req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ displayName: 'T', legalName: 'T LLC' }))
     })
@@ -43,6 +47,11 @@ describe('TS shadow driver', () => {
       expect(outcome.wire[0]?.status).toBe(200)
     } finally {
       session.restore()
+      if (previousImpl === undefined) {
+        delete process.env.SOLVAPAY_IMPL
+      } else {
+        process.env.SOLVAPAY_IMPL = previousImpl
+      }
       await new Promise<void>((resolve, reject) =>
         server.close(err => (err ? reject(err) : resolve())),
       )

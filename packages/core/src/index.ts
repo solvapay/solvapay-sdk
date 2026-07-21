@@ -113,7 +113,18 @@ export {
   creditsToDisplayMinorUnits,
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
-} from './credit-display'
+  validateBusinessDetails,
+  deriveTaxIdType,
+  getTaxIdExample,
+  getTaxIdFieldLabel,
+  getTaxIdHelperText,
+  resolveTaxBehavior,
+  getBusinessCountryOptions,
+  getSellerTaxIdentifierDisplayLabel,
+  getSellerTaxIdentifierDisplayLabelByType,
+  resolveSellerIdentityDisplay,
+  installNativeCoreApi,
+} from './native-core'
 
 export {
   BusinessDetailsSchema,
@@ -125,12 +136,6 @@ export {
   TAX_EXCLUSIVE_CURRENCIES,
   TAX_ID_EXAMPLE_BY_COUNTRY,
   TAX_ID_TYPES,
-  deriveTaxIdType,
-  getTaxIdExample,
-  getTaxIdFieldLabel,
-  getTaxIdHelperText,
-  resolveTaxBehavior,
-  validateBusinessDetails,
   type BusinessCountryOption,
   type BusinessDetails,
   type BusinessDetailsInput,
@@ -146,8 +151,6 @@ export {
 
 export {
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
-  getSellerTaxIdentifierDisplayLabel,
-  resolveSellerIdentityDisplay,
   type SellerIdentityDisplay,
   type SellerIdentityRow,
 } from './seller-identity'

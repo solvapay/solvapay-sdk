@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { createSolvaPayClient } from '../src/index'
 
 /**
@@ -6,9 +6,24 @@ import { createSolvaPayClient } from '../src/index'
  * the backend, but the SDK's `createCustomer` interface declares its return
  * as `{ customerRef }`. The client must map at the boundary — same pattern
  * as `updateCustomer` and `getCustomer`.
+ *
+ * Forces `SOLVAPAY_IMPL=ts` — this suite characterizes the retained TypeScript
+ * fetch body / response mapping. Rust-side mapping is covered by
+ * `client_group_a_fixtures` + `client-native-dispatch.unit.test.ts`.
  */
 describe('createSolvaPayClient().createCustomer — response mapping', () => {
+  const originalImpl = process.env.SOLVAPAY_IMPL
+
+  beforeEach(() => {
+    process.env.SOLVAPAY_IMPL = 'ts'
+  })
+
   afterEach(() => {
+    if (originalImpl === undefined) {
+      delete process.env.SOLVAPAY_IMPL
+    } else {
+      process.env.SOLVAPAY_IMPL = originalImpl
+    }
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })

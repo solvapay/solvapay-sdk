@@ -5,7 +5,7 @@
  * Works with standard Web API Request (works everywhere).
  */
 
-import { coerceCustomerOptions } from '@solvapay/core'
+import { coerceCustomerOptions } from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'

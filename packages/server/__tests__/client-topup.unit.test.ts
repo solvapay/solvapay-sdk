@@ -1,13 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createSolvaPayClient } from '../src/client'
 import { SolvaPayError } from '@solvapay/core'
 
+/**
+ * Forces `SOLVAPAY_IMPL=ts` — characterizes the retained TypeScript fetch body
+ * for `createTopupPaymentIntent`. Rust dispatch is covered by
+ * `client-native-dispatch.unit.test.ts` + Group B fixtures.
+ */
 describe('createSolvaPayClient - createTopupPaymentIntent', () => {
   const apiKey = 'sk_test_123'
   const baseUrl = 'https://api.solvapay.com'
+  const originalImpl = process.env.SOLVAPAY_IMPL
 
   beforeEach(() => {
+    process.env.SOLVAPAY_IMPL = 'ts'
     vi.restoreAllMocks()
+  })
+
+  afterEach(() => {
+    if (originalImpl === undefined) {
+      delete process.env.SOLVAPAY_IMPL
+    } else {
+      process.env.SOLVAPAY_IMPL = originalImpl
+    }
   })
 
   it('sends correct body with purpose: credit_topup to /v1/sdk/payment-intents', async () => {

@@ -65,6 +65,7 @@ export function stageConsumerSmoke(consumerDir, fs = {}) {
   for (const name of [
     'clean-install-consumer.mjs',
     'webhook-smoke-fixture.mjs',
+    'client-smoke-fixture.mjs',
     'targets.mjs',
   ]) {
     copy(join(SCRIPTS_DIR, name), join(smokeDir, name))
