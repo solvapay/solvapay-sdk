@@ -106,23 +106,13 @@ export function resetNativeDecisionApiForTests(): void {
   installed = null
 }
 
-function shouldAttemptNative(): boolean {
-  try {
-    return (
-      typeof process !== 'undefined' &&
-      typeof process.versions === 'object' &&
-      process.versions != null &&
-      typeof process.versions.node === 'string' &&
-      process.env.SOLVAPAY_IMPL !== 'ts'
-    )
-  } catch {
-    return false
-  }
-}
-
 function dispatchSync<T>(fn: NativeSyncMethod, args: unknown, tsFallback: () => T): T {
-  if (!shouldAttemptNative() || installed === null) return tsFallback()
-  if (installed.resolveImpl('helper') !== 'rust') return tsFallback()
+  // The install is the gate: Node installs napi dispatch (`index.ts`), edge
+  // installs WASM dispatch (`edge.ts`). Uninstalled (browser / no warm-up) →
+  // TS. `resolveImpl` carries the `SOLVAPAY_IMPL` rollback per runtime.
+  if (installed === null || installed.resolveImpl('helper') !== 'rust') {
+    return tsFallback()
+  }
   return installed.callNativeSync(fn, JSON.stringify(args)) as T
 }
 
@@ -507,7 +497,7 @@ export function decidePaywallOutcome<TGate>(input: {
   checkoutUrl?: string
   buildGate: (product: string, limits: PaywallDecisionLimits) => TGate
 }): PaywallOutcome<TGate> {
-  if (!shouldAttemptNative() || installed === null || installed.resolveImpl('helper') !== 'rust') {
+  if (installed === null || installed.resolveImpl('helper') !== 'rust') {
     return decidePaywallOutcomeTs(input)
   }
   // Rust path ignores `buildGate` — uses in-crate `build_paywall_gate`.

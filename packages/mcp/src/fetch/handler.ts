@@ -8,6 +8,7 @@
 
 import {
   buildAuthInfoFromBearer,
+  isFreeMcpMethod,
   McpBearerAuthError,
   type BuildAuthInfoFromBearerOptions,
   type OAuthBridgePaths,
@@ -96,13 +97,23 @@ function getJsonRpcId(body: unknown): string | number | null {
   return null
 }
 
-async function readJsonRpcId(req: Request): Promise<string | number | null> {
+function getJsonRpcMethod(body: unknown): string | undefined {
+  if (body && typeof body === 'object' && 'method' in body) {
+    const method = (body as { method?: unknown }).method
+    return typeof method === 'string' ? method : undefined
+  }
+  return undefined
+}
+
+async function readJsonRpcEnvelope(
+  req: Request,
+): Promise<{ id: string | number | null; method?: string }> {
   try {
     const clone = req.clone()
     const body = await clone.json()
-    return getJsonRpcId(body)
+    return { id: getJsonRpcId(body), method: getJsonRpcMethod(body) }
   } catch {
-    return null
+    return { id: null }
   }
 }
 
@@ -112,9 +123,11 @@ async function readJsonRpcId(req: Request): Promise<string | number | null> {
  * 1. Serves `OPTIONS` preflight for native-scheme origins.
  * 2. Serves every `.well-known/*` + `/oauth/*` route via
  *    {@link createOAuthFetchRouter}.
- * 3. Enforces bearer-token auth on the MCP path (default `/mcp`) and
- *    returns `401 + WWW-Authenticate: Bearer resource_metadata="…"`
- *    when auth is missing.
+ * 3. Enforces bearer-token auth on `tools/call` when `requireAuth`
+ *    is true (default). Handshake / listing methods (`initialize`,
+ *    `tools/list`, …) stay open so clients and no-code discovery can
+ *    connect without a customer JWT. Missing auth on a gated method
+ *    returns `401 + WWW-Authenticate: Bearer resource_metadata="…"`.
  * 4. Forwards the request to a fresh
  *    `WebStandardStreamableHTTPServerTransport` wired to the provided
  *    `McpServer`. The transport's `close()` runs in a `finally` block
@@ -218,22 +231,27 @@ export function createSolvaPayMcpFetchHandler(
       return new Response(null, { status: 405, headers })
     }
 
-    // 5) Bearer auth guard.
+    // 5) Bearer auth guard. With requireAuth (default), only tools/call
+    //    is gated — initialize / tools/list / etc. stay open for discovery.
     const authHeader = req.headers.get('authorization')
     let resolvedAuthInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
     if (authHeader || requireAuth) {
-      try {
-        resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, authInfo)
-        if (!resolvedAuthInfo) {
-          throw new McpBearerAuthError('Missing bearer token')
+      const envelope = await readJsonRpcEnvelope(req)
+      const skipAuth =
+        requireAuth && !authHeader && isFreeMcpMethod(envelope.method)
+      if (!skipAuth) {
+        try {
+          resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, authInfo)
+          if (!resolvedAuthInfo) {
+            throw new McpBearerAuthError('Missing bearer token')
+          }
+        } catch {
+          return authChallenge(req, {
+            publicBaseUrl,
+            protectedResourcePath,
+            jsonRpcId: envelope.id,
+          })
         }
-      } catch {
-        const jsonRpcId = await readJsonRpcId(req)
-        return authChallenge(req, {
-          publicBaseUrl,
-          protectedResourcePath,
-          jsonRpcId,
-        })
       }
     }
 
@@ -267,7 +285,7 @@ export function createSolvaPayMcpFetchHandler(
     } catch (error) {
       const headers = new Headers({ 'content-type': 'application/json' })
       applyNativeCors(req.headers, headers)
-      const jsonRpcId = await readJsonRpcId(req)
+      const { id: jsonRpcId } = await readJsonRpcEnvelope(req)
       return new Response(
         JSON.stringify({
           jsonrpc: '2.0',

@@ -13,8 +13,8 @@ const repoRoot = new URL('../../..', import.meta.url)
 const serverEdge = new URL('packages/server/dist/edge.js', repoRoot).href
 const mcpCore = new URL('packages/mcp-core/dist/index.js', repoRoot).href
 
-const { verifyWebhook } = await import(serverEdge)
-const { MCP_TOOL_NAMES } = await import(mcpCore)
+const { verifyWebhook, classifyPaywallState, buildPaywallGate } = await import(serverEdge)
+const { MCP_TOOL_NAMES, getMcpToolNamesTable } = await import(mcpCore)
 
 const FIXTURE_BODY = JSON.stringify({
   type: 'purchase.created',
@@ -54,6 +54,32 @@ if (toolCount < 1) {
   throw new Error('MCP_TOOL_NAMES missing from mcp-core')
 }
 
-console.log('OK: deno-edge-smoke verifyWebhook + MCP_TOOL_NAMES')
+// Sync edge surfaces. The webhook above awaited WASM warm-up, so these route
+// through the installed WASM sync dispatch (Step 38R-c/d) — a throw here means
+// the edge install / initSync wiring is broken.
+const state = classifyPaywallState(null)
+if (!state || state.kind !== 'upgrade_required') {
+  throw new Error(`classifyPaywallState returned unexpected value: ${JSON.stringify(state)}`)
+}
+
+const gate = buildPaywallGate('prod_smoke', {
+  remaining: 0,
+  withinLimits: false,
+  plan: '',
+  checkoutUrl: 'https://checkout.example/smoke',
+})
+if (gate.product !== 'prod_smoke' || gate.kind !== 'payment_required') {
+  throw new Error(`buildPaywallGate returned unexpected gate: ${JSON.stringify(gate)}`)
+}
+
+// mcp-core sync dispatch (ambient WASM API published by the edge entry).
+const toolTable = getMcpToolNamesTable()
+if (!toolTable || Object.keys(toolTable).length !== toolCount) {
+  throw new Error('getMcpToolNamesTable did not match MCP_TOOL_NAMES')
+}
+
+console.log('OK: deno-edge-smoke verifyWebhook + sync edge surfaces + MCP_TOOL_NAMES')
 console.log(`  event.id=${event.id}`)
+console.log(`  paywall.state=${state.kind}`)
+console.log(`  gate.kind=${gate.kind}`)
 console.log(`  MCP_TOOL_NAMES.keys=${toolCount}`)

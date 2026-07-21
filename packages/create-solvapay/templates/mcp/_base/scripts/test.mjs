@@ -69,13 +69,11 @@ async function main() {
   const { spec } = await loadSpec(args.specPath)
   const operations = listOperations(spec)
 
-  // Anonymous `tools/list` is gated when the worker uses the SDK default
-  // `requireAuth: true`. The well-formed challenge response is the same
-  // signal `verify.mjs` treats as a pass — here we surface it as a
-  // structured `overall: "skipped"` so the human sees a one-line reason
-  // instead of a stack trace and knows to either pass a bearer token
-  // via `--credentials-file` or temporarily flip the worker to
-  // `requireAuth: false`.
+  // Anonymous `tools/list` is open under the SDK default `requireAuth:
+  // true` (only `tools/call` is gated). A 401 here usually means an
+  // outdated worker still gating discovery, or a missing/expired bearer
+  // when probing a fully-private origin. Soft-skip with a structured
+  // reason so the human knows to redeploy or pass `--credentials-file`.
   let exposedTools
   try {
     exposedTools = new Set((await listTools(base, rpcOptions)).map(t => t.name))
@@ -90,7 +88,7 @@ async function main() {
           overall: 'skipped',
           reason: bearerToken
             ? 'worker rejected bearer token; credentials may be expired — re-run `mcpjam oauth login`'
-            : 'worker requires bearer auth; pass `--credentials-file <path>` from `mcpjam oauth login --credentials-out`',
+            : 'worker gated tools/list (discovery should be anonymous); redeploy with a current @solvapay/mcp, or pass `--credentials-file <path>`',
           wwwAuthenticate: challenge,
         }
         process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`)

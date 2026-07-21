@@ -100,8 +100,11 @@ describe('createSolvaPayClient - createTopupPaymentIntent', () => {
   })
 
   it('throws SolvaPayError on non-ok response', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('Bad Request: amount must be positive', { status: 400 }),
+    // Two rejection assertions below → each awaits a fresh Response (a Response
+    // body can only be read once, and mockResolvedValueOnce would exhaust after
+    // the first call and fall through to real fetch).
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () => new Response('Bad Request: amount must be positive', { status: 400 }),
     )
 
     const client = createSolvaPayClient({ apiKey, apiBaseUrl: baseUrl })

@@ -12,10 +12,14 @@ export default defineConfig([
     shims: true,
     // Native binding stays external so the Node bundle does not embed it;
     // `node:module` is needed for the sync createRequire loader in native.ts.
+    // `@solvapay/server-wasm` stays external too: client.ts dynamic-imports
+    // `./wasm` (edge adapter) which dynamic-imports the WASM package — keeping
+    // it external prevents the Node bundle from embedding the `.wasm` glue.
     external: [
       '@solvapay/core',
       '@solvapay/auth',
       '@solvapay/server-native',
+      '@solvapay/server-wasm',
       'node:module',
       'zod',
       'jose',

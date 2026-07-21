@@ -7,12 +7,39 @@
  * Automatically selected when running in edge runtimes (Vercel Edge, Cloudflare Workers, Deno, etc.)
  */
 
-import { SolvaPayError } from '@solvapay/core'
+import { installNativeCoreApi, SolvaPayError } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
+import { installMcpAdapterNative } from './adapters/mcp'
+import { installNativeDecisionApi } from './native-decisions'
+import type { PaywallStructuredContent, PaywallToolResult } from './types'
 import {
+  callWasmSync,
+  publishWasmSyncApi,
+  resolveEdgeImpl,
   resolveEdgeWebhookImpl,
   verifyWebhookWasm,
-} from './webhook-wasm'
+  warmWasm,
+} from './wasm'
+
+// Install WASM sync dispatch for the edge graph (Deno / Workers / edge-light).
+// The install is the gate — `resolveEdgeImpl` carries the `SOLVAPAY_IMPL`
+// rollback, so `SOLVAPAY_IMPL=ts` keeps every surface on TypeScript. Node never
+// loads this module (it installs napi dispatch via `index.ts`).
+installNativeDecisionApi({ callNativeSync: callWasmSync, resolveImpl: resolveEdgeImpl })
+installNativeCoreApi({ callNativeSync: callWasmSync, resolveImpl: resolveEdgeImpl })
+installMcpAdapterNative({
+  formatGate: (gate: PaywallStructuredContent): PaywallToolResult | null => {
+    if (resolveEdgeImpl('mcp') !== 'rust') return null
+    return callWasmSync(
+      'paywallToolResult',
+      JSON.stringify({ message: gate.message, structuredContent: gate }),
+    ) as PaywallToolResult
+  },
+})
+// Ambient registry for mcp-core (Deno resolves it to the edge graph too).
+publishWasmSyncApi()
+// Warm the module so sync surfaces can synchronously init on first use.
+warmWasm()
 
 // Re-export the main client which is already edge-compatible (uses fetch)
 export { createSolvaPayClient } from './client'

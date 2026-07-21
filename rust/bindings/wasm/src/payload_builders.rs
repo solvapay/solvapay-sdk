@@ -1,0 +1,510 @@
+//! Sync JSON-envelope wasm-bindgen exports for core + MCP payload builders
+//! (Step 38R-d / 38R-e).
+//!
+//! Mirror of `rust/bindings/node/src/payload_builders.rs`. The public-safe
+//! subset (business-details / credit-display / seller-identity) compiles under
+//! **both** profiles; the MCP payload / descriptor subset is `edge`-only so the
+//! browser bundle never ships secret-adjacent server surface.
+
+use serde_json::Value;
+use solvapay_core::{
+    credits_to_display_minor_units, derive_tax_id_type, get_business_country_options,
+    get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
+    get_tax_id_helper_text, is_zero_decimal_currency, minor_units_per_major,
+    resolve_seller_identity_display, resolve_tax_behavior,
+    seller_tax_identifier_display_label_by_type, validate_business_details, BusinessDetailsInput,
+    CreditsToDisplayInput, SdkError, SellerIdentityInput,
+};
+use wasm_bindgen::prelude::*;
+
+use crate::args::{args_map, optional_string, require_f64, require_string, to_value};
+use crate::error::run_envelope_sync;
+
+// --- business-details (public-safe) ---
+
+/// Binding for `validateBusinessDetails`.
+#[wasm_bindgen(js_name = "validateBusinessDetails")]
+pub fn validate_business_details_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let input: BusinessDetailsInput = serde_json::from_str(&args_json).map_err(|err| {
+            SdkError::transport(format!("invalid BusinessDetailsInput: {err}"), false)
+        })?;
+        to_value(&validate_business_details(&input))
+    })
+}
+
+/// Binding for `deriveTaxIdType`.
+#[wasm_bindgen(js_name = "deriveTaxIdType")]
+pub fn derive_tax_id_type_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        match derive_tax_id_type(&country) {
+            Some(tax_type) => to_value(&tax_type),
+            None => Err(SdkError::transport(
+                format!("unsupported country: {country}"),
+                false,
+            )),
+        }
+    })
+}
+
+/// Binding for `resolveTaxBehavior`.
+#[wasm_bindgen(js_name = "resolveTaxBehavior")]
+pub fn resolve_tax_behavior_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let behavior = require_string(&args, "behavior")?;
+        let currency = require_string(&args, "currency")?;
+        match resolve_tax_behavior(&behavior, &currency) {
+            Some(resolved) => Ok(Value::String(resolved.to_owned())),
+            None => Err(SdkError::transport(
+                format!("unsupported tax behavior: {behavior}"),
+                false,
+            )),
+        }
+    })
+}
+
+/// Binding for `getTaxIdExample`.
+#[wasm_bindgen(js_name = "getTaxIdExample")]
+pub fn get_tax_id_example_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        match get_tax_id_example(&country) {
+            Some(example) => Ok(Value::String(example.to_owned())),
+            None => Err(SdkError::transport(
+                format!("unsupported country: {country}"),
+                false,
+            )),
+        }
+    })
+}
+
+/// Binding for `getTaxIdFieldLabel`.
+#[wasm_bindgen(js_name = "getTaxIdFieldLabel")]
+pub fn get_tax_id_field_label_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        match get_tax_id_field_label(&country) {
+            Some(label) => Ok(Value::String(label.to_owned())),
+            None => Err(SdkError::transport(
+                format!("unsupported country: {country}"),
+                false,
+            )),
+        }
+    })
+}
+
+/// Binding for `getTaxIdHelperText`.
+#[wasm_bindgen(js_name = "getTaxIdHelperText")]
+pub fn get_tax_id_helper_text_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = require_string(&args, "country")?;
+        match get_tax_id_helper_text(&country) {
+            Some(text) => Ok(Value::String(text)),
+            None => Err(SdkError::transport(
+                format!("unsupported country: {country}"),
+                false,
+            )),
+        }
+    })
+}
+
+/// Binding for `getBusinessCountryOptions`.
+#[wasm_bindgen(js_name = "getBusinessCountryOptions")]
+pub fn get_business_country_options_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        to_value(&get_business_country_options())
+    })
+}
+
+// --- credit-display (public-safe) ---
+
+/// Binding for `minorUnitsPerMajor`.
+#[wasm_bindgen(js_name = "minorUnitsPerMajor")]
+pub fn minor_units_per_major_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let currency = require_string(&args, "currency")?;
+        Ok(Value::from(minor_units_per_major(&currency)))
+    })
+}
+
+/// Binding for `isZeroDecimalCurrency`.
+#[wasm_bindgen(js_name = "isZeroDecimalCurrency")]
+pub fn is_zero_decimal_currency_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let currency = require_string(&args, "currency")?;
+        Ok(Value::Bool(is_zero_decimal_currency(&currency)))
+    })
+}
+
+/// Binding for `creditsToDisplayMinorUnits` (`null` when undefined).
+#[wasm_bindgen(js_name = "creditsToDisplayMinorUnits")]
+pub fn credits_to_display_minor_units_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = CreditsToDisplayInput {
+            credits: require_f64(&args, "credits")?,
+            credits_per_minor_unit: require_f64(&args, "creditsPerMinorUnit")?,
+            display_exchange_rate: require_f64(&args, "displayExchangeRate")?,
+            display_currency: require_string(&args, "displayCurrency")?,
+        };
+        match credits_to_display_minor_units(&input) {
+            Some(n) => Ok(Value::from(n)),
+            None => Ok(Value::Null),
+        }
+    })
+}
+
+// --- seller-identity (public-safe) ---
+
+/// Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
+#[wasm_bindgen(js_name = "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE")]
+pub fn seller_tax_identifier_display_label_by_type_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        let mut map = serde_json::Map::new();
+        for (key, label) in seller_tax_identifier_display_label_by_type() {
+            map.insert((*key).to_owned(), Value::String((*label).to_owned()));
+        }
+        Ok(Value::Object(map))
+    })
+}
+
+/// Binding for `getSellerTaxIdentifierDisplayLabel`.
+#[wasm_bindgen(js_name = "getSellerTaxIdentifierDisplayLabel")]
+pub fn get_seller_tax_identifier_display_label_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let country = optional_string(&args, "country")?;
+        Ok(Value::String(get_seller_tax_identifier_display_label(
+            country.as_deref(),
+        )))
+    })
+}
+
+/// Binding for `resolveSellerIdentityDisplay`.
+#[wasm_bindgen(js_name = "resolveSellerIdentityDisplay")]
+pub fn resolve_seller_identity_display_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = SellerIdentityInput {
+            country: optional_string(&args, "country")?,
+            vat_number: optional_string(&args, "vatNumber")?,
+            tax_id: optional_string(&args, "taxId")?,
+            company_number: optional_string(&args, "companyNumber")?,
+        };
+        to_value(&resolve_seller_identity_display(&input))
+    })
+}
+
+// --- MCP payload / descriptors (edge-only) ---
+
+/// Edge-only MCP payload / descriptor envelope bindings (server surface).
+///
+/// Excluded from the browser profile so the public bundle never ships
+/// secret-adjacent MCP formatting symbols (§7.8).
+#[cfg(feature = "edge")]
+mod mcp_payload {
+    use serde_json::{Map, Value};
+    use solvapay_core::{
+        assert_response_result, build_prompt_descriptor_metadata, build_prompt_user_message,
+        build_tool_descriptor_metadata, derive_icons, make_response_result, mcp_tool_names_json,
+        mcp_view_maps, paywall_tool_result, validate_public_base_url,
+        BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, MerchantBranding,
+        PaywallGate, SdkError,
+    };
+    use wasm_bindgen::prelude::*;
+
+    use crate::args::{args_map, require_string, require_typed, to_value};
+    use crate::error::run_envelope_sync;
+
+    /// Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
+    #[wasm_bindgen(js_name = "paywallToolResult")]
+    pub fn paywall_tool_result_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let message = require_string(&args, "message")?;
+            let gate: PaywallGate = require_typed(&args, "structuredContent")?;
+            to_value(&paywall_tool_result(&message, &gate))
+        })
+    }
+
+    /// Binding for `makeResponseResult`.
+    #[wasm_bindgen(js_name = "makeResponseResult")]
+    pub fn make_response_result_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let data = args
+                .get("data")
+                .cloned()
+                .ok_or_else(|| SdkError::transport("args.data is required".to_owned(), false))?;
+
+            let options = match args.get("options") {
+                None => None,
+                Some(Value::Null) => {
+                    return Err(SdkError::transport(
+                        "args.options must be an object when present".to_owned(),
+                        false,
+                    ));
+                }
+                Some(value) if value.is_object() => Some(value.clone()),
+                Some(_) => {
+                    return Err(SdkError::transport(
+                        "args.options must be an object when present".to_owned(),
+                        false,
+                    ));
+                }
+            };
+
+            let emitted_blocks = match args.get("emittedBlocks") {
+                None => Vec::new(),
+                Some(Value::Array(items)) => items.clone(),
+                Some(_) => {
+                    return Err(SdkError::transport(
+                        "args.emittedBlocks must be an array when present".to_owned(),
+                        false,
+                    ));
+                }
+            };
+
+            to_value(&make_response_result(data, options, emitted_blocks))
+        })
+    }
+
+    /// Binding for `assertResponseResult` — brand failures are Transport errors
+    /// (TS wrapper rethrows as plain `Error` for fixture name parity).
+    #[wasm_bindgen(js_name = "assertResponseResult")]
+    pub fn assert_response_result_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let value = args
+                .get("value")
+                .cloned()
+                .ok_or_else(|| SdkError::transport("args.value is required".to_owned(), false))?;
+            match assert_response_result(&value) {
+                Ok(v) => Ok(v),
+                Err(message) => Err(SdkError::transport(message.to_owned(), false)),
+            }
+        })
+    }
+
+    /// Binding for `MCP_TOOL_NAMES`.
+    #[wasm_bindgen(js_name = "MCP_TOOL_NAMES")]
+    pub fn mcp_tool_names_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let _args = args_map(&args_json)?;
+            Ok(mcp_tool_names_json())
+        })
+    }
+
+    /// Binding for `mcpViewMaps`.
+    #[wasm_bindgen(js_name = "mcpViewMaps")]
+    pub fn mcp_view_maps_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let _args = args_map(&args_json)?;
+            to_value(&mcp_view_maps())
+        })
+    }
+
+    /// Binding for `deriveIcons` — absent/empty branding → JSON `null`.
+    #[wasm_bindgen(js_name = "deriveIcons")]
+    pub fn derive_icons_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let branding = optional_branding(&args)?;
+            match derive_icons(branding.as_ref()) {
+                None => Ok(Value::Null),
+                Some(icons) => to_value(&icons),
+            }
+        })
+    }
+
+    /// Binding for `buildToolDescriptorMetadata`.
+    #[wasm_bindgen(js_name = "buildToolDescriptorMetadata")]
+    pub fn build_tool_descriptor_metadata_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let resource_uri = require_string(&args, "resourceUri")?;
+            let views = optional_views(&args)?;
+            let branding = optional_branding(&args)?;
+            let options = BuildToolDescriptorMetadataOptions {
+                resource_uri,
+                views,
+                branding,
+            };
+            to_value(&build_tool_descriptor_metadata(&options))
+        })
+    }
+
+    /// Binding for `buildPromptDescriptorMetadata`.
+    #[wasm_bindgen(js_name = "buildPromptDescriptorMetadata")]
+    pub fn build_prompt_descriptor_metadata_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let views = optional_views(&args)?;
+            let options = BuildPromptDescriptorMetadataOptions { views };
+            to_value(&build_prompt_descriptor_metadata(&options))
+        })
+    }
+
+    /// Binding for `buildPromptUserMessage`.
+    #[wasm_bindgen(js_name = "buildPromptUserMessage")]
+    pub fn build_prompt_user_message_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let prompt_name = require_string(&args, "promptName")?;
+            let nested_args = match args.get("args") {
+                Some(Value::Object(_)) => args["args"].clone(),
+                Some(_) => {
+                    return Err(SdkError::transport(
+                        "args.args must be an object".to_owned(),
+                        false,
+                    ));
+                }
+                None => {
+                    return Err(SdkError::transport(
+                        "args.args is required".to_owned(),
+                        false,
+                    ));
+                }
+            };
+            to_value(&build_prompt_user_message(&prompt_name, &nested_args))
+        })
+    }
+
+    /// Binding for `validatePublicBaseUrl` — invalid → error message; valid → `null`.
+    #[wasm_bindgen(js_name = "validatePublicBaseUrl")]
+    pub fn validate_public_base_url_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let public_base_url = require_string(&args, "publicBaseUrl")?;
+            match validate_public_base_url(&public_base_url) {
+                None => Ok(Value::Null),
+                Some(message) => Ok(Value::String(message.to_owned())),
+            }
+        })
+    }
+
+    /// Optional `args.views` string array.
+    fn optional_views(args: &Map<String, Value>) -> Result<Option<Vec<String>>, SdkError> {
+        match args.get("views") {
+            None => Ok(None),
+            Some(Value::Array(items)) => {
+                let mut views = Vec::with_capacity(items.len());
+                for item in items {
+                    match item.as_str() {
+                        Some(s) => views.push(s.to_owned()),
+                        None => {
+                            return Err(SdkError::transport(
+                                "args.views must be an array of strings".to_owned(),
+                                false,
+                            ));
+                        }
+                    }
+                }
+                Ok(Some(views))
+            }
+            Some(_) => Err(SdkError::transport(
+                "args.views must be an array when present".to_owned(),
+                false,
+            )),
+        }
+    }
+
+    /// Optional `args.branding` object → [`MerchantBranding`].
+    fn optional_branding(args: &Map<String, Value>) -> Result<Option<MerchantBranding>, SdkError> {
+        match args.get("branding") {
+            None | Some(Value::Null) => Ok(None),
+            Some(Value::Object(map)) => Ok(Some(MerchantBranding {
+                brand_name: optional_string_field(map, "brandName")?,
+                icon_url: optional_string_field(map, "iconUrl")?,
+                logo_url: optional_string_field(map, "logoUrl")?,
+            })),
+            Some(_) => Err(SdkError::transport(
+                "args.branding must be an object when present".to_owned(),
+                false,
+            )),
+        }
+    }
+
+    /// Optional string field on a branding object (`null` ≡ absent).
+    fn optional_string_field(
+        map: &Map<String, Value>,
+        key: &str,
+    ) -> Result<Option<String>, SdkError> {
+        match map.get(key) {
+            None | Some(Value::Null) => Ok(None),
+            Some(Value::String(s)) => Ok(Some(s.clone())),
+            Some(_) => Err(SdkError::transport(
+                format!("args.branding.{key} must be a string when present"),
+                false,
+            )),
+        }
+    }
+}
+
+#[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::missing_docs_in_private_items,
+    missing_docs
+)]
+mod tests {
+    use super::{credits_to_display_minor_units_binding, validate_business_details_binding};
+    use serde_json::Value;
+
+    fn parse_envelope(json: &str) -> Value {
+        serde_json::from_str(json).expect("envelope must be JSON")
+    }
+
+    #[test]
+    fn validate_business_details_success_envelope() {
+        let env = parse_envelope(&validate_business_details_binding(
+            r#"{"isBusiness":false}"#.to_owned(),
+        ));
+        assert_eq!(env["ok"], true);
+        assert_eq!(env["value"]["success"], true);
+    }
+
+    #[test]
+    fn credits_to_display_null_when_rate_non_positive() {
+        let env = parse_envelope(&credits_to_display_minor_units_binding(
+            r#"{"credits":100,"creditsPerMinorUnit":0,"displayExchangeRate":1,"displayCurrency":"USD"}"#
+                .to_owned(),
+        ));
+        assert_eq!(env["ok"], true);
+        assert!(env["value"].is_null());
+    }
+
+    #[cfg(feature = "edge")]
+    #[test]
+    fn paywall_tool_result_envelope_shape() {
+        use super::mcp_payload::paywall_tool_result_binding;
+        let env = parse_envelope(&paywall_tool_result_binding(
+            r#"{
+              "message":"Please upgrade",
+              "structuredContent":{
+                "kind":"payment_required",
+                "product":"prod_1",
+                "checkoutUrl":"https://pay.example/x",
+                "message":"Please upgrade"
+              }
+            }"#
+            .to_owned(),
+        ));
+        assert_eq!(env["ok"], true);
+        assert_eq!(env["value"]["isError"], false);
+        assert_eq!(env["value"]["content"][0]["text"], "Please upgrade");
+        assert_eq!(env["value"]["structuredContent"]["product"], "prod_1");
+    }
+}

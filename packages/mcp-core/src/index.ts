@@ -210,3 +210,6 @@ export {
   getCustomerRefFromJwtPayload,
 } from './bearer'
 export type { McpBearerCustomerRefOptions } from './bearer'
+
+/** True for MCP methods that must not require bearer auth (everything except tools/call). */
+export { isFreeMcpMethod } from './is-free-mcp-method'

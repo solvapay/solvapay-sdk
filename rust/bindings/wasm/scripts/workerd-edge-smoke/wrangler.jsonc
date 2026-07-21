@@ -1,0 +1,9 @@
+{
+  "name": "solvapay-edge-wasm-smoke",
+  "main": "worker.mjs",
+  "compatibility_date": "2025-06-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "SOLVAPAY_IMPL": "rust"
+  }
+}

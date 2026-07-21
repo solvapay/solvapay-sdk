@@ -69,23 +69,14 @@ export function resetNativeCoreApiForTests(): void {
   installed = null
 }
 
-function shouldAttemptNative(): boolean {
-  try {
-    return (
-      typeof process !== 'undefined' &&
-      typeof process.versions === 'object' &&
-      process.versions != null &&
-      typeof process.versions.node === 'string' &&
-      process.env.SOLVAPAY_IMPL !== 'ts'
-    )
-  } catch {
-    return false
-  }
-}
-
 function dispatchSync<T>(fn: NativeCoreSyncMethod, args: unknown, tsFallback: () => T): T {
-  if (!shouldAttemptNative() || installed === null) return tsFallback()
-  if (installed.resolveImpl('helper') !== 'rust') return tsFallback()
+  // The install is the gate: Node installs napi dispatch (`@solvapay/server`
+  // index), edge installs WASM dispatch (`@solvapay/server` edge). Uninstalled
+  // (browser / React / no warm-up) → TS. `resolveImpl` carries the
+  // `SOLVAPAY_IMPL` rollback per runtime.
+  if (installed === null || installed.resolveImpl('helper') !== 'rust') {
+    return tsFallback()
+  }
   return installed.callNativeSync(fn, JSON.stringify(args)) as T
 }
 

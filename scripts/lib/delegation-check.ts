@@ -1,9 +1,17 @@
 /**
- * Node-binding delegation inventory gate (Step 37R-e).
+ * Binding delegation inventory gate (Step 37R-e; edge markers added Step 38R-f).
  *
  * Enumerates value exports of `@solvapay/server` + `@solvapay/core`, resolves
  * each symbol's defining module (following re-export chains), and requires a
  * delegation marker — or an allowlist entry with a permitted reason.
+ *
+ * A definition file counts as delegating when it routes through either binding:
+ * the Node napi path (`dispatchClient` / `dispatchSync` / `callNative` /
+ * `callNativeSync` / `verifyWebhookNative`) or the edge WASM path
+ * (`callWasm` / `callWasmSync` / `verifyWebhookWasm`). Most shared definition
+ * files (e.g. `client.ts`, `native-decisions.ts`) carry the dispatch marker that
+ * fans out to both, so this list is a superset that also recognizes files that
+ * only reach the WASM binding directly.
  */
 
 import path from 'node:path'
@@ -16,6 +24,10 @@ export const DELEGATION_MARKERS = [
   'callNative',
   'callNativeSync',
   'verifyWebhookNative',
+  // Edge WASM binding delegation (Step 38R-f).
+  'callWasm',
+  'callWasmSync',
+  'verifyWebhookWasm',
 ] as const
 
 export const PERMITTED_ALLOWLIST_REASONS = [

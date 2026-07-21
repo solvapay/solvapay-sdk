@@ -12,7 +12,25 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const pkgRoot = resolve(__dirname, '..')
 const rustRoot = resolve(pkgRoot, '../..')
 
-const BROWSER_SEMANTIC_ALLOWLIST = new Set(['wasmVersion'])
+const BROWSER_SEMANTIC_ALLOWLIST = new Set([
+  'wasmVersion',
+  // business-details (public-safe, Step 38R-e)
+  'validateBusinessDetails',
+  'deriveTaxIdType',
+  'resolveTaxBehavior',
+  'getTaxIdExample',
+  'getTaxIdFieldLabel',
+  'getTaxIdHelperText',
+  'getBusinessCountryOptions',
+  // credit-display (public-safe)
+  'creditsToDisplayMinorUnits',
+  'isZeroDecimalCurrency',
+  'minorUnitsPerMajor',
+  // seller-identity (public-safe)
+  'resolveSellerIdentityDisplay',
+  'getSellerTaxIdentifierDisplayLabel',
+  'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE',
+])
 const FORBIDDEN_SEMANTIC = [
   'verifyWebhook',
   'verify_webhook',

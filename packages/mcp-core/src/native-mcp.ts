@@ -97,24 +97,12 @@ function getApi(): NativeMcpApi | null {
   return installed ?? readAmbientApi()
 }
 
-function shouldAttemptNative(): boolean {
-  try {
-    return (
-      typeof process !== 'undefined' &&
-      typeof process.versions === 'object' &&
-      process.versions != null &&
-      typeof process.versions.node === 'string' &&
-      process.env.SOLVAPAY_IMPL !== 'ts'
-    )
-  } catch {
-    return false
-  }
-}
-
 function dispatchSync<T>(fn: NativeMcpSyncMethod, args: unknown, tsFallback: () => T): T {
+  // The install (or ambient publish) is the gate: Node publishes napi dispatch
+  // (`@solvapay/server` index), edge publishes WASM dispatch (`@solvapay/server`
+  // edge). Uninstalled → TS. `resolveImpl` carries the `SOLVAPAY_IMPL` rollback.
   const api = getApi()
-  if (!shouldAttemptNative() || api === null) return tsFallback()
-  if (api.resolveImpl('mcp') !== 'rust') return tsFallback()
+  if (api === null || api.resolveImpl('mcp') !== 'rust') return tsFallback()
   return api.callNativeSync(fn, JSON.stringify(args)) as T
 }
 
@@ -127,7 +115,7 @@ export async function paywallToolResult(
   ctx: PaywallToolResultContext = {},
 ): Promise<PaywallToolResult> {
   const api = getApi()
-  if (!shouldAttemptNative() || api === null || api.resolveImpl('mcp') !== 'rust') {
+  if (api === null || api.resolveImpl('mcp') !== 'rust') {
     return paywallToolResultTs(errOrGate, ctx)
   }
 
@@ -160,7 +148,7 @@ export function makeResponseResult<TData>(
 
 export function assertResponseResult(value: unknown): ResponseResult<unknown> {
   const api = getApi()
-  if (!shouldAttemptNative() || api === null || api.resolveImpl('mcp') !== 'rust') {
+  if (api === null || api.resolveImpl('mcp') !== 'rust') {
     return assertResponseResultTs(value)
   }
   try {

@@ -1,17 +1,16 @@
-//! Host-native async [`NativeClient`] (Step 37R-a/b).
+//! Edge async [`WasmClient`] over [`FetchTransport`] (Step 38R-a/b).
 //!
-//! Compiled out of `wasm32` / WASI builds — those targets keep sync
-//! `verifyWebhook` + decision / payload-builder envelopes only. Reqwest +
-//! napi `tokio_rt` async client methods are host-native until a WASI
-//! transport lands.
+//! Edge-only mirror of `rust/bindings/node/src/native_client.rs`. Wraps the
+//! typed [`SolvaPayClient`] (via [`ClientShell`] + [`FetchTransport`]) and
+//! exposes all Groups A+B+C methods as async functions that take one JSON-args
+//! string and return one envelope string
+//! (`{"ok":true,"value":…}` | `{"ok":false,"error":…}`).
 
-#![cfg(not(target_arch = "wasm32"))]
+#![cfg(all(feature = "edge", target_arch = "wasm32"))]
 
+use std::rc::Rc;
 use std::sync::Arc;
 
-use crate::error::{internal_error_envelope, parse_args_json, run_envelope};
-use napi::bindgen_prelude::*;
-use napi_derive::napi;
 use serde_json::{Map, Value};
 use solvapay_core::SdkError;
 use solvapay_dto::{
@@ -24,59 +23,61 @@ use solvapay_dto::{
     ReactivatePurchaseParams, SaveAutoRechargeParams, TrackUsageBulkRequest, TrackUsageRequest,
     UpdateCustomerParams, UpdatePlanRequest, UpdateProductRequest,
 };
-use solvapay_transport::{ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient};
+use solvapay_transport::{ClientShell, FetchTransport, SharedTransport, SolvaPayClient};
+use wasm_bindgen::prelude::*;
 
-/// Builds the typed Rust client (pure; used by the napi constructor + tests).
+use crate::error::{internal_error_envelope, parse_args_json, run_envelope};
+
+/// Builds the typed Rust client over [`FetchTransport`] (pure; used by the
+/// wasm-bindgen constructor + tests).
 ///
-/// # Errors
-///
-/// Returns [`SdkError::Transport`] when the reqwest client cannot be built.
+/// Construction is infallible on wasm32 — [`FetchTransport::new`] cannot fail.
+/// The client is held in an [`Rc`] (not [`Arc`]) because the fetch-backed
+/// [`SolvaPayClient`] is single-threaded and `!Send`/`!Sync` on wasm32.
 pub(crate) fn build_solvapay_client(
     api_key: String,
     api_base_url: Option<String>,
-) -> std::result::Result<Arc<SolvaPayClient>, SdkError> {
-    let transport = ReqwestTransport::new()?;
-    let transport: SharedTransport = Arc::new(transport);
+) -> Rc<SolvaPayClient> {
+    let transport: SharedTransport = Arc::new(FetchTransport::new());
     let mut shell = ClientShell::new(transport, api_key);
     if let Some(base) = api_base_url {
         shell = shell.with_base_url(base);
     }
-    Ok(Arc::new(SolvaPayClient::new(shell)))
+    Rc::new(SolvaPayClient::new(shell))
 }
 
-/// napi client wrapping Rust [`SolvaPayClient`] over [`ReqwestTransport`].
+/// wasm-bindgen client wrapping Rust [`SolvaPayClient`] over [`FetchTransport`].
 ///
-/// Every method takes one JSON-args string and returns one envelope string
-/// (`{"ok":true,"value":…}` | `{"ok":false,"error":…}`).
-#[napi]
-pub struct NativeClient {
-    /// Shared typed client (Arc so `&self` async methods can clone cheaply).
-    client: Arc<SolvaPayClient>,
+/// Every method takes one JSON-args string and returns a `Promise<string>`
+/// resolving to one envelope string.
+#[wasm_bindgen(js_name = WasmClient)]
+pub struct WasmClient {
+    /// Shared typed client (Rc so `&self` async methods can clone cheaply on
+    /// the single-threaded wasm32 event loop).
+    client: Rc<SolvaPayClient>,
 }
 
-#[napi]
-impl NativeClient {
-    /// Constructs a client over `ReqwestTransport` + `ClientShell`.
+#[wasm_bindgen(js_class = WasmClient)]
+impl WasmClient {
+    /// Constructs a client over `FetchTransport` + `ClientShell`.
     ///
     /// # Arguments
     ///
     /// * `api_key` - Bearer token.
     /// * `api_base_url` - Optional origin; defaults to `https://api.solvapay.com`.
-    ///
-    /// # Errors
-    ///
-    /// Returns a napi error when the reqwest client cannot be built.
-    #[napi(constructor)]
-    pub fn new(api_key: String, api_base_url: Option<String>) -> Result<Self> {
-        build_solvapay_client(api_key, api_base_url)
-            .map(|client| Self { client })
-            .map_err(|err| Error::from_reason(err.message().to_owned()))
+    #[wasm_bindgen(constructor)]
+    pub fn new(api_key: String, api_base_url: Option<String>) -> Self {
+        Self {
+            client: build_solvapay_client(api_key, api_base_url),
+        }
     }
 
+    // --- Group A -------------------------------------------------------------
+
     /// `POST /v1/sdk/customers`
-    #[napi(js_name = "createCustomer")]
+    #[wasm_bindgen(js_name = "createCustomer")]
     pub async fn create_customer(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: CreateCustomerRequest = parse_args_json(&args_json)?;
             client.create_customer(params).await
@@ -87,9 +88,9 @@ impl NativeClient {
     /// `PATCH /v1/sdk/customers/{customerRef}`
     ///
     /// Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
-    #[napi(js_name = "updateCustomer")]
+    #[wasm_bindgen(js_name = "updateCustomer")]
     pub async fn update_customer(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let (refs, body) = split_path_refs(&args_json, &["customerRef"])?;
             let params: UpdateCustomerParams = serde_json::from_value(body).map_err(|err| {
@@ -101,9 +102,9 @@ impl NativeClient {
     }
 
     /// Customer lookup by ref / externalRef / email.
-    #[napi(js_name = "getCustomer")]
+    #[wasm_bindgen(js_name = "getCustomer")]
     pub async fn get_customer(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: GetCustomerParams = parse_args_json(&args_json)?;
             client.get_customer(params).await
@@ -112,9 +113,9 @@ impl NativeClient {
     }
 
     /// Grant credits to a customer.
-    #[napi(js_name = "assignCredits")]
+    #[wasm_bindgen(js_name = "assignCredits")]
     pub async fn assign_credits(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: AssignCreditsRequest = parse_args_json(&args_json)?;
             client.assign_credits(params).await
@@ -123,9 +124,9 @@ impl NativeClient {
     }
 
     /// Credit balance for a customer.
-    #[napi(js_name = "getCustomerBalance")]
+    #[wasm_bindgen(js_name = "getCustomerBalance")]
     pub async fn get_customer_balance(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: GetCustomerBalanceParams = parse_args_json(&args_json)?;
             client.get_customer_balance(params).await
@@ -134,9 +135,9 @@ impl NativeClient {
     }
 
     /// User info for a customer/product pair.
-    #[napi(js_name = "getUserInfo")]
+    #[wasm_bindgen(js_name = "getUserInfo")]
     pub async fn get_user_info(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: GetUserInfoParams = parse_args_json(&args_json)?;
             client.get_user_info(params).await
@@ -145,9 +146,9 @@ impl NativeClient {
     }
 
     /// Hosted checkout session.
-    #[napi(js_name = "createCheckoutSession")]
+    #[wasm_bindgen(js_name = "createCheckoutSession")]
     pub async fn create_checkout_session(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: CreateCheckoutSessionRequest = parse_args_json(&args_json)?;
             client.create_checkout_session(params).await
@@ -156,9 +157,9 @@ impl NativeClient {
     }
 
     /// Customer portal session.
-    #[napi(js_name = "createCustomerSession")]
+    #[wasm_bindgen(js_name = "createCustomerSession")]
     pub async fn create_customer_session(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: CreateCustomerSessionRequest = parse_args_json(&args_json)?;
             client.create_customer_session(params).await
@@ -167,25 +168,25 @@ impl NativeClient {
     }
 
     /// Merchant profile (`args_json` ignored; pass `"{}"`).
-    #[napi(js_name = "getMerchant")]
+    #[wasm_bindgen(js_name = "getMerchant")]
     pub async fn get_merchant(&self, _args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move { client.get_merchant().await }).await
     }
 
     /// Platform config (`args_json` ignored; pass `"{}"`).
-    #[napi(js_name = "getPlatformConfig")]
+    #[wasm_bindgen(js_name = "getPlatformConfig")]
     pub async fn get_platform_config(&self, _args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move { client.get_platform_config().await }).await
     }
 
     // --- Group B -------------------------------------------------------------
 
     /// `POST /v1/sdk/payment-intents` (plan checkout).
-    #[napi(js_name = "createPaymentIntent")]
+    #[wasm_bindgen(js_name = "createPaymentIntent")]
     pub async fn create_payment_intent(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: CreatePaymentIntentParams = parse_args_json(&args_json)?;
             client.create_payment_intent(params).await
@@ -194,9 +195,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/payment-intents` (credit top-up).
-    #[napi(js_name = "createTopupPaymentIntent")]
+    #[wasm_bindgen(js_name = "createTopupPaymentIntent")]
     pub async fn create_topup_payment_intent(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: CreateTopupPaymentIntentParams = parse_args_json(&args_json)?;
             client.create_topup_payment_intent(params).await
@@ -205,9 +206,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/payment-intents/{id}/process`
-    #[napi(js_name = "processPaymentIntent")]
+    #[wasm_bindgen(js_name = "processPaymentIntent")]
     pub async fn process_payment_intent(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: ProcessPaymentIntentParams = parse_args_json(&args_json)?;
             client.process_payment_intent(params).await
@@ -216,9 +217,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/payment-intents/{id}/business-details`
-    #[napi(js_name = "attachBusinessDetails")]
+    #[wasm_bindgen(js_name = "attachBusinessDetails")]
     pub async fn attach_business_details(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: AttachBusinessDetailsParams = parse_args_json(&args_json)?;
             client.attach_business_details(params).await
@@ -227,9 +228,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/activate`
-    #[napi(js_name = "activatePlan")]
+    #[wasm_bindgen(js_name = "activatePlan")]
     pub async fn activate_plan(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: ActivatePlanDto = parse_args_json(&args_json)?;
             client.activate_plan(params).await
@@ -240,9 +241,9 @@ impl NativeClient {
     // --- Group C -------------------------------------------------------------
 
     /// `POST /v1/sdk/limits`
-    #[napi(js_name = "checkLimits")]
+    #[wasm_bindgen(js_name = "checkLimits")]
     pub async fn check_limits(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: CheckLimitsRequest = parse_args_json(&args_json)?;
             client.check_limits(params).await
@@ -251,9 +252,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/usages`
-    #[napi(js_name = "trackUsage")]
+    #[wasm_bindgen(js_name = "trackUsage")]
     pub async fn track_usage(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: TrackUsageRequest = parse_args_json(&args_json)?;
             client.track_usage(params).await
@@ -262,9 +263,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/usages/bulk`
-    #[napi(js_name = "trackUsageBulk")]
+    #[wasm_bindgen(js_name = "trackUsageBulk")]
     pub async fn track_usage_bulk(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: TrackUsageBulkRequest = parse_args_json(&args_json)?;
             client.track_usage_bulk(params).await
@@ -275,9 +276,9 @@ impl NativeClient {
     /// `GET /v1/sdk/products/{productRef}`
     ///
     /// Args JSON is `{ productRef }`.
-    #[napi(js_name = "getProduct")]
+    #[wasm_bindgen(js_name = "getProduct")]
     pub async fn get_product(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let (refs, _) = split_path_refs(&args_json, &["productRef"])?;
             client.get_product(&refs[0]).await
@@ -286,16 +287,16 @@ impl NativeClient {
     }
 
     /// `GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`).
-    #[napi(js_name = "listProducts")]
+    #[wasm_bindgen(js_name = "listProducts")]
     pub async fn list_products(&self, _args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move { client.list_products().await }).await
     }
 
     /// `POST /v1/sdk/products`
-    #[napi(js_name = "createProduct")]
+    #[wasm_bindgen(js_name = "createProduct")]
     pub async fn create_product(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: CreateProductRequest = parse_args_json(&args_json)?;
             client.create_product(params).await
@@ -306,9 +307,9 @@ impl NativeClient {
     /// `PUT /v1/sdk/products/{productRef}`
     ///
     /// Args JSON is `{ productRef, ...params }`.
-    #[napi(js_name = "updateProduct")]
+    #[wasm_bindgen(js_name = "updateProduct")]
     pub async fn update_product(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let (refs, body) = split_path_refs(&args_json, &["productRef"])?;
             let params: UpdateProductRequest = serde_json::from_value(body).map_err(|err| {
@@ -322,9 +323,9 @@ impl NativeClient {
     /// `DELETE /v1/sdk/products/{productRef}`
     ///
     /// Args JSON is `{ productRef }`. Success value is `null`.
-    #[napi(js_name = "deleteProduct")]
+    #[wasm_bindgen(js_name = "deleteProduct")]
     pub async fn delete_product(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let (refs, _) = split_path_refs(&args_json, &["productRef"])?;
             client.delete_product(&refs[0]).await
@@ -335,9 +336,9 @@ impl NativeClient {
     /// `POST /v1/sdk/products/{productRef}/clone`
     ///
     /// Args JSON is `{ productRef, name? }`.
-    #[napi(js_name = "cloneProduct")]
+    #[wasm_bindgen(js_name = "cloneProduct")]
     pub async fn clone_product(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let (refs, body) = split_path_refs(&args_json, &["productRef"])?;
             let overrides: CloneProductOverrides = serde_json::from_value(body).map_err(|err| {
@@ -349,9 +350,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/products/mcp/bootstrap`
-    #[napi(js_name = "bootstrapMcpProduct")]
+    #[wasm_bindgen(js_name = "bootstrapMcpProduct")]
     pub async fn bootstrap_mcp_product(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: McpBootstrapDto = parse_args_json(&args_json)?;
             client.bootstrap_mcp_product(params).await
@@ -362,9 +363,9 @@ impl NativeClient {
     /// `PUT /v1/sdk/products/{productRef}/mcp/plans`
     ///
     /// Args JSON is `{ productRef, ...params }`.
-    #[napi(js_name = "configureMcpPlans")]
+    #[wasm_bindgen(js_name = "configureMcpPlans")]
     pub async fn configure_mcp_plans(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let (refs, body) = split_path_refs(&args_json, &["productRef"])?;
             let params: ConfigureMcpPlansDto = serde_json::from_value(body).map_err(|err| {
@@ -378,9 +379,9 @@ impl NativeClient {
     /// `GET /v1/sdk/products/{productRef}/plans`
     ///
     /// Args JSON is `{ productRef }`.
-    #[napi(js_name = "listPlans")]
+    #[wasm_bindgen(js_name = "listPlans")]
     pub async fn list_plans(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let (refs, _) = split_path_refs(&args_json, &["productRef"])?;
             client.list_plans(&refs[0]).await
@@ -389,9 +390,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).
-    #[napi(js_name = "createPlan")]
+    #[wasm_bindgen(js_name = "createPlan")]
     pub async fn create_plan(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: CreatePlanParams = parse_args_json(&args_json)?;
             client.create_plan(params).await
@@ -402,9 +403,9 @@ impl NativeClient {
     /// `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
     ///
     /// Args JSON is `{ productRef, planRef, ...params }`.
-    #[napi(js_name = "updatePlan")]
+    #[wasm_bindgen(js_name = "updatePlan")]
     pub async fn update_plan(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let (refs, body) = split_path_refs(&args_json, &["productRef", "planRef"])?;
             let params: UpdatePlanRequest = serde_json::from_value(body).map_err(|err| {
@@ -418,9 +419,9 @@ impl NativeClient {
     /// `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
     ///
     /// Args JSON is `{ productRef, planRef }`. Success value is `null`.
-    #[napi(js_name = "deletePlan")]
+    #[wasm_bindgen(js_name = "deletePlan")]
     pub async fn delete_plan(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let (refs, _) = split_path_refs(&args_json, &["productRef", "planRef"])?;
             client.delete_plan(&refs[0], &refs[1]).await
@@ -429,9 +430,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/purchases/{purchaseRef}/cancel`
-    #[napi(js_name = "cancelPurchase")]
+    #[wasm_bindgen(js_name = "cancelPurchase")]
     pub async fn cancel_purchase(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: CancelPurchaseParams = parse_args_json(&args_json)?;
             client.cancel_purchase(params).await
@@ -440,9 +441,9 @@ impl NativeClient {
     }
 
     /// `POST /v1/sdk/purchases/{purchaseRef}/reactivate`
-    #[napi(js_name = "reactivatePurchase")]
+    #[wasm_bindgen(js_name = "reactivatePurchase")]
     pub async fn reactivate_purchase(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: ReactivatePurchaseParams = parse_args_json(&args_json)?;
             client.reactivate_purchase(params).await
@@ -451,9 +452,9 @@ impl NativeClient {
     }
 
     /// `GET /v1/sdk/payment-method`
-    #[napi(js_name = "getPaymentMethod")]
+    #[wasm_bindgen(js_name = "getPaymentMethod")]
     pub async fn get_payment_method(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: GetPaymentMethodParams = parse_args_json(&args_json)?;
             client.get_payment_method(params).await
@@ -462,9 +463,9 @@ impl NativeClient {
     }
 
     /// `GET /v1/sdk/auto-recharge`
-    #[napi(js_name = "getAutoRecharge")]
+    #[wasm_bindgen(js_name = "getAutoRecharge")]
     pub async fn get_auto_recharge(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: GetAutoRechargeParams = parse_args_json(&args_json)?;
             client.get_auto_recharge(params).await
@@ -473,9 +474,9 @@ impl NativeClient {
     }
 
     /// `PUT /v1/sdk/auto-recharge`
-    #[napi(js_name = "saveAutoRecharge")]
+    #[wasm_bindgen(js_name = "saveAutoRecharge")]
     pub async fn save_auto_recharge(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: SaveAutoRechargeParams = parse_args_json(&args_json)?;
             client.save_auto_recharge(params).await
@@ -484,9 +485,9 @@ impl NativeClient {
     }
 
     /// `DELETE /v1/sdk/auto-recharge`
-    #[napi(js_name = "disableAutoRecharge")]
+    #[wasm_bindgen(js_name = "disableAutoRecharge")]
     pub async fn disable_auto_recharge(&self, args_json: String) -> String {
-        let client = Arc::clone(&self.client);
+        let client = Rc::clone(&self.client);
         run_envelope(async move {
             let params: DisableAutoRechargeParams = parse_args_json(&args_json)?;
             client.disable_auto_recharge(params).await
@@ -496,8 +497,8 @@ impl NativeClient {
 }
 
 /// Offline dispatch helper: unknown fn names return an internal-error envelope
-/// without touching the network (unit-tested). Known names are listed for the
-/// Groups A–C surface; the napi methods call the typed client directly.
+/// without touching the network. Mirrors the node binding for parity; the
+/// wasm-bindgen methods call the typed client directly.
 #[cfg_attr(not(test), allow(dead_code))]
 pub fn dispatch_envelope_for_fn(fn_name: &str, _args_json: &str) -> Option<String> {
     match fn_name {
@@ -538,7 +539,7 @@ pub fn dispatch_envelope_for_fn(fn_name: &str, _args_json: &str) -> Option<Strin
         | "saveAutoRecharge"
         | "disableAutoRecharge" => None,
         other => Some(internal_error_envelope(format!(
-            "unknown NativeClient fn: {other}"
+            "unknown WasmClient fn: {other}"
         ))),
     }
 }
@@ -546,10 +547,7 @@ pub fn dispatch_envelope_for_fn(fn_name: &str, _args_json: &str) -> Option<Strin
 /// Extracts path refs from a combined args object, leaving the remaining body.
 ///
 /// Keys are removed in order; missing/non-string keys map to Transport errors.
-fn split_path_refs(
-    args_json: &str,
-    keys: &[&str],
-) -> std::result::Result<(Vec<String>, Value), SdkError> {
+fn split_path_refs(args_json: &str, keys: &[&str]) -> Result<(Vec<String>, Value), SdkError> {
     let mut map: Map<String, Value> = parse_args_json(args_json)?;
     let mut refs = Vec::with_capacity(keys.len());
     for key in keys {

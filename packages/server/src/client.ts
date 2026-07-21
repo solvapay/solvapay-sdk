@@ -49,18 +49,56 @@ type NativeClientMethod =
   | 'disableAutoRecharge'
 
 /**
+ * True on Deno / Cloudflare Workers / Vercel Edge-light — even when those
+ * hosts expose a `process` / `nodejs_compat` shim that looks Node-like.
+ */
+function isEdgeRuntime(): boolean {
+  try {
+    if ((globalThis as { Deno?: unknown }).Deno !== undefined) return true
+  } catch {
+    // ignore
+  }
+  try {
+    const nav = (globalThis as { navigator?: { userAgent?: string } }).navigator
+    if (nav?.userAgent === 'Cloudflare-Workers') return true
+  } catch {
+    // ignore
+  }
+  try {
+    if ((globalThis as { EdgeRuntime?: unknown }).EdgeRuntime !== undefined) {
+      return true
+    }
+  } catch {
+    // ignore
+  }
+  return false
+}
+
+/**
+ * True on the Node.js runtime (not Deno / Workers / edge-light). Deno and
+ * Workers are treated as edge even when they expose a `process` shim.
+ */
+function isNodeRuntime(): boolean {
+  try {
+    if (isEdgeRuntime()) return false
+    return (
+      typeof process !== 'undefined' &&
+      typeof process.versions === 'object' &&
+      process.versions != null &&
+      typeof process.versions.node === 'string'
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
  * Whether this runtime may attempt the Node napi client path.
  * Edge / browser must never load `./native` (`node:module`).
  */
 function shouldAttemptNativeClient(): boolean {
   try {
-    return (
-      typeof process !== 'undefined' &&
-      typeof process.versions === 'object' &&
-      process.versions != null &&
-      typeof process.versions.node === 'string' &&
-      process.env.SOLVAPAY_IMPL !== 'ts'
-    )
+    return isNodeRuntime() && process.env.SOLVAPAY_IMPL !== 'ts'
   } catch {
     return false
   }
@@ -137,26 +175,64 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
   const nativeConfig = { apiKey: opts.apiKey, apiBaseUrl: opts.apiBaseUrl }
 
   /**
-   * Dispatches a Groups A–C client method to the napi binding when
-   * `resolveImpl('client') === 'rust'`. Returns the envelope `value`
-   * verbatim — do not re-apply TS response normalization.
+   * Dispatches a Groups A–C client method to a Rust binding when the resolved
+   * implementation is `rust`. Returns the envelope `value` verbatim — do not
+   * re-apply TS response normalization.
    *
-   * Uses a dynamic import so the edge bundle never statically pulls
-   * `./native` / `node:module`.
+   * Runtime split (both via dynamic import so neither graph statically pulls
+   * the other):
+   * - Edge (Deno / Workers / edge-light) → `@solvapay/server-wasm` via `./wasm`.
+   *   The edge bundle never imports `./native` / `node:module`.
+   * - Node → `@solvapay/server-native` via `./native`.
+   * - Node vitest with an injected `WasmClient` override → the WASM path (so
+   *   `client-wasm-dispatch` can exercise edge dispatch under Node).
    */
   async function dispatchClient<T>(
     fn: NativeClientMethod,
     params: unknown,
     tsFallback: () => Promise<T>,
   ): Promise<T> {
+    const argsJson = JSON.stringify(params ?? {})
+
+    // Edge (Deno / Workers / edge-light) — never touch `./native`.
+    // Also used under Node vitest when a fake WasmClient override is installed.
+    if (!isNodeRuntime()) {
+      const wasm = await import('./wasm')
+      if (wasm.resolveEdgeImpl('client') !== 'rust') {
+        return tsFallback()
+      }
+      return (await wasm.callWasm(fn, argsJson, nativeConfig)) as T
+    }
+
+    // Node vitest: injected WasmClient forces the edge dispatch path without
+    // requiring a Deno/Workers runtime.
+    const wasm = await import('./wasm')
+    if (wasm.isWasmClientOverrideActive()) {
+      if (wasm.resolveEdgeImpl('client') !== 'rust') {
+        return tsFallback()
+      }
+      return (await wasm.callWasm(fn, argsJson, nativeConfig)) as T
+    }
+
     if (!shouldAttemptNativeClient()) {
       return tsFallback()
     }
-    const { callNative, resolveImpl } = await import('./native')
+    // Non-literal specifier so edge rebundlers (wrangler/esbuild) that pull in
+    // this shared module cannot statically resolve the Node-only `./native`
+    // graph into a Workers bundle (tsup already externalizes it for edge.js).
+    const nativeSpecifier: string = ['./', 'native'].join('')
+    const { callNative, resolveImpl } = (await import(nativeSpecifier)) as {
+      callNative: (
+        method: NativeClientMethod,
+        json: string,
+        config: { apiKey: string; apiBaseUrl?: string },
+      ) => Promise<unknown>
+      resolveImpl: (surface: string) => 'ts' | 'rust'
+    }
     if (resolveImpl('client') !== 'rust') {
       return tsFallback()
     }
-    return (await callNative(fn, JSON.stringify(params ?? {}), nativeConfig)) as T
+    return (await callNative(fn, argsJson, nativeConfig)) as T
   }
 
   return {

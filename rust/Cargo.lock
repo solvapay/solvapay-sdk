@@ -1300,9 +1300,13 @@ name = "solvapay-wasm"
 version = "0.1.0"
 dependencies = [
  "js-sys",
+ "serde",
  "serde_json",
  "solvapay-core",
+ "solvapay-dto",
+ "solvapay-transport",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wasm-bindgen-test",
 ]
 

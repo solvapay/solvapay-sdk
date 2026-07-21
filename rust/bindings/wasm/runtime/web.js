@@ -1,10 +1,14 @@
 /**
  * Default web / edge-light wrapper for the edge WASM profile.
+ *
+ * No synchronous file access is available here, so there is no
+ * `ensureReadySync`: callers must `await ready()` (warm-up) before any sync
+ * envelope function. Re-exports the full generated edge surface (`WasmClient`,
+ * `verifyWebhook`, `wasmVersion`, and every sync envelope fn).
  */
-import init, {
-  wasmVersion as wasmVersionRaw,
-  verifyWebhook as verifyWebhookRaw,
-} from '../pkg/edge/solvapay_wasm.js'
+import init from '../pkg/edge/solvapay_wasm.js'
+
+export * from '../pkg/edge/solvapay_wasm.js'
 
 let initPromise
 
@@ -15,12 +19,4 @@ export function ready() {
     }).then(() => undefined)
   }
   return initPromise
-}
-
-export function wasmVersion() {
-  return wasmVersionRaw()
-}
-
-export function verifyWebhook(body, signature, secret, nowUnixSecs) {
-  return verifyWebhookRaw(body, signature, secret, nowUnixSecs)
 }

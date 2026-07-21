@@ -26,9 +26,7 @@ describe('delegation-check fixtures', () => {
     ]
 
     const issues = checkDelegation(inventory, { entries: [] })
-    expect(issues.some(i => i.kind === 'missing-marker' && i.symbol === 'orphanHelper')).toBe(
-      true,
-    )
+    expect(issues.some(i => i.kind === 'missing-marker' && i.symbol === 'orphanHelper')).toBe(true)
     expect(formatDelegationReport(issues)).toMatch(/orphanHelper/)
   })
 
@@ -59,6 +57,23 @@ describe('delegation-check fixtures', () => {
     expect(formatDelegationReport(issues)).toMatch(/doesNotExistAnymore/)
   })
 
+  it('recognizes edge WASM delegation markers (Step 38R-f)', () => {
+    expect(hasDelegationMarker('return callWasm(fn, argsJson, config)')).toBe(true)
+    expect(hasDelegationMarker('return callWasmSync(fn, argsJson)')).toBe(true)
+    expect(hasDelegationMarker('return verifyWebhookWasm(payload, sig, secret)')).toBe(true)
+
+    const inventory: ExportInventoryEntry[] = [
+      {
+        package: '@solvapay/server',
+        symbol: 'verifyWebhookEdge',
+        definitionFile: '/tmp/wasm.ts',
+        sourceText:
+          'export function verifyWebhookEdge() { return verifyWebhookWasm("p", "s", "k") }\n',
+      },
+    ]
+    expect(checkDelegation(inventory, { entries: [] })).toEqual([])
+  })
+
   it('passes a marked export and rejects an invalid allowlist reason', () => {
     expect(hasDelegationMarker('return dispatchClient("getCustomer", params, fn)')).toBe(true)
 
@@ -67,7 +82,8 @@ describe('delegation-check fixtures', () => {
         package: '@solvapay/server',
         symbol: 'buildPaywallGate',
         definitionFile: '/tmp/native-decisions.ts',
-        sourceText: 'export function buildPaywallGate() { return dispatchSync("x", {}, () => ({})) }\n',
+        sourceText:
+          'export function buildPaywallGate() { return dispatchSync("x", {}, () => ({})) }\n',
       },
     ]
 

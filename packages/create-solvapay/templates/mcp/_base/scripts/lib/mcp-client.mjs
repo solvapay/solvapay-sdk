@@ -32,10 +32,9 @@ let nextId = 1
  * @param {object} [options]
  * @param {string} [options.bearerToken] - OAuth bearer token. When
  *   present, the call is sent with `Authorization: Bearer <token>` so
- *   it can reach a worker running with the SDK default
- *   `requireAuth: true`. Without it, anonymous calls are gated with a
- *   `WWW-Authenticate` challenge (the well-formed-401 path
- *   `verify.mjs` / `test.mjs` treat as a soft skip).
+ *   it can reach `tools/call` under the SDK default `requireAuth: true`
+ *   (discovery methods like `tools/list` stay anonymous). Without it,
+ *   `tools/call` is gated with a `WWW-Authenticate` challenge.
  */
 export async function rpc(workerUrl, method, params = {}, options = {}) {
   const body = {

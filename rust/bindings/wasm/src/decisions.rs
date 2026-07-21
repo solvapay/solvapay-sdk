@@ -1,0 +1,683 @@
+//! Sync JSON-envelope wasm-bindgen exports for decision / paywall / retry cores
+//! (Step 38R-c).
+//!
+//! Edge-only mirror of `rust/bindings/node/src/decisions.rs`. Each function
+//! takes one JSON-args string and returns one envelope string
+//! (`{"ok":true,"value":…}` | `{"ok":false,"error":…}`).
+
+#![cfg(feature = "edge")]
+
+use serde_json::Value;
+use solvapay_core::{
+    attach_business_details_validation_error, build_create_customer_params, build_gate_message,
+    build_nudge_message, build_paywall_gate, classify_cancel_error, classify_create_error,
+    classify_customer_ref, classify_lookup_error, classify_paywall_state,
+    classify_reactivate_error, coerce_customer_options, decide_paywall_outcome,
+    evaluate_cached_limits, evaluate_fresh_limits, extract_backend_customer_ref,
+    is_cached_customer_ref_valid, is_email_conflict, is_error_result, map_route_error,
+    normalize_cancel_response, normalize_reactivate_response, paywall_client_payload,
+    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
+    resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
+    resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
+    validate_activate_plan_params, validate_attach_business_details_params,
+    validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
+    validate_process_payment_intent_params, validate_purchase_ref,
+    validate_topup_payment_intent_params, Backoff, GateContent, PaymentIntentSource, PaywallGate,
+    PaywallGateLimits, PaywallLimits, PaywallState, RetryPolicy, RouteErrorInput, RouteErrorKind,
+    SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
+};
+use wasm_bindgen::prelude::*;
+
+use crate::args::{
+    args_map, option_helper_err, optional_f64, optional_string, optional_typed, optional_u16,
+    optional_u32, optional_u64, optional_value, require_array, require_bool, require_f64,
+    require_i64, require_object, require_string, require_typed, require_u32, result_as_value,
+    to_value,
+};
+use crate::error::run_envelope_sync;
+
+// --- customer-sync ---
+
+/// Binding for `classifyCustomerRef`.
+#[wasm_bindgen(js_name = "classifyCustomerRef")]
+pub fn classify_customer_ref_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let customer_ref = require_string(&args, "customerRef")?;
+        to_value(&classify_customer_ref(&customer_ref))
+    })
+}
+
+/// Binding for `coerceCustomerOptions`.
+#[wasm_bindgen(js_name = "coerceCustomerOptions")]
+pub fn coerce_customer_options_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let email = optional_string(&args, "email")?;
+        let name = optional_string(&args, "name")?;
+        to_value(&coerce_customer_options(email.as_deref(), name.as_deref()))
+    })
+}
+
+/// Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock string).
+#[wasm_bindgen(js_name = "buildCreateCustomerParams")]
+pub fn build_create_customer_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let customer_ref = require_string(&args, "customerRef")?;
+        let external_ref = optional_string(&args, "externalRef")?;
+        let email = optional_string(&args, "email")?;
+        let name = optional_string(&args, "name")?;
+        let now_ms = require_i64(&args, "nowMs")?;
+        to_value(&build_create_customer_params(
+            &customer_ref,
+            external_ref.as_deref(),
+            email.as_deref(),
+            name.as_deref(),
+            now_ms,
+        ))
+    })
+}
+
+/// Binding for `extractBackendCustomerRef`.
+#[wasm_bindgen(js_name = "extractBackendCustomerRef")]
+pub fn extract_backend_customer_ref_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let response = require_object(&args, "response")?;
+        let fallback = require_string(&args, "fallback")?;
+        Ok(Value::String(extract_backend_customer_ref(
+            response, &fallback,
+        )))
+    })
+}
+
+/// Binding for `classifyLookupError`.
+#[wasm_bindgen(js_name = "classifyLookupError")]
+pub fn classify_lookup_error_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let message = require_string(&args, "message")?;
+        to_value(&classify_lookup_error(&message))
+    })
+}
+
+/// Binding for `classifyCreateError`.
+#[wasm_bindgen(js_name = "classifyCreateError")]
+pub fn classify_create_error_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let message = require_string(&args, "message")?;
+        to_value(&classify_create_error(&message))
+    })
+}
+
+/// Binding for `isEmailConflict`.
+#[wasm_bindgen(js_name = "isEmailConflict")]
+pub fn is_email_conflict_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let message = require_string(&args, "message")?;
+        Ok(Value::Bool(is_email_conflict(&message)))
+    })
+}
+
+// --- activation ---
+
+/// Binding for `validateActivatePlanParams`.
+#[wasm_bindgen(js_name = "validateActivatePlanParams")]
+pub fn validate_activate_plan_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let product_ref = optional_string(&args, "productRef")?;
+        let plan_ref = optional_string(&args, "planRef")?;
+        option_helper_err(validate_activate_plan_params(
+            product_ref.as_deref(),
+            plan_ref.as_deref(),
+        ))
+    })
+}
+
+// --- payment ---
+
+/// Binding for `validateCreatePaymentIntentParams`.
+#[wasm_bindgen(js_name = "validateCreatePaymentIntentParams")]
+pub fn validate_create_payment_intent_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let plan_ref = optional_string(&args, "planRef")?;
+        let product_ref = optional_string(&args, "productRef")?;
+        option_helper_err(validate_create_payment_intent_params(
+            plan_ref.as_deref(),
+            product_ref.as_deref(),
+        ))
+    })
+}
+
+/// Binding for `validateTopupPaymentIntentParams`.
+#[wasm_bindgen(js_name = "validateTopupPaymentIntentParams")]
+pub fn validate_topup_payment_intent_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let amount = optional_f64(&args, "amount")?;
+        let currency = optional_string(&args, "currency")?;
+        option_helper_err(validate_topup_payment_intent_params(
+            amount,
+            currency.as_deref(),
+        ))
+    })
+}
+
+/// Binding for `validateProcessPaymentIntentParams`.
+#[wasm_bindgen(js_name = "validateProcessPaymentIntentParams")]
+pub fn validate_process_payment_intent_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let payment_intent_id = optional_string(&args, "paymentIntentId")?;
+        let product_ref = optional_string(&args, "productRef")?;
+        option_helper_err(validate_process_payment_intent_params(
+            payment_intent_id.as_deref(),
+            product_ref.as_deref(),
+        ))
+    })
+}
+
+/// Binding for `validateAttachBusinessDetailsParams`.
+#[wasm_bindgen(js_name = "validateAttachBusinessDetailsParams")]
+pub fn validate_attach_business_details_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let payment_intent_id = optional_string(&args, "paymentIntentId")?;
+        option_helper_err(validate_attach_business_details_params(
+            payment_intent_id.as_deref(),
+        ))
+    })
+}
+
+/// Binding for `attachBusinessDetailsValidationError`.
+#[wasm_bindgen(js_name = "attachBusinessDetailsValidationError")]
+pub fn attach_business_details_validation_error_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let first_issue_message = optional_string(&args, "firstIssueMessage")?;
+        to_value(&attach_business_details_validation_error(
+            first_issue_message.as_deref(),
+        ))
+    })
+}
+
+/// Binding for `projectPaymentIntentResult`.
+#[wasm_bindgen(js_name = "projectPaymentIntentResult")]
+pub fn project_payment_intent_result_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let processor_payment_id = require_string(&args, "processorPaymentId")?;
+        let client_secret = require_string(&args, "clientSecret")?;
+        let publishable_key = require_string(&args, "publishableKey")?;
+        let customer_ref = require_string(&args, "customerRef")?;
+        let account_id = optional_string(&args, "accountId")?;
+        to_value(&project_payment_intent_result(
+            &PaymentIntentSource {
+                processor_payment_id,
+                client_secret,
+                publishable_key,
+                account_id,
+            },
+            &customer_ref,
+        ))
+    })
+}
+
+/// Binding for `projectTopupProcessOutcome`.
+#[wasm_bindgen(js_name = "projectTopupProcessOutcome")]
+pub fn project_topup_process_outcome_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let status = optional_string(&args, "status")?;
+        let message = optional_string(&args, "message")?;
+        to_value(&project_topup_process_outcome(
+            status.as_deref(),
+            message.as_deref(),
+        ))
+    })
+}
+
+// --- checkout ---
+
+/// Binding for `resolveReturnUrl`.
+#[wasm_bindgen(js_name = "resolveReturnUrl")]
+pub fn resolve_return_url_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let body_return_url = optional_string(&args, "bodyReturnUrl")?;
+        let options_return_url = optional_string(&args, "optionsReturnUrl")?;
+        let origin = optional_string(&args, "origin")?;
+        match resolve_return_url(
+            body_return_url.as_deref(),
+            options_return_url.as_deref(),
+            origin.as_deref(),
+        ) {
+            None => Ok(Value::Null),
+            Some(url) => Ok(Value::String(url)),
+        }
+    })
+}
+
+/// Binding for `validateCheckoutSessionParams`.
+#[wasm_bindgen(js_name = "validateCheckoutSessionParams")]
+pub fn validate_checkout_session_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let product_ref = optional_string(&args, "productRef")?;
+        option_helper_err(validate_checkout_session_params(product_ref.as_deref()))
+    })
+}
+
+// --- purchase ---
+
+/// Binding for `isCachedCustomerRefValid`.
+#[wasm_bindgen(js_name = "isCachedCustomerRefValid")]
+pub fn is_cached_customer_ref_valid_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let external_ref = optional_string(&args, "externalRef")?;
+        let user_id = require_string(&args, "userId")?;
+        let customer_ref = optional_string(&args, "customerRef")?;
+        Ok(Value::Bool(is_cached_customer_ref_valid(
+            external_ref.as_deref(),
+            &user_id,
+            customer_ref.as_deref(),
+        )))
+    })
+}
+
+/// Binding for `resolvePurchaseCustomerRef`.
+#[wasm_bindgen(js_name = "resolvePurchaseCustomerRef")]
+pub fn resolve_purchase_customer_ref_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let customer_ref = optional_string(&args, "customerRef")?;
+        let user_id = require_string(&args, "userId")?;
+        Ok(Value::String(resolve_purchase_customer_ref(
+            customer_ref.as_deref(),
+            &user_id,
+        )))
+    })
+}
+
+/// Binding for `selectActivePurchases`.
+#[wasm_bindgen(js_name = "selectActivePurchases")]
+pub fn select_active_purchases_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let purchases = require_array(&args, "purchases")?;
+        Ok(Value::Array(select_active_purchases(purchases)))
+    })
+}
+
+// --- renewal ---
+
+/// Binding for `classifyCancelError`.
+#[wasm_bindgen(js_name = "classifyCancelError")]
+pub fn classify_cancel_error_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let message = require_string(&args, "message")?;
+        to_value(&classify_cancel_error(&message))
+    })
+}
+
+/// Binding for `classifyReactivateError`.
+#[wasm_bindgen(js_name = "classifyReactivateError")]
+pub fn classify_reactivate_error_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let message = require_string(&args, "message")?;
+        to_value(&classify_reactivate_error(&message))
+    })
+}
+
+/// Binding for `normalizeCancelResponse`.
+#[wasm_bindgen(js_name = "normalizeCancelResponse")]
+pub fn normalize_cancel_response_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let response = args.get("response").cloned().unwrap_or(Value::Null);
+        result_as_value(normalize_cancel_response(&response))
+    })
+}
+
+/// Binding for `normalizeReactivateResponse`.
+#[wasm_bindgen(js_name = "normalizeReactivateResponse")]
+pub fn normalize_reactivate_response_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let response = args.get("response").cloned().unwrap_or(Value::Null);
+        result_as_value(normalize_reactivate_response(&response))
+    })
+}
+
+/// Binding for `validatePurchaseRef`.
+#[wasm_bindgen(js_name = "validatePurchaseRef")]
+pub fn validate_purchase_ref_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let purchase_ref = optional_string(&args, "purchaseRef")?;
+        option_helper_err(validate_purchase_ref(purchase_ref.as_deref()))
+    })
+}
+
+// --- usage ---
+
+/// Binding for `projectUsageSnapshot`.
+#[wasm_bindgen(js_name = "projectUsageSnapshot")]
+pub fn project_usage_snapshot_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let purchase = match args.get("activePurchase") {
+            None | Some(Value::Null) => None,
+            Some(v) => Some(v),
+        };
+        to_value(&project_usage_snapshot(purchase))
+    })
+}
+
+// --- limits ---
+
+/// Binding for `resolveCheckLimitsParams`.
+#[wasm_bindgen(js_name = "resolveCheckLimitsParams")]
+pub fn resolve_check_limits_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let product_ref = optional_string(&args, "productRef")?;
+        let meter_name = optional_string(&args, "meterName")?;
+        result_as_value(resolve_check_limits_params(
+            product_ref.as_deref(),
+            meter_name.as_deref(),
+        ))
+    })
+}
+
+// --- plans ---
+
+/// Binding for `validateListPlansParams`.
+#[wasm_bindgen(js_name = "validateListPlansParams")]
+pub fn validate_list_plans_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let product_ref = optional_string(&args, "productRef")?;
+        option_helper_err(validate_list_plans_params(product_ref.as_deref()))
+    })
+}
+
+// --- error ---
+
+/// Binding for `isErrorResult`.
+#[wasm_bindgen(js_name = "isErrorResult")]
+pub fn is_error_result_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let value = args.get("result").cloned().unwrap_or(Value::Null);
+        Ok(Value::Bool(is_error_result(&value)))
+    })
+}
+
+/// Binding for `mapRouteError` (`kind`: `"solvapay"` | `"error"` | `"unknown"`).
+#[wasm_bindgen(js_name = "mapRouteError")]
+pub fn map_route_error_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let kind = match require_string(&args, "kind")?.as_str() {
+            "solvapay" => RouteErrorKind::SolvaPay,
+            "error" => RouteErrorKind::Error,
+            "unknown" => RouteErrorKind::Unknown,
+            other => {
+                return Err(SdkError::transport(
+                    format!("args.kind must be 'solvapay' | 'error' | 'unknown', got {other:?}"),
+                    false,
+                ));
+            }
+        };
+        let message = optional_string(&args, "message")?;
+        let default_message = optional_string(&args, "defaultMessage")?;
+        let operation_name = require_string(&args, "operationName")?;
+        let status = optional_u16(&args, "status")?;
+        to_value(&map_route_error(&RouteErrorInput {
+            kind,
+            message,
+            status,
+            operation_name,
+            default_message,
+        }))
+    })
+}
+
+// --- product ---
+
+/// Binding for `validateGetProductParams`.
+#[wasm_bindgen(js_name = "validateGetProductParams")]
+pub fn validate_get_product_params_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let product_ref = optional_string(&args, "productRef")?;
+        option_helper_err(validate_get_product_params(product_ref.as_deref()))
+    })
+}
+
+// --- paywall-decision ---
+
+/// Binding for `resolveProductRef`.
+#[wasm_bindgen(js_name = "resolveProductRef")]
+pub fn resolve_product_ref_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let metadata_product = optional_string(&args, "metadataProduct")?;
+        let env_product = optional_string(&args, "envProduct")?;
+        Ok(Value::String(resolve_product_ref(
+            metadata_product.as_deref(),
+            env_product.as_deref(),
+        )))
+    })
+}
+
+/// Binding for `evaluateCachedLimits`.
+#[wasm_bindgen(js_name = "evaluateCachedLimits")]
+pub fn evaluate_cached_limits_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let remaining = require_f64(&args, "remaining")?;
+        to_value(&evaluate_cached_limits(remaining))
+    })
+}
+
+/// Binding for `evaluateFreshLimits`.
+#[wasm_bindgen(js_name = "evaluateFreshLimits")]
+pub fn evaluate_fresh_limits_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let within_limits = require_bool(&args, "withinLimits")?;
+        let remaining = require_f64(&args, "remaining")?;
+        to_value(&evaluate_fresh_limits(within_limits, remaining))
+    })
+}
+
+/// Binding for `decidePaywallOutcome`.
+#[wasm_bindgen(js_name = "decidePaywallOutcome")]
+pub fn decide_paywall_outcome_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let within_limits = require_bool(&args, "withinLimits")?;
+        let product = require_string(&args, "product")?;
+        let checkout_url = optional_string(&args, "checkoutUrl")?;
+        let limits = optional_value(&args, "limits");
+        to_value(&decide_paywall_outcome(
+            within_limits,
+            &product,
+            limits.as_ref(),
+            checkout_url.as_deref(),
+        ))
+    })
+}
+
+/// Binding for `resolveFallbackGateLimits`.
+#[wasm_bindgen(js_name = "resolveFallbackGateLimits")]
+pub fn resolve_fallback_gate_limits_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let checkout_url = optional_string(&args, "checkoutUrl")?;
+        to_value(&resolve_fallback_gate_limits(checkout_url.as_deref()))
+    })
+}
+
+// --- paywall state / gate / payload ---
+
+/// Binding for `classifyPaywallState`.
+#[wasm_bindgen(js_name = "classifyPaywallState")]
+pub fn classify_paywall_state_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let limits = optional_typed::<PaywallLimits>(&args, "limits")?;
+        to_value(&classify_paywall_state(limits.as_ref()))
+    })
+}
+
+/// Binding for `buildGateMessage`.
+#[wasm_bindgen(js_name = "buildGateMessage")]
+pub fn build_gate_message_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = require_typed::<PaywallState>(&args, "state")?;
+        let gate = require_typed::<GateContent>(&args, "gate")?;
+        Ok(Value::String(build_gate_message(&state, &gate)))
+    })
+}
+
+/// Binding for `buildNudgeMessage`.
+#[wasm_bindgen(js_name = "buildNudgeMessage")]
+pub fn build_nudge_message_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = require_typed::<PaywallState>(&args, "state")?;
+        let limits = optional_typed::<PaywallLimits>(&args, "limits")?;
+        Ok(Value::String(build_nudge_message(&state, limits.as_ref())))
+    })
+}
+
+/// Binding for `buildPaywallGate`.
+#[wasm_bindgen(js_name = "buildPaywallGate")]
+pub fn build_paywall_gate_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let product_ref = require_string(&args, "productRef")?;
+        let limits = require_typed::<PaywallGateLimits>(&args, "limits")?;
+        to_value(&build_paywall_gate(&product_ref, &limits))
+    })
+}
+
+/// Binding for `paywallErrorToClientPayload`.
+#[wasm_bindgen(js_name = "paywallErrorToClientPayload")]
+pub fn paywall_error_to_client_payload_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let _message = require_string(&args, "message")?;
+        let gate = require_typed::<PaywallGate>(&args, "structuredContent")?;
+        to_value(&paywall_client_payload(&gate))
+    })
+}
+
+// --- retry ---
+
+/// Binding for `retryNextDelayMs`.
+#[wasm_bindgen(js_name = "retryNextDelayMs")]
+pub fn retry_next_delay_ms(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let attempt = require_u32(&args, "attempt")?;
+        let mut policy = RetryPolicy {
+            max_retries: DEFAULT_MAX_RETRIES,
+            initial_delay_ms: DEFAULT_INITIAL_DELAY_MS,
+            backoff: Backoff::Fixed,
+        };
+        if let Some(max_retries) = optional_u32(&args, "maxRetries")? {
+            policy.max_retries = max_retries;
+        }
+        if let Some(initial_delay) = optional_u64(&args, "initialDelay")? {
+            policy.initial_delay_ms = initial_delay;
+        }
+        if let Some(strategy) = optional_string(&args, "backoffStrategy")? {
+            policy.backoff = match strategy.as_str() {
+                "fixed" => Backoff::Fixed,
+                "linear" => Backoff::Linear,
+                "exponential" => Backoff::Exponential,
+                other => {
+                    return Err(SdkError::transport(
+                        format!(
+                            "args.backoffStrategy must be fixed|linear|exponential, got {other}"
+                        ),
+                        false,
+                    ));
+                }
+            };
+        }
+        match policy.next_delay(attempt) {
+            None => Ok(Value::Null),
+            Some(delay) => {
+                let ms = u64::try_from(delay.as_millis()).unwrap_or(u64::MAX);
+                Ok(Value::from(ms))
+            }
+        }
+    })
+}
+
+#[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::missing_docs_in_private_items,
+    missing_docs
+)]
+mod tests {
+    use super::{build_paywall_gate_binding, classify_customer_ref_binding, retry_next_delay_ms};
+    use serde_json::Value;
+
+    fn parse_envelope(json: &str) -> Value {
+        serde_json::from_str(json).expect("envelope must be JSON")
+    }
+
+    #[test]
+    fn classify_customer_ref_envelope_round_trips() {
+        let env = parse_envelope(&classify_customer_ref_binding(
+            r#"{"customerRef":"cus_abc123"}"#.to_owned(),
+        ));
+        assert_eq!(env["ok"], true);
+        assert_eq!(env["value"], "backend");
+    }
+
+    #[test]
+    fn build_paywall_gate_envelope_matches_shape() {
+        let env = parse_envelope(&build_paywall_gate_binding(
+            r#"{"productRef":"prod_1","limits":{"remaining":0}}"#.to_owned(),
+        ));
+        assert_eq!(env["ok"], true);
+        assert!(env["value"]["kind"].is_string());
+        assert_eq!(env["value"]["product"], "prod_1");
+    }
+
+    #[test]
+    fn retry_next_delay_exhaustion_is_null() {
+        let env = parse_envelope(&retry_next_delay_ms(
+            r#"{"attempt":2,"maxRetries":2}"#.to_owned(),
+        ));
+        assert_eq!(env["ok"], true);
+        assert!(env["value"].is_null());
+    }
+
+    #[test]
+    fn retry_next_delay_fixed_default() {
+        let env = parse_envelope(&retry_next_delay_ms(r#"{"attempt":0}"#.to_owned()));
+        assert_eq!(env["ok"], true);
+        assert_eq!(env["value"], 500);
+    }
+}

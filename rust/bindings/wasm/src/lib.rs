@@ -1,18 +1,28 @@
-//! wasm-bindgen binding for `solvapay-core` (Phase 6 step 38).
+//! wasm-bindgen binding for `solvapay-core` / `solvapay-transport` (Phase 6
+//! steps 38 / 38R).
 //!
 //! Profiles (exactly one required):
-//! - `edge`: exports [`wasm_version`] + [`verify_webhook`]
-//! - `browser`: exports [`wasm_version`] only (no webhook / secret-key symbols)
+//! - `edge`: full server surface — [`wasm_version`] + [`verify_webhook`], sync
+//!   decision / paywall / retry JSON envelopes ([`decisions`]), sync core + MCP
+//!   payload builders ([`payload_builders`]), and the async
+//!   [`wasm_client::WasmClient`] Groups A–C methods over `FetchTransport`.
+//! - `browser`: public-safe pure surface only — [`wasm_version`] + the
+//!   business-details / credit-display / seller-identity subset of
+//!   [`payload_builders`]. No webhook, no secret-key client, no MCP symbols.
 //!
 //! # Panic safety
 //!
 //! The `wasm-release` profile sets `panic = "abort"`. Recoverable unwinding across
 //! the JS boundary is therefore unavailable; prevention and Clippy
 //! `unwrap_used` / `expect_used` / `panic` denies are the primary safety
-//! mechanism. Native `rlib` unit tests of pure helpers may still use
-//! `catch_unwind` where the host allows it.
+//! mechanism (§7.6). Sync envelope edges only map `Result` (no `catch_unwind`).
+//! Native `rlib` unit tests of pure helpers may still use `catch_unwind` where
+//! the host allows it.
 
 #![deny(clippy::all)]
+// `SdkError` is intentionally large (paywall gate payload); returned by value at
+// the envelope boundary rather than `Box<SdkError>` (§4.4).
+#![allow(clippy::result_large_err)]
 
 #[cfg(all(feature = "edge", feature = "browser"))]
 compile_error!("solvapay-wasm: enable exactly one of features `edge` or `browser`, not both");
@@ -20,8 +30,14 @@ compile_error!("solvapay-wasm: enable exactly one of features `edge` or `browser
 #[cfg(not(any(feature = "edge", feature = "browser")))]
 compile_error!("solvapay-wasm: enable exactly one of features `edge` or `browser`");
 
-#[cfg(feature = "edge")]
+mod args;
 mod error;
+pub mod payload_builders;
+
+#[cfg(feature = "edge")]
+pub mod decisions;
+#[cfg(all(feature = "edge", target_arch = "wasm32"))]
+mod wasm_client;
 
 use wasm_bindgen::prelude::*;
 
@@ -92,6 +108,9 @@ mod edge_api {
 
 #[cfg(feature = "edge")]
 pub use edge_api::{verify_webhook, verify_webhook_json};
+
+#[cfg(all(feature = "edge", target_arch = "wasm32"))]
+pub use wasm_client::WasmClient;
 
 #[cfg(test)]
 #[cfg(feature = "edge")]

@@ -156,6 +156,76 @@ interface ToolCallResult {
 }
 
 describe('createSolvaPayMcpFetch', () => {
+  describe('method-aware auth (requireAuth default)', () => {
+    function makeJwt(sub: string) {
+      return (
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+        Buffer.from(JSON.stringify({ sub, exp: 9_999_999_999 })).toString('base64url') +
+        '.sig'
+      )
+    }
+
+    it('allows anonymous initialize when requireAuth defaults to true', async () => {
+      const handler = buildHandler({ requireAuth: true })
+      const res = await initialize(handler)
+      expect(res.status).toBe(200)
+      expect(res.json.result?.serverInfo?.name).toBe('solvapay-mcp-server')
+    })
+
+    it('allows anonymous tools/list when requireAuth defaults to true', async () => {
+      const handler = buildHandler({ requireAuth: true })
+      await initialize(handler)
+      const list = await callRpc<ToolsListResult>(handler, {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/list',
+      })
+      expect(list.status).toBe(200)
+      expect(list.json.result?.tools?.length).toBeGreaterThan(0)
+    })
+
+    it('challenges anonymous tools/call with 401 + Unauthorized', async () => {
+      const handler = buildHandler({ requireAuth: true })
+      await initialize(handler)
+      const call = await callRpc(handler, {
+        jsonrpc: '2.0',
+        id: 3,
+        method: 'tools/call',
+        params: { name: MCP_TOOL_NAMES.upgrade, arguments: {} },
+      })
+      expect(call.status).toBe(401)
+      expect(call.json.error?.code).toBe(-32001)
+      expect(call.json.error?.message).toBe('Unauthorized')
+    })
+
+    it('allows authenticated tools/call through', async () => {
+      const handler = buildHandler({ requireAuth: true })
+      const auth = { authorization: `Bearer ${makeJwt('cust_1')}` }
+      await callRpc(handler, {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: {},
+          clientInfo: { name: 'test-client', version: '0.0.0' },
+        },
+      }, auth)
+      const call = await callRpc<ToolCallResult>(
+        handler,
+        {
+          jsonrpc: '2.0',
+          id: 4,
+          method: 'tools/call',
+          params: { name: MCP_TOOL_NAMES.upgrade, arguments: {} },
+        },
+        auth,
+      )
+      expect(call.status).toBe(200)
+      expect(call.json.result ?? call.json.error).toBeDefined()
+    })
+  })
+
   it('initialize → 200 + serverInfo with default name', async () => {
     const handler = buildHandler()
     const res = await initialize(handler)
