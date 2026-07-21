@@ -391,7 +391,12 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install npm deps
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.6.0
+
+      - name: Install npm deps (binding)
         run: npm ci
 
       - name: Ensure npm platform dirs
@@ -406,13 +411,352 @@ jobs:
 
       - name: Place artifacts into npm/ via napi artifacts
         run: |
-          # Flatten downloaded files next to package.json so `napi artifacts` can find them.
-          find ci-artifacts -type f \( -name '*.node' -o -name '*.wasm' -o -name '*.wasi.cjs' -o -name 'wasi-worker*' -o -name '*.wasi-browser.js' \) -exec cp -f {} . \;
-          ls -la *.node *.wasm 2>/dev/null || true
+          # napi artifacts reads binaries from ./artifacts (CLI --output-dir default).
+          # WASI glue + loader JS must also sit next to package.json for the move step.
+          mkdir -p artifacts
+          find ci-artifacts -type f \( -name '*.node' -o -name '*.wasm' \) -exec cp -f {} artifacts/ \;
+          find ci-artifacts -type f \( -name '*.wasi.cjs' -o -name 'wasi-worker*' -o -name '*.wasi-browser.js' -o -name 'index.js' -o -name 'index.d.ts' -o -name 'browser.js' \) -exec cp -f {} . \;
+          ls -la artifacts/ index.js 2>/dev/null || true
           npx napi artifacts
 
       - name: Pre-publish artifact gate (hard-fail)
         run: node scripts/check-artifacts.mjs
+
+      # Step 39 — pack publish-shaped tarballs once for the clean-install matrix.
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        working-directory: .
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Pack clean-install package bundle
+        working-directory: .
+        run: |
+          mkdir -p rust/bindings/node/clean-install-bundle
+          node rust/bindings/node/scripts/prepare-clean-install-packages.mjs \
+            --out-dir rust/bindings/node/clean-install-bundle \
+            --require-all
+
+      - name: Upload clean-install package bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-clean-install-packages
+          path: rust/bindings/node/clean-install-bundle/
+          if-no-files-found: error
+
+  # Step 39 — fresh npm install + public @solvapay/server verifyWebhook (native matrix).
+  # Target/host metadata mirrors rust/bindings/node/scripts/targets.mjs (8 × Node 22/24/26 = 24).
+  node-clean-install-native:
+    name: node clean install (native, ${{ matrix.target.id }}, Node ${{ matrix.node }})
+    needs:
+      - node-binding-artifacts
+    runs-on: ${{ matrix.target.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24', '26']
+        target:
+          - id: linux-x64-gnu
+            host: ubuntu-24.04
+            musl: 'false'
+          - id: linux-arm64-gnu
+            host: ubuntu-24.04-arm
+            musl: 'false'
+          - id: linux-x64-musl
+            host: ubuntu-24.04
+            musl: 'true'
+          - id: linux-arm64-musl
+            host: ubuntu-24.04-arm
+            musl: 'true'
+          - id: darwin-x64
+            host: macos-15-intel
+            musl: 'false'
+          - id: darwin-arm64
+            host: macos-15
+            musl: 'false'
+          - id: win32-x64-msvc
+            host: windows-latest
+            musl: 'false'
+          - id: win32-arm64-msvc
+            host: windows-11-arm
+            musl: 'false'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download clean-install package bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: server-clean-install-packages
+          path: clean-install-bundle
+
+      - name: Setup Node.js
+        if: matrix.target.musl == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Clean-install smoke (host)
+        if: matrix.target.musl == 'false'
+        shell: bash
+        run: |
+          node rust/bindings/node/scripts/clean-install-smoke.mjs \
+            --bundle-dir clean-install-bundle \
+            --mode native \
+            --target "${{ matrix.target.id }}" \
+            --node-major "${{ matrix.node }}"
+
+      - name: Clean-install smoke (musl container)
+        if: matrix.target.musl == 'true'
+        shell: bash
+        run: |
+          # setup-node / JS actions are glibc — run only the smoke inside Alpine.
+          IMAGE="node:${{ matrix.node }}-alpine"
+          docker pull "$IMAGE"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD/clean-install-bundle:/bundle:ro" \
+            -v "$PWD/rust/bindings/node/scripts:/scripts:ro" \
+            -e HOME=/tmp \
+            -w /tmp \
+            "$IMAGE" \
+            node /scripts/clean-install-smoke.mjs \
+              --bundle-dir /bundle \
+              --mode native \
+              --target "${{ matrix.target.id }}" \
+              --node-major "${{ matrix.node }}"
+
+  # Step 39 — WASI-only clean install (no .node targets) on Linux x64 × Node 22/24/26.
+  node-clean-install-wasi:
+    name: node clean install (WASI, Node ${{ matrix.node }})
+    needs:
+      - node-binding-artifacts
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24', '26']
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download clean-install package bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: server-clean-install-packages
+          path: clean-install-bundle
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Clean-install smoke (WASI)
+        shell: bash
+        run: |
+          node rust/bindings/node/scripts/clean-install-smoke.mjs \
+            --bundle-dir clean-install-bundle \
+            --mode wasi \
+            --target wasm32-wasi \
+            --node-major "${{ matrix.node }}"
+
+  # Step 37 — flag-reversible Node verifyWebhook cutover (rust ↔ ts).
+  node-binding-conformance:
+    name: node-binding conformance (SOLVAPAY_IMPL rust/ts)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.6.0
+
+      - name: Install Rust toolchain (host)
+        working-directory: rust
+        run: rustup show
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @solvapay/core (server unit deps)
+        run: pnpm --filter @solvapay/core build
+
+      - name: Build @solvapay/server-native (host)
+        run: pnpm --filter @solvapay/server-native build
+
+      - name: Server unit suite on Rust binding
+        run: pnpm --filter @solvapay/server test:unit:rust
+
+      - name: Server unit suite forced back to TypeScript
+        run: pnpm --filter @solvapay/server test:unit:ts
+
+  # Step 38 — edge/browser wasm-bindgen cutover (capability split + budgets + Deno).
+  wasm-binding:
+    name: wasm-binding (Step 38 edge/browser)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.6.0
+
+      - name: Install Rust toolchain
+        working-directory: rust
+        run: rustup show
+
+      - name: Cache wasm-bindgen-cli
+        id: cache-wasm-bindgen-cli-38
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen-test-runner
+            ~/.cargo/bin/wasm2es6js
+          key: ${{ runner.os }}-wasm-bindgen-cli-0.2.126
+
+      - name: Install wasm-bindgen-cli
+        if: steps.cache-wasm-bindgen-cli-38.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version 0.2.126 --locked
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild wasm artifacts + drift check
+        working-directory: rust/bindings/wasm
+        run: |
+          pnpm build:wasm
+          pnpm build:check-drift
+
+      - name: Cargo feature / exclusivity checks
+        working-directory: rust
+        run: |
+          cargo check -p solvapay-core
+          cargo check -p solvapay-core --no-default-features --features browser
+          cargo check -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features edge
+          cargo check -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features browser
+          if cargo check -p solvapay-wasm --no-default-features --features edge,browser 2>/dev/null; then
+            echo "expected edge+browser to fail" >&2
+            exit 1
+          fi
+          if cargo check -p solvapay-wasm --no-default-features 2>/dev/null; then
+            echo "expected neither feature to fail" >&2
+            exit 1
+          fi
+
+      - name: Native binding unit tests + clippy/fmt gates (wasm crate)
+        working-directory: rust
+        run: |
+          cargo test -p solvapay-wasm --no-default-features --features edge --lib
+          cargo fmt --all -- --check
+          cargo clippy -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features edge -- -D warnings
+          cargo clippy -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features browser -- -D warnings
+          ./scripts/check-no-unwrap.sh
+
+      - name: Browser symbol audit
+        working-directory: rust/bindings/wasm
+        run: pnpm symbols:check
+
+      - name: Size / cold-start budget check
+        working-directory: rust/bindings/wasm
+        run: pnpm measure
+
+      - name: Node smoke (edge wrapper)
+        working-directory: rust/bindings/wasm
+        run: pnpm test
+
+      - name: Build core, server-wasm, server, mcp-core
+        run: |
+          pnpm --filter @solvapay/core build
+          pnpm --filter @solvapay/server-wasm build
+          pnpm --filter @solvapay/server build
+          pnpm --filter @solvapay/mcp-core build
+
+      - name: Edge implementation unit tests (WASM + TS rollback)
+        run: |
+          pnpm --filter @solvapay/server test:unit:edge-wasm
+          pnpm --filter @solvapay/server test:unit:edge-ts
+
+      - name: Webhook edge corpus (WASM then TS rollback)
+        run: |
+          # Edge-only replay: Node napi uses wall-clock and cannot honor fixture
+          # `input.clock` (Step 37 gap). This gate proves the Step 38 edge path.
+          SOLVAPAY_IMPL=rust node scripts/replay-webhook-edge-wasm.mjs
+          SOLVAPAY_IMPL=ts node scripts/replay-webhook-edge-wasm.mjs
+          # Full harness still green on the TS path for both node + edge bindings.
+          SOLVAPAY_IMPL=ts pnpm exec vitest run scripts/contract-fixtures.test.ts -t webhook-verification
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: '2.7.4'
+
+      - name: Deno edge + mcp-core smoke
+        run: |
+          deno run --allow-read=packages,rust/bindings/wasm,node_modules \
+            packages/mcp-core/scripts/deno-edge-smoke.mjs
+
+      - name: Fetch-runtime validation
+        run: pnpm validate:fetch-runtime
 
   documentation:
     name: Documentation Validation

@@ -1,12 +1,18 @@
 /**
  * SolvaPay Server SDK - Edge Runtime Entry Point
  *
- * This module provides edge runtime-compatible exports using Web Crypto API.
+ * This module provides edge runtime-compatible exports. Webhook verification
+ * defaults to the wasm-bindgen binding (`@solvapay/server-wasm`); the Web Crypto
+ * TypeScript path remains as a temporary `SOLVAPAY_IMPL=ts` rollback until Step 53.
  * Automatically selected when running in edge runtimes (Vercel Edge, Cloudflare Workers, Deno, etc.)
  */
 
 import { SolvaPayError } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
+import {
+  resolveEdgeWebhookImpl,
+  verifyWebhookWasm,
+} from './webhook-wasm'
 
 // Re-export the main client which is already edge-compatible (uses fetch)
 export { createSolvaPayClient } from './client'
@@ -124,7 +130,10 @@ export type {
 } from './helpers'
 
 /**
- * Verify webhook signature using edge-compatible Web Crypto API.
+ * Verify webhook signature (async edge facade).
+ *
+ * Defaults to the Rust WASM binding (`solvapay_core::verify_webhook`). Set
+ * `SOLVAPAY_IMPL=ts` to force the retained Web Crypto rollback path.
  *
  * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
  * The HMAC is SHA-256 over `"{timestamp}.{rawBody}"` keyed by the full webhook secret
@@ -158,7 +167,8 @@ function timingSafeEqual(a: string, b: string): boolean {
   return mismatch === 0
 }
 
-export async function verifyWebhook({
+/** Temporary Web Crypto rollback (`SOLVAPAY_IMPL=ts`) until Step 53 deletion. */
+async function verifyWebhookTs({
   body,
   signature,
   secret,
@@ -212,4 +222,19 @@ export async function verifyWebhook({
   } catch {
     throw new SolvaPayError('Invalid webhook payload: body is not valid JSON')
   }
+}
+
+export async function verifyWebhook({
+  body,
+  signature,
+  secret,
+}: {
+  body: string
+  signature: string
+  secret: string
+}): Promise<WebhookEvent> {
+  if (resolveEdgeWebhookImpl() === 'ts') {
+    return verifyWebhookTs({ body, signature, secret })
+  }
+  return verifyWebhookWasm({ body, signature, secret })
 }

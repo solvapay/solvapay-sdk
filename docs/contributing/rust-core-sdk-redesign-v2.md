@@ -717,12 +717,23 @@ Browser and server builds are feature-gated so secret-key operations can never e
 
 ```toml
 [features]
-default = []
+default = ["server"]                         # native consumers (napi, fixture-runner) keep webhook + auth HMAC
 server = ["client-full", "webhook-verify"]   # napi-rs, PyO3, Magnus, wazero host, crates.io facade, server-side Workers
-browser = ["client-public"]                  # wasm-bindgen browser build
+browser = ["client-public"]                  # wasm-bindgen browser build — no webhook / no JWT HMAC
+client-full = ["hmac-crypto"]                # Bearer/auth JWT helpers (server-side)
+client-public = []                           # public-safe pure logic only (marker)
+webhook-verify = ["hmac-crypto"]             # `verify_webhook` + HMAC deps
+hmac-crypto = ["dep:hmac", "dep:sha2", "dep:subtle"]
 ```
 
-The browser build compiles out every method that requires `Authorization: Bearer {secret}` — enforced structurally (the secret-key client type doesn't exist under `browser`), not by runtime checks. CI includes a symbol-audit step: the browser `.wasm` must contain no secret-key method exports.
+Composition used by the Step 38 wasm-bindgen crate (`@solvapay/server-wasm`):
+
+| Profile | `solvapay-core` features | JS-visible exports |
+| --- | --- | --- |
+| `edge` | `webhook-verify` (no `client-full`) | `wasmVersion`, `verifyWebhook` |
+| `browser` | `browser` → `client-public` only | `wasmVersion` only |
+
+Browser excludes webhook/server symbols because `webhook-verify` is off — the webhook module and its re-exports are `cfg`'d out, and CI's browser symbol audit allowlists semantic exports (plus pattern-allowed wasm-bindgen allocator/reference internals). The secret-key client type is not compiled into either profile yet (full client binding is later); the structural gate is the feature graph + export audit, not a runtime check.
 
 ### 7.2 std-based core (not `no_std`)
 
@@ -782,7 +793,9 @@ The workload is I/O-bound request/response; concurrency means overlapping in-fli
 
 | Ecosystem | Artifacts | Fallback behavior |
 | --- | --- | --- |
-| npm (`@solvapay/server`) | Per-target native packages as `optionalDependencies` (darwin-x64/arm64, linux-gnu/musl × x64/arm64, win32-x64/arm64) + napi-rs WASI fallback package (`cpu: ["wasm32"]`) + separate `wasm-bindgen` browser/edge build wired through export conditions | napi-rs loader auto-falls back native → WASI; `NAPI_RS_FORCE_WASI` exercises the fallback in CI (§15 note 1) |
+| npm (`@solvapay/server`) | Per-target native packages as `optionalDependencies` (darwin-x64/arm64, linux-gnu/musl × x64/arm64, win32-x64/arm64) + napi-rs WASI fallback package (`cpu: ["wasm32"]`) + separate `wasm-bindgen` package `@solvapay/server-wasm` (edge + browser profiles) wired through export conditions | napi-rs loader auto-falls back native → WASI; `NAPI_RS_FORCE_WASI` exercises the fallback in CI (§15 note 1). Edge `verifyWebhook` defaults to `@solvapay/server-wasm` (Step 38); Node stays on `@solvapay/server-native` (Step 37) |
+
+**`@solvapay/server-wasm` layout (Step 38):** one optimized `.wasm` per profile (`pkg/edge/`, `pkg/browser/`) from a shared `wasm-bindgen --target web` glue generation, plus thin runtime wrappers (`runtime/{node,deno,workerd,web}.js`) that expose a uniform contract: `ready()` and (edge only) `verifyWebhook(body, signature, secret, nowUnixSecs)`. Package `exports` put runtime-specific conditions (`deno`, `workerd`, `worker`, `edge-light`, `browser`, `node`) **before** generic `import`/`default` because Deno also advertises `node` and `import`. Generated glue + portable `.wasm` artifacts are committed and drift-checked so `pnpm build:packages` does not require Rust/wasm-bindgen/Binaryen for TypeScript contributors.
 | PyPI | `abi3` wheels via maturin (manylinux x64/arm64, musllinux, macOS universal2, Windows x64) | Clear install error on unsupported platforms; **no** silent pure-Python stub for secret-key ops |
 | RubyGems | Precompiled platform gems via `rb-sys-dock` (linux x64/arm64, darwin x64/arm64, mingw) + source gem requiring a Rust toolchain | Source-gem compile as documented fallback; no silent stub |
 | Go module | Module with `//go:embed` of the `wasm32-wasip1` core artifact; wazero runtime; tagged releases | Pure Go — no cgo fallback path. Artifact either committed in-repo or attached to release tags (gate in §13). |
@@ -795,14 +808,14 @@ All artifacts are stamped with the SDK release-train version plus the core git S
 
 | Metric | Initial budget | When enforced |
 | --- | --- | --- |
-| Browser WASM, gzipped | Baseline at step 38; regression > 10% needs approval | Phase 6+ |
-| WASM cold start (instantiate + first call) | Baseline at step 38 | Phase 6+ |
+| Browser WASM, gzipped | Baseline recorded in [`rust/bindings/wasm/budgets.json`](../../rust/bindings/wasm/budgets.json) at Step 38; regression > 10% needs approval + baseline update rationale | Phase 6+ |
+| WASM cold start (instantiate + first call) | Browser: fresh process/module instantiation + first `wasmVersion` (median). Edge diagnostic: fresh instantiation + frozen valid `verifyWebhook` (retained; not the mandatory §7.8 gate). Same `budgets.json`. | Phase 6+ |
 | Request overhead vs TS client | Shadow mode (step 25): median delta within agreed % | Phase 3+ |
 | FFI memory copies | ≤ 1 encode per hop (JSON bytes cross once; no intermediate string re-encodes) | Binding code review |
-| Binary coverage | Full platform matrix green on main | Phase 6+ |
-| Unsupported platform | Documented error + WASI fallback for Node | Phase 6+ |
+| Binary coverage | Full platform matrix green on main — enforced by Step 39 clean-install CI (`node clean install (native, …)` × 24 + `node clean install (WASI, …)` × 3) after publish-shaped `npm install` of packed tarballs | Phase 6+ |
+| Unsupported platform | Documented error + WASI fallback for Node — Step 39 WASI-only clean install (`NAPI_RS_FORCE_WASI=error`, no `.node` in the consumer tree) proves the packaged napi-rs WASI path (not `@solvapay/server-wasm`) | Phase 6+ |
 
-Do not make unqualified performance claims anywhere in SDK docs; cite these budgets.
+Measurement methodology: `rust/bindings/wasm/scripts/measure-wasm.mjs` — deterministic raw + gzip level-9 byte counts; multiple isolated child processes; discard warm reuse; report median + spread; pin Node/OS/toolchain metadata. Normal CI uses `--check` (cannot rewrite budgets); recording requires explicit `--record`. Do not make unqualified performance claims anywhere in SDK docs; cite these budgets.
 
 ---
 
@@ -1090,9 +1103,11 @@ The first phase where Rust serves production traffic.
 ```mermaid
 flowchart LR
   CORE6["Rust core"] --> NAPI6["napi-rs prebuilds<br/>+ WASI fallback pkg"]
-  CORE6 --> WASM6["wasm-bindgen build"]
-  NAPI6 --> EXP["@solvapay/server<br/>conditional exports + version flag"]
+  CORE6 --> WASM6["wasm-bindgen<br/>@solvapay/server-wasm<br/>edge + browser profiles"]
+  NAPI6 --> EXP["@solvapay/server<br/>Node: napi · Edge: WASM<br/>SOLVAPAY_IMPL rollback"]
   WASM6 --> EXP
+  WASM6 --> WRAP["runtime wrappers<br/>deno / workerd / node / web"]
+  WRAP --> EXP
   EXP --> SMOKE["Clean-install matrix"]
 ```
 
@@ -1101,13 +1116,16 @@ flowchart LR
 
 37. **Wire conditional exports.** `@solvapay/server` → napi-rs binding with WASI fallback, behind a version flag (`SOLVAPAY_IMPL=ts|rust` or a package export condition) so rollback is a flag flip, not a republish.
     **Done when:** the existing server test suite is green on the binding, and green again with the flag forced back to TS.
+    **Step 37 note:** Cut over Node sync `verifyWebhook` only (full-surface napi later). Runtime flag `SOLVAPAY_IMPL` (`ts` / `rust` / unset→prefer rust with silent TS fallback). Loader is sync `createRequire` in `packages/server/src/webhook-native.ts` (never imported by `edge.ts`). `@solvapay/server` optionalDependency on `@solvapay/server-native` via `workspace:*`; CI gate `node-binding-conformance`. See migration-map Step 37 decisions.
 
 38. **Edge/browser WASM cutover.** Cut `edge.ts` consumers over to the `wasm-bindgen` build (capability-separated: the browser artifact has no secret-key symbols, §7.1). Record the size and cold-start baselines that become the §7.8 budgets.
     *Gotcha:* `@solvapay/mcp-core` under Deno resolves `@solvapay/server` to the edge build — its test suite is part of this step's gate.
     **Done when:** edge export tests + mcp-core Deno tests pass and WASM size/cold-start budgets are recorded and met.
+    **Step 38 note:** Narrow cutover — only async edge `verifyWebhook` → `solvapay_core::verify_webhook` via `@solvapay/server-wasm` (wasm-bindgen `web` target + runtime wrappers). Node stays on Step 37 napi. Browser profile exports `wasmVersion` only (symbol audit). Budgets in `rust/bindings/wasm/budgets.json`. See migration-map Step 38 decisions + §15 note 29.
 
 39. **Clean-install smoke tests.** Fresh `npm install` + one native call across the platform matrix (glibc, musl, macOS x64/arm64, Windows; Node 22/24/26) as a permanent CI gate, plus the WASI-fallback install path.
     **Done when:** the gate runs green on main.
+    **Step 39 note:** Consumer-path gate (not in-tree). `node-binding-artifacts` packs an immutable `server-clean-install-packages` bundle (`scripts/prepare-clean-install-packages.mjs` → publish-shaped `.tgz` + `manifest.json`). Runtime jobs `node clean install (native, <target>, Node <major>)` (24) and `node clean install (WASI, Node <major>)` (3) download that bundle, `npm install` into an empty temp project, and call public `@solvapay/server` `verifyWebhook` with `SOLVAPAY_IMPL=rust`. Native omits WASI; WASI uses `NAPI_RS_FORCE_WASI=error` and omits every `.node` target. Harness: `scripts/clean-install-smoke.mjs` + `scripts/clean-install-consumer.mjs`; shared targets in `scripts/targets.mjs`. Phase 6 Mermaid `EXP → SMOKE` already models this flow. CI remains PR-triggered (`pull_request` to `main`/`dev`); branch protection on those checks is the “green on main” interpretation. See §15 note 30 + migration-map Step 39 decisions.
 
 ---
 
@@ -1405,8 +1423,8 @@ Intentionally open until the phase that needs them; resolve with research + a PR
 
 | Gate | Resolve by | Notes |
 | --- | --- | --- |
-| Exact WASM size / cold-start numeric budgets | Step 38 baseline | Placeholder: regression >10% needs approval |
-| Final npm optional-dependency layout + package names for prebuilds | Steps 36–37 | **Provisional (step 36):** `@solvapay/server-native` + per-target `@solvapay/server-native-<platform>` + `-wasm32-wasi` via `create-npm-dirs`; step 37 wires into `@solvapay/server` |
+| Exact WASM size / cold-start numeric budgets | Step 38 baseline | **Resolved (step 38):** see `rust/bindings/wasm/budgets.json` — browser gzip **6531** bytes, cold-start median ~**12.7 ms** (Node 20/26 measure harness); edge diagnostic gzip **34157** / ~**14.2 ms**; regression >10% needs approval + `--record` |
+| Final npm optional-dependency layout + package names for prebuilds | Steps 36–37 | **Resolved (step 37):** `@solvapay/server-native` + per-target `@solvapay/server-native-<platform>` + `-wasm32-wasi` via `create-npm-dirs`; `@solvapay/server` optionalDependency `workspace:*` on `@solvapay/server-native` |
 | Python package name on PyPI (`solvapay` vs scoped) and minimum CPython (abi3 floor) | Steps 40–42 | Check PyPI name availability early — before step 40 |
 | Ruby gem name + versioning scheme; source-gem toolchain floor | Steps 43–45 | Check RubyGems name availability early |
 | Go module path naming (`github.com/solvapay/solvapay-go` vs vanity import) | Steps 49–51 | Decide before first tagged release; vanity import needs DNS + hosting |
@@ -1495,6 +1513,10 @@ Re-check the linked sources at the start of any step touching the corresponding 
 **Note 26 — Step 34 MCP payload builders (checked 2026-07-17):** No new crate deps / toolchain pins under the step-8 freeze — reused step-14 `PaywallGate` as typed input and `solvapay_dto::error_templates` for the frozen assert message. Pure cores: `paywall_tool_result` (`isError: false` + narration + gate verbatim — no payment-branch dropping, unlike step 33) and `make_response_result` / `assert_response_result` (brand + skip-absent `options` / empty `emittedBlocks`). No TS extract — dual-binding fixtures prove `@solvapay/mcp-core` `paywallToolResult` ≡ `@solvapay/server` `McpAdapter.formatGate` (step-4 node/edge precedent); additive exports `McpAdapter` / `makeResponseResult` / `assertResponseResult` + root `@solvapay/mcp-core` devDependency. Manifest freeze: `errors.mcp.messages.rawHandlerReturn` → dto-gen `error_templates::mcp::RAW_HANDLER_RETURN`. Decision impact: fixtures pin `args.message === structuredContent.message` so both bindings agree; `checkoutUrl: ""` and `confirmationUrl: ""` pass through on `structuredContent`. GREEN: `mcp/` 19/19 + full corpus `executed=411 passed=411 failed=0` (was 392). Sources: step-33 dual-binding / no-extract pattern; step-17 error_templates emit; MCP Apps text-only paywall (`isError: false`, §6.5).
 
 **Note 27 — Step 35 MCP names + descriptors (checked 2026-07-17):** No new crate deps / toolchain pins under the step-8 freeze — serde/serde_json only. Pure cores: `MCP_TOOL_NAMES` (12), `TOOL_FOR_VIEW`/`VIEW_FOR_TOOL`, `derive_icons`, `build_tool_descriptor_metadata`, `build_prompt_descriptor_metadata`, `build_prompt_user_message`, `validate_public_base_url`. TS extract `packages/mcp-core/src/descriptor-metadata.ts` rewired into `descriptors.ts` (handlers/schemas/fs/crypto/CSP stay host). Decision impact: registration order is contract (intent → transport → activate_plan); skip-absent `title`/`icons`/annotation flags; `deriveIcons` undefined → fixture `null`; frozen `publicBaseUrl` message stays a local const (no manifest `errors.mcp` key). Characterization extended on `descriptors.unit.test.ts` before extract. GREEN: +20 fixtures under `mcp/{tool-names,derive-icons,descriptors,prompts}` + full corpus `executed=431 passed=431 failed=0` (was 411). Sources: step-32 TS-extract rewire pattern; step-34 `mcp/` fixture layout; no upstream research beyond confirming no new deps needed.
+
+**Note 30 — Step 39 clean-install smoke (checked 2026-07-21):** Confirmed `napi artifacts` / `napi create-npm-dirs` as the supported path to place downloaded binaries into per-target npm packages ([napi artifacts](https://napi.rs/docs/cli/artifacts), [release native packages](https://napi.rs/docs/deep-dive/release)). `NAPI_RS_FORCE_WASI` still forces only for `true` / `error` (CLI ≥3.7); Step 39 WASI leg uses `error`. `pnpm pack` (from the package directory) rewrites `workspace:*` to concrete versions; `pnpm --filter <pkg> pack` is rejected on pnpm 9.6 — pack from each package cwd instead. Publish-shaped `@solvapay/server-native` optionalDependencies are version pins (not `file:npm/…`); the packer builds that manifest in a staging dir so the same path can feed a future release workflow. Fresh consumer installs use **`npm install`** (never `pnpm`, never `npm ci`, never workspace links) with `--ignore-scripts` so success cannot come from a local source rebuild. WASI direct dependency on host CPU needs `npm_config_cpu=wasm32` + `--force` to defeat `EBADPLATFORM` for `cpu: ["wasm32"]`. Alpine/musl: run smoke inside `node:<major>-alpine` on a glibc runner — do not run `actions/setup-node` inside musl (downloaded Node is glibc-linked). Runner labels: `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15`, `macos-15-intel`, `windows-latest`, `windows-11-arm`. Node majors **22 / 24 / 26** via `actions/setup-node@v4` (same major as existing binding jobs). **Out of scope for this gate:** `@solvapay/server-wasm` edge/browser wasm-bindgen path (Step 38) — Step 39 proves the napi packaged path only. Diagram in Phase 6 already shows `EXP → SMOKE`; no architectural change. Sources: napi-rs release docs; npm `os`/`cpu`/`libc` optionalDeps; GitHub-hosted runner labels (2026).
+
+**Note 29 — Step 38 edge/browser WASM cutover (checked 2026-07-21):** Confirmed upstream against pinned **wasm-bindgen 0.2.126** CLI: `--target web` emits ESM glue with async default `init(module_or_path?)` and `initSync({ module })` (object-form; positional deprecated). Deno also has `--target deno`, but a **single shared `web` output + thin runtime wrappers** avoids duplicating the edge binary across Node/Deno/workerd/browser loaders. Deno 2.x npm resolution: put `deno` (and `workerd`/`worker`/`edge-light`) **before** `node`/`import`/`default` in `package.json` `exports` — Deno advertises `node` and `import`. Cloudflare Workers/workerd: a `.wasm` (or `.wasm?module`) import yields a `WebAssembly.Module`; the workerd wrapper calls `initSync({ module })`. Binaryen pin: npm **`binaryen@131.0.0`** (`bin/wasm-opt`) — do not rely on an unversioned global. Workspace Rust pin remains **1.96.0** via `rust-toolchain.toml` (host `rustc` may be newer). Narrow cutover: only edge async `verifyWebhook` → `solvapay_core::verify_webhook` via `@solvapay/server-wasm`; Node stays on Step 37 napi; other edge exports stay TypeScript. `SOLVAPAY_IMPL` on edge uses a guarded runtime-neutral env lookup (never `node:process` / `node:module` in the edge graph); unset/`rust` → WASM; `ts` → retained Web Crypto rollback until Step 53. Panic strategy: `wasm-release` uses `panic = "abort"` — prevention/no-panic linting is the primary safety mechanism (no recoverable unwinding). Package: `@solvapay/server-wasm` under `rust/bindings/wasm/`; committed `pkg/{edge,browser}/` + drift check. Sources: [wasm-bindgen deployment](https://wasm-bindgen.github.io/wasm-bindgen/reference/deployment.html), [initSync](https://rustwasm.github.io/docs/wasm-bindgen/examples/synchronous-instantiation.html), [Workers Wasm](https://developers.cloudflare.com/workers/runtime-apis/webassembly/), [binaryen npm](https://www.npmjs.com/package/binaryen).
 
 **Note 28 — Step 36 napi-rs scaffold (checked 2026-07-20):** Current stack: `napi`/`napi-derive` **3.10.x**, `@napi-rs/cli` **3.7.3**, `napi-build` **2.3.x**, `@napi-rs/wasm-runtime` **^1.1.6** (required by generated `.wasi.cjs`). MSRV for napi 3.10 is **1.88** — workspace pin **1.96.0** stays (no bump). CLI flags confirmed: `napi build --platform --release [--target <triple>]`, `--use-napi-cross` (linux gnu), `--cross-compile`/`-x` (musl / zigbuild / xwin), `napi create-npm-dirs`, `napi artifacts`, `napi prepublish` (still warns-and-continues on missing artifacts → our `scripts/check-artifacts.mjs` hard-fails). WASI target `wasm32-wasip1-threads` added to `rust-toolchain.toml`. **`NAPI_RS_FORCE_WASI` tri-state (CLI ≥3.7):** unset = native-first; `true` = prefer WASI; `error` = prefer WASI and throw if absent; values `1`/`0`/`false` do **not** force WASI (supersedes casual `=1` wording). **Tokio:** enable `napi` feature `tokio_rt` — shared multi-thread runtime is **per-addon** (napi owns it on an extra thread); safe under `worker_threads`; sync `verifyWebhook` smoke does not exercise it. Provisional npm name `@solvapay/server-native` + per-target optionalDependencies + `wasm32-wasi` (`cpu: ["wasm32"]`). Until first publish, optionalDeps are `file:./npm/<triple>` (registry versions would break `npm ci` lock sync). Smoke surface only: `napiVersion` + `verifyWebhook` → `solvapay_core::verify_webhook`. Sources: [napi.rs v3 announcement](https://napi.rs/blog/announce-v3), [WASI docs](https://napi.rs/docs/concepts/webassembly), [build CLI](https://napi.rs/docs/cli/build), [crates.io napi 3.10](https://crates.io/crates/napi).
 

@@ -53,3 +53,7 @@ rust/bindings/node/*.wasm
 rust/bindings/node/node_modules/
 rust/bindings/node/npm/**/*.node
 rust/bindings/node/npm/**/*.wasm
+rust/bindings/node/npm/wasm32-wasi/server-native.wasi*
+rust/bindings/node/npm/wasm32-wasi/wasi-worker*
+rust/bindings/node/artifacts/
+rust/bindings/node/clean-install-bundle/

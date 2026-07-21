@@ -1293,6 +1293,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "solvapay-wasm"
+version = "0.1.0"
+dependencies = [
+ "js-sys",
+ "serde_json",
+ "solvapay-core",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

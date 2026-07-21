@@ -7,12 +7,23 @@ rust-version.workspace = true
 description = "Pure SolvaPay SDK logic — no HTTP, no tokio, no wasm-bindgen"
 publish = false
 
+[features]
+# Native consumers (napi, fixture-runner, shadow-invoker) keep full server surface.
+default = ["server"]
+# §7.1 capability composition
+server = ["client-full", "webhook-verify"]
+browser = ["client-public"]
+client-full = ["hmac-crypto"]
+client-public = []
+webhook-verify = ["hmac-crypto"]
+hmac-crypto = ["dep:hmac", "dep:sha2", "dep:subtle"]
+
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
-hmac = { workspace = true }
-sha2 = { workspace = true }
-subtle = { workspace = true }
+hmac = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+subtle = { workspace = true, optional = true }
 solvapay-dto = { path = "../solvapay-dto" }
 
 [lints]

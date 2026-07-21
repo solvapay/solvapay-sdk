@@ -6,17 +6,14 @@
  */
 
 import assert from 'node:assert/strict'
-import { createHmac } from 'node:crypto'
 import { describe, it } from 'node:test'
-
-const SECRET = 'whsec_test_fixture_secret'
-const BODY =
-  '{"type":"purchase.created","id":"evt_fixture_1","created":1782864000,"api_version":"2025-10-01","data":{"object":{"id":"pur_fixture_1"},"previous_attributes":null},"livemode":false,"request":{"id":null,"idempotency_key":null}}'
-
-function sign(body, secret, t) {
-  const hex = createHmac('sha256', secret).update(`${t}.${body}`).digest('hex')
-  return `t=${t},v1=${hex}`
-}
+import {
+  WEBHOOK_SMOKE_BODY,
+  WEBHOOK_SMOKE_EVENT_ID,
+  WEBHOOK_SMOKE_EVENT_TYPE,
+  WEBHOOK_SMOKE_SECRET,
+  freshWebhookSmokeSigned,
+} from '../scripts/webhook-smoke-fixture.mjs'
 
 describe('@solvapay/server-native binding smoke', () => {
   it('napiVersion returns a non-empty string', async () => {
@@ -28,11 +25,11 @@ describe('@solvapay/server-native binding smoke', () => {
 
   it('verifyWebhook accepts a known-good signed body', async () => {
     const { verifyWebhook } = await import('../index.js')
-    const t = Math.floor(Date.now() / 1000)
-    const json = verifyWebhook(BODY, sign(BODY, SECRET, t), SECRET)
+    const signed = freshWebhookSmokeSigned()
+    const json = verifyWebhook(signed.body, signed.signature, signed.secret)
     const value = JSON.parse(json)
-    assert.equal(value.type, 'purchase.created')
-    assert.equal(value.id, 'evt_fixture_1')
+    assert.equal(value.type, WEBHOOK_SMOKE_EVENT_TYPE)
+    assert.equal(value.id, WEBHOOK_SMOKE_EVENT_ID)
   })
 
   it('verifyWebhook throws with code on a bad signature', async () => {
@@ -40,7 +37,7 @@ describe('@solvapay/server-native binding smoke', () => {
     const t = Math.floor(Date.now() / 1000)
     const badSig = `t=${t},v1=${'ff'.repeat(32)}`
     assert.throws(
-      () => verifyWebhook(BODY, badSig, SECRET),
+      () => verifyWebhook(WEBHOOK_SMOKE_BODY, badSig, WEBHOOK_SMOKE_SECRET),
       err => {
         assert.ok(err instanceof Error)
         assert.equal(err.code, 'invalid_signature')

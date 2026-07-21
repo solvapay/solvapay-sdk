@@ -1,10 +1,14 @@
 //! Pure SolvaPay SDK logic.
 //!
-//! Dependency discipline (§4.3): `serde`, `serde_json`, `hmac`/`sha2`, `subtle`,
-//! plus `solvapay-dto` for generated error-template constants. No HTTP, no tokio,
-//! no wasm-bindgen.
+//! Dependency discipline (§4.3): `serde`, `serde_json`, optional `hmac`/`sha2`/
+//! `subtle` (via `hmac-crypto`), plus `solvapay-dto` for generated error-template
+//! constants. No HTTP, no tokio, no wasm-bindgen.
+//!
+//! Capability features (§7.1): `server` = `client-full` + `webhook-verify`;
+//! `browser` = `client-public` only (no webhook / no JWT HMAC).
 
 pub mod activation;
+#[cfg(feature = "client-full")]
 pub mod auth_resolution;
 pub mod balance_poll;
 pub mod business_details;
@@ -13,6 +17,7 @@ pub mod credit_display;
 pub mod customer_sync;
 pub mod error;
 pub mod helper_error;
+#[cfg(feature = "hmac-crypto")]
 mod hmac_util;
 pub mod limits;
 pub mod mcp;
@@ -30,9 +35,11 @@ pub mod route_error;
 pub mod seller_identity;
 mod serde_util;
 pub mod usage;
+#[cfg(feature = "webhook-verify")]
 pub mod webhook;
 
 pub use activation::validate_activate_plan_params;
+#[cfg(feature = "client-full")]
 pub use auth_resolution::{resolve_authenticated_user, AuthResolutionInput, AuthenticatedUser};
 pub use balance_poll::{
     evaluate_balance_observation, BalancePollPolicy, BALANCE_RECONCILE_DELAYS_MS,
@@ -102,4 +109,27 @@ pub use seller_identity::{
     SellerIdentityRow, SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
 };
 pub use usage::{project_usage_snapshot, UsageSnapshot};
+#[cfg(feature = "webhook-verify")]
 pub use webhook::{verify_webhook, WebhookError, WebhookErrorCode};
+
+#[cfg(test)]
+mod feature_gates {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
+
+    /// Documents the §7.1 feature contract for Step 38 compile checks.
+    ///
+    /// Run manually:
+    /// - `cargo check -p solvapay-core` (default/server)
+    /// - `cargo check -p solvapay-core --no-default-features --features browser`
+    #[test]
+    fn feature_contract_markers_exist() {
+        assert!(
+            cfg!(feature = "server")
+                || cfg!(feature = "browser")
+                || cfg!(feature = "client-public")
+                || cfg!(feature = "client-full")
+                || cfg!(feature = "webhook-verify")
+                || !cfg!(feature = "hmac-crypto")
+        );
+    }
+}

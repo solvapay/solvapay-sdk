@@ -1,0 +1,61 @@
+{
+  "name": "@solvapay/server-wasm",
+  "version": "0.1.0",
+  "description": "SolvaPay wasm-bindgen edge/browser binding (Step 38)",
+  "type": "module",
+  "sideEffects": [
+    "./runtime/*.js",
+    "./pkg/**/*.js"
+  ],
+  "files": [
+    "pkg",
+    "runtime",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./runtime/index.d.ts",
+      "deno": "./runtime/deno.js",
+      "workerd": "./runtime/workerd.js",
+      "worker": "./runtime/workerd.js",
+      "edge-light": "./runtime/web.js",
+      "browser": "./runtime/web.js",
+      "node": "./runtime/node.js",
+      "import": "./runtime/web.js",
+      "default": "./runtime/web.js"
+    },
+    "./edge": {
+      "types": "./runtime/index.d.ts",
+      "deno": "./runtime/deno.js",
+      "workerd": "./runtime/workerd.js",
+      "worker": "./runtime/workerd.js",
+      "edge-light": "./runtime/web.js",
+      "browser": "./runtime/web.js",
+      "node": "./runtime/node.js",
+      "import": "./runtime/web.js",
+      "default": "./runtime/web.js"
+    },
+    "./browser": {
+      "types": "./runtime/browser.d.ts",
+      "import": "./runtime/browser-web.js",
+      "default": "./runtime/browser-web.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/check-artifacts-present.mjs",
+    "build:wasm": "node scripts/build.mjs",
+    "build:check-drift": "node scripts/build.mjs --check-drift",
+    "test": "node --test __test__/binding.spec.mjs",
+    "symbols:check": "node scripts/check-browser-symbols.mjs",
+    "measure": "node scripts/measure-wasm.mjs --check",
+    "measure:record": "node scripts/measure-wasm.mjs --record"
+  },
+  "devDependencies": {
+    "binaryen": "131.0.0"
+  }
+}

@@ -35,8 +35,11 @@
     "build:debug": "napi build --platform",
     "create-npm-dirs": "napi create-npm-dirs",
     "artifacts:check": "node scripts/check-artifacts.mjs",
+    "pack:clean-install": "node scripts/prepare-clean-install-packages.mjs",
     "test": "node --test __test__/binding.spec.mjs",
-    "test:wasi": "NAPI_RS_FORCE_WASI=error node --test __test__/binding.spec.mjs"
+    "test:wasi": "NAPI_RS_FORCE_WASI=error node --test __test__/binding.spec.mjs",
+    "test:clean-install:unit": "node --test __test__/clean-install*.spec.mjs",
+    "test:clean-install": "node scripts/clean-install-smoke.mjs"
   },
   "dependencies": {
     "@napi-rs/wasm-runtime": "^1.1.6"

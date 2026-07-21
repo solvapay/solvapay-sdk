@@ -13,22 +13,10 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ALL_TARGETS } from './targets.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
-
-/** Expected platform package dirs under npm/ (§7.7 matrix + WASI). */
-const EXPECTED = [
-  { dir: 'darwin-x64', kind: 'node', binary: 'server-native.darwin-x64.node' },
-  { dir: 'darwin-arm64', kind: 'node', binary: 'server-native.darwin-arm64.node' },
-  { dir: 'linux-x64-gnu', kind: 'node', binary: 'server-native.linux-x64-gnu.node' },
-  { dir: 'linux-arm64-gnu', kind: 'node', binary: 'server-native.linux-arm64-gnu.node' },
-  { dir: 'linux-x64-musl', kind: 'node', binary: 'server-native.linux-x64-musl.node' },
-  { dir: 'linux-arm64-musl', kind: 'node', binary: 'server-native.linux-arm64-musl.node' },
-  { dir: 'win32-x64-msvc', kind: 'node', binary: 'server-native.win32-x64-msvc.node' },
-  { dir: 'win32-arm64-msvc', kind: 'node', binary: 'server-native.win32-arm64-msvc.node' },
-  { dir: 'wasm32-wasi', kind: 'wasm', binary: 'server-native.wasm32-wasi.wasm' },
-]
 
 function parseArgs(argv) {
   let npmRoot = join(ROOT, 'npm')
@@ -50,7 +38,7 @@ function main() {
     process.exit(1)
   }
 
-  for (const entry of EXPECTED) {
+  for (const entry of ALL_TARGETS) {
     const dirPath = join(npmRoot, entry.dir)
     if (!existsSync(dirPath) || !statSync(dirPath).isDirectory()) {
       missing.push(`${entry.dir}/ (directory)`)
@@ -80,11 +68,11 @@ function main() {
     for (const m of missing) {
       console.error(`  - ${m}`)
     }
-    console.error(`present: ${present.length}/${EXPECTED.length}`)
+    console.error(`present: ${present.length}/${ALL_TARGETS.length}`)
     process.exit(1)
   }
 
-  console.log(`check-artifacts: OK — ${present.length}/${EXPECTED.length} artifacts present`)
+  console.log(`check-artifacts: OK — ${present.length}/${ALL_TARGETS.length} artifacts present`)
   process.exit(0)
 }
 

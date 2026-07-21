@@ -8,6 +8,7 @@
 import crypto from 'node:crypto'
 import { SolvaPayError } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
+import { resolveWebhookImpl, verifyWebhookNative } from './webhook-native'
 
 // Main factory for unified API
 export { createSolvaPay } from './factory'
@@ -68,6 +69,21 @@ export type { ServerClientOptions } from './client'
  * @since 1.0.0
  */
 export function verifyWebhook({
+  body,
+  signature,
+  secret,
+}: {
+  body: string
+  signature: string
+  secret: string
+}): WebhookEvent {
+  return resolveWebhookImpl() === 'rust'
+    ? verifyWebhookNative({ body, signature, secret })
+    : verifyWebhookTs({ body, signature, secret })
+}
+
+/** TypeScript / `node:crypto` implementation (rollback path via `SOLVAPAY_IMPL=ts`). */
+function verifyWebhookTs({
   body,
   signature,
   secret,

@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::paywall_gate::PaywallGate;
+#[cfg(feature = "webhook-verify")]
 use crate::webhook::{WebhookError, WebhookErrorCode};
 
 /// Single structured error surface for all SolvaPay bindings (§4.4).
@@ -40,6 +41,7 @@ pub enum SdkError {
         gate: PaywallGate,
     },
     /// Webhook verification failures with stable codes.
+    #[cfg(feature = "webhook-verify")]
     Webhook {
         /// Frozen human-readable message for the code.
         message: String,
@@ -125,8 +127,9 @@ impl SdkError {
         match self {
             Self::Api { message, .. }
             | Self::Paywall { message, .. }
-            | Self::Webhook { message, .. }
             | Self::Transport { message, .. } => message,
+            #[cfg(feature = "webhook-verify")]
+            Self::Webhook { message, .. } => message,
         }
     }
 
@@ -139,12 +142,14 @@ impl SdkError {
         match self {
             Self::Api { .. } => "Api",
             Self::Paywall { .. } => "Paywall",
+            #[cfg(feature = "webhook-verify")]
             Self::Webhook { .. } => "Webhook",
             Self::Transport { .. } => "Transport",
         }
     }
 }
 
+#[cfg(feature = "webhook-verify")]
 impl From<WebhookError> for SdkError {
     /// Folds a domain [`WebhookError`] into [`SdkError::Webhook`].
     ///

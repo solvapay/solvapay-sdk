@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "measurement": {
+    "gzipLevel": 9,
+    "browserColdStart": "fresh Node process: import runtime/browser-node.js → ready() → wasmVersion()",
+    "edgeColdStart": "fresh Node process: import runtime/node.js → ready() → verifyWebhook(frozen accept fixture)",
+    "samplesPerMetric": 7,
+    "statistic": "median",
+    "spread": "median absolute deviation (MAD)",
+    "regressionThresholdPct": 10
+  },
+  "environment": {
+    "node": "v26.5.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "osRelease": "25.5.0",
+    "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+    "wasmBindgen": "wasm-bindgen 0.2.126",
+    "binaryen": "131.0.0",
+    "recordedAt": "2026-07-21T12:49:56.071Z"
+  },
+  "baselines": {
+    "browser": {
+      "rawBytes": 14293,
+      "gzipBytes": 6531,
+      "coldStartMedianMs": 12.681458000000001
+    },
+    "edge": {
+      "rawBytes": 73075,
+      "gzipBytes": 34157,
+      "coldStartMedianMs": 14.200708,
+      "note": "diagnostic only — §7.8 mandatory budget is browser"
+    }
+  },
+  "maxAllowed": {
+    "browser": {
+      "gzipBytes": 7184,
+      "coldStartMedianMs": 13.949603800000002
+    },
+    "edge": {
+      "gzipBytes": 37572,
+      "coldStartMedianMs": 15.620778800000002
+    }
+  }
+}
