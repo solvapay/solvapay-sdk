@@ -86,6 +86,7 @@ pub fn parse_openapi(root: &Value) -> GenResult<Ir> {
         routes,
         error_templates: crate::ir::IrErrorTemplates::default(),
         entry_points: BTreeMap::new(),
+        binding_symbols: BTreeMap::new(),
     })
 }
 

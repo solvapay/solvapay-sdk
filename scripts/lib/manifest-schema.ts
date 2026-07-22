@@ -330,6 +330,290 @@ const NamedEntry = z.object({
   typeParams: z.array(TypeParamSchema).optional(),
 })
 
+/** Boundary type vocabulary for §5.7 JSON-arg extractors. */
+export const BOUNDARY_TYPE_REFS = [
+  'string',
+  'string?',
+  'f64',
+  'f64?',
+  'i64',
+  'bool',
+  'value',
+] as const
+export type BoundaryTypeRef = (typeof BOUNDARY_TYPE_REFS)[number]
+
+const BoundaryTypeRefSchema = z.enum(BOUNDARY_TYPE_REFS)
+
+/** `args.rs` extractor helpers (§5.7 / step 39G-b). Independent of boundary type. */
+export const BINDING_EXTRACT_KINDS = [
+  'requireString',
+  'optionalString',
+  'requireF64',
+  'optionalF64',
+  'requireI64',
+  'requireU32',
+  'optionalU16',
+  'optionalU32',
+  'optionalU64',
+  'requireBool',
+  'requireObject',
+  'requireArray',
+  'requireTyped',
+  'optionalTyped',
+  'optionalValue',
+  'rawValueOrNull',
+] as const
+export type BindingExtractKind = (typeof BINDING_EXTRACT_KINDS)[number]
+
+/** Envelope serialize forms for structured shim bodies (§5.7 / step 39G-b). */
+export const BINDING_SERIALIZE_KINDS = [
+  'toValue',
+  'valueBool',
+  'valueString',
+  'valueArray',
+  'optionHelperErr',
+  'resultAsValue',
+  'clientAwait',
+  'clientSplit',
+  'clientIgnore',
+] as const
+export type BindingSerializeKind = (typeof BINDING_SERIALIZE_KINDS)[number]
+
+/** Generated shim files a binding symbol can land in (§5.7 / step 39G-b). */
+export const BINDING_ARTIFACTS = [
+  'decisions',
+  'payloadBuilders',
+  'client',
+  'webhook',
+] as const
+export type BindingArtifact = (typeof BINDING_ARTIFACTS)[number]
+
+const BindingArgSchema = z.object({
+  name: z.string().min(1),
+  type: BoundaryTypeRefSchema,
+  required: z.boolean().default(true),
+  /** Host adapter supplies this arg (clock / RNG); not part of the public caller surface. */
+  hostInjected: z.boolean().default(false),
+  /** Exact `args.rs` extractor helper (defaults from `(type, required)` when omitted). */
+  extract: z.enum(BINDING_EXTRACT_KINDS).optional(),
+  /** Turbofish / annotation type for `requireTyped` / `optionalTyped`. */
+  typedAs: z.string().min(1).optional(),
+  /** Rendering style for typed extracts (`turbofish` default | `annotation`). */
+  typedStyle: z.enum(['turbofish', 'annotation']).optional(),
+  /** Local binding name (`let {local} = …`). */
+  local: z.string().min(1).optional(),
+})
+
+const BindingCallSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('verbatim') }),
+  z.object({
+    kind: z.literal('wrap'),
+    serialize: z.enum(BINDING_SERIALIZE_KINDS),
+    args: z.array(z.string()).default([]),
+  }),
+])
+
+const BindingCatalogLinkSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('none') }),
+  z.object({ kind: z.literal('operation'), id: z.string().min(1) }),
+  z.object({ kind: z.literal('topLevel'), id: z.string().min(1) }),
+  z.object({ kind: z.literal('coreHelper'), id: z.string().min(1) }),
+  z.object({ kind: z.literal('facade'), id: z.string().min(1) }),
+])
+
+const BindingSymbolSchema = z.object({
+  /** Fully-qualified Rust core / transport fn path. */
+  core: z.string().min(1),
+  /** Per-toolchain export names (`ts` is today's `js_name`). */
+  names: LangNames,
+  catalog: BindingCatalogLinkSchema,
+  /** Ordered JSON-args keys extracted inside the shim. */
+  args: z.array(BindingArgSchema).default([]),
+  /** Ordered path-ref keys split from the combined args JSON (§15 note 34). */
+  splitPathRefs: z.array(z.string().min(1)).default([]),
+  /** Envelope success-value shape (opaque JSON today). */
+  return: z.literal('value'),
+  sync: z.enum(['sync', 'async']),
+  envelope: z.enum(['sync', 'async', 'webhookThrow']),
+  /** Generated shim file (`webhook` is not emitted as a shim). */
+  artifact: z.enum(BINDING_ARTIFACTS).optional(),
+  /** Stable emit order within the artifact. */
+  emitOrder: z.number().int().min(0).optional(),
+  /** Section marker (`// --- section ---`) preceding the symbol. */
+  section: z.string().min(1).optional(),
+  /** Doc comment body (no `///` prefix; lines joined with `\n`). */
+  doc: z.string().optional(),
+  /** Wasm doc override when the mirror doc differs from node. */
+  docWasm: z.string().optional(),
+  /** Rust fn / method name (defaults to `names.rust`). */
+  rustFnName: z.string().min(1).optional(),
+  /** Shim body strategy. */
+  call: BindingCallSchema.optional(),
+  /** Verbatim body source (Node) when `call.kind === 'verbatim'`. */
+  verbatimBody: z.string().optional(),
+  /** Verbatim body source override for Wasm when it differs from Node. */
+  verbatimBodyWasm: z.string().optional(),
+  /** Client DTO parsed from args JSON. */
+  dtoType: z.string().min(1).optional(),
+  /** Bare core call name (method / free fn). */
+  coreCall: z.string().min(1).optional(),
+  /** Client method call args (verbatim tokens) for `clientSplit`. */
+  clientCallArgs: z.array(z.string()).default([]),
+})
+
+export type BindingSymbol = z.infer<typeof BindingSymbolSchema>
+export type BindingCatalogLink = z.infer<typeof BindingCatalogLinkSchema>
+
+/**
+ * Committed node/wasm shim `js_name` inventory (37R/38R). Node and wasm mirror
+ * this set (wasm adds infra `wasmVersion` / `WasmClient` excluded below).
+ */
+export const SHIM_JS_NAMES = [
+  // Client dispatch (36)
+  'activatePlan',
+  'assignCredits',
+  'attachBusinessDetails',
+  'bootstrapMcpProduct',
+  'cancelPurchase',
+  'checkLimits',
+  'cloneProduct',
+  'configureMcpPlans',
+  'createCheckoutSession',
+  'createCustomer',
+  'createCustomerSession',
+  'createPaymentIntent',
+  'createPlan',
+  'createProduct',
+  'createTopupPaymentIntent',
+  'deletePlan',
+  'deleteProduct',
+  'disableAutoRecharge',
+  'getAutoRecharge',
+  'getCustomer',
+  'getCustomerBalance',
+  'getMerchant',
+  'getPaymentMethod',
+  'getPlatformConfig',
+  'getProduct',
+  'getUserInfo',
+  'listPlans',
+  'listProducts',
+  'processPaymentIntent',
+  'reactivatePurchase',
+  'saveAutoRecharge',
+  'trackUsage',
+  'trackUsageBulk',
+  'updateCustomer',
+  'updatePlan',
+  'updateProduct',
+  // Decision cores (42)
+  'attachBusinessDetailsValidationError',
+  'buildCreateCustomerParams',
+  'buildGateMessage',
+  'buildNudgeMessage',
+  'buildPaywallGate',
+  'classifyCancelError',
+  'classifyCreateError',
+  'classifyCustomerRef',
+  'classifyLookupError',
+  'classifyPaywallState',
+  'classifyReactivateError',
+  'coerceCustomerOptions',
+  'decidePaywallOutcome',
+  'evaluateCachedLimits',
+  'evaluateFreshLimits',
+  'extractBackendCustomerRef',
+  'isCachedCustomerRefValid',
+  'isEmailConflict',
+  'isErrorResult',
+  'mapRouteError',
+  'normalizeCancelResponse',
+  'normalizeReactivateResponse',
+  'paywallErrorToClientPayload',
+  'projectPaymentIntentResult',
+  'projectTopupProcessOutcome',
+  'projectUsageSnapshot',
+  'resolveCheckLimitsParams',
+  'resolveFallbackGateLimits',
+  'resolveProductRef',
+  'resolvePurchaseCustomerRef',
+  'resolveReturnUrl',
+  'retryNextDelayMs',
+  'selectActivePurchases',
+  'validateActivatePlanParams',
+  'validateAttachBusinessDetailsParams',
+  'validateCheckoutSessionParams',
+  'validateCreatePaymentIntentParams',
+  'validateGetProductParams',
+  'validateListPlansParams',
+  'validateProcessPaymentIntentParams',
+  'validatePurchaseRef',
+  'validateTopupPaymentIntentParams',
+  // Payload builders (23)
+  'assertResponseResult',
+  'buildPromptDescriptorMetadata',
+  'buildPromptUserMessage',
+  'buildToolDescriptorMetadata',
+  'creditsToDisplayMinorUnits',
+  'deriveIcons',
+  'deriveTaxIdType',
+  'getBusinessCountryOptions',
+  'getSellerTaxIdentifierDisplayLabel',
+  'getTaxIdExample',
+  'getTaxIdFieldLabel',
+  'getTaxIdHelperText',
+  'isZeroDecimalCurrency',
+  'makeResponseResult',
+  'MCP_TOOL_NAMES',
+  'mcpViewMaps',
+  'minorUnitsPerMajor',
+  'paywallToolResult',
+  'resolveSellerIdentityDisplay',
+  'resolveTaxBehavior',
+  'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE',
+  'validateBusinessDetails',
+  'validatePublicBaseUrl',
+  // Webhook
+  'verifyWebhook',
+] as const
+
+/** Binding-infra exports that are not core symbols (mirrors delegation-allowlist). */
+export const BINDING_INFRA_ALLOWLIST = [
+  'napiVersion',
+  'wasmVersion',
+  'NativeClient',
+  'WasmClient',
+] as const
+
+/**
+ * Catalog ids that cross the binding boundary and must have exactly one linker.
+ * §8 facades, error classes, `withRetry` host orchestration, and TS-only const
+ * tables are intentionally excluded.
+ */
+export const BINDING_CATALOG_BOUNDARY_TOP_LEVEL = [
+  'verifyWebhook',
+  'buildPaywallGate',
+  'buildGateMessage',
+  'buildNudgeMessage',
+  'classifyPaywallState',
+  'paywallErrorToClientPayload',
+] as const
+
+export const BINDING_CATALOG_BOUNDARY_CORE_HELPERS = [
+  'validateBusinessDetails',
+  'deriveTaxIdType',
+  'resolveTaxBehavior',
+  'getTaxIdExample',
+  'getTaxIdFieldLabel',
+  'getTaxIdHelperText',
+  'minorUnitsPerMajor',
+  'isZeroDecimalCurrency',
+  'creditsToDisplayMinorUnits',
+  'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE',
+  'getSellerTaxIdentifierDisplayLabel',
+  'resolveSellerIdentityDisplay',
+] as const
+
 export const SdkContractManifestSchema = z.object({
   operations: z.record(z.string(), Operation),
   /** SDK-only overlay type catalog (§5.4). Keys are overlay names. */
@@ -337,6 +621,11 @@ export const SdkContractManifestSchema = z.object({
   topLevel: z.record(z.string(), NamedEntry),
   coreHelpers: z.record(z.string(), NamedEntry),
   facade: z.record(z.string(), NamedEntry),
+  /**
+   * Binding-boundary descriptors (§5.7 / step 39G-a). Keys are canonical
+   * symbol ids (today equal to the shim `js_name`).
+   */
+  bindings: z.record(z.string(), BindingSymbolSchema).default({}),
   /** Global shadow-mode volatile rules (step 25). */
   shadow: GlobalShadow,
   errors: z
@@ -819,6 +1108,127 @@ export function crossCheckOpenApi(
   return issues
 }
 
+/**
+ * Bidirectional binding-boundary reconciliation (§5.7 / step 39G-a):
+ * (a) every catalog-linked binding resolves to a real catalog id, and every
+ *     non-§8 catalog entry that crosses the boundary has exactly one linker;
+ * (b) committed shim `js_name`s (minus infra allowlist) match `bindings` export names;
+ * (c) core fn paths are unique.
+ */
+export function assertBindingReconciliation(manifest: SdkContractManifest): string[] {
+  const issues: string[] = []
+  const bindings = manifest.bindings
+
+  // (c) unique core paths
+  const coreOwners = new Map<string, string>()
+  for (const [id, symbol] of Object.entries(bindings)) {
+    const prior = coreOwners.get(symbol.core)
+    if (prior !== undefined) {
+      issues.push(
+        `Bindings: duplicate core path "${symbol.core}" used by ${prior} and ${id}`,
+      )
+    } else {
+      coreOwners.set(symbol.core, id)
+    }
+  }
+
+  // Collect catalog linkers: section.id → binding id
+  const linkers = new Map<string, string>()
+  for (const [id, symbol] of Object.entries(bindings)) {
+    if (symbol.catalog.kind === 'none') {
+      continue
+    }
+    const catalogId = symbol.catalog.id
+    const section = symbol.catalog.kind
+    const catalogKey = `${section}.${catalogId}`
+
+    const sectionMap =
+      section === 'operation'
+        ? manifest.operations
+        : section === 'topLevel'
+          ? manifest.topLevel
+          : section === 'coreHelper'
+            ? manifest.coreHelpers
+            : manifest.facade
+    if (!(catalogId in sectionMap)) {
+      issues.push(
+        `Bindings: ${id} catalog link ${catalogKey} does not resolve to a catalog entry`,
+      )
+      continue
+    }
+    const prior = linkers.get(catalogKey)
+    if (prior !== undefined) {
+      issues.push(
+        `Bindings: catalog ${catalogKey} has multiple binders (${prior}, ${id})`,
+      )
+    } else {
+      linkers.set(catalogKey, id)
+    }
+  }
+
+  // (a) every boundary catalog entry has exactly one linker
+  for (const opId of Object.keys(manifest.operations)) {
+    const key = `operation.${opId}`
+    if (!linkers.has(key)) {
+      issues.push(
+        `Bindings: orphan catalog entry ${key} has no binding linker`,
+      )
+    }
+  }
+  for (const id of BINDING_CATALOG_BOUNDARY_TOP_LEVEL) {
+    if (!(id in manifest.topLevel)) {
+      continue
+    }
+    const key = `topLevel.${id}`
+    if (!linkers.has(key)) {
+      issues.push(
+        `Bindings: orphan catalog entry ${key} has no binding linker`,
+      )
+    }
+  }
+  for (const id of BINDING_CATALOG_BOUNDARY_CORE_HELPERS) {
+    if (!(id in manifest.coreHelpers)) {
+      continue
+    }
+    const key = `coreHelper.${id}`
+    if (!linkers.has(key)) {
+      issues.push(
+        `Bindings: orphan catalog entry ${key} has no binding linker`,
+      )
+    }
+  }
+
+  // (b) shim js_names ↔ bindings names.ts
+  const bindingJsNames = new Set(
+    Object.values(bindings).map(symbol => symbol.names.ts),
+  )
+  const infra = new Set<string>(BINDING_INFRA_ALLOWLIST)
+  const shimNames = new Set<string>(SHIM_JS_NAMES)
+
+  for (const jsName of shimNames) {
+    if (infra.has(jsName)) {
+      continue
+    }
+    if (!bindingJsNames.has(jsName)) {
+      issues.push(
+        `Bindings: orphan shim js_name "${jsName}" has no bindings entry`,
+      )
+    }
+  }
+  for (const jsName of bindingJsNames) {
+    if (infra.has(jsName)) {
+      continue
+    }
+    if (!shimNames.has(jsName)) {
+      issues.push(
+        `Bindings: bindings export "${jsName}" is not in the committed shim inventory`,
+      )
+    }
+  }
+
+  return issues
+}
+
 export function validateManifestSemantics(manifest: SdkContractManifest): string[] {
   return [
     ...assertOperationCount(manifest),
@@ -827,5 +1237,6 @@ export function validateManifestSemantics(manifest: SdkContractManifest): string
     ...assertNameCorrectness(manifest),
     ...assertNoNameCollisions(manifest),
     ...assertParamsCoverage(manifest),
+    ...assertBindingReconciliation(manifest),
   ]
 }

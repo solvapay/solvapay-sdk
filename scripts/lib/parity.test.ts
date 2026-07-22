@@ -123,6 +123,7 @@ function stubManifest(): SdkContractManifest {
       },
     },
     reservedWords: { go: [], py: [], rb: [], rust: [], ts: [] },
+    bindings: {},
   }
 }
 

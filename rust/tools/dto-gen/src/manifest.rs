@@ -25,6 +25,143 @@ pub struct Manifest {
     /// Facade factory / payable surface.
     #[serde(default)]
     pub facade: BTreeMap<String, NamedEntry>,
+    /// Binding-boundary descriptors (§5.7 / step 39G-a).
+    #[serde(default)]
+    pub bindings: BTreeMap<String, BindingDef>,
+}
+
+/// One `bindings:` entry from the contract manifest.
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct BindingDef {
+    /// Fully-qualified Rust core / transport fn path.
+    pub core: String,
+    /// Per-toolchain export names.
+    pub names: LangNames,
+    /// Catalog link (`kind: none` or section + id).
+    pub catalog: BindingCatalogLink,
+    /// Ordered JSON-args.
+    #[serde(default)]
+    pub args: Vec<BindingArgDef>,
+    /// Ordered path-ref split keys.
+    #[serde(default, rename = "splitPathRefs")]
+    pub split_path_refs: Vec<String>,
+    /// Envelope success-value shape (`value`).
+    #[serde(rename = "return")]
+    pub return_shape: String,
+    /// `sync` or `async`.
+    pub sync: String,
+    /// `sync` | `async` | `webhookThrow`.
+    pub envelope: String,
+    /// Generated shim file: `decisions` | `payloadBuilders` | `client` | `webhook`.
+    #[serde(default)]
+    pub artifact: Option<String>,
+    /// Stable emit order within the artifact.
+    #[serde(default, rename = "emitOrder")]
+    pub emit_order: Option<u32>,
+    /// Section marker preceding the symbol.
+    #[serde(default)]
+    pub section: Option<String>,
+    /// Doc comment body (no `///` prefix; lines joined with `\n`).
+    #[serde(default)]
+    pub doc: Option<String>,
+    /// Wasm doc override when the mirror doc differs from node.
+    #[serde(default, rename = "docWasm")]
+    pub doc_wasm: Option<String>,
+    /// Rust fn / method name (defaults to `names.rust`).
+    #[serde(default, rename = "rustFnName")]
+    pub rust_fn_name: Option<String>,
+    /// Shim body strategy.
+    #[serde(default)]
+    pub call: Option<BindingCallDef>,
+    /// Verbatim body source (Node) when `call.kind == verbatim`.
+    #[serde(default, rename = "verbatimBody")]
+    pub verbatim_body: Option<String>,
+    /// Verbatim body source override for Wasm when it differs.
+    #[serde(default, rename = "verbatimBodyWasm")]
+    pub verbatim_body_wasm: Option<String>,
+    /// Client DTO parsed from args JSON.
+    #[serde(default, rename = "dtoType")]
+    pub dto_type: Option<String>,
+    /// Bare core call name (method / free fn).
+    #[serde(default, rename = "coreCall")]
+    pub core_call: Option<String>,
+    /// Client method call args (verbatim tokens) for `clientSplit`.
+    #[serde(default, rename = "clientCallArgs")]
+    pub client_call_args: Vec<String>,
+}
+
+/// Shim body strategy on a binding symbol (step 39G-b).
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct BindingCallDef {
+    /// `wrap` (structured extract/serialize) or `verbatim`.
+    pub kind: String,
+    /// Serialize form for `wrap` (`toValue`, `valueBool`, `clientAwait`, …).
+    #[serde(default)]
+    pub serialize: Option<String>,
+    /// Positional args passed to the core call (verbatim tokens).
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+/// Catalog link on a binding symbol.
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(tag = "kind")]
+pub enum BindingCatalogLink {
+    /// Internal core (no catalog entry).
+    #[serde(rename = "none")]
+    None,
+    /// Client operation.
+    #[serde(rename = "operation")]
+    Operation {
+        /// Catalog operation id.
+        id: String,
+    },
+    /// Top-level helper.
+    #[serde(rename = "topLevel")]
+    TopLevel {
+        /// Catalog topLevel id.
+        id: String,
+    },
+    /// Core helper.
+    #[serde(rename = "coreHelper")]
+    CoreHelper {
+        /// Catalog coreHelpers id.
+        id: String,
+    },
+    /// Facade entry.
+    #[serde(rename = "facade")]
+    Facade {
+        /// Catalog facade id.
+        id: String,
+    },
+}
+
+/// One ordered JSON-arg on a binding symbol.
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct BindingArgDef {
+    /// Arg key.
+    pub name: String,
+    /// Boundary type (`string`, `string?`, `f64`, …).
+    #[serde(rename = "type")]
+    pub ty: String,
+    /// Required vs optional.
+    #[serde(default = "default_true")]
+    pub required: bool,
+    /// Host-injected flag.
+    #[serde(default, rename = "hostInjected")]
+    pub host_injected: bool,
+    /// Exact `args.rs` extractor helper (defaults from `(type, required)`).
+    #[serde(default)]
+    pub extract: Option<String>,
+    /// Turbofish / annotation type for `requireTyped` / `optionalTyped`.
+    #[serde(default, rename = "typedAs")]
+    pub typed_as: Option<String>,
+    /// Rendering style for typed extracts (`turbofish` default | `annotation`).
+    #[serde(default, rename = "typedStyle")]
+    pub typed_style: Option<String>,
+    /// Local binding name (defaults to snake_case of `name`).
+    #[serde(default)]
+    pub local: Option<String>,
 }
 
 /// Per-language idiomatic names (§5.6).
@@ -418,5 +555,64 @@ topLevel:
         assert_eq!(entry.type_params.len(), 1);
         assert_eq!(entry.type_params[0].name, "T");
         assert_eq!(entry.params.len(), 2);
+    }
+
+    #[test]
+    fn deserializes_bindings_section() {
+        let yaml = r#"
+bindings:
+  updateCustomer:
+    core: solvapay_transport::SolvaPayClient::update_customer
+    names:
+      ts: updateCustomer
+      py: update_customer
+      rb: update_customer
+      go: UpdateCustomer
+      rust: update_customer
+    catalog:
+      kind: operation
+      id: updateCustomer
+    args: []
+    splitPathRefs:
+      - customerRef
+    return: value
+    sync: async
+    envelope: async
+  buildCreateCustomerParams:
+    core: solvapay_core::customer_sync::build_create_customer_params
+    names:
+      ts: buildCreateCustomerParams
+      py: build_create_customer_params
+      rb: build_create_customer_params
+      go: BuildCreateCustomerParams
+      rust: build_create_customer_params
+    catalog:
+      kind: none
+    args:
+      - name: customerRef
+        type: string
+        required: true
+      - name: nowMs
+        type: i64
+        required: true
+        hostInjected: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+"#;
+        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+        assert_eq!(manifest.bindings.len(), 2);
+        let update = manifest.bindings.get("updateCustomer").unwrap();
+        assert_eq!(update.split_path_refs, vec!["customerRef".to_string()]);
+        assert_eq!(update.envelope, "async");
+        assert!(matches!(
+            update.catalog,
+            BindingCatalogLink::Operation { ref id } if id == "updateCustomer"
+        ));
+        let build = manifest.bindings.get("buildCreateCustomerParams").unwrap();
+        assert_eq!(build.args.len(), 2);
+        assert!(build.args[1].host_injected);
+        assert!(matches!(build.catalog, BindingCatalogLink::None));
     }
 }

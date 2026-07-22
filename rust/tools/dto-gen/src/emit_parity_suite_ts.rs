@@ -130,6 +130,7 @@ mod tests {
             routes: vec![],
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
+            binding_symbols: BTreeMap::new(),
         };
         ir.entry_points.insert(
             "checkLimits".into(),

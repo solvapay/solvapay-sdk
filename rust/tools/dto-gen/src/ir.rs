@@ -20,6 +20,221 @@ pub struct Ir {
     pub error_templates: IrErrorTemplates,
     /// Catalogued entry points (operations + topLevel + facade + coreHelpers).
     pub entry_points: BTreeMap<String, IrEntryPoint>,
+    /// Binding-boundary symbols (§5.7 / step 39G-a), keyed by canonical id.
+    pub binding_symbols: BTreeMap<String, IrBindingSymbol>,
+}
+
+/// Envelope mode at the binding boundary (§5.7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrEnvelopeMode {
+    /// Sync `run_envelope_sync`.
+    Sync,
+    /// Async `run_envelope`.
+    Async,
+    /// Webhook-throw exception path (not JSON envelope).
+    WebhookThrow,
+}
+
+/// Boundary type for a JSON-arg extractor (§5.7 matrix).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrBoundaryType {
+    /// Required string.
+    String,
+    /// Optional string.
+    StringOpt,
+    /// Required f64 / JS number.
+    F64,
+    /// Optional f64.
+    F64Opt,
+    /// Required i64 (host-injected clocks often use this).
+    I64,
+    /// Boolean.
+    Bool,
+    /// Opaque JSON value passthrough.
+    Value,
+}
+
+/// Extractor helper used to pull one arg out of the combined args JSON (§5.7).
+///
+/// Separate from [`IrBoundaryType`] — the boundary type describes the public
+/// surface, the extract kind is the exact `args.rs` helper the shim body calls.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrExtractKind {
+    /// `require_string(&args, "k")?`
+    RequireString,
+    /// `optional_string(&args, "k")?`
+    OptionalString,
+    /// `require_f64(&args, "k")?`
+    RequireF64,
+    /// `optional_f64(&args, "k")?`
+    OptionalF64,
+    /// `require_i64(&args, "k")?`
+    RequireI64,
+    /// `require_u32(&args, "k")?`
+    RequireU32,
+    /// `optional_u16(&args, "k")?`
+    OptionalU16,
+    /// `optional_u32(&args, "k")?`
+    OptionalU32,
+    /// `optional_u64(&args, "k")?`
+    OptionalU64,
+    /// `require_bool(&args, "k")?`
+    RequireBool,
+    /// `require_object(&args, "k")?`
+    RequireObject,
+    /// `require_array(&args, "k")?`
+    RequireArray,
+    /// `require_typed::<T>(&args, "k")?`
+    RequireTyped,
+    /// `optional_typed::<T>(&args, "k")?`
+    OptionalTyped,
+    /// `optional_value(&args, "k")` (no `?`)
+    OptionalValue,
+    /// `args.get("k").cloned().unwrap_or(Value::Null)`
+    RawValueOrNull,
+}
+
+/// Rendering style for `require_typed` / `optional_typed` extract lines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IrTypedStyle {
+    /// `let x = require_typed::<T>(&args, "k")?` (default).
+    #[default]
+    Turbofish,
+    /// `let x: T = require_typed(&args, "k")?`.
+    Annotation,
+}
+
+/// One ordered JSON-arg on a binding symbol.
+#[derive(Debug, Clone, PartialEq)]
+pub struct IrBindingArg {
+    /// Arg key in the combined args JSON.
+    pub name: String,
+    /// Boundary type.
+    pub ty: IrBoundaryType,
+    /// Required vs optional.
+    pub required: bool,
+    /// Host adapter injects this arg (not the public caller).
+    pub host_injected: bool,
+    /// Exact extractor helper the shim body calls.
+    pub extract: IrExtractKind,
+    /// Turbofish / annotation type for `require_typed` / `optional_typed`.
+    pub typed_as: Option<String>,
+    /// Rendering style for typed extracts.
+    pub typed_style: IrTypedStyle,
+    /// Local binding name (`let {local} = …`).
+    pub local: Option<String>,
+}
+
+/// Optional link from a binding symbol back to the §5.6 catalog.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IrBindingCatalogLink {
+    /// Internal core with no public catalog entry.
+    None,
+    /// Client operation.
+    Operation(String),
+    /// Top-level helper.
+    TopLevel(String),
+    /// Core helper.
+    CoreHelper(String),
+    /// Facade entry.
+    Facade(String),
+}
+
+/// Which generated shim file a binding symbol is emitted into (step 39G-b).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrBindingArtifact {
+    /// Sync decision / paywall / retry cores → `decisions.rs`.
+    Decisions,
+    /// Sync core + MCP payload builders → `payload_builders.rs`.
+    PayloadBuilders,
+    /// Async client methods → `native_client.rs` / `wasm_client.rs`.
+    Client,
+    /// Webhook verify — not emitted as a generated shim file.
+    Webhook,
+}
+
+/// How the shim body serializes the core call into the envelope value (§5.7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrSerializeKind {
+    /// `to_value(&core(..))`
+    ToValue,
+    /// `Ok(Value::Bool(core(..)))`
+    ValueBool,
+    /// `Ok(Value::String(core(..)))`
+    ValueString,
+    /// `Ok(Value::Array(core(..)))`
+    ValueArray,
+    /// `option_helper_err(core(..))`
+    OptionHelperErr,
+    /// `result_as_value(core(..))`
+    ResultAsValue,
+    /// Client: `parse_args_json::<Dto>` + `client.method(params).await`
+    ClientAwait,
+    /// Client: `split_path_refs` + optional body parse + `client.method(..).await`
+    ClientSplit,
+    /// Client: `client.method().await` (args ignored)
+    ClientIgnore,
+}
+
+/// Shim body strategy: a structured wrap or a verbatim source blob.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IrBindingCall {
+    /// Structured extract-then-serialize wrap.
+    Wrap {
+        /// Serialize form.
+        serialize: IrSerializeKind,
+        /// Positional args passed to the core call (verbatim tokens).
+        args: Vec<String>,
+    },
+    /// Emit the captured body source verbatim.
+    Verbatim,
+}
+
+/// One binding-boundary symbol descriptor (§5.7).
+#[derive(Debug, Clone, PartialEq)]
+pub struct IrBindingSymbol {
+    /// Canonical symbol id (matches shim `js_name` today).
+    pub id: String,
+    /// Fully-qualified Rust core / transport fn path.
+    pub core: String,
+    /// Per-toolchain export names.
+    pub names: IrLangNames,
+    /// Catalog link (or `None` for internal cores).
+    pub catalog: IrBindingCatalogLink,
+    /// Ordered JSON-args.
+    pub args: Vec<IrBindingArg>,
+    /// Ordered path-ref split keys.
+    pub split_path_refs: Vec<String>,
+    /// Envelope success-value shape marker (`value` today).
+    pub return_shape: String,
+    /// Sync vs async binding.
+    pub sync: IrSyncKind,
+    /// Envelope mode.
+    pub envelope: IrEnvelopeMode,
+    /// Which generated shim file this symbol lands in.
+    pub artifact: IrBindingArtifact,
+    /// Stable emit order within the artifact.
+    pub emit_order: u32,
+    /// Section marker (`// --- section ---`) preceding the symbol, if any.
+    pub section: Option<String>,
+    /// Doc comment body (no `///` prefix; lines joined with `\n`).
+    pub doc: String,
+    /// Wasm doc override when the mirror doc differs from node.
+    pub doc_wasm: Option<String>,
+    /// Rust fn / method name.
+    pub rust_fn_name: String,
+    /// Shim body strategy.
+    pub call: IrBindingCall,
+    /// Verbatim body source (Node) when `call == Verbatim`.
+    pub verbatim_body: Option<String>,
+    /// Verbatim body source override for Wasm when it differs from Node.
+    pub verbatim_body_wasm: Option<String>,
+    /// Client DTO type parsed from args JSON.
+    pub dto_type: Option<String>,
+    /// Bare core call name (method / free fn).
+    pub core_call: Option<String>,
+    /// Client method call args (verbatim tokens) for `ClientSplit`.
+    pub client_call_args: Vec<String>,
 }
 
 /// Which catalog section an entry point belongs to.

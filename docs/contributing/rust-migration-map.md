@@ -7,7 +7,7 @@ Living **state / progress / handoff** layer for the Rust core SDK redesign. Comp
 
 Session workflow (redesign §14): pick the next incomplete step in redesign §9 → implement only that step → prove its "done when" → update **this map** (status + handoff bullets). At each phase close, finalize that phase's handoff entry before opening the next phase's first PR.
 
-**Current progress (2026-07-21):** Steps 1–38 **Done**; Step **37R Done** (a–e); Step **38R Done** (a–g) — full-surface edge WASM cutover; Step 39 **In progress** (local host-native + WASI clean-install green incl. 37R-e extension; awaiting full CI matrix 24+3). Full-surface Node napi cutover closed: server/core/mcp-core unit both flags, `test:contract` 1181 both flags, `pnpm delegation:check`, extended clean-install, `shadow:selftest` IDENTICAL, React 1083 unmodified (§15 notes 33–37). Full-surface edge WASM closed: `WasmClient` (Groups A–C over `FetchTransport`) + sync decision/paywall/core/MCP envelopes via `initSync`; browser public-safe subset with opt-in async warm-up; edge markers in the delegation gate; server 366×2 / mcp-core 108×2 / core 117 / React 1083; Deno edge smoke covers async webhook + sync dispatch (§15 note 38). Phase 6 closes when Step 39 CI is green. **Next:** land Step 39 CI matrix green → Phase 6 close → Step 40 (PyO3 scaffold).
+**Current progress (2026-07-22):** Steps 1–38 **Done**; Step **37R Done** (a–e); Step **38R Done** (a–g); Step 39 **In progress** (local host-native + WASI clean-install green; awaiting full CI matrix); Step **39G-a Done** — binding-boundary IR + manifest `bindings:` (102 symbols), Zod schema, `Ir.binding_symbols` lowering, bidirectional reconciliation gate, `--dump-bindings` snapshot + CI drift (§15 note 40); Step **39G-b Done** — Rust shim emitters (napi + wasm) regenerate the eight committed 37R/38R shim files byte-identical below the `@generated` header; CI regen-drift + `@generated` header gate cover the shims (§15 note 41). Phase 6 closes when Step 39 CI is green. **Next:** land Step 39 CI matrix green → Phase 6 close → Phase 6G continues with 39G-c (native-side marshalling emitters) → Step 40 (PyO3 scaffold).
 
 ## Status legend
 
@@ -63,22 +63,30 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 38 | Edge/browser WASM cutover | Phase 6 | Done | — | CI `wasm-binding`: artifact drift + feature exclusivity + symbol audit + budgets + edge unit (70×2) + 18/18 edge corpus rust/ts + Deno smoke + fetch-runtime; browser gzip 6531 / cold ~12.7ms | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 38R | Full-surface edge WASM cutover | Phase 6 | Done | — | Per sub-step (38R-a…g, §15 note 38): `WasmClient` (36 Groups A–C over `FetchTransport`) + sync decision/paywall/retry/core/MCP envelopes via `initSync`; edge installs WASM dispatch in `edge.ts`; browser public-safe subset + opt-in `warmBrowserCoreWasm`; `callWasm`/`callWasmSync`/`verifyWebhookWasm` delegation markers; server 366×2 / mcp-core 108×2 / core 117 / React 1083; Deno edge smoke (async webhook + sync dispatch); symbol audit + budgets re-recorded | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
 | 39 | Clean-install smoke tests | Phase 6 | In progress | — | Local: `CLEAN_INSTALL_OK` native darwin-arm64 + WASI on Node 26; CI jobs `node clean install (native, <target>, Node <major>)` ×24 + `node clean install (WASI, Node <major>)` ×3 (pending green) | [Phase 6](#phase-6--node-binding-cutover-then-edgebrowser-wasm) |
+| 39G-a | Binding-boundary IR + manifest `bindings:` section | Phase 6G | Done | — | `pnpm manifest:check` green (schema + reconciliation); `cargo test -p dto-gen` green (parse/lower/idempotence); `binding-symbols.snapshot.json` committed + CI drift via `dto-gen --dump-bindings`; 102 symbols enumerated from 37R/38R shims; no shim emission | [Phase 6G](#phase-6g--binding-glue-generator) |
+| 39G-b | Rust shim emitters (napi + wasm) + retrofit proof | Phase 6G | Done | — | Regenerated node + wasm shims diff-clean below `@generated` header (8 files); `cargo test -p dto-gen` golden + unit green; `cargo test -p solvapay-node` 22/22 on generated shims; CI regen-drift + `@generated` header gate cover the eight shim paths; both-flag suites unchanged (behavioral proof) | [Phase 6G](#phase-6g--binding-glue-generator) |
+| 39G-c | Native-side marshalling emitters (TS) | Phase 6G | Not started | — | — | [Phase 6G](#phase-6g--binding-glue-generator) |
 | 40 | Scaffold PyO3/maturin | Phase 7 | Not started | — | — | [Phase 7](#phase-7--python) |
-| 41 | Generate the Python facade | Phase 7 | Not started | — | — | [Phase 7](#phase-7--python) |
+| 41 | Generate the Python facade (+ generated binding glue, §5.7) | Phase 7 | Not started | — | — | [Phase 7](#phase-7--python) |
 | 42 | Live contract tests + publish (Python) | Phase 7 | Not started | — | — | [Phase 7](#phase-7--python) |
 | 43 | Scaffold Magnus/rb-sys | Phase 8 | Not started | — | — | [Phase 8](#phase-8--ruby) |
-| 44 | Generate the Ruby facade | Phase 8 | Not started | — | — | [Phase 8](#phase-8--ruby) |
+| 44 | Generate the Ruby facade (+ generated binding glue, §5.7) | Phase 8 | Not started | — | — | [Phase 8](#phase-8--ruby) |
 | 45 | Live contract tests + publish (Ruby) | Phase 8 | Not started | — | — | [Phase 8](#phase-8--ruby) |
 | 46 | Scaffold the `solvapay` facade crate | Phase 9 | Not started | — | — | [Phase 9](#phase-9--rust-public-crate) |
 | 47 | Generate Rust facade signatures + signature-parity suite | Phase 9 | Not started | — | — | [Phase 9](#phase-9--rust-public-crate) |
 | 48 | crates.io publish + docs.rs + live contract tests | Phase 9 | Not started | — | — | [Phase 9](#phase-9--rust-public-crate) |
 | 49 | Scaffold wazero binding | Phase 10 | Not started | — | — | [Phase 10](#phase-10--go-wazero--embedded-wasm) |
-| 50 | Generate the Go facade + signature-parity suite | Phase 10 | Not started | — | — | [Phase 10](#phase-10--go-wazero--embedded-wasm) |
+| 50 | Generate the Go facade + signature-parity suite (+ generated binding glue, §5.7) | Phase 10 | Not started | — | — | [Phase 10](#phase-10--go-wazero--embedded-wasm) |
 | 51 | Live contract tests + go module release wiring | Phase 10 | Not started | — | — | [Phase 10](#phase-10--go-wazero--embedded-wasm) |
 | 52 | Delete superseded TS in `@solvapay/core` | Post-cutover | Not started | — | — | [Post-cutover](#post-cutover--deletion-and-c-abi) |
 | 53 | Delete superseded TS in `@solvapay/server` | Post-cutover | Not started | — | — | [Post-cutover](#post-cutover--deletion-and-c-abi) |
 | 54 | Publish the optional C ABI | Post-cutover | Not started | — | — | [Post-cutover](#post-cutover--deletion-and-c-abi) |
 | 55 | Promote all compatibility gates | Post-cutover | Not started | — | — | [Post-cutover](#post-cutover--deletion-and-c-abi) |
+| MA-0 | Shared MCP-authoring conformance fixtures + adapter contract | MCP-authoring track | Not started | — | — | [MCP-authoring](#mcp-authoring-adapters--per-language) |
+| MA-Py | `solvapay-mcp` (Python) over `mcp`/FastMCP | MCP-authoring track | Not started | — | — | [MCP-authoring](#mcp-authoring-adapters--per-language) |
+| MA-Rb | `solvapay-mcp` (Ruby) over the Ruby MCP SDK | MCP-authoring track | Not started | — | — | [MCP-authoring](#mcp-authoring-adapters--per-language) |
+| MA-Go | `solvapay-mcp` (Go) over the Go MCP SDK | MCP-authoring track | Not started | — | — | [MCP-authoring](#mcp-authoring-adapters--per-language) |
+| MA-Rs | `solvapay-mcp` (Rust) over `rmcp` | MCP-authoring track | Not started | — | — | [MCP-authoring](#mcp-authoring-adapters--per-language) |
 
 ## Per-phase handoff log
 
@@ -535,6 +543,19 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
 - **Pointers:** §7.7, §7.8, §9, §10.3, D9, Notes 28–37; diagrams updated: Phase 6 `EXP → SMOKE` (unchanged)
 
+### Phase 6G — Binding-glue generator — In progress
+
+<!-- running per-step bullets accumulate here as each step lands -->
+- Step 39G-a (Binding-boundary IR + manifest `bindings:`): ✅ Zod `bindings:` (102 symbols) + `BindingDef` / `Ir.binding_symbols` / `lower_bindings.rs`; bidirectional `assertBindingReconciliation` (catalog linkers + shim `js_name` inventory − infra allowlist + unique cores); `dto-gen --dump-bindings` → `contract/manifest/binding-symbols.snapshot.json` + CI drift; host-injected (`hostInjected`) + `splitPathRefs` shape closed (§15 note 40) — "done when" verified: `pnpm manifest:check`, `cargo test -p dto-gen`, snapshot idempotent, no `rust/bindings/**` changes
+- Step 39G-b (Rust shim emitters napi + wasm + retrofit proof): ✅ `emit_bindings_rs.rs` + enriched `bindings:` emit fields (`artifact`/`emitOrder`/`section`/`doc`/`extract`/`call`/`verbatimBody`/`dtoType`/…); shared `Toolchain` body-emitter; chrome assets in `binding-emit.snapshot.json`; regenerate eight shims with `@generated` header only delta; golden test proves body byte-identity; CI regen-drift + `@generated` gate cover shims (§15 note 41) — "done when" verified: header-only `git diff` on shims, `cargo test -p dto-gen` + `solvapay-node` green, both-flag suites unmodified
+- Step 39G-c (Native-side marshalling emitters TS): emit `native.ts`/`wasm.ts` dispatch + envelope→`SolvaPayError`/`PaywallError` reconstructor; prove byte-identical over committed 37R/38R glue — "done when": server/core/mcp-core suites green both flags on generated glue, `node-binding-delegation` unchanged
+
+**Phase-close handoff** (filled when the last step's "done when" is verified):
+- **What was done:** … (§5.7 IR-driven binding-glue emitters proven byte-identical against the hand-written 37R/38R napi + wasm shims, ready to forward-apply to Python/Ruby/Rust/Go/TS)
+- **Why:** … (stop hand-mirroring every new core fn across toolchains; make add-a-symbol a manifest edit)
+- **Decisions to document:** … (D16 JSON-envelope universal ABI + generated glue; D17 manifest `bindings:` descriptor reconciled with catalog; new §10.3 gates: binding-glue regen drift/idempotence/hand-edit, catalog reconciliation, retrofit byte-identical; new §13 gates: host-injected/path-ref declaration shape, deferred proc-macro derive; deviations: …; deferred: forward languages consume the emitter in steps 40–50/54)
+- **Pointers:** §5.7, Phase 6G, §12 D16–D17, §13 binding-boundary gates, §15 note 39; diagrams updated: §5.2 (`GEN → GLUE` branch)
+
 ### Phase 7 — Python — Not started
 
 <!-- running per-step bullets accumulate here as each step lands -->
@@ -585,6 +606,19 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
 - **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
 
+### MCP-authoring adapters — per-language — Not started
+
+Post-cutover future track (redesign §9, "MCP-authoring adapters"): layer-3 hand-written `registerPayable` / `ctx.respond` adapters over each language's own MCP SDK, on top of the shared layer-2 Rust decision core. Not part of steps 1–55.
+
+<!-- running per-step bullets accumulate here as each step lands -->
+- Step MA-0 (<title>): <one-line what/why> — PR #___, "done when" verified: <how>
+
+**Phase-close handoff** (filled when the last step's "done when" is verified):
+- **What was done:** …
+- **Why:** …
+- **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
+- **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
+
 ## Open handoff items index
 
 Mirrors redesign §13 "Unresolved implementation gates", plus blockers discovered mid-migration.
@@ -608,8 +642,11 @@ Mirrors redesign §13 "Unresolved implementation gates", plus blockers discovere
 | Free-threaded CPython: `gil_used = false` from day one, or after an audit? | Step 40 | Open | SDK |
 | Fuzz corpus seed strategy | Step 55 | Open | SDK |
 | Whether UniFFI is ever used for a *sixth* language later | Only if needed | Open | SDK |
+| Binding-boundary descriptor shape for host-injected args (`nowMs`/clock/RNG) + path-ref splits | Step 39G-a | **Resolved (39G-a):** `hostInjected: bool` on args + ordered `splitPathRefs: string[]` on the symbol (§15 note 40) | SDK |
+| Whether a later proc-macro auto-derives binding-boundary descriptors from Rust core signatures | Deferred (post-Phase 6G) | Open | SDK |
 | Backend CI-published OpenAPI artifact for automated snapshot drift | Post–Step 1 / ongoing | Open | Backend |
 | Hosted contract-test environment for CI shadow live runs | Post–step 25 | Open | Backend + SDK |
+| MCP-authoring parity scope + `solvapay-mcp-<lang>` package naming | Before the MCP-authoring track | Open | SDK |
 
 ## Reusable handoff-entry template
 

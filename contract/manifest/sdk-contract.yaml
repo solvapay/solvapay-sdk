@@ -48,7 +48,7 @@ operations:
     optionalOnClient: false
     request: CheckLimitsRequest
     response: LimitResponseWithPlan
-    overlays: [includeCheckoutSession, CheckLimitsRequest, LimitResponseWithPlan]
+    overlays: [ includeCheckoutSession, CheckLimitsRequest, LimitResponseWithPlan ]
     normalization: []
     shadow:
       volatile: []
@@ -64,10 +64,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   trackUsage:
     route:
       method: POST
@@ -81,7 +81,7 @@ operations:
     optionalOnClient: false
     request: TrackUsageRequest
     response: UsageRecordResponse
-    overlays: [TrackUsageRequest]
+    overlays: [ TrackUsageRequest ]
     normalization: []
     shadow:
       volatile: []
@@ -97,10 +97,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   trackUsageBulk:
     route:
       method: POST
@@ -114,7 +114,7 @@ operations:
     optionalOnClient: true
     request: TrackUsageBulkRequest
     response: BulkUsageResponse
-    overlays: [TrackUsageBulkRequest]
+    overlays: [ TrackUsageBulkRequest ]
     normalization: []
     shadow:
       volatile: []
@@ -130,10 +130,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   createCustomer:
     route:
       method: POST
@@ -147,7 +147,7 @@ operations:
     optionalOnClient: true
     request: CreateCustomerRequest
     response: CreateCustomerResult
-    overlays: [CreateCustomerResult]
+    overlays: [ CreateCustomerResult ]
     normalization:
       - "map reference||customerRef → { customerRef }"
     shadow:
@@ -164,10 +164,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   updateCustomer:
     route:
       method: PATCH
@@ -181,7 +181,7 @@ operations:
     optionalOnClient: true
     request: UpdateCustomerRequest
     response: UpdateCustomerResult
-    overlays: [UpdateCustomerResult, UpdateCustomerParams]
+    overlays: [ UpdateCustomerResult, UpdateCustomerParams ]
     normalization:
       - "map reference||customerRef → { customerRef }"
     shadow:
@@ -201,10 +201,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   getCustomer:
     route:
       method: GET
@@ -218,7 +218,7 @@ operations:
     optionalOnClient: false
     request: GetCustomerParams
     response: CustomerResponseMapped
-    overlays: [GetCustomerParams, CustomerResponseMapped]
+    overlays: [ GetCustomerParams, CustomerResponseMapped ]
     normalization:
       - accept direct customer object
       - accept bare customer array
@@ -240,10 +240,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   assignCredits:
     route:
       method: POST
@@ -257,7 +257,7 @@ operations:
     optionalOnClient: true
     request: AssignCreditsRequest
     response: GrantCustomerCreditsResponse
-    overlays: [AssignCreditsRequest]
+    overlays: [ AssignCreditsRequest ]
     normalization: []
     shadow:
       volatile: []
@@ -274,10 +274,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   getMerchant:
     route:
       method: GET
@@ -303,10 +303,10 @@ operations:
     params: []
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   getPlatformConfig:
     route:
       method: GET
@@ -332,10 +332,10 @@ operations:
     params: []
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   getProduct:
     route:
       method: GET
@@ -365,10 +365,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   listProducts:
     route:
       method: GET
@@ -381,7 +381,7 @@ operations:
       rust: list_products
     optionalOnClient: true
     response: ListProductsResult
-    overlays: [ListProductsResult]
+    overlays: [ ListProductsResult ]
     normalization:
       - "accept bare array or { products } wrapper"
       - unwrap nested data field
@@ -396,10 +396,10 @@ operations:
     params: []
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   createProduct:
     route:
       method: POST
@@ -413,7 +413,7 @@ operations:
     optionalOnClient: true
     request: CreateProductRequest
     response: CreateProductResult
-    overlays: [CreateProductResult]
+    overlays: [ CreateProductResult ]
     normalization: []
     shadow:
       volatile: []
@@ -429,10 +429,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   bootstrapMcpProduct:
     route:
       method: POST
@@ -446,7 +446,7 @@ operations:
     optionalOnClient: true
     request: McpBootstrapDto
     response: McpBootstrapResponse
-    overlays: [McpBootstrapResponse]
+    overlays: [ McpBootstrapResponse ]
     normalization: []
     shadow:
       volatile: []
@@ -462,10 +462,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   configureMcpPlans:
     route:
       method: PUT
@@ -479,7 +479,7 @@ operations:
     optionalOnClient: true
     request: ConfigureMcpPlansDto
     response: ConfigureMcpPlansResponse
-    overlays: [ConfigureMcpPlansResponse]
+    overlays: [ ConfigureMcpPlansResponse ]
     normalization: []
     shadow:
       volatile: []
@@ -498,10 +498,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   updateProduct:
     route:
       method: PUT
@@ -534,10 +534,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   deleteProduct:
     route:
       method: DELETE
@@ -550,7 +550,7 @@ operations:
       rust: delete_product
     optionalOnClient: true
     response: void
-    overlays: [void]
+    overlays: [ void ]
     normalization:
       - treat HTTP 404 as success
     shadow:
@@ -567,10 +567,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   cloneProduct:
     route:
       method: POST
@@ -584,7 +584,7 @@ operations:
     optionalOnClient: true
     request: CloneProductDto
     response: CloneProductResult
-    overlays: [CloneProductResult, CloneProductOverrides]
+    overlays: [ CloneProductResult, CloneProductOverrides ]
     normalization: []
     shadow:
       volatile: []
@@ -603,10 +603,10 @@ operations:
         required: false
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   listPlans:
     route:
       method: GET
@@ -619,11 +619,12 @@ operations:
       rust: list_plans
     optionalOnClient: true
     response: ListPlansResult
-    overlays: [ListPlansResult]
+    overlays: [ ListPlansResult ]
     normalization:
       - "accept bare array or { plans } wrapper"
       - unwrap nested data field
-      - "merge { ...data, ...plan } with price precedence plan.price ?? data.price; delete data key"
+      - "merge { ...data, ...plan } with price precedence plan.price ??
+        data.price; delete data key"
     shadow:
       volatile: []
     idempotency:
@@ -638,10 +639,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   createPlan:
     route:
       method: POST
@@ -655,7 +656,7 @@ operations:
     optionalOnClient: true
     request: CreatePlanRequest
     response: Plan
-    overlays: [CreatePlanParams]
+    overlays: [ CreatePlanParams ]
     normalization: []
     shadow:
       volatile: []
@@ -671,10 +672,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   updatePlan:
     route:
       method: PUT
@@ -710,10 +711,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   deletePlan:
     route:
       method: DELETE
@@ -726,7 +727,7 @@ operations:
       rust: delete_plan
     optionalOnClient: true
     response: void
-    overlays: [void]
+    overlays: [ void ]
     normalization:
       - treat HTTP 404 as success
     shadow:
@@ -746,10 +747,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   createPaymentIntent:
     route:
       method: POST
@@ -763,7 +764,7 @@ operations:
     optionalOnClient: true
     request: CreatePaymentIntentParams
     response: CreatePaymentIntentResult
-    overlays: [CreatePaymentIntentParams, CreatePaymentIntentResult]
+    overlays: [ CreatePaymentIntentParams, CreatePaymentIntentResult ]
     normalization: []
     shadow:
       volatile: []
@@ -780,10 +781,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   createTopupPaymentIntent:
     route:
       method: POST
@@ -797,7 +798,13 @@ operations:
     optionalOnClient: true
     request: CreateTopupPaymentIntentParams
     response: CreateTopupPaymentIntentResult
-    overlays: [CreateTopupPaymentIntentParams, CreateTopupPaymentIntentResult, AutoRechargeInput, topupProjection]
+    overlays:
+      [
+        CreateTopupPaymentIntentParams,
+        CreateTopupPaymentIntentResult,
+        AutoRechargeInput,
+        topupProjection
+      ]
     normalization: []
     shadow:
       volatile: []
@@ -814,10 +821,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   cancelPurchase:
     route:
       method: POST
@@ -831,9 +838,10 @@ operations:
     optionalOnClient: true
     request: CancelPurchaseRequest
     response: PurchaseInfo
-    overlays: [CancelPurchaseParams]
+    overlays: [ CancelPurchaseParams ]
     normalization:
-      - "extract nested { purchase } when present; else top-level object with reference"
+      - "extract nested { purchase } when present; else top-level object with
+        reference"
       - validate JSON parseability of response body
     shadow:
       volatile: []
@@ -847,7 +855,8 @@ operations:
           status: 404
         - messageTemplate: "Purchase cannot be cancelled or does not belong to provider: {body}"
           status: 400
-        - messageTemplate: "Invalid JSON response from cancel purchase endpoint: {bodyPrefix200}"
+        - messageTemplate: "Invalid JSON response from cancel purchase endpoint:
+            {bodyPrefix200}"
         - messageTemplate: Invalid response structure from cancel purchase endpoint
         - messageTemplate: Invalid purchase data in cancel purchase response
     params:
@@ -856,10 +865,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   reactivatePurchase:
     route:
       method: POST
@@ -872,9 +881,10 @@ operations:
       rust: reactivate_purchase
     optionalOnClient: true
     response: PurchaseInfo
-    overlays: [ReactivatePurchaseParams]
+    overlays: [ ReactivatePurchaseParams ]
     normalization:
-      - "extract nested { purchase } when present; else top-level object with reference"
+      - "extract nested { purchase } when present; else top-level object with
+        reference"
       - validate JSON parseability of response body
     shadow:
       volatile: []
@@ -888,7 +898,8 @@ operations:
           status: 404
         - messageTemplate: "Purchase cannot be reactivated: {body}"
           status: 400
-        - messageTemplate: "Invalid JSON response from reactivate purchase endpoint: {bodyPrefix200}"
+        - messageTemplate: "Invalid JSON response from reactivate purchase endpoint:
+            {bodyPrefix200}"
         - messageTemplate: Invalid response structure from reactivate purchase endpoint
         - messageTemplate: Invalid purchase data in reactivate purchase response
     params:
@@ -897,10 +908,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   processPaymentIntent:
     route:
       method: POST
@@ -914,7 +925,14 @@ operations:
     optionalOnClient: true
     request: ProcessPaymentIntentParams
     response: ProcessPaymentResult
-    overlays: [ProcessPaymentIntentParams, ProcessPaymentResult, OneTimePurchaseInfo, TopupProcessResult, topupProjection]
+    overlays:
+      [
+        ProcessPaymentIntentParams,
+        ProcessPaymentResult,
+        OneTimePurchaseInfo,
+        TopupProcessResult,
+        topupProjection
+      ]
     normalization: []
     shadow:
       volatile: []
@@ -930,10 +948,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   attachBusinessDetails:
     route:
       method: POST
@@ -947,7 +965,7 @@ operations:
     optionalOnClient: true
     request: AttachBusinessDetailsParams
     response: AttachBusinessDetailsResult
-    overlays: [AttachBusinessDetailsParams, AttachBusinessDetailsResult]
+    overlays: [ AttachBusinessDetailsParams, AttachBusinessDetailsResult ]
     normalization: []
     shadow:
       volatile: []
@@ -963,10 +981,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   getUserInfo:
     route:
       method: POST
@@ -980,7 +998,7 @@ operations:
     optionalOnClient: true
     request: UserInfoRequest
     response: UserInfoResponse
-    overlays: [GetUserInfoParams]
+    overlays: [ GetUserInfoParams ]
     normalization: []
     shadow:
       volatile: []
@@ -996,10 +1014,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   getCustomerBalance:
     route:
       method: GET
@@ -1013,7 +1031,7 @@ operations:
     optionalOnClient: true
     request: GetCustomerBalanceParams
     response: GetCustomerBalanceResult
-    overlays: [GetCustomerBalanceParams, GetCustomerBalanceResult, CreditDisplayBlock]
+    overlays: [ GetCustomerBalanceParams, GetCustomerBalanceResult, CreditDisplayBlock ]
     normalization: []
     shadow:
       volatile: []
@@ -1029,10 +1047,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   createCheckoutSession:
     route:
       method: POST
@@ -1062,10 +1080,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   createCustomerSession:
     route:
       method: POST
@@ -1095,10 +1113,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   activatePlan:
     route:
       method: POST
@@ -1128,10 +1146,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   getPaymentMethod:
     route:
       method: GET
@@ -1145,7 +1163,7 @@ operations:
     optionalOnClient: true
     request: GetPaymentMethodParams
     response: PaymentMethodInfo
-    overlays: [GetPaymentMethodParams, PaymentMethodInfo]
+    overlays: [ GetPaymentMethodParams, PaymentMethodInfo ]
     normalization: []
     shadow:
       volatile: []
@@ -1161,10 +1179,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   getAutoRecharge:
     route:
       method: GET
@@ -1178,7 +1196,7 @@ operations:
     optionalOnClient: true
     request: GetAutoRechargeParams
     response: AutoRechargeResponse
-    overlays: [GetAutoRechargeParams, AutoRechargeResponse, AutoRechargeConfig]
+    overlays: [ GetAutoRechargeParams, AutoRechargeResponse, AutoRechargeConfig ]
     normalization: []
     shadow:
       volatile: []
@@ -1194,10 +1212,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   saveAutoRecharge:
     route:
       method: PUT
@@ -1211,7 +1229,7 @@ operations:
     optionalOnClient: true
     request: SaveAutoRechargeInput
     response: SaveAutoRechargeResponse
-    overlays: [SaveAutoRechargeInput, AutoRechargeConfig, SaveAutoRechargeParams]
+    overlays: [ SaveAutoRechargeInput, AutoRechargeConfig, SaveAutoRechargeParams ]
     normalization: []
     shadow:
       volatile: []
@@ -1227,10 +1245,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
   disableAutoRecharge:
     route:
       method: DELETE
@@ -1244,7 +1262,7 @@ operations:
     optionalOnClient: true
     request: DisableAutoRechargeParams
     response: DisableAutoRechargeResponse
-    overlays: [DisableAutoRechargeParams]
+    overlays: [ DisableAutoRechargeParams ]
     normalization: []
     shadow:
       volatile: []
@@ -1260,10 +1278,10 @@ operations:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
 
 overlays:
   AssignCreditsRequest:
@@ -1334,7 +1352,7 @@ overlays:
         ref: AutoRechargeTopup
         required: true
       fundingSourceType:
-        enum: [saved_card, tokenized_card]
+        enum: [ saved_card, tokenized_card ]
         required: false
       paymentMethodId:
         type: string
@@ -1363,7 +1381,8 @@ overlays:
       display:
         ref: AutoRechargeDisplayBlock
         required: false
-        doc: "Backend-computed display values — render verbatim; do not derive from trigger fields."
+        doc: "Backend-computed display values — render verbatim; do not derive from
+          trigger fields."
   AutoRechargeDisplayBlock:
     kind: synthetic
     fields:
@@ -1383,7 +1402,7 @@ overlays:
         type: number
         required: true
       rateSource:
-        enum: [parity, db, fallback]
+        enum: [ parity, db, fallback ]
         required: true
   AutoRechargeDisplayFormatted:
     kind: synthetic
@@ -1427,7 +1446,7 @@ overlays:
         required: false
   AutoRechargeStatus:
     kind: synthetic
-    enum: [active, disabled, failed, pending_setup]
+    enum: [ active, disabled, failed, pending_setup ]
   AutoRechargeTopup:
     kind: synthetic
     fields:
@@ -1456,7 +1475,9 @@ overlays:
       includeCheckoutSession:
         type: boolean
         required: false
-        doc: "When true, the backend mints a checkout session (or customer portal session for activation flows) and returns its URL / id on the response."
+        doc: "When true, the backend mints a checkout session (or customer portal
+          session for activation flows) and returns its URL / id on the
+          response."
   CloneProductResult:
     kind: synthetic
     fields:
@@ -1594,7 +1615,7 @@ overlays:
         type: number
         required: true
       rateSource:
-        enum: [parity, db, fallback]
+        enum: [ parity, db, fallback ]
         required: true
   CustomerResponseMapped:
     kind: mapDto
@@ -1821,7 +1842,7 @@ overlays:
         type: number
         required: true
       treatment:
-        enum: [reverse_charge, standard, none, not_collecting]
+        enum: [ reverse_charge, standard, none, not_collecting ]
         required: true
       total:
         type: number
@@ -1835,7 +1856,7 @@ overlays:
   TopupProcessResult:
     kind: projectUnion
     base: ProcessPaymentResult
-    dropVariants: [SucceededRecurring, SucceededOneTime]
+    dropVariants: [ SucceededRecurring, SucceededOneTime ]
     succeededFields:
       creditsAdded:
         type: number
@@ -2496,10 +2517,3467 @@ facade:
         required: true
     sync:
       ts: async
-      py: [async, blocking]
+      py: [ async, blocking ]
       rb: blocking
       go: blocking
-      rust: [async, blocking]
+      rust: [ async, blocking ]
+
+bindings:
+  MCP_TOOL_NAMES:
+    core: solvapay_core::mcp::mcp_tool_names_json
+    names:
+      ts: MCP_TOOL_NAMES
+      py: MCP_TOOL_NAMES
+      rb: MCP_TOOL_NAMES
+      go: MCP_TOOL_NAMES
+      rust: MCP_TOOL_NAMES
+    catalog:
+      kind: none
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 16
+    section: MCP payload / descriptors
+    doc: Binding for `MCP_TOOL_NAMES`.
+    rustFnName: mcp_tool_names_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let _args = args_map(&args_json)?;
+              Ok(mcp_tool_names_json())
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE:
+    core: solvapay_core::seller_identity::seller_tax_identifier_display_label_by_type
+    names:
+      ts: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      py: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      rb: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      go: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      rust: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    catalog:
+      kind: coreHelper
+      id: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 10
+    section: seller-identity
+    doc: Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
+    rustFnName: seller_tax_identifier_display_label_by_type_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let _args = args_map(&args_json)?;
+              let mut map = Map::new();
+              for (key, label) in seller_tax_identifier_display_label_by_type() {
+                  map.insert((*key).to_owned(), Value::String((*label).to_owned()));
+              }
+              Ok(Value::Object(map))
+    verbatimBodyWasm: |-
+      let _args = args_map(&args_json)?;
+              let mut map = serde_json::Map::new();
+              for (key, label) in seller_tax_identifier_display_label_by_type() {
+                  map.insert((*key).to_owned(), Value::String((*label).to_owned()));
+              }
+              Ok(Value::Object(map))
+  activatePlan:
+    core: solvapay_transport::SolvaPayClient::activate_plan
+    names:
+      ts: activatePlan
+      py: activate_plan
+      rb: activate_plan
+      go: ActivatePlan
+      rust: activate_plan
+    catalog:
+      kind: operation
+      id: activatePlan
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 14
+    section: Group B
+    doc: "`POST /v1/sdk/activate`"
+    rustFnName: activate_plan
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: activate_plan
+    dtoType: ActivatePlanDto
+  assertResponseResult:
+    core: solvapay_core::mcp::assert_response_result
+    names:
+      ts: assertResponseResult
+      py: assert_response_result
+      rb: assert_response_result
+      go: AssertResponseResult
+      rust: assert_response_result
+    catalog:
+      kind: none
+    args:
+      - name: value
+        type: value
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 15
+    section: MCP payload / descriptors
+    doc: |-
+      Binding for `assertResponseResult` — brand failures are Transport errors
+      (TS wrapper rethrows as plain `Error` for fixture name parity).
+    rustFnName: assert_response_result_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let value = args
+                  .get("value")
+                  .cloned()
+                  .ok_or_else(|| SdkError::transport("args.value is required".to_owned(), false))?;
+              match assert_response_result(&value) {
+                  Ok(v) => Ok(v),
+                  Err(message) => Err(SdkError::transport(message.to_owned(), false)),
+              }
+  assignCredits:
+    core: solvapay_transport::SolvaPayClient::assign_credits
+    names:
+      ts: assignCredits
+      py: assign_credits
+      rb: assign_credits
+      go: AssignCredits
+      rust: assign_credits
+    catalog:
+      kind: operation
+      id: assignCredits
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 3
+    section: Group A
+    doc: Grant credits to a customer.
+    rustFnName: assign_credits
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: assign_credits
+    dtoType: AssignCreditsRequest
+  attachBusinessDetails:
+    core: solvapay_transport::SolvaPayClient::attach_business_details
+    names:
+      ts: attachBusinessDetails
+      py: attach_business_details
+      rb: attach_business_details
+      go: AttachBusinessDetails
+      rust: attach_business_details
+    catalog:
+      kind: operation
+      id: attachBusinessDetails
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 13
+    section: Group B
+    doc: "`POST /v1/sdk/payment-intents/{id}/business-details`"
+    rustFnName: attach_business_details
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: attach_business_details
+    dtoType: AttachBusinessDetailsParams
+  attachBusinessDetailsValidationError:
+    core: solvapay_core::payment::attach_business_details_validation_error
+    names:
+      ts: attachBusinessDetailsValidationError
+      py: attach_business_details_validation_error
+      rb: attach_business_details_validation_error
+      go: AttachBusinessDetailsValidationError
+      rust: attach_business_details_validation_error
+    catalog:
+      kind: none
+    args:
+      - name: firstIssueMessage
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: first_issue_message
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 12
+    section: payment
+    doc: Binding for `attachBusinessDetailsValidationError`.
+    rustFnName: attach_business_details_validation_error_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - first_issue_message.as_deref()
+    coreCall: attach_business_details_validation_error
+  bootstrapMcpProduct:
+    core: solvapay_transport::SolvaPayClient::bootstrap_mcp_product
+    names:
+      ts: bootstrapMcpProduct
+      py: bootstrap_mcp_product
+      rb: bootstrap_mcp_product
+      go: BootstrapMcpProduct
+      rust: bootstrap_mcp_product
+    catalog:
+      kind: operation
+      id: bootstrapMcpProduct
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 24
+    section: Group C
+    doc: "`POST /v1/sdk/products/mcp/bootstrap`"
+    rustFnName: bootstrap_mcp_product
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: bootstrap_mcp_product
+    dtoType: McpBootstrapDto
+  buildCreateCustomerParams:
+    core: solvapay_core::customer_sync::build_create_customer_params
+    names:
+      ts: buildCreateCustomerParams
+      py: build_create_customer_params
+      rb: build_create_customer_params
+      go: BuildCreateCustomerParams
+      rust: build_create_customer_params
+    catalog:
+      kind: none
+    args:
+      - name: customerRef
+        type: string
+        required: true
+        extract: requireString
+        local: customer_ref
+      - name: externalRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: external_ref
+      - name: email
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: email
+      - name: name
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: name
+      - name: nowMs
+        type: i64
+        required: true
+        hostInjected: true
+        extract: requireI64
+        local: now_ms
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 2
+    section: customer-sync
+    doc: Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock
+      string).
+    rustFnName: build_create_customer_params_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - "&customer_ref"
+        - external_ref.as_deref()
+        - email.as_deref()
+        - name.as_deref()
+        - now_ms
+    coreCall: build_create_customer_params
+  buildGateMessage:
+    core: solvapay_core::paywall_state::build_gate_message
+    names:
+      ts: buildGateMessage
+      py: build_gate_message
+      rb: build_gate_message
+      go: BuildGateMessage
+      rust: build_gate_message
+    catalog:
+      kind: topLevel
+      id: buildGateMessage
+    args:
+      - name: state
+        type: value
+        required: true
+        extract: requireTyped
+        typedAs: PaywallState
+        local: state
+      - name: gate
+        type: value
+        required: true
+        extract: requireTyped
+        typedAs: GateContent
+        local: gate
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 37
+    section: paywall state / gate / payload
+    doc: Binding for `buildGateMessage`.
+    rustFnName: build_gate_message_binding
+    call:
+      kind: wrap
+      serialize: valueString
+      args:
+        - "&state"
+        - "&gate"
+    coreCall: build_gate_message
+  buildNudgeMessage:
+    core: solvapay_core::paywall_state::build_nudge_message
+    names:
+      ts: buildNudgeMessage
+      py: build_nudge_message
+      rb: build_nudge_message
+      go: BuildNudgeMessage
+      rust: build_nudge_message
+    catalog:
+      kind: topLevel
+      id: buildNudgeMessage
+    args:
+      - name: state
+        type: value
+        required: true
+        extract: requireTyped
+        typedAs: PaywallState
+        local: state
+      - name: limits
+        type: value
+        required: false
+        extract: optionalTyped
+        typedAs: PaywallLimits
+        local: limits
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 38
+    section: paywall state / gate / payload
+    doc: Binding for `buildNudgeMessage`.
+    rustFnName: build_nudge_message_binding
+    call:
+      kind: wrap
+      serialize: valueString
+      args:
+        - "&state"
+        - limits.as_ref()
+    coreCall: build_nudge_message
+  buildPaywallGate:
+    core: solvapay_core::paywall_gate::build_paywall_gate
+    names:
+      ts: buildPaywallGate
+      py: build_paywall_gate
+      rb: build_paywall_gate
+      go: BuildPaywallGate
+      rust: build_paywall_gate
+    catalog:
+      kind: topLevel
+      id: buildPaywallGate
+    args:
+      - name: productRef
+        type: string
+        required: true
+        extract: requireString
+        local: product_ref
+      - name: limits
+        type: value
+        required: true
+        extract: requireTyped
+        typedAs: PaywallGateLimits
+        local: limits
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 39
+    section: paywall state / gate / payload
+    doc: Binding for `buildPaywallGate`.
+    rustFnName: build_paywall_gate_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - "&product_ref"
+        - "&limits"
+    coreCall: build_paywall_gate
+  buildPromptDescriptorMetadata:
+    core: solvapay_core::mcp::build_prompt_descriptor_metadata
+    names:
+      ts: buildPromptDescriptorMetadata
+      py: build_prompt_descriptor_metadata
+      rb: build_prompt_descriptor_metadata
+      go: BuildPromptDescriptorMetadata
+      rust: build_prompt_descriptor_metadata
+    catalog:
+      kind: none
+    args:
+      - name: views
+        type: value
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 20
+    section: MCP payload / descriptors
+    doc: Binding for `buildPromptDescriptorMetadata`.
+    rustFnName: build_prompt_descriptor_metadata_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let views = optional_views(&args)?;
+              let options = BuildPromptDescriptorMetadataOptions { views };
+              to_value(&build_prompt_descriptor_metadata(&options))
+  buildPromptUserMessage:
+    core: solvapay_core::mcp::build_prompt_user_message
+    names:
+      ts: buildPromptUserMessage
+      py: build_prompt_user_message
+      rb: build_prompt_user_message
+      go: BuildPromptUserMessage
+      rust: build_prompt_user_message
+    catalog:
+      kind: none
+    args:
+      - name: promptName
+        type: string
+        required: true
+      - name: args
+        type: value
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 21
+    section: MCP payload / descriptors
+    doc: Binding for `buildPromptUserMessage`.
+    rustFnName: build_prompt_user_message_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let prompt_name = require_string(&args, "promptName")?;
+              let nested_args = match args.get("args") {
+                  Some(Value::Object(_)) => args["args"].clone(),
+                  Some(_) => {
+                      return Err(SdkError::transport(
+                          "args.args must be an object".to_owned(),
+                          false,
+                      ));
+                  }
+                  None => {
+                      return Err(SdkError::transport(
+                          "args.args is required".to_owned(),
+                          false,
+                      ));
+                  }
+              };
+              to_value(&build_prompt_user_message(&prompt_name, &nested_args))
+  buildToolDescriptorMetadata:
+    core: solvapay_core::mcp::build_tool_descriptor_metadata
+    names:
+      ts: buildToolDescriptorMetadata
+      py: build_tool_descriptor_metadata
+      rb: build_tool_descriptor_metadata
+      go: BuildToolDescriptorMetadata
+      rust: build_tool_descriptor_metadata
+    catalog:
+      kind: none
+    args:
+      - name: resourceUri
+        type: string
+        required: true
+      - name: views
+        type: value
+        required: false
+      - name: branding
+        type: value
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 19
+    section: MCP payload / descriptors
+    doc: Binding for `buildToolDescriptorMetadata`.
+    rustFnName: build_tool_descriptor_metadata_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let resource_uri = require_string(&args, "resourceUri")?;
+              let views = optional_views(&args)?;
+              let branding = optional_branding(&args)?;
+              let options = BuildToolDescriptorMetadataOptions {
+                  resource_uri,
+                  views,
+                  branding,
+              };
+              to_value(&build_tool_descriptor_metadata(&options))
+  cancelPurchase:
+    core: solvapay_transport::SolvaPayClient::cancel_purchase
+    names:
+      ts: cancelPurchase
+      py: cancel_purchase
+      rb: cancel_purchase
+      go: CancelPurchase
+      rust: cancel_purchase
+    catalog:
+      kind: operation
+      id: cancelPurchase
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 30
+    section: Group C
+    doc: "`POST /v1/sdk/purchases/{purchaseRef}/cancel`"
+    rustFnName: cancel_purchase
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: cancel_purchase
+    dtoType: CancelPurchaseParams
+  checkLimits:
+    core: solvapay_transport::SolvaPayClient::check_limits
+    names:
+      ts: checkLimits
+      py: check_limits
+      rb: check_limits
+      go: CheckLimits
+      rust: check_limits
+    catalog:
+      kind: operation
+      id: checkLimits
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 15
+    section: Group C
+    doc: "`POST /v1/sdk/limits`"
+    rustFnName: check_limits
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: check_limits
+    dtoType: CheckLimitsRequest
+  classifyCancelError:
+    core: solvapay_core::renewal::classify_cancel_error
+    names:
+      ts: classifyCancelError
+      py: classify_cancel_error
+      rb: classify_cancel_error
+      go: ClassifyCancelError
+      rust: classify_cancel_error
+    catalog:
+      kind: none
+    args:
+      - name: message
+        type: string
+        required: true
+        extract: requireString
+        local: message
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 20
+    section: renewal
+    doc: Binding for `classifyCancelError`.
+    rustFnName: classify_cancel_error_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - "&message"
+    coreCall: classify_cancel_error
+  classifyCreateError:
+    core: solvapay_core::customer_sync::classify_create_error
+    names:
+      ts: classifyCreateError
+      py: classify_create_error
+      rb: classify_create_error
+      go: ClassifyCreateError
+      rust: classify_create_error
+    catalog:
+      kind: none
+    args:
+      - name: message
+        type: string
+        required: true
+        extract: requireString
+        local: message
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 5
+    section: customer-sync
+    doc: Binding for `classifyCreateError`.
+    rustFnName: classify_create_error_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - "&message"
+    coreCall: classify_create_error
+  classifyCustomerRef:
+    core: solvapay_core::customer_sync::classify_customer_ref
+    names:
+      ts: classifyCustomerRef
+      py: classify_customer_ref
+      rb: classify_customer_ref
+      go: ClassifyCustomerRef
+      rust: classify_customer_ref
+    catalog:
+      kind: none
+    args:
+      - name: customerRef
+        type: string
+        required: true
+        extract: requireString
+        local: customer_ref
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 0
+    section: customer-sync
+    doc: Binding for `classifyCustomerRef`.
+    rustFnName: classify_customer_ref_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - "&customer_ref"
+    coreCall: classify_customer_ref
+  classifyLookupError:
+    core: solvapay_core::customer_sync::classify_lookup_error
+    names:
+      ts: classifyLookupError
+      py: classify_lookup_error
+      rb: classify_lookup_error
+      go: ClassifyLookupError
+      rust: classify_lookup_error
+    catalog:
+      kind: none
+    args:
+      - name: message
+        type: string
+        required: true
+        extract: requireString
+        local: message
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 4
+    section: customer-sync
+    doc: Binding for `classifyLookupError`.
+    rustFnName: classify_lookup_error_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - "&message"
+    coreCall: classify_lookup_error
+  classifyPaywallState:
+    core: solvapay_core::paywall_state::classify_paywall_state
+    names:
+      ts: classifyPaywallState
+      py: classify_paywall_state
+      rb: classify_paywall_state
+      go: ClassifyPaywallState
+      rust: classify_paywall_state
+    catalog:
+      kind: topLevel
+      id: classifyPaywallState
+    args:
+      - name: limits
+        type: value
+        required: false
+        extract: optionalTyped
+        typedAs: PaywallLimits
+        local: limits
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 36
+    section: paywall state / gate / payload
+    doc: Binding for `classifyPaywallState`.
+    rustFnName: classify_paywall_state_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - limits.as_ref()
+    coreCall: classify_paywall_state
+  classifyReactivateError:
+    core: solvapay_core::renewal::classify_reactivate_error
+    names:
+      ts: classifyReactivateError
+      py: classify_reactivate_error
+      rb: classify_reactivate_error
+      go: ClassifyReactivateError
+      rust: classify_reactivate_error
+    catalog:
+      kind: none
+    args:
+      - name: message
+        type: string
+        required: true
+        extract: requireString
+        local: message
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 21
+    section: renewal
+    doc: Binding for `classifyReactivateError`.
+    rustFnName: classify_reactivate_error_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - "&message"
+    coreCall: classify_reactivate_error
+  cloneProduct:
+    core: solvapay_transport::SolvaPayClient::clone_product
+    names:
+      ts: cloneProduct
+      py: clone_product
+      rb: clone_product
+      go: CloneProduct
+      rust: clone_product
+    catalog:
+      kind: operation
+      id: cloneProduct
+    args: []
+    splitPathRefs:
+      - productRef
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 23
+    section: Group C
+    doc: |-
+      `POST /v1/sdk/products/{productRef}/clone`
+
+      Args JSON is `{ productRef, name? }`.
+    rustFnName: clone_product
+    call:
+      kind: wrap
+      serialize: clientSplit
+    coreCall: clone_product
+    dtoType: CloneProductOverrides
+    clientCallArgs:
+      - "&refs[0]"
+      - Some(overrides)
+  coerceCustomerOptions:
+    core: solvapay_core::customer_sync::coerce_customer_options
+    names:
+      ts: coerceCustomerOptions
+      py: coerce_customer_options
+      rb: coerce_customer_options
+      go: CoerceCustomerOptions
+      rust: coerce_customer_options
+    catalog:
+      kind: none
+    args:
+      - name: email
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: email
+      - name: name
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: name
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 1
+    section: customer-sync
+    doc: Binding for `coerceCustomerOptions`.
+    rustFnName: coerce_customer_options_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - email.as_deref()
+        - name.as_deref()
+    coreCall: coerce_customer_options
+  configureMcpPlans:
+    core: solvapay_transport::SolvaPayClient::configure_mcp_plans
+    names:
+      ts: configureMcpPlans
+      py: configure_mcp_plans
+      rb: configure_mcp_plans
+      go: ConfigureMcpPlans
+      rust: configure_mcp_plans
+    catalog:
+      kind: operation
+      id: configureMcpPlans
+    args: []
+    splitPathRefs:
+      - productRef
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 25
+    section: Group C
+    doc: |-
+      `PUT /v1/sdk/products/{productRef}/mcp/plans`
+
+      Args JSON is `{ productRef, ...params }`.
+    rustFnName: configure_mcp_plans
+    call:
+      kind: wrap
+      serialize: clientSplit
+    coreCall: configure_mcp_plans
+    dtoType: ConfigureMcpPlansDto
+    clientCallArgs:
+      - "&refs[0]"
+      - params
+  createCheckoutSession:
+    core: solvapay_transport::SolvaPayClient::create_checkout_session
+    names:
+      ts: createCheckoutSession
+      py: create_checkout_session
+      rb: create_checkout_session
+      go: CreateCheckoutSession
+      rust: create_checkout_session
+    catalog:
+      kind: operation
+      id: createCheckoutSession
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 6
+    section: Group A
+    doc: Hosted checkout session.
+    rustFnName: create_checkout_session
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: create_checkout_session
+    dtoType: CreateCheckoutSessionRequest
+  createCustomer:
+    core: solvapay_transport::SolvaPayClient::create_customer
+    names:
+      ts: createCustomer
+      py: create_customer
+      rb: create_customer
+      go: CreateCustomer
+      rust: create_customer
+    catalog:
+      kind: operation
+      id: createCustomer
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 0
+    section: Group A
+    doc: "`POST /v1/sdk/customers`"
+    rustFnName: create_customer
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: create_customer
+    dtoType: CreateCustomerRequest
+  createCustomerSession:
+    core: solvapay_transport::SolvaPayClient::create_customer_session
+    names:
+      ts: createCustomerSession
+      py: create_customer_session
+      rb: create_customer_session
+      go: CreateCustomerSession
+      rust: create_customer_session
+    catalog:
+      kind: operation
+      id: createCustomerSession
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 7
+    section: Group A
+    doc: Customer portal session.
+    rustFnName: create_customer_session
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: create_customer_session
+    dtoType: CreateCustomerSessionRequest
+  createPaymentIntent:
+    core: solvapay_transport::SolvaPayClient::create_payment_intent
+    names:
+      ts: createPaymentIntent
+      py: create_payment_intent
+      rb: create_payment_intent
+      go: CreatePaymentIntent
+      rust: create_payment_intent
+    catalog:
+      kind: operation
+      id: createPaymentIntent
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 10
+    section: Group B
+    doc: "`POST /v1/sdk/payment-intents` (plan checkout)."
+    rustFnName: create_payment_intent
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: create_payment_intent
+    dtoType: CreatePaymentIntentParams
+  createPlan:
+    core: solvapay_transport::SolvaPayClient::create_plan
+    names:
+      ts: createPlan
+      py: create_plan
+      rb: create_plan
+      go: CreatePlan
+      rust: create_plan
+    catalog:
+      kind: operation
+      id: createPlan
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 27
+    section: Group C
+    doc: "`POST /v1/sdk/products/{productRef}/plans` (`productRef` in body)."
+    rustFnName: create_plan
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: create_plan
+    dtoType: CreatePlanParams
+  createProduct:
+    core: solvapay_transport::SolvaPayClient::create_product
+    names:
+      ts: createProduct
+      py: create_product
+      rb: create_product
+      go: CreateProduct
+      rust: create_product
+    catalog:
+      kind: operation
+      id: createProduct
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 20
+    section: Group C
+    doc: "`POST /v1/sdk/products`"
+    rustFnName: create_product
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: create_product
+    dtoType: CreateProductRequest
+  createTopupPaymentIntent:
+    core: solvapay_transport::SolvaPayClient::create_topup_payment_intent
+    names:
+      ts: createTopupPaymentIntent
+      py: create_topup_payment_intent
+      rb: create_topup_payment_intent
+      go: CreateTopupPaymentIntent
+      rust: create_topup_payment_intent
+    catalog:
+      kind: operation
+      id: createTopupPaymentIntent
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 11
+    section: Group B
+    doc: "`POST /v1/sdk/payment-intents` (credit top-up)."
+    rustFnName: create_topup_payment_intent
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: create_topup_payment_intent
+    dtoType: CreateTopupPaymentIntentParams
+  creditsToDisplayMinorUnits:
+    core: solvapay_core::credit_display::credits_to_display_minor_units
+    names:
+      ts: creditsToDisplayMinorUnits
+      py: credits_to_display_minor_units
+      rb: credits_to_display_minor_units
+      go: CreditsToDisplayMinorUnits
+      rust: credits_to_display_minor_units
+    catalog:
+      kind: coreHelper
+      id: creditsToDisplayMinorUnits
+    args:
+      - name: credits
+        type: f64
+        required: true
+      - name: creditsPerMinorUnit
+        type: f64
+        required: true
+      - name: displayExchangeRate
+        type: f64
+        required: true
+      - name: displayCurrency
+        type: string
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 9
+    section: credit-display
+    doc: Binding for `creditsToDisplayMinorUnits` (`null` when undefined).
+    rustFnName: credits_to_display_minor_units_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let input = CreditsToDisplayInput {
+                  credits: require_f64(&args, "credits")?,
+                  credits_per_minor_unit: require_f64(&args, "creditsPerMinorUnit")?,
+                  display_exchange_rate: require_f64(&args, "displayExchangeRate")?,
+                  display_currency: require_string(&args, "displayCurrency")?,
+              };
+              match credits_to_display_minor_units(&input) {
+                  Some(n) => Ok(Value::from(n)),
+                  None => Ok(Value::Null),
+              }
+  decidePaywallOutcome:
+    core: solvapay_core::paywall_decision::decide_paywall_outcome
+    names:
+      ts: decidePaywallOutcome
+      py: decide_paywall_outcome
+      rb: decide_paywall_outcome
+      go: DecidePaywallOutcome
+      rust: decide_paywall_outcome
+    catalog:
+      kind: none
+    args:
+      - name: withinLimits
+        type: bool
+        required: true
+        extract: requireBool
+        local: within_limits
+      - name: product
+        type: string
+        required: true
+        extract: requireString
+        local: product
+      - name: checkoutUrl
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: checkout_url
+      - name: limits
+        type: value
+        required: false
+        extract: optionalValue
+        local: limits
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 34
+    section: paywall-decision
+    doc: Binding for `decidePaywallOutcome`.
+    rustFnName: decide_paywall_outcome_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - within_limits
+        - "&product"
+        - limits.as_ref()
+        - checkout_url.as_deref()
+    coreCall: decide_paywall_outcome
+  deletePlan:
+    core: solvapay_transport::SolvaPayClient::delete_plan
+    names:
+      ts: deletePlan
+      py: delete_plan
+      rb: delete_plan
+      go: DeletePlan
+      rust: delete_plan
+    catalog:
+      kind: operation
+      id: deletePlan
+    args: []
+    splitPathRefs:
+      - productRef
+      - planRef
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 29
+    section: Group C
+    doc: |-
+      `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
+
+      Args JSON is `{ productRef, planRef }`. Success value is `null`.
+    rustFnName: delete_plan
+    call:
+      kind: wrap
+      serialize: clientSplit
+    coreCall: delete_plan
+    clientCallArgs:
+      - "&refs[0]"
+      - "&refs[1]"
+  deleteProduct:
+    core: solvapay_transport::SolvaPayClient::delete_product
+    names:
+      ts: deleteProduct
+      py: delete_product
+      rb: delete_product
+      go: DeleteProduct
+      rust: delete_product
+    catalog:
+      kind: operation
+      id: deleteProduct
+    args: []
+    splitPathRefs:
+      - productRef
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 22
+    section: Group C
+    doc: |-
+      `DELETE /v1/sdk/products/{productRef}`
+
+      Args JSON is `{ productRef }`. Success value is `null`.
+    rustFnName: delete_product
+    call:
+      kind: wrap
+      serialize: clientSplit
+    coreCall: delete_product
+    clientCallArgs:
+      - "&refs[0]"
+  deriveIcons:
+    core: solvapay_core::mcp::derive_icons
+    names:
+      ts: deriveIcons
+      py: derive_icons
+      rb: derive_icons
+      go: DeriveIcons
+      rust: derive_icons
+    catalog:
+      kind: none
+    args:
+      - name: branding
+        type: value
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 18
+    section: MCP payload / descriptors
+    doc: Binding for `deriveIcons` — absent/empty branding → JSON `null`.
+    rustFnName: derive_icons_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let branding = optional_branding(&args)?;
+              match derive_icons(branding.as_ref()) {
+                  None => Ok(Value::Null),
+                  Some(icons) => to_value(&icons),
+              }
+  deriveTaxIdType:
+    core: solvapay_core::business_details::derive_tax_id_type
+    names:
+      ts: deriveTaxIdType
+      py: derive_tax_id_type
+      rb: derive_tax_id_type
+      go: DeriveTaxIdType
+      rust: derive_tax_id_type
+    catalog:
+      kind: coreHelper
+      id: deriveTaxIdType
+    args:
+      - name: country
+        type: string
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 1
+    section: business-details
+    doc: Binding for `deriveTaxIdType`.
+    rustFnName: derive_tax_id_type_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let country = require_string(&args, "country")?;
+              match derive_tax_id_type(&country) {
+                  Some(tax_type) => to_value(&tax_type),
+                  None => Err(SdkError::transport(
+                      format!("unsupported country: {country}"),
+                      false,
+                  )),
+              }
+  disableAutoRecharge:
+    core: solvapay_transport::SolvaPayClient::disable_auto_recharge
+    names:
+      ts: disableAutoRecharge
+      py: disable_auto_recharge
+      rb: disable_auto_recharge
+      go: DisableAutoRecharge
+      rust: disable_auto_recharge
+    catalog:
+      kind: operation
+      id: disableAutoRecharge
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 35
+    section: Group C
+    doc: "`DELETE /v1/sdk/auto-recharge`"
+    rustFnName: disable_auto_recharge
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: disable_auto_recharge
+    dtoType: DisableAutoRechargeParams
+  evaluateCachedLimits:
+    core: solvapay_core::paywall_decision::evaluate_cached_limits
+    names:
+      ts: evaluateCachedLimits
+      py: evaluate_cached_limits
+      rb: evaluate_cached_limits
+      go: EvaluateCachedLimits
+      rust: evaluate_cached_limits
+    catalog:
+      kind: none
+    args:
+      - name: remaining
+        type: f64
+        required: true
+        extract: requireF64
+        local: remaining
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 32
+    section: paywall-decision
+    doc: Binding for `evaluateCachedLimits`.
+    rustFnName: evaluate_cached_limits_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - remaining
+    coreCall: evaluate_cached_limits
+  evaluateFreshLimits:
+    core: solvapay_core::paywall_decision::evaluate_fresh_limits
+    names:
+      ts: evaluateFreshLimits
+      py: evaluate_fresh_limits
+      rb: evaluate_fresh_limits
+      go: EvaluateFreshLimits
+      rust: evaluate_fresh_limits
+    catalog:
+      kind: none
+    args:
+      - name: withinLimits
+        type: bool
+        required: true
+        extract: requireBool
+        local: within_limits
+      - name: remaining
+        type: f64
+        required: true
+        extract: requireF64
+        local: remaining
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 33
+    section: paywall-decision
+    doc: Binding for `evaluateFreshLimits`.
+    rustFnName: evaluate_fresh_limits_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - within_limits
+        - remaining
+    coreCall: evaluate_fresh_limits
+  extractBackendCustomerRef:
+    core: solvapay_core::customer_sync::extract_backend_customer_ref
+    names:
+      ts: extractBackendCustomerRef
+      py: extract_backend_customer_ref
+      rb: extract_backend_customer_ref
+      go: ExtractBackendCustomerRef
+      rust: extract_backend_customer_ref
+    catalog:
+      kind: none
+    args:
+      - name: response
+        type: value
+        required: true
+        extract: requireObject
+        local: response
+      - name: fallback
+        type: string
+        required: true
+        extract: requireString
+        local: fallback
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 3
+    section: customer-sync
+    doc: Binding for `extractBackendCustomerRef`.
+    rustFnName: extract_backend_customer_ref_binding
+    call:
+      kind: wrap
+      serialize: valueString
+      args:
+        - response
+        - "&fallback"
+    coreCall: extract_backend_customer_ref
+  getAutoRecharge:
+    core: solvapay_transport::SolvaPayClient::get_auto_recharge
+    names:
+      ts: getAutoRecharge
+      py: get_auto_recharge
+      rb: get_auto_recharge
+      go: GetAutoRecharge
+      rust: get_auto_recharge
+    catalog:
+      kind: operation
+      id: getAutoRecharge
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 33
+    section: Group C
+    doc: "`GET /v1/sdk/auto-recharge`"
+    rustFnName: get_auto_recharge
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: get_auto_recharge
+    dtoType: GetAutoRechargeParams
+  getBusinessCountryOptions:
+    core: solvapay_core::business_details::get_business_country_options
+    names:
+      ts: getBusinessCountryOptions
+      py: get_business_country_options
+      rb: get_business_country_options
+      go: GetBusinessCountryOptions
+      rust: get_business_country_options
+    catalog:
+      kind: none
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 6
+    section: business-details
+    doc: Binding for `getBusinessCountryOptions`.
+    rustFnName: get_business_country_options_binding
+    call:
+      kind: wrap
+      serialize: toValue
+    coreCall: get_business_country_options
+  getCustomer:
+    core: solvapay_transport::SolvaPayClient::get_customer
+    names:
+      ts: getCustomer
+      py: get_customer
+      rb: get_customer
+      go: GetCustomer
+      rust: get_customer
+    catalog:
+      kind: operation
+      id: getCustomer
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 2
+    section: Group A
+    doc: Customer lookup by ref / externalRef / email.
+    rustFnName: get_customer
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: get_customer
+    dtoType: GetCustomerParams
+  getCustomerBalance:
+    core: solvapay_transport::SolvaPayClient::get_customer_balance
+    names:
+      ts: getCustomerBalance
+      py: get_customer_balance
+      rb: get_customer_balance
+      go: GetCustomerBalance
+      rust: get_customer_balance
+    catalog:
+      kind: operation
+      id: getCustomerBalance
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 4
+    section: Group A
+    doc: Credit balance for a customer.
+    rustFnName: get_customer_balance
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: get_customer_balance
+    dtoType: GetCustomerBalanceParams
+  getMerchant:
+    core: solvapay_transport::SolvaPayClient::get_merchant
+    names:
+      ts: getMerchant
+      py: get_merchant
+      rb: get_merchant
+      go: GetMerchant
+      rust: get_merchant
+    catalog:
+      kind: operation
+      id: getMerchant
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 8
+    section: Group A
+    doc: Merchant profile (`args_json` ignored; pass `"{}"`).
+    rustFnName: get_merchant
+    call:
+      kind: wrap
+      serialize: clientIgnore
+    coreCall: get_merchant
+  getPaymentMethod:
+    core: solvapay_transport::SolvaPayClient::get_payment_method
+    names:
+      ts: getPaymentMethod
+      py: get_payment_method
+      rb: get_payment_method
+      go: GetPaymentMethod
+      rust: get_payment_method
+    catalog:
+      kind: operation
+      id: getPaymentMethod
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 32
+    section: Group C
+    doc: "`GET /v1/sdk/payment-method`"
+    rustFnName: get_payment_method
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: get_payment_method
+    dtoType: GetPaymentMethodParams
+  getPlatformConfig:
+    core: solvapay_transport::SolvaPayClient::get_platform_config
+    names:
+      ts: getPlatformConfig
+      py: get_platform_config
+      rb: get_platform_config
+      go: GetPlatformConfig
+      rust: get_platform_config
+    catalog:
+      kind: operation
+      id: getPlatformConfig
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 9
+    section: Group A
+    doc: Platform config (`args_json` ignored; pass `"{}"`).
+    rustFnName: get_platform_config
+    call:
+      kind: wrap
+      serialize: clientIgnore
+    coreCall: get_platform_config
+  getProduct:
+    core: solvapay_transport::SolvaPayClient::get_product
+    names:
+      ts: getProduct
+      py: get_product
+      rb: get_product
+      go: GetProduct
+      rust: get_product
+    catalog:
+      kind: operation
+      id: getProduct
+    args: []
+    splitPathRefs:
+      - productRef
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 18
+    section: Group C
+    doc: |-
+      `GET /v1/sdk/products/{productRef}`
+
+      Args JSON is `{ productRef }`.
+    rustFnName: get_product
+    call:
+      kind: wrap
+      serialize: clientSplit
+    coreCall: get_product
+    clientCallArgs:
+      - "&refs[0]"
+  getSellerTaxIdentifierDisplayLabel:
+    core: solvapay_core::seller_identity::get_seller_tax_identifier_display_label
+    names:
+      ts: getSellerTaxIdentifierDisplayLabel
+      py: get_seller_tax_identifier_display_label
+      rb: get_seller_tax_identifier_display_label
+      go: GetSellerTaxIdentifierDisplayLabel
+      rust: get_seller_tax_identifier_display_label
+    catalog:
+      kind: coreHelper
+      id: getSellerTaxIdentifierDisplayLabel
+    args:
+      - name: country
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: country
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 11
+    section: seller-identity
+    doc: Binding for `getSellerTaxIdentifierDisplayLabel`.
+    rustFnName: get_seller_tax_identifier_display_label_binding
+    call:
+      kind: wrap
+      serialize: valueString
+      args:
+        - country.as_deref()
+    coreCall: get_seller_tax_identifier_display_label
+  getTaxIdExample:
+    core: solvapay_core::business_details::get_tax_id_example
+    names:
+      ts: getTaxIdExample
+      py: get_tax_id_example
+      rb: get_tax_id_example
+      go: GetTaxIdExample
+      rust: get_tax_id_example
+    catalog:
+      kind: coreHelper
+      id: getTaxIdExample
+    args:
+      - name: country
+        type: string
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 3
+    section: business-details
+    doc: Binding for `getTaxIdExample`.
+    rustFnName: get_tax_id_example_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let country = require_string(&args, "country")?;
+              match get_tax_id_example(&country) {
+                  Some(example) => Ok(Value::String(example.to_owned())),
+                  None => Err(SdkError::transport(
+                      format!("unsupported country: {country}"),
+                      false,
+                  )),
+              }
+  getTaxIdFieldLabel:
+    core: solvapay_core::business_details::get_tax_id_field_label
+    names:
+      ts: getTaxIdFieldLabel
+      py: get_tax_id_field_label
+      rb: get_tax_id_field_label
+      go: GetTaxIdFieldLabel
+      rust: get_tax_id_field_label
+    catalog:
+      kind: coreHelper
+      id: getTaxIdFieldLabel
+    args:
+      - name: country
+        type: string
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 4
+    section: business-details
+    doc: Binding for `getTaxIdFieldLabel`.
+    rustFnName: get_tax_id_field_label_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let country = require_string(&args, "country")?;
+              match get_tax_id_field_label(&country) {
+                  Some(label) => Ok(Value::String(label.to_owned())),
+                  None => Err(SdkError::transport(
+                      format!("unsupported country: {country}"),
+                      false,
+                  )),
+              }
+  getTaxIdHelperText:
+    core: solvapay_core::business_details::get_tax_id_helper_text
+    names:
+      ts: getTaxIdHelperText
+      py: get_tax_id_helper_text
+      rb: get_tax_id_helper_text
+      go: GetTaxIdHelperText
+      rust: get_tax_id_helper_text
+    catalog:
+      kind: coreHelper
+      id: getTaxIdHelperText
+    args:
+      - name: country
+        type: string
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 5
+    section: business-details
+    doc: Binding for `getTaxIdHelperText`.
+    rustFnName: get_tax_id_helper_text_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let country = require_string(&args, "country")?;
+              match get_tax_id_helper_text(&country) {
+                  Some(text) => Ok(Value::String(text)),
+                  None => Err(SdkError::transport(
+                      format!("unsupported country: {country}"),
+                      false,
+                  )),
+              }
+  getUserInfo:
+    core: solvapay_transport::SolvaPayClient::get_user_info
+    names:
+      ts: getUserInfo
+      py: get_user_info
+      rb: get_user_info
+      go: GetUserInfo
+      rust: get_user_info
+    catalog:
+      kind: operation
+      id: getUserInfo
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 5
+    section: Group A
+    doc: User info for a customer/product pair.
+    rustFnName: get_user_info
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: get_user_info
+    dtoType: GetUserInfoParams
+  isCachedCustomerRefValid:
+    core: solvapay_core::purchase::is_cached_customer_ref_valid
+    names:
+      ts: isCachedCustomerRefValid
+      py: is_cached_customer_ref_valid
+      rb: is_cached_customer_ref_valid
+      go: IsCachedCustomerRefValid
+      rust: is_cached_customer_ref_valid
+    catalog:
+      kind: none
+    args:
+      - name: externalRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: external_ref
+      - name: userId
+        type: string
+        required: true
+        extract: requireString
+        local: user_id
+      - name: customerRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: customer_ref
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 17
+    section: purchase
+    doc: Binding for `isCachedCustomerRefValid`.
+    rustFnName: is_cached_customer_ref_valid_binding
+    call:
+      kind: wrap
+      serialize: valueBool
+      args:
+        - external_ref.as_deref()
+        - "&user_id"
+        - customer_ref.as_deref()
+    coreCall: is_cached_customer_ref_valid
+  isEmailConflict:
+    core: solvapay_core::customer_sync::is_email_conflict
+    names:
+      ts: isEmailConflict
+      py: is_email_conflict
+      rb: is_email_conflict
+      go: IsEmailConflict
+      rust: is_email_conflict
+    catalog:
+      kind: none
+    args:
+      - name: message
+        type: string
+        required: true
+        extract: requireString
+        local: message
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 6
+    section: customer-sync
+    doc: Binding for `isEmailConflict`.
+    rustFnName: is_email_conflict_binding
+    call:
+      kind: wrap
+      serialize: valueBool
+      args:
+        - "&message"
+    coreCall: is_email_conflict
+  isErrorResult:
+    core: solvapay_core::route_error::is_error_result
+    names:
+      ts: isErrorResult
+      py: is_error_result
+      rb: is_error_result
+      go: IsErrorResult
+      rust: is_error_result
+    catalog:
+      kind: none
+    args:
+      - name: result
+        type: value
+        required: true
+        extract: rawValueOrNull
+        local: value
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 28
+    section: error
+    doc: Binding for `isErrorResult`.
+    rustFnName: is_error_result_binding
+    call:
+      kind: wrap
+      serialize: valueBool
+      args:
+        - "&value"
+    coreCall: is_error_result
+  isZeroDecimalCurrency:
+    core: solvapay_core::credit_display::is_zero_decimal_currency
+    names:
+      ts: isZeroDecimalCurrency
+      py: is_zero_decimal_currency
+      rb: is_zero_decimal_currency
+      go: IsZeroDecimalCurrency
+      rust: is_zero_decimal_currency
+    catalog:
+      kind: coreHelper
+      id: isZeroDecimalCurrency
+    args:
+      - name: currency
+        type: string
+        required: true
+        extract: requireString
+        local: currency
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 8
+    section: credit-display
+    doc: Binding for `isZeroDecimalCurrency`.
+    rustFnName: is_zero_decimal_currency_binding
+    call:
+      kind: wrap
+      serialize: valueBool
+      args:
+        - "&currency"
+    coreCall: is_zero_decimal_currency
+  listPlans:
+    core: solvapay_transport::SolvaPayClient::list_plans
+    names:
+      ts: listPlans
+      py: list_plans
+      rb: list_plans
+      go: ListPlans
+      rust: list_plans
+    catalog:
+      kind: operation
+      id: listPlans
+    args: []
+    splitPathRefs:
+      - productRef
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 26
+    section: Group C
+    doc: |-
+      `GET /v1/sdk/products/{productRef}/plans`
+
+      Args JSON is `{ productRef }`.
+    rustFnName: list_plans
+    call:
+      kind: wrap
+      serialize: clientSplit
+    coreCall: list_plans
+    clientCallArgs:
+      - "&refs[0]"
+  listProducts:
+    core: solvapay_transport::SolvaPayClient::list_products
+    names:
+      ts: listProducts
+      py: list_products
+      rb: list_products
+      go: ListProducts
+      rust: list_products
+    catalog:
+      kind: operation
+      id: listProducts
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 19
+    section: Group C
+    doc: '`GET /v1/sdk/products` (`args_json` ignored; pass `"{}"`).'
+    rustFnName: list_products
+    call:
+      kind: wrap
+      serialize: clientIgnore
+    coreCall: list_products
+  makeResponseResult:
+    core: solvapay_core::mcp::make_response_result
+    names:
+      ts: makeResponseResult
+      py: make_response_result
+      rb: make_response_result
+      go: MakeResponseResult
+      rust: make_response_result
+    catalog:
+      kind: none
+    args:
+      - name: data
+        type: value
+        required: true
+      - name: options
+        type: value
+        required: false
+      - name: emittedBlocks
+        type: value
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 14
+    section: MCP payload / descriptors
+    doc: Binding for `makeResponseResult`.
+    rustFnName: make_response_result_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let data = args
+                  .get("data")
+                  .cloned()
+                  .ok_or_else(|| SdkError::transport("args.data is required".to_owned(), false))?;
+
+              let options = match args.get("options") {
+                  None => None,
+                  Some(Value::Null) => {
+                      return Err(SdkError::transport(
+                          "args.options must be an object when present".to_owned(),
+                          false,
+                      ));
+                  }
+                  Some(value) if value.is_object() => Some(value.clone()),
+                  Some(_) => {
+                      return Err(SdkError::transport(
+                          "args.options must be an object when present".to_owned(),
+                          false,
+                      ));
+                  }
+              };
+
+              let emitted_blocks = match args.get("emittedBlocks") {
+                  None => Vec::new(),
+                  Some(Value::Array(items)) => items.clone(),
+                  Some(_) => {
+                      return Err(SdkError::transport(
+                          "args.emittedBlocks must be an array when present".to_owned(),
+                          false,
+                      ));
+                  }
+              };
+
+              to_value(&make_response_result(data, options, emitted_blocks))
+  mapRouteError:
+    core: solvapay_core::route_error::map_route_error
+    names:
+      ts: mapRouteError
+      py: map_route_error
+      rb: map_route_error
+      go: MapRouteError
+      rust: map_route_error
+    catalog:
+      kind: none
+    args:
+      - name: kind
+        type: string
+        required: true
+      - name: message
+        type: "string?"
+        required: false
+      - name: defaultMessage
+        type: "string?"
+        required: false
+      - name: operationName
+        type: string
+        required: true
+      - name: status
+        type: "f64?"
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 29
+    section: error
+    doc: 'Binding for `mapRouteError` (`kind`: `"solvapay"` | `"error"` |
+      `"unknown"`).'
+    rustFnName: map_route_error_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let kind = match require_string(&args, "kind")?.as_str() {
+                  "solvapay" => RouteErrorKind::SolvaPay,
+                  "error" => RouteErrorKind::Error,
+                  "unknown" => RouteErrorKind::Unknown,
+                  other => {
+                      return Err(SdkError::transport(
+                          format!("args.kind must be 'solvapay' | 'error' | 'unknown', got {other:?}"),
+                          false,
+                      ));
+                  }
+              };
+              let message = optional_string(&args, "message")?;
+              let default_message = optional_string(&args, "defaultMessage")?;
+              let operation_name = require_string(&args, "operationName")?;
+              let status = optional_u16(&args, "status")?;
+              to_value(&map_route_error(&RouteErrorInput {
+                  kind,
+                  message,
+                  status,
+                  operation_name,
+                  default_message,
+              }))
+  mcpViewMaps:
+    core: solvapay_core::mcp::mcp_view_maps
+    names:
+      ts: mcpViewMaps
+      py: mcp_view_maps
+      rb: mcp_view_maps
+      go: McpViewMaps
+      rust: mcp_view_maps
+    catalog:
+      kind: none
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 17
+    section: MCP payload / descriptors
+    doc: Binding for `mcpViewMaps`.
+    rustFnName: mcp_view_maps_binding
+    call:
+      kind: wrap
+      serialize: toValue
+    coreCall: mcp_view_maps
+  minorUnitsPerMajor:
+    core: solvapay_core::credit_display::minor_units_per_major
+    names:
+      ts: minorUnitsPerMajor
+      py: minor_units_per_major
+      rb: minor_units_per_major
+      go: MinorUnitsPerMajor
+      rust: minor_units_per_major
+    catalog:
+      kind: coreHelper
+      id: minorUnitsPerMajor
+    args:
+      - name: currency
+        type: string
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 7
+    section: credit-display
+    doc: Binding for `minorUnitsPerMajor`.
+    rustFnName: minor_units_per_major_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let currency = require_string(&args, "currency")?;
+              Ok(Value::from(minor_units_per_major(&currency)))
+  normalizeCancelResponse:
+    core: solvapay_core::renewal::normalize_cancel_response
+    names:
+      ts: normalizeCancelResponse
+      py: normalize_cancel_response
+      rb: normalize_cancel_response
+      go: NormalizeCancelResponse
+      rust: normalize_cancel_response
+    catalog:
+      kind: none
+    args:
+      - name: response
+        type: value
+        required: true
+        extract: rawValueOrNull
+        local: response
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 22
+    section: renewal
+    doc: >-
+      Binding for `normalizeCancelResponse`.
+
+
+      Ok and Err ([`HelperErrorResult`]) both serialize as the envelope
+      **value**.
+    rustFnName: normalize_cancel_response_binding
+    call:
+      kind: wrap
+      serialize: resultAsValue
+      args:
+        - "&response"
+    coreCall: normalize_cancel_response
+    docWasm: Binding for `normalizeCancelResponse`.
+  normalizeReactivateResponse:
+    core: solvapay_core::renewal::normalize_reactivate_response
+    names:
+      ts: normalizeReactivateResponse
+      py: normalize_reactivate_response
+      rb: normalize_reactivate_response
+      go: NormalizeReactivateResponse
+      rust: normalize_reactivate_response
+    catalog:
+      kind: none
+    args:
+      - name: response
+        type: value
+        required: true
+        extract: rawValueOrNull
+        local: response
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 23
+    section: renewal
+    doc: >-
+      Binding for `normalizeReactivateResponse`.
+
+
+      Ok and Err ([`HelperErrorResult`]) both serialize as the envelope
+      **value**.
+    rustFnName: normalize_reactivate_response_binding
+    call:
+      kind: wrap
+      serialize: resultAsValue
+      args:
+        - "&response"
+    coreCall: normalize_reactivate_response
+    docWasm: Binding for `normalizeReactivateResponse`.
+  paywallErrorToClientPayload:
+    core: solvapay_core::paywall_payload::paywall_client_payload
+    names:
+      ts: paywallErrorToClientPayload
+      py: paywall_error_to_client_payload
+      rb: paywall_error_to_client_payload
+      go: PaywallErrorToClientPayload
+      rust: paywall_error_to_client_payload
+    catalog:
+      kind: topLevel
+      id: paywallErrorToClientPayload
+    args:
+      - name: message
+        type: string
+        required: true
+        extract: requireString
+        local: _message
+      - name: structuredContent
+        type: value
+        required: true
+        extract: requireTyped
+        typedAs: PaywallGate
+        local: gate
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 40
+    section: paywall state / gate / payload
+    doc: >-
+      Binding for `paywallErrorToClientPayload`.
+
+
+      Requires `message` + `structuredContent`; payload content comes from the
+      gate
+
+      (message is unused for payload body — fixture-runner parity).
+    rustFnName: paywall_error_to_client_payload_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - "&gate"
+    coreCall: paywall_client_payload
+    docWasm: Binding for `paywallErrorToClientPayload`.
+  paywallToolResult:
+    core: solvapay_core::mcp::paywall_tool_result
+    names:
+      ts: paywallToolResult
+      py: paywall_tool_result
+      rb: paywall_tool_result
+      go: PaywallToolResult
+      rust: paywall_tool_result
+    catalog:
+      kind: none
+    args:
+      - name: message
+        type: string
+        required: true
+        extract: requireString
+        local: message
+      - name: structuredContent
+        type: value
+        required: true
+        extract: requireTyped
+        typedAs: PaywallGate
+        local: gate
+        typedStyle: annotation
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 13
+    section: MCP payload / descriptors
+    doc: Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
+    rustFnName: paywall_tool_result_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - "&message"
+        - "&gate"
+    coreCall: paywall_tool_result
+  processPaymentIntent:
+    core: solvapay_transport::SolvaPayClient::process_payment_intent
+    names:
+      ts: processPaymentIntent
+      py: process_payment_intent
+      rb: process_payment_intent
+      go: ProcessPaymentIntent
+      rust: process_payment_intent
+    catalog:
+      kind: operation
+      id: processPaymentIntent
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 12
+    section: Group B
+    doc: "`POST /v1/sdk/payment-intents/{id}/process`"
+    rustFnName: process_payment_intent
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: process_payment_intent
+    dtoType: ProcessPaymentIntentParams
+  projectPaymentIntentResult:
+    core: solvapay_core::payment::project_payment_intent_result
+    names:
+      ts: projectPaymentIntentResult
+      py: project_payment_intent_result
+      rb: project_payment_intent_result
+      go: ProjectPaymentIntentResult
+      rust: project_payment_intent_result
+    catalog:
+      kind: none
+    args:
+      - name: processorPaymentId
+        type: string
+        required: true
+      - name: clientSecret
+        type: string
+        required: true
+      - name: publishableKey
+        type: string
+        required: true
+      - name: customerRef
+        type: string
+        required: true
+      - name: accountId
+        type: "string?"
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 13
+    section: payment
+    doc: Binding for `projectPaymentIntentResult`.
+    rustFnName: project_payment_intent_result_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let processor_payment_id = require_string(&args, "processorPaymentId")?;
+              let client_secret = require_string(&args, "clientSecret")?;
+              let publishable_key = require_string(&args, "publishableKey")?;
+              let customer_ref = require_string(&args, "customerRef")?;
+              let account_id = optional_string(&args, "accountId")?;
+              to_value(&project_payment_intent_result(
+                  &PaymentIntentSource {
+                      processor_payment_id,
+                      client_secret,
+                      publishable_key,
+                      account_id,
+                  },
+                  &customer_ref,
+              ))
+  projectTopupProcessOutcome:
+    core: solvapay_core::payment::project_topup_process_outcome
+    names:
+      ts: projectTopupProcessOutcome
+      py: project_topup_process_outcome
+      rb: project_topup_process_outcome
+      go: ProjectTopupProcessOutcome
+      rust: project_topup_process_outcome
+    catalog:
+      kind: none
+    args:
+      - name: status
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: status
+      - name: message
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: message
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 14
+    section: payment
+    doc: Binding for `projectTopupProcessOutcome`.
+    rustFnName: project_topup_process_outcome_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - status.as_deref()
+        - message.as_deref()
+    coreCall: project_topup_process_outcome
+  projectUsageSnapshot:
+    core: solvapay_core::usage::project_usage_snapshot
+    names:
+      ts: projectUsageSnapshot
+      py: project_usage_snapshot
+      rb: project_usage_snapshot
+      go: ProjectUsageSnapshot
+      rust: project_usage_snapshot
+    catalog:
+      kind: none
+    args:
+      - name: activePurchase
+        type: value
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 25
+    section: usage
+    doc: Binding for `projectUsageSnapshot`.
+    rustFnName: project_usage_snapshot_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let purchase = match args.get("activePurchase") {
+                  None | Some(Value::Null) => None,
+                  Some(v) => Some(v),
+              };
+              to_value(&project_usage_snapshot(purchase))
+  reactivatePurchase:
+    core: solvapay_transport::SolvaPayClient::reactivate_purchase
+    names:
+      ts: reactivatePurchase
+      py: reactivate_purchase
+      rb: reactivate_purchase
+      go: ReactivatePurchase
+      rust: reactivate_purchase
+    catalog:
+      kind: operation
+      id: reactivatePurchase
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 31
+    section: Group C
+    doc: "`POST /v1/sdk/purchases/{purchaseRef}/reactivate`"
+    rustFnName: reactivate_purchase
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: reactivate_purchase
+    dtoType: ReactivatePurchaseParams
+  resolveCheckLimitsParams:
+    core: solvapay_core::limits::resolve_check_limits_params
+    names:
+      ts: resolveCheckLimitsParams
+      py: resolve_check_limits_params
+      rb: resolve_check_limits_params
+      go: ResolveCheckLimitsParams
+      rust: resolve_check_limits_params
+    catalog:
+      kind: none
+    args:
+      - name: productRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: product_ref
+      - name: meterName
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: meter_name
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 26
+    section: limits
+    doc: >-
+      Binding for `resolveCheckLimitsParams`.
+
+
+      Ok and Err ([`HelperErrorResult`]) both serialize as the envelope
+      **value**.
+    rustFnName: resolve_check_limits_params_binding
+    call:
+      kind: wrap
+      serialize: resultAsValue
+      args:
+        - product_ref.as_deref()
+        - meter_name.as_deref()
+    coreCall: resolve_check_limits_params
+    docWasm: Binding for `resolveCheckLimitsParams`.
+  resolveFallbackGateLimits:
+    core: solvapay_core::paywall_decision::resolve_fallback_gate_limits
+    names:
+      ts: resolveFallbackGateLimits
+      py: resolve_fallback_gate_limits
+      rb: resolve_fallback_gate_limits
+      go: ResolveFallbackGateLimits
+      rust: resolve_fallback_gate_limits
+    catalog:
+      kind: none
+    args:
+      - name: checkoutUrl
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: checkout_url
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 35
+    section: paywall-decision
+    doc: Binding for `resolveFallbackGateLimits`.
+    rustFnName: resolve_fallback_gate_limits_binding
+    call:
+      kind: wrap
+      serialize: toValue
+      args:
+        - checkout_url.as_deref()
+    coreCall: resolve_fallback_gate_limits
+  resolveProductRef:
+    core: solvapay_core::paywall_decision::resolve_product_ref
+    names:
+      ts: resolveProductRef
+      py: resolve_product_ref
+      rb: resolve_product_ref
+      go: ResolveProductRef
+      rust: resolve_product_ref
+    catalog:
+      kind: none
+    args:
+      - name: metadataProduct
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: metadata_product
+      - name: envProduct
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: env_product
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 31
+    section: paywall-decision
+    doc: Binding for `resolveProductRef`.
+    rustFnName: resolve_product_ref_binding
+    call:
+      kind: wrap
+      serialize: valueString
+      args:
+        - metadata_product.as_deref()
+        - env_product.as_deref()
+    coreCall: resolve_product_ref
+  resolvePurchaseCustomerRef:
+    core: solvapay_core::purchase::resolve_purchase_customer_ref
+    names:
+      ts: resolvePurchaseCustomerRef
+      py: resolve_purchase_customer_ref
+      rb: resolve_purchase_customer_ref
+      go: ResolvePurchaseCustomerRef
+      rust: resolve_purchase_customer_ref
+    catalog:
+      kind: none
+    args:
+      - name: customerRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: customer_ref
+      - name: userId
+        type: string
+        required: true
+        extract: requireString
+        local: user_id
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 18
+    section: purchase
+    doc: Binding for `resolvePurchaseCustomerRef`.
+    rustFnName: resolve_purchase_customer_ref_binding
+    call:
+      kind: wrap
+      serialize: valueString
+      args:
+        - customer_ref.as_deref()
+        - "&user_id"
+    coreCall: resolve_purchase_customer_ref
+  resolveReturnUrl:
+    core: solvapay_core::checkout::resolve_return_url
+    names:
+      ts: resolveReturnUrl
+      py: resolve_return_url
+      rb: resolve_return_url
+      go: ResolveReturnUrl
+      rust: resolve_return_url
+    catalog:
+      kind: none
+    args:
+      - name: bodyReturnUrl
+        type: "string?"
+        required: false
+      - name: optionsReturnUrl
+        type: "string?"
+        required: false
+      - name: origin
+        type: "string?"
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 15
+    section: checkout
+    doc: Binding for `resolveReturnUrl`.
+    rustFnName: resolve_return_url_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let body_return_url = optional_string(&args, "bodyReturnUrl")?;
+              let options_return_url = optional_string(&args, "optionsReturnUrl")?;
+              let origin = optional_string(&args, "origin")?;
+              match resolve_return_url(
+                  body_return_url.as_deref(),
+                  options_return_url.as_deref(),
+                  origin.as_deref(),
+              ) {
+                  None => Ok(Value::Null),
+                  Some(url) => Ok(Value::String(url)),
+              }
+  resolveSellerIdentityDisplay:
+    core: solvapay_core::seller_identity::resolve_seller_identity_display
+    names:
+      ts: resolveSellerIdentityDisplay
+      py: resolve_seller_identity_display
+      rb: resolve_seller_identity_display
+      go: ResolveSellerIdentityDisplay
+      rust: resolve_seller_identity_display
+    catalog:
+      kind: coreHelper
+      id: resolveSellerIdentityDisplay
+    args:
+      - name: country
+        type: "string?"
+        required: false
+      - name: vatNumber
+        type: "string?"
+        required: false
+      - name: taxId
+        type: "string?"
+        required: false
+      - name: companyNumber
+        type: "string?"
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 12
+    section: seller-identity
+    doc: Binding for `resolveSellerIdentityDisplay`.
+    rustFnName: resolve_seller_identity_display_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let input = SellerIdentityInput {
+                  country: optional_string(&args, "country")?,
+                  vat_number: optional_string(&args, "vatNumber")?,
+                  tax_id: optional_string(&args, "taxId")?,
+                  company_number: optional_string(&args, "companyNumber")?,
+              };
+              to_value(&resolve_seller_identity_display(&input))
+  resolveTaxBehavior:
+    core: solvapay_core::business_details::resolve_tax_behavior
+    names:
+      ts: resolveTaxBehavior
+      py: resolve_tax_behavior
+      rb: resolve_tax_behavior
+      go: ResolveTaxBehavior
+      rust: resolve_tax_behavior
+    catalog:
+      kind: coreHelper
+      id: resolveTaxBehavior
+    args:
+      - name: behavior
+        type: string
+        required: true
+      - name: currency
+        type: string
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 2
+    section: business-details
+    doc: Binding for `resolveTaxBehavior`.
+    rustFnName: resolve_tax_behavior_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let behavior = require_string(&args, "behavior")?;
+              let currency = require_string(&args, "currency")?;
+              match resolve_tax_behavior(&behavior, &currency) {
+                  Some(resolved) => Ok(Value::String(resolved.to_owned())),
+                  None => Err(SdkError::transport(
+                      format!("unsupported tax behavior: {behavior}"),
+                      false,
+                  )),
+              }
+  retryNextDelayMs:
+    core: solvapay_core::retry::RetryPolicy::next_delay
+    names:
+      ts: retryNextDelayMs
+      py: retry_next_delay_ms
+      rb: retry_next_delay_ms
+      go: RetryNextDelayMs
+      rust: retry_next_delay_ms
+    catalog:
+      kind: none
+    args:
+      - name: attempt
+        type: f64
+        required: true
+      - name: maxRetries
+        type: "f64?"
+        required: false
+      - name: initialDelay
+        type: "f64?"
+        required: false
+      - name: backoffStrategy
+        type: "string?"
+        required: false
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 41
+    section: retry
+    doc: >-
+      Binding for `retryNextDelayMs`.
+
+
+      Args: `{ maxRetries?, initialDelay?, backoffStrategy?, attempt }`.
+
+      Envelope value is delay milliseconds, or `null` when retries are
+      exhausted.
+    rustFnName: retry_next_delay_ms
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let attempt = require_u32(&args, "attempt")?;
+              let mut policy = RetryPolicy {
+                  max_retries: DEFAULT_MAX_RETRIES,
+                  initial_delay_ms: DEFAULT_INITIAL_DELAY_MS,
+                  backoff: Backoff::Fixed,
+              };
+              if let Some(max_retries) = optional_u32(&args, "maxRetries")? {
+                  policy.max_retries = max_retries;
+              }
+              if let Some(initial_delay) = optional_u64(&args, "initialDelay")? {
+                  policy.initial_delay_ms = initial_delay;
+              }
+              if let Some(strategy) = optional_string(&args, "backoffStrategy")? {
+                  policy.backoff = match strategy.as_str() {
+                      "fixed" => Backoff::Fixed,
+                      "linear" => Backoff::Linear,
+                      "exponential" => Backoff::Exponential,
+                      other => {
+                          return Err(SdkError::transport(
+                              format!(
+                                  "args.backoffStrategy must be fixed|linear|exponential, got {other}"
+                              ),
+                              false,
+                          ));
+                      }
+                  };
+              }
+              match policy.next_delay(attempt) {
+                  None => Ok(Value::Null),
+                  Some(delay) => {
+                      let ms = u64::try_from(delay.as_millis()).unwrap_or(u64::MAX);
+                      Ok(Value::from(ms))
+                  }
+              }
+    docWasm: Binding for `retryNextDelayMs`.
+  saveAutoRecharge:
+    core: solvapay_transport::SolvaPayClient::save_auto_recharge
+    names:
+      ts: saveAutoRecharge
+      py: save_auto_recharge
+      rb: save_auto_recharge
+      go: SaveAutoRecharge
+      rust: save_auto_recharge
+    catalog:
+      kind: operation
+      id: saveAutoRecharge
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 34
+    section: Group C
+    doc: "`PUT /v1/sdk/auto-recharge`"
+    rustFnName: save_auto_recharge
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: save_auto_recharge
+    dtoType: SaveAutoRechargeParams
+  selectActivePurchases:
+    core: solvapay_core::purchase::select_active_purchases
+    names:
+      ts: selectActivePurchases
+      py: select_active_purchases
+      rb: select_active_purchases
+      go: SelectActivePurchases
+      rust: select_active_purchases
+    catalog:
+      kind: none
+    args:
+      - name: purchases
+        type: value
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 19
+    section: purchase
+    doc: Binding for `selectActivePurchases`.
+    rustFnName: select_active_purchases_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let purchases = require_array(&args, "purchases")?;
+              Ok(Value::Array(select_active_purchases(purchases)))
+  trackUsage:
+    core: solvapay_transport::SolvaPayClient::track_usage
+    names:
+      ts: trackUsage
+      py: track_usage
+      rb: track_usage
+      go: TrackUsage
+      rust: track_usage
+    catalog:
+      kind: operation
+      id: trackUsage
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 16
+    section: Group C
+    doc: "`POST /v1/sdk/usages`"
+    rustFnName: track_usage
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: track_usage
+    dtoType: TrackUsageRequest
+  trackUsageBulk:
+    core: solvapay_transport::SolvaPayClient::track_usage_bulk
+    names:
+      ts: trackUsageBulk
+      py: track_usage_bulk
+      rb: track_usage_bulk
+      go: TrackUsageBulk
+      rust: track_usage_bulk
+    catalog:
+      kind: operation
+      id: trackUsageBulk
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 17
+    section: Group C
+    doc: "`POST /v1/sdk/usages/bulk`"
+    rustFnName: track_usage_bulk
+    call:
+      kind: wrap
+      serialize: clientAwait
+    coreCall: track_usage_bulk
+    dtoType: TrackUsageBulkRequest
+  updateCustomer:
+    core: solvapay_transport::SolvaPayClient::update_customer
+    names:
+      ts: updateCustomer
+      py: update_customer
+      rb: update_customer
+      go: UpdateCustomer
+      rust: update_customer
+    catalog:
+      kind: operation
+      id: updateCustomer
+    args: []
+    splitPathRefs:
+      - customerRef
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 1
+    section: Group A
+    doc: |-
+      `PATCH /v1/sdk/customers/{customerRef}`
+
+      Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
+    rustFnName: update_customer
+    call:
+      kind: wrap
+      serialize: clientSplit
+    coreCall: update_customer
+    dtoType: UpdateCustomerParams
+    clientCallArgs:
+      - "&refs[0]"
+      - params
+  updatePlan:
+    core: solvapay_transport::SolvaPayClient::update_plan
+    names:
+      ts: updatePlan
+      py: update_plan
+      rb: update_plan
+      go: UpdatePlan
+      rust: update_plan
+    catalog:
+      kind: operation
+      id: updatePlan
+    args: []
+    splitPathRefs:
+      - productRef
+      - planRef
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 28
+    section: Group C
+    doc: |-
+      `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
+
+      Args JSON is `{ productRef, planRef, ...params }`.
+    rustFnName: update_plan
+    call:
+      kind: wrap
+      serialize: clientSplit
+    coreCall: update_plan
+    dtoType: UpdatePlanRequest
+    clientCallArgs:
+      - "&refs[0]"
+      - "&refs[1]"
+      - params
+  updateProduct:
+    core: solvapay_transport::SolvaPayClient::update_product
+    names:
+      ts: updateProduct
+      py: update_product
+      rb: update_product
+      go: UpdateProduct
+      rust: update_product
+    catalog:
+      kind: operation
+      id: updateProduct
+    args: []
+    splitPathRefs:
+      - productRef
+    return: value
+    sync: async
+    envelope: async
+    artifact: client
+    emitOrder: 21
+    section: Group C
+    doc: |-
+      `PUT /v1/sdk/products/{productRef}`
+
+      Args JSON is `{ productRef, ...params }`.
+    rustFnName: update_product
+    call:
+      kind: wrap
+      serialize: clientSplit
+    coreCall: update_product
+    dtoType: UpdateProductRequest
+    clientCallArgs:
+      - "&refs[0]"
+      - params
+  validateActivatePlanParams:
+    core: solvapay_core::activation::validate_activate_plan_params
+    names:
+      ts: validateActivatePlanParams
+      py: validate_activate_plan_params
+      rb: validate_activate_plan_params
+      go: ValidateActivatePlanParams
+      rust: validate_activate_plan_params
+    catalog:
+      kind: none
+    args:
+      - name: productRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: product_ref
+      - name: planRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: plan_ref
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 7
+    section: activation
+    doc: Binding for `validateActivatePlanParams`.
+    rustFnName: validate_activate_plan_params_binding
+    call:
+      kind: wrap
+      serialize: optionHelperErr
+      args:
+        - product_ref.as_deref()
+        - plan_ref.as_deref()
+    coreCall: validate_activate_plan_params
+  validateAttachBusinessDetailsParams:
+    core: solvapay_core::payment::validate_attach_business_details_params
+    names:
+      ts: validateAttachBusinessDetailsParams
+      py: validate_attach_business_details_params
+      rb: validate_attach_business_details_params
+      go: ValidateAttachBusinessDetailsParams
+      rust: validate_attach_business_details_params
+    catalog:
+      kind: none
+    args:
+      - name: paymentIntentId
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: payment_intent_id
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 11
+    section: payment
+    doc: Binding for `validateAttachBusinessDetailsParams`.
+    rustFnName: validate_attach_business_details_params_binding
+    call:
+      kind: wrap
+      serialize: optionHelperErr
+      args:
+        - payment_intent_id.as_deref()
+    coreCall: validate_attach_business_details_params
+  validateBusinessDetails:
+    core: solvapay_core::business_details::validate_business_details
+    names:
+      ts: validateBusinessDetails
+      py: validate_business_details
+      rb: validate_business_details
+      go: ValidateBusinessDetails
+      rust: validate_business_details
+    catalog:
+      kind: coreHelper
+      id: validateBusinessDetails
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 0
+    section: business-details
+    doc: Binding for `validateBusinessDetails`.
+    rustFnName: validate_business_details_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let input: BusinessDetailsInput = serde_json::from_str(&args_json).map_err(|err| {
+                  SdkError::transport(format!("invalid BusinessDetailsInput: {err}"), false)
+              })?;
+              to_value(&validate_business_details(&input))
+  validateCheckoutSessionParams:
+    core: solvapay_core::checkout::validate_checkout_session_params
+    names:
+      ts: validateCheckoutSessionParams
+      py: validate_checkout_session_params
+      rb: validate_checkout_session_params
+      go: ValidateCheckoutSessionParams
+      rust: validate_checkout_session_params
+    catalog:
+      kind: none
+    args:
+      - name: productRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: product_ref
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 16
+    section: checkout
+    doc: Binding for `validateCheckoutSessionParams`.
+    rustFnName: validate_checkout_session_params_binding
+    call:
+      kind: wrap
+      serialize: optionHelperErr
+      args:
+        - product_ref.as_deref()
+    coreCall: validate_checkout_session_params
+  validateCreatePaymentIntentParams:
+    core: solvapay_core::payment::validate_create_payment_intent_params
+    names:
+      ts: validateCreatePaymentIntentParams
+      py: validate_create_payment_intent_params
+      rb: validate_create_payment_intent_params
+      go: ValidateCreatePaymentIntentParams
+      rust: validate_create_payment_intent_params
+    catalog:
+      kind: none
+    args:
+      - name: planRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: plan_ref
+      - name: productRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: product_ref
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 8
+    section: payment
+    doc: Binding for `validateCreatePaymentIntentParams`.
+    rustFnName: validate_create_payment_intent_params_binding
+    call:
+      kind: wrap
+      serialize: optionHelperErr
+      args:
+        - plan_ref.as_deref()
+        - product_ref.as_deref()
+    coreCall: validate_create_payment_intent_params
+  validateGetProductParams:
+    core: solvapay_core::product::validate_get_product_params
+    names:
+      ts: validateGetProductParams
+      py: validate_get_product_params
+      rb: validate_get_product_params
+      go: ValidateGetProductParams
+      rust: validate_get_product_params
+    catalog:
+      kind: none
+    args:
+      - name: productRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: product_ref
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 30
+    section: product
+    doc: Binding for `validateGetProductParams`.
+    rustFnName: validate_get_product_params_binding
+    call:
+      kind: wrap
+      serialize: optionHelperErr
+      args:
+        - product_ref.as_deref()
+    coreCall: validate_get_product_params
+  validateListPlansParams:
+    core: solvapay_core::plans::validate_list_plans_params
+    names:
+      ts: validateListPlansParams
+      py: validate_list_plans_params
+      rb: validate_list_plans_params
+      go: ValidateListPlansParams
+      rust: validate_list_plans_params
+    catalog:
+      kind: none
+    args:
+      - name: productRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: product_ref
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 27
+    section: plans
+    doc: Binding for `validateListPlansParams`.
+    rustFnName: validate_list_plans_params_binding
+    call:
+      kind: wrap
+      serialize: optionHelperErr
+      args:
+        - product_ref.as_deref()
+    coreCall: validate_list_plans_params
+  validateProcessPaymentIntentParams:
+    core: solvapay_core::payment::validate_process_payment_intent_params
+    names:
+      ts: validateProcessPaymentIntentParams
+      py: validate_process_payment_intent_params
+      rb: validate_process_payment_intent_params
+      go: ValidateProcessPaymentIntentParams
+      rust: validate_process_payment_intent_params
+    catalog:
+      kind: none
+    args:
+      - name: paymentIntentId
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: payment_intent_id
+      - name: productRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: product_ref
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 10
+    section: payment
+    doc: Binding for `validateProcessPaymentIntentParams`.
+    rustFnName: validate_process_payment_intent_params_binding
+    call:
+      kind: wrap
+      serialize: optionHelperErr
+      args:
+        - payment_intent_id.as_deref()
+        - product_ref.as_deref()
+    coreCall: validate_process_payment_intent_params
+  validatePublicBaseUrl:
+    core: solvapay_core::mcp::validate_public_base_url
+    names:
+      ts: validatePublicBaseUrl
+      py: validate_public_base_url
+      rb: validate_public_base_url
+      go: ValidatePublicBaseUrl
+      rust: validate_public_base_url
+    catalog:
+      kind: none
+    args:
+      - name: publicBaseUrl
+        type: string
+        required: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: payloadBuilders
+    emitOrder: 22
+    section: MCP payload / descriptors
+    doc: Binding for `validatePublicBaseUrl` — invalid → error message string; valid
+      → `null`.
+    rustFnName: validate_public_base_url_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let public_base_url = require_string(&args, "publicBaseUrl")?;
+              match validate_public_base_url(&public_base_url) {
+                  None => Ok(Value::Null),
+                  Some(message) => Ok(Value::String(message.to_owned())),
+              }
+    docWasm: Binding for `validatePublicBaseUrl` — invalid → error message; valid →
+      `null`.
+  validatePurchaseRef:
+    core: solvapay_core::renewal::validate_purchase_ref
+    names:
+      ts: validatePurchaseRef
+      py: validate_purchase_ref
+      rb: validate_purchase_ref
+      go: ValidatePurchaseRef
+      rust: validate_purchase_ref
+    catalog:
+      kind: none
+    args:
+      - name: purchaseRef
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: purchase_ref
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 24
+    section: renewal
+    doc: Binding for `validatePurchaseRef`.
+    rustFnName: validate_purchase_ref_binding
+    call:
+      kind: wrap
+      serialize: optionHelperErr
+      args:
+        - purchase_ref.as_deref()
+    coreCall: validate_purchase_ref
+  validateTopupPaymentIntentParams:
+    core: solvapay_core::payment::validate_topup_payment_intent_params
+    names:
+      ts: validateTopupPaymentIntentParams
+      py: validate_topup_payment_intent_params
+      rb: validate_topup_payment_intent_params
+      go: ValidateTopupPaymentIntentParams
+      rust: validate_topup_payment_intent_params
+    catalog:
+      kind: none
+    args:
+      - name: amount
+        type: "f64?"
+        required: false
+        extract: optionalF64
+        local: amount
+      - name: currency
+        type: "string?"
+        required: false
+        extract: optionalString
+        local: currency
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 9
+    section: payment
+    doc: Binding for `validateTopupPaymentIntentParams`.
+    rustFnName: validate_topup_payment_intent_params_binding
+    call:
+      kind: wrap
+      serialize: optionHelperErr
+      args:
+        - amount
+        - currency.as_deref()
+    coreCall: validate_topup_payment_intent_params
+  verifyWebhook:
+    core: solvapay_core::webhook::verify_webhook
+    names:
+      ts: verifyWebhook
+      py: verify_webhook
+      rb: verify_webhook
+      go: VerifyWebhook
+      rust: verify_webhook
+    catalog:
+      kind: topLevel
+      id: verifyWebhook
+    args:
+      - name: body
+        type: string
+        required: true
+      - name: signature
+        type: string
+        required: true
+      - name: secret
+        type: string
+        required: true
+      - name: nowUnixSecs
+        type: i64
+        required: true
+        hostInjected: true
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: webhookThrow
+    artifact: webhook
 
 errors:
   webhook:
@@ -2521,7 +5999,10 @@ errors:
       activation_required: Activation required
   mcp:
     messages:
-      rawHandlerReturn: "SolvaPay: registerPayable handler returned a raw value. Handlers must return ctx.respond(data, options?). If you believe you did, this is an internal bug — please file an issue at https://github.com/solvapay/solvapay-sdk/issues."
+      rawHandlerReturn: "SolvaPay: registerPayable handler returned a raw value.
+        Handlers must return ctx.respond(data, options?). If you believe you
+        did, this is an internal bug — please file an issue at
+        https://github.com/solvapay/solvapay-sdk/issues."
   transport:
     messageTemplate: "{message}"
 

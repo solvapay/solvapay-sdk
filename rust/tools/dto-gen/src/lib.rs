@@ -1,11 +1,13 @@
 //! OpenAPI snapshot + SDK contract manifest → `solvapay-dto` generator.
 
 pub mod emit;
+pub mod emit_bindings_rs;
 pub mod emit_client_ts;
 pub mod emit_parity_suite_ts;
 pub mod emit_ts;
 pub mod error;
 pub mod ir;
+pub mod lower_bindings;
 pub mod lower_catalog;
 pub mod lower_errors;
 pub mod lower_overlays;
@@ -14,11 +16,13 @@ pub mod name;
 pub mod parse;
 
 pub use emit::{emit_crate, EmittedCrate};
+pub use emit_bindings_rs::{emit_bindings, EmittedBindings, Toolchain};
 pub use emit_client_ts::emit_client_ts;
 pub use emit_parity_suite_ts::emit_parity_suite_ts;
 pub use emit_ts::emit_overlays_ts;
 pub use error::{GenError, GenResult};
 pub use ir::Ir;
+pub use lower_bindings::{dump_binding_symbols, lower_bindings};
 pub use lower_catalog::lower_catalog;
 pub use lower_errors::lower_errors;
 pub use lower_overlays::lower_overlays;
@@ -36,6 +40,7 @@ use serde_json::Value;
 /// # Errors
 ///
 /// Returns IO/parse/emit failures from the underlying steps.
+#[allow(clippy::too_many_arguments)]
 pub fn generate_from_snapshot(
     snapshot_path: &Path,
     out_dir: &Path,
@@ -43,6 +48,9 @@ pub fn generate_from_snapshot(
     ts_out: Option<&Path>,
     ts_client_out: Option<&Path>,
     ts_parity_out: Option<&Path>,
+    dump_bindings: Option<&Path>,
+    node_bindings_out: Option<&Path>,
+    wasm_bindings_out: Option<&Path>,
 ) -> GenResult<()> {
     let raw = fs::read_to_string(snapshot_path).map_err(|source| GenError::Io {
         path: snapshot_path.to_path_buf(),
@@ -62,6 +70,7 @@ pub fn generate_from_snapshot(
         lower_overlays(&mut ir, &manifest)?;
         lower_errors(&mut ir, &manifest)?;
         lower_catalog(&mut ir, &manifest)?;
+        lower_bindings(&mut ir, &manifest)?;
     }
 
     let emitted = emit_crate(&ir)?;
@@ -100,6 +109,52 @@ pub fn generate_from_snapshot(
         write_file(ts_parity_path, &ts)?;
     }
 
+    if let Some(bindings_path) = dump_bindings {
+        let json = dump_binding_symbols(&ir);
+        if let Some(parent) = bindings_path.parent() {
+            fs::create_dir_all(parent).map_err(|source| GenError::Io {
+                path: parent.to_path_buf(),
+                source,
+            })?;
+        }
+        write_file(bindings_path, &json)?;
+    }
+
+    if let Some(dir) = node_bindings_out {
+        let emitted = emit_bindings(&ir, Toolchain::Node)?;
+        write_binding_shims(dir, &emitted, "native_client.rs")?;
+    }
+
+    if let Some(dir) = wasm_bindings_out {
+        let emitted = emit_bindings(&ir, Toolchain::Wasm)?;
+        write_binding_shims(dir, &emitted, "wasm_client.rs")?;
+    }
+
+    Ok(())
+}
+
+/// Writes + rustfmts the four generated shim files for one toolchain.
+///
+/// # Errors
+///
+/// Returns [`GenError::Io`] on write failures or [`GenError::Parse`] if rustfmt
+/// is unavailable.
+fn write_binding_shims(dir: &Path, emitted: &EmittedBindings, client_file: &str) -> GenResult<()> {
+    fs::create_dir_all(dir).map_err(|source| GenError::Io {
+        path: dir.to_path_buf(),
+        source,
+    })?;
+    let paths = [
+        dir.join("args.rs"),
+        dir.join("decisions.rs"),
+        dir.join("payload_builders.rs"),
+        dir.join(client_file),
+    ];
+    write_file(&paths[0], &emitted.args_rs)?;
+    write_file(&paths[1], &emitted.decisions_rs)?;
+    write_file(&paths[2], &emitted.payload_builders_rs)?;
+    write_file(&paths[3], &emitted.client_rs)?;
+    rustfmt_files(&paths)?;
     Ok(())
 }
 

@@ -1,0 +1,4827 @@
+{
+  "_comment": "generated — do not edit; regenerate with dto-gen --dump-bindings",
+  "bindings": {
+    "MCP_TOOL_NAMES": {
+      "args": [],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::mcp_tool_names_json",
+      "coreCall": null,
+      "doc": "Binding for `MCP_TOOL_NAMES`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 16,
+      "envelope": "sync",
+      "names": {
+        "go": "MCP_TOOL_NAMES",
+        "py": "MCP_TOOL_NAMES",
+        "rb": "MCP_TOOL_NAMES",
+        "rust": "MCP_TOOL_NAMES",
+        "ts": "MCP_TOOL_NAMES"
+      },
+      "return": "value",
+      "rustFnName": "mcp_tool_names_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let _args = args_map(&args_json)?;\n        Ok(mcp_tool_names_json())",
+      "verbatimBodyWasm": null
+    },
+    "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE": {
+      "args": [],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::seller_identity::seller_tax_identifier_display_label_by_type",
+      "coreCall": null,
+      "doc": "Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 10,
+      "envelope": "sync",
+      "names": {
+        "go": "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+        "py": "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+        "rb": "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+        "rust": "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+        "ts": "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE"
+      },
+      "return": "value",
+      "rustFnName": "seller_tax_identifier_display_label_by_type_binding",
+      "section": "seller-identity",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let _args = args_map(&args_json)?;\n        let mut map = Map::new();\n        for (key, label) in seller_tax_identifier_display_label_by_type() {\n            map.insert((*key).to_owned(), Value::String((*label).to_owned()));\n        }\n        Ok(Value::Object(map))",
+      "verbatimBodyWasm": "let _args = args_map(&args_json)?;\n        let mut map = serde_json::Map::new();\n        for (key, label) in seller_tax_identifier_display_label_by_type() {\n            map.insert((*key).to_owned(), Value::String((*label).to_owned()));\n        }\n        Ok(Value::Object(map))"
+    },
+    "activatePlan": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "activatePlan",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::activate_plan",
+      "coreCall": "activate_plan",
+      "doc": "`POST /v1/sdk/activate`",
+      "docWasm": null,
+      "dtoType": "ActivatePlanDto",
+      "emitOrder": 14,
+      "envelope": "async",
+      "names": {
+        "go": "ActivatePlan",
+        "py": "activate_plan",
+        "rb": "activate_plan",
+        "rust": "activate_plan",
+        "ts": "activatePlan"
+      },
+      "return": "value",
+      "rustFnName": "activate_plan",
+      "section": "Group B",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "assertResponseResult": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "value",
+          "required": true,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::assert_response_result",
+      "coreCall": null,
+      "doc": "Binding for `assertResponseResult` — brand failures are Transport errors\n(TS wrapper rethrows as plain `Error` for fixture name parity).",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 15,
+      "envelope": "sync",
+      "names": {
+        "go": "AssertResponseResult",
+        "py": "assert_response_result",
+        "rb": "assert_response_result",
+        "rust": "assert_response_result",
+        "ts": "assertResponseResult"
+      },
+      "return": "value",
+      "rustFnName": "assert_response_result_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let value = args\n            .get(\"value\")\n            .cloned()\n            .ok_or_else(|| SdkError::transport(\"args.value is required\".to_owned(), false))?;\n        match assert_response_result(&value) {\n            Ok(v) => Ok(v),\n            Err(message) => Err(SdkError::transport(message.to_owned(), false)),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "assignCredits": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "assignCredits",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::assign_credits",
+      "coreCall": "assign_credits",
+      "doc": "Grant credits to a customer.",
+      "docWasm": null,
+      "dtoType": "AssignCreditsRequest",
+      "emitOrder": 3,
+      "envelope": "async",
+      "names": {
+        "go": "AssignCredits",
+        "py": "assign_credits",
+        "rb": "assign_credits",
+        "rust": "assign_credits",
+        "ts": "assignCredits"
+      },
+      "return": "value",
+      "rustFnName": "assign_credits",
+      "section": "Group A",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "attachBusinessDetails": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "attachBusinessDetails",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::attach_business_details",
+      "coreCall": "attach_business_details",
+      "doc": "`POST /v1/sdk/payment-intents/{id}/business-details`",
+      "docWasm": null,
+      "dtoType": "AttachBusinessDetailsParams",
+      "emitOrder": 13,
+      "envelope": "async",
+      "names": {
+        "go": "AttachBusinessDetails",
+        "py": "attach_business_details",
+        "rb": "attach_business_details",
+        "rust": "attach_business_details",
+        "ts": "attachBusinessDetails"
+      },
+      "return": "value",
+      "rustFnName": "attach_business_details",
+      "section": "Group B",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "attachBusinessDetailsValidationError": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "first_issue_message",
+          "name": "firstIssueMessage",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "first_issue_message.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::payment::attach_business_details_validation_error",
+      "coreCall": "attach_business_details_validation_error",
+      "doc": "Binding for `attachBusinessDetailsValidationError`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 12,
+      "envelope": "sync",
+      "names": {
+        "go": "AttachBusinessDetailsValidationError",
+        "py": "attach_business_details_validation_error",
+        "rb": "attach_business_details_validation_error",
+        "rust": "attach_business_details_validation_error",
+        "ts": "attachBusinessDetailsValidationError"
+      },
+      "return": "value",
+      "rustFnName": "attach_business_details_validation_error_binding",
+      "section": "payment",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "bootstrapMcpProduct": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "bootstrapMcpProduct",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::bootstrap_mcp_product",
+      "coreCall": "bootstrap_mcp_product",
+      "doc": "`POST /v1/sdk/products/mcp/bootstrap`",
+      "docWasm": null,
+      "dtoType": "McpBootstrapDto",
+      "emitOrder": 24,
+      "envelope": "async",
+      "names": {
+        "go": "BootstrapMcpProduct",
+        "py": "bootstrap_mcp_product",
+        "rb": "bootstrap_mcp_product",
+        "rust": "bootstrap_mcp_product",
+        "ts": "bootstrapMcpProduct"
+      },
+      "return": "value",
+      "rustFnName": "bootstrap_mcp_product",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "buildCreateCustomerParams": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "customer_ref",
+          "name": "customerRef",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "external_ref",
+          "name": "externalRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "email",
+          "name": "email",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "name",
+          "name": "name",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireI64",
+          "hostInjected": true,
+          "local": "now_ms",
+          "name": "nowMs",
+          "required": true,
+          "type": "i64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&customer_ref",
+          "external_ref.as_deref()",
+          "email.as_deref()",
+          "name.as_deref()",
+          "now_ms"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::customer_sync::build_create_customer_params",
+      "coreCall": "build_create_customer_params",
+      "doc": "Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock string).",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 2,
+      "envelope": "sync",
+      "names": {
+        "go": "BuildCreateCustomerParams",
+        "py": "build_create_customer_params",
+        "rb": "build_create_customer_params",
+        "rust": "build_create_customer_params",
+        "ts": "buildCreateCustomerParams"
+      },
+      "return": "value",
+      "rustFnName": "build_create_customer_params_binding",
+      "section": "customer-sync",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "buildGateMessage": {
+      "args": [
+        {
+          "extract": "requireTyped",
+          "hostInjected": false,
+          "local": "state",
+          "name": "state",
+          "required": true,
+          "type": "value",
+          "typedAs": "PaywallState",
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireTyped",
+          "hostInjected": false,
+          "local": "gate",
+          "name": "gate",
+          "required": true,
+          "type": "value",
+          "typedAs": "GateContent",
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&state",
+          "&gate"
+        ],
+        "kind": "wrap",
+        "serialize": "valueString"
+      },
+      "catalog": {
+        "id": "buildGateMessage",
+        "kind": "topLevel"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_state::build_gate_message",
+      "coreCall": "build_gate_message",
+      "doc": "Binding for `buildGateMessage`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 37,
+      "envelope": "sync",
+      "names": {
+        "go": "BuildGateMessage",
+        "py": "build_gate_message",
+        "rb": "build_gate_message",
+        "rust": "build_gate_message",
+        "ts": "buildGateMessage"
+      },
+      "return": "value",
+      "rustFnName": "build_gate_message_binding",
+      "section": "paywall state / gate / payload",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "buildNudgeMessage": {
+      "args": [
+        {
+          "extract": "requireTyped",
+          "hostInjected": false,
+          "local": "state",
+          "name": "state",
+          "required": true,
+          "type": "value",
+          "typedAs": "PaywallState",
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalTyped",
+          "hostInjected": false,
+          "local": "limits",
+          "name": "limits",
+          "required": false,
+          "type": "value",
+          "typedAs": "PaywallLimits",
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&state",
+          "limits.as_ref()"
+        ],
+        "kind": "wrap",
+        "serialize": "valueString"
+      },
+      "catalog": {
+        "id": "buildNudgeMessage",
+        "kind": "topLevel"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_state::build_nudge_message",
+      "coreCall": "build_nudge_message",
+      "doc": "Binding for `buildNudgeMessage`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 38,
+      "envelope": "sync",
+      "names": {
+        "go": "BuildNudgeMessage",
+        "py": "build_nudge_message",
+        "rb": "build_nudge_message",
+        "rust": "build_nudge_message",
+        "ts": "buildNudgeMessage"
+      },
+      "return": "value",
+      "rustFnName": "build_nudge_message_binding",
+      "section": "paywall state / gate / payload",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "buildPaywallGate": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "product_ref",
+          "name": "productRef",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireTyped",
+          "hostInjected": false,
+          "local": "limits",
+          "name": "limits",
+          "required": true,
+          "type": "value",
+          "typedAs": "PaywallGateLimits",
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&product_ref",
+          "&limits"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "buildPaywallGate",
+        "kind": "topLevel"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_gate::build_paywall_gate",
+      "coreCall": "build_paywall_gate",
+      "doc": "Binding for `buildPaywallGate`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 39,
+      "envelope": "sync",
+      "names": {
+        "go": "BuildPaywallGate",
+        "py": "build_paywall_gate",
+        "rb": "build_paywall_gate",
+        "rust": "build_paywall_gate",
+        "ts": "buildPaywallGate"
+      },
+      "return": "value",
+      "rustFnName": "build_paywall_gate_binding",
+      "section": "paywall state / gate / payload",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "buildPromptDescriptorMetadata": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "views",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::build_prompt_descriptor_metadata",
+      "coreCall": null,
+      "doc": "Binding for `buildPromptDescriptorMetadata`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 20,
+      "envelope": "sync",
+      "names": {
+        "go": "BuildPromptDescriptorMetadata",
+        "py": "build_prompt_descriptor_metadata",
+        "rb": "build_prompt_descriptor_metadata",
+        "rust": "build_prompt_descriptor_metadata",
+        "ts": "buildPromptDescriptorMetadata"
+      },
+      "return": "value",
+      "rustFnName": "build_prompt_descriptor_metadata_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let views = optional_views(&args)?;\n        let options = BuildPromptDescriptorMetadataOptions { views };\n        to_value(&build_prompt_descriptor_metadata(&options))",
+      "verbatimBodyWasm": null
+    },
+    "buildPromptUserMessage": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "promptName",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "args",
+          "required": true,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::build_prompt_user_message",
+      "coreCall": null,
+      "doc": "Binding for `buildPromptUserMessage`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 21,
+      "envelope": "sync",
+      "names": {
+        "go": "BuildPromptUserMessage",
+        "py": "build_prompt_user_message",
+        "rb": "build_prompt_user_message",
+        "rust": "build_prompt_user_message",
+        "ts": "buildPromptUserMessage"
+      },
+      "return": "value",
+      "rustFnName": "build_prompt_user_message_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let prompt_name = require_string(&args, \"promptName\")?;\n        let nested_args = match args.get(\"args\") {\n            Some(Value::Object(_)) => args[\"args\"].clone(),\n            Some(_) => {\n                return Err(SdkError::transport(\n                    \"args.args must be an object\".to_owned(),\n                    false,\n                ));\n            }\n            None => {\n                return Err(SdkError::transport(\n                    \"args.args is required\".to_owned(),\n                    false,\n                ));\n            }\n        };\n        to_value(&build_prompt_user_message(&prompt_name, &nested_args))",
+      "verbatimBodyWasm": null
+    },
+    "buildToolDescriptorMetadata": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "resourceUri",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "views",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "branding",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::build_tool_descriptor_metadata",
+      "coreCall": null,
+      "doc": "Binding for `buildToolDescriptorMetadata`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 19,
+      "envelope": "sync",
+      "names": {
+        "go": "BuildToolDescriptorMetadata",
+        "py": "build_tool_descriptor_metadata",
+        "rb": "build_tool_descriptor_metadata",
+        "rust": "build_tool_descriptor_metadata",
+        "ts": "buildToolDescriptorMetadata"
+      },
+      "return": "value",
+      "rustFnName": "build_tool_descriptor_metadata_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let resource_uri = require_string(&args, \"resourceUri\")?;\n        let views = optional_views(&args)?;\n        let branding = optional_branding(&args)?;\n        let options = BuildToolDescriptorMetadataOptions {\n            resource_uri,\n            views,\n            branding,\n        };\n        to_value(&build_tool_descriptor_metadata(&options))",
+      "verbatimBodyWasm": null
+    },
+    "cancelPurchase": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "cancelPurchase",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::cancel_purchase",
+      "coreCall": "cancel_purchase",
+      "doc": "`POST /v1/sdk/purchases/{purchaseRef}/cancel`",
+      "docWasm": null,
+      "dtoType": "CancelPurchaseParams",
+      "emitOrder": 30,
+      "envelope": "async",
+      "names": {
+        "go": "CancelPurchase",
+        "py": "cancel_purchase",
+        "rb": "cancel_purchase",
+        "rust": "cancel_purchase",
+        "ts": "cancelPurchase"
+      },
+      "return": "value",
+      "rustFnName": "cancel_purchase",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "checkLimits": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "checkLimits",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::check_limits",
+      "coreCall": "check_limits",
+      "doc": "`POST /v1/sdk/limits`",
+      "docWasm": null,
+      "dtoType": "CheckLimitsRequest",
+      "emitOrder": 15,
+      "envelope": "async",
+      "names": {
+        "go": "CheckLimits",
+        "py": "check_limits",
+        "rb": "check_limits",
+        "rust": "check_limits",
+        "ts": "checkLimits"
+      },
+      "return": "value",
+      "rustFnName": "check_limits",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "classifyCancelError": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "message",
+          "name": "message",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&message"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::renewal::classify_cancel_error",
+      "coreCall": "classify_cancel_error",
+      "doc": "Binding for `classifyCancelError`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 20,
+      "envelope": "sync",
+      "names": {
+        "go": "ClassifyCancelError",
+        "py": "classify_cancel_error",
+        "rb": "classify_cancel_error",
+        "rust": "classify_cancel_error",
+        "ts": "classifyCancelError"
+      },
+      "return": "value",
+      "rustFnName": "classify_cancel_error_binding",
+      "section": "renewal",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "classifyCreateError": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "message",
+          "name": "message",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&message"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::customer_sync::classify_create_error",
+      "coreCall": "classify_create_error",
+      "doc": "Binding for `classifyCreateError`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 5,
+      "envelope": "sync",
+      "names": {
+        "go": "ClassifyCreateError",
+        "py": "classify_create_error",
+        "rb": "classify_create_error",
+        "rust": "classify_create_error",
+        "ts": "classifyCreateError"
+      },
+      "return": "value",
+      "rustFnName": "classify_create_error_binding",
+      "section": "customer-sync",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "classifyCustomerRef": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "customer_ref",
+          "name": "customerRef",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&customer_ref"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::customer_sync::classify_customer_ref",
+      "coreCall": "classify_customer_ref",
+      "doc": "Binding for `classifyCustomerRef`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 0,
+      "envelope": "sync",
+      "names": {
+        "go": "ClassifyCustomerRef",
+        "py": "classify_customer_ref",
+        "rb": "classify_customer_ref",
+        "rust": "classify_customer_ref",
+        "ts": "classifyCustomerRef"
+      },
+      "return": "value",
+      "rustFnName": "classify_customer_ref_binding",
+      "section": "customer-sync",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "classifyLookupError": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "message",
+          "name": "message",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&message"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::customer_sync::classify_lookup_error",
+      "coreCall": "classify_lookup_error",
+      "doc": "Binding for `classifyLookupError`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 4,
+      "envelope": "sync",
+      "names": {
+        "go": "ClassifyLookupError",
+        "py": "classify_lookup_error",
+        "rb": "classify_lookup_error",
+        "rust": "classify_lookup_error",
+        "ts": "classifyLookupError"
+      },
+      "return": "value",
+      "rustFnName": "classify_lookup_error_binding",
+      "section": "customer-sync",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "classifyPaywallState": {
+      "args": [
+        {
+          "extract": "optionalTyped",
+          "hostInjected": false,
+          "local": "limits",
+          "name": "limits",
+          "required": false,
+          "type": "value",
+          "typedAs": "PaywallLimits",
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "limits.as_ref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "classifyPaywallState",
+        "kind": "topLevel"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_state::classify_paywall_state",
+      "coreCall": "classify_paywall_state",
+      "doc": "Binding for `classifyPaywallState`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 36,
+      "envelope": "sync",
+      "names": {
+        "go": "ClassifyPaywallState",
+        "py": "classify_paywall_state",
+        "rb": "classify_paywall_state",
+        "rust": "classify_paywall_state",
+        "ts": "classifyPaywallState"
+      },
+      "return": "value",
+      "rustFnName": "classify_paywall_state_binding",
+      "section": "paywall state / gate / payload",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "classifyReactivateError": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "message",
+          "name": "message",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&message"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::renewal::classify_reactivate_error",
+      "coreCall": "classify_reactivate_error",
+      "doc": "Binding for `classifyReactivateError`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 21,
+      "envelope": "sync",
+      "names": {
+        "go": "ClassifyReactivateError",
+        "py": "classify_reactivate_error",
+        "rb": "classify_reactivate_error",
+        "rust": "classify_reactivate_error",
+        "ts": "classifyReactivateError"
+      },
+      "return": "value",
+      "rustFnName": "classify_reactivate_error_binding",
+      "section": "renewal",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "cloneProduct": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientSplit"
+      },
+      "catalog": {
+        "id": "cloneProduct",
+        "kind": "operation"
+      },
+      "clientCallArgs": [
+        "&refs[0]",
+        "Some(overrides)"
+      ],
+      "core": "solvapay_transport::SolvaPayClient::clone_product",
+      "coreCall": "clone_product",
+      "doc": "`POST /v1/sdk/products/{productRef}/clone`\n\nArgs JSON is `{ productRef, name? }`.",
+      "docWasm": null,
+      "dtoType": "CloneProductOverrides",
+      "emitOrder": 23,
+      "envelope": "async",
+      "names": {
+        "go": "CloneProduct",
+        "py": "clone_product",
+        "rb": "clone_product",
+        "rust": "clone_product",
+        "ts": "cloneProduct"
+      },
+      "return": "value",
+      "rustFnName": "clone_product",
+      "section": "Group C",
+      "splitPathRefs": [
+        "productRef"
+      ],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "coerceCustomerOptions": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "email",
+          "name": "email",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "name",
+          "name": "name",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "email.as_deref()",
+          "name.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::customer_sync::coerce_customer_options",
+      "coreCall": "coerce_customer_options",
+      "doc": "Binding for `coerceCustomerOptions`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 1,
+      "envelope": "sync",
+      "names": {
+        "go": "CoerceCustomerOptions",
+        "py": "coerce_customer_options",
+        "rb": "coerce_customer_options",
+        "rust": "coerce_customer_options",
+        "ts": "coerceCustomerOptions"
+      },
+      "return": "value",
+      "rustFnName": "coerce_customer_options_binding",
+      "section": "customer-sync",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "configureMcpPlans": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientSplit"
+      },
+      "catalog": {
+        "id": "configureMcpPlans",
+        "kind": "operation"
+      },
+      "clientCallArgs": [
+        "&refs[0]",
+        "params"
+      ],
+      "core": "solvapay_transport::SolvaPayClient::configure_mcp_plans",
+      "coreCall": "configure_mcp_plans",
+      "doc": "`PUT /v1/sdk/products/{productRef}/mcp/plans`\n\nArgs JSON is `{ productRef, ...params }`.",
+      "docWasm": null,
+      "dtoType": "ConfigureMcpPlansDto",
+      "emitOrder": 25,
+      "envelope": "async",
+      "names": {
+        "go": "ConfigureMcpPlans",
+        "py": "configure_mcp_plans",
+        "rb": "configure_mcp_plans",
+        "rust": "configure_mcp_plans",
+        "ts": "configureMcpPlans"
+      },
+      "return": "value",
+      "rustFnName": "configure_mcp_plans",
+      "section": "Group C",
+      "splitPathRefs": [
+        "productRef"
+      ],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "createCheckoutSession": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "createCheckoutSession",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::create_checkout_session",
+      "coreCall": "create_checkout_session",
+      "doc": "Hosted checkout session.",
+      "docWasm": null,
+      "dtoType": "CreateCheckoutSessionRequest",
+      "emitOrder": 6,
+      "envelope": "async",
+      "names": {
+        "go": "CreateCheckoutSession",
+        "py": "create_checkout_session",
+        "rb": "create_checkout_session",
+        "rust": "create_checkout_session",
+        "ts": "createCheckoutSession"
+      },
+      "return": "value",
+      "rustFnName": "create_checkout_session",
+      "section": "Group A",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "createCustomer": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "createCustomer",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::create_customer",
+      "coreCall": "create_customer",
+      "doc": "`POST /v1/sdk/customers`",
+      "docWasm": null,
+      "dtoType": "CreateCustomerRequest",
+      "emitOrder": 0,
+      "envelope": "async",
+      "names": {
+        "go": "CreateCustomer",
+        "py": "create_customer",
+        "rb": "create_customer",
+        "rust": "create_customer",
+        "ts": "createCustomer"
+      },
+      "return": "value",
+      "rustFnName": "create_customer",
+      "section": "Group A",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "createCustomerSession": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "createCustomerSession",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::create_customer_session",
+      "coreCall": "create_customer_session",
+      "doc": "Customer portal session.",
+      "docWasm": null,
+      "dtoType": "CreateCustomerSessionRequest",
+      "emitOrder": 7,
+      "envelope": "async",
+      "names": {
+        "go": "CreateCustomerSession",
+        "py": "create_customer_session",
+        "rb": "create_customer_session",
+        "rust": "create_customer_session",
+        "ts": "createCustomerSession"
+      },
+      "return": "value",
+      "rustFnName": "create_customer_session",
+      "section": "Group A",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "createPaymentIntent": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "createPaymentIntent",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::create_payment_intent",
+      "coreCall": "create_payment_intent",
+      "doc": "`POST /v1/sdk/payment-intents` (plan checkout).",
+      "docWasm": null,
+      "dtoType": "CreatePaymentIntentParams",
+      "emitOrder": 10,
+      "envelope": "async",
+      "names": {
+        "go": "CreatePaymentIntent",
+        "py": "create_payment_intent",
+        "rb": "create_payment_intent",
+        "rust": "create_payment_intent",
+        "ts": "createPaymentIntent"
+      },
+      "return": "value",
+      "rustFnName": "create_payment_intent",
+      "section": "Group B",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "createPlan": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "createPlan",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::create_plan",
+      "coreCall": "create_plan",
+      "doc": "`POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).",
+      "docWasm": null,
+      "dtoType": "CreatePlanParams",
+      "emitOrder": 27,
+      "envelope": "async",
+      "names": {
+        "go": "CreatePlan",
+        "py": "create_plan",
+        "rb": "create_plan",
+        "rust": "create_plan",
+        "ts": "createPlan"
+      },
+      "return": "value",
+      "rustFnName": "create_plan",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "createProduct": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "createProduct",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::create_product",
+      "coreCall": "create_product",
+      "doc": "`POST /v1/sdk/products`",
+      "docWasm": null,
+      "dtoType": "CreateProductRequest",
+      "emitOrder": 20,
+      "envelope": "async",
+      "names": {
+        "go": "CreateProduct",
+        "py": "create_product",
+        "rb": "create_product",
+        "rust": "create_product",
+        "ts": "createProduct"
+      },
+      "return": "value",
+      "rustFnName": "create_product",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "createTopupPaymentIntent": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "createTopupPaymentIntent",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::create_topup_payment_intent",
+      "coreCall": "create_topup_payment_intent",
+      "doc": "`POST /v1/sdk/payment-intents` (credit top-up).",
+      "docWasm": null,
+      "dtoType": "CreateTopupPaymentIntentParams",
+      "emitOrder": 11,
+      "envelope": "async",
+      "names": {
+        "go": "CreateTopupPaymentIntent",
+        "py": "create_topup_payment_intent",
+        "rb": "create_topup_payment_intent",
+        "rust": "create_topup_payment_intent",
+        "ts": "createTopupPaymentIntent"
+      },
+      "return": "value",
+      "rustFnName": "create_topup_payment_intent",
+      "section": "Group B",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "creditsToDisplayMinorUnits": {
+      "args": [
+        {
+          "extract": "requireF64",
+          "hostInjected": false,
+          "local": null,
+          "name": "credits",
+          "required": true,
+          "type": "f64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireF64",
+          "hostInjected": false,
+          "local": null,
+          "name": "creditsPerMinorUnit",
+          "required": true,
+          "type": "f64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireF64",
+          "hostInjected": false,
+          "local": null,
+          "name": "displayExchangeRate",
+          "required": true,
+          "type": "f64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "displayCurrency",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "creditsToDisplayMinorUnits",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::credit_display::credits_to_display_minor_units",
+      "coreCall": null,
+      "doc": "Binding for `creditsToDisplayMinorUnits` (`null` when undefined).",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 9,
+      "envelope": "sync",
+      "names": {
+        "go": "CreditsToDisplayMinorUnits",
+        "py": "credits_to_display_minor_units",
+        "rb": "credits_to_display_minor_units",
+        "rust": "credits_to_display_minor_units",
+        "ts": "creditsToDisplayMinorUnits"
+      },
+      "return": "value",
+      "rustFnName": "credits_to_display_minor_units_binding",
+      "section": "credit-display",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let input = CreditsToDisplayInput {\n            credits: require_f64(&args, \"credits\")?,\n            credits_per_minor_unit: require_f64(&args, \"creditsPerMinorUnit\")?,\n            display_exchange_rate: require_f64(&args, \"displayExchangeRate\")?,\n            display_currency: require_string(&args, \"displayCurrency\")?,\n        };\n        match credits_to_display_minor_units(&input) {\n            Some(n) => Ok(Value::from(n)),\n            None => Ok(Value::Null),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "decidePaywallOutcome": {
+      "args": [
+        {
+          "extract": "requireBool",
+          "hostInjected": false,
+          "local": "within_limits",
+          "name": "withinLimits",
+          "required": true,
+          "type": "bool",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "product",
+          "name": "product",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "checkout_url",
+          "name": "checkoutUrl",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": "limits",
+          "name": "limits",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "within_limits",
+          "&product",
+          "limits.as_ref()",
+          "checkout_url.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_decision::decide_paywall_outcome",
+      "coreCall": "decide_paywall_outcome",
+      "doc": "Binding for `decidePaywallOutcome`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 34,
+      "envelope": "sync",
+      "names": {
+        "go": "DecidePaywallOutcome",
+        "py": "decide_paywall_outcome",
+        "rb": "decide_paywall_outcome",
+        "rust": "decide_paywall_outcome",
+        "ts": "decidePaywallOutcome"
+      },
+      "return": "value",
+      "rustFnName": "decide_paywall_outcome_binding",
+      "section": "paywall-decision",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "deletePlan": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientSplit"
+      },
+      "catalog": {
+        "id": "deletePlan",
+        "kind": "operation"
+      },
+      "clientCallArgs": [
+        "&refs[0]",
+        "&refs[1]"
+      ],
+      "core": "solvapay_transport::SolvaPayClient::delete_plan",
+      "coreCall": "delete_plan",
+      "doc": "`DELETE /v1/sdk/products/{productRef}/plans/{planRef}`\n\nArgs JSON is `{ productRef, planRef }`. Success value is `null`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 29,
+      "envelope": "async",
+      "names": {
+        "go": "DeletePlan",
+        "py": "delete_plan",
+        "rb": "delete_plan",
+        "rust": "delete_plan",
+        "ts": "deletePlan"
+      },
+      "return": "value",
+      "rustFnName": "delete_plan",
+      "section": "Group C",
+      "splitPathRefs": [
+        "productRef",
+        "planRef"
+      ],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "deleteProduct": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientSplit"
+      },
+      "catalog": {
+        "id": "deleteProduct",
+        "kind": "operation"
+      },
+      "clientCallArgs": [
+        "&refs[0]"
+      ],
+      "core": "solvapay_transport::SolvaPayClient::delete_product",
+      "coreCall": "delete_product",
+      "doc": "`DELETE /v1/sdk/products/{productRef}`\n\nArgs JSON is `{ productRef }`. Success value is `null`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 22,
+      "envelope": "async",
+      "names": {
+        "go": "DeleteProduct",
+        "py": "delete_product",
+        "rb": "delete_product",
+        "rust": "delete_product",
+        "ts": "deleteProduct"
+      },
+      "return": "value",
+      "rustFnName": "delete_product",
+      "section": "Group C",
+      "splitPathRefs": [
+        "productRef"
+      ],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "deriveIcons": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "branding",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::derive_icons",
+      "coreCall": null,
+      "doc": "Binding for `deriveIcons` — absent/empty branding → JSON `null`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 18,
+      "envelope": "sync",
+      "names": {
+        "go": "DeriveIcons",
+        "py": "derive_icons",
+        "rb": "derive_icons",
+        "rust": "derive_icons",
+        "ts": "deriveIcons"
+      },
+      "return": "value",
+      "rustFnName": "derive_icons_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let branding = optional_branding(&args)?;\n        match derive_icons(branding.as_ref()) {\n            None => Ok(Value::Null),\n            Some(icons) => to_value(&icons),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "deriveTaxIdType": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "country",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "deriveTaxIdType",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::business_details::derive_tax_id_type",
+      "coreCall": null,
+      "doc": "Binding for `deriveTaxIdType`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 1,
+      "envelope": "sync",
+      "names": {
+        "go": "DeriveTaxIdType",
+        "py": "derive_tax_id_type",
+        "rb": "derive_tax_id_type",
+        "rust": "derive_tax_id_type",
+        "ts": "deriveTaxIdType"
+      },
+      "return": "value",
+      "rustFnName": "derive_tax_id_type_binding",
+      "section": "business-details",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let country = require_string(&args, \"country\")?;\n        match derive_tax_id_type(&country) {\n            Some(tax_type) => to_value(&tax_type),\n            None => Err(SdkError::transport(\n                format!(\"unsupported country: {country}\"),\n                false,\n            )),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "disableAutoRecharge": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "disableAutoRecharge",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::disable_auto_recharge",
+      "coreCall": "disable_auto_recharge",
+      "doc": "`DELETE /v1/sdk/auto-recharge`",
+      "docWasm": null,
+      "dtoType": "DisableAutoRechargeParams",
+      "emitOrder": 35,
+      "envelope": "async",
+      "names": {
+        "go": "DisableAutoRecharge",
+        "py": "disable_auto_recharge",
+        "rb": "disable_auto_recharge",
+        "rust": "disable_auto_recharge",
+        "ts": "disableAutoRecharge"
+      },
+      "return": "value",
+      "rustFnName": "disable_auto_recharge",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "evaluateCachedLimits": {
+      "args": [
+        {
+          "extract": "requireF64",
+          "hostInjected": false,
+          "local": "remaining",
+          "name": "remaining",
+          "required": true,
+          "type": "f64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "remaining"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_decision::evaluate_cached_limits",
+      "coreCall": "evaluate_cached_limits",
+      "doc": "Binding for `evaluateCachedLimits`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 32,
+      "envelope": "sync",
+      "names": {
+        "go": "EvaluateCachedLimits",
+        "py": "evaluate_cached_limits",
+        "rb": "evaluate_cached_limits",
+        "rust": "evaluate_cached_limits",
+        "ts": "evaluateCachedLimits"
+      },
+      "return": "value",
+      "rustFnName": "evaluate_cached_limits_binding",
+      "section": "paywall-decision",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "evaluateFreshLimits": {
+      "args": [
+        {
+          "extract": "requireBool",
+          "hostInjected": false,
+          "local": "within_limits",
+          "name": "withinLimits",
+          "required": true,
+          "type": "bool",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireF64",
+          "hostInjected": false,
+          "local": "remaining",
+          "name": "remaining",
+          "required": true,
+          "type": "f64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "within_limits",
+          "remaining"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_decision::evaluate_fresh_limits",
+      "coreCall": "evaluate_fresh_limits",
+      "doc": "Binding for `evaluateFreshLimits`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 33,
+      "envelope": "sync",
+      "names": {
+        "go": "EvaluateFreshLimits",
+        "py": "evaluate_fresh_limits",
+        "rb": "evaluate_fresh_limits",
+        "rust": "evaluate_fresh_limits",
+        "ts": "evaluateFreshLimits"
+      },
+      "return": "value",
+      "rustFnName": "evaluate_fresh_limits_binding",
+      "section": "paywall-decision",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "extractBackendCustomerRef": {
+      "args": [
+        {
+          "extract": "requireObject",
+          "hostInjected": false,
+          "local": "response",
+          "name": "response",
+          "required": true,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "fallback",
+          "name": "fallback",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "response",
+          "&fallback"
+        ],
+        "kind": "wrap",
+        "serialize": "valueString"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::customer_sync::extract_backend_customer_ref",
+      "coreCall": "extract_backend_customer_ref",
+      "doc": "Binding for `extractBackendCustomerRef`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 3,
+      "envelope": "sync",
+      "names": {
+        "go": "ExtractBackendCustomerRef",
+        "py": "extract_backend_customer_ref",
+        "rb": "extract_backend_customer_ref",
+        "rust": "extract_backend_customer_ref",
+        "ts": "extractBackendCustomerRef"
+      },
+      "return": "value",
+      "rustFnName": "extract_backend_customer_ref_binding",
+      "section": "customer-sync",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getAutoRecharge": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "getAutoRecharge",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::get_auto_recharge",
+      "coreCall": "get_auto_recharge",
+      "doc": "`GET /v1/sdk/auto-recharge`",
+      "docWasm": null,
+      "dtoType": "GetAutoRechargeParams",
+      "emitOrder": 33,
+      "envelope": "async",
+      "names": {
+        "go": "GetAutoRecharge",
+        "py": "get_auto_recharge",
+        "rb": "get_auto_recharge",
+        "rust": "get_auto_recharge",
+        "ts": "getAutoRecharge"
+      },
+      "return": "value",
+      "rustFnName": "get_auto_recharge",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getBusinessCountryOptions": {
+      "args": [],
+      "artifact": "payloadBuilders",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::business_details::get_business_country_options",
+      "coreCall": "get_business_country_options",
+      "doc": "Binding for `getBusinessCountryOptions`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 6,
+      "envelope": "sync",
+      "names": {
+        "go": "GetBusinessCountryOptions",
+        "py": "get_business_country_options",
+        "rb": "get_business_country_options",
+        "rust": "get_business_country_options",
+        "ts": "getBusinessCountryOptions"
+      },
+      "return": "value",
+      "rustFnName": "get_business_country_options_binding",
+      "section": "business-details",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getCustomer": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "getCustomer",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::get_customer",
+      "coreCall": "get_customer",
+      "doc": "Customer lookup by ref / externalRef / email.",
+      "docWasm": null,
+      "dtoType": "GetCustomerParams",
+      "emitOrder": 2,
+      "envelope": "async",
+      "names": {
+        "go": "GetCustomer",
+        "py": "get_customer",
+        "rb": "get_customer",
+        "rust": "get_customer",
+        "ts": "getCustomer"
+      },
+      "return": "value",
+      "rustFnName": "get_customer",
+      "section": "Group A",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getCustomerBalance": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "getCustomerBalance",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::get_customer_balance",
+      "coreCall": "get_customer_balance",
+      "doc": "Credit balance for a customer.",
+      "docWasm": null,
+      "dtoType": "GetCustomerBalanceParams",
+      "emitOrder": 4,
+      "envelope": "async",
+      "names": {
+        "go": "GetCustomerBalance",
+        "py": "get_customer_balance",
+        "rb": "get_customer_balance",
+        "rust": "get_customer_balance",
+        "ts": "getCustomerBalance"
+      },
+      "return": "value",
+      "rustFnName": "get_customer_balance",
+      "section": "Group A",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getMerchant": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientIgnore"
+      },
+      "catalog": {
+        "id": "getMerchant",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::get_merchant",
+      "coreCall": "get_merchant",
+      "doc": "Merchant profile (`args_json` ignored; pass `\"{}\"`).",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 8,
+      "envelope": "async",
+      "names": {
+        "go": "GetMerchant",
+        "py": "get_merchant",
+        "rb": "get_merchant",
+        "rust": "get_merchant",
+        "ts": "getMerchant"
+      },
+      "return": "value",
+      "rustFnName": "get_merchant",
+      "section": "Group A",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getPaymentMethod": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "getPaymentMethod",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::get_payment_method",
+      "coreCall": "get_payment_method",
+      "doc": "`GET /v1/sdk/payment-method`",
+      "docWasm": null,
+      "dtoType": "GetPaymentMethodParams",
+      "emitOrder": 32,
+      "envelope": "async",
+      "names": {
+        "go": "GetPaymentMethod",
+        "py": "get_payment_method",
+        "rb": "get_payment_method",
+        "rust": "get_payment_method",
+        "ts": "getPaymentMethod"
+      },
+      "return": "value",
+      "rustFnName": "get_payment_method",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getPlatformConfig": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientIgnore"
+      },
+      "catalog": {
+        "id": "getPlatformConfig",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::get_platform_config",
+      "coreCall": "get_platform_config",
+      "doc": "Platform config (`args_json` ignored; pass `\"{}\"`).",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 9,
+      "envelope": "async",
+      "names": {
+        "go": "GetPlatformConfig",
+        "py": "get_platform_config",
+        "rb": "get_platform_config",
+        "rust": "get_platform_config",
+        "ts": "getPlatformConfig"
+      },
+      "return": "value",
+      "rustFnName": "get_platform_config",
+      "section": "Group A",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getProduct": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientSplit"
+      },
+      "catalog": {
+        "id": "getProduct",
+        "kind": "operation"
+      },
+      "clientCallArgs": [
+        "&refs[0]"
+      ],
+      "core": "solvapay_transport::SolvaPayClient::get_product",
+      "coreCall": "get_product",
+      "doc": "`GET /v1/sdk/products/{productRef}`\n\nArgs JSON is `{ productRef }`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 18,
+      "envelope": "async",
+      "names": {
+        "go": "GetProduct",
+        "py": "get_product",
+        "rb": "get_product",
+        "rust": "get_product",
+        "ts": "getProduct"
+      },
+      "return": "value",
+      "rustFnName": "get_product",
+      "section": "Group C",
+      "splitPathRefs": [
+        "productRef"
+      ],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getSellerTaxIdentifierDisplayLabel": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "country",
+          "name": "country",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "args": [
+          "country.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "valueString"
+      },
+      "catalog": {
+        "id": "getSellerTaxIdentifierDisplayLabel",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::seller_identity::get_seller_tax_identifier_display_label",
+      "coreCall": "get_seller_tax_identifier_display_label",
+      "doc": "Binding for `getSellerTaxIdentifierDisplayLabel`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 11,
+      "envelope": "sync",
+      "names": {
+        "go": "GetSellerTaxIdentifierDisplayLabel",
+        "py": "get_seller_tax_identifier_display_label",
+        "rb": "get_seller_tax_identifier_display_label",
+        "rust": "get_seller_tax_identifier_display_label",
+        "ts": "getSellerTaxIdentifierDisplayLabel"
+      },
+      "return": "value",
+      "rustFnName": "get_seller_tax_identifier_display_label_binding",
+      "section": "seller-identity",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "getTaxIdExample": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "country",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "getTaxIdExample",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::business_details::get_tax_id_example",
+      "coreCall": null,
+      "doc": "Binding for `getTaxIdExample`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 3,
+      "envelope": "sync",
+      "names": {
+        "go": "GetTaxIdExample",
+        "py": "get_tax_id_example",
+        "rb": "get_tax_id_example",
+        "rust": "get_tax_id_example",
+        "ts": "getTaxIdExample"
+      },
+      "return": "value",
+      "rustFnName": "get_tax_id_example_binding",
+      "section": "business-details",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let country = require_string(&args, \"country\")?;\n        match get_tax_id_example(&country) {\n            Some(example) => Ok(Value::String(example.to_owned())),\n            None => Err(SdkError::transport(\n                format!(\"unsupported country: {country}\"),\n                false,\n            )),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "getTaxIdFieldLabel": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "country",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "getTaxIdFieldLabel",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::business_details::get_tax_id_field_label",
+      "coreCall": null,
+      "doc": "Binding for `getTaxIdFieldLabel`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 4,
+      "envelope": "sync",
+      "names": {
+        "go": "GetTaxIdFieldLabel",
+        "py": "get_tax_id_field_label",
+        "rb": "get_tax_id_field_label",
+        "rust": "get_tax_id_field_label",
+        "ts": "getTaxIdFieldLabel"
+      },
+      "return": "value",
+      "rustFnName": "get_tax_id_field_label_binding",
+      "section": "business-details",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let country = require_string(&args, \"country\")?;\n        match get_tax_id_field_label(&country) {\n            Some(label) => Ok(Value::String(label.to_owned())),\n            None => Err(SdkError::transport(\n                format!(\"unsupported country: {country}\"),\n                false,\n            )),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "getTaxIdHelperText": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "country",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "getTaxIdHelperText",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::business_details::get_tax_id_helper_text",
+      "coreCall": null,
+      "doc": "Binding for `getTaxIdHelperText`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 5,
+      "envelope": "sync",
+      "names": {
+        "go": "GetTaxIdHelperText",
+        "py": "get_tax_id_helper_text",
+        "rb": "get_tax_id_helper_text",
+        "rust": "get_tax_id_helper_text",
+        "ts": "getTaxIdHelperText"
+      },
+      "return": "value",
+      "rustFnName": "get_tax_id_helper_text_binding",
+      "section": "business-details",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let country = require_string(&args, \"country\")?;\n        match get_tax_id_helper_text(&country) {\n            Some(text) => Ok(Value::String(text)),\n            None => Err(SdkError::transport(\n                format!(\"unsupported country: {country}\"),\n                false,\n            )),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "getUserInfo": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "getUserInfo",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::get_user_info",
+      "coreCall": "get_user_info",
+      "doc": "User info for a customer/product pair.",
+      "docWasm": null,
+      "dtoType": "GetUserInfoParams",
+      "emitOrder": 5,
+      "envelope": "async",
+      "names": {
+        "go": "GetUserInfo",
+        "py": "get_user_info",
+        "rb": "get_user_info",
+        "rust": "get_user_info",
+        "ts": "getUserInfo"
+      },
+      "return": "value",
+      "rustFnName": "get_user_info",
+      "section": "Group A",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "isCachedCustomerRefValid": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "external_ref",
+          "name": "externalRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "user_id",
+          "name": "userId",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "customer_ref",
+          "name": "customerRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "external_ref.as_deref()",
+          "&user_id",
+          "customer_ref.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "valueBool"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::purchase::is_cached_customer_ref_valid",
+      "coreCall": "is_cached_customer_ref_valid",
+      "doc": "Binding for `isCachedCustomerRefValid`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 17,
+      "envelope": "sync",
+      "names": {
+        "go": "IsCachedCustomerRefValid",
+        "py": "is_cached_customer_ref_valid",
+        "rb": "is_cached_customer_ref_valid",
+        "rust": "is_cached_customer_ref_valid",
+        "ts": "isCachedCustomerRefValid"
+      },
+      "return": "value",
+      "rustFnName": "is_cached_customer_ref_valid_binding",
+      "section": "purchase",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "isEmailConflict": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "message",
+          "name": "message",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&message"
+        ],
+        "kind": "wrap",
+        "serialize": "valueBool"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::customer_sync::is_email_conflict",
+      "coreCall": "is_email_conflict",
+      "doc": "Binding for `isEmailConflict`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 6,
+      "envelope": "sync",
+      "names": {
+        "go": "IsEmailConflict",
+        "py": "is_email_conflict",
+        "rb": "is_email_conflict",
+        "rust": "is_email_conflict",
+        "ts": "isEmailConflict"
+      },
+      "return": "value",
+      "rustFnName": "is_email_conflict_binding",
+      "section": "customer-sync",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "isErrorResult": {
+      "args": [
+        {
+          "extract": "rawValueOrNull",
+          "hostInjected": false,
+          "local": "value",
+          "name": "result",
+          "required": true,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&value"
+        ],
+        "kind": "wrap",
+        "serialize": "valueBool"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::route_error::is_error_result",
+      "coreCall": "is_error_result",
+      "doc": "Binding for `isErrorResult`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 28,
+      "envelope": "sync",
+      "names": {
+        "go": "IsErrorResult",
+        "py": "is_error_result",
+        "rb": "is_error_result",
+        "rust": "is_error_result",
+        "ts": "isErrorResult"
+      },
+      "return": "value",
+      "rustFnName": "is_error_result_binding",
+      "section": "error",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "isZeroDecimalCurrency": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "currency",
+          "name": "currency",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "args": [
+          "&currency"
+        ],
+        "kind": "wrap",
+        "serialize": "valueBool"
+      },
+      "catalog": {
+        "id": "isZeroDecimalCurrency",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::credit_display::is_zero_decimal_currency",
+      "coreCall": "is_zero_decimal_currency",
+      "doc": "Binding for `isZeroDecimalCurrency`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 8,
+      "envelope": "sync",
+      "names": {
+        "go": "IsZeroDecimalCurrency",
+        "py": "is_zero_decimal_currency",
+        "rb": "is_zero_decimal_currency",
+        "rust": "is_zero_decimal_currency",
+        "ts": "isZeroDecimalCurrency"
+      },
+      "return": "value",
+      "rustFnName": "is_zero_decimal_currency_binding",
+      "section": "credit-display",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "listPlans": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientSplit"
+      },
+      "catalog": {
+        "id": "listPlans",
+        "kind": "operation"
+      },
+      "clientCallArgs": [
+        "&refs[0]"
+      ],
+      "core": "solvapay_transport::SolvaPayClient::list_plans",
+      "coreCall": "list_plans",
+      "doc": "`GET /v1/sdk/products/{productRef}/plans`\n\nArgs JSON is `{ productRef }`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 26,
+      "envelope": "async",
+      "names": {
+        "go": "ListPlans",
+        "py": "list_plans",
+        "rb": "list_plans",
+        "rust": "list_plans",
+        "ts": "listPlans"
+      },
+      "return": "value",
+      "rustFnName": "list_plans",
+      "section": "Group C",
+      "splitPathRefs": [
+        "productRef"
+      ],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "listProducts": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientIgnore"
+      },
+      "catalog": {
+        "id": "listProducts",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::list_products",
+      "coreCall": "list_products",
+      "doc": "`GET /v1/sdk/products` (`args_json` ignored; pass `\"{}\"`).",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 19,
+      "envelope": "async",
+      "names": {
+        "go": "ListProducts",
+        "py": "list_products",
+        "rb": "list_products",
+        "rust": "list_products",
+        "ts": "listProducts"
+      },
+      "return": "value",
+      "rustFnName": "list_products",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "makeResponseResult": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "data",
+          "required": true,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "options",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "emittedBlocks",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::make_response_result",
+      "coreCall": null,
+      "doc": "Binding for `makeResponseResult`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 14,
+      "envelope": "sync",
+      "names": {
+        "go": "MakeResponseResult",
+        "py": "make_response_result",
+        "rb": "make_response_result",
+        "rust": "make_response_result",
+        "ts": "makeResponseResult"
+      },
+      "return": "value",
+      "rustFnName": "make_response_result_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let data = args\n            .get(\"data\")\n            .cloned()\n            .ok_or_else(|| SdkError::transport(\"args.data is required\".to_owned(), false))?;\n\n        let options = match args.get(\"options\") {\n            None => None,\n            Some(Value::Null) => {\n                return Err(SdkError::transport(\n                    \"args.options must be an object when present\".to_owned(),\n                    false,\n                ));\n            }\n            Some(value) if value.is_object() => Some(value.clone()),\n            Some(_) => {\n                return Err(SdkError::transport(\n                    \"args.options must be an object when present\".to_owned(),\n                    false,\n                ));\n            }\n        };\n\n        let emitted_blocks = match args.get(\"emittedBlocks\") {\n            None => Vec::new(),\n            Some(Value::Array(items)) => items.clone(),\n            Some(_) => {\n                return Err(SdkError::transport(\n                    \"args.emittedBlocks must be an array when present\".to_owned(),\n                    false,\n                ));\n            }\n        };\n\n        to_value(&make_response_result(data, options, emitted_blocks))",
+      "verbatimBodyWasm": null
+    },
+    "mapRouteError": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "kind",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "message",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "defaultMessage",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "operationName",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalF64",
+          "hostInjected": false,
+          "local": null,
+          "name": "status",
+          "required": false,
+          "type": "f64?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::route_error::map_route_error",
+      "coreCall": null,
+      "doc": "Binding for `mapRouteError` (`kind`: `\"solvapay\"` | `\"error\"` | `\"unknown\"`).",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 29,
+      "envelope": "sync",
+      "names": {
+        "go": "MapRouteError",
+        "py": "map_route_error",
+        "rb": "map_route_error",
+        "rust": "map_route_error",
+        "ts": "mapRouteError"
+      },
+      "return": "value",
+      "rustFnName": "map_route_error_binding",
+      "section": "error",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let kind = match require_string(&args, \"kind\")?.as_str() {\n            \"solvapay\" => RouteErrorKind::SolvaPay,\n            \"error\" => RouteErrorKind::Error,\n            \"unknown\" => RouteErrorKind::Unknown,\n            other => {\n                return Err(SdkError::transport(\n                    format!(\"args.kind must be 'solvapay' | 'error' | 'unknown', got {other:?}\"),\n                    false,\n                ));\n            }\n        };\n        let message = optional_string(&args, \"message\")?;\n        let default_message = optional_string(&args, \"defaultMessage\")?;\n        let operation_name = require_string(&args, \"operationName\")?;\n        let status = optional_u16(&args, \"status\")?;\n        to_value(&map_route_error(&RouteErrorInput {\n            kind,\n            message,\n            status,\n            operation_name,\n            default_message,\n        }))",
+      "verbatimBodyWasm": null
+    },
+    "mcpViewMaps": {
+      "args": [],
+      "artifact": "payloadBuilders",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::mcp_view_maps",
+      "coreCall": "mcp_view_maps",
+      "doc": "Binding for `mcpViewMaps`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 17,
+      "envelope": "sync",
+      "names": {
+        "go": "McpViewMaps",
+        "py": "mcp_view_maps",
+        "rb": "mcp_view_maps",
+        "rust": "mcp_view_maps",
+        "ts": "mcpViewMaps"
+      },
+      "return": "value",
+      "rustFnName": "mcp_view_maps_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "minorUnitsPerMajor": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "currency",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "minorUnitsPerMajor",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::credit_display::minor_units_per_major",
+      "coreCall": null,
+      "doc": "Binding for `minorUnitsPerMajor`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 7,
+      "envelope": "sync",
+      "names": {
+        "go": "MinorUnitsPerMajor",
+        "py": "minor_units_per_major",
+        "rb": "minor_units_per_major",
+        "rust": "minor_units_per_major",
+        "ts": "minorUnitsPerMajor"
+      },
+      "return": "value",
+      "rustFnName": "minor_units_per_major_binding",
+      "section": "credit-display",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let currency = require_string(&args, \"currency\")?;\n        Ok(Value::from(minor_units_per_major(&currency)))",
+      "verbatimBodyWasm": null
+    },
+    "normalizeCancelResponse": {
+      "args": [
+        {
+          "extract": "rawValueOrNull",
+          "hostInjected": false,
+          "local": "response",
+          "name": "response",
+          "required": true,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&response"
+        ],
+        "kind": "wrap",
+        "serialize": "resultAsValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::renewal::normalize_cancel_response",
+      "coreCall": "normalize_cancel_response",
+      "doc": "Binding for `normalizeCancelResponse`.\n\nOk and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.",
+      "docWasm": "Binding for `normalizeCancelResponse`.",
+      "dtoType": null,
+      "emitOrder": 22,
+      "envelope": "sync",
+      "names": {
+        "go": "NormalizeCancelResponse",
+        "py": "normalize_cancel_response",
+        "rb": "normalize_cancel_response",
+        "rust": "normalize_cancel_response",
+        "ts": "normalizeCancelResponse"
+      },
+      "return": "value",
+      "rustFnName": "normalize_cancel_response_binding",
+      "section": "renewal",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "normalizeReactivateResponse": {
+      "args": [
+        {
+          "extract": "rawValueOrNull",
+          "hostInjected": false,
+          "local": "response",
+          "name": "response",
+          "required": true,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&response"
+        ],
+        "kind": "wrap",
+        "serialize": "resultAsValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::renewal::normalize_reactivate_response",
+      "coreCall": "normalize_reactivate_response",
+      "doc": "Binding for `normalizeReactivateResponse`.\n\nOk and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.",
+      "docWasm": "Binding for `normalizeReactivateResponse`.",
+      "dtoType": null,
+      "emitOrder": 23,
+      "envelope": "sync",
+      "names": {
+        "go": "NormalizeReactivateResponse",
+        "py": "normalize_reactivate_response",
+        "rb": "normalize_reactivate_response",
+        "rust": "normalize_reactivate_response",
+        "ts": "normalizeReactivateResponse"
+      },
+      "return": "value",
+      "rustFnName": "normalize_reactivate_response_binding",
+      "section": "renewal",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "paywallErrorToClientPayload": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "_message",
+          "name": "message",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireTyped",
+          "hostInjected": false,
+          "local": "gate",
+          "name": "structuredContent",
+          "required": true,
+          "type": "value",
+          "typedAs": "PaywallGate",
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "&gate"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "paywallErrorToClientPayload",
+        "kind": "topLevel"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_payload::paywall_client_payload",
+      "coreCall": "paywall_client_payload",
+      "doc": "Binding for `paywallErrorToClientPayload`.\n\nRequires `message` + `structuredContent`; payload content comes from the gate\n(message is unused for payload body — fixture-runner parity).",
+      "docWasm": "Binding for `paywallErrorToClientPayload`.",
+      "dtoType": null,
+      "emitOrder": 40,
+      "envelope": "sync",
+      "names": {
+        "go": "PaywallErrorToClientPayload",
+        "py": "paywall_error_to_client_payload",
+        "rb": "paywall_error_to_client_payload",
+        "rust": "paywall_error_to_client_payload",
+        "ts": "paywallErrorToClientPayload"
+      },
+      "return": "value",
+      "rustFnName": "paywall_error_to_client_payload_binding",
+      "section": "paywall state / gate / payload",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "paywallToolResult": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "message",
+          "name": "message",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireTyped",
+          "hostInjected": false,
+          "local": "gate",
+          "name": "structuredContent",
+          "required": true,
+          "type": "value",
+          "typedAs": "PaywallGate",
+          "typedStyle": "annotation"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "args": [
+          "&message",
+          "&gate"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::paywall_tool_result",
+      "coreCall": "paywall_tool_result",
+      "doc": "Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 13,
+      "envelope": "sync",
+      "names": {
+        "go": "PaywallToolResult",
+        "py": "paywall_tool_result",
+        "rb": "paywall_tool_result",
+        "rust": "paywall_tool_result",
+        "ts": "paywallToolResult"
+      },
+      "return": "value",
+      "rustFnName": "paywall_tool_result_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "processPaymentIntent": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "processPaymentIntent",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::process_payment_intent",
+      "coreCall": "process_payment_intent",
+      "doc": "`POST /v1/sdk/payment-intents/{id}/process`",
+      "docWasm": null,
+      "dtoType": "ProcessPaymentIntentParams",
+      "emitOrder": 12,
+      "envelope": "async",
+      "names": {
+        "go": "ProcessPaymentIntent",
+        "py": "process_payment_intent",
+        "rb": "process_payment_intent",
+        "rust": "process_payment_intent",
+        "ts": "processPaymentIntent"
+      },
+      "return": "value",
+      "rustFnName": "process_payment_intent",
+      "section": "Group B",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "projectPaymentIntentResult": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "processorPaymentId",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "clientSecret",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "publishableKey",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "customerRef",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "accountId",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::payment::project_payment_intent_result",
+      "coreCall": null,
+      "doc": "Binding for `projectPaymentIntentResult`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 13,
+      "envelope": "sync",
+      "names": {
+        "go": "ProjectPaymentIntentResult",
+        "py": "project_payment_intent_result",
+        "rb": "project_payment_intent_result",
+        "rust": "project_payment_intent_result",
+        "ts": "projectPaymentIntentResult"
+      },
+      "return": "value",
+      "rustFnName": "project_payment_intent_result_binding",
+      "section": "payment",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let processor_payment_id = require_string(&args, \"processorPaymentId\")?;\n        let client_secret = require_string(&args, \"clientSecret\")?;\n        let publishable_key = require_string(&args, \"publishableKey\")?;\n        let customer_ref = require_string(&args, \"customerRef\")?;\n        let account_id = optional_string(&args, \"accountId\")?;\n        to_value(&project_payment_intent_result(\n            &PaymentIntentSource {\n                processor_payment_id,\n                client_secret,\n                publishable_key,\n                account_id,\n            },\n            &customer_ref,\n        ))",
+      "verbatimBodyWasm": null
+    },
+    "projectTopupProcessOutcome": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "status",
+          "name": "status",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "message",
+          "name": "message",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "status.as_deref()",
+          "message.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::payment::project_topup_process_outcome",
+      "coreCall": "project_topup_process_outcome",
+      "doc": "Binding for `projectTopupProcessOutcome`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 14,
+      "envelope": "sync",
+      "names": {
+        "go": "ProjectTopupProcessOutcome",
+        "py": "project_topup_process_outcome",
+        "rb": "project_topup_process_outcome",
+        "rust": "project_topup_process_outcome",
+        "ts": "projectTopupProcessOutcome"
+      },
+      "return": "value",
+      "rustFnName": "project_topup_process_outcome_binding",
+      "section": "payment",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "projectUsageSnapshot": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "activePurchase",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::usage::project_usage_snapshot",
+      "coreCall": null,
+      "doc": "Binding for `projectUsageSnapshot`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 25,
+      "envelope": "sync",
+      "names": {
+        "go": "ProjectUsageSnapshot",
+        "py": "project_usage_snapshot",
+        "rb": "project_usage_snapshot",
+        "rust": "project_usage_snapshot",
+        "ts": "projectUsageSnapshot"
+      },
+      "return": "value",
+      "rustFnName": "project_usage_snapshot_binding",
+      "section": "usage",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let purchase = match args.get(\"activePurchase\") {\n            None | Some(Value::Null) => None,\n            Some(v) => Some(v),\n        };\n        to_value(&project_usage_snapshot(purchase))",
+      "verbatimBodyWasm": null
+    },
+    "reactivatePurchase": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "reactivatePurchase",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::reactivate_purchase",
+      "coreCall": "reactivate_purchase",
+      "doc": "`POST /v1/sdk/purchases/{purchaseRef}/reactivate`",
+      "docWasm": null,
+      "dtoType": "ReactivatePurchaseParams",
+      "emitOrder": 31,
+      "envelope": "async",
+      "names": {
+        "go": "ReactivatePurchase",
+        "py": "reactivate_purchase",
+        "rb": "reactivate_purchase",
+        "rust": "reactivate_purchase",
+        "ts": "reactivatePurchase"
+      },
+      "return": "value",
+      "rustFnName": "reactivate_purchase",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "resolveCheckLimitsParams": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "product_ref",
+          "name": "productRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "meter_name",
+          "name": "meterName",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "product_ref.as_deref()",
+          "meter_name.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "resultAsValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::limits::resolve_check_limits_params",
+      "coreCall": "resolve_check_limits_params",
+      "doc": "Binding for `resolveCheckLimitsParams`.\n\nOk and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.",
+      "docWasm": "Binding for `resolveCheckLimitsParams`.",
+      "dtoType": null,
+      "emitOrder": 26,
+      "envelope": "sync",
+      "names": {
+        "go": "ResolveCheckLimitsParams",
+        "py": "resolve_check_limits_params",
+        "rb": "resolve_check_limits_params",
+        "rust": "resolve_check_limits_params",
+        "ts": "resolveCheckLimitsParams"
+      },
+      "return": "value",
+      "rustFnName": "resolve_check_limits_params_binding",
+      "section": "limits",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "resolveFallbackGateLimits": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "checkout_url",
+          "name": "checkoutUrl",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "checkout_url.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_decision::resolve_fallback_gate_limits",
+      "coreCall": "resolve_fallback_gate_limits",
+      "doc": "Binding for `resolveFallbackGateLimits`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 35,
+      "envelope": "sync",
+      "names": {
+        "go": "ResolveFallbackGateLimits",
+        "py": "resolve_fallback_gate_limits",
+        "rb": "resolve_fallback_gate_limits",
+        "rust": "resolve_fallback_gate_limits",
+        "ts": "resolveFallbackGateLimits"
+      },
+      "return": "value",
+      "rustFnName": "resolve_fallback_gate_limits_binding",
+      "section": "paywall-decision",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "resolveProductRef": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "metadata_product",
+          "name": "metadataProduct",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "env_product",
+          "name": "envProduct",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "metadata_product.as_deref()",
+          "env_product.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "valueString"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_decision::resolve_product_ref",
+      "coreCall": "resolve_product_ref",
+      "doc": "Binding for `resolveProductRef`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 31,
+      "envelope": "sync",
+      "names": {
+        "go": "ResolveProductRef",
+        "py": "resolve_product_ref",
+        "rb": "resolve_product_ref",
+        "rust": "resolve_product_ref",
+        "ts": "resolveProductRef"
+      },
+      "return": "value",
+      "rustFnName": "resolve_product_ref_binding",
+      "section": "paywall-decision",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "resolvePurchaseCustomerRef": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "customer_ref",
+          "name": "customerRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "user_id",
+          "name": "userId",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "customer_ref.as_deref()",
+          "&user_id"
+        ],
+        "kind": "wrap",
+        "serialize": "valueString"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::purchase::resolve_purchase_customer_ref",
+      "coreCall": "resolve_purchase_customer_ref",
+      "doc": "Binding for `resolvePurchaseCustomerRef`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 18,
+      "envelope": "sync",
+      "names": {
+        "go": "ResolvePurchaseCustomerRef",
+        "py": "resolve_purchase_customer_ref",
+        "rb": "resolve_purchase_customer_ref",
+        "rust": "resolve_purchase_customer_ref",
+        "ts": "resolvePurchaseCustomerRef"
+      },
+      "return": "value",
+      "rustFnName": "resolve_purchase_customer_ref_binding",
+      "section": "purchase",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "resolveReturnUrl": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "bodyReturnUrl",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "optionsReturnUrl",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "origin",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::checkout::resolve_return_url",
+      "coreCall": null,
+      "doc": "Binding for `resolveReturnUrl`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 15,
+      "envelope": "sync",
+      "names": {
+        "go": "ResolveReturnUrl",
+        "py": "resolve_return_url",
+        "rb": "resolve_return_url",
+        "rust": "resolve_return_url",
+        "ts": "resolveReturnUrl"
+      },
+      "return": "value",
+      "rustFnName": "resolve_return_url_binding",
+      "section": "checkout",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let body_return_url = optional_string(&args, \"bodyReturnUrl\")?;\n        let options_return_url = optional_string(&args, \"optionsReturnUrl\")?;\n        let origin = optional_string(&args, \"origin\")?;\n        match resolve_return_url(\n            body_return_url.as_deref(),\n            options_return_url.as_deref(),\n            origin.as_deref(),\n        ) {\n            None => Ok(Value::Null),\n            Some(url) => Ok(Value::String(url)),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "resolveSellerIdentityDisplay": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "country",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "vatNumber",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "taxId",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "companyNumber",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "resolveSellerIdentityDisplay",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::seller_identity::resolve_seller_identity_display",
+      "coreCall": null,
+      "doc": "Binding for `resolveSellerIdentityDisplay`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 12,
+      "envelope": "sync",
+      "names": {
+        "go": "ResolveSellerIdentityDisplay",
+        "py": "resolve_seller_identity_display",
+        "rb": "resolve_seller_identity_display",
+        "rust": "resolve_seller_identity_display",
+        "ts": "resolveSellerIdentityDisplay"
+      },
+      "return": "value",
+      "rustFnName": "resolve_seller_identity_display_binding",
+      "section": "seller-identity",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let input = SellerIdentityInput {\n            country: optional_string(&args, \"country\")?,\n            vat_number: optional_string(&args, \"vatNumber\")?,\n            tax_id: optional_string(&args, \"taxId\")?,\n            company_number: optional_string(&args, \"companyNumber\")?,\n        };\n        to_value(&resolve_seller_identity_display(&input))",
+      "verbatimBodyWasm": null
+    },
+    "resolveTaxBehavior": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "behavior",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "currency",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "resolveTaxBehavior",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::business_details::resolve_tax_behavior",
+      "coreCall": null,
+      "doc": "Binding for `resolveTaxBehavior`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 2,
+      "envelope": "sync",
+      "names": {
+        "go": "ResolveTaxBehavior",
+        "py": "resolve_tax_behavior",
+        "rb": "resolve_tax_behavior",
+        "rust": "resolve_tax_behavior",
+        "ts": "resolveTaxBehavior"
+      },
+      "return": "value",
+      "rustFnName": "resolve_tax_behavior_binding",
+      "section": "business-details",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let behavior = require_string(&args, \"behavior\")?;\n        let currency = require_string(&args, \"currency\")?;\n        match resolve_tax_behavior(&behavior, &currency) {\n            Some(resolved) => Ok(Value::String(resolved.to_owned())),\n            None => Err(SdkError::transport(\n                format!(\"unsupported tax behavior: {behavior}\"),\n                false,\n            )),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "retryNextDelayMs": {
+      "args": [
+        {
+          "extract": "requireF64",
+          "hostInjected": false,
+          "local": null,
+          "name": "attempt",
+          "required": true,
+          "type": "f64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalF64",
+          "hostInjected": false,
+          "local": null,
+          "name": "maxRetries",
+          "required": false,
+          "type": "f64?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalF64",
+          "hostInjected": false,
+          "local": null,
+          "name": "initialDelay",
+          "required": false,
+          "type": "f64?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "backoffStrategy",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::retry::RetryPolicy::next_delay",
+      "coreCall": null,
+      "doc": "Binding for `retryNextDelayMs`.\n\nArgs: `{ maxRetries?, initialDelay?, backoffStrategy?, attempt }`.\nEnvelope value is delay milliseconds, or `null` when retries are exhausted.",
+      "docWasm": "Binding for `retryNextDelayMs`.",
+      "dtoType": null,
+      "emitOrder": 41,
+      "envelope": "sync",
+      "names": {
+        "go": "RetryNextDelayMs",
+        "py": "retry_next_delay_ms",
+        "rb": "retry_next_delay_ms",
+        "rust": "retry_next_delay_ms",
+        "ts": "retryNextDelayMs"
+      },
+      "return": "value",
+      "rustFnName": "retry_next_delay_ms",
+      "section": "retry",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let attempt = require_u32(&args, \"attempt\")?;\n        let mut policy = RetryPolicy {\n            max_retries: DEFAULT_MAX_RETRIES,\n            initial_delay_ms: DEFAULT_INITIAL_DELAY_MS,\n            backoff: Backoff::Fixed,\n        };\n        if let Some(max_retries) = optional_u32(&args, \"maxRetries\")? {\n            policy.max_retries = max_retries;\n        }\n        if let Some(initial_delay) = optional_u64(&args, \"initialDelay\")? {\n            policy.initial_delay_ms = initial_delay;\n        }\n        if let Some(strategy) = optional_string(&args, \"backoffStrategy\")? {\n            policy.backoff = match strategy.as_str() {\n                \"fixed\" => Backoff::Fixed,\n                \"linear\" => Backoff::Linear,\n                \"exponential\" => Backoff::Exponential,\n                other => {\n                    return Err(SdkError::transport(\n                        format!(\n                            \"args.backoffStrategy must be fixed|linear|exponential, got {other}\"\n                        ),\n                        false,\n                    ));\n                }\n            };\n        }\n        match policy.next_delay(attempt) {\n            None => Ok(Value::Null),\n            Some(delay) => {\n                let ms = u64::try_from(delay.as_millis()).unwrap_or(u64::MAX);\n                Ok(Value::from(ms))\n            }\n        }",
+      "verbatimBodyWasm": null
+    },
+    "saveAutoRecharge": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "saveAutoRecharge",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::save_auto_recharge",
+      "coreCall": "save_auto_recharge",
+      "doc": "`PUT /v1/sdk/auto-recharge`",
+      "docWasm": null,
+      "dtoType": "SaveAutoRechargeParams",
+      "emitOrder": 34,
+      "envelope": "async",
+      "names": {
+        "go": "SaveAutoRecharge",
+        "py": "save_auto_recharge",
+        "rb": "save_auto_recharge",
+        "rust": "save_auto_recharge",
+        "ts": "saveAutoRecharge"
+      },
+      "return": "value",
+      "rustFnName": "save_auto_recharge",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "selectActivePurchases": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "purchases",
+          "required": true,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::purchase::select_active_purchases",
+      "coreCall": null,
+      "doc": "Binding for `selectActivePurchases`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 19,
+      "envelope": "sync",
+      "names": {
+        "go": "SelectActivePurchases",
+        "py": "select_active_purchases",
+        "rb": "select_active_purchases",
+        "rust": "select_active_purchases",
+        "ts": "selectActivePurchases"
+      },
+      "return": "value",
+      "rustFnName": "select_active_purchases_binding",
+      "section": "purchase",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let purchases = require_array(&args, \"purchases\")?;\n        Ok(Value::Array(select_active_purchases(purchases)))",
+      "verbatimBodyWasm": null
+    },
+    "trackUsage": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "trackUsage",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::track_usage",
+      "coreCall": "track_usage",
+      "doc": "`POST /v1/sdk/usages`",
+      "docWasm": null,
+      "dtoType": "TrackUsageRequest",
+      "emitOrder": 16,
+      "envelope": "async",
+      "names": {
+        "go": "TrackUsage",
+        "py": "track_usage",
+        "rb": "track_usage",
+        "rust": "track_usage",
+        "ts": "trackUsage"
+      },
+      "return": "value",
+      "rustFnName": "track_usage",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "trackUsageBulk": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientAwait"
+      },
+      "catalog": {
+        "id": "trackUsageBulk",
+        "kind": "operation"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_transport::SolvaPayClient::track_usage_bulk",
+      "coreCall": "track_usage_bulk",
+      "doc": "`POST /v1/sdk/usages/bulk`",
+      "docWasm": null,
+      "dtoType": "TrackUsageBulkRequest",
+      "emitOrder": 17,
+      "envelope": "async",
+      "names": {
+        "go": "TrackUsageBulk",
+        "py": "track_usage_bulk",
+        "rb": "track_usage_bulk",
+        "rust": "track_usage_bulk",
+        "ts": "trackUsageBulk"
+      },
+      "return": "value",
+      "rustFnName": "track_usage_bulk",
+      "section": "Group C",
+      "splitPathRefs": [],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "updateCustomer": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientSplit"
+      },
+      "catalog": {
+        "id": "updateCustomer",
+        "kind": "operation"
+      },
+      "clientCallArgs": [
+        "&refs[0]",
+        "params"
+      ],
+      "core": "solvapay_transport::SolvaPayClient::update_customer",
+      "coreCall": "update_customer",
+      "doc": "`PATCH /v1/sdk/customers/{customerRef}`\n\nArgs JSON is `{ customerRef, ...body }` — Rust splits path vs body.",
+      "docWasm": null,
+      "dtoType": "UpdateCustomerParams",
+      "emitOrder": 1,
+      "envelope": "async",
+      "names": {
+        "go": "UpdateCustomer",
+        "py": "update_customer",
+        "rb": "update_customer",
+        "rust": "update_customer",
+        "ts": "updateCustomer"
+      },
+      "return": "value",
+      "rustFnName": "update_customer",
+      "section": "Group A",
+      "splitPathRefs": [
+        "customerRef"
+      ],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "updatePlan": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientSplit"
+      },
+      "catalog": {
+        "id": "updatePlan",
+        "kind": "operation"
+      },
+      "clientCallArgs": [
+        "&refs[0]",
+        "&refs[1]",
+        "params"
+      ],
+      "core": "solvapay_transport::SolvaPayClient::update_plan",
+      "coreCall": "update_plan",
+      "doc": "`PUT /v1/sdk/products/{productRef}/plans/{planRef}`\n\nArgs JSON is `{ productRef, planRef, ...params }`.",
+      "docWasm": null,
+      "dtoType": "UpdatePlanRequest",
+      "emitOrder": 28,
+      "envelope": "async",
+      "names": {
+        "go": "UpdatePlan",
+        "py": "update_plan",
+        "rb": "update_plan",
+        "rust": "update_plan",
+        "ts": "updatePlan"
+      },
+      "return": "value",
+      "rustFnName": "update_plan",
+      "section": "Group C",
+      "splitPathRefs": [
+        "productRef",
+        "planRef"
+      ],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "updateProduct": {
+      "args": [],
+      "artifact": "client",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "clientSplit"
+      },
+      "catalog": {
+        "id": "updateProduct",
+        "kind": "operation"
+      },
+      "clientCallArgs": [
+        "&refs[0]",
+        "params"
+      ],
+      "core": "solvapay_transport::SolvaPayClient::update_product",
+      "coreCall": "update_product",
+      "doc": "`PUT /v1/sdk/products/{productRef}`\n\nArgs JSON is `{ productRef, ...params }`.",
+      "docWasm": null,
+      "dtoType": "UpdateProductRequest",
+      "emitOrder": 21,
+      "envelope": "async",
+      "names": {
+        "go": "UpdateProduct",
+        "py": "update_product",
+        "rb": "update_product",
+        "rust": "update_product",
+        "ts": "updateProduct"
+      },
+      "return": "value",
+      "rustFnName": "update_product",
+      "section": "Group C",
+      "splitPathRefs": [
+        "productRef"
+      ],
+      "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "validateActivatePlanParams": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "product_ref",
+          "name": "productRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "plan_ref",
+          "name": "planRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "product_ref.as_deref()",
+          "plan_ref.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "optionHelperErr"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::activation::validate_activate_plan_params",
+      "coreCall": "validate_activate_plan_params",
+      "doc": "Binding for `validateActivatePlanParams`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 7,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidateActivatePlanParams",
+        "py": "validate_activate_plan_params",
+        "rb": "validate_activate_plan_params",
+        "rust": "validate_activate_plan_params",
+        "ts": "validateActivatePlanParams"
+      },
+      "return": "value",
+      "rustFnName": "validate_activate_plan_params_binding",
+      "section": "activation",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "validateAttachBusinessDetailsParams": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "payment_intent_id",
+          "name": "paymentIntentId",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "payment_intent_id.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "optionHelperErr"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::payment::validate_attach_business_details_params",
+      "coreCall": "validate_attach_business_details_params",
+      "doc": "Binding for `validateAttachBusinessDetailsParams`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 11,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidateAttachBusinessDetailsParams",
+        "py": "validate_attach_business_details_params",
+        "rb": "validate_attach_business_details_params",
+        "rust": "validate_attach_business_details_params",
+        "ts": "validateAttachBusinessDetailsParams"
+      },
+      "return": "value",
+      "rustFnName": "validate_attach_business_details_params_binding",
+      "section": "payment",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "validateBusinessDetails": {
+      "args": [],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "validateBusinessDetails",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::business_details::validate_business_details",
+      "coreCall": null,
+      "doc": "Binding for `validateBusinessDetails`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 0,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidateBusinessDetails",
+        "py": "validate_business_details",
+        "rb": "validate_business_details",
+        "rust": "validate_business_details",
+        "ts": "validateBusinessDetails"
+      },
+      "return": "value",
+      "rustFnName": "validate_business_details_binding",
+      "section": "business-details",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let input: BusinessDetailsInput = serde_json::from_str(&args_json).map_err(|err| {\n            SdkError::transport(format!(\"invalid BusinessDetailsInput: {err}\"), false)\n        })?;\n        to_value(&validate_business_details(&input))",
+      "verbatimBodyWasm": null
+    },
+    "validateCheckoutSessionParams": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "product_ref",
+          "name": "productRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "product_ref.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "optionHelperErr"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::checkout::validate_checkout_session_params",
+      "coreCall": "validate_checkout_session_params",
+      "doc": "Binding for `validateCheckoutSessionParams`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 16,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidateCheckoutSessionParams",
+        "py": "validate_checkout_session_params",
+        "rb": "validate_checkout_session_params",
+        "rust": "validate_checkout_session_params",
+        "ts": "validateCheckoutSessionParams"
+      },
+      "return": "value",
+      "rustFnName": "validate_checkout_session_params_binding",
+      "section": "checkout",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "validateCreatePaymentIntentParams": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "plan_ref",
+          "name": "planRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "product_ref",
+          "name": "productRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "plan_ref.as_deref()",
+          "product_ref.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "optionHelperErr"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::payment::validate_create_payment_intent_params",
+      "coreCall": "validate_create_payment_intent_params",
+      "doc": "Binding for `validateCreatePaymentIntentParams`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 8,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidateCreatePaymentIntentParams",
+        "py": "validate_create_payment_intent_params",
+        "rb": "validate_create_payment_intent_params",
+        "rust": "validate_create_payment_intent_params",
+        "ts": "validateCreatePaymentIntentParams"
+      },
+      "return": "value",
+      "rustFnName": "validate_create_payment_intent_params_binding",
+      "section": "payment",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "validateGetProductParams": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "product_ref",
+          "name": "productRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "product_ref.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "optionHelperErr"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::product::validate_get_product_params",
+      "coreCall": "validate_get_product_params",
+      "doc": "Binding for `validateGetProductParams`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 30,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidateGetProductParams",
+        "py": "validate_get_product_params",
+        "rb": "validate_get_product_params",
+        "rust": "validate_get_product_params",
+        "ts": "validateGetProductParams"
+      },
+      "return": "value",
+      "rustFnName": "validate_get_product_params_binding",
+      "section": "product",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "validateListPlansParams": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "product_ref",
+          "name": "productRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "product_ref.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "optionHelperErr"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::plans::validate_list_plans_params",
+      "coreCall": "validate_list_plans_params",
+      "doc": "Binding for `validateListPlansParams`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 27,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidateListPlansParams",
+        "py": "validate_list_plans_params",
+        "rb": "validate_list_plans_params",
+        "rust": "validate_list_plans_params",
+        "ts": "validateListPlansParams"
+      },
+      "return": "value",
+      "rustFnName": "validate_list_plans_params_binding",
+      "section": "plans",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "validateProcessPaymentIntentParams": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "payment_intent_id",
+          "name": "paymentIntentId",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "product_ref",
+          "name": "productRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "payment_intent_id.as_deref()",
+          "product_ref.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "optionHelperErr"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::payment::validate_process_payment_intent_params",
+      "coreCall": "validate_process_payment_intent_params",
+      "doc": "Binding for `validateProcessPaymentIntentParams`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 10,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidateProcessPaymentIntentParams",
+        "py": "validate_process_payment_intent_params",
+        "rb": "validate_process_payment_intent_params",
+        "rust": "validate_process_payment_intent_params",
+        "ts": "validateProcessPaymentIntentParams"
+      },
+      "return": "value",
+      "rustFnName": "validate_process_payment_intent_params_binding",
+      "section": "payment",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "validatePublicBaseUrl": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "publicBaseUrl",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "payloadBuilders",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::mcp::validate_public_base_url",
+      "coreCall": null,
+      "doc": "Binding for `validatePublicBaseUrl` — invalid → error message string; valid → `null`.",
+      "docWasm": "Binding for `validatePublicBaseUrl` — invalid → error message; valid → `null`.",
+      "dtoType": null,
+      "emitOrder": 22,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidatePublicBaseUrl",
+        "py": "validate_public_base_url",
+        "rb": "validate_public_base_url",
+        "rust": "validate_public_base_url",
+        "ts": "validatePublicBaseUrl"
+      },
+      "return": "value",
+      "rustFnName": "validate_public_base_url_binding",
+      "section": "MCP payload / descriptors",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let public_base_url = require_string(&args, \"publicBaseUrl\")?;\n        match validate_public_base_url(&public_base_url) {\n            None => Ok(Value::Null),\n            Some(message) => Ok(Value::String(message.to_owned())),\n        }",
+      "verbatimBodyWasm": null
+    },
+    "validatePurchaseRef": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "purchase_ref",
+          "name": "purchaseRef",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "purchase_ref.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "optionHelperErr"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::renewal::validate_purchase_ref",
+      "coreCall": "validate_purchase_ref",
+      "doc": "Binding for `validatePurchaseRef`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 24,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidatePurchaseRef",
+        "py": "validate_purchase_ref",
+        "rb": "validate_purchase_ref",
+        "rust": "validate_purchase_ref",
+        "ts": "validatePurchaseRef"
+      },
+      "return": "value",
+      "rustFnName": "validate_purchase_ref_binding",
+      "section": "renewal",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "validateTopupPaymentIntentParams": {
+      "args": [
+        {
+          "extract": "optionalF64",
+          "hostInjected": false,
+          "local": "amount",
+          "name": "amount",
+          "required": false,
+          "type": "f64?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "currency",
+          "name": "currency",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "amount",
+          "currency.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "optionHelperErr"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::payment::validate_topup_payment_intent_params",
+      "coreCall": "validate_topup_payment_intent_params",
+      "doc": "Binding for `validateTopupPaymentIntentParams`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 9,
+      "envelope": "sync",
+      "names": {
+        "go": "ValidateTopupPaymentIntentParams",
+        "py": "validate_topup_payment_intent_params",
+        "rb": "validate_topup_payment_intent_params",
+        "rust": "validate_topup_payment_intent_params",
+        "ts": "validateTopupPaymentIntentParams"
+      },
+      "return": "value",
+      "rustFnName": "validate_topup_payment_intent_params_binding",
+      "section": "payment",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "verifyWebhook": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "body",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "signature",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": null,
+          "name": "secret",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireI64",
+          "hostInjected": true,
+          "local": null,
+          "name": "nowUnixSecs",
+          "required": true,
+          "type": "i64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "webhook",
+      "call": {
+        "args": [],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "verifyWebhook",
+        "kind": "topLevel"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::webhook::verify_webhook",
+      "coreCall": null,
+      "doc": "",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 0,
+      "envelope": "webhookThrow",
+      "names": {
+        "go": "VerifyWebhook",
+        "py": "verify_webhook",
+        "rb": "verify_webhook",
+        "rust": "verify_webhook",
+        "ts": "verifyWebhook"
+      },
+      "return": "value",
+      "rustFnName": "verify_webhook",
+      "section": null,
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    }
+  }
+}

@@ -3,6 +3,7 @@ import {
   EXPECTED_OPERATION_COUNT,
   EXPECTED_TOP_LEVEL_IDS,
   SdkContractManifestSchema,
+  assertBindingReconciliation,
   assertNameCorrectness,
   assertNameCoverage,
   assertNoNameCollisions,
@@ -165,6 +166,7 @@ function minimalManifest(
       },
     },
     reservedWords: { go: [], py: [], rb: [], rust: [], ts: [] },
+    bindings: {},
   }
 
   return {
@@ -176,6 +178,24 @@ function minimalManifest(
     coreHelpers: overrides.coreHelpers ?? base.coreHelpers,
     facade: overrides.facade ?? base.facade,
     nameOverrides: overrides.nameOverrides ?? base.nameOverrides,
+    bindings: overrides.bindings ?? base.bindings,
+  }
+}
+
+function bindingSymbol(
+  id: string,
+  overrides: Partial<SdkContractManifest['bindings'][string]> = {},
+): SdkContractManifest['bindings'][string] {
+  return {
+    core: `solvapay_core::example::${id}`,
+    names: deriveNames(id),
+    catalog: { kind: 'none' },
+    args: [],
+    splitPathRefs: [],
+    return: 'value',
+    sync: 'sync',
+    envelope: 'sync',
+    ...overrides,
   }
 }
 
@@ -237,6 +257,138 @@ describe('SdkContractManifestSchema', () => {
     const transport = minimalManifest()
     transport.errors.transport.messageTemplate = ''
     expect(SdkContractManifestSchema.safeParse(transport).success).toBe(false)
+  })
+
+  it('accepts a minimal bindings entry with host-injected arg and path-ref split', () => {
+    const manifest = minimalManifest({
+      bindings: {
+        updateCustomer: bindingSymbol('updateCustomer', {
+          core: 'solvapay_transport::SolvaPayClient::update_customer',
+          catalog: { kind: 'operation', id: 'updateCustomer' },
+          args: [
+            {
+              name: 'nowMs',
+              type: 'i64',
+              required: true,
+              hostInjected: true,
+            },
+          ],
+          splitPathRefs: ['customerRef'],
+          sync: 'async',
+          envelope: 'async',
+        }),
+      },
+    })
+    const result = SdkContractManifestSchema.safeParse(manifest)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.bindings.updateCustomer.splitPathRefs).toEqual(['customerRef'])
+      expect(result.data.bindings.updateCustomer.args[0]?.hostInjected).toBe(true)
+    }
+  })
+
+  it('rejects bindings entries with unknown boundary types', () => {
+    const manifest = minimalManifest({
+      bindings: {
+        classifyCustomerRef: bindingSymbol('classifyCustomerRef', {
+          args: [{ name: 'customerRef', type: 'bytes' as 'string', required: true }],
+        }),
+      },
+    })
+    // Force an invalid type through an untyped object so Zod rejects it.
+    const raw = structuredClone(manifest) as {
+      bindings: Record<string, { args: Array<{ type: string }> }>
+    }
+    raw.bindings.classifyCustomerRef.args[0]!.type = 'bytes'
+    expect(SdkContractManifestSchema.safeParse(raw).success).toBe(false)
+  })
+
+  it('accepts 39G-b emit fields (extract, call wrap, verbatimBody)', () => {
+    const manifest = minimalManifest({
+      bindings: {
+        classifyCustomerRef: bindingSymbol('classifyCustomerRef', {
+          artifact: 'decisions',
+          emitOrder: 0,
+          section: 'customer-sync',
+          doc: 'Binding for `classifyCustomerRef`.',
+          rustFnName: 'classify_customer_ref_binding',
+          args: [
+            {
+              name: 'customerRef',
+              type: 'string',
+              required: true,
+              extract: 'requireString',
+              local: 'customer_ref',
+            },
+          ],
+          call: {
+            kind: 'wrap',
+            serialize: 'toValue',
+            args: ['&customer_ref'],
+          },
+          coreCall: 'classify_customer_ref',
+        }),
+        retryNextDelayMs: bindingSymbol('retryNextDelayMs', {
+          artifact: 'decisions',
+          emitOrder: 1,
+          call: { kind: 'verbatim' },
+          verbatimBody: 'Ok(Value::Null)',
+        }),
+      },
+    })
+    const result = SdkContractManifestSchema.safeParse(manifest)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.bindings.classifyCustomerRef.artifact).toBe('decisions')
+      expect(result.data.bindings.classifyCustomerRef.args[0]?.extract).toBe('requireString')
+      expect(result.data.bindings.classifyCustomerRef.call?.kind).toBe('wrap')
+      expect(result.data.bindings.retryNextDelayMs.verbatimBody).toBe('Ok(Value::Null)')
+    }
+  })
+})
+
+describe('assertBindingReconciliation', () => {
+  it('flags an orphan catalog entry that crosses the boundary without a linker', () => {
+    const manifest = minimalManifest({
+      bindings: {
+        // Links checkLimits but leaves other operations unlinked.
+        checkLimits: bindingSymbol('checkLimits', {
+          catalog: { kind: 'operation', id: 'checkLimits' },
+          sync: 'async',
+          envelope: 'async',
+        }),
+      },
+    })
+    const issues = assertBindingReconciliation(manifest)
+    expect(issues.some(i => /orphan catalog|missing binder|no binding/i.test(i))).toBe(true)
+  })
+
+  it('flags an orphan shim js_name missing from bindings', () => {
+    const manifest = minimalManifest({
+      bindings: {
+        // Intentionally omit decidePaywallOutcome which is a committed shim.
+        classifyCustomerRef: bindingSymbol('classifyCustomerRef'),
+      },
+    })
+    const issues = assertBindingReconciliation(manifest)
+    expect(issues.some(i => /decidePaywallOutcome/.test(i) && /shim|js_name|orphan/i.test(i))).toBe(
+      true,
+    )
+  })
+
+  it('flags duplicate core fn paths across bindings', () => {
+    const manifest = minimalManifest({
+      bindings: {
+        classifyCustomerRef: bindingSymbol('classifyCustomerRef', {
+          core: 'solvapay_core::shared::dup',
+        }),
+        coerceCustomerOptions: bindingSymbol('coerceCustomerOptions', {
+          core: 'solvapay_core::shared::dup',
+        }),
+      },
+    })
+    const issues = assertBindingReconciliation(manifest)
+    expect(issues.some(i => /duplicate core/i.test(i))).toBe(true)
   })
 })
 

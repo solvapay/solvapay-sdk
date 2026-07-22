@@ -388,6 +388,7 @@ mod tests {
             routes: vec![],
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
+            binding_symbols: BTreeMap::new(),
         }
     }
 
@@ -433,6 +434,7 @@ mod tests {
             top_level: BTreeMap::new(),
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
+            bindings: BTreeMap::new(),
         };
         lower_overlays(&mut ir, &manifest).expect("lower");
         match ir.overlays.get("LimitResponseWithPlan").expect("overlay") {
@@ -527,6 +529,7 @@ mod tests {
             top_level: BTreeMap::new(),
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
+            bindings: BTreeMap::new(),
         };
         lower_overlays(&mut ir, &manifest).expect("lower");
         match ir.overlays.get("TopupProcessResult").expect("overlay") {

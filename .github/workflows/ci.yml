@@ -150,22 +150,37 @@ jobs:
             --out crates/solvapay-dto/src \
             --ts-out ../packages/server/src/types/overlays.generated.d.ts \
             --ts-client-out ../packages/server/src/types/client.generated.d.ts \
-            --ts-parity-out ../packages/server/src/__generated__/signature-parity.generated.test.ts
+            --ts-parity-out ../packages/server/src/__generated__/signature-parity.generated.test.ts \
+            --dump-bindings ../contract/manifest/binding-symbols.snapshot.json \
+            --node-bindings-out bindings/node/src \
+            --wasm-bindings-out bindings/wasm/src
           GENERATED_PATHS=(
             rust/crates/solvapay-dto
             packages/server/src/types/overlays.generated.d.ts
             packages/server/src/types/client.generated.d.ts
             packages/server/src/__generated__/signature-parity.generated.test.ts
+            contract/manifest/binding-symbols.snapshot.json
+            rust/bindings/node/src/args.rs
+            rust/bindings/node/src/decisions.rs
+            rust/bindings/node/src/payload_builders.rs
+            rust/bindings/node/src/native_client.rs
+            rust/bindings/wasm/src/args.rs
+            rust/bindings/wasm/src/decisions.rs
+            rust/bindings/wasm/src/payload_builders.rs
+            rust/bindings/wasm/src/wasm_client.rs
           )
           if ! git -C .. diff --exit-code -- "${GENERATED_PATHS[@]}"; then
-            echo "solvapay-dto / generated TS artifacts are out of date — run:" >&2
+            echo "solvapay-dto / generated TS artifacts / binding-symbols dump are out of date — run:" >&2
             echo "  cargo run -p dto-gen -- \\" >&2
             echo "    --snapshot ../contract/openapi/sdk-v1.snapshot.json \\" >&2
             echo "    --manifest ../contract/manifest/sdk-contract.yaml \\" >&2
             echo "    --out crates/solvapay-dto/src \\" >&2
             echo "    --ts-out ../packages/server/src/types/overlays.generated.d.ts \\" >&2
             echo "    --ts-client-out ../packages/server/src/types/client.generated.d.ts \\" >&2
-            echo "    --ts-parity-out ../packages/server/src/__generated__/signature-parity.generated.test.ts" >&2
+            echo "    --ts-parity-out ../packages/server/src/__generated__/signature-parity.generated.test.ts \\" >&2
+            echo "    --dump-bindings ../contract/manifest/binding-symbols.snapshot.json \\" >&2
+            echo "    --node-bindings-out bindings/node/src \\" >&2
+            echo "    --wasm-bindings-out bindings/wasm/src" >&2
             exit 1
           fi
 
@@ -174,7 +189,15 @@ jobs:
           for f in \
             ../packages/server/src/types/overlays.generated.d.ts \
             ../packages/server/src/types/client.generated.d.ts \
-            ../packages/server/src/__generated__/signature-parity.generated.test.ts
+            ../packages/server/src/__generated__/signature-parity.generated.test.ts \
+            bindings/node/src/args.rs \
+            bindings/node/src/decisions.rs \
+            bindings/node/src/payload_builders.rs \
+            bindings/node/src/native_client.rs \
+            bindings/wasm/src/args.rs \
+            bindings/wasm/src/decisions.rs \
+            bindings/wasm/src/payload_builders.rs \
+            bindings/wasm/src/wasm_client.rs
           do
             if ! grep -q '@generated' "$f"; then
               echo "missing @generated header: $f" >&2

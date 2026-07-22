@@ -4,9 +4,13 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { parse as parseYaml } from 'yaml'
 import {
+  BINDING_CATALOG_BOUNDARY_CORE_HELPERS,
+  BINDING_CATALOG_BOUNDARY_TOP_LEVEL,
   EXPECTED_OPERATION_COUNT,
   EXPECTED_TOP_LEVEL_IDS,
+  SHIM_JS_NAMES,
   deriveNames,
+  type BindingSymbol,
   type SdkContractManifest,
 } from './lib/manifest-schema.js'
 import { runCli } from './manifest.js'
@@ -47,19 +51,61 @@ const PURE_SYNC = {
   rust: 'sync' as const,
 }
 
+/** Real client op ids so fixture bindings reconcile against SHIM_JS_NAMES. */
+const FIXTURE_OPERATION_IDS = SHIM_JS_NAMES.filter(id =>
+  [
+    'activatePlan',
+    'assignCredits',
+    'attachBusinessDetails',
+    'bootstrapMcpProduct',
+    'cancelPurchase',
+    'checkLimits',
+    'cloneProduct',
+    'configureMcpPlans',
+    'createCheckoutSession',
+    'createCustomer',
+    'createCustomerSession',
+    'createPaymentIntent',
+    'createPlan',
+    'createProduct',
+    'createTopupPaymentIntent',
+    'deletePlan',
+    'deleteProduct',
+    'disableAutoRecharge',
+    'getAutoRecharge',
+    'getCustomer',
+    'getCustomerBalance',
+    'getMerchant',
+    'getPaymentMethod',
+    'getPlatformConfig',
+    'getProduct',
+    'getUserInfo',
+    'listPlans',
+    'listProducts',
+    'processPaymentIntent',
+    'reactivatePurchase',
+    'saveAutoRecharge',
+    'trackUsage',
+    'trackUsageBulk',
+    'updateCustomer',
+    'updatePlan',
+    'updateProduct',
+  ].includes(id),
+)
+
 function buildFixtureManifest(): SdkContractManifest {
   const operations: SdkContractManifest['operations'] = {}
-  for (let i = 0; i < EXPECTED_OPERATION_COUNT; i += 1) {
-    const id = i === 0 ? 'checkLimits' : `op${String(i).padStart(2, '0')}`
+  for (const id of FIXTURE_OPERATION_IDS) {
+    const isCheckLimits = id === 'checkLimits'
     operations[id] = {
       route: {
-        method: i === 0 ? 'POST' : 'GET',
-        path: i === 0 ? '/v1/sdk/limits' : '/v1/sdk/merchant',
+        method: isCheckLimits ? 'POST' : 'GET',
+        path: isCheckLimits ? '/v1/sdk/limits' : '/v1/sdk/merchant',
       },
       names: deriveNames(id),
       optionalOnClient: false,
-      request: i === 0 ? 'CheckLimitRequest' : undefined,
-      response: i === 0 ? 'LimitResponse' : 'SdkMerchantResponseDto',
+      request: isCheckLimits ? 'CheckLimitRequest' : undefined,
+      response: isCheckLimits ? 'LimitResponse' : 'SdkMerchantResponseDto',
       params: [],
       overlays: [],
       normalization: [],
@@ -165,7 +211,49 @@ function buildFixtureManifest(): SdkContractManifest {
       },
     },
     reservedWords: { ts: [], py: [], rb: [], go: [], rust: [] },
+    bindings: stubBindings(operations, {
+      validateBusinessDetails: {
+        names: deriveNames('validateBusinessDetails'),
+        sync: PURE_SYNC,
+      },
+    }),
   }
+}
+
+/** Minimal bindings covering the shim inventory + catalog linkers for fixtures. */
+function stubBindings(
+  operations: SdkContractManifest['operations'],
+  coreHelpers: SdkContractManifest['coreHelpers'],
+): Record<string, BindingSymbol> {
+  const topLevelBoundary = new Set<string>(BINDING_CATALOG_BOUNDARY_TOP_LEVEL)
+  const coreHelperBoundary = new Set<string>(BINDING_CATALOG_BOUNDARY_CORE_HELPERS)
+  const bindings: Record<string, BindingSymbol> = {}
+  for (const js of SHIM_JS_NAMES) {
+    let catalog: BindingSymbol['catalog'] = { kind: 'none' }
+    if (js in operations) {
+      catalog = { kind: 'operation', id: js }
+    } else if (topLevelBoundary.has(js)) {
+      catalog = { kind: 'topLevel', id: js }
+    } else if (coreHelperBoundary.has(js) && js in coreHelpers) {
+      catalog = { kind: 'coreHelper', id: js }
+    }
+    bindings[js] = {
+      core: `test::stub::${js}`,
+      names: deriveNames(js),
+      catalog,
+      args: [],
+      splitPathRefs: [],
+      return: 'value',
+      sync: catalog.kind === 'operation' ? 'async' : 'sync',
+      envelope:
+        js === 'verifyWebhook'
+          ? 'webhookThrow'
+          : catalog.kind === 'operation'
+            ? 'async'
+            : 'sync',
+    }
+  }
+  return bindings
 }
 
 function writeFixture(dir: string, manifest: SdkContractManifest): {
@@ -255,7 +343,7 @@ describe('manifest CLI', () => {
   it('--check fails when a message template is reworded away from schema validity still reports semantic issues for duplicates', async () => {
     const dir = makeTempDir()
     const manifest = buildFixtureManifest()
-    manifest.operations.op01.names.ts = 'checkLimits'
+    manifest.operations.getCustomer.names.ts = 'checkLimits'
     const { manifestPath, snapshotPath } = writeFixture(dir, manifest)
 
     const result = await runCli([

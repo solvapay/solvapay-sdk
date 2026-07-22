@@ -179,6 +179,8 @@ Framework glue does **not** need a Python/Ruby/Go/Rust equivalent:
 
 Python, Ruby, Go, and Rust still get the underlying decision cores those adapters call into (paywall gate, virtual-tool payload builders), just not the JS framework wiring. A Python FastAPI, Ruby Rack, Go middleware, or Rust Axum adapter is a possible *future* package but is out of scope for the 55 steps. Go and Rust get decision cores and the high-level facade (`Payable`/`gate`); they do **not** get first-party framework adapters in this plan.
 
+Per-language **MCP-authoring adapters** — the thin `registerPayable(...)` / `ctx.respond(...)` ergonomic over each language's *own* MCP SDK that `@solvapay/mcp` provides today — fall in the same category. They are idiomatic, hand-written framework glue, **not** core, and are **not** produced by the §5.6/§5.7 signature/binding-glue generators. Like the framework adapters above they are out of scope for steps 1–55, but — unlike an accidental omission — they are a **named future track** (see §9, "MCP-authoring adapters"). The distinction is deliberate: steps 1–55 deliver *core-surface* parity (§2); turnkey paid-MCP *authoring* parity in every language is the additive commitment carried by that track (gate in §13).
+
 ### 2.6 Consistency rules
 
 | Rule | Requirement |
@@ -543,6 +545,7 @@ flowchart LR
   GEN --> GOS["Go interfaces + facade"]
   GEN --> RSF["Rust pub signatures (solvapay crate)"]
   GEN --> CH["C headers (optional ABI)"]
+  GEN --> GLUE["Binding-glue shims (napi/wasm/PyO3/Magnus/wazero/C) + native marshalling"]
   GEN --> CM["Compatibility manifests<br/>(parity-check input)"]
   GEN --> FX["Cross-language golden fixtures"]
   GEN --> SIG["Signature-parity suites<br/>(all five surfaces)"]
@@ -665,6 +668,64 @@ Every generated file carries a `generated — do not edit` header. Hand edits to
 2. Run `dto-gen` (IR → all emitters).
 3. All five language signatures, facade stubs, signature-parity suites, and fixture stubs update in a single PR.
 4. CI fails if regeneration was skipped or drifted.
+
+### 5.7 Binding-glue generation (native ↔ envelope ↔ core)
+
+§5.6 generates the public facade **signatures** (`.d.ts` / `.pyi` / RBS / Go / Rust) and the signature-parity suites. §5.7 generates the **binding-glue layer**: the per-toolchain FFI shims that marshal arguments across the boundary and reconstruct results/errors around the existing JSON-envelope-over-string ABI (`{"ok":true,"value":…}` | `{"ok":false,"error":<SdkError>}`, §15 note 32). This is the layer today hand-mirrored across [`rust/bindings/node/src/`](../../rust/bindings/node/src/decisions.rs) and [`rust/bindings/wasm/src/`](../../rust/bindings/wasm/src/decisions.rs) — `args`, `decisions`, `payload_builders`, the client dispatch (`native_client.rs` / `wasm_client.rs`), and the native-side `native.ts` / `wasm.ts` dispatch + envelope reconstructor. Adding a core fn currently means a hand-written `#[napi(js_name=…)]` and a byte-for-byte-parallel `#[wasm_bindgen(js_name=…)]` wrapper (extract each JSON arg with `require_string` / `optional_f64`, call core, `to_value`, wrap in `run_envelope_sync`); §5.7 makes that a manifest edit.
+
+The boundary substrate does not change: the JSON envelope stays the universal ABI (D16). No first-party cbindgen — D1 / §4.6 intact — and the optional C ABI (step 54) reuses the same envelope emitter for third parties. §5.7 generates only the marshalling/shim code around the envelope; emitters still consume only the IR (§5.6).
+
+#### Binding-boundary IR
+
+`dto-gen` gains a `BindingSymbol` per core symbol, lowered into `Ir.binding_symbols` from a new Zod-validated manifest section `bindings:`. Each descriptor carries:
+
+- Core Rust fn path (e.g. `solvapay_core::paywall_state::classify_paywall_state`).
+- Per-toolchain export name (`js_name` / py / rb / go / c), reusing the existing `IrLangNames` casing rules (§5.6) — emitters never re-case.
+- Ordered JSON-args keys with boundary type + required/optional + a **host-injected** flag for args the host supplies rather than the caller (e.g. `nowMs`, injected clock, seeded RNG).
+- Path-ref split rules — the existing `split_path_refs` case (ordered `productRef` / `planRef` / `customerRef` extracted from the combined args JSON, remainder is the body; §15 note 34).
+- Return shape, sync/async, and envelope mode (sync `run_envelope_sync` vs async `run_envelope`; the webhook-throw path stays the one documented exception, §15 note 32).
+
+The descriptor set is reconciled against the existing catalog (`entry_points` / `OPERATION_NAMES`): every non-§8 core symbol has exactly one `BindingSymbol` and every `BindingSymbol` maps to a real core symbol (`manifest:check` cross-check, mirroring the step-24 coverage gate).
+
+#### Boundary type-mapping matrix
+
+One reviewable table maps each IR boundary type to its arg-extractor + serializer per language, analogous to the §5.6 facade type table. Adding a language is one new column + one emitter.
+
+| IR boundary type | Rust extract (napi/wasm) | Rust serialize | TS reconstruct | Python (later) | Ruby (later) | Go (later) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `string` (required) | `require_string(key)` | `to_value` | `String(v)` | `str` decode | `String` | `string` |
+| `string?` (optional) | `optional_string(key)` | skip-absent | `v ?? undefined` | `Optional[str]` | `nil`-coalesce | `*string` |
+| `f64` / number | `require_f64` / `optional_f64` | `serialize_whole_f64` (whole → int) | `Number(v)` | `float` / `int` | `Float` / `Integer` | `float64` / `int64` |
+| `bool` | `require_bool` | `to_value` | `Boolean(v)` | `bool` | `true`/`false` | `bool` |
+| raw `Value` passthrough | `require_value` | verbatim | verbatim | dict | Hash | `json.RawMessage` |
+| host-injected (`nowMs`, clock, RNG) | read from injected arg, not caller | n/a | supplied by host adapter | host adapter | host adapter | host adapter |
+| envelope error | `err_envelope(<SdkError>)` | envelope JSON | `Api`→`SolvaPayError`, `Paywall`→`PaywallError` (`structuredContent`), `Webhook`/`Transport`→`SolvaPayError` | exceptions | exceptions | `errors.As` |
+
+#### Emitters
+
+New dto-gen emitters produce, all carrying the `generated — do not edit` header (hand edits are a CI failure, §5.6):
+
+- **Rust-side toolchain shims** — the napi `#[napi]` and wasm `#[wasm_bindgen]` `args.rs` / `decisions.rs` / `payload_builders.rs` / client-dispatch modules; later PyO3, Magnus, `wazero`-export, and the cbindgen surface (step 54).
+- **Native-side marshalling/reconstruction** — the TS `native.ts` / `wasm.ts` dispatch + the envelope → `SolvaPayError` / `PaywallError` reconstructor; later the Python / Ruby / Go equivalents.
+
+#### Reliability gates (also §10.3)
+
+The §5.6 gate table extends to the shim files:
+
+| Gate | What it proves |
+| --- | --- |
+| Binding-glue regen idempotence | Running the generator twice over the shim files produces zero diff |
+| Binding-glue committed-output drift | CI regenerates and fails on any diff against the committed shim + native-glue files |
+| Hand-edit header detection | The generated-header grep (§5.6) covers `args`/`decisions`/`payload_builders`/client-dispatch + `native.ts` / `wasm.ts` |
+| Binding-boundary catalog reconciliation | Every non-§8 core symbol has exactly one `BindingSymbol` and vice-versa |
+| Retrofit byte-identical proof | Regenerated node + wasm shims are byte-identical to the committed 37R/38R hand-written output; both-`SOLVAPAY_IMPL`-flag suites stay green on the generated glue |
+
+#### Add-a-core-symbol workflow
+
+1. Add/edit the manifest `bindings:` entry (and the core fn).
+2. Run `dto-gen` (IR → §5.6 signatures **and** §5.7 glue).
+3. Every toolchain shim + native marshalling updates in one PR.
+4. A skipped or drifted regen fails CI (same class as §5.6).
 
 ---
 
@@ -831,6 +892,7 @@ This table is the **exhaustive** list of what keeps logic in facade languages �
 | `createRequestDeduplicator` + limits cache plumbing | Host timers, host maps, Workers-safe lazy intervals — per-runtime by nature | Behavior unchanged; caches sit *above* the Rust client |
 | `@solvapay/auth`, `@solvapay/next`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init` | Product/framework glue | Unchanged |
 | MCP SDK registration glue ([`register-virtual-tools-mcp.ts`](../../packages/server/src/register-virtual-tools-mcp.ts)), `@solvapay/mcp-core` transport parts (OAuth bridge, bearer, CSP, narrate) | JS SDK types and Node/fetch middleware | Payload builders move (steps 34–35); registration and middleware stay TS |
+| Per-language MCP-authoring adapters (`solvapay-mcp-<lang>`) | Layer-1 MCP protocol/transport comes from each language's own MCP SDK (never reimplemented in Rust); the layer-3 `registerPayable` / `ctx.respond` ergonomic is idiomatic, hand-written glue | Consume the shared layer-2 Rust decision core (paywall/envelope/descriptors, steps 32/34/35); named future track in §9, not in steps 1–55 |
 
 ---
 
@@ -1153,6 +1215,22 @@ Steps 37/38 cut over `verifyWebhook` only; the `EXP` node reflects the end state
 
 ---
 
+### Phase 6G — Binding-glue generator (retrofit, then forward)
+
+The §5.6 pipeline generates facade signatures; Phase 6G adds the §5.7 binding-glue emitters and **proves them against the hand-written 37R/38R shims before any new language depends on them** — the same "so Python starts from a proven pattern" sequencing that put 37R/38R before Phase 7. `G`-suffixed step ids preserve the 1–55 numbering (like `37R`/`38R`). Docs-only prerequisite for Phases 7–10; no new production surface.
+
+39G-a. **Binding-boundary IR + manifest `bindings:` section.** Add the `bindings:` section + Zod schema to the contract manifest; lower it into `Ir.binding_symbols` in [`rust/tools/dto-gen/src/ir.rs`](../../rust/tools/dto-gen/src/ir.rs) (§5.7 descriptor: core fn path, per-toolchain export names, ordered JSON-args with boundary types + required/optional + host-injected flags, `split_path_refs` rules, return shape, sync/async, envelope mode). Enumerate today's hand-written symbols (the `decisions.rs` / `payload_builders.rs` / client-dispatch fns across node + wasm). Add the catalog-reconciliation cross-check (every non-§8 core symbol ↔ exactly one `BindingSymbol`).
+    **Done when:** `dto-gen` builds the binding IR, `pnpm manifest:check` reconciliation is green, and regenerating the IR from the same inputs is byte-identical (idempotence gate).
+
+39G-b. **Rust shim emitters (napi + wasm) + retrofit proof.** Emit `args.rs` / `decisions.rs` / `payload_builders.rs` / client-dispatch for both toolchains from the binding IR; regenerate over the committed 37R (node) and 38R (wasm) files and prove **byte-identical**.
+    *Gotcha:* the wasm crate has no `webhook-verify` feature (the `edge` feature drives it) and is `panic=abort` (no `catch_unwind`); the emitter must reproduce the `#[cfg]` gating exactly (§15 note 38) or the diff fails.
+    **Done when:** regenerated node + wasm shims diff-clean against the committed hand-written output, both-`SOLVAPAY_IMPL`-flag server/core/mcp-core suites stay green on the generated shims, and the hand-edit header gate covers the shim files.
+
+39G-c. **Native-side marshalling emitters (TS).** Emit the `native.ts` / `wasm.ts` dispatch + the envelope → `SolvaPayError` / `PaywallError` reconstructor from the IR; regenerate over the committed 37R/38R TS glue and prove byte-identical.
+    **Done when:** server / core / mcp-core suites are green under both flags on the generated glue, and `node-binding-delegation` is unchanged (the generated markers match the committed inventory).
+
+---
+
 ### Phase 7 — Python
 
 ```mermaid
@@ -1163,10 +1241,10 @@ flowchart LR
   PYF --> PAR7["Parity + fixtures + live contract tests"]
 ```
 
-40. **Scaffold PyO3/maturin.** Package with the tokio runtime via `pyo3-async-runtimes`, GIL-release plumbing for the sync facade, `abi3` wheel config, thread-safe module declaration for free-threaded CPython (§15 note 2).
+40. **Scaffold PyO3/maturin.** Package with the tokio runtime via `pyo3-async-runtimes`, GIL-release plumbing for the sync facade, `abi3` wheel config, thread-safe module declaration for free-threaded CPython (§15 note 2). The Rust-side PyO3 binding shims are **generated from the §5.7 emitter** (add the PyO3 toolchain column to the binding-boundary matrix + the PyO3 emitter), not hand-written — this step scaffolds the package/runtime plumbing the generated shims plug into.
     **Done when:** wheels build for the §7.7 matrix and a hello-world call round-trips async *and* sync.
 
-41. **Generate the Python facade.** Async + blocking-sync surfaces from the IR (§5.6) (snake_case names, `.pyi` stubs), the full portable surface, and the idiomatic `create_solvapay` / `@sp.payable` decorator / `sp.gate` (§2.4) driven by the shared decision core. Add the Python **signature-parity test suite** (§2.8) — same assertion classes as the TS suite from step 18 (presence, arity/names, defaults, `SdkError` mapping, sync/async matrix).
+41. **Generate the Python facade.** Async + blocking-sync surfaces from the IR (§5.6) (snake_case names, `.pyi` stubs), the full portable surface, and the idiomatic `create_solvapay` / `@sp.payable` decorator / `sp.gate` (§2.4) driven by the shared decision core. The Python binding glue (PyO3 shims + native-side marshalling/reconstruction) is generated alongside the facade signatures from the §5.7 emitter. Add the Python **signature-parity test suite** (§2.8) — same assertion classes as the TS suite from step 18 (presence, arity/names, defaults, `SdkError` mapping, sync/async matrix).
     **Done when:** shared fixture conformance passes, the per-language parity check confirms every catalogued entry point with matching semantics, and the Python signature-parity suite is green and structurally equivalent to the TS suite.
 
 42. **Live contract tests + publish.** Run the backend contract suite from Python; wire PyPI publishing into the release train with version stamping (§7.7).
@@ -1184,10 +1262,10 @@ flowchart LR
   RBF --> PAR8["Parity + fixtures + live contract tests"]
 ```
 
-43. **Scaffold Magnus/rb-sys.** Gem with `extconf.rb` via the `rb_sys` gem + `rake-compiler`, GVL-release plumbing around blocking calls, precompiled platform gems via `rb-sys-dock`, source gem as fallback (§15 note 3).
+43. **Scaffold Magnus/rb-sys.** Gem with `extconf.rb` via the `rb_sys` gem + `rake-compiler`, GVL-release plumbing around blocking calls, precompiled platform gems via `rb-sys-dock`, source gem as fallback (§15 note 3). The Rust-side Magnus binding shims are **generated from the §5.7 emitter** (add the Magnus toolchain column + emitter), not hand-written.
     **Done when:** platform gems build and a hello-world call round-trips.
 
-44. **Generate the Ruby facade.** Sync-first surface from the IR (§5.6) (snake_case, keyword args, RBS signatures), the full portable surface, and the idiomatic `SolvaPay.create` / block-based `protect` / `sp.gate` (§2.4) driven by the shared decision core. Add the Ruby **signature-parity test suite** (§2.8) — same assertion classes as the TS (step 18) and Python (step 41) suites.
+44. **Generate the Ruby facade.** Sync-first surface from the IR (§5.6) (snake_case, keyword args, RBS signatures), the full portable surface, and the idiomatic `SolvaPay.create` / block-based `protect` / `sp.gate` (§2.4) driven by the shared decision core. The Ruby binding glue (Magnus shims + native-side marshalling/reconstruction) is generated alongside the facade signatures from the §5.7 emitter. Add the Ruby **signature-parity test suite** (§2.8) — same assertion classes as the TS (step 18) and Python (step 41) suites.
     **Done when:** shared fixture conformance passes, the per-language parity check confirms every catalogued entry point with matching semantics, and the Ruby signature-parity suite is green and structurally equivalent to the TS/Python suites.
 
 45. **Live contract tests + publish.** Run the backend contract suite from Ruby; wire RubyGems publishing into the release train.
@@ -1230,9 +1308,10 @@ flowchart LR
 
 49. **Scaffold wazero binding.** Build the core for `wasm32-wasip1`; embed via `//go:embed`; load with wazero (pure Go, zero cgo). Implement the `Transport` trait contract as a wazero host function backed by `net/http`. Instance pool for concurrent calls (one WASM instance is single-threaded). Map `ctx` cancellation to instance teardown; map `SdkError` → `solvapay.Error` retrievable via `errors.As` (§15 note 4).
     *Gotcha:* do **not** use cgo — consumer cross-compilation and go-module distribution forbid it (§4.6). Resolve whether the `.wasm` artifact is committed in-repo or attached to release tags before this step's cutover (§13).
+    The Rust-side `wasm32-wasip1` export shims (the wazero host-function surface over the JSON envelope) are **generated from the §5.7 emitter** (add the wazero-export toolchain column + emitter), not hand-written.
     **Done when:** `go test` round-trips a hello-world call through the embedded WASM + host transport, including a concurrent call that exercises the instance pool.
 
-50. **Generate the Go facade + signature-parity suite.** Sync-first surface from the IR (§5.6): exported PascalCase names, `ctx context.Context` first, option structs, `Payable`/`Gate` ergonomics (§2.4). Add the Go **signature-parity test suite** (§2.8) — same assertion classes as the other surfaces.
+50. **Generate the Go facade + signature-parity suite.** Sync-first surface from the IR (§5.6): exported PascalCase names, `ctx context.Context` first, option structs, `Payable`/`Gate` ergonomics (§2.4). The Go binding glue (wazero-export shims + host-side marshalling/reconstruction) is generated alongside the facade signatures from the §5.7 emitter. Add the Go **signature-parity test suite** (§2.8) — same assertion classes as the other surfaces.
     **Done when:** shared fixture conformance passes, the per-language parity check confirms every catalogued entry point, and the Go signature-parity suite is green and structurally equivalent to the other four suites.
 
 51. **Live contract tests + go module release wiring.** Run the backend contract suite from Go; wire tagged module releases into the release train (§7.7).
@@ -1250,11 +1329,51 @@ flowchart LR
     *Depends on Steps 37R and 38R*: Node and edge surfaces must both be delegating before their TS bodies can be deleted.
     **Done when:** server suite green; a grep gate confirms no dead duplicated logic remains.
 
-54. **Publish the optional C ABI.** cbindgen headers, opaque handles, `solvapay_free_*` functions, `SOLVAPAY_ABI_VERSION`, panic containment per §7.6.
+54. **Publish the optional C ABI.** cbindgen headers, opaque handles, `solvapay_free_*` functions, `SOLVAPAY_ABI_VERSION`, panic containment per §7.6. The third-party C surface reuses the **§5.7 envelope emitter** — the same JSON-envelope marshalling generated for the first-party toolchains (add the C toolchain column + cbindgen emitter), so the C ABI is not a separately hand-written boundary.
     **Done when:** the header compiles in a C smoke test that exercises create/call/free and a deliberate handle-misuse error path.
 
 55. **Promote all compatibility gates.** API diff, cross-surface parity/coverage, homogeneous signature-parity suites for all five surfaces (§2.8), signature-generation reliability gates (§5.6), fixture conformance for all bindings + surfaces, no-unwrap Clippy/deny, size budgets, clean-install matrices, fuzzing (webhook parser, FFI JSON boundaries, C ABI handle misuse) — all required checks on main.
     **Done when:** all gates are required on main and a dry-run release passes end to end.
+
+---
+
+### MCP-authoring adapters — post-cutover future track (layer 3)
+
+A distinct, **post-cutover future track** — not part of steps 1–55 (which stay contiguous and deliver core-surface parity, §2). It sits after Phase 10/Go because it depends on the per-language facades those phases ship. It delivers the additive commitment named in §2.5: turnkey **paid-MCP authoring** parity across languages, via a thin `registerPayable(...)` / `ctx.respond(...)` ergonomic in each ecosystem. This is the same category as `@solvapay/react` or a future FastAPI/Rack/Axum adapter (§2.5, §8) — idiomatic framework glue, **NOT** core, and **NOT** emitted by the §5.6/§5.7 generators. Every artifact here is **hand-written** (unlike the `generated — do not edit` facades and binding glue).
+
+The surface decomposes into three layers:
+
+```mermaid
+flowchart TB
+  subgraph L1 [Layer 1 - MCP protocol + transport]
+    L1desc["each language's own MCP SDK<br/>TS @modelcontextprotocol/sdk / Python mcp+FastMCP / Go MCP SDK / rmcp / Ruby MCP SDK<br/>NEVER reimplemented in Rust"]
+  end
+  subgraph L2 [Layer 2 - SolvaPay decisions - SHARED, already built]
+    L2desc["Rust core: classify to gate to decide,<br/>paywallToolResult / envelope, tool-names, descriptors,<br/>checkLimits / trackUsage - steps 32/34/35 + phases 3-4"]
+  end
+  subgraph L3 [Layer 3 - payable-MCP adapter - HAND-WRITTEN per language]
+    L3desc["registerPayable + ctx.respond thin ergonomic<br/>solvapay-mcp-python / -ruby / -go / -rust"]
+  end
+  L3desc --> L1desc
+  L3desc --> L2desc
+```
+
+- **Layer 1 (reused, never Rust):** the MCP protocol and transport come from each ecosystem's own MCP SDK. Maintaining a competing five-language MCP implementation in Rust would be strictly worse than reusing the mature ecosystem SDKs, so layer 1 is *never* reimplemented in the core.
+- **Layer 2 (shared, already built):** the SolvaPay decision core — classify → build gate → decide, `paywallToolResult`/envelope, tool-names, descriptors, `checkLimits`/`trackUsage` — is the Rust core delivered by steps 32/34/35 and Phases 3–4. Gate copy and structured content are byte-identical across languages because they come from this one core.
+- **Layer 3 (new, hand-written):** the only new surface — a thin per-language facade that wraps a merchant handler with the layer-2 pre-check and registers it on a layer-1 server object. This mirrors what `@solvapay/mcp` does today via [`registerPayableTool.ts`](../../packages/mcp/src/registerPayableTool.ts) + [`payable-handler.ts`](../../packages/mcp-core/src/payable-handler.ts) (whose header already anticipates future adapters) over [`buildMcpServer.ts`](../../packages/mcp/src/internal/buildMcpServer.ts).
+
+Lettered step ids keep steps 1–55 intact (same convention as `37R` / `6G`). The canonical authoring skill is `create-mcp-app`.
+
+- **MA-0 — Shared MCP-authoring conformance fixtures + adapter contract.**
+  **Done when:** a language-neutral fixture set (a paywalled tool → allow round-trip + gate round-trip, with byte-identical gate copy sourced from layer 2) exists, and the TS `@solvapay/mcp` adapter replays it green as the reference implementation.
+- **MA-Py — `solvapay-mcp` (Python) over `mcp`/FastMCP.**
+  **Done when:** the shared MCP fixtures (MA-0) pass through the Python adapter; a paywalled tool round-trips allow + gate on Python's native MCP SDK (`mcp`/FastMCP, layer 1); the `registerPayable` ergonomic reaches parity with the TS reference.
+- **MA-Rb — `solvapay-mcp` (Ruby) over the Ruby MCP SDK.**
+  **Done when:** the shared MA-0 fixtures pass through the Ruby adapter; a paywalled tool round-trips allow + gate on Ruby's native MCP SDK (layer 1); parity with the TS `registerPayable` ergonomic.
+- **MA-Go — `solvapay-mcp` (Go) over the Go MCP SDK.**
+  **Done when:** the shared MA-0 fixtures pass through the Go adapter; a paywalled tool round-trips allow + gate on the Go MCP SDK (layer 1); parity with the TS `registerPayable` ergonomic.
+- **MA-Rs — `solvapay-mcp` (Rust) over `rmcp`.**
+  **Done when:** the shared MA-0 fixtures pass through the Rust adapter; a paywalled tool round-trips allow + gate on `rmcp` (layer 1); parity with the TS `registerPayable` ergonomic.
 
 ---
 
@@ -1303,6 +1422,9 @@ flowchart LR
 | Browser-WASM symbol audit | No secret-key ops in browser build | Step 38 |
 | Fuzzing | Webhook parser, FFI JSON boundaries, C ABI handle misuse | Step 55 |
 | Performance regression | WASM size, cold start, request-overhead budgets (§7.8) | Step 38 onward |
+| Binding-glue regen (drift / idempotence / hand-edit) | Generated §5.7 shims + native glue in sync, deterministic, and header-protected against hand edits | Phase 6G (39G-b Rust shims ✅; 39G-c native glue pending) |
+| Binding-boundary catalog reconciliation | Every non-§8 core symbol has exactly one `BindingSymbol` and vice-versa (§5.7) | Phase 6G (39G-a) |
+| Retrofit byte-identical proof | Regenerated node + wasm shims byte-identical to committed 37R/38R output; both-flag suites green on generated glue | Phase 6G (39G-b Rust shims ✅; 39G-c native glue pending) |
 
 ### 10.4 Testing strategy summary
 
@@ -1441,6 +1563,8 @@ sequenceDiagram
 | D13 | Homogeneous signature-parity test suites across all five surfaces (TS, Python, Ruby, Go, Rust), generated from the IR | §2.8, §5.6, §10.3 |
 | D14 | Go via wazero + embedded `wasm32-wasip1` WASM, not cgo — pure Go distribution, host `net/http` transport, instance pool for concurrency | §4.5–4.6, §7.5, §15 note 4 |
 | D15 | First-party `solvapay` Rust crate on crates.io is a public surface with the same parity obligations as the other wrappers | §4.3, §4.5, Phase 9, §15 note 5 |
+| D16 | The JSON envelope over string (`{"ok":true,"value":…}` \| `{"ok":false,"error":<SdkError>}`) is the universal binding ABI; the binding-glue layer around it is **generated, not hand-written** (no first-party cbindgen — the optional C ABI reuses the same envelope emitter) | §5.7, §4.6, §15 note 32 |
+| D17 | The per-core-symbol binding-boundary descriptor lives in the manifest `bindings:` section, reconciled against the catalog; IR-driven §5.7 emitters produce every toolchain shim (napi/wasm/PyO3/Magnus/wazero/C) + native-side marshalling | §5.7, §5.6, Phase 6G |
 
 ---
 
@@ -1466,7 +1590,10 @@ Intentionally open until the phase that needs them; resolve with research + a PR
 | Free-threaded CPython: declare `gil_used = false` from day one, or after an audit? | Step 40 | PyO3 0.28 defaults modules to thread-safe; audit is cheap if core stays lock-light (§15 note 2) |
 | Fuzz corpus seed strategy (webhook payloads, malformed signatures, FFI JSON) | Step 55 | Seed from Phase 0 fixtures + mutation |
 | Whether UniFFI is ever used for a *sixth* language later | Only if a new language can't use a specialized binding | §4.6 |
+| How host-injected args (`nowMs` / clock / seeded RNG) and path-ref splits are declared in the binding-boundary descriptor | Step 39G-a | **Resolved (39G-a):** each `bindings:` arg carries `hostInjected: bool` (default false); path splits are an ordered `splitPathRefs: string[]` on the symbol (e.g. `["customerRef"]`, `["productRef","planRef"]`). See §15 note 40 |
+| Whether a later proc-macro layer auto-derives binding-boundary descriptors from the Rust core signatures | Deferred (post-Phase 6G) | The manifest `bindings:` section is the source of truth for now; a derive macro is only worth it if the descriptor set grows faster than the manifest can track |
 | Hosted contract-test environment for CI shadow live runs | Post–step 25 | Offline `pnpm shadow:selftest` is in CI; live `pnpm shadow:run` is manual-dispatch (`.github/workflows/shadow.yml`) until a shared sandbox/contract env + secrets exist |
+| Turnkey paid-MCP authoring parity scope + naming of each `solvapay-mcp-<lang>` package (PyPI / RubyGems / Go module / crates.io) | Before the MCP-authoring track (§9) | Is turnkey paid-MCP authoring in every language a first-class product goal, or is core-surface parity (§2) sufficient? Names are per-ecosystem; check availability early |
 
 ---
 
@@ -1542,6 +1669,12 @@ Re-check the linked sources at the start of any step touching the corresponding 
 **Note 26 — Step 34 MCP payload builders (checked 2026-07-17):** No new crate deps / toolchain pins under the step-8 freeze — reused step-14 `PaywallGate` as typed input and `solvapay_dto::error_templates` for the frozen assert message. Pure cores: `paywall_tool_result` (`isError: false` + narration + gate verbatim — no payment-branch dropping, unlike step 33) and `make_response_result` / `assert_response_result` (brand + skip-absent `options` / empty `emittedBlocks`). No TS extract — dual-binding fixtures prove `@solvapay/mcp-core` `paywallToolResult` ≡ `@solvapay/server` `McpAdapter.formatGate` (step-4 node/edge precedent); additive exports `McpAdapter` / `makeResponseResult` / `assertResponseResult` + root `@solvapay/mcp-core` devDependency. Manifest freeze: `errors.mcp.messages.rawHandlerReturn` → dto-gen `error_templates::mcp::RAW_HANDLER_RETURN`. Decision impact: fixtures pin `args.message === structuredContent.message` so both bindings agree; `checkoutUrl: ""` and `confirmationUrl: ""` pass through on `structuredContent`. GREEN: `mcp/` 19/19 + full corpus `executed=411 passed=411 failed=0` (was 392). Sources: step-33 dual-binding / no-extract pattern; step-17 error_templates emit; MCP Apps text-only paywall (`isError: false`, §6.5).
 
 **Note 27 — Step 35 MCP names + descriptors (checked 2026-07-17):** No new crate deps / toolchain pins under the step-8 freeze — serde/serde_json only. Pure cores: `MCP_TOOL_NAMES` (12), `TOOL_FOR_VIEW`/`VIEW_FOR_TOOL`, `derive_icons`, `build_tool_descriptor_metadata`, `build_prompt_descriptor_metadata`, `build_prompt_user_message`, `validate_public_base_url`. TS extract `packages/mcp-core/src/descriptor-metadata.ts` rewired into `descriptors.ts` (handlers/schemas/fs/crypto/CSP stay host). Decision impact: registration order is contract (intent → transport → activate_plan); skip-absent `title`/`icons`/annotation flags; `deriveIcons` undefined → fixture `null`; frozen `publicBaseUrl` message stays a local const (no manifest `errors.mcp` key). Characterization extended on `descriptors.unit.test.ts` before extract. GREEN: +20 fixtures under `mcp/{tool-names,derive-icons,descriptors,prompts}` + full corpus `executed=431 passed=431 failed=0` (was 411). Sources: step-32 TS-extract rewire pattern; step-34 `mcp/` fixture layout; no upstream research beyond confirming no new deps needed.
+
+**Note 41 — Step 39G-b Rust shim emitters + retrofit proof (checked 2026-07-22):** Landed the Rust half of §5.7 emission (native-side TS marshalling remains 39G-c). **IR enrichment:** each `bindings:` entry gained additive emit fields — `artifact` (`decisions`/`payloadBuilders`/`client`/`webhook`), `emitOrder`, `section`, `doc`, `rustFnName`, per-arg `extract`/`typedAs`/`typedStyle`/`local`, discriminated `call` (`wrap` + serialize kind + arg templates, or `verbatim`), `verbatimBody` / optional `verbatimBodyWasm`, `dtoType`, `coreCall`, `clientCallArgs`. Defaults keep 39G-a fixtures valid; `extract` derives from `(type, required)` when omitted. **Emitter:** `dto-gen` `emit_bindings_rs.rs` is a pure `Ir → text` path parameterized by `Toolchain` (`napi` vs `wasm_bindgen` attrs, `Arc` vs `Rc`, header/`#![cfg]` chrome). Regular symbols render from `call`/`extract`; bespoke bodies (`retryNextDelayMs`, `mapRouteError`, MCP helpers, …) use the verbatim escape hatch; module headers / `use` blocks / `args.rs` / `mod tests` trailers / client preamble·postamble / wasm `mcp_payload` scaffold are verbatim chrome assets (`assets/binding-emit.snapshot.json`, refreshed by `scripts/extract-binding-emit.mjs`). **Byte-identical proof:** regenerating the eight shim files yields only the intentional `//! @generated by dto-gen — do not edit.` first-line delta; golden integration test asserts body equality after header normalization; `cargo test -p solvapay-node` 22/22 on generated shims. **Gates:** CI `solvapay-dto regen drift` passes `--node-bindings-out` / `--wasm-bindings-out` and diffs all eight shim paths; `@generated` header gate covers them. Both-flag `node-binding-conformance` / `wasm-binding` jobs are unchanged (behavioral proof on the generated bytes). Sources: committed 37R/38R shims; §15 notes 39–40.
+
+**Note 40 — Step 39G-a binding-boundary IR (checked 2026-07-22):** Landed the descriptor-and-gate half of §5.7 (no shim emission — that is 39G-b/c). **Manifest:** Zod-validated `bindings:` section in `sdk-contract.yaml` (102 symbols = 36 client + 42 decisions + 23 payload builders + `verifyWebhook`); each entry carries `core`, `names` (`IrLangNames`; `ts` = today's `js_name`), `catalog` (`operation`/`topLevel`/`coreHelper`/`facade` + id, or `kind: none`), ordered `args` (`name` + boundary type `string|string?|f64|f64?|i64|bool|value` + `required` + `hostInjected`), ordered `splitPathRefs`, `return: value`, `sync`, `envelope` (`sync`/`async`/`webhookThrow`). **IR:** `dto-gen` deserializes into `BindingDef` and lowers into `Ir.binding_symbols` via `lower_bindings.rs`. **Gates:** (1) `assertBindingReconciliation` in `pnpm manifest:check` — catalog-linked subset is 1:1 with boundary catalog entries; committed shim `js_name`s (minus `BINDING_INFRA_ALLOWLIST` = `napiVersion`/`wasmVersion`/`NativeClient`/`WasmClient`) match `bindings` export names; core paths unique. (2) `dto-gen --dump-bindings` writes canonical `contract/manifest/binding-symbols.snapshot.json`; CI regen-drift covers it; Rust test asserts two lowers yield identical IR. **Host-injected / path-ref shape (closes §13 gate):** `hostInjected: true` on args the host supplies (`nowMs`, `nowUnixSecs`); `splitPathRefs` ordered list on the symbol. Internal decision cores stay `catalog: none` (host-orchestration-decisions-delegated). Sources: committed 37R/38R shims; §15 note 39 design.
+
+**Note 39 — Binding-glue generation design (recorded 2026-07-22):** Recorded the design for generating the per-language binding-glue layer (§5.7 / Phase 6G / D16–D17). **Confirmed design:** (1) the existing JSON-envelope-over-string boundary (`{"ok":true,"value":…}` | `{"ok":false,"error":<SdkError>}`, §15 note 32) stays the universal binding ABI — §5.7 generates only the marshalling/shim code around it, not a new boundary; no first-party cbindgen (D1 / §4.6 intact), and the optional C ABI (step 54) reuses the same envelope emitter for third parties. (2) IR/manifest-driven: a new Zod-validated manifest `bindings:` section lowers into `Ir.binding_symbols` (one `BindingSymbol` per core symbol — core fn path, per-toolchain export names via the existing `IrLangNames` casing, ordered JSON-args with boundary type + required/optional + host-injected flag, `split_path_refs` rules, return shape, sync/async, envelope mode), reconciled against the catalog (`OPERATION_NAMES` / `entry_points`); dto-gen emitters then produce every toolchain shim (`args`/`decisions`/`payload_builders`/client-dispatch for napi + wasm today; PyO3/Magnus/wazero/C later) plus the native-side `native.ts` / `wasm.ts` dispatch + envelope reconstructor — preserving "emitters consume only the IR" (§5.6). (3) Retrofit-proof scope: node napi (37R) + wasm (38R) are the generator's golden target — regenerate and prove **byte-identical** to the committed hand-written shims before forward-applying to Ruby/Rust/Go/TS/Python (mirrors the 37R "Python starts from a proven pattern" sequencing). New CI gates: binding-glue regen drift/idempotence/hand-edit, binding-boundary catalog reconciliation, retrofit byte-identical proof (§10.3). Open gates (§13): exact declaration shape for host-injected args (`nowMs`/clock/RNG) + path-ref splits (pinned by the 37R/38R retrofit); whether a later proc-macro auto-derives descriptors from Rust signatures (deferred). Docs-only change — no code generated in this task. Sources: existing `rust/bindings/{node,wasm}/src/` hand-written shims; §15 note 32 (envelope boundary); §15 note 34 (`split_path_refs`). Step 39G-a later closed the host-injected/path-ref gate and landed the IR (see note 40).
 
 **Note 38 — Step 38R full-surface edge WASM cutover (checked 2026-07-21):** Edge mirror of 37R over `@solvapay/server-wasm`. **Rust:** `wasm_client.rs` wraps `Rc<SolvaPayClient>` over `FetchTransport` (not `Arc` — the fetch client is `!Send`/`!Sync` on wasm32; `Arc` trips `clippy::arc_with_non_send_sync`) and exposes all 36 Groups A–C async JSON-envelope methods (`#![cfg(all(feature = "edge", target_arch = "wasm32"))]`); `decisions.rs` + `payload_builders.rs` mirror the napi sync bindings via `#[wasm_bindgen(js_name=…)]` (edge-only MCP subset; public-safe business-details/credit-display/seller-identity dual-profile); `error.rs` envelope helpers + `run_envelope_sync` (no `catch_unwind` — wasm32 `panic=abort`); the webhook-throw `BindingError` + `js_sys` + async `run_envelope` move under `#[cfg(feature = "edge")]` (the wasm crate has no `webhook-verify` feature; `edge` drives it). **TS:** `packages/server/src/wasm.ts` generalizes `webhook-wasm.ts` (`loadWasmBinding` async `ready()`, `getWasmClient`, `callWasm`, `callWasmSync`, `ensureWasmReadySync`, `resolveEdgeImpl(surface)`, envelope→`SolvaPayError`/`PaywallError` reconstruct, test seams incl. `isWasmClientOverrideActive`, `publishWasmSyncApi`, `warmWasm`); `webhook-wasm.ts` is a re-export shim. `client.ts` `dispatchClient` splits edge→WASM / Node→napi via `isNodeRuntime()` + dynamic import (edge tsup externalizes `./native` + `./webhook-native` + `node:module` so the edge graph never statically pulls napi; unit tests force the edge path under Node via `setWasmClientForTests` + `SOLVAPAY_IMPL=rust`). `edge.ts` installs decision/core/MCP WASM dispatch, publishes `Symbol.for('solvapay.nativeSyncApi')`, and fires `warmWasm()`. **Install-is-the-gate:** removed the `process.versions.node` check from `native-decisions`/`native-core`/`native-mcp` `dispatchSync` (edge installs are now the sole gate). **Browser:** public-safe subset only (`browser-web.js` enumerates exports for the audit); opt-in `@solvapay/core/browser-wasm` `warmBrowserCoreWasm()` async-warms + installs WASM as the core sync dispatch — NOT imported by the core main entry, so React stays TS; eager main-thread cost ~1.8 KB, the ~63 KB WASM is opt-in. **Gate/budget:** `DELEGATION_MARKERS` gains `callWasm`/`callWasmSync`/`verifyWebhookWasm`; budgets re-recorded (browser 6531→63633, edge 34157→298838 gzip, both lazy/opt-in with rationale notes). GREEN: server 366×2, mcp-core 108×2, core 117 (incl. `warmBrowserCoreWasm` TS↔WASM flip), React 1083 unmodified, `pnpm delegation:check` OK, browser symbol audit + `measure-wasm --check` OK, Deno edge smoke (async webhook + `classifyPaywallState`/`buildPaywallGate` sync dispatch + ambient `getMcpToolNamesTable`), clean-install orchestrator unit 10/10. Next: Step 39 CI matrix → Phase 6 close.
 

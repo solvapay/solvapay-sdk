@@ -145,6 +145,7 @@ mod tests {
             routes: vec![],
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
+            binding_symbols: BTreeMap::new(),
         }
     }
 
@@ -242,6 +243,7 @@ topLevel:
             top_level: BTreeMap::new(),
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
+            bindings: BTreeMap::new(),
         };
         lower_catalog(&mut ir, &manifest).unwrap();
         assert_eq!(
