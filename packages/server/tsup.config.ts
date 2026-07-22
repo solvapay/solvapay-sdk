@@ -2,7 +2,15 @@ import { defineConfig } from 'tsup'
 
 export default defineConfig([
   {
-    entry: ['src/index.ts'],
+    // `native` is a separate entry so client.ts's runtime
+    // `import(['./', 'native.js'].join(''))` resolves to dist/native.js.
+    // (A non-literal specifier is intentional — keeps edge bundlers from
+    // statically pulling the Node-only graph — so tsup will not emit a
+    // hashed chunk for it unless it is an explicit entry.)
+    entry: {
+      index: 'src/index.ts',
+      native: 'src/native.ts',
+    },
     format: ['esm', 'cjs'],
     dts: true,
     tsconfig: 'tsconfig.build.json',

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bash scripts/dev-with-tunnel.sh",
-    "dev:local": "NODE_OPTIONS='--disable-warning=DEP0205' next dev --port 3010",
+    "dev:local": "NODE_OPTIONS='--disable-warning=DEP0205' next dev --webpack --port 3010",
     "dev:tunnel": "bash scripts/dev-with-tunnel.sh",
     "build": "next build",
     "build:opennext": "opennextjs-cloudflare build",
@@ -16,7 +16,8 @@
     "predeploy:cf": "pnpm -w build:packages && pnpm build:opennext",
     "deploy:cf": "node scripts/deploy.mjs",
     "deploy:cf:prod": "pnpm -w build:packages && pnpm build:opennext:prod && node scripts/deploy.mjs --prod",
-    "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern .open-next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs"
+    "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern .open-next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs",
+    "smoke:rust": "node scripts/smoke-rust.mjs"
   },
   "dependencies": {
     "@solvapay/auth": "workspace:*",
@@ -34,6 +35,8 @@
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.19.0",
+    "@solvapay/server-native": "workspace:*",
+    "@solvapay/server-wasm": "workspace:*",
     "@tailwindcss/postcss": "^4.2.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

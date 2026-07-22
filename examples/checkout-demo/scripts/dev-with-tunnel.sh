@@ -71,7 +71,8 @@ fi
 
 start_next() {
   echo "Starting checkout-demo on http://localhost:3010"
-  NODE_OPTIONS='--max-old-space-size=8192 --disable-warning=DEP0205' "$NEXT_BIN" dev --port 3010 &
+  # --webpack: Turbopack rebundles workspace @solvapay/server and breaks napi.
+  NODE_OPTIONS='--max-old-space-size=8192 --disable-warning=DEP0205' "$NEXT_BIN" dev --webpack --port 3010 &
   NEXT_PID=$!
 }
 

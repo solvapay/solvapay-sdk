@@ -105,6 +105,48 @@ function shouldAttemptNativeClient(): boolean {
 }
 
 /**
+ * Dynamically load the Node-only `./native` dispatch module.
+ *
+ * Prefer a relative `./native.js` import first so vitest / plain Node share the
+ * same module instance as `setNativeClientForTests`. When a bundler (Next
+ * webpack/Turbopack) rewrites that relative specifier into a broken context
+ * module, fall back to an absolute `file:` URL resolved via createRequire.
+ */
+async function importNativeDispatch(): Promise<unknown> {
+  const nativeSpecifier = ['./', 'native.js'].join('')
+  try {
+    return await import(/* webpackIgnore: true */ nativeSpecifier)
+  } catch {
+    // Bundler rewrote the relative import — resolve from the installed package.
+  }
+
+  type NodeModuleBuiltin = {
+    createRequire: (filename: string) => { resolve: (id: string) => string }
+  }
+
+  const nodeModule = (
+    process as NodeJS.Process & {
+      getBuiltinModule?: (id: string) => NodeModuleBuiltin | undefined
+    }
+  ).getBuiltinModule?.('module')
+
+  if (!nodeModule?.createRequire) {
+    throw new SolvaPayError(
+      'SolvaPay native dispatch module (./native.js) is not available',
+    )
+  }
+
+  const require = nodeModule.createRequire(`${process.cwd()}/package.json`)
+  const serverEntry = require.resolve(['@solvapay/', 'server'].join(''))
+  const [{ dirname, join }, { pathToFileURL }] = await Promise.all([
+    import('node:path'),
+    import('node:url'),
+  ])
+  const nativeHref = pathToFileURL(join(dirname(serverEntry), 'native.js')).href
+  return import(/* webpackIgnore: true */ nativeHref)
+}
+
+/**
  * Configuration options for creating a SolvaPay API client
  */
 export type ServerClientOptions = {
@@ -217,11 +259,12 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     if (!shouldAttemptNativeClient()) {
       return tsFallback()
     }
-    // Non-literal specifier so edge rebundlers (wrangler/esbuild) that pull in
-    // this shared module cannot statically resolve the Node-only `./native`
-    // graph into a Workers bundle (tsup already externalizes it for edge.js).
-    const nativeSpecifier: string = ['./', 'native'].join('')
-    const { callNative, resolveImpl } = (await import(nativeSpecifier)) as {
+    // Resolve `dist/native.js` via an absolute file URL so Next/webpack/Turbopack
+    // cannot rewrite a relative `./native.js` into a broken context module.
+    // `webpackIgnore` keeps the dynamic import as a real Node ESM import.
+    // The non-literal package/`native.js` join also keeps edge rebundlers from
+    // statically pulling this Node-only graph into a Workers bundle.
+    const { callNative, resolveImpl } = (await importNativeDispatch()) as {
       callNative: (
         method: NativeClientMethod,
         json: string,
