@@ -130,26 +130,6 @@ pub fn get_business_country_options_binding(args_json: String) -> String {
 
 // --- credit-display ---
 
-/// Binding for `minorUnitsPerMajor`.
-#[napi(js_name = "minorUnitsPerMajor")]
-pub fn minor_units_per_major_binding(args_json: String) -> String {
-    run_envelope_sync(|| {
-        let args = args_map(&args_json)?;
-        let currency = require_string(&args, "currency")?;
-        Ok(Value::from(minor_units_per_major(&currency)))
-    })
-}
-
-/// Binding for `isZeroDecimalCurrency`.
-#[napi(js_name = "isZeroDecimalCurrency")]
-pub fn is_zero_decimal_currency_binding(args_json: String) -> String {
-    run_envelope_sync(|| {
-        let args = args_map(&args_json)?;
-        let currency = require_string(&args, "currency")?;
-        Ok(Value::Bool(is_zero_decimal_currency(&currency)))
-    })
-}
-
 /// Binding for `creditsToDisplayMinorUnits` (`null` when undefined).
 #[napi(js_name = "creditsToDisplayMinorUnits")]
 pub fn credits_to_display_minor_units_binding(args_json: String) -> String {
@@ -168,18 +148,40 @@ pub fn credits_to_display_minor_units_binding(args_json: String) -> String {
     })
 }
 
+/// Binding for `isZeroDecimalCurrency`.
+#[napi(js_name = "isZeroDecimalCurrency")]
+pub fn is_zero_decimal_currency_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let currency = require_string(&args, "currency")?;
+        Ok(Value::Bool(is_zero_decimal_currency(&currency)))
+    })
+}
+
+/// Binding for `minorUnitsPerMajor`.
+#[napi(js_name = "minorUnitsPerMajor")]
+pub fn minor_units_per_major_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let currency = require_string(&args, "currency")?;
+        Ok(Value::from(minor_units_per_major(&currency)))
+    })
+}
+
 // --- seller-identity ---
 
-/// Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
-#[napi(js_name = "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE")]
-pub fn seller_tax_identifier_display_label_by_type_binding(args_json: String) -> String {
+/// Binding for `resolveSellerIdentityDisplay`.
+#[napi(js_name = "resolveSellerIdentityDisplay")]
+pub fn resolve_seller_identity_display_binding(args_json: String) -> String {
     run_envelope_sync(|| {
-        let _args = args_map(&args_json)?;
-        let mut map = Map::new();
-        for (key, label) in seller_tax_identifier_display_label_by_type() {
-            map.insert((*key).to_owned(), Value::String((*label).to_owned()));
-        }
-        Ok(Value::Object(map))
+        let args = args_map(&args_json)?;
+        let input = SellerIdentityInput {
+            country: optional_string(&args, "country")?,
+            vat_number: optional_string(&args, "vatNumber")?,
+            tax_id: optional_string(&args, "taxId")?,
+            company_number: optional_string(&args, "companyNumber")?,
+        };
+        to_value(&resolve_seller_identity_display(&input))
     })
 }
 
@@ -195,18 +197,16 @@ pub fn get_seller_tax_identifier_display_label_binding(args_json: String) -> Str
     })
 }
 
-/// Binding for `resolveSellerIdentityDisplay`.
-#[napi(js_name = "resolveSellerIdentityDisplay")]
-pub fn resolve_seller_identity_display_binding(args_json: String) -> String {
+/// Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
+#[napi(js_name = "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE")]
+pub fn seller_tax_identifier_display_label_by_type_binding(args_json: String) -> String {
     run_envelope_sync(|| {
-        let args = args_map(&args_json)?;
-        let input = SellerIdentityInput {
-            country: optional_string(&args, "country")?,
-            vat_number: optional_string(&args, "vatNumber")?,
-            tax_id: optional_string(&args, "taxId")?,
-            company_number: optional_string(&args, "companyNumber")?,
-        };
-        to_value(&resolve_seller_identity_display(&input))
+        let _args = args_map(&args_json)?;
+        let mut map = Map::new();
+        for (key, label) in seller_tax_identifier_display_label_by_type() {
+            map.insert((*key).to_owned(), Value::String((*label).to_owned()));
+        }
+        Ok(Value::Object(map))
     })
 }
 

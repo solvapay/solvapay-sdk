@@ -2,6 +2,7 @@
 
 pub mod emit;
 pub mod emit_bindings_rs;
+pub mod emit_bindings_ts;
 pub mod emit_client_ts;
 pub mod emit_parity_suite_ts;
 pub mod emit_ts;
@@ -17,6 +18,7 @@ pub mod parse;
 
 pub use emit::{emit_crate, EmittedCrate};
 pub use emit_bindings_rs::{emit_bindings, EmittedBindings, Toolchain};
+pub use emit_bindings_ts::emit_native_ts;
 pub use emit_client_ts::emit_client_ts;
 pub use emit_parity_suite_ts::emit_parity_suite_ts;
 pub use emit_ts::emit_overlays_ts;
@@ -51,6 +53,8 @@ pub fn generate_from_snapshot(
     dump_bindings: Option<&Path>,
     node_bindings_out: Option<&Path>,
     wasm_bindings_out: Option<&Path>,
+    native_ts_out: Option<&Path>,
+    wasm_ts_out: Option<&Path>,
 ) -> GenResult<()> {
     let raw = fs::read_to_string(snapshot_path).map_err(|source| GenError::Io {
         path: snapshot_path.to_path_buf(),
@@ -128,6 +132,28 @@ pub fn generate_from_snapshot(
     if let Some(dir) = wasm_bindings_out {
         let emitted = emit_bindings(&ir, Toolchain::Wasm)?;
         write_binding_shims(dir, &emitted, "wasm_client.rs")?;
+    }
+
+    if let Some(native_ts_path) = native_ts_out {
+        let ts = emit_native_ts(&ir, Toolchain::Node)?;
+        if let Some(parent) = native_ts_path.parent() {
+            fs::create_dir_all(parent).map_err(|source| GenError::Io {
+                path: parent.to_path_buf(),
+                source,
+            })?;
+        }
+        write_file(native_ts_path, &ts)?;
+    }
+
+    if let Some(wasm_ts_path) = wasm_ts_out {
+        let ts = emit_native_ts(&ir, Toolchain::Wasm)?;
+        if let Some(parent) = wasm_ts_path.parent() {
+            fs::create_dir_all(parent).map_err(|source| GenError::Io {
+                path: parent.to_path_buf(),
+                source,
+            })?;
+        }
+        write_file(wasm_ts_path, &ts)?;
     }
 
     Ok(())

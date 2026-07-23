@@ -1,4 +1,4 @@
-//! CLI: `dto-gen --snapshot <path> --out <dir> [--manifest <path>] [--ts-out <path>] [--ts-client-out <path>] [--ts-parity-out <path>] [--dump-bindings <path>] [--node-bindings-out <dir>] [--wasm-bindings-out <dir>]`
+//! CLI: `dto-gen --snapshot <path> --out <dir> [--manifest <path>] [--ts-out <path>] [--ts-client-out <path>] [--ts-parity-out <path>] [--dump-bindings <path>] [--node-bindings-out <dir>] [--wasm-bindings-out <dir>] [--native-ts-out <file>] [--wasm-ts-out <file>]`
 
 use std::env;
 use std::path::PathBuf;
@@ -36,6 +36,8 @@ fn run() -> Result<(), GenError> {
     let mut dump_bindings: Option<PathBuf> = None;
     let mut node_bindings_out: Option<PathBuf> = None;
     let mut wasm_bindings_out: Option<PathBuf> = None;
+    let mut native_ts_out: Option<PathBuf> = None;
+    let mut wasm_ts_out: Option<PathBuf> = None;
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -66,6 +68,12 @@ fn run() -> Result<(), GenError> {
             "--wasm-bindings-out" => {
                 wasm_bindings_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--native-ts-out" => {
+                native_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--wasm-ts-out" => {
+                wasm_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "-h" | "--help" => return Err(GenError::Usage),
             _ => return Err(GenError::Usage),
         }
@@ -82,5 +90,7 @@ fn run() -> Result<(), GenError> {
         dump_bindings.as_deref(),
         node_bindings_out.as_deref(),
         wasm_bindings_out.as_deref(),
+        native_ts_out.as_deref(),
+        wasm_ts_out.as_deref(),
     )
 }

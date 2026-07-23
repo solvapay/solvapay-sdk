@@ -153,12 +153,16 @@ jobs:
             --ts-parity-out ../packages/server/src/__generated__/signature-parity.generated.test.ts \
             --dump-bindings ../contract/manifest/binding-symbols.snapshot.json \
             --node-bindings-out bindings/node/src \
-            --wasm-bindings-out bindings/wasm/src
+            --wasm-bindings-out bindings/wasm/src \
+            --native-ts-out ../packages/server/src/native.ts \
+            --wasm-ts-out ../packages/server/src/wasm.ts
           GENERATED_PATHS=(
             rust/crates/solvapay-dto
             packages/server/src/types/overlays.generated.d.ts
             packages/server/src/types/client.generated.d.ts
             packages/server/src/__generated__/signature-parity.generated.test.ts
+            packages/server/src/native.ts
+            packages/server/src/wasm.ts
             contract/manifest/binding-symbols.snapshot.json
             rust/bindings/node/src/args.rs
             rust/bindings/node/src/decisions.rs
@@ -180,7 +184,9 @@ jobs:
             echo "    --ts-parity-out ../packages/server/src/__generated__/signature-parity.generated.test.ts \\" >&2
             echo "    --dump-bindings ../contract/manifest/binding-symbols.snapshot.json \\" >&2
             echo "    --node-bindings-out bindings/node/src \\" >&2
-            echo "    --wasm-bindings-out bindings/wasm/src" >&2
+            echo "    --wasm-bindings-out bindings/wasm/src \\" >&2
+            echo "    --native-ts-out ../packages/server/src/native.ts \\" >&2
+            echo "    --wasm-ts-out ../packages/server/src/wasm.ts" >&2
             exit 1
           fi
 
@@ -190,6 +196,8 @@ jobs:
             ../packages/server/src/types/overlays.generated.d.ts \
             ../packages/server/src/types/client.generated.d.ts \
             ../packages/server/src/__generated__/signature-parity.generated.test.ts \
+            ../packages/server/src/native.ts \
+            ../packages/server/src/wasm.ts \
             bindings/node/src/args.rs \
             bindings/node/src/decisions.rs \
             bindings/node/src/payload_builders.rs \

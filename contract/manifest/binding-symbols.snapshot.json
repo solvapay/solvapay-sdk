@@ -49,7 +49,7 @@
       "doc": "Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.",
       "docWasm": null,
       "dtoType": null,
-      "emitOrder": 10,
+      "emitOrder": 12,
       "envelope": "sync",
       "names": {
         "go": "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
@@ -1516,7 +1516,7 @@
       "doc": "Binding for `creditsToDisplayMinorUnits` (`null` when undefined).",
       "docWasm": null,
       "dtoType": null,
-      "emitOrder": 9,
+      "emitOrder": 7,
       "envelope": "sync",
       "names": {
         "go": "CreditsToDisplayMinorUnits",
@@ -2968,7 +2968,7 @@
       "doc": "Binding for `minorUnitsPerMajor`.",
       "docWasm": null,
       "dtoType": null,
-      "emitOrder": 7,
+      "emitOrder": 9,
       "envelope": "sync",
       "names": {
         "go": "MinorUnitsPerMajor",
@@ -3790,7 +3790,7 @@
       "doc": "Binding for `resolveSellerIdentityDisplay`.",
       "docWasm": null,
       "dtoType": null,
-      "emitOrder": 12,
+      "emitOrder": 10,
       "envelope": "sync",
       "names": {
         "go": "ResolveSellerIdentityDisplay",

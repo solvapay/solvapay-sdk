@@ -2565,7 +2565,7 @@ bindings:
     sync: sync
     envelope: sync
     artifact: payloadBuilders
-    emitOrder: 10
+    emitOrder: 12
     section: seller-identity
     doc: Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
     rustFnName: seller_tax_identifier_display_label_by_type_binding
@@ -3606,7 +3606,7 @@ bindings:
     sync: sync
     envelope: sync
     artifact: payloadBuilders
-    emitOrder: 9
+    emitOrder: 7
     section: credit-display
     doc: Binding for `creditsToDisplayMinorUnits` (`null` when undefined).
     rustFnName: credits_to_display_minor_units_binding
@@ -4677,7 +4677,7 @@ bindings:
     sync: sync
     envelope: sync
     artifact: payloadBuilders
-    emitOrder: 7
+    emitOrder: 9
     section: credit-display
     doc: Binding for `minorUnitsPerMajor`.
     rustFnName: minor_units_per_major_binding
@@ -5241,7 +5241,7 @@ bindings:
     sync: sync
     envelope: sync
     artifact: payloadBuilders
-    emitOrder: 12
+    emitOrder: 10
     section: seller-identity
     doc: Binding for `resolveSellerIdentityDisplay`.
     rustFnName: resolve_seller_identity_display_binding
