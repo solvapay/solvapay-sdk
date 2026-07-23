@@ -373,8 +373,9 @@ mod tests {
             defaults: IrDefaults::default(),
             errors: vec![IrErrorKind::Api],
             docs: IrDocModel {
-                summary: "Check remaining usage/spend limits for a customer against a product's plan."
-                    .into(),
+                summary:
+                    "Check remaining usage/spend limits for a customer against a product's plan."
+                        .into(),
                 returns: Some(
                     "Current remaining limits, optionally including plan details.".into(),
                 ),

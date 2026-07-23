@@ -14,7 +14,7 @@ use solvapay_core::{
 };
 use solvapay_dto::{
     CheckLimitRequest, CheckLimitsRequest, CreateCustomerRequest, CreateUsageRequest,
-    GetCustomerParams, SdkMerchantResponseDto, TrackUsageRequest,
+    GetCustomerParams, TrackUsageRequest,
 };
 use solvapay_transport::{ClientShell, SharedTransport, SolvaPayClient};
 use tokio::sync::{Mutex, Notify};
@@ -74,6 +74,11 @@ impl Client {
     /// Builds a client over an injected transport (tests, custom HTTP stacks).
     pub fn with_transport(transport: SharedTransport, config: Config) -> Self {
         let shell = build_shell(transport, &config);
+        Self::with_shell(shell, config)
+    }
+
+    /// Builds a client from a preconfigured [`ClientShell`] (fixture clock/rng hooks).
+    pub fn with_shell(shell: ClientShell, config: Config) -> Self {
         let api = SolvaPayClient::new(shell);
         Self {
             inner: Arc::new(ClientInner {
@@ -86,11 +91,6 @@ impl Client {
                 }),
             }),
         }
-    }
-
-    /// `GET /v1/sdk/merchant` — representative typed API delegation (Step 46).
-    pub async fn get_merchant(&self) -> Result<SdkMerchantResponseDto, SdkError> {
-        self.inner.api.get_merchant().await
     }
 
     /// Paywall gate for a customer and product (§2.4). Limit decisions delegate to core.
@@ -385,6 +385,9 @@ fn now_ms() -> u64 {
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_millis() as u64)
 }
+
+#[path = "client_generated.rs"]
+mod client_generated;
 
 #[cfg(test)]
 mod tests {

@@ -29,6 +29,7 @@ impl Default for Config {
     }
 }
 
+/// Reads a non-empty environment variable, or `None` when unset/blank.
 fn non_empty_env(key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|s| !s.is_empty())
 }

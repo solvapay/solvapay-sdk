@@ -1,4 +1,4 @@
-//! CLI: `dto-gen --snapshot <path> --out <dir> [...binding outputs] [--native-rb-out <file>] [--rb-client-out <file>] [--rb-rbs-out <file>] [--rb-parity-out <file>]`
+//! CLI: `dto-gen --snapshot <path> --out <dir> [...binding outputs] [--native-rb-out <file>] [--rb-client-out <file>] [--rb-rbs-out <file>] [--rb-parity-out <file>] [--rs-client-out <file>] [--rs-parity-out <file>]`
 
 use std::env;
 use std::path::PathBuf;
@@ -47,6 +47,8 @@ fn run() -> Result<(), GenError> {
     let mut rb_client_out: Option<PathBuf> = None;
     let mut rb_rbs_out: Option<PathBuf> = None;
     let mut rb_parity_out: Option<PathBuf> = None;
+    let mut rs_client_out: Option<PathBuf> = None;
+    let mut rs_parity_out: Option<PathBuf> = None;
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -110,6 +112,12 @@ fn run() -> Result<(), GenError> {
             "--rb-parity-out" => {
                 rb_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--rs-client-out" => {
+                rs_client_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--rs-parity-out" => {
+                rs_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "-h" | "--help" => return Err(GenError::Usage),
             _ => return Err(GenError::Usage),
         }
@@ -137,5 +145,7 @@ fn run() -> Result<(), GenError> {
         rb_client_out.as_deref(),
         rb_rbs_out.as_deref(),
         rb_parity_out.as_deref(),
+        rs_client_out.as_deref(),
+        rs_parity_out.as_deref(),
     )
 }

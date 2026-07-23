@@ -1,10 +1,16 @@
 # Rust facade — get merchant
 
-Minimal async example for the Step 46 `solvapay` crate.
+Minimal async example for the `solvapay` crate (Steps 46/48). Offline mock-transport test covers `run(...)`; live `.env` is optional.
 
 Credentials live in **this directory’s** `.env` (not committed). Path resolution is centralized in `examples/rust/env`.
 
-## Setup
+## Offline test (CI-safe)
+
+```bash
+cargo test --manifest-path examples/rust/get-merchant/Cargo.toml
+```
+
+## Setup (live run)
 
 ```bash
 cp .env.example .env
@@ -25,7 +31,7 @@ Or from `rust/`:
 cargo run --manifest-path ../examples/rust/get-merchant/Cargo.toml
 ```
 
-## Live integration test
+## Live integration test (facade crate)
 
 ```bash
 cd rust

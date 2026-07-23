@@ -79,9 +79,7 @@ pub fn emit_pyi_py(ir: &Ir) -> GenResult<String> {
         write_pydoc_block(&mut out, &doc, "    ");
         out.push_str("    ...\n");
     } else {
-        out.push_str(
-            "def verify_webhook(body: str, signature: str, secret: str) -> str: ...\n",
-        );
+        out.push_str("def verify_webhook(body: str, signature: str, secret: str) -> str: ...\n");
     }
 
     out.push_str(
@@ -222,8 +220,9 @@ mod tests {
             defaults: IrDefaults::default(),
             errors: vec![IrErrorKind::Api],
             docs: IrDocModel {
-                summary: "Check remaining usage/spend limits for a customer against a product's plan."
-                    .into(),
+                summary:
+                    "Check remaining usage/spend limits for a customer against a product's plan."
+                        .into(),
                 returns: Some(
                     "Current remaining limits, optionally including plan details.".into(),
                 ),
@@ -266,7 +265,9 @@ mod tests {
             .insert("checkLimits".into(), check_limits_ep());
         let out = emit_pyi_py(&ir).unwrap();
         // Both twins carry a docstring opener immediately after the signature.
-        assert!(out.contains("async def check_limits(self, args_json: str) -> str:\n        \"\"\""));
+        assert!(
+            out.contains("async def check_limits(self, args_json: str) -> str:\n        \"\"\"")
+        );
         assert!(
             out.contains("def check_limits_blocking(self, args_json: str) -> str:\n        \"\"\"")
         );
@@ -295,7 +296,8 @@ mod tests {
             }
             let name = &ep.names.py;
             if ep.availability.py.contains(&IrSyncKind::Async) {
-                let needle = format!("async def {name}(self, args_json: str) -> str:\n        \"\"\"");
+                let needle =
+                    format!("async def {name}(self, args_json: str) -> str:\n        \"\"\"");
                 assert!(out.contains(&needle), "missing docstring for async {name}");
             }
             if ep.availability.py.contains(&IrSyncKind::Sync) {

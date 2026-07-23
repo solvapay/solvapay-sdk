@@ -128,10 +128,31 @@ jobs:
       - name: cargo test
         run: cargo test --workspace
 
-      - name: solvapay facade blocking feature (Step 46)
+      - name: solvapay facade blocking feature (Step 46/47)
         run: |
           cargo build -p solvapay --features blocking
           cargo test -p solvapay --features blocking
+
+      - name: crates.io packageability (Step 48)
+        run: |
+          ./scripts/check-publish-graph.sh
+          # Leaf crate: full dry-run + verify (works before any crates.io upload).
+          # Dependents resolve versioned deps from the index after first publish.
+          cargo publish -p solvapay-dto --dry-run --allow-dirty
+
+      - name: solvapay facade docs.rs cfg (Step 48)
+        # docs.rs builds on nightly so `#![cfg_attr(docsrs, feature(doc_cfg))]` works.
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs'
+        run: |
+          rustup toolchain install nightly --profile minimal -c rust-docs
+          cargo +nightly doc -p solvapay --all-features --no-deps
+
+      - name: Rust example build+test (Step 48)
+        working-directory: .
+        run: |
+          cargo build --manifest-path examples/rust/get-merchant/Cargo.toml
+          cargo test --manifest-path examples/rust/get-merchant/Cargo.toml
 
       - name: Setup pnpm (shadow selftest)
         uses: pnpm/action-setup@v6
@@ -181,7 +202,9 @@ jobs:
             --native-rb-out bindings/ruby/lib/solvapay/_native.rb \
             --rb-client-out bindings/ruby/lib/solvapay/client.rb \
             --rb-rbs-out bindings/ruby/sig/solvapay.rbs \
-            --rb-parity-out bindings/ruby/test/signature_parity_generated_test.rb
+            --rb-parity-out bindings/ruby/test/signature_parity_generated_test.rb \
+            --rs-client-out crates/solvapay/src/client_generated.rs \
+            --rs-parity-out crates/solvapay/tests/signature_parity_generated.rs
           GENERATED_PATHS=(
             rust/crates/solvapay-dto
             packages/server/src/types/overlays.generated.d.ts
@@ -216,6 +239,9 @@ jobs:
             rust/bindings/ruby/lib/solvapay/helpers.generated.rb
             rust/bindings/ruby/sig/solvapay.rbs
             rust/bindings/ruby/test/signature_parity_generated_test.rb
+            rust/crates/solvapay/src/client_generated.rs
+            rust/crates/solvapay/src/blocking_generated.rs
+            rust/crates/solvapay/tests/signature_parity_generated.rs
           )
           if ! git -C .. diff --exit-code -- "${GENERATED_PATHS[@]}"; then
             echo "solvapay-dto / generated TS artifacts / binding-symbols dump are out of date — run:" >&2
@@ -239,7 +265,9 @@ jobs:
             echo "    --native-rb-out bindings/ruby/lib/solvapay/_native.rb \\" >&2
             echo "    --rb-client-out bindings/ruby/lib/solvapay/client.rb \\" >&2
             echo "    --rb-rbs-out bindings/ruby/sig/solvapay.rbs \\" >&2
-            echo "    --rb-parity-out bindings/ruby/test/signature_parity_generated_test.rb" >&2
+            echo "    --rb-parity-out bindings/ruby/test/signature_parity_generated_test.rb \\" >&2
+            echo "    --rs-client-out crates/solvapay/src/client_generated.rs \\" >&2
+            echo "    --rs-parity-out crates/solvapay/tests/signature_parity_generated.rs" >&2
             exit 1
           fi
 
@@ -276,7 +304,10 @@ jobs:
             bindings/ruby/lib/solvapay/client.rb \
             bindings/ruby/lib/solvapay/helpers.generated.rb \
             bindings/ruby/sig/solvapay.rbs \
-            bindings/ruby/test/signature_parity_generated_test.rb
+            bindings/ruby/test/signature_parity_generated_test.rb \
+            crates/solvapay/src/client_generated.rs \
+            crates/solvapay/src/blocking_generated.rs \
+            crates/solvapay/tests/signature_parity_generated.rs
           do
             if ! grep -q '@generated' "$f"; then
               echo "missing @generated header: $f" >&2

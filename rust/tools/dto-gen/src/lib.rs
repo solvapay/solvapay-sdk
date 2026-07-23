@@ -6,11 +6,13 @@ pub mod emit;
 pub mod emit_bindings_rs;
 pub mod emit_bindings_ts;
 pub mod emit_client_rb;
+pub mod emit_client_rs;
 pub mod emit_client_ts;
 pub mod emit_native_py;
 pub mod emit_native_rb;
 pub mod emit_parity_suite_py;
 pub mod emit_parity_suite_rb;
+pub mod emit_parity_suite_rs;
 pub mod emit_parity_suite_ts;
 pub mod emit_pyi_py;
 pub mod emit_rbs_rb;
@@ -30,11 +32,13 @@ pub use emit::{emit_crate, EmittedCrate};
 pub use emit_bindings_rs::{emit_bindings, EmittedBindings, Toolchain};
 pub use emit_bindings_ts::emit_native_ts;
 pub use emit_client_rb::{emit_client_rb, EmittedRubyPublic};
+pub use emit_client_rs::{emit_client_rs, EmittedRustClient};
 pub use emit_client_ts::emit_client_ts;
 pub use emit_native_py::emit_native_py;
 pub use emit_native_rb::emit_native_rb;
 pub use emit_parity_suite_py::emit_parity_suite_py;
 pub use emit_parity_suite_rb::emit_parity_suite_rb;
+pub use emit_parity_suite_rs::emit_parity_suite_rs;
 pub use emit_parity_suite_ts::emit_parity_suite_ts;
 pub use emit_pyi_py::emit_pyi_py;
 pub use emit_rbs_rb::emit_rbs_rb;
@@ -81,6 +85,8 @@ pub fn generate_from_snapshot(
     rb_client_out: Option<&Path>,
     rb_rbs_out: Option<&Path>,
     rb_parity_out: Option<&Path>,
+    rs_client_out: Option<&Path>,
+    rs_parity_out: Option<&Path>,
 ) -> GenResult<()> {
     let raw = fs::read_to_string(snapshot_path).map_err(|source| GenError::Io {
         path: snapshot_path.to_path_buf(),
@@ -247,6 +253,25 @@ pub fn generate_from_snapshot(
         let ruby = emit_parity_suite_rb(&ir)?;
         create_parent(rb_parity_path)?;
         write_file(rb_parity_path, &ruby)?;
+    }
+
+    if let Some(rs_client_path) = rs_client_out {
+        let rust = emit_client_rs(&ir)?;
+        create_parent(rs_client_path)?;
+        write_file(rs_client_path, &rust.client_generated_rs)?;
+        let parent = rs_client_path.parent().ok_or_else(|| {
+            GenError::Parse("--rs-client-out must have a parent directory".into())
+        })?;
+        let blocking_path = parent.join("blocking_generated.rs");
+        write_file(&blocking_path, &rust.blocking_generated_rs)?;
+        rustfmt_files(&[rs_client_path.to_path_buf(), blocking_path])?;
+    }
+
+    if let Some(rs_parity_path) = rs_parity_out {
+        let rust = emit_parity_suite_rs(&ir)?;
+        create_parent(rs_parity_path)?;
+        write_file(rs_parity_path, &rust)?;
+        rustfmt_files(&[rs_parity_path.to_path_buf()])?;
     }
 
     Ok(())

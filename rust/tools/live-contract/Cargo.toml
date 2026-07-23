@@ -1,0 +1,21 @@
+[package]
+name = "live-contract"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Step 48 live Rust contract driver (non-published)"
+publish = false
+
+[[bin]]
+name = "live-contract"
+path = "src/main.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+solvapay = { path = "../../crates/solvapay", features = ["blocking"] }
+solvapay-dto = { path = "../../crates/solvapay-dto" }
+
+[lints]
+workspace = true

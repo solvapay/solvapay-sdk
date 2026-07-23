@@ -2,7 +2,7 @@
 //!
 //! Idiomatic async-first API over [`solvapay_transport`] and [`solvapay_core`]:
 //! typed HTTP methods, paywall [`Client::gate`] ergonomics (§2.4), and an optional
-//! [`blocking`] module. Semantic decisions (limits, gate copy) stay in core; this
+//! `blocking` module. Semantic decisions (limits, gate copy) stay in core; this
 //! crate owns config, transport wiring, and host-side cache / dedup plumbing only.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]

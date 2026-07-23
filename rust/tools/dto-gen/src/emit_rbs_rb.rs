@@ -149,11 +149,7 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
         .collect();
     constants.sort_by(|left, right| left.ruby_target.name.cmp(&right.ruby_target.name));
     for entry in constants {
-        let _ = writeln!(
-            output,
-            "  {}: untyped",
-            entry.ruby_target.name
-        );
+        let _ = writeln!(output, "  {}: untyped", entry.ruby_target.name);
     }
 
     let helper_bindings = helper_bindings(ir);
@@ -313,7 +309,7 @@ mod tests {
     fn helper_params_come_from_binding_args_when_catalog_params_empty() {
         use crate::ir::{
             IrAvailability, IrBindingArg, IrBindingArtifact, IrBindingCall, IrDefaults, IrDocModel,
-            IrEnvelopeMode, IrEntrySection, IrErrorKind, IrExtractKind, IrLangNames, IrRubyTarget,
+            IrEntrySection, IrEnvelopeMode, IrErrorKind, IrExtractKind, IrLangNames, IrRubyTarget,
             IrSerializeKind, IrSyncKind, IrTypedStyle,
         };
 
@@ -410,8 +406,6 @@ mod tests {
             },
         );
         let output = emit_rbs_rb(&ir).unwrap();
-        assert!(output.contains(
-            "def self.derive_tax_id_type: (country: String) -> untyped"
-        ));
+        assert!(output.contains("def self.derive_tax_id_type: (country: String) -> untyped"));
     }
 }

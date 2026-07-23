@@ -4,8 +4,13 @@ version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Pure SolvaPay SDK logic — no HTTP, no tokio, no wasm-bindgen"
-publish = false
+readme = "README.md"
+publish = true
 
 [features]
 # Native consumers (napi, fixture-runner, shadow-invoker) keep full server surface.
@@ -24,7 +29,11 @@ serde_json = { workspace = true }
 hmac = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 subtle = { workspace = true, optional = true }
-solvapay-dto = { path = "../solvapay-dto" }
+solvapay-dto = { path = "../solvapay-dto", version = "0.1.0" }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]
 workspace = true

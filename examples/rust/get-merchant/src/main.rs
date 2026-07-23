@@ -6,6 +6,7 @@
 //! ```
 
 use solvapay::{Client, Config};
+use solvapay_example_get_merchant::run;
 use solvapay_rust_examples_env::load_get_merchant_dotenv;
 
 #[tokio::main(flavor = "current_thread")]
@@ -16,8 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("SOLVAPAY_SECRET_KEY is missing — copy .env.example to .env".into());
     }
     let client = Client::new(config).map_err(|err| format!("Client::new: {err:?}"))?;
-    let merchant = client
-        .get_merchant()
+    let merchant = run(&client)
         .await
         .map_err(|err| format!("get_merchant: {err:?}"))?;
     println!(

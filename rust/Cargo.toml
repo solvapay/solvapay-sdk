@@ -12,12 +12,17 @@ members = [
   "tools/dto-gen",
   "tools/fixture-runner",
   "tools/shadow-invoker",
+  "tools/live-contract",
 ]
 
 [workspace.package]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 rust-version = "1.96"
+repository = "https://github.com/solvapay/solvapay-sdk"
+homepage = "https://solvapay.com"
+keywords = ["solvapay", "payments", "sdk", "billing"]
+categories = ["api-bindings", "finance"]
 
 [workspace.dependencies]
 serde = { version = "1.0.228", features = ["derive"] }

@@ -4,12 +4,17 @@ version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "SolvaPay HTTP Transport trait, native reqwest/rustls, and WASM Fetch"
-publish = false
+readme = "README.md"
+publish = true
 
 [dependencies]
-solvapay-core = { path = "../solvapay-core" }
-solvapay-dto = { path = "../solvapay-dto" }
+solvapay-core = { path = "../solvapay-core", version = "0.1.0" }
+solvapay-dto = { path = "../solvapay-dto", version = "0.1.0" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
@@ -37,6 +42,10 @@ wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 wasm-bindgen-test = { workspace = true }
 web-sys = { workspace = true, features = ["Headers", "Request", "RequestInit", "Response"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]
 workspace = true

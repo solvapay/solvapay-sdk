@@ -5,8 +5,7 @@
 use std::sync::OnceLock;
 
 use solvapay_core::SdkError;
-use solvapay_dto::SdkMerchantResponseDto;
-use solvapay_transport::SharedTransport;
+use solvapay_transport::{ClientShell, SharedTransport};
 
 use crate::client::Client;
 use crate::config::Config;
@@ -52,9 +51,11 @@ impl BlockingClient {
         }
     }
 
-    /// `GET /v1/sdk/merchant` (blocking).
-    pub fn get_merchant(&self) -> Result<SdkMerchantResponseDto, SdkError> {
-        runtime().block_on(self.inner.get_merchant())
+    /// Builds a blocking client from a preconfigured [`ClientShell`].
+    pub fn with_shell(shell: ClientShell, config: Config) -> Self {
+        Self {
+            inner: Client::with_shell(shell, config),
+        }
     }
 
     /// Paywall gate (blocking).
@@ -67,6 +68,9 @@ impl BlockingClient {
         self.inner.payable(product, usage_type)
     }
 }
+
+#[path = "blocking_generated.rs"]
+mod blocking_generated;
 
 impl Allow {
     /// Records success usage (blocking).

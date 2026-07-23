@@ -50,6 +50,8 @@ fn emits_all_ruby_artifacts_identically_twice() {
             Some(&client),
             Some(&rbs),
             Some(&parity),
+            None,
+            None,
         )
         .expect("generate Ruby")
     };

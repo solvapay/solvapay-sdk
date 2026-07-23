@@ -775,6 +775,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
 
 [[package]]
+name = "live-contract"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "solvapay",
+ "solvapay-dto",
+]
+
+[[package]]
 name = "log"
 version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1483,12 +1493,16 @@ dependencies = [
 name = "solvapay"
 version = "0.1.0"
 dependencies = [
+ "fixture-runner",
+ "serde",
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
  "solvapay-rust-examples-env",
  "solvapay-transport",
  "tokio",
+ "walkdir",
+ "wiremock",
 ]
 
 [[package]]
