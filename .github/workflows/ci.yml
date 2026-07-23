@@ -539,6 +539,12 @@ jobs:
           bundle exec rake test
           bundle exec rbs validate
 
+      - name: Ruby type-strictness + lint (Step 45T / D18)
+        if: matrix.full
+        run: |
+          bundle exec steep check
+          bundle exec rubocop lib --no-parallel
+
       - name: Upload gem artifact
         uses: actions/upload-artifact@v4
         with:

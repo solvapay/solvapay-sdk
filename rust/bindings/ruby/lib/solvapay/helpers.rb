@@ -38,7 +38,7 @@ module SolvaPay
     attempt = 0
     loop do
       return operation.call
-    rescue StandardError => error
+    rescue StandardError => e
       delay_ms = NativeDispatch.call_sync(
         "retry_next_delay_ms",
         {
@@ -48,9 +48,9 @@ module SolvaPay
           "backoffStrategy" => backoff_strategy,
         },
       )
-      raise if delay_ms.nil? || (should_retry && !should_retry.call(error, attempt))
+      raise if delay_ms.nil? || (should_retry && !should_retry.call(e, attempt))
 
-      on_retry&.call(error, attempt, delay_ms)
+      on_retry&.call(e, attempt, delay_ms)
       sleeper.call(delay_ms.to_f / 1_000)
       attempt += 1
     end

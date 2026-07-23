@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "thread"
-
 module SolvaPay
   CUSTOMER_CACHE_TTL_MS = 60_000
   DEFAULT_LIMITS_CACHE_TTL_MS = 10_000
@@ -18,9 +16,9 @@ module SolvaPay
       @limits_cache_ttl = limits_cache_ttl
       @clock = clock || -> { (Time.now.to_f * 1_000).to_i }
       @mutex = Mutex.new
-      @customer_cache = {}
-      @customer_inflight = {}
-      @limits_cache = {}
+      @customer_cache = {} #: Hash[String, untyped]
+      @customer_inflight = {} #: Hash[String, untyped]
+      @limits_cache = {} #: Hash[String, untyped]
     end
 
     # Evaluate the paywall gate for a customer against a product.
@@ -85,7 +83,7 @@ module SolvaPay
         end
       end
 
-      if cached
+      if cached.is_a?(Hash)
         evaluation = NativeDispatch.call_sync(
           "evaluate_cached_limits",
           { "remaining" => cached.fetch(:remaining) },
@@ -94,7 +92,8 @@ module SolvaPay
           if evaluation["evict"]
             @limits_cache.delete(key)
           elsif evaluation["withinLimits"]
-            @limits_cache[key][:remaining] = evaluation["remaining"]
+            entry = @limits_cache[key]
+            entry[:remaining] = evaluation["remaining"] if entry.is_a?(Hash)
           end
         end
         return [evaluation["withinLimits"], evaluation["remaining"], cached[:limits]]
@@ -107,11 +106,14 @@ module SolvaPay
           "meterName" => usage_type,
         },
       )
-      limits = {} unless limits.is_a?(Hash)
+      unless limits.is_a?(Hash)
+        limits = {} #: Hash[String, untyped]
+      end
       evaluation = NativeDispatch.call_sync(
         "evaluate_fresh_limits",
         {
-          "withinLimits" => !!limits["withinLimits"],
+          # Coerce JSON truthiness to a bool for the decision core.
+          "withinLimits" => !!limits["withinLimits"], # rubocop:disable Style/DoubleNegation
           "remaining" => limits.fetch("remaining", 0),
         },
       )
@@ -139,8 +141,8 @@ module SolvaPay
         result = find_or_create_customer(customer_ref)
         publish_customer_lookup(customer_ref, state, result: result)
         result
-      rescue StandardError => error
-        publish_customer_lookup(customer_ref, state, error: error)
+      rescue StandardError => e
+        publish_customer_lookup(customer_ref, state, error: e)
         raise
       end
     end
@@ -194,9 +196,7 @@ module SolvaPay
       rescue SolvaPayError
         nil
       end
-      if existing.is_a?(Hash) && existing["customerRef"]
-        return existing["customerRef"].to_s
-      end
+      return existing["customerRef"].to_s if existing.is_a?(Hash) && existing["customerRef"]
 
       params = NativeDispatch.call_sync(
         "build_create_customer_params",
@@ -232,9 +232,11 @@ module SolvaPay
         nil
       end
       track_fail = lambda do |error, duration: nil, metadata: nil|
-        failure_metadata = (metadata || {}).dup
+        failure_metadata = {} #: Hash[String, untyped]
+        failure_metadata.merge!(metadata) if metadata.is_a?(Hash)
         failure_metadata["error"] = error.to_s
-        track_success.call(duration: duration, metadata: failure_metadata)
+        tracker = track_success #: untyped
+        tracker.call(duration: duration, metadata: failure_metadata)
       end
       PayableAllowResult.new(
         customer_ref: backend_ref,
@@ -261,18 +263,21 @@ module SolvaPay
       lambda do |*args, **kwargs, &block|
         customer_ref = kwargs[:customer_ref] || "anonymous"
         result = @facade.gate(customer_ref, product: @product, usage_type: @usage_type)
-        if result.kind == "paywall"
+        case result
+        when PayablePaywallResult
           raise PaywallError.new("Payment required", result.content)
+        when PayableAllowResult
+          begin
+            value = operation.call(*args, **kwargs, &block)
+          rescue StandardError => e
+            result.track_fail(e)
+            raise
+          end
+          result.track_success
+          value
+        else
+          raise SolvaPayError.new("unexpected gate result", code: "invalid_gate_result")
         end
-
-        begin
-          value = operation.call(*args, **kwargs, &block)
-        rescue StandardError => error
-          result.track_fail(error)
-          raise
-        end
-        result.track_success
-        value
       end
     end
   end
