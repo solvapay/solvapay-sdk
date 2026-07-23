@@ -1,4 +1,4 @@
-//! CLI: `dto-gen --snapshot <path> --out <dir> [--manifest <path>] [--ts-out <path>] [--ts-client-out <path>] [--ts-parity-out <path>] [--dump-bindings <path>] [--node-bindings-out <dir>] [--wasm-bindings-out <dir>] [--native-ts-out <file>] [--wasm-ts-out <file>]`
+//! CLI: `dto-gen --snapshot <path> --out <dir> [...binding outputs] [--native-rb-out <file>] [--rb-client-out <file>] [--rb-rbs-out <file>] [--rb-parity-out <file>]`
 
 use std::env;
 use std::path::PathBuf;
@@ -36,8 +36,17 @@ fn run() -> Result<(), GenError> {
     let mut dump_bindings: Option<PathBuf> = None;
     let mut node_bindings_out: Option<PathBuf> = None;
     let mut wasm_bindings_out: Option<PathBuf> = None;
+    let mut python_bindings_out: Option<PathBuf> = None;
+    let mut ruby_bindings_out: Option<PathBuf> = None;
     let mut native_ts_out: Option<PathBuf> = None;
     let mut wasm_ts_out: Option<PathBuf> = None;
+    let mut native_py_out: Option<PathBuf> = None;
+    let mut py_stub_out: Option<PathBuf> = None;
+    let mut py_parity_out: Option<PathBuf> = None;
+    let mut native_rb_out: Option<PathBuf> = None;
+    let mut rb_client_out: Option<PathBuf> = None;
+    let mut rb_rbs_out: Option<PathBuf> = None;
+    let mut rb_parity_out: Option<PathBuf> = None;
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -68,11 +77,38 @@ fn run() -> Result<(), GenError> {
             "--wasm-bindings-out" => {
                 wasm_bindings_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--python-bindings-out" => {
+                python_bindings_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--ruby-bindings-out" => {
+                ruby_bindings_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "--native-ts-out" => {
                 native_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
             "--wasm-ts-out" => {
                 wasm_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--native-py-out" => {
+                native_py_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--py-stub-out" => {
+                py_stub_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--py-parity-out" => {
+                py_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--native-rb-out" => {
+                native_rb_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--rb-client-out" => {
+                rb_client_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--rb-rbs-out" => {
+                rb_rbs_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--rb-parity-out" => {
+                rb_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
             "-h" | "--help" => return Err(GenError::Usage),
             _ => return Err(GenError::Usage),
@@ -90,7 +126,16 @@ fn run() -> Result<(), GenError> {
         dump_bindings.as_deref(),
         node_bindings_out.as_deref(),
         wasm_bindings_out.as_deref(),
+        python_bindings_out.as_deref(),
+        ruby_bindings_out.as_deref(),
         native_ts_out.as_deref(),
         wasm_ts_out.as_deref(),
+        native_py_out.as_deref(),
+        py_stub_out.as_deref(),
+        py_parity_out.as_deref(),
+        native_rb_out.as_deref(),
+        rb_client_out.as_deref(),
+        rb_rbs_out.as_deref(),
+        rb_parity_out.as_deref(),
     )
 }

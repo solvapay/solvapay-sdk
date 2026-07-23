@@ -1,0 +1,239 @@
+name: Publish Python (PyPI)
+
+# Separate from the npm Changesets workflow (`.github/workflows/publish.yml`).
+# Builds abi3 wheels via maturin for the §7.7 matrix, runs `check-wheels.py`,
+# then publishes with PyPI Trusted Publishing (OIDC).
+#
+# Default path publishes to TestPyPI (dry-run). Real PyPI publish is gated
+# behind `workflow_dispatch` input `publish_to_pypi=true` (or a `solvapay-python-v*`
+# tag once maintainers enable that path).
+#
+# Version stamping (§7.7):
+#   SOLVAPAY_RELEASE_VERSION → wheel / native `version()`
+#   SOLVAPAY_CORE_SHA        → `native_build_info().coreSha`
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release-train version for the wheel (e.g. 0.1.0)'
+        required: true
+        type: string
+        default: '0.1.0'
+      publish_to_pypi:
+        description: 'Publish to real PyPI (default: TestPyPI only)'
+        required: false
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'solvapay-python-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build-wheels:
+    name: build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: rust/bindings/python
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: manylinux-x86_64
+            os: ubuntu-latest
+            target: x86_64
+            manylinux: auto
+            maturin-args: --release --out dist
+          - platform: manylinux-aarch64
+            os: ubuntu-24.04-arm
+            target: aarch64
+            manylinux: auto
+            maturin-args: --release --out dist
+          - platform: musllinux-x86_64
+            os: ubuntu-latest
+            target: x86_64
+            manylinux: musllinux_1_1
+            maturin-args: --release --out dist
+          - platform: macos-universal2
+            os: macos-latest
+            target: universal2-apple-darwin
+            manylinux: ''
+            maturin-args: --release --out dist --target universal2-apple-darwin
+          - platform: win-amd64
+            os: windows-latest
+            target: x64
+            manylinux: ''
+            maturin-args: --release --out dist
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve version + core SHA
+        id: meta
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#solvapay-python-v}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "core_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp pyproject version
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os, re
+          path = Path("pyproject.toml")
+          version = os.environ["VERSION"]
+          text = path.read_text()
+          text = re.sub(r'^version = ".*"$', f'version = "{version}"', text, count=1, flags=re.M)
+          path.write_text(text)
+          PY
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+
+      - name: Build abi3 wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: ${{ matrix.maturin-args }}
+          working-directory: rust/bindings/python
+          sccache: 'true'
+        env:
+          SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+          SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-python-wheel-${{ matrix.platform }}
+          path: rust/bindings/python/dist/*.whl
+          if-no-files-found: error
+
+  build-sdist:
+    name: build sdist
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust/bindings/python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve version + core SHA
+        id: meta
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#solvapay-python-v}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "core_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp pyproject version
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os, re
+          path = Path("pyproject.toml")
+          version = os.environ["VERSION"]
+          text = path.read_text()
+          text = re.sub(r'^version = ".*"$', f'version = "{version}"', text, count=1, flags=re.M)
+          path.write_text(text)
+          PY
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+          working-directory: rust/bindings/python
+        env:
+          SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+          SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-python-sdist
+          path: rust/bindings/python/dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    needs:
+      - build-wheels
+      - build-sdist
+    defaults:
+      run:
+        working-directory: rust/bindings/python
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: rust/bindings/python/dist-in
+          pattern: publish-python-*
+          merge-multiple: true
+
+      - name: Collect wheels + sdist
+        shell: bash
+        run: |
+          mkdir -p dist
+          find dist-in -type f \( -name '*.whl' -o -name '*.tar.gz' \) -exec cp {} dist/ \;
+          ls -la dist
+
+      - name: check-wheels.py
+        run: python scripts/check-wheels.py --dir dist
+
+      - name: Publish to TestPyPI
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to_pypi != true }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: rust/bindings/python/dist
+          skip-existing: true
+
+      - name: Publish to PyPI
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_pypi == true) || startsWith(github.ref, 'refs/tags/solvapay-python-v') }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: rust/bindings/python/dist

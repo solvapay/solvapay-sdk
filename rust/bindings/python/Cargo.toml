@@ -1,0 +1,30 @@
+[package]
+name = "solvapay-python"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "PyO3 Python binding for solvapay-core (Step 40 scaffold)"
+publish = false
+
+[lib]
+name = "_solvapay"
+crate-type = ["cdylib"]
+
+[features]
+default = []
+# Enabled by maturin builds; omitted for `cargo test` so libpython links.
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+pyo3 = { version = "0.28.3", features = ["abi3-py39"] }
+pyo3-async-runtimes = { version = "0.28.0", features = ["tokio-runtime"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+solvapay-core = { path = "../../crates/solvapay-core" }
+solvapay-dto = { path = "../../crates/solvapay-dto" }
+solvapay-transport = { path = "../../crates/solvapay-transport" }
+
+[lints]
+workspace = true

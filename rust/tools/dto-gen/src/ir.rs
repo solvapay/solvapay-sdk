@@ -259,6 +259,97 @@ pub enum IrSyncKind {
     Sync,
 }
 
+/// Per-language callable availability for a catalog entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IrAvailability {
+    /// TypeScript modes.
+    pub ts: Vec<IrSyncKind>,
+    /// Python modes.
+    pub py: Vec<IrSyncKind>,
+    /// Ruby modes.
+    pub rb: Vec<IrSyncKind>,
+    /// Go modes.
+    pub go: Vec<IrSyncKind>,
+    /// Rust modes.
+    pub rust: Vec<IrSyncKind>,
+}
+
+/// Ruby public receiver/ownership kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrRubyReceiver {
+    /// `SolvaPay.helper` module function.
+    ModuleFunction,
+    /// `SolvaPay::Client#operation`.
+    ClientInstance,
+    /// High-level facade instance method such as `sp.gate`.
+    FacadeInstance,
+    /// Public exception class constructor.
+    ErrorClass,
+    /// Public Ruby constant.
+    Constant,
+}
+
+/// Normalized Ruby target consumed by Ruby emitters.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IrRubyTarget {
+    /// Public owner (`SolvaPay`, `SolvaPay::Client`, or `SolvaPay::Facade`).
+    pub owner: String,
+    /// Method/constant name without owner syntax.
+    pub name: String,
+    /// Receiver kind.
+    pub receiver: IrRubyReceiver,
+    /// Whether the public method accepts a block.
+    pub takes_block: bool,
+}
+
+/// Manifest-frozen runtime defaults used by parity/facade emitters.
+#[derive(Debug, Clone, PartialEq)]
+pub struct IrDefaults {
+    /// Retry attempts after the initial call.
+    pub max_retries: u32,
+    /// Initial retry delay in milliseconds.
+    pub initial_delay_ms: u64,
+    /// Webhook timestamp tolerance in seconds.
+    pub webhook_tolerance_sec: i64,
+    /// Limits-cache TTL in milliseconds.
+    pub limits_cache_ttl_ms: u64,
+}
+
+impl Default for IrDefaults {
+    fn default() -> Self {
+        Self {
+            max_retries: 2,
+            initial_delay_ms: 500,
+            webhook_tolerance_sec: 300,
+            limits_cache_ttl_ms: 10_000,
+        }
+    }
+}
+
+/// Stable public error categories represented at every language boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrErrorKind {
+    /// Backend API failure.
+    Api,
+    /// Structured payment gate.
+    Paywall,
+    /// Webhook verification failure.
+    Webhook,
+    /// Transport/internal boundary failure.
+    Transport,
+}
+
+/// Language-neutral doc model for one catalogued entry point (§5.6, D19).
+///
+/// Per-parameter descriptions stay on [`IrParam::doc`].
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct IrDocModel {
+    /// Required non-empty summary (coverage gate).
+    pub summary: String,
+    /// Optional return description.
+    pub returns: Option<String>,
+}
+
 /// One catalogued public entry point (§5.6).
 #[derive(Debug, Clone, PartialEq)]
 pub struct IrEntryPoint {
@@ -278,8 +369,18 @@ pub struct IrEntryPoint {
     pub request: Option<String>,
     /// Response DTO / overlay name.
     pub response: Option<String>,
-    /// TypeScript sync kind.
+    /// Typed per-language sync/async availability.
+    pub availability: IrAvailability,
+    /// TypeScript primary mode retained for existing TypeScript emitters.
     pub sync_ts: IrSyncKind,
+    /// Normalized Ruby owner/receiver/signature target.
+    pub ruby_target: IrRubyTarget,
+    /// Manifest-frozen runtime defaults.
+    pub defaults: IrDefaults,
+    /// Stable public errors this entry can reconstruct.
+    pub errors: Vec<IrErrorKind>,
+    /// Shared language-neutral doc model (§5.6 / D19).
+    pub docs: IrDocModel,
 }
 
 /// Per-language names in IR.
@@ -300,8 +401,10 @@ pub struct IrLangNames {
 /// One IR parameter.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IrParam {
-    /// Parameter name.
+    /// Canonical/wire parameter name.
     pub name: String,
+    /// Per-language public parameter names.
+    pub names: IrLangNames,
     /// Required vs optional.
     pub required: bool,
     /// Type reference (may be Named for inline objects materialized as helpers).

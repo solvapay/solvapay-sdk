@@ -1,10 +1,19 @@
 //! OpenAPI snapshot + SDK contract manifest → `solvapay-dto` generator.
 
+pub mod doc_coverage;
+pub mod doc_render;
 pub mod emit;
 pub mod emit_bindings_rs;
 pub mod emit_bindings_ts;
+pub mod emit_client_rb;
 pub mod emit_client_ts;
+pub mod emit_native_py;
+pub mod emit_native_rb;
+pub mod emit_parity_suite_py;
+pub mod emit_parity_suite_rb;
 pub mod emit_parity_suite_ts;
+pub mod emit_pyi_py;
+pub mod emit_rbs_rb;
 pub mod emit_ts;
 pub mod error;
 pub mod ir;
@@ -16,11 +25,19 @@ pub mod manifest;
 pub mod name;
 pub mod parse;
 
+pub use doc_coverage::check_doc_coverage;
 pub use emit::{emit_crate, EmittedCrate};
 pub use emit_bindings_rs::{emit_bindings, EmittedBindings, Toolchain};
 pub use emit_bindings_ts::emit_native_ts;
+pub use emit_client_rb::{emit_client_rb, EmittedRubyPublic};
 pub use emit_client_ts::emit_client_ts;
+pub use emit_native_py::emit_native_py;
+pub use emit_native_rb::emit_native_rb;
+pub use emit_parity_suite_py::emit_parity_suite_py;
+pub use emit_parity_suite_rb::emit_parity_suite_rb;
 pub use emit_parity_suite_ts::emit_parity_suite_ts;
+pub use emit_pyi_py::emit_pyi_py;
+pub use emit_rbs_rb::emit_rbs_rb;
 pub use emit_ts::emit_overlays_ts;
 pub use error::{GenError, GenResult};
 pub use ir::Ir;
@@ -53,8 +70,17 @@ pub fn generate_from_snapshot(
     dump_bindings: Option<&Path>,
     node_bindings_out: Option<&Path>,
     wasm_bindings_out: Option<&Path>,
+    python_bindings_out: Option<&Path>,
+    ruby_bindings_out: Option<&Path>,
     native_ts_out: Option<&Path>,
     wasm_ts_out: Option<&Path>,
+    native_py_out: Option<&Path>,
+    py_stub_out: Option<&Path>,
+    py_parity_out: Option<&Path>,
+    native_rb_out: Option<&Path>,
+    rb_client_out: Option<&Path>,
+    rb_rbs_out: Option<&Path>,
+    rb_parity_out: Option<&Path>,
 ) -> GenResult<()> {
     let raw = fs::read_to_string(snapshot_path).map_err(|source| GenError::Io {
         path: snapshot_path.to_path_buf(),
@@ -74,6 +100,7 @@ pub fn generate_from_snapshot(
         lower_overlays(&mut ir, &manifest)?;
         lower_errors(&mut ir, &manifest)?;
         lower_catalog(&mut ir, &manifest)?;
+        check_doc_coverage(&ir)?;
         lower_bindings(&mut ir, &manifest)?;
     }
 
@@ -134,6 +161,16 @@ pub fn generate_from_snapshot(
         write_binding_shims(dir, &emitted, "wasm_client.rs")?;
     }
 
+    if let Some(dir) = python_bindings_out {
+        let emitted = emit_bindings(&ir, Toolchain::Python)?;
+        write_python_shim(dir, &emitted)?;
+    }
+
+    if let Some(dir) = ruby_bindings_out {
+        let emitted = emit_bindings(&ir, Toolchain::Ruby)?;
+        write_ruby_shim(dir, &emitted)?;
+    }
+
     if let Some(native_ts_path) = native_ts_out {
         let ts = emit_native_ts(&ir, Toolchain::Node)?;
         if let Some(parent) = native_ts_path.parent() {
@@ -156,6 +193,127 @@ pub fn generate_from_snapshot(
         write_file(wasm_ts_path, &ts)?;
     }
 
+    if let Some(native_py_path) = native_py_out {
+        let py = emit_native_py(&ir)?;
+        if let Some(parent) = native_py_path.parent() {
+            fs::create_dir_all(parent).map_err(|source| GenError::Io {
+                path: parent.to_path_buf(),
+                source,
+            })?;
+        }
+        write_file(native_py_path, &py)?;
+    }
+
+    if let Some(py_stub_path) = py_stub_out {
+        let pyi = emit_pyi_py(&ir)?;
+        create_parent(py_stub_path)?;
+        write_file(py_stub_path, &pyi)?;
+    }
+
+    if let Some(py_parity_path) = py_parity_out {
+        let py = emit_parity_suite_py(&ir)?;
+        if let Some(parent) = py_parity_path.parent() {
+            fs::create_dir_all(parent).map_err(|source| GenError::Io {
+                path: parent.to_path_buf(),
+                source,
+            })?;
+        }
+        write_file(py_parity_path, &py)?;
+    }
+
+    if let Some(native_rb_path) = native_rb_out {
+        let ruby = emit_native_rb(&ir)?;
+        create_parent(native_rb_path)?;
+        write_file(native_rb_path, &ruby)?;
+    }
+
+    if let Some(rb_client_path) = rb_client_out {
+        let ruby = emit_client_rb(&ir)?;
+        create_parent(rb_client_path)?;
+        write_file(rb_client_path, &ruby.client_rb)?;
+        let parent = rb_client_path.parent().ok_or_else(|| {
+            GenError::Parse("--rb-client-out must have a parent directory".into())
+        })?;
+        write_file(&parent.join("helpers.generated.rb"), &ruby.helpers_rb)?;
+    }
+
+    if let Some(rb_rbs_path) = rb_rbs_out {
+        let rbs = emit_rbs_rb(&ir)?;
+        create_parent(rb_rbs_path)?;
+        write_file(rb_rbs_path, &rbs)?;
+    }
+
+    if let Some(rb_parity_path) = rb_parity_out {
+        let ruby = emit_parity_suite_rb(&ir)?;
+        create_parent(rb_parity_path)?;
+        write_file(rb_parity_path, &ruby)?;
+    }
+
+    Ok(())
+}
+
+fn create_parent(path: &Path) -> GenResult<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|source| GenError::Io {
+            path: parent.to_path_buf(),
+            source,
+        })?;
+    }
+    Ok(())
+}
+
+/// Writes + rustfmts all generated Step 44 Ruby binding shims.
+///
+/// # Errors
+///
+/// Returns [`GenError::Io`] on write failures or [`GenError::Parse`] if rustfmt
+/// is unavailable.
+fn write_ruby_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
+    fs::create_dir_all(dir).map_err(|source| GenError::Io {
+        path: dir.to_path_buf(),
+        source,
+    })?;
+    let paths = [
+        dir.join("args.rs"),
+        dir.join("decisions.rs"),
+        dir.join("payload_builders.rs"),
+        dir.join("client.rs"),
+        dir.join("register.rs"),
+    ];
+    write_file(&paths[0], &emitted.args_rs)?;
+    write_file(&paths[1], &emitted.decisions_rs)?;
+    write_file(&paths[2], &emitted.payload_builders_rs)?;
+    write_file(&paths[3], &emitted.client_rs)?;
+    write_file(&paths[4], &emitted.register_rs)?;
+    rustfmt_files(&paths)?;
+    Ok(())
+}
+
+/// Writes + rustfmts the Step 41 Python binding shims (`args` / `decisions` /
+/// `payload_builders` / `client` / `register`).
+///
+/// # Errors
+///
+/// Returns [`GenError::Io`] on write failures or [`GenError::Parse`] if rustfmt
+/// is unavailable.
+fn write_python_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
+    fs::create_dir_all(dir).map_err(|source| GenError::Io {
+        path: dir.to_path_buf(),
+        source,
+    })?;
+    let paths = [
+        dir.join("args.rs"),
+        dir.join("decisions.rs"),
+        dir.join("payload_builders.rs"),
+        dir.join("client.rs"),
+        dir.join("register.rs"),
+    ];
+    write_file(&paths[0], &emitted.args_rs)?;
+    write_file(&paths[1], &emitted.decisions_rs)?;
+    write_file(&paths[2], &emitted.payload_builders_rs)?;
+    write_file(&paths[3], &emitted.client_rs)?;
+    write_file(&paths[4], &emitted.register_rs)?;
+    rustfmt_files(&paths)?;
     Ok(())
 }
 

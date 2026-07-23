@@ -298,6 +298,15 @@ const GlobalShadow = z
     ],
   })
 
+/** Shared IR doc model authored once in the manifest (§5.6 / D19 / step 18T). */
+const DocsDefSchema = z
+  .object({
+    summary: z.string().min(1).optional(),
+    params: z.record(z.string(), z.string().min(1)).default({}),
+    returns: z.string().min(1).optional(),
+  })
+  .default({ params: {} })
+
 const Operation = z.object({
   route: z.object({
     method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
@@ -319,6 +328,8 @@ const Operation = z.object({
     cases: z.array(ErrorCase).default([]),
   }),
   sync: ClientSyncMatrix,
+  /** Language-neutral docs for TSDoc / docstring / YARD / godoc / rustdoc emitters. */
+  docs: DocsDefSchema,
 })
 
 const NamedEntry = z.object({
@@ -328,6 +339,8 @@ const NamedEntry = z.object({
   params: z.array(ParamDefSchema).default([]),
   /** Generic type parameters (e.g. withRetry&lt;T&gt;). */
   typeParams: z.array(TypeParamSchema).optional(),
+  /** Language-neutral docs for TSDoc / docstring / YARD / godoc / rustdoc emitters. */
+  docs: DocsDefSchema,
 })
 
 /** Boundary type vocabulary for §5.7 JSON-arg extractors. */

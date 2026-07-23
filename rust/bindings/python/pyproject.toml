@@ -1,0 +1,75 @@
+[build-system]
+requires = ["maturin>=1.8,<2"]
+build-backend = "maturin"
+
+[project]
+name = "solvapay"
+version = "0.1.0"
+description = "SolvaPay Python SDK (PyO3 binding)"
+requires-python = ">=3.9"
+classifiers = [
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24"]
+typecheck = [
+  "mypy==1.17.1",
+  "pyright==1.1.411",
+  "ruff==0.12.4",
+]
+
+[tool.maturin]
+bindings = "pyo3"
+module-name = "solvapay._solvapay"
+python-source = "python"
+features = ["extension-module"]
+include = [
+  "python/solvapay/py.typed",
+  "python/solvapay/*.pyi",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+# D18: no explicit Any on the public stub surface.
+disallow_any_explicit = true
+python_version = "3.12"
+# Public surface only — generated + hand-written stubs (D18). Implementation
+# bodies stay behind .pyi so internal Any in facade.py is not a consumer leak.
+files = [
+  "python/solvapay/__init__.pyi",
+  "python/solvapay/facade.pyi",
+  "python/solvapay/results.pyi",
+  "python/solvapay/errors.pyi",
+  "python/solvapay/_solvapay.pyi",
+]
+warn_unused_ignores = true
+mypy_path = "python"
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+src = ["python"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B010: setattr on SolvaPayError is intentional (native exception attrs).
+ignore = ["B010"]
+
+[tool.ruff.lint.per-file-ignores]
+# Generated artefacts — drift-checked / typed separately; not a lint surface.
+"python/solvapay/_native.py" = ["E", "F", "I", "UP", "B"]
+# Stub files: keep generator/hand-authored import layout stable.
+"python/solvapay/*.pyi" = ["I"]

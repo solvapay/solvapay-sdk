@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+
+# Step 45T — steep check against generated RBS (D18).
+# Use the default strict diagnostic set (not `all_error`): open-module files
+# (`errors.rb` / `helpers.rb` / …) otherwise report MethodDefinitionMissing for
+# methods implemented in sibling files under the same `module SolvaPay`.
+target :lib do
+  signature "sig"
+  check "lib"
+end

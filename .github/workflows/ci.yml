@@ -107,6 +107,12 @@ jobs:
         # rust-toolchain.toml pins channel, clippy, rustfmt, wasm32-unknown-unknown
         run: rustup show
 
+      # Magnus/rb-sys (Step 43) needs Ruby headers for workspace build/test/clippy.
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
       - name: cargo fmt
         run: cargo fmt --all -- --check
 
@@ -121,6 +127,11 @@ jobs:
 
       - name: cargo test
         run: cargo test --workspace
+
+      - name: solvapay facade blocking feature (Step 46)
+        run: |
+          cargo build -p solvapay --features blocking
+          cargo test -p solvapay --features blocking
 
       - name: Setup pnpm (shadow selftest)
         uses: pnpm/action-setup@v6
@@ -142,6 +153,12 @@ jobs:
         working-directory: .
         run: pnpm shadow:selftest
 
+      - name: doc-comment coverage gate
+        # Surface-agnostic IR check (§5.6 / D19 / step 18T): every catalogued
+        # entry point must have a non-empty docs.summary. Generation itself also
+        # fails on uncovered entries; this named step makes the signal explicit.
+        run: cargo test -q -p dto-gen --lib doc_coverage -- --nocapture
+
       - name: solvapay-dto regen drift
         run: |
           cargo run -q -p dto-gen -- \
@@ -154,8 +171,17 @@ jobs:
             --dump-bindings ../contract/manifest/binding-symbols.snapshot.json \
             --node-bindings-out bindings/node/src \
             --wasm-bindings-out bindings/wasm/src \
+            --python-bindings-out bindings/python/src \
+            --ruby-bindings-out bindings/ruby/ext/solvapay/src \
             --native-ts-out ../packages/server/src/native.ts \
-            --wasm-ts-out ../packages/server/src/wasm.ts
+            --wasm-ts-out ../packages/server/src/wasm.ts \
+            --native-py-out bindings/python/python/solvapay/_native.py \
+            --py-stub-out bindings/python/python/solvapay/__init__.pyi \
+            --py-parity-out bindings/python/tests/signature_parity_generated_test.py \
+            --native-rb-out bindings/ruby/lib/solvapay/_native.rb \
+            --rb-client-out bindings/ruby/lib/solvapay/client.rb \
+            --rb-rbs-out bindings/ruby/sig/solvapay.rbs \
+            --rb-parity-out bindings/ruby/test/signature_parity_generated_test.rb
           GENERATED_PATHS=(
             rust/crates/solvapay-dto
             packages/server/src/types/overlays.generated.d.ts
@@ -172,6 +198,24 @@ jobs:
             rust/bindings/wasm/src/decisions.rs
             rust/bindings/wasm/src/payload_builders.rs
             rust/bindings/wasm/src/wasm_client.rs
+            rust/bindings/python/src/args.rs
+            rust/bindings/python/src/decisions.rs
+            rust/bindings/python/src/payload_builders.rs
+            rust/bindings/python/src/client.rs
+            rust/bindings/python/src/register.rs
+            rust/bindings/python/python/solvapay/_native.py
+            rust/bindings/python/python/solvapay/__init__.pyi
+            rust/bindings/python/tests/signature_parity_generated_test.py
+            rust/bindings/ruby/ext/solvapay/src/args.rs
+            rust/bindings/ruby/ext/solvapay/src/decisions.rs
+            rust/bindings/ruby/ext/solvapay/src/payload_builders.rs
+            rust/bindings/ruby/ext/solvapay/src/client.rs
+            rust/bindings/ruby/ext/solvapay/src/register.rs
+            rust/bindings/ruby/lib/solvapay/_native.rb
+            rust/bindings/ruby/lib/solvapay/client.rb
+            rust/bindings/ruby/lib/solvapay/helpers.generated.rb
+            rust/bindings/ruby/sig/solvapay.rbs
+            rust/bindings/ruby/test/signature_parity_generated_test.rb
           )
           if ! git -C .. diff --exit-code -- "${GENERATED_PATHS[@]}"; then
             echo "solvapay-dto / generated TS artifacts / binding-symbols dump are out of date — run:" >&2
@@ -185,8 +229,17 @@ jobs:
             echo "    --dump-bindings ../contract/manifest/binding-symbols.snapshot.json \\" >&2
             echo "    --node-bindings-out bindings/node/src \\" >&2
             echo "    --wasm-bindings-out bindings/wasm/src \\" >&2
+            echo "    --python-bindings-out bindings/python/src \\" >&2
+            echo "    --ruby-bindings-out bindings/ruby/ext/solvapay/src \\" >&2
             echo "    --native-ts-out ../packages/server/src/native.ts \\" >&2
-            echo "    --wasm-ts-out ../packages/server/src/wasm.ts" >&2
+            echo "    --wasm-ts-out ../packages/server/src/wasm.ts \\" >&2
+            echo "    --native-py-out bindings/python/python/solvapay/_native.py \\" >&2
+            echo "    --py-stub-out bindings/python/python/solvapay/__init__.pyi \\" >&2
+            echo "    --py-parity-out bindings/python/tests/signature_parity_generated_test.py \\" >&2
+            echo "    --native-rb-out bindings/ruby/lib/solvapay/_native.rb \\" >&2
+            echo "    --rb-client-out bindings/ruby/lib/solvapay/client.rb \\" >&2
+            echo "    --rb-rbs-out bindings/ruby/sig/solvapay.rbs \\" >&2
+            echo "    --rb-parity-out bindings/ruby/test/signature_parity_generated_test.rb" >&2
             exit 1
           fi
 
@@ -205,7 +258,25 @@ jobs:
             bindings/wasm/src/args.rs \
             bindings/wasm/src/decisions.rs \
             bindings/wasm/src/payload_builders.rs \
-            bindings/wasm/src/wasm_client.rs
+            bindings/wasm/src/wasm_client.rs \
+            bindings/python/src/args.rs \
+            bindings/python/src/decisions.rs \
+            bindings/python/src/payload_builders.rs \
+            bindings/python/src/client.rs \
+            bindings/python/src/register.rs \
+            bindings/python/python/solvapay/_native.py \
+            bindings/python/python/solvapay/__init__.pyi \
+            bindings/python/tests/signature_parity_generated_test.py \
+            bindings/ruby/ext/solvapay/src/args.rs \
+            bindings/ruby/ext/solvapay/src/decisions.rs \
+            bindings/ruby/ext/solvapay/src/payload_builders.rs \
+            bindings/ruby/ext/solvapay/src/client.rs \
+            bindings/ruby/ext/solvapay/src/register.rs \
+            bindings/ruby/lib/solvapay/_native.rb \
+            bindings/ruby/lib/solvapay/client.rb \
+            bindings/ruby/lib/solvapay/helpers.generated.rb \
+            bindings/ruby/sig/solvapay.rbs \
+            bindings/ruby/test/signature_parity_generated_test.rb
           do
             if ! grep -q '@generated' "$f"; then
               echo "missing @generated header: $f" >&2
@@ -260,6 +331,249 @@ jobs:
 
       - name: fixture suite (bound pure-core suites; unbound skipped)
         run: cargo run -q -p fixture-runner -- ../contract/fixtures
+
+  # Step 40 — PyO3/maturin Python binding abi3 wheel matrix (§7.7) + artifact gate.
+  python-binding:
+    name: python-binding (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: rust/bindings/python
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: manylinux-x86_64
+            os: ubuntu-latest
+            target: x86_64
+            manylinux: auto
+            maturin-args: --release --out dist
+            smoke: true
+          - platform: manylinux-aarch64
+            os: ubuntu-24.04-arm
+            target: aarch64
+            manylinux: auto
+            maturin-args: --release --out dist
+            smoke: false
+          - platform: musllinux-x86_64
+            os: ubuntu-latest
+            target: x86_64
+            manylinux: musllinux_1_1
+            maturin-args: --release --out dist
+            smoke: false
+          - platform: macos-universal2
+            os: macos-latest
+            target: universal2-apple-darwin
+            manylinux: ''
+            maturin-args: --release --out dist --target universal2-apple-darwin
+            smoke: true
+          - platform: win-amd64
+            os: windows-latest
+            target: x64
+            manylinux: ''
+            maturin-args: --release --out dist
+            smoke: true
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Rust toolchain
+        working-directory: rust
+        run: rustup show
+
+      - name: Build abi3 wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: ${{ matrix.maturin-args }}
+          working-directory: rust/bindings/python
+          sccache: 'true'
+
+      - name: cargo test -p solvapay-python
+        if: matrix.smoke
+        working-directory: rust
+        run: cargo test -p solvapay-python --lib
+
+      - name: Fresh-venv pytest smoke
+        if: matrix.smoke
+        shell: bash
+        run: |
+          python -m venv .ci-venv
+          if [ -f .ci-venv/Scripts/pip ]; then
+            PIP=.ci-venv/Scripts/pip
+            PY=.ci-venv/Scripts/python
+            PYTEST=.ci-venv/Scripts/pytest
+          else
+            PIP=.ci-venv/bin/pip
+            PY=.ci-venv/bin/python
+            PYTEST=.ci-venv/bin/pytest
+          fi
+          "$PIP" install -U pip
+          wheel="$(ls dist/*.whl | head -n1)"
+          "$PIP" install "${wheel}[dev,typecheck]"
+          # Offline Python golden-fixture contract suite (Step 42) + smoke/parity.
+          "$PYTEST" -q
+          # Step 42T — strictness against the *installed* package (generated .pyi + facade).
+          "$PY" -c "import solvapay, pathlib; p=pathlib.Path(solvapay.__file__).parent; assert (p/'py.typed').is_file(), 'missing py.typed'; assert (p/'__init__.pyi').is_file(), 'missing __init__.pyi'"
+          "$PY" -m mypy --strict --disallow-any-explicit \
+            python/solvapay/__init__.pyi \
+            python/solvapay/facade.pyi \
+            python/solvapay/results.pyi \
+            python/solvapay/errors.pyi \
+            python/solvapay/_solvapay.pyi
+          "$PY" -m pyright
+          "$PY" -m ruff check python/solvapay
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheel-${{ matrix.platform }}
+          path: rust/bindings/python/dist/*.whl
+          if-no-files-found: error
+
+  python-binding-artifacts:
+    name: python-binding artifact gate
+    runs-on: ubuntu-latest
+    needs:
+      - python-binding
+    defaults:
+      run:
+        working-directory: rust/bindings/python
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download all python wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: rust/bindings/python/wheels
+          pattern: python-wheel-*
+          merge-multiple: true
+
+      - name: Pre-publish wheel gate (hard-fail)
+        run: python3 scripts/check-wheels.py --dir wheels
+
+  # Step 43 — Magnus/rb-sys Ruby binding platform matrix (§7.7) + artifact gate.
+  # Native hosts only for the scaffold: current rb-sys-dock images ship Ruby 4.0
+  # host + incomplete 3.3 toolchains, which break Magnus 0.7. Cross-compile via
+  # scripts/dock-build.sh lands when the dock image/Magnus stack align (Step 45).
+  ruby-binding:
+    name: ruby-binding (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: rust/bindings/ruby
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x86_64-linux
+            os: ubuntu-latest
+            smoke: true
+            full: true
+          - platform: aarch64-linux
+            os: ubuntu-24.04-arm
+            smoke: false
+            full: false
+          - platform: x86_64-darwin
+            os: macos-13
+            smoke: false
+            full: false
+          - platform: arm64-darwin
+            os: macos-latest
+            smoke: true
+            full: false
+          - platform: x64-mingw-ucrt
+            os: windows-latest
+            smoke: true
+            full: false
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby + Rust
+        uses: oxidize-rb/actions/setup-ruby-and-rust@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          cargo-cache: true
+          working-directory: rust/bindings/ruby
+
+      - name: Bundle install
+        run: bundle install
+
+      - name: Native platform gem
+        run: bundle exec rake native gem
+
+      - name: cargo test -p solvapay-ruby
+        if: matrix.smoke
+        working-directory: rust
+        run: cargo test -p solvapay-ruby --lib
+
+      - name: Source-gem compile + smoke
+        shell: bash
+        run: |
+          bundle exec rake compile
+          bundle exec ruby -Itest -Ilib test/smoke_test.rb
+
+      - name: Full Ruby suite + RBS
+        if: matrix.full
+        run: |
+          bundle exec rake test
+          bundle exec rbs validate
+
+      - name: Upload gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruby-gem-${{ matrix.platform }}
+          path: rust/bindings/ruby/pkg/*.gem
+          if-no-files-found: error
+
+  ruby-binding-artifacts:
+    name: ruby-binding artifact gate
+    runs-on: ubuntu-latest
+    needs:
+      - ruby-binding
+    defaults:
+      run:
+        working-directory: rust/bindings/ruby
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Download all ruby gem artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: rust/bindings/ruby/gems
+          pattern: ruby-gem-*
+          merge-multiple: true
+
+      - name: Pre-publish gem gate (hard-fail)
+        run: ruby scripts/check-gems.rb --dir gems
 
   # Step 36 — napi-rs Node binding platform matrix (§7.7) + artifact gate.
   node-binding:

@@ -26,7 +26,11 @@ pub enum GenError {
         "usage: dto-gen --snapshot <sdk-v1.snapshot.json> --out <crates/solvapay-dto/src> \
          [--manifest <sdk-contract.yaml>] [--ts-out <overlays.generated.d.ts>] \
          [--ts-client-out <client.generated.d.ts>] \
-         [--ts-parity-out <signature-parity.generated.test.ts>]"
+         [--ts-parity-out <signature-parity.generated.test.ts>] \
+         [--native-py-out <_native.py>] [--py-stub-out <__init__.pyi>] \
+         [--py-parity-out <signature_parity_generated_test.py>] \
+         [--native-rb-out <_native.rb>] [--rb-client-out <client.rb>] \
+         [--rb-rbs-out <solvapay.rbs>] [--rb-parity-out <signature-parity.rb>]"
     )]
     Usage,
 
@@ -41,6 +45,16 @@ pub enum GenError {
         name: String,
         /// Why emission failed.
         detail: String,
+    },
+
+    /// One or more catalogued entry points lack a non-empty `docs.summary` (§5.6 / D19).
+    #[error(
+        "doc-comment coverage: missing non-empty docs.summary for: {}",
+        missing.join(", ")
+    )]
+    DocCoverage {
+        /// Sorted catalog ids missing a usable summary.
+        missing: Vec<String>,
     },
 }
 

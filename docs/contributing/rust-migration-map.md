@@ -7,7 +7,7 @@ Living **state / progress / handoff** layer for the Rust core SDK redesign. Comp
 
 Session workflow (redesign §14): pick the next incomplete step in redesign §9 → implement only that step → prove its "done when" → update **this map** (status + handoff bullets). At each phase close, finalize that phase's handoff entry before opening the next phase's first PR.
 
-**Current progress (2026-07-23):** Steps 1–38 **Done**; Step **37R Done** (a–e); Step **38R Done** (a–g); Step 39 **In progress** (local host-native + WASI clean-install green; awaiting full CI matrix); Step **39G-a Done** — binding-boundary IR + manifest `bindings:` (102 symbols), Zod schema, `Ir.binding_symbols` lowering, bidirectional reconciliation gate, `--dump-bindings` snapshot + CI drift (§15 note 40); Step **39G-b Done** — Rust shim emitters (napi + wasm) regenerate the eight committed 37R/38R shim files byte-identical below the `@generated` header; CI regen-drift + `@generated` header gate cover the shims (§15 note 41); Step **39G-c Done** — native-side TS marshalling emitters regenerate `native.ts` / `wasm.ts` byte-identical below the `@generated` header; CI gates cover both files; both-flag server/core/mcp-core suites green; `pnpm delegation:check` unchanged (§15 note 42). Phase 6 closes when Step 39 CI is green. **Next:** land Step 39 CI matrix green → Phase 6 close → Phase 6G complete → Step 40 (PyO3 scaffold).
+**Current progress (2026-07-23):** Steps 1–38 **Done**; Step **37R Done** (a–e); Step **38R Done** (a–g); Step 39 **In progress** (local host-native + WASI clean-install green; awaiting full CI matrix); Step **39G-a/b/c Done** (§15 notes 40–42); Steps **40–42 Done** — Phase 7 **closed** (§15 notes 43–45); Steps **43–45 Done** — Phase 8 **closed** (§15 notes 46–48); Step **46 Done** — Phase 9 opened (§15 note 49); Step **18T Done** — shared IR doc model + TSDoc + coverage CI gate (§15 note 50); Step **42T Done** — Python `.pyi` + `py.typed` + `mypy`/`pyright`/`ruff` strictness + docstring coverage (§15 note 51). Phase 6 closes when Step 39 CI is green. Phase 6G **closed**. **Next:** Step 47 (generated Rust facade signatures + signature-parity suite; includes rustdoc from 18T model).
 
 ## Status legend
 
@@ -40,6 +40,7 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 16 | SDK-only overlays | Phase 2 | Done | — | `overlays:` catalog in manifest; `dto-gen --manifest` emits `overlays.rs` + `overlays.generated.d.ts`; `pnpm manifest:check`, `cargo build -p solvapay-dto`, `tsc --noEmit`, regen idempotence + CI drift gates green (§15 note 11 / `serde_norway 0.9.42`) | [Phase 2](#phase-2--generated-dtos-and-error-model) |
 | 17 | Error model | Phase 2 | Done | — | `SdkError` in `solvapay-core`; manifest-frozen templates → `error_templates.rs`; `error-model/` fixtures + one §6.4 conversion helper; RED→GREEN on `cargo test -p solvapay-core error`; `pnpm test:contract` + step-8 gates | [Phase 2](#phase-2--generated-dtos-and-error-model) |
 | 18 | TS declarations + parity check | Phase 2 | Done | — | Manifest `params` catalog; `client.generated.d.ts` + API-diff mutual assignability; `pnpm parity:check`; generated `signature-parity.generated.test.ts`; CI drift + `@generated` header gates; RED→GREEN on dto-gen emit + `test:types` | [Phase 2](#phase-2--generated-dtos-and-error-model) |
+| 18T | Doc-comment generation — shared infra + TS (retrofit) | Phase 2 | Done | — | Manifest `docs:` catalog; IR `IrDocModel` + lowering (`docs.params` wins over inline `params[].doc`); surface-agnostic `check_doc_coverage` + CI gate; TSDoc (`summary`/`@param`/`@returns`) on `client.generated.d.ts`; drift + `@generated` + idempotence gates green; RED→GREEN on manifest/lower/coverage/emit tests | [Strict typing & doc comments](#strict-typing--doc-comments--retrofit) |
 | 19 | Native transport | Phase 3 | Done | — | `ReqwestTransport` + wiremock corpus round-trips; §15 note 13 | [Phase 3](#phase-3--http-client-core) |
 | 20 | WASM Fetch transport | Phase 3 | Done | — | `FetchTransport` + `test-wasm-transport.sh` corpus round-trips; §15 note 14 | [Phase 3](#phase-3--http-client-core) |
 | 21 | Client shell | Phase 3 | Done | — | Shell unit + shell-level fixtures on reqwest + Fetch; §15 note 15 | [Phase 3](#phase-3--http-client-core) |
@@ -66,13 +67,15 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 | 39G-a | Binding-boundary IR + manifest `bindings:` section | Phase 6G | Done | — | `pnpm manifest:check` green (schema + reconciliation); `cargo test -p dto-gen` green (parse/lower/idempotence); `binding-symbols.snapshot.json` committed + CI drift via `dto-gen --dump-bindings`; 102 symbols enumerated from 37R/38R shims; no shim emission | [Phase 6G](#phase-6g--binding-glue-generator) |
 | 39G-b | Rust shim emitters (napi + wasm) + retrofit proof | Phase 6G | Done | — | Regenerated node + wasm shims diff-clean below `@generated` header (8 files); `cargo test -p dto-gen` golden + unit green; `cargo test -p solvapay-node` 22/22 on generated shims; CI regen-drift + `@generated` header gate cover the eight shim paths; both-flag suites unchanged (behavioral proof) | [Phase 6G](#phase-6g--binding-glue-generator) |
 | 39G-c | Native-side marshalling emitters (TS) | Phase 6G | Done | — | Regenerated `native.ts` / `wasm.ts` diff-clean below `@generated` header; `emit_bindings_ts.rs` + chrome asset; `cargo test -p dto-gen` golden + unit green; CI regen-drift + `@generated` header gate cover both paths; server 366×2 / core 117×2 / mcp-core 108×2; `pnpm delegation:check` OK (inventory unchanged); six `payloadBuilders` `emitOrder` values aligned to public TS union order | [Phase 6G](#phase-6g--binding-glue-generator) |
-| 40 | Scaffold PyO3/maturin | Phase 7 | Not started | — | — | [Phase 7](#phase-7--python) |
-| 41 | Generate the Python facade (+ generated binding glue, §5.7) | Phase 7 | Not started | — | — | [Phase 7](#phase-7--python) |
-| 42 | Live contract tests + publish (Python) | Phase 7 | Not started | — | — | [Phase 7](#phase-7--python) |
-| 43 | Scaffold Magnus/rb-sys | Phase 8 | Not started | — | — | [Phase 8](#phase-8--ruby) |
-| 44 | Generate the Ruby facade (+ generated binding glue, §5.7) | Phase 8 | Not started | — | — | [Phase 8](#phase-8--ruby) |
-| 45 | Live contract tests + publish (Ruby) | Phase 8 | Not started | — | — | [Phase 8](#phase-8--ruby) |
-| 46 | Scaffold the `solvapay` facade crate | Phase 9 | Not started | — | — | [Phase 9](#phase-9--rust-public-crate) |
+| 40 | Scaffold PyO3/maturin | Phase 7 | Done | — | `cargo test -p solvapay-python` + pytest smoke (async+blocking) + `python_shim_golden` + CI `python-binding` matrix + `check-wheels.py` | [Phase 7](#phase-7--python) |
+| 41 | Generate the Python facade (+ generated binding glue, §5.7) | Phase 7 | Done | — | `python_shim_golden` + `native_py_golden` + `python_parity_golden`; `cargo test -p solvapay-python`; facade/envelope pytest; CI regen-drift covers python shims + `_native.py` + parity suite (§15 note 44) | [Phase 7](#phase-7--python) |
+| 42 | Live contract tests + publish (Python) | Phase 7 | Done | — | Offline `pytest` contract suite green (535 fixtures + 36-op coverage); fresh-venv wheel install; `shadow-python.yml` dispatch-only live path; `publish-python.yml` TestPyPI-default + OIDC; §7.7 skew guard | [Phase 7](#phase-7--python) |
+| 42T | Python strict typing + doc comments (retrofit) | Phase 7 | Done | — | `emit_pyi_py` + committed `__init__.pyi` + `py.typed`; `mypy==1.17.1 --strict` + `pyright==1.1.411` strict + `ruff==0.12.4` green on public stubs in `python-binding` smoke; docstrings from IR `IrDocModel` (18T); regen-drift + `@generated` header cover `__init__.pyi`; `pyi_py_golden` + emitter coverage tests green | [Strict typing & doc comments](#strict-typing--doc-comments--retrofit) |
+| 43 | Scaffold Magnus/rb-sys | Phase 8 | Done | — | `cargo test -p solvapay` + minitest smoke + CI `ruby-binding` native-host matrix + `check-gems.rb`; `Toolchain::Ruby` hello-world emitter + `ruby_shim_golden` (§15 note 46) | [Phase 8](#phase-8--ruby) |
+| 44 | Generate the Ruby facade (+ generated binding glue, §5.7) | Phase 8 | Done | — | Full Groups A–C sync client + decisions/payload builders; generated `_native.rb` / `client.rb` / `helpers.generated.rb` / RBS / signature-parity; `SolvaPay.create` / `payable` / `gate`; 535 shared offline fixtures + 36-operation success/error guard; dto-gen goldens + CI regen-drift (§15 note 47) | [Phase 8](#phase-8--ruby) |
+| 45 | Live contract tests + publish (Ruby) | Phase 8 | Done | — | Load-time skew guard; `scripts/live_contract.rb` + `shadow-ruby.yml` (dispatch-only); `publish-ruby.yml` OIDC dry-run-default + version stamp; rb-sys-dock remains deferred (§15 note 48) | [Phase 8](#phase-8--ruby) |
+| 45T | Ruby strict typing + doc comments (retrofit) | Phase 8 | Not started | — | — | [Strict typing & doc comments](#strict-typing--doc-comments--retrofit) |
+| 46 | Scaffold the `solvapay` facade crate | Phase 9 | Done | — | `cargo test -p solvapay` + `hello_world` mock round-trip + `--features blocking` compile/test; CI explicit blocking step; workspace `solvapay-ruby` rename frees crates.io name (§15 note 49) | [Phase 9](#phase-9--rust-public-crate) |
 | 47 | Generate Rust facade signatures + signature-parity suite | Phase 9 | Not started | — | — | [Phase 9](#phase-9--rust-public-crate) |
 | 48 | crates.io publish + docs.rs + live contract tests | Phase 9 | Not started | — | — | [Phase 9](#phase-9--rust-public-crate) |
 | 49 | Scaffold wazero binding | Phase 10 | Not started | — | — | [Phase 10](#phase-10--go-wazero--embedded-wasm) |
@@ -215,6 +218,7 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - Step 16 (SDK-only overlays): `overlays:` catalog in manifest; `dto-gen --manifest` emits `overlays.rs` + `overlays.generated.d.ts`; regen idempotence + CI drift gates green
 - Step 17 (Error model): `solvapay-core::SdkError` (`Api` / `Paywall` / `Webhook` / `Transport`) + `render_template` / `api_from_template`; manifest `errors.webhook.messages` / `paywall.messages` / `transport.messageTemplate`; dto-gen emits `error_templates.rs`; webhook messages switch to generated constants; `From<WebhookError>`; fixture-runner `sdk_error_to_observation` (one §6.4 layer; webhook binding routes through it); `contract/fixtures/error-model/` (11 cases) + TS `constructSdkError` harness binding — RED→GREEN: `cargo test -p solvapay-core error` construction/serde/mapping tests written first then implemented; "done when" verified: error fixtures green in TS + Rust, `pnpm manifest:check`, step-8 gates, dto-gen regen idempotence
 - Step 18 (TS declarations + parity check): manifest `params` + dto-gen catalog IR; `--ts-client-out` → `client.generated.d.ts`; API-diff (`test:types` mutual assignability); `pnpm parity:check` (§2.5 allowlist); `--ts-parity-out` → `signature-parity.generated.test.ts` (presence/arity/defaults/errors/sync); CI drift covers all three TS artifacts + `@generated` header gate — RED→GREEN on emit_client_ts / emit_parity_suite_ts / parity.ts tests then emitters
+- Step 18T (Doc-comment generation — shared infra + TS): see [Strict typing & doc comments — retrofit](#strict-typing--doc-comments--retrofit); Phase 2 retrofit obligation for D19/TS closed; remaining surfaces stay on 42T/45T/47/50. Landed: manifest `docs:` (70 entry points), IR `IrDocModel`, `check_doc_coverage` + CI gate, TSDoc on `client.generated.d.ts`; §15 note 50
 
 #### Step 17 decisions for future handoffs
 
@@ -222,11 +226,17 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - **Templates live in the manifest:** operation `errors.default` / `cases` already frozen; step 17 added webhook/paywall/transport message strings. dto-gen emits `solvapay-dto::error_templates`; `solvapay-core` depends on `solvapay-dto` for webhook message constants.
 - **Fixtures:** `constructSdkError` builds variants for golden checks; TS asserts `name`/`message`/`status` only (`kind`/`code` are Rust-era); Transport uses stable codes `retryable` / `non_retryable`.
 
+#### Step 18T decisions for future handoffs
+
+- **Manifest `docs:` is the authored source** for entry-point summaries/params/returns (no OpenAPI operation-description linkage yet) — §15 note 50. IR shape stays forward-compatible for a later OpenAPI fallback.
+- **`docs.params.<name>` wins** over inline `params[].doc` when both exist.
+- **Coverage is surface-agnostic** (`check_doc_coverage` on all `ir.entry_points`); emitters only add a language column. Reuse from 42T/45T/47/50.
+
 **Phase-close handoff:**
-- **What was done:** `dto-gen` → `solvapay-dto` (wire schemas, routes, overlays, error templates); `SdkError` in core; TS `client.generated.d.ts` + parity/signature-parity gates.
-- **Why:** Single generated contract for Rust transport and multi-language facades; no hand-duplicated DTOs or error strings.
-- **Decisions to document:** Step 15–18 bullets; `ProcessPaymentResult` untagged enum; overlay catalog in manifest. Deviations: §13 OpenAPI gates (`includeCheckoutSession`, process-payment discriminator) still open — worked around via overlays/untagged. Deferred: backend republish for those gates.
-- **Pointers:** redesign §2.5, §2.8; `contract/manifest/sdk-contract.yaml`; §15 notes 10–12.
+- **What was done:** `dto-gen` → `solvapay-dto` (wire schemas, routes, overlays, error templates); `SdkError` in core; TS `client.generated.d.ts` + parity/signature-parity gates; Step 18T shared IR doc model + TSDoc + doc-comment coverage CI gate (D19 reference surface).
+- **Why:** Single generated contract for Rust transport and multi-language facades; no hand-duplicated DTOs, error strings, or per-language doc comments.
+- **Decisions to document:** Step 15–18 + 18T bullets; `ProcessPaymentResult` untagged enum; overlay catalog in manifest; manifest `docs:` as entry-point doc source (§15 note 50). New §10.3 / §13 gate: doc-comment coverage (shared infra + TS green; Python/Ruby/Rust/Go still open). Deviations: §13 OpenAPI gates (`includeCheckoutSession`, process-payment discriminator) still open — worked around via overlays/untagged. Deferred: backend republish for those gates; OpenAPI-operation-description → IR docs fallback.
+- **Pointers:** redesign §2.5, §2.8, §5.1, §5.6, D19; `contract/manifest/sdk-contract.yaml`; §15 notes 10–12, **50**.
 
 ### Phase 3 — HTTP client core — Done
 
@@ -551,34 +561,44 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 - Step 39G-c (Native-side marshalling emitters TS): ✅ `emit_bindings_ts.rs` + `native-ts-emit.snapshot.json` chrome; IR-derived `*ClientMethod` / `*SyncMethod` unions (`decisions` then `payloadBuilders`, MCP group comments); `--native-ts-out` / `--wasm-ts-out`; regenerate two files with `@generated` header only delta; golden `native_ts_golden.rs`; CI regen-drift + `@generated` gate cover both paths; six credit-display/seller-identity `emitOrder` values aligned to TS union order (§15 note 42) — "done when" verified: header-only `git diff` on `native.ts`/`wasm.ts`, `cargo test -p dto-gen` + both-flag server/core/mcp-core green, `pnpm delegation:check` OK
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** … (§5.7 IR-driven binding-glue emitters proven byte-identical against the hand-written 37R/38R napi + wasm shims, ready to forward-apply to Python/Ruby/Rust/Go/TS)
-- **Why:** … (stop hand-mirroring every new core fn across toolchains; make add-a-symbol a manifest edit)
-- **Decisions to document:** … (D16 JSON-envelope universal ABI + generated glue; D17 manifest `bindings:` descriptor reconciled with catalog; new §10.3 gates: binding-glue regen drift/idempotence/hand-edit, catalog reconciliation, retrofit byte-identical; new §13 gates: host-injected/path-ref declaration shape, deferred proc-macro derive; deviations: …; deferred: forward languages consume the emitter in steps 40–50/54)
-- **Pointers:** §5.7, Phase 6G, §12 D16–D17, §13 binding-boundary gates, §15 note 39; diagrams updated: §5.2 (`GEN → GLUE` branch)
+- **What was done:** §5.7 binding-glue pipeline end-to-end — IR `bindings:` (39G-a) → Rust napi/wasm shim emitters (39G-b) → TS `native.ts`/`wasm.ts` marshalling emitters (39G-c), each proven byte-identical below `@generated` against the hand-written 37R/38R cutover. Forward-applied immediately to Python (Phase 7) and Ruby (Phase 8).
+- **Why:** Stop hand-mirroring every new core fn across toolchains; add-a-symbol is a manifest edit + regen.
+- **Decisions to document:** D16 JSON-envelope universal ABI + generated glue; D17 manifest `bindings:` descriptor reconciled with catalog; §10.3 gates for regen drift/idempotence/hand-edit, catalog reconciliation, retrofit byte-identical; host-injected/`splitPathRefs` declaration shape closed at 39G-a; proc-macro auto-derive deferred. Deviations: six `payloadBuilders` `emitOrder` values reordered to match public TS union order (mechanical). Deferred: none material for 6G itself.
+- **Pointers:** §5.7, Phase 6G, §12 D16–D17, §13 binding-boundary gates, §15 notes 39–42; diagrams updated: §5.2 (`GEN → GLUE` branch)
 
-### Phase 7 — Python — Not started
+### Phase 7 — Python — Done
 
 <!-- running per-step bullets accumulate here as each step lands -->
+- Step 40 (Scaffold PyO3/maturin): `rust/bindings/python` + maturin `solvapay` abi3-py39; tokio via `pyo3-async-runtimes`; hello-world sync webhook + async/blocking `get_merchant`; §5.7 Python column emits allowlisted `client.rs`; CI wheel matrix + artifact gate — "done when" verified: unit + pytest smoke + golden + local abi3 wheel import (§15 note 43)
+- Step 41 (Generate the Python facade + binding glue): full Groups A–C client (async + blocking) + sync decisions/payload builders; generated `_native.py`; idiomatic `create_solvapay`/`payable`/`gate`; signature-parity suite; CI regen-drift (§15 note 44)
+- Step 42 (Live contract tests + publish): offline golden-fixture replay suite under `tests/contract/` (stub HTTP backend + `_verify_webhook_at` + host adapters); 36-op coverage guard; `scripts/live_contract.py` + `.github/workflows/shadow-python.yml` (dispatch-only); `.github/workflows/publish-python.yml` (maturin matrix + check-wheels + TestPyPI default / gated PyPI OIDC); §7.7 version stamp + load-time skew guard — "done when" verified: `pytest -q` 596 green in fresh venv incl. 535 fixtures; wheel install clean locally (§15 note 45)
+- **Retrofit:** Step **42T Done** — strict typing (`.pyi` + `py.typed`, `mypy --strict` + `pyright` + `ruff`) and docstring coverage from the shared IR doc model (reuses 18T infra). Remaining Phase 7 cross-cut: runnable example under `examples/python/` (Step 42 deliverable / D20) — tracked separately; not reopening Steps 40–42.
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** …
-- **Why:** …
-- **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
-- **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
+- **What was done:** Full PyO3/maturin Python surface (Steps 40–41) plus Step 42 offline contract conformance + release-train PyPI wiring. Offline suite is the green CI gate; live backend runs stay `workflow_dispatch` (same posture as TS shadow).
+- **Why:** Close Phase 7 with a third fixture consumer (TS + Rust fixture-runner + Python) and a publish path that stamps release-train version + core SHA without folding into the npm Changesets workflow.
+- **Decisions to document:** (1) Live Python contract mirrors shadow — offline fixtures in CI; hosted env still open. (2) PyPI publish is a separate OIDC workflow; TestPyPI is the default dry-run. (3) Facade↔native version mismatch is a load-time `SolvaPayError` (`code=version_skew`). (4) Test-only exports `_verify_webhook_at`, `SolvaPayClient._for_fixtures`, `_resolve_authenticated_user`, `_construct_sdk_error` stay off the idiomatic facade. New §10.3 / §13 rows for the Python contract suite + PyPI Trusted Publishing.
+- **Pointers:** §7.7, Phase 7, §10.3 Python contract suite, §13 PyPI OIDC gate, §15 note 45; diagrams unchanged (no new GEN branch).
 
-### Phase 8 — Ruby — Not started
+### Phase 8 — Ruby — Closed
 
 <!-- running per-step bullets accumulate here as each step lands -->
+- Step 43 (Scaffold Magnus/rb-sys): `rust/bindings/ruby` gem (`solvapay`, Ruby ≥3.0) + Magnus cdylib crate named `solvapay` (rb-sys ExtensionTask artifact); binding-owned tokio + GVL release (`without_gvl`); hello-world sync webhook + `get_merchant`; `Toolchain::Ruby` + `--ruby-bindings-out`; CI `ruby-binding` native-host matrix + `check-gems.rb` — "done when" verified: unit + smoke + golden (§15 note 46). rb-sys-dock cross-compile deferred (dock images ship Ruby 4.0 / incomplete 3.3 toolchains vs Magnus 0.7).
+- Step 44 (Generate the Ruby facade + binding glue): full Groups A–C sync client (36 methods, all GVL-releasing) + decisions (42) + payload builders (23); generated `_native.rb` / public `client.rb` / `helpers.generated.rb` / `sig/solvapay.rbs` / signature-parity suite; idiomatic `SolvaPay.create` / `payable` / `gate` with true Mutex/ConditionVariable customer single-flight (60s success cache) + 10s limits cache; offline `test/contract/` replay through a TCP stub (535 fixtures + 36-operation success/error guard); CI regen-drift covers all Ruby generated paths; `cargo test -p dto-gen`, `cargo test -p solvapay --lib`, `cargo clippy -p dto-gen -p solvapay --all-targets -- -D warnings`, `bundle exec rake test`, and `bundle exec rbs validate` green (§15 note 47)
+- Step 45 (Live contract tests + publish): load-time facade↔native skew guard (`SolvaPay._check_version_skew`); stdlib `scripts/live_contract.rb` (requirable `SolvaPay::LiveContract` pure helpers + guarded `main`); `.github/workflows/shadow-ruby.yml` (dispatch-only); `.github/workflows/publish-ruby.yml` (native-host platform matrix + source gem, `check-gems.rb`, dry-run local `gem install` default, OIDC `gem push` gated by `publish_to_rubygems` / `solvapay-ruby-v*` tag); §7.7 `version.rb` + `SOLVAPAY_RELEASE_VERSION`/`SOLVAPAY_CORE_SHA` stamping. rb-sys-dock cross-compile remains deferred (§15 note 48).
+- **Retrofit (open, redesign §5.6/§9/D18–D20):** Phase 8 predates three cross-cutting requirements — (1) strict-typing gate on the generated RBS (`steep check` + `rubocop`; optional Sorbet RBI) and (2) doc-comment coverage on every generated Ruby signature (YARD) from the shared IR doc model, both **owned by retrofit Step 45T** (which reuses the shared doc-model + coverage infra from Step 18T); plus (3) a runnable, tested example under `examples/ruby/` (Step 45 deliverable). Tracked in "### Strict typing & doc comments — retrofit" + "Open handoff items index"; not reopening Steps 43–45.
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
-- **What was done:** …
-- **Why:** …
-- **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
-- **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
+- **What was done:** Steps 43–45 delivered the Magnus/rb-sys gem scaffold, full §5.7 generated facade + offline contract suite, then live contract driver + RubyGems publish train (OIDC Trusted Publishing, dry-run default).
+- **Why:** Close Phase 8 so Ruby matches Python/TS reliability posture (offline golden CI gate + dispatch-only live shadow + release-train publish with version stamp + skew guard) before the Rust facade crate (Step 46).
+- **Decisions to document:** gem + crate name `solvapay`; native-host `rake native gem` CI until `rbsys 0.9.128` / Magnus 0.7 dock images align; live driver uses public keyword `Client` (no `_blocking` twins); RubyGems dry-run = build + `check-gems.rb` + local `gem install` (no TestPyPI equivalent); real push gated; deferred: rb-sys-dock cross-compile.
+- **Pointers:** §7.7, Phase 8, §10.3 Ruby contract/RubyGems rows, §15 notes 46–48; diagrams unchanged
 
-### Phase 9 — Rust public crate — Not started
+### Phase 9 — Rust public crate — In progress
 
 <!-- running per-step bullets accumulate here as each step lands -->
+- Step 46 (Scaffold `solvapay` facade crate): `rust/crates/solvapay` — curated re-exports, `Config` / `Client::new` / `Client::with_transport`, `get_merchant` delegation, §2.4 `gate` / `payable` / `Allow::track_*` (core-owned decisions + host limits/customer cache), optional `blocking` feature (native-only `blocking::Client`); `tests/hello_world.rs` mock round-trip; CI `cargo build/test -p solvapay --features blocking`; Ruby workspace crate renamed `solvapay-ruby` (`[lib] name = "solvapay"`) so the public facade owns package name `solvapay`; `publish = false` and path deps until Step 48 crates.io graph (§15 note 49).
+- **Cross-cutting deliverables (redesign §5.6/§9/D19–D20):** generated `pub` signatures carry rustdoc doc comments from the shared IR doc model (renders on docs.rs); Step 48 ships a runnable, tested example under `examples/rust/`. (Rust is statically typed, so no dynamic-language strictness gate applies.)
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
 - **What was done:** …
@@ -589,6 +609,7 @@ Session workflow (redesign §14): pick the next incomplete step in redesign §9 
 ### Phase 10 — Go (wazero + embedded WASM) — Not started
 
 <!-- running per-step bullets accumulate here as each step lands -->
+- **Cross-cutting deliverables (redesign §5.6/§9/D19–D20):** generated Go signatures carry godoc doc comments from the shared IR doc model; Step 51 ships a runnable, tested example under `examples/go/`. (Go is statically typed, so no dynamic-language strictness gate applies.)
 
 **Phase-close handoff** (filled when the last step's "done when" is verified):
 - **What was done:** …
@@ -619,6 +640,23 @@ Post-cutover future track (redesign §9, "MCP-authoring adapters"): layer-3 hand
 - **Decisions to document:** … (new §13 gates: …; deviations: …; deferred: …)
 - **Pointers:** §12 D__, §13 gate(s) __, §15 note __; diagrams updated: …
 
+### Strict typing & doc comments — retrofit — In progress
+
+Cross-cutting track for the two requirements that landed in the redesign as spec/decisions/gates (redesign §5.6, D18/D19, §10.3) after the TS/Python/Ruby surfaces already shipped: dynamic-language strict typing on the generated surface (D18) and language-native doc comments on every generated signature from one shared IR doc model (D19). Lettered step ids keep steps 1–55 intact (same convention as `37R` / `6G`); each retrofit step sits inline at the end of its own phase and does **not** reopen the numbered steps. Forward surfaces (Rust/Go) carry doc comments as inline amendments to Steps 47/50 — see Phase 9/10.
+
+<!-- running per-step bullets accumulate here as each step lands -->
+- Step 18T (Doc-comment generation — shared infra + TS): landed shared IR doc model + coverage checker/CI gate in `dto-gen`; authored manifest `docs:` for every catalogued entry point; emit TSDoc on `client.generated.d.ts` — "done when" verified: coverage gate green; regen idempotence + committed-output drift + `@generated` header gate hold; `pnpm test:types` green; §15 note 50 (manifest `docs:` as authored source)
+- Step 42T (Python strict typing + doc comments): ✅ landed `emit_pyi_py` → `__init__.pyi` (JSON-string boundary, async/`_blocking` twins, IR docstrings) + `py.typed`; hardened `facade.pyi` (`ApiClient` Protocol, `ParamSpec` `payable`, no `Any`); pinned `mypy==1.17.1` / `pyright==1.1.411` / `ruff==0.12.4` in `python-binding` smoke against public stubs; CI regen-drift + `@generated` cover `__init__.pyi` — "done when" verified: type-strictness + doc-comment coverage gates green; §15 note 51
+- Step 45T (Ruby strict typing + doc comments): generated RBS under `steep check` + `rubocop` (Sorbet RBI optional); YARD from the shared IR doc model — "done when" verified: type-strictness + doc-comment coverage gates green in `ruby-binding`
+- Forward (not retrofits): Rust rustdoc via Step 47 and Go godoc via Step 50, both reusing the Step 18T shared doc model (no strictness gate — statically typed).
+
+**Phase-close handoff** (track still open for 45T):
+- **What was done (18T):** Shared `IrDocModel` + `check_doc_coverage` + CI gate in `dto-gen`; manifest `docs:` authored for all catalogued entry points; TSDoc on `client.generated.d.ts`; manual verification green (idempotence, coverage bite, hand-edit/`@generated` bite, TS language-service hover, `test:types`).
+- **What was done (42T):** Python emitter column + D18 strictness gate — generated `__init__.pyi` + `py.typed`; facade stubs hardened (no public `Any`); `mypy`/`pyright`/`ruff` pinned and CI-gated; IR docstrings on every catalogued operation twin.
+- **Why:** D18/D19 — strictest static contract for Python consumers; shared IR docs so LSP hover matches TS.
+- **Decisions to document:** Manifest `docs:` as authored source (no OpenAPI operation-description link yet) — §15 note 50; Python keeps JSON-string boundary (no TypedDict DTOs in 42T) — §15 note 51; pinned toolchain versions in §13. Deferred to 45T: Ruby emitter column + strictness. Forward: rustdoc (47), godoc (50).
+- **Pointers:** §12 D18/D19, §5.6, §10.3; §15 notes 50–51; migration map rows 18T/42T.
+
 ## Open handoff items index
 
 Mirrors redesign §13 "Unresolved implementation gates", plus blockers discovered mid-migration.
@@ -627,8 +665,9 @@ Mirrors redesign §13 "Unresolved implementation gates", plus blockers discovere
 | --- | --- | --- | --- |
 | Exact WASM size / cold-start numeric budgets | Step 38 baseline; re-recorded step 38R | **Resolved (step 38; re-recorded 38R):** `rust/bindings/wasm/budgets.json` — after the full-surface cutover browser gzip **63633 B** / cold ~13.3 ms (public-safe subset + serde) and edge diagnostic **298838 B** / ~16.4 ms (full transport client + all sync envelopes); both lazy/opt-in with rationale notes; >10% needs approval | SDK |
 | Final npm optional-dependency layout + package names for prebuilds | Steps 36–37 | **Resolved (step 37):** `@solvapay/server-native` + per-target `@solvapay/server-native-<platform>` + `-wasm32-wasi`; `@solvapay/server` optionalDependency `workspace:*` on `@solvapay/server-native` | SDK |
-| Python package name on PyPI (`solvapay` vs scoped) and minimum CPython (abi3 floor) | Steps 40–42 | Open | SDK |
-| Ruby gem name + versioning scheme; source-gem toolchain floor | Steps 43–45 | Open | SDK |
+| Python package name on PyPI (`solvapay` vs scoped) and minimum CPython (abi3 floor) | Steps 40–42 | **Resolved (step 40):** `solvapay` + `abi3-py39` | SDK |
+| Ruby gem name + versioning scheme; source-gem toolchain floor | Steps 43–45 | **Resolved (step 43/45):** gem + crate name `solvapay`; Ruby ≥3.0; release-train via `SOLVAPAY_RELEASE_VERSION` / `SOLVAPAY_CORE_SHA` (`version` / `native_build_info`); load-time skew guard in `lib/solvapay.rb` | SDK |
+| rb-sys-dock cross-compile vs native-host gem builds | Step 45 | **Open (deferred):** current `rbsys/*:0.9.128` images expose Ruby 4.0 host + incomplete 3.3 toolchains; Magnus 0.7 fails inside dock. CI/publish build platform gems on native runners (`rake native gem`); revisit dock when images/Magnus align | SDK |
 | Go module path naming (`github.com/solvapay/solvapay-go` vs vanity import) | Steps 49–51 | Open | SDK |
 | Whether the Go WASM artifact is committed in-repo or attached to release tags | Before step 49 cutover | Open | SDK |
 | WASM instance-pool sizing strategy for Go | Step 49 | Open | SDK |
@@ -639,14 +678,18 @@ Mirrors redesign §13 "Unresolved implementation gates", plus blockers discovere
 | 37R clean-install smoke extension beyond `verifyWebhook` | Step 37R-e | **Resolved (37R-e):** `buildPaywallGate` + host-native `getCustomer` stub; WASI sync-only (see Step 37R-e decisions / §15 note 37) | SDK |
 | Process-payment OpenAPI discriminator fix — backend republish vs manifest overlay | Before step 15 cutover | Open | Backend + SDK |
 | `includeCheckoutSession` OpenAPI republish | Before step 15 cutover | Open | Backend + SDK |
-| Free-threaded CPython: `gil_used = false` from day one, or after an audit? | Step 40 | Open | SDK |
+| Free-threaded CPython: `gil_used = false` from day one, or after an audit? | Step 40 | **Resolved (step 40):** default thread-safe module; no `gil_used` opt-out (§15 note 43) | SDK |
 | Fuzz corpus seed strategy | Step 55 | Open | SDK |
 | Whether UniFFI is ever used for a *sixth* language later | Only if needed | Open | SDK |
 | Binding-boundary descriptor shape for host-injected args (`nowMs`/clock/RNG) + path-ref splits | Step 39G-a | **Resolved (39G-a):** `hostInjected: bool` on args + ordered `splitPathRefs: string[]` on the symbol (§15 note 40) | SDK |
 | Whether a later proc-macro auto-derives binding-boundary descriptors from Rust core signatures | Deferred (post-Phase 6G) | Open | SDK |
 | Backend CI-published OpenAPI artifact for automated snapshot drift | Post–Step 1 / ongoing | Open | Backend |
-| Hosted contract-test environment for CI shadow live runs | Post–step 25 | Open | Backend + SDK |
+| Hosted contract-test environment for CI shadow live runs | Post–step 25 | Open — TS `shadow.yml` + Python `shadow-python.yml` + Ruby `shadow-ruby.yml` are `workflow_dispatch`-only until a shared sandbox/contract env + secrets exist; offline golden fixtures (TS + Python Step 42 + Ruby Step 44) remain the green CI gate | Backend + SDK |
+| RubyGems publish workflow + Trusted Publishing / API key env | Step 45 | **Resolved (step 45):** `.github/workflows/publish-ruby.yml` — native-host platform matrix + source gem + `check-gems.rb` + OIDC (`rubygems/configure-rubygems-credentials`); dry-run default = local `gem install`; real `gem push` gated by `publish_to_rubygems=true` / `solvapay-ruby-v*` tag. Maintainer must still register the Trusted Publisher on RubyGems.org once. | SDK |
 | MCP-authoring parity scope + `solvapay-mcp-<lang>` package naming | Before the MCP-authoring track | Open | SDK |
+| Dynamic-language type-strictness gate + pinned toolchain (redesign §5.6, D18) | Owned by Steps 42T (Python) / 45T (Ruby) | **Partial (Python Resolved / 42T):** `mypy==1.17.1 --strict` + `pyright==1.1.411` strict + `ruff==0.12.4` against public stubs; `.pyi` + `py.typed` shipped (§15 note 51). Still open: Ruby `steep` + `rubocop` via 45T | SDK |
+| Doc-comment coverage on generated signatures (redesign §5.6/§5.1, D19) | Owned by Steps 42T/45T (+ Step 18T for TS + shared infra, Step 47 Rust, Step 50 Go) | **Partial (18T + 42T Done):** shared IR + TSDoc (18T); Python docstrings on generated `__init__.pyi` (42T, §15 note 51). Still open: Ruby (45T); Rust/Go in Steps 47/50 | SDK |
+| Per-language examples workstream + `examples/ → examples/typescript/` relocation (redesign §9 "Examples", D20) | Steps 42/45/48/51 (per-language example); relocation PR before/with them | **Open:** each language ships a runnable, tested example under `examples/<lang>/` (hand-written, CI build+test). Separately, relocate all current examples under `examples/typescript/` — updates pnpm-workspace globs + deploy configs; tracked as its own task | SDK |
 
 ## Reusable handoff-entry template
 

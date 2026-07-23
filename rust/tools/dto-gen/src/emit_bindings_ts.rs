@@ -36,6 +36,16 @@ pub fn emit_native_ts(ir: &Ir, toolchain: Toolchain) -> GenResult<String> {
     let key = match toolchain {
         Toolchain::Node => "native",
         Toolchain::Wasm => "wasm",
+        Toolchain::Python => {
+            return Err(GenError::Parse(
+                "emit_native_ts does not support Toolchain::Python (Step 41)".into(),
+            ))
+        }
+        Toolchain::Ruby => {
+            return Err(GenError::Parse(
+                "emit_native_ts does not support Toolchain::Ruby (Step 43)".into(),
+            ))
+        }
     };
     let file = chrome
         .get("files")
@@ -94,10 +104,7 @@ fn render_sync_union(ir: &Ir, core_comment: &str, mcp_comment: &str) -> String {
 }
 
 fn render_union_members(symbols: Vec<&IrBindingSymbol>) -> String {
-    let lines: Vec<String> = symbols
-        .iter()
-        .map(|s| union_member(&s.names.ts))
-        .collect();
+    let lines: Vec<String> = symbols.iter().map(|s| union_member(&s.names.ts)).collect();
     lines.join("\n")
 }
 
@@ -237,15 +244,12 @@ mod tests {
     #[test]
     fn node_vs_wasm_chrome_comments_differ() {
         let mut ir = empty_ir();
-        ir.binding_symbols.insert(
-            "createCustomer".into(),
-            {
-                let mut s = sym("createCustomer", IrBindingArtifact::Client, 0, None);
-                s.sync = IrSyncKind::Async;
-                s.envelope = IrEnvelopeMode::Async;
-                s
-            },
-        );
+        ir.binding_symbols.insert("createCustomer".into(), {
+            let mut s = sym("createCustomer", IrBindingArtifact::Client, 0, None);
+            s.sync = IrSyncKind::Async;
+            s.envelope = IrEnvelopeMode::Async;
+            s
+        });
         ir.binding_symbols.insert(
             "classifyCustomerRef".into(),
             sym("classifyCustomerRef", IrBindingArtifact::Decisions, 0, None),

@@ -1,0 +1,26 @@
+[package]
+# Workspace package name (Ruby gem / cdylib artifact stays `solvapay` via `[lib] name`).
+name = "solvapay-ruby"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Magnus Ruby binding for solvapay-core (Step 43 scaffold)"
+publish = false
+
+[lib]
+name = "solvapay"
+crate-type = ["cdylib"]
+
+[dependencies]
+magnus = { version = "0.7", features = ["rb-sys"] }
+rb-sys = { version = "*", default-features = false }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+solvapay-core = { path = "../../../../crates/solvapay-core" }
+solvapay-dto = { path = "../../../../crates/solvapay-dto" }
+solvapay-transport = { path = "../../../../crates/solvapay-transport" }
+
+[lints]
+workspace = true

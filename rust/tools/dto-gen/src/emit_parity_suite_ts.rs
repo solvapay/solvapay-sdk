@@ -118,7 +118,10 @@ pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
-    use crate::ir::{IrEntryPoint, IrEntrySection, IrLangNames, IrSyncKind};
+    use crate::ir::{
+        IrAvailability, IrDefaults, IrEntryPoint, IrEntrySection, IrErrorKind, IrLangNames,
+        IrRubyReceiver, IrRubyTarget, IrSyncKind,
+    };
     use std::collections::BTreeMap;
 
     #[test]
@@ -149,7 +152,23 @@ mod tests {
                 type_params: vec![],
                 request: None,
                 response: Some("LimitResponseWithPlan".into()),
+                availability: IrAvailability {
+                    ts: vec![IrSyncKind::Async],
+                    py: vec![IrSyncKind::Async, IrSyncKind::Sync],
+                    rb: vec![IrSyncKind::Sync],
+                    go: vec![IrSyncKind::Sync],
+                    rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
+                },
                 sync_ts: IrSyncKind::Async,
+                ruby_target: IrRubyTarget {
+                    owner: "SolvaPay::Client".into(),
+                    name: "check_limits".into(),
+                    receiver: IrRubyReceiver::ClientInstance,
+                    takes_block: false,
+                },
+                defaults: IrDefaults::default(),
+                errors: vec![IrErrorKind::Api],
+                docs: crate::ir::IrDocModel::default(),
             },
         );
         let out = emit_parity_suite_ts(&ir).unwrap();

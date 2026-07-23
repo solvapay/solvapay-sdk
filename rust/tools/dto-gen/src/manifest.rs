@@ -28,6 +28,69 @@ pub struct Manifest {
     /// Binding-boundary descriptors (§5.7 / step 39G-a).
     #[serde(default)]
     pub bindings: BTreeMap<String, BindingDef>,
+    /// Manifest-frozen runtime defaults used by every language facade.
+    #[serde(default)]
+    pub defaults: DefaultsDef,
+}
+
+/// Runtime defaults frozen by `sdk-contract.yaml`.
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct DefaultsDef {
+    /// Retry policy defaults.
+    #[serde(default)]
+    pub retry: RetryDefaultsDef,
+    /// Webhook timestamp tolerance in seconds.
+    #[serde(default = "default_webhook_tolerance", rename = "webhookToleranceSec")]
+    pub webhook_tolerance_sec: i64,
+    /// Limits cache TTL in milliseconds.
+    #[serde(default = "default_limits_cache_ttl", rename = "limitsCacheTTLMs")]
+    pub limits_cache_ttl_ms: u64,
+}
+
+impl Default for DefaultsDef {
+    fn default() -> Self {
+        Self {
+            retry: RetryDefaultsDef::default(),
+            webhook_tolerance_sec: default_webhook_tolerance(),
+            limits_cache_ttl_ms: default_limits_cache_ttl(),
+        }
+    }
+}
+
+/// Retry defaults frozen by the manifest.
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct RetryDefaultsDef {
+    /// Retry attempts after the initial call.
+    #[serde(default = "default_max_retries", rename = "maxRetries")]
+    pub max_retries: u32,
+    /// Initial delay in milliseconds.
+    #[serde(default = "default_initial_delay", rename = "initialDelayMs")]
+    pub initial_delay_ms: u64,
+}
+
+impl Default for RetryDefaultsDef {
+    fn default() -> Self {
+        Self {
+            max_retries: default_max_retries(),
+            initial_delay_ms: default_initial_delay(),
+        }
+    }
+}
+
+const fn default_max_retries() -> u32 {
+    2
+}
+
+const fn default_initial_delay() -> u64 {
+    500
+}
+
+const fn default_webhook_tolerance() -> i64 {
+    300
+}
+
+const fn default_limits_cache_ttl() -> u64 {
+    10_000
 }
 
 /// One `bindings:` entry from the contract manifest.
@@ -245,6 +308,23 @@ impl ParamDef {
     }
 }
 
+/// Language-neutral docs authored once in the manifest (§5.6 / D19 / step 18T).
+///
+/// Per-parameter descriptions may also appear on [`ParamDef::doc`]; when both
+/// exist, `docs.params.<name>` wins during IR lowering.
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+pub struct DocsDef {
+    /// One-line summary (required non-empty by the coverage gate once authored).
+    #[serde(default)]
+    pub summary: Option<String>,
+    /// Parameter name → description overlay.
+    #[serde(default)]
+    pub params: BTreeMap<String, String>,
+    /// Optional return-value description.
+    #[serde(default)]
+    pub returns: Option<String>,
+}
+
 /// Named catalog entry (topLevel / coreHelpers / facade).
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct NamedEntry {
@@ -259,6 +339,9 @@ pub struct NamedEntry {
     /// Generic type parameters.
     #[serde(default, rename = "typeParams")]
     pub type_params: Vec<TypeParam>,
+    /// Shared doc model for this entry point.
+    #[serde(default)]
+    pub docs: DocsDef,
 }
 
 /// Per-operation manifest entry.
@@ -284,6 +367,9 @@ pub struct OperationDef {
     pub sync: serde_json::Value,
     /// Error templates for this operation.
     pub errors: OperationErrors,
+    /// Shared doc model for this entry point.
+    #[serde(default)]
+    pub docs: DocsDef,
 }
 
 /// Operation-level default + case error templates.
@@ -555,6 +641,86 @@ topLevel:
         assert_eq!(entry.type_params.len(), 1);
         assert_eq!(entry.type_params[0].name, "T");
         assert_eq!(entry.params.len(), 2);
+    }
+
+    #[test]
+    fn deserializes_docs_block_on_operation_and_named_entry() {
+        let yaml = r#"
+operations:
+  checkLimits:
+    names:
+      ts: checkLimits
+      py: check_limits
+      rb: check_limits
+      go: CheckLimits
+      rust: check_limits
+    response: LimitResponseWithPlan
+    params:
+      - name: params
+        ref: CheckLimitsRequest
+        required: true
+    docs:
+      summary: "Check remaining usage/spend limits for a customer against a product's plan."
+      params:
+        params: "Limits request including customer and product refs."
+      returns: "Current remaining limits, optionally including plan details."
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+    errors:
+      default:
+        messageTemplate: "Check limits failed ({status}): {body}"
+topLevel:
+  withRetry:
+    names:
+      ts: withRetry
+      py: with_retry
+      rb: with_retry
+      go: WithRetry
+      rust: with_retry
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+    docs:
+      summary: "Retry an async callable with the frozen default backoff policy."
+      params:
+        fn: "Zero-arg async callable to invoke."
+        options: "Optional retry overrides."
+      returns: "The callable's resolved value."
+"#;
+        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+        let op = manifest.operations.get("checkLimits").unwrap();
+        assert_eq!(
+            op.docs.summary.as_deref(),
+            Some("Check remaining usage/spend limits for a customer against a product's plan.")
+        );
+        assert_eq!(
+            op.docs.params.get("params").map(String::as_str),
+            Some("Limits request including customer and product refs.")
+        );
+        assert_eq!(
+            op.docs.returns.as_deref(),
+            Some("Current remaining limits, optionally including plan details.")
+        );
+        let entry = manifest.top_level.get("withRetry").unwrap();
+        assert_eq!(
+            entry.docs.summary.as_deref(),
+            Some("Retry an async callable with the frozen default backoff policy.")
+        );
+        assert_eq!(
+            entry.docs.params.get("fn").map(String::as_str),
+            Some("Zero-arg async callable to invoke.")
+        );
+        assert_eq!(
+            entry.docs.returns.as_deref(),
+            Some("The callable's resolved value.")
+        );
     }
 
     #[test]

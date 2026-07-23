@@ -435,6 +435,7 @@ mod tests {
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
             bindings: BTreeMap::new(),
+            defaults: Default::default(),
         };
         lower_overlays(&mut ir, &manifest).expect("lower");
         match ir.overlays.get("LimitResponseWithPlan").expect("overlay") {
@@ -530,6 +531,7 @@ mod tests {
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
             bindings: BTreeMap::new(),
+            defaults: Default::default(),
         };
         lower_overlays(&mut ir, &manifest).expect("lower");
         match ir.overlays.get("TopupProcessResult").expect("overlay") {

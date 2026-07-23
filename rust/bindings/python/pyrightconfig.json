@@ -1,0 +1,19 @@
+{
+  "include": [
+    "python/solvapay/__init__.pyi",
+    "python/solvapay/facade.pyi",
+    "python/solvapay/results.pyi",
+    "python/solvapay/errors.pyi",
+    "python/solvapay/_solvapay.pyi"
+  ],
+  "exclude": ["**/__pycache__", "python/solvapay/_native.py"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "strict",
+  "reportMissingModuleSource": "none",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "pythonVersion": "3.12"
+    }
+  ]
+}
