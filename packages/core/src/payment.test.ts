@@ -7,7 +7,7 @@ import {
   validateCreatePaymentIntentParams,
   validateProcessPaymentIntentParams,
   validateTopupPaymentIntentParams,
-} from './payment'
+} from './native-helpers'
 
 describe('validateCreatePaymentIntentParams', () => {
   it('returns null when both refs are present', () => {

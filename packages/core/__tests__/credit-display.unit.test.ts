@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   creditsToDisplayMinorUnits,
   minorUnitsPerMajor,
-} from '../src/credit-display'
+} from '../src/native-core'
 
 describe('creditsToDisplayMinorUnits', () => {
   it('converts 159,600 credits to ~SEK 150.92 at rate 9.46', () => {

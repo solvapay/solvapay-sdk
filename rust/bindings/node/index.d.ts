@@ -358,16 +358,22 @@ export declare function validatePurchaseRef(argsJson: string): string
 export declare function validateTopupPaymentIntentParams(argsJson: string): string
 
 /**
- * Verifies a SolvaPay webhook signature using the host wall clock.
+ * Verifies a SolvaPay webhook signature.
  *
  * Returns the parsed JSON body as a string on success. On failure throws a JS
  * `Error` whose `code` is the snake_case webhook error code (via napi
  * `Error.status` → JS `Error.code`).
+ *
+ * The clock is host-injected: the TypeScript facade passes
+ * `Math.floor(Date.now() / 1000)` so a mocked host clock (fixtures, tests)
+ * flows through deterministically. Omitting `nowUnixSecs` falls back to the
+ * wall clock, keeping legacy three-argument native callers working.
  *
  * # Arguments
  *
  * * `body` - Raw request body string.
  * * `signature` - `SV-Signature` header value.
  * * `secret` - Webhook secret (`whsec_…`).
+ * * `now_unix_secs` - Optional host clock as unix seconds; wall clock when omitted.
  */
-export declare function verifyWebhook(body: string, signature: string, secret: string): string
+export declare function verifyWebhook(body: string, signature: string, secret: string, nowUnixSecs?: number | undefined | null): string

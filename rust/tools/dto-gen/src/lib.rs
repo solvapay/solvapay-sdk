@@ -5,11 +5,13 @@ pub mod doc_render;
 pub mod emit;
 pub mod emit_bindings_rs;
 pub mod emit_bindings_ts;
+pub mod emit_client_go;
 pub mod emit_client_rb;
 pub mod emit_client_rs;
 pub mod emit_client_ts;
 pub mod emit_native_py;
 pub mod emit_native_rb;
+pub mod emit_parity_suite_go;
 pub mod emit_parity_suite_py;
 pub mod emit_parity_suite_rb;
 pub mod emit_parity_suite_rs;
@@ -31,11 +33,13 @@ pub use doc_coverage::check_doc_coverage;
 pub use emit::{emit_crate, EmittedCrate};
 pub use emit_bindings_rs::{emit_bindings, EmittedBindings, Toolchain};
 pub use emit_bindings_ts::emit_native_ts;
+pub use emit_client_go::emit_client_go;
 pub use emit_client_rb::{emit_client_rb, EmittedRubyPublic};
 pub use emit_client_rs::{emit_client_rs, EmittedRustClient};
 pub use emit_client_ts::emit_client_ts;
 pub use emit_native_py::emit_native_py;
 pub use emit_native_rb::emit_native_rb;
+pub use emit_parity_suite_go::emit_parity_suite_go;
 pub use emit_parity_suite_py::emit_parity_suite_py;
 pub use emit_parity_suite_rb::emit_parity_suite_rb;
 pub use emit_parity_suite_rs::emit_parity_suite_rs;
@@ -76,6 +80,7 @@ pub fn generate_from_snapshot(
     wasm_bindings_out: Option<&Path>,
     python_bindings_out: Option<&Path>,
     ruby_bindings_out: Option<&Path>,
+    go_bindings_out: Option<&Path>,
     native_ts_out: Option<&Path>,
     wasm_ts_out: Option<&Path>,
     native_py_out: Option<&Path>,
@@ -87,6 +92,8 @@ pub fn generate_from_snapshot(
     rb_parity_out: Option<&Path>,
     rs_client_out: Option<&Path>,
     rs_parity_out: Option<&Path>,
+    go_client_out: Option<&Path>,
+    go_parity_out: Option<&Path>,
 ) -> GenResult<()> {
     let raw = fs::read_to_string(snapshot_path).map_err(|source| GenError::Io {
         path: snapshot_path.to_path_buf(),
@@ -175,6 +182,11 @@ pub fn generate_from_snapshot(
     if let Some(dir) = ruby_bindings_out {
         let emitted = emit_bindings(&ir, Toolchain::Ruby)?;
         write_ruby_shim(dir, &emitted)?;
+    }
+
+    if let Some(dir) = go_bindings_out {
+        let emitted = emit_bindings(&ir, Toolchain::Go)?;
+        write_go_shim(dir, &emitted)?;
     }
 
     if let Some(native_ts_path) = native_ts_out {
@@ -274,6 +286,18 @@ pub fn generate_from_snapshot(
         rustfmt_files(&[rs_parity_path.to_path_buf()])?;
     }
 
+    if let Some(go_client_path) = go_client_out {
+        let go = emit_client_go(&ir)?;
+        create_parent(go_client_path)?;
+        write_file(go_client_path, &go)?;
+    }
+
+    if let Some(go_parity_path) = go_parity_out {
+        let go = emit_parity_suite_go(&ir)?;
+        create_parent(go_parity_path)?;
+        write_file(go_parity_path, &go)?;
+    }
+
     Ok(())
 }
 
@@ -310,6 +334,30 @@ fn write_ruby_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
     write_file(&paths[2], &emitted.payload_builders_rs)?;
     write_file(&paths[3], &emitted.client_rs)?;
     write_file(&paths[4], &emitted.register_rs)?;
+    rustfmt_files(&paths)?;
+    Ok(())
+}
+
+/// Writes + rustfmts the Step 49 Go (wazero WASI guest) binding shims
+/// (`args.rs` / `client.rs` / `webhook.rs`).
+///
+/// # Errors
+///
+/// Returns [`GenError::Io`] on write failures or [`GenError::Parse`] if rustfmt
+/// is unavailable.
+fn write_go_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
+    fs::create_dir_all(dir).map_err(|source| GenError::Io {
+        path: dir.to_path_buf(),
+        source,
+    })?;
+    let paths = [
+        dir.join("args.rs"),
+        dir.join("client.rs"),
+        dir.join("webhook.rs"),
+    ];
+    write_file(&paths[0], &emitted.args_rs)?;
+    write_file(&paths[1], &emitted.client_rs)?;
+    write_file(&paths[2], &emitted.webhook_rs)?;
     rustfmt_files(&paths)?;
     Ok(())
 }

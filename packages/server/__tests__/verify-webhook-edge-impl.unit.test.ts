@@ -8,6 +8,7 @@ import {
   setWasmWebhookBindingForTests,
   verifyWebhookWasm,
 } from '../src/webhook-wasm'
+import { verifyWebhook as verifyWebhookEdge } from '../src/edge'
 
 const mockVerifyWebhook = vi.fn()
 const mockReady = vi.fn(async () => undefined)
@@ -182,6 +183,50 @@ describe('edge verifyWebhook impl selection', () => {
         secret: 'whsec_test',
       }),
     ).rejects.toBeInstanceOf(SolvaPayError)
+  })
+})
+
+describe('edge verifyWebhook public facade (Rust-only after Step 53)', () => {
+  const originalImpl = process.env.SOLVAPAY_IMPL
+
+  beforeEach(() => {
+    mockVerifyWebhook.mockReset()
+    mockReady.mockClear()
+    delete process.env.SOLVAPAY_IMPL
+    resetWasmWebhookCache()
+  })
+
+  afterEach(() => {
+    if (originalImpl === undefined) {
+      delete process.env.SOLVAPAY_IMPL
+    } else {
+      process.env.SOLVAPAY_IMPL = originalImpl
+    }
+    resetWasmWebhookCache()
+  })
+
+  it('fails fast under SOLVAPAY_IMPL=ts and never touches the binding', async () => {
+    process.env.SOLVAPAY_IMPL = 'ts'
+    setWasmWebhookBindingForTests(fakeBinding)
+
+    await expect(
+      verifyWebhookEdge({ body: eventBody, signature: 't=1,v1=deadbeef', secret: 'whsec_test' }),
+    ).rejects.toBeInstanceOf(SolvaPayError)
+    expect(mockVerifyWebhook).not.toHaveBeenCalled()
+  })
+
+  it('routes through the WASM binding by default', async () => {
+    setWasmWebhookBindingForTests(fakeBinding)
+    mockVerifyWebhook.mockReturnValue(eventBody)
+
+    const event = await verifyWebhookEdge({
+      body: eventBody,
+      signature: 't=1,v1=deadbeef',
+      secret: 'whsec_test',
+    })
+
+    expect(mockVerifyWebhook).toHaveBeenCalledTimes(1)
+    expect(event.type).toBe('purchase.created')
   })
 })
 

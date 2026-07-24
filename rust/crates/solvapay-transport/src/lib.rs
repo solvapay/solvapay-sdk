@@ -28,7 +28,10 @@ pub mod transport;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod reqwest_transport;
 
-#[cfg(target_arch = "wasm32")]
+// Fetch transport is browser/edge only (`wasm32-unknown-unknown`). The
+// `wasm32-wasip1` guest has no Fetch API and supplies its own host-import
+// transport (Step 49), so it must not compile `fetch_transport`.
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 pub mod fetch_transport;
 
 pub use client::{encode_path_segment, SolvaPayClient};
@@ -43,5 +46,5 @@ pub use transport::{BoxFuture, Transport};
 #[cfg(not(target_arch = "wasm32"))]
 pub use reqwest_transport::ReqwestTransport;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
 pub use fetch_transport::FetchTransport;

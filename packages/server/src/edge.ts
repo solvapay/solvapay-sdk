@@ -2,9 +2,9 @@
  * SolvaPay Server SDK - Edge Runtime Entry Point
  *
  * This module provides edge runtime-compatible exports. Webhook verification
- * defaults to the wasm-bindgen binding (`@solvapay/server-wasm`); the Web Crypto
- * TypeScript path remains as a temporary `SOLVAPAY_IMPL=ts` rollback until Step 53.
- * Automatically selected when running in edge runtimes (Vercel Edge, Cloudflare Workers, Deno, etc.)
+ * routes exclusively through the wasm-bindgen binding (`@solvapay/server-wasm`);
+ * there is no Web Crypto rollback. Automatically selected when running in edge
+ * runtimes (Vercel Edge, Cloudflare Workers, Deno, etc.)
  */
 
 import { installNativeCoreApi, SolvaPayError } from '@solvapay/core'
@@ -22,11 +22,13 @@ import {
 } from './wasm'
 
 // Install WASM sync dispatch for the edge graph (Deno / Workers / edge-light).
-// The install is the gate — `resolveEdgeImpl` carries the `SOLVAPAY_IMPL`
-// rollback, so `SOLVAPAY_IMPL=ts` keeps every surface on TypeScript. Node never
-// loads this module (it installs napi dispatch via `index.ts`).
+// The install is the gate. After Step 53, `SOLVAPAY_IMPL=ts` makes
+// `resolveEdgeImpl` return `ts` and every sync/async surface fail fast —
+// there is no TypeScript semantic path. Node never loads this module (it
+// installs napi dispatch via `index.ts`).
 installNativeDecisionApi({ callNativeSync: callWasmSync, resolveImpl: resolveEdgeImpl })
-installNativeCoreApi({ callNativeSync: callWasmSync, resolveImpl: resolveEdgeImpl })
+// Step 52: @solvapay/core is Rust-only — SOLVAPAY_IMPL=ts does not gate it.
+installNativeCoreApi({ callNativeSync: callWasmSync, resolveImpl: () => 'rust' })
 installMcpAdapterNative({
   formatGate: (gate: PaywallStructuredContent): PaywallToolResult | null => {
     if (resolveEdgeImpl('mcp') !== 'rust') return null
@@ -159,8 +161,9 @@ export type {
 /**
  * Verify webhook signature (async edge facade).
  *
- * Defaults to the Rust WASM binding (`solvapay_core::verify_webhook`). Set
- * `SOLVAPAY_IMPL=ts` to force the retained Web Crypto rollback path.
+ * Routes through the Rust WASM binding (`solvapay_core::verify_webhook`).
+ * Rust-only after Step 53 — `SOLVAPAY_IMPL=ts` fails fast rather than running a
+ * duplicate Web Crypto implementation.
  *
  * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
  * The HMAC is SHA-256 over `"{timestamp}.{rawBody}"` keyed by the full webhook secret
@@ -185,72 +188,6 @@ export type {
  * const event = await verifyWebhook({ body, signature, secret });
  * ```
  */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let mismatch = 0
-  for (let i = 0; i < a.length; i++) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return mismatch === 0
-}
-
-/** Temporary Web Crypto rollback (`SOLVAPAY_IMPL=ts`) until Step 53 deletion. */
-async function verifyWebhookTs({
-  body,
-  signature,
-  secret,
-}: {
-  body: string
-  signature: string
-  secret: string
-}): Promise<WebhookEvent> {
-  const toleranceSec = 300
-  if (!signature) throw new SolvaPayError('Missing webhook signature')
-
-  const parts = signature.split(',')
-  const tPart = parts.find(p => p.startsWith('t='))
-  const v1Part = parts.find(p => p.startsWith('v1='))
-  if (!tPart || !v1Part) {
-    throw new SolvaPayError('Malformed webhook signature')
-  }
-
-  const timestamp = parseInt(tPart.slice(2), 10)
-  const receivedHmac = v1Part.slice(3)
-  if (Number.isNaN(timestamp) || !receivedHmac) {
-    throw new SolvaPayError('Malformed webhook signature')
-  }
-
-  if (toleranceSec > 0) {
-    const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp)
-    if (age > toleranceSec) {
-      throw new SolvaPayError('Webhook signature timestamp too old')
-    }
-  }
-
-  const enc = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  )
-  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(`${timestamp}.${body}`))
-  const expectedHmac = Array.from(new Uint8Array(sigBuf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-
-  if (!timingSafeEqual(expectedHmac, receivedHmac)) {
-    throw new SolvaPayError('Invalid webhook signature')
-  }
-
-  try {
-    return JSON.parse(body) as WebhookEvent
-  } catch {
-    throw new SolvaPayError('Invalid webhook payload: body is not valid JSON')
-  }
-}
-
 export async function verifyWebhook({
   body,
   signature,
@@ -260,8 +197,10 @@ export async function verifyWebhook({
   signature: string
   secret: string
 }): Promise<WebhookEvent> {
-  if (resolveEdgeWebhookImpl() === 'ts') {
-    return verifyWebhookTs({ body, signature, secret })
+  // Rust-only after Step 53. `SOLVAPAY_IMPL=ts` fails fast instead of running a
+  // duplicate Web Crypto implementation on the edge.
+  if (resolveEdgeWebhookImpl() !== 'rust') {
+    throw new SolvaPayError('server webhook API not installed')
   }
   return verifyWebhookWasm({ body, signature, secret })
 }

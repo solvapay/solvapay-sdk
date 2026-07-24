@@ -1,4 +1,4 @@
-//! CLI: `dto-gen --snapshot <path> --out <dir> [...binding outputs] [--native-rb-out <file>] [--rb-client-out <file>] [--rb-rbs-out <file>] [--rb-parity-out <file>] [--rs-client-out <file>] [--rs-parity-out <file>]`
+//! CLI: `dto-gen --snapshot <path> --out <dir> [...binding outputs] [--go-bindings-out <dir>] [--go-client-out <file>] [--go-parity-out <file>] [--native-rb-out <file>] [--rb-client-out <file>] [--rb-rbs-out <file>] [--rb-parity-out <file>] [--rs-client-out <file>] [--rs-parity-out <file>]`
 
 use std::env;
 use std::path::PathBuf;
@@ -38,6 +38,7 @@ fn run() -> Result<(), GenError> {
     let mut wasm_bindings_out: Option<PathBuf> = None;
     let mut python_bindings_out: Option<PathBuf> = None;
     let mut ruby_bindings_out: Option<PathBuf> = None;
+    let mut go_bindings_out: Option<PathBuf> = None;
     let mut native_ts_out: Option<PathBuf> = None;
     let mut wasm_ts_out: Option<PathBuf> = None;
     let mut native_py_out: Option<PathBuf> = None;
@@ -49,6 +50,8 @@ fn run() -> Result<(), GenError> {
     let mut rb_parity_out: Option<PathBuf> = None;
     let mut rs_client_out: Option<PathBuf> = None;
     let mut rs_parity_out: Option<PathBuf> = None;
+    let mut go_client_out: Option<PathBuf> = None;
+    let mut go_parity_out: Option<PathBuf> = None;
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -85,6 +88,9 @@ fn run() -> Result<(), GenError> {
             "--ruby-bindings-out" => {
                 ruby_bindings_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--go-bindings-out" => {
+                go_bindings_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "--native-ts-out" => {
                 native_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
@@ -118,6 +124,12 @@ fn run() -> Result<(), GenError> {
             "--rs-parity-out" => {
                 rs_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--go-client-out" => {
+                go_client_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--go-parity-out" => {
+                go_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "-h" | "--help" => return Err(GenError::Usage),
             _ => return Err(GenError::Usage),
         }
@@ -136,6 +148,7 @@ fn run() -> Result<(), GenError> {
         wasm_bindings_out.as_deref(),
         python_bindings_out.as_deref(),
         ruby_bindings_out.as_deref(),
+        go_bindings_out.as_deref(),
         native_ts_out.as_deref(),
         wasm_ts_out.as_deref(),
         native_py_out.as_deref(),
@@ -147,5 +160,7 @@ fn run() -> Result<(), GenError> {
         rb_parity_out.as_deref(),
         rs_client_out.as_deref(),
         rs_parity_out.as_deref(),
+        go_client_out.as_deref(),
+        go_parity_out.as_deref(),
     )
 }

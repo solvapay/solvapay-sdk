@@ -2,7 +2,7 @@
  * Shared building blocks for `buildSolvaPayDescriptors` and any hand-rolled
  * SolvaPay MCP server that prefers to register tools directly.
  *
- * Lifted from the canonical example at `examples/mcp-checkout-app/src/server.ts`
+ * Lifted from the canonical example at `examples/typescript/mcp-checkout-app/src/server.ts`
  * so every integrator gets the same behavior for price enrichment, synthetic
  * `Request` construction, and tool-result wrapping.
  */

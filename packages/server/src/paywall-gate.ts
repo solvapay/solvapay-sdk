@@ -1,6 +1,6 @@
 /**
- * `buildPaywallGate` — Node may delegate to `@solvapay/server-native`
- * (Step 37R-c); edge / `SOLVAPAY_IMPL=ts` keep the TypeScript body.
+ * `buildPaywallGate` — thin re-export over Rust sync dispatch
+ * (`native-decisions` → napi on Node / WASM on edge). Rust-only after Step 53.
  *
  * @since 1.2.0
  */

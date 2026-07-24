@@ -281,7 +281,7 @@ function readImplFlag(): string | undefined {
 /**
  * Selects the edge implementation for a cut-over surface.
  *
- * - `SOLVAPAY_IMPL=ts` — force retained TypeScript path
+ * - `SOLVAPAY_IMPL=ts` — returns `ts`; edge surfaces reject (no TS path exists)
  * - `SOLVAPAY_IMPL=rust` — force WASM (surfaces init errors)
  * - unset — default WASM (edge has no silent TS fallback)
  *

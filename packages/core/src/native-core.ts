@@ -1,137 +1,78 @@
 /**
- * Sync core pure-logic delegation layer (Step 37R-d).
+ * Sync core pure-logic facade (Step 37R-d / Step 52).
  *
  * `business-details` / `credit-display` / `seller-identity` dispatch to napi
- * via an *installed* API so this module never statically imports
- * `node:module` or `@solvapay/server-native` — keeping React/browser graphs safe.
+ * or browser WASM via an *installed* API so this module never statically
+ * imports `node:module` or `@solvapay/server-native`.
  *
- * Node (`@solvapay/server` index) and vitest setup call `installNativeCoreApi`.
- * Browser / React never installs → always TypeScript fallback.
+ * After Step 52 there is no TypeScript fallback — uninstalled or
+ * `SOLVAPAY_IMPL=ts` throws {@link SolvaPayError}.
  */
 
-import {
-  BUSINESS_COUNTRY_OPTIONS,
-  deriveTaxIdType as deriveTaxIdTypeTs,
-  getTaxIdExample as getTaxIdExampleTs,
-  getTaxIdFieldLabel as getTaxIdFieldLabelTs,
-  getTaxIdHelperText as getTaxIdHelperTextTs,
-  resolveTaxBehavior as resolveTaxBehaviorTs,
-  validateBusinessDetails as validateBusinessDetailsTs,
-  type BusinessCountryOption,
-  type BusinessDetailsInput,
-  type SupportedBusinessCountry,
-  type TaxBehavior,
-  type TaxIdType,
-  type ValidateBusinessDetailsResult,
+import type {
+  BusinessCountryOption,
+  BusinessDetailsInput,
+  SupportedBusinessCountry,
+  TaxBehavior,
+  TaxIdType,
+  ValidateBusinessDetailsResult,
 } from './business-details'
+import type { SellerIdentityDisplay } from './seller-identity'
 import {
-  creditsToDisplayMinorUnits as creditsToDisplayMinorUnitsTs,
-  isZeroDecimalCurrency as isZeroDecimalCurrencyTs,
-  minorUnitsPerMajor as minorUnitsPerMajorTs,
-} from './credit-display'
-import {
-  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE as SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE_TS,
-  getSellerTaxIdentifierDisplayLabel as getSellerTaxIdentifierDisplayLabelTs,
-  resolveSellerIdentityDisplay as resolveSellerIdentityDisplayTs,
-  type SellerIdentityDisplay,
-} from './seller-identity'
+  dispatchSync,
+  installNativeCoreApi,
+  resetNativeCoreApiForTests,
+  type NativeCoreSyncMethod,
+  type SolvaPayImpl,
+} from './native-dispatch'
 
-export type SolvaPayImpl = 'ts' | 'rust'
-
-export type NativeCoreSyncMethod =
-  | 'validateBusinessDetails'
-  | 'deriveTaxIdType'
-  | 'resolveTaxBehavior'
-  | 'getTaxIdExample'
-  | 'getTaxIdFieldLabel'
-  | 'getTaxIdHelperText'
-  | 'getBusinessCountryOptions'
-  | 'creditsToDisplayMinorUnits'
-  | 'isZeroDecimalCurrency'
-  | 'minorUnitsPerMajor'
-  | 'resolveSellerIdentityDisplay'
-  | 'getSellerTaxIdentifierDisplayLabel'
-  | 'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE'
-
-type NativeCoreApi = {
-  callNativeSync: (fn: NativeCoreSyncMethod, argsJson: string) => unknown
-  resolveImpl: (surface: string) => SolvaPayImpl
-}
-
-let installed: NativeCoreApi | null = null
-
-export function installNativeCoreApi(api: NativeCoreApi): void {
-  installed = api
-}
-
-/** @internal test helper */
-export function resetNativeCoreApiForTests(): void {
-  installed = null
-}
-
-function dispatchSync<T>(fn: NativeCoreSyncMethod, args: unknown, tsFallback: () => T): T {
-  // The install is the gate: Node installs napi dispatch (`@solvapay/server`
-  // index), edge installs WASM dispatch (`@solvapay/server` edge). Uninstalled
-  // (browser / React / no warm-up) → TS. `resolveImpl` carries the
-  // `SOLVAPAY_IMPL` rollback per runtime.
-  if (installed === null || installed.resolveImpl('helper') !== 'rust') {
-    return tsFallback()
-  }
-  return installed.callNativeSync(fn, JSON.stringify(args)) as T
-}
+export type { NativeCoreSyncMethod, SolvaPayImpl }
+export { installNativeCoreApi, resetNativeCoreApiForTests }
 
 // --- business-details ---
 
 export function validateBusinessDetails(
   input: BusinessDetailsInput,
 ): ValidateBusinessDetailsResult {
-  return dispatchSync('validateBusinessDetails', input, () => validateBusinessDetailsTs(input))
+  return dispatchSync('validateBusinessDetails', input)
 }
 
 export function deriveTaxIdType(country: SupportedBusinessCountry): TaxIdType {
-  return dispatchSync('deriveTaxIdType', { country }, () => deriveTaxIdTypeTs(country))
+  return dispatchSync('deriveTaxIdType', { country })
 }
 
 export function resolveTaxBehavior(
   behavior: TaxBehavior,
   currency: string,
 ): 'inclusive' | 'exclusive' {
-  return dispatchSync(
-    'resolveTaxBehavior',
-    { behavior, currency },
-    () => resolveTaxBehaviorTs(behavior, currency),
-  )
+  return dispatchSync('resolveTaxBehavior', { behavior, currency })
 }
 
 export function getTaxIdExample(country: SupportedBusinessCountry): string {
-  return dispatchSync('getTaxIdExample', { country }, () => getTaxIdExampleTs(country))
+  return dispatchSync('getTaxIdExample', { country })
 }
 
 export function getTaxIdFieldLabel(country: SupportedBusinessCountry): string {
-  return dispatchSync('getTaxIdFieldLabel', { country }, () => getTaxIdFieldLabelTs(country))
+  return dispatchSync('getTaxIdFieldLabel', { country })
 }
 
 export function getTaxIdHelperText(country: SupportedBusinessCountry): string {
-  return dispatchSync('getTaxIdHelperText', { country }, () => getTaxIdHelperTextTs(country))
+  return dispatchSync('getTaxIdHelperText', { country })
 }
 
 /** Fixture-visible accessor; `BUSINESS_COUNTRY_OPTIONS` const stays for types/React. */
 export function getBusinessCountryOptions(): BusinessCountryOption[] {
-  return dispatchSync('getBusinessCountryOptions', {}, () => BUSINESS_COUNTRY_OPTIONS)
+  return dispatchSync('getBusinessCountryOptions', {})
 }
 
 // --- credit-display ---
 
 export function minorUnitsPerMajor(currency: string): number {
-  return dispatchSync('minorUnitsPerMajor', { currency }, () => minorUnitsPerMajorTs(currency))
+  return dispatchSync('minorUnitsPerMajor', { currency })
 }
 
 export function isZeroDecimalCurrency(currency: string): boolean {
-  return dispatchSync(
-    'isZeroDecimalCurrency',
-    { currency },
-    () => isZeroDecimalCurrencyTs(currency),
-  )
+  return dispatchSync('isZeroDecimalCurrency', { currency })
 }
 
 export function creditsToDisplayMinorUnits(input: {
@@ -140,28 +81,18 @@ export function creditsToDisplayMinorUnits(input: {
   displayExchangeRate: number
   displayCurrency: string
 }): number | null {
-  return dispatchSync('creditsToDisplayMinorUnits', input, () =>
-    creditsToDisplayMinorUnitsTs(input),
-  )
+  return dispatchSync('creditsToDisplayMinorUnits', input)
 }
 
 // --- seller-identity ---
 
 /** Fixture-visible accessor; const export keeps `as const` identity for types. */
 export function getSellerTaxIdentifierDisplayLabelByType(): Record<TaxIdType, string> {
-  return dispatchSync(
-    'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE',
-    {},
-    () => SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE_TS,
-  )
+  return dispatchSync('SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE', {})
 }
 
 export function getSellerTaxIdentifierDisplayLabel(country: string | null | undefined): string {
-  return dispatchSync(
-    'getSellerTaxIdentifierDisplayLabel',
-    { country: country ?? null },
-    () => getSellerTaxIdentifierDisplayLabelTs(country),
-  )
+  return dispatchSync('getSellerTaxIdentifierDisplayLabel', { country: country ?? null })
 }
 
 export function resolveSellerIdentityDisplay(input: {
@@ -170,14 +101,10 @@ export function resolveSellerIdentityDisplay(input: {
   taxId?: string | null
   companyNumber?: string | null
 }): SellerIdentityDisplay {
-  return dispatchSync(
-    'resolveSellerIdentityDisplay',
-    {
-      country: input.country ?? null,
-      vatNumber: input.vatNumber ?? null,
-      taxId: input.taxId ?? null,
-      companyNumber: input.companyNumber ?? null,
-    },
-    () => resolveSellerIdentityDisplayTs(input),
-  )
+  return dispatchSync('resolveSellerIdentityDisplay', {
+    country: input.country ?? null,
+    vatNumber: input.vatNumber ?? null,
+    taxId: input.taxId ?? null,
+    companyNumber: input.companyNumber ?? null,
+  })
 }

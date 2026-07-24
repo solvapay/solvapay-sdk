@@ -15,7 +15,14 @@ export type WireExchange = {
   responseBody?: unknown
 }
 
-/** Outcome of one side (TS or Rust) for a scenario. */
+/**
+ * Outcome of one side for a scenario.
+ *
+ * Step 53: the two sides are the npm facade binding (WASM `FetchTransport`) and
+ * the Rust CLI (shadow-invoker). The `ts*` field/label names below are retained
+ * only for report/golden compatibility — "ts" now denotes the facade side, not
+ * a TypeScript implementation.
+ */
 export type SideOutcome = {
   ok: boolean
   /** Success value or structured error observation. */
@@ -30,6 +37,10 @@ export type Divergence = {
   rustNormalized: unknown
   tsRaw: unknown
   rustRaw: unknown
+  /**
+   * Facade-side wire dump. Serialized key remains `tsWire` for persisted
+   * shadow-report compatibility (Step 53: facade ≠ TypeScript body).
+   */
   tsWire: WireExchange[]
   rustWire: WireExchange[]
   path?: string

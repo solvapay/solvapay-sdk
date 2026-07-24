@@ -73,7 +73,7 @@ jobs:
       - name: Validate fetch-runtime — Node gate
         run: pnpm validate:fetch-runtime
 
-      # Deno gate — type-checks examples/supabase-edge-mcp against the
+      # Deno gate — type-checks examples/typescript/supabase-edge-mcp against the
       # last-published `@preview` versions of the workspace packages it
       # imports. Catches Deno-incompatibility regressions one commit
       # late (the commit that introduced the break publishes, and the

@@ -35,7 +35,7 @@
   },
   "scripts": {
     "build": "turbo build --concurrency 16",
-    "build:examples": "turbo build --filter=@example/*",
+    "build:examples": "pnpm --filter '@example/*' -r --if-present build",
     "build:packages": "turbo build --filter=@solvapay/* --filter=solvapay --filter=create-solvapay",
     "clean": "turbo clean",
     "dev": "turbo dev --no-cache --concurrency 16 --continue",
@@ -68,6 +68,7 @@
     "manifest:check": "tsx scripts/manifest.ts --check",
     "parity:check": "tsx scripts/parity-check.ts",
     "delegation:check": "tsx scripts/check-delegation.ts",
+    "server-superseded-ts:check": "tsx scripts/check-superseded-server-ts.ts",
     "test:clean-install": "pnpm --filter @solvapay/server-native test:clean-install"
   },
   "devDependencies": {

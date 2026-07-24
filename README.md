@@ -27,7 +27,7 @@ npm create solvapay@latest my-mcp-app -- --type mcp
 ```bash
 git clone https://github.com/solvapay/solvapay-sdk
 cd solvapay-sdk && pnpm install && pnpm build
-cd examples/express-basic && pnpm dev   # stub mode — no API key needed
+cd examples/typescript/express-basic && pnpm dev   # stub mode — no API key needed
 ```
 
 ### Skills for coding agents
@@ -44,13 +44,13 @@ cd examples/express-basic && pnpm dev   # stub mode — no API key needed
 
 | Path | Entry | Packages | Example | Docs |
 | --- | --- | --- | --- | --- |
-| Express API | `npx solvapay init` | `@solvapay/server` | [express-basic](./examples/express-basic) | [Express](https://docs.solvapay.com/sdks/typescript/guides/express) |
-| Next.js checkout | `npx solvapay init` | `@solvapay/next` + `@solvapay/react` | [checkout-demo](./examples/checkout-demo) | [Next.js](https://docs.solvapay.com/sdks/typescript/guides/nextjs), [React](https://docs.solvapay.com/sdks/typescript/guides/react) |
-| Hosted checkout | `npx solvapay init` | `@solvapay/next` | [hosted-checkout-demo](./examples/hosted-checkout-demo) | [Purchase management](https://docs.solvapay.com/sdks/typescript/guides/purchase-management) |
-| Supabase Edge | `npx solvapay init` | `@solvapay/server/fetch` + `@solvapay/react` | [supabase-edge](./examples/supabase-edge) | [Supabase Edge](https://docs.solvapay.com/sdks/typescript/guides/supabase-edge) |
+| Express API | `npx solvapay init` | `@solvapay/server` | [express-basic](./examples/typescript/express-basic) | [Express](https://docs.solvapay.com/sdks/typescript/guides/express) |
+| Next.js checkout | `npx solvapay init` | `@solvapay/next` + `@solvapay/react` | [checkout-demo](./examples/typescript/checkout-demo) | [Next.js](https://docs.solvapay.com/sdks/typescript/guides/nextjs), [React](https://docs.solvapay.com/sdks/typescript/guides/react) |
+| Hosted checkout | `npx solvapay init` | `@solvapay/next` | [hosted-checkout-demo](./examples/typescript/hosted-checkout-demo) | [Purchase management](https://docs.solvapay.com/sdks/typescript/guides/purchase-management) |
+| Supabase Edge | `npx solvapay init` | `@solvapay/server/fetch` + `@solvapay/react` | [supabase-edge](./examples/typescript/supabase-edge) | [Supabase Edge](https://docs.solvapay.com/sdks/typescript/guides/supabase-edge) |
 | MCP app (server + UI) | **`npm create solvapay@latest <name> -- --type mcp`** | `@solvapay/mcp` + `@solvapay/react/mcp` + `@solvapay/server` | scaffold template | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp), [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app) |
-| MCP App UI (advanced) | manual on existing server | `@solvapay/mcp` + `@solvapay/react/mcp` | [mcp-checkout-app](./examples/mcp-checkout-app) | [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app) |
-| Existing MCP server | `npx solvapay init` | `@solvapay/server` + `@solvapay/mcp-core` | [mcp-oauth-bridge](./examples/mcp-oauth-bridge) | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp) |
+| MCP App UI (advanced) | manual on existing server | `@solvapay/mcp` + `@solvapay/react/mcp` | [mcp-checkout-app](./examples/typescript/mcp-checkout-app) | [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app) |
+| Existing MCP server | `npx solvapay init` | `@solvapay/server` + `@solvapay/mcp-core` | [mcp-oauth-bridge](./examples/typescript/mcp-oauth-bridge) | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp) |
 
 ## Packages
 
@@ -103,11 +103,11 @@ import { SolvaPayProvider, CheckoutLayout } from '@solvapay/react'
 
 | Example | Stack |
 | --- | --- |
-| [express-basic](./examples/express-basic) | Express paywall + stub mode |
-| [checkout-demo](./examples/checkout-demo) | Next.js checkout + Supabase |
-| [hosted-checkout-demo](./examples/hosted-checkout-demo) | Redirect checkout + portal |
-| [supabase-edge](./examples/supabase-edge) | Edge Functions one-liners |
-| [mcp-oauth-bridge](./examples/mcp-oauth-bridge) | MCP OAuth + paywall |
+| [express-basic](./examples/typescript/express-basic) | Express paywall + stub mode |
+| [checkout-demo](./examples/typescript/checkout-demo) | Next.js checkout + Supabase |
+| [hosted-checkout-demo](./examples/typescript/hosted-checkout-demo) | Redirect checkout + portal |
+| [supabase-edge](./examples/typescript/supabase-edge) | Edge Functions one-liners |
+| [mcp-oauth-bridge](./examples/typescript/mcp-oauth-bridge) | MCP OAuth + paywall |
 
 See [`examples/README.md`](./examples/README.md) for setup instructions.
 

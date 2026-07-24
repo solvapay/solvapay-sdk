@@ -12,6 +12,21 @@ export type LimitActivationBalance = components['schemas']['LimitBalanceDto']
 export type LimitActivationProduct = components['schemas']['LimitProductBriefDto']
 
 /**
+ * Discriminated union describing which recovery path the customer needs.
+ * Every state maps to exactly one primary recovery tool except
+ * `reactivation_required`, which surfaces two alternatives (rare).
+ *
+ * `reactivation_required` is not currently produced by `classifyPaywallState`
+ * (it needs a distinct backend signal), but stays in the union so downstream
+ * code compiles against the full set of discriminants.
+ */
+export type PaywallState =
+  | { kind: 'activation_required' }
+  | { kind: 'topup_required' }
+  | { kind: 'upgrade_required' }
+  | { kind: 'reactivation_required' }
+
+/**
  * Arguments passed to protected handlers
  */
 export interface PaywallArgs {

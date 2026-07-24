@@ -46,6 +46,11 @@ pub fn emit_native_ts(ir: &Ir, toolchain: Toolchain) -> GenResult<String> {
                 "emit_native_ts does not support Toolchain::Ruby (Step 43)".into(),
             ))
         }
+        Toolchain::Go => {
+            return Err(GenError::Parse(
+                "emit_native_ts does not support Toolchain::Go (Step 49)".into(),
+            ))
+        }
     };
     let file = chrome
         .get("files")

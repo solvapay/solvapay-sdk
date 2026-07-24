@@ -426,6 +426,10 @@ pub fn render_idempotency_key(
 }
 
 /// Wall-clock Unix epoch milliseconds for non-fixture clients.
+///
+/// `wasm32-unknown-unknown` (browser / edge) has no `SystemTime`, so it reads
+/// the host `Date.now()` — calling `SystemTime::now()` there traps (`unreachable`).
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 fn default_clock_ms() -> u64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     match SystemTime::now().duration_since(UNIX_EPOCH) {
@@ -434,7 +438,17 @@ fn default_clock_ms() -> u64 {
     }
 }
 
+/// Wall-clock Unix epoch milliseconds via host `Date.now()` (browser / edge).
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+fn default_clock_ms() -> u64 {
+    js_sys::Date::now() as u64
+}
+
 /// Non-cryptographic unit-interval float for non-fixture clients (`Math.random` role).
+///
+/// `wasm32-unknown-unknown` reads the host `Math.random()`; other targets derive
+/// one from `SystemTime` (which traps on that wasm target).
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 fn default_random() -> f64 {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
@@ -446,6 +460,12 @@ fn default_random() -> f64 {
         .unwrap_or(0)
         .hash(&mut hasher);
     (hasher.finish() as f64) / (u64::MAX as f64)
+}
+
+/// Host `Math.random()` unit-interval float (browser / edge).
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+fn default_random() -> f64 {
+    js_sys::Math::random()
 }
 
 /// JS `Math.imul` — signed 32-bit multiply, result as `u32` bits.

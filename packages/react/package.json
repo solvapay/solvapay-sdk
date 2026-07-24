@@ -8,7 +8,9 @@
   "sideEffects": [
     "dist/styles.css",
     "dist/mcp/styles.css",
-    "*.css"
+    "*.css",
+    "dist/index.js",
+    "dist/index.cjs"
   ],
   "exports": {
     ".": {

@@ -56,7 +56,7 @@ pnpm -F @solvapay/server dev
 pnpm build:packages
 
 # Run an example
-cd examples/express-basic
+cd examples/typescript/express-basic
 pnpm dev
 ```
 

@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { scenarioOperationCoverage } from '../../contract/shadow/scenarios.js'
-import { TS_SHADOW_OPERATION_NAMES } from './ts-driver.js'
+import { FACADE_SHADOW_OPERATION_NAMES } from './facade-driver.js'
 import {
   printReport,
   reportHasFailures,
@@ -35,7 +35,7 @@ describe('shadow selftest (stub backend)', () => {
 
   it('scenario catalog covers all 36 operations', () => {
     const covered = scenarioOperationCoverage()
-    for (const op of TS_SHADOW_OPERATION_NAMES) {
+    for (const op of FACADE_SHADOW_OPERATION_NAMES) {
       expect(covered.has(op), `missing scenario for ${op}`).toBe(true)
     }
   })

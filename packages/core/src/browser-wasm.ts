@@ -1,15 +1,15 @@
 /**
- * Opt-in browser WASM warm-up for `@solvapay/core` public-safe pure logic
- * (Step 38R-e).
+ * Eager browser WASM install for `@solvapay/core` public-safe pure logic
+ * (Step 38R-e / Step 52).
  *
- * NOT imported by the main entry: React / browser consumers default to the
- * TypeScript fallback (§7.9 — the React package + its tests run unmodified).
- * Call {@link warmBrowserCoreWasm} to asynchronously load the public-safe
- * browser WASM (`@solvapay/server-wasm/browser`) and install it as the core
- * sync dispatch. After warm-up, `validateBusinessDetails` / credit-display /
- * seller-identity read from WASM; before warm-up (or if it fails) they stay on
- * TS. This keeps the main-thread eager cost at zero — the ~public-safe WASM is
- * only fetched/instantiated when the app opts in.
+ * Importing this module starts WASM warm-up and installs the core sync
+ * dispatch as soon as `ready()` resolves. After Step 52 there is no TypeScript
+ * fallback — call sites must import this entry (or wait for
+ * {@link warmBrowserCoreWasm}) before using domain sync APIs.
+ *
+ * Prefer importing `@solvapay/core/browser-wasm` from React / browser bundles
+ * so dispatch is installed before first render. {@link warmBrowserCoreWasm}
+ * remains for back-compat and awaits the same in-flight install.
  */
 
 import {
@@ -18,11 +18,12 @@ import {
   type NativeCoreSyncMethod,
   type SolvaPayImpl,
 } from './native-core'
-import { SolvaPayError } from './index'
+import { SolvaPayError } from './solvapay-error'
 
 /** Async ready + the public-safe sync envelope functions on the browser binding. */
 type BrowserBinding = {
   ready: () => Promise<void>
+  ensureReadySync?: (wasmModule?: WebAssembly.Module) => void
 } & Partial<Record<NativeCoreSyncMethod, (argsJson: string) => string>>
 
 type EnvelopeOk = { ok: true; value: unknown }
@@ -61,25 +62,35 @@ function callBrowserSync(
   return unwrapEnvelope(method(argsJson))
 }
 
+function installFromBinding(binding: BrowserBinding): void {
+  installNativeCoreApi({
+    resolveImpl: (): SolvaPayImpl => 'rust',
+    callNativeSync: (fn, argsJson) => callBrowserSync(binding, fn, argsJson),
+  })
+}
+
 /** `undefined` = not attempted; Promise caches in-flight / completed warm-up. */
 let warmPromise: Promise<void> | undefined
 
 /**
- * Loads + instantiates the public-safe browser WASM and installs it as the
- * `@solvapay/core` sync dispatch. Idempotent; safe to call from multiple
- * components. Rejects (and clears the cache so a retry can re-attempt) if the
- * module fails to load — callers may ignore the rejection to keep the TS path.
+ * Eagerly loads + instantiates the public-safe browser WASM and installs it as
+ * the `@solvapay/core` sync dispatch. Started automatically on module import.
+ * Idempotent; safe to call from multiple components.
  */
 export function warmBrowserCoreWasm(): Promise<void> {
   if (!warmPromise) {
     warmPromise = import('@solvapay/server-wasm/browser')
       .then(async mod => {
         const binding = mod as unknown as BrowserBinding
+        // Prefer sync init when the runtime already has a compiled module
+        // (bundlers / workerd); otherwise fall through to async `ready()`.
+        try {
+          binding.ensureReadySync?.()
+        } catch {
+          // ensureReadySync throws without a precompiled module — use ready().
+        }
         await binding.ready()
-        installNativeCoreApi({
-          resolveImpl: (): SolvaPayImpl => 'rust',
-          callNativeSync: (fn, argsJson) => callBrowserSync(binding, fn, argsJson),
-        })
+        installFromBinding(binding)
       })
       .catch(err => {
         warmPromise = undefined
@@ -94,9 +105,19 @@ export function warmBrowserCoreWasm(): Promise<void> {
   return warmPromise
 }
 
+/** Eager install — starts on import so React does not need an explicit warm-up. */
+void warmBrowserCoreWasm()
+
 /**
- * Resets warm-up state and the installed core API. Reverts sync accessors to
- * the TypeScript fallback.
+ * Resolves when the (re)install has completed. Safe after test resets.
+ * @internal test helper / advanced callers
+ */
+export function whenBrowserCoreWasmReady(): Promise<void> {
+  return warmBrowserCoreWasm()
+}
+
+/**
+ * Resets warm-up state and the installed core API.
  * @internal test helper
  */
 export function resetBrowserCoreWasmForTests(): void {

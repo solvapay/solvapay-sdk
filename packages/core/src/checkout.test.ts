@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveReturnUrl, validateCheckoutSessionParams } from './checkout'
+import { resolveReturnUrl, validateCheckoutSessionParams } from './native-helpers'
 
 describe('validateCheckoutSessionParams', () => {
   it('returns null when productRef is present', () => {

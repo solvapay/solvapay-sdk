@@ -78,28 +78,38 @@ pub fn napi_version() -> Result<String> {
     }
 }
 
-/// Verifies a SolvaPay webhook signature using the host wall clock.
+/// Verifies a SolvaPay webhook signature.
 ///
 /// Returns the parsed JSON body as a string on success. On failure throws a JS
 /// `Error` whose `code` is the snake_case webhook error code (via napi
 /// `Error.status` → JS `Error.code`).
+///
+/// The clock is host-injected: the TypeScript facade passes
+/// `Math.floor(Date.now() / 1000)` so a mocked host clock (fixtures, tests)
+/// flows through deterministically. Omitting `nowUnixSecs` falls back to the
+/// wall clock, keeping legacy three-argument native callers working.
 ///
 /// # Arguments
 ///
 /// * `body` - Raw request body string.
 /// * `signature` - `SV-Signature` header value.
 /// * `secret` - Webhook secret (`whsec_…`).
+/// * `now_unix_secs` - Optional host clock as unix seconds; wall clock when omitted.
 #[napi(js_name = "verifyWebhook")]
 pub fn verify_webhook(
     body: String,
     signature: String,
     secret: String,
+    now_unix_secs: Option<i64>,
 ) -> std::result::Result<String, Error<&'static str>> {
     let result = catch_unwind(AssertUnwindSafe(|| {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| BindingError::clock_failed(e.to_string()))?
-            .as_secs() as i64;
+        let now = match now_unix_secs {
+            Some(now) => now,
+            None => SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|e| BindingError::clock_failed(e.to_string()))?
+                .as_secs() as i64,
+        };
         verify_webhook_json(&body, &signature, &secret, now)
     }));
 
@@ -150,6 +160,32 @@ mod tests {
         let err = verify_webhook_json(FIXTURE_BODY, bad_sig, FIXTURE_SECRET, FIXTURE_NOW)
             .expect_err("bad hmac must reject");
         assert_eq!(err.code(), "invalid_signature");
+    }
+
+    #[test]
+    fn verify_webhook_json_accepts_at_positive_tolerance_boundary() {
+        // |now − t| == 300 is still inside the tolerance window.
+        let json =
+            verify_webhook_json(FIXTURE_BODY, FIXTURE_SIGNATURE, FIXTURE_SECRET, FIXTURE_NOW + 300)
+                .expect("clock at +300 s boundary must verify");
+        let value: Value = serde_json::from_str(&json).expect("json");
+        assert_eq!(value["id"], "evt_fixture_1");
+    }
+
+    #[test]
+    fn verify_webhook_json_rejects_just_past_positive_tolerance() {
+        let err =
+            verify_webhook_json(FIXTURE_BODY, FIXTURE_SIGNATURE, FIXTURE_SECRET, FIXTURE_NOW + 301)
+                .expect_err("clock at +301 s must reject");
+        assert_eq!(err.code(), "timestamp_too_old");
+    }
+
+    #[test]
+    fn verify_webhook_json_rejects_just_before_negative_tolerance() {
+        let err =
+            verify_webhook_json(FIXTURE_BODY, FIXTURE_SIGNATURE, FIXTURE_SECRET, FIXTURE_NOW - 301)
+                .expect_err("clock at −301 s must reject");
+        assert_eq!(err.code(), "timestamp_too_old");
     }
 
     #[cfg(not(target_arch = "wasm32"))]

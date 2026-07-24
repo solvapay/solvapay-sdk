@@ -18,14 +18,14 @@
  *     through `'@solvapay/server'` — avoids the re-export indirection
  *     and keeps the build tree-shake-friendly.
  *  2. `verifyWebhook` imports from `'../edge'` explicitly so the
- *     `./fetch` subpath is deterministically Web Crypto regardless of
- *     which export condition a consumer's bundler selects for
- *     `@solvapay/server` (the root entry's `node:crypto` variant was
- *     the wrong choice on edge runtimes and the bundler-selected
- *     default could swing either way).
+ *     `./fetch` subpath is deterministically the async WASM edge facade
+ *     regardless of which export condition a consumer's bundler selects
+ *     for `@solvapay/server` (the root entry's sync napi facade was the
+ *     wrong choice on edge runtimes and the bundler-selected default
+ *     could swing either way).
  *  3. `await verifyWebhook(...)` — the previous call was un-awaited.
  *     Worked by accident on Deno because the `deno` export condition
- *     resolved `@solvapay/server` to `./dist/edge.js` (async Web Crypto
+ *     resolved `@solvapay/server` to `./dist/edge.js` (async WASM
  *     variant), and passing the Promise through `options.onEvent` got
  *     coerced to the event object in most handlers. Latent bug —
  *     surfaced as "event is a Promise" in strict TypeScript handlers
@@ -303,9 +303,9 @@ export function solvapayWebhook(options: SolvapayWebhookOptions): (req: Request)
 
     let event: WebhookEvent
     try {
-      // `verifyWebhook` is the async Web Crypto variant from `../edge`
+      // `verifyWebhook` is the async WASM edge facade from `../edge`
       // (deterministic choice — see module-level comment for why the
-      // root entry's `node:crypto` variant would be wrong here even on
+      // root entry's sync napi facade would be wrong here even on
       // Node's undici-backed fetch runtime).
       event = await verifyWebhook({ body, signature, secret })
     } catch {

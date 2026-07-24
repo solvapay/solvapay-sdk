@@ -37,6 +37,8 @@ pub enum Toolchain {
     Python,
     /// Magnus Ruby extension (`rust/bindings/ruby/ext/solvapay/src`).
     Ruby,
+    /// wazero WASI guest crate (`rust/bindings/go/wasm/src`).
+    Go,
 }
 
 /// The generated shim files for one toolchain.
@@ -48,9 +50,11 @@ pub struct EmittedBindings {
     pub decisions_rs: String,
     /// `payload_builders.rs`.
     pub payload_builders_rs: String,
-    /// `native_client.rs` (Node), `wasm_client.rs` (Wasm), or `client.rs` (Python/Ruby).
+    /// `native_client.rs` (Node), `wasm_client.rs` (Wasm), or `client.rs` (Python/Ruby/Go).
     pub client_rs: String,
-    /// Python-only `register.rs` (`#[pymodule]` wiring). Empty for Node/Wasm/Ruby.
+    /// Go-only `webhook.rs` (`sv_verify_webhook` guest export). Empty otherwise.
+    pub webhook_rs: String,
+    /// Python-only `register.rs` (`#[pymodule]` wiring). Empty for Node/Wasm/Ruby/Go.
     pub register_rs: String,
 }
 
@@ -75,7 +79,24 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
         Toolchain::Wasm => "wasm",
         Toolchain::Python => "python",
         Toolchain::Ruby => "ruby",
+        Toolchain::Go => "go",
     };
+
+    // The wazero WASI guest (Step 49) carries its chrome inline below rather
+    // than in the JSON snapshot: its shims are `#[no_mangle] extern "C"`
+    // exports over the guest-memory ABI, not `impl`-block methods, so they do
+    // not reuse the shared client/decision emitters.
+    if toolchain == Toolchain::Go {
+        return Ok(EmittedBindings {
+            args_rs: emit_go_args(),
+            decisions_rs: String::new(),
+            payload_builders_rs: String::new(),
+            client_rs: emit_go_client(ir)?,
+            webhook_rs: emit_go_webhook(),
+            register_rs: String::new(),
+        });
+    }
+
     let art = chrome
         .get("artifacts")
         .and_then(|a| a.get(lang))
@@ -92,6 +113,7 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
                 decisions_rs: emit_ruby_sync_artifact(ir, python_art, "decisions")?,
                 payload_builders_rs: emit_ruby_payload_builders(ir, python_art)?,
                 client_rs: emit_ruby_client(ir, art)?,
+                webhook_rs: String::new(),
                 register_rs: emit_ruby_register(ir),
             })
         }
@@ -100,6 +122,7 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
             decisions_rs: emit_decisions(ir, toolchain, art)?,
             payload_builders_rs: emit_payload_builders(ir, toolchain, art, &chrome)?,
             client_rs: emit_python_client(ir, art)?,
+            webhook_rs: String::new(),
             register_rs: emit_python_register(ir)?,
         }),
         Toolchain::Node | Toolchain::Wasm => Ok(EmittedBindings {
@@ -107,8 +130,10 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
             decisions_rs: emit_decisions(ir, toolchain, art)?,
             payload_builders_rs: emit_payload_builders(ir, toolchain, art, &chrome)?,
             client_rs: emit_client(ir, toolchain, art)?,
+            webhook_rs: String::new(),
             register_rs: String::new(),
         }),
+        Toolchain::Go => unreachable!("Go is emitted above via the inline chrome"),
     }
 }
 
@@ -211,6 +236,7 @@ fn emit_payload_builders(
             ))
         }
         Toolchain::Ruby => unreachable!("Ruby uses emit_ruby_payload_builders"),
+        Toolchain::Go => unreachable!("Go emits no payload builders in the scaffold"),
     }
 }
 
@@ -380,6 +406,228 @@ fn ruby_client_section(section: &str) -> String {
     format!("// --- {section} ---")
 }
 
+// --- Go (wazero WASI guest) --------------------------------------------------
+
+/// `args.rs` chrome: shared deserialize structs + `split_path_refs` helper.
+///
+/// Per-operation ClientAwait/ClientSplit bodies deserialize into `solvapay_dto`
+/// types in `client.rs` (same convention as the Python/Ruby guest shims).
+const GO_ARGS_RS: &str = r#"//! Shared JSON-args helpers for the WASI guest shims (Step 50).
+
+use serde::Deserialize;
+use serde_json::{Map, Value};
+use solvapay_core::SdkError;
+
+use crate::error::parse_args_json;
+
+/// `sv_client_new` config payload: `{"apiKey":…,"apiBaseUrl":…}`.
+#[derive(Debug, Deserialize)]
+pub(crate) struct ClientConfig {
+    /// Bearer token forwarded to the client shell.
+    #[serde(rename = "apiKey")]
+    pub(crate) api_key: String,
+    /// Optional origin override (defaults to `https://api.solvapay.com`).
+    #[serde(rename = "apiBaseUrl")]
+    pub(crate) api_base_url: Option<String>,
+}
+
+/// `sv_verify_webhook` args: `{"body","signature","secret","nowUnixSecs"}`.
+#[derive(Debug, Deserialize)]
+pub(crate) struct VerifyWebhookArgs {
+    /// Raw request body string (must match the signed bytes).
+    pub(crate) body: String,
+    /// `SV-Signature` header value (`t=…,v1=…`).
+    pub(crate) signature: String,
+    /// Webhook secret including the `whsec_` prefix.
+    pub(crate) secret: String,
+    /// Host clock as unix seconds.
+    #[serde(rename = "nowUnixSecs")]
+    pub(crate) now_unix_secs: i64,
+}
+
+/// Extracts path refs from a combined args object, leaving the remaining body.
+///
+/// Keys are removed in order; missing/non-string keys map to Transport errors.
+pub(crate) fn split_path_refs(
+    args_json: &str,
+    keys: &[&str],
+) -> Result<(Vec<String>, Value), SdkError> {
+    let mut map: Map<String, Value> = parse_args_json(args_json)?;
+    let mut refs = Vec::with_capacity(keys.len());
+    for key in keys {
+        let value = map
+            .remove(*key)
+            .and_then(|v| v.as_str().map(str::to_owned))
+            .ok_or_else(|| SdkError::transport(format!("missing {key}"), false))?;
+        refs.push(value);
+    }
+    Ok((refs, Value::Object(map)))
+}
+"#;
+
+/// Emits Go guest `args.rs` (config/webhook structs + `split_path_refs`).
+fn emit_go_args() -> String {
+    with_generated_header(GO_ARGS_RS)
+}
+
+/// `client.rs` chrome: module doc + fixed imports (DTO imports are appended).
+const GO_CLIENT_HEADER_PREFIX: &str = r#"//! WASI guest client shims — full Groups A–C surface (Step 50).
+//!
+//! Each export takes a guest pointer/length pair addressing a UTF-8 JSON args
+//! string and returns a packed `(ptr<<32)|len` handle to a JSON envelope
+//! string (`{"ok":true,"value":…}` | `{"ok":false,"error":…}`).
+
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::Arc;
+
+use solvapay_core::SdkError;
+"#;
+
+const GO_CLIENT_HEADER_SUFFIX: &str = r#"
+use solvapay_transport::{ClientShell, SharedTransport, SolvaPayClient as CoreClient};
+
+use crate::abi::{pack, read_string};
+use crate::args::{split_path_refs, ClientConfig};
+use crate::error::{internal_error_envelope, parse_args_json, run_envelope, run_envelope_sync};
+use crate::host_transport::WasiHostTransport;
+"#;
+
+/// `client.rs` chrome: thread-local client + `sv_client_new` + `with_client`.
+const GO_CLIENT_PREAMBLE: &str = r#"thread_local! {
+    /// Guest-global client configured by `sv_client_new` (single-threaded WASI).
+    static CLIENT: RefCell<Option<Rc<CoreClient>>> = const { RefCell::new(None) };
+}
+
+/// Configures the thread-local client from `{"apiKey":…,"apiBaseUrl":…}`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_client_new(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let config: ClientConfig = parse_args_json(&args_json)?;
+        let transport: SharedTransport = Arc::new(WasiHostTransport::new());
+        let mut shell = ClientShell::new(transport, config.api_key);
+        if let Some(base) = config.api_base_url {
+            shell = shell.with_base_url(base);
+        }
+        CLIENT.with(|cell| *cell.borrow_mut() = Some(Rc::new(CoreClient::new(shell))));
+        Ok(serde_json::Value::Bool(true))
+    }))
+}
+
+/// Runs `f` with the configured client, or an internal-error envelope if unset.
+fn with_client<F: FnOnce(Rc<CoreClient>) -> String>(f: F) -> String {
+    match CLIENT.with(|cell| cell.borrow().clone()) {
+        Some(client) => f(client),
+        None => internal_error_envelope("client not configured: call sv_client_new first"),
+    }
+}
+"#;
+
+/// `webhook.rs` chrome: the full sync `sv_verify_webhook` guest export.
+const GO_WEBHOOK_RS: &str = r#"//! WASI guest webhook shim (`verifyWebhook`).
+//!
+//! Synchronous: verifies the HMAC signature in-guest and returns the parsed
+//! JSON body as an envelope. Failures fold into `SdkError::Webhook`, carrying
+//! the stable snake_case `code` for host-side `errors.As` matching.
+
+use solvapay_core::{verify_webhook as core_verify_webhook, SdkError};
+
+use crate::abi::{pack, read_string};
+use crate::args::VerifyWebhookArgs;
+use crate::error::{parse_args_json, run_envelope_sync};
+
+/// Verifies a SolvaPay webhook signature and returns the parsed JSON body.
+///
+/// Args JSON: `{"body","signature","secret","nowUnixSecs"}`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_verify_webhook(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args: VerifyWebhookArgs = parse_args_json(&args_json)?;
+        core_verify_webhook(&args.body, &args.signature, &args.secret, args.now_unix_secs)
+            .map_err(SdkError::from)
+    }))
+}
+"#;
+
+/// Emits the Go guest `client.rs` (full Groups A–C surface).
+fn emit_go_client(ir: &Ir) -> GenResult<String> {
+    let symbols = symbols_for(ir, IrBindingArtifact::Client);
+    let mut dto_types: Vec<String> = symbols
+        .iter()
+        .filter_map(|sym| sym.dto_type.clone())
+        .collect();
+    dto_types.sort();
+    dto_types.dedup();
+
+    let dto_import = if dto_types.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "use solvapay_dto::{{\n    {},\n}};\n",
+            dto_types.join(",\n    ")
+        )
+    };
+
+    let header = format!("{GO_CLIENT_HEADER_PREFIX}{dto_import}{GO_CLIENT_HEADER_SUFFIX}");
+
+    let mut chunks: Vec<String> = Vec::new();
+    for sym in &symbols {
+        chunks.push(emit_go_client_method(sym)?);
+    }
+
+    Ok(format!(
+        "{}{}\n{}",
+        with_generated_header(&header),
+        GO_CLIENT_PREAMBLE,
+        chunks.join("\n\n")
+    ))
+}
+
+/// Emits one `#[no_mangle] extern "C"` guest export for a client symbol.
+///
+/// Supports `clientIgnore` / `clientAwait` / `clientSplit`, driven by the same
+/// [`client_call_body`] expression as the other toolchains, wrapped in
+/// `pollster::block_on` for the single-threaded WASI guest.
+fn emit_go_client_method(sym: &IrBindingSymbol) -> GenResult<String> {
+    let doc = render_doc(&sym.doc);
+    let fn_name = &sym.rust_fn_name;
+    let (param, inner) = client_call_body(sym)?;
+    let inner = inner
+        .strip_suffix(".await")
+        .ok_or_else(|| {
+            GenError::Parse(format!(
+                "Go client {} expected client_call_body to end in .await",
+                sym.id
+            ))
+        })?
+        .trim_end();
+    let call = format!("pollster::block_on({inner})");
+    let args_line = if param == "_args_json" {
+        "let _args_json = read_string(args_ptr, args_len);"
+    } else {
+        "let args_json = read_string(args_ptr, args_len);"
+    };
+
+    Ok(format!(
+        "{doc}\n///\n/// # Safety\n///\n/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.\n#[no_mangle]\npub unsafe extern \"C\" fn sv_{fn_name}(args_ptr: *mut u8, args_len: usize) -> u64 {{\n    {args_line}\n    pack(with_client(|client| {{\n        {call}\n    }}))\n}}"
+    ))
+}
+
+/// Emits the Go guest `webhook.rs` (static `sv_verify_webhook` shim).
+fn emit_go_webhook() -> String {
+    with_generated_header(GO_WEBHOOK_RS)
+}
+
 /// Emits a sync GVL-releasing Magnus client method for one symbol.
 fn emit_ruby_client_method(sym: &IrBindingSymbol) -> GenResult<String> {
     let doc = render_doc(&sym.doc);
@@ -514,7 +762,7 @@ fn emit_sync_fn(sym: &IrBindingSymbol, toolchain: Toolchain) -> String {
     let export_name = match toolchain {
         Toolchain::Python => sym.names.py.as_str(),
         Toolchain::Ruby => sym.names.rb.as_str(),
-        Toolchain::Node | Toolchain::Wasm => sym.id.as_str(),
+        Toolchain::Node | Toolchain::Wasm | Toolchain::Go => sym.id.as_str(),
     };
     let attr = attr_macro(toolchain, export_name);
     let attr_line = if attr.is_empty() {
@@ -593,7 +841,9 @@ fn sync_body(sym: &IrBindingSymbol, toolchain: Toolchain) -> String {
                     .as_deref()
                     .unwrap_or(node)
                     .to_string(),
-                Toolchain::Node | Toolchain::Python | Toolchain::Ruby => node.to_string(),
+                Toolchain::Node | Toolchain::Python | Toolchain::Ruby | Toolchain::Go => {
+                    node.to_string()
+                }
             }
         }
         IrBindingCall::Wrap { serialize, args } => {
@@ -727,21 +977,21 @@ fn attr_macro(toolchain: Toolchain, export_name: &str) -> String {
         Toolchain::Node => format!("#[napi(js_name = \"{export_name}\")]"),
         Toolchain::Wasm => format!("#[wasm_bindgen(js_name = \"{export_name}\")]"),
         Toolchain::Python => format!("#[pyfunction(name = \"{export_name}\")]"),
-        Toolchain::Ruby => String::new(),
+        Toolchain::Ruby | Toolchain::Go => String::new(),
     }
 }
 
 fn clone_ty(toolchain: Toolchain) -> &'static str {
     match toolchain {
         Toolchain::Node | Toolchain::Python | Toolchain::Ruby => "Arc",
-        Toolchain::Wasm => "Rc",
+        Toolchain::Wasm | Toolchain::Go => "Rc",
     }
 }
 
 fn pick_doc(sym: &IrBindingSymbol, toolchain: Toolchain) -> &str {
     match toolchain {
         Toolchain::Wasm => sym.doc_wasm.as_deref().unwrap_or(&sym.doc),
-        Toolchain::Node | Toolchain::Python | Toolchain::Ruby => &sym.doc,
+        Toolchain::Node | Toolchain::Python | Toolchain::Ruby | Toolchain::Go => &sym.doc,
     }
 }
 
@@ -1050,6 +1300,24 @@ bindings:
         assert!(split.contains("let params: UpdateCustomerParams = serde_json::from_value(body)"));
         assert!(split.contains("invalid updateCustomer body"));
         assert!(split.contains("client.update_customer(&refs[0], params).await"));
+
+        let go_await = emit_go_client_method(create).unwrap();
+        assert!(go_await.contains("sv_create_customer"));
+        assert!(go_await.contains("let args_json = read_string"));
+        assert!(go_await.contains("let params: CreateCustomerRequest = parse_args_json(&args_json)?;"));
+        assert!(go_await.contains("pollster::block_on(run_envelope"));
+        assert!(
+            !go_await.contains("})\n        .await"),
+            "Go guest must drive the future with pollster, not `.await` the envelope"
+        );
+
+        let go_split = emit_go_client_method(update).unwrap();
+        assert!(go_split.contains(
+            "let (refs, body) = split_path_refs(&args_json, &[\"customerRef\"])?;"
+        ));
+        assert!(go_split.contains("let params: UpdateCustomerParams = serde_json::from_value(body)"));
+        assert!(go_split.contains("client.update_customer(&refs[0], params).await"));
+        assert!(go_split.contains("pollster::block_on(run_envelope"));
     }
 
     #[test]

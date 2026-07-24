@@ -145,7 +145,7 @@ export type NativeSyncMethod =
   | 'validatePublicBaseUrl'
 
 export type NativeBinding = {
-  verifyWebhook(body: string, signature: string, secret: string): string
+  verifyWebhook(body: string, signature: string, secret: string, nowUnixSecs?: number): string
   NativeClient?: NativeClientConstructor
   napiVersion?: () => string
 } & Partial<Record<NativeSyncMethod, (argsJson: string) => string>>
@@ -237,9 +237,9 @@ export function loadNativeBinding(): NativeBinding | null {
 /**
  * Selects the implementation for a cut-over surface.
  *
- * - `SOLVAPAY_IMPL=ts` — force TypeScript
+ * - `SOLVAPAY_IMPL=ts` — fail-fast (`ts`); no TypeScript semantic path after Step 53
  * - `SOLVAPAY_IMPL=rust` — force the napi binding (surfaces load errors)
- * - unset — prefer rust when the binding loads, else silent TS fallback
+ * - unset — prefer rust when the binding loads, else `ts` (callers throw)
  *
  * `surface` is reserved for future per-surface env overrides; today every
  * surface shares `SOLVAPAY_IMPL` (read per call).
@@ -394,10 +394,13 @@ export function callNativeSync(fn: NativeSyncMethod, argsJson: string): unknown 
 
 /**
  * Verifies a webhook via `@solvapay/server-native`, rewrapping native errors
- * as {@link SolvaPayError} so public error shape stays unchanged.
+ * as {@link SolvaPayError} (preserving the snake_case `code` when present) so
+ * the public error shape stays unchanged.
  *
- * Webhook path still uses the sync throw-style binding (Step 37); envelope
- * migration for verifyWebhook is deferred.
+ * The host clock is injected as `Math.floor(Date.now() / 1000)` so a mocked
+ * `Date.now` (fixtures/tests) flows deterministically into Rust's ±300 s
+ * tolerance check; the native export falls back to the wall clock when the
+ * fourth argument is omitted (legacy three-argument callers).
  */
 export function verifyWebhookNative({
   body,
@@ -415,13 +418,24 @@ export function verifyWebhookNative({
     )
   }
 
+  const nowUnixSecs = Math.floor(Date.now() / 1000)
   try {
-    const json = binding.verifyWebhook(body, signature, secret)
+    const json = binding.verifyWebhook(body, signature, secret, nowUnixSecs)
     return JSON.parse(json) as WebhookEvent
   } catch (err) {
     if (err instanceof SolvaPayError) {
       throw err
     }
-    throw new SolvaPayError(err instanceof Error ? err.message : String(err))
+    const message = err instanceof Error ? err.message : String(err)
+    const code = webhookErrorCode(err)
+    throw new SolvaPayError(message, code !== undefined ? { code } : {})
   }
+}
+
+function webhookErrorCode(err: unknown): string | undefined {
+  if (typeof err === 'object' && err !== null && 'code' in err) {
+    const code = (err as { code?: unknown }).code
+    if (typeof code === 'string') return code
+  }
+  return undefined
 }

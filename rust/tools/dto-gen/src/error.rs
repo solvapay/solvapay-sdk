@@ -30,7 +30,10 @@ pub enum GenError {
          [--native-py-out <_native.py>] [--py-stub-out <__init__.pyi>] \
          [--py-parity-out <signature_parity_generated_test.py>] \
          [--native-rb-out <_native.rb>] [--rb-client-out <client.rb>] \
-         [--rb-rbs-out <solvapay.rbs>] [--rb-parity-out <signature-parity.rb>]"
+         [--rb-rbs-out <solvapay.rbs>] [--rb-parity-out <signature-parity.rb>] \
+         [--rs-client-out <client_generated.rs>] [--rs-parity-out <signature_parity_generated.rs>] \
+         [--go-bindings-out <bindings/go/wasm/src>] \
+         [--go-client-out <client_generated.go>] [--go-parity-out <signature_parity_generated_test.go>]"
     )]
     Usage,
 

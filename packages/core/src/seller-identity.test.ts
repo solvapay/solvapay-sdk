@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE } from './seller-identity'
 import {
-  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
   getSellerTaxIdentifierDisplayLabel,
   resolveSellerIdentityDisplay,
-} from './seller-identity'
+} from './native-core'
 
 describe('SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE', () => {
   it('uses VAT number for EU and GB', () => {

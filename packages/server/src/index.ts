@@ -5,7 +5,6 @@
  * Provides unified payable API with explicit adapters for all frameworks.
  */
 
-import crypto from 'node:crypto'
 import { installNativeCoreApi, SolvaPayError } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
 import { installMcpAdapterNative } from './adapters/mcp'
@@ -17,7 +16,8 @@ import type { PaywallStructuredContent, PaywallToolResult } from './types'
 
 // Install sync decision + core dispatch for Node (edge never installs → TS fallback).
 installNativeDecisionApi({ callNativeSync, resolveImpl })
-installNativeCoreApi({ callNativeSync, resolveImpl })
+// Step 52: @solvapay/core is Rust-only — SOLVAPAY_IMPL=ts does not gate it.
+installNativeCoreApi({ callNativeSync, resolveImpl: () => 'rust' })
 installMcpAdapterNative({
   formatGate: (gate: PaywallStructuredContent): PaywallToolResult | null => {
     if (resolveImpl('mcp') !== 'rust') return null
@@ -98,60 +98,13 @@ export function verifyWebhook({
   signature: string
   secret: string
 }): WebhookEvent {
-  return resolveWebhookImpl() === 'rust'
-    ? verifyWebhookNative({ body, signature, secret })
-    : verifyWebhookTs({ body, signature, secret })
-}
-
-/** TypeScript / `node:crypto` implementation (rollback path via `SOLVAPAY_IMPL=ts`). */
-function verifyWebhookTs({
-  body,
-  signature,
-  secret,
-}: {
-  body: string
-  signature: string
-  secret: string
-}): WebhookEvent {
-  const toleranceSec = 300
-  if (!signature) throw new SolvaPayError('Missing webhook signature')
-
-  const parts = signature.split(',')
-  const tPart = parts.find(p => p.startsWith('t='))
-  const v1Part = parts.find(p => p.startsWith('v1='))
-  if (!tPart || !v1Part) {
-    throw new SolvaPayError('Malformed webhook signature')
+  // Rust-only after Step 53. `SOLVAPAY_IMPL=ts` (or an unavailable binding that
+  // resolves to `ts`) fails fast instead of silently running a duplicate
+  // `node:crypto` implementation.
+  if (resolveWebhookImpl() !== 'rust') {
+    throw new SolvaPayError('server webhook API not installed')
   }
-
-  const timestamp = parseInt(tPart.slice(2), 10)
-  const receivedHmac = v1Part.slice(3)
-  if (Number.isNaN(timestamp) || !receivedHmac) {
-    throw new SolvaPayError('Malformed webhook signature')
-  }
-
-  if (toleranceSec > 0) {
-    const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp)
-    if (age > toleranceSec) {
-      throw new SolvaPayError('Webhook signature timestamp too old')
-    }
-  }
-
-  const expectedHmac = crypto
-    .createHmac('sha256', secret)
-    .update(`${timestamp}.${body}`)
-    .digest('hex')
-
-  if (receivedHmac.length !== expectedHmac.length) {
-    throw new SolvaPayError('Invalid webhook signature')
-  }
-  const ok = crypto.timingSafeEqual(Buffer.from(expectedHmac), Buffer.from(receivedHmac))
-  if (!ok) throw new SolvaPayError('Invalid webhook signature')
-
-  try {
-    return JSON.parse(body) as WebhookEvent
-  } catch {
-    throw new SolvaPayError('Invalid webhook payload: body is not valid JSON')
-  }
+  return verifyWebhookNative({ body, signature, secret })
 }
 
 // MCP adapter (formatGate / formatResponse) — used by contract fixtures and
@@ -161,6 +114,14 @@ export { McpAdapter } from './adapters'
 
 /** @internal Node native dispatch seams (fixture harness / package installs). */
 export { callNativeSync, resolveImpl } from './native'
+
+/**
+ * @internal WASM client seams. The contract fixture harness loads the real
+ * `@solvapay/server-wasm` client and installs it as an override so client
+ * fixtures exercise the Rust `FetchTransport` (mockable via `globalThis.fetch`)
+ * under Node — napi `reqwest` cannot be intercepted the same way.
+ */
+export { loadWasmBinding, getWasmClient, setWasmClientForTests, resetWasmCache } from './wasm'
 
 // Export PaywallError for error handling
 export { PaywallError } from './paywall'

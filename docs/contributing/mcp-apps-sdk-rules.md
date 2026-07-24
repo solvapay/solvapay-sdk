@@ -1,6 +1,6 @@
 # SolvaPay MCP Apps SDK — rules
 
-Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `packages/mcp-core`, `packages/mcp`, `packages/mcp-express`, `packages/mcp-fetch`, `packages/react/mcp`, or `examples/mcp-checkout-app` / `examples/supabase-edge-mcp`.
+Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `packages/mcp-core`, `packages/mcp`, `packages/mcp-express`, `packages/mcp-fetch`, `packages/react/mcp`, or `examples/typescript/mcp-checkout-app` / `examples/typescript/supabase-edge-mcp`.
 
 ## North Star
 
@@ -66,7 +66,7 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 ### Developer experience
 
 - **Target: `npx solvapay init` to working paid tool in 60 seconds.** Every decision that adds a step to this path needs justification.
-- **The example server is the primary docs surface.** If a merchant copy-pastes `examples/mcp-checkout-app`, they get best practices automatically. Keep it minimal and correct.
+- **The example server is the primary docs surface.** If a merchant copy-pastes `examples/typescript/mcp-checkout-app`, they get best practices automatically. Keep it minimal and correct.
 - **Errors point at solutions.** If a merchant forgets to mount the OAuth bridge, the error message names the fix. No cryptic 402s.
 - **Config-time validation over runtime failures.** If a required integration step is missing, `createSolvaPayMcpServer` throws at construction, not on the first paid call.
 

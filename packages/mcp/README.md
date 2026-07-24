@@ -71,7 +71,7 @@ See [`ctx.respond()` V1 spec](../../docs/spec/ctx-respond-v1.md).
 - [`@solvapay/mcp-core`](../mcp-core) — descriptors for custom adapters
 - [`@solvapay/react/mcp`](../react) — MCP App UI components
 - [`@solvapay/server`](../server) — core paywall runtime
-- [MCP app example](../../examples/mcp-checkout-app)
+- [MCP app example](../../examples/typescript/mcp-checkout-app)
 
 ## Support
 

@@ -9,6 +9,8 @@ members = [
   "bindings/wasm",
   "bindings/python",
   "bindings/ruby/ext/solvapay",
+  "bindings/go/wasm",
+  "bindings/c",
   "tools/dto-gen",
   "tools/fixture-runner",
   "tools/shadow-invoker",

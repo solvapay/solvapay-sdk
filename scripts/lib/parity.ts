@@ -114,6 +114,13 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'version',
   // OpenAPI namespace re-export
   'components',
+  // @internal WASM client seams re-exported from @solvapay/server (Step 53):
+  // used only by the contract fixture harness to drive the Rust FetchTransport
+  // under Node. Not part of the portable cross-language surface.
+  'loadWasmBinding',
+  'getWasmClient',
+  'setWasmClientForTests',
+  'resetWasmCache',
 ] as const
 
 /** Suffix / pattern allowlist for TS-only supporting exports. */

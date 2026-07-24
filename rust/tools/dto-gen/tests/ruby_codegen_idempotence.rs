@@ -46,10 +46,13 @@ fn emits_all_ruby_artifacts_identically_twice() {
             None,
             None,
             None,
+            None,
             Some(&native),
             Some(&client),
             Some(&rbs),
             Some(&parity),
+            None,
+            None,
             None,
             None,
         )

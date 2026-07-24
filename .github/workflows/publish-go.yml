@@ -1,0 +1,141 @@
+name: Publish Go (solvapay-go)
+
+# Separate from the npm Changesets workflow (`.github/workflows/publish.yml`).
+# git-subtree-splits `rust/bindings/go` into the external `solvapay/solvapay-go`
+# module repo and tags `vX.Y.Z`. The embedded `solvapay_core.wasm` ships inside
+# the same module tarball as the facade (one git tag = one module+wasm), so
+# there is no facade↔native skew guard (same reasoning as Note 53 for Rust).
+#
+# Default path is dry-run: rebuild + staleness-check wasm, `go build`/`go vet`
+# the monorepo module, subtree-split, then `go build` the split module. Real
+# push/tag is gated behind `workflow_dispatch` input `publish_to_go=true`
+# (or a `solvapay-go-v*` monorepo tag once maintainers enable that path).
+#
+# Maintainer prerequisite: create the empty `solvapay/solvapay-go` GitHub repo
+# and provide a deploy token with contents:write
+# (`SOLVAPAY_GO_DEPLOY_TOKEN`) before the first real publish.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Module tag version without leading v (e.g. 0.1.0)'
+        required: true
+        type: string
+        default: '0.1.0'
+      publish_to_go:
+        description: 'Push subtree + tag to solvapay/solvapay-go (default: dry-run only)'
+        required: false
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'solvapay-go-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain + WASI target
+        working-directory: rust
+        run: rustup show && rustup target add wasm32-wasip1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Resolve version + core SHA
+        id: meta
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#solvapay-go-v}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "core_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Rebuild embedded WASI guest
+        working-directory: rust
+        run: ./bindings/go/scripts/build-wasm.sh
+
+      - name: WASM staleness check (committed artifact matches source)
+        run: |
+          if ! git diff --exit-code -- rust/bindings/go/solvapay_core.wasm; then
+            echo "rust/bindings/go/solvapay_core.wasm is stale — rebuild and commit:" >&2
+            echo "  ./rust/bindings/go/scripts/build-wasm.sh" >&2
+            exit 1
+          fi
+          echo "OK: embedded solvapay_core.wasm is up to date"
+
+      - name: go build + vet (monorepo module)
+        working-directory: rust/bindings/go
+        run: |
+          go build ./...
+          go vet ./...
+
+      - name: Subtree split rust/bindings/go
+        id: split
+        shell: bash
+        run: |
+          set -euo pipefail
+          SPLIT_SHA="$(git subtree split --prefix rust/bindings/go HEAD)"
+          echo "split_sha=${SPLIT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "split SHA=${SPLIT_SHA}"
+
+      - name: Verify split module builds
+        shell: bash
+        env:
+          SPLIT_SHA: ${{ steps.split.outputs.split_sha }}
+        run: |
+          set -euo pipefail
+          WORK="$(mktemp -d)"
+          git clone --no-checkout . "$WORK/split"
+          git -C "$WORK/split" checkout "$SPLIT_SHA"
+          (cd "$WORK/split" && go build ./... && go vet ./...)
+          echo "OK: split module builds at ${SPLIT_SHA}"
+
+      - name: Dry-run summary
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to_go != true }}
+        shell: bash
+        run: |
+          cat <<EOF
+          DRY-RUN: would push subtree ${{ steps.split.outputs.split_sha }}
+            → github.com/solvapay/solvapay-go main
+            tag ${{ steps.meta.outputs.tag }}
+            core_sha ${{ steps.meta.outputs.core_sha }}
+          Real publish requires publish_to_go=true (or solvapay-go-v* tag)
+          plus SOLVAPAY_GO_DEPLOY_TOKEN and an existing solvapay/solvapay-go repo.
+          EOF
+
+      - name: Push subtree + tag to solvapay/solvapay-go
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_go == true) || startsWith(github.ref, 'refs/tags/solvapay-go-v') }}
+        shell: bash
+        env:
+          SPLIT_SHA: ${{ steps.split.outputs.split_sha }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          TOKEN: ${{ secrets.SOLVAPAY_GO_DEPLOY_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TOKEN}" ]; then
+            echo "SOLVAPAY_GO_DEPLOY_TOKEN is required for real publish" >&2
+            echo "Also ensure github.com/solvapay/solvapay-go exists." >&2
+            exit 1
+          fi
+          REMOTE="https://x-access-token:${TOKEN}@github.com/solvapay/solvapay-go.git"
+          git push "${REMOTE}" "${SPLIT_SHA}:refs/heads/main"
+          git tag -f "${TAG}" "${SPLIT_SHA}"
+          git push -f "${REMOTE}" "refs/tags/${TAG}"
+          echo "Published ${TAG} at ${SPLIT_SHA}"

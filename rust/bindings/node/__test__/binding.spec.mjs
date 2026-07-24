@@ -13,7 +13,11 @@ import {
   WEBHOOK_SMOKE_EVENT_TYPE,
   WEBHOOK_SMOKE_SECRET,
   freshWebhookSmokeSigned,
+  signWebhookSmoke,
 } from '../scripts/webhook-smoke-fixture.mjs'
+
+/** Frozen Step-4 fixture clock (matches the body's `created`). */
+const FIXTURE_CLOCK = 1782864000
 
 describe('@solvapay/server-native binding smoke', () => {
   it('napiVersion returns a non-empty string', async () => {
@@ -30,6 +34,28 @@ describe('@solvapay/server-native binding smoke', () => {
     const value = JSON.parse(json)
     assert.equal(value.type, WEBHOOK_SMOKE_EVENT_TYPE)
     assert.equal(value.id, WEBHOOK_SMOKE_EVENT_ID)
+  })
+
+  it('verifyWebhook accepts a frozen fixture body with an injected clock', async () => {
+    const { verifyWebhook } = await import('../index.js')
+    const signature = signWebhookSmoke(WEBHOOK_SMOKE_BODY, WEBHOOK_SMOKE_SECRET, FIXTURE_CLOCK)
+    const json = verifyWebhook(WEBHOOK_SMOKE_BODY, signature, WEBHOOK_SMOKE_SECRET, FIXTURE_CLOCK)
+    const value = JSON.parse(json)
+    assert.equal(value.id, WEBHOOK_SMOKE_EVENT_ID)
+  })
+
+  it('verifyWebhook rejects an out-of-tolerance injected clock', async () => {
+    const { verifyWebhook } = await import('../index.js')
+    const signature = signWebhookSmoke(WEBHOOK_SMOKE_BODY, WEBHOOK_SMOKE_SECRET, FIXTURE_CLOCK)
+    assert.throws(
+      () =>
+        verifyWebhook(WEBHOOK_SMOKE_BODY, signature, WEBHOOK_SMOKE_SECRET, FIXTURE_CLOCK + 400),
+      err => {
+        assert.ok(err instanceof Error)
+        assert.equal(err.code, 'timestamp_too_old')
+        return true
+      },
+    )
   })
 
   it('verifyWebhook throws with code on a bad signature', async () => {

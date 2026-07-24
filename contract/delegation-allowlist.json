@@ -2,16 +2,6 @@
   "entries": [
     {
       "package": "@solvapay/core",
-      "symbol": "attachBusinessDetailsValidationError",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "buildCreateCustomerParams",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
       "symbol": "BUSINESS_COUNTRY_DISPLAY_NAMES",
       "reason": "type-guard-or-const"
     },
@@ -27,43 +17,8 @@
     },
     {
       "package": "@solvapay/core",
-      "symbol": "classifyCancelError",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "classifyCreateError",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "classifyCustomerRef",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "classifyLookupError",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "classifyReactivateError",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "coerceCustomerOptions",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
       "symbol": "COUNTRY_TO_TAX_ID_TYPE",
       "reason": "type-guard-or-const"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "decidePaywallOutcome",
-      "reason": "portable-ts-fallback"
     },
     {
       "package": "@solvapay/core",
@@ -72,103 +27,13 @@
     },
     {
       "package": "@solvapay/core",
-      "symbol": "evaluateCachedLimits",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "evaluateFreshLimits",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "extractBackendCustomerRef",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
       "symbol": "getSolvaPayConfig",
       "reason": "section-8-exclusion"
     },
     {
       "package": "@solvapay/core",
-      "symbol": "isCachedCustomerRefValid",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "isEmailConflict",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "isErrorResult",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
       "symbol": "isRenewalError",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "mapRouteError",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "normalizeCancelResponse",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "normalizeReactivateResponse",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "projectPaymentIntentResult",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "projectTopupProcessOutcome",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "projectUsageSnapshot",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "resolveCheckLimitsParams",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "resolveFallbackGateLimits",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "resolveProductRef",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "resolvePurchaseCustomerRef",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "resolveReturnUrl",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "selectActivePurchases",
-      "reason": "portable-ts-fallback"
+      "reason": "type-guard-or-const"
     },
     {
       "package": "@solvapay/core",
@@ -204,51 +69,6 @@
       "package": "@solvapay/core",
       "symbol": "TAX_ID_TYPES",
       "reason": "type-guard-or-const"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "validateActivatePlanParams",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "validateAttachBusinessDetailsParams",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "validateCheckoutSessionParams",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "validateCreatePaymentIntentParams",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "validateGetProductParams",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "validateListPlansParams",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "validateProcessPaymentIntentParams",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "validatePurchaseRef",
-      "reason": "portable-ts-fallback"
-    },
-    {
-      "package": "@solvapay/core",
-      "symbol": "validateTopupPaymentIntentParams",
-      "reason": "portable-ts-fallback"
     },
     {
       "package": "@solvapay/core",

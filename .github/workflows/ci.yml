@@ -67,6 +67,15 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Build examples
+        run: pnpm build:examples
+
+      - name: Run example unit tests
+        run: |
+          pnpm --filter @example/express-basic test
+          pnpm --filter @example/express-provider-linkage test
+          pnpm --filter checkout-demo exec vitest run
+
       - name: Run contract tests
         run: pnpm test:contract
 
@@ -204,7 +213,10 @@ jobs:
             --rb-rbs-out bindings/ruby/sig/solvapay.rbs \
             --rb-parity-out bindings/ruby/test/signature_parity_generated_test.rb \
             --rs-client-out crates/solvapay/src/client_generated.rs \
-            --rs-parity-out crates/solvapay/tests/signature_parity_generated.rs
+            --rs-parity-out crates/solvapay/tests/signature_parity_generated.rs \
+            --go-bindings-out bindings/go/wasm/src \
+            --go-client-out bindings/go/client_generated.go \
+            --go-parity-out bindings/go/signature_parity_generated_test.go
           GENERATED_PATHS=(
             rust/crates/solvapay-dto
             packages/server/src/types/overlays.generated.d.ts
@@ -242,6 +254,11 @@ jobs:
             rust/crates/solvapay/src/client_generated.rs
             rust/crates/solvapay/src/blocking_generated.rs
             rust/crates/solvapay/tests/signature_parity_generated.rs
+            rust/bindings/go/wasm/src/args.rs
+            rust/bindings/go/wasm/src/client.rs
+            rust/bindings/go/wasm/src/webhook.rs
+            rust/bindings/go/client_generated.go
+            rust/bindings/go/signature_parity_generated_test.go
           )
           if ! git -C .. diff --exit-code -- "${GENERATED_PATHS[@]}"; then
             echo "solvapay-dto / generated TS artifacts / binding-symbols dump are out of date — run:" >&2
@@ -267,7 +284,10 @@ jobs:
             echo "    --rb-rbs-out bindings/ruby/sig/solvapay.rbs \\" >&2
             echo "    --rb-parity-out bindings/ruby/test/signature_parity_generated_test.rb \\" >&2
             echo "    --rs-client-out crates/solvapay/src/client_generated.rs \\" >&2
-            echo "    --rs-parity-out crates/solvapay/tests/signature_parity_generated.rs" >&2
+            echo "    --rs-parity-out crates/solvapay/tests/signature_parity_generated.rs \\" >&2
+            echo "    --go-bindings-out bindings/go/wasm/src \\" >&2
+            echo "    --go-client-out bindings/go/client_generated.go \\" >&2
+            echo "    --go-parity-out bindings/go/signature_parity_generated_test.go" >&2
             exit 1
           fi
 
@@ -307,7 +327,12 @@ jobs:
             bindings/ruby/test/signature_parity_generated_test.rb \
             crates/solvapay/src/client_generated.rs \
             crates/solvapay/src/blocking_generated.rs \
-            crates/solvapay/tests/signature_parity_generated.rs
+            crates/solvapay/tests/signature_parity_generated.rs \
+            bindings/go/wasm/src/args.rs \
+            bindings/go/wasm/src/client.rs \
+            bindings/go/wasm/src/webhook.rs \
+            bindings/go/client_generated.go \
+            bindings/go/signature_parity_generated_test.go
           do
             if ! grep -q '@generated' "$f"; then
               echo "missing @generated header: $f" >&2
@@ -452,6 +477,8 @@ jobs:
           "$PIP" install "${wheel}[dev,typecheck]"
           # Offline Python golden-fixture contract suite (Step 42) + smoke/parity.
           "$PYTEST" -q
+          # D20 / §9 — runnable get-merchant example (offline mock HTTP).
+          "$PYTEST" -q "$GITHUB_WORKSPACE/examples/python/get-merchant"
           # Step 42T — strictness against the *installed* package (generated .pyi + facade).
           "$PY" -c "import solvapay, pathlib; p=pathlib.Path(solvapay.__file__).parent; assert (p/'py.typed').is_file(), 'missing py.typed'; assert (p/'__init__.pyi').is_file(), 'missing __init__.pyi'"
           "$PY" -m mypy --strict --disallow-any-explicit \
@@ -569,6 +596,13 @@ jobs:
         run: |
           bundle exec rake test
           bundle exec rbs validate
+
+      - name: Example get_merchant offline test (D20 / §9)
+        if: matrix.full
+        working-directory: ${{ github.workspace }}
+        run: |
+          ruby -I"$GITHUB_WORKSPACE/rust/bindings/ruby/lib" \
+            examples/ruby/get_merchant/test/get_merchant_test.rb
 
       - name: Ruby type-strictness + lint (Step 45T / D18)
         if: matrix.full
@@ -955,9 +989,9 @@ jobs:
             --target wasm32-wasi \
             --node-major "${{ matrix.node }}"
 
-  # Step 37R-e — flag-reversible full-surface Node cutover (rust ↔ ts).
+  # Step 37R-e / 52 / 53 — Rust-only server+core conformance; mcp-core still dual-mode.
   node-binding-conformance:
-    name: node-binding conformance (SOLVAPAY_IMPL rust/ts)
+    name: node-binding conformance (Rust-only server/core)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1008,17 +1042,11 @@ jobs:
       - name: Build @solvapay/server-native (host)
         run: pnpm --filter @solvapay/server-native build
 
-      - name: Server unit suite on Rust binding
+      - name: Server unit suite on Rust binding (Rust-only after Step 53)
         run: pnpm --filter @solvapay/server test:unit:rust
 
-      - name: Server unit suite forced back to TypeScript
-        run: pnpm --filter @solvapay/server test:unit:ts
-
-      - name: Core unit suite on Rust binding
+      - name: Core unit suite on Rust binding (Rust-only after Step 52)
         run: pnpm --filter @solvapay/core test:unit:rust
-
-      - name: Core unit suite forced back to TypeScript
-        run: pnpm --filter @solvapay/core test:unit:ts
 
       - name: mcp-core unit suite on Rust binding
         run: pnpm --filter @solvapay/mcp-core test:unit:rust
@@ -1029,10 +1057,7 @@ jobs:
       - name: Contract fixtures on Rust binding
         run: SOLVAPAY_IMPL=rust pnpm test:contract
 
-      - name: Contract fixtures forced back to TypeScript
-        run: SOLVAPAY_IMPL=ts pnpm test:contract
-
-      - name: React package tests (unmodified, no SOLVAPAY_IMPL)
+      - name: React package tests (napi setup + eager browser-wasm stub)
         run: pnpm --filter @solvapay/react test
 
   # Step 37R-e — every non-§8 server/core export delegates (or allowlisted).
@@ -1074,6 +1099,9 @@ jobs:
 
       - name: Delegation inventory gate
         run: pnpm delegation:check
+
+      - name: Superseded server TypeScript gate (Step 53 Rust-only)
+        run: pnpm server-superseded-ts:check
 
   # Step 38 — edge/browser wasm-bindgen cutover (capability split + budgets + Deno).
   wasm-binding:
@@ -1180,19 +1208,14 @@ jobs:
           pnpm --filter @solvapay/server build
           pnpm --filter @solvapay/mcp-core build
 
-      - name: Edge implementation unit tests (WASM + TS rollback)
-        run: |
-          pnpm --filter @solvapay/server test:unit:edge-wasm
-          pnpm --filter @solvapay/server test:unit:edge-ts
+      - name: Edge implementation unit tests (WASM, Rust-only after Step 53)
+        run: pnpm --filter @solvapay/server test:unit:edge-wasm
 
-      - name: Webhook edge corpus (WASM then TS rollback)
+      - name: Webhook edge corpus (WASM)
         run: |
-          # Edge-only replay: Node napi uses wall-clock and cannot honor fixture
-          # `input.clock` (Step 37 gap). This gate proves the Step 38 edge path.
+          # Edge webhook verification is Rust-only (WASM). This gate proves the
+          # Step 38 edge path with the fixture clock injected via `Date.now`.
           SOLVAPAY_IMPL=rust node scripts/replay-webhook-edge-wasm.mjs
-          SOLVAPAY_IMPL=ts node scripts/replay-webhook-edge-wasm.mjs
-          # Full harness still green on the TS path for both node + edge bindings.
-          SOLVAPAY_IMPL=ts pnpm exec vitest run scripts/contract-fixtures.test.ts -t webhook-verification
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -1206,6 +1229,179 @@ jobs:
 
       - name: Fetch-runtime validation
         run: pnpm validate:fetch-runtime
+
+  # Step 49 — wazero (Go) binding: rebuild the embedded WASI guest, prove it is
+  # not stale vs. the committed artifact, then run the Go suite under -race.
+  go-binding:
+    name: go-binding (wazero WASI guest)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain + WASI target
+        working-directory: rust
+        # rust-toolchain.toml pins the channel + wasm32-wasip1; be explicit anyway.
+        run: rustup show && rustup target add wasm32-wasip1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Rebuild embedded WASI guest
+        working-directory: rust
+        run: ./bindings/go/scripts/build-wasm.sh
+
+      - name: WASM staleness check (committed artifact matches source)
+        run: |
+          if ! git diff --exit-code -- rust/bindings/go/solvapay_core.wasm; then
+            echo "rust/bindings/go/solvapay_core.wasm is stale — rebuild and commit:" >&2
+            echo "  ./rust/bindings/go/scripts/build-wasm.sh" >&2
+            exit 1
+          fi
+          echo "OK: embedded solvapay_core.wasm is up to date"
+
+      - name: gofmt
+        working-directory: rust/bindings/go
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed on:" >&2
+            echo "$unformatted" >&2
+            exit 1
+          fi
+          echo "OK: gofmt clean"
+
+      - name: go vet
+        working-directory: rust/bindings/go
+        run: go vet ./...
+
+      - name: go test -race
+        working-directory: rust/bindings/go
+        run: go test -race ./...
+
+      - name: Go example build+test (Step 51)
+        working-directory: examples/go/get-merchant
+        run: go test ./...
+
+      - name: Fresh-module go get smoke (local replace)
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORK="$(mktemp -d)"
+          BINDING="${GITHUB_WORKSPACE}/rust/bindings/go"
+          printf '%s\n' \
+            'module github.com/solvapay/solvapay-go-smoke' \
+            '' \
+            'go 1.23' \
+            '' \
+            'require github.com/solvapay/solvapay-go v0.0.0' \
+            '' \
+            "replace github.com/solvapay/solvapay-go => ${BINDING}" \
+            > "$WORK/go.mod"
+          printf '%s\n' \
+            'package main' \
+            '' \
+            'import (' \
+            '	"context"' \
+            '	"fmt"' \
+            '' \
+            '	solvapay "github.com/solvapay/solvapay-go"' \
+            ')' \
+            '' \
+            'func main() {' \
+            '	ctx := context.Background()' \
+            '	v, err := solvapay.Version(ctx)' \
+            '	if err != nil {' \
+            '		panic(err)' \
+            '	}' \
+            '	fmt.Println(v)' \
+            '}' \
+            > "$WORK/main.go"
+          (cd "$WORK" && go mod tidy && go build -o /tmp/solvapay-go-smoke .)
+          echo "OK: fresh module builds against local replace"
+
+  # Step 54 — optional native C ABI scaffold (cdylib + cbindgen header + C smoke).
+  c-binding:
+    name: c-binding (native C ABI)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        working-directory: rust
+        run: rustup show
+
+      - name: Install C toolchain
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: cargo build -p solvapay-c
+        working-directory: rust
+        run: cargo build -p solvapay-c
+
+      - name: cbindgen header drift check
+        run: |
+          if ! git diff --exit-code -- rust/bindings/c/include/solvapay.h; then
+            echo "rust/bindings/c/include/solvapay.h is stale — rebuild and commit:" >&2
+            echo "  cargo build -p solvapay-c" >&2
+            exit 1
+          fi
+          if ! grep -q '@generated' rust/bindings/c/include/solvapay.h; then
+            echo "missing @generated header: rust/bindings/c/include/solvapay.h" >&2
+            exit 1
+          fi
+          echo "OK: solvapay.h up to date and @generated"
+
+      - name: cargo test -p solvapay-c
+        working-directory: rust
+        run: cargo test -p solvapay-c
+
+      - name: cargo clippy -p solvapay-c
+        working-directory: rust
+        run: cargo clippy -p solvapay-c --all-targets -- -D warnings
+
+      - name: C smoke (create/call/free + handle misuse)
+        working-directory: rust
+        run: ./bindings/c/ctest/run.sh
+
+  # Step 51 — pure-Go + embedded wasm cross-compiles without cgo across the
+  # supported GOOS/GOARCH matrix (build + vet only; no off-host runtime).
+  go-crosscompile:
+    name: go-crosscompile (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    defaults:
+      run:
+        working-directory: rust/bindings/go
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: go build + vet
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          go build ./...
+          go vet ./...
 
   documentation:
     name: Documentation Validation

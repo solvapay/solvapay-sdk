@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { callNativeSync, resolveImpl } from '../../server/src/native'
+import { SolvaPayError } from '../src/solvapay-error'
 import {
   creditsToDisplayMinorUnits,
   installNativeCoreApi,
@@ -12,7 +13,7 @@ import {
 const SENTINEL_VALIDATE = { success: true as const, data: { isBusiness: false } }
 const SENTINEL_CREDITS = 9999
 
-describe('native-core.ts delegation', () => {
+describe('native-core.ts delegation (Step 52 Rust-only)', () => {
   const originalImpl = process.env.SOLVAPAY_IMPL
 
   beforeEach(() => {
@@ -62,7 +63,14 @@ describe('native-core.ts delegation', () => {
     ).toBe(SENTINEL_CREDITS)
   })
 
-  it('under SOLVAPAY_IMPL=ts, TS body is used (not sentinel)', () => {
+  it('throws SolvaPayError when the core API is not installed', () => {
+    expect(() => validateBusinessDetails({ isBusiness: false })).toThrow(SolvaPayError)
+    expect(() => validateBusinessDetails({ isBusiness: false })).toThrow(
+      'core sync API not installed',
+    )
+  })
+
+  it('throws SolvaPayError under SOLVAPAY_IMPL=ts (no portable TS fallback)', () => {
     process.env.SOLVAPAY_IMPL = 'ts'
     const callNativeSyncFn = vi.fn()
     installNativeCoreApi({
@@ -70,7 +78,7 @@ describe('native-core.ts delegation', () => {
       callNativeSync: callNativeSyncFn,
     })
 
-    expect(validateBusinessDetails({ isBusiness: false }).success).toBe(true)
+    expect(() => validateBusinessDetails({ isBusiness: false })).toThrow(SolvaPayError)
     expect(callNativeSyncFn).not.toHaveBeenCalled()
   })
 })

@@ -210,22 +210,16 @@ describe('createSolvaPayClient Group A WASM dispatch', () => {
     })
   })
 
-  it('uses TS fetch body under SOLVAPAY_IMPL=ts', async () => {
+  it('fails fast under SOLVAPAY_IMPL=ts (no TS fetch fallback)', async () => {
     process.env.SOLVAPAY_IMPL = 'ts'
     const createCustomer = vi.fn()
     setWasmClientForTests(fakeClient({ createCustomer }))
 
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ customerRef: 'cus_ts' }),
-    })
-
     const client = createSolvaPayClient({ apiKey: 'sk_test', apiBaseUrl: 'https://api.test' })
-    const result = await client.createCustomer({ email: 'a@b.c' })
 
-    expect(result).toEqual({ customerRef: 'cus_ts' })
+    await expect(client.createCustomer({ email: 'a@b.c' })).rejects.toBeInstanceOf(SolvaPayError)
     expect(createCustomer).not.toHaveBeenCalled()
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
 

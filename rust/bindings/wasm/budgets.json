@@ -14,32 +14,32 @@
     "platform": "darwin",
     "arch": "arm64",
     "osRelease": "25.5.0",
-    "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
     "wasmBindgen": "wasm-bindgen 0.2.126",
     "binaryen": "131.0.0",
-    "recordedAt": "2026-07-21T16:04:18.369Z"
+    "recordedAt": "2026-07-24T08:29:53.187Z"
   },
   "baselines": {
     "browser": {
       "rawBytes": 144412,
       "gzipBytes": 63633,
-      "coldStartMedianMs": 13.034457999999999
+      "coldStartMedianMs": 17.320166
     },
     "edge": {
       "rawBytes": 834895,
-      "gzipBytes": 298838,
-      "coldStartMedianMs": 15.691917,
+      "gzipBytes": 298834,
+      "coldStartMedianMs": 20.438708999999996,
       "note": "diagnostic only — §7.8 mandatory budget is browser"
     }
   },
   "maxAllowed": {
     "browser": {
       "gzipBytes": 69996,
-      "coldStartMedianMs": 14.3379038
+      "coldStartMedianMs": 19.052182600000002
     },
     "edge": {
-      "gzipBytes": 328721,
-      "coldStartMedianMs": 17.2611087
+      "gzipBytes": 328717,
+      "coldStartMedianMs": 22.482579899999998
     }
   }
 }

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   creditsToDisplayMinorUnits,
   minorUnitsPerMajor,
-} from '../src/credit-display'
+} from '../src/native-core'
 import {
   estimateCredits,
   estimateCurrencyMajorFromCredits,

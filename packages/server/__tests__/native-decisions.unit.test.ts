@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { SolvaPayError } from '@solvapay/core'
 import { callNativeSync, resolveImpl, type NativeSyncMethod, type SolvaPayImpl } from '../src/native'
 import {
   buildPaywallGate,
@@ -7,12 +8,36 @@ import {
   resetNativeDecisionApiForTests,
   retryNextDelayMs,
 } from '../src/native-decisions'
+import type { PaywallState } from '../src/paywall-state'
 
 const SENTINEL_CLASSIFY = 'SENTINEL_classifyCustomerRef'
-const SENTINEL_GATE = { kind: 'payment_required', product: 'SENTINEL', message: 'sentinel', checkoutUrl: '' }
+const SENTINEL_GATE = {
+  kind: 'payment_required',
+  product: 'SENTINEL',
+  message: 'sentinel',
+  checkoutUrl: '',
+}
 const SENTINEL_RETRY = 4242
 
-describe('native-decisions.ts delegation', () => {
+const RETRY_ARGS = {
+  maxRetries: 2,
+  initialDelay: 500,
+  backoffStrategy: 'fixed',
+  attempt: 0,
+} as const
+const GATE_LIMITS = { remaining: 0, withinLimits: false, plan: '' }
+
+// Type-level coverage: every `PaywallState` discriminant (including the
+// currently-unreachable `reactivation_required`) must survive the move to
+// `types/paywall.ts` and stay exported through `paywall-state`.
+const _paywallStates: PaywallState[] = [
+  { kind: 'activation_required' },
+  { kind: 'topup_required' },
+  { kind: 'upgrade_required' },
+  { kind: 'reactivation_required' },
+]
+
+describe('native-decisions.ts Rust-only dispatch (Step 53)', () => {
   const originalImpl = process.env.SOLVAPAY_IMPL
 
   beforeEach(() => {
@@ -31,10 +56,11 @@ describe('native-decisions.ts delegation', () => {
     installNativeDecisionApi({ callNativeSync, resolveImpl })
   })
 
-  function installFakeApi(resolve: SolvaPayImpl = 'rust'): void {
+  function installFakeApi(resolve: SolvaPayImpl, onCall?: () => void): void {
     installNativeDecisionApi({
       resolveImpl: (_surface: string) => resolve,
       callNativeSync: (fn: NativeSyncMethod, _argsJson: string) => {
+        onCall?.()
         switch (fn) {
           case 'classifyCustomerRef':
             return SENTINEL_CLASSIFY
@@ -49,69 +75,39 @@ describe('native-decisions.ts delegation', () => {
     })
   }
 
-  it('under SOLVAPAY_IMPL=rust, public functions return native sentinel', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
+  it('installed Rust sentinel wins for helpers, paywall, and retry', () => {
     installFakeApi('rust')
 
     expect(classifyCustomerRef('cus_abc')).toBe(SENTINEL_CLASSIFY)
-    expect(buildPaywallGate('prod_1', { remaining: 0, withinLimits: false, plan: '' })).toEqual(
-      SENTINEL_GATE,
-    )
-    expect(
-      retryNextDelayMs({
-        maxRetries: 2,
-        initialDelay: 500,
-        backoffStrategy: 'fixed',
-        attempt: 0,
-      }),
-    ).toBe(SENTINEL_RETRY)
+    expect(buildPaywallGate('prod_1', GATE_LIMITS)).toEqual(SENTINEL_GATE)
+    expect(retryNextDelayMs({ ...RETRY_ARGS })).toBe(SENTINEL_RETRY)
   })
 
-  it('under SOLVAPAY_IMPL=ts, TS body is used (not sentinel)', () => {
+  it('SOLVAPAY_IMPL=ts throws and never dispatches (no server TS fallback)', () => {
     process.env.SOLVAPAY_IMPL = 'ts'
-    const callNativeSync = vi.fn()
-    installNativeDecisionApi({
-      resolveImpl: () => 'ts',
-      callNativeSync,
+    let called = false
+    installFakeApi('ts', () => {
+      called = true
     })
 
-    expect(classifyCustomerRef('cus_abc')).toBe('backend')
-    expect(classifyCustomerRef('anonymous')).toBe('anonymous')
-    expect(classifyCustomerRef('user-1')).toBe('needsEnsure')
-
-    const gate = buildPaywallGate('prod_1', {
-      remaining: 0,
-      withinLimits: false,
-      plan: '',
-      checkoutUrl: 'https://checkout.example',
-    })
-    expect(gate.product).toBe('prod_1')
-    expect(gate.kind).toBe('payment_required')
-    expect(gate).not.toEqual(SENTINEL_GATE)
-
-    expect(
-      retryNextDelayMs({
-        maxRetries: 2,
-        initialDelay: 500,
-        backoffStrategy: 'fixed',
-        attempt: 0,
-      }),
-    ).toBe(500)
-    expect(
-      retryNextDelayMs({
-        maxRetries: 2,
-        initialDelay: 500,
-        backoffStrategy: 'fixed',
-        attempt: 2,
-      }),
-    ).toBeNull()
-
-    expect(callNativeSync).not.toHaveBeenCalled()
+    expect(() => classifyCustomerRef('cus_abc')).toThrow(SolvaPayError)
+    expect(() => buildPaywallGate('prod_1', GATE_LIMITS)).toThrow('server sync API not installed')
+    expect(() => retryNextDelayMs({ ...RETRY_ARGS })).toThrow(SolvaPayError)
+    expect(called).toBe(false)
   })
 
-  it('without install, always uses TS fallback even if SOLVAPAY_IMPL=rust', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
-    // no installNativeDecisionApi
-    expect(classifyCustomerRef('cus_abc')).toBe('backend')
+  it('uninstalled decision API throws — no core facade, no local fallback', () => {
+    // no installNativeDecisionApi in this test
+    expect(() => classifyCustomerRef('cus_abc')).toThrow('server sync API not installed')
+    expect(() => buildPaywallGate('prod_1', GATE_LIMITS)).toThrow(SolvaPayError)
+    expect(() => retryNextDelayMs({ ...RETRY_ARGS })).toThrow('server sync API not installed')
+  })
+
+  it('with the real resolveImpl, SOLVAPAY_IMPL=ts fails fast before any dispatch', () => {
+    process.env.SOLVAPAY_IMPL = 'ts'
+    installNativeDecisionApi({ callNativeSync, resolveImpl })
+
+    expect(() => classifyCustomerRef('cus_abc')).toThrow('server sync API not installed')
+    expect(() => retryNextDelayMs({ ...RETRY_ARGS })).toThrow('server sync API not installed')
   })
 })

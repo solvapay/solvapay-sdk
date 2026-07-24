@@ -1,5 +1,10 @@
 /**
- * Shadow-mode orchestrator: run TS + Rust clients side by side.
+ * Shadow-mode orchestrator: run the two client sides side by side.
+ *
+ * Step 53: side A is the npm `@solvapay/server` facade binding driven through
+ * the WASM `FetchTransport`; side B is the Rust CLI (shadow-invoker). Report
+ * fields still use the legacy `ts*` / side-label `"ts"` keys for persisted
+ * report compatibility — they mean the facade side, not a TypeScript body.
  */
 
 import path from 'node:path'
@@ -20,7 +25,7 @@ import {
   type ShadowReport,
 } from './report.js'
 import { invokeRustShadow } from './rust-driver.js'
-import { installTsDriverSession, type TsDriver } from './ts-driver.js'
+import { installFacadeDriverSession, type FacadeDriver } from './facade-driver.js'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -123,13 +128,15 @@ export async function runShadowSuite(
   const scenarios = options.scenarios ?? SHADOW_SCENARIOS
   const results: ScenarioResult[] = []
 
-  const session = installTsDriverSession({
+  const session = installFacadeDriverSession({
     apiKey: options.apiKey,
     apiBaseUrl: options.baseUrl,
   })
-  const tsDriver: TsDriver = session.driver
+  const facadeDriver: FacadeDriver = session.driver
 
-  const invokeTs = (fn: string, args: Record<string, unknown>) => tsDriver.invoke(fn, args)
+  // Legacy name `invokeTs` = facade side (report side label remains `"ts"`).
+  const invokeTs = (fn: string, args: Record<string, unknown>) =>
+    facadeDriver.invoke(fn, args)
   const invokeRust = (fn: string, args: Record<string, unknown>) =>
     invokeRustShadow(
       {

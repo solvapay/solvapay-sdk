@@ -1,9 +1,10 @@
 name: Shadow mode (manual)
 
-# Live TS↔Rust identity check against a hosted contract-test environment.
-# Offline self-test runs in the main CI job via `pnpm test:contract` /
-# `pnpm shadow:selftest`. This workflow is dispatch-only until a hosted
-# contract env exists (see rust-migration-map open handoff items).
+# Live identity check against a hosted contract-test environment: the npm
+# `@solvapay/server` facade binding (WASM FetchTransport) vs the Rust CLI
+# (shadow-invoker). Offline self-test runs in the main CI job via
+# `pnpm test:contract` / `pnpm shadow:selftest`. This workflow is dispatch-only
+# until a hosted contract env exists (see rust-migration-map open handoff items).
 
 on:
   workflow_dispatch:

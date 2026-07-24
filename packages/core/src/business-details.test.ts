@@ -5,13 +5,15 @@ import {
   BUSINESS_COUNTRY_OPTIONS,
   COUNTRY_TO_TAX_ID_TYPE,
   SUPPORTED_BUSINESS_COUNTRIES,
+} from './business-details'
+import {
   deriveTaxIdType,
   getTaxIdExample,
   getTaxIdFieldLabel,
   getTaxIdHelperText,
   resolveTaxBehavior,
   validateBusinessDetails,
-} from './business-details'
+} from './native-core'
 
 describe('BUSINESS_COUNTRY_OPTIONS', () => {
   it('provides a non-empty label for every supported country', () => {
@@ -246,13 +248,14 @@ describe('BusinessDetailsSchema', () => {
     }
   })
 
-  it('preserves customerCountry on the non-business branch', () => {
+  it('shape-only schema accepts customerCountry without transforming it', () => {
+    // Validation / normalization is Rust-only via validateBusinessDetails (Step 52).
     const result = BusinessDetailsSchema.parse({
       isBusiness: false,
       customerCountry: 'se',
     })
 
-    expect(result).toEqual({ isBusiness: false, customerCountry: 'SE' })
+    expect(result).toEqual({ isBusiness: false, customerCountry: 'se' })
   })
 
   it('rejects unsupported customerCountry for non-business purchases', () => {

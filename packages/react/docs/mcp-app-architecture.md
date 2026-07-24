@@ -5,7 +5,7 @@ _Status: accepted — lifted in `@solvapay/react` `1.0.x-preview.N`_
 ## Context
 
 The SolvaPay MCP App reference implementation originally lived entirely inside
-`examples/mcp-checkout-app`:
+`examples/typescript/mcp-checkout-app`:
 
 - A single `mcp-app.tsx` owned `app.connect()`, host-context application, the
   `open_*` bootstrap fetch, a `<SolvaPayProvider>` mount, and a 4-way view
@@ -105,7 +105,7 @@ consumer-facing rename, no behavioural change under the old defaults.
 
 `createMcpAppAdapter` already lived in `@solvapay/react/mcp`.
 `fetchMcpBootstrap`, `createMcpFetch`, and `useStripeProbe` lifted. Server-
-side `open_*` tool registration (`examples/mcp-checkout-app/src/server.ts`)
+side `open_*` tool registration (`examples/typescript/mcp-checkout-app/src/server.ts`)
 **stays put** — that's a host integration concern, not a SDK concern, and
 the plumbing differs enough per-host that a generic wrapper would obscure
 more than it simplifies. A separate follow-up

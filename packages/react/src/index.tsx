@@ -4,6 +4,9 @@
  * Provides headless React components and hooks for handling payment flows.
  */
 
+// Step 52: eager core WASM so domain sync APIs work before first render.
+import '@solvapay/core/browser-wasm'
+
 // Core Provider
 export { SolvaPayProvider } from './SolvaPayProvider'
 

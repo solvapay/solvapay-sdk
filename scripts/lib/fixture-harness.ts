@@ -97,6 +97,9 @@ import {
   validateProcessPaymentIntentParams,
   validatePurchaseRef,
   validateTopupPaymentIntentParams,
+  getWasmClient,
+  loadWasmBinding,
+  setWasmClientForTests,
   verifyWebhook,
   withRetry,
   type LimitResponseWithPlan,
@@ -108,7 +111,9 @@ import type { Fixture, FixtureErrorExpect, FixtureWire } from './fixture-schema.
 
 // Server index installs core + formatGate; mcp-core needs an explicit install
 // (avoids a hard server↔mcp-core production cycle).
-installNativeCoreApi({ callNativeSync, resolveImpl })
+// Step 52: @solvapay/core is Rust-only — always resolve to rust even when the
+// ambient SOLVAPAY_IMPL=ts (that flag no longer covers core logic).
+installNativeCoreApi({ callNativeSync, resolveImpl: () => 'rust' })
 installNativeMcpApi({ callNativeSync, resolveImpl })
 
 export type FixtureBinding = {
@@ -280,16 +285,43 @@ function wireResponseBody(body: unknown): BodyInit | null {
   return JSON.stringify(body)
 }
 
-function installMockFetch(wire: FixtureWire, onCapture: (request: CapturedRequest) => void): void {
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = requestUrl(input)
-    onCapture({
-      method: (init?.method ?? 'GET').toUpperCase(),
+/**
+ * Reads method / path / query / headers / body from a `fetch` invocation.
+ *
+ * The WASM `FetchTransport` calls `fetch(request)` with a single `Request`
+ * object (no `init`) — see `rust/crates/solvapay-transport/src/fetch_transport.rs`.
+ * The Node napi / TS paths call `fetch(url, init)`. This normalizes both so
+ * client fixtures capture the same wire shape regardless of transport.
+ */
+async function captureRequest(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+): Promise<CapturedRequest> {
+  if (typeof Request !== 'undefined' && input instanceof Request && init === undefined) {
+    const url = new URL(input.url)
+    const bodyText = await input.clone().text()
+    return {
+      method: input.method.toUpperCase(),
       path: url.pathname,
       query: searchParamsToRecord(url.searchParams),
-      headers: headersToRecord(init?.headers),
-      body: parseBody(init?.body ?? null),
-    })
+      headers: headersToRecord(input.headers),
+      body: parseBody(bodyText === '' ? null : bodyText),
+    }
+  }
+
+  const url = requestUrl(input)
+  return {
+    method: (init?.method ?? 'GET').toUpperCase(),
+    path: url.pathname,
+    query: searchParamsToRecord(url.searchParams),
+    headers: headersToRecord(init?.headers),
+    body: parseBody(init?.body ?? null),
+  }
+}
+
+function installMockFetch(wire: FixtureWire, onCapture: (request: CapturedRequest) => void): void {
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    onCapture(await captureRequest(input, init))
     return new Response(wireResponseBody(wire.response.body), {
       status: wire.response.status,
       headers: { 'Content-Type': 'application/json' },
@@ -846,14 +878,14 @@ function constructSdkErrorFromArgs(args: Record<string, unknown>): never {
 }
 
 /**
- * Force `SOLVAPAY_IMPL` for bindings that still need the TS body under an
- * ambient `rust` run (client wire fixtures use mocked `fetch`; webhook
- * fixtures need `Date.now` clock injection which napi wall-clock ignores).
- * Helper / paywall / retry bindings keep the ambient flag (Step 37R-c).
+ * Pin `SOLVAPAY_IMPL=rust` for the duration of `fn`. Step 53 made server client
+ * logic Rust-only, so client wire fixtures must stay on the WASM `FetchTransport`
+ * path even if a caller left an ambient `SOLVAPAY_IMPL=ts` set — otherwise the
+ * Rust-only guard would throw before any wire is captured.
  */
-function withForcedImpl<T>(impl: 'ts' | 'rust', fn: () => T | Promise<T>): T | Promise<T> {
+function withRustImpl<T>(fn: () => T | Promise<T>): T | Promise<T> {
   const previous = process.env.SOLVAPAY_IMPL
-  process.env.SOLVAPAY_IMPL = impl
+  process.env.SOLVAPAY_IMPL = 'rust'
   const restore = (): void => {
     if (previous === undefined) {
       delete process.env.SOLVAPAY_IMPL
@@ -874,6 +906,26 @@ function withForcedImpl<T>(impl: 'ts' | 'rust', fn: () => T | Promise<T>): T | P
   }
 }
 
+/**
+ * Loads the real `@solvapay/server-wasm` binding once and installs its
+ * `WasmClient` as the override so `createSolvaPayClient` dispatches client
+ * methods through the WASM `FetchTransport` under Node (Step 53-e). The config
+ * is irrelevant — the override is returned for every config — but must match
+ * the harness client so header/URL wire shapes stay consistent.
+ */
+let fixtureWasmClientReady: Promise<void> | undefined
+
+function ensureFixtureWasmClient(): Promise<void> {
+  if (!fixtureWasmClientReady) {
+    fixtureWasmClientReady = loadWasmBinding().then(() => {
+      setWasmClientForTests(
+        getWasmClient({ apiKey: 'sk_test_fixture', apiBaseUrl: 'https://api.solvapay.com' }),
+      )
+    })
+  }
+  return fixtureWasmClientReady
+}
+
 /** Registers default SDK bindings (webhook, client, retry, paywall, core helpers). */
 export function createDefaultRegistry(): FixtureRegistry {
   const registry = new FixtureRegistry()
@@ -883,13 +935,16 @@ export function createDefaultRegistry(): FixtureRegistry {
     invoke: args => constructSdkErrorFromArgs(args),
   })
 
+  // Webhook fixtures replay through Rust (napi / WASM). The frozen fixture
+  // clock reaches Rust because `verifyWebhook*` inject `Math.floor(Date.now()
+  // / 1000)` and the harness mocks `Date.now` via `patchClock` (Step 53-b).
   registry.register('verifyWebhook', {
     id: 'node',
     invoke: args => {
       if (!isVerifyWebhookArgs(args)) {
         throw new Error('verifyWebhook args must include string body, signature, and secret')
       }
-      return withForcedImpl('ts', () => verifyWebhook(args))
+      return verifyWebhook(args)
     },
   })
 
@@ -899,7 +954,7 @@ export function createDefaultRegistry(): FixtureRegistry {
       if (!isVerifyWebhookArgs(args)) {
         throw new Error('verifyWebhook args must include string body, signature, and secret')
       }
-      return withForcedImpl('ts', () => verifyWebhookEdge(args))
+      return verifyWebhookEdge(args)
     },
   })
 
@@ -914,7 +969,15 @@ export function createDefaultRegistry(): FixtureRegistry {
   ): void => {
     registry.register(fn, {
       id: 'client',
-      invoke: args => withForcedImpl('ts', () => invoke(args)),
+      // Client logic is Rust-only (Step 53-e). Route through the real WASM
+      // `WasmClient` + `FetchTransport` so the mocked `globalThis.fetch`
+      // captures the wire — napi `reqwest` cannot be intercepted that way.
+      // `withRustImpl` keeps it on the WASM path even when an ambient
+      // `SOLVAPAY_IMPL=ts` leg is running the same registry.
+      invoke: async args => {
+        await ensureFixtureWasmClient()
+        return withRustImpl(() => invoke(args))
+      },
     })
   }
 
@@ -1975,7 +2038,11 @@ export function createDefaultRegistry(): FixtureRegistry {
         product: args.product,
         limits: (args.limits ?? null) as PaywallDecisionLimits | null,
         checkoutUrl: args.checkoutUrl,
-        buildGate: buildPaywallGate,
+        // Core's `PaywallDecisionLimits` uses `unknown` pass-throughs; the gate
+        // builder accepts the wider LimitResponse-shaped `LimitsLike`. Same cast
+        // as `packages/server/src/paywall.ts`.
+        buildGate: (product, limits) =>
+          buildPaywallGate(product, limits as Parameters<typeof buildPaywallGate>[1]),
       })
     },
   })

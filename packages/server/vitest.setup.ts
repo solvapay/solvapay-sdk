@@ -10,7 +10,8 @@ import { installNativeDecisionApi } from './src/native-decisions'
 import type { PaywallStructuredContent, PaywallToolResult } from './src/types'
 
 installNativeDecisionApi({ callNativeSync, resolveImpl })
-installNativeCoreApi({ callNativeSync, resolveImpl })
+// Step 52: @solvapay/core is Rust-only — SOLVAPAY_IMPL=ts does not gate it.
+installNativeCoreApi({ callNativeSync, resolveImpl: () => 'rust' })
 installNativeMcpApi({ callNativeSync, resolveImpl })
 installMcpAdapterNative({
   formatGate: (gate: PaywallStructuredContent): PaywallToolResult | null => {
