@@ -84,51 +84,14 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'checkLimitsCore',
   'getMerchantCore',
   'getProductCore',
-  'isErrorResult',
   'handleRouteError',
   'pollBalanceUntilIncreased',
   'BALANCE_RECONCILE_DELAYS_MS',
   'TOPUP_BALANCE_POLL_DELAYS_MS',
-  // Pure helper decision cores extracted to @solvapay/core (steps 26–27 / 52);
-  // catalogued via golden fixtures, not the cross-language operations map.
-  'buildCreateCustomerParams',
-  'classifyCancelError',
-  'classifyCreateError',
-  'classifyCustomerRef',
-  'classifyLookupError',
-  'classifyReactivateError',
-  'coerceCustomerOptions',
-  'decidePaywallOutcome',
-  'evaluateCachedLimits',
-  'evaluateFreshLimits',
-  'extractBackendCustomerRef',
-  'isCachedCustomerRefValid',
-  'isEmailConflict',
-  'mapRouteError',
-  'normalizeCancelResponse',
-  'normalizeReactivateResponse',
-  'projectPaymentIntentResult',
-  'projectTopupProcessOutcome',
-  'projectUsageSnapshot',
-  'resolveCheckLimitsParams',
-  'resolveFallbackGateLimits',
-  'resolveProductRef',
-  'resolvePurchaseCustomerRef',
-  'resolveReturnUrl',
-  'retryNextDelayMs',
-  'selectActivePurchases',
-  'validateActivatePlanParams',
-  'attachBusinessDetailsValidationError',
-  'validateAttachBusinessDetailsParams',
-  'validateCheckoutSessionParams',
-  'validateCreatePaymentIntentParams',
-  'validateGetProductParams',
-  'validateListPlansParams',
-  'validateProcessPaymentIntentParams',
-  'validatePurchaseRef',
-  'validateTopupPaymentIntentParams',
+  // Pure helper decision cores (classifyCancelError, selectActivePurchases,
+  // validate*Params, …) are recognized via manifest.bindings names.ts — not
+  // allowlisted here. Adding a symbol to bindings is sufficient for parity.
   // core package config / domain helpers (not in cross-language catalog)
-  'getBusinessCountryOptions',
   'getSellerTaxIdentifierDisplayLabelByType',
   'getSolvaPayConfig',
   'installNativeCoreApi',
@@ -227,6 +190,12 @@ export function checkParity(input: CheckParityInput): ParityIssue[] {
 
   const expectedExports = new Set<string>()
   const facadeMethods = input.facadeMethods ?? new Set<string>()
+  // §5.7 cross-language helpers (catalog.kind: none and linked bindings).
+  // Recognition-only: suppress "extra", do not require presence (some payload
+  // builders are internal and not TS exports).
+  const bindingTsNames = new Set(
+    Object.values(input.manifest.bindings).map(symbol => symbol.names.ts),
+  )
 
   for (const entry of catalog) {
     if (entry.surface === 'clientMethod') {
@@ -282,7 +251,11 @@ export function checkParity(input: CheckParityInput): ParityIssue[] {
   }
 
   for (const name of input.portableExports) {
-    if (expectedExports.has(name) || isTsOnlyAllowlisted(name, allowlist)) {
+    if (
+      expectedExports.has(name) ||
+      bindingTsNames.has(name) ||
+      isTsOnlyAllowlisted(name, allowlist)
+    ) {
       continue
     }
     // Types / interfaces / constants that are supporting surface are often
@@ -293,7 +266,7 @@ export function checkParity(input: CheckParityInput): ParityIssue[] {
     }
     issues.push({
       kind: 'extra',
-      message: `Extra: uncatalogued portable export "${name}" (add to manifest or TS_ONLY_ALLOWLIST)`,
+      message: `Extra: uncatalogued portable export "${name}" (add to manifest.bindings or TS_ONLY_ALLOWLIST)`,
     })
   }
 

@@ -185,6 +185,29 @@ describe('checkParity', () => {
     )
   })
 
+  it('recognizes catalog:none bindings as catalogued (not extra)', () => {
+    const manifest = stubManifest()
+    manifest.bindings = {
+      classifyCancelError: {
+        core: 'solvapay_core::helpers::classify_cancel_error',
+        names: deriveNames('classifyCancelError'),
+        catalog: { kind: 'none' },
+        return: 'value',
+        sync: 'sync',
+        envelope: 'sync',
+      },
+    }
+    const clientMethods = new Set(Object.keys(manifest.operations).map(id => deriveNames(id).ts))
+    expect(
+      checkParity({
+        manifest,
+        portableExports: completePortableExports(['classifyCancelError']),
+        clientMethods,
+        facadeMethods: completeFacadeMethods(),
+      }),
+    ).toEqual([])
+  })
+
   it('allows explicit §2.5 allowlist extras', () => {
     const manifest = stubManifest()
     const clientMethods = new Set(Object.keys(manifest.operations).map(id => deriveNames(id).ts))
