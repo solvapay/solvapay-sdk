@@ -39,17 +39,14 @@ const PAYG_ACTIVATION_RESPONSE = {
 
 function createWrapper(props?: Record<string, unknown>) {
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(
-      SolvaPayProvider,
-      {
-        config: {
-          auth: { adapter: mockAdapter },
-        },
-        ...props,
-        children,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any,
-    )
+    React.createElement(SolvaPayProvider, {
+      config: {
+        auth: { adapter: mockAdapter },
+      },
+      ...props,
+      children,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
   Wrapper.displayName = 'PaygActivationTestWrapper'
   return Wrapper
 }
@@ -114,23 +111,18 @@ describe('PAYG activation parity (zero-amount active purchase)', () => {
 
   it('renders CurrentPlanCard with PAYG plan name when active purchase is zero-amount', async () => {
     render(
-      React.createElement(
-        SolvaPayProvider,
-        {
-          config: { auth: { adapter: mockAdapter } },
-          children: React.createElement(CurrentPlanCard),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
-      ),
+      React.createElement(SolvaPayProvider, {
+        config: { auth: { adapter: mockAdapter } },
+        children: React.createElement(CurrentPlanCard),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
     )
 
     await waitFor(() => {
       expect(screen.getByText('Pay as you go')).toBeTruthy()
     })
     expect(screen.queryByText('Unlimited')).toBeNull()
-    expect(
-      document.querySelector('[data-solvapay-current-plan-balance-line]'),
-    ).toBeTruthy()
+    expect(document.querySelector('[data-solvapay-current-plan-balance-line]')).toBeTruthy()
   })
 })
 
@@ -171,14 +163,11 @@ describe('manage account parity (DEV-545)', () => {
 
   function createWrapper() {
     const Wrapper = ({ children }: { children: React.ReactNode }) =>
-      React.createElement(
-        SolvaPayProvider,
-        {
-          config: { auth: { adapter: mockAdapter } },
-          children,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
-      )
+      React.createElement(SolvaPayProvider, {
+        config: { auth: { adapter: mockAdapter } },
+        children,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
     Wrapper.displayName = 'ManageAccountParityWrapper'
     return Wrapper
   }
@@ -209,14 +198,11 @@ describe('manage account parity (DEV-545)', () => {
 
   it('renders CurrentPlanCard (manage PurchaseCard equivalent) instead of activation-empty UI', async () => {
     render(
-      React.createElement(
-        SolvaPayProvider,
-        {
-          config: { auth: { adapter: mockAdapter } },
-          children: React.createElement(CurrentPlanCard),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
-      ),
+      React.createElement(SolvaPayProvider, {
+        config: { auth: { adapter: mockAdapter } },
+        children: React.createElement(CurrentPlanCard),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
     )
 
     await waitFor(() => {

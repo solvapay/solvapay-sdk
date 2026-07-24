@@ -64,28 +64,20 @@ function fakeClient(overrides: Partial<NativeClientLike> = {}): NativeClientLike
 }
 
 describe('createSolvaPayClient Group A native dispatch', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
   const fetchMock = vi.fn()
 
   beforeEach(() => {
-    delete process.env.SOLVAPAY_IMPL
     resetNativeCache()
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
     resetNativeCache()
     vi.unstubAllGlobals()
   })
 
-  it('dispatches each Group A method to NativeClient under SOLVAPAY_IMPL=rust', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
+  it('dispatches each Group A method to NativeClient', async () => {
     const calls: Array<{ fn: string; args: string }> = []
     const native = fakeClient(
       Object.fromEntries(
@@ -140,8 +132,6 @@ describe('createSolvaPayClient Group A native dispatch', () => {
   })
 
   it('returns envelope value unchanged (no TS re-normalization)', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
-    // Deliberately odd shape that TS createCustomer would rewrite
     const raw = { reference: 'cus_raw', customerRef: 'cus_mapped', extra: 1 }
     setNativeClientForTests(
       fakeClient({
@@ -156,7 +146,6 @@ describe('createSolvaPayClient Group A native dispatch', () => {
   })
 
   it('propagates reconstructed SolvaPayError from Api envelope', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     setNativeClientForTests(
       fakeClient({
         getMerchant: vi.fn(async () =>
@@ -183,7 +172,6 @@ describe('createSolvaPayClient Group A native dispatch', () => {
   })
 
   it('propagates reconstructed PaywallError from Paywall envelope', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     const gate = {
       kind: 'payment_required' as const,
       product: 'prod_1',
@@ -211,42 +199,31 @@ describe('createSolvaPayClient Group A native dispatch', () => {
     })
   })
 
-  it('fails fast under SOLVAPAY_IMPL=ts (no TS fetch fallback)', async () => {
-    process.env.SOLVAPAY_IMPL = 'ts'
-    const createCustomer = vi.fn()
-    setNativeClientForTests(fakeClient({ createCustomer }))
+  it('throws when the native client binding is missing', async () => {
+    setNativeClientForTests(null)
 
     const client = createSolvaPayClient({ apiKey: 'sk_test', apiBaseUrl: 'https://api.test' })
 
     await expect(client.createCustomer({ email: 'a@b.c' })).rejects.toBeInstanceOf(SolvaPayError)
-    expect(createCustomer).not.toHaveBeenCalled()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })
 
 describe('createSolvaPayClient Group B/C native dispatch', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
   const fetchMock = vi.fn()
 
   beforeEach(() => {
-    delete process.env.SOLVAPAY_IMPL
     resetNativeCache()
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
     resetNativeCache()
     vi.unstubAllGlobals()
   })
 
-  it('dispatches each Group B/C method to NativeClient under SOLVAPAY_IMPL=rust', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
+  it('dispatches each Group B/C method to NativeClient', async () => {
     const calls: Array<{ fn: string; args: string }> = []
     const groupBC = [...GROUP_B, ...GROUP_C]
     const native = fakeClient(
@@ -298,9 +275,9 @@ describe('createSolvaPayClient Group B/C native dispatch', () => {
       }),
     ).toEqual({ fromNative: 'activatePlan' })
 
-    expect(
-      await client.checkLimits({ productRef: 'prod_1', resource: 'tool', units: 1 }),
-    ).toEqual({ fromNative: 'checkLimits' })
+    expect(await client.checkLimits({ productRef: 'prod_1', resource: 'tool', units: 1 })).toEqual({
+      fromNative: 'checkLimits',
+    })
     expect(
       await client.trackUsage({
         customerRef: 'cus_1',
@@ -410,7 +387,6 @@ describe('createSolvaPayClient Group B/C native dispatch', () => {
   })
 
   it('deleteProduct/deletePlan return null from null-envelope value', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     setNativeClientForTests(
       fakeClient({
         deleteProduct: vi.fn(async () => JSON.stringify({ ok: true, value: null })),

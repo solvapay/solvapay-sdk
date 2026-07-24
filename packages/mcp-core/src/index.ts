@@ -121,20 +121,13 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 // merchant-facing `@solvapay/mcp` public entry — exported here so the
 // contract harness and adapters can share the same constructors.
 export { assertResponseResult, makeResponseResult } from './native-mcp'
-export {
-  getMcpToolNamesTable,
-  mcpViewMaps,
-  installNativeMcpApi,
-} from './native-mcp'
+export { getMcpToolNamesTable, mcpViewMaps, installNativeMcpApi } from './native-mcp'
 
 // ---- CSP baseline ----
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export {
-  applyHideToolsByAudience,
-  defaultIsChatGptRequest,
-} from './hideToolsByAudience'
+export { applyHideToolsByAudience, defaultIsChatGptRequest } from './hideToolsByAudience'
 export type {
   ApplyHideToolsByAudienceContext,
   ApplyHideToolsByAudienceExtra,
@@ -142,10 +135,7 @@ export type {
   HideToolsByAudienceBypass,
 } from './hideToolsByAudience'
 export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
-export type {
-  BuildSolvaPayDescriptorsOptions,
-  SolvaPayDescriptorBundle,
-} from './descriptors'
+export type { BuildSolvaPayDescriptorsOptions, SolvaPayDescriptorBundle } from './descriptors'
 export {
   deriveIcons,
   buildPromptDescriptorMetadata,
@@ -153,11 +143,7 @@ export {
   buildToolDescriptorMetadata,
   validatePublicBaseUrl,
 } from './native-mcp'
-export {
-  INTENT_TOOL_ANNOTATIONS,
-  PUBLIC_BASE_URL_ERROR,
-  solvapayTool,
-} from './descriptor-metadata'
+export { INTENT_TOOL_ANNOTATIONS, PUBLIC_BASE_URL_ERROR, solvapayTool } from './descriptor-metadata'
 export type {
   BuildPromptDescriptorMetadataOptions,
   BuildToolDescriptorMetadataOptions,
@@ -165,10 +151,7 @@ export type {
   ToolDescriptorMetadata,
 } from './descriptor-metadata'
 
-export {
-  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
-  SOLVAPAY_BOOTSTRAP_URI,
-} from './resources/bootstrap'
+export { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resources/bootstrap'
 
 export {
   SOLVAPAY_OVERVIEW_MARKDOWN,
@@ -193,10 +176,7 @@ export {
   resolveOAuthPaths,
   withoutTrailingSlash,
 } from './oauth-discovery'
-export type {
-  OAuthAuthorizationServerOptions,
-  OAuthBridgePaths,
-} from './oauth-discovery'
+export type { OAuthAuthorizationServerOptions, OAuthBridgePaths } from './oauth-discovery'
 
 // ---- Auth info + bearer helpers ----
 export { buildAuthInfoFromBearer } from './auth-bridge'

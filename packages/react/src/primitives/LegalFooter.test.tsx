@@ -42,10 +42,7 @@ describe('LegalFooter primitive', () => {
 
   it('honors termsUrl/privacyUrl overrides', () => {
     render(
-      <LegalFooter
-        termsUrl="https://example.com/tos"
-        privacyUrl="https://example.com/privacy"
-      />,
+      <LegalFooter termsUrl="https://example.com/tos" privacyUrl="https://example.com/privacy" />,
     )
     expect(screen.getByRole('link', { name: 'Terms' }).getAttribute('href')).toBe(
       'https://example.com/tos',

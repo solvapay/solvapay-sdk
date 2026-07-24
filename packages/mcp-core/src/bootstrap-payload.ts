@@ -27,11 +27,7 @@ import {
   defaultGetCustomerRef as defaultGetCustomerRefHelper,
   enrichPurchase,
 } from './helpers'
-import type {
-  BootstrapPayload,
-  McpToolExtra,
-  SolvaPayMcpViewKind,
-} from './types'
+import type { BootstrapPayload, McpToolExtra, SolvaPayMcpViewKind } from './types'
 
 export interface CreateBuildBootstrapPayloadOptions {
   solvaPay: SolvaPay
@@ -164,9 +160,15 @@ export function createBuildBootstrapPayload(
       getMerchantCore(buildRequest(undefined), { solvaPay }),
       getProductCore(productQueryRequest(), { solvaPay }),
       wrapError(listPlansCore(productQueryRequest(), { solvaPay })),
-      customerRef ? wrapError(checkPurchaseCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
-      customerRef ? wrapError(getPaymentMethodCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
-      customerRef ? wrapError(getCustomerBalanceCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
+      customerRef
+        ? wrapError(checkPurchaseCore(buildRequest(extra), { solvaPay }))
+        : unauthenticated(),
+      customerRef
+        ? wrapError(getPaymentMethodCore(buildRequest(extra), { solvaPay }))
+        : unauthenticated(),
+      customerRef
+        ? wrapError(getCustomerBalanceCore(buildRequest(extra), { solvaPay }))
+        : unauthenticated(),
       customerRef ? wrapError(getUsageCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
     ])
 

@@ -1,6 +1,9 @@
 /**
- * Inject `docs:` blocks into sdk-contract.yaml for every catalogued entry point
- * (step 18T). Idempotent: skips entries that already have `docs:`.
+ * Historical one-shot backfill (step 18T). Prefer OpenAPI description fallback
+ * + `pnpm gen:scaffold` for new ops; keep this for replaying curated prose.
+ *
+ * Inject `docs:` blocks into sdk-contract.yaml for every catalogued entry point.
+ * Idempotent: skips entries that already have `docs:`.
  *
  * Usage: pnpm exec tsx scripts/populate-manifest-docs.ts
  */
@@ -9,6 +12,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { stringify } from 'yaml'
+import { entryBounds } from './lib/manifest-edit.js'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const MANIFEST_PATH = path.join(REPO_ROOT, 'contract/manifest/sdk-contract.yaml')
@@ -21,8 +25,7 @@ type DocsInput = {
 
 const OPERATION_DOCS: Record<string, DocsInput> = {
   checkLimits: {
-    summary:
-      "Check remaining usage/spend limits for a customer against a product's plan.",
+    summary: "Check remaining usage/spend limits for a customer against a product's plan.",
     params: {
       params: 'Limits request including customer and product refs.',
     },
@@ -361,8 +364,7 @@ const FACADE_DOCS: Record<string, DocsInput> = {
     returns: 'Protected handler that gates on limits before running.',
   },
   gate: {
-    summary:
-      'Evaluate the paywall for a customer + product; returns an allow or paywall decision.',
+    summary: 'Evaluate the paywall for a customer + product; returns an allow or paywall decision.',
     params: { options: 'Gate options (customer, product, and optional meter).' },
     returns: 'Allow decision or structured paywall gate.',
   },
@@ -385,20 +387,6 @@ function docsYaml(docs: DocsInput, indent: number): string {
       .map(line => `${pad}${line}`)
       .join('\n') + '\n'
   )
-}
-
-function entryBounds(text: string, entryId: string): { start: number; end: number } {
-  const startRe = new RegExp(`^  ${entryId}:\\n`, 'm')
-  const startMatch = startRe.exec(text)
-  if (startMatch === null) {
-    throw new Error(`Entry not found: ${entryId}`)
-  }
-  const contentStart = startMatch.index + startMatch[0].length
-  const rest = text.slice(contentStart)
-  const nextRe = /^(?:  [A-Za-z]|[A-Za-z])/m
-  const nextMatch = nextRe.exec(rest)
-  const end = nextMatch === null ? text.length : contentStart + nextMatch.index
-  return { start: startMatch.index, end }
 }
 
 function insertBeforeSync(text: string, entryId: string, docs: DocsInput): string {

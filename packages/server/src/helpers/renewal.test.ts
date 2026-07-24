@@ -170,9 +170,7 @@ describe('cancelPurchaseCore', () => {
   })
 
   it('classifies does-not-belong as 400', async () => {
-    mockCancelPurchase.mockRejectedValue(
-      new SolvaPayError('Purchase does not belong to provider'),
-    )
+    mockCancelPurchase.mockRejectedValue(new SolvaPayError('Purchase does not belong to provider'))
     const result = await cancelPurchaseCore(
       new Request('http://localhost'),
       { purchaseRef: 'pur_1' },
@@ -327,9 +325,7 @@ describe('reactivatePurchaseCore', () => {
   })
 
   it('classifies cannot-be-reactivated as 400', async () => {
-    mockReactivatePurchase.mockRejectedValue(
-      new SolvaPayError('Purchase cannot be reactivated'),
-    )
+    mockReactivatePurchase.mockRejectedValue(new SolvaPayError('Purchase cannot be reactivated'))
     const result = await reactivatePurchaseCore(
       new Request('http://localhost'),
       { purchaseRef: 'pur_1' },

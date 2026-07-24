@@ -45,10 +45,7 @@ describe('supabase-edge example', () => {
       const match = content.match(
         /import\s*\{\s*(\w+)\s*\}\s*from\s*['"]@solvapay\/server\/fetch['"]/,
       )
-      expect(
-        match,
-        `${fn}/index.ts should import from @solvapay/server/fetch`,
-      ).toBeTruthy()
+      expect(match, `${fn}/index.ts should import from @solvapay/server/fetch`).toBeTruthy()
 
       const importedName = match![1]
       expect(

@@ -95,9 +95,9 @@ function formatZodIssues(error: {
     .join('\n')
 }
 
-function loadManifest(manifestPath: string):
-  | { ok: true; manifest: SdkContractManifest }
-  | { ok: false; stderr: string } {
+function loadManifest(
+  manifestPath: string,
+): { ok: true; manifest: SdkContractManifest } | { ok: false; stderr: string } {
   let rawText: string
   try {
     rawText = readFileSync(manifestPath, 'utf8')
@@ -129,9 +129,9 @@ function loadManifest(manifestPath: string):
   return { ok: true, manifest: result.data }
 }
 
-function loadSnapshot(snapshotPath: string):
-  | { ok: true; snapshot: OpenApiSnapshot }
-  | { ok: false; stderr: string } {
+function loadSnapshot(
+  snapshotPath: string,
+): { ok: true; snapshot: OpenApiSnapshot } | { ok: false; stderr: string } {
   try {
     const raw = JSON.parse(readFileSync(snapshotPath, 'utf8')) as unknown
     if (typeof raw !== 'object' || raw === null) {
@@ -224,8 +224,7 @@ async function main(): Promise<void> {
 }
 
 const isDirectRun =
-  process.argv[1] !== undefined &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 
 if (isDirectRun) {
   void main()

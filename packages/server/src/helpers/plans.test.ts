@@ -47,14 +47,11 @@ describe('listPlansCore', () => {
   })
 
   it('returns plans and productRef on the happy path', async () => {
-    const result = await listPlansCore(
-      new Request('http://localhost/api/plans?productRef=prd_1'),
-      {
-        solvaPay: {
-          apiClient: { listPlans: mockListPlans },
-        } as never,
-      },
-    )
+    const result = await listPlansCore(new Request('http://localhost/api/plans?productRef=prd_1'), {
+      solvaPay: {
+        apiClient: { listPlans: mockListPlans },
+      } as never,
+    })
 
     expect(mockListPlans).toHaveBeenCalledWith('prd_1')
     expect(result).toEqual({
@@ -66,14 +63,11 @@ describe('listPlansCore', () => {
   it('falls back to an empty plans array when listPlans returns nullish', async () => {
     mockListPlans.mockResolvedValue(null)
 
-    const result = await listPlansCore(
-      new Request('http://localhost/api/plans?productRef=prd_1'),
-      {
-        solvaPay: {
-          apiClient: { listPlans: mockListPlans },
-        } as never,
-      },
-    )
+    const result = await listPlansCore(new Request('http://localhost/api/plans?productRef=prd_1'), {
+      solvaPay: {
+        apiClient: { listPlans: mockListPlans },
+      } as never,
+    })
 
     expect(result).toEqual({
       plans: [],
@@ -82,10 +76,9 @@ describe('listPlansCore', () => {
   })
 
   it('returns 500 when listPlans is unavailable on the client', async () => {
-    const result = await listPlansCore(
-      new Request('http://localhost/api/plans?productRef=prd_1'),
-      { solvaPay: { apiClient: {} } as never },
-    )
+    const result = await listPlansCore(new Request('http://localhost/api/plans?productRef=prd_1'), {
+      solvaPay: { apiClient: {} } as never,
+    })
 
     expect(result).toEqual({
       error: 'List plans method not available',
@@ -103,9 +96,7 @@ describe('listPlansCore', () => {
     // With no apiKey path: the IIFE returns null only when config.apiKey is falsy.
     mockGetConfig.mockReturnValue({ apiKey: '' })
 
-    const result = await listPlansCore(
-      new Request('http://localhost/api/plans?productRef=prd_1'),
-    )
+    const result = await listPlansCore(new Request('http://localhost/api/plans?productRef=prd_1'))
 
     expect(result).toEqual({
       error: 'Server configuration error: SolvaPay secret key not configured',
@@ -116,14 +107,11 @@ describe('listPlansCore', () => {
   it('wraps thrown errors with handleRouteError', async () => {
     mockListPlans.mockRejectedValue(new Error('Backend exploded'))
 
-    const result = await listPlansCore(
-      new Request('http://localhost/api/plans?productRef=prd_1'),
-      {
-        solvaPay: {
-          apiClient: { listPlans: mockListPlans },
-        } as never,
-      },
-    )
+    const result = await listPlansCore(new Request('http://localhost/api/plans?productRef=prd_1'), {
+      solvaPay: {
+        apiClient: { listPlans: mockListPlans },
+      } as never,
+    })
 
     expect(result).toEqual({
       error: 'Failed to fetch plans',

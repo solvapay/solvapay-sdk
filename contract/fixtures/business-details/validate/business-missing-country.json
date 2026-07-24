@@ -13,9 +13,7 @@
       "error": {
         "issues": [
           {
-            "path": [
-              "country"
-            ],
+            "path": ["country"],
             "message": "Country is required"
           }
         ]

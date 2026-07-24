@@ -13,15 +13,15 @@ Triggered on `pull_request` to `main`/`dev` (and `workflow_dispatch`). There is 
 
 ### Node binding / clean-install (Steps 36–39)
 
-| Check name | What it proves |
-| --- | --- |
-| `node-binding (<triple>)` | Builds each §7.7 native target; in-tree `node --test` smoke on host-native legs (Node 22) |
-| `node-binding (wasm32-wasip1-threads + FORCE_WASI)` | In-tree WASI build + `NAPI_RS_FORCE_WASI=error` smoke |
-| `node-binding artifact gate` | `napi artifacts` + `check-artifacts.mjs` 9/9; packs publish-shaped tarball bundle `server-clean-install-packages` |
-| `node-binding conformance (SOLVAPAY_IMPL rust/ts)` | Workspace-linked `@solvapay/server` unit suite on rust then ts (Step 37) |
-| `wasm-binding (Step 38 edge/browser)` | wasm-bindgen edge/browser budgets, symbol audit, Deno smoke (separate from napi WASI) |
-| `node clean install (native, <target>, Node <major>)` | **Step 39:** fresh `npm install` of packed `.tgz` into an empty temp project + public `@solvapay/server` `verifyWebhook` (`SOLVAPAY_IMPL=rust`); 8 targets × Node 22/24/26 |
-| `node clean install (WASI, Node <major>)` | **Step 39:** WASI-only packed install (`NAPI_RS_FORCE_WASI=error`, no `.node`); Node 22/24/26 on Linux x64 |
+| Check name                                            | What it proves                                                                                                                                                             |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node-binding (<triple>)`                             | Builds each §7.7 native target; in-tree `node --test` smoke on host-native legs (Node 22)                                                                                  |
+| `node-binding (wasm32-wasip1-threads + FORCE_WASI)`   | In-tree WASI build + `NAPI_RS_FORCE_WASI=error` smoke                                                                                                                      |
+| `node-binding artifact gate`                          | `napi artifacts` + `check-artifacts.mjs` 9/9; packs publish-shaped tarball bundle `server-clean-install-packages`                                                          |
+| `node-binding conformance (Rust-only server/core)` | Workspace-linked `@solvapay/server` + `@solvapay/core` unit suites on Rust binding (Steps 52–53)                                                                             |
+| `wasm-binding (Step 38 edge/browser)`                 | wasm-bindgen edge/browser budgets, symbol audit, Deno smoke (separate from napi WASI)                                                                                      |
+| `node clean install (native, <target>, Node <major>)` | **Step 39:** fresh `npm install` of packed `.tgz` into an empty temp project + public `@solvapay/server` `verifyWebhook`; 8 targets × Node 22/24/26 |
+| `node clean install (WASI, Node <major>)`             | **Step 39:** WASI-only packed install (`NAPI_RS_FORCE_WASI=error`, no `.node`); Node 22/24/26 on Linux x64                                                                 |
 
 **Local entry points** (from repo root, after building host + WASI bindings and placing via `napi artifacts`):
 
@@ -113,12 +113,12 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 ## Quick Reference
 
-| Action                   | How to trigger                                                                 |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| Publish preview snapshot | Push to `dev`                                                                  |
-| Cut stable release       | Push to `main` (auto-opens Version Packages PR), then merge the generated PR   |
-| Write a changeset        | `pnpm changeset` (interactive)                                                 |
-| Inspect pending releases | `pnpm changeset status --verbose`                                              |
+| Action                   | How to trigger                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| Publish preview snapshot | Push to `dev`                                                                   |
+| Cut stable release       | Push to `main` (auto-opens Version Packages PR), then merge the generated PR    |
+| Write a changeset        | `pnpm changeset` (interactive)                                                  |
+| Inspect pending releases | `pnpm changeset status --verbose`                                               |
 | Verify fetch-runtime     | `pnpm validate:fetch-runtime` (or `pnpm tsx scripts/validate-fetch-runtime.ts`) |
 
 ## Troubleshooting

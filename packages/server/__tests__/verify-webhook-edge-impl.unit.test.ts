@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   resetWasmWebhookCache,
-  resolveEdgeWebhookImpl,
   setWasmWebhookBindingForTests,
   verifyWebhookWasm,
 } from '../src/webhook-wasm'
@@ -32,37 +31,15 @@ const eventBody = JSON.stringify({
   request: { id: null, idempotency_key: null },
 })
 
-describe('edge verifyWebhook impl selection', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
-
+describe('edge verifyWebhook WASM dispatch', () => {
   beforeEach(() => {
     mockVerifyWebhook.mockReset()
     mockReady.mockClear()
-    delete process.env.SOLVAPAY_IMPL
     resetWasmWebhookCache()
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
     resetWasmWebhookCache()
-  })
-
-  it('resolveEdgeWebhookImpl returns ts when SOLVAPAY_IMPL=ts', () => {
-    process.env.SOLVAPAY_IMPL = 'ts'
-    expect(resolveEdgeWebhookImpl()).toBe('ts')
-  })
-
-  it('resolveEdgeWebhookImpl returns rust when SOLVAPAY_IMPL=rust', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
-    expect(resolveEdgeWebhookImpl()).toBe('rust')
-  })
-
-  it('resolveEdgeWebhookImpl defaults to rust when unset', () => {
-    expect(resolveEdgeWebhookImpl()).toBe('rust')
   })
 
   it('shares one init Promise while initialization is in progress', async () => {
@@ -172,8 +149,7 @@ describe('edge verifyWebhook impl selection', () => {
     }
   })
 
-  it('SOLVAPAY_IMPL=rust surfaces init errors when binding is unavailable', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
+  it('throws when the WASM binding is unavailable', async () => {
     setWasmWebhookBindingForTests(null)
 
     await expect(
@@ -186,36 +162,18 @@ describe('edge verifyWebhook impl selection', () => {
   })
 })
 
-describe('edge verifyWebhook public facade (Rust-only after Step 53)', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
-
+describe('edge verifyWebhook public facade', () => {
   beforeEach(() => {
     mockVerifyWebhook.mockReset()
     mockReady.mockClear()
-    delete process.env.SOLVAPAY_IMPL
     resetWasmWebhookCache()
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
     resetWasmWebhookCache()
   })
 
-  it('fails fast under SOLVAPAY_IMPL=ts and never touches the binding', async () => {
-    process.env.SOLVAPAY_IMPL = 'ts'
-    setWasmWebhookBindingForTests(fakeBinding)
-
-    await expect(
-      verifyWebhookEdge({ body: eventBody, signature: 't=1,v1=deadbeef', secret: 'whsec_test' }),
-    ).rejects.toBeInstanceOf(SolvaPayError)
-    expect(mockVerifyWebhook).not.toHaveBeenCalled()
-  })
-
-  it('routes through the WASM binding by default', async () => {
+  it('routes through the WASM binding', async () => {
     setWasmWebhookBindingForTests(fakeBinding)
     mockVerifyWebhook.mockReturnValue(eventBody)
 
@@ -227,6 +185,14 @@ describe('edge verifyWebhook public facade (Rust-only after Step 53)', () => {
 
     expect(mockVerifyWebhook).toHaveBeenCalledTimes(1)
     expect(event.type).toBe('purchase.created')
+  })
+
+  it('throws when the WASM binding is unavailable', async () => {
+    setWasmWebhookBindingForTests(null)
+
+    await expect(
+      verifyWebhookEdge({ body: eventBody, signature: 't=1,v1=deadbeef', secret: 'whsec_test' }),
+    ).rejects.toBeInstanceOf(SolvaPayError)
   })
 })
 

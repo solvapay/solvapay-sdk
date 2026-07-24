@@ -5,11 +5,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import {
-  getAuthenticatedUserCore,
-  type AuthenticatedUser,
-  isErrorResult,
-} from '@solvapay/server'
+import { getAuthenticatedUserCore, type AuthenticatedUser, isErrorResult } from '@solvapay/server'
 
 /**
  * Get authenticated user information from a Next.js request.

@@ -66,7 +66,9 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
               ? `${creditsAdded.toLocaleString(locale)} credits`
               : formatPrice(amountMinor, currency, { locale })}
           </span>
-          {creditsAdded != null ? <span>{formatPrice(amountMinor, currency, { locale })}</span> : null}
+          {creditsAdded != null ? (
+            <span>{formatPrice(amountMinor, currency, { locale })}</span>
+          ) : null}
         </div>
         <div className="solvapay-mcp-checkout-order-summary-row">
           <span className={cx.muted}>One-time</span>

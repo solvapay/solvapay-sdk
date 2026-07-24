@@ -1,9 +1,6 @@
 import type { NextResponse } from 'next/server'
 import type { SolvaPay } from '@solvapay/server'
-import {
-  createCheckoutSessionCore,
-  createCustomerSessionCore,
-} from '@solvapay/server'
+import { createCheckoutSessionCore, createCustomerSessionCore } from '@solvapay/server'
 import { toNextRouteResponse } from './_response'
 
 /**

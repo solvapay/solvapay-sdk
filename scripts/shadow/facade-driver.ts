@@ -83,10 +83,7 @@ function reqStr(args: Record<string, unknown>, key: string): string {
   return value
 }
 
-function omitKeys(
-  args: Record<string, unknown>,
-  keys: string[],
-): Record<string, unknown> {
+function omitKeys(args: Record<string, unknown>, keys: string[]): Record<string, unknown> {
   const out = { ...args }
   for (const key of keys) {
     delete out[key]
@@ -147,10 +144,7 @@ function requestUrl(input: RequestInfo | URL): string {
  * Wrap `fetchImpl` to append each exchange onto `wire`.
  * Clones the response so the SDK can still read the body.
  */
-export function createRecordingFetch(
-  fetchImpl: typeof fetch,
-  wire: WireExchange[],
-): typeof fetch {
+export function createRecordingFetch(fetchImpl: typeof fetch, wire: WireExchange[]): typeof fetch {
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     let method: string
     let url: string
@@ -285,10 +279,7 @@ function errorObservation(error: unknown): Record<string, unknown> {
  * client is built for this session's `apiBaseUrl` even if a prior session left
  * an override installed.
  */
-async function installFacadeClient(config: {
-  apiKey: string
-  apiBaseUrl: string
-}): Promise<void> {
+async function installFacadeClient(config: { apiKey: string; apiBaseUrl: string }): Promise<void> {
   resetWasmCache()
   await loadWasmBinding()
   setWasmClientForTests(getWasmClient(config))
@@ -368,18 +359,15 @@ let _originalFetch: typeof fetch | undefined
 /**
  * Install a facade shadow driver session.
  *
- * Step 53: the facade client is Rust-only, so the session forces
- * `SOLVAPAY_IMPL=rust` and drives the injected WASM `WasmClient` /
- * `FetchTransport`. `restore()` clears the WASM override (via
- * {@link resetWasmCache}) so later non-shadow WASM use is unaffected.
+ * Step 53: the facade client is Rust-only, so the session drives the injected
+ * WASM `WasmClient` / `FetchTransport`. `restore()` clears the WASM override
+ * (via {@link resetWasmCache}) so later non-shadow WASM use is unaffected.
  */
 export function installFacadeDriverSession(options: FacadeDriverOptions): {
   driver: FacadeDriver
   restore: () => void
 } {
   _originalFetch = globalThis.fetch
-  const previousImpl = process.env.SOLVAPAY_IMPL
-  process.env.SOLVAPAY_IMPL = 'rust'
   const driver = createFacadeShadowDriver(options)
   return {
     driver,
@@ -388,11 +376,6 @@ export function installFacadeDriverSession(options: FacadeDriverOptions): {
         globalThis.fetch = _originalFetch
       }
       resetWasmCache()
-      if (previousImpl === undefined) {
-        delete process.env.SOLVAPAY_IMPL
-      } else {
-        process.env.SOLVAPAY_IMPL = previousImpl
-      }
     },
   }
 }

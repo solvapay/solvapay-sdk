@@ -31,7 +31,8 @@ describe('superseded-server-ts-check fixtures', () => {
     const root = makeRepo({
       'packages/server/src/paywall-state-ts.ts': 'export type PaywallState = never\n',
       'packages/server/src/paywall-gate-ts.ts': 'export function buildPaywallGate() {}\n',
-      'packages/server/src/paywall-payload-ts.ts': 'export function paywallErrorToClientPayloadTs() {}\n',
+      'packages/server/src/paywall-payload-ts.ts':
+        'export function paywallErrorToClientPayloadTs() {}\n',
       'packages/server/src/ok.ts': 'export const ok = true\n',
     })
     const issues = runSupersededServerTsCheck(root)
@@ -88,8 +89,7 @@ describe('superseded-server-ts-check fixtures', () => {
         'export function verifyWebhook(o) { return verifyWebhookNative(o) }\n',
       'packages/server/src/edge.ts':
         'export async function verifyWebhook(o) { return verifyWebhookWasm(o) }\n',
-      'packages/server/src/utils.ts':
-        'export async function withRetry(fn) { return fn() }\n',
+      'packages/server/src/utils.ts': 'export async function withRetry(fn) { return fn() }\n',
     })
     expect(runSupersededServerTsCheck(root)).toEqual([])
     expect(formatSupersededReport([])).toBe('server-superseded-ts:check: OK')

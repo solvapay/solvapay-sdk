@@ -40,8 +40,6 @@ import type { PaywallStructuredContent } from '@solvapay/server'
 import { PaywallError } from '@solvapay/server'
 import type { PaywallToolResultContext } from './paywallToolResult'
 
-export type SolvaPayImpl = 'ts' | 'rust'
-
 export type NativeMcpSyncMethod =
   | 'paywallToolResult'
   | 'makeResponseResult'
@@ -56,7 +54,6 @@ export type NativeMcpSyncMethod =
 
 type NativeMcpApi = {
   callNativeSync: (fn: NativeMcpSyncMethod, argsJson: string) => unknown
-  resolveImpl: (surface: string) => SolvaPayImpl
 }
 
 /** Must match `SOLVAPAY_NATIVE_SYNC_API` in `@solvapay/server` native-registry. */
@@ -77,20 +74,20 @@ export function resetNativeMcpApiForTests(): void {
   delete g[AMBIENT_NATIVE_SYNC_API]
 }
 
+function isNativeMcpApi(value: unknown): value is NativeMcpApi {
+  return (
+    value != null &&
+    typeof value === 'object' &&
+    typeof (value as NativeMcpApi).callNativeSync === 'function'
+  )
+}
+
 function readAmbientApi(): NativeMcpApi | null {
   const g = globalThis as typeof globalThis & {
     [AMBIENT_NATIVE_SYNC_API]?: NativeMcpApi
   }
   const api = g[AMBIENT_NATIVE_SYNC_API]
-  if (
-    api != null &&
-    typeof api === 'object' &&
-    typeof api.callNativeSync === 'function' &&
-    typeof api.resolveImpl === 'function'
-  ) {
-    return api
-  }
-  return null
+  return isNativeMcpApi(api) ? api : null
 }
 
 function getApi(): NativeMcpApi | null {
@@ -100,9 +97,9 @@ function getApi(): NativeMcpApi | null {
 function dispatchSync<T>(fn: NativeMcpSyncMethod, args: unknown, tsFallback: () => T): T {
   // The install (or ambient publish) is the gate: Node publishes napi dispatch
   // (`@solvapay/server` index), edge publishes WASM dispatch (`@solvapay/server`
-  // edge). Uninstalled → TS. `resolveImpl` carries the `SOLVAPAY_IMPL` rollback.
+  // edge). Uninstalled / edge-without-publish → TypeScript fallback.
   const api = getApi()
-  if (api === null || api.resolveImpl('mcp') !== 'rust') return tsFallback()
+  if (api === null) return tsFallback()
   return api.callNativeSync(fn, JSON.stringify(args)) as T
 }
 
@@ -115,7 +112,7 @@ export async function paywallToolResult(
   ctx: PaywallToolResultContext = {},
 ): Promise<PaywallToolResult> {
   const api = getApi()
-  if (api === null || api.resolveImpl('mcp') !== 'rust') {
+  if (api === null) {
     return paywallToolResultTs(errOrGate, ctx)
   }
 
@@ -148,7 +145,7 @@ export function makeResponseResult<TData>(
 
 export function assertResponseResult(value: unknown): ResponseResult<unknown> {
   const api = getApi()
-  if (api === null || api.resolveImpl('mcp') !== 'rust') {
+  if (api === null) {
     return assertResponseResultTs(value)
   }
   try {
@@ -209,17 +206,13 @@ export function buildPromptUserMessage(
   promptName: McpToolName,
   args: Record<string, unknown>,
 ): SolvaPayPromptResult {
-  return dispatchSync(
-    'buildPromptUserMessage',
-    { promptName, args },
-    () => buildPromptUserMessageTs(promptName, args),
+  return dispatchSync('buildPromptUserMessage', { promptName, args }, () =>
+    buildPromptUserMessageTs(promptName, args),
   )
 }
 
 export function validatePublicBaseUrl(publicBaseUrl: string): string | null {
-  return dispatchSync(
-    'validatePublicBaseUrl',
-    { publicBaseUrl },
-    () => validatePublicBaseUrlTs(publicBaseUrl),
+  return dispatchSync('validatePublicBaseUrl', { publicBaseUrl }, () =>
+    validatePublicBaseUrlTs(publicBaseUrl),
   )
 }

@@ -237,8 +237,7 @@ export function createSolvaPayMcpFetchHandler(
     let resolvedAuthInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
     if (authHeader || requireAuth) {
       const envelope = await readJsonRpcEnvelope(req)
-      const skipAuth =
-        requireAuth && !authHeader && isFreeMcpMethod(envelope.method)
+      const skipAuth = requireAuth && !authHeader && isFreeMcpMethod(envelope.method)
       if (!skipAuth) {
         try {
           resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, authInfo)

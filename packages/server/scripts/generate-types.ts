@@ -44,8 +44,7 @@ async function main(): Promise<void> {
     const { spec: prunedSpec, pruned: prunedSchemas } = pruneUnreferencedSchemas(filtered)
     console.log(`Pruned ${prunedSchemas} unreachable schemas`)
 
-    const { spec: finalSpec, added: missingSchemasAdded } =
-      addMissingSchemaPlaceholders(prunedSpec)
+    const { spec: finalSpec, added: missingSchemasAdded } = addMissingSchemaPlaceholders(prunedSpec)
     if (missingSchemasAdded > 0) {
       console.warn(
         `Added ${missingSchemasAdded} placeholder component schema(s) for unresolved $ref values`,

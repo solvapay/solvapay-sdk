@@ -18,7 +18,7 @@ import type {
  */
 type McpContext = Record<string, unknown>
 
-type FormatGateNative = (gate: PaywallStructuredContent) => PaywallToolResult | null
+type FormatGateNative = (gate: PaywallStructuredContent) => PaywallToolResult
 
 /**
  * Install-gated rust path for `formatGate` (shares `paywallToolResult` napi fn).

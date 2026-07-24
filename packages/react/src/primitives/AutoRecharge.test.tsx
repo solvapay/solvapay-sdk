@@ -21,25 +21,27 @@ const config: AutoRechargeConfig = {
   monthlySpendMinor: 0,
 }
 
-const autoRechargeMocks = vi.hoisted((): {
-  config: AutoRechargeConfig | null
-  loading: boolean
-  saving: boolean
-  disabling: boolean
-  error: Error | null
-  save: ReturnType<typeof vi.fn>
-  disable: ReturnType<typeof vi.fn>
-  refresh: ReturnType<typeof vi.fn>
-} => ({
-  config: null,
-  loading: false,
-  saving: false,
-  disabling: false,
-  error: null,
-  save: vi.fn(),
-  disable: vi.fn(),
-  refresh: vi.fn(),
-}))
+const autoRechargeMocks = vi.hoisted(
+  (): {
+    config: AutoRechargeConfig | null
+    loading: boolean
+    saving: boolean
+    disabling: boolean
+    error: Error | null
+    save: ReturnType<typeof vi.fn>
+    disable: ReturnType<typeof vi.fn>
+    refresh: ReturnType<typeof vi.fn>
+  } => ({
+    config: null,
+    loading: false,
+    saving: false,
+    disabling: false,
+    error: null,
+    save: vi.fn(),
+    disable: vi.fn(),
+    refresh: vi.fn(),
+  }),
+)
 
 const balanceMocks = vi.hoisted(() => ({
   creditsPerMinorUnit: 100,
@@ -196,9 +198,7 @@ describe('AutoRecharge primitive', () => {
   it('shows balance threshold summary with natural phrasing', () => {
     renderAutoRecharge({ currency: 'SEK' })
     enableAutoRecharge()
-    expect(
-      screen.getByText(/When my balance falls below .* add .*./),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/When my balance falls below .* add .*./)).toBeInTheDocument()
   })
 
   it('shows plus applicable tax disclosure when auto-recharge is enabled', () => {
@@ -267,7 +267,8 @@ describe('AutoRecharge primitive', () => {
 
   it('shows disable button when config exists', () => {
     autoRechargeMocks.config = config
-    renderAutoRecharge({}, (
+    renderAutoRecharge(
+      {},
       <>
         <AutoRecharge.Header />
         <AutoRecharge.Body>
@@ -276,8 +277,8 @@ describe('AutoRecharge primitive', () => {
             <AutoRecharge.DisableButton />
           </AutoRecharge.Actions>
         </AutoRecharge.Body>
-      </>
-    ))
+      </>,
+    )
     expect(screen.getByRole('button', { name: 'Disable automatic top-up' })).toBeInTheDocument()
   })
 
@@ -374,9 +375,7 @@ describe('AutoRecharge primitive', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
-    expect(
-      screen.getByText(/When my balance falls below .* add .*./),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/When my balance falls below .* add .*./)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Modify' })).toBeInTheDocument()
   })
 

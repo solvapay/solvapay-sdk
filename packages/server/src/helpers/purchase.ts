@@ -63,10 +63,7 @@ export async function checkPurchaseCore(
         const customer = await solvaPay.getCustomer({ customerRef: cachedCustomerRef })
 
         const cachedRef = customer?.customerRef
-        if (
-          cachedRef &&
-          isCachedCustomerRefValid(customer?.externalRef, userId, cachedRef)
-        ) {
+        if (cachedRef && isCachedCustomerRefValid(customer?.externalRef, userId, cachedRef)) {
           return {
             customerRef: cachedRef,
             email: customer.email,

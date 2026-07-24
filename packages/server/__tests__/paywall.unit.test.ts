@@ -310,9 +310,9 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
-      await expect(
-        protectedHandler({ auth: { customer_ref: 'test_user' } }),
-      ).resolves.toEqual({ success: true })
+      await expect(protectedHandler({ auth: { customer_ref: 'test_user' } })).resolves.toEqual({
+        success: true,
+      })
     })
   })
 

@@ -1,15 +1,14 @@
 #!/usr/bin/env node
+/* global Buffer, URL, console, fetch, process */
 /**
- * Demo smoke + rust-vs-ts parity harness.
+ * Demo Rust smoke harness.
  *
  * Usage:
- *   pnpm smoke:rust                          # spawn rust+ts servers, diff
+ *   pnpm smoke:rust                          # spawn next dev, assert Rust + route smoke
  *   pnpm smoke:rust -- --base-url URL        # hit a running server (single pass)
- *   pnpm smoke:rust -- --base-url URL --ts-url URL   # diff two running servers
- *   pnpm smoke:rust -- --parity              # explicit spawn mode (default when no URL)
  *
  * Env:
- *   SMOKE_BASE_URL / SMOKE_TS_URL
+ *   SMOKE_BASE_URL
  *   SMOKE_PRODUCT_REF (falls back to SOLVAPAY_PRODUCT_REF from .env)
  *   SMOKE_AUTH_TOKEN  (optional Bearer; else mints a short-lived JWT from SUPABASE_JWT_SECRET)
  */
@@ -23,27 +22,7 @@ import { setTimeout as sleep } from 'node:timers/promises'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const APP_ROOT = join(__dirname, '..')
-
-const VOLATILE_KEYS = new Set([
-  'clientSecret',
-  'client_secret',
-  'paymentIntentId',
-  'payment_intent_id',
-  'createdAt',
-  'updatedAt',
-  'created_at',
-  'updated_at',
-  'timestamp',
-  'expiresAt',
-  'expires_at',
-  'requestId',
-  'request_id',
-  'sessionId',
-  'session_id',
-  'id',
-])
-
-const VOLATILE_SUFFIXES = ['At', 'Secret', 'Token', 'Url', 'URL']
+const SMOKE_PORT = 13910
 
 function loadEnvFile(path) {
   if (!existsSync(path)) return {}
@@ -67,16 +46,13 @@ function loadEnvFile(path) {
 }
 
 function parseArgs(argv) {
-  const args = { parity: false, baseUrl: null, tsUrl: null, help: false }
+  const args = { baseUrl: null, help: false }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--') continue
     if (a === '--help' || a === '-h') args.help = true
-    else if (a === '--parity') args.parity = true
     else if (a === '--base-url') args.baseUrl = argv[++i]
-    else if (a === '--ts-url') args.tsUrl = argv[++i]
     else if (a.startsWith('--base-url=')) args.baseUrl = a.slice('--base-url='.length)
-    else if (a.startsWith('--ts-url=')) args.tsUrl = a.slice('--ts-url='.length)
     else if (!a.startsWith('-') && !args.baseUrl) args.baseUrl = a
   }
   return args
@@ -108,112 +84,6 @@ function mintSupabaseJwt(secret, sub = `smoke-${randomUUID()}`) {
   return `${data}.${sig}`
 }
 
-function isVolatileKey(key) {
-  if (VOLATILE_KEYS.has(key)) return true
-  return VOLATILE_SUFFIXES.some(suffix => key.endsWith(suffix) && key.length > suffix.length)
-}
-
-function stripVolatileInString(value) {
-  return value
-    .replace(/\d{4}-\d{2}-\d{2}T[^"'\s]*/g, '<ts>')
-    .replace(/\b(pi_|seti_|cus_|pur_|prd_|pln_|cs_|tok_|pm_)[A-Za-z0-9_]+/g, '<ref>')
-    .replace(
-      /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi,
-      '<uuid>',
-    )
-}
-
-function normalize(value) {
-  if (Array.isArray(value)) return value.map(normalize)
-  if (value !== null && typeof value === 'object') {
-    const out = {}
-    for (const [k, v] of Object.entries(value)) {
-      if (isVolatileKey(k)) continue
-      if (v === null || v === undefined) continue
-      out[k] = normalize(v)
-    }
-    return out
-  }
-  if (typeof value === 'string') {
-    // Opaque refs / Stripe ids / ISO timestamps
-    if (/^(pi_|seti_|cus_|pur_|prd_|pln_|cs_|tok_|pm_)/.test(value)) return '<ref>'
-    if (/^\d{4}-\d{2}-\d{2}T/.test(value)) return '<ts>'
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
-      return '<uuid>'
-    }
-    return stripVolatileInString(value)
-  }
-  return value
-}
-
-/**
- * Collapse known rust-vs-ts HTTP error envelope differences so the smoke can
- * flag semantic parity bugs without failing on wrapper wording / status mapping.
- */
-function normalizeParityResult(result) {
-  let status = result.status
-  let body = normalize(result.body)
-
-  const blob = typeof result.body === 'string' ? result.body : JSON.stringify(result.body ?? {})
-  const embedded =
-    blob.match(/\\?"statusCode\\?"\s*:\s*(\d+)/) ||
-    blob.match(/failed\s*\((\d{3})\)/i) ||
-    blob.match(/\((\d{3})\):\s*\{/)
-  if (embedded && status >= 400) {
-    status = Number(embedded[1])
-  }
-
-  if (body && typeof body === 'object' && !Array.isArray(body)) {
-    const record = body
-    // Prefer the inner details string when present (rust wraps; ts often surfaces it as error).
-    const core = typeof record.details === 'string' ? record.details : record.error
-    if (typeof core === 'string' && status >= 400) {
-      let message = stripVolatileInString(core)
-      // Drop leading wrapper phrases ("Failed to fetch merchant", etc.)
-      message = message.replace(/^[^:]+:\s*/, '')
-      // If the remainder is JSON-ish backend payload, keep just the message field.
-      const msgField = message.match(/"message"\s*:\s*"([^"]+)"/)
-      if (msgField) message = msgField[1]
-      body = { error: message }
-    }
-  }
-
-  return { status, body }
-}
-
-function deepEqual(a, b) {
-  return JSON.stringify(a) === JSON.stringify(b)
-}
-
-function diffPaths(a, b, path = '') {
-  const diffs = []
-  if (typeof a !== typeof b) {
-    diffs.push(`${path || '/'}: type ${typeof a} !== ${typeof b}`)
-    return diffs
-  }
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) {
-      diffs.push(`${path || '/'}: array length ${a.length} !== ${b.length}`)
-    }
-    const n = Math.max(a.length, b.length)
-    for (let i = 0; i < n; i++) {
-      diffs.push(...diffPaths(a[i], b[i], `${path}/${i}`))
-    }
-    return diffs
-  }
-  if (a !== null && b !== null && typeof a === 'object') {
-    const keys = new Set([...Object.keys(a), ...Object.keys(b)])
-    for (const key of keys) {
-      if (!(key in a)) diffs.push(`${path}/${key}: missing in rust`)
-      else if (!(key in b)) diffs.push(`${path}/${key}: missing in ts`)
-      else diffs.push(...diffPaths(a[key], b[key], `${path}/${key}`))
-    }
-    return diffs
-  }
-  if (a !== b) diffs.push(`${path || '/'}: ${JSON.stringify(a)} !== ${JSON.stringify(b)}`)
-  return diffs
-}
-
 async function fetchJson(url, init = {}) {
   const res = await fetch(url, init)
   const text = await res.text()
@@ -235,11 +105,10 @@ function buildCases({ productRef, authToken }) {
       name: 'diag-impl',
       method: 'GET',
       path: '/api/diag/impl',
-      // Node-only; skipped on edge/workerd when absent
       optional: true,
       expect: ({ status, body }) => {
         if (status !== 200) return `expected 200, got ${status}`
-        if (!body || typeof body.impl !== 'string') return 'missing impl'
+        if (body?.impl !== 'rust') return `expected impl=rust, got ${JSON.stringify(body?.impl)}`
         return null
       },
     },
@@ -247,7 +116,6 @@ function buildCases({ productRef, authToken }) {
       name: 'merchant',
       method: 'GET',
       path: '/api/merchant',
-      // Backend may 404/500 depending on local stack; binding must still respond.
       expect: ({ status, body }) =>
         status > 0 && !String(body?.details ?? body?.error ?? '').includes('Cannot find module')
           ? null
@@ -412,12 +280,7 @@ async function runSuite(baseUrl, ctx) {
       result = await fetchJson(url, init)
     } catch (err) {
       if (c.optional) {
-        results.push({
-          name: c.name,
-          status: 0,
-          body: { skipped: true, error: String(err) },
-          normalized: { skipped: true },
-        })
+        results.push({ name: c.name, status: 0, skipped: true })
         continue
       }
       failures.push(`${c.name}: fetch failed: ${err}`)
@@ -425,12 +288,7 @@ async function runSuite(baseUrl, ctx) {
     }
 
     if (c.optional && result.status === 404) {
-      results.push({
-        name: c.name,
-        status: 404,
-        body: result.body,
-        normalized: { skipped: true },
-      })
+      results.push({ name: c.name, status: 404, skipped: true })
       continue
     }
 
@@ -439,16 +297,7 @@ async function runSuite(baseUrl, ctx) {
       failures.push(`${c.name}: ${err} body=${JSON.stringify(result.body).slice(0, 200)}`)
     }
 
-    results.push({
-      name: c.name,
-      status: result.status,
-      body: result.body,
-      normalized: normalizeParityResult({
-        name: c.name,
-        status: result.status,
-        body: result.body,
-      }),
-    })
+    results.push({ name: c.name, status: result.status })
   }
 
   return { results, failures }
@@ -460,7 +309,6 @@ async function waitForServer(baseUrl, { timeoutMs = 90_000, path = '/api/merchan
   while (Date.now() - start < timeoutMs) {
     try {
       const res = await fetch(new URL(path, baseUrl), { method: 'GET' })
-      // Any HTTP response means the server is up
       if (res.status > 0) return
     } catch (err) {
       lastErr = err
@@ -470,17 +318,15 @@ async function waitForServer(baseUrl, { timeoutMs = 90_000, path = '/api/merchan
   throw new Error(`Server at ${baseUrl} did not become ready: ${lastErr}`)
 }
 
-async function startNextServer({ port, impl, envFile }) {
+async function startNextServer({ port, envFile }) {
   const fileEnv = loadEnvFile(envFile)
   const env = {
     ...process.env,
     ...fileEnv,
-    SOLVAPAY_IMPL: impl,
     PORT: String(port),
     NODE_OPTIONS: '--disable-warning=DEP0205',
   }
 
-  // --webpack: Turbopack rebundles workspace @solvapay/server and breaks napi.
   const child = spawn(
     process.execPath,
     [
@@ -515,7 +361,6 @@ async function startNextServer({ port, impl, envFile }) {
 
   return {
     baseUrl,
-    impl,
     async stop() {
       if (child.killed) return
       child.kill('SIGTERM')
@@ -530,36 +375,12 @@ async function startNextServer({ port, impl, envFile }) {
 function printSuiteSummary(label, { results, failures }) {
   console.log(`\n[${label}] ${results.length} routes, ${failures.length} failures`)
   for (const r of results) {
-    const mark = r.normalized?.skipped ? 'skip' : String(r.status)
+    const mark = r.skipped ? 'skip' : String(r.status)
     console.log(`  ${mark.padStart(4)}  ${r.name}`)
   }
   if (failures.length) {
     for (const f of failures) console.error(`  FAIL ${f}`)
   }
-}
-
-function compareSuites(rustSuite, tsSuite) {
-  const diffs = []
-  const rustByName = new Map(rustSuite.results.map(r => [r.name, r]))
-  const tsByName = new Map(tsSuite.results.map(r => [r.name, r]))
-  const names = new Set([...rustByName.keys(), ...tsByName.keys()])
-
-  for (const name of names) {
-    const rust = rustByName.get(name)
-    const ts = tsByName.get(name)
-    if (!rust || !ts) {
-      diffs.push(`${name}: missing in ${rust ? 'ts' : 'rust'} suite`)
-      continue
-    }
-    // Diag intentionally reports the active impl — exclude from parity.
-    if (name === 'diag-impl') continue
-    if (rust.normalized?.skipped || ts.normalized?.skipped) continue
-    if (!deepEqual(rust.normalized, ts.normalized)) {
-      const pathDiffs = diffPaths(rust.normalized, ts.normalized).slice(0, 20)
-      diffs.push(`${name}:\n    ${pathDiffs.join('\n    ')}`)
-    }
-  }
-  return diffs
 }
 
 async function assertDiagRust(baseUrl) {
@@ -578,16 +399,28 @@ async function assertDiagRust(baseUrl) {
     console.log(`[diag] impl=rust napiVersion=${diag.body.napiVersion}`)
   } catch (err) {
     if (String(err).includes('fetch failed') || String(err).includes('ECONNREFUSED')) throw err
-    // Edge-only deployments may not expose the Node diag route
     if (String(err.message ?? err).includes('napiVersion')) throw err
     console.warn(`[diag] ${err.message ?? err}`)
   }
 }
 
+async function runSmoke(baseUrl, ctx) {
+  await waitForServer(baseUrl)
+  await assertDiagRust(baseUrl)
+  const suite = await runSuite(baseUrl, ctx)
+  printSuiteSummary('run', suite)
+  if (suite.failures.length) {
+    process.exitCode = 1
+    return false
+  }
+  console.log('\nOK — Rust smoke passed')
+  return true
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   if (args.help) {
-    console.log(`Usage: node scripts/smoke-rust.mjs [--parity] [--base-url URL] [--ts-url URL]`)
+    console.log('Usage: node scripts/smoke-rust.mjs [--base-url URL]')
     process.exit(0)
   }
 
@@ -610,75 +443,21 @@ async function main() {
 
   const ctx = { productRef, authToken }
   const baseUrl = args.baseUrl || process.env.SMOKE_BASE_URL || null
-  const tsUrl = args.tsUrl || process.env.SMOKE_TS_URL || null
-  const wantParity = args.parity || (!baseUrl && !tsUrl) || Boolean(tsUrl)
 
-  if (baseUrl && !tsUrl && !args.parity) {
-    // Single-pass against a running server (local rust or workerd preview)
+  if (baseUrl) {
     console.log(`Smoke against ${baseUrl} (productRef=${productRef})`)
-    await waitForServer(baseUrl)
-    await assertDiagRust(baseUrl)
-    const suite = await runSuite(baseUrl, ctx)
-    printSuiteSummary('run', suite)
-    if (suite.failures.length) {
-      process.exitCode = 1
-      return
-    }
-    console.log('\nOK — single-pass smoke passed')
+    await runSmoke(baseUrl, ctx)
     return
   }
 
-  // Next.js 16 allows only one `next dev` per project dir, so spawn rust then
-  // ts sequentially on the same port when URLs are not supplied.
-  const parityPort = 13910
-  let rustSuite
-  let tsSuite
-
-  if (baseUrl && tsUrl) {
-    console.log(`Rust: ${baseUrl}`)
-    console.log(`TS:   ${tsUrl}`)
-    await assertDiagRust(baseUrl)
-    rustSuite = await runSuite(baseUrl, ctx)
-    tsSuite = await runSuite(tsUrl, ctx)
-  } else {
-    console.log('Parity mode: spawning next servers sequentially (rust, then ts)...')
-    const envFile = join(APP_ROOT, '.env')
-
-    let handle = await startNextServer({ port: parityPort, impl: 'rust', envFile })
-    try {
-      console.log(`Rust: ${handle.baseUrl}`)
-      await assertDiagRust(handle.baseUrl)
-      rustSuite = await runSuite(handle.baseUrl, ctx)
-    } finally {
-      await handle.stop()
-      await sleep(1000)
-    }
-
-    handle = await startNextServer({ port: parityPort, impl: 'ts', envFile })
-    try {
-      console.log(`TS:   ${handle.baseUrl}`)
-      tsSuite = await runSuite(handle.baseUrl, ctx)
-    } finally {
-      await handle.stop()
-    }
-  }
-
-  printSuiteSummary('rust', rustSuite)
-  printSuiteSummary('ts', tsSuite)
-
-  if (rustSuite.failures.length || tsSuite.failures.length) {
-    process.exitCode = 1
-  }
-
-  if (wantParity) {
-    const diffs = compareSuites(rustSuite, tsSuite)
-    if (diffs.length) {
-      console.error(`\nParity diffs (${diffs.length}):`)
-      for (const d of diffs) console.error(`  ${d}`)
-      process.exitCode = 1
-    } else {
-      console.log('\nOK — rust-vs-ts response diff is empty')
-    }
+  console.log('Spawning next dev for Rust smoke...')
+  const envFile = join(APP_ROOT, '.env')
+  const handle = await startNextServer({ port: SMOKE_PORT, envFile })
+  try {
+    console.log(`Server: ${handle.baseUrl}`)
+    await runSmoke(handle.baseUrl, ctx)
+  } finally {
+    await handle.stop()
   }
 }
 

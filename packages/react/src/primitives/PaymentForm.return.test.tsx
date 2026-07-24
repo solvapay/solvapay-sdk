@@ -39,11 +39,7 @@ vi.mock('@stripe/react-stripe-js', async () => {
       handleNextAction,
     }),
     useElements: () => ({ getElement: vi.fn(), submit: vi.fn() }),
-    PaymentElement: ({
-      onChange,
-    }: {
-      onChange?: (e: { complete: boolean }) => void
-    }) => {
+    PaymentElement: ({ onChange }: { onChange?: (e: { complete: boolean }) => void }) => {
       ReactMod.useEffect(() => {
         onChange?.({ complete: true })
       }, [onChange])

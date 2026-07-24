@@ -59,13 +59,13 @@ cd rust && cargo run -q -p fixture-runner -- ../contract/fixtures
 
 Construction + mapping fixtures for `SdkError` / TS `SolvaPayError` + `PaywallError`. Binding: `constructSdkError` (`kind`: `Api` | `Webhook` | `Paywall` | `Transport`). Rust asserts `kind`/`code` when present; TS ignores those fields by design.
 
-| Path | Axis |
-| --- | --- |
-| `error-model/api/check-limits-template.json` | `{status}` / `{body}` template render |
-| `error-model/api/external-ref-case.json` | named `{externalRef}` case template |
-| `error-model/webhook/*.json` | five stable webhook codes + frozen messages |
-| `error-model/paywall/*.json` | `PaywallError` + gate attached |
-| `error-model/transport/*.json` | retryable / non-retryable transport |
+| Path                                         | Axis                                        |
+| -------------------------------------------- | ------------------------------------------- |
+| `error-model/api/check-limits-template.json` | `{status}` / `{body}` template render       |
+| `error-model/api/external-ref-case.json`     | named `{externalRef}` case template         |
+| `error-model/webhook/*.json`                 | five stable webhook codes + frozen messages |
+| `error-model/paywall/*.json`                 | `PaywallError` + gate attached              |
+| `error-model/transport/*.json`               | retryable / non-retryable transport         |
 
 ## Webhook verification (Step 4 / §6.1)
 
@@ -151,34 +151,34 @@ Event vocabulary (program order): `call:<attempt>`, `shouldRetry:<attempt>=<true
 
 Captures `@solvapay/core` helpers: `validateBusinessDetails`, `deriveTaxIdType`, `resolveTaxBehavior`, `getTaxIdExample` / `getTaxIdFieldLabel` / `getTaxIdHelperText`, and `getBusinessCountryOptions` (locks `BUSINESS_COUNTRY_OPTIONS` sort). Pure fixtures — no `wire` block; `expect.result` only. Absent optional fields are omitted (never `null`).
 
-| Path | `input.fn` | Axis |
-| --- | --- | --- |
-| `business-details/validate/*.json` | `validateBusinessDetails` | Non-business / business happy paths, unsupported countries, invalid tax ID, Zod `too_big` default message (`customer-name-too-big-zod-default-message`), normalization, skip-absent outputs, `taxIdType` derivation |
-| `business-details/tax-id-by-country/*-{accept,reject}.json` | `validateBusinessDetails` | Accept (`TAX_ID_EXAMPLE_BY_COUNTRY`) + one reject per each of 29 countries |
-| `business-details/derive-tax-id-type/*.json` | `deriveTaxIdType` | `eu_vat` / `gb_vat` / `us_ein` |
-| `business-details/tax-behavior/*.json` | `resolveTaxBehavior` | `auto`+USD/CAD → exclusive, `auto`+EUR → inclusive, explicit passthrough, lowercase currency |
-| `business-details/labels/*.json` | `getTaxIdExample` / `getTaxIdFieldLabel` / `getTaxIdHelperText` | Per tax-ID type copy + Greece `EL` example |
-| `business-details/country-options.json` | `getBusinessCountryOptions` | LocaleCompare ordering of display labels |
+| Path                                                        | `input.fn`                                                      | Axis                                                                                                                                                                                                                |
+| ----------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `business-details/validate/*.json`                          | `validateBusinessDetails`                                       | Non-business / business happy paths, unsupported countries, invalid tax ID, Zod `too_big` default message (`customer-name-too-big-zod-default-message`), normalization, skip-absent outputs, `taxIdType` derivation |
+| `business-details/tax-id-by-country/*-{accept,reject}.json` | `validateBusinessDetails`                                       | Accept (`TAX_ID_EXAMPLE_BY_COUNTRY`) + one reject per each of 29 countries                                                                                                                                          |
+| `business-details/derive-tax-id-type/*.json`                | `deriveTaxIdType`                                               | `eu_vat` / `gb_vat` / `us_ein`                                                                                                                                                                                      |
+| `business-details/tax-behavior/*.json`                      | `resolveTaxBehavior`                                            | `auto`+USD/CAD → exclusive, `auto`+EUR → inclusive, explicit passthrough, lowercase currency                                                                                                                        |
+| `business-details/labels/*.json`                            | `getTaxIdExample` / `getTaxIdFieldLabel` / `getTaxIdHelperText` | Per tax-ID type copy + Greece `EL` example                                                                                                                                                                          |
+| `business-details/country-options.json`                     | `getBusinessCountryOptions`                                     | LocaleCompare ordering of display labels                                                                                                                                                                            |
 
 ## Credit display (Step 10)
 
 Captures `@solvapay/core` helpers: `minorUnitsPerMajor`, `isZeroDecimalCurrency`, `creditsToDisplayMinorUnits`. Pure fixtures — no `wire` block. When `creditsPerMinorUnit <= 0`, `expect.result` is JSON `null` (not omitted).
 
-| Path | `input.fn` | Axis |
-| --- | --- | --- |
-| `credit-display/minor-units/*.json` | `minorUnitsPerMajor` | 100 vs 1 (zero-decimal), case-insensitive currency |
-| `credit-display/zero-decimal/*.json` | `isZeroDecimalCurrency` | True for JPY/KRW, false for USD |
-| `credit-display/convert/*.json` | `creditsToDisplayMinorUnits` | SEK/USD/EUR/JPY conversions, half-up rounding, zero/negative credits, CPM ≤ 0 → `null`, rate `0` → treat as `1` |
+| Path                                 | `input.fn`                   | Axis                                                                                                            |
+| ------------------------------------ | ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `credit-display/minor-units/*.json`  | `minorUnitsPerMajor`         | 100 vs 1 (zero-decimal), case-insensitive currency                                                              |
+| `credit-display/zero-decimal/*.json` | `isZeroDecimalCurrency`      | True for JPY/KRW, false for USD                                                                                 |
+| `credit-display/convert/*.json`      | `creditsToDisplayMinorUnits` | SEK/USD/EUR/JPY conversions, half-up rounding, zero/negative credits, CPM ≤ 0 → `null`, rate `0` → treat as `1` |
 
 ## Seller identity (Step 10)
 
 Captures `@solvapay/core` helpers: `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`, `getSellerTaxIdentifierDisplayLabel`, `resolveSellerIdentityDisplay`. Pure fixtures — no `wire` block. Unlike paywall skip-absent, absent identity rows are emitted as JSON `null` (`"taxIdentifier": null` / `"companyNumber": null`).
 
-| Path | `input.fn` | Axis |
-| --- | --- | --- |
-| `seller-identity/label-map/by-type.json` | `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE` | Full `eu_vat` / `gb_vat` / `us_ein` map |
-| `seller-identity/labels/*.json` | `getSellerTaxIdentifierDisplayLabel` | VAT / EIN / Tax ID fallback; lowercase country; null country |
-| `seller-identity/resolve/*.json` | `resolveSellerIdentityDisplay` | EU/GB/US/CA value selection, company dedupe, whitespace-only → absent, explicit null rows |
+| Path                                     | `input.fn`                                    | Axis                                                                                      |
+| ---------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `seller-identity/label-map/by-type.json` | `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE` | Full `eu_vat` / `gb_vat` / `us_ein` map                                                   |
+| `seller-identity/labels/*.json`          | `getSellerTaxIdentifierDisplayLabel`          | VAT / EIN / Tax ID fallback; lowercase country; null country                              |
+| `seller-identity/resolve/*.json`         | `resolveSellerIdentityDisplay`                | EU/GB/US/CA value selection, company dedupe, whitespace-only → absent, explicit null rows |
 
 ## Paywall (Step 6 / §6.3)
 

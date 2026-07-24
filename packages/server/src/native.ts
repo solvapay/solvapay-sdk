@@ -16,11 +16,6 @@ import { PaywallError } from './paywall'
 import type { PaywallStructuredContent } from './types/paywall'
 import type { WebhookEvent } from './types/webhook'
 
-export type SolvaPayImpl = 'ts' | 'rust'
-
-/** Surfaces that read `SOLVAPAY_IMPL` independently (per-call). */
-export type NativeSurface = 'client' | 'webhook' | string
-
 /** Async methods on the napi `NativeClient` (Groups A + B + C). */
 export type NativeClientMethod =
   | 'createCustomer'
@@ -69,10 +64,7 @@ export type NativeClientLike = {
   [K in NativeClientMethod]: (argsJson: string) => Promise<string>
 }
 
-type NativeClientConstructor = new (
-  apiKey: string,
-  apiBaseUrl?: string | null,
-) => NativeClientLike
+type NativeClientConstructor = new (apiKey: string, apiBaseUrl?: string | null) => NativeClientLike
 
 /** Sync pure-logic methods on the napi binding (Step 37R-c). */
 export type NativeSyncMethod =
@@ -235,23 +227,6 @@ export function loadNativeBinding(): NativeBinding | null {
 }
 
 /**
- * Selects the implementation for a cut-over surface.
- *
- * - `SOLVAPAY_IMPL=ts` — fail-fast (`ts`); no TypeScript semantic path after Step 53
- * - `SOLVAPAY_IMPL=rust` — force the napi binding (surfaces load errors)
- * - unset — prefer rust when the binding loads, else `ts` (callers throw)
- *
- * `surface` is reserved for future per-surface env overrides; today every
- * surface shares `SOLVAPAY_IMPL` (read per call).
- */
-export function resolveImpl(_surface: NativeSurface): SolvaPayImpl {
-  const flag = process.env.SOLVAPAY_IMPL
-  if (flag === 'ts') return 'ts'
-  if (flag === 'rust') return 'rust'
-  return loadNativeBinding() ? 'rust' : 'ts'
-}
-
-/**
  * Returns a cached napi `NativeClient` for the given config.
  */
 export function getNativeClient(config: NativeClientConfig): NativeClientLike {
@@ -259,9 +234,7 @@ export function getNativeClient(config: NativeClientConfig): NativeClientLike {
     return clientOverride
   }
   if (clientOverride === null) {
-    throw new SolvaPayError(
-      'SolvaPay native binding (@solvapay/server-native) is not available',
-    )
+    throw new SolvaPayError('SolvaPay native binding (@solvapay/server-native) is not available')
   }
 
   const key = configKey(config)
@@ -270,9 +243,7 @@ export function getNativeClient(config: NativeClientConfig): NativeClientLike {
 
   const binding = loadNativeBinding()
   if (binding === null || binding.NativeClient === undefined) {
-    throw new SolvaPayError(
-      'SolvaPay native binding (@solvapay/server-native) is not available',
-    )
+    throw new SolvaPayError('SolvaPay native binding (@solvapay/server-native) is not available')
   }
 
   const client = new binding.NativeClient(config.apiKey, config.apiBaseUrl ?? null)
@@ -292,10 +263,7 @@ function isEnvelope(value: unknown): value is Envelope {
 export function reconstructEnvelopeError(error: EnvelopeErr['error']): Error {
   switch (error.kind) {
     case 'Paywall':
-      return new PaywallError(
-        error.message,
-        error.gate as PaywallStructuredContent,
-      )
+      return new PaywallError(error.message, error.gate as PaywallStructuredContent)
     case 'Api': {
       const init: { status?: number; code?: string } = {}
       if (typeof error.status === 'number') init.status = error.status
@@ -369,9 +337,7 @@ export async function callNative(
 export function callNativeSync(fn: NativeSyncMethod, argsJson: string): unknown {
   const binding = loadNativeBinding()
   if (binding === null) {
-    throw new SolvaPayError(
-      'SolvaPay native binding (@solvapay/server-native) is not available',
-    )
+    throw new SolvaPayError('SolvaPay native binding (@solvapay/server-native) is not available')
   }
 
   const method = binding[fn]
@@ -413,9 +379,7 @@ export function verifyWebhookNative({
 }): WebhookEvent {
   const binding = loadNativeBinding()
   if (binding === null) {
-    throw new SolvaPayError(
-      'SolvaPay native binding (@solvapay/server-native) is not available',
-    )
+    throw new SolvaPayError('SolvaPay native binding (@solvapay/server-native) is not available')
   }
 
   const nowUnixSecs = Math.floor(Date.now() / 1000)

@@ -2,10 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
 import { CancelledPlanNotice as ShimCancelledPlanNotice } from './CancelledPlanNotice'
-import {
-  CancelledPlanNotice,
-  useCancelledPlanNotice,
-} from '../primitives/CancelledPlanNotice'
+import { CancelledPlanNotice, useCancelledPlanNotice } from '../primitives/CancelledPlanNotice'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { PurchaseInfo, SolvaPayContextValue } from '../types'
@@ -43,7 +40,7 @@ function buildCtx(purchases: PurchaseInfo[]): SolvaPayContextValue {
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
     cancelRenewal: vi.fn(),
-    reactivateRenewal: vi.fn(async () => ({ success: true } as never)),
+    reactivateRenewal: vi.fn(async () => ({ success: true }) as never),
     activatePlan: vi.fn(),
     balance: mockBalanceStatus(),
   }

@@ -9,7 +9,7 @@
 import { SolvaPayError } from '@solvapay/core'
 import type { SolvaPayClient } from './types'
 
-/** Groups A–C methods delegated to napi `NativeClient` under `SOLVAPAY_IMPL=rust`. */
+/** Groups A–C methods delegated to napi `NativeClient` (Node) or WASM (edge). */
 type NativeClientMethod =
   | 'createCustomer'
   | 'updateCustomer'
@@ -97,11 +97,7 @@ function isNodeRuntime(): boolean {
  * Edge / browser must never load `./native` (`node:module`).
  */
 function shouldAttemptNativeClient(): boolean {
-  try {
-    return isNodeRuntime() && process.env.SOLVAPAY_IMPL !== 'ts'
-  } catch {
-    return false
-  }
+  return isNodeRuntime()
 }
 
 /**
@@ -131,9 +127,7 @@ async function importNativeDispatch(): Promise<unknown> {
   ).getBuiltinModule?.('module')
 
   if (!nodeModule?.createRequire) {
-    throw new SolvaPayError(
-      'SolvaPay native dispatch module (./native.js) is not available',
-    )
+    throw new SolvaPayError('SolvaPay native dispatch module (./native.js) is not available')
   }
 
   const require = nodeModule.createRequire(`${process.cwd()}/package.json`)
@@ -207,8 +201,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
    * `value` verbatim (no TS response normalization); HTTP + JSON handling lives
    * entirely in `solvapay_core` (napi `reqwest` / WASM `FetchTransport`).
    *
-   * When the resolved implementation is not `rust` (`SOLVAPAY_IMPL=ts`, or the
-   * binding is unavailable) this throws instead of silently degrading.
+   * Missing bindings throw instead of silently degrading.
    *
    * Runtime split (both via dynamic import so neither graph statically pulls the
    * other):
@@ -226,9 +219,6 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // Also used under Node vitest when a fake WasmClient override is installed.
     if (!isNodeRuntime()) {
       const wasm = await import('./wasm')
-      if (wasm.resolveEdgeImpl('client') !== 'rust') {
-        throw new SolvaPayError('server client API not installed')
-      }
       return (await wasm.callWasm(fn, argsJson, nativeConfig)) as T
     }
 
@@ -236,9 +226,6 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // requiring a Deno/Workers runtime.
     const wasm = await import('./wasm')
     if (wasm.isWasmClientOverrideActive()) {
-      if (wasm.resolveEdgeImpl('client') !== 'rust') {
-        throw new SolvaPayError('server client API not installed')
-      }
       return (await wasm.callWasm(fn, argsJson, nativeConfig)) as T
     }
 
@@ -250,16 +237,12 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // `webpackIgnore` keeps the dynamic import as a real Node ESM import.
     // The non-literal package/`native.js` join also keeps edge rebundlers from
     // statically pulling this Node-only graph into a Workers bundle.
-    const { callNative, resolveImpl } = (await importNativeDispatch()) as {
+    const { callNative } = (await importNativeDispatch()) as {
       callNative: (
         method: NativeClientMethod,
         json: string,
         config: { apiKey: string; apiBaseUrl?: string },
       ) => Promise<unknown>
-      resolveImpl: (surface: string) => 'ts' | 'rust'
-    }
-    if (resolveImpl('client') !== 'rust') {
-      throw new SolvaPayError('server client API not installed')
     }
     return (await callNative(fn, argsJson, nativeConfig)) as T
   }

@@ -38,10 +38,9 @@ fn ir() -> Ir {
 fn go_parity_matches_committed_and_has_real_defaults() {
     let ir = ir();
     let emitted = emit_parity_suite_go(&ir).expect("emit parity");
-    let committed = fs::read_to_string(
-        root().join("rust/bindings/go/signature_parity_generated_test.go"),
-    )
-    .expect("committed parity");
+    let committed =
+        fs::read_to_string(root().join("rust/bindings/go/signature_parity_generated_test.go"))
+            .expect("committed parity");
     assert_eq!(emitted, committed);
     assert!(emitted.contains("len(operationSignatures); got != 36"));
     assert!(emitted.contains("expectedLimitsCacheTTLMs = 10000"));

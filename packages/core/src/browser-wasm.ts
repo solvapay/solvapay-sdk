@@ -16,7 +16,6 @@ import {
   installNativeCoreApi,
   resetNativeCoreApiForTests,
   type NativeCoreSyncMethod,
-  type SolvaPayImpl,
 } from './native-core'
 import { SolvaPayError } from './solvapay-error'
 
@@ -64,7 +63,6 @@ function callBrowserSync(
 
 function installFromBinding(binding: BrowserBinding): void {
   installNativeCoreApi({
-    resolveImpl: (): SolvaPayImpl => 'rust',
     callNativeSync: (fn, argsJson) => callBrowserSync(binding, fn, argsJson),
   })
 }

@@ -1,9 +1,6 @@
 import { createServer } from 'node:http'
 import { describe, expect, it } from 'vitest'
-import {
-  FACADE_SHADOW_OPERATION_NAMES,
-  installFacadeDriverSession,
-} from './facade-driver.js'
+import { FACADE_SHADOW_OPERATION_NAMES, installFacadeDriverSession } from './facade-driver.js'
 
 describe('facade shadow driver', () => {
   it('registers all 36 camelCase operations', () => {
@@ -13,9 +10,7 @@ describe('facade shadow driver', () => {
       apiBaseUrl: 'http://127.0.0.1:9',
     })
     try {
-      expect(new Set(session.driver.operationNames)).toEqual(
-        new Set(FACADE_SHADOW_OPERATION_NAMES),
-      )
+      expect(new Set(session.driver.operationNames)).toEqual(new Set(FACADE_SHADOW_OPERATION_NAMES))
     } finally {
       session.restore()
     }

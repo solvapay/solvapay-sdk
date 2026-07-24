@@ -178,9 +178,7 @@ describe('LaunchCustomerPortalButton', () => {
 
     renderWithTransport({ createCustomerSession }, { onLaunch })
 
-    await waitFor(() =>
-      expect(screen.getByRole('link').getAttribute('data-state')).toBe('ready'),
-    )
+    await waitFor(() => expect(screen.getByRole('link').getAttribute('data-state')).toBe('ready'))
     fireEvent.click(screen.getByRole('link'))
 
     expect(onLaunch).toHaveBeenCalledWith('https://portal.solvapay.test/launch')
@@ -192,14 +190,11 @@ describe('LaunchCustomerPortalButton', () => {
     })
     const onLaunch = vi.fn()
 
-    renderWithTransport(
-      { createCustomerSession },
-      {
-        asChild: true,
-        onLaunch,
-        children: <button data-testid="custom-btn">Open portal</button>,
-      } as Parameters<typeof LaunchCustomerPortalButton>[0],
-    )
+    renderWithTransport({ createCustomerSession }, {
+      asChild: true,
+      onLaunch,
+      children: <button data-testid="custom-btn">Open portal</button>,
+    } as Parameters<typeof LaunchCustomerPortalButton>[0])
 
     const btn = await screen.findByTestId('custom-btn')
     expect(btn.tagName).toBe('BUTTON')
@@ -213,15 +208,10 @@ describe('LaunchCustomerPortalButton', () => {
   })
 
   it('keeps rendering the link and surfaces error className on a failed click-time fetch', async () => {
-    const createCustomerSession = vi
-      .fn()
-      .mockRejectedValue(new Error('customer_ref missing'))
+    const createCustomerSession = vi.fn().mockRejectedValue(new Error('customer_ref missing'))
     const onError = vi.fn()
 
-    renderWithTransport(
-      { createCustomerSession },
-      { onError, errorClassName: 'is-error' },
-    )
+    renderWithTransport({ createCustomerSession }, { onError, errorClassName: 'is-error' })
 
     // Wait for the eager fetch to settle into the error state.
     await waitFor(() => expect(createCustomerSession).toHaveBeenCalled())

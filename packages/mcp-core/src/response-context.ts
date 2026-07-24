@@ -9,11 +9,7 @@
  * forward-compatible handlers today; real implementations land in V1.1.
  */
 
-import type {
-  LimitResponseWithPlan,
-  PaywallStructuredContent,
-  SolvaPay,
-} from '@solvapay/server'
+import type { LimitResponseWithPlan, PaywallStructuredContent, SolvaPay } from '@solvapay/server'
 import { PaywallError } from '@solvapay/server'
 import { makeResponseResult } from './response-envelope'
 import type {
@@ -112,8 +108,7 @@ export function buildResponseContext(
   // string) so `ctx.customer.plan` is non-null for customers with an
   // active plan. The stub carries only `.reference`; merchants
   // consuming richer fields should fetch from their own bootstrap.
-  const bootstrapPlan: BootstrapPlan | null =
-    params.bootstrapPlan ?? synthesizePlanStub(limits)
+  const bootstrapPlan: BootstrapPlan | null = params.bootstrapPlan ?? synthesizePlanStub(limits)
 
   const emittedBlocks: ContentBlock[] = []
   const abortController = new AbortController()

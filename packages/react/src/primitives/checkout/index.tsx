@@ -29,11 +29,7 @@ import {
 import { PaymentForm } from '../PaymentForm'
 import { TopupForm } from '../TopupForm'
 import { MandateText } from '../MandateText'
-import {
-  isTopupGate,
-  resolvePaywallMessage,
-  usePaywallNoticeOptional,
-} from '../PaywallNotice'
+import { isTopupGate, resolvePaywallMessage, usePaywallNoticeOptional } from '../PaywallNotice'
 import { Slot } from '../slot'
 import { useBalance } from '../../hooks/useBalance'
 import { useCopy, useLocale } from '../../hooks/useCopy'
@@ -360,29 +356,28 @@ const StepHeading = forwardRef<HTMLHeadingElement, StepLeafProps>(function Check
  *      `paymentOneTime`.
  *  - `success` — renders nothing.
  */
-const StepMessage = forwardRef<HTMLParagraphElement, StepLeafProps>(function CheckoutStepsStepMessage(
-  { asChild, children, className, ...rest },
-  forwardedRef,
-) {
-  const flow = useCheckoutContext('StepMessage')
-  const copy = useCopy()
-  const paywallCtx = usePaywallNoticeOptional()
-  if (flow.step === 'success') return null
-  const defaultText = resolveStepMessage(flow, copy, paywallCtx?.content ?? null)
-  if (!defaultText && children == null) return null
-  const Comp = asChild ? Slot : 'p'
-  return (
-    <Comp
-      ref={forwardedRef}
-      data-solvapay-checkout-step-message=""
-      data-step={flow.step}
-      className={className ?? 'solvapay-checkout-step-message'}
-      {...rest}
-    >
-      {children ?? defaultText}
-    </Comp>
-  )
-})
+const StepMessage = forwardRef<HTMLParagraphElement, StepLeafProps>(
+  function CheckoutStepsStepMessage({ asChild, children, className, ...rest }, forwardedRef) {
+    const flow = useCheckoutContext('StepMessage')
+    const copy = useCopy()
+    const paywallCtx = usePaywallNoticeOptional()
+    if (flow.step === 'success') return null
+    const defaultText = resolveStepMessage(flow, copy, paywallCtx?.content ?? null)
+    if (!defaultText && children == null) return null
+    const Comp = asChild ? Slot : 'p'
+    return (
+      <Comp
+        ref={forwardedRef}
+        data-solvapay-checkout-step-message=""
+        data-step={flow.step}
+        className={className ?? 'solvapay-checkout-step-message'}
+        {...rest}
+      >
+        {children ?? defaultText}
+      </Comp>
+    )
+  },
+)
 
 function resolveStepHeading(
   step: CheckoutStep,
@@ -498,11 +493,7 @@ function AmountPicker({ className, children }: AmountPickerProps) {
   // and disappears the moment merchant data arrives.
   if (!flow.topupCurrencyReady || flow.topupCurrency == null) {
     return (
-      <div
-        className={className ?? 'solvapay-amount-picker'}
-        data-state="loading"
-        aria-busy="true"
-      >
+      <div className={className ?? 'solvapay-amount-picker'} data-state="loading" aria-busy="true">
         <div className="solvapay-amount-picker-pills">
           {[0, 1, 2, 3].map(i => (
             <span

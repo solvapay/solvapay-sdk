@@ -1,7 +1,7 @@
 # Rust SDK examples
 
-| Example | Description |
-| --- | --- |
+| Example                           | Description                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------ |
 | [`get-merchant`](./get-merchant/) | Async `Client::get_merchant` with local `.env` (offline mock-transport test covered) |
 
 Shared dotenv paths live in [`env/`](./env/) (`solvapay-rust-examples-env`).

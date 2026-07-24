@@ -15,9 +15,7 @@
       "error": {
         "issues": [
           {
-            "path": [
-              "taxId"
-            ],
+            "path": ["taxId"],
             "message": "Enter a valid tax ID for AT"
           }
         ]

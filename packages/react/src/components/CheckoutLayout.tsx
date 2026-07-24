@@ -22,11 +22,7 @@ import { defaultListPlans } from '../transport/list-plans'
 import { useCopy } from '../hooks/useCopy'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { PaymentIntent } from '@stripe/stripe-js'
-import type {
-  CheckoutResult,
-  Plan,
-  PrefillCustomer,
-} from '../types'
+import type { CheckoutResult, Plan, PrefillCustomer } from '../types'
 
 export type CheckoutLayoutSize = 'chat' | 'mobile' | 'desktop' | 'auto'
 
@@ -228,10 +224,7 @@ const SelectStep: React.FC<{
   const solva = useContext(SolvaPayContext)
   const config = solva?._config
 
-  const fetcher = useCallback(
-    (ref: string) => defaultListPlans(ref, config),
-    [config],
-  )
+  const fetcher = useCallback((ref: string) => defaultListPlans(ref, config), [config])
 
   const { plans, selectedPlan } = usePlans({
     productRef,

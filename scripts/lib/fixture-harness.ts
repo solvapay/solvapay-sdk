@@ -82,7 +82,6 @@ import {
   projectTopupProcessOutcome,
   projectUsageSnapshot,
   resolveCheckLimitsParams,
-  resolveImpl,
   resolveProductRef,
   resolvePurchaseCustomerRef,
   resolveReturnUrl,
@@ -111,10 +110,8 @@ import type { Fixture, FixtureErrorExpect, FixtureWire } from './fixture-schema.
 
 // Server index installs core + formatGate; mcp-core needs an explicit install
 // (avoids a hard server↔mcp-core production cycle).
-// Step 52: @solvapay/core is Rust-only — always resolve to rust even when the
-// ambient SOLVAPAY_IMPL=ts (that flag no longer covers core logic).
-installNativeCoreApi({ callNativeSync, resolveImpl: () => 'rust' })
-installNativeMcpApi({ callNativeSync, resolveImpl })
+installNativeCoreApi({ callNativeSync })
+installNativeMcpApi({ callNativeSync })
 
 export type FixtureBinding = {
   /** Distinguishes multiple bindings for the same `input.fn` (e.g. node vs edge). */
@@ -577,7 +574,9 @@ function isBusinessDetailsInput(args: Record<string, unknown>): args is Business
   return typeof args.isBusiness === 'boolean'
 }
 
-function isCountryArg(args: Record<string, unknown>): args is { country: SupportedBusinessCountry } {
+function isCountryArg(
+  args: Record<string, unknown>,
+): args is { country: SupportedBusinessCountry } {
   return typeof args.country === 'string'
 }
 
@@ -605,9 +604,7 @@ function isCreditsToDisplayArgs(args: Record<string, unknown>): args is {
   )
 }
 
-function isOptionalCountryArg(
-  args: Record<string, unknown>,
-): args is { country?: string | null } {
+function isOptionalCountryArg(args: Record<string, unknown>): args is { country?: string | null } {
   return args.country === undefined || args.country === null || typeof args.country === 'string'
 }
 
@@ -878,40 +875,11 @@ function constructSdkErrorFromArgs(args: Record<string, unknown>): never {
 }
 
 /**
- * Pin `SOLVAPAY_IMPL=rust` for the duration of `fn`. Step 53 made server client
- * logic Rust-only, so client wire fixtures must stay on the WASM `FetchTransport`
- * path even if a caller left an ambient `SOLVAPAY_IMPL=ts` set — otherwise the
- * Rust-only guard would throw before any wire is captured.
- */
-function withRustImpl<T>(fn: () => T | Promise<T>): T | Promise<T> {
-  const previous = process.env.SOLVAPAY_IMPL
-  process.env.SOLVAPAY_IMPL = 'rust'
-  const restore = (): void => {
-    if (previous === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = previous
-    }
-  }
-  try {
-    const result = fn()
-    if (result !== null && typeof result === 'object' && 'then' in result) {
-      return Promise.resolve(result).finally(restore)
-    }
-    restore()
-    return result
-  } catch (err) {
-    restore()
-    throw err
-  }
-}
-
-/**
  * Loads the real `@solvapay/server-wasm` binding once and installs its
  * `WasmClient` as the override so `createSolvaPayClient` dispatches client
- * methods through the WASM `FetchTransport` under Node (Step 53-e). The config
- * is irrelevant — the override is returned for every config — but must match
- * the harness client so header/URL wire shapes stay consistent.
+ * methods through the WASM `FetchTransport` under Node. The config is
+ * irrelevant — the override is returned for every config — but must match the
+ * harness client so header/URL wire shapes stay consistent.
  */
 let fixtureWasmClientReady: Promise<void> | undefined
 
@@ -937,7 +905,7 @@ export function createDefaultRegistry(): FixtureRegistry {
 
   // Webhook fixtures replay through Rust (napi / WASM). The frozen fixture
   // clock reaches Rust because `verifyWebhook*` inject `Math.floor(Date.now()
-  // / 1000)` and the harness mocks `Date.now` via `patchClock` (Step 53-b).
+  // / 1000)` and the harness mocks `Date.now` via `patchClock`.
   registry.register('verifyWebhook', {
     id: 'node',
     invoke: args => {
@@ -969,14 +937,12 @@ export function createDefaultRegistry(): FixtureRegistry {
   ): void => {
     registry.register(fn, {
       id: 'client',
-      // Client logic is Rust-only (Step 53-e). Route through the real WASM
-      // `WasmClient` + `FetchTransport` so the mocked `globalThis.fetch`
-      // captures the wire — napi `reqwest` cannot be intercepted that way.
-      // `withRustImpl` keeps it on the WASM path even when an ambient
-      // `SOLVAPAY_IMPL=ts` leg is running the same registry.
+      // Client logic routes through the real WASM `WasmClient` + `FetchTransport`
+      // so the mocked `globalThis.fetch` captures the wire — napi `reqwest` cannot
+      // be intercepted that way.
       invoke: async args => {
         await ensureFixtureWasmClient()
-        return withRustImpl(() => invoke(args))
+        return invoke(args)
       },
     })
   }
@@ -1606,7 +1572,11 @@ export function createDefaultRegistry(): FixtureRegistry {
   registry.register('extractBackendCustomerRef', {
     id: 'core',
     invoke: args => {
-      if (args.response === null || typeof args.response !== 'object' || Array.isArray(args.response)) {
+      if (
+        args.response === null ||
+        typeof args.response !== 'object' ||
+        Array.isArray(args.response)
+      ) {
         throw new Error('extractBackendCustomerRef args.response must be an object')
       }
       if (typeof args.fallback !== 'string') {
@@ -1755,19 +1725,13 @@ export function createDefaultRegistry(): FixtureRegistry {
     id: 'core',
     invoke: args => {
       if (!isOptionalString(args.status) && args.status !== null) {
-        throw new Error(
-          'projectTopupProcessOutcome args.status must be string, null, or omitted',
-        )
+        throw new Error('projectTopupProcessOutcome args.status must be string, null, or omitted')
       }
       if (!isOptionalString(args.message) && args.message !== null) {
-        throw new Error(
-          'projectTopupProcessOutcome args.message must be string, null, or omitted',
-        )
+        throw new Error('projectTopupProcessOutcome args.message must be string, null, or omitted')
       }
-      const status =
-        args.status === null || args.status === undefined ? undefined : args.status
-      const message =
-        args.message === null || args.message === undefined ? undefined : args.message
+      const status = args.status === null || args.status === undefined ? undefined : args.status
+      const message = args.message === null || args.message === undefined ? undefined : args.message
       return projectTopupProcessOutcome(status, message)
     },
   })
@@ -1845,9 +1809,7 @@ export function createDefaultRegistry(): FixtureRegistry {
     id: 'core',
     invoke: args => {
       if (!isNullableString(args.purchaseRef)) {
-        throw new Error(
-          'validatePurchaseRef args.purchaseRef must be string, null, or omitted',
-        )
+        throw new Error('validatePurchaseRef args.purchaseRef must be string, null, or omitted')
       }
       return validatePurchaseRef(args.purchaseRef)
     },
@@ -1916,9 +1878,7 @@ export function createDefaultRegistry(): FixtureRegistry {
     id: 'core',
     invoke: args => {
       if (!isNullableString(args.productRef)) {
-        throw new Error(
-          'validateListPlansParams args.productRef must be string, null, or omitted',
-        )
+        throw new Error('validateListPlansParams args.productRef must be string, null, or omitted')
       }
       return validateListPlansParams(args.productRef)
     },
@@ -1927,14 +1887,8 @@ export function createDefaultRegistry(): FixtureRegistry {
   registry.register('mapRouteError', {
     id: 'core',
     invoke: args => {
-      if (
-        args.kind !== 'solvapay' &&
-        args.kind !== 'error' &&
-        args.kind !== 'unknown'
-      ) {
-        throw new Error(
-          "mapRouteError args.kind must be 'solvapay' | 'error' | 'unknown'",
-        )
+      if (args.kind !== 'solvapay' && args.kind !== 'error' && args.kind !== 'unknown') {
+        throw new Error("mapRouteError args.kind must be 'solvapay' | 'error' | 'unknown'")
       }
       if (!isNullableString(args.message) || !isNullableString(args.defaultMessage)) {
         throw new Error(
@@ -1971,9 +1925,7 @@ export function createDefaultRegistry(): FixtureRegistry {
     id: 'core',
     invoke: args => {
       if (!isNullableString(args.productRef)) {
-        throw new Error(
-          'validateGetProductParams args.productRef must be string, null, or omitted',
-        )
+        throw new Error('validateGetProductParams args.productRef must be string, null, or omitted')
       }
       return validateGetProductParams(args.productRef)
     },
@@ -2062,16 +2014,18 @@ function isOptionalString(value: unknown): value is string | undefined {
   return value === undefined || typeof value === 'string'
 }
 
-async function invokeResolveAuthenticatedUser(
-  args: Record<string, unknown>,
-): Promise<unknown> {
+async function invokeResolveAuthenticatedUser(args: Record<string, unknown>): Promise<unknown> {
   const headerUserId =
     args.headerUserId === undefined || args.headerUserId === null
       ? undefined
       : typeof args.headerUserId === 'string'
         ? args.headerUserId
         : undefined
-  if (args.headerUserId !== undefined && args.headerUserId !== null && typeof args.headerUserId !== 'string') {
+  if (
+    args.headerUserId !== undefined &&
+    args.headerUserId !== null &&
+    typeof args.headerUserId !== 'string'
+  ) {
     throw new Error('resolveAuthenticatedUser args.headerUserId must be string, null, or omitted')
   }
   if (
@@ -2083,7 +2037,11 @@ async function invokeResolveAuthenticatedUser(
       'resolveAuthenticatedUser args.authorizationHeader must be string, null, or omitted',
     )
   }
-  if (args.jwtSecret !== undefined && args.jwtSecret !== null && typeof args.jwtSecret !== 'string') {
+  if (
+    args.jwtSecret !== undefined &&
+    args.jwtSecret !== null &&
+    typeof args.jwtSecret !== 'string'
+  ) {
     throw new Error('resolveAuthenticatedUser args.jwtSecret must be string, null, or omitted')
   }
   if (typeof args.strictMode !== 'boolean') {

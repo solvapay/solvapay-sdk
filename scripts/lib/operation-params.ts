@@ -1,8 +1,8 @@
 /**
- * Canonical per-entry-point parameter lists for the SDK contract catalog (§5.6).
+ * Historical per-entry-point parameter dictionaries (step 18 backfill).
  *
- * Sourced from hand-written `SolvaPayClient` / topLevel / facade signatures.
- * Consumed by the YAML populate helper and by unit tests as the expected shape.
+ * New operations should use `pnpm gen:scaffold` (DTO-derived params). These
+ * maps remain for `populate-manifest-params.ts` replay and unit-test fixtures.
  */
 
 import type { OverlayTypeRef } from './manifest-schema.js'

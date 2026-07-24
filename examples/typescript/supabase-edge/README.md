@@ -96,24 +96,24 @@ supabase functions deploy
 
 ## Edge Functions
 
-| Function                       | Method | Handler                    | Description                       |
-| ------------------------------ | ------ | -------------------------- | --------------------------------- |
-| `check-purchase`               | GET    | `checkPurchase`            | Check user's purchase status      |
-| `create-payment-intent`        | POST   | `createPaymentIntent`      | Create payment intent for a plan  |
-| `process-payment`              | POST   | `processPayment`           | Process confirmed payment         |
-| `create-topup-payment-intent`  | POST   | `createTopupPaymentIntent` | Create credit top-up intent       |
-| `customer-balance`             | GET    | `customerBalance`          | Get customer credit balance       |
-| `cancel-renewal`               | POST   | `cancelRenewal`            | Cancel subscription renewal       |
-| `reactivate-renewal`           | POST   | `reactivateRenewal`        | Reactivate cancelled subscription |
-| `activate-plan`                | POST   | `activatePlan`             | Activate a free/usage plan        |
-| `list-plans`                   | GET    | `listPlans`                | List available plans              |
-| `get-merchant`                 | GET    | `getMerchant`              | Fetch the authenticated merchant's public metadata (name, branding, currency). |
-| `get-product`                  | GET    | `getProduct`               | Fetch a product by reference (name, description). |
-| `track-usage`                  | POST   | `trackUsage`               | Track usage for metered billing   |
-| `sync-customer`                | POST   | `syncCustomer`             | Sync/create customer in SolvaPay  |
-| `create-checkout-session`      | POST   | `createCheckoutSession`    | Create hosted checkout session    |
-| `create-customer-session`      | POST   | `createCustomerSession`    | Create customer portal session    |
-| `solvapay-webhook`             | POST   | `solvapayWebhook(options)` | Receive and verify webhook events |
+| Function                      | Method | Handler                    | Description                                                                    |
+| ----------------------------- | ------ | -------------------------- | ------------------------------------------------------------------------------ |
+| `check-purchase`              | GET    | `checkPurchase`            | Check user's purchase status                                                   |
+| `create-payment-intent`       | POST   | `createPaymentIntent`      | Create payment intent for a plan                                               |
+| `process-payment`             | POST   | `processPayment`           | Process confirmed payment                                                      |
+| `create-topup-payment-intent` | POST   | `createTopupPaymentIntent` | Create credit top-up intent                                                    |
+| `customer-balance`            | GET    | `customerBalance`          | Get customer credit balance                                                    |
+| `cancel-renewal`              | POST   | `cancelRenewal`            | Cancel subscription renewal                                                    |
+| `reactivate-renewal`          | POST   | `reactivateRenewal`        | Reactivate cancelled subscription                                              |
+| `activate-plan`               | POST   | `activatePlan`             | Activate a free/usage plan                                                     |
+| `list-plans`                  | GET    | `listPlans`                | List available plans                                                           |
+| `get-merchant`                | GET    | `getMerchant`              | Fetch the authenticated merchant's public metadata (name, branding, currency). |
+| `get-product`                 | GET    | `getProduct`               | Fetch a product by reference (name, description).                              |
+| `track-usage`                 | POST   | `trackUsage`               | Track usage for metered billing                                                |
+| `sync-customer`               | POST   | `syncCustomer`             | Sync/create customer in SolvaPay                                               |
+| `create-checkout-session`     | POST   | `createCheckoutSession`    | Create hosted checkout session                                                 |
+| `create-customer-session`     | POST   | `createCustomerSession`    | Create customer portal session                                                 |
+| `solvapay-webhook`            | POST   | `solvapayWebhook(options)` | Receive and verify webhook events                                              |
 
 ## CORS configuration
 

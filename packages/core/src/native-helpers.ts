@@ -2,17 +2,12 @@
  * Sync helper pure-logic facade (Step 52).
  *
  * Phase-4/5 decision helpers dispatch to napi / WASM via the shared
- * {@link dispatchSync} install. No TypeScript fallback — uninstalled or
- * `SOLVAPAY_IMPL=ts` throws.
+ * {@link dispatchSync} install. No TypeScript fallback — uninstalled throws.
  */
 
 import { dispatchSync } from './native-dispatch'
-import type {
-  ActivatePlanValidationError,
-} from './activation'
-import type {
-  CheckoutHelperError,
-} from './checkout'
+import type { ActivatePlanValidationError } from './activation'
+import type { CheckoutHelperError } from './checkout'
 import type {
   CoercedCustomerOptions,
   CreateCustomerParams,
@@ -20,14 +15,8 @@ import type {
   CustomerRefKind,
   LookupErrorKind,
 } from './customer-sync'
-import type {
-  RouteErrorInput,
-  RouteErrorResult,
-} from './error'
-import type {
-  CheckLimitsParams,
-  LimitsHelperError,
-} from './limits'
+import type { RouteErrorInput, RouteErrorResult } from './error'
+import type { CheckLimitsParams, LimitsHelperError } from './limits'
 import type {
   CachedLimitsEvaluation,
   FreshLimitsEvaluation,
@@ -40,19 +29,10 @@ import type {
   PaymentIntentSource,
   TopupProcessOutcome,
 } from './payment'
-import type {
-  PlansHelperError,
-} from './plans'
-import type {
-  ProductHelperError,
-} from './product'
-import type {
-  RenewalHelperError,
-} from './renewal'
-import type {
-  UsageSnapshot,
-  UsageSnapshotPurchase,
-} from './usage'
+import type { PlansHelperError } from './plans'
+import type { ProductHelperError } from './product'
+import type { RenewalHelperError } from './renewal'
+import type { UsageSnapshot, UsageSnapshotPurchase } from './usage'
 
 // --- customer-sync ---
 
@@ -178,10 +158,7 @@ export function projectPaymentIntentResult(
   })
 }
 
-export function projectTopupProcessOutcome(
-  status?: string,
-  message?: string,
-): TopupProcessOutcome {
+export function projectTopupProcessOutcome(status?: string, message?: string): TopupProcessOutcome {
   return dispatchSync('projectTopupProcessOutcome', {
     status: status ?? null,
     message: message ?? null,

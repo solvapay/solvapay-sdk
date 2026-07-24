@@ -7,7 +7,11 @@
  * then strip the params so a manual refresh does not re-trigger the resume.
  */
 
-const SETUP_INTENT_PARAMS = ['setup_intent', 'setup_intent_client_secret', 'redirect_status'] as const
+const SETUP_INTENT_PARAMS = [
+  'setup_intent',
+  'setup_intent_client_secret',
+  'redirect_status',
+] as const
 
 /** Read the SetupIntent client secret from a URL query string, if present. */
 export function readSetupIntentClientSecret(search: string): string | null {

@@ -45,9 +45,7 @@ const CheckoutSummaryContext = createContext<CheckoutSummaryContextValue | null>
 function useCheckoutSummaryContext(part: string): CheckoutSummaryContextValue {
   const ctx = useContext(CheckoutSummaryContext)
   if (!ctx) {
-    throw new Error(
-      `CheckoutSummary.${part} must be rendered inside <CheckoutSummary.Root>.`,
-    )
+    throw new Error(`CheckoutSummary.${part} must be rendered inside <CheckoutSummary.Root>.`)
   }
   return ctx
 }
@@ -139,9 +137,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function CheckoutSummaryRoot(
   const Comp = asChild ? Slot : 'section'
   return (
     <Comp ref={forwardedRef} data-solvapay-checkout-summary="" {...rest}>
-      <CheckoutSummaryContext.Provider value={ctx}>
-        {children}
-      </CheckoutSummaryContext.Provider>
+      <CheckoutSummaryContext.Provider value={ctx}>{children}</CheckoutSummaryContext.Provider>
     </Comp>
   )
 })
@@ -178,8 +174,10 @@ const PlanSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummary
   )
 })
 
-const TaxNoteSlot = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }>(
-  function CheckoutSummaryTaxNote({ asChild, children, ...rest }, forwardedRef) {
+const TaxNoteSlot = forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
+>(function CheckoutSummaryTaxNote({ asChild, children, ...rest }, forwardedRef) {
   const ctx = useCheckoutSummaryContext('TaxNote')
   if (ctx.taxBreakdown) return null
   const Comp = asChild ? Slot : 'p'
@@ -248,24 +246,23 @@ const TaxTreatmentNoteSlot = forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
 >(function CheckoutSummaryTaxTreatmentNote({ asChild, children, ...rest }, forwardedRef) {
-    const ctx = useCheckoutSummaryContext('TaxTreatmentNote')
-    const treatment = ctx.taxBreakdown?.treatment
-    if (!treatment || treatment === 'standard') return null
-    const Comp = asChild ? Slot : 'p'
-    const defaultNote =
-      treatment === 'reverse_charge'
-        ? 'VAT reverse charge applies — you are responsible for reporting VAT in your jurisdiction.'
-        : treatment === 'not_collecting'
-          ? 'Tax is not collected on this purchase.'
-          : null
-    if (!defaultNote && !children) return null
-    return (
-      <Comp ref={forwardedRef} data-solvapay-checkout-summary-tax-treatment-note="" {...rest}>
-        {children ?? defaultNote}
-      </Comp>
-    )
-  },
-)
+  const ctx = useCheckoutSummaryContext('TaxTreatmentNote')
+  const treatment = ctx.taxBreakdown?.treatment
+  if (!treatment || treatment === 'standard') return null
+  const Comp = asChild ? Slot : 'p'
+  const defaultNote =
+    treatment === 'reverse_charge'
+      ? 'VAT reverse charge applies — you are responsible for reporting VAT in your jurisdiction.'
+      : treatment === 'not_collecting'
+        ? 'Tax is not collected on this purchase.'
+        : null
+  if (!defaultNote && !children) return null
+  return (
+    <Comp ref={forwardedRef} data-solvapay-checkout-summary-tax-treatment-note="" {...rest}>
+      {children ?? defaultNote}
+    </Comp>
+  )
+})
 
 const PriceSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummaryPrice(
   { asChild, children, ...rest },
@@ -281,8 +278,10 @@ const PriceSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummar
   )
 })
 
-const TrialSlot = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }>(
-  function CheckoutSummaryTrial({ asChild, children, ...rest }, forwardedRef) {
+const TrialSlot = forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
+>(function CheckoutSummaryTrial({ asChild, children, ...rest }, forwardedRef) {
   const ctx = useCheckoutSummaryContext('Trial')
   if (!ctx.trialBanner || ctx.taxBreakdown) return null
   const Comp = asChild ? Slot : 'p'

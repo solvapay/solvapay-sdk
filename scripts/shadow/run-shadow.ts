@@ -8,11 +8,7 @@
 
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  printReport,
-  reportHasFailures,
-  runShadowSuite,
-} from './orchestrator.js'
+import { printReport, reportHasFailures, runShadowSuite } from './orchestrator.js'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 

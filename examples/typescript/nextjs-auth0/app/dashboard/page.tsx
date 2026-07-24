@@ -1,12 +1,7 @@
 import { redirect } from 'next/navigation'
 
 import { TaskBoard } from '@/components/task-board'
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { auth0 } from '@/lib/auth0'
 
 export default async function DashboardPage() {
@@ -29,8 +24,8 @@ export default async function DashboardPage() {
         <CardHeader>
           <CardTitle>Your tasks</CardTitle>
           <CardDescription>
-            Signed in as {displayName}. Tasks are stored in memory and reset when the dev
-            server restarts.
+            Signed in as {displayName}. Tasks are stored in memory and reset when the dev server
+            restarts.
           </CardDescription>
         </CardHeader>
       </Card>

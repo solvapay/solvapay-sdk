@@ -1,7 +1,7 @@
 # Go SDK examples
 
-| Example | Description |
-| --- | --- |
+| Example                           | Description                                                              |
+| --------------------------------- | ------------------------------------------------------------------------ |
 | [`get-merchant`](./get-merchant/) | `Client.GetMerchant` with local `.env` (offline `httptest` test covered) |
 
 Published consumers use `go get github.com/solvapay/solvapay-go`. The example modules under this tree keep a local `replace` so they build against the monorepo binding in CI.

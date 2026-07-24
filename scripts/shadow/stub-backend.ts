@@ -52,9 +52,7 @@ function send(res: ServerResponse, status: number, body: unknown): void {
   res.end(payload)
 }
 
-export async function startStubBackend(
-  options: StubBackendOptions = {},
-): Promise<StubBackend> {
+export async function startStubBackend(options: StubBackendOptions = {}): Promise<StubBackend> {
   seq = 0
   let listPlansHits = 0
 
@@ -161,11 +159,7 @@ export async function startStubBackend(
       }
       if (method === 'GET' && rest === '/plans') {
         listPlansHits += 1
-        const price = options.divergeListPlansPrice
-          ? listPlansHits % 2 === 1
-            ? 100
-            : 999
-          : 1000
+        const price = options.divergeListPlansPrice ? (listPlansHits % 2 === 1 ? 100 : 999) : 1000
         const list = [...plans.values()].filter(p => p.productRef === productRef)
         if (list.length === 0) {
           list.push({
@@ -239,11 +233,11 @@ export async function startStubBackend(
         return send(res, 404, { message: 'Customer not found' })
       }
       const found = reference
-        ? customers.get(reference) ?? {
+        ? (customers.get(reference) ?? {
             reference,
             customerRef: reference,
             email: 'unknown@example.com',
-          }
+          })
         : undefined
       return send(res, 200, found ?? { customers: [...customers.values()] })
     }

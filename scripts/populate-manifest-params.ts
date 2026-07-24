@@ -1,4 +1,6 @@
 /**
+ * Historical one-shot backfill (step 18). Prefer `pnpm gen:scaffold` for new ops.
+ *
  * Inject `params` (+ new overlays / typeParams) into sdk-contract.yaml
  * without reformatting the whole document.
  *
@@ -9,6 +11,11 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { stringify } from 'yaml'
+import {
+  entryBounds,
+  insertBeforeSync as insertBeforeSyncBase,
+  renderYamlFragment,
+} from './lib/manifest-edit.js'
 import {
   FACADE_PARAMS,
   OPERATION_PARAMS,
@@ -22,69 +29,18 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const MANIFEST_PATH = path.join(REPO_ROOT, 'contract/manifest/sdk-contract.yaml')
 
 function paramsYaml(params: ParamDefInput[], indent: number): string {
-  const pad = ' '.repeat(indent)
   if (params.length === 0) {
-    return `${pad}params: []\n`
+    return `${' '.repeat(indent)}params: []\n`
   }
-  const doc = { params }
-  const rendered = stringify(doc, {
-    lineWidth: 0,
-    defaultKeyType: 'PLAIN',
-    defaultStringType: 'PLAIN',
-  })
-  return (
-    rendered
-      .split('\n')
-      .filter(line => line.length > 0)
-      .map(line => `${pad}${line}`)
-      .join('\n') + '\n'
-  )
+  return renderYamlFragment({ params }, indent)
 }
 
 function typeParamsYaml(typeParams: { name: string }[], indent: number): string {
-  const pad = ' '.repeat(indent)
-  const doc = { typeParams }
-  const rendered = stringify(doc, {
-    lineWidth: 0,
-    defaultKeyType: 'PLAIN',
-    defaultStringType: 'PLAIN',
-  })
-  return (
-    rendered
-      .split('\n')
-      .filter(line => line.length > 0)
-      .map(line => `${pad}${line}`)
-      .join('\n') + '\n'
-  )
-}
-
-/** Bounds of `  entryId:` block through the line before the next sibling / section. */
-function entryBounds(text: string, entryId: string): { start: number; end: number } {
-  const startRe = new RegExp(`^  ${entryId}:\\n`, 'm')
-  const startMatch = startRe.exec(text)
-  if (startMatch === null) {
-    throw new Error(`Entry not found: ${entryId}`)
-  }
-  const contentStart = startMatch.index + startMatch[0].length
-  const rest = text.slice(contentStart)
-  const nextRe = /^(?:  [A-Za-z]|[A-Za-z])/m
-  const nextMatch = nextRe.exec(rest)
-  const end = nextMatch === null ? text.length : contentStart + nextMatch.index
-  return { start: startMatch.index, end }
+  return renderYamlFragment({ typeParams }, indent)
 }
 
 function insertBeforeSync(text: string, entryId: string, insert: string): string {
-  const { start, end } = entryBounds(text, entryId)
-  const full = text.slice(start, end)
-  if (/^    params:/m.test(full)) {
-    const replaced = full.replace(/^    params:[\s\S]*?(?=^    sync:)/m, insert)
-    return text.slice(0, start) + replaced + text.slice(end)
-  }
-  if (!/^    sync:/m.test(full)) {
-    throw new Error(`No sync: block in ${entryId}`)
-  }
-  const withParams = full.replace(/^    sync:/m, `${insert}    sync:`)
-  return text.slice(0, start) + withParams + text.slice(end)
+  return insertBeforeSyncBase(text, entryId, insert, { replaceKey: 'params' })
 }
 
 function insertOverlays(raw: string): string {
@@ -166,9 +122,7 @@ function main(): void {
   const facadeStart = raw.indexOf('\nfacade:\n')
   if (coreStart !== -1 && facadeStart !== -1 && facadeStart > coreStart) {
     let coreSection = raw.slice(coreStart, facadeStart)
-    const helperIds = [...coreSection.matchAll(/^  ([A-Za-z][A-Za-z0-9]*):$/gm)].map(
-      m => m[1]!,
-    )
+    const helperIds = [...coreSection.matchAll(/^  ([A-Za-z][A-Za-z0-9]*):$/gm)].map(m => m[1]!)
     for (const id of helperIds) {
       const { start, end } = entryBounds(coreSection, id)
       const full = coreSection.slice(start, end)

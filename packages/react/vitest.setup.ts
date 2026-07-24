@@ -7,8 +7,8 @@ import { installNativeCoreApi } from '@solvapay/core'
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers)
 
-// Step 52: React tests install napi — core is Rust-only (no TS fallback).
-installNativeCoreApi({ callNativeSync, resolveImpl: () => 'rust' })
+// React tests install napi — core is Rust-only (no TS fallback).
+installNativeCoreApi({ callNativeSync })
 
 const createLocalStorageMock = () => {
   let store: Record<string, string> = {}

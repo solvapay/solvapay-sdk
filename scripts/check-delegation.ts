@@ -8,10 +8,7 @@
 
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  formatDelegationReport,
-  runDelegationCheck,
-} from './lib/delegation-check.js'
+import { formatDelegationReport, runDelegationCheck } from './lib/delegation-check.js'
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const allowlistPath = path.join(repoRoot, 'contract/delegation-allowlist.json')

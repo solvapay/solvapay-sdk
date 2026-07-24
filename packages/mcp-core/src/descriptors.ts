@@ -59,10 +59,7 @@ import {
 import type { IntentTool } from './narrate'
 import { createBuildBootstrapPayload, type BuildBootstrapPayloadFn } from './bootstrap-payload'
 import { mergeCsp } from './csp'
-import {
-  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
-  SOLVAPAY_BOOTSTRAP_URI,
-} from './resources/bootstrap'
+import { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resources/bootstrap'
 import {
   SOLVAPAY_OVERVIEW_MARKDOWN,
   SOLVAPAY_OVERVIEW_MIME_TYPE,
@@ -214,7 +211,7 @@ export function buildSolvaPayDescriptors(
     getCustomerRef = defaultGetCustomerRefHelper,
     onToolCall,
     onToolResult,
-      branding,
+    branding,
   } = options
 
   const publicBaseUrlError = validatePublicBaseUrl(publicBaseUrl)
@@ -241,7 +238,10 @@ export function buildSolvaPayDescriptors(
   // for name/title/description/annotations/meta/icons stays single.
   const pushTool = (
     name: string,
-    extras: Omit<SolvaPayToolDescriptor, 'name' | 'title' | 'description' | 'annotations' | 'meta' | 'icons'>,
+    extras: Omit<
+      SolvaPayToolDescriptor,
+      'name' | 'title' | 'description' | 'annotations' | 'meta' | 'icons'
+    >,
   ): void => {
     const meta = metadataByName.get(name)
     if (!meta) {
@@ -498,17 +498,13 @@ export function buildSolvaPayDescriptors(
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
 
-        const paymentIntentId =
-          typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
+        const paymentIntentId = typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
         const isBusiness = args.isBusiness === true
-        const businessName =
-          typeof args.businessName === 'string' ? args.businessName : undefined
+        const businessName = typeof args.businessName === 'string' ? args.businessName : undefined
         const country = typeof args.country === 'string' ? args.country : undefined
         const taxId = typeof args.taxId === 'string' ? args.taxId : undefined
         const taxIdType =
-          args.taxIdType === 'eu_vat' ||
-          args.taxIdType === 'gb_vat' ||
-          args.taxIdType === 'us_ein'
+          args.taxIdType === 'eu_vat' || args.taxIdType === 'gb_vat' || args.taxIdType === 'us_ein'
             ? args.taxIdType
             : undefined
 
@@ -681,9 +677,7 @@ export function buildSolvaPayDescriptors(
 export function buildSolvaPayPrompts(
   options: { enabledViews?: Set<SolvaPayMcpViewKind> } = {},
 ): SolvaPayPromptDescriptor[] {
-  const views = options.enabledViews
-    ? [...options.enabledViews]
-    : DEFAULT_VIEWS
+  const views = options.enabledViews ? [...options.enabledViews] : DEFAULT_VIEWS
   const metadata = buildPromptDescriptorMetadata({ views })
   const prompts: SolvaPayPromptDescriptor[] = []
 

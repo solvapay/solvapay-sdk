@@ -165,26 +165,38 @@ mod tests {
     #[test]
     fn verify_webhook_json_accepts_at_positive_tolerance_boundary() {
         // |now − t| == 300 is still inside the tolerance window.
-        let json =
-            verify_webhook_json(FIXTURE_BODY, FIXTURE_SIGNATURE, FIXTURE_SECRET, FIXTURE_NOW + 300)
-                .expect("clock at +300 s boundary must verify");
+        let json = verify_webhook_json(
+            FIXTURE_BODY,
+            FIXTURE_SIGNATURE,
+            FIXTURE_SECRET,
+            FIXTURE_NOW + 300,
+        )
+        .expect("clock at +300 s boundary must verify");
         let value: Value = serde_json::from_str(&json).expect("json");
         assert_eq!(value["id"], "evt_fixture_1");
     }
 
     #[test]
     fn verify_webhook_json_rejects_just_past_positive_tolerance() {
-        let err =
-            verify_webhook_json(FIXTURE_BODY, FIXTURE_SIGNATURE, FIXTURE_SECRET, FIXTURE_NOW + 301)
-                .expect_err("clock at +301 s must reject");
+        let err = verify_webhook_json(
+            FIXTURE_BODY,
+            FIXTURE_SIGNATURE,
+            FIXTURE_SECRET,
+            FIXTURE_NOW + 301,
+        )
+        .expect_err("clock at +301 s must reject");
         assert_eq!(err.code(), "timestamp_too_old");
     }
 
     #[test]
     fn verify_webhook_json_rejects_just_before_negative_tolerance() {
-        let err =
-            verify_webhook_json(FIXTURE_BODY, FIXTURE_SIGNATURE, FIXTURE_SECRET, FIXTURE_NOW - 301)
-                .expect_err("clock at −301 s must reject");
+        let err = verify_webhook_json(
+            FIXTURE_BODY,
+            FIXTURE_SIGNATURE,
+            FIXTURE_SECRET,
+            FIXTURE_NOW - 301,
+        )
+        .expect_err("clock at −301 s must reject");
         assert_eq!(err.code(), "timestamp_too_old");
     }
 

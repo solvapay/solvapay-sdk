@@ -71,8 +71,35 @@ fn lower_operation(
         sync_ts,
         defaults: defaults_from_manifest(defaults),
         errors: all_error_kinds(),
-        docs: lower_docs(&op.docs),
+        docs: lower_operation_docs(ir, op),
     })
+}
+
+/// Manifest `docs:` wins; otherwise fall back to OpenAPI operation description/summary.
+fn lower_operation_docs(ir: &Ir, op: &OperationDef) -> IrDocModel {
+    let mut docs = lower_docs(&op.docs);
+    if !docs.summary.trim().is_empty() {
+        return docs;
+    }
+    let Some(route) = op.route.as_ref() else {
+        return docs;
+    };
+    let method = route.method.to_ascii_uppercase();
+    let fallback = ir.routes.iter().find_map(|r| {
+        if r.method != method || r.path_template != route.path {
+            return None;
+        }
+        r.description
+            .as_deref()
+            .or(r.summary.as_deref())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+    });
+    if let Some(summary) = fallback {
+        docs.summary = summary;
+    }
+    docs
 }
 
 fn lower_named(
@@ -349,6 +376,94 @@ mod tests {
     }
 
     #[test]
+    fn falls_back_to_openapi_description_when_manifest_docs_absent() {
+        let yaml = r#"
+operations:
+  checkLimits:
+    route:
+      method: POST
+      path: /v1/sdk/limits
+    names:
+      ts: checkLimits
+      py: check_limits
+      rb: check_limits
+      go: CheckLimits
+      rust: check_limits
+    response: LimitResponseWithPlan
+    params: []
+    sync:
+      ts: async
+      py: [async]
+      rb: blocking
+      go: blocking
+      rust: [async]
+    errors:
+      default:
+        messageTemplate: "x"
+"#;
+        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+        let mut ir = empty_ir();
+        ir.routes.push(crate::ir::IrRoute {
+            method: "POST".into(),
+            path_template: "/v1/sdk/limits".into(),
+            operation_id: "Limits_check".into(),
+            description: Some("OpenAPI description for check limits.".into()),
+            summary: Some("Short summary".into()),
+            request_body: None,
+            response_body: None,
+        });
+        lower_catalog(&mut ir, &manifest).unwrap();
+        let ep = ir.entry_points.get("checkLimits").unwrap();
+        assert_eq!(ep.docs.summary, "OpenAPI description for check limits.");
+    }
+
+    #[test]
+    fn manifest_docs_override_openapi_description() {
+        let yaml = r#"
+operations:
+  checkLimits:
+    route:
+      method: POST
+      path: /v1/sdk/limits
+    names:
+      ts: checkLimits
+      py: check_limits
+      rb: check_limits
+      go: CheckLimits
+      rust: check_limits
+    response: LimitResponseWithPlan
+    params: []
+    docs:
+      summary: "Manifest wins."
+    sync:
+      ts: async
+      py: [async]
+      rb: blocking
+      go: blocking
+      rust: [async]
+    errors:
+      default:
+        messageTemplate: "x"
+"#;
+        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+        let mut ir = empty_ir();
+        ir.routes.push(crate::ir::IrRoute {
+            method: "POST".into(),
+            path_template: "/v1/sdk/limits".into(),
+            operation_id: "Limits_check".into(),
+            description: Some("OpenAPI description".into()),
+            summary: None,
+            request_body: None,
+            response_body: None,
+        });
+        lower_catalog(&mut ir, &manifest).unwrap();
+        assert_eq!(
+            ir.entry_points.get("checkLimits").unwrap().docs.summary,
+            "Manifest wins."
+        );
+    }
+
+    #[test]
     fn lowers_docs_summary_returns_and_param_merge() {
         let yaml = r#"
 operations:
@@ -480,6 +595,7 @@ topLevel:
         ops.insert(
             "checkLimits".into(),
             OperationDef {
+                route: None,
                 names: None,
                 optional_on_client: false,
                 request: None,

@@ -4,10 +4,10 @@ wasm-bindgen binding for SolvaPay edge/browser runtimes (Step 38).
 
 ## Profiles
 
-| Profile | Features | Exports |
-| --- | --- | --- |
-| `edge` | `webhook-verify` | `ready`, `wasmVersion`, `verifyWebhook` |
-| `browser` | `client-public` | `ready`, `wasmVersion` |
+| Profile   | Features         | Exports                                 |
+| --------- | ---------------- | --------------------------------------- |
+| `edge`    | `webhook-verify` | `ready`, `wasmVersion`, `verifyWebhook` |
+| `browser` | `client-public`  | `ready`, `wasmVersion`                  |
 
 ## Rebuild artifacts
 

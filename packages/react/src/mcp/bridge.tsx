@@ -146,9 +146,7 @@ export function McpBridgeProvider({ app, messageOnSuccess, children }: McpBridge
         }
       },
       notifySuccess: async (evt: McpSuccessEvent): Promise<void> => {
-        const resolved = messageOnSuccess
-          ? messageOnSuccess(evt)
-          : defaultSuccessCopy(evt, locale)
+        const resolved = messageOnSuccess ? messageOnSuccess(evt) : defaultSuccessCopy(evt, locale)
         if (resolved === null || resolved === undefined) return
         if (typeof app.sendMessage !== 'function') return
         try {

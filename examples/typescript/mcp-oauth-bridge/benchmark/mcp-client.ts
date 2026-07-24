@@ -70,7 +70,11 @@ export class McpClient {
     }
 
     if (!responseText) {
-      return { json: { jsonrpc: '2.0' as const, id: body.id ?? 0 }, latencyMs, headers: response.headers }
+      return {
+        json: { jsonrpc: '2.0' as const, id: body.id ?? 0 },
+        latencyMs,
+        headers: response.headers,
+      }
     }
 
     const contentType = response.headers.get('content-type') ?? ''

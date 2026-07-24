@@ -92,16 +92,10 @@ const mockFetch = vi.fn().mockImplementation((url: string) => {
   return Promise.resolve(new Response('{}', { status: 200 }))
 })
 
-const renderLayout = (
-  props: Partial<React.ComponentProps<typeof CheckoutLayout>> = {},
-) =>
+const renderLayout = (props: Partial<React.ComponentProps<typeof CheckoutLayout>> = {}) =>
   render(
     <SolvaPayProvider config={{ fetch: mockFetch as unknown as typeof fetch }}>
-      <CheckoutLayout
-        planRef="pln_1"
-        productRef="prd_x"
-        {...props}
-      />
+      <CheckoutLayout planRef="pln_1" productRef="prd_x" {...props} />
     </SolvaPayProvider>,
   )
 
@@ -115,18 +109,14 @@ describe('CheckoutLayout', () => {
   it('renders chat-sized layout when size="chat"', async () => {
     const { container } = renderLayout({ size: 'chat' })
     await waitFor(() =>
-      expect(
-        container.querySelector('[data-solvapay-checkout-layout="chat"]'),
-      ).toBeTruthy(),
+      expect(container.querySelector('[data-solvapay-checkout-layout="chat"]')).toBeTruthy(),
     )
   })
 
   it('renders desktop layout when size="desktop"', async () => {
     const { container } = renderLayout({ size: 'desktop' })
     await waitFor(() =>
-      expect(
-        container.querySelector('[data-solvapay-checkout-layout="desktop"]'),
-      ).toBeTruthy(),
+      expect(container.querySelector('[data-solvapay-checkout-layout="desktop"]')).toBeTruthy(),
     )
   })
 
@@ -136,23 +126,17 @@ describe('CheckoutLayout', () => {
     await waitFor(() => expect(resizeObserverObserved).toBeTruthy())
     triggerResize(400)
     await waitFor(() =>
-      expect(
-        container.querySelector('[data-solvapay-checkout-layout="chat"]'),
-      ).toBeTruthy(),
+      expect(container.querySelector('[data-solvapay-checkout-layout="chat"]')).toBeTruthy(),
     )
     triggerResize(900)
     await waitFor(() =>
-      expect(
-        container.querySelector('[data-solvapay-checkout-layout="desktop"]'),
-      ).toBeTruthy(),
+      expect(container.querySelector('[data-solvapay-checkout-layout="desktop"]')).toBeTruthy(),
     )
   })
 
   it('renders stable solvapay-* class names on the root', async () => {
     const { container } = renderLayout()
-    await waitFor(() =>
-      expect(container.querySelector('.solvapay-checkout-layout')).toBeTruthy(),
-    )
+    await waitFor(() => expect(container.querySelector('.solvapay-checkout-layout')).toBeTruthy())
   })
 
   it('exposes data-solvapay-step on the root', async () => {
@@ -245,9 +229,7 @@ describe('CheckoutLayout — new orchestration', () => {
         <CheckoutLayout planRef="pln_free" productRef="prd_free" />
       </SolvaPayProvider>,
     )
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Start using/ })).toBeTruthy(),
-    )
+    await waitFor(() => expect(screen.getByRole('button', { name: /Start using/ })).toBeTruthy())
   })
 
   it('back button returns from pay step to select when planRef is omitted', async () => {
@@ -320,8 +302,6 @@ describe('CheckoutLayout — new orchestration', () => {
       </SolvaPayProvider>,
     )
     // Should skip 'Choose your pricing' and go straight to pay step.
-    await waitFor(() =>
-      expect(screen.queryByText('Choose your pricing')).toBeNull(),
-    )
+    await waitFor(() => expect(screen.queryByText('Choose your pricing')).toBeNull())
   })
 })

@@ -45,7 +45,7 @@ function makeApp(opts: {
   // before `<McpApp>` subscribes to `toolresult`.
   let connected = false
 
-  const fireToolResult: ToolResultHandler = (params) => {
+  const fireToolResult: ToolResultHandler = params => {
     for (const handler of listeners['toolresult'] ?? []) handler(params)
     app.ontoolresult?.(params)
   }
@@ -86,11 +86,7 @@ function makeApp(opts: {
             fireToolResult(opts.initialToolResultParams)
             return
           }
-          if (
-            emitInitialToolResult &&
-            opts.structuredContent !== undefined &&
-            !opts.isError
-          ) {
+          if (emitInitialToolResult && opts.structuredContent !== undefined && !opts.isError) {
             fireToolResult({ structuredContent: opts.structuredContent })
           }
         }),

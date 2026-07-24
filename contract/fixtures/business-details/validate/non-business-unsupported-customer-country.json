@@ -14,9 +14,7 @@
       "error": {
         "issues": [
           {
-            "path": [
-              "customerCountry"
-            ],
+            "path": ["customerCountry"],
             "message": "Billing country is not supported for tax calculation"
           }
         ]

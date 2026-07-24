@@ -1,11 +1,5 @@
 /**
-* @generated — do not edit. Regenerate with:
-*   cargo run -p dto-gen -- \
-*     --snapshot ../contract/openapi/sdk-v1.snapshot.json \
-*     --manifest ../contract/manifest/sdk-contract.yaml \
-*     --out crates/solvapay-dto/src \
-*     --ts-out packages/server/src/types/overlays.generated.d.ts \
-*     --ts-client-out packages/server/src/types/client.generated.d.ts
+* @generated — do not edit. Regenerate with: pnpm gen
 */
 
 import type { components, operations } from './generated'

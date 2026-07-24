@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { resolveImpl } from '@solvapay/server'
 
 type NodeModuleBuiltin = {
   createRequire: (filename: string) => (id: string) => {
@@ -9,13 +8,12 @@ type NodeModuleBuiltin = {
 
 /**
  * Positive confirmation that the Node (napi) Rust core is loaded.
- * `impl: "rust"` + a non-empty `napiVersion` means requests are not on TS fallback.
+ * `impl: "rust"` + a non-empty `napiVersion` means the Rust binding is live.
  *
  * Loads napi via process.getBuiltinModule + createRequire so bundlers cannot
  * rewrite the `.node` path (and avoid webpack `node:module` UnhandledSchemeError).
  */
 export async function GET() {
-  const impl = resolveImpl('client')
   let version: string | null = null
   let error: string | undefined
 
@@ -38,7 +36,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    impl,
+    impl: 'rust',
     napiVersion: version,
     ...(error ? { error } : {}),
   })

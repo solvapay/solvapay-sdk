@@ -90,9 +90,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "&customer_ref"
-        ]
+        "args": ["&customer_ref"]
       },
       "coreCall": "classify_customer_ref"
     },
@@ -117,10 +115,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "email.as_deref()",
-          "name.as_deref()"
-        ]
+        "args": ["email.as_deref()", "name.as_deref()"]
       },
       "coreCall": "coerce_customer_options"
     },
@@ -191,10 +186,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueString",
-        "args": [
-          "response",
-          "&fallback"
-        ]
+        "args": ["response", "&fallback"]
       },
       "coreCall": "extract_backend_customer_ref"
     },
@@ -214,9 +206,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "&message"
-        ]
+        "args": ["&message"]
       },
       "coreCall": "classify_lookup_error"
     },
@@ -236,9 +226,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "&message"
-        ]
+        "args": ["&message"]
       },
       "coreCall": "classify_create_error"
     },
@@ -258,9 +246,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueBool",
-        "args": [
-          "&message"
-        ]
+        "args": ["&message"]
       },
       "coreCall": "is_email_conflict"
     },
@@ -285,10 +271,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "optionHelperErr",
-        "args": [
-          "product_ref.as_deref()",
-          "plan_ref.as_deref()"
-        ]
+        "args": ["product_ref.as_deref()", "plan_ref.as_deref()"]
       },
       "coreCall": "validate_activate_plan_params"
     },
@@ -313,10 +296,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "optionHelperErr",
-        "args": [
-          "plan_ref.as_deref()",
-          "product_ref.as_deref()"
-        ]
+        "args": ["plan_ref.as_deref()", "product_ref.as_deref()"]
       },
       "coreCall": "validate_create_payment_intent_params"
     },
@@ -341,10 +321,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "optionHelperErr",
-        "args": [
-          "amount",
-          "currency.as_deref()"
-        ]
+        "args": ["amount", "currency.as_deref()"]
       },
       "coreCall": "validate_topup_payment_intent_params"
     },
@@ -369,10 +346,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "optionHelperErr",
-        "args": [
-          "payment_intent_id.as_deref()",
-          "product_ref.as_deref()"
-        ]
+        "args": ["payment_intent_id.as_deref()", "product_ref.as_deref()"]
       },
       "coreCall": "validate_process_payment_intent_params"
     },
@@ -392,9 +366,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "optionHelperErr",
-        "args": [
-          "payment_intent_id.as_deref()"
-        ]
+        "args": ["payment_intent_id.as_deref()"]
       },
       "coreCall": "validate_attach_business_details_params"
     },
@@ -414,9 +386,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "first_issue_message.as_deref()"
-        ]
+        "args": ["first_issue_message.as_deref()"]
       },
       "coreCall": "attach_business_details_validation_error"
     },
@@ -452,10 +422,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "status.as_deref()",
-          "message.as_deref()"
-        ]
+        "args": ["status.as_deref()", "message.as_deref()"]
       },
       "coreCall": "project_topup_process_outcome"
     },
@@ -486,9 +453,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "optionHelperErr",
-        "args": [
-          "product_ref.as_deref()"
-        ]
+        "args": ["product_ref.as_deref()"]
       },
       "coreCall": "validate_checkout_session_params"
     },
@@ -518,11 +483,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueBool",
-        "args": [
-          "external_ref.as_deref()",
-          "&user_id",
-          "customer_ref.as_deref()"
-        ]
+        "args": ["external_ref.as_deref()", "&user_id", "customer_ref.as_deref()"]
       },
       "coreCall": "is_cached_customer_ref_valid"
     },
@@ -547,10 +508,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueString",
-        "args": [
-          "customer_ref.as_deref()",
-          "&user_id"
-        ]
+        "args": ["customer_ref.as_deref()", "&user_id"]
       },
       "coreCall": "resolve_purchase_customer_ref"
     },
@@ -581,9 +539,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "&message"
-        ]
+        "args": ["&message"]
       },
       "coreCall": "classify_cancel_error"
     },
@@ -603,9 +559,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "&message"
-        ]
+        "args": ["&message"]
       },
       "coreCall": "classify_reactivate_error"
     },
@@ -626,9 +580,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "resultAsValue",
-        "args": [
-          "&response"
-        ]
+        "args": ["&response"]
       },
       "coreCall": "normalize_cancel_response"
     },
@@ -649,9 +601,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "resultAsValue",
-        "args": [
-          "&response"
-        ]
+        "args": ["&response"]
       },
       "coreCall": "normalize_reactivate_response"
     },
@@ -671,9 +621,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "optionHelperErr",
-        "args": [
-          "purchase_ref.as_deref()"
-        ]
+        "args": ["purchase_ref.as_deref()"]
       },
       "coreCall": "validate_purchase_ref"
     },
@@ -710,10 +658,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "resultAsValue",
-        "args": [
-          "product_ref.as_deref()",
-          "meter_name.as_deref()"
-        ]
+        "args": ["product_ref.as_deref()", "meter_name.as_deref()"]
       },
       "coreCall": "resolve_check_limits_params"
     },
@@ -733,9 +678,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "optionHelperErr",
-        "args": [
-          "product_ref.as_deref()"
-        ]
+        "args": ["product_ref.as_deref()"]
       },
       "coreCall": "validate_list_plans_params"
     },
@@ -755,9 +698,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueBool",
-        "args": [
-          "&value"
-        ]
+        "args": ["&value"]
       },
       "coreCall": "is_error_result"
     },
@@ -788,9 +729,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "optionHelperErr",
-        "args": [
-          "product_ref.as_deref()"
-        ]
+        "args": ["product_ref.as_deref()"]
       },
       "coreCall": "validate_get_product_params"
     },
@@ -815,10 +754,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueString",
-        "args": [
-          "metadata_product.as_deref()",
-          "env_product.as_deref()"
-        ]
+        "args": ["metadata_product.as_deref()", "env_product.as_deref()"]
       },
       "coreCall": "resolve_product_ref"
     },
@@ -838,9 +774,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "remaining"
-        ]
+        "args": ["remaining"]
       },
       "coreCall": "evaluate_cached_limits"
     },
@@ -865,10 +799,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "within_limits",
-          "remaining"
-        ]
+        "args": ["within_limits", "remaining"]
       },
       "coreCall": "evaluate_fresh_limits"
     },
@@ -903,12 +834,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "within_limits",
-          "&product",
-          "limits.as_ref()",
-          "checkout_url.as_deref()"
-        ]
+        "args": ["within_limits", "&product", "limits.as_ref()", "checkout_url.as_deref()"]
       },
       "coreCall": "decide_paywall_outcome"
     },
@@ -928,9 +854,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "checkout_url.as_deref()"
-        ]
+        "args": ["checkout_url.as_deref()"]
       },
       "coreCall": "resolve_fallback_gate_limits"
     },
@@ -951,9 +875,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "limits.as_ref()"
-        ]
+        "args": ["limits.as_ref()"]
       },
       "coreCall": "classify_paywall_state"
     },
@@ -980,10 +902,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueString",
-        "args": [
-          "&state",
-          "&gate"
-        ]
+        "args": ["&state", "&gate"]
       },
       "coreCall": "build_gate_message"
     },
@@ -1010,10 +929,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueString",
-        "args": [
-          "&state",
-          "limits.as_ref()"
-        ]
+        "args": ["&state", "limits.as_ref()"]
       },
       "coreCall": "build_nudge_message"
     },
@@ -1039,10 +955,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "&product_ref",
-          "&limits"
-        ]
+        "args": ["&product_ref", "&limits"]
       },
       "coreCall": "build_paywall_gate"
     },
@@ -1069,9 +982,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "&gate"
-        ]
+        "args": ["&gate"]
       },
       "coreCall": "paywall_client_payload"
     },
@@ -1194,9 +1105,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueBool",
-        "args": [
-          "&currency"
-        ]
+        "args": ["&currency"]
       },
       "coreCall": "is_zero_decimal_currency"
     },
@@ -1239,9 +1148,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "valueString",
-        "args": [
-          "country.as_deref()"
-        ]
+        "args": ["country.as_deref()"]
       },
       "coreCall": "get_seller_tax_identifier_display_label"
     },
@@ -1279,10 +1186,7 @@
       "call": {
         "kind": "wrap",
         "serialize": "toValue",
-        "args": [
-          "&message",
-          "&gate"
-        ]
+        "args": ["&message", "&gate"]
       },
       "coreCall": "paywall_tool_result"
     },
@@ -1409,13 +1313,8 @@
       "doc": "`PATCH /v1/sdk/customers/{customerRef}`\n\nArgs JSON is `{ customerRef, ...body }` — Rust splits path vs body.",
       "rustFnName": "update_customer",
       "dtoType": "UpdateCustomerParams",
-      "splitPathRefs": [
-        "customerRef"
-      ],
-      "clientCallArgs": [
-        "&refs[0]",
-        "params"
-      ],
+      "splitPathRefs": ["customerRef"],
+      "clientCallArgs": ["&refs[0]", "params"],
       "coreCall": "update_customer",
       "call": {
         "kind": "wrap",
@@ -1635,12 +1534,8 @@
       "section": "Group C",
       "doc": "`GET /v1/sdk/products/{productRef}`\n\nArgs JSON is `{ productRef }`.",
       "rustFnName": "get_product",
-      "splitPathRefs": [
-        "productRef"
-      ],
-      "clientCallArgs": [
-        "&refs[0]"
-      ],
+      "splitPathRefs": ["productRef"],
+      "clientCallArgs": ["&refs[0]"],
       "coreCall": "get_product",
       "call": {
         "kind": "wrap",
@@ -1679,13 +1574,8 @@
       "doc": "`PUT /v1/sdk/products/{productRef}`\n\nArgs JSON is `{ productRef, ...params }`.",
       "rustFnName": "update_product",
       "dtoType": "UpdateProductRequest",
-      "splitPathRefs": [
-        "productRef"
-      ],
-      "clientCallArgs": [
-        "&refs[0]",
-        "params"
-      ],
+      "splitPathRefs": ["productRef"],
+      "clientCallArgs": ["&refs[0]", "params"],
       "coreCall": "update_product",
       "call": {
         "kind": "wrap",
@@ -1699,12 +1589,8 @@
       "section": "Group C",
       "doc": "`DELETE /v1/sdk/products/{productRef}`\n\nArgs JSON is `{ productRef }`. Success value is `null`.",
       "rustFnName": "delete_product",
-      "splitPathRefs": [
-        "productRef"
-      ],
-      "clientCallArgs": [
-        "&refs[0]"
-      ],
+      "splitPathRefs": ["productRef"],
+      "clientCallArgs": ["&refs[0]"],
       "coreCall": "delete_product",
       "call": {
         "kind": "wrap",
@@ -1718,13 +1604,8 @@
       "doc": "`POST /v1/sdk/products/{productRef}/clone`\n\nArgs JSON is `{ productRef, name? }`.",
       "rustFnName": "clone_product",
       "dtoType": "CloneProductOverrides",
-      "splitPathRefs": [
-        "productRef"
-      ],
-      "clientCallArgs": [
-        "&refs[0]",
-        "Some(overrides)"
-      ],
+      "splitPathRefs": ["productRef"],
+      "clientCallArgs": ["&refs[0]", "Some(overrides)"],
       "coreCall": "clone_product",
       "call": {
         "kind": "wrap",
@@ -1752,13 +1633,8 @@
       "doc": "`PUT /v1/sdk/products/{productRef}/mcp/plans`\n\nArgs JSON is `{ productRef, ...params }`.",
       "rustFnName": "configure_mcp_plans",
       "dtoType": "ConfigureMcpPlansDto",
-      "splitPathRefs": [
-        "productRef"
-      ],
-      "clientCallArgs": [
-        "&refs[0]",
-        "params"
-      ],
+      "splitPathRefs": ["productRef"],
+      "clientCallArgs": ["&refs[0]", "params"],
       "coreCall": "configure_mcp_plans",
       "call": {
         "kind": "wrap",
@@ -1772,12 +1648,8 @@
       "section": "Group C",
       "doc": "`GET /v1/sdk/products/{productRef}/plans`\n\nArgs JSON is `{ productRef }`.",
       "rustFnName": "list_plans",
-      "splitPathRefs": [
-        "productRef"
-      ],
-      "clientCallArgs": [
-        "&refs[0]"
-      ],
+      "splitPathRefs": ["productRef"],
+      "clientCallArgs": ["&refs[0]"],
       "coreCall": "list_plans",
       "call": {
         "kind": "wrap",
@@ -1804,15 +1676,8 @@
       "doc": "`PUT /v1/sdk/products/{productRef}/plans/{planRef}`\n\nArgs JSON is `{ productRef, planRef, ...params }`.",
       "rustFnName": "update_plan",
       "dtoType": "UpdatePlanRequest",
-      "splitPathRefs": [
-        "productRef",
-        "planRef"
-      ],
-      "clientCallArgs": [
-        "&refs[0]",
-        "&refs[1]",
-        "params"
-      ],
+      "splitPathRefs": ["productRef", "planRef"],
+      "clientCallArgs": ["&refs[0]", "&refs[1]", "params"],
       "coreCall": "update_plan",
       "call": {
         "kind": "wrap",
@@ -1826,14 +1691,8 @@
       "section": "Group C",
       "doc": "`DELETE /v1/sdk/products/{productRef}/plans/{planRef}`\n\nArgs JSON is `{ productRef, planRef }`. Success value is `null`.",
       "rustFnName": "delete_plan",
-      "splitPathRefs": [
-        "productRef",
-        "planRef"
-      ],
-      "clientCallArgs": [
-        "&refs[0]",
-        "&refs[1]"
-      ],
+      "splitPathRefs": ["productRef", "planRef"],
+      "clientCallArgs": ["&refs[0]", "&refs[1]"],
       "coreCall": "delete_plan",
       "call": {
         "kind": "wrap",

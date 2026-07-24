@@ -190,7 +190,11 @@ export type VerifyMerchantResult =
       providerExistsInSandbox?: boolean
     }
   | { status: 'unauthorized' }
-  | { status: 'env_mismatch'; keyEnvironment?: 'sandbox' | 'live'; providerEnvironment?: 'sandbox' | 'live' }
+  | {
+      status: 'env_mismatch'
+      keyEnvironment?: 'sandbox' | 'live'
+      providerEnvironment?: 'sandbox' | 'live'
+    }
   | { status: 'error'; message: string }
 
 const parseJsonSafe = async (response: Response): Promise<unknown> => {

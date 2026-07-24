@@ -35,7 +35,8 @@ const CONTENT_RULES: readonly ContentRule[] = [
   {
     token: 'verifyWebhookTs',
     pattern: /\bverifyWebhookTs\b/,
-    remediation: 'Delete the TS webhook body; route only through verifyWebhookNative / verifyWebhookWasm.',
+    remediation:
+      'Delete the TS webhook body; route only through verifyWebhookNative / verifyWebhookWasm.',
   },
   {
     token: 'timingSafeEqual',
@@ -52,19 +53,40 @@ const CONTENT_RULES: readonly ContentRule[] = [
     token: 'tsFallback',
     pattern: /\btsFallback\b/,
     fileBasename: 'client.ts',
-    remediation: 'Remove tsFallback from dispatchClient; fail fast when Rust is unavailable or forced off.',
+    remediation:
+      'Remove tsFallback from dispatchClient; fail fast when the Rust binding is unavailable.',
   },
   {
     token: 'tsFallback',
     pattern: /\btsFallback\b/,
     fileBasename: 'native-decisions.ts',
-    remediation: 'Remove tsFallback from dispatchSync; fail fast when uninstalled or SOLVAPAY_IMPL=ts.',
+    remediation:
+      'Remove tsFallback from dispatchSync; fail fast when the Rust binding is unavailable.',
+  },
+  {
+    token: 'SOLVAPAY_IMPL',
+    pattern: /\bSOLVAPAY_IMPL\b/,
+    remediation:
+      'Remove SOLVAPAY_IMPL — server/core are Rust-only after Steps 52/53; rollback is republish, not a flag.',
+  },
+  {
+    token: 'resolveImpl',
+    pattern: /\bresolveImpl\b/,
+    remediation:
+      'Remove resolveImpl — implementation selection was deleted with SOLVAPAY_IMPL (Steps 52/53).',
+  },
+  {
+    token: 'SolvaPayImpl',
+    pattern: /\bSolvaPayImpl\b/,
+    remediation:
+      'Remove SolvaPayImpl — the ts/rust union type was deleted with SOLVAPAY_IMPL (Steps 52/53).',
   },
   {
     token: 'fetch(',
     pattern: /\bfetch\s*\(/,
     fileBasename: 'client.ts',
-    remediation: 'Delete client fetch bodies; every method must only assemble args + dispatchClient.',
+    remediation:
+      'Delete client fetch bodies; every method must only assemble args + dispatchClient.',
   },
   {
     token: 'paywall-*-ts import',

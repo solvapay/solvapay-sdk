@@ -20,9 +20,7 @@ function getDeps(): ApiDeps {
   if (cachedDeps) return cachedDeps
   const apiKey = process.env.SOLVAPAY_SECRET_KEY ?? ''
   if (!apiKey) {
-    throw new Error(
-      'SOLVAPAY_SECRET_KEY is not set — fill it in `.env` to enable /api/* routes',
-    )
+    throw new Error('SOLVAPAY_SECRET_KEY is not set — fill it in `.env` to enable /api/* routes')
   }
   cachedDeps = {
     solvaPay: createSolvaPay({
@@ -46,7 +44,9 @@ export async function handleSolvaPayRequest(
     console.error('[solvapay-api] adapter error:', error)
     res.statusCode = 500
     res.setHeader('content-type', 'application/json')
-    res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }))
+    res.end(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
+    )
     return
   }
 

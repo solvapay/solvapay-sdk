@@ -17,9 +17,7 @@ const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => 
 })
 
 // Helper function to create mock purchase status
-const createMockPurchaseStatus = (
-  overrides: Partial<PurchaseStatus> = {},
-): PurchaseStatus => ({
+const createMockPurchaseStatus = (overrides: Partial<PurchaseStatus> = {}): PurchaseStatus => ({
   loading: false,
   isRefetching: false,
   error: null,

@@ -99,9 +99,7 @@ describe('ActivationFlow (default-tree shim) — state machine', () => {
   })
 
   it('error state shows Try Again and resets to summary', async () => {
-    const { fetchFn } = makeFakeFetch([
-      { status: 'invalid', message: 'Invalid plan config' },
-    ])
+    const { fetchFn } = makeFakeFetch([{ status: 'invalid', message: 'Invalid plan config' }])
     render(
       <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
         <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" />
@@ -140,11 +138,7 @@ describe('ActivationFlow primitive', () => {
     ])
     render(
       <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
-        <ActivationFlow.Root
-          productRef="prd_usage"
-          planRef="pln_usage"
-          data-testid="root"
-        >
+        <ActivationFlow.Root productRef="prd_usage" planRef="pln_usage" data-testid="root">
           <ActivationFlow.Summary data-testid="summary" />
           <ActivationFlow.ActivateButton data-testid="activate" />
           <ActivationFlow.Activated data-testid="activated" />

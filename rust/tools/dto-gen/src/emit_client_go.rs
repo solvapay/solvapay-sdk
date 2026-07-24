@@ -106,11 +106,7 @@ fn write_split_marshal(
                     entry.id
                 ))
             })?;
-        let _ = writeln!(
-            output,
-            "\tpayload[\"{key}\"] = {}",
-            param.names.go
-        );
+        let _ = writeln!(output, "\tpayload[\"{key}\"] = {}", param.names.go);
     }
     // Remaining catalog params are body fields (required or optional maps).
     for param in &entry.params {

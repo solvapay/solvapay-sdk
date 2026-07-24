@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { callNativeSync, resolveImpl } from '../../server/src/native'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { callNativeSync } from '../../server/src/native'
 import { SolvaPayError } from '../src/solvapay-error'
 import {
   creditsToDisplayMinorUnits,
@@ -7,34 +7,23 @@ import {
   resetNativeCoreApiForTests,
   validateBusinessDetails,
   type NativeCoreSyncMethod,
-  type SolvaPayImpl,
 } from '../src/native-core'
 
 const SENTINEL_VALIDATE = { success: true as const, data: { isBusiness: false } }
 const SENTINEL_CREDITS = 9999
 
-describe('native-core.ts delegation (Step 52 Rust-only)', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
-
+describe('native-core.ts delegation', () => {
   beforeEach(() => {
-    delete process.env.SOLVAPAY_IMPL
     resetNativeCoreApiForTests()
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
-    // Restore the setupFiles install so later suites still have the API.
     resetNativeCoreApiForTests()
-    installNativeCoreApi({ callNativeSync, resolveImpl })
+    installNativeCoreApi({ callNativeSync })
   })
 
-  function installFakeApi(resolve: SolvaPayImpl = 'rust'): void {
+  function installFakeApi(): void {
     installNativeCoreApi({
-      resolveImpl: (_surface: string) => resolve,
       callNativeSync: (fn: NativeCoreSyncMethod, _argsJson: string) => {
         switch (fn) {
           case 'validateBusinessDetails':
@@ -48,9 +37,8 @@ describe('native-core.ts delegation (Step 52 Rust-only)', () => {
     })
   }
 
-  it('under SOLVAPAY_IMPL=rust, public functions return native sentinel', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
-    installFakeApi('rust')
+  it('public functions return native sentinel when installed', () => {
+    installFakeApi()
 
     expect(validateBusinessDetails({ isBusiness: false })).toEqual(SENTINEL_VALIDATE)
     expect(
@@ -68,17 +56,5 @@ describe('native-core.ts delegation (Step 52 Rust-only)', () => {
     expect(() => validateBusinessDetails({ isBusiness: false })).toThrow(
       'core sync API not installed',
     )
-  })
-
-  it('throws SolvaPayError under SOLVAPAY_IMPL=ts (no portable TS fallback)', () => {
-    process.env.SOLVAPAY_IMPL = 'ts'
-    const callNativeSyncFn = vi.fn()
-    installNativeCoreApi({
-      resolveImpl: () => 'ts',
-      callNativeSync: callNativeSyncFn,
-    })
-
-    expect(() => validateBusinessDetails({ isBusiness: false })).toThrow(SolvaPayError)
-    expect(callNativeSyncFn).not.toHaveBeenCalled()
   })
 })

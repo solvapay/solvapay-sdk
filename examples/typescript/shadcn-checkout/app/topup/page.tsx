@@ -92,11 +92,7 @@ export default function TopupPage() {
             <TopupForm.SubmitButton asChild>
               <Button size="lg" className="w-full" />
             </TopupForm.SubmitButton>
-            <Button
-              variant="ghost"
-              onClick={() => setAmountCents(null)}
-              className="self-start"
-            >
+            <Button variant="ghost" onClick={() => setAmountCents(null)} className="self-start">
               ← Change amount
             </Button>
           </TopupForm.Root>

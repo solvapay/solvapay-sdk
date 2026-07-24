@@ -5,7 +5,6 @@ import {
   callNative,
   callNativeSync,
   resetNativeCache,
-  resolveImpl,
   setNativeBindingForTests,
   setNativeClientForTests,
   type NativeClientLike,
@@ -52,54 +51,20 @@ const ALL_METHODS: NativeClientMethod[] = [
 ]
 
 function fakeClient(overrides: Partial<NativeClientLike> = {}): NativeClientLike {
-  const base = Object.fromEntries(
-    ALL_METHODS.map(fn => [fn, vi.fn()]),
-  ) as NativeClientLike
+  const base = Object.fromEntries(ALL_METHODS.map(fn => [fn, vi.fn()])) as NativeClientLike
   return { ...base, ...overrides }
 }
 
 describe('native.ts dispatch + envelope reconstructor', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
-
   beforeEach(() => {
-    delete process.env.SOLVAPAY_IMPL
     resetNativeCache()
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
     resetNativeCache()
   })
 
-  it('resolveImpl(client) returns ts when SOLVAPAY_IMPL=ts', () => {
-    process.env.SOLVAPAY_IMPL = 'ts'
-    expect(resolveImpl('client')).toBe('ts')
-  })
-
-  it('resolveImpl(client) returns rust when SOLVAPAY_IMPL=rust', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
-    expect(resolveImpl('client')).toBe('rust')
-  })
-
-  it('resolveImpl(client) prefers rust by default when the binding loads', () => {
-    setNativeBindingForTests({
-      verifyWebhook: () => '{}',
-      NativeClient: class {
-        constructor(_apiKey: string, _apiBaseUrl?: string | null) {}
-      } as unknown as new (
-        apiKey: string,
-        apiBaseUrl?: string | null,
-      ) => NativeClientLike,
-    })
-    expect(resolveImpl('client')).toBe('rust')
-  })
-
   it('callNative reconstructs Api envelope as SolvaPayError with status', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     const createCustomer = vi.fn(async () =>
       JSON.stringify({
         ok: false,
@@ -128,7 +93,6 @@ describe('native.ts dispatch + envelope reconstructor', () => {
   })
 
   it('callNative reconstructs Paywall envelope as PaywallError with structuredContent', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     const gate = {
       kind: 'payment_required' as const,
       product: 'prod_1',
@@ -147,18 +111,17 @@ describe('native.ts dispatch + envelope reconstructor', () => {
     )
     setNativeClientForTests(fakeClient({ getMerchant }))
 
-    await expect(
-      callNative('getMerchant', '{}', { apiKey: 'sk_test' }),
-    ).rejects.toSatisfy((err: unknown) => {
-      expect(err).toBeInstanceOf(PaywallError)
-      expect((err as PaywallError).message).toBe('Payment required')
-      expect((err as PaywallError).structuredContent).toEqual(gate)
-      return true
-    })
+    await expect(callNative('getMerchant', '{}', { apiKey: 'sk_test' })).rejects.toSatisfy(
+      (err: unknown) => {
+        expect(err).toBeInstanceOf(PaywallError)
+        expect((err as PaywallError).message).toBe('Payment required')
+        expect((err as PaywallError).structuredContent).toEqual(gate)
+        return true
+      },
+    )
   })
 
   it('callNative reconstructs Transport envelope as SolvaPayError', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     const getPlatformConfig = vi.fn(async () =>
       JSON.stringify({
         ok: false,
@@ -171,31 +134,27 @@ describe('native.ts dispatch + envelope reconstructor', () => {
     )
     setNativeClientForTests(fakeClient({ getPlatformConfig }))
 
-    await expect(
-      callNative('getPlatformConfig', '{}', { apiKey: 'sk_test' }),
-    ).rejects.toSatisfy((err: unknown) => {
-      expect(err).toBeInstanceOf(SolvaPayError)
-      expect((err as SolvaPayError).message).toBe('connection reset')
-      return true
-    })
+    await expect(callNative('getPlatformConfig', '{}', { apiKey: 'sk_test' })).rejects.toSatisfy(
+      (err: unknown) => {
+        expect(err).toBeInstanceOf(SolvaPayError)
+        expect((err as SolvaPayError).message).toBe('connection reset')
+        return true
+      },
+    )
   })
 
   it('callNative returns envelope value on success', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     const value = { customerRef: 'cus_1' }
     const createCustomer = vi.fn(async () => JSON.stringify({ ok: true, value }))
     setNativeClientForTests(fakeClient({ createCustomer }))
 
-    const result = await callNative(
-      'createCustomer',
-      JSON.stringify({ email: 'a@b.c' }),
-      { apiKey: 'sk_test' },
-    )
+    const result = await callNative('createCustomer', JSON.stringify({ email: 'a@b.c' }), {
+      apiKey: 'sk_test',
+    })
     expect(result).toEqual(value)
   })
 
   it('callNativeSync returns envelope value on success', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     const classifyCustomerRef = vi.fn(() => JSON.stringify({ ok: true, value: 42 }))
     setNativeBindingForTests({
       verifyWebhook: () => '{}',
@@ -207,7 +166,6 @@ describe('native.ts dispatch + envelope reconstructor', () => {
   })
 
   it('callNativeSync reconstructs Api envelope as SolvaPayError', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     setNativeBindingForTests({
       verifyWebhook: () => '{}',
       classifyCustomerRef: () =>
@@ -233,7 +191,6 @@ describe('native.ts dispatch + envelope reconstructor', () => {
   })
 
   it('callNativeSync reconstructs Paywall envelope as PaywallError', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     const gate = {
       kind: 'payment_required' as const,
       product: 'prod_1',
@@ -256,5 +213,11 @@ describe('native.ts dispatch + envelope reconstructor', () => {
       expect(err).toBeInstanceOf(PaywallError)
       expect((err as PaywallError).structuredContent).toEqual(gate)
     }
+  })
+
+  it('callNativeSync throws when the native binding is missing', () => {
+    setNativeBindingForTests(null)
+
+    expect(() => callNativeSync('classifyCustomerRef', '{}')).toThrow(SolvaPayError)
   })
 })

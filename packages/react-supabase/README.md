@@ -31,7 +31,9 @@ const supabase = createClient(
 
 export default function RootLayout({ children }) {
   return (
-    <SolvaPayProvider config={{ auth: { adapter: createSupabaseAuthAdapter({ client: supabase }) } }}>
+    <SolvaPayProvider
+      config={{ auth: { adapter: createSupabaseAuthAdapter({ client: supabase }) } }}
+    >
       {children}
     </SolvaPayProvider>
   )

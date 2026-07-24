@@ -115,14 +115,12 @@ describe('useLimits', () => {
     })
 
     it('defaults meterName to "requests" when omitted', async () => {
-      const getLimits = vi
-        .fn()
-        .mockResolvedValue({
-          withinLimits: true,
-          remaining: 3,
-          meterName: 'requests',
-          activationRequired: false,
-        })
+      const getLimits = vi.fn().mockResolvedValue({
+        withinLimits: true,
+        remaining: 3,
+        meterName: 'requests',
+        activationRequired: false,
+      })
       setTransport({ getLimits })
 
       renderHook(() => useLimits({ productRef: 'prd_api' }))

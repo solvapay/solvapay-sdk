@@ -1304,7 +1304,9 @@ bindings:
         let go_await = emit_go_client_method(create).unwrap();
         assert!(go_await.contains("sv_create_customer"));
         assert!(go_await.contains("let args_json = read_string"));
-        assert!(go_await.contains("let params: CreateCustomerRequest = parse_args_json(&args_json)?;"));
+        assert!(
+            go_await.contains("let params: CreateCustomerRequest = parse_args_json(&args_json)?;")
+        );
         assert!(go_await.contains("pollster::block_on(run_envelope"));
         assert!(
             !go_await.contains("})\n        .await"),
@@ -1312,10 +1314,11 @@ bindings:
         );
 
         let go_split = emit_go_client_method(update).unwrap();
-        assert!(go_split.contains(
-            "let (refs, body) = split_path_refs(&args_json, &[\"customerRef\"])?;"
-        ));
-        assert!(go_split.contains("let params: UpdateCustomerParams = serde_json::from_value(body)"));
+        assert!(go_split
+            .contains("let (refs, body) = split_path_refs(&args_json, &[\"customerRef\"])?;"));
+        assert!(
+            go_split.contains("let params: UpdateCustomerParams = serde_json::from_value(body)")
+        );
         assert!(go_split.contains("client.update_customer(&refs[0], params).await"));
         assert!(go_split.contains("pollster::block_on(run_envelope"));
     }

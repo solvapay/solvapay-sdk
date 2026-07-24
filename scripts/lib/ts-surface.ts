@@ -33,7 +33,11 @@ function namedExportsOf(program: ts.Program, filePath: string): Set<string> {
   if (symbol === undefined) {
     // Fall back to walking export declarations when the file isn't a module symbol.
     for (const stmt of sf.statements) {
-      if (ts.isExportDeclaration(stmt) && stmt.exportClause && ts.isNamedExports(stmt.exportClause)) {
+      if (
+        ts.isExportDeclaration(stmt) &&
+        stmt.exportClause &&
+        ts.isNamedExports(stmt.exportClause)
+      ) {
         for (const el of stmt.exportClause.elements) {
           out.add(el.name.text)
         }
@@ -137,10 +141,7 @@ export function readTsSurface(repoRoot: string): TsSurface {
         },
       }
 
-  const program = loadProgram(
-    [serverEntry, coreEntry, clientFile, factoryFile],
-    config.options,
-  )
+  const program = loadProgram([serverEntry, coreEntry, clientFile, factoryFile], config.options)
   const portableExports = new Set<string>([
     ...namedExportsOf(program, serverEntry),
     ...namedExportsOf(program, coreEntry),

@@ -245,11 +245,9 @@ export function validateAutoRechargeForm(
     return {
       ok: false,
       error: interpolate(messages.topupBelowThreshold, {
-        amount: formatPrice(
-          Math.round(payload.thresholdAmountMajor * minorPerMajor),
-          currency,
-          { free: '' },
-        ),
+        amount: formatPrice(Math.round(payload.thresholdAmountMajor * minorPerMajor), currency, {
+          free: '',
+        }),
       }),
     }
   }
@@ -312,8 +310,7 @@ export function configToAutoRechargeInput(
       currency,
       ...(config.maxMonthlySpendMinor != null
         ? {
-            maxMonthlySpendMajor:
-              config.maxMonthlySpendMinor / getMinorUnitsPerMajor(currency),
+            maxMonthlySpendMajor: config.maxMonthlySpendMinor / getMinorUnitsPerMajor(currency),
           }
         : {}),
     }
@@ -360,8 +357,7 @@ export function configToForm(config: AutoRechargeConfig, currency: string): Auto
   }
 
   const thresholdMajor = triggerAmountMajorFromConfig(config)
-  const thresholdStr =
-    thresholdMajor != null ? String(Math.max(0, thresholdMajor)) : '0'
+  const thresholdStr = thresholdMajor != null ? String(Math.max(0, thresholdMajor)) : '0'
   const topupStr = String(config.topup.amountMinor / getMinorUnitsPerMajor(currency))
   return {
     ...base,
@@ -386,10 +382,7 @@ export function formatAmountWithUnit(
   return formatPrice(Math.round(num * getMinorUnitsPerMajor(currency)), currency, { free: '' })
 }
 
-export function buildSummaryLine(
-  form: AutoRechargeFormState,
-  currency: string,
-): string | null {
+export function buildSummaryLine(form: AutoRechargeFormState, currency: string): string | null {
   if (!form.enabled) return null
   const thresholdDisplay = formatAmountWithUnit(
     form.thresholdAmountMajor,
@@ -410,8 +403,7 @@ export function payloadToForm(
   }
   const thresholdStr = String(payload.thresholdAmountMajor ?? base.thresholdAmountMajor)
   const topupStr = String(payload.topupAmountMajor ?? base.topupAmountMajor)
-  const capStr =
-    payload.maxMonthlySpendMajor != null ? String(payload.maxMonthlySpendMajor) : ''
+  const capStr = payload.maxMonthlySpendMajor != null ? String(payload.maxMonthlySpendMajor) : ''
   return {
     ...base,
     enabled: true,

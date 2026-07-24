@@ -239,36 +239,40 @@ const OperationShadow = z
 const GlobalShadow = z
   .object({
     /** Object keys whose values are always treated as volatile. */
-    globalVolatileKeys: z.array(z.string()).default([
-      'createdAt',
-      'updatedAt',
-      'id',
-      'reference',
-      'idempotencyKey',
-      'clientSecret',
-      'sessionId',
-      'email',
-      'name',
-    ]),
+    globalVolatileKeys: z
+      .array(z.string())
+      .default([
+        'createdAt',
+        'updatedAt',
+        'id',
+        'reference',
+        'idempotencyKey',
+        'clientSecret',
+        'sessionId',
+        'email',
+        'name',
+      ]),
     /** Keys ending with these suffixes (e.g. `customerRef`) are volatile. */
     volatileKeySuffixes: z.array(z.string()).default(['Ref']),
     /**
      * String prefixes that mark SolvaPay resource refs (`prd_…`, `cus_…`).
      * Matching tokens in strings/URLs are normalized.
      */
-    refPrefixes: z.array(z.string()).default([
-      'prd_',
-      'pln_',
-      'cus_',
-      'cusess_',
-      'pur_',
-      'pi_',
-      'ses_',
-      'usg_',
-      'cs_',
-      'top_',
-      'mcp_',
-    ]),
+    refPrefixes: z
+      .array(z.string())
+      .default([
+        'prd_',
+        'pln_',
+        'cus_',
+        'cusess_',
+        'pur_',
+        'pi_',
+        'ses_',
+        'usg_',
+        'cs_',
+        'top_',
+        'mcp_',
+      ]),
   })
   .default({
     globalVolatileKeys: [
@@ -393,12 +397,7 @@ export const BINDING_SERIALIZE_KINDS = [
 export type BindingSerializeKind = (typeof BINDING_SERIALIZE_KINDS)[number]
 
 /** Generated shim files a binding symbol can land in (§5.7 / step 39G-b). */
-export const BINDING_ARTIFACTS = [
-  'decisions',
-  'payloadBuilders',
-  'client',
-  'webhook',
-] as const
+export const BINDING_ARTIFACTS = ['decisions', 'payloadBuilders', 'client', 'webhook'] as const
 export type BindingArtifact = (typeof BINDING_ARTIFACTS)[number]
 
 const BindingArgSchema = z.object({
@@ -851,9 +850,7 @@ export function assertNoNameCollisions(manifest: SdkContractManifest): string[] 
 export function assertOperationCount(manifest: SdkContractManifest): string[] {
   const count = Object.keys(manifest.operations).length
   if (count !== EXPECTED_OPERATION_COUNT) {
-    return [
-      `Operation count: expected ${EXPECTED_OPERATION_COUNT}, found ${count}`,
-    ]
+    return [`Operation count: expected ${EXPECTED_OPERATION_COUNT}, found ${count}`]
   }
   return []
 }
@@ -946,9 +943,7 @@ export function collectTypeRefs(ty: OverlayTypeRef): string[] {
 }
 
 /** Collect named type refs from overlay field maps. */
-export function collectFieldRefs(
-  fields: Record<string, OverlayField> | undefined,
-): string[] {
+export function collectFieldRefs(fields: Record<string, OverlayField> | undefined): string[] {
   if (fields === undefined) {
     return []
   }
@@ -988,10 +983,7 @@ export function collectOverlayDeps(overlay: Overlay): string[] {
  * Wire type names synthesized by dto-gen that are not always present as
  * `components.schemas` entries (inline response oneOfs).
  */
-export const IR_SYNTHESIZED_TYPE_NAMES = new Set([
-  'ProcessPaymentResult',
-  'PaymentMethodResult',
-])
+export const IR_SYNTHESIZED_TYPE_NAMES = new Set(['ProcessPaymentResult', 'PaymentMethodResult'])
 
 /**
  * Cross-check operations against the OpenAPI snapshot and the overlay catalog.
@@ -1137,9 +1129,7 @@ export function assertBindingReconciliation(manifest: SdkContractManifest): stri
   for (const [id, symbol] of Object.entries(bindings)) {
     const prior = coreOwners.get(symbol.core)
     if (prior !== undefined) {
-      issues.push(
-        `Bindings: duplicate core path "${symbol.core}" used by ${prior} and ${id}`,
-      )
+      issues.push(`Bindings: duplicate core path "${symbol.core}" used by ${prior} and ${id}`)
     } else {
       coreOwners.set(symbol.core, id)
     }
@@ -1164,16 +1154,12 @@ export function assertBindingReconciliation(manifest: SdkContractManifest): stri
             ? manifest.coreHelpers
             : manifest.facade
     if (!(catalogId in sectionMap)) {
-      issues.push(
-        `Bindings: ${id} catalog link ${catalogKey} does not resolve to a catalog entry`,
-      )
+      issues.push(`Bindings: ${id} catalog link ${catalogKey} does not resolve to a catalog entry`)
       continue
     }
     const prior = linkers.get(catalogKey)
     if (prior !== undefined) {
-      issues.push(
-        `Bindings: catalog ${catalogKey} has multiple binders (${prior}, ${id})`,
-      )
+      issues.push(`Bindings: catalog ${catalogKey} has multiple binders (${prior}, ${id})`)
     } else {
       linkers.set(catalogKey, id)
     }
@@ -1184,7 +1170,7 @@ export function assertBindingReconciliation(manifest: SdkContractManifest): stri
     const key = `operation.${opId}`
     if (!linkers.has(key)) {
       issues.push(
-        `Bindings: orphan catalog entry ${key} has no binding linker`,
+        `Bindings: orphan catalog entry ${key} has no binding linker (fix: pnpm gen:bindings --fix)`,
       )
     }
   }
@@ -1194,9 +1180,7 @@ export function assertBindingReconciliation(manifest: SdkContractManifest): stri
     }
     const key = `topLevel.${id}`
     if (!linkers.has(key)) {
-      issues.push(
-        `Bindings: orphan catalog entry ${key} has no binding linker`,
-      )
+      issues.push(`Bindings: orphan catalog entry ${key} has no binding linker`)
     }
   }
   for (const id of BINDING_CATALOG_BOUNDARY_CORE_HELPERS) {
@@ -1205,16 +1189,12 @@ export function assertBindingReconciliation(manifest: SdkContractManifest): stri
     }
     const key = `coreHelper.${id}`
     if (!linkers.has(key)) {
-      issues.push(
-        `Bindings: orphan catalog entry ${key} has no binding linker`,
-      )
+      issues.push(`Bindings: orphan catalog entry ${key} has no binding linker`)
     }
   }
 
   // (b) shim js_names ↔ bindings names.ts
-  const bindingJsNames = new Set(
-    Object.values(bindings).map(symbol => symbol.names.ts),
-  )
+  const bindingJsNames = new Set(Object.values(bindings).map(symbol => symbol.names.ts))
   const infra = new Set<string>(BINDING_INFRA_ALLOWLIST)
   const shimNames = new Set<string>(SHIM_JS_NAMES)
 
@@ -1223,9 +1203,7 @@ export function assertBindingReconciliation(manifest: SdkContractManifest): stri
       continue
     }
     if (!bindingJsNames.has(jsName)) {
-      issues.push(
-        `Bindings: orphan shim js_name "${jsName}" has no bindings entry`,
-      )
+      issues.push(`Bindings: orphan shim js_name "${jsName}" has no bindings entry`)
     }
   }
   for (const jsName of bindingJsNames) {
@@ -1233,9 +1211,7 @@ export function assertBindingReconciliation(manifest: SdkContractManifest): stri
       continue
     }
     if (!shimNames.has(jsName)) {
-      issues.push(
-        `Bindings: bindings export "${jsName}" is not in the committed shim inventory`,
-      )
+      issues.push(`Bindings: bindings export "${jsName}" is not in the committed shim inventory`)
     }
   }
 

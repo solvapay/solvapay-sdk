@@ -51,11 +51,11 @@ ANTHROPIC_API_KEY=sk-... tsx benchmark/agent-compare.ts \
 
 ## Scripts
 
-| Script | Purpose | Key Flags |
-|--------|---------|-----------|
-| `micro.ts` | Deterministic per-tool latency measurement | `--url`, `--token`, `--iterations`, `--warmup`, `--label` |
-| `agent.ts` | Real LLM agent end-to-end measurement | `--url`, `--token`, `--runs`, `--model`, `--label` |
-| `agent-compare.ts` | Side-by-side agent comparison (2 or 3-way) | `--baseline`, `--sdk`, `--proxy`, `--runs`, `--region` |
+| Script             | Purpose                                    | Key Flags                                                 |
+| ------------------ | ------------------------------------------ | --------------------------------------------------------- |
+| `micro.ts`         | Deterministic per-tool latency measurement | `--url`, `--token`, `--iterations`, `--warmup`, `--label` |
+| `agent.ts`         | Real LLM agent end-to-end measurement      | `--url`, `--token`, `--runs`, `--model`, `--label`        |
+| `agent-compare.ts` | Side-by-side agent comparison (2 or 3-way) | `--baseline`, `--sdk`, `--proxy`, `--runs`, `--region`    |
 
 ### micro.ts
 

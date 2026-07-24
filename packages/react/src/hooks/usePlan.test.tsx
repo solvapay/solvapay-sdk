@@ -39,18 +39,12 @@ describe('usePlan', () => {
 
   it('fetches plans via /api/list-plans when productRef is provided', async () => {
     const fetchFn = makeFetch({ plans: [planA, planB] })
-    const { result } = renderHook(
-      () => usePlan({ planRef: 'pln_b', productRef: 'prd_x' }),
-      {
-        wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
-      },
-    )
+    const { result } = renderHook(() => usePlan({ planRef: 'pln_b', productRef: 'prd_x' }), {
+      wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+    })
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.plan).toEqual(planB)
-    expect(fetchFn).toHaveBeenCalledWith(
-      '/api/list-plans?productRef=prd_x',
-      expect.any(Object),
-    )
+    expect(fetchFn).toHaveBeenCalledWith('/api/list-plans?productRef=prd_x', expect.any(Object))
   })
 
   it('piggybacks on usePlans cache', async () => {
@@ -60,12 +54,9 @@ describe('usePlan', () => {
       promise: null,
     })
     const fetchFn = makeFetch({ plans: [] })
-    const { result } = renderHook(
-      () => usePlan({ planRef: 'pln_a', productRef: 'prd_x' }),
-      {
-        wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
-      },
-    )
+    const { result } = renderHook(() => usePlan({ planRef: 'pln_a', productRef: 'prd_x' }), {
+      wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+    })
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.plan).toEqual(planA)
     expect(fetchFn).not.toHaveBeenCalled()
@@ -73,12 +64,9 @@ describe('usePlan', () => {
 
   it('exposes error when planRef not found in product', async () => {
     const fetchFn = makeFetch({ plans: [planA] })
-    const { result } = renderHook(
-      () => usePlan({ planRef: 'pln_missing', productRef: 'prd_x' }),
-      {
-        wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
-      },
-    )
+    const { result } = renderHook(() => usePlan({ planRef: 'pln_missing', productRef: 'prd_x' }), {
+      wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
+    })
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.plan).toBeNull()
     expect(result.current.error).toBeInstanceOf(Error)
@@ -100,16 +88,13 @@ describe('usePlan', () => {
       timestamp: Date.now(),
       promise: null,
     })
-    const { result } = renderHook(
-      () => usePlan({ planRef: 'pln_b', productRef: 'prd_x' }),
-      {
-        wrapper: wrapper({
-          fetch: fetchFn as unknown as typeof fetch,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          transport: { checkPurchase: vi.fn() } as any,
-        }),
-      },
-    )
+    const { result } = renderHook(() => usePlan({ planRef: 'pln_b', productRef: 'prd_x' }), {
+      wrapper: wrapper({
+        fetch: fetchFn as unknown as typeof fetch,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        transport: { checkPurchase: vi.fn() } as any,
+      }),
+    })
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.plan).toEqual(planB)
     expect(fetchFn).not.toHaveBeenCalled()

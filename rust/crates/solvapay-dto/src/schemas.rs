@@ -1,8 +1,4 @@
-// @generated — do not edit. Regenerate with:
-//   cargo run -p dto-gen -- \
-//     --snapshot ../contract/openapi/sdk-v1.snapshot.json \
-//     --manifest ../contract/manifest/sdk-contract.yaml \
-//     --out crates/solvapay-dto/src
+// @generated — do not edit. Regenerate with: pnpm gen
 
 //! Generated wire schemas.
 

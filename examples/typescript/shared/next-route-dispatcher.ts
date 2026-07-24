@@ -37,18 +37,9 @@ import type { SolvaPay } from '@solvapay/server'
 type Handler = (request: Request) => Promise<Response>
 
 export type SolvaPayRouteHandlers = {
-  GET: (
-    request: Request,
-    ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<Response>
-  POST: (
-    request: Request,
-    ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<Response>
-  PUT: (
-    request: NextRequest,
-    ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<Response>
+  GET: (request: Request, ctx: { params: Promise<{ solvapay: string[] }> }) => Promise<Response>
+  POST: (request: Request, ctx: { params: Promise<{ solvapay: string[] }> }) => Promise<Response>
+  PUT: (request: NextRequest, ctx: { params: Promise<{ solvapay: string[] }> }) => Promise<Response>
   DELETE: (
     request: NextRequest,
     ctx: { params: Promise<{ solvapay: string[] }> },

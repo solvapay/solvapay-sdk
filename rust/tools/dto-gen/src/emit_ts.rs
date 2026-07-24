@@ -8,12 +8,7 @@ use crate::name::rust_type_name;
 
 const GENERATED_HEADER: &str = "\
 /**\n\
- * @generated — do not edit. Regenerate with:\n\
- *   cargo run -p dto-gen -- \\\n\
- *     --snapshot ../contract/openapi/sdk-v1.snapshot.json \\\n\
- *     --manifest ../contract/manifest/sdk-contract.yaml \\\n\
- *     --out crates/solvapay-dto/src \\\n\
- *     --ts-out packages/server/src/types/overlays.generated.d.ts\n\
+ * @generated — do not edit. Regenerate with: pnpm gen\n\
  */\n\n";
 
 /// Emits `overlays.generated.d.ts` contents.

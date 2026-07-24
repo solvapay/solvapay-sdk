@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 /**
- * Replay the webhook-verification corpus against the edge facade only,
- * with SOLVAPAY_IMPL forced so Node napi's wall-clock path is not involved.
+ * Replay the webhook-verification corpus against the edge facade only.
  *
  * Usage:
- *   SOLVAPAY_IMPL=rust node scripts/replay-webhook-edge-wasm.mjs
- *   SOLVAPAY_IMPL=ts node scripts/replay-webhook-edge-wasm.mjs
+ *   node scripts/replay-webhook-edge-wasm.mjs
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -14,9 +12,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(__dirname, '..')
 const fixturesDir = join(repoRoot, 'contract/fixtures/webhook-verification')
-
-const impl = process.env.SOLVAPAY_IMPL ?? 'rust'
-process.env.SOLVAPAY_IMPL = impl
 
 const { verifyWebhook } = await import(
   pathToFileURL(join(repoRoot, 'packages/server/dist/edge.js')).href
@@ -66,9 +61,9 @@ for (const file of files) {
       }
     }
     passed += 1
-    console.log(`OK  ${file} (${impl})`)
+    console.log(`OK  ${file}`)
   } catch (err) {
-    console.error(`FAIL ${file} (${impl}): ${err instanceof Error ? err.message : err}`)
+    console.error(`FAIL ${file}: ${err instanceof Error ? err.message : err}`)
     restoreClock()
     process.exit(1)
   } finally {
@@ -76,4 +71,4 @@ for (const file of files) {
   }
 }
 
-console.log(`OK: ${passed}/${files.length} webhook fixtures via edge (${impl})`)
+console.log(`OK: ${passed}/${files.length} webhook fixtures via edge WASM`)

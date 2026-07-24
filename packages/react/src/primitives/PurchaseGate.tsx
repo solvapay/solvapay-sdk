@@ -9,12 +9,7 @@
  * `Allowed`, `Blocked`, `Loading`, and `Error` subcomponents.
  */
 
-import React, {
-  createContext,
-  forwardRef,
-  useContext,
-  useMemo,
-} from 'react'
+import React, { createContext, forwardRef, useContext, useMemo } from 'react'
 import { Slot } from './slot'
 import { usePurchase } from '../hooks/usePurchase'
 import { SolvaPayContext } from '../SolvaPayProvider'
@@ -71,12 +66,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function PurchaseGateRoot(
   const Comp = asChild ? Slot : 'div'
   return (
     <PurchaseGateContext.Provider value={ctx}>
-      <Comp
-        ref={forwardedRef}
-        data-solvapay-purchase-gate=""
-        data-state={state}
-        {...rest}
-      >
+      <Comp ref={forwardedRef} data-solvapay-purchase-gate="" data-state={state} {...rest}>
         {children}
       </Comp>
     </PurchaseGateContext.Provider>

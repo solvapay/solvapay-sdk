@@ -43,11 +43,7 @@ describe('handleRouteError', () => {
 
   it('maps unknown non-Error throws to details Unknown error', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    const result = handleRouteError(
-      'string-throw',
-      'Get merchant',
-      'Failed to fetch merchant',
-    )
+    const result = handleRouteError('string-throw', 'Get merchant', 'Failed to fetch merchant')
     expect(result).toEqual({
       error: 'Failed to fetch merchant',
       status: 500,

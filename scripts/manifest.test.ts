@@ -246,17 +246,16 @@ function stubBindings(
       return: 'value',
       sync: catalog.kind === 'operation' ? 'async' : 'sync',
       envelope:
-        js === 'verifyWebhook'
-          ? 'webhookThrow'
-          : catalog.kind === 'operation'
-            ? 'async'
-            : 'sync',
+        js === 'verifyWebhook' ? 'webhookThrow' : catalog.kind === 'operation' ? 'async' : 'sync',
     }
   }
   return bindings
 }
 
-function writeFixture(dir: string, manifest: SdkContractManifest): {
+function writeFixture(
+  dir: string,
+  manifest: SdkContractManifest,
+): {
   manifestPath: string
   snapshotPath: string
 } {
@@ -292,13 +291,7 @@ describe('manifest CLI', () => {
     const dir = makeTempDir()
     const { manifestPath, snapshotPath } = writeFixture(dir, buildFixtureManifest())
 
-    const result = await runCli([
-      '--check',
-      '--manifest',
-      manifestPath,
-      '--snapshot',
-      snapshotPath,
-    ])
+    const result = await runCli(['--check', '--manifest', manifestPath, '--snapshot', snapshotPath])
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toMatch(/passed/i)
@@ -310,13 +303,7 @@ describe('manifest CLI', () => {
     manifest.operations.checkLimits.names.go = ''
     const { manifestPath, snapshotPath } = writeFixture(dir, manifest)
 
-    const result = await runCli([
-      '--check',
-      '--manifest',
-      manifestPath,
-      '--snapshot',
-      snapshotPath,
-    ])
+    const result = await runCli(['--check', '--manifest', manifestPath, '--snapshot', snapshotPath])
 
     expect(result.exitCode).not.toBe(0)
     expect(`${result.stdout}${result.stderr}`).toMatch(/go|coverage|name/i)
@@ -328,13 +315,7 @@ describe('manifest CLI', () => {
     manifest.operations.checkLimits.route.path = '/v1/sdk/does-not-exist'
     const { manifestPath, snapshotPath } = writeFixture(dir, manifest)
 
-    const result = await runCli([
-      '--check',
-      '--manifest',
-      manifestPath,
-      '--snapshot',
-      snapshotPath,
-    ])
+    const result = await runCli(['--check', '--manifest', manifestPath, '--snapshot', snapshotPath])
 
     expect(result.exitCode).not.toBe(0)
     expect(`${result.stdout}${result.stderr}`).toMatch(/route|OpenAPI/i)
@@ -346,13 +327,7 @@ describe('manifest CLI', () => {
     manifest.operations.getCustomer.names.ts = 'checkLimits'
     const { manifestPath, snapshotPath } = writeFixture(dir, manifest)
 
-    const result = await runCli([
-      '--check',
-      '--manifest',
-      manifestPath,
-      '--snapshot',
-      snapshotPath,
-    ])
+    const result = await runCli(['--check', '--manifest', manifestPath, '--snapshot', snapshotPath])
 
     expect(result.exitCode).not.toBe(0)
     expect(`${result.stdout}${result.stderr}`).toMatch(/collision/i)

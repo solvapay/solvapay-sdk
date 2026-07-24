@@ -2,9 +2,9 @@
 
 Checked-in OpenAPI inputs for the Rust core SDK migration (Phase 0 / Step 1).
 
-| File | Role |
-| --- | --- |
-| `sdk-v1.source.json` | Recorded backend OpenAPI **restricted to `/v1/sdk/*` paths**, schemas intact (unpruned). Offline CI input. |
+| File                   | Role                                                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `sdk-v1.source.json`   | Recorded backend OpenAPI **restricted to `/v1/sdk/*` paths**, schemas intact (unpruned). Offline CI input.  |
 | `sdk-v1.snapshot.json` | Derived deliverable: path-filtered, schemas pruned, dangling `$ref` placeholders added, keys canonicalized. |
 
 `/v1/sdk/agents` is excluded (parity with `packages/server/scripts/generate-types.ts`). That exclusion is currently a no-op if the route is absent upstream.

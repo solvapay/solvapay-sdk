@@ -114,9 +114,10 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'version',
   // OpenAPI namespace re-export
   'components',
-  // @internal WASM client seams re-exported from @solvapay/server (Step 53):
-  // used only by the contract fixture harness to drive the Rust FetchTransport
-  // under Node. Not part of the portable cross-language surface.
+  // @internal native / WASM seams re-exported from @solvapay/server:
+  // fixture harness + package installs. Not part of the portable
+  // cross-language surface.
+  'callNativeSync',
   'loadWasmBinding',
   'getWasmClient',
   'setWasmClientForTests',
@@ -167,9 +168,7 @@ export function cataloguedTsEntries(manifest: SdkContractManifest): CataloguedEn
     })
   }
   for (const [id, entry] of Object.entries(manifest.facade)) {
-    const tsName = entry.names.ts.includes('.')
-      ? entry.names.ts.split('.').pop()!
-      : entry.names.ts
+    const tsName = entry.names.ts.includes('.') ? entry.names.ts.split('.').pop()! : entry.names.ts
     const surface =
       id === 'createSolvaPay' || id === 'createSolvaPayClient' ? 'export' : 'facadeMethod'
     out.push({

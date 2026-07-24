@@ -39,7 +39,9 @@ pub fn emit_parity_suite_go(ir: &Ir) -> GenResult<String> {
     output.push_str("\tparams []string\n");
     output.push_str("}\n\n");
 
-    output.push_str("// operationSignatures locks the Go facade surface (presence + arity + names).\n");
+    output.push_str(
+        "// operationSignatures locks the Go facade surface (presence + arity + names).\n",
+    );
     output.push_str("var operationSignatures = []operationSignature{\n");
     for (entry, _) in &ops {
         let params = entry
@@ -53,11 +55,7 @@ pub fn emit_parity_suite_go(ir: &Ir) -> GenResult<String> {
         } else {
             format!("[]string{{{params}}}")
         };
-        let _ = writeln!(
-            output,
-            "\t{{\"{}\", {params_lit}}},",
-            entry.names.go
-        );
+        let _ = writeln!(output, "\t{{\"{}\", {params_lit}}},", entry.names.go);
     }
     output.push_str("}\n\n");
 

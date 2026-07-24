@@ -49,10 +49,7 @@ export function shadowRulesForOperation(
  * - Explicit `null` is dropped (treated as absent) so typed Rust omit-empty
  *   matches TS `res.json()` null passthrough for optional fields.
  */
-export function normalizeVolatile(
-  value: unknown,
-  rules: ShadowNormalizeRules,
-): unknown {
+export function normalizeVolatile(value: unknown, rules: ShadowNormalizeRules): unknown {
   const cloned = structuredClone(value) as unknown
   for (const pointer of rules.pointers) {
     deletePointer(cloned, pointer)
@@ -92,8 +89,7 @@ function walk(value: unknown, rules: ShadowNormalizeRules): unknown {
 }
 
 /** ISO-8601 timestamps (with optional fractional seconds / Z / offset). */
-const ISO_TIMESTAMP_RE =
-  /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/g
+const ISO_TIMESTAMP_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/g
 
 /** Hosted-page / session opaque ids in query strings. */
 const QUERY_ID_RE = /([?&]id=)[0-9a-fA-F]{16,}/g
@@ -101,10 +97,7 @@ const QUERY_ID_RE = /([?&]id=)[0-9a-fA-F]{16,}/g
 /** Email addresses embedded in error messages or bodies. */
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
 
-function normalizeVolatileString(
-  value: string,
-  rules: ShadowNormalizeRules,
-): string {
+function normalizeVolatileString(value: string, rules: ShadowNormalizeRules): string {
   if (rules.refPrefixes.some(prefix => value.startsWith(prefix))) {
     return VOLATILE_SENTINEL
   }
@@ -136,10 +129,7 @@ function deletePointer(root: unknown, pointer: string): void {
   if (!pointer.startsWith('/')) {
     throw new Error(`Invalid JSON Pointer (must start with /): ${pointer}`)
   }
-  const tokens = pointer
-    .slice(1)
-    .split('/')
-    .map(decodePointerToken)
+  const tokens = pointer.slice(1).split('/').map(decodePointerToken)
   let current: unknown = root
   for (let i = 0; i < tokens.length - 1; i += 1) {
     const token = tokens[i]

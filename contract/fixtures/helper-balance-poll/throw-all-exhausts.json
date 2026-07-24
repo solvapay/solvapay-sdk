@@ -5,12 +5,7 @@
     "fn": "pollBalanceUntilIncreased",
     "args": {
       "baseline": 400,
-      "observations": [
-        { "throw": "a" },
-        { "throw": "b" },
-        { "throw": "c" },
-        { "throw": "d" }
-      ],
+      "observations": [{ "throw": "a" }, { "throw": "b" }, { "throw": "c" }, { "throw": "d" }],
       "delays": "topup"
     }
   },

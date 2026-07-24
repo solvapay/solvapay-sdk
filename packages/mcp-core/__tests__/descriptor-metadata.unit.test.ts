@@ -105,9 +105,7 @@ describe('buildPromptDescriptorMetadata / buildPromptUserMessage', () => {
 
   it('builds exact user messages', () => {
     expect(buildPromptUserMessage(MCP_TOOL_NAMES.upgrade, { planRef: 'pln_x' })).toEqual({
-      messages: [
-        { role: 'user', content: { type: 'text', text: 'Activate plan pln_x for me.' } },
-      ],
+      messages: [{ role: 'user', content: { type: 'text', text: 'Activate plan pln_x for me.' } }],
     })
     expect(buildPromptUserMessage(MCP_TOOL_NAMES.topup, {})).toEqual({
       messages: [

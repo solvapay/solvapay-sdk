@@ -2,13 +2,11 @@
  * Shared install-gated sync dispatch for `@solvapay/core` (Step 52).
  *
  * Node (`@solvapay/server`) and vitest setup call {@link installNativeCoreApi}.
- * Browser installs via eager `@solvapay/core/browser-wasm`. When uninstalled
- * (or `SOLVAPAY_IMPL=ts`), sync APIs throw — there is no portable TS fallback.
+ * Browser installs via eager `@solvapay/core/browser-wasm`. When uninstalled,
+ * sync APIs throw — there is no portable TS fallback.
  */
 
 import { SolvaPayError } from './solvapay-error'
-
-export type SolvaPayImpl = 'ts' | 'rust'
 
 export type NativeCoreSyncMethod =
   // Domain (37R-d)
@@ -65,7 +63,6 @@ export type NativeCoreSyncMethod =
 
 type NativeCoreApi = {
   callNativeSync: (fn: NativeCoreSyncMethod, argsJson: string) => unknown
-  resolveImpl: (surface: string) => SolvaPayImpl
 }
 
 let installed: NativeCoreApi | null = null
@@ -81,11 +78,11 @@ export function resetNativeCoreApiForTests(): void {
 
 /**
  * Dispatches a sync core/helper method to the installed binding.
- * Throws when the API is not installed or `SOLVAPAY_IMPL` forces TypeScript
- * (Rust-only after Step 52 — no portable TS fallback).
+ * Throws when the API is not installed (Rust-only after Step 52 — no portable
+ * TS fallback).
  */
 export function dispatchSync<T>(fn: NativeCoreSyncMethod, args: unknown): T {
-  if (installed === null || installed.resolveImpl('helper') !== 'rust') {
+  if (installed === null) {
     throw new SolvaPayError('core sync API not installed')
   }
   return installed.callNativeSync(fn, JSON.stringify(args)) as T

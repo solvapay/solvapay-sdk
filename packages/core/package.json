@@ -44,8 +44,6 @@
     "dev": "tsup src/index.ts src/business-details-public.ts src/browser-wasm.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external @solvapay/server-wasm --watch",
     "test": "vitest run",
     "test:unit": "vitest run",
-    "test:unit:rust": "SOLVAPAY_IMPL=rust pnpm run test:unit",
-    "test:unit:ts": "pnpm run test:unit:rust",
     "test:watch": "vitest",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"

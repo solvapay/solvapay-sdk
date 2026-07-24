@@ -23,12 +23,7 @@ import { createAuth0ClientAuthAdapter } from '@solvapay/react/auth0'
 export function SolvaPayClientProvider({ children }: { children: React.ReactNode }) {
   const { user } = useUser()
 
-  const adapter = useMemo(
-    () => createAuth0ClientAuthAdapter({ userId: user?.sub }),
-    [user?.sub],
-  )
+  const adapter = useMemo(() => createAuth0ClientAuthAdapter({ userId: user?.sub }), [user?.sub])
 
-  return (
-    <SolvaPayProvider config={{ auth: { adapter } }}>{children}</SolvaPayProvider>
-  )
+  return <SolvaPayProvider config={{ auth: { adapter } }}>{children}</SolvaPayProvider>
 }

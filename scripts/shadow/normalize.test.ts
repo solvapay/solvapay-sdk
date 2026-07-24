@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  VOLATILE_SENTINEL,
-  normalizeVolatile,
-  type ShadowNormalizeRules,
-} from './normalize.js'
+import { VOLATILE_SENTINEL, normalizeVolatile, type ShadowNormalizeRules } from './normalize.js'
 
 const BASE_RULES: ShadowNormalizeRules = {
   globalVolatileKeys: ['createdAt', 'updatedAt', 'id', 'reference', 'idempotencyKey'],
@@ -60,9 +56,7 @@ describe('normalizeVolatile', () => {
       // typed Rust side may omit volatile keys entirely
       price: 100,
     }
-    expect(normalizeVolatile(left, BASE_RULES)).toEqual(
-      normalizeVolatile(right, BASE_RULES),
-    )
+    expect(normalizeVolatile(left, BASE_RULES)).toEqual(normalizeVolatile(right, BASE_RULES))
   })
 
   it('leaves non-volatile bytes untouched', () => {
@@ -96,8 +90,7 @@ describe('normalizeVolatile', () => {
 
   it('normalizes timestamps, emails, and session id query params in strings', () => {
     const input = {
-      message:
-        'failed at 2026-07-17T13:01:21.082Z for user shadow-ts@example.com path=/x',
+      message: 'failed at 2026-07-17T13:01:21.082Z for user shadow-ts@example.com path=/x',
       checkoutUrl:
         'https://jack-local.ngrok.app/customer/checkout?id=6ef05a85b897ab52defe4f41f7e7831f',
     }
@@ -109,8 +102,8 @@ describe('normalizeVolatile', () => {
 
   it('no-ops for missing JSON pointers', () => {
     const input = { name: 'A' }
-    expect(
-      normalizeVolatile(input, { ...BASE_RULES, pointers: ['/missing/path'] }),
-    ).toEqual({ name: 'A' })
+    expect(normalizeVolatile(input, { ...BASE_RULES, pointers: ['/missing/path'] })).toEqual({
+      name: 'A',
+    })
   })
 })

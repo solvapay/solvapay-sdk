@@ -14,10 +14,7 @@
     "result": [
       {
         "src": "https://cdn.example.com/icon.png",
-        "sizes": [
-          "any",
-          "512x512"
-        ]
+        "sizes": ["any", "512x512"]
       }
     ]
   }

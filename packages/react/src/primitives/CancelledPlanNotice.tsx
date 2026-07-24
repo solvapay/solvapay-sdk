@@ -12,13 +12,7 @@
  * with `data-state=idle|reactivating`.
  */
 
-import React, {
-  createContext,
-  forwardRef,
-  useCallback,
-  useContext,
-  useMemo,
-} from 'react'
+import React, { createContext, forwardRef, useCallback, useContext, useMemo } from 'react'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { usePurchaseStatus } from '../hooks/usePurchaseStatus'
@@ -67,12 +61,8 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function CancelledPlanNoticeR
   const solva = useContext(SolvaPayContext)
   if (!solva) throw new MissingProviderError('CancelledPlanNotice')
 
-  const {
-    cancelledPurchase,
-    shouldShowCancelledNotice,
-    formatDate,
-    getDaysUntilExpiration,
-  } = usePurchaseStatus()
+  const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
+    usePurchaseStatus()
   const { reactivateRenewal, isReactivating } = usePurchaseActions()
 
   const reactivate = useCallback(async () => {
@@ -92,8 +82,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function CancelledPlanNoticeR
 
   const ctx = useMemo<CancelledPlanNoticeContextValue | null>(() => {
     if (!cancelledPurchase) return null
-    const state: NoticeState =
-      daysRemaining != null && daysRemaining > 0 ? 'active' : 'expired'
+    const state: NoticeState = daysRemaining != null && daysRemaining > 0 ? 'active' : 'expired'
     return {
       purchase: cancelledPurchase,
       state,

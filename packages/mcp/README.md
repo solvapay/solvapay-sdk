@@ -51,11 +51,11 @@ One call wires transport tools, UI resource (Stripe CSP baseline), and your paya
 
 ## Subpath exports
 
-| Import | Use when |
-| --- | --- |
-| `@solvapay/mcp` | `createSolvaPayMcpServer`, `registerPayableTool` |
-| `@solvapay/mcp/express` | Node `(req, res, next)` OAuth middleware |
-| `@solvapay/mcp/fetch` | Edge `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch` |
+| Import                  | Use when                                                        |
+| ----------------------- | --------------------------------------------------------------- |
+| `@solvapay/mcp`         | `createSolvaPayMcpServer`, `registerPayableTool`                |
+| `@solvapay/mcp/express` | Node `(req, res, next)` OAuth middleware                        |
+| `@solvapay/mcp/fetch`   | Edge `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch` |
 
 Framework-neutral contracts live in [`@solvapay/mcp-core`](../mcp-core).
 

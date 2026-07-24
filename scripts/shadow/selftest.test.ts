@@ -11,11 +11,7 @@ import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { scenarioOperationCoverage } from '../../contract/shadow/scenarios.js'
 import { FACADE_SHADOW_OPERATION_NAMES } from './facade-driver.js'
-import {
-  printReport,
-  reportHasFailures,
-  runShadowSuite,
-} from './orchestrator.js'
+import { printReport, reportHasFailures, runShadowSuite } from './orchestrator.js'
 import { startStubBackend, type StubBackend } from './stub-backend.js'
 import { SHADOW_SCENARIOS } from '../../contract/shadow/scenarios.js'
 
@@ -52,9 +48,7 @@ describe('shadow selftest (stub backend)', () => {
 
     const identical = report.results.filter(r => r.status === 'IDENTICAL')
     const skipped = report.results.filter(r => r.status === 'SKIPPED')
-    const bad = report.results.filter(
-      r => r.status === 'DIVERGED' || r.status === 'ERROR',
-    )
+    const bad = report.results.filter(r => r.status === 'DIVERGED' || r.status === 'ERROR')
 
     expect(skipped.length).toBeGreaterThan(0)
     expect(skipped.every(s => (s.reason ?? '').includes('requires:'))).toBe(true)

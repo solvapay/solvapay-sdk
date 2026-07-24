@@ -66,8 +66,7 @@ export function enrichPurchase(purchase: Record<string, unknown>): Record<string
     typeof purchase.originalAmount === 'number' ? purchase.originalAmount : undefined
   const currency = typeof purchase.currency === 'string' ? purchase.currency : undefined
 
-  const priceDisplay =
-    formatMinorUnits(originalAmount, currency) ?? formatMinorUnits(amount, 'USD')
+  const priceDisplay = formatMinorUnits(originalAmount, currency) ?? formatMinorUnits(amount, 'USD')
 
   const priceUsdDisplay =
     currency && currency.toUpperCase() !== 'USD' ? formatMinorUnits(amount, 'USD') : null
@@ -223,7 +222,12 @@ export function narratedToolResult(
   mode: SolvaPayToolMode = 'ui',
   baseMeta: Record<string, unknown> | undefined = undefined,
 ): SolvaPayCallToolResult {
-  const narrator = (NARRATORS as Record<string, (d: BootstrapPayload) => { text: string; links?: Array<{ uri: string; name: string }> }>)[tool]
+  const narrator = (
+    NARRATORS as Record<
+      string,
+      (d: BootstrapPayload) => { text: string; links?: Array<{ uri: string; name: string }> }
+    >
+  )[tool]
   if (!narrator) {
     const fallback = toolResult(data)
     if (mode === 'text' && baseMeta && 'ui' in baseMeta) {
@@ -241,7 +245,7 @@ export function narratedToolResult(
     annotations: { audience: ['assistant'] },
   }
 
-  const resourceLinkBlocks = ((links ?? []).map((l) => ({
+  const resourceLinkBlocks = (links ?? []).map(l => ({
     type: 'resource_link',
     uri: l.uri,
     name: l.name,
@@ -250,7 +254,7 @@ export function narratedToolResult(
     // `SolvaPayCallToolResult`, but the official SDK accepts it — we
     // cast at the boundary to keep the local type narrow while still
     // shipping the enrichment.
-  })) as unknown as SolvaPayCallToolResult['content'])
+  })) as unknown as SolvaPayCallToolResult['content']
 
   const placeholderBlock: SolvaPayCallToolResult['content'][number] = {
     type: 'text',

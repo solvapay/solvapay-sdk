@@ -76,7 +76,11 @@ export interface SolvaPayCallToolResult {
   content: Array<
     | { type: 'text'; text: string; annotations?: SolvaPayContentAnnotations }
     | { type: 'image'; data: string; mimeType: string; annotations?: SolvaPayContentAnnotations }
-    | { type: 'resource'; resource: Record<string, unknown>; annotations?: SolvaPayContentAnnotations }
+    | {
+        type: 'resource'
+        resource: Record<string, unknown>
+        annotations?: SolvaPayContentAnnotations
+      }
   >
   structuredContent?: Record<string, unknown>
   isError?: boolean

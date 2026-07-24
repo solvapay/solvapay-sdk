@@ -8,8 +8,8 @@
  *
  * Node entry (`index.ts`) installs napi dispatch; edge entry (`edge.ts`)
  * installs WASM dispatch. After Step 53 the logic is Rust-only: an uninstalled
- * API — or `SOLVAPAY_IMPL=ts` — throws {@link SolvaPayError}. Restoring the old
- * behaviour requires republishing the prior `@solvapay/server` facade.
+ * API throws {@link SolvaPayError}. Restoring the old behaviour requires
+ * republishing the prior `@solvapay/server` facade.
  */
 
 import { SolvaPayError } from '@solvapay/core'
@@ -39,11 +39,8 @@ import type {
   UsageSnapshot,
   UsageSnapshotPurchase,
 } from '@solvapay/core'
-import type { NativeSyncMethod, SolvaPayImpl } from './native'
-import type {
-  LimitResponseWithPlan,
-  PaywallStructuredContent,
-} from './types'
+import type { NativeSyncMethod } from './native'
+import type { LimitResponseWithPlan, PaywallStructuredContent } from './types'
 import type { PaywallState } from './types/paywall'
 
 export type { PaywallState }
@@ -56,7 +53,6 @@ export type PaywallErrorLike = {
 
 type NativeDecisionApi = {
   callNativeSync: (fn: NativeSyncMethod, argsJson: string) => unknown
-  resolveImpl: (surface: string) => SolvaPayImpl
 }
 
 let installed: NativeDecisionApi | null = null
@@ -74,11 +70,11 @@ export function resetNativeDecisionApiForTests(): void {
  * Dispatches a sync decision/helper method to the installed binding.
  *
  * The install is the gate: Node installs napi dispatch (`index.ts`), edge
- * installs WASM dispatch (`edge.ts`). Throws when uninstalled or when
- * `SOLVAPAY_IMPL` forces TypeScript — Rust-only after Step 53, no fallback.
+ * installs WASM dispatch (`edge.ts`). Throws when uninstalled — Rust-only after
+ * Step 53, no fallback.
  */
 function dispatchSync<T>(fn: NativeSyncMethod, args: unknown): T {
-  if (installed === null || installed.resolveImpl('helper') !== 'rust') {
+  if (installed === null) {
     throw new SolvaPayError('server sync API not installed')
   }
   return installed.callNativeSync(fn, JSON.stringify(args)) as T
@@ -205,10 +201,7 @@ export function projectPaymentIntentResult(
   })
 }
 
-export function projectTopupProcessOutcome(
-  status?: string,
-  message?: string,
-): TopupProcessOutcome {
+export function projectTopupProcessOutcome(status?: string, message?: string): TopupProcessOutcome {
   return dispatchSync('projectTopupProcessOutcome', {
     status: status ?? null,
     message: message ?? null,
@@ -406,10 +399,7 @@ type LimitsLike = Omit<LimitResponseWithPlan, 'plan'> & {
   plan?: LimitResponseWithPlan['plan']
 }
 
-export function buildPaywallGate(
-  productRef: string,
-  limits: LimitsLike,
-): PaywallStructuredContent {
+export function buildPaywallGate(productRef: string, limits: LimitsLike): PaywallStructuredContent {
   return dispatchSync('buildPaywallGate', { productRef, limits })
 }
 

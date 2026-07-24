@@ -42,19 +42,10 @@ import { useCopy, useLocale } from '../hooks/useCopy'
 import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
-import {
-  type BusinessDetailsInput,
-  type TaxBreakdown,
-} from '@solvapay/core'
+import { type BusinessDetailsInput, type TaxBreakdown } from '@solvapay/core'
 import type { TopupFormProps } from '../types'
-import {
-  readPaymentIntentClientSecret,
-  stripPaymentIntentParams,
-} from './paymentIntentReturn'
-import {
-  useBusinessDetailsAttach,
-  defaultBusinessDetails,
-} from '../hooks/useBusinessDetailsAttach'
+import { readPaymentIntentClientSecret, stripPaymentIntentParams } from './paymentIntentReturn'
+import { useBusinessDetailsAttach, defaultBusinessDetails } from '../hooks/useBusinessDetailsAttach'
 import {
   createBusinessDetailsParts,
   createTaxSummaryParts,
@@ -246,7 +237,9 @@ type InnerProps = {
    * argument so the checkout flow can optimistically bump the
    * in-memory balance before its deterministic refetch lands.
    */
-  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<
+  processTopupPayment?: (params: {
+    paymentIntentId: string
+  }) => Promise<
     | { status: 'succeeded'; creditsAdded?: number }
     | { status: 'processing' }
     | { status: 'timeout'; message?: string }
@@ -473,10 +466,7 @@ const Inner: React.FC<InnerProps> = ({
 
     setIsProcessing(false)
     if (paymentIntent) {
-      await onSuccess?.(
-        paymentIntent,
-        creditsAdded !== undefined ? { creditsAdded } : undefined,
-      )
+      await onSuccess?.(paymentIntent, creditsAdded !== undefined ? { creditsAdded } : undefined)
     }
   }, [
     stripe,
@@ -682,7 +672,10 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
             )
           : children
       return (
-        <Slot ref={forwardedRef as React.Ref<HTMLElement>} {...(commonProps as Record<string, unknown>)}>
+        <Slot
+          ref={forwardedRef as React.Ref<HTMLElement>}
+          {...(commonProps as Record<string, unknown>)}
+        >
           {slotChild}
         </Slot>
       )

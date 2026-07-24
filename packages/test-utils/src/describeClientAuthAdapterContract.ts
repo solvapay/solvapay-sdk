@@ -16,9 +16,7 @@ export interface ClientAuthAdapterContractOptions {
 /**
  * Shared contract tests for client-side `AuthAdapter` implementations.
  */
-export function describeClientAuthAdapterContract(
-  options: ClientAuthAdapterContractOptions,
-): void {
+export function describeClientAuthAdapterContract(options: ClientAuthAdapterContractOptions): void {
   describe(`${options.name} client AuthAdapter contract`, () => {
     it('returns token and user id for authenticated clients', async () => {
       const adapter = options.createAuthenticatedAdapter()

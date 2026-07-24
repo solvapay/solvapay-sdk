@@ -28,9 +28,6 @@
   "observability": {
     "enabled": true,
   },
-  "vars": {
-    "SOLVAPAY_IMPL": "rust",
-  },
   "env": {
     "production": {
       "name": "solvapay-checkout-demo-prod",
@@ -56,9 +53,6 @@
       ],
       "observability": {
         "enabled": true,
-      },
-      "vars": {
-        "SOLVAPAY_IMPL": "rust",
       },
     },
   },

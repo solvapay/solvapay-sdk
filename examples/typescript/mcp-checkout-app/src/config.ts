@@ -31,7 +31,7 @@ export const solvapayApiOrigin = new URL(solvapayApiBaseUrl).origin
  */
 export const mcpAssetOrigins = (process.env.MCP_ASSET_ORIGINS ?? '')
   .split(',')
-  .map((entry) => entry.trim())
+  .map(entry => entry.trim())
   .filter(Boolean)
 
 if (!process.env.SOLVAPAY_SECRET_KEY) {

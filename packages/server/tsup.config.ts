@@ -67,12 +67,6 @@ export default defineConfig([
     tsconfig: 'tsconfig.build.json',
     clean: false,
     outDir: 'dist/fetch',
-    external: [
-      '@solvapay/core',
-      '@solvapay/auth',
-      '@solvapay/server-wasm',
-      'zod',
-      'jose',
-    ],
+    external: ['@solvapay/core', '@solvapay/auth', '@solvapay/server-wasm', 'zod', 'jose'],
   },
 ])

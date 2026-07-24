@@ -4,10 +4,7 @@
   "input": {
     "fn": "buildPromptDescriptorMetadata",
     "args": {
-      "views": [
-        "account",
-        "topup"
-      ]
+      "views": ["account", "topup"]
     }
   },
   "expect": {

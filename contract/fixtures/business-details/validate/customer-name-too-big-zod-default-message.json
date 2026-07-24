@@ -14,9 +14,7 @@
       "error": {
         "issues": [
           {
-            "path": [
-              "customerName"
-            ],
+            "path": ["customerName"],
             "message": "Too big: expected string to have <=100 characters"
           }
         ]

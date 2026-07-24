@@ -7,7 +7,7 @@
  * runtimes (Vercel Edge, Cloudflare Workers, Deno, etc.)
  */
 
-import { installNativeCoreApi, SolvaPayError } from '@solvapay/core'
+import { installNativeCoreApi } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
 import { installMcpAdapterNative } from './adapters/mcp'
 import { installNativeDecisionApi } from './native-decisions'
@@ -15,28 +15,21 @@ import type { PaywallStructuredContent, PaywallToolResult } from './types'
 import {
   callWasmSync,
   publishWasmSyncApi,
-  resolveEdgeImpl,
-  resolveEdgeWebhookImpl,
   verifyWebhookWasm,
   warmWasm,
 } from './wasm'
 
 // Install WASM sync dispatch for the edge graph (Deno / Workers / edge-light).
-// The install is the gate. After Step 53, `SOLVAPAY_IMPL=ts` makes
-// `resolveEdgeImpl` return `ts` and every sync/async surface fail fast —
-// there is no TypeScript semantic path. Node never loads this module (it
-// installs napi dispatch via `index.ts`).
-installNativeDecisionApi({ callNativeSync: callWasmSync, resolveImpl: resolveEdgeImpl })
-// Step 52: @solvapay/core is Rust-only — SOLVAPAY_IMPL=ts does not gate it.
-installNativeCoreApi({ callNativeSync: callWasmSync, resolveImpl: () => 'rust' })
+// The install is the gate — missing WASM fails fast. Node never loads this
+// module (it installs napi dispatch via `index.ts`).
+installNativeDecisionApi({ callNativeSync: callWasmSync })
+installNativeCoreApi({ callNativeSync: callWasmSync })
 installMcpAdapterNative({
-  formatGate: (gate: PaywallStructuredContent): PaywallToolResult | null => {
-    if (resolveEdgeImpl('mcp') !== 'rust') return null
-    return callWasmSync(
+  formatGate: (gate: PaywallStructuredContent): PaywallToolResult =>
+    callWasmSync(
       'paywallToolResult',
       JSON.stringify({ message: gate.message, structuredContent: gate }),
-    ) as PaywallToolResult
-  },
+    ) as PaywallToolResult,
 })
 // Ambient registry for mcp-core (Deno resolves it to the edge graph too).
 publishWasmSyncApi()
@@ -162,7 +155,7 @@ export type {
  * Verify webhook signature (async edge facade).
  *
  * Routes through the Rust WASM binding (`solvapay_core::verify_webhook`).
- * Rust-only after Step 53 — `SOLVAPAY_IMPL=ts` fails fast rather than running a
+ * Rust-only after Step 53 — missing WASM fails fast rather than running a
  * duplicate Web Crypto implementation.
  *
  * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
@@ -197,10 +190,7 @@ export async function verifyWebhook({
   signature: string
   secret: string
 }): Promise<WebhookEvent> {
-  // Rust-only after Step 53. `SOLVAPAY_IMPL=ts` fails fast instead of running a
-  // duplicate Web Crypto implementation on the edge.
-  if (resolveEdgeWebhookImpl() !== 'rust') {
-    throw new SolvaPayError('server webhook API not installed')
-  }
+  // Rust-only after Step 53 — loader throws when WASM is unavailable instead
+  // of running a duplicate Web Crypto implementation on the edge.
   return verifyWebhookWasm({ body, signature, secret })
 }

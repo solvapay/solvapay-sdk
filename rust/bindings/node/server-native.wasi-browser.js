@@ -5,8 +5,6 @@ import {
   WASI as __WASI,
 } from '@napi-rs/wasm-runtime'
 
-
-
 const __wasi = new __WASI({
   version: 'preview1',
 })
@@ -14,14 +12,13 @@ const __wasi = new __WASI({
 const __wasmUrl = new URL('./server-native.wasm32-wasi.wasm', import.meta.url).href
 const __emnapiContext = __emnapiGetDefaultContext()
 
-
 const __sharedMemory = new WebAssembly.Memory({
   initial: 4000,
   maximum: 65536,
   shared: true,
 })
 
-const __wasmFile = await fetch(__wasmUrl).then((res) => res.arrayBuffer())
+const __wasmFile = await fetch(__wasmUrl).then(res => res.arrayBuffer())
 
 const {
   instance: __napiInstance,
@@ -35,7 +32,6 @@ const {
     const worker = new Worker(new URL('./wasi-worker-browser.mjs', import.meta.url), {
       type: 'module',
     })
-
 
     return worker
   },
@@ -59,7 +55,8 @@ const {
 export default __napiModule.exports
 export const NativeClient = __napiModule.exports.NativeClient
 export const assertResponseResult = __napiModule.exports.assertResponseResult
-export const attachBusinessDetailsValidationError = __napiModule.exports.attachBusinessDetailsValidationError
+export const attachBusinessDetailsValidationError =
+  __napiModule.exports.attachBusinessDetailsValidationError
 export const buildCreateCustomerParams = __napiModule.exports.buildCreateCustomerParams
 export const buildGateMessage = __napiModule.exports.buildGateMessage
 export const buildNudgeMessage = __napiModule.exports.buildNudgeMessage
@@ -82,7 +79,8 @@ export const evaluateCachedLimits = __napiModule.exports.evaluateCachedLimits
 export const evaluateFreshLimits = __napiModule.exports.evaluateFreshLimits
 export const extractBackendCustomerRef = __napiModule.exports.extractBackendCustomerRef
 export const getBusinessCountryOptions = __napiModule.exports.getBusinessCountryOptions
-export const getSellerTaxIdentifierDisplayLabel = __napiModule.exports.getSellerTaxIdentifierDisplayLabel
+export const getSellerTaxIdentifierDisplayLabel =
+  __napiModule.exports.getSellerTaxIdentifierDisplayLabel
 export const getTaxIdExample = __napiModule.exports.getTaxIdExample
 export const getTaxIdFieldLabel = __napiModule.exports.getTaxIdFieldLabel
 export const getTaxIdHelperText = __napiModule.exports.getTaxIdHelperText
@@ -112,16 +110,21 @@ export const resolveSellerIdentityDisplay = __napiModule.exports.resolveSellerId
 export const resolveTaxBehavior = __napiModule.exports.resolveTaxBehavior
 export const retryNextDelayMs = __napiModule.exports.retryNextDelayMs
 export const selectActivePurchases = __napiModule.exports.selectActivePurchases
-export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = __napiModule.exports.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE =
+  __napiModule.exports.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
 export const validateActivatePlanParams = __napiModule.exports.validateActivatePlanParams
-export const validateAttachBusinessDetailsParams = __napiModule.exports.validateAttachBusinessDetailsParams
+export const validateAttachBusinessDetailsParams =
+  __napiModule.exports.validateAttachBusinessDetailsParams
 export const validateBusinessDetails = __napiModule.exports.validateBusinessDetails
 export const validateCheckoutSessionParams = __napiModule.exports.validateCheckoutSessionParams
-export const validateCreatePaymentIntentParams = __napiModule.exports.validateCreatePaymentIntentParams
+export const validateCreatePaymentIntentParams =
+  __napiModule.exports.validateCreatePaymentIntentParams
 export const validateGetProductParams = __napiModule.exports.validateGetProductParams
 export const validateListPlansParams = __napiModule.exports.validateListPlansParams
-export const validateProcessPaymentIntentParams = __napiModule.exports.validateProcessPaymentIntentParams
+export const validateProcessPaymentIntentParams =
+  __napiModule.exports.validateProcessPaymentIntentParams
 export const validatePublicBaseUrl = __napiModule.exports.validatePublicBaseUrl
 export const validatePurchaseRef = __napiModule.exports.validatePurchaseRef
-export const validateTopupPaymentIntentParams = __napiModule.exports.validateTopupPaymentIntentParams
+export const validateTopupPaymentIntentParams =
+  __napiModule.exports.validateTopupPaymentIntentParams
 export const verifyWebhook = __napiModule.exports.verifyWebhook

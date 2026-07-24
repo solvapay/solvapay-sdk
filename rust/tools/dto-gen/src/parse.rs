@@ -64,6 +64,18 @@ pub fn parse_openapi(root: &Value) -> GenResult<Ir> {
                 .and_then(Value::as_str)
                 .unwrap_or("anonymous")
                 .to_string();
+            let description = op_obj
+                .get("description")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string);
+            let summary = op_obj
+                .get("summary")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string);
             let request_body = parse_request_body(op_obj, &mut ctx, schemas)?;
             let response_body =
                 parse_success_response(op_obj, path, method, &operation_id, &mut ctx, schemas)?;
@@ -71,6 +83,8 @@ pub fn parse_openapi(root: &Value) -> GenResult<Ir> {
                 method: method.to_ascii_uppercase(),
                 path_template: path.clone(),
                 operation_id,
+                description,
+                summary,
                 request_body,
                 response_body,
             });

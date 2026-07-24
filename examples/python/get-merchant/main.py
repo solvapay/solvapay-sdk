@@ -1,7 +1,7 @@
 """Minimal SolvaPay Python SDK example: fetch the merchant profile.
 
-    cp .env.example .env
-    python main.py
+cp .env.example .env
+python main.py
 """
 
 from __future__ import annotations
@@ -35,7 +35,10 @@ def main() -> int:
     _load_dotenv()
     api_key = os.environ.get("SOLVAPAY_SECRET_KEY")
     if not api_key:
-        print("SOLVAPAY_SECRET_KEY is missing — copy .env.example to .env", file=sys.stderr)
+        print(
+            "SOLVAPAY_SECRET_KEY is missing — copy .env.example to .env",
+            file=sys.stderr,
+        )
         return 1
     client = SolvaPayClient(api_key, os.environ.get("SOLVAPAY_API_BASE_URL"))
     merchant = run(client)

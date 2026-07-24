@@ -189,9 +189,13 @@ describe('scaffold.mjs against cached fixtures', () => {
 
     expect(out.mode).toBe('one-to-one')
     expect(out.operationsGenerated).toHaveLength(5)
-    expect(out.operationsGenerated.map(o => o.operationId).sort()).toEqual(
-      ['addPet', 'findPetsByStatus', 'getInventory', 'getPetById', 'updatePet'],
-    )
+    expect(out.operationsGenerated.map(o => o.operationId).sort()).toEqual([
+      'addPet',
+      'findPetsByStatus',
+      'getInventory',
+      'getPetById',
+      'updatePet',
+    ])
 
     // Top-level files the template promises.
     await expect(stat(path.join(target, 'wrangler.jsonc'))).resolves.toBeDefined()
@@ -203,16 +207,14 @@ describe('scaffold.mjs against cached fixtures', () => {
     const toolFiles = (await readdir(path.join(target, 'src', 'tools')))
       .filter(name => name.endsWith('.ts'))
       .sort()
-    expect(toolFiles).toEqual(
-      [
-        'addPet.ts',
-        'findPetsByStatus.ts',
-        'getInventory.ts',
-        'getPetById.ts',
-        'index.ts',
-        'updatePet.ts',
-      ],
-    )
+    expect(toolFiles).toEqual([
+      'addPet.ts',
+      'findPetsByStatus.ts',
+      'getInventory.ts',
+      'getPetById.ts',
+      'index.ts',
+      'updatePet.ts',
+    ])
 
     // package.json renders as plain JSON and carries the worker name
     // — cheapest proxy for "template substitutions applied".

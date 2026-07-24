@@ -7,9 +7,8 @@
  * - one `@solvapay/core` pure fn via the edge install (`validateBusinessDetails`)
  * - one async client method (`getMerchant`) against a stub origin
  *
- * Run both impls and compare:
- *   SOLVAPAY_IMPL=rust npx wrangler dev --local --port 8787
- *   SOLVAPAY_IMPL=ts   npx wrangler dev --local --port 8788
+ * Run:
+ *   npx wrangler dev --local --port 8787
  *   curl -s http://127.0.0.1:8787/smoke | jq .
  *
  * Prerequisites: `pnpm --filter @solvapay/server --filter @solvapay/core build`
@@ -38,29 +37,11 @@ const FIXTURE_SECRET = 'whsec_test_fixture_secret'
 const FIXTURE_SIGNATURE =
   't=1782864000,v1=04834cba2241fe998a4fb5b8bb4632b2c2e18a3e330dba1905f62b365521ca82'
 
-function readImpl() {
-  try {
-    return globalThis.process?.env?.SOLVAPAY_IMPL ?? 'rust'
-  } catch {
-    return 'rust'
-  }
-}
-
 export default {
-  async fetch(request, env) {
+  async fetch(request) {
     const url = new URL(request.url)
     if (url.pathname !== '/smoke') {
       return new Response('not found', { status: 404 })
-    }
-
-    const impl = env.SOLVAPAY_IMPL ?? readImpl()
-    // Mirror env into process shim so resolveEdgeImpl sees it under workerd.
-    try {
-      globalThis.process = globalThis.process ?? { env: {} }
-      globalThis.process.env = globalThis.process.env ?? {}
-      globalThis.process.env.SOLVAPAY_IMPL = impl
-    } catch {
-      // ignore
     }
 
     const RealDate = Date
@@ -93,7 +74,6 @@ export default {
       taxId: 'GB123456789',
     })
 
-    // Stub origin — proves WasmClient (rust) or fetch TS path round-trips.
     const stub = 'https://api.solvapay.invalid'
     const originalFetch = globalThis.fetch
     globalThis.fetch = async (input, init) => {
@@ -123,7 +103,7 @@ export default {
     globalThis.Date = RealDate
 
     const body = {
-      impl,
+      impl: 'rust',
       ok:
         event.id === 'evt_fixture_1' &&
         gate.kind === 'payment_required' &&

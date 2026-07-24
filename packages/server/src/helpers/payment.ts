@@ -407,11 +407,7 @@ export async function attachBusinessDetailsCore(
 
     return result
   } catch (error) {
-    return handleRouteError(
-      error,
-      'Attach business details',
-      'Failed to attach business details',
-    )
+    return handleRouteError(error, 'Attach business details', 'Failed to attach business details')
   }
 }
 

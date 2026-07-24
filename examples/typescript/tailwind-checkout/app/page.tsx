@@ -20,8 +20,8 @@ export default function Home() {
         >
           <h2 className="text-lg font-medium text-slate-900">Checkout →</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Pick a plan, pay, and activate — composed from{' '}
-            <code>PlanSelector</code> + <code>PaymentForm</code>.
+            Pick a plan, pay, and activate — composed from <code>PlanSelector</code> +{' '}
+            <code>PaymentForm</code>.
           </p>
         </Link>
         <Link

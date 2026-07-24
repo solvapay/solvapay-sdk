@@ -5,8 +5,8 @@
  * or browser WASM via an *installed* API so this module never statically
  * imports `node:module` or `@solvapay/server-native`.
  *
- * After Step 52 there is no TypeScript fallback — uninstalled or
- * `SOLVAPAY_IMPL=ts` throws {@link SolvaPayError}.
+ * After Step 52 there is no TypeScript fallback — uninstalled throws
+ * {@link SolvaPayError}.
  */
 
 import type {
@@ -23,10 +23,9 @@ import {
   installNativeCoreApi,
   resetNativeCoreApiForTests,
   type NativeCoreSyncMethod,
-  type SolvaPayImpl,
 } from './native-dispatch'
 
-export type { NativeCoreSyncMethod, SolvaPayImpl }
+export type { NativeCoreSyncMethod }
 export { installNativeCoreApi, resetNativeCoreApiForTests }
 
 // --- business-details ---

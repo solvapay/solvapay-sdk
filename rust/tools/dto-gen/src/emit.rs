@@ -10,11 +10,7 @@ use crate::ir::{
 };
 use crate::name::to_snake_case;
 
-const GENERATED_HEADER: &str = "// @generated — do not edit. Regenerate with:\n\
-//   cargo run -p dto-gen -- \\\n\
-//     --snapshot ../contract/openapi/sdk-v1.snapshot.json \\\n\
-//     --manifest ../contract/manifest/sdk-contract.yaml \\\n\
-//     --out crates/solvapay-dto/src\n";
+const GENERATED_HEADER: &str = "// @generated — do not edit. Regenerate with: pnpm gen\n";
 
 /// Emitted crate sources written under `--out`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -776,6 +772,8 @@ mod tests {
                 method: "POST".into(),
                 path_template: "/v1/sdk/payment-intents/{processorPaymentId}/process".into(),
                 operation_id: "PaymentIntentSdkController_processPaymentIntent".into(),
+                description: None,
+                summary: None,
                 request_body: None,
                 response_body: Some(IrTypeRef::Named("ProcessPaymentResult".into())),
             }],

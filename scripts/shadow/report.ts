@@ -51,9 +51,7 @@ export function formatHumanSummary(report: ShadowReport): string {
         break
       case 'DIVERGED':
         diverged += 1
-        divergeLines.push(
-          `  - ${r.scenarioId ?? r.op}: path=${r.divergence?.path ?? '?'}`,
-        )
+        divergeLines.push(`  - ${r.scenarioId ?? r.op}: path=${r.divergence?.path ?? '?'}`)
         break
       case 'ERROR':
         errored += 1

@@ -314,7 +314,8 @@ impl ParamDef {
 /// exist, `docs.params.<name>` wins during IR lowering.
 #[derive(Debug, Clone, Deserialize, PartialEq, Default)]
 pub struct DocsDef {
-    /// One-line summary (required non-empty by the coverage gate once authored).
+    /// One-line summary. Manifest wins; for routed operations an empty/absent
+    /// summary falls back to the OpenAPI operation `description` / `summary`.
     #[serde(default)]
     pub summary: Option<String>,
     /// Parameter name → description overlay.
@@ -347,6 +348,9 @@ pub struct NamedEntry {
 /// Per-operation manifest entry.
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct OperationDef {
+    /// HTTP route for this wire operation.
+    #[serde(default)]
+    pub route: Option<OperationRoute>,
     /// Per-language names.
     #[serde(default)]
     pub names: Option<LangNames>,
@@ -370,6 +374,15 @@ pub struct OperationDef {
     /// Shared doc model for this entry point.
     #[serde(default)]
     pub docs: DocsDef,
+}
+
+/// HTTP method + path for a catalogued wire operation.
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct OperationRoute {
+    /// Uppercase HTTP method (`GET`, `POST`, …).
+    pub method: String,
+    /// Templated path (e.g. `/v1/sdk/limits`).
+    pub path: String,
 }
 
 /// Operation-level default + case error templates.

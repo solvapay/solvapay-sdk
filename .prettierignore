@@ -29,9 +29,14 @@ yarn.lock
 .env*
 !.env.example
 
-# IDE
+# IDE / editor local state
 .vscode/
 .idea/
+.cursor/
+
+# Local virtualenvs (never format vendored site-packages)
+**/.venv/
+.venv/
 
 # OS
 .DS_Store

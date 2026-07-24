@@ -48,13 +48,13 @@ cp env.example .env
 
 Required env vars:
 
-| Variable | Purpose |
-|---|---|
-| `SOLVAPAY_SECRET_KEY` | Secret API key (sandbox or live). Server-side only. |
-| `GEMINI_API_KEY` | Gemini API key from [aistudio.google.com](https://aistudio.google.com/app/apikey). Server-side only — proxied through `/api/chat`. |
-| `VITE_SUBSCRIPTION_PRODUCT_REF` | A product intended to back the subscription scenario (typically a **recurring** paid plan). |
-| `VITE_LIFETIME_PRODUCT_REF` | A product intended to back the lifetime access scenario (typically a **one-time** paid plan). |
-| `VITE_TOPUP_PRODUCT_REF` | A product intended to back the top-up scenario (a usage-based plan + one one-time plan per credit pack). |
+| Variable                        | Purpose                                                                                                                            |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `SOLVAPAY_SECRET_KEY`           | Secret API key (sandbox or live). Server-side only.                                                                                |
+| `GEMINI_API_KEY`                | Gemini API key from [aistudio.google.com](https://aistudio.google.com/app/apikey). Server-side only — proxied through `/api/chat`. |
+| `VITE_SUBSCRIPTION_PRODUCT_REF` | A product intended to back the subscription scenario (typically a **recurring** paid plan).                                        |
+| `VITE_LIFETIME_PRODUCT_REF`     | A product intended to back the lifetime access scenario (typically a **one-time** paid plan).                                      |
+| `VITE_TOPUP_PRODUCT_REF`        | A product intended to back the top-up scenario (a usage-based plan + one one-time plan per credit pack).                           |
 
 The demo lists plans for each product on demand. Each scenario can be configured independently — the demo will display an inline notice when env vars are missing, so you can try the chat / paywall flow with just one scenario set up.
 
@@ -62,11 +62,11 @@ The demo lists plans for each product on demand. Each scenario can be configured
 
 The demo no longer hardcodes any pricing or free-tier limits — it reads them from the plans you configure on each product in the SolvaPay dashboard.
 
-| Scenario | Product needs | Each plan should set |
-|---|---|---|
-| Subscription | One recurring paid plan (and optionally one free plan). | `name`, `price`, `currency`, `billingCycle`. The free plan should set `freeUnits` to whatever message cap you want before the paywall trips. |
-| Lifetime Access | One one-time paid plan (and optionally one free plan). | `name`, `price`, `currency`. The free plan should set `freeUnits`. |
-| Top-up | One usage-based plan (and optionally one free plan). | Usage-based plan: `meterName: 'requests'`, `freeUnits`, `creditsPerUnit`. The SDK's `<AmountPicker>` handles credit-pack selection via currency presets (`$10` / `$50` / `$100` / `$500` for USD) plus a custom amount — **no separate pack plans needed**. |
+| Scenario        | Product needs                                           | Each plan should set                                                                                                                                                                                                                                        |
+| --------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Subscription    | One recurring paid plan (and optionally one free plan). | `name`, `price`, `currency`, `billingCycle`. The free plan should set `freeUnits` to whatever message cap you want before the paywall trips.                                                                                                                |
+| Lifetime Access | One one-time paid plan (and optionally one free plan).  | `name`, `price`, `currency`. The free plan should set `freeUnits`.                                                                                                                                                                                          |
+| Top-up          | One usage-based plan (and optionally one free plan).    | Usage-based plan: `meterName: 'requests'`, `freeUnits`, `creditsPerUnit`. The SDK's `<AmountPicker>` handles credit-pack selection via currency presets (`$10` / `$50` / `$100` / `$500` for USD) plus a custom amount — **no separate pack plans needed**. |
 
 > **Migration note.** Earlier revisions of this README told you to set up the topup product with `"one one-time plan per credit pack"` (`100 Credits` at `$5`, `250 Credits` at `$10`, etc.). That was wrong — it doesn't match the hosted-checkout topup pattern in `solvapay-frontend/src/pages/customer/checkout/topup.tsx`. If your topup product carries those pack plans, delete them in the SolvaPay dashboard. The SDK's `<CheckoutSteps.AmountPicker>` covers their job and uses the same currency presets as the hosted page. Recent SDK versions also default to a smart plan filter that hides PAYG when the product still has pack plans, so the grid renders only the packs while you migrate.
 
@@ -108,21 +108,21 @@ pnpm preview
 
 Stripe test cards work in sandbox mode:
 
-| Card | Result |
-|---|---|
-| `4242 4242 4242 4242` | Succeeds |
-| `4000 0000 0000 0002` | Declined |
+| Card                  | Result       |
+| --------------------- | ------------ |
+| `4242 4242 4242 4242` | Succeeds     |
+| `4000 0000 0000 0002` | Declined     |
 | `4000 0025 0000 3155` | Requires 3DS |
 
 Use any future expiry, any 3-digit CVC, any postcode.
 
 ## How the scenarios map to SolvaPay
 
-| Scenario | Plan type | Checkout primitive (driven by `<CheckoutSteps.*>`) |
-|---|---|---|
-| Subscription | `recurring` | `<PaymentForm.Root>` |
-| Lifetime Access | `one-time` | `<PaymentForm.Root>` |
-| Top-up | `usage-based` | `<AmountPicker>` → `<TopupForm.Root>` |
+| Scenario        | Plan type     | Checkout primitive (driven by `<CheckoutSteps.*>`) |
+| --------------- | ------------- | -------------------------------------------------- |
+| Subscription    | `recurring`   | `<PaymentForm.Root>`                               |
+| Lifetime Access | `one-time`    | `<PaymentForm.Root>`                               |
+| Top-up          | `usage-based` | `<AmountPicker>` → `<TopupForm.Root>`              |
 
 All three scenarios share **one** drawer (`components/InlineCheckout.tsx`). The drawer routes on a discriminated state:
 
@@ -131,12 +131,12 @@ All three scenarios share **one** drawer (`components/InlineCheckout.tsx`). The 
 
 ### Which component when
 
-| Use case | Import |
-|---|---|
-| Building any checkout UX (web, chatbot, custom) — want the state engine and pre-styled parts | `useCheckoutFlow` + `CheckoutSteps` from `@solvapay/react` |
-| Reacting to a 402 paywall response with the SDK's recommended stepped layout | `<PaywallNotice.EmbeddedCheckout>` |
-| Building an MCP App iframe | `<McpApp>` / `<McpCheckoutView>` from `@solvapay/react/mcp` |
-| Need full layout control or a custom step ordering | Compose `<CheckoutSteps.*>` parts in your own JSX, or drop to `<PlanSelector>` / `<PaymentForm>` / `<TopupForm>` directly |
+| Use case                                                                                     | Import                                                                                                                    |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Building any checkout UX (web, chatbot, custom) — want the state engine and pre-styled parts | `useCheckoutFlow` + `CheckoutSteps` from `@solvapay/react`                                                                |
+| Reacting to a 402 paywall response with the SDK's recommended stepped layout                 | `<PaywallNotice.EmbeddedCheckout>`                                                                                        |
+| Building an MCP App iframe                                                                   | `<McpApp>` / `<McpCheckoutView>` from `@solvapay/react/mcp`                                                               |
+| Need full layout control or a custom step ordering                                           | Compose `<CheckoutSteps.*>` parts in your own JSX, or drop to `<PlanSelector>` / `<PaymentForm>` / `<TopupForm>` directly |
 
 `App.tsx` derives the scenario state directly from SDK hooks:
 
@@ -301,11 +301,11 @@ pnpm exec wrangler tail --env production --format=pretty
 
 Which file Vite reads depends on the deploy target:
 
-| Command       | Vite mode    | Env files (later wins per Vite's load order)         |
-|---------------|--------------|------------------------------------------------------|
-| `pnpm dev`    | `development`| `.env` → `.env.local` → `.env.development` (none)    |
-| `pnpm build`  | `production` | `.env` → `.env.local` → `.env.production` (none)     |
-| `pnpm build:prod` / `pnpm deploy:prod` | `prod` | `.env` → `.env.local` → `.env.prod` |
+| Command                                | Vite mode     | Env files (later wins per Vite's load order)      |
+| -------------------------------------- | ------------- | ------------------------------------------------- |
+| `pnpm dev`                             | `development` | `.env` → `.env.local` → `.env.development` (none) |
+| `pnpm build`                           | `production`  | `.env` → `.env.local` → `.env.production` (none)  |
+| `pnpm build:prod` / `pnpm deploy:prod` | `prod`        | `.env` → `.env.local` → `.env.prod`               |
 
 `pnpm deploy:prod` runs `vite build --mode prod` (not the default `production`) so the same `.env.prod` that drives `scripts/deploy.mjs` ALSO drives the SPA bundle — one source of truth for the prod target. This is the only reason the build:prod step exists; if you forget and run `pnpm build` for a deploy, Vite picks up `.env.local` (your local sandbox merchant) and the deployed SPA ends up with product refs that don't match the Worker's `SOLVAPAY_SECRET_KEY`, manifesting as `Product not found: prd_…` 404s on `/api/limits` (and any other `/api/*` route that takes a `productRef`).
 

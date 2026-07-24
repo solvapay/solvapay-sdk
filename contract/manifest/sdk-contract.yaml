@@ -48,7 +48,7 @@ operations:
     optionalOnClient: false
     request: CheckLimitsRequest
     response: LimitResponseWithPlan
-    overlays: [ includeCheckoutSession, CheckLimitsRequest, LimitResponseWithPlan ]
+    overlays: [includeCheckoutSession, CheckLimitsRequest, LimitResponseWithPlan]
     normalization: []
     shadow:
       volatile: []
@@ -56,7 +56,7 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Check limits failed ({status}): {body}"
+        messageTemplate: 'Check limits failed ({status}): {body}'
       cases: []
     params:
       - name: params
@@ -65,14 +65,14 @@ operations:
     docs:
       summary: "Check remaining usage/spend limits for a customer against a product's plan."
       params:
-        params: "Limits request including customer and product refs."
-      returns: "Current remaining limits, optionally including plan details."
+        params: 'Limits request including customer and product refs.'
+      returns: 'Current remaining limits, optionally including plan details.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   trackUsage:
     route:
       method: POST
@@ -86,7 +86,7 @@ operations:
     optionalOnClient: false
     request: TrackUsageRequest
     response: UsageRecordResponse
-    overlays: [ TrackUsageRequest ]
+    overlays: [TrackUsageRequest]
     normalization: []
     shadow:
       volatile: []
@@ -94,23 +94,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Track usage failed ({status}): {body}"
+        messageTemplate: 'Track usage failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: TrackUsageRequest
         required: true
     docs:
-      summary: "Record a single usage event against a meter for billing."
+      summary: 'Record a single usage event against a meter for billing.'
       params:
-        params: "Usage event payload (customer, meter, and amount)."
-      returns: "The recorded usage event response."
+        params: 'Usage event payload (customer, meter, and amount).'
+      returns: 'The recorded usage event response.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   trackUsageBulk:
     route:
       method: POST
@@ -124,7 +124,7 @@ operations:
     optionalOnClient: true
     request: TrackUsageBulkRequest
     response: BulkUsageResponse
-    overlays: [ TrackUsageBulkRequest ]
+    overlays: [TrackUsageBulkRequest]
     normalization: []
     shadow:
       volatile: []
@@ -132,23 +132,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Track usage bulk failed ({status}): {body}"
+        messageTemplate: 'Track usage bulk failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: TrackUsageBulkRequest
         required: true
     docs:
-      summary: "Record multiple usage events in one request."
+      summary: 'Record multiple usage events in one request.'
       params:
-        params: "Bulk usage payload with one or more events."
-      returns: "Bulk usage recording response."
+        params: 'Bulk usage payload with one or more events.'
+      returns: 'Bulk usage recording response.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   createCustomer:
     route:
       method: POST
@@ -162,32 +162,32 @@ operations:
     optionalOnClient: true
     request: CreateCustomerRequest
     response: CreateCustomerResult
-    overlays: [ CreateCustomerResult ]
+    overlays: [CreateCustomerResult]
     normalization:
-      - "map reference||customerRef → { customerRef }"
+      - 'map reference||customerRef → { customerRef }'
     shadow:
       volatile: []
     idempotency:
       kind: none
     errors:
       default:
-        messageTemplate: "Create customer failed ({status}): {body}"
+        messageTemplate: 'Create customer failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: CreateCustomerRequest
         required: true
     docs:
-      summary: "Create a customer in SolvaPay for the current merchant."
+      summary: 'Create a customer in SolvaPay for the current merchant.'
       params:
-        params: "Customer creation fields (email, external refs, metadata)."
-      returns: "The created customer projection."
+        params: 'Customer creation fields (email, external refs, metadata).'
+      returns: 'The created customer projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   updateCustomer:
     route:
       method: PATCH
@@ -201,16 +201,16 @@ operations:
     optionalOnClient: true
     request: UpdateCustomerRequest
     response: UpdateCustomerResult
-    overlays: [ UpdateCustomerResult, UpdateCustomerParams ]
+    overlays: [UpdateCustomerResult, UpdateCustomerParams]
     normalization:
-      - "map reference||customerRef → { customerRef }"
+      - 'map reference||customerRef → { customerRef }'
     shadow:
       volatile: []
     idempotency:
       kind: none
     errors:
       default:
-        messageTemplate: "Update customer failed ({status}): {body}"
+        messageTemplate: 'Update customer failed ({status}): {body}'
       cases: []
     params:
       - name: customerRef
@@ -220,17 +220,17 @@ operations:
         ref: UpdateCustomerParams
         required: true
     docs:
-      summary: "Update an existing customer by reference."
+      summary: 'Update an existing customer by reference.'
       params:
-        customer_ref: "Customer reference to update."
-        params: "Fields to patch on the customer."
-      returns: "The updated customer projection."
+        customer_ref: 'Customer reference to update.'
+        params: 'Fields to patch on the customer.'
+      returns: 'The updated customer projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   getCustomer:
     route:
       method: GET
@@ -244,11 +244,11 @@ operations:
     optionalOnClient: false
     request: GetCustomerParams
     response: CustomerResponseMapped
-    overlays: [ GetCustomerParams, CustomerResponseMapped ]
+    overlays: [GetCustomerParams, CustomerResponseMapped]
     normalization:
       - accept direct customer object
       - accept bare customer array
-      - "accept { customers: [...] } / { customer: {...} } wrappers"
+      - 'accept { customers: [...] } / { customer: {...} } wrappers'
       - map reference → customerRef; default purchases to []
     shadow:
       volatile: []
@@ -256,25 +256,25 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Get customer failed ({status}): {body}"
+        messageTemplate: 'Get customer failed ({status}): {body}'
       cases:
         - messageTemplate: One of customerRef, externalRef, or email must be provided
-        - messageTemplate: "No customer found with externalRef: {externalRef}"
+        - messageTemplate: 'No customer found with externalRef: {externalRef}'
     params:
       - name: params
         ref: GetCustomerParams
         required: true
     docs:
-      summary: "Fetch a customer by reference."
+      summary: 'Fetch a customer by reference.'
       params:
-        params: "Lookup options including the customer reference."
-      returns: "The customer projection."
+        params: 'Lookup options including the customer reference.'
+      returns: 'The customer projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   assignCredits:
     route:
       method: POST
@@ -288,7 +288,7 @@ operations:
     optionalOnClient: true
     request: AssignCreditsRequest
     response: GrantCustomerCreditsResponse
-    overlays: [ AssignCreditsRequest ]
+    overlays: [AssignCreditsRequest]
     normalization: []
     shadow:
       volatile: []
@@ -297,23 +297,23 @@ operations:
       header: Idempotency-Key
     errors:
       default:
-        messageTemplate: "Assign credits failed ({status}): {body}"
+        messageTemplate: 'Assign credits failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: AssignCreditsRequest
         required: true
     docs:
-      summary: "Grant credits to a customer balance."
+      summary: 'Grant credits to a customer balance.'
       params:
-        params: "Credit grant request (customer, amount, and reason)."
-      returns: "Credit assignment response."
+        params: 'Credit grant request (customer, amount, and reason).'
+      returns: 'Credit assignment response.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   getMerchant:
     route:
       method: GET
@@ -334,18 +334,18 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Get merchant failed ({status}): {body}"
+        messageTemplate: 'Get merchant failed ({status}): {body}'
       cases: []
     params: []
     docs:
-      summary: "Fetch the authenticated merchant profile."
-      returns: "Merchant profile projection."
+      summary: 'Fetch the authenticated merchant profile.'
+      returns: 'Merchant profile projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   getPlatformConfig:
     route:
       method: GET
@@ -366,18 +366,18 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Get platform config failed ({status}): {body}"
+        messageTemplate: 'Get platform config failed ({status}): {body}'
       cases: []
     params: []
     docs:
-      summary: "Fetch platform configuration for the current merchant."
-      returns: "Platform configuration projection."
+      summary: 'Fetch platform configuration for the current merchant.'
+      returns: 'Platform configuration projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   getProduct:
     route:
       method: GET
@@ -392,30 +392,30 @@ operations:
     response: SdkProductResponse
     overlays: []
     normalization:
-      - "merge { ...result.data, ...result }"
+      - 'merge { ...result.data, ...result }'
     shadow:
       volatile: []
     idempotency:
       kind: none
     errors:
       default:
-        messageTemplate: "Get product failed ({status}): {body}"
+        messageTemplate: 'Get product failed ({status}): {body}'
       cases: []
     params:
       - name: productRef
         type: string
         required: true
     docs:
-      summary: "Fetch a product by reference."
+      summary: 'Fetch a product by reference.'
       params:
-        product_ref: "Product reference to fetch."
-      returns: "Product projection."
+        product_ref: 'Product reference to fetch.'
+      returns: 'Product projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   listProducts:
     route:
       method: GET
@@ -428,9 +428,9 @@ operations:
       rust: list_products
     optionalOnClient: true
     response: ListProductsResult
-    overlays: [ ListProductsResult ]
+    overlays: [ListProductsResult]
     normalization:
-      - "accept bare array or { products } wrapper"
+      - 'accept bare array or { products } wrapper'
       - unwrap nested data field
     shadow:
       volatile: []
@@ -438,18 +438,18 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "List products failed ({status}): {body}"
+        messageTemplate: 'List products failed ({status}): {body}'
       cases: []
     params: []
     docs:
-      summary: "List products for the current merchant."
-      returns: "Product list projection."
+      summary: 'List products for the current merchant.'
+      returns: 'Product list projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   createProduct:
     route:
       method: POST
@@ -463,7 +463,7 @@ operations:
     optionalOnClient: true
     request: CreateProductRequest
     response: CreateProductResult
-    overlays: [ CreateProductResult ]
+    overlays: [CreateProductResult]
     normalization: []
     shadow:
       volatile: []
@@ -471,23 +471,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Create product failed ({status}): {body}"
+        messageTemplate: 'Create product failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: CreateProductRequest
         required: true
     docs:
-      summary: "Create a product for the current merchant."
+      summary: 'Create a product for the current merchant.'
       params:
-        params: "Product creation fields."
-      returns: "The created product projection."
+        params: 'Product creation fields.'
+      returns: 'The created product projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   bootstrapMcpProduct:
     route:
       method: POST
@@ -501,7 +501,7 @@ operations:
     optionalOnClient: true
     request: McpBootstrapDto
     response: McpBootstrapResponse
-    overlays: [ McpBootstrapResponse ]
+    overlays: [McpBootstrapResponse]
     normalization: []
     shadow:
       volatile: []
@@ -509,23 +509,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Bootstrap MCP product failed ({status}): {body}"
+        messageTemplate: 'Bootstrap MCP product failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: McpBootstrapDto
         required: true
     docs:
-      summary: "Bootstrap an MCP product with default plans and tooling."
+      summary: 'Bootstrap an MCP product with default plans and tooling.'
       params:
-        params: "MCP bootstrap request payload."
-      returns: "Bootstrap result including product and plan refs."
+        params: 'MCP bootstrap request payload.'
+      returns: 'Bootstrap result including product and plan refs.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   configureMcpPlans:
     route:
       method: PUT
@@ -539,7 +539,7 @@ operations:
     optionalOnClient: true
     request: ConfigureMcpPlansDto
     response: ConfigureMcpPlansResponse
-    overlays: [ ConfigureMcpPlansResponse ]
+    overlays: [ConfigureMcpPlansResponse]
     normalization: []
     shadow:
       volatile: []
@@ -547,7 +547,7 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Configure MCP plans failed ({status}): {body}"
+        messageTemplate: 'Configure MCP plans failed ({status}): {body}'
       cases: []
     params:
       - name: productRef
@@ -557,17 +557,17 @@ operations:
         ref: ConfigureMcpPlansDto
         required: true
     docs:
-      summary: "Configure MCP plans for an existing product."
+      summary: 'Configure MCP plans for an existing product.'
       params:
-        product_ref: "Product whose MCP plans are configured."
-        params: "MCP plan configuration payload."
-      returns: "Configured MCP plans response."
+        product_ref: 'Product whose MCP plans are configured.'
+        params: 'MCP plan configuration payload.'
+      returns: 'Configured MCP plans response.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   updateProduct:
     route:
       method: PUT
@@ -589,7 +589,7 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Update product failed ({status}): {body}"
+        messageTemplate: 'Update product failed ({status}): {body}'
       cases: []
     params:
       - name: productRef
@@ -599,17 +599,17 @@ operations:
         ref: UpdateProductRequest
         required: true
     docs:
-      summary: "Update an existing product by reference."
+      summary: 'Update an existing product by reference.'
       params:
-        product_ref: "Product reference to update."
-        params: "Fields to patch on the product."
-      returns: "The updated product projection."
+        product_ref: 'Product reference to update.'
+        params: 'Fields to patch on the product.'
+      returns: 'The updated product projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   deleteProduct:
     route:
       method: DELETE
@@ -622,7 +622,7 @@ operations:
       rust: delete_product
     optionalOnClient: true
     response: void
-    overlays: [ void ]
+    overlays: [void]
     normalization:
       - treat HTTP 404 as success
     shadow:
@@ -631,22 +631,22 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Delete product failed ({status}): {body}"
+        messageTemplate: 'Delete product failed ({status}): {body}'
       cases: []
     params:
       - name: productRef
         type: string
         required: true
     docs:
-      summary: "Delete a product by reference."
+      summary: 'Delete a product by reference.'
       params:
-        product_ref: "Product reference to delete."
+        product_ref: 'Product reference to delete.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   cloneProduct:
     route:
       method: POST
@@ -660,7 +660,7 @@ operations:
     optionalOnClient: true
     request: CloneProductDto
     response: CloneProductResult
-    overlays: [ CloneProductResult, CloneProductOverrides ]
+    overlays: [CloneProductResult, CloneProductOverrides]
     normalization: []
     shadow:
       volatile: []
@@ -668,7 +668,7 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Clone product failed ({status}): {body}"
+        messageTemplate: 'Clone product failed ({status}): {body}'
       cases: []
     params:
       - name: productRef
@@ -678,17 +678,17 @@ operations:
         ref: CloneProductOverrides
         required: false
     docs:
-      summary: "Clone a product, optionally applying field overrides."
+      summary: 'Clone a product, optionally applying field overrides.'
       params:
-        product_ref: "Source product reference to clone."
-        overrides: "Optional field overrides applied to the clone."
-      returns: "The cloned product projection."
+        product_ref: 'Source product reference to clone.'
+        overrides: 'Optional field overrides applied to the clone.'
+      returns: 'The cloned product projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   listPlans:
     route:
       method: GET
@@ -701,35 +701,35 @@ operations:
       rust: list_plans
     optionalOnClient: true
     response: ListPlansResult
-    overlays: [ ListPlansResult ]
+    overlays: [ListPlansResult]
     normalization:
-      - "accept bare array or { plans } wrapper"
+      - 'accept bare array or { plans } wrapper'
       - unwrap nested data field
-      - "merge { ...data, ...plan } with price precedence plan.price ??
-        data.price; delete data key"
+      - 'merge { ...data, ...plan } with price precedence plan.price ??
+        data.price; delete data key'
     shadow:
       volatile: []
     idempotency:
       kind: none
     errors:
       default:
-        messageTemplate: "List plans failed ({status}): {body}"
+        messageTemplate: 'List plans failed ({status}): {body}'
       cases: []
     params:
       - name: productRef
         type: string
         required: true
     docs:
-      summary: "List plans for a product."
+      summary: 'List plans for a product.'
       params:
-        product_ref: "Product whose plans are listed."
-      returns: "Plan list projection."
+        product_ref: 'Product whose plans are listed.'
+      returns: 'Plan list projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   createPlan:
     route:
       method: POST
@@ -743,7 +743,7 @@ operations:
     optionalOnClient: true
     request: CreatePlanRequest
     response: Plan
-    overlays: [ CreatePlanParams ]
+    overlays: [CreatePlanParams]
     normalization: []
     shadow:
       volatile: []
@@ -751,23 +751,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Create plan failed ({status}): {body}"
+        messageTemplate: 'Create plan failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: CreatePlanParams
         required: true
     docs:
-      summary: "Create a plan under a product."
+      summary: 'Create a plan under a product.'
       params:
-        params: "Plan creation fields including product ref."
-      returns: "The created plan projection."
+        params: 'Plan creation fields including product ref.'
+      returns: 'The created plan projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   updatePlan:
     route:
       method: PUT
@@ -789,7 +789,7 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Update plan failed ({status}): {body}"
+        messageTemplate: 'Update plan failed ({status}): {body}'
       cases: []
     params:
       - name: productRef
@@ -802,18 +802,18 @@ operations:
         ref: UpdatePlanRequest
         required: true
     docs:
-      summary: "Update an existing plan by product and plan references."
+      summary: 'Update an existing plan by product and plan references.'
       params:
-        product_ref: "Product that owns the plan."
-        plan_ref: "Plan reference to update."
-        params: "Fields to patch on the plan."
-      returns: "The updated plan projection."
+        product_ref: 'Product that owns the plan.'
+        plan_ref: 'Plan reference to update.'
+        params: 'Fields to patch on the plan.'
+      returns: 'The updated plan projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   deletePlan:
     route:
       method: DELETE
@@ -826,7 +826,7 @@ operations:
       rust: delete_plan
     optionalOnClient: true
     response: void
-    overlays: [ void ]
+    overlays: [void]
     normalization:
       - treat HTTP 404 as success
     shadow:
@@ -835,7 +835,7 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Delete plan failed ({status}): {body}"
+        messageTemplate: 'Delete plan failed ({status}): {body}'
       cases: []
     params:
       - name: productRef
@@ -845,16 +845,16 @@ operations:
         type: string
         required: true
     docs:
-      summary: "Delete a plan by product and plan references."
+      summary: 'Delete a plan by product and plan references.'
       params:
-        product_ref: "Product that owns the plan."
-        plan_ref: "Plan reference to delete."
+        product_ref: 'Product that owns the plan.'
+        plan_ref: 'Plan reference to delete.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   createPaymentIntent:
     route:
       method: POST
@@ -868,32 +868,32 @@ operations:
     optionalOnClient: true
     request: CreatePaymentIntentParams
     response: CreatePaymentIntentResult
-    overlays: [ CreatePaymentIntentParams, CreatePaymentIntentResult ]
+    overlays: [CreatePaymentIntentParams, CreatePaymentIntentResult]
     normalization: []
     shadow:
       volatile: []
     idempotency:
       kind: autoKey
-      format: "payment-{planRef}-{epochMs}-{random9}"
+      format: 'payment-{planRef}-{epochMs}-{random9}'
     errors:
       default:
-        messageTemplate: "Create payment intent failed ({status}): {body}"
+        messageTemplate: 'Create payment intent failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: CreatePaymentIntentParams
         required: true
     docs:
-      summary: "Create a payment intent for a purchase or activation flow."
+      summary: 'Create a payment intent for a purchase or activation flow.'
       params:
-        params: "Payment intent creation fields."
-      returns: "Created payment intent projection."
+        params: 'Payment intent creation fields.'
+      returns: 'Created payment intent projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   createTopupPaymentIntent:
     route:
       method: POST
@@ -912,33 +912,33 @@ operations:
         CreateTopupPaymentIntentParams,
         CreateTopupPaymentIntentResult,
         AutoRechargeInput,
-        topupProjection
+        topupProjection,
       ]
     normalization: []
     shadow:
       volatile: []
     idempotency:
       kind: autoKey
-      format: "topup-{epochMs}-{random9}"
+      format: 'topup-{epochMs}-{random9}'
     errors:
       default:
-        messageTemplate: "Create topup payment intent failed ({status}): {body}"
+        messageTemplate: 'Create topup payment intent failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: CreateTopupPaymentIntentParams
         required: true
     docs:
-      summary: "Create a payment intent to top up a customer balance."
+      summary: 'Create a payment intent to top up a customer balance.'
       params:
-        params: "Top-up payment intent fields."
-      returns: "Created top-up payment intent projection."
+        params: 'Top-up payment intent fields.'
+      returns: 'Created top-up payment intent projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   cancelPurchase:
     route:
       method: POST
@@ -952,10 +952,10 @@ operations:
     optionalOnClient: true
     request: CancelPurchaseRequest
     response: PurchaseInfo
-    overlays: [ CancelPurchaseParams ]
+    overlays: [CancelPurchaseParams]
     normalization:
-      - "extract nested { purchase } when present; else top-level object with
-        reference"
+      - 'extract nested { purchase } when present; else top-level object with
+        reference'
       - validate JSON parseability of response body
     shadow:
       volatile: []
@@ -963,14 +963,14 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Cancel purchase failed ({status}): {body}"
+        messageTemplate: 'Cancel purchase failed ({status}): {body}'
       cases:
-        - messageTemplate: "Purchase not found: {body}"
+        - messageTemplate: 'Purchase not found: {body}'
           status: 404
-        - messageTemplate: "Purchase cannot be cancelled or does not belong to provider: {body}"
+        - messageTemplate: 'Purchase cannot be cancelled or does not belong to provider: {body}'
           status: 400
-        - messageTemplate: "Invalid JSON response from cancel purchase endpoint:
-            {bodyPrefix200}"
+        - messageTemplate: 'Invalid JSON response from cancel purchase endpoint:
+            {bodyPrefix200}'
         - messageTemplate: Invalid response structure from cancel purchase endpoint
         - messageTemplate: Invalid purchase data in cancel purchase response
     params:
@@ -978,16 +978,16 @@ operations:
         ref: CancelPurchaseParams
         required: true
     docs:
-      summary: "Cancel an active purchase for a customer."
+      summary: 'Cancel an active purchase for a customer.'
       params:
-        params: "Cancel request identifying the purchase."
-      returns: "Updated purchase info after cancellation."
+        params: 'Cancel request identifying the purchase.'
+      returns: 'Updated purchase info after cancellation.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   reactivatePurchase:
     route:
       method: POST
@@ -1000,10 +1000,10 @@ operations:
       rust: reactivate_purchase
     optionalOnClient: true
     response: PurchaseInfo
-    overlays: [ ReactivatePurchaseParams ]
+    overlays: [ReactivatePurchaseParams]
     normalization:
-      - "extract nested { purchase } when present; else top-level object with
-        reference"
+      - 'extract nested { purchase } when present; else top-level object with
+        reference'
       - validate JSON parseability of response body
     shadow:
       volatile: []
@@ -1011,14 +1011,14 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Reactivate purchase failed ({status}): {body}"
+        messageTemplate: 'Reactivate purchase failed ({status}): {body}'
       cases:
-        - messageTemplate: "Purchase not found: {body}"
+        - messageTemplate: 'Purchase not found: {body}'
           status: 404
-        - messageTemplate: "Purchase cannot be reactivated: {body}"
+        - messageTemplate: 'Purchase cannot be reactivated: {body}'
           status: 400
-        - messageTemplate: "Invalid JSON response from reactivate purchase endpoint:
-            {bodyPrefix200}"
+        - messageTemplate: 'Invalid JSON response from reactivate purchase endpoint:
+            {bodyPrefix200}'
         - messageTemplate: Invalid response structure from reactivate purchase endpoint
         - messageTemplate: Invalid purchase data in reactivate purchase response
     params:
@@ -1026,16 +1026,16 @@ operations:
         ref: ReactivatePurchaseParams
         required: true
     docs:
-      summary: "Reactivate a previously cancelled purchase."
+      summary: 'Reactivate a previously cancelled purchase.'
       params:
-        params: "Reactivate request identifying the purchase."
-      returns: "Updated purchase info after reactivation."
+        params: 'Reactivate request identifying the purchase.'
+      returns: 'Updated purchase info after reactivation.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   processPaymentIntent:
     route:
       method: POST
@@ -1055,7 +1055,7 @@ operations:
         ProcessPaymentResult,
         OneTimePurchaseInfo,
         TopupProcessResult,
-        topupProjection
+        topupProjection,
       ]
     normalization: []
     shadow:
@@ -1064,23 +1064,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Process payment failed ({status}): {body}"
+        messageTemplate: 'Process payment failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: ProcessPaymentIntentParams
         required: true
     docs:
-      summary: "Process a completed payment intent into a purchase or top-up outcome."
+      summary: 'Process a completed payment intent into a purchase or top-up outcome.'
       params:
-        params: "Process request identifying the payment intent."
-      returns: "Normalized process-payment result (purchase, top-up, or error branch)."
+        params: 'Process request identifying the payment intent.'
+      returns: 'Normalized process-payment result (purchase, top-up, or error branch).'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   attachBusinessDetails:
     route:
       method: POST
@@ -1094,7 +1094,7 @@ operations:
     optionalOnClient: true
     request: AttachBusinessDetailsParams
     response: AttachBusinessDetailsResult
-    overlays: [ AttachBusinessDetailsParams, AttachBusinessDetailsResult ]
+    overlays: [AttachBusinessDetailsParams, AttachBusinessDetailsResult]
     normalization: []
     shadow:
       volatile: []
@@ -1102,23 +1102,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Attach business details failed ({status}): {body}"
+        messageTemplate: 'Attach business details failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: AttachBusinessDetailsParams
         required: true
     docs:
-      summary: "Attach or update business details used for tax and invoicing."
+      summary: 'Attach or update business details used for tax and invoicing.'
       params:
-        params: "Business details payload."
-      returns: "Attached business details result."
+        params: 'Business details payload.'
+      returns: 'Attached business details result.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   getUserInfo:
     route:
       method: POST
@@ -1132,7 +1132,7 @@ operations:
     optionalOnClient: true
     request: UserInfoRequest
     response: UserInfoResponse
-    overlays: [ GetUserInfoParams ]
+    overlays: [GetUserInfoParams]
     normalization: []
     shadow:
       volatile: []
@@ -1140,23 +1140,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Get user info failed ({status}): {body}"
+        messageTemplate: 'Get user info failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: GetUserInfoParams
         required: true
     docs:
-      summary: "Fetch end-user info for a customer session."
+      summary: 'Fetch end-user info for a customer session.'
       params:
-        params: "User-info request options."
-      returns: "User info projection."
+        params: 'User-info request options.'
+      returns: 'User info projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   getCustomerBalance:
     route:
       method: GET
@@ -1170,7 +1170,7 @@ operations:
     optionalOnClient: true
     request: GetCustomerBalanceParams
     response: GetCustomerBalanceResult
-    overlays: [ GetCustomerBalanceParams, GetCustomerBalanceResult, CreditDisplayBlock ]
+    overlays: [GetCustomerBalanceParams, GetCustomerBalanceResult, CreditDisplayBlock]
     normalization: []
     shadow:
       volatile: []
@@ -1178,23 +1178,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Get customer balance failed ({status}): {body}"
+        messageTemplate: 'Get customer balance failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: GetCustomerBalanceParams
         required: true
     docs:
-      summary: "Fetch a customer credit balance projection for display."
+      summary: 'Fetch a customer credit balance projection for display.'
       params:
-        params: "Balance request identifying the customer."
-      returns: "Customer balance display projection."
+        params: 'Balance request identifying the customer.'
+      returns: 'Customer balance display projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   createCheckoutSession:
     route:
       method: POST
@@ -1216,23 +1216,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Create checkout session failed ({status}): {body}"
+        messageTemplate: 'Create checkout session failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: CreateCheckoutSessionRequest
         required: true
     docs:
-      summary: "Create a hosted checkout session for a customer and product."
+      summary: 'Create a hosted checkout session for a customer and product.'
       params:
-        params: "Checkout session creation fields."
-      returns: "Created checkout session projection."
+        params: 'Checkout session creation fields.'
+      returns: 'Created checkout session projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   createCustomerSession:
     route:
       method: POST
@@ -1254,23 +1254,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Create customer session failed ({status}): {body}"
+        messageTemplate: 'Create customer session failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: CreateCustomerSessionRequest
         required: true
     docs:
-      summary: "Create a customer portal/session for self-serve account actions."
+      summary: 'Create a customer portal/session for self-serve account actions.'
       params:
-        params: "Customer session creation fields."
-      returns: "Created customer session projection."
+        params: 'Customer session creation fields.'
+      returns: 'Created customer session projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   activatePlan:
     route:
       method: POST
@@ -1292,23 +1292,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Activate plan failed ({status}): {body}"
+        messageTemplate: 'Activate plan failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: ActivatePlanDto
         required: true
     docs:
-      summary: "Activate a plan for a customer (purchase or entitlement grant)."
+      summary: 'Activate a plan for a customer (purchase or entitlement grant).'
       params:
-        params: "Plan activation request fields."
-      returns: "Activation result projection."
+        params: 'Plan activation request fields.'
+      returns: 'Activation result projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   getPaymentMethod:
     route:
       method: GET
@@ -1322,7 +1322,7 @@ operations:
     optionalOnClient: true
     request: GetPaymentMethodParams
     response: PaymentMethodInfo
-    overlays: [ GetPaymentMethodParams, PaymentMethodInfo ]
+    overlays: [GetPaymentMethodParams, PaymentMethodInfo]
     normalization: []
     shadow:
       volatile: []
@@ -1330,23 +1330,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Get payment method failed ({status}): {body}"
+        messageTemplate: 'Get payment method failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: GetPaymentMethodParams
         required: true
     docs:
-      summary: "Fetch the default payment method for a customer."
+      summary: 'Fetch the default payment method for a customer.'
       params:
-        params: "Payment-method lookup options."
-      returns: "Payment method info, when present."
+        params: 'Payment-method lookup options.'
+      returns: 'Payment method info, when present.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   getAutoRecharge:
     route:
       method: GET
@@ -1360,7 +1360,7 @@ operations:
     optionalOnClient: true
     request: GetAutoRechargeParams
     response: AutoRechargeResponse
-    overlays: [ GetAutoRechargeParams, AutoRechargeResponse, AutoRechargeConfig ]
+    overlays: [GetAutoRechargeParams, AutoRechargeResponse, AutoRechargeConfig]
     normalization: []
     shadow:
       volatile: []
@@ -1368,23 +1368,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Get auto-recharge failed ({status}): {body}"
+        messageTemplate: 'Get auto-recharge failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: GetAutoRechargeParams
         required: true
     docs:
-      summary: "Fetch auto-recharge configuration for a customer."
+      summary: 'Fetch auto-recharge configuration for a customer.'
       params:
-        params: "Auto-recharge lookup options."
-      returns: "Auto-recharge configuration projection."
+        params: 'Auto-recharge lookup options.'
+      returns: 'Auto-recharge configuration projection.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   saveAutoRecharge:
     route:
       method: PUT
@@ -1398,7 +1398,7 @@ operations:
     optionalOnClient: true
     request: SaveAutoRechargeInput
     response: SaveAutoRechargeResponse
-    overlays: [ SaveAutoRechargeInput, AutoRechargeConfig, SaveAutoRechargeParams ]
+    overlays: [SaveAutoRechargeInput, AutoRechargeConfig, SaveAutoRechargeParams]
     normalization: []
     shadow:
       volatile: []
@@ -1406,23 +1406,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Save auto-recharge failed ({status}): {body}"
+        messageTemplate: 'Save auto-recharge failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: SaveAutoRechargeParams
         required: true
     docs:
-      summary: "Create or update auto-recharge configuration for a customer."
+      summary: 'Create or update auto-recharge configuration for a customer.'
       params:
-        params: "Auto-recharge settings to persist."
-      returns: "Saved auto-recharge configuration."
+        params: 'Auto-recharge settings to persist.'
+      returns: 'Saved auto-recharge configuration.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
   disableAutoRecharge:
     route:
       method: DELETE
@@ -1436,7 +1436,7 @@ operations:
     optionalOnClient: true
     request: DisableAutoRechargeParams
     response: DisableAutoRechargeResponse
-    overlays: [ DisableAutoRechargeParams ]
+    overlays: [DisableAutoRechargeParams]
     normalization: []
     shadow:
       volatile: []
@@ -1444,23 +1444,23 @@ operations:
       kind: none
     errors:
       default:
-        messageTemplate: "Disable auto-recharge failed ({status}): {body}"
+        messageTemplate: 'Disable auto-recharge failed ({status}): {body}'
       cases: []
     params:
       - name: params
         ref: DisableAutoRechargeParams
         required: true
     docs:
-      summary: "Disable auto-recharge for a customer."
+      summary: 'Disable auto-recharge for a customer.'
       params:
-        params: "Disable request identifying the customer."
-      returns: "Updated auto-recharge status after disable."
+        params: 'Disable request identifying the customer.'
+      returns: 'Updated auto-recharge status after disable.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
 
 overlays:
   AssignCreditsRequest:
@@ -1531,7 +1531,7 @@ overlays:
         ref: AutoRechargeTopup
         required: true
       fundingSourceType:
-        enum: [ saved_card, tokenized_card ]
+        enum: [saved_card, tokenized_card]
         required: false
       paymentMethodId:
         type: string
@@ -1560,8 +1560,8 @@ overlays:
       display:
         ref: AutoRechargeDisplayBlock
         required: false
-        doc: "Backend-computed display values — render verbatim; do not derive from
-          trigger fields."
+        doc: 'Backend-computed display values — render verbatim; do not derive from
+          trigger fields.'
   AutoRechargeDisplayBlock:
     kind: synthetic
     fields:
@@ -1581,7 +1581,7 @@ overlays:
         type: number
         required: true
       rateSource:
-        enum: [ parity, db, fallback ]
+        enum: [parity, db, fallback]
         required: true
   AutoRechargeDisplayFormatted:
     kind: synthetic
@@ -1625,7 +1625,7 @@ overlays:
         required: false
   AutoRechargeStatus:
     kind: synthetic
-    enum: [ active, disabled, failed, pending_setup ]
+    enum: [active, disabled, failed, pending_setup]
   AutoRechargeTopup:
     kind: synthetic
     fields:
@@ -1654,9 +1654,9 @@ overlays:
       includeCheckoutSession:
         type: boolean
         required: false
-        doc: "When true, the backend mints a checkout session (or customer portal
+        doc: 'When true, the backend mints a checkout session (or customer portal
           session for activation flows) and returns its URL / id on the
-          response."
+          response.'
   CloneProductResult:
     kind: synthetic
     fields:
@@ -1794,7 +1794,7 @@ overlays:
         type: number
         required: true
       rateSource:
-        enum: [ parity, db, fallback ]
+        enum: [parity, db, fallback]
         required: true
   CustomerResponseMapped:
     kind: mapDto
@@ -2021,7 +2021,7 @@ overlays:
         type: number
         required: true
       treatment:
-        enum: [ reverse_charge, standard, none, not_collecting ]
+        enum: [reverse_charge, standard, none, not_collecting]
         required: true
       total:
         type: number
@@ -2035,7 +2035,7 @@ overlays:
   TopupProcessResult:
     kind: projectUnion
     base: ProcessPaymentResult
-    dropVariants: [ SucceededRecurring, SucceededOneTime ]
+    dropVariants: [SucceededRecurring, SucceededOneTime]
     succeededFields:
       creditsAdded:
         type: number
@@ -2152,7 +2152,7 @@ overlays:
   includeCheckoutSession:
     kind: synthetic
     marker: true
-    doc: "Field extension tag for CheckLimitsRequest"
+    doc: 'Field extension tag for CheckLimitsRequest'
   topupProjection:
     kind: synthetic
     marker: true
@@ -2181,10 +2181,10 @@ topLevel:
             required: true
         required: true
     docs:
-      summary: "Verify a SolvaPay webhook signature and parse the event payload."
+      summary: 'Verify a SolvaPay webhook signature and parse the event payload.'
       params:
-        options: "Webhook body, signature header, and signing secret."
-      returns: "Parsed webhook event when verification succeeds."
+        options: 'Webhook body, signature header, and signing secret.'
+      returns: 'Parsed webhook event when verification succeeds.'
     sync:
       ts: sync
       py: sync
@@ -2209,10 +2209,10 @@ topLevel:
     typeParams:
       - name: T
     docs:
-      summary: "Retry an async callable with the frozen default backoff policy."
+      summary: 'Retry an async callable with the frozen default backoff policy.'
       params:
-        fn: "() => Promise<T> — callable stand-in"
-        options: "Optional retry overrides."
+        fn: '() => Promise<T> — callable stand-in'
+        options: 'Optional retry overrides.'
       returns: "The callable's resolved value."
     sync:
       ts: sync
@@ -2232,10 +2232,10 @@ topLevel:
         type: unknown
         required: true
     docs:
-      summary: "Build the structured paywall gate payload for a product and limits snapshot."
+      summary: 'Build the structured paywall gate payload for a product and limits snapshot.'
       params:
-        options: "Product ref and current limits used to shape the gate."
-      returns: "Structured gate content for paywall responses."
+        options: 'Product ref and current limits used to shape the gate.'
+      returns: 'Structured gate content for paywall responses.'
     sync:
       ts: sync
       py: sync
@@ -2254,10 +2254,10 @@ topLevel:
         type: unknown
         required: true
     docs:
-      summary: "Build the human-readable paywall gate message from state and gate content."
+      summary: 'Build the human-readable paywall gate message from state and gate content.'
       params:
-        options: "Paywall state and gate payload inputs."
-      returns: "Gate message string."
+        options: 'Paywall state and gate payload inputs.'
+      returns: 'Gate message string.'
     sync:
       ts: sync
       py: sync
@@ -2276,10 +2276,10 @@ topLevel:
         type: unknown
         required: true
     docs:
-      summary: "Build a soft nudge message when usage approaches plan limits."
+      summary: 'Build a soft nudge message when usage approaches plan limits.'
       params:
-        options: "Paywall state and optional limits snapshot."
-      returns: "Nudge message string."
+        options: 'Paywall state and optional limits snapshot.'
+      returns: 'Nudge message string.'
     sync:
       ts: sync
       py: sync
@@ -2298,10 +2298,10 @@ topLevel:
         type: unknown
         required: true
     docs:
-      summary: "Classify paywall state from limits and product context."
+      summary: 'Classify paywall state from limits and product context.'
       params:
-        options: "Inputs used to classify the paywall state."
-      returns: "Canonical paywall state label."
+        options: 'Inputs used to classify the paywall state.'
+      returns: 'Canonical paywall state label.'
     sync:
       ts: sync
       py: sync
@@ -2320,10 +2320,10 @@ topLevel:
         type: unknown
         required: true
     docs:
-      summary: "Project a PaywallError into the client-facing payload shape."
+      summary: 'Project a PaywallError into the client-facing payload shape.'
       params:
-        options: "Paywall error fields to project."
-      returns: "Client payload object for paywall responses."
+        options: 'Paywall error fields to project.'
+      returns: 'Client payload object for paywall responses.'
     sync:
       ts: sync
       py: sync
@@ -2351,7 +2351,7 @@ topLevel:
             required: false
         required: false
     docs:
-      summary: "Public SDK error class for API, transport, and webhook failures."
+      summary: 'Public SDK error class for API, transport, and webhook failures.'
     sync:
       ts: sync
       py: sync
@@ -2373,7 +2373,7 @@ topLevel:
         type: unknown
         required: true
     docs:
-      summary: "Paywall gate error carrying structured content for client formatting."
+      summary: 'Paywall gate error carrying structured content for client formatting.'
     sync:
       ts: sync
       py: sync
@@ -2391,10 +2391,10 @@ coreHelpers:
       rust: validate_business_details
     params: []
     docs:
-      summary: "Validate seller business-details fields before submission."
+      summary: 'Validate seller business-details fields before submission.'
       params:
-        options: "Business details input to validate."
-      returns: "Validation issues when present."
+        options: 'Business details input to validate.'
+      returns: 'Validation issues when present.'
     sync:
       ts: sync
       py: sync
@@ -2410,10 +2410,10 @@ coreHelpers:
       rust: derive_tax_id_type
     params: []
     docs:
-      summary: "Derive the tax ID type for a business country."
+      summary: 'Derive the tax ID type for a business country.'
       params:
-        options: "Country used to select the tax ID type."
-      returns: "Tax ID type string when known."
+        options: 'Country used to select the tax ID type.'
+      returns: 'Tax ID type string when known.'
     sync:
       ts: sync
       py: sync
@@ -2429,10 +2429,10 @@ coreHelpers:
       rust: resolve_tax_behavior
     params: []
     docs:
-      summary: "Resolve inclusive vs exclusive tax behavior for a currency/country pair."
+      summary: 'Resolve inclusive vs exclusive tax behavior for a currency/country pair.'
       params:
-        options: "Currency and country used for tax behavior."
-      returns: "Resolved tax behavior."
+        options: 'Currency and country used for tax behavior.'
+      returns: 'Resolved tax behavior.'
     sync:
       ts: sync
       py: sync
@@ -2448,10 +2448,10 @@ coreHelpers:
       rust: get_tax_id_example
     params: []
     docs:
-      summary: "Return an example tax ID string for a country."
+      summary: 'Return an example tax ID string for a country.'
       params:
-        options: "Country whose example tax ID is requested."
-      returns: "Example tax ID string."
+        options: 'Country whose example tax ID is requested.'
+      returns: 'Example tax ID string.'
     sync:
       ts: sync
       py: sync
@@ -2467,10 +2467,10 @@ coreHelpers:
       rust: get_tax_id_field_label
     params: []
     docs:
-      summary: "Return the localized field label for a country tax ID."
+      summary: 'Return the localized field label for a country tax ID.'
       params:
-        options: "Country for the tax ID field label."
-      returns: "Field label string."
+        options: 'Country for the tax ID field label.'
+      returns: 'Field label string.'
     sync:
       ts: sync
       py: sync
@@ -2486,10 +2486,10 @@ coreHelpers:
       rust: get_tax_id_helper_text
     params: []
     docs:
-      summary: "Return helper text describing the tax ID format for a country."
+      summary: 'Return helper text describing the tax ID format for a country.'
       params:
-        options: "Country for the tax ID helper text."
-      returns: "Helper text string."
+        options: 'Country for the tax ID helper text.'
+      returns: 'Helper text string.'
     sync:
       ts: sync
       py: sync
@@ -2504,7 +2504,7 @@ coreHelpers:
       go: BUSINESS_COUNTRY_DISPLAY_NAMES
       rust: BUSINESS_COUNTRY_DISPLAY_NAMES
     docs:
-      summary: "Map of supported business country codes to display names."
+      summary: 'Map of supported business country codes to display names.'
     sync:
       ts: sync
       py: sync
@@ -2519,7 +2519,7 @@ coreHelpers:
       go: BUSINESS_COUNTRY_OPTIONS
       rust: BUSINESS_COUNTRY_OPTIONS
     docs:
-      summary: "Ordered list of business country options for seller identity forms."
+      summary: 'Ordered list of business country options for seller identity forms.'
     sync:
       ts: sync
       py: sync
@@ -2534,7 +2534,7 @@ coreHelpers:
       go: COUNTRY_TO_TAX_ID_TYPE
       rust: COUNTRY_TO_TAX_ID_TYPE
     docs:
-      summary: "Map of business country codes to default tax ID types."
+      summary: 'Map of business country codes to default tax ID types.'
     sync:
       ts: sync
       py: sync
@@ -2549,7 +2549,7 @@ coreHelpers:
       go: SUPPORTED_BUSINESS_COUNTRIES
       rust: SUPPORTED_BUSINESS_COUNTRIES
     docs:
-      summary: "Frozen list of country codes supported for seller business details."
+      summary: 'Frozen list of country codes supported for seller business details.'
     sync:
       ts: sync
       py: sync
@@ -2564,7 +2564,7 @@ coreHelpers:
       go: TAX_BEHAVIORS
       rust: TAX_BEHAVIORS
     docs:
-      summary: "Frozen set of supported tax behavior values."
+      summary: 'Frozen set of supported tax behavior values.'
     sync:
       ts: sync
       py: sync
@@ -2579,7 +2579,7 @@ coreHelpers:
       go: TAX_EXCLUSIVE_CURRENCIES
       rust: TAX_EXCLUSIVE_CURRENCIES
     docs:
-      summary: "Currencies that default to tax-exclusive pricing behavior."
+      summary: 'Currencies that default to tax-exclusive pricing behavior.'
     sync:
       ts: sync
       py: sync
@@ -2594,7 +2594,7 @@ coreHelpers:
       go: TAX_ID_EXAMPLE_BY_COUNTRY
       rust: TAX_ID_EXAMPLE_BY_COUNTRY
     docs:
-      summary: "Map of country codes to example tax ID strings."
+      summary: 'Map of country codes to example tax ID strings.'
     sync:
       ts: sync
       py: sync
@@ -2609,7 +2609,7 @@ coreHelpers:
       go: TAX_ID_TYPES
       rust: TAX_ID_TYPES
     docs:
-      summary: "Frozen set of supported tax ID type values."
+      summary: 'Frozen set of supported tax ID type values.'
     sync:
       ts: sync
       py: sync
@@ -2625,10 +2625,10 @@ coreHelpers:
       rust: credits_to_display_minor_units
     params: []
     docs:
-      summary: "Convert credit units into display minor units for a currency."
+      summary: 'Convert credit units into display minor units for a currency.'
       params:
-        options: "Credits amount and currency for conversion."
-      returns: "Display amount in minor units."
+        options: 'Credits amount and currency for conversion.'
+      returns: 'Display amount in minor units.'
     sync:
       ts: sync
       py: sync
@@ -2644,10 +2644,10 @@ coreHelpers:
       rust: is_zero_decimal_currency
     params: []
     docs:
-      summary: "Return whether a currency uses zero decimal places."
+      summary: 'Return whether a currency uses zero decimal places.'
       params:
-        options: "Currency code to inspect."
-      returns: "True when the currency has zero decimal places."
+        options: 'Currency code to inspect.'
+      returns: 'True when the currency has zero decimal places.'
     sync:
       ts: sync
       py: sync
@@ -2663,10 +2663,10 @@ coreHelpers:
       rust: minor_units_per_major
     params: []
     docs:
-      summary: "Return how many minor units make one major unit for a currency."
+      summary: 'Return how many minor units make one major unit for a currency.'
       params:
-        options: "Currency code to inspect."
-      returns: "Minor units per major unit."
+        options: 'Currency code to inspect.'
+      returns: 'Minor units per major unit.'
     sync:
       ts: sync
       py: sync
@@ -2682,10 +2682,10 @@ coreHelpers:
       rust: resolve_seller_identity_display
     params: []
     docs:
-      summary: "Resolve seller identity fields into a display projection."
+      summary: 'Resolve seller identity fields into a display projection.'
       params:
-        options: "Seller identity inputs to project."
-      returns: "Display projection for seller identity."
+        options: 'Seller identity inputs to project.'
+      returns: 'Display projection for seller identity.'
     sync:
       ts: sync
       py: sync
@@ -2701,10 +2701,10 @@ coreHelpers:
       rust: get_seller_tax_identifier_display_label
     params: []
     docs:
-      summary: "Return the display label for a seller tax identifier type."
+      summary: 'Return the display label for a seller tax identifier type.'
       params:
-        options: "Tax identifier type to label."
-      returns: "Display label string."
+        options: 'Tax identifier type to label.'
+      returns: 'Display label string.'
     sync:
       ts: sync
       py: sync
@@ -2719,7 +2719,7 @@ coreHelpers:
       go: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
       rust: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     docs:
-      summary: "Map of seller tax identifier types to display labels."
+      summary: 'Map of seller tax identifier types to display labels.'
     sync:
       ts: sync
       py: sync
@@ -2734,16 +2734,16 @@ facade:
       py: create_solva_pay
       rb: SolvaPay.create
       go: solvapay.New
-      rust: "Client::new"
+      rust: 'Client::new'
     params:
       - name: config
         type: unknown
         required: false
     docs:
-      summary: "Create the idiomatic high-level SolvaPay facade instance."
+      summary: 'Create the idiomatic high-level SolvaPay facade instance.'
       params:
-        options: "API credentials and optional facade configuration."
-      returns: "Configured SolvaPay facade."
+        options: 'API credentials and optional facade configuration.'
+      returns: 'Configured SolvaPay facade.'
     sync:
       ts: sync
       py: sync
@@ -2762,10 +2762,10 @@ facade:
         type: unknown
         required: true
     docs:
-      summary: "Create a portable SolvaPayClient bound to API credentials."
+      summary: 'Create a portable SolvaPayClient bound to API credentials.'
       params:
-        options: "API key and optional base URL."
-      returns: "Configured SolvaPayClient."
+        options: 'API key and optional base URL.'
+      returns: 'Configured SolvaPayClient.'
     sync:
       ts: sync
       py: sync
@@ -2784,10 +2784,10 @@ facade:
         type: unknown
         required: true
     docs:
-      summary: "Return a decorator/wrapper that gates a callable behind paywall checks."
+      summary: 'Return a decorator/wrapper that gates a callable behind paywall checks.'
       params:
-        options: "Product and usage meter used for gating."
-      returns: "Decorator that enforces the paywall before invocation."
+        options: 'Product and usage meter used for gating.'
+      returns: 'Decorator that enforces the paywall before invocation.'
     sync:
       ts: sync
       py: sync
@@ -2806,10 +2806,10 @@ facade:
         type: unknown
         required: true
     docs:
-      summary: "Protect a callable with paywall gating for the given product."
+      summary: 'Protect a callable with paywall gating for the given product.'
       params:
-        options: "Product and usage meter used for protection."
-      returns: "Protected callable wrapper."
+        options: 'Product and usage meter used for protection.'
+      returns: 'Protected callable wrapper.'
     sync:
       ts: sync
       py: sync
@@ -2828,16 +2828,16 @@ facade:
         type: unknown
         required: true
     docs:
-      summary: "Evaluate the paywall gate for a customer against a product."
+      summary: 'Evaluate the paywall gate for a customer against a product.'
       params:
-        options: "Customer ref, product, and usage meter for the gate decision."
-      returns: "Paywall or allow result with usage trackers."
+        options: 'Customer ref, product, and usage meter for the gate decision.'
+      returns: 'Paywall or allow result with usage trackers.'
     sync:
       ts: async
-      py: [ async, blocking ]
+      py: [async, blocking]
       rb: blocking
       go: blocking
-      rust: [ async, blocking ]
+      rust: [async, blocking]
 
 bindings:
   MCP_TOOL_NAMES:
@@ -2921,7 +2921,7 @@ bindings:
     artifact: client
     emitOrder: 14
     section: Group B
-    doc: "`POST /v1/sdk/activate`"
+    doc: '`POST /v1/sdk/activate`'
     rustFnName: activate_plan
     call:
       kind: wrap
@@ -3010,7 +3010,7 @@ bindings:
     artifact: client
     emitOrder: 13
     section: Group B
-    doc: "`POST /v1/sdk/payment-intents/{id}/business-details`"
+    doc: '`POST /v1/sdk/payment-intents/{id}/business-details`'
     rustFnName: attach_business_details
     call:
       kind: wrap
@@ -3029,7 +3029,7 @@ bindings:
       kind: none
     args:
       - name: firstIssueMessage
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: first_issue_message
@@ -3067,7 +3067,7 @@ bindings:
     artifact: client
     emitOrder: 24
     section: Group C
-    doc: "`POST /v1/sdk/products/mcp/bootstrap`"
+    doc: '`POST /v1/sdk/products/mcp/bootstrap`'
     rustFnName: bootstrap_mcp_product
     call:
       kind: wrap
@@ -3091,17 +3091,17 @@ bindings:
         extract: requireString
         local: customer_ref
       - name: externalRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: external_ref
       - name: email
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: email
       - name: name
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: name
@@ -3125,7 +3125,7 @@ bindings:
       kind: wrap
       serialize: toValue
       args:
-        - "&customer_ref"
+        - '&customer_ref'
         - external_ref.as_deref()
         - email.as_deref()
         - name.as_deref()
@@ -3168,8 +3168,8 @@ bindings:
       kind: wrap
       serialize: valueString
       args:
-        - "&state"
-        - "&gate"
+        - '&state'
+        - '&gate'
     coreCall: build_gate_message
   buildNudgeMessage:
     core: solvapay_core::paywall_state::build_nudge_message
@@ -3208,7 +3208,7 @@ bindings:
       kind: wrap
       serialize: valueString
       args:
-        - "&state"
+        - '&state'
         - limits.as_ref()
     coreCall: build_nudge_message
   buildPaywallGate:
@@ -3247,8 +3247,8 @@ bindings:
       kind: wrap
       serialize: toValue
       args:
-        - "&product_ref"
-        - "&limits"
+        - '&product_ref'
+        - '&limits'
     coreCall: build_paywall_gate
   buildPromptDescriptorMetadata:
     core: solvapay_core::mcp::build_prompt_descriptor_metadata
@@ -3388,7 +3388,7 @@ bindings:
     artifact: client
     emitOrder: 30
     section: Group C
-    doc: "`POST /v1/sdk/purchases/{purchaseRef}/cancel`"
+    doc: '`POST /v1/sdk/purchases/{purchaseRef}/cancel`'
     rustFnName: cancel_purchase
     call:
       kind: wrap
@@ -3414,7 +3414,7 @@ bindings:
     artifact: client
     emitOrder: 15
     section: Group C
-    doc: "`POST /v1/sdk/limits`"
+    doc: '`POST /v1/sdk/limits`'
     rustFnName: check_limits
     call:
       kind: wrap
@@ -3450,7 +3450,7 @@ bindings:
       kind: wrap
       serialize: toValue
       args:
-        - "&message"
+        - '&message'
     coreCall: classify_cancel_error
   classifyCreateError:
     core: solvapay_core::customer_sync::classify_create_error
@@ -3481,7 +3481,7 @@ bindings:
       kind: wrap
       serialize: toValue
       args:
-        - "&message"
+        - '&message'
     coreCall: classify_create_error
   classifyCustomerRef:
     core: solvapay_core::customer_sync::classify_customer_ref
@@ -3512,7 +3512,7 @@ bindings:
       kind: wrap
       serialize: toValue
       args:
-        - "&customer_ref"
+        - '&customer_ref'
     coreCall: classify_customer_ref
   classifyLookupError:
     core: solvapay_core::customer_sync::classify_lookup_error
@@ -3543,7 +3543,7 @@ bindings:
       kind: wrap
       serialize: toValue
       args:
-        - "&message"
+        - '&message'
     coreCall: classify_lookup_error
   classifyPaywallState:
     core: solvapay_core::paywall_state::classify_paywall_state
@@ -3607,7 +3607,7 @@ bindings:
       kind: wrap
       serialize: toValue
       args:
-        - "&message"
+        - '&message'
     coreCall: classify_reactivate_error
   cloneProduct:
     core: solvapay_transport::SolvaPayClient::clone_product
@@ -3640,7 +3640,7 @@ bindings:
     coreCall: clone_product
     dtoType: CloneProductOverrides
     clientCallArgs:
-      - "&refs[0]"
+      - '&refs[0]'
       - Some(overrides)
   coerceCustomerOptions:
     core: solvapay_core::customer_sync::coerce_customer_options
@@ -3654,12 +3654,12 @@ bindings:
       kind: none
     args:
       - name: email
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: email
       - name: name
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: name
@@ -3710,7 +3710,7 @@ bindings:
     coreCall: configure_mcp_plans
     dtoType: ConfigureMcpPlansDto
     clientCallArgs:
-      - "&refs[0]"
+      - '&refs[0]'
       - params
   createCheckoutSession:
     core: solvapay_transport::SolvaPayClient::create_checkout_session
@@ -3757,7 +3757,7 @@ bindings:
     artifact: client
     emitOrder: 0
     section: Group A
-    doc: "`POST /v1/sdk/customers`"
+    doc: '`POST /v1/sdk/customers`'
     rustFnName: create_customer
     call:
       kind: wrap
@@ -3809,7 +3809,7 @@ bindings:
     artifact: client
     emitOrder: 10
     section: Group B
-    doc: "`POST /v1/sdk/payment-intents` (plan checkout)."
+    doc: '`POST /v1/sdk/payment-intents` (plan checkout).'
     rustFnName: create_payment_intent
     call:
       kind: wrap
@@ -3835,7 +3835,7 @@ bindings:
     artifact: client
     emitOrder: 27
     section: Group C
-    doc: "`POST /v1/sdk/products/{productRef}/plans` (`productRef` in body)."
+    doc: '`POST /v1/sdk/products/{productRef}/plans` (`productRef` in body).'
     rustFnName: create_plan
     call:
       kind: wrap
@@ -3861,7 +3861,7 @@ bindings:
     artifact: client
     emitOrder: 20
     section: Group C
-    doc: "`POST /v1/sdk/products`"
+    doc: '`POST /v1/sdk/products`'
     rustFnName: create_product
     call:
       kind: wrap
@@ -3887,7 +3887,7 @@ bindings:
     artifact: client
     emitOrder: 11
     section: Group B
-    doc: "`POST /v1/sdk/payment-intents` (credit top-up)."
+    doc: '`POST /v1/sdk/payment-intents` (credit top-up).'
     rustFnName: create_topup_payment_intent
     call:
       kind: wrap
@@ -3963,7 +3963,7 @@ bindings:
         extract: requireString
         local: product
       - name: checkoutUrl
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: checkout_url
@@ -3986,7 +3986,7 @@ bindings:
       serialize: toValue
       args:
         - within_limits
-        - "&product"
+        - '&product'
         - limits.as_ref()
         - checkout_url.as_deref()
     coreCall: decide_paywall_outcome
@@ -4021,8 +4021,8 @@ bindings:
       serialize: clientSplit
     coreCall: delete_plan
     clientCallArgs:
-      - "&refs[0]"
-      - "&refs[1]"
+      - '&refs[0]'
+      - '&refs[1]'
   deleteProduct:
     core: solvapay_transport::SolvaPayClient::delete_product
     names:
@@ -4053,7 +4053,7 @@ bindings:
       serialize: clientSplit
     coreCall: delete_product
     clientCallArgs:
-      - "&refs[0]"
+      - '&refs[0]'
   deriveIcons:
     core: solvapay_core::mcp::derive_icons
     names:
@@ -4141,7 +4141,7 @@ bindings:
     artifact: client
     emitOrder: 35
     section: Group C
-    doc: "`DELETE /v1/sdk/auto-recharge`"
+    doc: '`DELETE /v1/sdk/auto-recharge`'
     rustFnName: disable_auto_recharge
     call:
       kind: wrap
@@ -4251,7 +4251,7 @@ bindings:
       serialize: valueString
       args:
         - response
-        - "&fallback"
+        - '&fallback'
     coreCall: extract_backend_customer_ref
   getAutoRecharge:
     core: solvapay_transport::SolvaPayClient::get_auto_recharge
@@ -4272,7 +4272,7 @@ bindings:
     artifact: client
     emitOrder: 33
     section: Group C
-    doc: "`GET /v1/sdk/auto-recharge`"
+    doc: '`GET /v1/sdk/auto-recharge`'
     rustFnName: get_auto_recharge
     call:
       kind: wrap
@@ -4399,7 +4399,7 @@ bindings:
     artifact: client
     emitOrder: 32
     section: Group C
-    doc: "`GET /v1/sdk/payment-method`"
+    doc: '`GET /v1/sdk/payment-method`'
     rustFnName: get_payment_method
     call:
       kind: wrap
@@ -4461,7 +4461,7 @@ bindings:
       serialize: clientSplit
     coreCall: get_product
     clientCallArgs:
-      - "&refs[0]"
+      - '&refs[0]'
   getSellerTaxIdentifierDisplayLabel:
     core: solvapay_core::seller_identity::get_seller_tax_identifier_display_label
     names:
@@ -4475,7 +4475,7 @@ bindings:
       id: getSellerTaxIdentifierDisplayLabel
     args:
       - name: country
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: country
@@ -4640,7 +4640,7 @@ bindings:
       kind: none
     args:
       - name: externalRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: external_ref
@@ -4650,7 +4650,7 @@ bindings:
         extract: requireString
         local: user_id
       - name: customerRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: customer_ref
@@ -4668,7 +4668,7 @@ bindings:
       serialize: valueBool
       args:
         - external_ref.as_deref()
-        - "&user_id"
+        - '&user_id'
         - customer_ref.as_deref()
     coreCall: is_cached_customer_ref_valid
   isEmailConflict:
@@ -4700,7 +4700,7 @@ bindings:
       kind: wrap
       serialize: valueBool
       args:
-        - "&message"
+        - '&message'
     coreCall: is_email_conflict
   isErrorResult:
     core: solvapay_core::route_error::is_error_result
@@ -4731,7 +4731,7 @@ bindings:
       kind: wrap
       serialize: valueBool
       args:
-        - "&value"
+        - '&value'
     coreCall: is_error_result
   isZeroDecimalCurrency:
     core: solvapay_core::credit_display::is_zero_decimal_currency
@@ -4763,7 +4763,7 @@ bindings:
       kind: wrap
       serialize: valueBool
       args:
-        - "&currency"
+        - '&currency'
     coreCall: is_zero_decimal_currency
   listPlans:
     core: solvapay_transport::SolvaPayClient::list_plans
@@ -4795,7 +4795,7 @@ bindings:
       serialize: clientSplit
     coreCall: list_plans
     clientCallArgs:
-      - "&refs[0]"
+      - '&refs[0]'
   listProducts:
     core: solvapay_transport::SolvaPayClient::list_products
     names:
@@ -4903,16 +4903,16 @@ bindings:
         type: string
         required: true
       - name: message
-        type: "string?"
+        type: 'string?'
         required: false
       - name: defaultMessage
-        type: "string?"
+        type: 'string?'
         required: false
       - name: operationName
         type: string
         required: true
       - name: status
-        type: "f64?"
+        type: 'f64?'
         required: false
     splitPathRefs: []
     return: value
@@ -5038,7 +5038,7 @@ bindings:
       kind: wrap
       serialize: resultAsValue
       args:
-        - "&response"
+        - '&response'
     coreCall: normalize_cancel_response
     docWasm: Binding for `normalizeCancelResponse`.
   normalizeReactivateResponse:
@@ -5075,7 +5075,7 @@ bindings:
       kind: wrap
       serialize: resultAsValue
       args:
-        - "&response"
+        - '&response'
     coreCall: normalize_reactivate_response
     docWasm: Binding for `normalizeReactivateResponse`.
   paywallErrorToClientPayload:
@@ -5121,7 +5121,7 @@ bindings:
       kind: wrap
       serialize: toValue
       args:
-        - "&gate"
+        - '&gate'
     coreCall: paywall_client_payload
     docWasm: Binding for `paywallErrorToClientPayload`.
   paywallToolResult:
@@ -5160,8 +5160,8 @@ bindings:
       kind: wrap
       serialize: toValue
       args:
-        - "&message"
-        - "&gate"
+        - '&message'
+        - '&gate'
     coreCall: paywall_tool_result
   processPaymentIntent:
     core: solvapay_transport::SolvaPayClient::process_payment_intent
@@ -5182,7 +5182,7 @@ bindings:
     artifact: client
     emitOrder: 12
     section: Group B
-    doc: "`POST /v1/sdk/payment-intents/{id}/process`"
+    doc: '`POST /v1/sdk/payment-intents/{id}/process`'
     rustFnName: process_payment_intent
     call:
       kind: wrap
@@ -5213,7 +5213,7 @@ bindings:
         type: string
         required: true
       - name: accountId
-        type: "string?"
+        type: 'string?'
         required: false
     splitPathRefs: []
     return: value
@@ -5254,12 +5254,12 @@ bindings:
       kind: none
     args:
       - name: status
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: status
       - name: message
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: message
@@ -5330,7 +5330,7 @@ bindings:
     artifact: client
     emitOrder: 31
     section: Group C
-    doc: "`POST /v1/sdk/purchases/{purchaseRef}/reactivate`"
+    doc: '`POST /v1/sdk/purchases/{purchaseRef}/reactivate`'
     rustFnName: reactivate_purchase
     call:
       kind: wrap
@@ -5349,12 +5349,12 @@ bindings:
       kind: none
     args:
       - name: productRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: product_ref
       - name: meterName
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: meter_name
@@ -5392,7 +5392,7 @@ bindings:
       kind: none
     args:
       - name: checkoutUrl
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: checkout_url
@@ -5423,12 +5423,12 @@ bindings:
       kind: none
     args:
       - name: metadataProduct
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: metadata_product
       - name: envProduct
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: env_product
@@ -5460,7 +5460,7 @@ bindings:
       kind: none
     args:
       - name: customerRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: customer_ref
@@ -5483,7 +5483,7 @@ bindings:
       serialize: valueString
       args:
         - customer_ref.as_deref()
-        - "&user_id"
+        - '&user_id'
     coreCall: resolve_purchase_customer_ref
   resolveReturnUrl:
     core: solvapay_core::checkout::resolve_return_url
@@ -5497,13 +5497,13 @@ bindings:
       kind: none
     args:
       - name: bodyReturnUrl
-        type: "string?"
+        type: 'string?'
         required: false
       - name: optionsReturnUrl
-        type: "string?"
+        type: 'string?'
         required: false
       - name: origin
-        type: "string?"
+        type: 'string?'
         required: false
     splitPathRefs: []
     return: value
@@ -5542,16 +5542,16 @@ bindings:
       id: resolveSellerIdentityDisplay
     args:
       - name: country
-        type: "string?"
+        type: 'string?'
         required: false
       - name: vatNumber
-        type: "string?"
+        type: 'string?'
         required: false
       - name: taxId
-        type: "string?"
+        type: 'string?'
         required: false
       - name: companyNumber
-        type: "string?"
+        type: 'string?'
         required: false
     splitPathRefs: []
     return: value
@@ -5628,13 +5628,13 @@ bindings:
         type: f64
         required: true
       - name: maxRetries
-        type: "f64?"
+        type: 'f64?'
         required: false
       - name: initialDelay
-        type: "f64?"
+        type: 'f64?'
         required: false
       - name: backoffStrategy
-        type: "string?"
+        type: 'string?'
         required: false
     splitPathRefs: []
     return: value
@@ -5710,7 +5710,7 @@ bindings:
     artifact: client
     emitOrder: 34
     section: Group C
-    doc: "`PUT /v1/sdk/auto-recharge`"
+    doc: '`PUT /v1/sdk/auto-recharge`'
     rustFnName: save_auto_recharge
     call:
       kind: wrap
@@ -5765,7 +5765,7 @@ bindings:
     artifact: client
     emitOrder: 16
     section: Group C
-    doc: "`POST /v1/sdk/usages`"
+    doc: '`POST /v1/sdk/usages`'
     rustFnName: track_usage
     call:
       kind: wrap
@@ -5791,7 +5791,7 @@ bindings:
     artifact: client
     emitOrder: 17
     section: Group C
-    doc: "`POST /v1/sdk/usages/bulk`"
+    doc: '`POST /v1/sdk/usages/bulk`'
     rustFnName: track_usage_bulk
     call:
       kind: wrap
@@ -5829,7 +5829,7 @@ bindings:
     coreCall: update_customer
     dtoType: UpdateCustomerParams
     clientCallArgs:
-      - "&refs[0]"
+      - '&refs[0]'
       - params
   updatePlan:
     core: solvapay_transport::SolvaPayClient::update_plan
@@ -5863,8 +5863,8 @@ bindings:
     coreCall: update_plan
     dtoType: UpdatePlanRequest
     clientCallArgs:
-      - "&refs[0]"
-      - "&refs[1]"
+      - '&refs[0]'
+      - '&refs[1]'
       - params
   updateProduct:
     core: solvapay_transport::SolvaPayClient::update_product
@@ -5897,7 +5897,7 @@ bindings:
     coreCall: update_product
     dtoType: UpdateProductRequest
     clientCallArgs:
-      - "&refs[0]"
+      - '&refs[0]'
       - params
   validateActivatePlanParams:
     core: solvapay_core::activation::validate_activate_plan_params
@@ -5911,12 +5911,12 @@ bindings:
       kind: none
     args:
       - name: productRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: product_ref
       - name: planRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: plan_ref
@@ -5948,7 +5948,7 @@ bindings:
       kind: none
     args:
       - name: paymentIntentId
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: payment_intent_id
@@ -6007,7 +6007,7 @@ bindings:
       kind: none
     args:
       - name: productRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: product_ref
@@ -6038,12 +6038,12 @@ bindings:
       kind: none
     args:
       - name: planRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: plan_ref
       - name: productRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: product_ref
@@ -6075,7 +6075,7 @@ bindings:
       kind: none
     args:
       - name: productRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: product_ref
@@ -6106,7 +6106,7 @@ bindings:
       kind: none
     args:
       - name: productRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: product_ref
@@ -6137,12 +6137,12 @@ bindings:
       kind: none
     args:
       - name: paymentIntentId
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: payment_intent_id
       - name: productRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: product_ref
@@ -6209,7 +6209,7 @@ bindings:
       kind: none
     args:
       - name: purchaseRef
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: purchase_ref
@@ -6240,12 +6240,12 @@ bindings:
       kind: none
     args:
       - name: amount
-        type: "f64?"
+        type: 'f64?'
         required: false
         extract: optionalF64
         local: amount
       - name: currency
-        type: "string?"
+        type: 'string?'
         required: false
         extract: optionalString
         local: currency
@@ -6309,19 +6309,19 @@ errors:
       malformed_signature: Malformed webhook signature
       timestamp_too_old: Webhook signature timestamp too old
       invalid_signature: Invalid webhook signature
-      invalid_payload: "Invalid webhook payload: body is not valid JSON"
+      invalid_payload: 'Invalid webhook payload: body is not valid JSON'
   paywall:
     messages:
       payment_required: Payment required
       activation_required: Activation required
   mcp:
     messages:
-      rawHandlerReturn: "SolvaPay: registerPayable handler returned a raw value.
+      rawHandlerReturn: 'SolvaPay: registerPayable handler returned a raw value.
         Handlers must return ctx.respond(data, options?). If you believe you
         did, this is an internal bug — please file an issue at
-        https://github.com/solvapay/solvapay-sdk/issues."
+        https://github.com/solvapay/solvapay-sdk/issues.'
   transport:
-    messageTemplate: "{message}"
+    messageTemplate: '{message}'
 
 defaults:
   retry:
@@ -6331,15 +6331,15 @@ defaults:
   webhookToleranceSec: 300
   limitsCacheTTLMs: 10000
   idempotencyKeyFormats:
-    payment: "payment-{planRef}-{epochMs}-{random9}"
-    topup: "topup-{epochMs}-{random9}"
+    payment: 'payment-{planRef}-{epochMs}-{random9}'
+    topup: 'topup-{epochMs}-{random9}'
   goContextFirstParam: true
 
 nameOverrides:
   createSolvaPay:
     rb: SolvaPay.create
     go: solvapay.New
-    rust: "Client::new"
+    rust: 'Client::new'
   gate:
     ts: payable.gate
     py: sp.gate

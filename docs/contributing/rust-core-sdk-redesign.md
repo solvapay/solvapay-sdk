@@ -1,5 +1,7 @@
 # Rust Core SDK Redesign
 
+> **Superseded.** This is the v1 draft, kept for history. The current spec is [`rust-core-sdk-redesign-v2.md`](./rust-core-sdk-redesign-v2.md) (more detail, Go + Rust surfaces, per-step scope); the as-built architecture is [`architecture.md`](./architecture.md); step status is [`rust-migration-map.md`](./rust-migration-map.md). Do not use this document as a reference for new work.
+
 Implementation-oriented architecture decision document for migrating SolvaPay’s shared SDK behavior into a Rust semantic core while preserving the existing TypeScript/React surface and adding idiomatic Python and Ruby packages.
 
 **Status:** living document. Every migration step starts with online research against current upstream sources; findings that confirm, sharpen, or contradict a decision are written back here in the same session.
@@ -34,14 +36,14 @@ The SDK contract manifest (Phase 0) is the one source of truth for what “publi
 
 All three wrappers must expose, with equivalent semantics:
 
-| Category | Current TypeScript anchors |
-| --- | --- |
-| Client factory | `createSolvaPayClient` |
-| Client methods | Every `SolvaPayClient` method in `client.ts` (see catalog below) |
-| Top-level functions | `verifyWebhook`, `withRetry` |
-| Paywall helpers | `buildPaywallGate`, `buildGateMessage`, `buildNudgeMessage`, `classifyPaywallState`, `paywallErrorToClientPayload` |
-| Errors | `SolvaPayError`, `PaywallError` |
-| Core helpers | `@solvapay/core` business-details, credit-display, seller-identity |
+| Category            | Current TypeScript anchors                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Client factory      | `createSolvaPayClient`                                                                                             |
+| Client methods      | Every `SolvaPayClient` method in `client.ts` (see catalog below)                                                   |
+| Top-level functions | `verifyWebhook`, `withRetry`                                                                                       |
+| Paywall helpers     | `buildPaywallGate`, `buildGateMessage`, `buildNudgeMessage`, `classifyPaywallState`, `paywallErrorToClientPayload` |
+| Errors              | `SolvaPayError`, `PaywallError`                                                                                    |
+| Core helpers        | `@solvapay/core` business-details, credit-display, seller-identity                                                 |
 
 **`SolvaPayClient` methods (portable):**
 
@@ -56,8 +58,8 @@ All three wrappers must expose, with equivalent semantics:
 Framework glue does **not** need a Python/Ruby equivalent:
 
 - `@solvapay/react`, `@solvapay/next`
-- Framework adapters in [`packages/server/src/adapters`](../../packages/server/src/adapters)
-- Fetch route handlers in [`packages/server/src/fetch`](../../packages/server/src/fetch)
+- Framework adapters in [`packages/server/src/adapters`](../../packages/server/src/adapters/index.ts)
+- Fetch route handlers in [`packages/server/src/fetch`](../../packages/server/src/fetch/index.ts)
 - MCP SDK registration glue ([`register-virtual-tools-mcp.ts`](../../packages/server/src/register-virtual-tools-mcp.ts))
 - `@solvapay/auth`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init`
 
@@ -65,15 +67,15 @@ Python/Ruby still get the underlying decision cores those adapters call into (pa
 
 ### 2.5 Consistency rules
 
-| Rule | Requirement |
-| --- | --- |
-| Operations | Same set and semantics |
-| Names | Adapted only to language convention (`camelCase` TS, `snake_case` Python/Ruby) |
-| Arguments | Same shapes; same required/optional fields |
-| Defaults | Same retry policy, idempotency, tolerances |
-| Errors | Same taxonomy and stable `code` values |
-| Results | Same shapes |
-| Sync/async | Equivalent availability per event-loop-ownership rules (§6) |
+| Rule       | Requirement                                                                    |
+| ---------- | ------------------------------------------------------------------------------ |
+| Operations | Same set and semantics                                                         |
+| Names      | Adapted only to language convention (`camelCase` TS, `snake_case` Python/Ruby) |
+| Arguments  | Same shapes; same required/optional fields                                     |
+| Defaults   | Same retry policy, idempotency, tolerances                                     |
+| Errors     | Same taxonomy and stable `code` values                                         |
+| Results    | Same shapes                                                                    |
+| Sync/async | Equivalent availability per event-loop-ownership rules (§6)                    |
 
 ### 2.6 Enforced, not aspirational
 
@@ -167,40 +169,40 @@ flowchart TB
 
 **What crosses each boundary:**
 
-| Boundary | Crosses | Must not cross |
-| --- | --- | --- |
-| React → TS facade | JSON, typed hooks, transport callbacks | Secret keys, native handles |
-| TS facade → binding | Structs/JSON, Promises | Framework objects (Request, Next.js types) |
-| Binding → core | Owned buffers, typed errors, cancellation | Host event-loop types (tokio `Handle` in public core API) |
-| Core → wire | HTTP via transport trait | Language-specific exceptions |
+| Boundary            | Crosses                                   | Must not cross                                            |
+| ------------------- | ----------------------------------------- | --------------------------------------------------------- |
+| React → TS facade   | JSON, typed hooks, transport callbacks    | Secret keys, native handles                               |
+| TS facade → binding | Structs/JSON, Promises                    | Framework objects (Request, Next.js types)                |
+| Binding → core      | Owned buffers, typed errors, cancellation | Host event-loop types (tokio `Handle` in public core API) |
+| Core → wire         | HTTP via transport trait                  | Language-specific exceptions                              |
 
 ### 4.3 Workspace split
 
-| Crate | Responsibility | Deps |
-| --- | --- | --- |
-| `solvapay-core` | Validation, retries (policy), webhooks, paywall state/gate, business-details, credit-display, seller-identity, error model | No HTTP; std allowed |
-| `solvapay-dto` | Generated OpenAPI DTOs + SDK overlays | Generated; serde |
-| `solvapay-transport` | Transport trait, `reqwest`/rustls, Fetch-backed WASM, client shell, method implementations | Depends on core + dto |
+| Crate                | Responsibility                                                                                                             | Deps                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `solvapay-core`      | Validation, retries (policy), webhooks, paywall state/gate, business-details, credit-display, seller-identity, error model | No HTTP; std allowed  |
+| `solvapay-dto`       | Generated OpenAPI DTOs + SDK overlays                                                                                      | Generated; serde      |
+| `solvapay-transport` | Transport trait, `reqwest`/rustls, Fetch-backed WASM, client shell, method implementations                                 | Depends on core + dto |
 
 ### 4.4 Binding strategy
 
-| Target | Toolchain | Notes |
-| --- | --- | --- |
-| Node TypeScript | `napi-rs` | Prebuilds for platform matrix; WASM fallback when native unavailable |
-| Browser / edge / Workers / Deno | `wasm-bindgen` | Capability-separated builds; no secret-key ops in browser WASM |
-| Python | PyO3 + maturin | Async + blocking sync facades; GIL released while awaiting |
-| Ruby | Magnus + rb-sys | Sync-first facade; GVL released during blocking calls |
-| Third-party / exotic | Optional C ABI | Opaque handles, owned buffers, explicit free, panic containment |
+| Target                          | Toolchain       | Notes                                                                |
+| ------------------------------- | --------------- | -------------------------------------------------------------------- |
+| Node TypeScript                 | `napi-rs`       | Prebuilds for platform matrix; WASM fallback when native unavailable |
+| Browser / edge / Workers / Deno | `wasm-bindgen`  | Capability-separated builds; no secret-key ops in browser WASM       |
+| Python                          | PyO3 + maturin  | Async + blocking sync facades; GIL released while awaiting           |
+| Ruby                            | Magnus + rb-sys | Sync-first facade; GVL released during blocking calls                |
+| Third-party / exotic            | Optional C ABI  | Opaque handles, owned buffers, explicit free, panic containment      |
 
 ### 4.5 Why not the alternatives
 
-| Approach | Why weaker for this target set |
-| --- | --- |
-| **Single raw C ABI for all first-party wrappers** | Forces every language through the least common denominator: manual memory, no idiomatic async, duplicated safety wrappers, and worse DX than napi-rs/PyO3/Magnus. Keep C ABI optional for portability, not mandatory. |
-| **UniFFI-only** | Strong for Kotlin/Swift/Python/Ruby mobile-style components; Node and browser/WASM paths are second-class or third-party. We need first-class Node (napi-rs) and browser WASM (`wasm-bindgen`) for the existing product. |
-| **Diplomat-only** | Excellent C/C++/JS hub-and-spoke generator; Python via nanobind is newer; no first-class Ruby/napi-rs story matching our Node + PyPI + RubyGems matrix. |
-| **WIT / Wasm Component Model only** | Promising long-term host model, but not a mature path for shipping idiomatic Node native addons, CPython wheels, and Ruby gems today. WASM remains our browser/edge/fallback path, not the universal packaging format. |
-| **WASM for every language** | Acceptable fallback for JS when native is missing; too slow/awkward as the primary Python/Ruby delivery (GIL/GVL, startup, tooling). Native extensions win for server SDKs. |
+| Approach                                          | Why weaker for this target set                                                                                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Single raw C ABI for all first-party wrappers** | Forces every language through the least common denominator: manual memory, no idiomatic async, duplicated safety wrappers, and worse DX than napi-rs/PyO3/Magnus. Keep C ABI optional for portability, not mandatory.    |
+| **UniFFI-only**                                   | Strong for Kotlin/Swift/Python/Ruby mobile-style components; Node and browser/WASM paths are second-class or third-party. We need first-class Node (napi-rs) and browser WASM (`wasm-bindgen`) for the existing product. |
+| **Diplomat-only**                                 | Excellent C/C++/JS hub-and-spoke generator; Python via nanobind is newer; no first-class Ruby/napi-rs story matching our Node + PyPI + RubyGems matrix.                                                                  |
+| **WIT / Wasm Component Model only**               | Promising long-term host model, but not a mature path for shipping idiomatic Node native addons, CPython wheels, and Ruby gems today. WASM remains our browser/edge/fallback path, not the universal packaging format.   |
+| **WASM for every language**                       | Acceptable fallback for JS when native is missing; too slow/awkward as the primary Python/Ruby delivery (GIL/GVL, startup, tooling). Native extensions win for server SDKs.                                              |
 
 **Decision:** specialized generated runtime bindings per language, with a stable optional C ABI for third parties.
 
@@ -229,13 +231,13 @@ From those two inputs:
 
 These currently live as hand-maintained overlays in [`packages/server/src/types/client.ts`](../../packages/server/src/types/client.ts) and must be encoded in OpenAPI and/or the contract manifest:
 
-| Blocker | Today | Required before gen cutover |
-| --- | --- | --- |
-| `CheckLimitsRequest.includeCheckoutSession` | TS intersection overlay; comment says temporary until OpenAPI republish | Field in OpenAPI or explicit manifest overlay |
-| `LimitResponseWithPlan` | `LimitResponse` + SDK-added `plan` | Document as overlay or push into API |
-| `ProcessPaymentResult` | Discriminated `oneOf` with recurring/one-time/topup/failed/cancelled/timeout branches | OpenAPI discriminators must round-trip; generator must preserve them |
-| `CustomerResponseMapped` | Field mapping + optional purchase enrichments | Manifest normalization rules |
-| SDK-only result types | `OneTimePurchaseInfo`, MCP bootstrap types, auto-recharge display blocks, etc. | Manifest overlays with generation tests |
+| Blocker                                     | Today                                                                                 | Required before gen cutover                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `CheckLimitsRequest.includeCheckoutSession` | TS intersection overlay; comment says temporary until OpenAPI republish               | Field in OpenAPI or explicit manifest overlay                        |
+| `LimitResponseWithPlan`                     | `LimitResponse` + SDK-added `plan`                                                    | Document as overlay or push into API                                 |
+| `ProcessPaymentResult`                      | Discriminated `oneOf` with recurring/one-time/topup/failed/cancelled/timeout branches | OpenAPI discriminators must round-trip; generator must preserve them |
+| `CustomerResponseMapped`                    | Field mapping + optional purchase enrichments                                         | Manifest normalization rules                                         |
+| SDK-only result types                       | `OneTimePurchaseInfo`, MCP bootstrap types, auto-recharge display blocks, etc.        | Manifest overlays with generation tests                              |
 
 ### 5.4 Compatibility model
 
@@ -280,47 +282,47 @@ Workload is I/O-bound request/response. Concurrency means overlapping in-flight 
 
 ### 6.5 Event-loop ownership (bindings, never the core)
 
-| Binding | Ownership |
-| --- | --- |
-| napi-rs | Shared multi-thread tokio runtime; futures surface as JS Promises |
-| wasm-bindgen | Host microtask queue via `wasm-bindgen-futures` |
-| PyO3 | Owns a tokio runtime; releases GIL while awaiting; async + blocking sync facades |
-| Ruby (Magnus) | Sync-first facade; releases GVL during blocking calls |
+| Binding       | Ownership                                                                        |
+| ------------- | -------------------------------------------------------------------------------- |
+| napi-rs       | Shared multi-thread tokio runtime; futures surface as JS Promises                |
+| wasm-bindgen  | Host microtask queue via `wasm-bindgen-futures`                                  |
+| PyO3          | Owns a tokio runtime; releases GIL while awaiting; async + blocking sync facades |
+| Ruby (Magnus) | Sync-first facade; releases GVL during blocking calls                            |
 
 ### 6.6 Safety and interop checklist
 
-| Concern | Rule |
-| --- | --- |
-| Cancellation | Drop-based via futures; bindings map host cancel/AbortSignal where available |
-| CORS / TLS | Native: rustls. WASM: host Fetch + platform TLS. No custom browser TLS. |
-| Webhook sync compat | One Rust implementation; Node sync facade and edge/async facade both call it |
-| Opaque-handle lifecycle | C ABI: create/use/free pairs; no borrow across calls without explicit rules |
-| Allocator ownership | Callee-allocated buffers freed by matching free functions; document ownership in headers |
-| Panic boundaries | `catch_unwind` at FFI edge; never unwind across language boundaries |
-| Thread / GVL / GIL | Binding owns release rules; core stays lock-light and async |
-| Structured errors | Stable `code` + message + optional details; map to `SolvaPayError` / language exceptions |
+| Concern                 | Rule                                                                                     |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| Cancellation            | Drop-based via futures; bindings map host cancel/AbortSignal where available             |
+| CORS / TLS              | Native: rustls. WASM: host Fetch + platform TLS. No custom browser TLS.                  |
+| Webhook sync compat     | One Rust implementation; Node sync facade and edge/async facade both call it             |
+| Opaque-handle lifecycle | C ABI: create/use/free pairs; no borrow across calls without explicit rules              |
+| Allocator ownership     | Callee-allocated buffers freed by matching free functions; document ownership in headers |
+| Panic boundaries        | `catch_unwind` at FFI edge; never unwind across language boundaries                      |
+| Thread / GVL / GIL      | Binding owns release rules; core stays lock-light and async                              |
+| Structured errors       | Stable `code` + message + optional details; map to `SolvaPayError` / language exceptions |
 
 ### 6.7 Release artifacts and target matrices
 
-| Ecosystem | Artifacts | Fallback |
-| --- | --- | --- |
-| npm (`@solvapay/server`) | Native prebuilds (darwin/linux/win × arch) + WASM package | Load WASM when native missing/unsupported |
-| PyPI | manylinux / macOS / Windows wheels via maturin | Fail install clearly; no silent pure-Python stub for secret ops |
-| RubyGems | Platform gems via rb-sys | Document unsupported platforms; no silent stub |
-| Optional C ABI | Shared library + cbindgen headers | Third-party responsibility |
+| Ecosystem                | Artifacts                                                 | Fallback                                                        |
+| ------------------------ | --------------------------------------------------------- | --------------------------------------------------------------- |
+| npm (`@solvapay/server`) | Native prebuilds (darwin/linux/win × arch) + WASM package | Load WASM when native missing/unsupported                       |
+| PyPI                     | manylinux / macOS / Windows wheels via maturin            | Fail install clearly; no silent pure-Python stub for secret ops |
+| RubyGems                 | Platform gems via rb-sys                                  | Document unsupported platforms; no silent stub                  |
+| Optional C ABI           | Shared library + cbindgen headers                         | Third-party responsibility                                      |
 
 All artifacts are version-stamped in lockstep with the SDK release train.
 
 ### 6.8 Measurable budgets (placeholders until Phase 6 baselines)
 
-| Metric | Initial budget | When enforced |
-| --- | --- | --- |
-| WASM gzipped size | Set baseline in step 38; regress < 10% without approval | Phase 6+ |
-| Cold start (WASM init) | Baseline in step 38 | Phase 6+ |
-| Request overhead vs TS client | Shadow mode: median delta within agreed % | Phase 3+ |
-| Extra memory copies at FFI | Prefer zero-copy / single encode per hop | Binding reviews |
-| Binary coverage | Platform matrix green on main | Phase 6+ |
-| Unsupported platform | Documented error + WASM fallback for Node | Phase 6+ |
+| Metric                        | Initial budget                                          | When enforced   |
+| ----------------------------- | ------------------------------------------------------- | --------------- |
+| WASM gzipped size             | Set baseline in step 38; regress < 10% without approval | Phase 6+        |
+| Cold start (WASM init)        | Baseline in step 38                                     | Phase 6+        |
+| Request overhead vs TS client | Shadow mode: median delta within agreed %               | Phase 3+        |
+| Extra memory copies at FFI    | Prefer zero-copy / single encode per hop                | Binding reviews |
+| Binary coverage               | Platform matrix green on main                           | Phase 6+        |
+| Unsupported platform          | Documented error + WASM fallback for Node               | Phase 6+        |
 
 Do not make unqualified performance claims; cite these budgets.
 
@@ -328,13 +330,13 @@ Do not make unqualified performance claims; cite these budgets.
 
 ## 7. What never moves to Rust
 
-| Area | Reason | Compatibility guarantee |
-| --- | --- | --- |
-| Entire [`packages/react`](../../packages/react) | Components, hooks, Stripe.js, i18n, transport wiring | Consumes only the TS facade of `@solvapay/server`; binding beneath is invisible. React package tests are a regression gate at every cutover. |
-| Adapters + fetch handlers | Thin TS shells | Delegate to Rust decision/client cores |
-| `createSolvaPay` factory ergonomics | Language-idiomatic facade | Decisions it calls into move; factory stays TS (Python/Ruby get their own idiomatic facades) |
-| `@solvapay/auth`, `@solvapay/next`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init` | Product/framework glue | Unchanged |
-| MCP SDK registration glue | JS SDK types | Payload builders move; registration stays TS |
+| Area                                                                                     | Reason                                               | Compatibility guarantee                                                                                                                      |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entire [`packages/react`](../../packages/react)                                          | Components, hooks, Stripe.js, i18n, transport wiring | Consumes only the TS facade of `@solvapay/server`; binding beneath is invisible. React package tests are a regression gate at every cutover. |
+| Adapters + fetch handlers                                                                | Thin TS shells                                       | Delegate to Rust decision/client cores                                                                                                       |
+| `createSolvaPay` factory ergonomics                                                      | Language-idiomatic facade                            | Decisions it calls into move; factory stays TS (Python/Ruby get their own idiomatic facades)                                                 |
+| `@solvapay/auth`, `@solvapay/next`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init` | Product/framework glue                               | Unchanged                                                                                                                                    |
+| MCP SDK registration glue                                                                | JS SDK types                                         | Payload builders move; registration stays TS                                                                                                 |
 
 ---
 
@@ -658,27 +660,27 @@ flowchart LR
 
 ### 9.2 Rollback boundaries
 
-| Surface | Rollback strategy |
-| --- | --- |
-| `@solvapay/server` conditional exports | Feature/version flag to force previous TS or WASM path |
-| `verifyWebhook` Node-sync / edge-async | Keep thin facades; core swap is internal |
-| Fetch-runtime validation | Adapter tests remain TS; can point helpers back to TS during rollback |
-| Deno / Workers | WASM build pin; reject broken WASM via size/cold-start gate |
-| React behavior | Unmodified React tests; never bind React to native directly |
+| Surface                                | Rollback strategy                                                     |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| `@solvapay/server` conditional exports | Feature/version flag to force previous TS or WASM path                |
+| `verifyWebhook` Node-sync / edge-async | Keep thin facades; core swap is internal                              |
+| Fetch-runtime validation               | Adapter tests remain TS; can point helpers back to TS during rollback |
+| Deno / Workers                         | WASM build pin; reject broken WASM via size/cold-start gate           |
+| React behavior                         | Unmodified React tests; never bind React to native directly           |
 
 ### 9.3 CI gates
 
-| Gate | Purpose |
-| --- | --- |
-| Generated-diff checks | OpenAPI snapshot + generated DTOs/declarations stay in sync |
-| ABI/API compatibility | No silent public API drift on TS exports |
+| Gate                                    | Purpose                                                                    |
+| --------------------------------------- | -------------------------------------------------------------------------- |
+| Generated-diff checks                   | OpenAPI snapshot + generated DTOs/declarations stay in sync                |
+| ABI/API compatibility                   | No silent public API drift on TS exports                                   |
 | Per-language public-API parity/coverage | Every wrapper exposes every catalogued entry point with matching semantics |
-| Shared fixture conformance | All bindings + all three language wrappers |
-| Live backend contract tests | Shadow mode (Phase 3) and language-specific (Phases 7–8) |
-| Clean-install smoke tests | Platform matrix |
-| Platform build matrices | napi-rs / wheels / gems / WASM |
-| Fuzzing | FFI parsers and opaque-handle misuse |
-| Performance regression thresholds | WASM size, cold start, request overhead budgets |
+| Shared fixture conformance              | All bindings + all three language wrappers                                 |
+| Live backend contract tests             | Shadow mode (Phase 3) and language-specific (Phases 7–8)                   |
+| Clean-install smoke tests               | Platform matrix                                                            |
+| Platform build matrices                 | napi-rs / wheels / gems / WASM                                             |
+| Fuzzing                                 | FFI parsers and opaque-handle misuse                                       |
+| Performance regression thresholds       | WASM size, cold start, request overhead budgets                            |
 
 ### 9.4 Testing strategy summary
 
@@ -780,16 +782,16 @@ sequenceDiagram
 
 ## 11. Explicit decisions
 
-| ID | Decision |
-| --- | --- |
-| D1 | Specialized bindings (napi-rs, wasm-bindgen, PyO3, Magnus); optional C ABI for third parties |
-| D2 | Cross-surface API parity is a CI-enforced success criterion |
-| D3 | std-based core with size discipline; not `no_std` |
-| D4 | Async Rust concurrency; runtime-agnostic core; bindings own event loops |
-| D5 | Checked-in filtered OpenAPI snapshot + SDK contract manifest as dual generation inputs |
-| D6 | React, framework adapters, factory ergonomics, auth/next/cli stay TypeScript |
-| D7 | Migration is 49 session-sized steps with per-step “done when” gates |
-| D8 | This document is living: research findings and diagram updates land in the same session as code |
+| ID  | Decision                                                                                        |
+| --- | ----------------------------------------------------------------------------------------------- |
+| D1  | Specialized bindings (napi-rs, wasm-bindgen, PyO3, Magnus); optional C ABI for third parties    |
+| D2  | Cross-surface API parity is a CI-enforced success criterion                                     |
+| D3  | std-based core with size discipline; not `no_std`                                               |
+| D4  | Async Rust concurrency; runtime-agnostic core; bindings own event loops                         |
+| D5  | Checked-in filtered OpenAPI snapshot + SDK contract manifest as dual generation inputs          |
+| D6  | React, framework adapters, factory ergonomics, auth/next/cli stay TypeScript                    |
+| D7  | Migration is 49 session-sized steps with per-step “done when” gates                             |
+| D8  | This document is living: research findings and diagram updates land in the same session as code |
 
 ---
 
@@ -797,15 +799,15 @@ sequenceDiagram
 
 These are intentionally open until the phase that needs them; resolve with research + a PR that updates this section.
 
-| Gate | Resolve by |
-| --- | --- |
-| Exact WASM size and cold-start numeric budgets | Step 38 baseline |
-| Final npm optional-dependencies / optional native package layout | Step 36–37 |
-| Python package name on PyPI (`solvapay` vs scoped) | Step 40–42 |
-| Ruby gem name and versioning scheme | Step 43–45 |
-| Whether UniFFI is ever used for a *fourth* language later | Only if a new language cannot use a specialized binding |
-| Process-payment OpenAPI discriminator fix ownership (backend vs SDK overlay) | Before step 15 cutover |
-| Fuzz corpus seed strategy for webhook/FFI parsers | Step 49 |
+| Gate                                                                         | Resolve by                                              |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Exact WASM size and cold-start numeric budgets                               | Step 38 baseline                                        |
+| Final npm optional-dependencies / optional native package layout             | Step 36–37                                              |
+| Python package name on PyPI (`solvapay` vs scoped)                           | Step 40–42                                              |
+| Ruby gem name and versioning scheme                                          | Step 43–45                                              |
+| Whether UniFFI is ever used for a _fourth_ language later                    | Only if a new language cannot use a specialized binding |
+| Process-payment OpenAPI discriminator fix ownership (backend vs SDK overlay) | Before step 15 cutover                                  |
+| Fuzz corpus seed strategy for webhook/FFI parsers                            | Step 49                                                 |
 
 ---
 
@@ -813,19 +815,19 @@ These are intentionally open until the phase that needs them; resolve with resea
 
 Re-check these at the start of any step that touches the corresponding layer; pin versions in Cargo/npm when adopting.
 
-| Topic | Links |
-| --- | --- |
-| UniFFI | [mozilla/uniffi-rs](https://github.com/mozilla/uniffi-rs), [docs.rs/uniffi](https://docs.rs/uniffi) |
-| Diplomat | [rust-diplomat/diplomat](https://github.com/rust-diplomat/diplomat), [Diplomat blog (2026)](https://manishearth.github.io/blog/2026/06/14/diplomat-multi-language-ffi-for-rust-libraries/) |
-| cbindgen | [mozilla/cbindgen](https://github.com/mozilla/cbindgen) |
-| wasm-bindgen | [rustwasm/wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/), [wasm-pack](https://rustwasm.github.io/wasm-pack/) |
-| napi-rs | [napi.rs](https://napi.rs/), [napi-rs/napi-rs](https://github.com/napi-rs/napi-rs) |
-| PyO3 / maturin | [PyO3](https://pyo3.rs/), [maturin](https://www.maturin.rs/), [Bindings guide](https://www.maturin.rs/bindings) |
-| Magnus / rb-sys | [Magnus](https://github.com/matsadler/magnus), [rb-sys](https://github.com/oxidize-rb/rb-sys) |
-| Rust FFI safety | [The Rustonomicon — FFI](https://doc.rust-lang.org/nomicon/ffi.html), [Unsafe Code Guidelines](https://rust-lang.github.io/unsafe-code-guidelines/) |
-| WebAssembly Component Model / WIT | [Component Model](https://component-model.bytecodealliance.org/), [WIT](https://component-model.bytecodealliance.org/design/wit.html) |
-| reqwest / rustls | [reqwest](https://docs.rs/reqwest), [rustls](https://docs.rs/rustls) |
-| Workers / WASM limits | [Cloudflare Workers limits](https://developers.cloudflare.com/workers/platform/limits/), platform release notes as of the step date |
+| Topic                             | Links                                                                                                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| UniFFI                            | [mozilla/uniffi-rs](https://github.com/mozilla/uniffi-rs), [docs.rs/uniffi](https://docs.rs/uniffi)                                                                                        |
+| Diplomat                          | [rust-diplomat/diplomat](https://github.com/rust-diplomat/diplomat), [Diplomat blog (2026)](https://manishearth.github.io/blog/2026/06/14/diplomat-multi-language-ffi-for-rust-libraries/) |
+| cbindgen                          | [mozilla/cbindgen](https://github.com/mozilla/cbindgen)                                                                                                                                    |
+| wasm-bindgen                      | [rustwasm/wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/), [wasm-pack](https://rustwasm.github.io/wasm-pack/)                                                                      |
+| napi-rs                           | [napi.rs](https://napi.rs/), [napi-rs/napi-rs](https://github.com/napi-rs/napi-rs)                                                                                                         |
+| PyO3 / maturin                    | [PyO3](https://pyo3.rs/), [maturin](https://www.maturin.rs/), [Bindings guide](https://www.maturin.rs/bindings)                                                                            |
+| Magnus / rb-sys                   | [Magnus](https://github.com/matsadler/magnus), [rb-sys](https://github.com/oxidize-rb/rb-sys)                                                                                              |
+| Rust FFI safety                   | [The Rustonomicon — FFI](https://doc.rust-lang.org/nomicon/ffi.html), [Unsafe Code Guidelines](https://rust-lang.github.io/unsafe-code-guidelines/)                                        |
+| WebAssembly Component Model / WIT | [Component Model](https://component-model.bytecodealliance.org/), [WIT](https://component-model.bytecodealliance.org/design/wit.html)                                                      |
+| reqwest / rustls                  | [reqwest](https://docs.rs/reqwest), [rustls](https://docs.rs/rustls)                                                                                                                       |
+| Workers / WASM limits             | [Cloudflare Workers limits](https://developers.cloudflare.com/workers/platform/limits/), platform release notes as of the step date                                                        |
 
 ---
 

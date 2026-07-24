@@ -8,10 +8,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
-import {
-  SdkContractManifestSchema,
-  type SdkContractManifest,
-} from './lib/manifest-schema.js'
+import { SdkContractManifestSchema, type SdkContractManifest } from './lib/manifest-schema.js'
 import { checkParity, formatParityReport } from './lib/parity.js'
 import { readTsSurface } from './lib/ts-surface.js'
 

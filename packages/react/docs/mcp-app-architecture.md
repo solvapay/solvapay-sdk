@@ -151,8 +151,7 @@ import { App } from '@modelcontextprotocol/ext-apps'
 import { useMcpToolResult } from '@solvapay/react/mcp'
 
 function MyCustomWidget({ app }: { app: App }) {
-  const { structuredContent, content, toolName } =
-    useMcpToolResult<{ orderId: string }>(app)
+  const { structuredContent, content, toolName } = useMcpToolResult<{ orderId: string }>(app)
 
   if (!structuredContent) return <p>Waiting for a tool result…</p>
   return (
@@ -170,4 +169,3 @@ internally it uses `useSyncExternalStore` so concurrent renders always
 observe a coherent snapshot. Error notifications are filtered out — the
 consumer pairs the hook with whatever error UI they want driven off the
 adapter promise.
-

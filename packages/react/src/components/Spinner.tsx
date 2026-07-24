@@ -24,14 +24,7 @@ export const Spinner: React.FC<{
       fill="none"
       aria-hidden="true"
     >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-        strokeOpacity="0.25"
-      />
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.25" />
       <path
         fill="currentColor"
         fillOpacity="0.75"

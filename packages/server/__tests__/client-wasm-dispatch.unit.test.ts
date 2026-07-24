@@ -64,28 +64,20 @@ function fakeClient(overrides: Partial<WasmClientLike> = {}): WasmClientLike {
 }
 
 describe('createSolvaPayClient Group A WASM dispatch', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
   const fetchMock = vi.fn()
 
   beforeEach(() => {
-    delete process.env.SOLVAPAY_IMPL
     resetWasmCache()
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
     resetWasmCache()
     vi.unstubAllGlobals()
   })
 
-  it('dispatches each Group A method to WasmClient under SOLVAPAY_IMPL=rust', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
+  it('dispatches each Group A method to WasmClient', async () => {
     const calls: Array<{ fn: string; args: string }> = []
     const wasm = fakeClient(
       Object.fromEntries(
@@ -140,7 +132,6 @@ describe('createSolvaPayClient Group A WASM dispatch', () => {
   })
 
   it('returns envelope value unchanged (no TS re-normalization)', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     const raw = { reference: 'cus_raw', customerRef: 'cus_mapped', extra: 1 }
     setWasmClientForTests(
       fakeClient({
@@ -155,7 +146,6 @@ describe('createSolvaPayClient Group A WASM dispatch', () => {
   })
 
   it('propagates reconstructed SolvaPayError from Api envelope', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     setWasmClientForTests(
       fakeClient({
         getMerchant: vi.fn(async () =>
@@ -182,7 +172,6 @@ describe('createSolvaPayClient Group A WASM dispatch', () => {
   })
 
   it('propagates reconstructed PaywallError from Paywall envelope', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     const gate = {
       kind: 'payment_required' as const,
       product: 'prod_1',
@@ -210,42 +199,31 @@ describe('createSolvaPayClient Group A WASM dispatch', () => {
     })
   })
 
-  it('fails fast under SOLVAPAY_IMPL=ts (no TS fetch fallback)', async () => {
-    process.env.SOLVAPAY_IMPL = 'ts'
-    const createCustomer = vi.fn()
-    setWasmClientForTests(fakeClient({ createCustomer }))
+  it('throws when the WASM client binding is missing', async () => {
+    setWasmClientForTests(null)
 
     const client = createSolvaPayClient({ apiKey: 'sk_test', apiBaseUrl: 'https://api.test' })
 
     await expect(client.createCustomer({ email: 'a@b.c' })).rejects.toBeInstanceOf(SolvaPayError)
-    expect(createCustomer).not.toHaveBeenCalled()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })
 
 describe('createSolvaPayClient Group B/C WASM dispatch', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
   const fetchMock = vi.fn()
 
   beforeEach(() => {
-    delete process.env.SOLVAPAY_IMPL
     resetWasmCache()
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
     resetWasmCache()
     vi.unstubAllGlobals()
   })
 
-  it('dispatches each Group B/C method to WasmClient under SOLVAPAY_IMPL=rust', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
+  it('dispatches each Group B/C method to WasmClient', async () => {
     const calls: Array<{ fn: string; args: string }> = []
     const groupBC = [...GROUP_B, ...GROUP_C]
     const wasm = fakeClient(
@@ -297,9 +275,9 @@ describe('createSolvaPayClient Group B/C WASM dispatch', () => {
       }),
     ).toEqual({ fromWasm: 'activatePlan' })
 
-    expect(
-      await client.checkLimits({ productRef: 'prod_1', resource: 'tool', units: 1 }),
-    ).toEqual({ fromWasm: 'checkLimits' })
+    expect(await client.checkLimits({ productRef: 'prod_1', resource: 'tool', units: 1 })).toEqual({
+      fromWasm: 'checkLimits',
+    })
     expect(
       await client.trackUsage({
         customerRef: 'cus_1',
@@ -409,7 +387,6 @@ describe('createSolvaPayClient Group B/C WASM dispatch', () => {
   })
 
   it('deleteProduct/deletePlan return null from null-envelope value', async () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
     setWasmClientForTests(
       fakeClient({
         deleteProduct: vi.fn(async () => JSON.stringify({ ok: true, value: null })),

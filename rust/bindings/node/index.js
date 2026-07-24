@@ -21,7 +21,7 @@ const isMusl = () => {
   return musl
 }
 
-const isFileMusl = (f) => f.includes('libc.musl-') || f.includes('ld-musl-')
+const isFileMusl = f => f.includes('libc.musl-') || f.includes('ld-musl-')
 
 const isMuslFromFilesystem = () => {
   try {
@@ -63,7 +63,7 @@ const isMuslFromChildProcess = () => {
 function requireNative() {
   if (process.env.NAPI_RS_NATIVE_LIBRARY_PATH) {
     try {
-      return require(process.env.NAPI_RS_NATIVE_LIBRARY_PATH);
+      return require(process.env.NAPI_RS_NATIVE_LIBRARY_PATH)
     } catch (err) {
       loadErrors.push(err)
     }
@@ -76,9 +76,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-android-arm64')
-        const bindingPackageVersion = require('@solvapay/server-native-android-arm64/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-android-arm64/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -92,9 +99,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-android-arm-eabi')
-        const bindingPackageVersion = require('@solvapay/server-native-android-arm-eabi/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-android-arm-eabi/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -105,38 +119,59 @@ function requireNative() {
     }
   } else if (process.platform === 'win32') {
     if (process.arch === 'x64') {
-      if ((process.config && process.config.variables && process.config.variables.shlib_suffix === 'dll.a') || (process.config && process.config.variables && process.config.variables.node_target_type === 'shared_library')) {
+      if (
+        (process.config &&
+          process.config.variables &&
+          process.config.variables.shlib_suffix === 'dll.a') ||
+        (process.config &&
+          process.config.variables &&
+          process.config.variables.node_target_type === 'shared_library')
+      ) {
         try {
-        return require('./server-native.win32-x64-gnu.node')
-      } catch (e) {
-        loadErrors.push(e)
-      }
-      try {
-        const binding = require('@solvapay/server-native-win32-x64-gnu')
-        const bindingPackageVersion = require('@solvapay/server-native-win32-x64-gnu/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          return require('./server-native.win32-x64-gnu.node')
+        } catch (e) {
+          loadErrors.push(e)
         }
-        return binding
-      } catch (e) {
-        loadErrors.push(e)
-      }
+        try {
+          const binding = require('@solvapay/server-native-win32-x64-gnu')
+          const bindingPackageVersion =
+            require('@solvapay/server-native-win32-x64-gnu/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
+          }
+          return binding
+        } catch (e) {
+          loadErrors.push(e)
+        }
       } else {
         try {
-        return require('./server-native.win32-x64-msvc.node')
-      } catch (e) {
-        loadErrors.push(e)
-      }
-      try {
-        const binding = require('@solvapay/server-native-win32-x64-msvc')
-        const bindingPackageVersion = require('@solvapay/server-native-win32-x64-msvc/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          return require('./server-native.win32-x64-msvc.node')
+        } catch (e) {
+          loadErrors.push(e)
         }
-        return binding
-      } catch (e) {
-        loadErrors.push(e)
-      }
+        try {
+          const binding = require('@solvapay/server-native-win32-x64-msvc')
+          const bindingPackageVersion =
+            require('@solvapay/server-native-win32-x64-msvc/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
+          }
+          return binding
+        } catch (e) {
+          loadErrors.push(e)
+        }
       }
     } else if (process.arch === 'ia32') {
       try {
@@ -146,9 +181,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-win32-ia32-msvc')
-        const bindingPackageVersion = require('@solvapay/server-native-win32-ia32-msvc/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-win32-ia32-msvc/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -162,9 +204,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-win32-arm64-msvc')
-        const bindingPackageVersion = require('@solvapay/server-native-win32-arm64-msvc/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-win32-arm64-msvc/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -181,9 +230,16 @@ function requireNative() {
     }
     try {
       const binding = require('@solvapay/server-native-darwin-universal')
-      const bindingPackageVersion = require('@solvapay/server-native-darwin-universal/package.json').version
-      if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-        throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+      const bindingPackageVersion =
+        require('@solvapay/server-native-darwin-universal/package.json').version
+      if (
+        bindingPackageVersion !== '0.1.0' &&
+        process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+        process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+      ) {
+        throw new Error(
+          `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+        )
       }
       return binding
     } catch (e) {
@@ -197,9 +253,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-darwin-x64')
-        const bindingPackageVersion = require('@solvapay/server-native-darwin-x64/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-darwin-x64/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -213,9 +276,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-darwin-arm64')
-        const bindingPackageVersion = require('@solvapay/server-native-darwin-arm64/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-darwin-arm64/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -233,9 +303,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-freebsd-x64')
-        const bindingPackageVersion = require('@solvapay/server-native-freebsd-x64/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-freebsd-x64/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -249,9 +326,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-freebsd-arm64')
-        const bindingPackageVersion = require('@solvapay/server-native-freebsd-arm64/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-freebsd-arm64/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -270,9 +354,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-x64-musl')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-x64-musl/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-x64-musl/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -286,9 +377,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-x64-gnu')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-x64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-x64-gnu/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -304,9 +402,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-arm64-musl')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-arm64-musl/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-arm64-musl/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -320,9 +425,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-arm64-gnu')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-arm64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-arm64-gnu/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -338,9 +450,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-arm-musleabihf')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-arm-musleabihf/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-arm-musleabihf/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -354,9 +473,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-arm-gnueabihf')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-arm-gnueabihf/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-arm-gnueabihf/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -372,9 +498,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-loong64-musl')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-loong64-musl/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-loong64-musl/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -388,9 +521,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-loong64-gnu')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-loong64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-loong64-gnu/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -406,9 +546,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-riscv64-musl')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-riscv64-musl/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-riscv64-musl/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -422,9 +569,16 @@ function requireNative() {
         }
         try {
           const binding = require('@solvapay/server-native-linux-riscv64-gnu')
-          const bindingPackageVersion = require('@solvapay/server-native-linux-riscv64-gnu/package.json').version
-          if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          const bindingPackageVersion =
+            require('@solvapay/server-native-linux-riscv64-gnu/package.json').version
+          if (
+            bindingPackageVersion !== '0.1.0' &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+            process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+          ) {
+            throw new Error(
+              `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+            )
           }
           return binding
         } catch (e) {
@@ -439,9 +593,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-linux-ppc64-gnu')
-        const bindingPackageVersion = require('@solvapay/server-native-linux-ppc64-gnu/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-linux-ppc64-gnu/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -455,9 +616,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-linux-s390x-gnu')
-        const bindingPackageVersion = require('@solvapay/server-native-linux-s390x-gnu/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-linux-s390x-gnu/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -475,9 +643,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-openharmony-arm64')
-        const bindingPackageVersion = require('@solvapay/server-native-openharmony-arm64/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-openharmony-arm64/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -491,9 +666,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-openharmony-x64')
-        const bindingPackageVersion = require('@solvapay/server-native-openharmony-x64/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-openharmony-x64/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -507,9 +689,16 @@ function requireNative() {
       }
       try {
         const binding = require('@solvapay/server-native-openharmony-arm')
-        const bindingPackageVersion = require('@solvapay/server-native-openharmony-arm/package.json').version
-        if (bindingPackageVersion !== '0.1.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        const bindingPackageVersion =
+          require('@solvapay/server-native-openharmony-arm/package.json').version
+        if (
+          bindingPackageVersion !== '0.1.0' &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK &&
+          process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0'
+        ) {
+          throw new Error(
+            `Native binding package version mismatch, expected 0.1.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`,
+          )
         }
         return binding
       } catch (e) {
@@ -589,7 +778,8 @@ if (!nativeBinding) {
 module.exports = nativeBinding
 module.exports.NativeClient = nativeBinding.NativeClient
 module.exports.assertResponseResult = nativeBinding.assertResponseResult
-module.exports.attachBusinessDetailsValidationError = nativeBinding.attachBusinessDetailsValidationError
+module.exports.attachBusinessDetailsValidationError =
+  nativeBinding.attachBusinessDetailsValidationError
 module.exports.buildCreateCustomerParams = nativeBinding.buildCreateCustomerParams
 module.exports.buildGateMessage = nativeBinding.buildGateMessage
 module.exports.buildNudgeMessage = nativeBinding.buildNudgeMessage
@@ -642,9 +832,11 @@ module.exports.resolveSellerIdentityDisplay = nativeBinding.resolveSellerIdentit
 module.exports.resolveTaxBehavior = nativeBinding.resolveTaxBehavior
 module.exports.retryNextDelayMs = nativeBinding.retryNextDelayMs
 module.exports.selectActivePurchases = nativeBinding.selectActivePurchases
-module.exports.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = nativeBinding.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+module.exports.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE =
+  nativeBinding.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
 module.exports.validateActivatePlanParams = nativeBinding.validateActivatePlanParams
-module.exports.validateAttachBusinessDetailsParams = nativeBinding.validateAttachBusinessDetailsParams
+module.exports.validateAttachBusinessDetailsParams =
+  nativeBinding.validateAttachBusinessDetailsParams
 module.exports.validateBusinessDetails = nativeBinding.validateBusinessDetails
 module.exports.validateCheckoutSessionParams = nativeBinding.validateCheckoutSessionParams
 module.exports.validateCreatePaymentIntentParams = nativeBinding.validateCreatePaymentIntentParams

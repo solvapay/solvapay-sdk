@@ -48,8 +48,7 @@ Pass `planRef` to skip plan selection. Compose slot children on `<PaymentForm>` 
 import { SolvaPayProvider } from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
 import { supabase } from './lib/supabase'
-
-<SolvaPayProvider config={{ auth: { adapter: createSupabaseAuthAdapter({ client: supabase }) } }}>
+;<SolvaPayProvider config={{ auth: { adapter: createSupabaseAuthAdapter({ client: supabase }) } }}>
   <CheckoutLayout productRef="prd_myapi" />
 </SolvaPayProvider>
 ```

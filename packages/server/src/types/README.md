@@ -1,59 +1,51 @@
-# Generated Types Directory
+# Generated types (`@solvapay/server`)
 
-This directory contains auto-generated TypeScript types from the SolvaPay backend OpenAPI specification.
+This directory holds OpenAPI-derived and dto-gen-derived TypeScript artifacts.
 
-## Generating Types
-
-To generate types from your locally running backend:
-
-1. Start your backend server locally (default port: 3001)
-2. Ensure the OpenAPI spec is available at `http://localhost:3001/v1/openapi.json`
-3. Run the generation script:
-
-**Note:** Only routes starting with `/v1/sdk/` are included in the generated types.
-
-```bash
-# From the root of the monorepo
-pnpm --filter @solvapay/server generate:types
-
-# Or from packages/server directory
-pnpm generate:types
-```
+For the full five-surface SDK codegen runbook (manifest, bindings, CI gates), see
+[`docs/contributing/sdk-codegen.md`](../../../../docs/contributing/sdk-codegen.md).
 
 ## Files
 
-- `generated.ts` - Auto-generated TypeScript types from OpenAPI spec
-- `README.md` - This file
+| File                                                  | Producer                                                                            | Edit? |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------- | ----- |
+| `generated.ts`                                        | `pnpm --filter @solvapay/server generate:types` (live OpenAPI → openapi-typescript) | No    |
+| `overlays.generated.d.ts`                             | `pnpm gen` (dto-gen)                                                                | No    |
+| `client.generated.d.ts`                               | `pnpm gen` (dto-gen)                                                                | No    |
+| `../native.ts` / `../wasm.ts`                         | `pnpm gen` (dto-gen)                                                                | No    |
+| `../__generated__/signature-parity.generated.test.ts` | `pnpm gen` (dto-gen)                                                                | No    |
+
+Only `/v1/sdk/*` paths are included (agents routes excluded). See
+`scripts/lib/openapi-pipeline.ts`.
+
+## Typical flows
+
+### Refresh wire types from a local backend
+
+```bash
+# Backend must serve http://localhost:3001/v1/openapi.json
+pnpm --filter @solvapay/server generate:types   # → generated.ts
+pnpm snapshot:openapi --from-url                # → contract/openapi/*
+pnpm gen                                        # → overlays, client, native, all surfaces
+```
+
+### Regenerate facades after a manifest-only change
+
+```bash
+pnpm gen
+pnpm gen:check   # must be clean before push / CI
+```
 
 ## Usage
 
-Import the generated types in your code:
-
 ```typescript
-import type { paths, components } from './types/generated'
+import type { components, paths } from './generated'
 
-// Use path operation types
 type CheckLimitsRequest =
   paths['/v1/sdk/limits']['post']['requestBody']['content']['application/json']
-type CheckLimitsResponse =
-  paths['/v1/sdk/limits']['post']['responses']['200']['content']['application/json']
-
-// Use component schemas
-type Agent = components['schemas']['Agent']
 ```
 
-## Important Notes
-
-- These types are generated from the OpenAPI specification and should not be manually edited
-- Only routes starting with `/v1/sdk/` are included (filtered using `--path-filter "^/v1/sdk/"`)
-- After generation, you may need to manually remove duplicate operations if the backend has overlapping route definitions
-- Run the generation script whenever the backend API changes
-- The generated file is committed to the repository for convenience
-- If the backend is not running, the script will fail
-
-## Type Mappings
-
-The `types.ts` file provides mapped types that bridge differences between the generated OpenAPI types and the SDK's interface:
-
-- `LimitResponseWithPlan` - Extends `LimitResponse` with a required `plan` field
-- `CustomerResponseMapped` - Maps backend's `reference` field to `customerRef` for consistency
+Hand-written bridges that adapt wire shapes to SDK ergonomics live in nearby
+non-generated modules (e.g. mapped customer/plan helpers). Prefer extending the
+manifest `overlays:` catalog + `pnpm gen` when the shape should be
+cross-language.

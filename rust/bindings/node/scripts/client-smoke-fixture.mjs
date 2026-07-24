@@ -1,7 +1,7 @@
 /**
  * Shared client + sync pure-logic smoke fixtures (Step 37R-e).
  *
- * Used by clean-install-consumer under SOLVAPAY_IMPL=rust:
+ * Used by clean-install-consumer:
  * - sync: buildPaywallGate golden (mirrors contract/fixtures/paywall/gate/payment-minimal)
  * - async: getCustomer against an in-process node:http stub
  */

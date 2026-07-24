@@ -2,12 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSolvaPay, PaywallError } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
 import { buildPayableHandler } from '../src/payable-handler'
-import type {
-  ContentBlock,
-  NudgeSpec,
-  ResponseContext,
-  SolvaPayCallToolResult,
-} from '../src/types'
+import type { ContentBlock, NudgeSpec, ResponseContext, SolvaPayCallToolResult } from '../src/types'
 // `resourceUri` is no longer part of `BuildPayableHandlerContext`;
 // these tests intentionally omit it to lock in the narrower signature.
 
@@ -109,8 +104,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const handler = buildPayableHandler(
         solvaPay,
         { product: 'prd_test' },
-        async (_args, ctx: ResponseContext) =>
-          ctx.respond({ x: 1 }, { text: 'Found 1 result' }),
+        async (_args, ctx: ResponseContext) => ctx.respond({ x: 1 }, { text: 'Found 1 result' }),
       )
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
@@ -201,8 +195,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const handler = buildPayableHandler(
         solvaPay,
         { product: 'prd_test' },
-        async (_args, ctx: ResponseContext) =>
-          ctx.respond({ results: [1, 2, 3, 4] }, { units: 4 }),
+        async (_args, ctx: ResponseContext) => ctx.respond({ results: [1, 2, 3, 4] }, { units: 4 }),
       )
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
@@ -333,24 +326,18 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const client = makeMockClient()
       const solvaPay = makeSolvaPay(client)
 
-      const handler = buildPayableHandler(
-        solvaPay,
-        { product: 'prd_throw' },
-        async () => {
-          throw new PaywallError('manual', {
-            kind: 'payment_required',
-            product: 'prd_throw',
-            checkoutUrl: '',
-            message: 'manual',
-          })
-        },
-      )
+      const handler = buildPayableHandler(solvaPay, { product: 'prd_throw' }, async () => {
+        throw new PaywallError('manual', {
+          kind: 'payment_required',
+          product: 'prd_throw',
+          checkoutUrl: '',
+          message: 'manual',
+        })
+      })
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
       expect(result.isError).toBe(false)
-      expect((result.structuredContent as Record<string, unknown>).kind).toBe(
-        'payment_required',
-      )
+      expect((result.structuredContent as Record<string, unknown>).kind).toBe('payment_required')
       const firstBlock = result.content[0] as { type: string; text: string }
       expect(firstBlock.text).toBe('manual')
       expect(firstBlock.text).not.toMatch(/success/i)
@@ -427,13 +414,9 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const client = makeMockClient()
       const solvaPay = makeSolvaPay(client)
 
-      const handler = buildPayableHandler(
-        solvaPay,
-        { product: 'prd_test' },
-        async () => {
-          throw new Error('boom')
-        },
-      )
+      const handler = buildPayableHandler(solvaPay, { product: 'prd_test' }, async () => {
+        throw new Error('boom')
+      })
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
       expect(result.isError).toBe(true)
@@ -452,18 +435,12 @@ describe('buildPayableHandler — ctx.respond V1', () => {
         typeof buildPayableHandler
       >[2]
 
-      const handler = buildPayableHandler(
-        solvaPay,
-        { product: 'prd_test' },
-        rawHandler,
-      )
+      const handler = buildPayableHandler(solvaPay, { product: 'prd_test' }, rawHandler)
 
       await expect(handler({}, mcpExtra())).rejects.toThrow(
         /registerPayable handler returned a raw value/,
       )
-      await expect(handler({}, mcpExtra())).rejects.toThrow(
-        /ctx\.respond\(data, options\?\)/,
-      )
+      await expect(handler({}, mcpExtra())).rejects.toThrow(/ctx\.respond\(data, options\?\)/)
     })
   })
 

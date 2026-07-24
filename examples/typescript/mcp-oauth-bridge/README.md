@@ -17,14 +17,14 @@ URL. This bridge makes the MCP origin a fully self-consistent authorization serv
 
 ## Endpoints
 
-| Endpoint (on MCP origin)                         | Proxied to                                         |
-| ------------------------------------------------ | -------------------------------------------------- |
-| `GET /.well-known/oauth-protected-resource`      | local (`authorization_servers: [mcpOrigin]`)       |
-| `GET /.well-known/oauth-authorization-server`    | local (`issuer` = MCP origin)                      |
-| `POST /oauth/register`                           | `POST /v1/customer/auth/register?product_ref=…`    |
-| `GET  /oauth/authorize`                          | `302` → `/v1/customer/auth/authorize`              |
-| `POST /oauth/token`                              | `POST /v1/customer/auth/token`                     |
-| `POST /oauth/revoke`                             | `POST /v1/customer/auth/revoke`                    |
+| Endpoint (on MCP origin)                      | Proxied to                                      |
+| --------------------------------------------- | ----------------------------------------------- |
+| `GET /.well-known/oauth-protected-resource`   | local (`authorization_servers: [mcpOrigin]`)    |
+| `GET /.well-known/oauth-authorization-server` | local (`issuer` = MCP origin)                   |
+| `POST /oauth/register`                        | `POST /v1/customer/auth/register?product_ref=…` |
+| `GET  /oauth/authorize`                       | `302` → `/v1/customer/auth/authorize`           |
+| `POST /oauth/token`                           | `POST /v1/customer/auth/token`                  |
+| `POST /oauth/revoke`                          | `POST /v1/customer/auth/revoke`                 |
 
 ## Quick start
 

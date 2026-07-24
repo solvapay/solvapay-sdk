@@ -178,9 +178,7 @@ describe('createOAuthAuthorizeHandler', () => {
     const res = await handler(new Request(`${publicBaseUrl}/oauth/authorize?${query}`))
 
     expect(res!.status).toBe(302)
-    expect(res!.headers.get('location')).toBe(
-      `${apiBaseUrl}/v1/customer/auth/authorize?${query}`,
-    )
+    expect(res!.headers.get('location')).toBe(`${apiBaseUrl}/v1/customer/auth/authorize?${query}`)
   })
 })
 

@@ -7,17 +7,13 @@
  */
 
 import {
-  type EdgeImpl,
   type WasmBinding,
   resetWasmCache,
-  resolveEdgeWebhookImpl,
   setWasmBindingForTests,
   verifyWebhookWasm,
 } from './wasm'
 
-export type EdgeWebhookImpl = EdgeImpl
-
-export { resolveEdgeWebhookImpl, verifyWebhookWasm }
+export { verifyWebhookWasm }
 
 /**
  * Clears cached WASM init state. Used by unit tests.

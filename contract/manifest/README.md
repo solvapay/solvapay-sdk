@@ -2,8 +2,8 @@
 
 Checked-in public-API catalog for the Rust core SDK migration (Phase 0 / Step 2).
 
-| File | Role |
-| --- | --- |
+| File                | Role                                                                                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `sdk-contract.yaml` | Canonical catalog of operations, top-level exports, core helpers, facade entry points, error templates, defaults, and per-language names. |
 
 Together with [`../openapi/`](../openapi/), this is one of the two generation inputs. OpenAPI owns wire DTOs; the manifest owns non-wire behavior (normalization, idempotency, message templates, overlays, sync matrix, idiomatic names).

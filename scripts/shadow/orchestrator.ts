@@ -103,9 +103,7 @@ async function setupSide(
   }
   const customerRef = extractRef(customerOutcome.value, ['customerRef', 'reference'])
   if (!customerRef) {
-    throw new Error(
-      `${label} setup missing customerRef: ${JSON.stringify(customerOutcome.value)}`,
-    )
+    throw new Error(`${label} setup missing customerRef: ${JSON.stringify(customerOutcome.value)}`)
   }
 
   return { productRef, planRef, customerRef, email, sideTag }
@@ -120,9 +118,7 @@ function shouldSkip(
   return scenario.skipReason ?? `requires: ${scenario.requires}`
 }
 
-export async function runShadowSuite(
-  options: OrchestratorOptions,
-): Promise<ShadowReport> {
+export async function runShadowSuite(options: OrchestratorOptions): Promise<ShadowReport> {
   const startedAt = new Date().toISOString()
   const manifest = loadShadowManifest()
   const scenarios = options.scenarios ?? SHADOW_SCENARIOS
@@ -135,8 +131,7 @@ export async function runShadowSuite(
   const facadeDriver: FacadeDriver = session.driver
 
   // Legacy name `invokeTs` = facade side (report side label remains `"ts"`).
-  const invokeTs = (fn: string, args: Record<string, unknown>) =>
-    facadeDriver.invoke(fn, args)
+  const invokeTs = (fn: string, args: Record<string, unknown>) => facadeDriver.invoke(fn, args)
   const invokeRust = (fn: string, args: Record<string, unknown>) =>
     invokeRustShadow(
       {
@@ -247,8 +242,7 @@ export async function runShadowSuite(
     results,
   }
 
-  const outDir =
-    options.outDir ?? path.join(REPO_ROOT, 'contract/shadow/output')
+  const outDir = options.outDir ?? path.join(REPO_ROOT, 'contract/shadow/output')
   writeShadowReport(report, outDir)
   return report
 }

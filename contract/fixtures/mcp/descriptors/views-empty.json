@@ -16,9 +16,7 @@
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
-            "visibility": [
-              "app"
-            ]
+            "visibility": ["app"]
           },
           "audience": "ui",
           "openai/widgetAccessible": true
@@ -33,9 +31,7 @@
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
-            "visibility": [
-              "app"
-            ]
+            "visibility": ["app"]
           },
           "audience": "ui",
           "openai/widgetAccessible": true
@@ -50,9 +46,7 @@
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
-            "visibility": [
-              "app"
-            ]
+            "visibility": ["app"]
           },
           "audience": "ui",
           "openai/widgetAccessible": true
@@ -68,9 +62,7 @@
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
-            "visibility": [
-              "app"
-            ]
+            "visibility": ["app"]
           },
           "audience": "ui",
           "openai/widgetAccessible": true
@@ -87,9 +79,7 @@
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
-            "visibility": [
-              "app"
-            ]
+            "visibility": ["app"]
           },
           "audience": "ui",
           "openai/widgetAccessible": true
@@ -104,9 +94,7 @@
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
-            "visibility": [
-              "app"
-            ]
+            "visibility": ["app"]
           },
           "audience": "ui",
           "openai/widgetAccessible": true
@@ -121,9 +109,7 @@
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
-            "visibility": [
-              "app"
-            ]
+            "visibility": ["app"]
           },
           "audience": "ui",
           "openai/widgetAccessible": true
@@ -140,9 +126,7 @@
         "meta": {
           "ui": {
             "resourceUri": "ui://test/view.html",
-            "visibility": [
-              "app"
-            ]
+            "visibility": ["app"]
           },
           "audience": "ui",
           "openai/widgetAccessible": true

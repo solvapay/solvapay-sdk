@@ -56,10 +56,22 @@ export default defineConfig({
       { find: /^@solvapay\/mcp-core$/, replacement: `${packagesDir}/mcp-core/src/index.ts` },
       { find: /^@solvapay\/react$/, replacement: `${packagesDir}/react/src/index.tsx` },
       { find: /^@solvapay\/react\/mcp$/, replacement: `${packagesDir}/react/src/mcp/index.ts` },
-      { find: /^@solvapay\/react\/primitives$/, replacement: `${packagesDir}/react/src/primitives/index.ts` },
-      { find: /^@solvapay\/react\/adapters\/auth$/, replacement: `${packagesDir}/react/src/adapters/auth.ts` },
-      { find: /^@solvapay\/react\/mcp\/styles\.css$/, replacement: `${packagesDir}/react/src/mcp/styles.css` },
-      { find: /^@solvapay\/react\/styles\.css$/, replacement: `${packagesDir}/react/src/styles.css` },
+      {
+        find: /^@solvapay\/react\/primitives$/,
+        replacement: `${packagesDir}/react/src/primitives/index.ts`,
+      },
+      {
+        find: /^@solvapay\/react\/adapters\/auth$/,
+        replacement: `${packagesDir}/react/src/adapters/auth.ts`,
+      },
+      {
+        find: /^@solvapay\/react\/mcp\/styles\.css$/,
+        replacement: `${packagesDir}/react/src/mcp/styles.css`,
+      },
+      {
+        find: /^@solvapay\/react\/styles\.css$/,
+        replacement: `${packagesDir}/react/src/styles.css`,
+      },
     ],
   },
   build: {

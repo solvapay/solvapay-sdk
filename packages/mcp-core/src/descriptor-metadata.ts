@@ -54,14 +54,12 @@ export function solvapayTool(
 }
 
 /** Per-view annotation map for intent tools — keep aligned with `TOOL_FOR_VIEW`. */
-export const INTENT_TOOL_ANNOTATIONS: Record<
-  keyof typeof TOOL_FOR_VIEW,
-  SolvaPayToolAnnotations
-> = {
-  account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-  topup: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-  checkout: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-}
+export const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPayToolAnnotations> =
+  {
+    account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+    topup: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+    checkout: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+  }
 
 /** Tool metadata without `inputSchema` / `handler` (pure registration surface). */
 export type ToolDescriptorMetadata = {
@@ -285,10 +283,7 @@ export function buildPromptUserMessage(
   }
 }
 
-function promptUserMessageText(
-  promptName: McpToolName,
-  args: Record<string, unknown>,
-): string {
+function promptUserMessageText(promptName: McpToolName, args: Record<string, unknown>): string {
   switch (promptName) {
     case MCP_TOOL_NAMES.upgrade: {
       const planRef = args.planRef

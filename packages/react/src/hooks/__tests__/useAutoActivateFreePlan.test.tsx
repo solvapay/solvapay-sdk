@@ -120,9 +120,7 @@ describe('useAutoActivateFreePlan', () => {
     setPlans([paidPlan])
     const activate = setActivation()
 
-    const { result } = renderHook(() =>
-      useAutoActivateFreePlan({ productRef: 'prd_payg' }),
-    )
+    const { result } = renderHook(() => useAutoActivateFreePlan({ productRef: 'prd_payg' }))
 
     // Give any latent effect a tick.
     await act(async () => {
@@ -140,9 +138,7 @@ describe('useAutoActivateFreePlan', () => {
     setPlans([freePlan])
     const activate = setActivation()
 
-    const { result } = renderHook(() =>
-      useAutoActivateFreePlan({ productRef: 'prd_api' }),
-    )
+    const { result } = renderHook(() => useAutoActivateFreePlan({ productRef: 'prd_api' }))
 
     await act(async () => {
       await Promise.resolve()
@@ -175,8 +171,7 @@ describe('useAutoActivateFreePlan', () => {
     const activate = setActivation()
 
     const { rerender } = renderHook(
-      ({ productRef }: { productRef: string }) =>
-        useAutoActivateFreePlan({ productRef }),
+      ({ productRef }: { productRef: string }) => useAutoActivateFreePlan({ productRef }),
       { initialProps: { productRef: 'prd_a' } },
     )
 
@@ -200,9 +195,7 @@ describe('useAutoActivateFreePlan', () => {
     setPlans([freePlan])
     const activate = setActivation()
 
-    const { rerender } = renderHook(() =>
-      useAutoActivateFreePlan({ productRef: 'prd_api' }),
-    )
+    const { rerender } = renderHook(() => useAutoActivateFreePlan({ productRef: 'prd_api' }))
 
     await waitFor(() => expect(activate).toHaveBeenCalledTimes(1))
 
@@ -220,9 +213,7 @@ describe('useAutoActivateFreePlan', () => {
       .mockRejectedValue(new Error('activation failed')) as unknown as ActivateFn
     setActivation({ activate })
 
-    const { rerender } = renderHook(() =>
-      useAutoActivateFreePlan({ productRef: 'prd_api' }),
-    )
+    const { rerender } = renderHook(() => useAutoActivateFreePlan({ productRef: 'prd_api' }))
 
     await waitFor(() => expect(activate).toHaveBeenCalledTimes(1))
 

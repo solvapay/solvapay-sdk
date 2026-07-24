@@ -11,10 +11,7 @@
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type {
-  AnySchema,
-  ZodRawShapeCompat,
-} from '@modelcontextprotocol/sdk/server/zod-compat.js'
+import type { AnySchema, ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js'
 import type { BuildSolvaPayDescriptorsOptions } from '@solvapay/mcp-core'
 import type { SolvaPay } from '@solvapay/server'
 import {
@@ -25,10 +22,7 @@ import {
 } from './internal/buildMcpServer'
 
 export type { HideToolsByAudienceConfig } from './internal/buildMcpServer'
-import {
-  registerPayableTool,
-  type RegisterPayableToolOptions,
-} from './registerPayableTool'
+import { registerPayableTool, type RegisterPayableToolOptions } from './registerPayableTool'
 
 /**
  * Callback fired from the `additionalTools` hook with helpers bound for

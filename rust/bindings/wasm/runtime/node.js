@@ -14,9 +14,7 @@ let initPromise
 let syncInitDone = false
 
 function wasmBytes() {
-  return readFileSync(
-    fileURLToPath(new URL('../pkg/edge/solvapay_wasm_bg.wasm', import.meta.url)),
-  )
+  return readFileSync(fileURLToPath(new URL('../pkg/edge/solvapay_wasm_bg.wasm', import.meta.url)))
 }
 
 export function ready() {

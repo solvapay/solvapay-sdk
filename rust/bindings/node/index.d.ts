@@ -376,4 +376,9 @@ export declare function validateTopupPaymentIntentParams(argsJson: string): stri
  * * `secret` - Webhook secret (`whsec_…`).
  * * `now_unix_secs` - Optional host clock as unix seconds; wall clock when omitted.
  */
-export declare function verifyWebhook(body: string, signature: string, secret: string, nowUnixSecs?: number | undefined | null): string
+export declare function verifyWebhook(
+  body: string,
+  signature: string,
+  secret: string,
+  nowUnixSecs?: number | undefined | null,
+): string

@@ -49,7 +49,11 @@ fn lower_ir() -> Ir {
 
 fn rustfmt(source: &str, tag: &str) -> String {
     let mut path = std::env::temp_dir();
-    path.push(format!("dto_gen_go_golden_{}_{}.rs", std::process::id(), tag));
+    path.push(format!(
+        "dto_gen_go_golden_{}_{}.rs",
+        std::process::id(),
+        tag
+    ));
     {
         let mut f = fs::File::create(&path).expect("create temp");
         f.write_all(source.as_bytes()).expect("write temp");
@@ -146,7 +150,9 @@ fn go_client_exports_full_36_op_surface() {
                 saw_await = true;
                 let dto = sym.dto_type.as_deref().expect("clientAwait dto");
                 assert!(
-                    emitted.client_rs.contains(&format!("let params: {dto} = parse_args_json")),
+                    emitted
+                        .client_rs
+                        .contains(&format!("let params: {dto} = parse_args_json")),
                     "ClientAwait {} missing dto deserialize for {dto}",
                     sym.id
                 );

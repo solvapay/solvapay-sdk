@@ -30,7 +30,7 @@ function mockFreeUser() {
     hasPaidPurchase: false,
     activePurchase: null,
     refetch: vi.fn(),
-  } as any)
+  } as ReturnType<typeof usePurchase>)
 }
 
 function mockPaidUser() {
@@ -39,7 +39,7 @@ function mockPaidUser() {
     hasPaidPurchase: true,
     activePurchase: { productRef: 'prd_TEST', productName: 'Pro Plan' },
     refetch: vi.fn(),
-  } as any)
+  } as ReturnType<typeof usePurchase>)
 }
 
 beforeEach(() => {
@@ -86,9 +86,7 @@ describe('Navigation', () => {
     render(<Navigation />)
     fireEvent.click(screen.getByRole('button', { name: /upgrade/i }))
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /redirecting/i })).toBeDisabled(),
-    )
+    await waitFor(() => expect(screen.getByRole('button', { name: /redirecting/i })).toBeDisabled())
   })
 
   it('double-click fires only one fetch — shared lock blocks duplicate checkout session', async () => {

@@ -23,19 +23,10 @@ import React, { useState } from 'react'
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
-import {
-  McpAccountView,
-  type McpAccountViewProps,
-} from './views/McpAccountView'
+import { McpAccountView, type McpAccountViewProps } from './views/McpAccountView'
 import { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
-import {
-  McpCheckoutView,
-  type McpCheckoutViewProps,
-} from './views/McpCheckoutView'
-import {
-  McpTopupView,
-  type McpTopupViewProps,
-} from './views/McpTopupView'
+import { McpCheckoutView, type McpCheckoutViewProps } from './views/McpCheckoutView'
+import { McpTopupView, type McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { LegalFooter } from '../primitives/LegalFooter'
 
@@ -75,9 +66,7 @@ export interface McpAppShellProps {
  * the surviving three surfaces. Undefined bootstrap views default to
  * `account`.
  */
-function resolveSurface(
-  bootstrapView: McpBootstrap['view'] | string | undefined,
-): McpViewKind {
+function resolveSurface(bootstrapView: McpBootstrap['view'] | string | undefined): McpViewKind {
   switch (bootstrapView) {
     case 'checkout':
     case 'about': // About folds into checkout's picker.
@@ -204,7 +193,8 @@ export function McpViewRouter({
   onClose,
 }: McpViewRouterProps): React.ReactNode {
   const { productRef, stripePublishableKey, returnUrl } = bootstrap
-  const CheckoutView = (views?.checkout ?? McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
+  const CheckoutView = (views?.checkout ??
+    McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
   const AccountView = (views?.account ?? McpAccountView) as React.ComponentType<McpAccountViewProps>
   const TopupView = (views?.topup ?? McpTopupView) as React.ComponentType<McpTopupViewProps>
 

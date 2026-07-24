@@ -25,16 +25,10 @@ import type { SolvaPayConfig, SolvaPayProviderInitial } from '../types'
  * the seeded entries match the keys `useMerchant` / `useProduct` /
  * `usePlans` / `usePaymentMethod` read on first render.
  */
-export function seedMcpCaches(
-  initial: SolvaPayProviderInitial,
-  config: SolvaPayConfig,
-): void {
+export function seedMcpCaches(initial: SolvaPayProviderInitial, config: SolvaPayConfig): void {
   const now = Date.now()
 
-  const merchantKey = createTransportCacheKey(
-    config,
-    config.api?.getMerchant || '/api/merchant',
-  )
+  const merchantKey = createTransportCacheKey(config, config.api?.getMerchant || '/api/merchant')
   merchantCache.set(merchantKey, {
     merchant: initial.merchant,
     promise: null,

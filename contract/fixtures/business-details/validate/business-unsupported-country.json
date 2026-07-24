@@ -14,9 +14,7 @@
       "error": {
         "issues": [
           {
-            "path": [
-              "country"
-            ],
+            "path": ["country"],
             "message": "Country is not supported for business purchases"
           }
         ]

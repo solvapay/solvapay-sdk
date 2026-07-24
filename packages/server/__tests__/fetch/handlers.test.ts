@@ -172,9 +172,7 @@ describe('createPaymentIntent', () => {
       customerRef: 'cus_1',
     })
 
-    const res = await createPaymentIntent(
-      fakePost({ planRef: 'pln_1', productRef: 'prd_1' }),
-    )
+    const res = await createPaymentIntent(fakePost({ planRef: 'pln_1', productRef: 'prd_1' }))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ clientSecret: 'cs_1' })
   })
@@ -192,9 +190,7 @@ describe('processPayment', () => {
       type: 'recurring',
     })
 
-    const res = await processPayment(
-      fakePost({ paymentIntentId: 'pi_1', productRef: 'prd_1' }),
-    )
+    const res = await processPayment(fakePost({ paymentIntentId: 'pi_1', productRef: 'prd_1' }))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ status: 'succeeded' })
   })
@@ -209,9 +205,7 @@ describe('createTopupPaymentIntent', () => {
       customerRef: 'cus_1',
     })
 
-    const res = await createTopupPaymentIntent(
-      fakePost({ amount: 1000, currency: 'USD' }),
-    )
+    const res = await createTopupPaymentIntent(fakePost({ amount: 1000, currency: 'USD' }))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ clientSecret: 'cs_1' })
   })
@@ -265,9 +259,7 @@ describe('activatePlan', () => {
       purchase: { reference: 'pur_1' },
     } as never)
 
-    const res = await activatePlan(
-      fakePost({ productRef: 'prd_1', planRef: 'pln_1' }),
-    )
+    const res = await activatePlan(fakePost({ productRef: 'prd_1', planRef: 'pln_1' }))
     expect(res.status).toBe(200)
   })
 })
@@ -368,7 +360,9 @@ describe('createCheckoutSession', () => {
 
     const res = await createCheckoutSession(fakePost({}))
     expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ error: 'Missing required parameter: productRef is required' })
+    expect(await res.json()).toMatchObject({
+      error: 'Missing required parameter: productRef is required',
+    })
   })
 })
 

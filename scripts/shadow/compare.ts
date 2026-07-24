@@ -157,10 +157,7 @@ export function compareSides(input: {
   const rustRaw = { ok: input.rust.ok, value: input.rust.value }
   const tsNormalized = {
     ok: input.ts.ok,
-    value: normalizeVolatile(
-      canonicalizeOutcomeValue(input.ts.ok, input.ts.value),
-      input.rules,
-    ),
+    value: normalizeVolatile(canonicalizeOutcomeValue(input.ts.ok, input.ts.value), input.rules),
   }
   const rustNormalized = {
     ok: input.rust.ok,

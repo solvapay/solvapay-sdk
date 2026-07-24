@@ -70,7 +70,7 @@ describe('useHostLocale', () => {
       document.documentElement.lang = 'ja-JP'
       // MutationObserver fires asynchronously; give it a microtask.
       await Promise.resolve()
-      await new Promise((r) => setTimeout(r, 0))
+      await new Promise(r => setTimeout(r, 0))
     })
 
     expect(result.current).toBe('ja-JP')

@@ -46,7 +46,9 @@ const ANSI_ESCAPE_RE = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;]*m`, 'g'
 const trimLine = (line: string): string => line.replace(ANSI_ESCAPE_RE, '').trim()
 
 const parsePnpmProgress = (line: string): string | null => {
-  const progressMatch = line.match(/Progress:\s*resolved\s+(\d+).+downloaded\s+(\d+).+added\s+(\d+)/)
+  const progressMatch = line.match(
+    /Progress:\s*resolved\s+(\d+).+downloaded\s+(\d+).+added\s+(\d+)/,
+  )
   if (progressMatch) {
     const [, resolved, downloaded, added] = progressMatch
     return `Installing packages (${added} added, ${downloaded} downloaded, ${resolved} resolved)`

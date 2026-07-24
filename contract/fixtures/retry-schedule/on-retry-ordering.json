@@ -12,15 +12,7 @@
   "expect": {
     "result": {
       "delays": [500, 500],
-      "events": [
-        "call:0",
-        "onRetry:0",
-        "sleep:500",
-        "call:1",
-        "onRetry:1",
-        "sleep:500",
-        "call:2"
-      ],
+      "events": ["call:0", "onRetry:0", "sleep:500", "call:1", "onRetry:1", "sleep:500", "call:2"],
       "outcome": { "type": "rejected", "name": "Error", "message": "boom" }
     }
   }

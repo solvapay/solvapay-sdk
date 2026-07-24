@@ -120,10 +120,6 @@ if (mode === 'native') {
   fail('wasi mode requires NAPI_RS_FORCE_WASI=error')
 }
 
-if (process.env.SOLVAPAY_IMPL !== 'rust') {
-  fail('SOLVAPAY_IMPL must be rust')
-}
-
 let serverPkgPath
 let loaderPkgPath
 let targetPkgPath
@@ -206,7 +202,7 @@ assert.deepEqual(gate, PAYWALL_GATE_SMOKE_EXPECTED)
 
 // --- async: getCustomer against in-process stub (host-native only) ---
 // WASI builds omit NativeClient (no ReqwestTransport); sync surfaces above
-// still prove the extended 37R-e path under SOLVAPAY_IMPL=rust.
+// still prove the extended 37R-e path on native host bindings.
 let customerLabel = 'skipped-wasi'
 if (mode === 'native') {
   const stub = createServer((req, res) => {

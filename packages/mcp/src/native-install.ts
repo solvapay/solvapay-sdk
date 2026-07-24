@@ -6,7 +6,7 @@
  */
 
 import { installNativeMcpApi } from '@solvapay/mcp-core'
-import { callNativeSync, resolveImpl } from '@solvapay/server'
+import { callNativeSync } from '@solvapay/server'
 
 function isNodeRuntime(): boolean {
   try {
@@ -22,5 +22,5 @@ function isNodeRuntime(): boolean {
 }
 
 if (isNodeRuntime()) {
-  installNativeMcpApi({ callNativeSync, resolveImpl })
+  installNativeMcpApi({ callNativeSync })
 }

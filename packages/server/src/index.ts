@@ -5,27 +5,24 @@
  * Provides unified payable API with explicit adapters for all frameworks.
  */
 
-import { installNativeCoreApi, SolvaPayError } from '@solvapay/core'
+import { installNativeCoreApi } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
 import { installMcpAdapterNative } from './adapters/mcp'
-import { callNativeSync, resolveImpl } from './native'
+import { callNativeSync } from './native'
 import { installNativeDecisionApi } from './native-decisions'
 import { publishNativeSyncApi } from './native-registry'
-import { resolveWebhookImpl, verifyWebhookNative } from './webhook-native'
+import { verifyWebhookNative } from './webhook-native'
 import type { PaywallStructuredContent, PaywallToolResult } from './types'
 
-// Install sync decision + core dispatch for Node (edge never installs → TS fallback).
-installNativeDecisionApi({ callNativeSync, resolveImpl })
-// Step 52: @solvapay/core is Rust-only — SOLVAPAY_IMPL=ts does not gate it.
-installNativeCoreApi({ callNativeSync, resolveImpl: () => 'rust' })
+// Install sync decision + core dispatch for Node.
+installNativeDecisionApi({ callNativeSync })
+installNativeCoreApi({ callNativeSync })
 installMcpAdapterNative({
-  formatGate: (gate: PaywallStructuredContent): PaywallToolResult | null => {
-    if (resolveImpl('mcp') !== 'rust') return null
-    return callNativeSync(
+  formatGate: (gate: PaywallStructuredContent): PaywallToolResult =>
+    callNativeSync(
       'paywallToolResult',
       JSON.stringify({ message: gate.message, structuredContent: gate }),
-    ) as PaywallToolResult
-  },
+    ) as PaywallToolResult,
 })
 // Ambient registry for mcp-core (and peers) — avoids server→mcp-core cycle
 // and the createRequire CJS/ESM dual-instance trap.
@@ -98,12 +95,8 @@ export function verifyWebhook({
   signature: string
   secret: string
 }): WebhookEvent {
-  // Rust-only after Step 53. `SOLVAPAY_IMPL=ts` (or an unavailable binding that
-  // resolves to `ts`) fails fast instead of silently running a duplicate
-  // `node:crypto` implementation.
-  if (resolveWebhookImpl() !== 'rust') {
-    throw new SolvaPayError('server webhook API not installed')
-  }
+  // Rust-only after Step 53 — loader throws when `@solvapay/server-native`
+  // is unavailable instead of silently running a duplicate `node:crypto` path.
   return verifyWebhookNative({ body, signature, secret })
 }
 
@@ -113,7 +106,7 @@ export function verifyWebhook({
 export { McpAdapter } from './adapters'
 
 /** @internal Node native dispatch seams (fixture harness / package installs). */
-export { callNativeSync, resolveImpl } from './native'
+export { callNativeSync } from './native'
 
 /**
  * @internal WASM client seams. The contract fixture harness loads the real

@@ -1,4 +1,4 @@
-# __PROJECT_NAME__
+# **PROJECT_NAME**
 
 Next.js starter scaffolded by `create-solvapay --auth auth0`.
 

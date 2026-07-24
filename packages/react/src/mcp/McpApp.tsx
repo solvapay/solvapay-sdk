@@ -332,9 +332,7 @@ export function McpApp({
         }
         // Post-mount non-bootstrap or errored payload — ignore silently.
         // The mounted view survives.
-        if (typeof console !== 'undefined') {
-          console.debug('[solvapay] non-bootstrap tool-result notification:', err)
-        }
+        void err
       }
     }
 
@@ -424,9 +422,7 @@ export function McpApp({
     if (typeof document === 'undefined') return
     if (!iconUrl) return
     const MANAGED_ATTR = 'data-solvapay-favicon'
-    const existing = document.head.querySelector<HTMLLinkElement>(
-      `link[${MANAGED_ATTR}]`,
-    )
+    const existing = document.head.querySelector<HTMLLinkElement>(`link[${MANAGED_ATTR}]`)
     const link = existing ?? document.createElement('link')
     link.setAttribute(MANAGED_ATTR, '')
     link.rel = 'icon'
@@ -440,9 +436,7 @@ export function McpApp({
     // icon swap is invisible. Managed via a separate `data-*` attr so
     // favicon + preload links don't clobber each other.
     const PRELOAD_ATTR = 'data-solvapay-icon-preload'
-    const existingPreload = document.head.querySelector<HTMLLinkElement>(
-      `link[${PRELOAD_ATTR}]`,
-    )
+    const existingPreload = document.head.querySelector<HTMLLinkElement>(`link[${PRELOAD_ATTR}]`)
     const preload = existingPreload ?? document.createElement('link')
     preload.setAttribute(PRELOAD_ATTR, '')
     preload.rel = 'preload'
@@ -457,44 +451,41 @@ export function McpApp({
     }
   }, [iconUrl])
 
-  const providerConfig = useMemo(
-    () => {
-      // Build the resolved config first so every `seedMcpCaches` call
-      // (first render + post-refresh) runs against the same object the
-      // hooks later read via `configRef.current` — otherwise
-      // `createTransportCacheKey` could in principle compute a
-      // different key at refresh-time than at mount-time.
-      const resolved: SolvaPayConfig = {
-        // `SolvaPayProvider` short-circuits its fetch pipeline when there's
-        // no auth token, which means our `checkPurchase` override would
-        // never run. In the MCP App the real identity lives server-side on
-        // the OAuth bridge's `customer_ref`, so we just need to tell the
-        // provider "yes, you're authenticated". Returning a sentinel token
-        // is enough to flip `isAuthenticated` true and unlock the refetch
-        // path.
-        auth: {
-          adapter: {
-            getToken: async () => 'mcp-session',
-            getUserId: async () => initial?.customerRef ?? null,
-          },
+  const providerConfig = useMemo(() => {
+    // Build the resolved config first so every `seedMcpCaches` call
+    // (first render + post-refresh) runs against the same object the
+    // hooks later read via `configRef.current` — otherwise
+    // `createTransportCacheKey` could in principle compute a
+    // different key at refresh-time than at mount-time.
+    const resolved: SolvaPayConfig = {
+      // `SolvaPayProvider` short-circuits its fetch pipeline when there's
+      // no auth token, which means our `checkPurchase` override would
+      // never run. In the MCP App the real identity lives server-side on
+      // the OAuth bridge's `customer_ref`, so we just need to tell the
+      // provider "yes, you're authenticated". Returning a sentinel token
+      // is enough to flip `isAuthenticated` true and unlock the refetch
+      // path.
+      auth: {
+        adapter: {
+          getToken: async () => 'mcp-session',
+          getUserId: async () => initial?.customerRef ?? null,
         },
-        transport,
-        initial,
-        refreshInitial: async (): Promise<SolvaPayProviderInitial | null> => {
-          // Re-fetch the bootstrap payload by replaying the host-invoked
-          // intent tool (`fetchMcpBootstrap` infers it from host context —
-          // defaulting to `upgrade` when none is present). Re-seeds the
-          // module caches so every hook sees the refreshed snapshot.
-          const fresh = await fetchMcpBootstrap(app)
-          const next = bootstrapToInitial(fresh)
-          seedMcpCaches(next, resolved)
-          return next
-        },
-      }
-      return resolved
-    },
-    [transport, initial, app],
-  )
+      },
+      transport,
+      initial,
+      refreshInitial: async (): Promise<SolvaPayProviderInitial | null> => {
+        // Re-fetch the bootstrap payload by replaying the host-invoked
+        // intent tool (`fetchMcpBootstrap` infers it from host context —
+        // defaulting to `upgrade` when none is present). Re-seeds the
+        // module caches so every hook sees the refreshed snapshot.
+        const fresh = await fetchMcpBootstrap(app)
+        const next = bootstrapToInitial(fresh)
+        seedMcpCaches(next, resolved)
+        return next
+      },
+    }
+    return resolved
+  }, [transport, initial, app])
 
   // Seed the module-level hook caches synchronously during render,
   // before any child mounts. Children (`useMerchant` / `useProduct` /
@@ -547,9 +538,7 @@ export function McpApp({
   const effectiveOnClose = onClose ?? defaultOnClose
 
   const effectiveBootstrap =
-    bootstrap && productRefOverride
-      ? { ...bootstrap, productRef: productRefOverride }
-      : bootstrap
+    bootstrap && productRefOverride ? { ...bootstrap, productRef: productRefOverride } : bootstrap
 
   return (
     <McpHostInfoProvider hostName={hostName}>

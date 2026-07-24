@@ -25,9 +25,7 @@ export type SupabaseClientLike = {
      * Supabase's native auth-state subscription. Structurally typed so we
      * don't import `@supabase/supabase-js`. Returns `{ data: { subscription: { unsubscribe } } }`.
      */
-    onAuthStateChange: (
-      callback: (event: string, session: unknown) => void,
-    ) => {
+    onAuthStateChange: (callback: (event: string, session: unknown) => void) => {
       data: {
         subscription: {
           unsubscribe: () => void
@@ -82,9 +80,10 @@ export function createSupabaseAuthAdapter(config: SupabaseAuthAdapterConfig): Au
 
   const client = config.client
 
-  const readSession = async (): Promise<
-    { access_token?: string; user?: { id?: string } } | null
-  > => {
+  const readSession = async (): Promise<{
+    access_token?: string
+    user?: { id?: string }
+  } | null> => {
     if (typeof window === 'undefined') return null
 
     try {

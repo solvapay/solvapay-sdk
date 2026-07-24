@@ -625,6 +625,10 @@ pub struct IrRoute {
     pub path_template: String,
     /// OpenAPI `operationId`.
     pub operation_id: String,
+    /// OpenAPI operation `description` (preferred doc fallback).
+    pub description: Option<String>,
+    /// OpenAPI operation `summary` (secondary doc fallback).
+    pub summary: Option<String>,
     /// JSON request body type, when present.
     pub request_body: Option<IrTypeRef>,
     /// Preferred 2xx JSON response body type, when present.

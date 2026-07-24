@@ -388,7 +388,6 @@ export async function runCleanInstallSmoke(opts, fs = {}) {
     const target = mode === 'native' ? targetByDir(expectedTargetDir) : WASI_TARGET
     const smokeEnv = {
       ...process.env,
-      SOLVAPAY_IMPL: 'rust',
       NAPI_RS_ENFORCE_VERSION_CHECK: '1',
       CLEAN_INSTALL_MODE: mode,
       CLEAN_INSTALL_EXPECTED_TARGET: target.dir,

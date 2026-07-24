@@ -28,7 +28,11 @@ describe('validateCheckoutSessionParams', () => {
 describe('resolveReturnUrl', () => {
   it('prefers body returnUrl', () => {
     expect(
-      resolveReturnUrl('https://body.example/return', 'https://options.example/return', 'https://origin'),
+      resolveReturnUrl(
+        'https://body.example/return',
+        'https://options.example/return',
+        'https://origin',
+      ),
     ).toBe('https://body.example/return')
   })
 

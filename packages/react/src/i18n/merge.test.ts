@@ -30,10 +30,12 @@ describe('mergeCopy', () => {
       subscribe: enCopy.cta.subscribe,
     })
     mergeCopy(enCopy, { cta: { subscribe: 'X' } })
-    expect(JSON.stringify({
-      payNow: enCopy.cta.payNow,
-      subscribe: enCopy.cta.subscribe,
-    })).toBe(snapshot)
+    expect(
+      JSON.stringify({
+        payNow: enCopy.cta.payNow,
+        subscribe: enCopy.cta.subscribe,
+      }),
+    ).toBe(snapshot)
   })
 
   it('exposes deprecated cardElementMissing alongside paymentElementMissing', () => {

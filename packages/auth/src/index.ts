@@ -6,12 +6,7 @@
  */
 
 // Export the interface
-export type {
-  AuthAdapter,
-  AuthRequestHandleResult,
-  RequestLike,
-  ServerIdentity,
-} from './adapter'
+export type { AuthAdapter, AuthRequestHandleResult, RequestLike, ServerIdentity } from './adapter'
 
 export { SOLVAPAY_AUTHORIZATION_HEADER, SOLVAPAY_USER_ID_HEADER } from './constants'
 

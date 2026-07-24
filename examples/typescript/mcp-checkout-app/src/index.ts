@@ -126,14 +126,13 @@ app.delete('/mcp', async (req: Request, res: Response) => {
   await sessions[sessionId].transport.handleRequest(req, res)
 })
 
-
 // Warm the branding cache before accepting traffic so the very first
 // `initialize` handshake carries merchant identity (brand name on the
 // Implementation + iconUrl on tools/list) instead of the generic
 // SolvaPay fallback. Failure is silent — the server still boots with
 // the default identity.
 fetchBranding()
-  .then((branding) => {
+  .then(branding => {
     cachedBranding = branding
     if (branding) {
       console.error('[mcp-checkout-app] branding', {

@@ -58,9 +58,7 @@ function op(
   }
 }
 
-function minimalManifest(
-  overrides: Partial<SdkContractManifest> = {},
-): SdkContractManifest {
+function minimalManifest(overrides: Partial<SdkContractManifest> = {}): SdkContractManifest {
   const operations: SdkContractManifest['operations'] = {}
   for (let i = 0; i < EXPECTED_OPERATION_COUNT; i += 1) {
     const id = i === 0 ? 'checkLimits' : `op${String(i).padStart(2, '0')}`

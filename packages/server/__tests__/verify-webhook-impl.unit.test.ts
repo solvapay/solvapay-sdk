@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SolvaPayError } from '@solvapay/core'
-import {
-  resetWebhookBindingCache,
-  resolveWebhookImpl,
-  setWebhookBindingForTests,
-} from '../src/webhook-native'
+import { resetWebhookBindingCache, setWebhookBindingForTests } from '../src/webhook-native'
 import { verifyWebhook } from '../src/index'
 
 const mockVerifyWebhook = vi.fn()
@@ -27,35 +23,17 @@ const eventBody = JSON.stringify({
   request: { id: null, idempotency_key: null },
 })
 
-describe('verifyWebhook impl selection (Rust-only after Step 53)', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
-
+describe('verifyWebhook native dispatch', () => {
   beforeEach(() => {
     mockVerifyWebhook.mockReset()
-    delete process.env.SOLVAPAY_IMPL
     resetWebhookBindingCache()
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
     resetWebhookBindingCache()
   })
 
-  it('resolveWebhookImpl returns rust when SOLVAPAY_IMPL=rust', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
-    expect(resolveWebhookImpl()).toBe('rust')
-  })
-
-  it('resolveWebhookImpl prefers rust by default when the binding loads', () => {
-    setWebhookBindingForTests(fakeBinding)
-    expect(resolveWebhookImpl()).toBe('rust')
-  })
-
-  it('dispatches to the native binding by default, injecting the host clock', () => {
+  it('dispatches to the native binding, injecting the host clock', () => {
     setWebhookBindingForTests(fakeBinding)
     mockVerifyWebhook.mockReturnValue(eventBody)
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_782_864_000_500)
@@ -96,18 +74,7 @@ describe('verifyWebhook impl selection (Rust-only after Step 53)', () => {
     }
   })
 
-  it('fails fast under SOLVAPAY_IMPL=ts and never calls the binding', () => {
-    process.env.SOLVAPAY_IMPL = 'ts'
-    setWebhookBindingForTests(fakeBinding)
-
-    expect(() =>
-      verifyWebhook({ body: eventBody, signature: 't=1,v1=deadbeef', secret: 'whsec_test' }),
-    ).toThrowError(SolvaPayError)
-    expect(mockVerifyWebhook).not.toHaveBeenCalled()
-  })
-
-  it('surfaces a clear error under SOLVAPAY_IMPL=rust when the binding is missing', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
+  it('throws when the native binding is missing', () => {
     setWebhookBindingForTests(null)
 
     expect(() =>

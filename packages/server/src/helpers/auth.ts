@@ -47,8 +47,9 @@ function base64UrlDecode(input: string): string {
   }
 
   // Last-resort Buffer fallback (Node only).
-  const BufferCtor = (globalThis as { Buffer?: { from(s: string, enc: string): { toString(enc: string): string } } })
-    .Buffer
+  const BufferCtor = (
+    globalThis as { Buffer?: { from(s: string, enc: string): { toString(enc: string): string } } }
+  ).Buffer
   if (BufferCtor) {
     return BufferCtor.from(base64, 'base64').toString('utf-8')
   }

@@ -19,9 +19,7 @@ function buildCtxWithTransport(
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
     createCheckoutSession: vi.fn(),
-    createCustomerSession: vi
-      .fn()
-      .mockResolvedValue({ customerUrl: 'https://portal.test' }),
+    createCustomerSession: vi.fn().mockResolvedValue({ customerUrl: 'https://portal.test' }),
     getMerchant: vi.fn(),
     getProduct: vi.fn(),
     listPlans: vi.fn(),

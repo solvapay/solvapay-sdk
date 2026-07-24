@@ -138,11 +138,7 @@ describe('createSolvaPayMcpServer', () => {
     // `/activate_plan` is wired to the checkout view (it opens the
     // embedded plan picker when called without a planRef).
     expect(promptNames.sort()).toEqual(
-      [
-        MCP_TOOL_NAMES.activatePlan,
-        MCP_TOOL_NAMES.manageAccount,
-        MCP_TOOL_NAMES.upgrade,
-      ].sort(),
+      [MCP_TOOL_NAMES.activatePlan, MCP_TOOL_NAMES.manageAccount, MCP_TOOL_NAMES.upgrade].sort(),
     )
   })
 
@@ -262,9 +258,7 @@ describe('createSolvaPayMcpServer', () => {
       // SolvaPay intent tools — where opening the iframe IS the UX —
       // still advertise their UI resource.
       const upgrade = registered[MCP_TOOL_NAMES.upgrade]
-      const upgradeUi = (
-        upgrade?._meta as { ui?: { resourceUri?: string } } | undefined
-      )?.ui
+      const upgradeUi = (upgrade?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
       expect(upgradeUi?.resourceUri).toBe('ui://test/view.html')
     })
 
@@ -282,9 +276,8 @@ describe('createSolvaPayMcpServer', () => {
       ).toBe(true)
 
       const upgrade = registered[MCP_TOOL_NAMES.upgrade]
-      const intentUi = (
-        upgrade?._meta as { ui?: { visibility?: readonly string[] } } | undefined
-      )?.ui
+      const intentUi = (upgrade?._meta as { ui?: { visibility?: readonly string[] } } | undefined)
+        ?.ui
       expect(intentUi?.visibility).not.toEqual(['app'])
       expect(
         (upgrade?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
@@ -302,11 +295,8 @@ describe('createSolvaPayMcpServer', () => {
       // @ts-expect-error — private registry used for coverage only
       const registered = server._registeredTools ?? {}
       const manageAccount = registered[MCP_TOOL_NAMES.manageAccount]
-      const ui = (
-        manageAccount?._meta as
-          | { ui?: { icons?: Array<{ src: string }> } }
-          | undefined
-      )?.ui
+      const ui = (manageAccount?._meta as { ui?: { icons?: Array<{ src: string }> } } | undefined)
+        ?.ui
       expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
     })
 
@@ -320,11 +310,7 @@ describe('createSolvaPayMcpServer', () => {
       // @ts-expect-error — private registry used for coverage only
       const registered = server._registeredTools ?? {}
       const upgrade = registered[MCP_TOOL_NAMES.upgrade]
-      const ui = (
-        upgrade?._meta as
-          | { ui?: { icons?: Array<{ src: string }> } }
-          | undefined
-      )?.ui
+      const ui = (upgrade?._meta as { ui?: { icons?: Array<{ src: string }> } } | undefined)?.ui
       expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/logo.png')
     })
 
@@ -418,11 +404,7 @@ describe('createSolvaPayMcpServer', () => {
       // @ts-expect-error — private registry used for coverage only
       const registered = server._registeredTools ?? {}
       const branded = registered['search_branded']
-      const ui = (
-        branded?._meta as
-          | { ui?: { icons?: Array<{ src: string }> } }
-          | undefined
-      )?.ui
+      const ui = (branded?._meta as { ui?: { icons?: Array<{ src: string }> } } | undefined)?.ui
       expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
     })
 
@@ -458,11 +440,9 @@ describe('createSolvaPayMcpServer', () => {
       // @ts-expect-error — private registry used for coverage only
       const resources = server._registeredResources ?? {}
       const entry = resources['ui://test/view.html']
-      const metaUi = (
-        entry?.metadata?._meta as { ui?: { prefersBorder?: boolean } } | undefined
-      )?.ui
+      const metaUi = (entry?.metadata?._meta as { ui?: { prefersBorder?: boolean } } | undefined)
+        ?.ui
       expect(metaUi?.prefersBorder).toBe(false)
     })
-
   })
 })

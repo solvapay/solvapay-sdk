@@ -28,7 +28,10 @@ export interface VirtualToolDefinition {
     properties: Record<string, object>
     required: string[]
   }
-  handler: (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<{
+  handler: (
+    args: Record<string, unknown>,
+    extra?: McpToolExtra,
+  ) => Promise<{
     content: Array<{ type: string; text: string }>
     isError?: boolean
   }>

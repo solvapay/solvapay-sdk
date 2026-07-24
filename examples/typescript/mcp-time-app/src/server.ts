@@ -1,6 +1,10 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server'
+import {
+  registerAppResource,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+} from '@modelcontextprotocol/ext-apps/server'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
@@ -78,10 +82,11 @@ export function createServer() {
   }
 
   const payableTimeHandler = payable?.mcp(async () => createTimeResult())
-  const timeHandler = paywallEnabled && payableTimeHandler
-    ? async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
-        (await payableTimeHandler(args, extra)) as CallToolResult
-    : async (): Promise<CallToolResult> => directTimeHandler()
+  const timeHandler =
+    paywallEnabled && payableTimeHandler
+      ? async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
+          (await payableTimeHandler(args, extra)) as CallToolResult
+      : async (): Promise<CallToolResult> => directTimeHandler()
   const timeOutputSchema = z
     .object({
       currentTime: z.string().optional(),

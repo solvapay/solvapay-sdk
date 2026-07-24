@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  compareSides,
-  deepEqualNormalized,
-  firstDiffPath,
-  type SideOutcome,
-} from './compare.js'
+import { compareSides, deepEqualNormalized, firstDiffPath, type SideOutcome } from './compare.js'
 import type { ShadowNormalizeRules } from './normalize.js'
 import { formatHumanSummary, writeShadowReport, type ShadowReport } from './report.js'
 import { mkdtempSync, readFileSync } from 'node:fs'

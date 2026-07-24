@@ -5,12 +5,12 @@ AllCops:
   NewCops: enable
   SuggestExtensions: false
   Exclude:
-    - "pkg/**/*"
-    - "tmp/**/*"
-    - "vendor/**/*"
-    - "ext/**/*"
-    - "test/**/*"
-    - "scripts/**/*"
+    - 'pkg/**/*'
+    - 'tmp/**/*'
+    - 'vendor/**/*'
+    - 'ext/**/*'
+    - 'test/**/*'
+    - 'scripts/**/*'
 
 # Generated surfaces keep emitter formatting; prefer emitter fixes over broad
 # disables. Narrow exclusions only where cops fight keyword-heavy generated style.
@@ -53,36 +53,36 @@ Style/FrozenStringLiteralComment:
 Layout/LineLength:
   Max: 120
   Exclude:
-    - "lib/solvapay/client.rb"
-    - "lib/solvapay/helpers.generated.rb"
-    - "lib/solvapay/_native.rb"
-    - "sig/**/*"
+    - 'lib/solvapay/client.rb'
+    - 'lib/solvapay/helpers.generated.rb'
+    - 'lib/solvapay/_native.rb'
+    - 'sig/**/*'
 
 # Catalog method names are language-neutral (`get_*`, `is_*`); do not rename.
 Naming/AccessorMethodName:
   Exclude:
-    - "lib/solvapay/client.rb"
-    - "lib/solvapay/helpers.generated.rb"
+    - 'lib/solvapay/client.rb'
+    - 'lib/solvapay/helpers.generated.rb'
 
 Naming/PredicatePrefix:
   Exclude:
-    - "lib/solvapay/client.rb"
-    - "lib/solvapay/helpers.generated.rb"
+    - 'lib/solvapay/client.rb'
+    - 'lib/solvapay/helpers.generated.rb'
 
 # RBS inline annotations use `#:` (no space). Steep requires that exact form.
 Layout/LeadingCommentSpace:
   Exclude:
-    - "lib/solvapay/client.rb"
-    - "lib/solvapay/helpers.generated.rb"
-    - "lib/solvapay/facade.rb"
-    - "lib/solvapay/helpers.rb"
-    - "lib/solvapay/_native.rb"
+    - 'lib/solvapay/client.rb'
+    - 'lib/solvapay/helpers.generated.rb'
+    - 'lib/solvapay/facade.rb'
+    - 'lib/solvapay/helpers.rb'
+    - 'lib/solvapay/_native.rb'
 
 # Envelope rescue uses `public_send(:code)` so steep accepts StandardError without
 # a `code` method; prefer that over a typed cast.
 Style/SendWithLiteralMethodName:
   Exclude:
-    - "lib/solvapay/_native.rb"
+    - 'lib/solvapay/_native.rb'
 
 Style/TrailingCommaInArguments:
   EnforcedStyleForMultiline: consistent_comma

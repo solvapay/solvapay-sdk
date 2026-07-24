@@ -110,7 +110,10 @@ fn call_host(req: &HttpRequest) -> Result<HttpResponse, SdkError> {
     }
 
     if packed == 0 {
-        return Err(SdkError::transport("host transport returned no response", false));
+        return Err(SdkError::transport(
+            "host transport returned no response",
+            false,
+        ));
     }
     let resp_ptr = ((packed >> 32) as u32) as *mut u8;
     let resp_len = (packed & 0xFFFF_FFFF) as usize;

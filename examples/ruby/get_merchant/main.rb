@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 #
 # Minimal SolvaPay Ruby SDK example: fetch the merchant profile.
 #
@@ -24,12 +25,12 @@ end
 
 load_dotenv
 
-api_key = ENV["SOLVAPAY_SECRET_KEY"]
+api_key = ENV.fetch("SOLVAPAY_SECRET_KEY", nil)
 if api_key.nil? || api_key.empty?
   warn "SOLVAPAY_SECRET_KEY is missing — copy .env.example to .env"
   exit 1
 end
 
-client = SolvaPay::Client.new(api_key: api_key, api_base_url: ENV["SOLVAPAY_API_BASE_URL"])
+client = SolvaPay::Client.new(api_key: api_key, api_base_url: ENV.fetch("SOLVAPAY_API_BASE_URL", nil))
 merchant = GetMerchant.run(client)
-puts "merchant displayName=#{merchant["displayName"]} defaultCurrency=#{merchant["defaultCurrency"]}"
+puts "merchant displayName=#{merchant['displayName']} defaultCurrency=#{merchant['defaultCurrency']}"

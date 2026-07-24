@@ -78,9 +78,7 @@ function renderFlow(activateMock: ReturnType<typeof activatePlanTopupRequired>) 
  */
 function FlowSelectorAmount() {
   const flow = useActivationFlow()
-  return (
-    <span data-testid="picked-amount">{flow.amountSelector.resolvedAmount ?? ''}</span>
-  )
+  return <span data-testid="picked-amount">{flow.amountSelector.resolvedAmount ?? ''}</span>
 }
 
 beforeEach(() => {
@@ -172,8 +170,6 @@ describe('ActivationFlow amountMinor (zero-decimal currencies)', () => {
     fireEvent.click(await screen.findByTestId('activate'))
     fireEvent.click(await screen.findByTestId('pill-1000'))
 
-    await waitFor(() =>
-      expect(screen.getByTestId('amount-minor').textContent).toBe('100000'),
-    )
+    await waitFor(() => expect(screen.getByTestId('amount-minor').textContent).toBe('100000'))
   })
 })

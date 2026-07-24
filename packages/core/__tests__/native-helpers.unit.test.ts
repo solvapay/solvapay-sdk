@@ -1,11 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { callNativeSync, resolveImpl } from '../../server/src/native'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { callNativeSync } from '../../server/src/native'
 import { SolvaPayError } from '../src/solvapay-error'
 import {
   installNativeCoreApi,
   resetNativeCoreApiForTests,
   type NativeCoreSyncMethod,
-  type SolvaPayImpl,
 } from '../src/native-core'
 import {
   buildCreateCustomerParams,
@@ -22,27 +21,18 @@ const SENTINEL_PARAMS = {
 const SENTINEL_ROUTE = { error: 'sentinel', status: 418 }
 const SENTINEL_OUTCOME = { outcome: 'allow' as const }
 
-describe('native-helpers.ts delegation (Step 52 Rust-only)', () => {
-  const originalImpl = process.env.SOLVAPAY_IMPL
-
+describe('native-helpers.ts delegation', () => {
   beforeEach(() => {
-    delete process.env.SOLVAPAY_IMPL
     resetNativeCoreApiForTests()
   })
 
   afterEach(() => {
-    if (originalImpl === undefined) {
-      delete process.env.SOLVAPAY_IMPL
-    } else {
-      process.env.SOLVAPAY_IMPL = originalImpl
-    }
     resetNativeCoreApiForTests()
-    installNativeCoreApi({ callNativeSync, resolveImpl })
+    installNativeCoreApi({ callNativeSync })
   })
 
-  function installFakeApi(resolve: SolvaPayImpl = 'rust'): void {
+  function installFakeApi(): void {
     installNativeCoreApi({
-      resolveImpl: (_surface: string) => resolve,
       callNativeSync: (fn: NativeCoreSyncMethod, _argsJson: string) => {
         switch (fn) {
           case 'classifyCustomerRef':
@@ -61,8 +51,7 @@ describe('native-helpers.ts delegation (Step 52 Rust-only)', () => {
   }
 
   it('delegates helpers via callNativeSync when installed', () => {
-    process.env.SOLVAPAY_IMPL = 'rust'
-    installFakeApi('rust')
+    installFakeApi()
 
     expect(classifyCustomerRef('cus_abc')).toBe(SENTINEL_CLASSIFY)
     expect(buildCreateCustomerParams('user-1', undefined, 'a@b.c', undefined, 1)).toEqual(
@@ -88,17 +77,5 @@ describe('native-helpers.ts delegation (Step 52 Rust-only)', () => {
   it('throws SolvaPayError when the core API is not installed', () => {
     expect(() => classifyCustomerRef('cus_abc')).toThrow(SolvaPayError)
     expect(() => classifyCustomerRef('cus_abc')).toThrow('core sync API not installed')
-  })
-
-  it('throws under SOLVAPAY_IMPL=ts (no portable TS fallback)', () => {
-    process.env.SOLVAPAY_IMPL = 'ts'
-    const callNativeSyncFn = vi.fn()
-    installNativeCoreApi({
-      resolveImpl: () => 'ts',
-      callNativeSync: callNativeSyncFn,
-    })
-
-    expect(() => classifyCustomerRef('cus_abc')).toThrow(SolvaPayError)
-    expect(callNativeSyncFn).not.toHaveBeenCalled()
   })
 })

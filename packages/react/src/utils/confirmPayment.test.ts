@@ -192,9 +192,7 @@ describe('confirmPayment', () => {
 
   it('maps requires_action status', async () => {
     const stripe = makeStripe({
-      confirmPayment: vi
-        .fn()
-        .mockResolvedValue({ paymentIntent: { status: 'requires_action' } }),
+      confirmPayment: vi.fn().mockResolvedValue({ paymentIntent: { status: 'requires_action' } }),
     })
     const elements = makeElements({})
     const result = await confirmPayment({
@@ -209,9 +207,7 @@ describe('confirmPayment', () => {
 
   it('returns error when Stripe returns an error', async () => {
     const stripe = makeStripe({
-      confirmPayment: vi
-        .fn()
-        .mockResolvedValue({ error: { message: 'card declined' } }),
+      confirmPayment: vi.fn().mockResolvedValue({ error: { message: 'card declined' } }),
     })
     const elements = makeElements({})
     const result = await confirmPayment({

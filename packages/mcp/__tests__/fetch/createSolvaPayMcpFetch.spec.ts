@@ -104,19 +104,16 @@ async function fetch200<T = unknown>(
 }
 
 async function initialize(handler: (req: Request) => Promise<Response>) {
-  return callRpc<{ serverInfo?: { name?: string; icons?: Array<{ src: string }> } }>(
-    handler,
-    {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-06-18',
-        capabilities: {},
-        clientInfo: { name: 'test-client', version: '0.0.0' },
-      },
+  return callRpc<{ serverInfo?: { name?: string; icons?: Array<{ src: string }> } }>(handler, {
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2025-06-18',
+      capabilities: {},
+      clientInfo: { name: 'test-client', version: '0.0.0' },
     },
-  )
+  })
 }
 
 const INTENT_TOOLS = [
@@ -201,16 +198,20 @@ describe('createSolvaPayMcpFetch', () => {
     it('allows authenticated tools/call through', async () => {
       const handler = buildHandler({ requireAuth: true })
       const auth = { authorization: `Bearer ${makeJwt('cust_1')}` }
-      await callRpc(handler, {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '2025-06-18',
-          capabilities: {},
-          clientInfo: { name: 'test-client', version: '0.0.0' },
+      await callRpc(
+        handler,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: {
+            protocolVersion: '2025-06-18',
+            capabilities: {},
+            clientInfo: { name: 'test-client', version: '0.0.0' },
+          },
         },
-      }, auth)
+        auth,
+      )
       const call = await callRpc<ToolCallResult>(
         handler,
         {
@@ -433,7 +434,10 @@ describe('createSolvaPayMcpFetch', () => {
     // for their consumers, since the root entry carries
     // `registerPayableTool` + its zod-compat + payable-handler wiring
     // that the subpath is meant to leave behind.
-    const source = await readFile(path.resolve(__dirname, 'createSolvaPayMcpFetch.spec.ts'), 'utf-8')
+    const source = await readFile(
+      path.resolve(__dirname, 'createSolvaPayMcpFetch.spec.ts'),
+      'utf-8',
+    )
     expect(source).not.toMatch(/from\s+['"]@solvapay\/mcp['"]/)
   })
 

@@ -21,11 +21,6 @@ import { PaywallError } from './paywall'
 import type { PaywallStructuredContent } from './types/paywall'
 import type { WebhookEvent } from './types/webhook'
 
-export type EdgeImpl = 'ts' | 'rust'
-
-/** Surfaces that read `SOLVAPAY_IMPL` independently (per-call). */
-export type EdgeSurface = 'client' | 'webhook' | 'decision' | 'core' | 'mcp' | string
-
 /** Async methods on the WASM `WasmClient` (Groups A + B + C) — mirror `native.ts`. */
 export type WasmClientMethod =
   | 'createCustomer'
@@ -144,10 +139,7 @@ export type WasmClientLike = {
   [K in WasmClientMethod]: (argsJson: string) => Promise<string>
 }
 
-type WasmClientConstructor = new (
-  apiKey: string,
-  apiBaseUrl?: string | null,
-) => WasmClientLike
+type WasmClientConstructor = new (apiKey: string, apiBaseUrl?: string | null) => WasmClientLike
 
 /**
  * Shape of the loaded `@solvapay/server-wasm` runtime wrapper (edge profile).
@@ -160,12 +152,7 @@ type WasmClientConstructor = new (
 export type WasmBinding = {
   ready: () => Promise<void>
   ensureReadySync?: () => void
-  verifyWebhook: (
-    body: string,
-    signature: string,
-    secret: string,
-    nowUnixSecs: number,
-  ) => string
+  verifyWebhook: (body: string, signature: string, secret: string, nowUnixSecs: number) => string
   WasmClient?: WasmClientConstructor
 } & Partial<Record<WasmSyncMethod, (argsJson: string) => string>>
 
@@ -249,59 +236,6 @@ export function isWasmClientOverrideActive(): boolean {
   return clientOverride !== undefined && clientOverride !== null
 }
 
-/**
- * Reads `SOLVAPAY_IMPL` without importing `node:process`.
- * Supports Node (`process.env`), Deno (`Deno.env`), and missing env (unset).
- */
-function readImplFlag(): string | undefined {
-  try {
-    const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-      .process
-    const fromProcess = proc?.env?.SOLVAPAY_IMPL
-    if (typeof fromProcess === 'string') return fromProcess
-  } catch {
-    // ignore
-  }
-
-  try {
-    const deno = (
-      globalThis as {
-        Deno?: { env?: { get?: (key: string) => string | undefined } }
-      }
-    ).Deno
-    const fromDeno = deno?.env?.get?.('SOLVAPAY_IMPL')
-    if (typeof fromDeno === 'string') return fromDeno
-  } catch {
-    // ignore
-  }
-
-  return undefined
-}
-
-/**
- * Selects the edge implementation for a cut-over surface.
- *
- * - `SOLVAPAY_IMPL=ts` — returns `ts`; edge surfaces reject (no TS path exists)
- * - `SOLVAPAY_IMPL=rust` — force WASM (surfaces init errors)
- * - unset — default WASM (edge has no silent TS fallback)
- *
- * `surface` is reserved for future per-surface env overrides; today every
- * surface shares `SOLVAPAY_IMPL` (read per call).
- */
-export function resolveEdgeImpl(_surface: EdgeSurface): EdgeImpl {
-  const flag = readImplFlag()
-  if (flag === 'ts') return 'ts'
-  return 'rust'
-}
-
-/**
- * Legacy alias retained for the narrow webhook cutover call sites.
- * @deprecated Prefer {@link resolveEdgeImpl}.
- */
-export function resolveEdgeWebhookImpl(): EdgeImpl {
-  return resolveEdgeImpl('webhook')
-}
-
 /** Builds a {@link WasmBinding} facade over the loaded runtime-wrapper module. */
 function toBinding(mod: Record<string, unknown>): WasmBinding {
   const binding = mod as unknown as WasmBinding
@@ -316,10 +250,9 @@ export function loadWasmBinding(): Promise<WasmBinding> {
   if (bindingOverride !== undefined) {
     if (bindingOverride === null) {
       return Promise.reject(
-        new SolvaPayError(
-          'SolvaPay WASM binding (@solvapay/server-wasm) is not available',
-          { code: 'internal_error' },
-        ),
+        new SolvaPayError('SolvaPay WASM binding (@solvapay/server-wasm) is not available', {
+          code: 'internal_error',
+        }),
       )
     }
     syncBinding = bindingOverride
@@ -388,10 +321,9 @@ export function getWasmClient(config: WasmClientConfig): WasmClientLike {
     return clientOverride
   }
   if (clientOverride === null) {
-    throw new SolvaPayError(
-      'SolvaPay WASM binding (@solvapay/server-wasm) is not available',
-      { code: 'internal_error' },
-    )
+    throw new SolvaPayError('SolvaPay WASM binding (@solvapay/server-wasm) is not available', {
+      code: 'internal_error',
+    })
   }
 
   const key = configKey(config)
@@ -529,7 +461,6 @@ const AMBIENT_SYNC_API = Symbol.for('solvapay.nativeSyncApi')
 
 type AmbientSyncApi = {
   callNativeSync: (fn: WasmSyncMethod, argsJson: string) => unknown
-  resolveImpl: (surface: EdgeSurface) => EdgeImpl
 }
 
 /**
@@ -541,17 +472,16 @@ export function publishWasmSyncApi(): void {
   const g = globalThis as typeof globalThis & {
     [AMBIENT_SYNC_API]?: AmbientSyncApi
   }
-  g[AMBIENT_SYNC_API] = { callNativeSync: callWasmSync, resolveImpl: resolveEdgeImpl }
+  g[AMBIENT_SYNC_API] = { callNativeSync: callWasmSync }
 }
 
 /**
  * Kicks off (idempotent) async warm-up so edge sync surfaces can init the WASM
  * module synchronously via {@link ensureWasmReadySync}. Fire-and-forget: never
  * rejects (errors surface later at call time, preserving the no-silent-fallback
- * edge contract). Skipped when `SOLVAPAY_IMPL=ts`.
+ * edge contract).
  */
 export function warmWasm(): void {
-  if (resolveEdgeImpl('client') === 'ts') return
   void loadWasmBinding().catch(() => undefined)
 }
 
