@@ -480,7 +480,9 @@ jobs:
         with:
           ruby-version: '3.3'
           bundler-cache: true
-          cargo-cache: true
+          # oxidize-rb cargo-binstall has no aarch64-unknown-linux-musl cargo-cache
+          # binary; that hard-fails Setup on ubuntu-24.04-arm.
+          cargo-cache: ${{ matrix.platform != 'aarch64-linux' }}
           working-directory: rust/bindings/ruby
 
       - name: Bundle install

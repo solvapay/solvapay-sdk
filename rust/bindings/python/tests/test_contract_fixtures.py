@@ -17,7 +17,7 @@ FIXTURES_ROOT = REPO_ROOT / "contract" / "fixtures"
 MANIFEST_PATH = REPO_ROOT / "contract" / "manifest" / "sdk-contract.yaml"
 
 FIXTURE_FILES = discover_fixture_files(FIXTURES_ROOT)
-FIXTURE_IDS = [str(path.relative_to(FIXTURES_ROOT)) for path in FIXTURE_FILES]
+FIXTURE_IDS = [path.relative_to(FIXTURES_ROOT).as_posix() for path in FIXTURE_FILES]
 
 
 def _parse_manifest_operation_ts_names(manifest_text: str) -> list[str]:
@@ -56,7 +56,8 @@ def test_covers_every_manifest_client_operation() -> None:
     ops = _parse_manifest_operation_ts_names(MANIFEST_PATH.read_text(encoding="utf-8"))
     assert len(ops) == 36
 
-    relative = [str(path.relative_to(FIXTURES_ROOT)) for path in FIXTURE_FILES]
+    # as_posix(): Windows Path.str uses `\`, which breaks the `client/` prefix.
+    relative = [path.relative_to(FIXTURES_ROOT).as_posix() for path in FIXTURE_FILES]
     missing: list[str] = []
     for op_ts in ops:
         method_dir = camel_to_kebab(op_ts)

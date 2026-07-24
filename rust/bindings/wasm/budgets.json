@@ -10,36 +10,34 @@
     "regressionThresholdPct": 10
   },
   "environment": {
-    "node": "v26.5.0",
-    "platform": "darwin",
-    "arch": "arm64",
-    "osRelease": "25.5.0",
-    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "node": "CI ubuntu-latest (GHA run 30090741437)",
+    "platform": "linux",
+    "arch": "x64",
+    "note": "Cold-start baselines retaken from wasm-binding CI host; darwin local runs are faster.",
     "wasmBindgen": "wasm-bindgen 0.2.126",
-    "binaryen": "131.0.0",
-    "recordedAt": "2026-07-24T08:29:53.187Z"
+    "recordedAt": "2026-07-24T11:51:42Z"
   },
   "baselines": {
     "browser": {
-      "rawBytes": 144412,
-      "gzipBytes": 63633,
-      "coldStartMedianMs": 17.320166
+      "rawBytes": 143697,
+      "gzipBytes": 63460,
+      "coldStartMedianMs": 23.341638
     },
     "edge": {
-      "rawBytes": 834895,
-      "gzipBytes": 298834,
-      "coldStartMedianMs": 20.438708999999996,
+      "rawBytes": 833344,
+      "gzipBytes": 298593,
+      "coldStartMedianMs": 28.019522,
       "note": "diagnostic only — §7.8 mandatory budget is browser"
     }
   },
   "maxAllowed": {
     "browser": {
-      "gzipBytes": 69996,
-      "coldStartMedianMs": 19.052182600000002
+      "gzipBytes": 69806,
+      "coldStartMedianMs": 25.6758018
     },
     "edge": {
-      "gzipBytes": 328717,
-      "coldStartMedianMs": 22.482579899999998
+      "gzipBytes": 328452,
+      "coldStartMedianMs": 30.8214742
     }
   }
 }

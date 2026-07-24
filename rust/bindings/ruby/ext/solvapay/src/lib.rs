@@ -127,7 +127,9 @@ fn error_code(ex: Exception) -> Result<magnus::Value, Error> {
 /// # Errors
 ///
 /// Propagates Magnus errors from module / class / method registration.
-#[magnus::init]
+// Package crate is `solvapay-ruby` (avoids colliding with the crates.io facade
+// `solvapay`); the gem still loads `solvapay.so` / `Init_solvapay`.
+#[magnus::init(name = "solvapay")]
 fn init(ruby: &Ruby) -> Result<(), Error> {
     runtime::init();
 

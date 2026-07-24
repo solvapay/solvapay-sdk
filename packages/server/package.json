@@ -80,7 +80,6 @@
   "devDependencies": {
     "@solvapay/auth": "workspace:*",
     "@solvapay/demo-services": "workspace:*",
-    "@solvapay/mcp-core": "workspace:*",
     "@solvapay/test-utils": "workspace:^",
     "dotenv": "^17.4.2",
     "openapi-typescript": "^7.13.0",
