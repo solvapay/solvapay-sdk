@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the WASI guest and commits the optimized artifact under the Go module.
+# Builds the WASI guest and writes the artifact under the Go module.
 #
 #   rust/bindings/go/scripts/build-wasm.sh
 #
@@ -7,6 +7,10 @@
 #   1. cargo build -p solvapay-go-wasm --target wasm32-wasip1 --profile wasm-release
 #   2. wasm-opt -Oz (if available) → rust/bindings/go/solvapay_core.wasm
 #      Falls back to copying the cargo artifact verbatim when wasm-opt is missing.
+#
+# Note: cargo's wasm32-wasip1 output is not bit-stable across hosts. Prefer
+# regenerating on linux/amd64 (see go-binding CI job) before committing, and do
+# not install wasm-opt if you need the blob to match CI (CI has no binaryen).
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -3,6 +3,8 @@
 //! Exposes `_resolve_authenticated_user` and `_construct_sdk_error` for the
 //! offline Python contract suite. Not part of the idiomatic `solvapay` facade.
 
+#![allow(clippy::missing_docs_in_private_items)]
+
 use std::collections::BTreeMap;
 
 use pyo3::prelude::*;

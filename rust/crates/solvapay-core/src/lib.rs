@@ -124,13 +124,17 @@ mod feature_gates {
     /// - `cargo check -p solvapay-core --no-default-features --features browser`
     #[test]
     fn feature_contract_markers_exist() {
-        assert!(
-            cfg!(feature = "server")
-                || cfg!(feature = "browser")
-                || cfg!(feature = "client-public")
-                || cfg!(feature = "client-full")
-                || cfg!(feature = "webhook-verify")
-                || !cfg!(feature = "hmac-crypto")
-        );
+        // Compile-time feature contract (§7.1). `cfg!` folds to a constant per
+        // build, so use `const { assert!(..) }` instead of a runtime assert.
+        const {
+            assert!(
+                cfg!(feature = "server")
+                    || cfg!(feature = "browser")
+                    || cfg!(feature = "client-public")
+                    || cfg!(feature = "client-full")
+                    || cfg!(feature = "webhook-verify")
+                    || !cfg!(feature = "hmac-crypto")
+            );
+        }
     }
 }

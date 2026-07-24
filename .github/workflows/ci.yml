@@ -126,16 +126,17 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: cargo clippy (unwrap/expect/panic/docs deny)
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        # solvapay-wasm requires --features edge|browser; covered by wasm-binding job.
+        run: cargo clippy --workspace --exclude solvapay-wasm --all-targets -- -D warnings
 
       - name: no-unwrap ripgrep gate
         run: ./scripts/check-no-unwrap.sh
 
       - name: cargo build (native)
-        run: cargo build --workspace
+        run: cargo build --workspace --exclude solvapay-wasm
 
       - name: cargo test
-        run: cargo test --workspace
+        run: cargo test --workspace --exclude solvapay-wasm
 
       - name: solvapay facade blocking feature (Step 46/47)
         run: |
@@ -359,6 +360,10 @@ jobs:
       - name: cargo test -p solvapay-python
         if: matrix.smoke
         working-directory: rust
+        # maturin-action with sccache:'true' leaks RUSTC_WRAPPER=sccache into the
+        # job env from the manylinux container; the host has no sccache binary.
+        env:
+          RUSTC_WRAPPER: ''
         run: cargo test -p solvapay-python --lib
 
       - name: Fresh-venv pytest smoke
@@ -375,7 +380,8 @@ jobs:
             PY=.ci-venv/bin/python
             PYTEST=.ci-venv/bin/pytest
           fi
-          "$PIP" install -U pip
+          # Windows refuses self-upgrade via the pip launcher; use python -m pip.
+          "$PY" -m pip install -U pip
           wheel="$(ls dist/*.whl | head -n1)"
           "$PIP" install "${wheel}[dev,typecheck]"
           # Offline Python golden-fixture contract suite (Step 42) + smoke/parity.
@@ -623,6 +629,11 @@ jobs:
         run: npx napi create-npm-dirs
 
       - name: Build binding
+        # ring (via reqwest rustls-tls) needs __ARM_ARCH when cross-compiling
+        # aarch64 with napi-cross's C toolchain; musl/zig paths are unaffected.
+        env:
+          CFLAGS_aarch64_unknown_linux_gnu: '-D__ARM_ARCH=8'
+          CFLAGS_aarch64_unknown_linux_musl: '-D__ARM_ARCH=8'
         run: ${{ matrix.settings.build }}
         shell: bash
 
@@ -936,6 +947,9 @@ jobs:
       - name: Build @solvapay/core (server unit deps)
         run: pnpm --filter @solvapay/core build
 
+      - name: Build @solvapay/auth (server peer — needed for unit resolve)
+        run: pnpm --filter @solvapay/auth build
+
       - name: Build @solvapay/mcp-core
         run: pnpm --filter @solvapay/mcp-core build
 
@@ -1101,9 +1115,10 @@ jobs:
         working-directory: rust/bindings/wasm
         run: pnpm test
 
-      - name: Build core, server-wasm, server, mcp-core
+      - name: Build core, auth, server-wasm, server, mcp-core
         run: |
           pnpm --filter @solvapay/core build
+          pnpm --filter @solvapay/auth build
           pnpm --filter @solvapay/server-wasm build
           pnpm --filter @solvapay/server build
           pnpm --filter @solvapay/mcp-core build
@@ -1152,14 +1167,20 @@ jobs:
         working-directory: rust
         run: ./bindings/go/scripts/build-wasm.sh
 
-      - name: WASM staleness check (committed artifact matches source)
+      - name: WASM freshness note (CI uses rebuilt artifact)
+        # cargo wasm32-wasip1 output is not bit-stable across hosts (mac vs
+        # linux/amd64 vs GHA), even on the same rustc channel without wasm-opt.
+        # Always rebuild above; subsequent Go steps use that file. Warn when the
+        # committed blob drifts so local `go test` without a rebuild stays honest.
         run: |
           if ! git diff --exit-code -- rust/bindings/go/solvapay_core.wasm; then
-            echo "rust/bindings/go/solvapay_core.wasm is stale — rebuild and commit:" >&2
-            echo "  ./rust/bindings/go/scripts/build-wasm.sh" >&2
-            exit 1
+            echo "::warning::committed solvapay_core.wasm differs from this runner's rebuild (cross-host wasm is not bit-stable). CI tests use the rebuilt artifact."
+            echo "Refresh the committed blob from linux/amd64 when go-wasm/core sources change:"
+            echo "  docker run --rm --platform linux/amd64 -v \"\$PWD:/workspace\" -w /workspace/rust \\"
+            echo "    rust:1.96.0-bookworm bash -c 'export PATH=/usr/local/cargo/bin:\$PATH; rustup target add wasm32-wasip1; ./bindings/go/scripts/build-wasm.sh'"
+          else
+            echo "OK: committed solvapay_core.wasm matches this runner's rebuild"
           fi
-          echo "OK: embedded solvapay_core.wasm is up to date"
 
       - name: gofmt
         working-directory: rust/bindings/go
