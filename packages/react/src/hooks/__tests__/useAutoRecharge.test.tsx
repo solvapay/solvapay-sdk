@@ -76,10 +76,7 @@ describe('useAutoRecharge', () => {
       exchangeRate: 1,
       rateSource: 'parity' as const,
     }
-    const fetchFn = makeFetch([
-      { config: null },
-      { config, display: savedDisplay },
-    ])
+    const fetchFn = makeFetch([{ config: null }, { config, display: savedDisplay }])
     const { result } = renderHook(() => useAutoRecharge(), {
       wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),
     })
@@ -250,10 +247,7 @@ describe('useAutoRecharge', () => {
       trigger: { type: 'balance', thresholdAmountMinor: 700 },
     }
 
-    const fetchFn = makeFetch([
-      { config },
-      { config: editedConfig },
-    ])
+    const fetchFn = makeFetch([{ config }, { config: editedConfig }])
 
     const { result } = renderHook(() => useAutoRecharge(), {
       wrapper: wrapper({ fetch: fetchFn as unknown as typeof fetch }),

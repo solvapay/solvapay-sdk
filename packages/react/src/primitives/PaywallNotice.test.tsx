@@ -184,9 +184,7 @@ vi.mock('./checkout', () => {
     children?: React.ReactNode
   }
   const Root = (props: RootProps) => {
-    capturedOnPurchaseSuccess = props.onPurchaseSuccess
-      ? () => props.onPurchaseSuccess?.({})
-      : null
+    capturedOnPurchaseSuccess = props.onPurchaseSuccess ? () => props.onPurchaseSuccess?.({}) : null
     return React.createElement(
       'div',
       {
@@ -194,10 +192,7 @@ vi.mock('./checkout', () => {
         'data-has-filter': props.filter ? 'true' : 'false',
         'data-filter-hides-free': props.filter
           ? String(
-              props.filter(
-                { reference: 'pln_free', requiresPayment: false } as Plan,
-                0,
-              ) === false,
+              props.filter({ reference: 'pln_free', requiresPayment: false } as Plan, 0) === false,
             )
           : 'n/a',
       },

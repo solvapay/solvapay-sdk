@@ -1,0 +1,32 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getMerchant",
+    "args": {},
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-merchant-success",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/merchant",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "displayName": "Fixture Merchant",
+        "legalName": "Fixture Merchant LLC"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "displayName": "Fixture Merchant",
+      "legalName": "Fixture Merchant LLC"
+    }
+  }
+}

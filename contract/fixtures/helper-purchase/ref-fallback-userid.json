@@ -1,0 +1,12 @@
+{
+  "suite": "helper-purchase",
+  "case": "ref-fallback-userid",
+  "input": {
+    "fn": "resolvePurchaseCustomerRef",
+    "args": {
+      "customerRef": null,
+      "userId": "user_123"
+    }
+  },
+  "expect": { "result": "user_123" }
+}

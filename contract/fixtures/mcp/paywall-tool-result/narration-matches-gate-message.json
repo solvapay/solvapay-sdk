@@ -1,0 +1,33 @@
+{
+  "suite": "mcp",
+  "case": "narration-matches-gate-message",
+  "input": {
+    "fn": "paywallToolResult",
+    "args": {
+      "message": "Call solvapay_upgrade to continue — checkout at https://pay.test/x",
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "Call solvapay_upgrade to continue — checkout at https://pay.test/x"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "Call solvapay_upgrade to continue — checkout at https://pay.test/x"
+        }
+      ],
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "Call solvapay_upgrade to continue — checkout at https://pay.test/x"
+      }
+    }
+  }
+}

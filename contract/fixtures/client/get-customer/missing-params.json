@@ -1,0 +1,15 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getCustomer",
+    "args": {},
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-customer-missing-params",
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "One of customerRef, externalRef, or email must be provided"
+    }
+  }
+}

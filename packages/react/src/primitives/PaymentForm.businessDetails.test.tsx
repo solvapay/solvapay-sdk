@@ -41,9 +41,7 @@ const mockTaxBreakdown: TaxBreakdown = {
 
 const stripeMocks = vi.hoisted(() => ({
   submit: vi.fn<() => Promise<{ error?: { message: string } }>>(),
-  confirmPayment: vi.fn<
-    () => Promise<PaymentIntentResult>
-  >(),
+  confirmPayment: vi.fn<() => Promise<PaymentIntentResult>>(),
   fetchUpdates: vi.fn<() => Promise<{ error?: { message: string } }>>(),
 }))
 
@@ -137,13 +135,7 @@ function ctx(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
   }
 }
 
-function Wrap({
-  value,
-  children,
-}: {
-  value: SolvaPayContextValue
-  children: React.ReactNode
-}) {
+function Wrap({ value, children }: { value: SolvaPayContextValue; children: React.ReactNode }) {
   return React.createElement(SolvaPayContext.Provider, { value }, children)
 }
 

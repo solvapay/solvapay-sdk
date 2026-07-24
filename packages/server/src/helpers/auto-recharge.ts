@@ -39,7 +39,7 @@ export async function getAutoRechargeCore(
       return { error: 'getAutoRecharge is not implemented on this API client', status: 500 }
     }
 
-    return solvaPay.apiClient.getAutoRecharge({ customerRef })
+    return await solvaPay.apiClient.getAutoRecharge({ customerRef })
   } catch (error) {
     return handleRouteError(error, 'Get auto-recharge', 'Failed to load auto-recharge')
   }
@@ -59,7 +59,7 @@ export async function saveAutoRechargeCore(
       return { error: 'saveAutoRecharge is not implemented on this API client', status: 500 }
     }
 
-    return solvaPay.apiClient.saveAutoRecharge({ customerRef, ...input })
+    return await solvaPay.apiClient.saveAutoRecharge({ customerRef, ...input })
   } catch (error) {
     return handleRouteError(error, 'Save auto-recharge', 'Failed to save auto-recharge')
   }
@@ -78,7 +78,7 @@ export async function disableAutoRechargeCore(
       return { error: 'disableAutoRecharge is not implemented on this API client', status: 500 }
     }
 
-    return solvaPay.apiClient.disableAutoRecharge({ customerRef })
+    return await solvaPay.apiClient.disableAutoRecharge({ customerRef })
   } catch (error) {
     return handleRouteError(error, 'Disable auto-recharge', 'Failed to disable auto-recharge')
   }

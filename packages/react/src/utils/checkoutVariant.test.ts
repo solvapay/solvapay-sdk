@@ -5,9 +5,7 @@ import type { Plan } from '../types'
 describe('deriveVariant', () => {
   it('returns topup when mode="topup" regardless of plan', () => {
     expect(deriveVariant(undefined, 'topup')).toBe('topup')
-    expect(
-      deriveVariant({ reference: 'pln', type: 'recurring' } as Plan, 'topup'),
-    ).toBe('topup')
+    expect(deriveVariant({ reference: 'pln', type: 'recurring' } as Plan, 'topup')).toBe('topup')
   })
 
   it('returns oneTime when plan is missing', () => {
@@ -16,15 +14,11 @@ describe('deriveVariant', () => {
   })
 
   it('maps recurring plans', () => {
-    expect(deriveVariant({ reference: 'p', type: 'recurring' } as Plan)).toBe(
-      'recurring',
-    )
+    expect(deriveVariant({ reference: 'p', type: 'recurring' } as Plan)).toBe('recurring')
   })
 
   it('maps one-time plans', () => {
-    expect(deriveVariant({ reference: 'p', type: 'one-time' } as Plan)).toBe(
-      'oneTime',
-    )
+    expect(deriveVariant({ reference: 'p', type: 'one-time' } as Plan)).toBe('oneTime')
   })
 
   it('maps usage-based pre-paid as topup', () => {

@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "measurement": {
+    "gzipLevel": 9,
+    "browserColdStart": "fresh Node process: import runtime/browser-node.js → ready() → wasmVersion()",
+    "edgeColdStart": "fresh Node process: import runtime/node.js → ready() → verifyWebhook(frozen accept fixture)",
+    "samplesPerMetric": 7,
+    "statistic": "median",
+    "spread": "median absolute deviation (MAD)",
+    "regressionThresholdPct": 10
+  },
+  "environment": {
+    "node": "CI ubuntu-latest (GHA run 30090741437)",
+    "platform": "linux",
+    "arch": "x64",
+    "note": "Cold-start baselines retaken from wasm-binding CI host; darwin local runs are faster.",
+    "wasmBindgen": "wasm-bindgen 0.2.126",
+    "recordedAt": "2026-07-24T11:51:42Z"
+  },
+  "baselines": {
+    "browser": {
+      "rawBytes": 143697,
+      "gzipBytes": 63460,
+      "coldStartMedianMs": 23.341638
+    },
+    "edge": {
+      "rawBytes": 833344,
+      "gzipBytes": 298593,
+      "coldStartMedianMs": 28.019522,
+      "note": "diagnostic only — §7.8 mandatory budget is browser"
+    }
+  },
+  "maxAllowed": {
+    "browser": {
+      "gzipBytes": 69806,
+      "coldStartMedianMs": 25.6758018
+    },
+    "edge": {
+      "gzipBytes": 328452,
+      "coldStartMedianMs": 30.8214742
+    }
+  }
+}

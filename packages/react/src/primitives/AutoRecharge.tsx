@@ -316,10 +316,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function AutoRechargeRoot(
 
   const savedSummaryLine = useMemo(() => {
     if (!autoRecharge.config?.enabled) return null
-    return buildSummaryLine(
-      configToForm(autoRecharge.config, currency),
-      currency,
-    )
+    return buildSummaryLine(configToForm(autoRecharge.config, currency), currency)
   }, [autoRecharge.config, currency])
 
   const save = useCallback(async () => {
@@ -508,12 +505,7 @@ const Card = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(function
   forwardedRef,
 ) {
   return (
-    <section
-      ref={forwardedRef}
-      className={className}
-      data-solvapay-auto-recharge-card=""
-      {...rest}
-    >
+    <section ref={forwardedRef} className={className} data-solvapay-auto-recharge-card="" {...rest}>
       {children}
     </section>
   )
@@ -631,16 +623,17 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function AutoRechargeCo
   forwardedRef,
 ) {
   const ctx = useAutoRechargeCtx('Content')
+  const { open, resetForm, setOpen, focusTrigger } = ctx
   const panelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (!ctx.open) return
+    if (!open) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        ctx.resetForm()
-        ctx.setOpen(false)
-        ctx.focusTrigger()
+        resetForm()
+        setOpen(false)
+        focusTrigger()
       }
     }
 
@@ -653,9 +646,9 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function AutoRechargeCo
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [ctx.open, ctx.resetForm, ctx.setOpen, ctx.focusTrigger])
+  }, [open, resetForm, setOpen, focusTrigger])
 
-  if (!ctx.open || typeof document === 'undefined') return null
+  if (!open || typeof document === 'undefined') return null
 
   return createPortal(
     <div data-solvapay-auto-recharge-portal="">
@@ -1133,7 +1126,9 @@ const MaxMonthlySpendField = forwardRef<
           {...rest}
         />
       </span>
-      <p data-solvapay-auto-recharge-max-spend-helper="">{copy.autoRecharge.maxMonthlySpendHelper}</p>
+      <p data-solvapay-auto-recharge-max-spend-helper="">
+        {copy.autoRecharge.maxMonthlySpendHelper}
+      </p>
     </section>
   )
 })

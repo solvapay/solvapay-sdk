@@ -31,7 +31,9 @@ const supabase = createClient(
 
 export default function RootLayout({ children }) {
   return (
-    <SolvaPayProvider config={{ auth: { adapter: createSupabaseAuthAdapter({ client: supabase }) } }}>
+    <SolvaPayProvider
+      config={{ auth: { adapter: createSupabaseAuthAdapter({ client: supabase }) } }}
+    >
       {children}
     </SolvaPayProvider>
   )
@@ -49,7 +51,7 @@ Calls `supabase.auth.getSession()` for the current token and user ID. Subscribes
 - [`@solvapay/react`](../react) — checkout UI and hooks
 - [`@solvapay/auth`](../auth) — server-side Supabase JWT adapter
 - [`@solvapay/server/fetch`](../server) — Supabase Edge Function handlers
-- [Supabase Edge example](../../examples/supabase-edge)
+- [Supabase Edge example](../../examples/typescript/supabase-edge)
 
 ## Support
 

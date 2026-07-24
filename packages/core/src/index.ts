@@ -1,67 +1,13 @@
 import { z } from 'zod'
 
+import { SolvaPayError } from './solvapay-error'
+export { SolvaPayError }
+
 export const Env = z.object({
   SOLVAPAY_SECRET_KEY: z.string().min(1),
   SOLVAPAY_API_BASE_URL: z.string().url().optional(),
 })
 export type Env = z.infer<typeof Env>
-
-/**
- * Base error class for SolvaPay SDK errors.
- *
- * All SolvaPay SDK errors extend this class, making it easy to catch
- * and handle SDK-specific errors separately from other errors.
- *
- * @example
- * ```typescript
- * import { SolvaPayError } from '@solvapay/core';
- *
- * try {
- *   const config = getSolvaPayConfig();
- * } catch (error) {
- *   if (error instanceof SolvaPayError) {
- *     // Handle SolvaPay-specific error
- *     console.error('SolvaPay error:', error.message);
- *   } else {
- *     // Handle other errors
- *     throw error;
- *   }
- * }
- * ```
- *
- * @since 1.0.0
- */
-export class SolvaPayError extends Error {
-  /**
-   * HTTP status code associated with the error, when the error
-   * originated from an upstream API response. Optional so existing
-   * `new SolvaPayError(message)` callsites stay valid.
-   */
-  readonly status?: number
-
-  /**
-   * Optional short code for programmatic branching (e.g.
-   * `'missing_secret'`, `'merchant_not_found'`). Free-form by design;
-   * callers should not depend on an exhaustive enum.
-   */
-  readonly code?: string
-
-  /**
-   * Creates a new SolvaPayError instance.
-   *
-   * @param message - Error message
-   * @param init - Optional `{ status, code }` metadata. Both fields
-   *   are preserved on the instance so downstream consumers
-   *   (`handleRouteError`, MCP trace wrappers) can branch on HTTP
-   *   status without parsing the message string.
-   */
-  constructor(message: string, init: { status?: number; code?: string } = {}) {
-    super(message)
-    this.name = 'SolvaPayError'
-    this.status = init.status
-    this.code = init.code
-  }
-}
 
 export interface SolvaPayConfig {
   apiKey: string
@@ -113,7 +59,18 @@ export {
   creditsToDisplayMinorUnits,
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
-} from './credit-display'
+  validateBusinessDetails,
+  deriveTaxIdType,
+  getTaxIdExample,
+  getTaxIdFieldLabel,
+  getTaxIdHelperText,
+  resolveTaxBehavior,
+  getBusinessCountryOptions,
+  getSellerTaxIdentifierDisplayLabel,
+  getSellerTaxIdentifierDisplayLabelByType,
+  resolveSellerIdentityDisplay,
+  installNativeCoreApi,
+} from './native-core'
 
 export {
   BusinessDetailsSchema,
@@ -125,12 +82,6 @@ export {
   TAX_EXCLUSIVE_CURRENCIES,
   TAX_ID_EXAMPLE_BY_COUNTRY,
   TAX_ID_TYPES,
-  deriveTaxIdType,
-  getTaxIdExample,
-  getTaxIdFieldLabel,
-  getTaxIdHelperText,
-  resolveTaxBehavior,
-  validateBusinessDetails,
   type BusinessCountryOption,
   type BusinessDetails,
   type BusinessDetailsInput,
@@ -146,10 +97,85 @@ export {
 
 export {
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
-  getSellerTaxIdentifierDisplayLabel,
-  resolveSellerIdentityDisplay,
   type SellerIdentityDisplay,
   type SellerIdentityRow,
 } from './seller-identity'
+
+export {
+  buildCreateCustomerParams,
+  classifyCreateError,
+  classifyCustomerRef,
+  classifyLookupError,
+  coerceCustomerOptions,
+  extractBackendCustomerRef,
+  isEmailConflict,
+  validateActivatePlanParams,
+  attachBusinessDetailsValidationError,
+  projectPaymentIntentResult,
+  projectTopupProcessOutcome,
+  validateAttachBusinessDetailsParams,
+  validateCreatePaymentIntentParams,
+  validateProcessPaymentIntentParams,
+  validateTopupPaymentIntentParams,
+  resolveReturnUrl,
+  validateCheckoutSessionParams,
+  isCachedCustomerRefValid,
+  resolvePurchaseCustomerRef,
+  selectActivePurchases,
+  classifyCancelError,
+  classifyReactivateError,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  validatePurchaseRef,
+  projectUsageSnapshot,
+  resolveCheckLimitsParams,
+  validateListPlansParams,
+  isErrorResult,
+  mapRouteError,
+  validateGetProductParams,
+  decidePaywallOutcome,
+  evaluateCachedLimits,
+  evaluateFreshLimits,
+  resolveFallbackGateLimits,
+  resolveProductRef,
+} from './native-helpers'
+
+export {
+  type CoercedCustomerOptions,
+  type CreateCustomerParams,
+  type CreateErrorKind,
+  type CustomerRefKind,
+  type LookupErrorKind,
+} from './customer-sync'
+
+export { type ActivatePlanValidationError } from './activation'
+
+export {
+  type PaymentHelperError,
+  type PaymentIntentProjection,
+  type PaymentIntentSource,
+  type TopupProcessOutcome,
+} from './payment'
+
+export { type CheckoutHelperError } from './checkout'
+
+export { isRenewalError, type RenewalHelperError } from './renewal'
+
+export { type UsageSnapshot, type UsageSnapshotPurchase } from './usage'
+
+export { type CheckLimitsParams, type LimitsHelperError } from './limits'
+
+export { type PlansHelperError } from './plans'
+
+export { type RouteErrorInput, type RouteErrorKind, type RouteErrorResult } from './error'
+
+export { type ProductHelperError } from './product'
+
+export {
+  type CachedLimitsEvaluation,
+  type FreshLimitsEvaluation,
+  type PaywallDecisionLimits,
+  type PaywallOutcome,
+} from './paywall-decision'
 
 export const version = '0.1.0'

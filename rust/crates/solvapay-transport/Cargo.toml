@@ -1,0 +1,55 @@
+[package]
+name = "solvapay-transport"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SolvaPay HTTP Transport trait, native reqwest/rustls, and WASM Fetch"
+readme = "README.md"
+publish = true
+
+[dependencies]
+solvapay-core = { path = "../solvapay-core", version = "0.1.0" }
+solvapay-dto = { path = "../solvapay-dto", version = "0.1.0" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reqwest = { workspace = true }
+
+# Browser / edge wasm only (`wasm32-unknown-unknown`). The `wasm32-wasip1`
+# guest (Go binding, Step 49) has no Fetch API — it uses a host-import
+# transport that lives in the go-wasm binding crate, so it must NOT pull
+# wasm-bindgen / web-sys.
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-sys = { workspace = true, features = ["Headers", "Request", "RequestInit", "Response"] }
+
+[dev-dependencies]
+fixture-runner = { path = "../../tools/fixture-runner" }
+serde_json = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+tokio = { workspace = true }
+walkdir = { workspace = true }
+wiremock = { workspace = true }
+
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
+js-sys = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+wasm-bindgen-test = { workspace = true }
+web-sys = { workspace = true, features = ["Headers", "Request", "RequestInit", "Response"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true

@@ -44,9 +44,7 @@ beforeEach(() => {
   })
 })
 
-function renderWith(
-  extraProps: Partial<React.ComponentProps<typeof PaymentForm>> = {},
-) {
+function renderWith(extraProps: Partial<React.ComponentProps<typeof PaymentForm>> = {}) {
   const activateCalls: Array<{ productRef: string; planRef: string }> = []
   const fakeFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input.toString()
@@ -99,9 +97,7 @@ describe('PaymentForm — free plan routing', () => {
     fireEvent.click(button)
 
     await waitFor(() =>
-      expect(activateCalls).toEqual([
-        { productRef: 'prd_free', planRef: 'pln_free' },
-      ]),
+      expect(activateCalls).toEqual([{ productRef: 'prd_free', planRef: 'pln_free' }]),
     )
     await waitFor(() => expect(onResult).toHaveBeenCalled())
     expect(onResult.mock.calls[0][0].kind).toBe('activated')

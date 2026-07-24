@@ -1,0 +1,22 @@
+{
+  "suite": "paywall",
+  "case": "payment-no-url",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "plan": "pl_basic",
+        "remaining": 0
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "checkoutUrl": "",
+      "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan."
+    }
+  }
+}

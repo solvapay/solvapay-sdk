@@ -44,17 +44,17 @@ Use `Slot` from `./primitives/slot`. Refs are merged via `composeRefs`; event ha
 
 Every stateful subcomponent emits a `data-state` attribute from a fixed, documented vocabulary. States are driven by context (`PlanSelectionContext`, `PaymentFormContext`), never by subcomponent-local state.
 
-| Primitive | `data-state` values |
-| --- | --- |
-| `PlanSelector.Card` | `idle` \| `selected` \| `current` \| `disabled` |
-| `PaymentForm.SubmitButton` | `idle` \| `processing` \| `disabled` |
-| `ActivationFlow.Root` | `summary` \| `activating` \| `selectAmount` \| `topupPayment` \| `retrying` \| `activated` \| `error` |
-| `CreditGate.Root` | `allowed` \| `blocked` \| `loading` |
-| `PurchaseGate.Root` | `allowed` \| `blocked` \| `loading` |
-| `CancelledPlanNotice.Root` | `active` \| `expired` |
-| `CancelPlanButton` | `idle` \| `cancelling` |
-| `BalanceBadge` | `loading` \| `zero` \| `low` \| `ok` |
-| `AmountPicker.Option` | `idle` \| `selected` \| `disabled` |
+| Primitive                  | `data-state` values                                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `PlanSelector.Card`        | `idle` \| `selected` \| `current` \| `disabled`                                                       |
+| `PaymentForm.SubmitButton` | `idle` \| `processing` \| `disabled`                                                                  |
+| `ActivationFlow.Root`      | `summary` \| `activating` \| `selectAmount` \| `topupPayment` \| `retrying` \| `activated` \| `error` |
+| `CreditGate.Root`          | `allowed` \| `blocked` \| `loading`                                                                   |
+| `PurchaseGate.Root`        | `allowed` \| `blocked` \| `loading`                                                                   |
+| `CancelledPlanNotice.Root` | `active` \| `expired`                                                                                 |
+| `CancelPlanButton`         | `idle` \| `cancelling`                                                                                |
+| `BalanceBadge`             | `loading` \| `zero` \| `low` \| `ok`                                                                  |
+| `AmountPicker.Option`      | `idle` \| `selected` \| `disabled`                                                                    |
 
 Secondary flags use `data-<flag>` (e.g. `data-free`, `data-popular`, `data-has-reason`).
 

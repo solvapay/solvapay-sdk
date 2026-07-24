@@ -46,7 +46,17 @@ vi.mock('../../../primitives/TopupForm', () => {
     Total: () => null,
     Rows: () => null,
   }
-  return { TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary } }
+  return {
+    TopupForm: {
+      Root,
+      Loading,
+      PaymentElement,
+      Error: ErrorSlot,
+      SubmitButton,
+      BusinessDetails,
+      Summary,
+    },
+  }
 })
 
 vi.mock('../../../primitives/MandateText', () => ({ MandateText: () => null }))

@@ -1,0 +1,24 @@
+{
+  "suite": "error-model",
+  "case": "paywall-payment-required",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Paywall",
+      "message": "Payment required",
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_test",
+        "checkoutUrl": "https://checkout.example/x",
+        "message": "You need to upgrade to continue"
+      }
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "PaywallError",
+      "message": "Payment required",
+      "kind": "Paywall"
+    }
+  }
+}

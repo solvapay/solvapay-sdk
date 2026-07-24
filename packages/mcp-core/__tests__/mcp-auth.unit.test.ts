@@ -109,3 +109,15 @@ describe('mcp-auth helpers', () => {
     }
   })
 })
+
+describe('isFreeMcpMethod', () => {
+  it('requires auth only for tools/call', async () => {
+    const { isFreeMcpMethod } = await import('../src/is-free-mcp-method')
+    expect(isFreeMcpMethod('tools/call')).toBe(false)
+    expect(isFreeMcpMethod('TOOLS/CALL')).toBe(false)
+    expect(isFreeMcpMethod('initialize')).toBe(true)
+    expect(isFreeMcpMethod('tools/list')).toBe(true)
+    expect(isFreeMcpMethod('ping')).toBe(true)
+    expect(isFreeMcpMethod(undefined)).toBe(true)
+  })
+})

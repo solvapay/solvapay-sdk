@@ -53,11 +53,7 @@ const limitsCache = new Map<string, CacheEntry>()
 /** @internal Exported only for tests — do not use in application code */
 export { limitsCache, CACHE_TTL_MS, OPTIMISTIC_GRACE_MS }
 
-function cacheKey(
-  customerRef: string | undefined,
-  productRef: string,
-  meterName: string,
-): string {
+function cacheKey(customerRef: string | undefined, productRef: string, meterName: string): string {
   return `${customerRef ?? 'anonymous'}:${productRef}:${meterName}`
 }
 
@@ -114,8 +110,7 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
   // disabled or `productRef` is missing. Used both for the in-render
   // key-change detector below and as a synchronous source of truth in
   // the lazy initialisers for `data` and `loading`.
-  const currentKey =
-    !productRef || !enabled ? null : cacheKey(customerRef, productRef, meterName)
+  const currentKey = !productRef || !enabled ? null : cacheKey(customerRef, productRef, meterName)
 
   const [data, setData] = useState<TransportLimitsResult | null>(() => {
     if (!currentKey) return null
@@ -159,9 +154,7 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
   // fresh-fetch branches of `fetchLimits`. Returns the resolved value
   // (so the caller can persist it to cache) or `null` on error.
   const attachToFetch = useCallback(
-    async (
-      promise: Promise<TransportLimitsResult>,
-    ): Promise<TransportLimitsResult | null> => {
+    async (promise: Promise<TransportLimitsResult>): Promise<TransportLimitsResult | null> => {
       setLoading(true)
       try {
         const fresh = await promise

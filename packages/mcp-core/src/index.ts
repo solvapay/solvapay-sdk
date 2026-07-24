@@ -112,33 +112,46 @@ export type { IntentTool, NarratorOutput } from './narrate'
 // stamping has no consumers. Downstream code that constructed its
 // own `_meta.ui` envelope with this helper should drop it outright —
 // the descriptor is the only trigger now.
-export { paywallToolResult } from './paywallToolResult'
+export { paywallToolResult } from './native-mcp'
 export type { PaywallToolResultContext } from './paywallToolResult'
+
+// ---- Response envelope helpers (adapter-internal) ----
+//
+// Used by `ctx.respond(...)` / `buildPayableHandler`. Not part of the
+// merchant-facing `@solvapay/mcp` public entry — exported here so the
+// contract harness and adapters can share the same constructors.
+export { assertResponseResult, makeResponseResult } from './native-mcp'
+export { getMcpToolNamesTable, mcpViewMaps, installNativeMcpApi } from './native-mcp'
 
 // ---- CSP baseline ----
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export {
-  applyHideToolsByAudience,
-  defaultIsChatGptRequest,
-} from './hideToolsByAudience'
+export { applyHideToolsByAudience, defaultIsChatGptRequest } from './hideToolsByAudience'
 export type {
   ApplyHideToolsByAudienceContext,
   ApplyHideToolsByAudienceExtra,
   ApplyHideToolsByAudienceOptions,
   HideToolsByAudienceBypass,
 } from './hideToolsByAudience'
-export { buildSolvaPayDescriptors, buildSolvaPayPrompts, deriveIcons } from './descriptors'
-export type {
-  BuildSolvaPayDescriptorsOptions,
-  SolvaPayDescriptorBundle,
-} from './descriptors'
-
+export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
+export type { BuildSolvaPayDescriptorsOptions, SolvaPayDescriptorBundle } from './descriptors'
 export {
-  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
-  SOLVAPAY_BOOTSTRAP_URI,
-} from './resources/bootstrap'
+  deriveIcons,
+  buildPromptDescriptorMetadata,
+  buildPromptUserMessage,
+  buildToolDescriptorMetadata,
+  validatePublicBaseUrl,
+} from './native-mcp'
+export { INTENT_TOOL_ANNOTATIONS, PUBLIC_BASE_URL_ERROR, solvapayTool } from './descriptor-metadata'
+export type {
+  BuildPromptDescriptorMetadataOptions,
+  BuildToolDescriptorMetadataOptions,
+  PromptDescriptorMetadata,
+  ToolDescriptorMetadata,
+} from './descriptor-metadata'
+
+export { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resources/bootstrap'
 
 export {
   SOLVAPAY_OVERVIEW_MARKDOWN,
@@ -163,10 +176,7 @@ export {
   resolveOAuthPaths,
   withoutTrailingSlash,
 } from './oauth-discovery'
-export type {
-  OAuthAuthorizationServerOptions,
-  OAuthBridgePaths,
-} from './oauth-discovery'
+export type { OAuthAuthorizationServerOptions, OAuthBridgePaths } from './oauth-discovery'
 
 // ---- Auth info + bearer helpers ----
 export { buildAuthInfoFromBearer } from './auth-bridge'
@@ -180,3 +190,6 @@ export {
   getCustomerRefFromJwtPayload,
 } from './bearer'
 export type { McpBearerCustomerRefOptions } from './bearer'
+
+/** True for MCP methods that must not require bearer auth (everything except tools/call). */
+export { isFreeMcpMethod } from './is-free-mcp-method'

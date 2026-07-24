@@ -46,14 +46,14 @@ export function useHostLocale(): string {
     }
     const root = document.documentElement
     const observer = new MutationObserver(() => {
-      setLocale((prev) => {
+      setLocale(prev => {
         const next = resolveLocale()
         return next === prev ? prev : next
       })
     })
     observer.observe(root, { attributes: true, attributeFilter: ['lang'] })
     // Sync once in case `lang` changed between mount and effect.
-    setLocale((prev) => {
+    setLocale(prev => {
       const next = resolveLocale()
       return next === prev ? prev : next
     })

@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@solvapay/core": ["../../../core/src/index.ts"]
+    },
+    "baseUrl": "."
+  },
+  "include": [
+    "./api-diff.test-d.ts",
+    "../../__generated__/signature-parity.generated.test.ts",
+    "../client.ts",
+    "../client.generated.d.ts",
+    "../generated.ts",
+    "../overlays.generated.d.ts",
+    "../../paywall.ts",
+    "../paywall.ts"
+  ]
+}

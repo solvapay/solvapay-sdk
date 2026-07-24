@@ -21,9 +21,7 @@ export const TopupForm: React.FC<TopupFormProps> = props => {
       <Primitive.PaymentElement />
       <Primitive.Error className="solvapay-topup-form-error" />
       <Primitive.Loading className="solvapay-topup-form-loading" />
-      <Primitive.SubmitButton className={buttonClass}>
-        {submitButtonText}
-      </Primitive.SubmitButton>
+      <Primitive.SubmitButton className={buttonClass}>{submitButtonText}</Primitive.SubmitButton>
     </Primitive.Root>
   )
 }

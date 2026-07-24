@@ -123,14 +123,12 @@ describe('toolResult / toolErrorResult', () => {
     const result = toolErrorResult({
       error: 'merchant lookup failed',
       status: 404,
-      details:
-        'Provider not found. Run `npx solvapay init` to create a merchant before deploying.',
+      details: 'Provider not found. Run `npx solvapay init` to create a merchant before deploying.',
     })
     expect(result.content).toEqual([
       {
         type: 'text',
-        text:
-          'Provider not found. Run `npx solvapay init` to create a merchant before deploying.',
+        text: 'Provider not found. Run `npx solvapay init` to create a merchant before deploying.',
       },
     ])
   })

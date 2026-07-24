@@ -717,7 +717,7 @@ describe('createMcpOAuthBridge integration', () => {
     expect(state.headers['access-control-allow-origin']).toBe('cursor://test')
   })
 
-  it('exposes WWW-Authenticate via CORS on 401 POST /mcp with native origin', async () => {
+  it('allows anonymous initialize through mcp auth middleware', async () => {
     const middlewares = createMcpOAuthBridge({
       publicBaseUrl,
       apiBaseUrl,
@@ -733,11 +733,42 @@ describe('createMcpOAuthBridge integration', () => {
 
     await runPipeline(middlewares, req, res, state)
 
+    // Discovery methods pass through without ending the response.
+    expect(state.ended).toBe(false)
+    expect(state.statusCode).toBe(200)
+  })
+
+  it('exposes WWW-Authenticate via CORS on 401 anonymous tools/call with native origin', async () => {
+    const middlewares = createMcpOAuthBridge({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+    })
+    const { res, state } = mockRes()
+    const req = mockReq({
+      method: 'POST',
+      path: '/mcp',
+      headers: { origin: 'cursor://test', 'content-type': 'application/json' },
+      body: {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: { name: 'echo', arguments: {} },
+      },
+    })
+
+    await runPipeline(middlewares, req, res, state)
+
     expect(state.statusCode).toBe(401)
     expect(state.headers['access-control-allow-origin']).toBe('cursor://test')
     expect(state.headers['access-control-expose-headers']).toBe('WWW-Authenticate')
     expect(state.headers['www-authenticate']).toContain('Bearer')
     expect(state.headers['www-authenticate']).toContain('resource_metadata=')
+    expect(state.body).toEqual({
+      jsonrpc: '2.0',
+      id: 1,
+      error: { code: -32001, message: 'Unauthorized' },
+    })
   })
 
   it('returns 404 on GET /.well-known/openid-configuration (SolvaPay is an OAuth AS, not an OIDC Provider)', async () => {

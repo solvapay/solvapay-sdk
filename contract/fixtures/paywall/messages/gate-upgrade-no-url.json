@@ -1,0 +1,21 @@
+{
+  "suite": "paywall",
+  "case": "gate-upgrade-no-url",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": {
+        "kind": "upgrade_required"
+      },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "",
+        "message": ""
+      }
+    }
+  },
+  "expect": {
+    "result": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan."
+  }
+}

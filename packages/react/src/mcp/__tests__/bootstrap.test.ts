@@ -156,11 +156,17 @@ describe('fetchMcpBootstrapViaResource', () => {
       readServerResource: opts.resourceFails
         ? vi.fn().mockRejectedValue(new Error('resource unavailable'))
         : vi.fn().mockResolvedValue({
-            contents: [{ text: opts.resourceText ?? JSON.stringify({
-              view: 'account',
-              productRef: 'prod_123',
-              returnUrl: 'https://example.test/return',
-            }) }],
+            contents: [
+              {
+                text:
+                  opts.resourceText ??
+                  JSON.stringify({
+                    view: 'account',
+                    productRef: 'prod_123',
+                    returnUrl: 'https://example.test/return',
+                  }),
+              },
+            ],
           }),
     }
   }
@@ -226,8 +232,7 @@ describe('classifyHostEntry', () => {
   function mkApp(toolName?: string): McpAppBootstrapLike {
     return {
       callServerTool: vi.fn(),
-      getHostContext: () =>
-        toolName ? { toolInfo: { tool: { name: toolName } } } : undefined,
+      getHostContext: () => (toolName ? { toolInfo: { tool: { name: toolName } } } : undefined),
     }
   }
 
@@ -367,8 +372,8 @@ describe('waitForInitialToolResult', () => {
     const hostContext: { toolInfo: { tool: { name: string } } } = {
       toolInfo: { tool: { name: 'create_payment_intent' } },
     }
-    ;(app as unknown as { getHostContext: () => typeof hostContext }).getHostContext =
-      () => hostContext
+    ;(app as unknown as { getHostContext: () => typeof hostContext }).getHostContext = () =>
+      hostContext
     fire({
       structuredContent: { view: 'checkout', productRef: 'prd_x', returnUrl: 'https://e/r' },
     })
@@ -430,4 +435,3 @@ describe('waitForInitialToolResult', () => {
     await expect(promise).rejects.toThrow(/productRef/)
   })
 })
-

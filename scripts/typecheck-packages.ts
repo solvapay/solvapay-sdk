@@ -54,8 +54,7 @@ function main(): void {
         process.exit(1)
       }
 
-      const label =
-        project === 'tsconfig.build.json' ? pkg.dir : `${pkg.dir}/${project}`
+      const label = project === 'tsconfig.build.json' ? pkg.dir : `${pkg.dir}/${project}`
       console.log(`\n> typecheck ${label}`)
       const status = runTsc(projectPath)
       if (status !== 0) {

@@ -30,14 +30,11 @@ interface TestApp {
   fireToolResult: (params: Parameters<ToolResultHandler>[0]) => void
 }
 
-function makeEventfulApp(opts: {
-  initialToolName: string
-  initialStructured: unknown
-}): TestApp {
+function makeEventfulApp(opts: { initialToolName: string; initialStructured: unknown }): TestApp {
   const listeners: Record<string, ToolResultHandler[]> = {}
   const hostContext = { toolInfo: { tool: { name: opts.initialToolName } } }
 
-  const fireToolResult: TestApp['fireToolResult'] = (params) => {
+  const fireToolResult: TestApp['fireToolResult'] = params => {
     const bucket = listeners['toolresult'] ?? []
     for (const h of bucket) h(params)
   }
@@ -155,7 +152,7 @@ describe('<McpApp> — live tool-result subscription', () => {
     }
 
     // 50ms grace; no re-route should happen for any of them.
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise(r => setTimeout(r, 50))
     expect(screen.queryByTestId('topup-stub')).toBeNull()
     expect(screen.queryByTestId('account-stub')).toBeTruthy()
   })
@@ -192,7 +189,7 @@ describe('<McpApp> — live tool-result subscription', () => {
       })
     })
 
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise(r => setTimeout(r, 50))
     expect(screen.queryByTestId('topup-stub')).toBeNull()
     // The mounted checkout shell must survive — the pre-mount
     // teardown guard gates on `bootstrapRef`.
@@ -229,7 +226,7 @@ describe('<McpApp> — live tool-result subscription', () => {
       })
     })
 
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise(r => setTimeout(r, 50))
     expect(screen.queryByTestId('checkout-stub')).toBeTruthy()
     expect(app.requestTeardown).not.toHaveBeenCalled()
   })

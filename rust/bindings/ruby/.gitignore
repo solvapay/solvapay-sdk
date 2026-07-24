@@ -1,0 +1,13 @@
+/.bundle/
+/vendor/bundle/
+/tmp/
+/pkg/
+/target/
+*.bundle
+*.so
+*.dll
+lib/solvapay/*.bundle
+lib/solvapay/*.so
+lib/solvapay/3.*/
+/pkg/
+/tmp/

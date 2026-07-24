@@ -1,0 +1,40 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "attachBusinessDetails",
+    "args": {
+      "paymentIntentId": "pi_fixture",
+      "isBusiness": true,
+      "businessName": "Acme",
+      "country": "US"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "attach-business-details-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents/pi_fixture/business-details",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "isBusiness": true,
+        "businessName": "Acme",
+        "country": "US"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Attach business details failed (400): bad",
+      "status": 400
+    }
+  }
+}

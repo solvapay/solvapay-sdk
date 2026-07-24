@@ -1,0 +1,13 @@
+{
+  "suite": "credit-display",
+  "case": "minor-units-usd-100",
+  "input": {
+    "fn": "minorUnitsPerMajor",
+    "args": {
+      "currency": "USD"
+    }
+  },
+  "expect": {
+    "result": 100
+  }
+}

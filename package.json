@@ -35,7 +35,7 @@
   },
   "scripts": {
     "build": "turbo build --concurrency 16",
-    "build:examples": "turbo build --filter=@example/*",
+    "build:examples": "pnpm --filter '@example/*' -r --if-present build",
     "build:packages": "turbo build --filter=@solvapay/* --filter=solvapay --filter=create-solvapay",
     "clean": "turbo clean",
     "dev": "turbo dev --no-cache --concurrency 16 --continue",
@@ -58,9 +58,29 @@
     "docs:validate-links": "tsx scripts/validate-doc-links.ts",
     "docs:validate": "pnpm docs:validate-links && pnpm docs:check && pnpm docs:build",
     "deps:check": "tsx scripts/check-dependency-health.ts",
-    "loc": "tsx scripts/count-loc.ts"
+    "loc": "tsx scripts/count-loc.ts",
+    "test:contract": "vitest run scripts --exclude '**/shadow/selftest.test.ts'",
+    "shadow:run": "tsx scripts/shadow/run-shadow.ts",
+    "shadow:selftest": "vitest run scripts/shadow/",
+    "snapshot:openapi": "tsx scripts/snapshot-openapi.ts",
+    "snapshot:openapi:check": "tsx scripts/snapshot-openapi.ts --check",
+    "gen": "tsx scripts/gen.ts",
+    "gen:check": "tsx scripts/gen.ts --check",
+    "gen:all": "tsx scripts/gen-all.ts",
+    "gen:scaffold": "tsx scripts/gen-scaffold.ts",
+    "gen:bindings": "tsx scripts/gen-bindings.ts",
+    "manifest:validate": "tsx scripts/manifest.ts",
+    "manifest:check": "tsx scripts/manifest.ts --check",
+    "parity:check": "tsx scripts/parity-check.ts",
+    "delegation:check": "tsx scripts/check-delegation.ts",
+    "server-superseded-ts:check": "tsx scripts/check-superseded-server-ts.ts",
+    "test:clean-install": "pnpm --filter @solvapay/server-native test:clean-install",
+    "prepare": "husky || true"
   },
   "devDependencies": {
+    "@solvapay/core": "workspace:*",
+    "@solvapay/mcp-core": "workspace:*",
+    "@solvapay/server": "workspace:*",
     "@changesets/cli": "^2.27.10",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
@@ -77,6 +97,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "fastify": "^5.8.4",
     "glob": "^13.0.6",
+    "husky": "^9.1.7",
     "jose": "^6.2.2",
     "nodemon": "^3.1.14",
     "prettier": "^3.8.1",
@@ -88,6 +109,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.2",
     "vitest": "^4.1.2",
+    "yaml": "^2.9.0",
     "zod": "^4.3.6"
   }
 }

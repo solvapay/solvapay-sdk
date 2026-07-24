@@ -1,0 +1,30 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getMerchant",
+    "args": {},
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-merchant-error",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/merchant",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Get merchant failed (400): bad",
+      "status": 400
+    }
+  }
+}

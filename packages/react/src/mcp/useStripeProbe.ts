@@ -79,9 +79,7 @@ const ELEMENT_MOUNT_TIMEOUT_MS = 2_000
 export type StripeProbeState = 'loading' | 'ready' | 'blocked'
 
 export function useStripeProbe(publishableKey: string | null): StripeProbeState {
-  const [state, setState] = useState<StripeProbeState>(
-    publishableKey ? 'loading' : 'blocked',
-  )
+  const [state, setState] = useState<StripeProbeState>(publishableKey ? 'loading' : 'blocked')
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -128,8 +126,7 @@ export function useStripeProbe(publishableKey: string | null): StripeProbeState 
     const isStripeFrameViolation = (event: SecurityPolicyViolationEvent): boolean => {
       const directive = event.effectiveDirective || event.violatedDirective || ''
       const blockedURI = event.blockedURI || ''
-      const isFrameSrc =
-        directive === 'frame-src' || directive.startsWith('frame-src ')
+      const isFrameSrc = directive === 'frame-src' || directive.startsWith('frame-src ')
       return isFrameSrc && /(^|\W)stripe\.com(\W|$)/.test(blockedURI)
     }
     const onCspViolation = (event: SecurityPolicyViolationEvent) => {
@@ -172,7 +169,7 @@ export function useStripeProbe(publishableKey: string | null): StripeProbeState 
     }, STRIPE_LOAD_TIMEOUT_MS)
 
     loadStripe(publishableKey, { developerTools: { assistant: { enabled: false } } })
-      .then((stripe) => {
+      .then(stripe => {
         if (cancelled || resolved) return
         // `loadStripe` resolved after the script-src timeout fired —
         // `resolved` is already true, bail.

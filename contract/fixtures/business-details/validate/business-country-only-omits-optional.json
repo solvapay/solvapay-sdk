@@ -1,0 +1,20 @@
+{
+  "suite": "business-details",
+  "case": "business-country-only-omits-optional",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "SE"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "SE"
+      }
+    }
+  }
+}

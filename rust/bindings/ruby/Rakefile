@@ -1,0 +1,42 @@
+# frozen_string_literal: true
+
+require "bundler/gem_tasks"
+require "rb_sys/extensiontask"
+require "rb_sys/cargo/metadata"
+
+task build: :compile
+
+GEMSPEC = Gem::Specification.load("solvapay.gemspec")
+
+# The workspace also has a crates.io facade package named `solvapay`
+# (rust/crates/solvapay). RbSys::ExtensionTask looks up cargo metadata by the
+# extension name, so "solvapay" resolves to that facade (no extconf.rb) instead
+# of the Magnus crate `solvapay-ruby`. Keep the Ruby extension / .so name as
+# `solvapay` while pointing cargo metadata at the real binding crate.
+class SolvaPayExtensionTask < RbSys::ExtensionTask
+  def cargo_metadata
+    @cargo_metadata ||= RbSys::Cargo::Metadata.new("solvapay-ruby").load!
+  end
+end
+
+SolvaPayExtensionTask.new("solvapay", GEMSPEC) do |ext|
+  ext.lib_dir = "lib/solvapay"
+  ext.cross_compile = true
+  ext.cross_platform = %w[
+    x86_64-linux
+    aarch64-linux
+    x86_64-darwin
+    arm64-darwin
+    x64-mingw-ucrt
+  ]
+end
+
+require "rake/testtask"
+
+Rake::TestTask.new(:test) do |t|
+  t.libs << "test"
+  t.libs << "lib"
+  t.test_files = FileList["test/**/*_test.rb"]
+end
+
+task default: %i[compile test]

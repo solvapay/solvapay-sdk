@@ -1,0 +1,27 @@
+{
+  "suite": "helper-usage",
+  "case": "used-absent",
+  "input": {
+    "fn": "projectUsageSnapshot",
+    "args": {
+      "activePurchase": {
+        "reference": "pur_1",
+        "planSnapshot": {
+          "meterRef": "mtr_requests",
+          "limit": 100
+        },
+        "usage": {}
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "meterRef": "mtr_requests",
+      "total": 100,
+      "used": 0,
+      "remaining": 100,
+      "percentUsed": 0,
+      "purchaseRef": "pur_1"
+    }
+  }
+}

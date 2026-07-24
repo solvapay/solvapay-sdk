@@ -1,0 +1,21 @@
+{
+  "suite": "paywall",
+  "case": "gate-topup-no-url",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": {
+        "kind": "topup_required"
+      },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "",
+        "message": ""
+      }
+    }
+  },
+  "expect": {
+    "result": "You're out of credits. Call the `topup` tool to add more."
+  }
+}

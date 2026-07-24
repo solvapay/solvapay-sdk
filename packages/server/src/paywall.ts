@@ -16,6 +16,19 @@ import type {
   PaywallToolResult,
   SolvaPayClient,
 } from './types'
+import {
+  buildCreateCustomerParams,
+  classifyCreateError,
+  classifyCustomerRef,
+  classifyLookupError,
+  decidePaywallOutcome,
+  evaluateCachedLimits,
+  evaluateFreshLimits,
+  extractBackendCustomerRef,
+  isEmailConflict,
+  paywallErrorToClientPayload as paywallErrorToClientPayloadDispatch,
+  resolveProductRef,
+} from './native-decisions'
 import { buildPaywallGate } from './paywall-gate'
 import { withRetry, createRequestDeduplicator } from './utils'
 
@@ -100,26 +113,7 @@ export class PaywallError extends Error {
 
 /** JSON body shape for HTTP adapters and MCP text content (stable fields for clients). */
 export function paywallErrorToClientPayload(error: PaywallError): Record<string, unknown> {
-  const sc = error.structuredContent
-  const base: Record<string, unknown> = {
-    success: false,
-    error: sc.kind === 'activation_required' ? 'Activation required' : 'Payment required',
-    product: sc.product,
-    checkoutUrl: sc.checkoutUrl,
-    message: sc.message,
-  }
-  if (sc.kind === 'activation_required') {
-    base.kind = 'activation_required'
-    if (sc.plans !== undefined) base.plans = sc.plans
-    if (sc.balance !== undefined) base.balance = sc.balance
-    if (sc.productDetails !== undefined) base.productDetails = sc.productDetails
-    if (sc.confirmationUrl !== undefined) base.confirmationUrl = sc.confirmationUrl
-  } else {
-    base.kind = 'payment_required'
-    if (sc.balance !== undefined) base.balance = sc.balance
-    if (sc.productDetails !== undefined) base.productDetails = sc.productDetails
-  }
-  return base
+  return paywallErrorToClientPayloadDispatch(error)
 }
 
 /**
@@ -215,7 +209,7 @@ export class SolvaPayPaywall {
   }
 
   private resolveProduct(metadata: PaywallMetadata): string {
-    return metadata.product || process.env.SOLVAPAY_PRODUCT || 'default-product'
+    return resolveProductRef(metadata.product, process.env.SOLVAPAY_PRODUCT)
   }
 
   private generateRequestId(): string {
@@ -280,18 +274,13 @@ export class SolvaPayPaywall {
       // handler context carries balance/plan even on cache hits.
       lastLimitsCheck = cachedLimits.limits
 
-      if (cachedLimits.remaining > 0) {
-        cachedLimits.remaining--
-        if (cachedLimits.remaining <= 0) {
-          this.limitsCache.delete(limitsCacheKey)
-        }
-        withinLimits = true
-        remaining = cachedLimits.remaining
-      } else {
-        // A zero-remaining entry indicates we already consumed the final unit.
-        // Block one immediate follow-up request from cache, then force re-check next time.
-        withinLimits = false
-        remaining = 0
+      const cachedEval = evaluateCachedLimits(cachedLimits.remaining)
+      withinLimits = cachedEval.withinLimits
+      remaining = cachedEval.remaining
+      if (cachedEval.withinLimits) {
+        cachedLimits.remaining = cachedEval.remaining
+      }
+      if (cachedEval.evict) {
         this.limitsCache.delete(limitsCacheKey)
       }
     } else {
@@ -313,19 +302,17 @@ export class SolvaPayPaywall {
       })
 
       lastLimitsCheck = limitsCheck
-      withinLimits = limitsCheck.withinLimits
-      remaining = limitsCheck.remaining
       checkoutUrl = limitsCheck.checkoutUrl
       resolvedMeterName = limitsCheck.meterName
 
-      const consumedAllowance = withinLimits && remaining > 0
-      if (consumedAllowance) {
-        // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
-        // so cached follow-up requests don't get an extra free call.
-        remaining = Math.max(0, remaining - 1)
-      }
+      // checkLimits reflects pre-request allowance. Consume one unit for
+      // this in-flight request so cached follow-up requests don't get an
+      // extra free call.
+      const freshEval = evaluateFreshLimits(limitsCheck.withinLimits, limitsCheck.remaining)
+      withinLimits = freshEval.withinLimits
+      remaining = freshEval.remaining
 
-      if (consumedAllowance) {
+      if (freshEval.shouldCache) {
         this.limitsCache.set(limitsCacheKey, {
           remaining,
           checkoutUrl,
@@ -336,7 +323,18 @@ export class SolvaPayPaywall {
       }
     }
 
-    if (!withinLimits) {
+    const decision = decidePaywallOutcome({
+      withinLimits,
+      product,
+      limits: lastLimitsCheck ?? null,
+      checkoutUrl,
+      // Core's PaywallDecisionLimits uses unknown pass-throughs; gate assembly
+      // accepts the same runtime shape as LimitResponseWithPlan.
+      buildGate: (productRef, limits) =>
+        buildPaywallGate(productRef, limits as Parameters<typeof buildPaywallGate>[1]),
+    })
+
+    if (decision.outcome === 'gate') {
       const latencyMs = Date.now() - startTime
       // Awaited (not floated) so the call survives runtimes that
       // terminate the request context as soon as the response returns
@@ -355,21 +353,9 @@ export class SolvaPayPaywall {
         latencyMs,
       ).catch(() => undefined)
 
-      // Delegate gate construction to `buildPaywallGate` so adapter
-      // paths and `payable.gate()` produce byte-identical wire shapes.
-      const gate = buildPaywallGate(
-        product,
-        lastLimitsCheck ?? {
-          withinLimits: false,
-          remaining: 0,
-          plan: '',
-          ...(checkoutUrl !== undefined ? { checkoutUrl } : {}),
-        },
-      )
-
       return {
         outcome: 'gate',
-        gate,
+        gate: decision.gate,
         limits: lastLimitsCheck ?? null,
         customerRef: backendCustomerRef,
       }
@@ -524,15 +510,11 @@ export class SolvaPayPaywall {
       return this.customerRefMapping.get(customerRef)!
     }
 
-    // Skip for anonymous users
-    if (customerRef === 'anonymous') {
-      return customerRef
-    }
-
-    // If customerRef is already a SolvaPay ID (starts with 'cus_'),
-    // return it directly. We cannot "ensure" (create) a customer with a specific ID,
+    const refKind = classifyCustomerRef(customerRef)
+    // Skip for anonymous users / already-backend refs (cus_ prefix).
+    // We cannot "ensure" (create) a customer with a specific backend ID,
     // and using it as an externalRef causes issues.
-    if (customerRef.startsWith('cus_')) {
+    if (refKind === 'anonymous' || refKind === 'backend') {
       return customerRef
     }
 
@@ -570,7 +552,7 @@ export class SolvaPayPaywall {
         } catch (error) {
           // 404 means customer doesn't exist yet - this is expected, continue to creation
           const errorMessage = error instanceof Error ? error.message : String(error)
-          if (!errorMessage.includes('404') && !errorMessage.includes('not found')) {
+          if (classifyLookupError(errorMessage) === 'unexpected') {
             // Unexpected error - log but continue to fallback behavior
             this.log(`⚠️  Error looking up customer by externalRef: ${errorMessage}`)
           }
@@ -602,29 +584,19 @@ export class SolvaPayPaywall {
         // Prepare customer creation params
         // Use provided email/name, or fallback to auto-generated values
         // Use a timestamp-based email to avoid conflicts with old orphaned records
-        const createParams: {
-          email: string
-          name?: string
-          externalRef?: string
-          metadata: Record<string, unknown>
-        } = {
-          email: options?.email || `${customerRef}-${Date.now()}@auto-created.local`,
-          metadata: {},
-        }
-
-        if (options?.name) {
-          createParams.name = options.name
-        }
-
-        if (externalRef) {
-          createParams.externalRef = externalRef
-        }
+        const createParams = buildCreateCustomerParams(
+          customerRef,
+          externalRef,
+          options?.email,
+          options?.name,
+          Date.now(),
+        )
 
         const result = await this.apiClient.createCustomer(createParams)
 
         // Extract the backend reference from the response
-        const resultObj = result as unknown as Record<string, string>
-        const ref = resultObj.customerRef || resultObj.reference || customerRef
+        const resultObj = result as unknown as Record<string, unknown>
+        const ref = extractBackendCustomerRef(resultObj, customerRef)
 
         // Store the mapping (per-instance cache)
         this.customerRefMapping.set(customerRef, ref)
@@ -632,7 +604,7 @@ export class SolvaPayPaywall {
         return ref
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error)
-        if (errorMessage.includes('409') || errorMessage.includes('already exists')) {
+        if (classifyCreateError(errorMessage) === 'conflict') {
           // Try to lookup by externalRef first if available
           if (externalRef) {
             try {
@@ -652,10 +624,7 @@ export class SolvaPayPaywall {
           // If conflict is due to email uniqueness but externalRef lookup failed,
           // retry creation with a generated email while preserving externalRef.
           // This allows resolving stale customers created before externalRef was set.
-          const isEmailConflict =
-            errorMessage.includes('email') || errorMessage.includes('identifier email')
-
-          if (externalRef && isEmailConflict && options?.email) {
+          if (externalRef && isEmailConflict(errorMessage) && options?.email) {
             try {
               const byEmail = await this.apiClient.getCustomer({ email: options.email })
               if (byEmail && byEmail.customerRef) {
@@ -689,24 +658,17 @@ export class SolvaPayPaywall {
             }
 
             try {
-              const retryParams: {
-                email: string
-                name?: string
-                externalRef?: string
-                metadata: Record<string, unknown>
-              } = {
-                email: `${customerRef}-${Date.now()}@auto-created.local`,
+              const retryParams = buildCreateCustomerParams(
+                customerRef,
                 externalRef,
-                metadata: {},
-              }
-
-              if (options?.name) {
-                retryParams.name = options.name
-              }
+                undefined,
+                options?.name,
+                Date.now(),
+              )
 
               const retryResult = await this.apiClient.createCustomer(retryParams)
-              const retryObj = retryResult as unknown as Record<string, string>
-              const retryRef = retryObj.customerRef || retryObj.reference || customerRef
+              const retryObj = retryResult as unknown as Record<string, unknown>
+              const retryRef = extractBackendCustomerRef(retryObj, customerRef)
 
               this.customerRefMapping.set(customerRef, retryRef)
               this.log(
@@ -850,8 +812,8 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return async (req: any, reply: any) => {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const extractArgs =
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (options?.extractArgs as (req: any) => PaywallArgs) || defaultExtractArgs
           const getCustomerRef =
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -965,9 +927,9 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
     metadata: PaywallMetadata,
     handler: (args: PaywallArgs) => Promise<unknown>,
     options?: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       extractArgs?: (
         request: Request,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         context?: any,
       ) => Promise<Record<string, unknown>> | Record<string, unknown>
       getCustomerRef?: (request: Request) => Promise<string> | string

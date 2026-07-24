@@ -1,0 +1,16 @@
+{
+  "suite": "paywall",
+  "case": "usage-based-nested-balance-0",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 5,
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }],
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

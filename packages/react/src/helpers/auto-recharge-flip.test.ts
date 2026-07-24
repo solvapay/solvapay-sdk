@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  flipUnitValue,
-  type AmountInputUnit,
-  type AmountInputAnchor,
-} from './auto-recharge-form'
+import { flipUnitValue, type AmountInputUnit, type AmountInputAnchor } from './auto-recharge-form'
 
 const CPM = 100
 const SEK_RATE = 9.46
@@ -66,15 +62,18 @@ describe('flipUnitValue (DEV-591: snap-back to user-entered base)', () => {
   })
 
   it('returns value unchanged for invalid or non-positive input', () => {
-    expect(
-      flipUnitValue({ value: '', unit: 'currency' }, 'credits', 'USD', CPM, 1),
-    ).toEqual({ value: '', unit: 'credits' })
-    expect(
-      flipUnitValue({ value: 'abc', unit: 'currency' }, 'credits', 'USD', CPM, 1),
-    ).toEqual({ value: 'abc', unit: 'credits' })
-    expect(
-      flipUnitValue({ value: '0', unit: 'currency' }, 'credits', 'USD', CPM, 1),
-    ).toEqual({ value: '0', unit: 'credits' })
+    expect(flipUnitValue({ value: '', unit: 'currency' }, 'credits', 'USD', CPM, 1)).toEqual({
+      value: '',
+      unit: 'credits',
+    })
+    expect(flipUnitValue({ value: 'abc', unit: 'currency' }, 'credits', 'USD', CPM, 1)).toEqual({
+      value: 'abc',
+      unit: 'credits',
+    })
+    expect(flipUnitValue({ value: '0', unit: 'currency' }, 'credits', 'USD', CPM, 1)).toEqual({
+      value: '0',
+      unit: 'credits',
+    })
   })
 
   it('preserves JPY whole-yen anchor on round-trip', () => {

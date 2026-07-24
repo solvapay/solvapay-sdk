@@ -119,10 +119,12 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
     solvapayProductRef: productRef ?? PLACEHOLDERS.PRODUCT_REF,
     mode: 'one-to-one',
     upstreamAuth: authChoice,
-    operations: operations.map((op: { operationId: string; suggestedTier: 'free' | 'paid' | 'skip' }) => ({
-      operationId: op.operationId,
-      tier: op.suggestedTier,
-    })),
+    operations: operations.map(
+      (op: { operationId: string; suggestedTier: 'free' | 'paid' | 'skip' }) => ({
+        operationId: op.operationId,
+        tier: op.suggestedTier,
+      }),
+    ),
   }
   if (upstreamBaseUrl) {
     selections.upstreamBaseUrl = upstreamBaseUrl
@@ -139,13 +141,7 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
 
   try {
     process.stdout.write(`⚙️  Generating ${operations.length} tool stubs…\n`)
-    await runScript([
-      'scaffold.mjs',
-      spec,
-      target,
-      '--selections',
-      tmpSelectionsPath,
-    ])
+    await runScript(['scaffold.mjs', spec, target, '--selections', tmpSelectionsPath])
   } finally {
     await rm(tmpSelectionsPath, { force: true })
   }
@@ -229,9 +225,10 @@ async function resolveUpstreamBaseUrl(
 ): Promise<string | undefined> {
   if (servers.some(isAbsoluteHttpUrl)) return undefined
 
-  const problem = servers.length > 0
-    ? `declares only relative server URL(s): ${servers.join(', ')}`
-    : 'does not declare an OpenAPI server URL'
+  const problem =
+    servers.length > 0
+      ? `declares only relative server URL(s): ${servers.join(', ')}`
+      : 'does not declare an OpenAPI server URL'
 
   if (nonInteractive || !stdin.isTTY || !stdout.isTTY) {
     throw new Error(
@@ -247,7 +244,9 @@ async function resolveUpstreamBaseUrl(
       )
     ).trim()
     if (!answer) {
-      throw new Error('Upstream API base URL is required when the OpenAPI spec has no absolute server URL.')
+      throw new Error(
+        'Upstream API base URL is required when the OpenAPI spec has no absolute server URL.',
+      )
     }
     if (!isAbsoluteHttpUrl(answer)) {
       throw new Error(`Upstream API base URL must start with http:// or https:// (got ${answer}).`)
@@ -350,10 +349,11 @@ async function chooseAuth(
   // are optional and skipped when blank.
   const tokenUrl = firstSupported.tokenUrl
   if (!tokenUrl) return { kind: 'none' }
-  process.stdout.write(
-    `Spec requires OAuth 2.0 client_credentials (token endpoint ${tokenUrl}).\n`,
+  process.stdout.write(`Spec requires OAuth 2.0 client_credentials (token endpoint ${tokenUrl}).\n`)
+  const clientId = await askValue(
+    'OAuth client_id (blank = skip OAuth setup): ',
+    'oauth2-client-credentials',
   )
-  const clientId = await askValue('OAuth client_id (blank = skip OAuth setup): ', 'oauth2-client-credentials')
   if (!clientId) return { kind: 'none' }
   const clientSecret = await askValue('OAuth client_secret: ', 'oauth2-client-credentials')
   if (!clientSecret) return { kind: 'none' }
@@ -482,7 +482,7 @@ async function runScript(argv: string[]): Promise<void> {
       stdio: ['ignore', 'inherit', 'inherit'],
     })
     child.once('error', reject)
-      child.once('close', code => {
+    child.once('close', code => {
       if (code === 0) resolve()
       else reject(new Error(`${scriptName} exited with code ${code}`))
     })

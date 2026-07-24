@@ -6,12 +6,13 @@
  * This is a public route - no authentication required.
  */
 
+import { getSolvaPayConfig } from '@solvapay/core'
+import { validateListPlansParams } from '../native-decisions'
 import type { ErrorResult } from './types'
 import type { components } from '../types/generated'
 import type { SolvaPay } from '../factory'
 import { createSolvaPayClient } from '../client'
 import { handleRouteError } from './error'
-import { getSolvaPayConfig } from '@solvapay/core'
 
 type Plan = components['schemas']['Plan']
 
@@ -36,23 +37,23 @@ export async function listPlansCore(
 > {
   try {
     const url = new URL(request.url)
-    const productRef = url.searchParams.get('productRef')
+    const productRef = url.searchParams.get('productRef') ?? ''
 
-    if (!productRef) {
-      return {
-        error: 'Missing required parameter: productRef',
-        status: 400,
-      }
+    const validationError = validateListPlansParams(productRef)
+    if (validationError) {
+      return validationError
     }
 
-    const apiClient = options.solvaPay?.apiClient ?? (() => {
-      const config = getSolvaPayConfig()
-      if (!config.apiKey) return null
-      return createSolvaPayClient({
-        apiKey: config.apiKey,
-        apiBaseUrl: config.apiBaseUrl,
-      })
-    })()
+    const apiClient =
+      options.solvaPay?.apiClient ??
+      (() => {
+        const config = getSolvaPayConfig()
+        if (!config.apiKey) return null
+        return createSolvaPayClient({
+          apiKey: config.apiKey,
+          apiBaseUrl: config.apiBaseUrl,
+        })
+      })()
 
     if (!apiClient) {
       return {

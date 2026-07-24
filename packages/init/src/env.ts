@@ -46,9 +46,11 @@ const normalizeTrailingNewline = (content: string): string =>
 const askOverwrite = async (): Promise<boolean> => {
   const rl = readline.createInterface({ input: stdin, output: stdout })
   try {
-    const answer = (await rl.question(
-      "You're already set up. Overwrite SOLVAPAY_SECRET_KEY? (y/N) ",
-    )).trim().toLowerCase()
+    const answer = (
+      await rl.question("You're already set up. Overwrite SOLVAPAY_SECRET_KEY? (y/N) ")
+    )
+      .trim()
+      .toLowerCase()
     return answer === 'y' || answer === 'yes'
   } finally {
     rl.close()
@@ -61,7 +63,9 @@ const hasEnvGitignoreEntry = (content: string): boolean =>
     .map(line => line.trim())
     .some(line => line === '.env' || line === '/.env')
 
-export const ensureEnvInGitignore = async (cwd: string = process.cwd()): Promise<GitignoreEnvResult> => {
+export const ensureEnvInGitignore = async (
+  cwd: string = process.cwd(),
+): Promise<GitignoreEnvResult> => {
   const gitignorePath = path.join(cwd, '.gitignore')
   const exists = await envFileExists(gitignorePath)
 
@@ -117,10 +121,7 @@ export const writeSolvaPaySecretToEnv = async (
     return { filePath: envPath, action: 'unchanged' }
   }
 
-  const updatedContent = currentContent.replace(
-    /^\s*SOLVAPAY_SECRET_KEY\s*=.*$/m,
-    keyLine,
-  )
+  const updatedContent = currentContent.replace(/^\s*SOLVAPAY_SECRET_KEY\s*=.*$/m, keyLine)
   await writeFile(envPath, updatedContent, 'utf8')
   return { filePath: envPath, action: 'updated' }
 }

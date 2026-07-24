@@ -1,0 +1,61 @@
+name: Shadow Go (manual)
+
+# Live Go contract suite against a hosted backend.
+# Offline golden-fixture replay runs in the main CI `go-binding` job via
+# `go test -race ./...`. This workflow is dispatch-only until a hosted contract
+# env exists (see rust-migration-map open handoff items). Mirrors
+# `.github/workflows/shadow-rust.yml`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'SOLVAPAY_SHADOW_BASE_URL'
+        required: true
+        type: string
+      enable_stripe:
+        description: 'Run requires:stripe scenarios'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  shadow-go-live:
+    name: Go live contract
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust/bindings/go
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain + WASI target
+        working-directory: rust
+        run: rustup show && rustup target add wasm32-wasip1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Rebuild embedded WASI guest
+        working-directory: rust
+        run: ./bindings/go/scripts/build-wasm.sh
+
+      - name: Run live Go contract suite
+        env:
+          SOLVAPAY_SHADOW_BASE_URL: ${{ inputs.base_url }}
+          SOLVAPAY_SHADOW_API_KEY: ${{ secrets.SOLVAPAY_SHADOW_API_KEY }}
+          SOLVAPAY_SHADOW_ENABLE_STRIPE: ${{ inputs.enable_stripe }}
+          SOLVAPAY_LIVE_OUT: ${{ github.workspace }}/contract/shadow/output/go-live-report.json
+        run: |
+          mkdir -p "${{ github.workspace }}/contract/shadow/output"
+          go run ./cmd/live-contract
+
+      - name: Upload go-live-report.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-live-report
+          path: contract/shadow/output/go-live-report.json

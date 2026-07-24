@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "lookup-404",
+  "input": {
+    "fn": "classifyLookupError",
+    "args": {
+      "message": "Request failed with status 404"
+    }
+  },
+  "expect": {
+    "result": "expectedMissing"
+  }
+}

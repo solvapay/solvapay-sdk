@@ -1,0 +1,39 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "updatePlan",
+    "args": {
+      "productRef": "prd_fixture",
+      "planRef": "plan_basic",
+      "name": "Basic Plus"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "update-plan-success",
+  "wire": {
+    "request": {
+      "method": "PUT",
+      "path": "/v1/sdk/products/prd_fixture/plans/plan_basic",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "name": "Basic Plus"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "plan_basic",
+        "name": "Basic Plus"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "plan_basic",
+      "name": "Basic Plus"
+    }
+  }
+}

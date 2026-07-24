@@ -1,0 +1,16 @@
+{
+  "suite": "paywall",
+  "case": "nudge-null-limits",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": {
+        "kind": "upgrade_required"
+      },
+      "limits": null
+    }
+  },
+  "expect": {
+    "result": "Heads up — approaching your plan's limit this period. Call the `upgrade` tool for more headroom."
+  }
+}

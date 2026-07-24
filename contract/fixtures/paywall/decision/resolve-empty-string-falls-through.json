@@ -1,0 +1,14 @@
+{
+  "suite": "paywall",
+  "case": "resolve-empty-string-falls-through",
+  "input": {
+    "fn": "resolveProductRef",
+    "args": {
+      "metadataProduct": "",
+      "envProduct": "prd_env"
+    }
+  },
+  "expect": {
+    "result": "prd_env"
+  }
+}

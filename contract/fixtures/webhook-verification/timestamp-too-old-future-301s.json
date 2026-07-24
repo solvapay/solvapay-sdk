@@ -1,0 +1,21 @@
+{
+  "suite": "webhook-verification",
+  "case": "timestamp-too-old-future-301s",
+  "input": {
+    "fn": "verifyWebhook",
+    "args": {
+      "body": "{\"type\":\"purchase.created\",\"id\":\"evt_fixture_1\",\"created\":1782864000,\"api_version\":\"2025-10-01\",\"data\":{\"object\":{\"id\":\"pur_fixture_1\"},\"previous_attributes\":null},\"livemode\":false,\"request\":{\"id\":null,\"idempotency_key\":null}}",
+      "signature": "t=1782864301,v1=83c66d6bce433bbd631c1b160da317a03db4606f19f1f26a35c7c8fa8a810350",
+      "secret": "whsec_test_fixture_secret"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Webhook signature timestamp too old",
+      "kind": "Webhook",
+      "code": "timestamp_too_old"
+    }
+  }
+}

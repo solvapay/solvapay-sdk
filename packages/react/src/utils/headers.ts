@@ -88,8 +88,7 @@ export async function buildRequestHeaders(
   }
 
   if (config?.headers) {
-    const custom =
-      typeof config.headers === 'function' ? await config.headers() : config.headers
+    const custom = typeof config.headers === 'function' ? await config.headers() : config.headers
     Object.assign(headers, custom)
   }
 

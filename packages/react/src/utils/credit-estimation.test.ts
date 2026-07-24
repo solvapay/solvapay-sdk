@@ -11,16 +11,12 @@ describe('estimateCredits', () => {
   })
 
   it('converts 100 SEK to credits using displayExchangeRate', () => {
-    expect(estimateCredits(100, 'SEK', CPM, SEK_RATE)).toBe(
-      Math.round((10_000 / SEK_RATE) * CPM),
-    )
+    expect(estimateCredits(100, 'SEK', CPM, SEK_RATE)).toBe(Math.round((10_000 / SEK_RATE) * CPM))
     expect(estimateCredits(100, 'SEK', CPM, SEK_RATE)).toBe(105_708)
   })
 
   it('converts 500 JPY using zero-decimal minor units', () => {
-    expect(estimateCredits(500, 'JPY', CPM, JPY_RATE)).toBe(
-      Math.round((500 / JPY_RATE) * CPM),
-    )
+    expect(estimateCredits(500, 'JPY', CPM, JPY_RATE)).toBe(Math.round((500 / JPY_RATE) * CPM))
     expect(estimateCredits(500, 'JPY', CPM, JPY_RATE)).toBe(333)
   })
 

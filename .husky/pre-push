@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+# Local convenience gate — CI `pnpm gen:check` remains authoritative.
+pnpm gen:check || exit 1
+pnpm manifest:check || exit 1
+pnpm parity:check || exit 1

@@ -1,0 +1,19 @@
+{
+  "suite": "mcp",
+  "case": "brand-false",
+  "input": {
+    "fn": "assertResponseResult",
+    "args": {
+      "value": {
+        "__solvapayResponse": false,
+        "data": { "ok": true }
+      }
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "Error",
+      "message": "SolvaPay: registerPayable handler returned a raw value. Handlers must return ctx.respond(data, options?). If you believe you did, this is an internal bug — please file an issue at https://github.com/solvapay/solvapay-sdk/issues."
+    }
+  }
+}

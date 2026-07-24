@@ -1,0 +1,36 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "assignCredits",
+    "args": {
+      "customerRef": "cus_fixture",
+      "credits": 25
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "assign-credits-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/customers/cus_fixture/credits",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "credits": 25
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Assign credits failed (400): bad",
+      "status": 400
+    }
+  }
+}

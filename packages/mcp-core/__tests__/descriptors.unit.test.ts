@@ -6,7 +6,16 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { createSolvaPay, type SolvaPayClient } from '@solvapay/server'
-import { buildSolvaPayDescriptors, MCP_TOOL_NAMES } from '../src'
+import {
+  buildSolvaPayDescriptors,
+  buildSolvaPayPrompts,
+  deriveIcons,
+  MCP_TOOL_NAMES,
+  OPEN_TOOL_FOR_VIEW,
+  TOOL_FOR_VIEW,
+  VIEW_FOR_OPEN_TOOL,
+  VIEW_FOR_TOOL,
+} from '../src'
 
 interface MakeSolvaPayOverrides {
   customer?: {
@@ -111,8 +120,7 @@ describe('buildSolvaPayDescriptors', () => {
       const tool = tools.find(t => t.name === name)
       expect(tool).toBeTruthy()
       expect((tool!.meta as Record<string, unknown>).audience).toBeUndefined()
-      const visibility = (tool!.meta as { ui?: { visibility?: readonly string[] } }).ui
-        ?.visibility
+      const visibility = (tool!.meta as { ui?: { visibility?: readonly string[] } }).ui?.visibility
       expect(visibility).not.toEqual(['app'])
     }
 
@@ -153,7 +161,11 @@ describe('buildSolvaPayDescriptors', () => {
       publicBaseUrl: 'https://example.com',
     })
 
-    for (const name of [MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.topup, MCP_TOOL_NAMES.manageAccount]) {
+    for (const name of [
+      MCP_TOOL_NAMES.upgrade,
+      MCP_TOOL_NAMES.topup,
+      MCP_TOOL_NAMES.manageAccount,
+    ]) {
       const tool = tools.find(t => t.name === name)!
       expect(tool.annotations).toMatchObject({
         openWorldHint: true,
@@ -215,7 +227,7 @@ describe('buildSolvaPayDescriptors', () => {
     expect(names).not.toContain(MCP_TOOL_NAMES.topup)
   })
 
-  it('rejects non-http publicBaseUrl', () => {
+  it('rejects non-http publicBaseUrl with the frozen message', () => {
     expect(() =>
       buildSolvaPayDescriptors({
         solvaPay: makeSolvaPay(),
@@ -224,7 +236,97 @@ describe('buildSolvaPayDescriptors', () => {
         readHtml: async () => '<html></html>',
         publicBaseUrl: 'ui://nope',
       }),
-    ).toThrow(/http\(s\)/)
+    ).toThrow(
+      'buildSolvaPayDescriptors: publicBaseUrl must be an http(s) URL (Stripe confirmPayment rejects `ui://`).',
+    )
+  })
+
+  it('keeps transport tools + activate_plan when views is empty', () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+      views: [],
+    })
+    const names = tools.map(t => t.name)
+    expect(names).not.toContain(MCP_TOOL_NAMES.upgrade)
+    expect(names).not.toContain(MCP_TOOL_NAMES.manageAccount)
+    expect(names).not.toContain(MCP_TOOL_NAMES.topup)
+    expect(names).toContain(MCP_TOOL_NAMES.createCheckoutSession)
+    expect(names).toContain(MCP_TOOL_NAMES.activatePlan)
+  })
+
+  it('stamps icons from branding on every tool when provided', () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+      branding: { iconUrl: 'https://cdn.example.com/icon.png' },
+    })
+    for (const tool of tools) {
+      expect(tool.icons).toEqual([
+        { src: 'https://cdn.example.com/icon.png', sizes: ['any', '512x512'] },
+      ])
+    }
+  })
+
+  it('pins exact annotations per tool', () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const byName = Object.fromEntries(tools.map(t => [t.name, t.annotations]))
+    expect(byName[MCP_TOOL_NAMES.upgrade]).toEqual({
+      openWorldHint: true,
+      readOnlyHint: true,
+      idempotentHint: true,
+    })
+    expect(byName[MCP_TOOL_NAMES.processPayment]).toEqual({
+      openWorldHint: true,
+      destructiveHint: true,
+    })
+    expect(byName[MCP_TOOL_NAMES.cancelRenewal]).toEqual({
+      openWorldHint: true,
+      destructiveHint: true,
+      idempotentHint: true,
+    })
+    expect(byName[MCP_TOOL_NAMES.reactivateRenewal]).toEqual({
+      openWorldHint: true,
+      idempotentHint: true,
+    })
+    expect(byName[MCP_TOOL_NAMES.createCheckoutSession]).toEqual({ openWorldHint: true })
+    expect(byName[MCP_TOOL_NAMES.activatePlan]).toEqual({ openWorldHint: true })
+  })
+
+  it('emits tools in registration order (intent → transport → activate_plan)', () => {
+    const { tools } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    expect(tools.map(t => t.name)).toEqual([
+      MCP_TOOL_NAMES.upgrade,
+      MCP_TOOL_NAMES.manageAccount,
+      MCP_TOOL_NAMES.topup,
+      MCP_TOOL_NAMES.createCheckoutSession,
+      MCP_TOOL_NAMES.createPayment,
+      MCP_TOOL_NAMES.processPayment,
+      MCP_TOOL_NAMES.createCustomerSession,
+      MCP_TOOL_NAMES.createTopupPayment,
+      MCP_TOOL_NAMES.attachBusinessDetails,
+      MCP_TOOL_NAMES.cancelRenewal,
+      MCP_TOOL_NAMES.reactivateRenewal,
+      MCP_TOOL_NAMES.activatePlan,
+    ])
   })
 
   it('auto-includes apiBaseUrl origin in resourceDomains + connectDomains', () => {
@@ -403,9 +505,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
               status: 404,
             })
           }),
-          getProduct: vi
-            .fn()
-            .mockResolvedValue({ reference: 'prd_test', name: 'Test product' }),
+          getProduct: vi.fn().mockResolvedValue({ reference: 'prd_test', name: 'Test product' }),
           listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_basic', name: 'Basic' }]),
         } as unknown as SolvaPayClient,
       }),
@@ -500,6 +600,121 @@ describe('buildSolvaPayDescriptors → _meta["openai/widgetSessionId"] stamping'
     const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)!
     const result = await activate.handler({}, {})
     expect(metaKey(result)).toMatch(UUID_RE)
+  })
+})
+
+describe('deriveIcons', () => {
+  it('returns undefined when branding is absent', () => {
+    expect(deriveIcons(undefined)).toBeUndefined()
+  })
+
+  it('returns undefined when branding has neither icon nor logo', () => {
+    expect(deriveIcons({ brandName: 'Acme' })).toBeUndefined()
+  })
+
+  it('prefers iconUrl with sizes any + 512x512', () => {
+    expect(
+      deriveIcons({
+        iconUrl: 'https://cdn.example.com/icon.png',
+        logoUrl: 'https://cdn.example.com/logo.png',
+      }),
+    ).toEqual([{ src: 'https://cdn.example.com/icon.png', sizes: ['any', '512x512'] }])
+  })
+
+  it('falls back to logoUrl without sizes', () => {
+    expect(deriveIcons({ logoUrl: 'https://cdn.example.com/logo.png' })).toEqual([
+      { src: 'https://cdn.example.com/logo.png' },
+    ])
+  })
+})
+
+describe('TOOL_FOR_VIEW / VIEW_FOR_TOOL', () => {
+  it('maps each view to its intent tool and inverts cleanly', () => {
+    expect(TOOL_FOR_VIEW).toEqual({
+      checkout: 'upgrade',
+      account: 'manage_account',
+      topup: 'topup',
+    })
+    expect(VIEW_FOR_TOOL).toEqual({
+      upgrade: 'checkout',
+      manage_account: 'account',
+      topup: 'topup',
+    })
+    expect(OPEN_TOOL_FOR_VIEW).toBe(TOOL_FOR_VIEW)
+    expect(VIEW_FOR_OPEN_TOOL).toBe(VIEW_FOR_TOOL)
+  })
+})
+
+describe('buildSolvaPayPrompts', () => {
+  it('emits all four prompts when every view is enabled', () => {
+    const prompts = buildSolvaPayPrompts()
+    expect(prompts.map(p => p.name)).toEqual([
+      MCP_TOOL_NAMES.upgrade,
+      MCP_TOOL_NAMES.manageAccount,
+      MCP_TOOL_NAMES.topup,
+      MCP_TOOL_NAMES.activatePlan,
+    ])
+  })
+
+  it('drops upgrade + activate_plan prompts when checkout is disabled', () => {
+    const prompts = buildSolvaPayPrompts({
+      enabledViews: new Set(['account', 'topup']),
+    })
+    expect(prompts.map(p => p.name)).toEqual([MCP_TOOL_NAMES.manageAccount, MCP_TOOL_NAMES.topup])
+  })
+
+  it('renders exact user-message text with and without args', async () => {
+    const prompts = buildSolvaPayPrompts()
+    const byName = Object.fromEntries(prompts.map(p => [p.name, p]))
+
+    expect(await byName[MCP_TOOL_NAMES.upgrade]!.handler({ planRef: 'pln_pro' })).toEqual({
+      messages: [
+        { role: 'user', content: { type: 'text', text: 'Activate plan pln_pro for me.' } },
+      ],
+    })
+    expect(await byName[MCP_TOOL_NAMES.upgrade]!.handler({})).toEqual({
+      messages: [
+        {
+          role: 'user',
+          content: { type: 'text', text: 'Show me the upgrade options for my SolvaPay account.' },
+        },
+      ],
+    })
+    expect(await byName[MCP_TOOL_NAMES.manageAccount]!.handler({})).toEqual({
+      messages: [{ role: 'user', content: { type: 'text', text: 'Show me my SolvaPay account.' } }],
+    })
+    expect(await byName[MCP_TOOL_NAMES.topup]!.handler({ amount: '10' })).toEqual({
+      messages: [
+        {
+          role: 'user',
+          content: { type: 'text', text: 'Top up my SolvaPay credits by 10.' },
+        },
+      ],
+    })
+    expect(await byName[MCP_TOOL_NAMES.topup]!.handler({})).toEqual({
+      messages: [
+        {
+          role: 'user',
+          content: { type: 'text', text: 'I want to top up my SolvaPay credits.' },
+        },
+      ],
+    })
+    expect(await byName[MCP_TOOL_NAMES.activatePlan]!.handler({ planRef: 'pln_free' })).toEqual({
+      messages: [
+        {
+          role: 'user',
+          content: { type: 'text', text: 'Activate plan pln_free on my SolvaPay account.' },
+        },
+      ],
+    })
+    expect(await byName[MCP_TOOL_NAMES.activatePlan]!.handler({})).toEqual({
+      messages: [
+        {
+          role: 'user',
+          content: { type: 'text', text: 'What plans can I activate on my SolvaPay account?' },
+        },
+      ],
+    })
   })
 })
 

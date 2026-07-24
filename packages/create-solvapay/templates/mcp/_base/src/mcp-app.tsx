@@ -8,7 +8,7 @@
  *
  * Runtime-agnostic: the whole point of `@solvapay/mcp/fetch` is that
  * the iframe payload doesn't need to know which runtime serves it.
- * Mirrored byte-for-byte from `solvapay-sdk/examples/cloudflare-workers-mcp/src/mcp-app.tsx`.
+ * Mirrored byte-for-byte from `solvapay-sdk/examples/typescript/cloudflare-workers-mcp/src/mcp-app.tsx`.
  */
 
 import { createRoot } from 'react-dom/client'

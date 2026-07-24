@@ -1,0 +1,25 @@
+{
+  "suite": "business-details",
+  "case": "hu-reject",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "HU",
+      "taxId": "HU1234567"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": ["taxId"],
+            "message": "Enter a valid tax ID for HU"
+          }
+        ]
+      }
+    }
+  }
+}

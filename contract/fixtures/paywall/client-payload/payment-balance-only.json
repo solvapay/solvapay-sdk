@@ -1,0 +1,28 @@
+{
+  "suite": "paywall",
+  "case": "payment-balance-only",
+  "input": {
+    "fn": "paywallErrorToClientPayload",
+    "args": {
+      "message": "pay",
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "pay",
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": "Payment required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/x",
+      "message": "pay",
+      "kind": "payment_required",
+      "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+    }
+  }
+}

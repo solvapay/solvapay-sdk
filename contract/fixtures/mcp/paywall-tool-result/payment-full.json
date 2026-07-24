@@ -1,0 +1,32 @@
+{
+  "suite": "mcp",
+  "case": "payment-full",
+  "input": {
+    "fn": "paywallToolResult",
+    "args": {
+      "message": "pay",
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "pay",
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
+        "productDetails": { "name": "Demo", "reference": "prd_demo" }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "isError": false,
+      "content": [{ "type": "text", "text": "pay" }],
+      "structuredContent": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "pay",
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
+        "productDetails": { "name": "Demo", "reference": "prd_demo" }
+      }
+    }
+  }
+}

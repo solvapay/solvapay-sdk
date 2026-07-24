@@ -1,0 +1,65 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/solvapay-core",
+  "crates/solvapay-dto",
+  "crates/solvapay-transport",
+  "crates/solvapay",
+  "bindings/node",
+  "bindings/wasm",
+  "bindings/python",
+  "bindings/ruby/ext/solvapay",
+  "bindings/go/wasm",
+  "bindings/c",
+  "tools/dto-gen",
+  "tools/fixture-runner",
+  "tools/shadow-invoker",
+  "tools/live-contract",
+]
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.96"
+repository = "https://github.com/solvapay/solvapay-sdk"
+homepage = "https://solvapay.com"
+keywords = ["solvapay", "payments", "sdk", "billing"]
+categories = ["api-bindings", "finance"]
+
+[workspace.dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+serde_norway = "0.9.42"
+hmac = "0.13.0"
+sha2 = "0.11.0"
+subtle = "2.6.1"
+thiserror = "2.0.18"
+walkdir = "2.5.0"
+# Native HTTP (step 19): rustls only — no OpenSSL / default-tls.
+reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls"] }
+# Dev-only: mock-server round-trips + async test runtime (not in production graphs).
+tokio = { version = "1.52.4", features = ["rt", "macros"] }
+wiremock = "0.6.5"
+# WASM Fetch transport (step 20): versions must match wasm-bindgen-cli exactly.
+wasm-bindgen = "0.2.126"
+js-sys = "0.3.103"
+wasm-bindgen-futures = "0.4.76"
+web-sys = "0.3.103"
+wasm-bindgen-test = "0.3.76"
+
+[workspace.lints.rust]
+missing_docs = "deny"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+missing_docs_in_private_items = "deny"
+
+# §7.2 WASM size profile — used by later wasm-bindgen / WASI builds.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+panic = "abort"
+codegen-units = 1

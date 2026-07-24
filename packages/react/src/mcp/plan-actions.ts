@@ -9,7 +9,12 @@
  * pure-function target (no RTL needed).
  */
 
-export type PlanShape = 'free' | 'trial' | 'usage-based' | 'recurring-unlimited' | 'recurring-metered'
+export type PlanShape =
+  | 'free'
+  | 'trial'
+  | 'usage-based'
+  | 'recurring-unlimited'
+  | 'recurring-metered'
 
 /**
  * Strategy the Plan tab uses when the user clicks a plan card:
@@ -109,7 +114,11 @@ export interface PlanActionsInput {
   paidPlanCount: number
 }
 
-export function resolvePlanActions({ purchase, planCount, paidPlanCount }: PlanActionsInput): PlanActions {
+export function resolvePlanActions({
+  purchase,
+  planCount,
+  paidPlanCount,
+}: PlanActionsInput): PlanActions {
   const shape = resolvePlanShape(purchase?.planSnapshot)
   const hasPaymentMethod = Boolean(purchase?.hasPaymentMethod)
   const canOfferChange = planCount > 1
@@ -118,7 +127,11 @@ export function resolvePlanActions({ purchase, planCount, paidPlanCount }: PlanA
 
   return {
     topUp: shape === 'usage-based',
-    cancel: shape === 'recurring-unlimited' || shape === 'recurring-metered' || shape === 'free' || shape === 'trial',
+    cancel:
+      shape === 'recurring-unlimited' ||
+      shape === 'recurring-metered' ||
+      shape === 'free' ||
+      shape === 'trial',
     changePlan: canOfferChange && !canUpgrade,
     managePortal: hasPaymentMethod,
     upgrade: canUpgrade,
@@ -137,7 +150,9 @@ export type ActivityStripKind =
   | 'recurring-metered-usage'
   | 'free-usage'
 
-export function resolveActivityStrip(purchase: PurchaseSnapshotLike | null | undefined): ActivityStripKind {
+export function resolveActivityStrip(
+  purchase: PurchaseSnapshotLike | null | undefined,
+): ActivityStripKind {
   const shape = resolvePlanShape(purchase?.planSnapshot)
   if (!shape) return 'none'
   if (shape === 'usage-based') return 'payg-balance'

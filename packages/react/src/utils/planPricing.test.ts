@@ -14,9 +14,9 @@ const multiCurrencyPlan: Plan = {
 
 describe('planPricing', () => {
   it('falls back to legacy price and currency when pricingOptions are absent', () => {
-    expect(getPlanPricingOptions({ reference: 'pln_legacy', price: 2500, currency: 'GBP' })).toEqual([
-      { currency: 'GBP', price: 2500, default: true },
-    ])
+    expect(
+      getPlanPricingOptions({ reference: 'pln_legacy', price: 2500, currency: 'GBP' }),
+    ).toEqual([{ currency: 'GBP', price: 2500, default: true }])
   })
 
   it('resolves the requested currency option', () => {

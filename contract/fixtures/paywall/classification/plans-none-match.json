@@ -1,0 +1,15 @@
+{
+  "suite": "paywall",
+  "case": "plans-none-match",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_missing",
+        "remaining": 0,
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+      }
+    }
+  },
+  "expect": { "result": { "kind": "upgrade_required" } }
+}

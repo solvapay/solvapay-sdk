@@ -1,0 +1,25 @@
+{
+  "suite": "business-details",
+  "case": "business-invalid-tax-id",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "DE",
+      "taxId": "DE12"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": ["taxId"],
+            "message": "Enter a valid tax ID for DE"
+          }
+        ]
+      }
+    }
+  }
+}

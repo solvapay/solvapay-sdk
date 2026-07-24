@@ -49,7 +49,15 @@ vi.mock('../TopupForm', () => {
     Rows: () => null,
   }
   return {
-    TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary },
+    TopupForm: {
+      Root,
+      Loading,
+      PaymentElement,
+      Error: ErrorSlot,
+      SubmitButton,
+      BusinessDetails,
+      Summary,
+    },
   }
 })
 
@@ -534,9 +542,7 @@ describe('<CheckoutSteps> topup currency', () => {
         </CheckoutSteps.IfStep>
       </CheckoutSteps.Root>,
     )
-    const continueButton = await waitFor(
-      () => screen.getByTestId('continue') as HTMLButtonElement,
-    )
+    const continueButton = await waitFor(() => screen.getByTestId('continue') as HTMLButtonElement)
     expect(continueButton.disabled).toBe(true)
     const preset = await waitFor(
       () => document.querySelector('[data-amount="10"]') as HTMLElement | null,
@@ -698,12 +704,8 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
         <CheckoutSteps.StepMessage data-testid="message" />
       </CheckoutSteps.Root>,
     )
-    await waitFor(() =>
-      expect(screen.getByTestId('heading').textContent).toBe('Choose your plan'),
-    )
-    expect(screen.getByTestId('message').textContent).toBe(
-      'Pick the option that fits your usage.',
-    )
+    await waitFor(() => expect(screen.getByTestId('heading').textContent).toBe('Choose your plan'))
+    expect(screen.getByTestId('message').textContent).toBe('Pick the option that fits your usage.')
     expect(screen.getByTestId('heading').getAttribute('data-step')).toBe('plan')
   })
 
@@ -739,9 +741,7 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
         <CheckoutSteps.StepMessage data-testid="message" />
       </CheckoutSteps.Root>,
     )
-    await waitFor(() =>
-      expect(screen.getByTestId('heading').textContent).toBe('Complete payment'),
-    )
+    await waitFor(() => expect(screen.getByTestId('heading').textContent).toBe('Complete payment'))
     expect(screen.getByTestId('message').textContent).toBe(
       'Confirm your card to add credits to your balance.',
     )
@@ -760,9 +760,7 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
         <CheckoutSteps.StepMessage data-testid="message" />
       </CheckoutSteps.Root>,
     )
-    await waitFor(() =>
-      expect(screen.getByTestId('heading').textContent).toBe('Complete payment'),
-    )
+    await waitFor(() => expect(screen.getByTestId('heading').textContent).toBe('Complete payment'))
     expect(screen.getByTestId('message').textContent).toBe(
       'Confirm your card to start your Pro plan.',
     )
@@ -804,9 +802,7 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
         </CheckoutSteps.Root>
       </SolvaPayContext.Provider>,
     )
-    await waitFor(() =>
-      expect(screen.getByTestId('heading').textContent).toBe('Complete payment'),
-    )
+    await waitFor(() => expect(screen.getByTestId('heading').textContent).toBe('Complete payment'))
     expect(screen.getByTestId('message').textContent).toBe(
       'Confirm your card to complete the purchase.',
     )

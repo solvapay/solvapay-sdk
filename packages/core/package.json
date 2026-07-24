@@ -15,6 +15,11 @@
       "types": "./dist/business-details-public.d.ts",
       "import": "./dist/business-details-public.js",
       "require": "./dist/business-details-public.cjs"
+    },
+    "./browser-wasm": {
+      "types": "./dist/browser-wasm.d.ts",
+      "import": "./dist/browser-wasm.js",
+      "require": "./dist/browser-wasm.cjs"
     }
   },
   "files": [
@@ -30,10 +35,13 @@
     "url": "https://github.com/solvapay/solvapay-sdk.git",
     "directory": "packages/core"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/browser-wasm.js",
+    "./dist/browser-wasm.cjs"
+  ],
   "scripts": {
-    "build": "tsup src/index.ts src/business-details-public.ts --format esm,cjs --dts --tsconfig tsconfig.build.json && cp business-details-public.d.ts dist/business-details-public.d.ts",
-    "dev": "tsup src/index.ts src/business-details-public.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --watch",
+    "build": "tsup src/index.ts src/business-details-public.ts src/browser-wasm.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external @solvapay/server-wasm && cp business-details-public.d.ts dist/business-details-public.d.ts",
+    "dev": "tsup src/index.ts src/business-details-public.ts src/browser-wasm.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external @solvapay/server-wasm --watch",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",
@@ -42,6 +50,9 @@
   },
   "dependencies": {
     "zod": "^4.3.6"
+  },
+  "optionalDependencies": {
+    "@solvapay/server-wasm": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

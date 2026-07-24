@@ -120,9 +120,7 @@ export async function createTestPlan(
   freeUnitsOrOptions: number | CreateTestPlanOptions = 5,
 ): Promise<TestPlanSetup> {
   const opts: CreateTestPlanOptions =
-    typeof freeUnitsOrOptions === 'number'
-      ? { freeUnits: freeUnitsOrOptions }
-      : freeUnitsOrOptions
+    typeof freeUnitsOrOptions === 'number' ? { freeUnits: freeUnitsOrOptions } : freeUnitsOrOptions
 
   const planType = opts.type ?? 'recurring'
   const price = opts.price ?? 0

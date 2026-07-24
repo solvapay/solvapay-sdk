@@ -1,0 +1,73 @@
+name: Shadow Python (manual)
+
+# Live Python contract suite against a hosted backend.
+# Offline golden-fixture replay runs in the main CI `python-binding` job via
+# `pytest`. This workflow is dispatch-only until a hosted contract env exists
+# (see rust-migration-map open handoff items). Mirrors `.github/workflows/shadow.yml`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'SOLVAPAY_SHADOW_BASE_URL'
+        required: true
+        type: string
+      enable_stripe:
+        description: 'Run requires:stripe scenarios'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  shadow-python-live:
+    name: Python live contract
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust/bindings/python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Rust toolchain
+        working-directory: rust
+        run: rustup show
+
+      - name: Build abi3 wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: x86_64
+          manylinux: auto
+          args: --release --out dist
+          working-directory: rust/bindings/python
+          sccache: 'true'
+
+      - name: Install wheel
+        shell: bash
+        run: |
+          python -m venv .ci-venv
+          .ci-venv/bin/pip install -U pip
+          wheel="$(ls dist/*.whl | head -n1)"
+          .ci-venv/bin/pip install "${wheel}"
+
+      - name: Run live Python contract suite
+        env:
+          SOLVAPAY_SHADOW_BASE_URL: ${{ inputs.base_url }}
+          SOLVAPAY_SHADOW_API_KEY: ${{ secrets.SOLVAPAY_SHADOW_API_KEY }}
+          SOLVAPAY_SHADOW_ENABLE_STRIPE: ${{ inputs.enable_stripe }}
+          SOLVAPAY_LIVE_OUT: ${{ github.workspace }}/contract/shadow/output/python-live-report.json
+        run: |
+          mkdir -p "${{ github.workspace }}/contract/shadow/output"
+          .ci-venv/bin/python scripts/live_contract.py
+
+      - name: Upload python-live-report.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-live-report
+          path: contract/shadow/output/python-live-report.json

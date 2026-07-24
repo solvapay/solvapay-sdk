@@ -1,0 +1,22 @@
+{
+  "suite": "business-details",
+  "case": "non-business-with-country-and-name",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": false,
+      "customerCountry": "se",
+      "customerName": "  Jane Doe  "
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": false,
+        "customerCountry": "SE",
+        "customerName": "Jane Doe"
+      }
+    }
+  }
+}

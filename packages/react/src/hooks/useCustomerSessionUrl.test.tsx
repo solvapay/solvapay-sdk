@@ -1,10 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
-import {
-  useCustomerSessionUrl,
-  __resetCustomerSessionStore,
-} from './useCustomerSessionUrl'
+import { useCustomerSessionUrl, __resetCustomerSessionStore } from './useCustomerSessionUrl'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue, SolvaPayConfig } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
@@ -69,9 +66,7 @@ function wrapperFor(transport: NonNullable<SolvaPayConfig['transport']>) {
 describe('useCustomerSessionUrl', () => {
   it('starts loading on mount and resolves to the customer portal URL', async () => {
     const transport = buildTransport({
-      createCustomerSession: vi
-        .fn()
-        .mockResolvedValue({ customerUrl: 'https://portal.test/abc' }),
+      createCustomerSession: vi.fn().mockResolvedValue({ customerUrl: 'https://portal.test/abc' }),
     })
 
     const { result } = renderHook(() => useCustomerSessionUrl(), {

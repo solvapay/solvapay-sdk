@@ -22,9 +22,16 @@ config({ path: resolve(__dirname, '.env'), override: true })
  */
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@solvapay/core': resolve(__dirname, '../core/src'),
+      '@solvapay/mcp-core': resolve(__dirname, '../mcp-core/src'),
+    },
+  },
   test: {
     environment: 'node',
     globals: true,
+    setupFiles: ['./vitest.setup.ts'],
     include: ['__tests__/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
     // Increase timeout for integration tests (default is 5000ms)
     // Integration tests make multiple slow API calls to real backend

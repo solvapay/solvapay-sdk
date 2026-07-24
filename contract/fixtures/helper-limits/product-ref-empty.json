@@ -1,0 +1,17 @@
+{
+  "suite": "helper-limits",
+  "case": "product-ref-empty",
+  "input": {
+    "fn": "resolveCheckLimitsParams",
+    "args": {
+      "productRef": "",
+      "meterName": "requests"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing required parameter: productRef",
+      "status": 400
+    }
+  }
+}

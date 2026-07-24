@@ -1,0 +1,20 @@
+{
+  "suite": "helper-balance-poll",
+  "case": "topup-table",
+  "input": {
+    "fn": "pollBalanceUntilIncreased",
+    "args": {
+      "baseline": 400,
+      "observations": [
+        { "credits": 400 },
+        { "credits": 400 },
+        { "credits": 400 },
+        { "credits": 400 }
+      ],
+      "delays": "topup"
+    }
+  },
+  "expect": {
+    "result": { "delays": [500, 1000, 2000, 4000], "result": null }
+  }
+}

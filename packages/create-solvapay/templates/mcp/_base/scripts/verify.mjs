@@ -84,24 +84,22 @@ async function main() {
   const toolsResult = await runToolsListCheck(base, rpcOptions)
   checks.toolsList = toolsResult
 
-  // `paywallGate` needs the catalog to pick a candidate tool. When the
-  // worker is gated (`requireAuth: true` default) and no credentials
-  // were supplied, the gate check has to be skipped — that's a known
-  // limitation of an anonymous probe, not a worker bug. With
-  // `--credentials-file`, the catalog is available so the gate check
-  // runs against authenticated tool calls.
+  // `paywallGate` needs credentials: `tools/call` is gated under the
+  // SDK default `requireAuth: true` even though discovery is anonymous.
+  // Without `--credentials-file`, skip the gate check — that's expected,
+  // not a worker bug. With credentials, call paid tools and look for
+  // the SolvaPay paywall envelope.
   const candidates =
     toolsResult.status === 'passed' && Array.isArray(toolsResult.value.names)
       ? findToolCandidates(toolsResult.value.names)
       : []
-  checks.paywallGate =
-    toolsResult.status === 'passed' && toolsResult.value.authRequired && !bearerToken
-      ? {
-          status: 'skipped',
-          reason:
-            'worker requires bearer auth; pass `--credentials-file <path>` from `mcpjam oauth login --credentials-out` to exercise the paywall gate',
-        }
-      : await runPaywallGateCheck(base, candidates, rpcOptions)
+  checks.paywallGate = !bearerToken
+    ? {
+        status: 'skipped',
+        reason:
+          'tools/call requires bearer auth; pass `--credentials-file <path>` from `mcpjam oauth login --credentials-out` to exercise the paywall gate',
+      }
+    : await runPaywallGateCheck(base, candidates, rpcOptions)
 
   // `merchantBootstrap` exercises the SolvaPay bootstrap path by
   // calling `manage_account` (an intent tool, always registered) and
@@ -156,16 +154,12 @@ async function run(fn) {
 }
 
 /**
- * Two valid contract shapes for `tools/list`:
+ * Contract for `tools/list`: anonymous discovery must succeed (SDK
+ * `requireAuth` gates only `tools/call`). Assert intent tools present
+ * and no UI-only tools leak into the text catalog.
  *
- * 1. Anonymous list succeeds → assert intent tools present + no UI leak.
- * 2. Anonymous list returns `401` with a well-formed
- *    `WWW-Authenticate: Bearer resource_metadata="…"` challenge →
- *    server is correctly gated, treat as passed and surface
- *    `authRequired: true` so the downstream paywall check knows to
- *    skip itself.
- *
- * A 401 without a challenge, or any other error, is a real failure.
+ * A 401 on `tools/list` is a failure — the worker is incorrectly
+ * gating discovery (outdated SDK or a fully-private origin).
  */
 async function runToolsListCheck(base, rpcOptions = {}) {
   try {
@@ -179,19 +173,14 @@ async function runToolsListCheck(base, rpcOptions = {}) {
       leakedUi.length === 0,
       `UI-only tools leaked to text catalog: ${leakedUi.join(', ')}. Set \`hideToolsByAudience: ['ui']\`.`,
     )
-    return { status: 'passed', value: { toolCount: names.length, names, authRequired: false } }
+    return { status: 'passed', value: { toolCount: names.length, names } }
   } catch (err) {
     if (err instanceof RpcError && err.info?.httpStatus === 401) {
       const challenge = err.info.wwwAuthenticate ?? ''
-      if (/^Bearer\b/i.test(challenge) && /resource_metadata="/.test(challenge)) {
-        return {
-          status: 'passed',
-          value: { authRequired: true, wwwAuthenticate: challenge },
-        }
-      }
       return {
         status: 'failed',
-        error: 'worker returned 401 without a well-formed `WWW-Authenticate: Bearer …` challenge',
+        error:
+          'worker gated tools/list; discovery must be anonymous under current @solvapay/mcp (only tools/call requires auth)',
         info: { wwwAuthenticate: challenge || null },
       }
     }

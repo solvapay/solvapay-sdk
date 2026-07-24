@@ -131,8 +131,7 @@ export function createAuthMiddleware(options: AuthMiddlewareOptions) {
     const identity = await resolveIdentity(adapter, req)
     const userId = identity?.userId ?? null
 
-    const isProtectedApiRoute =
-      pathname.startsWith(protectedRoutePrefix) && !isPublicRoute
+    const isProtectedApiRoute = pathname.startsWith(protectedRoutePrefix) && !isPublicRoute
 
     if (isProtectedApiRoute && !userId) {
       const unauthorized = NextResponse.json(

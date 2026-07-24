@@ -1,0 +1,35 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "disableAutoRecharge",
+    "args": {
+      "customerRef": "cus_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "disable-auto-recharge-success",
+  "wire": {
+    "request": {
+      "method": "DELETE",
+      "path": "/v1/sdk/auto-recharge",
+      "query": {
+        "customerRef": "cus_fixture"
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "success": true
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true
+    }
+  }
+}

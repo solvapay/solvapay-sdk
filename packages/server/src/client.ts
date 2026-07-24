@@ -9,6 +9,137 @@
 import { SolvaPayError } from '@solvapay/core'
 import type { SolvaPayClient } from './types'
 
+/** Groups A–C methods delegated to napi `NativeClient` (Node) or WASM (edge). */
+type NativeClientMethod =
+  | 'createCustomer'
+  | 'updateCustomer'
+  | 'getCustomer'
+  | 'assignCredits'
+  | 'getCustomerBalance'
+  | 'getUserInfo'
+  | 'createCheckoutSession'
+  | 'createCustomerSession'
+  | 'getMerchant'
+  | 'getPlatformConfig'
+  | 'createPaymentIntent'
+  | 'createTopupPaymentIntent'
+  | 'processPaymentIntent'
+  | 'attachBusinessDetails'
+  | 'activatePlan'
+  | 'checkLimits'
+  | 'trackUsage'
+  | 'trackUsageBulk'
+  | 'getProduct'
+  | 'listProducts'
+  | 'createProduct'
+  | 'updateProduct'
+  | 'deleteProduct'
+  | 'cloneProduct'
+  | 'bootstrapMcpProduct'
+  | 'configureMcpPlans'
+  | 'listPlans'
+  | 'createPlan'
+  | 'updatePlan'
+  | 'deletePlan'
+  | 'cancelPurchase'
+  | 'reactivatePurchase'
+  | 'getPaymentMethod'
+  | 'getAutoRecharge'
+  | 'saveAutoRecharge'
+  | 'disableAutoRecharge'
+
+/**
+ * True on Deno / Cloudflare Workers / Vercel Edge-light — even when those
+ * hosts expose a `process` / `nodejs_compat` shim that looks Node-like.
+ */
+function isEdgeRuntime(): boolean {
+  try {
+    if ((globalThis as { Deno?: unknown }).Deno !== undefined) return true
+  } catch {
+    // ignore
+  }
+  try {
+    const nav = (globalThis as { navigator?: { userAgent?: string } }).navigator
+    if (nav?.userAgent === 'Cloudflare-Workers') return true
+  } catch {
+    // ignore
+  }
+  try {
+    if ((globalThis as { EdgeRuntime?: unknown }).EdgeRuntime !== undefined) {
+      return true
+    }
+  } catch {
+    // ignore
+  }
+  return false
+}
+
+/**
+ * True on the Node.js runtime (not Deno / Workers / edge-light). Deno and
+ * Workers are treated as edge even when they expose a `process` shim.
+ */
+function isNodeRuntime(): boolean {
+  try {
+    if (isEdgeRuntime()) return false
+    return (
+      typeof process !== 'undefined' &&
+      typeof process.versions === 'object' &&
+      process.versions != null &&
+      typeof process.versions.node === 'string'
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Whether this runtime may attempt the Node napi client path.
+ * Edge / browser must never load `./native` (`node:module`).
+ */
+function shouldAttemptNativeClient(): boolean {
+  return isNodeRuntime()
+}
+
+/**
+ * Dynamically load the Node-only `./native` dispatch module.
+ *
+ * Prefer a relative `./native.js` import first so vitest / plain Node share the
+ * same module instance as `setNativeClientForTests`. When a bundler (Next
+ * webpack/Turbopack) rewrites that relative specifier into a broken context
+ * module, fall back to an absolute `file:` URL resolved via createRequire.
+ */
+async function importNativeDispatch(): Promise<unknown> {
+  const nativeSpecifier = ['./', 'native.js'].join('')
+  try {
+    return await import(/* webpackIgnore: true */ nativeSpecifier)
+  } catch {
+    // Bundler rewrote the relative import — resolve from the installed package.
+  }
+
+  type NodeModuleBuiltin = {
+    createRequire: (filename: string) => { resolve: (id: string) => string }
+  }
+
+  const nodeModule = (
+    process as NodeJS.Process & {
+      getBuiltinModule?: (id: string) => NodeModuleBuiltin | undefined
+    }
+  ).getBuiltinModule?.('module')
+
+  if (!nodeModule?.createRequire) {
+    throw new SolvaPayError('SolvaPay native dispatch module (./native.js) is not available')
+  }
+
+  const require = nodeModule.createRequire(`${process.cwd()}/package.json`)
+  const serverEntry = require.resolve(['@solvapay/', 'server'].join(''))
+  const [{ dirname, join }, { pathToFileURL }] = await Promise.all([
+    import('node:path'),
+    import('node:url'),
+  ])
+  const nativeHref = pathToFileURL(join(dirname(serverEntry), 'native.js')).href
+  return import(/* webpackIgnore: true */ nativeHref)
+}
+
 /**
  * Configuration options for creating a SolvaPay API client
  */
@@ -60,965 +191,206 @@ export type ServerClientOptions = {
  * @since 1.0.0
  */
 export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient {
-  const base = opts.apiBaseUrl ?? 'https://api.solvapay.com'
   if (!opts.apiKey) throw new SolvaPayError('Missing apiKey')
 
-  const headers = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${opts.apiKey}`,
-  }
+  const nativeConfig = { apiKey: opts.apiKey, apiBaseUrl: opts.apiBaseUrl }
 
-  // Enable debug logging via environment variable (same pattern as paywall)
-  const debug = process.env.SOLVAPAY_DEBUG === 'true'
-  const log = (...args: unknown[]) => {
-    if (debug) {
-      // eslint-disable-next-line no-console
-      console.log(...args)
+  /**
+   * Dispatches a Groups A–C client method to a Rust binding. Rust-only after
+   * Step 53 — there is no TypeScript `fetch` fallback. Returns the envelope
+   * `value` verbatim (no TS response normalization); HTTP + JSON handling lives
+   * entirely in `solvapay_core` (napi `reqwest` / WASM `FetchTransport`).
+   *
+   * Missing bindings throw instead of silently degrading.
+   *
+   * Runtime split (both via dynamic import so neither graph statically pulls the
+   * other):
+   * - Edge (Deno / Workers / edge-light) → `@solvapay/server-wasm` via `./wasm`.
+   *   The edge bundle never imports `./native` / `node:module`.
+   * - Node → `@solvapay/server-native` via `./native`.
+   * - Node vitest with an injected `WasmClient` override → the WASM path (so
+   *   `client-wasm-dispatch` / fixtures can exercise edge dispatch under Node
+   *   and capture the wire via a stubbed `globalThis.fetch`).
+   */
+  async function dispatchClient<T>(fn: NativeClientMethod, params: unknown): Promise<T> {
+    const argsJson = JSON.stringify(params ?? {})
+
+    // Edge (Deno / Workers / edge-light) — never touch `./native`.
+    // Also used under Node vitest when a fake WasmClient override is installed.
+    if (!isNodeRuntime()) {
+      const wasm = await import('./wasm')
+      return (await wasm.callWasm(fn, argsJson, nativeConfig)) as T
     }
+
+    // Node vitest: injected WasmClient forces the edge dispatch path without
+    // requiring a Deno/Workers runtime.
+    const wasm = await import('./wasm')
+    if (wasm.isWasmClientOverrideActive()) {
+      return (await wasm.callWasm(fn, argsJson, nativeConfig)) as T
+    }
+
+    if (!shouldAttemptNativeClient()) {
+      throw new SolvaPayError('server client API not installed')
+    }
+    // Resolve `dist/native.js` via an absolute file URL so Next/webpack/Turbopack
+    // cannot rewrite a relative `./native.js` into a broken context module.
+    // `webpackIgnore` keeps the dynamic import as a real Node ESM import.
+    // The non-literal package/`native.js` join also keeps edge rebundlers from
+    // statically pulling this Node-only graph into a Workers bundle.
+    const { callNative } = (await importNativeDispatch()) as {
+      callNative: (
+        method: NativeClientMethod,
+        json: string,
+        config: { apiKey: string; apiBaseUrl?: string },
+      ) => Promise<unknown>
+    }
+    return (await callNative(fn, argsJson, nativeConfig)) as T
   }
 
   return {
-    // POST: /v1/sdk/limits
     async checkLimits(params) {
-      const url = `${base}/v1/sdk/limits`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Check limits failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      return result
+      return dispatchClient('checkLimits', params)
     },
 
-    // POST: /v1/sdk/usages
     async trackUsage(params) {
-      const url = `${base}/v1/sdk/usages`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Track usage failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('trackUsage', params)
     },
 
-    // POST: /v1/sdk/usages/bulk
     async trackUsageBulk(params) {
-      const url = `${base}/v1/sdk/usages/bulk`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Track usage bulk failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('trackUsageBulk', params)
     },
 
-    // POST: /v1/sdk/customers
     async createCustomer(params) {
-      const url = `${base}/v1/sdk/customers`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create customer failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      return {
-        customerRef: result.reference || result.customerRef,
-      }
+      return dispatchClient('createCustomer', params)
     },
 
-    // PATCH: /v1/sdk/customers/{customerRef}
+    // Rust splits path vs body from a single args object (fixture parity).
     async updateCustomer(customerRef, params) {
-      const url = `${base}/v1/sdk/customers/${encodeURIComponent(customerRef)}`
-
-      const res = await fetch(url, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Update customer failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      return {
-        customerRef: result.reference || result.customerRef || customerRef,
-      }
+      return dispatchClient('updateCustomer', { customerRef, ...params })
     },
 
-    // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}|email={email}
     async getCustomer(params) {
-      let url
-      let isByExternalRef = false
-      let isByEmail = false
-
-      if (params.externalRef) {
-        url = `${base}/v1/sdk/customers?externalRef=${encodeURIComponent(params.externalRef)}`
-        isByExternalRef = true
-      } else if (params.email) {
-        url = `${base}/v1/sdk/customers?email=${encodeURIComponent(params.email)}`
-        isByEmail = true
-      } else if (params.customerRef) {
-        url = `${base}/v1/sdk/customers/${params.customerRef}`
-      } else {
-        throw new SolvaPayError('One of customerRef, externalRef, or email must be provided')
-      }
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get customer failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-
-      // If getting by externalRef, support all backend response shapes:
-      // - direct customer object
-      // - array of customers
-      // - wrapped object with `customers` or `customer`
-      let customer = result
-      if (isByExternalRef || isByEmail) {
-        const directCustomer =
-          result &&
-          typeof result === 'object' &&
-          (result.reference || result.customerRef || result.externalRef)
-            ? result
-            : undefined
-
-        const wrappedCustomer =
-          result && typeof result === 'object' && result.customer ? result.customer : undefined
-
-        const customers = Array.isArray(result)
-          ? result
-          : result && typeof result === 'object' && Array.isArray(result.customers)
-            ? result.customers
-            : []
-
-        customer = directCustomer || wrappedCustomer || customers[0]
-
-        if (!customer) {
-          throw new SolvaPayError(`No customer found with externalRef: ${params.externalRef}`)
-        }
-      }
-
-      // Map response fields to expected format
-      // Note: purchases may include additional fields like endDate, cancelledAt
-      // even though they're not in the PurchaseInfo type definition
-      return {
-        customerRef: customer.reference || customer.customerRef,
-        email: customer.email,
-        name: customer.name,
-        externalRef: customer.externalRef,
-        purchases: customer.purchases || [],
-      }
+      return dispatchClient('getCustomer', params)
     },
 
-    // POST: /v1/sdk/customers/{reference}/credits
     async assignCredits(params) {
-      const { customerRef, idempotencyKey, ...body } = params
-      const url = `${base}/v1/sdk/customers/${encodeURIComponent(customerRef)}/credits`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
-        },
-        body: JSON.stringify(body),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Assign credits failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('assignCredits', params)
     },
 
-    // GET: /v1/sdk/merchant
     async getMerchant() {
-      const url = `${base}/v1/sdk/merchant`
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get merchant failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return res.json()
+      return dispatchClient('getMerchant', {})
     },
 
-    // GET: /v1/sdk/platform-config
     async getPlatformConfig() {
-      const url = `${base}/v1/sdk/platform-config`
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get platform config failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return res.json()
+      return dispatchClient('getPlatformConfig', {})
     },
 
-    // GET: /v1/sdk/products/{productRef}
     async getProduct(productRef) {
-      const url = `${base}/v1/sdk/products/${encodeURIComponent(productRef)}`
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      const data = (result.data as Record<string, unknown>) || {}
-      return { ...data, ...result }
+      return dispatchClient('getProduct', { productRef })
     },
 
-    // Product management methods (primarily for integration tests)
-
-    // GET: /v1/sdk/products
     async listProducts() {
-      const url = `${base}/v1/sdk/products`
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`List products failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      // Handle both direct array and wrapped object formats
-      const products = Array.isArray(result) ? result : result.products || []
-
-      // Unwrap data field if present
-      return products.map((product: Record<string, unknown>) => ({
-        ...product,
-        ...((product.data as Record<string, unknown>) || {}),
-      }))
+      return dispatchClient('listProducts', {})
     },
 
-    // POST: /v1/sdk/products
     async createProduct(params) {
-      const url = `${base}/v1/sdk/products`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      return result
+      return dispatchClient('createProduct', params)
     },
 
-    // POST: /v1/sdk/products/mcp/bootstrap
     async bootstrapMcpProduct(params) {
-      const url = `${base}/v1/sdk/products/mcp/bootstrap`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Bootstrap MCP product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('bootstrapMcpProduct', params)
     },
 
-    // PUT: /v1/sdk/products/{productRef}/mcp/plans
     async configureMcpPlans(productRef, params) {
-      const url = `${base}/v1/sdk/products/${productRef}/mcp/plans`
-
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Configure MCP plans failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('configureMcpPlans', { productRef, ...params })
     },
 
-    // DELETE: /v1/sdk/products/{productRef}
+    async updateProduct(productRef, params) {
+      return dispatchClient('updateProduct', { productRef, ...params })
+    },
+
     async deleteProduct(productRef) {
-      const url = `${base}/v1/sdk/products/${productRef}`
-
-      const res = await fetch(url, {
-        method: 'DELETE',
-        headers,
-      })
-
-      if (!res.ok && res.status !== 404) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Delete product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
+      return dispatchClient('deleteProduct', { productRef })
     },
 
-    // POST: /v1/sdk/products/{productRef}/clone
     async cloneProduct(productRef, overrides) {
-      const url = `${base}/v1/sdk/products/${productRef}/clone`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(overrides || {}),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Clone product failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('cloneProduct', { productRef, ...(overrides ?? {}) })
     },
 
-    // GET: /v1/sdk/products/{productRef}/plans
     async listPlans(productRef) {
-      const url = `${base}/v1/sdk/products/${productRef}/plans`
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`List plans failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-
-      // Handle both direct array and wrapped object formats
-      const plans = Array.isArray(result) ? result : result.plans || []
-
-      // Unwrap data field if present, preserving all plan properties
-      // Spread plan.data first, then plan, so plan properties take precedence
-      return plans.map((plan: Record<string, unknown>) => {
-        const data = (plan.data as Record<string, unknown>) || {}
-        const price = plan.price ?? data.price
-
-        const unwrapped: Record<string, unknown> = {
-          ...data,
-          ...plan,
-          ...(price !== undefined && { price }),
-        }
-        delete unwrapped.data
-
-        return unwrapped
-      })
+      return dispatchClient('listPlans', { productRef })
     },
 
-    // POST: /v1/sdk/products/{productRef}/plans
     async createPlan(params) {
-      const url = `${base}/v1/sdk/products/${params.productRef}/plans`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create plan failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      return result
+      return dispatchClient('createPlan', params)
     },
 
-    // PUT: /v1/sdk/products/{productRef}/plans/{planRef}
     async updatePlan(productRef, planRef, params) {
-      const url = `${base}/v1/sdk/products/${productRef}/plans/${planRef}`
-
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Update plan failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('updatePlan', { productRef, planRef, ...params })
     },
 
-    // DELETE: /v1/sdk/products/{productRef}/plans/{planRef}
     async deletePlan(productRef, planRef) {
-      const url = `${base}/v1/sdk/products/${productRef}/plans/${planRef}`
-
-      const res = await fetch(url, {
-        method: 'DELETE',
-        headers,
-      })
-
-      if (!res.ok && res.status !== 404) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Delete plan failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
+      return dispatchClient('deletePlan', { productRef, planRef })
     },
 
-    // POST: /payment-intents
     async createPaymentIntent(params) {
-      const idempotencyKey =
-        params.idempotencyKey ||
-        `payment-${params.planRef}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
-      const url = `${base}/v1/sdk/payment-intents`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Idempotency-Key': idempotencyKey,
-        },
-        body: JSON.stringify({
-          productRef: params.productRef,
-          planRef: params.planRef,
-          customerRef: params.customerRef,
-          ...(params.currency && { currency: params.currency }),
-        }),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create payment intent failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('createPaymentIntent', params)
     },
 
-    // POST: /v1/sdk/payment-intents (purpose: credit_topup)
     async createTopupPaymentIntent(params) {
-      const idempotencyKey =
-        params.idempotencyKey || `topup-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
-      const url = `${base}/v1/sdk/payment-intents`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Idempotency-Key': idempotencyKey,
-        },
-        body: JSON.stringify({
-          customerRef: params.customerRef,
-          purpose: 'credit_topup',
-          amount: params.amount,
-          currency: params.currency,
-          description: params.description,
-          ...(params.autoRecharge ? { autoRecharge: params.autoRecharge } : {}),
-        }),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create topup payment intent failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('createTopupPaymentIntent', params)
     },
 
-    // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
     async processPaymentIntent(params) {
-      const url = `${base}/v1/sdk/payment-intents/${params.paymentIntentId}/process`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          productRef: params.productRef,
-          customerRef: params.customerRef,
-          planRef: params.planRef,
-        }),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Process payment failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      return result
+      return dispatchClient('processPaymentIntent', params)
     },
 
-    // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
     async attachBusinessDetails(params) {
-      const url = `${base}/v1/sdk/payment-intents/${params.paymentIntentId}/business-details`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          isBusiness: params.isBusiness,
-          ...(params.businessName !== undefined && { businessName: params.businessName }),
-          ...(params.country !== undefined && { country: params.country }),
-          ...(params.taxId !== undefined && { taxId: params.taxId }),
-          ...(params.taxIdType !== undefined && { taxIdType: params.taxIdType }),
-          ...(params.customerRef !== undefined && { customerRef: params.customerRef }),
-        }),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(
-          `Attach business details failed (${res.status}): ${error}`,
-          { status: res.status },
-        )
-      }
-
-      return await res.json()
+      return dispatchClient('attachBusinessDetails', params)
     },
 
-    // POST: /v1/sdk/purchases/{purchaseRef}/cancel
     async cancelPurchase(params) {
-      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/cancel`
-
-      // Prepare request options
-      const requestOptions: RequestInit = {
-        method: 'POST',
-        headers,
-      }
-
-      // Only include body if reason is provided (backend body is optional)
-      if (params.reason) {
-        requestOptions.body = JSON.stringify({ reason: params.reason })
-      }
-
-      const res = await fetch(url, requestOptions)
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-
-        if (res.status === 404) {
-          throw new SolvaPayError(`Purchase not found: ${error}`, { status: 404 })
-        }
-
-        if (res.status === 400) {
-          throw new SolvaPayError(
-            `Purchase cannot be cancelled or does not belong to provider: ${error}`,
-            { status: 400 },
-          )
-        }
-
-        throw new SolvaPayError(`Cancel purchase failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      // Get response text first to debug any parsing issues
-      const responseText = await res.text()
-
-      let responseData
-      try {
-        responseData = JSON.parse(responseText)
-      } catch (parseError) {
-        log(`❌ Failed to parse response as JSON: ${parseError}`)
-        throw new SolvaPayError(
-          `Invalid JSON response from cancel purchase endpoint: ${responseText.substring(0, 200)}`,
-        )
-      }
-
-      // Validate response structure
-      if (!responseData || typeof responseData !== 'object') {
-        log(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
-        throw new SolvaPayError(`Invalid response structure from cancel purchase endpoint`)
-      }
-
-      // Backend returns nested structure: { purchase: {...}, message: "..." }
-      // Extract the purchase object from the response
-      let result
-      if (responseData.purchase && typeof responseData.purchase === 'object') {
-        result = responseData.purchase
-      } else if (responseData.reference) {
-        result = responseData
-      } else {
-        // Try to extract anyway or use the whole response
-        result = responseData.purchase || responseData
-      }
-
-      // Check if response has expected fields
-      if (!result || typeof result !== 'object') {
-        log(`❌ Invalid purchase data in response. Full response:`, responseData)
-        throw new SolvaPayError(`Invalid purchase data in cancel purchase response`)
-      }
-
-      return result
+      return dispatchClient('cancelPurchase', params)
     },
 
-    // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
     async reactivatePurchase(params) {
-      const url = `${base}/v1/sdk/purchases/${params.purchaseRef}/reactivate`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-
-        if (res.status === 404) {
-          throw new SolvaPayError(`Purchase not found: ${error}`, { status: 404 })
-        }
-
-        if (res.status === 400) {
-          throw new SolvaPayError(`Purchase cannot be reactivated: ${error}`, { status: 400 })
-        }
-
-        throw new SolvaPayError(`Reactivate purchase failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const responseText = await res.text()
-
-      let responseData
-      try {
-        responseData = JSON.parse(responseText)
-      } catch (parseError) {
-        log(`❌ Failed to parse response as JSON: ${parseError}`)
-        throw new SolvaPayError(
-          `Invalid JSON response from reactivate purchase endpoint: ${responseText.substring(0, 200)}`,
-        )
-      }
-
-      if (!responseData || typeof responseData !== 'object') {
-        log(`❌ Invalid response structure: ${JSON.stringify(responseData)}`)
-        throw new SolvaPayError(`Invalid response structure from reactivate purchase endpoint`)
-      }
-
-      let result
-      if (responseData.purchase && typeof responseData.purchase === 'object') {
-        result = responseData.purchase
-      } else if (responseData.reference) {
-        result = responseData
-      } else {
-        result = responseData.purchase || responseData
-      }
-
-      if (!result || typeof result !== 'object') {
-        log(`❌ Invalid purchase data in response. Full response:`, responseData)
-        throw new SolvaPayError(`Invalid purchase data in reactivate purchase response`)
-      }
-
-      return result
+      return dispatchClient('reactivatePurchase', params)
     },
 
-    // POST: /v1/sdk/user-info
     async getUserInfo(params) {
-      const url = `${base}/v1/sdk/user-info`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get user info failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('getUserInfo', params)
     },
 
-    // GET: /v1/sdk/customers/:customerRef/balance
     async getCustomerBalance(params) {
-      const url = `${base}/v1/sdk/customers/${params.customerRef}/balance`
-
-      const res = await fetch(url, {
-        method: 'GET',
-        headers,
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get customer balance failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('getCustomerBalance', params)
     },
 
-    // POST: /v1/sdk/checkout-sessions
     async createCheckoutSession(params) {
-      const url = `${base}/v1/sdk/checkout-sessions`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create checkout session failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      return result
+      return dispatchClient('createCheckoutSession', params)
     },
 
-    // POST: /v1/sdk/customers/customer-sessions
     async createCustomerSession(params) {
-      const url = `${base}/v1/sdk/customers/customer-sessions`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Create customer session failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      const result = await res.json()
-      return result
+      return dispatchClient('createCustomerSession', params)
     },
 
-    // POST: /v1/sdk/activate
     async activatePlan(params) {
-      const url = `${base}/v1/sdk/activate`
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Activate plan failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('activatePlan', params)
     },
 
     async getPaymentMethod(params) {
-      const url = new URL(`${base}/v1/sdk/payment-method`)
-      url.searchParams.set('customerRef', params.customerRef)
-
-      const res = await fetch(url.toString(), { method: 'GET', headers })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get payment method failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('getPaymentMethod', params)
     },
 
     async getAutoRecharge(params) {
-      const url = new URL(`${base}/v1/sdk/auto-recharge`)
-      url.searchParams.set('customerRef', params.customerRef)
-
-      const res = await fetch(url.toString(), { method: 'GET', headers })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Get auto-recharge failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('getAutoRecharge', params)
     },
 
     async saveAutoRecharge(params) {
-      const res = await fetch(`${base}/v1/sdk/auto-recharge`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(params),
-      })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Save auto-recharge failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('saveAutoRecharge', params)
     },
 
     async disableAutoRecharge(params) {
-      const url = new URL(`${base}/v1/sdk/auto-recharge`)
-      url.searchParams.set('customerRef', params.customerRef)
-
-      const res = await fetch(url.toString(), { method: 'DELETE', headers })
-
-      if (!res.ok) {
-        const error = await res.text()
-        log(`❌ API Error: ${res.status} - ${error}`)
-        throw new SolvaPayError(`Disable auto-recharge failed (${res.status}): ${error}`, {
-          status: res.status,
-        })
-      }
-
-      return await res.json()
+      return dispatchClient('disableAutoRecharge', params)
     },
   }
 }

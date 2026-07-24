@@ -1,0 +1,24 @@
+{
+  "suite": "helper-balance-poll",
+  "case": "default-table-is-reconcile",
+  "input": {
+    "fn": "pollBalanceUntilIncreased",
+    "args": {
+      "baseline": 400,
+      "observations": [
+        { "credits": 400 },
+        { "credits": 400 },
+        { "credits": 400 },
+        { "credits": 400 },
+        { "credits": 400 },
+        { "credits": 400 }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "delays": [500, 1000, 2000, 4000, 8000, 16000],
+      "result": null
+    }
+  }
+}

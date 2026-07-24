@@ -1,0 +1,24 @@
+{
+  "suite": "business-details",
+  "case": "business-unsupported-country",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "JP"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": false,
+      "error": {
+        "issues": [
+          {
+            "path": ["country"],
+            "message": "Country is not supported for business purchases"
+          }
+        ]
+      }
+    }
+  }
+}

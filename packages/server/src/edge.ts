@@ -1,12 +1,40 @@
 /**
  * SolvaPay Server SDK - Edge Runtime Entry Point
  *
- * This module provides edge runtime-compatible exports using Web Crypto API.
- * Automatically selected when running in edge runtimes (Vercel Edge, Cloudflare Workers, Deno, etc.)
+ * This module provides edge runtime-compatible exports. Webhook verification
+ * routes exclusively through the wasm-bindgen binding (`@solvapay/server-wasm`);
+ * there is no Web Crypto rollback. Automatically selected when running in edge
+ * runtimes (Vercel Edge, Cloudflare Workers, Deno, etc.)
  */
 
-import { SolvaPayError } from '@solvapay/core'
+import { installNativeCoreApi } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
+import { installMcpAdapterNative } from './adapters/mcp'
+import { installNativeDecisionApi } from './native-decisions'
+import type { PaywallStructuredContent, PaywallToolResult } from './types'
+import {
+  callWasmSync,
+  publishWasmSyncApi,
+  verifyWebhookWasm,
+  warmWasm,
+} from './wasm'
+
+// Install WASM sync dispatch for the edge graph (Deno / Workers / edge-light).
+// The install is the gate — missing WASM fails fast. Node never loads this
+// module (it installs napi dispatch via `index.ts`).
+installNativeDecisionApi({ callNativeSync: callWasmSync })
+installNativeCoreApi({ callNativeSync: callWasmSync })
+installMcpAdapterNative({
+  formatGate: (gate: PaywallStructuredContent): PaywallToolResult =>
+    callWasmSync(
+      'paywallToolResult',
+      JSON.stringify({ message: gate.message, structuredContent: gate }),
+    ) as PaywallToolResult,
+})
+// Ambient registry for mcp-core (Deno resolves it to the edge graph too).
+publishWasmSyncApi()
+// Warm the module so sync surfaces can synchronously init on first use.
+warmWasm()
 
 // Re-export the main client which is already edge-compatible (uses fetch)
 export { createSolvaPayClient } from './client'
@@ -124,7 +152,11 @@ export type {
 } from './helpers'
 
 /**
- * Verify webhook signature using edge-compatible Web Crypto API.
+ * Verify webhook signature (async edge facade).
+ *
+ * Routes through the Rust WASM binding (`solvapay_core::verify_webhook`).
+ * Rust-only after Step 53 — missing WASM fails fast rather than running a
+ * duplicate Web Crypto implementation.
  *
  * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
  * The HMAC is SHA-256 over `"{timestamp}.{rawBody}"` keyed by the full webhook secret
@@ -149,15 +181,6 @@ export type {
  * const event = await verifyWebhook({ body, signature, secret });
  * ```
  */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let mismatch = 0
-  for (let i = 0; i < a.length; i++) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
-  return mismatch === 0
-}
-
 export async function verifyWebhook({
   body,
   signature,
@@ -167,49 +190,7 @@ export async function verifyWebhook({
   signature: string
   secret: string
 }): Promise<WebhookEvent> {
-  const toleranceSec = 300
-  if (!signature) throw new SolvaPayError('Missing webhook signature')
-
-  const parts = signature.split(',')
-  const tPart = parts.find(p => p.startsWith('t='))
-  const v1Part = parts.find(p => p.startsWith('v1='))
-  if (!tPart || !v1Part) {
-    throw new SolvaPayError('Malformed webhook signature')
-  }
-
-  const timestamp = parseInt(tPart.slice(2), 10)
-  const receivedHmac = v1Part.slice(3)
-  if (Number.isNaN(timestamp) || !receivedHmac) {
-    throw new SolvaPayError('Malformed webhook signature')
-  }
-
-  if (toleranceSec > 0) {
-    const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp)
-    if (age > toleranceSec) {
-      throw new SolvaPayError('Webhook signature timestamp too old')
-    }
-  }
-
-  const enc = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  )
-  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(`${timestamp}.${body}`))
-  const expectedHmac = Array.from(new Uint8Array(sigBuf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-
-  if (!timingSafeEqual(expectedHmac, receivedHmac)) {
-    throw new SolvaPayError('Invalid webhook signature')
-  }
-
-  try {
-    return JSON.parse(body) as WebhookEvent
-  } catch {
-    throw new SolvaPayError('Invalid webhook payload: body is not valid JSON')
-  }
+  // Rust-only after Step 53 — loader throws when WASM is unavailable instead
+  // of running a duplicate Web Crypto implementation on the edge.
+  return verifyWebhookWasm({ body, signature, secret })
 }

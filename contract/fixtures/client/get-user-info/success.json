@@ -1,0 +1,37 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getUserInfo",
+    "args": {
+      "customerRef": "cus_fixture",
+      "productRef": "prd_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-user-info-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/user-info",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "customerRef": "cus_fixture",
+        "productRef": "prd_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "status": "active"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "active"
+    }
+  }
+}

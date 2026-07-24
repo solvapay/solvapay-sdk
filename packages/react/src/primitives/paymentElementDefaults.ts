@@ -30,9 +30,7 @@ export const DEFAULT_PAYMENT_ELEMENT_OPTIONS = {
  * level deep so the caller's `applePay` / `googlePay` choices compose
  * with the default `link` setting instead of clobbering it.
  */
-export function withPaymentElementDefaults(
-  options?: PaymentElementOptions,
-): PaymentElementOptions {
+export function withPaymentElementDefaults(options?: PaymentElementOptions): PaymentElementOptions {
   return {
     ...options,
     wallets: {

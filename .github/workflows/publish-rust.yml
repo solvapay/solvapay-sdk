@@ -1,0 +1,175 @@
+name: Publish Rust (crates.io)
+
+# Separate from the npm Changesets workflow (`.github/workflows/publish.yml`).
+# Stamps release-train version + core SHA, dry-runs `cargo publish` by default,
+# then (when gated) publishes topologically via crates.io Trusted Publishing OIDC.
+#
+# Publish order: solvapay-dto → solvapay-core → solvapay-transport → solvapay
+#
+# Default path is dry-run only. Real crates.io publish is gated behind
+# `workflow_dispatch` input `publish_to_crates_io=true` (or a `solvapay-rust-v*`
+# tag once maintainers enable that path).
+#
+# Version stamping (§7.7):
+#   SOLVAPAY_RELEASE_VERSION → each crate's package.version (+ internal dep versions)
+#   SOLVAPAY_CORE_SHA        → recorded in the job summary / env for parity
+#
+# Maintainer prerequisite: reserve crate names and register Trusted Publishers
+# on crates.io once (see rust-migration-map open handoff items).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release-train version for the crates (e.g. 0.1.0)'
+        required: true
+        type: string
+        default: '0.1.0'
+      publish_to_crates_io:
+        description: 'Publish to crates.io (default: dry-run only)'
+        required: false
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'solvapay-rust-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Install Rust toolchain
+        run: rustup show
+
+      - name: Resolve version + core SHA
+        id: meta
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#solvapay-rust-v}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "core_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp crate versions + internal dep versions
+        shell: bash
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+          SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re
+
+          version = os.environ["VERSION"]
+          crates = [
+              "crates/solvapay-dto/Cargo.toml",
+              "crates/solvapay-core/Cargo.toml",
+              "crates/solvapay-transport/Cargo.toml",
+              "crates/solvapay/Cargo.toml",
+          ]
+          for rel in crates:
+              path = Path(rel)
+              text = path.read_text()
+              text = re.sub(
+                  r'^version = ".*"$',
+                  f'version = "{version}"',
+                  text,
+                  count=1,
+                  flags=re.M,
+              )
+              text = re.sub(
+                  r'(solvapay-(?:dto|core|transport) = \{ path = "[^"]+", version = )"([^"]+)"( \})',
+                  rf'\g<1>"{version}"\3',
+                  text,
+              )
+              path.write_text(text)
+          print(f"stamped version={version} core_sha={os.environ['SOLVAPAY_CORE_SHA']}")
+          PY
+
+      - name: cargo build --workspace
+        env:
+          SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+          SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}
+        run: cargo build --workspace
+
+      - name: Publish graph metadata check
+        run: ./scripts/check-publish-graph.sh
+
+      - name: Dry-run publish (dependency order)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io != true }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Leaf always dry-runs with full verify.
+          cargo publish -p solvapay-dto --dry-run --allow-dirty
+          # Dependents need prior crates on the index for resolve; try dry-run
+          # and accept "no matching package" until the first real publish lands.
+          for crate in solvapay-core solvapay-transport solvapay; do
+            if cargo publish -p "$crate" --dry-run --allow-dirty; then
+              echo "OK: dry-run $crate"
+            else
+              echo "WARN: dry-run $crate skipped (dependency not yet on crates.io index)"
+            fi
+          done
+
+      - name: Authenticate with crates.io (Trusted Publishing)
+        id: crates_auth
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io == true) || startsWith(github.ref, 'refs/tags/solvapay-rust-v') }}
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Publish to crates.io (dependency order)
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io == true) || startsWith(github.ref, 'refs/tags/solvapay-rust-v') }}
+        shell: bash
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates_auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
+          SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+          SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}
+        run: |
+          set -euo pipefail
+          wait_for_index() {
+            local crate="$1"
+            local version="$2"
+            local attempt
+            for attempt in $(seq 1 30); do
+              if cargo search "$crate" --limit 1 2>/dev/null | grep -q "^${crate} = \"${version}\""; then
+                echo "index has ${crate}@${version}"
+                return 0
+              fi
+              echo "waiting for crates.io index: ${crate}@${version} (attempt ${attempt})"
+              sleep 10
+            done
+            echo "WARN: index poll timed out for ${crate}@${version}; continuing" >&2
+          }
+
+          VERSION="${{ steps.meta.outputs.version }}"
+          for crate in solvapay-dto solvapay-core solvapay-transport solvapay; do
+            echo "Publishing ${crate}@${VERSION}"
+            cargo publish -p "$crate" --allow-dirty
+            if [ "$crate" != "solvapay" ]; then
+              wait_for_index "$crate" "$VERSION"
+            fi
+          done

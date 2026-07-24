@@ -1,0 +1,46 @@
+{
+  "case": "create-topup-payment-intent-success",
+  "suite": "client",
+  "input": {
+    "fn": "createTopupPaymentIntent",
+    "args": {
+      "customerRef": "cus_fixture",
+      "amount": 2000,
+      "currency": "usd"
+    },
+    "clock": "2026-07-01T00:00:00Z",
+    "rngSeed": 42
+  },
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture",
+        "Idempotency-Key": "topup-1782864000000-ln13h9a6y"
+      },
+      "body": {
+        "customerRef": "cus_fixture",
+        "purpose": "credit_topup",
+        "amount": 2000,
+        "currency": "usd"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "processorPaymentId": "pi_topup_1",
+        "clientSecret": "pi_topup_1_secret",
+        "publishableKey": "pk_test_fixture"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "processorPaymentId": "pi_topup_1",
+      "clientSecret": "pi_topup_1_secret",
+      "publishableKey": "pk_test_fixture"
+    }
+  }
+}

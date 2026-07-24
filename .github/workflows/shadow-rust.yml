@@ -1,0 +1,57 @@
+name: Shadow Rust (manual)
+
+# Live Rust contract suite against a hosted backend.
+# Offline golden-fixture replay runs in the main CI `rust` job via
+# `cargo test -p solvapay` / `cargo test -p live-contract`. This workflow is
+# dispatch-only until a hosted contract env exists (see rust-migration-map open
+# handoff items). Mirrors `.github/workflows/shadow-python.yml`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'SOLVAPAY_SHADOW_BASE_URL'
+        required: true
+        type: string
+      enable_stripe:
+        description: 'Run requires:stripe scenarios'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  shadow-rust-live:
+    name: Rust live contract
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        # Magnus/rb-sys workspace member needs Ruby headers for cargo build.
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Install Rust toolchain
+        run: rustup show
+
+      - name: Run live Rust contract suite
+        env:
+          SOLVAPAY_SHADOW_BASE_URL: ${{ inputs.base_url }}
+          SOLVAPAY_SHADOW_API_KEY: ${{ secrets.SOLVAPAY_SHADOW_API_KEY }}
+          SOLVAPAY_SHADOW_ENABLE_STRIPE: ${{ inputs.enable_stripe }}
+          SOLVAPAY_LIVE_OUT: ${{ github.workspace }}/contract/shadow/output/rust-live-report.json
+        run: |
+          mkdir -p "${{ github.workspace }}/contract/shadow/output"
+          cargo run -p live-contract --release
+
+      - name: Upload rust-live-report.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-live-report
+          path: contract/shadow/output/rust-live-report.json

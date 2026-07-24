@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-Example app: [`examples/checkout-demo`](../../examples/checkout-demo)
+Example app: [`examples/typescript/checkout-demo`](../../examples/typescript/checkout-demo)
 
 ## Helper reference
 

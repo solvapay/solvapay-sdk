@@ -122,10 +122,7 @@ function PlanTypeLine({
     const date = formatDate(purchase.nextBillingDate)
     if (!date) return null
     return (
-      <span
-        className={className}
-        data-solvapay-current-plan-next-billing=""
-      >
+      <span className={className} data-solvapay-current-plan-next-billing="">
         {interpolate(copy.currentPlan.nextBilling, { date })}
       </span>
     )
@@ -214,9 +211,7 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
     rawCycle && rawCycle in copy.currentPlan.cycleUnit
       ? (rawCycle as keyof typeof copy.currentPlan.cycleUnit)
       : undefined
-  const intervalLabel = cycleKey
-    ? (copy.currentPlan.cycleUnit[cycleKey] ?? rawCycle)
-    : rawCycle
+  const intervalLabel = cycleKey ? (copy.currentPlan.cycleUnit[cycleKey] ?? rawCycle) : rawCycle
   const priceLabel = formatPrice(amount, currency, {
     interval: intervalLabel,
   })
@@ -230,24 +225,17 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
       ? activePurchase.productName
       : null
 
-  const rootClass = [
-    'solvapay-current-plan-card',
-    overrides?.root,
-    className,
-  ]
+  const rootClass = ['solvapay-current-plan-card', overrides?.root, className]
     .filter(Boolean)
     .join(' ')
 
   // Hide the payment-method row entirely when the hook errored OR returned a
   // null (no endpoint deployed yet / MCP server doesn't expose the tool) so
   // the card degrades gracefully.
-  const shouldShowPaymentMethod =
-    !hidePaymentMethod && paymentMethod !== null
+  const shouldShowPaymentMethod = !hidePaymentMethod && paymentMethod !== null
 
   const showCancelButton =
-    !hideCancelButton &&
-    !activePurchase.cancelledAt &&
-    !shouldShowCancelledNotice
+    !hideCancelButton && !activePurchase.cancelledAt && !shouldShowCancelledNotice
 
   return (
     <section
@@ -294,18 +282,19 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
         className={overrides?.dateLine ?? 'solvapay-current-plan-date-line'}
       />
 
-      {showStartDate && (() => {
-        const started = formatDate(activePurchase.startDate)
-        if (!started) return null
-        return (
-          <span
-            className={overrides?.startedLine ?? 'solvapay-current-plan-started-line'}
-            data-solvapay-current-plan-started-line=""
-          >
-            {interpolate(copy.currentPlan.startedOn, { date: started })}
-          </span>
-        )
-      })()}
+      {showStartDate &&
+        (() => {
+          const started = formatDate(activePurchase.startDate)
+          if (!started) return null
+          return (
+            <span
+              className={overrides?.startedLine ?? 'solvapay-current-plan-started-line'}
+              data-solvapay-current-plan-started-line=""
+            >
+              {interpolate(copy.currentPlan.startedOn, { date: started })}
+            </span>
+          )
+        })()}
 
       {showReference && activePurchase.reference && (
         <span

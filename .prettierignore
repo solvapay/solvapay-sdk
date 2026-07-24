@@ -14,6 +14,9 @@ coverage/
 generated/
 docs/api/
 
+# Canonical OpenAPI contract artifacts (key order is load-bearing)
+contract/openapi/*.json
+
 # Lock files
 pnpm-lock.yaml
 package-lock.json
@@ -26,9 +29,14 @@ yarn.lock
 .env*
 !.env.example
 
-# IDE
+# IDE / editor local state
 .vscode/
 .idea/
+.cursor/
+
+# Local virtualenvs (never format vendored site-packages)
+**/.venv/
+.venv/
 
 # OS
 .DS_Store

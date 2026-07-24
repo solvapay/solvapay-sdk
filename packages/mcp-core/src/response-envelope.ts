@@ -1,8 +1,9 @@
 /**
- * Runtime helpers for the `ResponseResult` envelope. Intentionally
- * module-internal — not re-exported from `@solvapay/mcp`'s public
- * entry point. Merchants produce envelopes via `ctx.respond(...)` and
- * the SDK unwraps them inside `buildPayableHandler`.
+ * Runtime helpers for the `ResponseResult` envelope. Adapter-internal —
+ * exported from `@solvapay/mcp-core` for adapters / contract fixtures,
+ * but not re-exported from `@solvapay/mcp`'s public entry. Merchants
+ * produce envelopes via `ctx.respond(...)` and the SDK unwraps them
+ * inside `buildPayableHandler`.
  *
  * After the legacy raw-return handler shape was removed, the brand
  * check (`__solvapayResponse: true`) exists solely as an internal

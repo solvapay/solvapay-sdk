@@ -35,6 +35,7 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",
+    "test:deno-edge-smoke": "deno run --allow-read=../..,../../rust/bindings/wasm,../../node_modules scripts/deno-edge-smoke.mjs",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"
   },

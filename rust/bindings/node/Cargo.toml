@@ -1,0 +1,26 @@
+[package]
+name = "solvapay-node"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "napi-rs Node binding for solvapay-core (Step 37R NativeClient)"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "3", default-features = false, features = ["napi9", "tokio_rt"] }
+napi-derive = "3"
+serde = { workspace = true }
+serde_json = { workspace = true }
+solvapay-core = { path = "../../crates/solvapay-core" }
+solvapay-dto = { path = "../../crates/solvapay-dto" }
+solvapay-transport = { path = "../../crates/solvapay-transport" }
+
+[build-dependencies]
+napi-build = "2"
+
+[lints]
+workspace = true

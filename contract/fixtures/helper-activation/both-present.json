@@ -1,0 +1,14 @@
+{
+  "suite": "helper-activation",
+  "case": "both-present",
+  "input": {
+    "fn": "validateActivatePlanParams",
+    "args": {
+      "productRef": "prod_1",
+      "planRef": "plan_1"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

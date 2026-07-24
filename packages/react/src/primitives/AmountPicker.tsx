@@ -182,11 +182,9 @@ const Option = forwardRef<HTMLButtonElement, OptionProps>(function AmountPickerO
     ...rest,
   } satisfies React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>
 
-  const defaultLabel = formatPrice(
-    amount * getMinorUnitsPerMajor(ctx.currency),
-    ctx.currency,
-    { free: '' },
-  )
+  const defaultLabel = formatPrice(amount * getMinorUnitsPerMajor(ctx.currency), ctx.currency, {
+    free: '',
+  })
 
   if (asChild) {
     return (

@@ -1,0 +1,28 @@
+[package]
+name = "solvapay-dto"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Generated SolvaPay wire DTOs (do not hand-edit — regenerate via dto-gen)"
+readme = "README.md"
+publish = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+fixture-runner = { path = "../../tools/fixture-runner" }
+walkdir = { workspace = true }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true

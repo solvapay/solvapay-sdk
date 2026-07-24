@@ -102,13 +102,7 @@ export const AmountStep = memo(function AmountStep({
   )
 })
 
-function PresetAmountRow({
-  cx,
-  currencyDisplay,
-}: {
-  cx: Cx
-  currencyDisplay: 'symbol' | 'code'
-}) {
+function PresetAmountRow({ cx, currencyDisplay }: { cx: Cx; currencyDisplay: 'symbol' | 'code' }) {
   const { quickAmounts, currency } = useAmountPicker()
   const locale = useHostLocale()
   // Recommended preset: the second option (index 1) when available —

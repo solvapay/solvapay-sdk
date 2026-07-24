@@ -16,11 +16,7 @@
 import React, { forwardRef } from 'react'
 import { Slot } from './slot'
 import { useCopy } from '../hooks/useCopy'
-import {
-  SOLVAPAY_PRIVACY_URL,
-  SOLVAPAY_TERMS_URL,
-  SOLVAPAY_WEBSITE_URL,
-} from '../constants/legal'
+import { SOLVAPAY_PRIVACY_URL, SOLVAPAY_TERMS_URL, SOLVAPAY_WEBSITE_URL } from '../constants/legal'
 
 export type LegalFooterProps = {
   /**
@@ -37,63 +33,61 @@ export type LegalFooterProps = {
     children?: React.ReactNode
   }
 
-export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(
-  function LegalFooter(
-    {
-      attribution = 'provided',
-      termsUrl = SOLVAPAY_TERMS_URL,
-      privacyUrl = SOLVAPAY_PRIVACY_URL,
-      asChild,
-      children,
-      ...rest
-    },
-    forwardedRef,
-  ) {
-    const copy = useCopy()
-    const attributionLabel =
-      attribution === 'provided'
-        ? copy.legalFooter.providedBy
-        : attribution === 'powered'
-          ? copy.legalFooter.poweredBy
-          : null
-
-    const Comp = asChild ? Slot : 'div'
-    return (
-      <Comp ref={forwardedRef} data-solvapay-legal-footer="" {...rest}>
-        {children ?? (
-          <>
-            <div data-solvapay-legal-footer-links="">
-              <a
-                data-solvapay-legal-footer-link=""
-                href={termsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {copy.legalFooter.terms}
-              </a>
-              <span aria-hidden="true"> · </span>
-              <a
-                data-solvapay-legal-footer-link=""
-                href={privacyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {copy.legalFooter.privacy}
-              </a>
-            </div>
-            {attributionLabel ? (
-              <a
-                data-solvapay-legal-footer-attribution=""
-                href={SOLVAPAY_WEBSITE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {attributionLabel}
-              </a>
-            ) : null}
-          </>
-        )}
-      </Comp>
-    )
+export const LegalFooter = forwardRef<HTMLDivElement, LegalFooterProps>(function LegalFooter(
+  {
+    attribution = 'provided',
+    termsUrl = SOLVAPAY_TERMS_URL,
+    privacyUrl = SOLVAPAY_PRIVACY_URL,
+    asChild,
+    children,
+    ...rest
   },
-)
+  forwardedRef,
+) {
+  const copy = useCopy()
+  const attributionLabel =
+    attribution === 'provided'
+      ? copy.legalFooter.providedBy
+      : attribution === 'powered'
+        ? copy.legalFooter.poweredBy
+        : null
+
+  const Comp = asChild ? Slot : 'div'
+  return (
+    <Comp ref={forwardedRef} data-solvapay-legal-footer="" {...rest}>
+      {children ?? (
+        <>
+          <div data-solvapay-legal-footer-links="">
+            <a
+              data-solvapay-legal-footer-link=""
+              href={termsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {copy.legalFooter.terms}
+            </a>
+            <span aria-hidden="true"> · </span>
+            <a
+              data-solvapay-legal-footer-link=""
+              href={privacyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {copy.legalFooter.privacy}
+            </a>
+          </div>
+          {attributionLabel ? (
+            <a
+              data-solvapay-legal-footer-attribution=""
+              href={SOLVAPAY_WEBSITE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {attributionLabel}
+            </a>
+          ) : null}
+        </>
+      )}
+    </Comp>
+  )
+})

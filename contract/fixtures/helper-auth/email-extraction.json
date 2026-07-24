@@ -1,0 +1,20 @@
+{
+  "suite": "helper-auth",
+  "case": "email-extraction",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "authorizationHeader": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1IiwiZW1haWwiOiJlQGV4YW1wbGUuY29tIn0.not-a-signature",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "u",
+      "email": "e@example.com",
+      "name": null
+    }
+  }
+}

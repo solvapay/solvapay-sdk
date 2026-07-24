@@ -57,9 +57,7 @@ describe('usePaymentMethod', () => {
       }),
     })
 
-    await waitFor(() =>
-      expect(fetchFn).toHaveBeenCalledWith('/custom/card', expect.any(Object)),
-    )
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledWith('/custom/card', expect.any(Object)))
   })
 
   it('routes through a custom transport when provided', async () => {

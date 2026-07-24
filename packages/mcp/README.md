@@ -51,11 +51,11 @@ One call wires transport tools, UI resource (Stripe CSP baseline), and your paya
 
 ## Subpath exports
 
-| Import | Use when |
-| --- | --- |
-| `@solvapay/mcp` | `createSolvaPayMcpServer`, `registerPayableTool` |
-| `@solvapay/mcp/express` | Node `(req, res, next)` OAuth middleware |
-| `@solvapay/mcp/fetch` | Edge `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch` |
+| Import                  | Use when                                                        |
+| ----------------------- | --------------------------------------------------------------- |
+| `@solvapay/mcp`         | `createSolvaPayMcpServer`, `registerPayableTool`                |
+| `@solvapay/mcp/express` | Node `(req, res, next)` OAuth middleware                        |
+| `@solvapay/mcp/fetch`   | Edge `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch` |
 
 Framework-neutral contracts live in [`@solvapay/mcp-core`](../mcp-core).
 
@@ -71,7 +71,7 @@ See [`ctx.respond()` V1 spec](../../docs/spec/ctx-respond-v1.md).
 - [`@solvapay/mcp-core`](../mcp-core) — descriptors for custom adapters
 - [`@solvapay/react/mcp`](../react) — MCP App UI components
 - [`@solvapay/server`](../server) — core paywall runtime
-- [MCP app example](../../examples/mcp-checkout-app)
+- [MCP app example](../../examples/typescript/mcp-checkout-app)
 
 ## Support
 

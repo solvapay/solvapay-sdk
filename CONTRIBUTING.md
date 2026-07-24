@@ -12,6 +12,20 @@ Please also review our [Code of Conduct](./CODE_OF_CONDUCT.md) before contributi
 - **pnpm** (package manager)
 - **TypeScript** >= 5.0
 
+**Rust toolchain** — required only when touching the `rust/` workspace or running
+`pnpm gen` (it invokes `cargo run -p dto-gen`). The channel, components, and the
+`wasm32-unknown-unknown` target are pinned by `rust/rust-toolchain.toml`, so a
+`rustup`-managed install picks them up automatically. TypeScript-only changes do
+**not** need Rust — committed generated/WASM artifacts let `pnpm build:packages`
+run without it.
+
+Optional, per language surface you actually build/test locally:
+
+- **Python** binding — `maturin`
+- **Ruby** binding — `rb-sys` + Ruby headers
+- **Go** binding — Go toolchain (uses embedded WASI, no cgo)
+- **wasm-bindgen** builds — the `wasm32-unknown-unknown` target + `wasm-opt` (Binaryen)
+
 ### Getting Started
 
 ```bash
@@ -42,9 +56,22 @@ pnpm -F @solvapay/server test
 pnpm -F @solvapay/server dev
 ```
 
+### The `rust/` workspace
+
+Shared SDK semantics (validation, retry, webhook verify, paywall, helper
+decision cores, the HTTP client, MCP payload builders) live once in the Rust
+workspace under `rust/`, and the language facades delegate to it. TypeScript-only
+work generally doesn't touch `rust/`; committed generated + WASM artifacts let
+`pnpm build:packages` run without a Rust toolchain. Reach for `rust/` when
+changing shared behavior, the transport, or a binding — build/test it with
+`cargo` from the `rust/` directory (`cargo test --workspace`, `cargo clippy`).
+See [SDK architecture](./docs/contributing/architecture.md) for the crate/binding
+map.
+
 ## Contributor docs
 
 - [SDK architecture](./docs/contributing/architecture.md)
+- [SDK codegen (OpenAPI → five surfaces)](./docs/contributing/sdk-codegen.md)
 - [SDK testing](./docs/contributing/testing.md)
 - [SDK error handling](./docs/contributing/error-handling.md)
 - [SDK performance](./docs/contributing/performance.md)
@@ -56,7 +83,7 @@ pnpm -F @solvapay/server dev
 pnpm build:packages
 
 # Run an example
-cd examples/express-basic
+cd examples/typescript/express-basic
 pnpm dev
 ```
 
@@ -70,14 +97,35 @@ pnpm dev
 
 Each package has specific constraints:
 
-| Package | Constraints |
-| --- | --- |
-| `@solvapay/core` | No Node/browser globals (pure TypeScript, runtime-agnostic) |
-| `@solvapay/server` | Node + Edge runtime support (automatic detection via export conditions) |
-| `@solvapay/react` | Browser-only, no secrets, peer deps on React |
-| `@solvapay/react-supabase` | Browser-only, peer deps on React and Supabase |
-| `@solvapay/auth` | Server-side auth adapters, Edge-compatible |
-| `@solvapay/next` | Next.js-specific, peer dep on Next.js |
+| Package                    | Constraints                                                             |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `@solvapay/core`           | Runtime-agnostic; helpers delegate to the Rust core (no Node/browser globals) |
+| `@solvapay/server`         | Node + Edge runtime support (napi native / wasm-bindgen via export conditions) |
+| `@solvapay/react`          | Browser-only, no secrets, peer deps on React                            |
+| `@solvapay/react-supabase` | Browser-only, peer deps on React and Supabase                           |
+| `@solvapay/auth`           | Server-side auth adapters, Edge-compatible                              |
+| `@solvapay/next`           | Next.js-specific, peer dep on Next.js                                   |
+
+The Rust workspace under `rust/` holds the shared semantic core the facades
+delegate to:
+
+| Path                             | Constraints                                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------- |
+| `rust/crates/solvapay-core`      | Pure logic; `serde`/`hmac` only — **no** `reqwest`, `tokio`, or `wasm-bindgen`; no env reads, no timers |
+| `rust/crates/solvapay-dto`       | Generated wire models + overlays — **never hand-edited** (produced by `pnpm gen`)   |
+| `rust/crates/solvapay-transport` | `Transport` trait + reqwest/fetch impls + client shell; runtime-agnostic async     |
+| `rust/crates/solvapay`           | Public crates.io facade — ergonomics only, no new semantic logic                   |
+| `rust/bindings/{node,wasm,python,ruby,go,c}` | Per-language bindings; thin type-conversion shims over the core          |
+
+**Generated-file gate:** files carrying an `@generated` header (Rust DTOs, TS
+overlays/marshalling, binding shims, parity suites) are produced by `pnpm gen` and
+must not be hand-edited — CI's `@generated` header check and `pnpm gen:check`
+enforce this. Change the manifest or OpenAPI snapshot and rerun `pnpm gen`
+instead.
+
+Multi-language examples live under `examples/<language>/`
+(`go`, `python`, `ruby`, `rust`, `typescript`); each consumes only its published
+facade and is exercised in CI.
 
 ## PR Checklist
 
@@ -86,6 +134,7 @@ Before submitting a pull request, ensure:
 - [ ] Builds (`pnpm build`)
 - [ ] Tests pass (`pnpm test`)
 - [ ] Types OK (no dts errors)
+- [ ] If you touched `contract/manifest/`, OpenAPI snapshot, or dto-gen: `pnpm gen` then `pnpm gen:check` (see [sdk-codegen.md](./docs/contributing/sdk-codegen.md))
 - [ ] Web-standards runtime gate passes (`pnpm validate:fetch-runtime`) — required when touching `@solvapay/server/fetch` or `@solvapay/mcp/fetch`
 - [ ] Docs updated when needed
 - [ ] Documentation links valid (`pnpm docs:validate-links`)
@@ -109,12 +158,12 @@ pnpm changeset
 
 Pick the right bump level per affected package:
 
-| Level     | When                                                                     |
-| --------- | ------------------------------------------------------------------------ |
-| **patch** | Bug fix, internal refactor, dep-only update — no public API change       |
-| **minor** | New public API — additive and backwards-compatible                       |
-| **major** | Removed/renamed API, changed signature, behaviour break — anything that  |
-|           | would make an existing consumer's build / runtime regress after upgrade  |
+| Level     | When                                                                    |
+| --------- | ----------------------------------------------------------------------- |
+| **patch** | Bug fix, internal refactor, dep-only update — no public API change      |
+| **minor** | New public API — additive and backwards-compatible                      |
+| **major** | Removed/renamed API, changed signature, behaviour break — anything that |
+|           | would make an existing consumer's build / runtime regress after upgrade |
 
 The changeset body is a short markdown description that ends up verbatim in each affected package's `CHANGELOG.md`. Lead with **what changed for consumers**, not implementation detail.
 
@@ -132,7 +181,7 @@ When one `@solvapay/*` package lists another as a **peerDependency**, use `works
 "peerDependencies": { "@solvapay/auth": "workspace:*" }
 ```
 
-`.changeset/config.json` sets `onlyUpdatePeerDependentsWhenOutOfRange: true`, and a peer-range change is a **major** bump by convention. `workspace:*` publishes as the *exact* current version, so **any** bump to that peer — even a patch — puts the range out of range and forces Changesets to bump **every dependent to a new major**. `workspace:^` publishes as `^<version>`, so patch/minor peer bumps stay in range.
+`.changeset/config.json` sets `onlyUpdatePeerDependentsWhenOutOfRange: true`, and a peer-range change is a **major** bump by convention. `workspace:*` publishes as the _exact_ current version, so **any** bump to that peer — even a patch — puts the range out of range and forces Changesets to bump **every dependent to a new major**. `workspace:^` publishes as `^<version>`, so patch/minor peer bumps stay in range.
 
 > **Pre-1.0 peers:** `workspace:^` on a `0.x` peer publishes as `^0.2.4`, which only satisfies `0.2.x` — a future `0.3.0` will still cascade. That is correct semver; discuss with the team before choosing a looser range.
 

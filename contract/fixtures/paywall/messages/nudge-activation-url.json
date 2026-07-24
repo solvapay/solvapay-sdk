@@ -1,0 +1,20 @@
+{
+  "suite": "paywall",
+  "case": "nudge-activation-url",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": {
+        "kind": "activation_required"
+      },
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 1,
+        "checkoutUrl": "https://pay.test/x"
+      }
+    }
+  },
+  "expect": {
+    "result": "Heads up — this plan still needs activation. Call the `activate_plan` tool, or visit https://pay.test/x."
+  }
+}

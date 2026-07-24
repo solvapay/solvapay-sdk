@@ -1,0 +1,18 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "create-params-no-optional",
+  "input": {
+    "fn": "buildCreateCustomerParams",
+    "args": {
+      "customerRef": "user-1",
+      "email": "a@b.com"
+    },
+    "clock": "2023-11-14T22:13:20Z"
+  },
+  "expect": {
+    "result": {
+      "email": "a@b.com",
+      "metadata": {}
+    }
+  }
+}

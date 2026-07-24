@@ -1,0 +1,32 @@
+{
+  "suite": "mcp",
+  "case": "prompts-all-views",
+  "input": {
+    "fn": "buildPromptDescriptorMetadata",
+    "args": {}
+  },
+  "expect": {
+    "result": [
+      {
+        "name": "upgrade",
+        "title": "Upgrade plan",
+        "description": "Start or change a paid plan for the current customer."
+      },
+      {
+        "name": "manage_account",
+        "title": "Manage account",
+        "description": "Show the current plan, balance, payment method, and cancel/reactivate controls for the current customer."
+      },
+      {
+        "name": "topup",
+        "title": "Top up credits",
+        "description": "Add SolvaPay credits to the current customer."
+      },
+      {
+        "name": "activate_plan",
+        "title": "Activate plan",
+        "description": "Pick a plan to activate, or activate a specific plan by ref."
+      }
+    ]
+  }
+}

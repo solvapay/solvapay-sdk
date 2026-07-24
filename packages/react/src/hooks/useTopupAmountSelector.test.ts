@@ -209,9 +209,7 @@ describe('useTopupAmountSelector', () => {
     })
 
     it('returns false when below minimum', () => {
-      const { result } = renderHook(() =>
-        useTopupAmountSelector({ currency: 'usd', minAmount: 5 }),
-      )
+      const { result } = renderHook(() => useTopupAmountSelector({ currency: 'usd', minAmount: 5 }))
 
       act(() => result.current.setCustomAmount('3'))
 

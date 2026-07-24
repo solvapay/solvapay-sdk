@@ -12,6 +12,7 @@ import {
   buildAuthInfoFromBearer,
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
+  isFreeMcpMethod,
   McpBearerAuthError,
   resolveOAuthPaths,
   withoutTrailingSlash,
@@ -100,6 +101,14 @@ function getRequestJsonRpcId(body: unknown): JsonRpcId {
     return id ?? null
   }
   return null
+}
+
+function getRequestJsonRpcMethod(body: unknown): string | undefined {
+  if (body && typeof body === 'object' && 'method' in body) {
+    const method = (body as { method?: unknown }).method
+    return typeof method === 'string' ? method : undefined
+  }
+  return undefined
 }
 
 function makeUnauthorizedJsonRpc(id: JsonRpcId) {
@@ -490,8 +499,10 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
 
     const authHeader = getRequestAuthHeader(req)
     const id = getRequestJsonRpcId(req.body)
+    const method = getRequestJsonRpcMethod(req.body)
 
-    if (!authHeader && !requireAuth) {
+    // requireAuth gates tools/call only — discovery methods stay open.
+    if (!authHeader && (!requireAuth || isFreeMcpMethod(method))) {
       next()
       return
     }

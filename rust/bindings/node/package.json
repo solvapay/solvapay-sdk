@@ -1,0 +1,65 @@
+{
+  "name": "@solvapay/server-native",
+  "version": "0.1.0",
+  "description": "SolvaPay napi-rs Node binding (step 36 scaffold)",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "browser": "browser.js",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "browser.js"
+  ],
+  "napi": {
+    "binaryName": "server-native",
+    "packageName": "@solvapay/server-native",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-musl",
+      "x86_64-pc-windows-msvc",
+      "aarch64-pc-windows-msvc",
+      "wasm32-wasip1-threads"
+    ]
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "license": "MIT",
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "create-npm-dirs": "napi create-npm-dirs",
+    "artifacts:check": "node scripts/check-artifacts.mjs",
+    "pack:clean-install": "node scripts/prepare-clean-install-packages.mjs",
+    "test": "node --test __test__/binding.spec.mjs",
+    "test:wasi": "NAPI_RS_FORCE_WASI=error node --test __test__/binding.spec.mjs",
+    "test:clean-install:unit": "node --test __test__/clean-install*.spec.mjs",
+    "test:clean-install": "node scripts/clean-install-smoke.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/wasm-runtime": "^1.1.6"
+  },
+  "devDependencies": {
+    "@emnapi/core": "1.11.2",
+    "@emnapi/runtime": "1.11.2",
+    "@napi-rs/cli": "3.7.3",
+    "@tybys/wasm-util": "^0.10.1",
+    "emnapi": "1.11.2"
+  },
+  "optionalDependencies": {
+    "@solvapay/server-native-darwin-arm64": "file:npm/darwin-arm64",
+    "@solvapay/server-native-darwin-x64": "file:npm/darwin-x64",
+    "@solvapay/server-native-linux-arm64-gnu": "file:npm/linux-arm64-gnu",
+    "@solvapay/server-native-linux-arm64-musl": "file:npm/linux-arm64-musl",
+    "@solvapay/server-native-linux-x64-gnu": "file:npm/linux-x64-gnu",
+    "@solvapay/server-native-linux-x64-musl": "file:npm/linux-x64-musl",
+    "@solvapay/server-native-wasm32-wasi": "file:npm/wasm32-wasi",
+    "@solvapay/server-native-win32-arm64-msvc": "file:npm/win32-arm64-msvc",
+    "@solvapay/server-native-win32-x64-msvc": "file:npm/win32-x64-msvc"
+  }
+}

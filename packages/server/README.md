@@ -58,7 +58,7 @@ Deno.serve(checkPurchase)
 
 Available handlers include `checkPurchase`, `createPaymentIntent`, `processPayment`, `listPlans`, `syncCustomer`, `createCheckoutSession`, `createCustomerSession`, `solvapayWebhook`, and more.
 
-Guide: [Supabase Edge](https://docs.solvapay.com/sdks/typescript/guides/supabase-edge) · Example: [`examples/supabase-edge`](../../examples/supabase-edge)
+Guide: [Supabase Edge](https://docs.solvapay.com/sdks/typescript/guides/supabase-edge) · Example: [`examples/typescript/supabase-edge`](../../examples/typescript/supabase-edge)
 
 ### Paywall adapters
 

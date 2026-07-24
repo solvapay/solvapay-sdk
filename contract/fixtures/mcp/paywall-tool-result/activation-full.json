@@ -1,0 +1,36 @@
+{
+  "suite": "mcp",
+  "case": "activation-full",
+  "input": {
+    "fn": "paywallToolResult",
+    "args": {
+      "message": "activate",
+      "structuredContent": {
+        "kind": "activation_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/confirm",
+        "message": "activate",
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }],
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
+        "productDetails": { "name": "Demo", "reference": "prd_demo" },
+        "confirmationUrl": "https://pay.test/confirm"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "isError": false,
+      "content": [{ "type": "text", "text": "activate" }],
+      "structuredContent": {
+        "kind": "activation_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/confirm",
+        "message": "activate",
+        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }],
+        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
+        "productDetails": { "name": "Demo", "reference": "prd_demo" },
+        "confirmationUrl": "https://pay.test/confirm"
+      }
+    }
+  }
+}

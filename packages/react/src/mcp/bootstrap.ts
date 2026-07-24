@@ -15,7 +15,12 @@ import type {
   BootstrapProduct,
   SolvaPayMcpViewKind,
 } from '@solvapay/mcp-core'
-import { MCP_TOOL_NAMES, TOOL_FOR_VIEW, VIEW_FOR_TOOL, SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
+import {
+  MCP_TOOL_NAMES,
+  TOOL_FOR_VIEW,
+  VIEW_FOR_TOOL,
+  SOLVAPAY_BOOTSTRAP_URI,
+} from '@solvapay/mcp-core'
 import type { McpAppLike } from './adapter'
 
 /**
@@ -65,9 +70,7 @@ export interface McpAppBootstrapLike extends McpAppLike {
    * Return shape is intentionally loose so ext-apps `App` (text + blob
    * resource contents) is structurally assignable without fighting variance.
    */
-  readServerResource?: (params: {
-    uri: string
-  }) => Promise<{
+  readServerResource?: (params: { uri: string }) => Promise<{
     contents?: ReadonlyArray<{
       text?: string
       blob?: string
@@ -106,9 +109,7 @@ export interface CallToolResultLike {
  * edit (in `@solvapay/mcp-core/tool-names`).
  */
 export const SOLVAPAY_TRANSPORT_TOOL_NAMES: ReadonlySet<string> = new Set(
-  (Object.values(MCP_TOOL_NAMES) as string[]).filter(
-    (name) => !(name in VIEW_FOR_TOOL),
-  ),
+  (Object.values(MCP_TOOL_NAMES) as string[]).filter(name => !(name in VIEW_FOR_TOOL)),
 )
 
 /**
@@ -274,9 +275,7 @@ export function parseBootstrapFromToolResult(
   if (result.isError && !hasBootstrapShape) {
     const first = result.content?.[0]
     const message =
-      first && 'text' in first && typeof first.text === 'string'
-        ? first.text
-        : `${toolName} failed`
+      first && 'text' in first && typeof first.text === 'string' ? first.text : `${toolName} failed`
     throw new Error(message)
   }
   const ref = structured?.productRef
@@ -408,7 +407,7 @@ export function waitForInitialToolResult(
       resolve(outcome)
     }
 
-    const handler: ToolResultListener = (params) => {
+    const handler: ToolResultListener = params => {
       if (settled) return
       const toolName = app.getHostContext()?.toolInfo?.tool?.name ?? null
       if (toolName && isTransportToolName(toolName)) return
@@ -461,4 +460,3 @@ export function waitForInitialToolResult(
     }
   })
 }
-

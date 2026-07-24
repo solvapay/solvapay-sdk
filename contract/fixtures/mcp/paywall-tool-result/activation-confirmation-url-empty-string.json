@@ -1,0 +1,30 @@
+{
+  "suite": "mcp",
+  "case": "activation-confirmation-url-empty-string",
+  "input": {
+    "fn": "paywallToolResult",
+    "args": {
+      "message": "activate",
+      "structuredContent": {
+        "kind": "activation_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/confirm",
+        "message": "activate",
+        "confirmationUrl": ""
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "isError": false,
+      "content": [{ "type": "text", "text": "activate" }],
+      "structuredContent": {
+        "kind": "activation_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/confirm",
+        "message": "activate",
+        "confirmationUrl": ""
+      }
+    }
+  }
+}

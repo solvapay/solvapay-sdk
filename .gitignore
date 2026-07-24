@@ -35,3 +35,25 @@ docs/api.json
 
 # Scratch research notes — internal, not for the public repo
 research-tmp/
+
+# Contract / snapshot CLI test scratch
+scripts/.tmp/
+
+# Shadow-mode live/selftest report output (step 25)
+contract/shadow/output/
+
+# Rust / Cargo build artifacts
+rust/target/
+**/*.rs.bk
+*.pdb
+
+# napi-rs Node binding (step 36) — native/WASI binaries (loaders are committed)
+rust/bindings/node/*.node
+rust/bindings/node/*.wasm
+rust/bindings/node/node_modules/
+rust/bindings/node/npm/**/*.node
+rust/bindings/node/npm/**/*.wasm
+rust/bindings/node/npm/wasm32-wasi/server-native.wasi*
+rust/bindings/node/npm/wasm32-wasi/wasi-worker*
+rust/bindings/node/artifacts/
+rust/bindings/node/clean-install-bundle/

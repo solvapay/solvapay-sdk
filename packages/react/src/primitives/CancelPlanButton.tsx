@@ -9,7 +9,7 @@
  * via the `confirm` prop (`false` to skip, string to replace).
  */
 
-import React, { forwardRef, useCallback, useContext } from 'react'
+import React, { forwardRef, useCallback, useContext, useMemo } from 'react'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { usePurchase } from '../hooks/usePurchase'
@@ -69,11 +69,12 @@ export const CancelPlanButton = forwardRef<HTMLButtonElement, CancelPlanButtonPr
     const { activePurchase } = usePurchase()
     const { cancelRenewal, isCancelling } = usePurchaseActions()
 
-    const effectivePurchase: PurchaseInfo | null = purchaseRef
-      ? activePurchase && activePurchase.reference === purchaseRef
-        ? activePurchase
-        : ({ reference: purchaseRef } as PurchaseInfo)
-      : activePurchase
+    const effectivePurchase = useMemo((): PurchaseInfo | null => {
+      if (!purchaseRef) return activePurchase
+      if (activePurchase && activePurchase.reference === purchaseRef) return activePurchase
+      // Minimal stub when only a ref is known (confirm copy falls back to recurring).
+      return { reference: purchaseRef } as PurchaseInfo
+    }, [purchaseRef, activePurchase])
 
     const effectiveRef = purchaseRef ?? effectivePurchase?.reference
 
@@ -92,7 +93,16 @@ export const CancelPlanButton = forwardRef<HTMLButtonElement, CancelPlanButtonPr
       } catch (err) {
         onError?.(err instanceof Error ? err : new Error(String(err)))
       }
-    }, [effectiveRef, effectivePurchase, confirm, copy, cancelRenewal, reason, onCancelled, onError])
+    }, [
+      effectiveRef,
+      effectivePurchase,
+      confirm,
+      copy,
+      cancelRenewal,
+      reason,
+      onCancelled,
+      onError,
+    ])
 
     // Pending cancellation: renewal is already stopped; reactivate via
     // CancelledPlanNotice instead of offering cancel again.

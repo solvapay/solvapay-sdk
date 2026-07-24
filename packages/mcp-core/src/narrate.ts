@@ -63,7 +63,10 @@ interface CustomerShape {
   purchase?: { purchases?: PurchaseShape[] } | null
 }
 
-function formatMoney(amountMinor: number | null | undefined, currency: string | null | undefined): string | null {
+function formatMoney(
+  amountMinor: number | null | undefined,
+  currency: string | null | undefined,
+): string | null {
   if (amountMinor == null || !currency) return null
   const zero = isZeroDecimalCurrency(currency)
   const major = zero ? amountMinor : amountMinor / 100
@@ -81,7 +84,11 @@ function formatMoney(amountMinor: number | null | undefined, currency: string | 
 function formatDate(iso: string | null | undefined): string | null {
   if (!iso) return null
   try {
-    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    return new Date(iso).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
   } catch {
     return null
   }
@@ -119,9 +126,7 @@ function balanceRow(customer: CustomerShape | null | undefined): string | null {
   const currency = customer.balance.displayCurrency
   const creditsPerMinorUnit = customer.balance.creditsPerMinorUnit
   const displayMinor =
-    currency &&
-    typeof creditsPerMinorUnit === 'number' &&
-    creditsPerMinorUnit > 0
+    currency && typeof creditsPerMinorUnit === 'number' && creditsPerMinorUnit > 0
       ? creditsToDisplayMinorUnits({
           credits,
           creditsPerMinorUnit,
@@ -162,7 +167,7 @@ function costPerCallRow(creditsPerUnit: number): string {
 }
 
 function commandsLine(commands: string[]): string {
-  return `Commands: ${commands.map((c) => `\`/${c}\``).join(' ')}`
+  return `Commands: ${commands.map(c => `\`/${c}\``).join(' ')}`
 }
 
 function formatPlanPrices(p: PlanShape): string {
@@ -172,13 +177,13 @@ function formatPlanPrices(p: PlanShape): string {
       : [{ currency: p.currency, price: p.price, default: true }]
 
   return options
-    .map((option) => formatMoney(option.price, option.currency))
+    .map(option => formatMoney(option.price, option.currency))
     .filter((value): value is string => value != null)
     .join(' · ')
 }
 
 function plansListLines(plans: PlanShape[]): string[] {
-  return plans.map((p) => {
+  return plans.map(p => {
     const name = p.name ?? 'Plan'
     const price = formatPlanPrices(p)
     const cycle = p.billingCycle ? `/${p.billingCycle}` : ''
@@ -260,7 +265,7 @@ export function narrateUpgrade(data: BootstrapPayload): NarratorOutput {
   const lines: string[] = []
   lines.push(`**Upgrade — ${productName(data)}**`)
   lines.push('')
-  const plans = ((data.plans ?? []) as PlanShape[]).filter((p) => p.planType !== 'free')
+  const plans = ((data.plans ?? []) as PlanShape[]).filter(p => p.planType !== 'free')
   if (plans.length > 0) {
     lines.push('Plans available:')
     lines.push(...plansListLines(plans))
@@ -280,7 +285,7 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
   if (bal) lines.push(bal)
   const currency = (data.customer as CustomerShape | null)?.balance?.displayCurrency ?? 'USD'
   const presets = [1000, 2500, 5000, 10_000]
-    .map((m) => formatMoney(m, currency))
+    .map(m => formatMoney(m, currency))
     .filter(Boolean)
     .join(' · ')
   if (presets) lines.push(`Top-up presets: ${presets}`)
@@ -313,10 +318,10 @@ export const NARRATORS: Record<IntentTool, (data: BootstrapPayload) => NarratorO
 }
 
 const UI_OPENED_VERB: Record<IntentTool, (productName: string) => string> = {
-  topup: (p) => `Opened ${p} top-up.`,
-  upgrade: (p) => `Opened ${p} upgrade.`,
-  manage_account: (p) => `Opened your ${p} account.`,
-  activate_plan: (p) => `Opened ${p} plan picker.`,
+  topup: p => `Opened ${p} top-up.`,
+  upgrade: p => `Opened ${p} upgrade.`,
+  manage_account: p => `Opened your ${p} account.`,
+  activate_plan: p => `Opened ${p} plan picker.`,
 }
 
 const UI_PANEL_SHOWN: Record<IntentTool, string> = {
@@ -332,10 +337,7 @@ const UI_PANEL_SHOWN: Record<IntentTool, string> = {
  * surface opened + balance when available) without flooding the user
  * pane with the full narrated markdown that the iframe already covers.
  */
-export function uiPlaceholder(
-  tool: IntentTool,
-  data: BootstrapPayload,
-): string {
+export function uiPlaceholder(tool: IntentTool, data: BootstrapPayload): string {
   const name = productName(data)
   const opened = UI_OPENED_VERB[tool](name)
   const balance = balanceSummary(data.customer as CustomerShape | null)

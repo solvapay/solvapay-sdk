@@ -48,8 +48,7 @@ Pass `planRef` to skip plan selection. Compose slot children on `<PaymentForm>` 
 import { SolvaPayProvider } from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
 import { supabase } from './lib/supabase'
-
-<SolvaPayProvider config={{ auth: { adapter: createSupabaseAuthAdapter({ client: supabase }) } }}>
+;<SolvaPayProvider config={{ auth: { adapter: createSupabaseAuthAdapter({ client: supabase }) } }}>
   <CheckoutLayout productRef="prd_myapi" />
 </SolvaPayProvider>
 ```
@@ -99,7 +98,7 @@ const app = new App({ name: 'my-mcp-app', version: '1.0.0' })
 createRoot(document.getElementById('root')!).render(<McpApp app={app} />)
 ```
 
-Example: [`examples/mcp-checkout-app`](../../examples/mcp-checkout-app)
+Example: [`examples/typescript/mcp-checkout-app`](../../examples/typescript/mcp-checkout-app)
 
 For custom shells, compose `McpCheckoutView`, `McpAccountView`, `McpTopupView`, and `createMcpAppAdapter` — full API in the [MCP app guide](https://docs.solvapay.com/sdks/typescript/guides/mcp-app).
 

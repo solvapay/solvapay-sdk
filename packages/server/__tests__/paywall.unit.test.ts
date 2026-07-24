@@ -310,9 +310,9 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
-      await expect(
-        protectedHandler({ auth: { customer_ref: 'test_user' } }),
-      ).resolves.toEqual({ success: true })
+      await expect(protectedHandler({ auth: { customer_ref: 'test_user' } })).resolves.toEqual({
+        success: true,
+      })
     })
   })
 
@@ -1049,6 +1049,137 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(decision.gate.checkoutUrl).toBe('https://pay.example.com/confirm')
       expect(mockApiClient.trackUsageCalls).toHaveLength(1)
       expect(mockApiClient.trackUsageCalls[0].outcome).toBe('paywall')
+    })
+
+    it('cache hit with remaining=1 allows then evicts; next call re-fetches', async () => {
+      // Fresh remaining=2 → cache remaining=1; next hit decrements to 0 and evicts.
+      const checkLimitsSpy = vi
+        .spyOn(mockApiClient, 'checkLimits')
+        .mockResolvedValue({ withinLimits: true, remaining: 2, plan: 'free' })
+
+      const first = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_cache_one' } },
+        { product: 'decide-cache-one' },
+      )
+      expect(first.outcome).toBe('allow')
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+
+      const second = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_cache_one' } },
+        { product: 'decide-cache-one' },
+      )
+      expect(second.outcome).toBe('allow')
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+
+      // Entry was evicted at remaining=0; third call must re-fetch.
+      const third = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_cache_one' } },
+        { product: 'decide-cache-one' },
+      )
+      expect(third.outcome).toBe('allow')
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('cache hit with remaining=0 blocks once then evicts; next call re-fetches', async () => {
+      const checkLimitsSpy = vi
+        .spyOn(mockApiClient, 'checkLimits')
+        .mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' })
+
+      const first = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_cache_zero' } },
+        { product: 'decide-cache-zero' },
+      )
+      expect(first.outcome).toBe('allow')
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+
+      // Cached remaining=0: block exactly one follow-up, then force re-check.
+      const second = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_cache_zero' } },
+        { product: 'decide-cache-zero' },
+      )
+      expect(second.outcome).toBe('gate')
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+
+      const third = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_cache_zero' } },
+        { product: 'decide-cache-zero' },
+      )
+      expect(third.outcome).toBe('allow')
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('fresh withinLimits+remaining=1 allows and caches remaining=0 for one block', async () => {
+      const checkLimitsSpy = vi
+        .spyOn(mockApiClient, 'checkLimits')
+        .mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' })
+
+      const first = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_fresh_one' } },
+        { product: 'decide-fresh-one' },
+      )
+      expect(first.outcome).toBe('allow')
+      if (first.outcome !== 'allow') throw new Error('unreachable')
+      // decide() surfaces the pre-consume API remaining on `limits`; the
+      // optimistic decrement lives only in the cache entry.
+      expect(first.limits.remaining).toBe(1)
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+
+      const second = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_fresh_one' } },
+        { product: 'decide-fresh-one' },
+      )
+      expect(second.outcome).toBe('gate')
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('gates with empty checkoutUrl when checkLimits omits checkoutUrl', async () => {
+      mockApiClient.checkLimits = vi.fn().mockResolvedValue({
+        withinLimits: false,
+        remaining: 0,
+        plan: 'free',
+      })
+
+      const decision = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_no_checkout' } },
+        { product: 'decide-no-checkout' },
+      )
+      expect(decision.outcome).toBe('gate')
+      if (decision.outcome !== 'gate') throw new Error('unreachable')
+      expect(decision.gate.kind).toBe('payment_required')
+      expect(decision.gate.checkoutUrl).toBe('')
+      expect(decision.gate.product).toBe('decide-no-checkout')
+      expect(decision.limits).toMatchObject({ withinLimits: false, remaining: 0, plan: 'free' })
+    })
+
+    it('returns a payment_required gate with full LimitResponseWithPlan fields', async () => {
+      const balance = { creditBalance: 0, creditsPerUnit: 1, currency: 'usd' }
+      const product = { name: 'Demo', ref: 'prd_full', provider: 'pv' }
+      mockApiClient.checkLimits = vi.fn().mockResolvedValue({
+        withinLimits: false,
+        remaining: 0,
+        plan: 'pl_basic',
+        checkoutUrl: 'https://pay.example.com/upgrade',
+        balance,
+        product,
+      })
+
+      const decision = await paywall.decide(
+        { auth: { customer_ref: 'cus_decide_payment_full' } },
+        { product: 'decide-payment-full' },
+      )
+
+      expect(decision.outcome).toBe('gate')
+      if (decision.outcome !== 'gate') throw new Error('unreachable')
+      expect(decision.gate.kind).toBe('payment_required')
+      expect(decision.gate.product).toBe('decide-payment-full')
+      expect(decision.gate.checkoutUrl).toBe('https://pay.example.com/upgrade')
+      expect(decision.gate.balance).toEqual(balance)
+      expect(decision.gate.productDetails).toEqual(product)
+      expect(decision.limits).toMatchObject({
+        withinLimits: false,
+        remaining: 0,
+        plan: 'pl_basic',
+      })
     })
   })
 

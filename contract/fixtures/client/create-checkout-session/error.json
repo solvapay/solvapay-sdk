@@ -1,0 +1,37 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createCheckoutSession",
+    "args": {
+      "customerRef": "cus_fixture",
+      "productRef": "prd_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-checkout-session-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/checkout-sessions",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "customerRef": "cus_fixture",
+        "productRef": "prd_fixture"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Create checkout session failed (400): bad",
+      "status": 400
+    }
+  }
+}

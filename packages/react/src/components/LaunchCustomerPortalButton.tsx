@@ -29,11 +29,10 @@ import { ExternalLinkGlyph } from './ExternalLinkGlyph'
 
 type ClickState = 'idle' | 'pending' | 'error'
 
-export interface LaunchCustomerPortalButtonProps
-  extends Omit<
-    React.AnchorHTMLAttributes<HTMLAnchorElement>,
-    'href' | 'target' | 'rel' | 'onError'
-  > {
+export interface LaunchCustomerPortalButtonProps extends Omit<
+  React.AnchorHTMLAttributes<HTMLAnchorElement>,
+  'href' | 'target' | 'rel' | 'onError'
+> {
   /** Override the default "Manage account" label. */
   children?: React.ReactNode
   /** Called immediately before the user navigates to `href`. */
@@ -84,13 +83,14 @@ export const LaunchCustomerPortalButton = forwardRef<
   const label = children ?? copy.customerPortal.launchButton
   const labelText = typeof label === 'string' ? label : copy.customerPortal.launchButton
 
-  const composedClassName = [
-    className,
-    clickState === 'pending' ? loadingClassName : null,
-    clickState === 'error' ? errorClassName : null,
-  ]
-    .filter(Boolean)
-    .join(' ') || undefined
+  const composedClassName =
+    [
+      className,
+      clickState === 'pending' ? loadingClassName : null,
+      clickState === 'error' ? errorClassName : null,
+    ]
+      .filter(Boolean)
+      .join(' ') || undefined
 
   // Synchronous, sandbox-safe path: anchor has a real href + target,
   // browser handles the navigation, we just notify onLaunch.

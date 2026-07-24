@@ -5,9 +5,7 @@ import { isErrorResult } from '../src/helpers/error'
 
 function base64UrlEncode(input: string): string {
   const base64 =
-    typeof btoa === 'function'
-      ? btoa(input)
-      : Buffer.from(input, 'utf-8').toString('base64')
+    typeof btoa === 'function' ? btoa(input) : Buffer.from(input, 'utf-8').toString('base64')
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
@@ -18,10 +16,7 @@ function forgeJwt(payload: Record<string, unknown>): string {
   return `${header}.${body}.not-a-signature`
 }
 
-async function signedHs256(
-  payload: Record<string, unknown>,
-  secret: string,
-): Promise<string> {
+async function signedHs256(payload: Record<string, unknown>, secret: string): Promise<string> {
   const key = new TextEncoder().encode(secret)
   return await new SignJWT(payload).setProtectedHeader({ alg: 'HS256' }).sign(key)
 }
@@ -167,10 +162,7 @@ describe('getAuthenticatedUserCore', () => {
     it('accepts a correctly signed token', async () => {
       const secret = 'test-secret-at-least-32-chars-long-for-hs256'
       process.env.SUPABASE_JWT_SECRET = secret
-      const token = await signedHs256(
-        { sub: 'signed-user', email: 'signed@example.com' },
-        secret,
-      )
+      const token = await signedHs256({ sub: 'signed-user', email: 'signed@example.com' }, secret)
       const req = new Request('https://example.com', {
         headers: { authorization: `Bearer ${token}` },
       })
@@ -185,10 +177,7 @@ describe('getAuthenticatedUserCore', () => {
 
     it('rejects a token signed with a different secret', async () => {
       process.env.SUPABASE_JWT_SECRET = 'server-secret-value-32-chars-min'
-      const token = await signedHs256(
-        { sub: 'signed-user' },
-        'attacker-secret-value-32-chars-min',
-      )
+      const token = await signedHs256({ sub: 'signed-user' }, 'attacker-secret-value-32-chars-min')
       const req = new Request('https://example.com', {
         headers: { authorization: `Bearer ${token}` },
       })

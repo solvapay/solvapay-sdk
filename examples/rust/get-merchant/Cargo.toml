@@ -1,0 +1,33 @@
+[package]
+name = "solvapay-example-get-merchant"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.96"
+description = "SolvaPay Rust facade — get_merchant example (Step 46/48)"
+publish = false
+
+[[bin]]
+name = "get-merchant"
+path = "src/main.rs"
+
+[lib]
+name = "solvapay_example_get_merchant"
+path = "src/lib.rs"
+
+[dependencies]
+solvapay = { path = "../../../rust/crates/solvapay" }
+solvapay-rust-examples-env = { path = "../env" }
+tokio = { version = "1.52.4", features = ["rt", "macros"] }
+
+[dev-dependencies]
+tokio = { version = "1.52.4", features = ["rt", "macros"] }
+
+[lints.rust]
+missing_docs = "deny"
+
+[lints.clippy]
+missing_docs_in_private_items = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

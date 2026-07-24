@@ -336,19 +336,13 @@ describe('monthly spend helpers (DEV-635)', () => {
 
   it('effectiveMonthlySpend resets when the period does not match', () => {
     expect(
-      effectiveMonthlySpend(
-        { monthlySpendMinor: 4500, monthlySpendPeriod: '2026-06' },
-        july2026,
-      ),
+      effectiveMonthlySpend({ monthlySpendMinor: 4500, monthlySpendPeriod: '2026-06' }, july2026),
     ).toBe(0)
   })
 
   it('effectiveMonthlySpend returns spend for the current period', () => {
     expect(
-      effectiveMonthlySpend(
-        { monthlySpendMinor: 4500, monthlySpendPeriod: '2026-07' },
-        july2026,
-      ),
+      effectiveMonthlySpend({ monthlySpendMinor: 4500, monthlySpendPeriod: '2026-07' }, july2026),
     ).toBe(4500)
   })
 

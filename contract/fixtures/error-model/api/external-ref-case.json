@@ -1,0 +1,21 @@
+{
+  "suite": "error-model",
+  "case": "api-external-ref-case",
+  "input": {
+    "fn": "constructSdkError",
+    "args": {
+      "kind": "Api",
+      "template": "No customer found with externalRef: {externalRef}",
+      "vars": {
+        "externalRef": "ext_missing"
+      }
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "No customer found with externalRef: ext_missing",
+      "kind": "Api"
+    }
+  }
+}

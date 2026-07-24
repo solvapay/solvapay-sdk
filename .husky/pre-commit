@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+
+# When the contract manifest or OpenAPI snapshot changes, regenerate surfaces
+# and re-stage generated outputs. CI `pnpm gen:check` remains authoritative.
+
+changed=$(git diff --cached --name-only -- \
+  contract/manifest/sdk-contract.yaml \
+  contract/openapi/sdk-v1.snapshot.json)
+
+if [ -z "$changed" ]; then
+  exit 0
+fi
+
+echo "contract changed — running pnpm gen…"
+pnpm gen || exit 1
+
+# Re-stage generated artifacts that gen may have rewritten.
+git add -- \
+  rust/crates/solvapay-dto \
+  packages/server/src/types/overlays.generated.d.ts \
+  packages/server/src/types/client.generated.d.ts \
+  packages/server/src/__generated__/signature-parity.generated.test.ts \
+  packages/server/src/native.ts \
+  packages/server/src/wasm.ts \
+  contract/manifest/binding-symbols.snapshot.json \
+  rust/bindings/node/src \
+  rust/bindings/wasm/src \
+  rust/bindings/python/src \
+  rust/bindings/python/python/solvapay/_native.py \
+  rust/bindings/python/python/solvapay/__init__.pyi \
+  rust/bindings/python/tests/signature_parity_generated_test.py \
+  rust/bindings/ruby/ext/solvapay/src \
+  rust/bindings/ruby/lib/solvapay/_native.rb \
+  rust/bindings/ruby/lib/solvapay/client.rb \
+  rust/bindings/ruby/lib/solvapay/helpers.generated.rb \
+  rust/bindings/ruby/sig/solvapay.rbs \
+  rust/bindings/ruby/test/signature_parity_generated_test.rb \
+  rust/crates/solvapay/src/client_generated.rs \
+  rust/crates/solvapay/src/blocking_generated.rs \
+  rust/crates/solvapay/tests/signature_parity_generated.rs \
+  rust/bindings/go/wasm/src \
+  rust/bindings/go/client_generated.go \
+  rust/bindings/go/signature_parity_generated_test.go

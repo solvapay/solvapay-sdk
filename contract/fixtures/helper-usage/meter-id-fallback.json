@@ -1,0 +1,29 @@
+{
+  "suite": "helper-usage",
+  "case": "meter-id-fallback",
+  "input": {
+    "fn": "projectUsageSnapshot",
+    "args": {
+      "activePurchase": {
+        "reference": "pur_1",
+        "planSnapshot": {
+          "meterId": "mtr_legacy",
+          "limit": 10
+        },
+        "usage": {
+          "used": 2
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "meterRef": "mtr_legacy",
+      "total": 10,
+      "used": 2,
+      "remaining": 8,
+      "percentUsed": 20,
+      "purchaseRef": "pur_1"
+    }
+  }
+}

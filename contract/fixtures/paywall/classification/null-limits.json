@@ -1,0 +1,9 @@
+{
+  "suite": "paywall",
+  "case": "null-limits",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": { "limits": null }
+  },
+  "expect": { "result": { "kind": "upgrade_required" } }
+}

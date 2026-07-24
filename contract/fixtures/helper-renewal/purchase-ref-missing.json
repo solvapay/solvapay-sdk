@@ -1,0 +1,14 @@
+{
+  "suite": "helper-renewal",
+  "case": "purchase-ref-missing",
+  "input": {
+    "fn": "validatePurchaseRef",
+    "args": { "purchaseRef": null }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing required parameter: purchaseRef is required",
+      "status": 400
+    }
+  }
+}

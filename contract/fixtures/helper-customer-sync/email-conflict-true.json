@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "email-conflict-true",
+  "input": {
+    "fn": "isEmailConflict",
+    "args": {
+      "message": "duplicate identifier email"
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

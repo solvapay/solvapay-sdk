@@ -57,18 +57,12 @@ import { MandateText as MandateTextShim } from '../components/MandateText'
 import { Spinner } from '../components/Spinner'
 import { confirmPayment } from '../utils/confirmPayment'
 import { reconcilePayment } from '../utils/processPaymentResult'
-import {
-  readPaymentIntentClientSecret,
-  stripPaymentIntentParams,
-} from './paymentIntentReturn'
+import { readPaymentIntentClientSecret, stripPaymentIntentParams } from './paymentIntentReturn'
 import { normalizeOneTimePurchase } from '../utils/normalizePurchase'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { resolveCta } from '../utils/checkoutCta'
 import { formatPrice } from '../utils/format'
-import {
-  useBusinessDetailsAttach,
-  defaultBusinessDetails,
-} from '../hooks/useBusinessDetailsAttach'
+import { useBusinessDetailsAttach, defaultBusinessDetails } from '../hooks/useBusinessDetailsAttach'
 import {
   createBusinessDetailsParts,
   createTaxSummaryParts,
@@ -453,7 +447,10 @@ const PaidInner: React.FC<{
           try {
             await refetch()
           } catch (error) {
-            console.error('[PaymentForm] secondary purchase refetch failed after return-path success', error)
+            console.error(
+              '[PaymentForm] secondary purchase refetch failed after return-path success',
+              error,
+            )
           }
         }
         onSuccess?.(paymentIntent)
@@ -592,7 +589,10 @@ const PaidInner: React.FC<{
           try {
             await refetch()
           } catch (error) {
-            console.error('[PaymentForm] secondary purchase refetch failed after submit success', error)
+            console.error(
+              '[PaymentForm] secondary purchase refetch failed after submit success',
+              error,
+            )
           }
         }
 
@@ -1052,7 +1052,7 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
     const baseMinor = ctx.taxBreakdown?.total ?? plan?.price ?? ctx.plan?.price ?? 0
     const amountFormatted = formatPrice(baseMinor, ctx.taxBreakdown?.currency ?? planCurrency, {
       locale,
-      interval: variant === 'recurring' ? plan?.interval ?? ctx.plan?.interval : undefined,
+      interval: variant === 'recurring' ? (plan?.interval ?? ctx.plan?.interval) : undefined,
       intervalCount: variant === 'recurring' ? 1 : undefined,
       free: copy.interval.free,
     })

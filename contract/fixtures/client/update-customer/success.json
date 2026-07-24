@@ -1,0 +1,36 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "updateCustomer",
+    "args": {
+      "customerRef": "cus_fixture",
+      "name": "Ada"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "update-customer-success",
+  "wire": {
+    "request": {
+      "method": "PATCH",
+      "path": "/v1/sdk/customers/cus_fixture",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "name": "Ada"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "cus_mapped"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "customerRef": "cus_mapped"
+    }
+  }
+}

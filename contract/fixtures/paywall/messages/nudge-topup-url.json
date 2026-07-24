@@ -1,0 +1,20 @@
+{
+  "suite": "paywall",
+  "case": "nudge-topup-url",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": {
+        "kind": "topup_required"
+      },
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 1,
+        "checkoutUrl": "https://pay.test/x"
+      }
+    }
+  },
+  "expect": {
+    "result": "Heads up — running low on credits. Call the `topup` tool to add more, or visit https://pay.test/x."
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "cancelPurchase",
+    "args": {
+      "purchaseRef": "pur_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "cancel-purchase-success-flat",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/purchases/pur_fixture/cancel",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "pur_fixture",
+        "status": "cancelled"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "pur_fixture",
+      "status": "cancelled"
+    }
+  }
+}

@@ -10,6 +10,15 @@ import {
   type BusinessDetailsInput,
   type TaxBreakdown,
 } from '@solvapay/core'
+import {
+  attachBusinessDetailsValidationError,
+  projectPaymentIntentResult,
+  projectTopupProcessOutcome,
+  validateAttachBusinessDetailsParams,
+  validateCreatePaymentIntentParams,
+  validateProcessPaymentIntentParams,
+  validateTopupPaymentIntentParams,
+} from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import type { TopupProcessResult } from '../types/client'
@@ -81,11 +90,9 @@ export async function createPaymentIntentCore(
   | ErrorResult
 > {
   try {
-    if (!body.planRef || !body.productRef) {
-      return {
-        error: 'Missing required parameters: planRef and productRef are required',
-        status: 400,
-      }
+    const validationError = validateCreatePaymentIntentParams(body.planRef, body.productRef)
+    if (validationError) {
+      return validationError
     }
 
     const customerResult = await syncCustomerCore(request, {
@@ -109,13 +116,7 @@ export async function createPaymentIntentCore(
       ...(body.currency && { currency: body.currency }),
     })
 
-    return {
-      processorPaymentId: paymentIntent.processorPaymentId,
-      clientSecret: paymentIntent.clientSecret,
-      publishableKey: paymentIntent.publishableKey,
-      accountId: paymentIntent.accountId,
-      customerRef,
-    }
+    return projectPaymentIntentResult(paymentIntent, customerRef)
   } catch (error) {
     return handleRouteError(error, 'Create payment intent', 'Payment intent creation failed')
   }
@@ -160,25 +161,9 @@ export async function createTopupPaymentIntentCore(
   | ErrorResult
 > {
   try {
-    if (!body.amount || body.amount <= 0) {
-      return {
-        error: 'Missing or invalid amount: must be a positive number',
-        status: 400,
-      }
-    }
-
-    if (!body.currency) {
-      return {
-        error: 'Missing required parameter: currency',
-        status: 400,
-      }
-    }
-
-    if (body.currency !== body.currency.toUpperCase()) {
-      return {
-        error: `Invalid currency "${body.currency}": must be an uppercase ISO 4217 code (e.g. "USD", "EUR")`,
-        status: 400,
-      }
+    const validationError = validateTopupPaymentIntentParams(body.amount, body.currency)
+    if (validationError) {
+      return validationError
     }
 
     const customerResult = await syncCustomerCore(request, {
@@ -203,13 +188,7 @@ export async function createTopupPaymentIntentCore(
       ...(body.autoRecharge ? { autoRecharge: body.autoRecharge } : {}),
     })
 
-    return {
-      processorPaymentId: paymentIntent.processorPaymentId,
-      clientSecret: paymentIntent.clientSecret,
-      publishableKey: paymentIntent.publishableKey,
-      accountId: paymentIntent.accountId,
-      customerRef,
-    }
+    return projectPaymentIntentResult(paymentIntent, customerRef)
   } catch (error) {
     return handleRouteError(
       error,
@@ -267,11 +246,12 @@ export async function processPaymentIntentCore(
   } = {},
 ): Promise<import('../types/client').ProcessPaymentResult | ErrorResult> {
   try {
-    if (!body.paymentIntentId || !body.productRef) {
-      return {
-        error: 'paymentIntentId and productRef are required',
-        status: 400,
-      }
+    const validationError = validateProcessPaymentIntentParams(
+      body.paymentIntentId,
+      body.productRef,
+    )
+    if (validationError) {
+      return validationError
     }
 
     const customerResult = await syncCustomerCore(request, {
@@ -389,11 +369,9 @@ export async function attachBusinessDetailsCore(
   } = {},
 ): Promise<{ taxBreakdown: TaxBreakdown } | ErrorResult> {
   try {
-    if (!body.paymentIntentId) {
-      return {
-        error: 'paymentIntentId is required',
-        status: 400,
-      }
+    const paramError = validateAttachBusinessDetailsParams(body.paymentIntentId)
+    if (paramError) {
+      return paramError
     }
 
     const validation = validateBusinessDetails({
@@ -408,10 +386,7 @@ export async function attachBusinessDetailsCore(
 
     if (!validation.success) {
       const firstIssue = validation.error.issues[0]
-      return {
-        error: firstIssue?.message ?? 'Invalid business details',
-        status: 400,
-      }
+      return attachBusinessDetailsValidationError(firstIssue?.message)
     }
 
     const solvaPay = options.solvaPay || createSolvaPay()
@@ -432,11 +407,7 @@ export async function attachBusinessDetailsCore(
 
     return result
   } catch (error) {
-    return handleRouteError(
-      error,
-      'Attach business details',
-      'Failed to attach business details',
-    )
+    return handleRouteError(error, 'Attach business details', 'Failed to attach business details')
   }
 }
 
@@ -450,11 +421,9 @@ export async function processTopupPaymentIntentCore(
   } = {},
 ): Promise<TopupProcessResult | ErrorResult> {
   try {
-    if (!body.paymentIntentId) {
-      return {
-        error: 'paymentIntentId is required',
-        status: 400,
-      }
+    const paramError = validateAttachBusinessDetailsParams(body.paymentIntentId)
+    if (paramError) {
+      return paramError
     }
 
     const customerResult = await syncCustomerCore(request, {
@@ -499,16 +468,10 @@ export async function processTopupPaymentIntentCore(
     // `type: 'recurring' | 'one-time'`, but the backend response type
     // permits them, so narrow defensively.
     const status = (result as { status?: string }).status
-    if (status === 'timeout') {
-      const message = (result as { message?: string }).message
-      return message !== undefined ? { status: 'timeout', message } : { status: 'timeout' }
-    }
-    if (status === 'failed') return { status: 'failed' }
-    if (status === 'cancelled') return { status: 'cancelled' }
-    if (status !== 'succeeded') {
-      // Defensive fallback: if the backend returns an unknown or missing
-      // status, fail closed instead of misreporting success.
-      return { status: 'failed' }
+    const message = (result as { message?: string }).message
+    const outcome = projectTopupProcessOutcome(status, message)
+    if (outcome.status !== 'succeeded') {
+      return outcome
     }
 
     // Succeeded: PI is in terminal state but the webhook handler may

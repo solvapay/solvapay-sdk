@@ -36,9 +36,7 @@ function makeSolvaPay() {
   return createSolvaPay({ apiClient: client })
 }
 
-function buildServer(
-  overrides: Partial<Parameters<typeof createSolvaPayMcpServer>[0]> = {},
-) {
+function buildServer(overrides: Partial<Parameters<typeof createSolvaPayMcpServer>[0]> = {}) {
   return createSolvaPayMcpServer({
     solvaPay: makeSolvaPay(),
     productRef: 'prd_test',
@@ -117,10 +115,7 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
   it('leaves the hidden tools callable via tools/call (enabled: true)', async () => {
     const server = buildServer({ hideToolsByAudience: ['ui'] })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const registered = (server as any)._registeredTools as Record<
-      string,
-      { enabled: boolean }
-    >
+    const registered = (server as any)._registeredTools as Record<string, { enabled: boolean }>
     for (const uiTool of UI_TOOLS) {
       expect(registered[uiTool]?.enabled).toBe(true)
     }

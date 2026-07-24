@@ -11,12 +11,12 @@ CSS so they render as real UI in the markdown preview (open this file's preview 
 
 Auto-recharge is not a UI that payment infrastructure ships — it is a product pattern.
 
-| Source | Ships an auto-recharge UI? | Notes |
-| --- | --- | --- |
-| **Stripe** | No | Billing credits + credit-grant ledger only. You build threshold-watching + recharge. |
-| **Polar** | No | Credits + meters + Customer Portal *displays* balance; top-up logic is yours. |
-| **Metronome / Stigg / Flexprice** | Yes | Same 2 knobs: threshold and fixed recharge amount, payment gating. |
-| **OpenAI / Anthropic / Cursor / Twilio** | Yes | The de-facto visual reference everyone copies. |
+| Source                                   | Ships an auto-recharge UI? | Notes                                                                                |
+| ---------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------ |
+| **Stripe**                               | No                         | Billing credits + credit-grant ledger only. You build threshold-watching + recharge. |
+| **Polar**                                | No                         | Credits + meters + Customer Portal _displays_ balance; top-up logic is yours.        |
+| **Metronome / Stigg / Flexprice**        | Yes                        | Same 2 knobs: threshold and fixed recharge amount, payment gating.                   |
+| **OpenAI / Anthropic / Cursor / Twilio** | Yes                        | The de-facto visual reference everyone copies.                                       |
 
 References: [OpenAI prepaid billing](https://help.openai.com/en/articles/8264644-how-can-i-set-up-prepaid-billing) ·
 [Metronome thresholds](https://docs.metronome.com/guides/customers-billing/optimize-customer-experience/prepaid-balance-thresholds) ·
@@ -110,27 +110,27 @@ Shown on the summary card when auto-recharge is paused.
 
 ## Field spec (mapped to `AutoRechargeConfig`)
 
-| UI field | Form state | Config path | Default | Rules |
-| --- | --- | --- | --- | --- |
-| Enable checkbox | `enabled` | `enabled` | `false` (opt-in) | Off by default; threshold and amount fields stay hidden until checked |
-| Threshold | `thresholdAmountMajor` + `thresholdUnit` | `trigger.thresholdAmountMinor` | `5` | Stored in display-currency minor units; entered in $ or credits |
-| Fixed amount | `topupAmountMajor` + `topupUnit` | `topup.amountMinor` | `10` | ≥ minimum charge |
-| Payment method | Stripe `PaymentElement` | — | — | Required before enable |
-| Summary | `summaryLine` (`buildSummaryLine`) | derived | — | Updates live |
+| UI field        | Form state                               | Config path                    | Default          | Rules                                                                 |
+| --------------- | ---------------------------------------- | ------------------------------ | ---------------- | --------------------------------------------------------------------- |
+| Enable checkbox | `enabled`                                | `enabled`                      | `false` (opt-in) | Off by default; threshold and amount fields stay hidden until checked |
+| Threshold       | `thresholdAmountMajor` + `thresholdUnit` | `trigger.thresholdAmountMinor` | `5`              | Stored in display-currency minor units; entered in $ or credits       |
+| Fixed amount    | `topupAmountMajor` + `topupUnit`         | `topup.amountMinor`            | `10`             | ≥ minimum charge                                                      |
+| Payment method  | Stripe `PaymentElement`                  | —                              | —                | Required before enable                                                |
+| Summary         | `summaryLine` (`buildSummaryLine`)       | derived                        | —                | Updates live                                                          |
 
 ## States
 
 `dataState: 'loading' | 'idle' | 'saving' | 'disabling' | 'setup' | 'error'`
 
-| State | UI |
-| --- | --- |
-| `loading` | Skeleton / `Spinner` on summary card |
-| `setup` | First-time: PaymentElement inline in dialog, CTA "Set up auto-recharge" (mockup 3) |
-| `idle` | Summary card + dialog for editing (mockup 2) |
-| `saving` | Save button → spinner, fields disabled |
-| `disabling` | Disable in progress |
-| `error` | Inline error banner with retry; never silently fail |
-| failed recharge | `status`/`failureCount` → warning banner on card (mockup 4) |
+| State           | UI                                                                                 |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `loading`       | Skeleton / `Spinner` on summary card                                               |
+| `setup`         | First-time: PaymentElement inline in dialog, CTA "Set up auto-recharge" (mockup 3) |
+| `idle`          | Summary card + dialog for editing (mockup 2)                                       |
+| `saving`        | Save button → spinner, fields disabled                                             |
+| `disabling`     | Disable in progress                                                                |
+| `error`         | Inline error banner with retry; never silently fail                                |
+| failed recharge | `status`/`failureCount` → warning banner on card (mockup 4)                        |
 
 ## Mapping to the compound primitive
 

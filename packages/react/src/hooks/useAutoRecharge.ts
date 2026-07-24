@@ -7,7 +7,13 @@ import type {
 import { useSolvaPay } from './useSolvaPay'
 import { createHttpTransport } from '../transport/http'
 import type { SolvaPayConfig } from '../types'
-import { autoRechargeCache, autoRechargeCacheKeyFor, CACHE_DURATION, subscribeAutoRecharge, writeAutoRechargeCache } from './autoRechargeCache'
+import {
+  autoRechargeCache,
+  autoRechargeCacheKeyFor,
+  CACHE_DURATION,
+  subscribeAutoRecharge,
+  writeAutoRechargeCache,
+} from './autoRechargeCache'
 
 export type UseAutoRechargeReturn = {
   config: AutoRechargeConfig | null

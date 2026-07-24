@@ -1,0 +1,16 @@
+{
+  "suite": "helper-payment",
+  "case": "attach-validation-with-message",
+  "input": {
+    "fn": "attachBusinessDetailsValidationError",
+    "args": {
+      "firstIssueMessage": "Business name is required"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Business name is required",
+      "status": 400
+    }
+  }
+}

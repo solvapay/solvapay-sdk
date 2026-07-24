@@ -207,19 +207,25 @@ describe('createHttpTransport — default routes', () => {
   })
 
   it('falls back to statusText when response has no JSON body', async () => {
-    const fetchFn = vi.fn().mockResolvedValue(
-      new Response('not json', { status: 500, statusText: 'Internal Server Error' }),
-    )
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValue(
+        new Response('not json', { status: 500, statusText: 'Internal Server Error' }),
+      )
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
-    await expect(transport.checkPurchase!()).rejects.toThrow(/Internal Server Error|Failed to check purchase/)
+    await expect(transport.checkPurchase!()).rejects.toThrow(
+      /Internal Server Error|Failed to check purchase/,
+    )
   })
 
   it('invokes config.onError with the right context key on failure', async () => {
     const onError = vi.fn()
-    const fetchFn = vi.fn().mockResolvedValue(
-      new Response('{}', { status: 500, headers: { 'Content-Type': 'application/json' } }),
-    )
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValue(
+        new Response('{}', { status: 500, headers: { 'Content-Type': 'application/json' } }),
+      )
     const transport = createHttpTransport({
       fetch: fetchFn as unknown as typeof fetch,
       onError,

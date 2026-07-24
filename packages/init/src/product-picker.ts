@@ -7,7 +7,10 @@ const CONSOLE_PRODUCTS_URL = 'https://app.solvapay.com/products'
 export type PickResult =
   | { action: 'picked'; product: ProductSummary }
   | { action: 'declined' }
-  | { action: 'skipped'; reason: 'zero_products' | 'network_error' | 'non_interactive_requires_product' }
+  | {
+      action: 'skipped'
+      reason: 'zero_products' | 'network_error' | 'non_interactive_requires_product'
+    }
 
 type PickOptions = {
   yes: boolean

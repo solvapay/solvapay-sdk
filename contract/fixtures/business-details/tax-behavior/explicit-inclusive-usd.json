@@ -1,0 +1,14 @@
+{
+  "suite": "business-details",
+  "case": "explicit-inclusive-usd",
+  "input": {
+    "fn": "resolveTaxBehavior",
+    "args": {
+      "behavior": "inclusive",
+      "currency": "USD"
+    }
+  },
+  "expect": {
+    "result": "inclusive"
+  }
+}

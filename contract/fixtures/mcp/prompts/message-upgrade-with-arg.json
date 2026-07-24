@@ -1,0 +1,26 @@
+{
+  "suite": "mcp",
+  "case": "message-upgrade-with-arg",
+  "input": {
+    "fn": "buildPromptUserMessage",
+    "args": {
+      "promptName": "upgrade",
+      "args": {
+        "planRef": "pln_pro"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "messages": [
+        {
+          "role": "user",
+          "content": {
+            "type": "text",
+            "text": "Activate plan pln_pro for me."
+          }
+        }
+      ]
+    }
+  }
+}

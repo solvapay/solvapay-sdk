@@ -6,10 +6,9 @@ import { enCopy } from '../i18n/en'
 
 const confirmCardPayment = vi.fn()
 const getElement = vi.fn()
-const cardOnChangeRef: { current?: (event: {
-  complete: boolean
-  error?: { message: string }
-}) => void } = {}
+const cardOnChangeRef: {
+  current?: (event: { complete: boolean; error?: { message: string } }) => void
+} = {}
 
 vi.mock('@stripe/react-stripe-js', () => ({
   CardElement: ({
@@ -60,7 +59,11 @@ describe('StripePaymentFormWrapper', () => {
     const onSuccess = vi.fn()
 
     render(
-      <StripePaymentFormWrapper clientSecret="cs_test" onSuccess={onSuccess} submitButtonText="Pay" />,
+      <StripePaymentFormWrapper
+        clientSecret="cs_test"
+        onSuccess={onSuccess}
+        submitButtonText="Pay"
+      />,
     )
 
     cardOnChangeRef.current?.({ complete: true })

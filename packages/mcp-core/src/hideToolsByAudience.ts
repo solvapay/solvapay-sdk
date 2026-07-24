@@ -67,10 +67,7 @@
  */
 interface McpServerLike {
   server: {
-    _requestHandlers: Map<
-      string,
-      (req: unknown, extra: unknown) => Promise<ToolsListResponseLike>
-    >
+    _requestHandlers: Map<string, (req: unknown, extra: unknown) => Promise<ToolsListResponseLike>>
     getClientVersion?: () => { name?: unknown } | undefined
   }
 }

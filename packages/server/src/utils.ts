@@ -2,6 +2,7 @@
  * Utility functions for the SolvaPay Server SDK
  */
 
+import { retryNextDelayMs } from './native-decisions'
 import type { RetryOptions } from './types'
 
 /**
@@ -10,6 +11,9 @@ import type { RetryOptions } from './types'
  * This utility function provides configurable retry logic with exponential backoff,
  * conditional retry logic, and retry callbacks. Useful for handling transient
  * network errors or rate limiting.
+ *
+ * Delay scheduling delegates to `retryNextDelayMs` (Rust when installed); host
+ * timers (`sleep`) and `shouldRetry` / `onRetry` callbacks stay here.
  *
  * @template T The return type of the async function
  * @param fn The async function to execute
@@ -58,10 +62,13 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
 
-      const isLastAttempt = attempt === maxRetries
-
-      // Check if we should retry
-      if (isLastAttempt) {
+      const delay = retryNextDelayMs({
+        maxRetries,
+        initialDelay,
+        backoffStrategy,
+        attempt,
+      })
+      if (delay === null) {
         throw lastError
       }
 
@@ -69,9 +76,6 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
       if (shouldRetry && !shouldRetry(lastError, attempt)) {
         throw lastError
       }
-
-      // Calculate delay based on backoff strategy
-      const delay = calculateDelay(initialDelay, attempt, backoffStrategy)
 
       // Call onRetry callback if provided
       if (onRetry) {
@@ -85,26 +89,6 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
 
   // This should never be reached, but TypeScript needs it
   throw lastError!
-}
-
-/**
- * Calculate the delay before the next retry based on the backoff strategy
- */
-function calculateDelay(
-  initialDelay: number,
-  attempt: number,
-  strategy: 'fixed' | 'linear' | 'exponential',
-): number {
-  switch (strategy) {
-    case 'fixed':
-      return initialDelay
-    case 'linear':
-      return initialDelay * (attempt + 1)
-    case 'exponential':
-      return initialDelay * Math.pow(2, attempt)
-    default:
-      return initialDelay
-  }
 }
 
 /**

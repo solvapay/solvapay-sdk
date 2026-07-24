@@ -2,10 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import React, { createRef } from 'react'
 import { CreditGate as ShimCreditGate } from './CreditGate'
-import {
-  CreditGate,
-  useCreditGate,
-} from '../primitives/CreditGate'
+import { CreditGate, useCreditGate } from '../primitives/CreditGate'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { BalanceStatus, SolvaPayContextValue } from '../types'
@@ -132,7 +129,11 @@ describe('CreditGate primitive', () => {
   it('useCreditGate hook exposes state + balance for custom leaves', () => {
     const Custom = () => {
       const ctx = useCreditGate()
-      return <span data-testid="custom">{ctx.state}:{ctx.balance}</span>
+      return (
+        <span data-testid="custom">
+          {ctx.state}:{ctx.balance}
+        </span>
+      )
     }
     render(
       <Wrap ctx={ctxWithBalance({ credits: 3 })}>

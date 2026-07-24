@@ -1,0 +1,15 @@
+{
+  "suite": "seller-identity",
+  "case": "label-map-by-type",
+  "input": {
+    "fn": "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+    "args": {}
+  },
+  "expect": {
+    "result": {
+      "eu_vat": "VAT number",
+      "gb_vat": "VAT number",
+      "us_ein": "EIN"
+    }
+  }
+}

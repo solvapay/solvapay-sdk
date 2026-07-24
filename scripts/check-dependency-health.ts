@@ -44,8 +44,22 @@ const runRecursiveList = (): ListedPackage[] => {
   return JSON.parse(stdout) as ListedPackage[]
 }
 
+const isProtocolVersion = (version: string): boolean =>
+  version.startsWith('link:') ||
+  version.startsWith('workspace:') ||
+  version.startsWith('file:') ||
+  version.startsWith('npm:') ||
+  version.startsWith('portal:') ||
+  version.startsWith('catalog:')
+
+/** True for semver values with a prerelease segment (e.g. 1.2.3-beta.1, ^0.1.0-rc.2). */
+const isSemverPrerelease = (version: string): boolean => {
+  const cleaned = version.replace(/^[\^~>=<\s|]+/, '').split(/\s*\|\|\s*/)[0] ?? version
+  return /^\d+\.\d+\.\d+-[0-9A-Za-z.-]+/.test(cleaned)
+}
+
 const parseMajor = (rawVersion: string | undefined): number | null => {
-  if (!rawVersion || rawVersion.startsWith('link:') || rawVersion.startsWith('workspace:')) {
+  if (!rawVersion || isProtocolVersion(rawVersion)) {
     return null
   }
 
@@ -76,11 +90,7 @@ const probePeerWarningsWithFrozenInstall = (): string[] => {
   const hasPeerWarnings = combinedOutput.includes('Issues with peer dependencies found')
 
   if (installProbe.status !== 0) {
-    const trimmedOutput = combinedOutput
-      .trim()
-      .split('\n')
-      .slice(-12)
-      .join('\n')
+    const trimmedOutput = combinedOutput.trim().split('\n').slice(-12).join('\n')
     return [
       `Unable to probe peer dependencies with frozen install (exit ${installProbe.status ?? 'unknown'}).\n${trimmedOutput}`,
     ]
@@ -92,7 +102,9 @@ const probePeerWarningsWithFrozenInstall = (): string[] => {
 
   const warningLines = combinedOutput
     .split('\n')
-    .filter(line => line.includes('Issues with peer dependencies found') || line.includes('✕ unmet peer'))
+    .filter(
+      line => line.includes('Issues with peer dependencies found') || line.includes('✕ unmet peer'),
+    )
 
   if (warningLines.length === 0) {
     return ['pnpm reported peer dependency issues during frozen install']
@@ -137,7 +149,9 @@ const findCriticalMajorDrift = (packages: ListedPackage[]): string[] => {
 
     const details = [...majorMap.entries()]
       .sort((a, b) => a[0] - b[0])
-      .map(([major, packagesUsingMajor]) => `v${major} (${[...packagesUsingMajor].sort().join(', ')})`)
+      .map(
+        ([major, packagesUsingMajor]) => `v${major} (${[...packagesUsingMajor].sort().join(', ')})`,
+      )
       .join(' vs ')
 
     issues.push(`${library}: ${details}`)
@@ -157,10 +171,7 @@ const findSolvaPayPrereleaseDrift = (packages: ListedPackage[]): string[] => {
         }
 
         const version = dependencyInfo.version
-        if (!version || version.startsWith('link:') || version.startsWith('workspace:')) {
-          continue
-        }
-        if (!version.includes('-')) {
+        if (!version || isProtocolVersion(version) || !isSemverPrerelease(version)) {
           continue
         }
 

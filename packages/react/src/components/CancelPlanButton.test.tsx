@@ -8,7 +8,10 @@ import type { PurchaseInfo, SolvaPayContextValue } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 beforeEach(() => {
-  vi.stubGlobal('confirm', vi.fn(() => true))
+  vi.stubGlobal(
+    'confirm',
+    vi.fn(() => true),
+  )
 })
 
 function buildCtx(
@@ -32,7 +35,7 @@ function buildCtx(
     upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
     createTopupPayment: vi.fn(),
-    cancelRenewal: vi.fn(async () => ({ success: true } as never)),
+    cancelRenewal: vi.fn(async () => ({ success: true }) as never),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
     balance: mockBalanceStatus(),

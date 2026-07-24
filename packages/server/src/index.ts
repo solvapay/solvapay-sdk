@@ -5,9 +5,28 @@
  * Provides unified payable API with explicit adapters for all frameworks.
  */
 
-import crypto from 'node:crypto'
-import { SolvaPayError } from '@solvapay/core'
+import { installNativeCoreApi } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
+import { installMcpAdapterNative } from './adapters/mcp'
+import { callNativeSync } from './native'
+import { installNativeDecisionApi } from './native-decisions'
+import { publishNativeSyncApi } from './native-registry'
+import { verifyWebhookNative } from './webhook-native'
+import type { PaywallStructuredContent, PaywallToolResult } from './types'
+
+// Install sync decision + core dispatch for Node.
+installNativeDecisionApi({ callNativeSync })
+installNativeCoreApi({ callNativeSync })
+installMcpAdapterNative({
+  formatGate: (gate: PaywallStructuredContent): PaywallToolResult =>
+    callNativeSync(
+      'paywallToolResult',
+      JSON.stringify({ message: gate.message, structuredContent: gate }),
+    ) as PaywallToolResult,
+})
+// Ambient registry for mcp-core (and peers) — avoids server→mcp-core cycle
+// and the createRequire CJS/ESM dual-instance trap.
+publishNativeSyncApi()
 
 // Main factory for unified API
 export { createSolvaPay } from './factory'
@@ -76,49 +95,32 @@ export function verifyWebhook({
   signature: string
   secret: string
 }): WebhookEvent {
-  const toleranceSec = 300
-  if (!signature) throw new SolvaPayError('Missing webhook signature')
-
-  const parts = signature.split(',')
-  const tPart = parts.find(p => p.startsWith('t='))
-  const v1Part = parts.find(p => p.startsWith('v1='))
-  if (!tPart || !v1Part) {
-    throw new SolvaPayError('Malformed webhook signature')
-  }
-
-  const timestamp = parseInt(tPart.slice(2), 10)
-  const receivedHmac = v1Part.slice(3)
-  if (Number.isNaN(timestamp) || !receivedHmac) {
-    throw new SolvaPayError('Malformed webhook signature')
-  }
-
-  if (toleranceSec > 0) {
-    const age = Math.abs(Math.floor(Date.now() / 1000) - timestamp)
-    if (age > toleranceSec) {
-      throw new SolvaPayError('Webhook signature timestamp too old')
-    }
-  }
-
-  const expectedHmac = crypto
-    .createHmac('sha256', secret)
-    .update(`${timestamp}.${body}`)
-    .digest('hex')
-
-  if (receivedHmac.length !== expectedHmac.length) {
-    throw new SolvaPayError('Invalid webhook signature')
-  }
-  const ok = crypto.timingSafeEqual(Buffer.from(expectedHmac), Buffer.from(receivedHmac))
-  if (!ok) throw new SolvaPayError('Invalid webhook signature')
-
-  try {
-    return JSON.parse(body) as WebhookEvent
-  } catch {
-    throw new SolvaPayError('Invalid webhook payload: body is not valid JSON')
-  }
+  // Rust-only after Step 53 — loader throws when `@solvapay/server-native`
+  // is unavailable instead of silently running a duplicate `node:crypto` path.
+  return verifyWebhookNative({ body, signature, secret })
 }
 
+// MCP adapter (formatGate / formatResponse) — used by contract fixtures and
+// advanced integrators that need the transport-shaped paywall payload without
+// going through payable().mcp().
+export { McpAdapter } from './adapters'
+
+/** @internal Node native dispatch seams (fixture harness / package installs). */
+export { callNativeSync } from './native'
+
+/**
+ * @internal WASM client seams. The contract fixture harness loads the real
+ * `@solvapay/server-wasm` client and installs it as an override so client
+ * fixtures exercise the Rust `FetchTransport` (mockable via `globalThis.fetch`)
+ * under Node — napi `reqwest` cannot be intercepted the same way.
+ */
+export { loadWasmBinding, getWasmClient, setWasmClientForTests, resetWasmCache } from './wasm'
+
 // Export PaywallError for error handling
-export { PaywallError, paywallErrorToClientPayload } from './paywall'
+export { PaywallError } from './paywall'
+// Payload builder delegates via native-decisions (Step 37R-c); keep the
+// re-export chain explicit so the node-binding-delegation gate sees markers.
+export { paywallErrorToClientPayload } from './native-decisions'
 export type { ProtectHandlerContext } from './paywall'
 export { isPaywallStructuredContent } from './types/paywall'
 
@@ -199,6 +201,46 @@ export type {
 
 // Export utilities for general use
 export { withRetry } from './utils'
+
+// Decision-core wrappers (Step 37R-c) — fixture harness + advanced integrators.
+export {
+  attachBusinessDetailsValidationError,
+  buildCreateCustomerParams,
+  classifyCancelError,
+  classifyCreateError,
+  classifyCustomerRef,
+  classifyLookupError,
+  classifyReactivateError,
+  coerceCustomerOptions,
+  decidePaywallOutcome,
+  evaluateCachedLimits,
+  evaluateFreshLimits,
+  extractBackendCustomerRef,
+  isCachedCustomerRefValid,
+  isEmailConflict,
+  mapRouteError,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  projectPaymentIntentResult,
+  projectTopupProcessOutcome,
+  projectUsageSnapshot,
+  resolveCheckLimitsParams,
+  resolveFallbackGateLimits,
+  resolveProductRef,
+  resolvePurchaseCustomerRef,
+  resolveReturnUrl,
+  retryNextDelayMs,
+  selectActivePurchases,
+  validateActivatePlanParams,
+  validateAttachBusinessDetailsParams,
+  validateCheckoutSessionParams,
+  validateCreatePaymentIntentParams,
+  validateGetProductParams,
+  validateListPlansParams,
+  validateProcessPaymentIntentParams,
+  validatePurchaseRef,
+  validateTopupPaymentIntentParams,
+} from './native-decisions'
 
 // Export route helpers (generic, framework-agnostic)
 export {

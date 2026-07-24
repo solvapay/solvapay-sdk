@@ -1,6 +1,6 @@
 # SolvaPay MCP Apps SDK — rules
 
-Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `packages/mcp-core`, `packages/mcp`, `packages/mcp-express`, `packages/mcp-fetch`, `packages/react/mcp`, or `examples/mcp-checkout-app` / `examples/supabase-edge-mcp`.
+Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `packages/mcp-core`, `packages/mcp`, `packages/mcp-express`, `packages/mcp-fetch`, `packages/react/mcp`, or `examples/typescript/mcp-checkout-app` / `examples/typescript/supabase-edge-mcp`.
 
 ## North Star
 
@@ -13,8 +13,8 @@ Every design decision should serve this. When in doubt, ask: does this make the 
 Every SolvaPay response is in one of three modes. Know which before writing code.
 
 1. **Silent.** Merchant's tool returned data. No iframe, no card, no upsell. Just the data. This is 90% of calls for a paying user.
-2. **Nudge.** Data returned *and* something is worth flagging (low balance, cycle ending, approaching limit). Small inline strip. Dismissible. Never blocks.
-3. **Gate.** Data could *not* be returned. User is out of credits or needs to upgrade. SDK takes over the surface. Focused, terminal, collapses after.
+2. **Nudge.** Data returned _and_ something is worth flagging (low balance, cycle ending, approaching limit). Small inline strip. Dismissible. Never blocks.
+3. **Gate.** Data could _not_ be returned. User is out of credits or needs to upgrade. SDK takes over the surface. Focused, terminal, collapses after.
 
 If you're building a UI surface that doesn't match one of these three, stop and escalate.
 
@@ -66,7 +66,7 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 ### Developer experience
 
 - **Target: `npx solvapay init` to working paid tool in 60 seconds.** Every decision that adds a step to this path needs justification.
-- **The example server is the primary docs surface.** If a merchant copy-pastes `examples/mcp-checkout-app`, they get best practices automatically. Keep it minimal and correct.
+- **The example server is the primary docs surface.** If a merchant copy-pastes `examples/typescript/mcp-checkout-app`, they get best practices automatically. Keep it minimal and correct.
 - **Errors point at solutions.** If a merchant forgets to mount the OAuth bridge, the error message names the fix. No cryptic 402s.
 - **Config-time validation over runtime failures.** If a required integration step is missing, `createSolvaPayMcpServer` throws at construction, not on the first paid call.
 
@@ -87,4 +87,4 @@ Every rule above is a strong default. If you think you need to violate one:
 1. Write down the specific case.
 2. Check whether the case is really what the rule is pointing away from, or an edge the rule doesn't cover.
 3. If it's an edge, extend the rule; do not add an exception.
-4. If it's really a violation, write down *why* and keep the diff small enough to revert.
+4. If it's really a violation, write down _why_ and keep the diff small enough to revert.

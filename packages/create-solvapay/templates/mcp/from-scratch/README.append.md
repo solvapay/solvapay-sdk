@@ -1,4 +1,3 @@
-
 ## From-scratch mode notes
 
 This project was scaffolded with a single placeholder paid tool. The

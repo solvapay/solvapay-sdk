@@ -5,10 +5,17 @@
  * Works with standard Web API Request (works everywhere).
  */
 
+import { isRenewalError, SolvaPayError } from '@solvapay/core'
+import {
+  classifyCancelError,
+  classifyReactivateError,
+  normalizeCancelResponse,
+  normalizeReactivateResponse,
+  validatePurchaseRef,
+} from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
-import { SolvaPayError } from '@solvapay/core'
 import { handleRouteError } from './error'
 
 /**
@@ -30,11 +37,9 @@ export async function cancelPurchaseCore(
   } = {},
 ): Promise<Record<string, unknown> | ErrorResult> {
   try {
-    if (!body.purchaseRef) {
-      return {
-        error: 'Missing required parameter: purchaseRef is required',
-        status: 400,
-      }
+    const validationError = validatePurchaseRef(body.purchaseRef)
+    if (validationError) {
+      return validationError
     }
 
     const solvaPay = options.solvaPay || createSolvaPay()
@@ -46,71 +51,22 @@ export async function cancelPurchaseCore(
       }
     }
 
-    let cancelledPurchase = await solvaPay.apiClient.cancelPurchase({
+    const cancelledPurchase = await solvaPay.apiClient.cancelPurchase({
       purchaseRef: body.purchaseRef,
       reason: body.reason,
     })
 
-    if (!cancelledPurchase || typeof cancelledPurchase !== 'object') {
-      return {
-        error: 'Invalid response from cancel purchase endpoint',
-        status: 500,
-      }
-    }
-
-    const responseObj = cancelledPurchase as unknown as Record<string, unknown>
-    if (responseObj.purchase && typeof responseObj.purchase === 'object') {
-      cancelledPurchase = responseObj.purchase as typeof cancelledPurchase
-    }
-
-    if (!cancelledPurchase.reference) {
-      return {
-        error: 'Cancel purchase response missing required fields',
-        status: 500,
-      }
-    }
-
-    const isCancelled =
-      cancelledPurchase.status === 'cancelled' || cancelledPurchase.cancelledAt
-
-    if (!isCancelled) {
-      return {
-        error: `Purchase cancellation failed: backend returned status '${cancelledPurchase.status}' without cancelledAt timestamp`,
-        status: 500,
-      }
+    const normalized = normalizeCancelResponse(cancelledPurchase)
+    if (isRenewalError(normalized)) {
+      return normalized
     }
 
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    return cancelledPurchase
+    return normalized
   } catch (error: unknown) {
     if (error instanceof SolvaPayError) {
-      const errorMessage = error.message
-
-      if (errorMessage.includes('not found')) {
-        return {
-          error: 'Purchase not found',
-          status: 404,
-          details: errorMessage,
-        }
-      }
-
-      if (
-        errorMessage.includes('cannot be cancelled') ||
-        errorMessage.includes('does not belong to provider')
-      ) {
-        return {
-          error: 'Purchase cannot be cancelled or does not belong to provider',
-          status: 400,
-          details: errorMessage,
-        }
-      }
-
-      return {
-        error: errorMessage,
-        status: 500,
-        details: errorMessage,
-      }
+      return classifyCancelError(error.message)
     }
 
     return handleRouteError(error, 'Cancel purchase', 'Failed to cancel purchase')
@@ -138,11 +94,9 @@ export async function reactivatePurchaseCore(
   } = {},
 ): Promise<Record<string, unknown> | ErrorResult> {
   try {
-    if (!body.purchaseRef) {
-      return {
-        error: 'Missing required parameter: purchaseRef is required',
-        status: 400,
-      }
+    const validationError = validatePurchaseRef(body.purchaseRef)
+    if (validationError) {
+      return validationError
     }
 
     const solvaPay = options.solvaPay || createSolvaPay()
@@ -154,69 +108,21 @@ export async function reactivatePurchaseCore(
       }
     }
 
-    let reactivatedPurchase = await solvaPay.apiClient.reactivatePurchase({
+    const reactivatedPurchase = await solvaPay.apiClient.reactivatePurchase({
       purchaseRef: body.purchaseRef,
     })
 
-    if (!reactivatedPurchase || typeof reactivatedPurchase !== 'object') {
-      return {
-        error: 'Invalid response from reactivate purchase endpoint',
-        status: 500,
-      }
-    }
-
-    const responseObj = reactivatedPurchase as unknown as Record<string, unknown>
-    if (responseObj.purchase && typeof responseObj.purchase === 'object') {
-      reactivatedPurchase = responseObj.purchase as typeof reactivatedPurchase
-    }
-
-    if (!reactivatedPurchase.reference) {
-      return {
-        error: 'Reactivate purchase response missing required fields',
-        status: 500,
-      }
-    }
-
-    if (reactivatedPurchase.cancelledAt) {
-      return {
-        error: `Purchase reactivation failed: cancelledAt is still set`,
-        status: 500,
-      }
+    const normalized = normalizeReactivateResponse(reactivatedPurchase)
+    if (isRenewalError(normalized)) {
+      return normalized
     }
 
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    return reactivatedPurchase
+    return normalized
   } catch (error: unknown) {
     if (error instanceof SolvaPayError) {
-      const errorMessage = error.message
-
-      if (errorMessage.includes('not found')) {
-        return {
-          error: 'Purchase not found',
-          status: 404,
-          details: errorMessage,
-        }
-      }
-
-      if (
-        errorMessage.includes('cannot be reactivated') ||
-        errorMessage.includes('not pending cancellation') ||
-        errorMessage.includes('already been fully cancelled') ||
-        errorMessage.includes('already ended')
-      ) {
-        return {
-          error: 'Purchase cannot be reactivated',
-          status: 400,
-          details: errorMessage,
-        }
-      }
-
-      return {
-        error: errorMessage,
-        status: 500,
-        details: errorMessage,
-      }
+      return classifyReactivateError(error.message)
     }
 
     return handleRouteError(error, 'Reactivate purchase', 'Failed to reactivate purchase')

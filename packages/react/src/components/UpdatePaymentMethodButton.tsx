@@ -20,8 +20,10 @@ import { useCopy } from '../hooks/useCopy'
 
 export type UpdatePaymentMethodButtonMode = 'portal'
 
-export interface UpdatePaymentMethodButtonProps
-  extends Omit<LaunchCustomerPortalButtonProps, 'children'> {
+export interface UpdatePaymentMethodButtonProps extends Omit<
+  LaunchCustomerPortalButtonProps,
+  'children'
+> {
   /**
    * How card updates are collected. `"portal"` (default, only value shipped
    * today) opens the SolvaPay hosted customer portal in a new tab. A
@@ -36,10 +38,7 @@ export interface UpdatePaymentMethodButtonProps
 export const UpdatePaymentMethodButton = forwardRef<
   HTMLAnchorElement,
   UpdatePaymentMethodButtonProps
->(function UpdatePaymentMethodButton(
-  { mode = 'portal', children, ...rest },
-  forwardedRef,
-) {
+>(function UpdatePaymentMethodButton({ mode = 'portal', children, ...rest }, forwardedRef) {
   const copy = useCopy()
 
   // Defensive: preserve the API shape. Today only 'portal' is implemented.
@@ -50,11 +49,7 @@ export const UpdatePaymentMethodButton = forwardRef<
   }
 
   return (
-    <LaunchCustomerPortalButton
-      ref={forwardedRef}
-      data-solvapay-update-payment-method=""
-      {...rest}
-    >
+    <LaunchCustomerPortalButton ref={forwardedRef} data-solvapay-update-payment-method="" {...rest}>
       {children ?? copy.currentPlan.updatePaymentButton}
     </LaunchCustomerPortalButton>
   )

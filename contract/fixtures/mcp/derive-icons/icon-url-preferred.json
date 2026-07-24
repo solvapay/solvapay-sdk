@@ -1,0 +1,21 @@
+{
+  "suite": "mcp",
+  "case": "icon-url-preferred",
+  "input": {
+    "fn": "deriveIcons",
+    "args": {
+      "branding": {
+        "iconUrl": "https://cdn.example.com/icon.png",
+        "logoUrl": "https://cdn.example.com/logo.png"
+      }
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "src": "https://cdn.example.com/icon.png",
+        "sizes": ["any", "512x512"]
+      }
+    ]
+  }
+}

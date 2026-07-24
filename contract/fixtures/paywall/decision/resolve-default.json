@@ -1,0 +1,11 @@
+{
+  "suite": "paywall",
+  "case": "resolve-default",
+  "input": {
+    "fn": "resolveProductRef",
+    "args": {}
+  },
+  "expect": {
+    "result": "default-product"
+  }
+}

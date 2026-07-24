@@ -5,6 +5,7 @@
  * Works with standard Web API Request (works everywhere).
  */
 
+import { coerceCustomerOptions } from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
@@ -90,10 +91,11 @@ export async function syncCustomerCore(
     // Pass email and name to ensure correct customer data
     // Note: Customer lookup deduplication is handled automatically by the SDK
     // The returned customerRef is the SolvaPay backend customer reference (different from Supabase user ID)
-    const customerRef = await solvaPay.ensureCustomer(userId, userId, {
-      email: email || undefined,
-      name: name || undefined,
-    })
+    const customerRef = await solvaPay.ensureCustomer(
+      userId,
+      userId,
+      coerceCustomerOptions(email, name),
+    )
 
     return customerRef
   } catch (error) {
@@ -127,10 +129,11 @@ export async function getCustomerBalanceCore(
 
     const solvaPay = options.solvaPay || createSolvaPay()
 
-    const customerRef = await solvaPay.ensureCustomer(userId, userId, {
-      email: email || undefined,
-      name: name || undefined,
-    })
+    const customerRef = await solvaPay.ensureCustomer(
+      userId,
+      userId,
+      coerceCustomerOptions(email, name),
+    )
 
     const result = await solvaPay.getCustomerBalance({ customerRef })
 

@@ -59,38 +59,38 @@ npm run deploy       # Cloudflare Workers deploy
 
 **Common**
 
-| Flag | Description |
-| --- | --- |
-| `--type <kind>` | Project type (`mcp` today). Required in non-interactive mode. |
-| `-y`, `--yes` | Non-interactive: accept all defaults |
-| `--product <ref>` | Pre-fill `SOLVAPAY_PRODUCT_REF` (skip the picker) |
-| `--non-interactive` | Alias for `--yes`; fail fast on missing prompt input |
-| `--skip-install` | Skip post-scaffold `npm install` |
-| `--skip-init` | Skip post-scaffold `solvapay init` (no browser OAuth) |
-| `--dev` | Target api-dev.solvapay.com (internal testing only) |
-| `--list-types` | List available project types and exit |
+| Flag                | Description                                                   |
+| ------------------- | ------------------------------------------------------------- |
+| `--type <kind>`     | Project type (`mcp` today). Required in non-interactive mode. |
+| `-y`, `--yes`       | Non-interactive: accept all defaults                          |
+| `--product <ref>`   | Pre-fill `SOLVAPAY_PRODUCT_REF` (skip the picker)             |
+| `--non-interactive` | Alias for `--yes`; fail fast on missing prompt input          |
+| `--skip-install`    | Skip post-scaffold `npm install`                              |
+| `--skip-init`       | Skip post-scaffold `solvapay init` (no browser OAuth)         |
+| `--dev`             | Target api-dev.solvapay.com (internal testing only)           |
+| `--list-types`      | List available project types and exit                         |
 
 **MCP (`--type mcp`)**
 
-| Flag | Description |
-| --- | --- |
-| `--openapi <url\|path>` | OpenAPI / Swagger spec — implies from-openapi mode |
-| `--no-openapi` | From-scratch mode with a placeholder paid tool |
-| `--tool-name <camel>` | Placeholder tool name in from-scratch mode (default: `helloTool`) |
+| Flag                    | Description                                                       |
+| ----------------------- | ----------------------------------------------------------------- |
+| `--openapi <url\|path>` | OpenAPI / Swagger spec — implies from-openapi mode                |
+| `--no-openapi`          | From-scratch mode with a placeholder paid tool                    |
+| `--tool-name <camel>`   | Placeholder tool name in from-scratch mode (default: `helloTool`) |
 
 Run `npm create solvapay my-app -- --type mcp --help` for MCP-specific help.
 
 ## Integration paths
 
-| Path | Entry | Packages | Example | Docs |
-| --- | --- | --- | --- | --- |
-| Express API | `npx solvapay init` | `@solvapay/server` | [express-basic](https://github.com/solvapay/solvapay-sdk/tree/main/examples/express-basic) | [Express](https://docs.solvapay.com/sdks/typescript/guides/express) |
-| Next.js checkout | `npx solvapay init` | `@solvapay/next` + `@solvapay/react` | [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/checkout-demo) | [Next.js](https://docs.solvapay.com/sdks/typescript/guides/nextjs), [React](https://docs.solvapay.com/sdks/typescript/guides/react) |
-| Hosted checkout | `npx solvapay init` | `@solvapay/next` | [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/hosted-checkout-demo) | [Purchase management](https://docs.solvapay.com/sdks/typescript/guides/purchase-management) |
-| Supabase Edge | `npx solvapay init` | `@solvapay/server/fetch` + `@solvapay/react` | [supabase-edge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/supabase-edge) | [Supabase Edge](https://docs.solvapay.com/sdks/typescript/guides/supabase-edge) |
-| **MCP app (server + UI)** | **`npm create solvapay@latest <name> -- --type mcp`** | `@solvapay/mcp` + `@solvapay/react/mcp` + `@solvapay/server` | scaffold template | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp), [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app) |
-| MCP App UI (advanced) | manual on existing server | `@solvapay/mcp` + `@solvapay/react/mcp` | [mcp-checkout-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-checkout-app) | [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app) |
-| Existing MCP server | `npx solvapay init` | `@solvapay/server` + `@solvapay/mcp-core` | [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-oauth-bridge) | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp) |
+| Path                      | Entry                                                 | Packages                                                     | Example                                                                                                             | Docs                                                                                                                                |
+| ------------------------- | ----------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Express API               | `npx solvapay init`                                   | `@solvapay/server`                                           | [express-basic](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/express-basic)               | [Express](https://docs.solvapay.com/sdks/typescript/guides/express)                                                                 |
+| Next.js checkout          | `npx solvapay init`                                   | `@solvapay/next` + `@solvapay/react`                         | [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/checkout-demo)               | [Next.js](https://docs.solvapay.com/sdks/typescript/guides/nextjs), [React](https://docs.solvapay.com/sdks/typescript/guides/react) |
+| Hosted checkout           | `npx solvapay init`                                   | `@solvapay/next`                                             | [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/hosted-checkout-demo) | [Purchase management](https://docs.solvapay.com/sdks/typescript/guides/purchase-management)                                         |
+| Supabase Edge             | `npx solvapay init`                                   | `@solvapay/server/fetch` + `@solvapay/react`                 | [supabase-edge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge)               | [Supabase Edge](https://docs.solvapay.com/sdks/typescript/guides/supabase-edge)                                                     |
+| **MCP app (server + UI)** | **`npm create solvapay@latest <name> -- --type mcp`** | `@solvapay/mcp` + `@solvapay/react/mcp` + `@solvapay/server` | scaffold template                                                                                                   | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp), [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app)    |
+| MCP App UI (advanced)     | manual on existing server                             | `@solvapay/mcp` + `@solvapay/react/mcp`                      | [mcp-checkout-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-checkout-app)         | [MCP app](https://docs.solvapay.com/sdks/typescript/guides/mcp-app)                                                                 |
+| Existing MCP server       | `npx solvapay init`                                   | `@solvapay/server` + `@solvapay/mcp-core`                    | [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-oauth-bridge)         | [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp)                                                                         |
 
 ## Documentation
 

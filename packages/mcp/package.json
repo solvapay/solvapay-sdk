@@ -38,7 +38,12 @@
   "engines": {
     "node": ">=18.17"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/index.cjs",
+    "./src/index.ts",
+    "./src/native-install.ts"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

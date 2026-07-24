@@ -11,7 +11,9 @@ import {
   installProjectDependencies,
 } from '../mcp/scaffold'
 
-const NEXT_AUTH0_TEMPLATE_DIR = join(fileURLToPath(new URL('../../../templates/next-auth0', import.meta.url)))
+const NEXT_AUTH0_TEMPLATE_DIR = join(
+  fileURLToPath(new URL('../../../templates/next-auth0', import.meta.url)),
+)
 
 const parseNextAuth0Args = (): ParsedTypeArgs => ({
   noOpenapi: false,

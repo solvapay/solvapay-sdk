@@ -46,9 +46,7 @@ type PaymentFormRootProps = PaymentFormProps & {
   children?: React.ReactNode
 }
 
-const DefaultTree: React.FC<{ requireTermsAcceptance: boolean }> = ({
-  requireTermsAcceptance,
-}) => (
+const DefaultTree: React.FC<{ requireTermsAcceptance: boolean }> = ({ requireTermsAcceptance }) => (
   <>
     <Primitive.Summary />
     <PaidBusinessSlots />

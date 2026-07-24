@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "cancel-error-other",
+  "input": {
+    "fn": "classifyCancelError",
+    "args": { "message": "upstream boom" }
+  },
+  "expect": {
+    "result": {
+      "error": "upstream boom",
+      "status": 500,
+      "details": "upstream boom"
+    }
+  }
+}

@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  creditsToDisplayMinorUnits,
-  minorUnitsPerMajor,
-} from '../src/credit-display'
+import { creditsToDisplayMinorUnits, minorUnitsPerMajor } from '../src/native-core'
 import {
   estimateCredits,
   estimateCurrencyMajorFromCredits,
@@ -55,16 +52,13 @@ describe('conversion contract round-trip', () => {
     { currency: 'SEK', rate: SEK_RATE, amount: 100 },
     { currency: 'EUR', rate: EUR_RATE, amount: 50 },
     { currency: 'JPY', rate: JPY_RATE, amount: 500 },
-  ])(
-    '$currency top-up round-trips within one minor unit',
-    ({ currency, rate, amount }) => {
-      const credits = mintCreditsFromTopup(amount, currency, rate, CPM)
-      const displayedMajor = displayMajorFromCredits(credits, currency, rate, CPM)
-      const minorPerMajor = minorUnitsPerMajor(currency)
-      const driftMinor = Math.abs(displayedMajor - amount) * minorPerMajor
-      expect(Math.round(driftMinor * 100) / 100).toBeLessThanOrEqual(1)
-    },
-  )
+  ])('$currency top-up round-trips within one minor unit', ({ currency, rate, amount }) => {
+    const credits = mintCreditsFromTopup(amount, currency, rate, CPM)
+    const displayedMajor = displayMajorFromCredits(credits, currency, rate, CPM)
+    const minorPerMajor = minorUnitsPerMajor(currency)
+    const driftMinor = Math.abs(displayedMajor - amount) * minorPerMajor
+    expect(Math.round(driftMinor * 100) / 100).toBeLessThanOrEqual(1)
+  })
 
   it('estimateCredits stays within a few credits of backend mint for SEK', () => {
     const estimate = estimateCredits(100, 'SEK', CPM, SEK_RATE)!
@@ -148,12 +142,7 @@ describe('topped-up amount equals available display amount', () => {
 
   it('optimistic SEK estimate credits display as the topped-up amount', () => {
     const estimate = estimateCredits(100, 'SEK', CPM, SEK_RATE)!
-    const availableMajor = estimateCurrencyMajorFromCredits(
-      estimate,
-      'SEK',
-      CPM,
-      SEK_RATE,
-    )
+    const availableMajor = estimateCurrencyMajorFromCredits(estimate, 'SEK', CPM, SEK_RATE)
     expect(availableMajor).toBeGreaterThan(99)
     expect(availableMajor).toBeLessThanOrEqual(100)
   })
