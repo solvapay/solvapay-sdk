@@ -1127,7 +1127,7 @@ jobs:
         working-directory: rust/bindings/wasm
         run: pnpm test
 
-      - name: Build core, auth, server-wasm, server-native, server, mcp-core
+      - name: Build core, auth, server-wasm, server-native, server, mcp-core, mcp
         run: |
           pnpm --filter @solvapay/core build
           pnpm --filter @solvapay/auth build
@@ -1136,6 +1136,8 @@ jobs:
           pnpm --filter @solvapay/server-native build
           pnpm --filter @solvapay/server build
           pnpm --filter @solvapay/mcp-core build
+          # validate:fetch-runtime checks @solvapay/mcp/fetch dist exports.
+          pnpm --filter @solvapay/mcp build
 
       - name: Edge implementation unit tests (WASM, Rust-only after Step 53)
         run: pnpm --filter @solvapay/server test:unit:edge
