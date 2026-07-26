@@ -1293,7 +1293,8 @@ jobs:
 
       - name: cargo test -p solvapay-c
         working-directory: rust
-        run: cargo test -p solvapay-c
+        # Handle registry is process-global; parallel lib tests race on reuse assertions.
+        run: cargo test -p solvapay-c -- --test-threads=1
 
       - name: cargo clippy -p solvapay-c
         working-directory: rust

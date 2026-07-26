@@ -1,4 +1,3 @@
-import { createRequire } from 'node:module'
 import type { SolvaPayClient } from './types'
 import {
   createVirtualTools,
@@ -36,20 +35,57 @@ export interface RegisterVirtualToolsMcpOptions extends Omit<
   ) => (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<unknown> | unknown
 }
 
-function getNodeRequire() {
+type NodeModuleBuiltin = {
+  createRequire: (filename: string) => NodeRequire
+}
+
+/**
+ * Resolve a Node `require` without a static `node:module` import.
+ *
+ * A static import is rewritten to bare `"module"` by the edge tsup bundle and
+ * then fails Deno (`Import "module" not a dependency`). Lazy builtin lookup
+ * keeps `createSolvaPay` (which re-exports this path) loadable on edge/Deno;
+ * `registerVirtualToolsMcp` itself still requires Node when invoked.
+ */
+function getNodeRequire(): NodeRequire {
   try {
     return (0, eval)('require') as NodeRequire
   } catch {
-    return createRequire(`${process.cwd()}/package.json`)
+    const nodeModule = (
+      process as NodeJS.Process & {
+        getBuiltinModule?: (id: string) => NodeModuleBuiltin | undefined
+      }
+    ).getBuiltinModule?.('module')
+    if (!nodeModule?.createRequire) {
+      throw new Error(
+        'registerVirtualToolsMcp() requires Node.js (createRequire unavailable in this runtime)',
+      )
+    }
+    return nodeModule.createRequire(`${process.cwd()}/package.json`)
   }
 }
 
-const nodeRequire = getNodeRequire()
+let cachedRequire: NodeRequire | undefined
 
 function getZod() {
+  cachedRequire ??= getNodeRequire()
   try {
-    const zodModule = nodeRequire('zod')
-    return zodModule.z ?? zodModule
+    const zodModule = cachedRequire('zod') as { z?: Record<string, unknown> } & Record<
+      string,
+      unknown
+    >
+    // Zod CJS interop: some resolvers expose `{ z }`, others the namespace itself.
+    return (zodModule.z ?? zodModule) as {
+      enum: (values: [string, ...string[]]) => unknown
+      literal: (value: unknown) => unknown
+      union: (values: unknown[]) => unknown
+      string: () => unknown
+      number: () => { int: () => unknown }
+      boolean: () => unknown
+      array: (schema: unknown) => unknown
+      object: (shape: ZodRawShape) => unknown
+      any: () => unknown
+    }
   } catch {
     throw new Error(
       'zod is required to use registerVirtualToolsMcp(). Install it as a dependency in your MCP server project.',
