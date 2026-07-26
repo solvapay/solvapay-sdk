@@ -103,6 +103,32 @@ describe('clean-install orchestrator', () => {
       () => assertNpmInstallPlan({ command: 'pnpm', args: ['install'], cwd: '/x' }),
       /must use npm/,
     )
+    assert.throws(
+      () => assertNpmInstallPlan({ command: 'npm.cmd', args: ['install'], cwd: '/x' }),
+      /must use npm/,
+    )
+  })
+
+  it('always plans bare npm and passes shell:true on win32 to spawn', async () => {
+    const plan = buildNpmInstallPlan({ consumerDir: '/tmp/empty-consumer', mode: 'native' })
+    assert.equal(plan.command, 'npm')
+
+    /** @type {{ shell?: boolean } | undefined} */
+    let spawnOpts
+    function fakeSpawn(_cmd, _args, opts) {
+      spawnOpts = opts
+      const ee = new EventEmitter()
+      ee.stdout = new EventEmitter()
+      ee.stderr = new EventEmitter()
+      queueMicrotask(() => {
+        ee.emit('close', 0)
+      })
+      return ee
+    }
+
+    await runCaptured(plan, { spawn: fakeSpawn })
+    assert.ok(spawnOpts, 'expected spawn to be called')
+    assert.equal(spawnOpts.shell, process.platform === 'win32')
   })
 
   it('propagates the child install exit code and includes stdout/stderr in the error', async () => {

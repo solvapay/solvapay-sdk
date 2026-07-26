@@ -296,6 +296,7 @@ jobs:
   python-binding:
     name: python-binding (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: rust/bindings/python
@@ -356,6 +357,13 @@ jobs:
           args: ${{ matrix.maturin-args }}
           working-directory: rust/bindings/python
           sccache: 'true'
+
+      # maturin-action runs the manylinux container as root and leaves a
+      # root-owned rust/target; its own fix-up only covers the crate dir.
+      - name: Reclaim workspace target dir ownership
+        if: matrix.smoke && runner.os == 'Linux'
+        working-directory: rust
+        run: sudo chown -R "$(id -u):$(id -g)" target
 
       - name: cargo test -p solvapay-python
         if: matrix.smoke
@@ -439,9 +447,13 @@ jobs:
   # Native hosts only for the scaffold: current rb-sys-dock images ship Ruby 4.0
   # host + incomplete 3.3 toolchains, which break Magnus 0.7. Cross-compile via
   # scripts/dock-build.sh lands when the dock image/Magnus stack align (Step 45).
+  # Windows (x64-mingw-ucrt) is excluded: rb-sys/bindgen + clang 20 fails inside
+  # LLVM AVX10.2/AMX intrinsic headers. Windows Ruby consumers install the
+  # source gem and compile locally via rb_sys/mkmf.
   ruby-binding:
     name: ruby-binding (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: rust/bindings/ruby
@@ -458,15 +470,11 @@ jobs:
             smoke: false
             full: false
           - platform: x86_64-darwin
-            os: macos-13
+            os: macos-15-intel
             smoke: false
             full: false
           - platform: arm64-darwin
             os: macos-latest
-            smoke: true
-            full: false
-          - platform: x64-mingw-ucrt
-            os: windows-latest
             smoke: true
             full: false
     permissions:
@@ -561,6 +569,7 @@ jobs:
   node-binding:
     name: node-binding (${{ matrix.settings.target }})
     runs-on: ${{ matrix.settings.host }}
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: rust/bindings/node
@@ -1023,6 +1032,7 @@ jobs:
   wasm-binding:
     name: wasm-binding (Step 38 edge/browser)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -1149,6 +1159,7 @@ jobs:
   go-binding:
     name: go-binding (wazero WASI guest)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:

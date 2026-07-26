@@ -13,28 +13,43 @@ anywhere in SDK docs; cite the budgets below.**
 Budgets live in [`rust/bindings/wasm/budgets.json`](../../rust/bindings/wasm/budgets.json)
 and are the source of truth. It records, per profile (`browser`, `edge`):
 
-- `baselines` — measured raw bytes, gzip bytes, and median cold-start ms
-- `maxAllowed` — the ceiling CI enforces
+- `baselines` — measured raw bytes, gzip bytes, and cold-start ms (p20)
+- `maxAllowed` — the ceiling CI enforces (bytes and cold start use different tolerances)
 - `environment` — pinned Node/OS/rustc/wasm-bindgen/Binaryen versions
-- `measurement` — gzip level, cold-start definition, sample count, statistic
+- `measurement` — gzip level, cold-start definition, sample count, statistic, tolerances
 
-The **browser** gzip size + cold start is the mandatory gate (secret-key symbols
-are excluded from the browser profile — see capability separation in
-[architecture.md](./architecture.md)). The **edge** profile is diagnostic only.
-A regression beyond the recorded threshold (`regressionThresholdPct`, currently
-10%) requires approval and a documented baseline update.
+The **browser** gzip size + cold start is the §7.8 headline gate (secret-key
+symbols are excluded from the browser profile — see capability separation in
+[architecture.md](./architecture.md)). The **edge** profile is also checked in
+CI with the same script (hard-fail on blowups); it is not the redesign's primary
+cited metric.
+
+Tolerances:
+
+| Metric | Threshold (`*RegressionThresholdPct`) |
+| --- | --- |
+| gzip / raw bytes | 10% (`byteRegressionThresholdPct`) |
+| cold start (p20) | 50% (`coldStartRegressionThresholdPct`) |
+
+A regression beyond the recorded threshold requires approval and a documented
+baseline update.
 
 ## Measurement methodology
 
 `rust/bindings/wasm/scripts/measure-wasm.mjs` produces the numbers:
 
-- deterministic raw + gzip level-9 byte counts
-- multiple isolated child processes; warm reuse discarded
-- reports median + spread (median absolute deviation)
+- deterministic raw + gzip level-9 byte counts (exact comparison)
+- multiple isolated child processes (`samplesPerMetric`); discard the first
+  `warmupDiscard` samples (shared-runner cold-boot noise)
+- cold start uses a **low percentile (p20)** — the stable lower tail. Cold start
+  is bounded below by real work and unbounded above by runner contention, so the
+  median drifts upward under load while p20 stays stable
+- MAD of post-warmup samples is logged for diagnostics only
 - pins Node/OS/toolchain metadata into `budgets.json`
 
 Normal CI runs `--check` (cannot rewrite budgets). Recording new baselines
-requires an explicit `--record` and a rationale in the PR.
+requires an explicit `--record` and a rationale in the PR. Always re-record from
+a CI linux host — darwin local runs are materially faster.
 
 ## FFI boundary rule
 

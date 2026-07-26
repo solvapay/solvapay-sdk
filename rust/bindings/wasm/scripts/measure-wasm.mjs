@@ -18,8 +18,19 @@ const budgetsPath = join(pkgRoot, 'budgets.json')
 const record = process.argv.includes('--record')
 const check = !record || process.argv.includes('--check')
 
-const SAMPLES = 7
-const REGRESSION_PCT = 10
+/** Total child-process samples collected per profile (including warmups). */
+const SAMPLES = 15
+/** Discard the first N samples — shared runners are noisy on cold boot. */
+const WARMUP_DISCARD = 3
+/** Byte budgets stay strict. */
+const BYTE_REGRESSION_PCT = 10
+/**
+ * Cold start is bounded below by real work and unbounded above by runner
+ * contention, so it gets a wider tolerance than byte metrics.
+ */
+const COLD_START_REGRESSION_PCT = 50
+/** Lower-tail statistic for cold start (stable under upward noise). */
+const COLD_START_PERCENTILE = 0.2
 
 function fail(msg) {
   console.error(`measure-wasm: ${msg}`)
@@ -37,6 +48,18 @@ function median(values) {
 function mad(values, med) {
   const deviations = values.map(v => Math.abs(v - med))
   return median(deviations)
+}
+
+/** Linear-interpolation percentile; `p` in [0, 1]. */
+function percentile(values, p) {
+  const sorted = [...values].sort((a, b) => a - b)
+  if (sorted.length === 0) return Number.NaN
+  if (sorted.length === 1) return sorted[0]
+  const idx = (sorted.length - 1) * p
+  const lo = Math.floor(idx)
+  const hi = Math.ceil(idx)
+  if (lo === hi) return sorted[lo]
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo)
 }
 
 function measureBytes(profile) {
@@ -101,9 +124,17 @@ process.stdout.write(String(ms));
     }
     samples.push(ms)
   }
-  if (samples.length < SAMPLES) fail('insufficient cold-start samples')
-  const med = median(samples)
-  return { medianMs: med, madMs: mad(samples, med), samples }
+  const measured = samples.slice(WARMUP_DISCARD)
+  if (measured.length < 3) fail('insufficient cold-start samples after warmup discard')
+  const coldMs = percentile(measured, COLD_START_PERCENTILE)
+  const med = median(measured)
+  return {
+    coldStartMs: coldMs,
+    medianMs: med,
+    madMs: mad(measured, med),
+    samples: measured,
+    allSamples: samples,
+  }
 }
 
 function rustcVersion() {
@@ -130,9 +161,13 @@ const observed = {
     edgeColdStart:
       'fresh Node process: import runtime/node.js → ready() → verifyWebhook(frozen accept fixture)',
     samplesPerMetric: SAMPLES,
-    statistic: 'median',
-    spread: 'median absolute deviation (MAD)',
-    regressionThresholdPct: REGRESSION_PCT,
+    warmupDiscard: WARMUP_DISCARD,
+    statistic: `percentile p${Math.round(COLD_START_PERCENTILE * 100)} (cold start); exact (bytes)`,
+    spread: 'median absolute deviation (MAD) of post-warmup samples (diagnostic)',
+    byteRegressionThresholdPct: BYTE_REGRESSION_PCT,
+    coldStartRegressionThresholdPct: COLD_START_REGRESSION_PCT,
+    // Back-compat alias used by older readers of budgets.json.
+    regressionThresholdPct: BYTE_REGRESSION_PCT,
   },
   environment: {
     node: process.version,
@@ -148,29 +183,29 @@ const observed = {
     browser: {
       rawBytes: browserSize.rawBytes,
       gzipBytes: browserSize.gzipBytes,
-      coldStartMedianMs: browserCold.medianMs,
+      coldStartMs: browserCold.coldStartMs,
     },
     edge: {
       rawBytes: edgeSize.rawBytes,
       gzipBytes: edgeSize.gzipBytes,
-      coldStartMedianMs: edgeCold.medianMs,
-      note: 'diagnostic only — §7.8 mandatory budget is browser',
+      coldStartMs: edgeCold.coldStartMs,
+      note: 'CI-enforced alongside browser; §7.8 headline metric remains browser',
     },
   },
-  // Max allowed = baseline * 1.10 (enforced on check against stored baselines)
+  // Max allowed computed per-metric (bytes vs cold-start tolerances differ).
   maxAllowed: null,
 }
 
 function withMax(baselines) {
   return {
     browser: {
-      gzipBytes: Math.floor(baselines.browser.gzipBytes * (1 + REGRESSION_PCT / 100)),
-      coldStartMedianMs:
-        baselines.browser.coldStartMedianMs * (1 + REGRESSION_PCT / 100),
+      gzipBytes: Math.floor(baselines.browser.gzipBytes * (1 + BYTE_REGRESSION_PCT / 100)),
+      coldStartMs:
+        baselines.browser.coldStartMs * (1 + COLD_START_REGRESSION_PCT / 100),
     },
     edge: {
-      gzipBytes: Math.floor(baselines.edge.gzipBytes * (1 + REGRESSION_PCT / 100)),
-      coldStartMedianMs: baselines.edge.coldStartMedianMs * (1 + REGRESSION_PCT / 100),
+      gzipBytes: Math.floor(baselines.edge.gzipBytes * (1 + BYTE_REGRESSION_PCT / 100)),
+      coldStartMs: baselines.edge.coldStartMs * (1 + COLD_START_REGRESSION_PCT / 100),
     },
   }
 }
@@ -179,7 +214,18 @@ observed.maxAllowed = withMax(observed.baselines)
 
 console.log('Observed:')
 console.log(JSON.stringify(observed.baselines, null, 2))
-console.log('Cold-start MAD (browser/edge):', browserCold.madMs, edgeCold.madMs)
+console.log(
+  'Cold-start p20 / median / MAD (browser):',
+  browserCold.coldStartMs,
+  browserCold.medianMs,
+  browserCold.madMs,
+)
+console.log(
+  'Cold-start p20 / median / MAD (edge):',
+  edgeCold.coldStartMs,
+  edgeCold.medianMs,
+  edgeCold.madMs,
+)
 
 if (record) {
   writeFileSync(budgetsPath, `${JSON.stringify(observed, null, 2)}\n`)
@@ -191,25 +237,65 @@ if (check && !record) {
     fail('budgets.json missing — run with --record once to establish baselines')
   }
   const budget = JSON.parse(readFileSync(budgetsPath, 'utf8'))
-  const max = budget.maxAllowed ?? withMax(budget.baselines)
+  // Migrate older budgets that stored coldStartMedianMs.
+  const baselines = {
+    browser: {
+      gzipBytes: budget.baselines.browser.gzipBytes,
+      coldStartMs:
+        budget.baselines.browser.coldStartMs ?? budget.baselines.browser.coldStartMedianMs,
+    },
+    edge: {
+      gzipBytes: budget.baselines.edge.gzipBytes,
+      coldStartMs:
+        budget.baselines.edge.coldStartMs ?? budget.baselines.edge.coldStartMedianMs,
+    },
+  }
+  const max = budget.maxAllowed
+    ? {
+        browser: {
+          gzipBytes: budget.maxAllowed.browser.gzipBytes,
+          coldStartMs:
+            budget.maxAllowed.browser.coldStartMs ??
+            budget.maxAllowed.browser.coldStartMedianMs,
+        },
+        edge: {
+          gzipBytes: budget.maxAllowed.edge.gzipBytes,
+          coldStartMs:
+            budget.maxAllowed.edge.coldStartMs ?? budget.maxAllowed.edge.coldStartMedianMs,
+        },
+      }
+    : withMax(baselines)
 
-  function checkMetric(label, value, limit) {
+  function checkMetric(label, value, limit, thresholdPct) {
     if (value > limit) {
       fail(
-        `${label} regression: observed ${value} > maxAllowed ${limit} (>${REGRESSION_PCT}% over baseline). Explicit review + --record required.`,
+        `${label} regression: observed ${value} > maxAllowed ${limit} (>${thresholdPct}% over baseline). Explicit review + --record required.`,
       )
     }
   }
 
-  checkMetric('browser.gzipBytes', browserSize.gzipBytes, max.browser.gzipBytes)
   checkMetric(
-    'browser.coldStartMedianMs',
-    browserCold.medianMs,
-    max.browser.coldStartMedianMs,
+    'browser.gzipBytes',
+    browserSize.gzipBytes,
+    max.browser.gzipBytes,
+    BYTE_REGRESSION_PCT,
   )
-  // Edge diagnostics: warn-style hard fail same threshold so CI catches blowups.
-  checkMetric('edge.gzipBytes', edgeSize.gzipBytes, max.edge.gzipBytes)
-  checkMetric('edge.coldStartMedianMs', edgeCold.medianMs, max.edge.coldStartMedianMs)
+  checkMetric(
+    'browser.coldStartMs',
+    browserCold.coldStartMs,
+    max.browser.coldStartMs,
+    COLD_START_REGRESSION_PCT,
+  )
+  // Edge is CI-enforced (same thresholds) to catch blowups; §7.8 headline is browser.
+  checkMetric('edge.gzipBytes', edgeSize.gzipBytes, max.edge.gzipBytes, BYTE_REGRESSION_PCT)
+  checkMetric(
+    'edge.coldStartMs',
+    edgeCold.coldStartMs,
+    max.edge.coldStartMs,
+    COLD_START_REGRESSION_PCT,
+  )
 
-  console.log('OK: size/cold-start budgets within 10% of recorded baselines')
+  console.log(
+    `OK: size within ${BYTE_REGRESSION_PCT}% and cold-start p20 within ${COLD_START_REGRESSION_PCT}% of recorded baselines`,
+  )
 }

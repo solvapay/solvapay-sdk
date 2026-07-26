@@ -245,8 +245,12 @@ export function buildNpmInstallPlan({ consumerDir, mode, npmArgs = [] }, _fs = {
     env.npm_config_cpu = 'wasm32'
   }
 
+  // Always the bare binary name. On win32, `spawn('npm.cmd', …)` without
+  // `shell: true` is EINVAL under Node ≥ 18.20.2 / 20.12.2 (CVE-2024-27980);
+  // keep `npm` and let `shell` resolve the `.cmd` shim (same pattern as
+  // packages/init and create-solvapay).
   return {
-    command: process.platform === 'win32' ? 'npm.cmd' : 'npm',
+    command: 'npm',
     args,
     cwd: consumerDir,
     env,
@@ -258,7 +262,7 @@ export function buildNpmInstallPlan({ consumerDir, mode, npmArgs = [] }, _fs = {
  * @param {{ command: string, args: string[], cwd: string }} plan
  */
 export function assertNpmInstallPlan(plan) {
-  if (plan.command !== 'npm' && plan.command !== 'npm.cmd') {
+  if (plan.command !== 'npm') {
     throw new Error(`clean-install: must use npm, got command=${plan.command}`)
   }
   if (plan.args[0] !== 'install') {
@@ -292,6 +296,7 @@ export function runCaptured(plan, fs = {}) {
       cwd: plan.cwd,
       env: plan.env,
       stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
     })
     let stdout = ''
     let stderr = ''
@@ -301,7 +306,12 @@ export function runCaptured(plan, fs = {}) {
     child.stderr?.on('data', chunk => {
       stderr += String(chunk)
     })
-    child.on('error', reject)
+    child.on('error', err => {
+      const wrapped =
+        err instanceof Error ? err : new Error(typeof err === 'string' ? err : 'spawn failed')
+      wrapped.message = `spawn ${plan.command} ${plan.args.join(' ')} failed: ${wrapped.message}`
+      reject(wrapped)
+    })
     child.on('close', code => {
       resolvePromise({ code: code ?? 1, stdout, stderr })
     })

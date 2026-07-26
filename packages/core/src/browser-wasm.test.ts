@@ -87,4 +87,41 @@ describe('browser-wasm eager install (Step 52)', () => {
     await warmBrowserCoreWasm()
     expect(readyMock.mock.calls.length).toBe(callsAfterFirst)
   })
+
+  it('explicit warm rejects when browser WASM init fails (retryable)', async () => {
+    readyMock.mockRejectedValueOnce(new Error('simulated fetch(file://) failure'))
+    await expect(warmBrowserCoreWasm()).rejects.toThrow(/simulated fetch/)
+    // Rejection clears the cache so a later warm can succeed.
+    await warmBrowserCoreWasm()
+    expect(readyMock).toHaveBeenCalled()
+  })
+
+  it('eager module import swallows a rejecting browser WASM (no unhandled rejection)', async () => {
+    vi.resetModules()
+    vi.doMock('@solvapay/server-wasm/browser', () => ({
+      ready: async () => {
+        throw new Error('simulated fetch(file://) failure')
+      },
+      ensureReadySync: () => {
+        throw new Error('no precompiled module in unit test')
+      },
+      validateBusinessDetails: () => JSON.stringify({ ok: true, value: {} }),
+    }))
+
+    const unhandled: unknown[] = []
+    const onUnhandled = (reason: unknown) => {
+      unhandled.push(reason)
+    }
+    process.on('unhandledRejection', onUnhandled)
+    try {
+      await import('./browser-wasm')
+      // Flush microtasks / promise reactions from the eager void call.
+      await new Promise<void>(resolve => {
+        setImmediate(resolve)
+      })
+      expect(unhandled).toEqual([])
+    } finally {
+      process.off('unhandledRejection', onUnhandled)
+    }
+  })
 })

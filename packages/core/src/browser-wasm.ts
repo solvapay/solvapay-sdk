@@ -103,8 +103,12 @@ export function warmBrowserCoreWasm(): Promise<void> {
   return warmPromise
 }
 
-/** Eager install — starts on import so React does not need an explicit warm-up. */
-void warmBrowserCoreWasm()
+/** Eager install — starts on import so React does not need an explicit warm-up.
+ * Swallow at this call site only: Node/SSR/vitest evaluate this module without a
+ * real browser WASM fetch, and an unhandled rejection would terminate the process.
+ * Explicit `warmBrowserCoreWasm()` / `whenBrowserCoreWasmReady()` callers still
+ * observe the rejection (mirrors `warmWasm()` in `@solvapay/server`). */
+void warmBrowserCoreWasm().catch(() => undefined)
 
 /**
  * Resolves when the (re)install has completed. Safe after test resets.

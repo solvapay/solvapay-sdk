@@ -22,12 +22,13 @@ end
 SolvaPayExtensionTask.new("solvapay", GEMSPEC) do |ext|
   ext.lib_dir = "lib/solvapay"
   ext.cross_compile = true
+  # Windows (x64-mingw-ucrt) omitted — prebuilt gems are not published; install
+  # the source gem and compile locally via rb_sys/mkmf.
   ext.cross_platform = %w[
     x86_64-linux
     aarch64-linux
     x86_64-darwin
     arm64-darwin
-    x64-mingw-ucrt
   ]
 end
 

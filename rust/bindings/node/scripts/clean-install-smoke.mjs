@@ -71,6 +71,11 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error(err instanceof Error ? err.message : err)
+  if (err instanceof Error) {
+    console.error(`clean-install-smoke: ${err.message}`)
+    if (err.stack) console.error(err.stack)
+  } else {
+    console.error('clean-install-smoke:', err)
+  }
   process.exit(1)
 })

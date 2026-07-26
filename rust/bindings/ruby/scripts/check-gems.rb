@@ -13,7 +13,8 @@ EXPECTED = [
   # Host platform gems use darwin-XX suffixes (e.g. arm64-darwin-25).
   ["x86_64-darwin", ->(n) { n.include?("x86_64-darwin") }],
   ["arm64-darwin", ->(n) { n.include?("arm64-darwin") }],
-  ["x64-mingw", ->(n) { n.include?("x64-mingw") || n.include?("x86_64-mingw") || n.include?("mingw") }],
+  # Windows prebuilt gems are not published (clang/bindgen AVX10.2 breakage);
+  # consumers install the source gem and compile via rb_sys/mkmf.
 ].freeze
 
 dir = Pathname("gems")

@@ -14,6 +14,9 @@ name: Publish Ruby (RubyGems)
 #   SOLVAPAY_CORE_SHA        → `native_build_info` coreSha
 #
 # rb-sys-dock cross-compile remains deferred (rbsys 0.9.128 / Magnus 0.7 mismatch).
+# Windows (x64-mingw-ucrt) prebuilt gems are not published: rb-sys/bindgen + clang 20
+# fails inside LLVM AVX10.2/AMX headers. Windows consumers install the source gem
+# and compile locally via rb_sys/mkmf.
 
 on:
   workflow_dispatch:
@@ -51,11 +54,9 @@ jobs:
           - platform: aarch64-linux
             os: ubuntu-24.04-arm
           - platform: x86_64-darwin
-            os: macos-13
+            os: macos-15-intel
           - platform: arm64-darwin
             os: macos-latest
-          - platform: x64-mingw-ucrt
-            os: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
