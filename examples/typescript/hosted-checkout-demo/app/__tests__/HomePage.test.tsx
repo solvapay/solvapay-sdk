@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import type { PurchaseInfo, PurchaseStatus, PurchaseStatusReturn } from '@solvapay/react'
 import React from 'react'
 
 vi.mock('@solvapay/react', () => ({
@@ -18,34 +19,65 @@ import HomePage from '../page'
 const fetchMock = vi.fn()
 global.fetch = fetchMock
 
-function mockFreeUser() {
-  vi.mocked(usePurchase).mockReturnValue({
-    loading: false,
-    hasPaidPurchase: false,
-    activePurchase: null,
-    refetch: vi.fn().mockResolvedValue(undefined),
-  } as ReturnType<typeof usePurchase>)
-  vi.mocked(usePurchaseStatus).mockReturnValue({
+type PurchaseHookValue = PurchaseStatus & { refetch: () => Promise<void> }
+
+function mockPurchaseStatus(): PurchaseStatusReturn {
+  return {
     cancelledPurchase: null,
     shouldShowCancelledNotice: false,
-    formatDate: vi.fn((d: string) => d),
+    formatDate: vi.fn((d?: string) => d ?? null),
     getDaysUntilExpiration: vi.fn(() => null),
-  } as ReturnType<typeof usePurchaseStatus>)
+  }
+}
+
+function mockPurchase(
+  overrides: Omit<Partial<PurchaseHookValue>, 'activePurchase'> & {
+    activePurchase?: Partial<PurchaseInfo> | null
+  } = {},
+): PurchaseHookValue {
+  const { activePurchase: activePurchaseOverride, hasPaidPurchase, ...rest } = overrides
+  const activePurchase =
+    activePurchaseOverride === null
+      ? null
+      : ({
+          reference: 'pur_TEST',
+          productName: 'Pro Plan',
+          productRef: 'prd_TEST',
+          status: 'active',
+          startDate: '2026-01-01T00:00:00.000Z',
+          ...activePurchaseOverride,
+        } satisfies PurchaseInfo)
+
+  const paid = hasPaidPurchase ?? Boolean(activePurchase)
+
+  return {
+    loading: false,
+    isRefetching: false,
+    error: null,
+    purchases: activePurchase ? [activePurchase] : [],
+    hasProduct: () => Boolean(activePurchase),
+    activePurchase,
+    hasPaidPurchase: paid,
+    activePaidPurchase: paid ? activePurchase : null,
+    balanceTransactions: [],
+    refetch: vi.fn().mockResolvedValue(undefined),
+    ...rest,
+  }
+}
+
+function mockFreeUser() {
+  vi.mocked(usePurchase).mockReturnValue(mockPurchase({ activePurchase: null, hasPaidPurchase: false }))
+  vi.mocked(usePurchaseStatus).mockReturnValue(mockPurchaseStatus())
 }
 
 function mockPaidUser() {
-  vi.mocked(usePurchase).mockReturnValue({
-    loading: false,
-    hasPaidPurchase: true,
-    activePurchase: { productRef: 'prd_TEST', productName: 'Pro Plan' },
-    refetch: vi.fn().mockResolvedValue(undefined),
-  } as ReturnType<typeof usePurchase>)
-  vi.mocked(usePurchaseStatus).mockReturnValue({
-    cancelledPurchase: null,
-    shouldShowCancelledNotice: false,
-    formatDate: vi.fn((d: string) => d),
-    getDaysUntilExpiration: vi.fn(() => null),
-  } as ReturnType<typeof usePurchaseStatus>)
+  vi.mocked(usePurchase).mockReturnValue(
+    mockPurchase({
+      hasPaidPurchase: true,
+      activePurchase: { productRef: 'prd_TEST', productName: 'Pro Plan' },
+    }),
+  )
+  vi.mocked(usePurchaseStatus).mockReturnValue(mockPurchaseStatus())
 }
 
 beforeEach(() => {

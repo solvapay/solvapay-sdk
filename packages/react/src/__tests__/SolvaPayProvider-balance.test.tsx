@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
-import { BALANCE_RECONCILE_DELAYS_MS } from '@solvapay/server'
+import { BALANCE_RECONCILE_DELAYS_MS } from '../helpers/balance-poll'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { useSolvaPay } from '../hooks/useSolvaPay'
 import { useAutoRecharge } from '../hooks/useAutoRecharge'

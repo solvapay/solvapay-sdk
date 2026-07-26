@@ -150,7 +150,10 @@ pnpm build
 pnpm start
 ```
 
-Open [http://localhost:3010](http://localhost:3010) in your browser.
+`pnpm dev` serves locally on [http://localhost:3014](http://localhost:3014) and
+exposes your reserved tunnel (e.g. `https://checkout-jack-local.ngrok.app`) via
+ngrok. Use the **tunnel URL** for Google/Supabase auth so the OAuth callback
+lands back on the same origin. For Next-only without a tunnel: `pnpm dev:local`.
 
 **SDK package changes:** checkout-demo imports `@solvapay/react` from the built
 `packages/react/dist` bundle (not TypeScript source). After editing SDK primitives
@@ -226,7 +229,7 @@ Before deploying to `web-app-demo.solvapay.app`, confirm all of the following:
 
 In **Authentication → URL configuration** for `ganvogeprtezdpakybib`:
 
-- **Redirect URLs:** `https://web-app-demo.solvapay.app/auth/callback` (keep `http://localhost:3010/auth/callback` for local dev)
+- **Redirect URLs:** `https://web-app-demo.solvapay.app/auth/callback` (keep `http://localhost:3014/auth/callback` for local dev)
 - **Site URL:** `https://web-app-demo.solvapay.app` (recommended)
 
 Google Cloud Console still uses `https://ganvogeprtezdpakybib.supabase.co/auth/v1/callback` only.

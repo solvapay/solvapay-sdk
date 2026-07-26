@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "bash scripts/dev-with-tunnel.sh",
-    "dev:local": "NODE_OPTIONS='--disable-warning=DEP0205' next dev --webpack --port 3010",
+    "dev:local": "NODE_OPTIONS='--disable-warning=DEP0205' next dev --webpack --port 3014",
     "dev:tunnel": "bash scripts/dev-with-tunnel.sh",
-    "build": "next build",
+    "build": "next build --webpack",
     "build:opennext": "opennextjs-cloudflare build",
     "build:opennext:prod": "dotenv -e .env.prod -- opennextjs-cloudflare build",
     "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.19.0",
+    "@solvapay/examples-shared": "workspace:*",
     "@solvapay/server-native": "workspace:*",
     "@solvapay/server-wasm": "workspace:*",
     "@tailwindcss/postcss": "^4.2.2",

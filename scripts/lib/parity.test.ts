@@ -155,7 +155,7 @@ describe('checkParity', () => {
     ).toEqual([])
   })
 
-  it('fails when a client method is missing', () => {
+  it('detects a missing client method', () => {
     const manifest = stubManifest()
     const clientMethods = new Set(
       Object.keys(manifest.operations)
@@ -171,18 +171,18 @@ describe('checkParity', () => {
     expect(issues.some(i => i.kind === 'missing' && /checkLimits/.test(i.message))).toBe(true)
   })
 
-  it('fails when an uncatalogued portable export is present', () => {
+  it('flags an uncatalogued portable export as extra', () => {
     const manifest = stubManifest()
     const clientMethods = new Set(Object.keys(manifest.operations).map(id => deriveNames(id).ts))
     const issues = checkParity({
       manifest,
-      portableExports: completePortableExports(['sneakyUndocumentedHelper']),
+      portableExports: completePortableExports(['uncataloguedPortableHelper']),
       clientMethods,
       facadeMethods: completeFacadeMethods(),
     })
-    expect(issues.some(i => i.kind === 'extra' && /sneakyUndocumentedHelper/.test(i.message))).toBe(
-      true,
-    )
+    expect(
+      issues.some(i => i.kind === 'extra' && /uncataloguedPortableHelper/.test(i.message)),
+    ).toBe(true)
   })
 
   it('recognizes catalog:none bindings as catalogued (not extra)', () => {

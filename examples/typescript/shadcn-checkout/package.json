@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3012",
-    "build": "next build",
+    "dev": "next dev --webpack --port 3012",
+    "build": "next build --webpack",
     "start": "next start --port 3012",
     "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs"
   },
@@ -30,6 +30,8 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@solvapay/server-native": "workspace:*",
+    "@solvapay/server-wasm": "workspace:*",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",

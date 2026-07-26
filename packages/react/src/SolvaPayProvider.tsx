@@ -16,7 +16,7 @@ import type {
   SolvaPayProviderInitial,
 } from './types'
 import type { ProcessPaymentResult, TopupProcessResult, ActivatePlanResult } from '@solvapay/server'
-import { pollBalanceUntilIncreased, BALANCE_RECONCILE_DELAYS_MS } from '@solvapay/server'
+import { pollBalanceUntilIncreased, BALANCE_RECONCILE_DELAYS_MS } from './helpers/balance-poll'
 import { BALANCE_RECONCILE_GRACE_MS } from './helpers/auto-recharge-cache'
 import { autoRechargeCacheKeyFor, invalidateAutoRecharge } from './hooks/autoRechargeCache'
 import {

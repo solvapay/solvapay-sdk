@@ -72,9 +72,12 @@ jobs:
 
       - name: Run example unit tests
         run: |
+          pnpm --filter @solvapay/examples-shared test
           pnpm --filter @example/express-basic test
           pnpm --filter @example/express-provider-linkage test
           pnpm --filter checkout-demo exec vitest run
+          pnpm --filter hosted-checkout-demo test
+          pnpm --filter nextjs-auth0 test
 
       - name: Run contract tests
         run: pnpm test:contract

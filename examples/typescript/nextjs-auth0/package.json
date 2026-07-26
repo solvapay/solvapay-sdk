@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3013",
-    "build": "next build",
+    "dev": "next dev --webpack --port 3013",
+    "build": "next build --webpack",
     "start": "next start --port 3013",
     "test": "pnpm exec vitest run proxy.test.ts",
     "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs --ignore-pattern .agents --ignore-pattern .claude"
@@ -27,6 +27,9 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@solvapay/examples-shared": "workspace:*",
+    "@solvapay/server-native": "workspace:*",
+    "@solvapay/server-wasm": "workspace:*",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
@@ -34,6 +37,7 @@
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.3"
   }
 }

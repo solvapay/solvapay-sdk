@@ -84,6 +84,30 @@ export const config = {
 
 Next.js 16 renamed middleware to proxy — use `@solvapay/next/middleware` and export `proxy` instead of `middleware` when required.
 
+## Native binding (napi) with Next.js
+
+`@solvapay/next` loads `@solvapay/server`, which uses the Node napi addon
+`@solvapay/server-native`. Keep that package on disk — do not let the bundler
+inline it:
+
+```js
+// next.config.mjs
+const nextConfig = {
+  serverExternalPackages: [
+    '@solvapay/next',
+    '@solvapay/server',
+    '@solvapay/server-native',
+    '@solvapay/server-wasm',
+  ],
+}
+```
+
+Add `@solvapay/server-native` as a dependency, and build/dev with webpack until
+Turbopack can load napi addons: `next build --webpack` / `next dev --webpack`.
+
+In this monorepo the examples share that setup via
+`@solvapay/examples-shared/solvapay-next-config`.
+
 ## Requirements
 
 - Next.js >= 13.0.0

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import type {
+  BalanceStatus,
+  PurchaseStatus,
+  PurchaseStatusReturn,
+  UsePlansReturn,
+} from '@solvapay/react'
 import { formatCreditCurrencyEquivalent } from '../lib/credit-display'
 import HomePage from '../page'
 
@@ -16,31 +22,66 @@ vi.mock('../components/UsageSimulator', () => ({
 
 import { usePurchase, usePlans, usePurchaseStatus, useBalance } from '@solvapay/react'
 
-function mockDefaults(balanceOverrides: Partial<ReturnType<typeof useBalance>> = {}) {
-  vi.mocked(useBalance).mockReturnValue({
+type PurchaseHookValue = PurchaseStatus & { refetch: () => Promise<void> }
+
+function mockBalance(overrides: Partial<BalanceStatus> = {}): BalanceStatus {
+  return {
     credits: 31_500,
     loading: false,
     displayCurrency: 'SEK',
     creditsPerMinorUnit: 100,
     displayExchangeRate: 9.46,
+    display: null,
     refetch: vi.fn(),
     adjustBalance: vi.fn(),
-    ...balanceOverrides,
-  })
-  vi.mocked(usePurchase).mockReturnValue({
+    reconcileAfterUsageDebit: vi.fn(),
+    ...overrides,
+  }
+}
+
+function mockPurchase(): PurchaseHookValue {
+  return {
     loading: false,
+    isRefetching: false,
+    error: null,
+    purchases: [],
+    hasProduct: () => false,
     activePurchase: null,
-  } as ReturnType<typeof usePurchase>)
-  vi.mocked(usePlans).mockReturnValue({
+    hasPaidPurchase: false,
+    activePaidPurchase: null,
+    balanceTransactions: [],
+    refetch: vi.fn().mockResolvedValue(undefined),
+  }
+}
+
+function mockPlans(): UsePlansReturn {
+  return {
     loading: false,
     plans: [],
-  } as ReturnType<typeof usePlans>)
-  vi.mocked(usePurchaseStatus).mockReturnValue({
+    error: null,
+    selectedPlanIndex: -1,
+    selectedPlan: null,
+    setSelectedPlanIndex: vi.fn(),
+    selectPlan: vi.fn(),
+    refetch: vi.fn().mockResolvedValue(undefined),
+    isSelectionReady: true,
+  }
+}
+
+function mockPurchaseStatus(): PurchaseStatusReturn {
+  return {
     cancelledPurchase: null,
     shouldShowCancelledNotice: false,
-    formatDate: (d: string) => d,
+    formatDate: (d?: string) => d ?? null,
     getDaysUntilExpiration: () => null,
-  } as ReturnType<typeof usePurchaseStatus>)
+  }
+}
+
+function mockDefaults(balanceOverrides: Partial<BalanceStatus> = {}) {
+  vi.mocked(useBalance).mockReturnValue(mockBalance(balanceOverrides))
+  vi.mocked(usePurchase).mockReturnValue(mockPurchase())
+  vi.mocked(usePlans).mockReturnValue(mockPlans())
+  vi.mocked(usePurchaseStatus).mockReturnValue(mockPurchaseStatus())
 }
 
 describe('HomePage credit balance card', () => {
@@ -118,11 +159,11 @@ describe('HomePage credit balance card', () => {
     expect(balanceCard?.textContent).not.toMatch(/~/)
   })
 
-  it('falls back to rate 1 when displayExchangeRate is undefined', () => {
+  it('falls back to rate 1 when displayExchangeRate is null', () => {
     mockDefaults({
       credits: 10_000,
       displayCurrency: 'USD',
-      displayExchangeRate: undefined,
+      displayExchangeRate: null,
     })
 
     render(<HomePage />)

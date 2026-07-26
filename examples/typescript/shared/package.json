@@ -9,7 +9,11 @@
     ".": "./stub-api-client.ts",
     "./stub-api-client": "./stub-api-client.ts",
     "./next-stub": "./next-stub.ts",
-    "./next-route-dispatcher": "./next-route-dispatcher.ts"
+    "./next-route-dispatcher": "./next-route-dispatcher.ts",
+    "./solvapay-next-config": "./solvapay-next-config.mjs"
+  },
+  "scripts": {
+    "test": "node --test solvapay-next-config.test.mjs"
   },
   "peerDependencies": {
     "next": ">=13.0.0"

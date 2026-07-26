@@ -4,6 +4,22 @@ This folder contains shared utilities used across multiple examples in the Solva
 
 ## Contents
 
+### `solvapay-next-config.mjs`
+
+Shared Next.js config helper for examples that load `@solvapay/server` / the
+napi `@solvapay/server-native` addon. Sets `outputFileTracingRoot`,
+`serverExternalPackages`, and client webpack stubs. Pair with
+`next build --webpack` / `next dev --webpack`.
+
+```js
+import { withSolvaPayNextConfig } from '@solvapay/examples-shared/solvapay-next-config'
+
+export default withSolvaPayNextConfig(
+  { transpilePackages: ['@solvapay/react', '@solvapay/core'] },
+  { importMetaUrl: import.meta.url },
+)
+```
+
 ### `stub-api-client.ts`
 
 A demo implementation of the SolvaPay API client that simulates backend behavior for local development and testing.

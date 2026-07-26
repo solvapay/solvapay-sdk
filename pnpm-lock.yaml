@@ -217,6 +217,9 @@ importers:
       '@opennextjs/cloudflare':
         specifier: ^1.19.0
         version: 1.19.11(next@16.2.7(@babel/core@7.29.0)(@playwright/test@1.61.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(wrangler@4.98.0)
+      '@solvapay/examples-shared':
+        specifier: workspace:*
+        version: link:../shared
       '@solvapay/server-native':
         specifier: workspace:*
         version: link:../../../rust/bindings/node
@@ -448,6 +451,15 @@ importers:
         specifier: ^19.2.5
         version: 19.2.5(react@19.2.5)
     devDependencies:
+      '@solvapay/examples-shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@solvapay/server-native':
+        specifier: workspace:*
+        version: link:../../../rust/bindings/node
+      '@solvapay/server-wasm':
+        specifier: workspace:*
+        version: link:../../../rust/bindings/wasm
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -722,6 +734,15 @@ importers:
         specifier: ^2.6.0
         version: 2.6.1
     devDependencies:
+      '@solvapay/examples-shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@solvapay/server-native':
+        specifier: workspace:*
+        version: link:../../../rust/bindings/node
+      '@solvapay/server-wasm':
+        specifier: workspace:*
+        version: link:../../../rust/bindings/wasm
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -746,6 +767,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.1.3
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   examples/typescript/shadcn-checkout:
     dependencies:
@@ -804,6 +828,12 @@ importers:
         specifier: ^2.6.0
         version: 2.6.1
     devDependencies:
+      '@solvapay/server-native':
+        specifier: workspace:*
+        version: link:../../../rust/bindings/node
+      '@solvapay/server-wasm':
+        specifier: workspace:*
+        version: link:../../../rust/bindings/wasm
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -947,6 +977,12 @@ importers:
         specifier: ^19.2.5
         version: 19.2.5(react@19.2.5)
     devDependencies:
+      '@solvapay/server-native':
+        specifier: workspace:*
+        version: link:../../../rust/bindings/node
+      '@solvapay/server-wasm':
+        specifier: workspace:*
+        version: link:../../../rust/bindings/wasm
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2

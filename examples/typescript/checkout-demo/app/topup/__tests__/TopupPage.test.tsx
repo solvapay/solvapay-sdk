@@ -81,6 +81,7 @@ vi.mock('../components/StyledTopupForm', () => ({
 }))
 
 import { useAutoRecharge, useBalance } from '@solvapay/react'
+import type { BalanceStatus } from '@solvapay/react'
 
 function mockAutoRecharge(overrides: Partial<ReturnType<typeof useAutoRecharge>> = {}) {
   vi.mocked(useAutoRecharge).mockReturnValue({
@@ -96,17 +97,17 @@ function mockAutoRecharge(overrides: Partial<ReturnType<typeof useAutoRecharge>>
   })
 }
 
-function mockBalance(overrides: Partial<ReturnType<typeof useBalance>> = {}) {
+function mockBalance(overrides: Partial<BalanceStatus> = {}) {
   vi.mocked(useBalance).mockReturnValue({
-    credits: 0,
-    loading: false,
-    displayCurrency: 'SEK',
-    creditsPerMinorUnit: 100,
-    displayExchangeRate: 9.46,
-    refetch: mockRefetch,
-    adjustBalance: vi.fn(),
-    reconcileAfterUsageDebit: vi.fn(),
-    ...overrides,
+    credits: overrides.credits ?? 0,
+    loading: overrides.loading ?? false,
+    displayCurrency: overrides.displayCurrency ?? 'SEK',
+    creditsPerMinorUnit: overrides.creditsPerMinorUnit ?? 100,
+    displayExchangeRate: overrides.displayExchangeRate ?? 9.46,
+    display: overrides.display ?? null,
+    refetch: overrides.refetch ?? mockRefetch,
+    adjustBalance: overrides.adjustBalance ?? vi.fn(),
+    reconcileAfterUsageDebit: overrides.reconcileAfterUsageDebit ?? vi.fn(),
   })
 }
 
@@ -156,6 +157,7 @@ describe('TopupPage payment success', () => {
         topup: { mode: 'fixed', amountMinor: 1000, currency: 'SEK' },
         status: 'pending_setup',
         failureCount: 0,
+        monthlySpendMinor: 0,
         display: {
           thresholdAmountMajor: 45,
           topupAmountMajor: 10,

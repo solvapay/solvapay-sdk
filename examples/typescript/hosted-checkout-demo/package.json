@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "[ -e '.env' ] || cp env.example .env && next build",
+    "dev": "next dev --webpack",
+    "build": "[ -e '.env' ] || cp env.example .env && next build --webpack",
     "start": "next start",
     "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.js",
     "test": "vitest run",
@@ -25,6 +25,9 @@
     "react-dom": "^19.2.5"
   },
   "devDependencies": {
+    "@solvapay/examples-shared": "workspace:*",
+    "@solvapay/server-native": "workspace:*",
+    "@solvapay/server-wasm": "workspace:*",
     "@tailwindcss/postcss": "^4.2.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
