@@ -1127,11 +1127,13 @@ jobs:
         working-directory: rust/bindings/wasm
         run: pnpm test
 
-      - name: Build core, auth, server-wasm, server, mcp-core
+      - name: Build core, auth, server-wasm, server-native, server, mcp-core
         run: |
           pnpm --filter @solvapay/core build
           pnpm --filter @solvapay/auth build
           pnpm --filter @solvapay/server-wasm build
+          # verify-webhook.unit.test.ts exercises both node (napi) and edge (WASM).
+          pnpm --filter @solvapay/server-native build
           pnpm --filter @solvapay/server build
           pnpm --filter @solvapay/mcp-core build
 
