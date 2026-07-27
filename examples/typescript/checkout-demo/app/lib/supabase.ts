@@ -4,16 +4,23 @@
  * Creates and exports the Supabase client for authentication.
  */
 
-import { createClient, Session } from '@supabase/supabase-js'
+import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-if (!supabaseUrl || !supabaseAnonKey) {
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+
+if (!isSupabaseConfigured) {
   console.warn('Supabase environment variables not configured. Authentication will not work.')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// createClient throws on empty url/key; use placeholders so Next can prerender
+// without credentials (CI copies env.example → .env before build).
+export const supabase: SupabaseClient = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'public-anon-key',
+)
 
 /**
  * Get the current user's ID from Supabase session

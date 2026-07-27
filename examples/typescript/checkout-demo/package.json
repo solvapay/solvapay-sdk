@@ -7,7 +7,7 @@
     "dev": "bash scripts/dev-with-tunnel.sh",
     "dev:local": "NODE_OPTIONS='--disable-warning=DEP0205' next dev --webpack --port 3014",
     "dev:tunnel": "bash scripts/dev-with-tunnel.sh",
-    "build": "next build --webpack",
+    "build": "[ -e '.env' ] || cp env.example .env && next build --webpack",
     "build:opennext": "opennextjs-cloudflare build",
     "build:opennext:prod": "dotenv -e .env.prod -- opennextjs-cloudflare build",
     "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

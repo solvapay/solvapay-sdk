@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getOrCreateCustomerId } from '../lib/customer'
-import { onAuthStateChange } from '../lib/supabase'
+import { isSupabaseConfigured, onAuthStateChange } from '../lib/supabase'
 import { Auth } from './Auth'
 import { Navigation } from './Navigation'
 import { Providers } from './Providers'
@@ -15,18 +15,13 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false
 
+    if (!isSupabaseConfigured) {
+      setIsAuthenticated(false)
+      setIsLoading(false)
+      return
+    }
+
     const initializeAuth = async () => {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (!supabaseUrl || !supabaseAnonKey) {
-        if (!cancelled) {
-          setIsAuthenticated(false)
-          setIsLoading(false)
-        }
-        return
-      }
-
       try {
         const userId = await getOrCreateCustomerId()
         if (!cancelled) {
@@ -46,10 +41,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Subscribe to auth state changes
     const {
       data: { subscription },
-    } = onAuthStateChange((event, session) => {
+    } = onAuthStateChange((_event, session) => {
       if (!cancelled) {
         setIsAuthenticated(!!session?.user?.id)
       }
