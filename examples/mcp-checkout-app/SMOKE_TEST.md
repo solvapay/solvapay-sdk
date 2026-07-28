@@ -28,7 +28,7 @@ out of the plan-selection surface — it shows paid options only.
 
 ## Prerequisites
 
-- Backend running at `http://localhost:3001` with your product and
+- Platform stack running with API fan-out at `http://localhost:3010` with your product and
   plans created.
 - `.env` set: `SOLVAPAY_SECRET_KEY`, `SOLVAPAY_PRODUCT_REF`,
   `DEMO_TOOLS=true`.
