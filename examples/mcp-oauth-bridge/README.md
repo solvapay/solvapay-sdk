@@ -31,16 +31,19 @@ URL. This bridge makes the MCP origin a fully self-consistent authorization serv
 ```bash
 cd examples/mcp-oauth-bridge
 pnpm install
-cp .env.example .env
-# Edit .env values
+# Against a local platform stack, start from the shared template:
+cp ../.env.platform-local.example .env
+# Or: cp .env.example .env
+# Edit .env values (API base :3010, MCP_PORT 3030+)
 pnpm dev
 ```
 
-Server default: `http://localhost:3004`
+Server default (platform-local): `http://localhost:3030`
 
 ## Required environment variables
 
-- `SOLVAPAY_API_BASE_URL`: backend base URL (for example `http://localhost:3000`) used for OAuth endpoints and SDK metering checks
+- `SOLVAPAY_API_BASE_URL`: backend base URL — against a local platform stack use
+  `http://localhost:3010` (see [`../.env.platform-local.example`](../.env.platform-local.example))
 - `SOLVAPAY_PRODUCT_REF`: product reference used by `payable.mcp(...)` and OAuth DCR (`product_ref`)
 - `MCP_PUBLIC_BASE_URL`: local MCP origin exposed to clients
 - `OAUTH_REDIRECT_URI`: redirect used in DCR + auth flow
@@ -50,8 +53,8 @@ Server default: `http://localhost:3004`
 
 - This example's `pnpm dev` process receives webhooks on `POST /webhooks` and serves MCP on `/mcp`.
 - Recommended local bind: `MCP_HOST=0.0.0.0` (default in `.env.example`) with
-  `MCP_PUBLIC_BASE_URL=http://localhost:3004`.
-- Configure the backend webhook endpoint URL as `http://localhost:3004/webhooks` to avoid loopback
+  `MCP_PUBLIC_BASE_URL=http://localhost:3030`.
+- Configure the backend webhook endpoint URL as `http://localhost:3030/webhooks` to avoid loopback
   IPv4/IPv6 mismatches (`127.0.0.1` vs `::1`).
 - Set `SOLVAPAY_WEBHOOK_SECRET` to the endpoint signing secret from SolvaPay backend.
 
