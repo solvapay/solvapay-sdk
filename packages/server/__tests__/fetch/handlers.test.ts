@@ -347,7 +347,7 @@ describe('createCheckoutSession', () => {
   it('parses body and returns checkout session', async () => {
     mockCreateCheckoutSessionCore.mockResolvedValue({
       sessionId: 'ses_1',
-      checkoutUrl: 'https://checkout.solvapay.com/ses_1',
+      checkoutUrl: 'https://customer.solvapay.com/ses_1',
     })
 
     const res = await createCheckoutSession(
@@ -356,7 +356,7 @@ describe('createCheckoutSession', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({
       sessionId: 'ses_1',
-      checkoutUrl: 'https://checkout.solvapay.com/ses_1',
+      checkoutUrl: 'https://customer.solvapay.com/ses_1',
     })
   })
 
@@ -381,14 +381,14 @@ describe('createCustomerSession', () => {
   it('returns customer session on success', async () => {
     mockCreateCustomerSessionCore.mockResolvedValue({
       sessionId: 'ses_2',
-      customerUrl: 'https://billing.solvapay.com/ses_2',
+      customerUrl: 'https://customer.solvapay.com/ses_2',
     })
 
     const res = await createCustomerSession(fakePost())
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({
       sessionId: 'ses_2',
-      customerUrl: 'https://billing.solvapay.com/ses_2',
+      customerUrl: 'https://customer.solvapay.com/ses_2',
     })
   })
 
