@@ -1050,29 +1050,127 @@ export interface components {
     }
     ConfigureMcpPlansDto: {
       plans?: {
-        /** @enum {string} */
-        billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-        /** @enum {string} */
-        billingModel?: 'pre-paid' | 'post-paid'
-        creditsPerUnit?: number
-        currency: string
+        currency?: string
         features?: {
           [key: string]: unknown
         }
-        freeUnits?: number
         key: string
-        limit?: number
         name: string
-        price: number
-        pricingOptions?: {
-          basePrice?: number
-          currency: string
-          default?: boolean
-          price: number
-          setupFee?: number
-        }[]
-        /** @enum {string} */
-        type?: 'recurring' | 'one-time' | 'usage-based'
+        options: (
+          | {
+              amountMinor: number
+              currency: string
+              /** @enum {string} */
+              kind: 'charge'
+              label?: string
+              meter?: string
+              oneTime?: boolean
+              /** @enum {string} */
+              per: 'unit' | 'seat' | 'flat'
+            }
+          | {
+              /** Format: date-time */
+              anchor?: string
+              count?: number
+              /** @enum {string} */
+              interval: 'week' | 'month' | 'year'
+              /** @enum {string} */
+              kind: 'cadence'
+            }
+          | {
+              charge: {
+                amountMinor: number
+                currency: string
+                label?: string
+                meter?: string
+                /** @enum {string} */
+                per: 'unit' | 'seat' | 'flat'
+              }
+              from: number
+              /** @enum {string} */
+              kind: 'tier'
+              label?: string
+              /** @enum {string} */
+              mode: 'graduated' | 'volume'
+              to: number | null
+            }
+          | {
+              cap: number
+              /** @enum {string} */
+              kind: 'limit'
+              label?: string
+              meter: string
+              /** @enum {string} */
+              onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+              onExceedPricingId?: string
+              /** @enum {string} */
+              scope: 'billing_period' | 'lifetime' | 'rolling_window'
+              /** @enum {string} */
+              uiHint?: 'upgrade_prompt' | 'soft_warning'
+              windowDays?: number
+            }
+          | {
+              feature: string
+              /** @enum {string} */
+              kind: 'entitlement'
+              label?: string
+              scope?: string
+              value: boolean | number | string
+            }
+          | {
+              days: number
+              downgradeToPricingId?: string
+              /** @enum {string} */
+              kind: 'trial'
+              label?: string
+              /** @enum {string} */
+              onEnd: 'convert' | 'cancel' | 'downgrade'
+              requireCard?: boolean
+            }
+          | {
+              /** @enum {string} */
+              kind: 'prepaid'
+              label?: string
+              lowBalanceUnits?: number
+              minTopUpMinor?: number
+            }
+          | {
+              /** @enum {string} */
+              appliesTo?: 'recurring' | 'setup' | 'usage' | 'all'
+              currency?: string
+              cycles?: number
+              /** @enum {string} */
+              duration: 'once' | 'repeating' | 'forever'
+              /** @enum {string} */
+              kind: 'discount'
+              label?: string
+              /** @enum {string} */
+              mode: 'percentage' | 'fixed'
+              value: number
+            }
+          | {
+              capUnits?: number
+              currency?: string
+              /** @enum {string} */
+              kind: 'rollover'
+              label?: string
+              maxCycles?: number
+              meter: string
+              rateMinor?: number
+              /** @enum {string} */
+              treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
+            }
+          | {
+              /** @enum {string} */
+              kind: 'default'
+              label?: string
+            }
+          | {
+              /** @enum {string} */
+              kind: 'enterprise'
+              label?: string
+            }
+        )[]
       }[]
       toolMapping?: {
         name: string
@@ -1160,6 +1258,138 @@ export interface components {
        * @enum {string}
        */
       purpose: 'product' | 'credit_topup' | 'usage_billing'
+    }
+    CreatePlanRequest: {
+      accessExpiryDays?: number
+      currency?: string
+      description?: string
+      features?: {
+        [key: string]: unknown
+      }
+      maxActiveUsers?: number
+      metadata?: {
+        [key: string]: unknown
+      }
+      name: string
+      options: (
+        | {
+            amountMinor: number
+            currency: string
+            /** @enum {string} */
+            kind: 'charge'
+            label?: string
+            meter?: string
+            oneTime?: boolean
+            /** @enum {string} */
+            per: 'unit' | 'seat' | 'flat'
+          }
+        | {
+            /** Format: date-time */
+            anchor?: string
+            count?: number
+            /** @enum {string} */
+            interval: 'week' | 'month' | 'year'
+            /** @enum {string} */
+            kind: 'cadence'
+          }
+        | {
+            charge: {
+              amountMinor: number
+              currency: string
+              label?: string
+              meter?: string
+              /** @enum {string} */
+              per: 'unit' | 'seat' | 'flat'
+            }
+            from: number
+            /** @enum {string} */
+            kind: 'tier'
+            label?: string
+            /** @enum {string} */
+            mode: 'graduated' | 'volume'
+            to: number | null
+          }
+        | {
+            cap: number
+            /** @enum {string} */
+            kind: 'limit'
+            label?: string
+            meter: string
+            /** @enum {string} */
+            onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+            onExceedPricingId?: string
+            /** @enum {string} */
+            scope: 'billing_period' | 'lifetime' | 'rolling_window'
+            /** @enum {string} */
+            uiHint?: 'upgrade_prompt' | 'soft_warning'
+            windowDays?: number
+          }
+        | {
+            feature: string
+            /** @enum {string} */
+            kind: 'entitlement'
+            label?: string
+            scope?: string
+            value: boolean | number | string
+          }
+        | {
+            days: number
+            downgradeToPricingId?: string
+            /** @enum {string} */
+            kind: 'trial'
+            label?: string
+            /** @enum {string} */
+            onEnd: 'convert' | 'cancel' | 'downgrade'
+            requireCard?: boolean
+          }
+        | {
+            /** @enum {string} */
+            kind: 'prepaid'
+            label?: string
+            lowBalanceUnits?: number
+            minTopUpMinor?: number
+          }
+        | {
+            /** @enum {string} */
+            appliesTo?: 'recurring' | 'setup' | 'usage' | 'all'
+            currency?: string
+            cycles?: number
+            /** @enum {string} */
+            duration: 'once' | 'repeating' | 'forever'
+            /** @enum {string} */
+            kind: 'discount'
+            label?: string
+            /** @enum {string} */
+            mode: 'percentage' | 'fixed'
+            value: number
+          }
+        | {
+            capUnits?: number
+            currency?: string
+            /** @enum {string} */
+            kind: 'rollover'
+            label?: string
+            maxCycles?: number
+            meter: string
+            rateMinor?: number
+            /** @enum {string} */
+            treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
+          }
+        | {
+            /** @enum {string} */
+            kind: 'default'
+            label?: string
+          }
+        | {
+            /** @enum {string} */
+            kind: 'enterprise'
+            label?: string
+          }
+      )[]
+      /** @enum {string} */
+      status?: 'active' | 'inactive' | 'archived'
+      /** @enum {string} */
+      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
     }
     CreateProductRequest: {
       config?: {
@@ -1384,19 +1614,23 @@ export interface components {
       remainingUnits?: number
     }
     LimitPlanItemDto: {
+      /** @description Derived billing cycle */
       billingCycle?: string
-      billingModel?: string
-      /** @description Credits per usage unit (usage-based plans) */
+      /** @description Per-unit charge in minor units (usage-based plans) */
       creditsPerUnit?: number
       currency: string
+      /** @description Derived included units for the metered allowance */
       freeUnits?: number
       name?: string
-      /** @description Price in smallest currency unit (e.g. cents) */
+      /** @description Composable pricing options for this plan */
+      options?: {
+        [key: string]: unknown
+      }[]
+      /** @description Headline price in smallest currency unit (e.g. cents) */
       price: number
-      /** @description Per-currency price options for this plan */
-      pricingOptions?: components['schemas']['PlanPricingOptionDto'][]
       reference: string
       requiresPayment: boolean
+      /** @description Derived plan type */
       type: string
     }
     LimitProductBriefDto: {
@@ -1458,29 +1692,127 @@ export interface components {
       name?: string
       originUrl: string
       plans?: {
-        /** @enum {string} */
-        billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-        /** @enum {string} */
-        billingModel?: 'pre-paid' | 'post-paid'
-        creditsPerUnit?: number
-        currency: string
+        currency?: string
         features?: {
           [key: string]: unknown
         }
-        freeUnits?: number
         key: string
-        limit?: number
         name: string
-        price: number
-        pricingOptions?: {
-          basePrice?: number
-          currency: string
-          default?: boolean
-          price: number
-          setupFee?: number
-        }[]
-        /** @enum {string} */
-        type?: 'recurring' | 'one-time' | 'usage-based'
+        options: (
+          | {
+              amountMinor: number
+              currency: string
+              /** @enum {string} */
+              kind: 'charge'
+              label?: string
+              meter?: string
+              oneTime?: boolean
+              /** @enum {string} */
+              per: 'unit' | 'seat' | 'flat'
+            }
+          | {
+              /** Format: date-time */
+              anchor?: string
+              count?: number
+              /** @enum {string} */
+              interval: 'week' | 'month' | 'year'
+              /** @enum {string} */
+              kind: 'cadence'
+            }
+          | {
+              charge: {
+                amountMinor: number
+                currency: string
+                label?: string
+                meter?: string
+                /** @enum {string} */
+                per: 'unit' | 'seat' | 'flat'
+              }
+              from: number
+              /** @enum {string} */
+              kind: 'tier'
+              label?: string
+              /** @enum {string} */
+              mode: 'graduated' | 'volume'
+              to: number | null
+            }
+          | {
+              cap: number
+              /** @enum {string} */
+              kind: 'limit'
+              label?: string
+              meter: string
+              /** @enum {string} */
+              onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+              onExceedPricingId?: string
+              /** @enum {string} */
+              scope: 'billing_period' | 'lifetime' | 'rolling_window'
+              /** @enum {string} */
+              uiHint?: 'upgrade_prompt' | 'soft_warning'
+              windowDays?: number
+            }
+          | {
+              feature: string
+              /** @enum {string} */
+              kind: 'entitlement'
+              label?: string
+              scope?: string
+              value: boolean | number | string
+            }
+          | {
+              days: number
+              downgradeToPricingId?: string
+              /** @enum {string} */
+              kind: 'trial'
+              label?: string
+              /** @enum {string} */
+              onEnd: 'convert' | 'cancel' | 'downgrade'
+              requireCard?: boolean
+            }
+          | {
+              /** @enum {string} */
+              kind: 'prepaid'
+              label?: string
+              lowBalanceUnits?: number
+              minTopUpMinor?: number
+            }
+          | {
+              /** @enum {string} */
+              appliesTo?: 'recurring' | 'setup' | 'usage' | 'all'
+              currency?: string
+              cycles?: number
+              /** @enum {string} */
+              duration: 'once' | 'repeating' | 'forever'
+              /** @enum {string} */
+              kind: 'discount'
+              label?: string
+              /** @enum {string} */
+              mode: 'percentage' | 'fixed'
+              value: number
+            }
+          | {
+              capUnits?: number
+              currency?: string
+              /** @enum {string} */
+              kind: 'rollover'
+              label?: string
+              maxCycles?: number
+              meter: string
+              rateMinor?: number
+              /** @enum {string} */
+              treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
+            }
+          | {
+              /** @enum {string} */
+              kind: 'default'
+              label?: string
+            }
+          | {
+              /** @enum {string} */
+              kind: 'enterprise'
+              label?: string
+            }
+        )[]
       }[]
       productType?: string
       tools?: {
@@ -1559,24 +1891,8 @@ export interface components {
     Plan: {
       /** @description Access expiry in days */
       accessExpiryDays?: number
-      /**
-       * Billing cycle
-       * @example monthly
-       */
-      billingCycle?: string
-      /**
-       * Billing model
-       * @example pre-paid
-       * @enum {string}
-       */
-      billingModel?: 'pre-paid' | 'post-paid'
       /** @description Creation timestamp */
       createdAt: string
-      /**
-       * Credits per usage unit (integer, >= 1)
-       * @example 1
-       */
-      creditsPerUnit?: number
       /**
        * Currency code (ISO 4217)
        * @example USD
@@ -1597,53 +1913,26 @@ export interface components {
         [key: string]: unknown
       }
       /**
-       * Number of free units included
-       * @example 100
-       */
-      freeUnits?: number
-      /**
-       * Whether the plan is hidden from customer-facing surfaces. When true, the plan does not appear in checkout or the SDK catalog and can only be granted via direct assignment (enterprise plans).
-       * @example false
-       */
-      hidden: boolean
-      /**
        * Whether the plan is active (derived from status)
        * @example true
        */
       isActive: boolean
-      /**
-       * Usage limit for the meter
-       * @example 10000
-       */
-      limit?: number
-      /** @description Usage limits */
-      limits?: {
-        [key: string]: unknown
-      }
       /** @description Maximum number of active users */
       maxActiveUsers?: number
-      /**
-       * What the plan measures for usage tracking
-       * @example requests
-       */
-      measures?: string
-      /**
-       * Meter reference for usage-based plans
-       * @example mtr_1A2B3C4D
-       */
-      meterRef?: string
       /**
        * Plan name
        * @example Starter
        */
       name?: string
+      /** @description Composable pricing options (money as integer minor units) */
+      options: {
+        [key: string]: unknown
+      }[]
       /**
-       * Plan price in cents
+       * Derived headline price in minor units (the base or one-time charge)
        * @example 2999
        */
       price?: number
-      /** @description Per-currency price options for this plan */
-      pricingOptions?: components['schemas']['PlanPricingOptionDto'][]
       /**
        * Plan reference
        * @example pln_1A2B3C4D
@@ -1655,60 +1944,18 @@ export interface components {
        */
       requiresPayment?: boolean
       /**
-       * Whether unused units roll over to next period
-       * @example false
-       */
-      rolloverUnusedUnits?: boolean
-      /**
-       * One-time setup fee
-       * @example 500
-       */
-      setupFee?: number
-      /**
        * Plan status
        * @example active
        */
       status: string
       /**
-       * Free trial period in days
-       * @example 14
-       */
-      trialDays?: number
-      /**
-       * Plan type exposed in SDK
+       * Derived plan type (read from options)
        * @example recurring
        * @enum {string}
        */
       type: 'recurring' | 'one-time' | 'usage-based' | 'hybrid'
       /** @description Last update timestamp */
       updatedAt: string
-    }
-    PlanPricingOptionDto: {
-      /**
-       * Base price in smallest currency unit (hybrid plans)
-       * @example 1999
-       */
-      basePrice?: number
-      /**
-       * ISO 4217 currency code
-       * @example USD
-       */
-      currency: string
-      /**
-       * Whether this is the default currency option for the plan
-       * @example true
-       */
-      default?: boolean
-      /**
-       * Price in smallest currency unit (e.g. cents)
-       * @example 2999
-       */
-      price: number
-      /**
-       * One-time setup fee in smallest currency unit
-       * @example 500
-       */
-      setupFee?: number
     }
     ProcessPaymentCancelled: {
       /**
@@ -1910,73 +2157,6 @@ export interface components {
       /** @description Connected Stripe account ID */
       stripeAccountId?: string
     }
-    SdkCreatePlanRequest: {
-      accessExpiryDays?: number
-      /** @enum {string} */
-      billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-      /** @enum {string} */
-      billingModel?: 'pre-paid' | 'post-paid'
-      billingStrategy?: {
-        type?: string
-      }
-      creditsPerUnit?: number
-      currency?: string
-      default?: boolean
-      description?: string
-      features?: {
-        [key: string]: unknown
-      }
-      freeUnits?: number
-      fulfillment?: {
-        deliveryMethod?: string
-        estimatedDelivery?: string
-        type?: string
-      }
-      hidden?: boolean
-      limit?: number
-      limits?: {
-        [key: string]: unknown
-      }
-      maxActiveUsers?: number
-      metadata?: {
-        [key: string]: unknown
-      }
-      name: string
-      overagePolicy?: {
-        allowOverage?: boolean
-        maxOverage?: number
-      }
-      price?: number
-      pricingOptions?: {
-        basePrice?: number
-        currency: string
-        default?: boolean
-        price: number
-        setupFee?: number
-      }[]
-      returnPolicy?: {
-        allowed?: boolean
-        conditions?: string
-        period?: number
-      }
-      /** @enum {string} */
-      status?: 'active' | 'inactive' | 'archived'
-      /** @enum {string} */
-      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
-      /** @enum {string} */
-      type?: 'recurring' | 'usage-based' | 'one-time' | 'hybrid'
-      usageTracking?: {
-        /** @enum {string} */
-        granularity?: 'hourly' | 'daily' | 'weekly' | 'monthly'
-        /** @enum {string} */
-        method?: 'automatic' | 'manual' | 'hybrid'
-      }
-      warranty?: {
-        duration?: number
-        terms?: string
-        unit?: string
-      }
-    }
     SdkMerchantResponseDto: {
       /**
        * Company registration number (EIN, Companies House No, Org No)
@@ -2164,23 +2344,8 @@ export interface components {
       transactionId?: string
     }
     SdkPlanResponse: {
-      /**
-       * Billing cycle
-       * @example monthly
-       */
-      billingCycle?: string
-      /**
-       * Billing model
-       * @example pre-paid
-       */
-      billingModel?: string
       /** @description Creation timestamp */
       createdAt: string
-      /**
-       * Credits per usage unit (integer, >= 1)
-       * @example 1
-       */
-      creditsPerUnit?: number
       /**
        * Currency code (ISO 4217)
        * @example USD
@@ -2191,59 +2356,29 @@ export interface components {
        * @example $
        */
       currencySymbol?: string
-      /**
-       * Plan description
-       * @example Best for teams getting started
-       */
-      description?: string
       /** @description Plan features */
       features?: {
         [key: string]: unknown
       }
-      /**
-       * Included free units
-       * @example 1000
-       */
-      freeUnits?: number
-      /**
-       * Whether the plan is hidden from the customer-facing catalog. Enterprise plans (true) do not appear in checkout or the SDK catalog and can only be granted via direct assignment.
-       * @example false
-       */
-      hidden: boolean
       /**
        * Whether the plan is active
        * @example true
        */
       isActive: boolean
       /**
-       * Usage limit for the meter
-       * @example 10000
-       */
-      limit?: number
-      /** @description Usage limits */
-      limits?: {
-        [key: string]: unknown
-      }
-      /**
-       * What the plan measures for usage tracking
-       * @example requests
-       */
-      measures?: string
-      /**
-       * Meter reference for usage-based limits
-       * @example mtr_1A2B3C4D
-       */
-      meterRef?: string
-      /**
        * Plan name
        * @example Starter
        */
       name?: string
+      /** @description Composable pricing options (money as integer minor units) */
+      options: {
+        [key: string]: unknown
+      }[]
       /**
-       * Plan price in cents
+       * Derived headline price in minor units (base or one-time charge)
        * @example 2999
        */
-      price: number
+      price?: number
       /**
        * Plan reference
        * @example pln_1A2B3C4D
@@ -2255,27 +2390,12 @@ export interface components {
        */
       requiresPayment: boolean
       /**
-       * Whether unused units roll over to next period
-       * @example false
-       */
-      rolloverUnusedUnits?: boolean
-      /**
-       * One-time setup fee
-       * @example 500
-       */
-      setupFee?: number
-      /**
        * Plan status
        * @example active
        */
       status: string
       /**
-       * Free trial period in days
-       * @example 14
-       */
-      trialDays?: number
-      /**
-       * Plan type
+       * Derived plan type (read from options)
        * @example recurring
        * @enum {string}
        */
@@ -2285,15 +2405,10 @@ export interface components {
     }
     SdkPlanSnapshotDto: {
       /**
-       * Billing cycle
+       * Derived billing cycle
        * @example monthly
        */
       billingCycle?: string | null
-      /**
-       * Credits per usage unit (integer, >= 1)
-       * @example 1
-       */
-      creditsPerUnit?: number
       /**
        * Currency code
        * @example USD
@@ -2304,22 +2419,13 @@ export interface components {
         [key: string]: unknown
       } | null
       /**
-       * Number of free units included
-       * @example 100
-       */
-      freeUnits?: number
-      /**
-       * Usage limit for the meter
+       * Derived included units for the metered allowance (0 = unlimited/none)
        * @example 5000
        */
-      limit?: number
-      /** @description Usage limits */
-      limits?: {
-        [key: string]: unknown
-      } | null
+      includedUnits?: number
       /**
-       * Meter reference
-       * @example mtr_1A2B3C4D
+       * Meter key referenced by the plan options
+       * @example requests
        */
       meterRef?: string
       /**
@@ -2327,13 +2433,12 @@ export interface components {
        * @example Pro Monthly
        */
       name?: string
+      /** @description Frozen composable pricing options captured at purchase time */
+      options?: {
+        [key: string]: unknown
+      }[]
       /**
-       * Plan type
-       * @example recurring
-       */
-      planType: string
-      /**
-       * Plan price in cents
+       * Headline plan price in minor units (e.g. cents)
        * @example 2999
        */
       price: number
@@ -2342,6 +2447,11 @@ export interface components {
        * @example pln_1A2B3C4D
        */
       reference?: string
+      /**
+       * Derived plan type
+       * @example recurring
+       */
+      type?: string
     }
     SdkPlatformConfigResponseDto: {
       /**
@@ -2510,65 +2620,6 @@ export interface components {
       /** @description Usage billing state for usage-based plans */
       usage?: components['schemas']['UsageBillingDto']
     }
-    SdkUpdatePlanRequest: {
-      accessExpiryDays?: number
-      /** @enum {string} */
-      billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-      /** @enum {string} */
-      billingModel?: 'pre-paid' | 'post-paid'
-      billingStrategy?: {
-        type?: string
-      }
-      creditsPerUnit?: number
-      currency?: string
-      default?: boolean
-      description?: string
-      features?: {
-        [key: string]: unknown
-      }
-      freeUnits?: number
-      fulfillment?: {
-        deliveryMethod?: string
-        estimatedDelivery?: string
-        type?: string
-      }
-      hidden?: boolean
-      limit?: number
-      limits?: {
-        [key: string]: unknown
-      }
-      maxActiveUsers?: number
-      metadata?: {
-        [key: string]: unknown
-      }
-      name?: string
-      overagePolicy?: {
-        allowOverage?: boolean
-        maxOverage?: number
-      }
-      price?: number
-      pricingOptions?: {
-        basePrice?: number
-        currency: string
-        default?: boolean
-        price: number
-        setupFee?: number
-      }[]
-      returnPolicy?: {
-        allowed?: boolean
-        conditions?: string
-        period?: number
-      }
-      /** @enum {string} */
-      status?: 'active' | 'inactive' | 'archived'
-      /** @enum {string} */
-      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
-      warranty?: {
-        duration?: number
-        terms?: string
-        unit?: string
-      }
-    }
     UpdateCustomerRequest: {
       description?: string
       /** Format: email */
@@ -2577,6 +2628,138 @@ export interface components {
       metadata?: unknown
       name?: string
       telephone?: string | ''
+    }
+    UpdatePlanRequest: {
+      accessExpiryDays?: number
+      currency?: string
+      description?: string
+      features?: {
+        [key: string]: unknown
+      }
+      maxActiveUsers?: number
+      metadata?: {
+        [key: string]: unknown
+      }
+      name?: string
+      options?: (
+        | {
+            amountMinor: number
+            currency: string
+            /** @enum {string} */
+            kind: 'charge'
+            label?: string
+            meter?: string
+            oneTime?: boolean
+            /** @enum {string} */
+            per: 'unit' | 'seat' | 'flat'
+          }
+        | {
+            /** Format: date-time */
+            anchor?: string
+            count?: number
+            /** @enum {string} */
+            interval: 'week' | 'month' | 'year'
+            /** @enum {string} */
+            kind: 'cadence'
+          }
+        | {
+            charge: {
+              amountMinor: number
+              currency: string
+              label?: string
+              meter?: string
+              /** @enum {string} */
+              per: 'unit' | 'seat' | 'flat'
+            }
+            from: number
+            /** @enum {string} */
+            kind: 'tier'
+            label?: string
+            /** @enum {string} */
+            mode: 'graduated' | 'volume'
+            to: number | null
+          }
+        | {
+            cap: number
+            /** @enum {string} */
+            kind: 'limit'
+            label?: string
+            meter: string
+            /** @enum {string} */
+            onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+            onExceedPricingId?: string
+            /** @enum {string} */
+            scope: 'billing_period' | 'lifetime' | 'rolling_window'
+            /** @enum {string} */
+            uiHint?: 'upgrade_prompt' | 'soft_warning'
+            windowDays?: number
+          }
+        | {
+            feature: string
+            /** @enum {string} */
+            kind: 'entitlement'
+            label?: string
+            scope?: string
+            value: boolean | number | string
+          }
+        | {
+            days: number
+            downgradeToPricingId?: string
+            /** @enum {string} */
+            kind: 'trial'
+            label?: string
+            /** @enum {string} */
+            onEnd: 'convert' | 'cancel' | 'downgrade'
+            requireCard?: boolean
+          }
+        | {
+            /** @enum {string} */
+            kind: 'prepaid'
+            label?: string
+            lowBalanceUnits?: number
+            minTopUpMinor?: number
+          }
+        | {
+            /** @enum {string} */
+            appliesTo?: 'recurring' | 'setup' | 'usage' | 'all'
+            currency?: string
+            cycles?: number
+            /** @enum {string} */
+            duration: 'once' | 'repeating' | 'forever'
+            /** @enum {string} */
+            kind: 'discount'
+            label?: string
+            /** @enum {string} */
+            mode: 'percentage' | 'fixed'
+            value: number
+          }
+        | {
+            capUnits?: number
+            currency?: string
+            /** @enum {string} */
+            kind: 'rollover'
+            label?: string
+            maxCycles?: number
+            meter: string
+            rateMinor?: number
+            /** @enum {string} */
+            treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
+          }
+        | {
+            /** @enum {string} */
+            kind: 'default'
+            label?: string
+          }
+        | {
+            /** @enum {string} */
+            kind: 'enterprise'
+            label?: string
+          }
+      )[]
+      /** @enum {string} */
+      status?: 'active' | 'inactive' | 'archived'
+      /** @enum {string} */
+      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
     }
     UpdateProductRequest: {
       config?: {
@@ -3968,7 +4151,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['SdkCreatePlanRequest']
+        'application/json': components['schemas']['CreatePlanRequest']
       }
     }
     responses: {
@@ -4036,7 +4219,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['SdkUpdatePlanRequest']
+        'application/json': components['schemas']['UpdatePlanRequest']
       }
     }
     responses: {
