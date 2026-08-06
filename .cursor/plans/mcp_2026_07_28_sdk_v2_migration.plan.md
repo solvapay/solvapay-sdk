@@ -1,39 +1,42 @@
 ---
 name: MCP 2026-07-28 / official SDK v2 migration
-overview: The MCP specification revision 2026-07-28 finalises on 2026-07-28 and is only reachable through the official TypeScript SDK v2, which replaces the single `@modelcontextprotocol/sdk` package with a scope of split packages (`@modelcontextprotocol/core`, `/server`, `/client`, `/node`, `/express`, `/hono`, `/fastify`). The wire protocol goes stateless — no `initialize`, no `Mcp-Session-Id`, no server-to-client request channel. Only `@solvapay/mcp` imports the official SDK, so the blast radius inside our packages is small, but the change is breaking for every integrator (the peer dependency is renamed) and it lands on top of an unreleased `@modelcontextprotocol/ext-apps` v2. Recommendation - do a single clean cut to v2, deprecate v1 support rather than dual-targeting, and gate the stable release on ext-apps shipping v2.
+overview: "The MCP specification revision 2026-07-28 is now reachable only through the official TypeScript SDK v2, which shipped GA at `2.0.0` and replaces the single `@modelcontextprotocol/sdk` package with a scope of split packages (`@modelcontextprotocol/core`, `/server`, `/client`, `/node`, `/express`, `/hono`, `/fastify`). The wire protocol goes stateless — no `initialize`, no `Mcp-Session-Id`, no server-to-client request channel. Only `@solvapay/mcp` imports the official SDK, so the blast radius inside our packages is small, but the change is breaking for every integrator (the peer dependency is renamed). Decision — single clean cut to v2 and retire every legacy affordance we hand-maintain (the `sse-stateful` mode, the `McpHandlerMode` option, the session plumbing, and the v1 `0.2.x` line, which we deprecate rather than dual-target). Vendor the three ext-apps symbols we use rather than wait for its stalled v2 — lead PR #710 is closed and no v2 prerelease exists. Retiring our legacy code is not the same as refusing 2025-era clients — keep `createMcpHandler`'s zero-cost `legacy: 'stateless'` leg so today's hosts keep working with nothing for us to maintain, and hold `legacy: 'reject'` (modern-only) as a documented future toggle for once hosts ship 2026-07-28."
 todos:
   - id: prep-audit
-    content: "Pre-flight audit. Bump `engines.node` to `>=20` and the `zod` peer to `^4.2.0` across `@solvapay/mcp`, `@solvapay/mcp-core`, `@solvapay/server`. Confirm no remaining `@modelcontextprotocol/sdk` references outside `packages/mcp` (CI gates, docs, scaffolding templates, Deno import maps)."
-    status: pending
+    content: Pre-flight audit. Bump `engines.node` to `>=20` and the `zod` peer to `^4.2.0` — dropping the `^3.25.0` zod-3 leg, since v2 needs 4.2+ — across `@solvapay/mcp`, `@solvapay/mcp-core`, `@solvapay/server`. Confirm no remaining v1 `@modelcontextprotocol/sdk` references outside `packages/mcp` (CI gates, docs, scaffolding templates, Deno import maps).
+    status: completed
   - id: spike-branch
-    content: "Throwaway spike on `2.0.0-beta.x` to validate the three unknowns before committing: (1) does `createMcpHandler` cover all three of our `McpHandlerMode` presets, (2) can `hideToolsByAudience` be rebuilt on the public factory seam, (3) can we run without ext-apps by vendoring `registerAppTool`/`registerAppResource`."
-    status: pending
+    content: Confirmation spike, not open research — the three unknowns are already answered by the published `2.0.0` types; prove them in code and move on. (1) `createMcpHandler` is fetch-native — it returns a `{ fetch, close, notify, bus }` object, the Workers/Deno/Bun shape, so the fetch-first handler maps cleanly. (2) `hideToolsByAudience` rebuilds on the factory seam — `McpRequestContext.requestInfo` is a web `Request`, so the ChatGPT UA branch runs before the server is built. (3) Vendoring is viable — server-side ext-apps usage is exactly `registerAppTool` / `registerAppResource` / `RESOURCE_MIME_TYPE` across two files.
+    status: completed
   - id: extapps-decision
-    content: "Decide the `@modelcontextprotocol/ext-apps` strategy. Its v2 migration is three competing unmerged PRs (#710, #719, #720) and 1.7.5 still peer-depends on `@modelcontextprotocol/sdk@^1.29.0`. Either wait, or vendor the ~40 lines of `registerAppTool` / `registerAppResource` / `RESOURCE_MIME_TYPE` we actually use into `@solvapay/mcp`."
-    status: pending
+    content: 'Vendor — decided, not open. ext-apps still ships no v2 (`1.7.5`, peer `@modelcontextprotocol/sdk@^1.29.0`); its lead migration PR #710 is closed and #719/#720 are stale drafts. Vendor the ~40 lines of `registerAppTool` / `registerAppResource` / `RESOURCE_MIME_TYPE` into `packages/mcp/src/internal/` and drop the ext-apps server peer from `@solvapay/mcp`. The client-side ext-apps usage in `@solvapay/react`/examples runs in the iframe and is untouched. Because dropping the peer leaves merchants writing MCP Apps tools with no v2-compatible import, the three symbols are re-exported from `@solvapay/mcp` rather than kept private.'
+    status: completed
   - id: codemod
-    content: "Run `npx @modelcontextprotocol/codemod@beta v1-to-v2 packages/mcp` plus each example and the scaffolding template, then resolve every `@mcp-codemod-error` marker. Review the manifest rewrite by hand — this is a pnpm workspace and the codemod only rewrites the nearest manifest."
-    status: pending
+    content: Run `npx @modelcontextprotocol/codemod v1-to-v2 packages/mcp` (the codemod is GA at `2.0.0`, no `@beta`) plus each example and the scaffolding template, then resolve every `@mcp-codemod-error` marker. Review the manifest rewrite by hand — this is a pnpm workspace and the codemod only rewrites the nearest manifest.
+    status: completed
   - id: handler-rewrite
-    content: "Rewrite `packages/mcp/src/fetch/handler.ts` onto `createMcpHandler(factory)`. This replaces the per-request transport, the `server.connect`/`transport.close` dance and the shared-server mutex with a per-request server factory. Reshape `CreateSolvaPayMcpFetchHandlerOptions` from `server: McpServer` to a factory, and collapse `McpHandlerMode` onto `legacy` + `responseMode`."
-    status: pending
+    content: "Rewrite `packages/mcp/src/fetch/handler.ts` onto `createMcpHandler(factory, options)`. This deletes the per-request transport construction, the `server.connect`/`transport.close` dance, the shared-server mutex, the `buildTransport` escape hatch and the `sessionIdGenerator` option. Reshape `CreateSolvaPayMcpFetchHandlerOptions` from `server: McpServer` to `factory: McpServerFactory`, and retire `McpHandlerMode` entirely — `sse-stateful` has no v2 equivalent (sessions are gone) and the rest collapses onto the SDK's `responseMode` (`json` for edge runtimes that cannot stream, `auto`/`sse` otherwise). Auth becomes `handler.fetch(request, { authInfo })`, dropping the `resolvedAuthInfo as any` cast."
+    status: completed
+  - id: legacy-stance
+    content: "Keep `createMcpHandler`'s default `legacy: 'stateless'` so 2025-era hosts (Claude Desktop, ChatGPT, Cursor) keep working at zero maintenance cost while they ship 2026-07-28 support — retiring our legacy machinery is not the same as refusing legacy clients. Leave `legacy: 'reject'` (modern-only) documented as a deliberate future toggle; flipping it now would leave a server no currently-shipping host can reach, which is its own broken window."
+    status: completed
   - id: hide-tools
-    content: "Rebuild `applyHideToolsByAudience` (`packages/mcp-core/src/hideToolsByAudience.ts`) without the `_requestHandlers` private-map reach-in. Under `createMcpHandler` the ChatGPT bypass reads the User-Agent off `McpRequestContext.requestInfo` in the factory and decides what to register, so no handler wrapping is needed at all."
-    status: pending
+    content: Rebuild `applyHideToolsByAudience` (`packages/mcp-core/src/hideToolsByAudience.ts`) without the `_requestHandlers` private-map reach-in (still private in v2). Under `createMcpHandler` the ChatGPT bypass reads the User-Agent off `McpRequestContext.requestInfo.headers.get('user-agent')` in the factory and decides what to register, so no handler wrapping is needed; `Protocol.removeRequestHandler(method)` is a public fallback. Fix the latent bug too — the `getClientVersion()` half of the detection returns `undefined` on 2026-era connections (no `initialize`), so the header path must be primary.
+    status: completed
   - id: schemas
-    content: "Move every schema we hand to `registerTool` to an explicitly `z.object()`-wrapped zod >=4.2 schema. Affects `packages/mcp/src/registerPayableTool.ts`, `packages/mcp/src/internal/buildMcpServer.ts`, and `jsonSchemaToZodRawShape` in `packages/server/src/register-virtual-tools-mcp.ts` (raw shapes now get wrapped with the SDK's bundled zod and fail at the first `tools/list`)."
-    status: pending
+    content: Move every schema we hand to `registerTool` to an explicitly `z.object()`-wrapped zod >=4.2 schema. Affects `packages/mcp/src/registerPayableTool.ts`, `packages/mcp/src/internal/buildMcpServer.ts`, and `jsonSchemaToZodRawShape` in `packages/server/src/register-virtual-tools-mcp.ts` (raw shapes now get wrapped with the SDK's bundled zod and fail at the first `tools/list`).
+    status: completed
   - id: auth-errors
-    content: "Align the OAuth bridge with v2: token verifiers must throw `OAuthError(OAuthErrorCode.InvalidToken)` or invalid tokens become HTTP 500, and RFC 9207 `iss` validation is now enforced. Re-check our hand-rolled `-32001` / `-32603` JSON-RPC error codes against v2's `ProtocolErrorCode` and the new `-32020` / `-32021` / `-32022`."
-    status: pending
+    content: "Align the OAuth bridge with v2: token verifiers must throw `OAuthError(OAuthErrorCode.InvalidToken)` or invalid tokens become HTTP 500, and RFC 9207 `iss` validation is now enforced. Re-check our hand-rolled `-32001` / `-32603` codes against v2's `ProtocolErrorCode` and the new `-32020` (`HeaderMismatch`) / `-32021` / `-32022` — all confirmed present in `2.0.0`; `-32001` does not collide numerically, but confirm the semantics."
+    status: completed
   - id: tests
-    content: "Re-baseline the MCP test suites. `protocolVersion: '2025-06-18'` fixtures in `packages/mcp/__tests__/fetch/*` need modern-era equivalents, capability advertisement changed (`listChanged: true` is now default), unknown-tool calls now reject instead of resolving `isError`, and there is no in-memory 2026-era transport — drive `handler.fetch` directly."
-    status: pending
+    content: "Re-baseline the MCP test suites. `protocolVersion: '2025-06-18'` fixtures in `packages/mcp/__tests__/fetch/*` need modern-era counterparts (both eras stay in scope — `legacy: 'stateless'` remains on), capability advertisement changed (`listChanged: true` is now default), unknown-tool calls now reject instead of resolving `isError`, and there is no in-memory 2026-era transport — drive `handler.fetch` directly."
+    status: completed
   - id: examples-template
-    content: "Migrate the five MCP examples and the `create-solvapay` MCP template. `examples/mcp-checkout-app` and `examples/mcp-oauth-bridge` carry hand-rolled session maps and `isInitializeRequest` routing that disappear entirely; `examples/supabase-edge-mcp` needs its Deno import map re-pointed at the split packages."
-    status: pending
+    content: Migrate the five MCP examples and the `create-solvapay` MCP template. `examples/mcp-checkout-app`, `examples/mcp-oauth-bridge` and `examples/mcp-time-app` carried hand-rolled session maps and `isInitializeRequest` routing that disappear entirely — all three now mount one `app.all('/mcp', toNodeHandler(mcpHandler))` from `@modelcontextprotocol/node`, which streams SSE and forwards `req.auth` as `authInfo`. `examples/supabase-edge-mcp` needed its Deno import map re-pointed at the split packages.
+    status: completed
   - id: release
-    content: "Ship it: `@solvapay/mcp` and `@solvapay/mcp-core` 0.2.x -> 0.3.0 behind a `preview` snapshot tag first, with a migration note in both CHANGELOGs and `docs/guides/mcp.mdx`. Deprecate rather than maintain the v1 line — publish 0.2.x as-is, add a deprecation notice, and do not backport."
+    content: 'Ship it: `@solvapay/mcp` and `@solvapay/mcp-core` 0.2.x -> 0.3.0 behind a `preview` snapshot tag first, with a migration note in both CHANGELOGs and `docs/guides/mcp.mdx`. Deprecate rather than maintain the v1 line — publish 0.2.x as-is, add a deprecation notice, and do not backport. Version bumps and both CHANGELOG entries are in place; the changeset, the `preview` snapshot publish and the `npm deprecate` on 0.2.x are still outstanding.'
     status: pending
 isProject: true
 ---
@@ -44,8 +47,8 @@ isProject: true
 
 The 2026-07-28 protocol revision is a clean break, and the official TypeScript SDK
 made it a clean break too: the single `@modelcontextprotocol/sdk` package is gone,
-replaced by a scope of split packages. There is no path to 2026-07-28 on v1 —
-published v1 `1.29.x` tops out at `2025-11-25`.
+replaced by a scope of split packages, now GA at `2.0.0`. There is no path to
+2026-07-28 on v1 — the v1 `@modelcontextprotocol/sdk` line never reaches this revision.
 
 Our exposure is narrower than it looks. `@solvapay/mcp` is the only package that
 imports the official SDK; `@solvapay/mcp-core`, `@solvapay/server` and
@@ -62,8 +65,12 @@ customers on the MCP packages, `@solvapay/mcp` is still `0.2.x`, and the integra
 cost of staying on v1 is "keep installing the old peer dependency" — nobody is
 stranded. Deprecate the 0.2.x line and move on.
 
-**The real scheduling constraint is not us, it is `@modelcontextprotocol/ext-apps`.**
-See [The ext-apps blocker](#the-ext-apps-blocker).
+**Retire legacy on our side; keep serving legacy clients.** Delete every legacy affordance
+we hand-maintain — the `sse-stateful` mode, the `mode` option, the session plumbing, the v1
+`0.2.x` line — but keep `createMcpHandler`'s zero-cost `legacy: 'stateless'` leg so today's
+hosts still connect while they upgrade. And ext-apps no longer gates us: it has no v2 (its
+lead PR is closed), so we vendor the three symbols we use. See
+[The ext-apps blocker](#the-ext-apps-blocker).
 
 ## What actually changed
 
@@ -96,18 +103,21 @@ SDK repackaging that carries it.
 
 ### 2. The SDK v2 repackaging
 
-| v1 | v2 |
-| --- | --- |
-| `@modelcontextprotocol/sdk` | `@modelcontextprotocol/server` (server implementation) |
-| | `@modelcontextprotocol/client` (client implementation) |
-| | `@modelcontextprotocol/core` (public Zod `*Schema` constants) |
-| `StreamableHTTPServerTransport` | `NodeStreamableHTTPServerTransport` from `@modelcontextprotocol/node` |
-| built-in framework glue | `@modelcontextprotocol/{node,express,hono,fastify}` |
-| `SSEServerTransport`, AS helpers | `@modelcontextprotocol/server-legacy` (frozen, deprecated) |
+| v1                               | v2                                                                                                                                                               |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@modelcontextprotocol/sdk`      | `@modelcontextprotocol/server` (server implementation)                                                                                                           |
+|                                  | `@modelcontextprotocol/client` (client implementation)                                                                                                           |
+|                                  | `@modelcontextprotocol/core` (public Zod `*Schema` constants)                                                                                                    |
+| `StreamableHTTPServerTransport`  | `NodeStreamableHTTPServerTransport` (`/node`); the web-standard `WebStandardStreamableHTTPServerTransport` we use **survives** in `@modelcontextprotocol/server` |
+| built-in framework glue          | `@modelcontextprotocol/{node,express,hono,fastify}`                                                                                                              |
+| `SSEServerTransport`, AS helpers | `@modelcontextprotocol/server-legacy` (frozen, deprecated)                                                                                                       |
 
-Status as of 2026-07-27: `2.0.0-beta.5`, published 2026-07-21, all packages on one
-version number. The spec finalises tomorrow; Tier 1 SDKs were expected to ship support
-inside the ten-week RC window, so a stable `2.0.0` is imminent but not out yet.
+Status as of 2026-08-05: `2.0.0` is GA. Every split package (`core`, `server`, `client`,
+`node`, `express`, `hono`, `fastify`, `server-legacy`) and the codemod are on `2.0.0`, all
+sharing one version number. The earlier draft's beta-churn risk is closed — pin exactly and
+move. Note the fetch-first `WebStandardStreamableHTTPServerTransport` we build today still
+exists in `2.0.0` (re-exported from `@modelcontextprotocol/server`), but `createMcpHandler`
+owns transport construction now, so we stop instantiating it directly.
 
 Beyond the rename, the changes that touch code we have written:
 
@@ -117,7 +127,7 @@ Beyond the rename, the changes that touch code we have written:
   `extra.sessionId` -> `ctx.sessionId`.
 - **`setRequestHandler` takes a method string**, not a Zod schema.
 - **Raw Zod shapes are deprecated** on `registerTool`/`registerPrompt`. They still
-  work, but they get wrapped with the SDK's *bundled* zod — which fails at the first
+  work, but they get wrapped with the SDK's _bundled_ zod — which fails at the first
   `tools/list` when the shape was authored with a different zod copy. Wrap with
   `z.object()` yourself.
 - **Zod 3 is dropped**; v2 wants `zod ^4.2.0` (4.0–4.1 falls back to the bundled
@@ -125,7 +135,7 @@ Beyond the rename, the changes that touch code we have written:
 - **Node 20+** required.
 - **`McpError` -> `ProtocolError`**, `ErrorCode` -> `ProtocolErrorCode`,
   `StreamableHTTPError` -> `SdkHttpError`. The `MCP error <code>: ` message prefix is
-  gone. Unknown/disabled tool calls now *reject* with `-32602` instead of resolving
+  gone. Unknown/disabled tool calls now _reject_ with `-32602` instead of resolving
   `{ isError: true }`.
 - **OAuth error classes consolidate** into `OAuthError` + `OAuthErrorCode`. Token
   verifiers that throw anything else produce HTTP 500 instead of a 401 challenge.
@@ -173,19 +183,23 @@ serialised.
 
 The mapping for our three modes:
 
-| Our `McpHandlerMode` | v2 equivalent |
-| --- | --- |
-| `'json-stateless'` | `createMcpHandler(factory)` default (`legacy: 'stateless'`, `responseMode: 'auto'` or `'json'`) |
-| `'sse-stateless'` | `createMcpHandler(factory, { responseMode: 'sse' })` |
-| `'sse-stateful'` | no direct equivalent — sessions are gone from the protocol |
+| Our `McpHandlerMode` | v2 equivalent                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| `'json-stateless'`   | `createMcpHandler(factory)` default (`legacy: 'stateless'`, `responseMode: 'auto'` or `'json'`) |
+| `'sse-stateless'`    | `createMcpHandler(factory, { responseMode: 'sse' })`                                            |
+| `'sse-stateful'`     | no direct equivalent — sessions are gone from the protocol                                      |
 
-`'sse-stateful'` is the current default, which makes this an API-shape decision, not a
-mechanical port. The honest answer is that the mode option should collapse: the 2026
-era has no sessions, and `createMcpHandler`'s legacy leg is stateless by construction.
-`CreateSolvaPayMcpFetchHandlerOptions.server: McpServer` has to become a factory
-either way, so `mode` can be retired in the same breaking change.
+**Decision: retire `McpHandlerMode` outright.** `'sse-stateful'` — the current default — has
+no v2 equivalent because sessions are gone from the protocol, and the other two collapse
+onto the SDK's `responseMode`. `CreateSolvaPayMcpFetchHandlerOptions.server: McpServer`
+becomes a `factory` in the same breaking change, so nothing is left for `mode` to select.
+Edge runtimes that cannot hold a stream pass `responseMode: 'json'` (single JSON body,
+mid-call notifications dropped — we emit none); everything else takes the `'auto'` default.
+This retires _our_ legacy plumbing, not legacy _clients_: `createMcpHandler`'s
+`legacy: 'stateless'` default (kept) still answers 2025-era hosts on the same endpoint at
+zero cost to us — see "Backwards compatibility" below.
 
-The auth plumbing gets *cleaner*. Today we cast our auth envelope through `any` to
+The auth plumbing gets _cleaner_. Today we cast our auth envelope through `any` to
 satisfy the SDK's `AuthInfo`:
 
 ```252:262:packages/mcp/src/fetch/handler.ts
@@ -241,7 +255,7 @@ things that retire it:
 2. More usefully, `createMcpHandler`'s factory receives
    `McpRequestContext { era, authInfo?, requestInfo?: Request }`. The ChatGPT
    User-Agent detection this helper exists for can read
-   `ctx.requestInfo?.headers.get('user-agent')` *before* the server is built, and the
+   `ctx.requestInfo?.headers.get('user-agent')` _before_ the server is built, and the
    factory simply decides which tools to register.
 
 That turns a handler-wrapping hack into a branch in the factory. It also fixes a
@@ -266,7 +280,7 @@ straight to `registerTool`:
 ```
 
 This is exactly the failure mode the migration guide warns about: a raw shape built
-with *our* zod, wrapped by the SDK's *bundled* zod, registering fine and then failing
+with _our_ zod, wrapped by the SDK's _bundled_ zod, registering fine and then failing
 on the first `tools/list`. Fix is one line — wrap in `z.object()` — plus the
 `zod ^4.2.0` bump. We deliberately do not reach for the SDK's `fromJsonSchema()` here,
 because `@solvapay/server` must stay free of `@modelcontextprotocol/*` per the package
@@ -290,16 +304,18 @@ factory. `examples/supabase-edge-mcp` pins the SDK through a Deno import map
 
 ## The ext-apps blocker
 
-This is the thing that decides the schedule, and it is not under our control.
+This was billed as the scheduling constraint. It no longer is — we vendor, so ext-apps
+stops gating us.
 
-`@modelcontextprotocol/ext-apps@1.7.5` (released 2026-07-23, four days ago) still
-declares `"@modelcontextprotocol/sdk": "^1.29.0"` as a peer dependency. Its v2
-migration is **three competing open PRs** — [#710](https://github.com/modelcontextprotocol/ext-apps/pull/710)
-(ready, `App` subclasses the v2 `Client`), [#719](https://github.com/modelcontextprotocol/ext-apps/pull/719)
-(draft, core-only Apps protocol) and [#720](https://github.com/modelcontextprotocol/ext-apps/pull/720)
-(draft, official `Protocol` base with role-isolated peers) — with an unresolved
-architectural question about whether server-only consumers should be forced to bundle
-the client role. No v2 prerelease is published.
+`@modelcontextprotocol/ext-apps@1.7.5` still declares
+`"@modelcontextprotocol/sdk": "^1.29.0"` as a peer dependency, and its v2 migration has
+stalled: the lead PR [#710](https://github.com/modelcontextprotocol/ext-apps/pull/710)
+(`App` subclasses the v2 `Client`) is **closed unmerged**, while
+[#719](https://github.com/modelcontextprotocol/ext-apps/pull/719) (draft, core-only Apps
+protocol) and [#720](https://github.com/modelcontextprotocol/ext-apps/pull/720) (draft,
+official `Protocol` base with role-isolated peers) linger as stale drafts behind an
+unresolved question about whether server-only consumers must bundle the client role. No v2
+prerelease is published.
 
 If we adopt SDK v2 while ext-apps is still on v1, we get two zod copies, two SDK
 copies and an unsatisfiable peer graph.
@@ -311,18 +327,13 @@ normaliser followed by `server.registerTool`, and `registerAppResource` is a
 `mimeType` default followed by `server.registerResource`. Roughly 40 lines of real
 logic.
 
-So there are two viable paths:
-
-- **Wait** for ext-apps v2 and take the dependency. Lowest maintenance, unknown
-  timing, and we inherit whichever architecture wins the three-way PR race.
-- **Vendor** the three symbols into `packages/mcp/src/internal/` behind our own thin
-  wrapper, drop the ext-apps peer dependency from `@solvapay/mcp` entirely, and adopt
-  upstream later if it is worth it. Unblocks us immediately; costs us ~40 lines and
-  the risk of drifting from whatever normalisation upstream adds next.
-
-Vendoring is the better default given the timing, and it is cheap to reverse. The
-client-side ext-apps usage in `packages/react/mcp` and the example widgets is
-unaffected either way — that runs in the iframe and does not touch the server SDK.
+**Decision: vendor.** With #710 closed there is no near-term v2 to wait for, and waiting
+would re-couple our schedule to an upstream with an unresolved architecture debate. Vendor
+the three symbols into `packages/mcp/src/internal/` behind a thin wrapper, drop the ext-apps
+server peer from `@solvapay/mcp` entirely, and revisit adopting upstream only if a real
+reason appears — it is ~40 lines and cheap to reverse. The client-side ext-apps usage in
+`packages/react/mcp` and the example widgets is unaffected: it runs in the iframe and never
+touches the server SDK, so it stays on the ext-apps client entry regardless.
 
 ## Backwards compatibility: don't
 
@@ -358,12 +369,18 @@ the v1 package still exists under its own name, `0.2.8` stays on npm forever, an
 - Everything else in the workspace (`@solvapay/server` at `2.0.0`, `@solvapay/react`
   at `1.6.0`) takes a minor for the zod and Node bumps. Those are not MCP-breaking.
 
-One thing worth being deliberate about: **serve both protocol eras, even though we
-only ship one SDK major.** `createMcpHandler`'s default `legacy: 'stateless'` answers
-2025-era clients on the same endpoint as 2026-era ones. Keeping that default means
-Claude Desktop, ChatGPT connectors and Cursor keep working through their own upgrade
-cycles while we sit on v2. That is where the backwards compatibility should live — in
-the protocol layer, at zero cost to us — not in our package matrix.
+One distinction to be deliberate about, because it is easy to conflate with "retire
+legacy": **we retire every legacy affordance _we_ hand-maintain, but we still _answer_
+2025-era clients.** Those are different things. Retired: the `sse-stateful` mode, the
+session-id plumbing, the connect/close mutex, the hand-rolled session maps in the examples,
+and the v1 `0.2.x` line. Kept: `createMcpHandler`'s default `legacy: 'stateless'`, which
+answers 2025-era clients on the same endpoint as 2026-era ones at **zero code and zero
+maintenance** for us. Claude Desktop, ChatGPT connectors and Cursor do not speak 2026-07-28
+yet (the spec finalised days ago), so keeping that default is what lets the packages talk to
+any real host at all. `legacy: 'reject'` (modern-only) is a deliberate future toggle for
+once hosts have shipped 2026-07-28 support — flipping it today would leave a server no
+current client can reach, which is a broken window, not a clean cut. Backwards compatibility
+lives in the protocol layer, at zero cost — never in our package matrix.
 
 ## Phasing
 
@@ -374,14 +391,15 @@ outside `packages/mcp` names the v1 package. Independently useful and safe to la
 before anything else. Touches: every `packages/*/package.json`, the scaffold template,
 the Deno import maps.
 
-**Phase 1 — spike.** Throwaway branch on `2.0.0-beta.5` answering the three questions
-in the `spike-branch` todo. The `createMcpHandler` mode mapping is the one with real
-design content: our `'sse-stateful'` default has no v2 equivalent, and we need to know
-whether any deployed integrator actually depends on session stickiness before we
-retire the option. Output is a decision record, not shippable code.
+**Phase 1 — confirmation spike.** The three `spike-branch` questions are already answered by
+the published `2.0.0` types; this is a short branch to prove them in code, not open
+research. The one design decision it used to carry — whether to retire `sse-stateful` / the
+`mode` option — is now made: retire it, and keep `legacy: 'stateless'` for 2025-era clients.
+Output is a green `handler.fetch` smoke test, not a decision record.
 
-**Phase 2 — ext-apps decision.** Gated on Phase 1's answer to whether vendoring works.
-Blocks Phase 3 and nothing else.
+**Phase 2 — vendor ext-apps symbols.** The decision is made (vendor; #710 is closed). This
+is the ~40-line lift into `packages/mcp/src/internal/` plus dropping the server peer. Blocks
+Phase 3 and nothing else.
 
 **Phase 3 — `@solvapay/mcp` + `@solvapay/mcp-core`.** Codemod, then the manual work:
 handler rewrite, `hideToolsByAudience` rebuild, schema wrapping, auth error alignment.
@@ -406,24 +424,27 @@ under the `preview` tag), validate against a real host, then `0.3.0`.
 
 ## Risks and open questions
 
-- **The SDK is still `2.0.0-beta.5`.** Migrating against a beta means absorbing any
-  further churn before `2.0.0`. Mitigated by pinning exactly during the spike and by
-  the fact that all v2 packages share one version number.
-- **ext-apps timing is genuinely unknown** and has an unresolved architectural
-  disagreement behind it. The vendoring path is the hedge; take it unless the spike
-  shows the three symbols are doing more than they appear to.
-- **`'sse-stateful'` removal needs a real answer.** It is the current default. If
-  someone is deployed against it with session stickiness, retiring the mode is a
-  behavioural break beyond the peer-dependency rename. Worth checking before Phase 3
-  rather than after.
+- **~~The SDK is still `2.0.0-beta.5`.~~ Resolved:** `2.0.0` is GA across all split
+  packages and the codemod. Pin exactly and move — no beta churn left to absorb.
+- **~~ext-apps timing is genuinely unknown.~~ Resolved by decision:** we vendor, so upstream
+  timing and the three-way PR race no longer gate us (and #710, the lead PR, is now closed).
+  Residual risk is drift from whatever normalisation upstream adds later — cheap to reconcile
+  against ~40 vendored lines.
+- **~~`'sse-stateful'` removal needs a real answer.~~ Decided — retire it** (and the whole
+  `mode` option). Pre-revenue on these packages, no integrator on session stickiness, and
+  2025-era _clients_ stay served by the kept `legacy: 'stateless'` leg, so removing the mode
+  is not a client-facing break. The only client-facing lever left is `legacy: 'reject'`,
+  which we deliberately do **not** flip yet.
 - **ChatGPT's connector gateway is the riskiest host.** The bypass in
   `hideToolsByAudience` exists because ChatGPT re-validates iframe-initiated
   `tools/call` against a cached `tools/list`. Now that the spec has real cache
   semantics (`ttlMs`, `cacheScope`), the workaround may need rethinking rather than
   porting — and the `getClientVersion()` half of the detection stops working on the
   modern era regardless.
-- **The `_meta` conventions we rely on are unaudited against 2026-07-28.** We stamp
-  `_meta.ui.*`, `_meta.audience` and `_meta["openai/widgetSessionId"]`. The revision
-  reserves the `io.modelcontextprotocol/` prefix and lifts those keys out of `params._meta`
-  before handlers run; ours are outside that prefix, but the interaction with the
-  envelope lift deserves an explicit test rather than an assumption.
+- **The `_meta` conventions we rely on need an explicit test against 2026-07-28.** We stamp
+  `_meta.ui.*`, `_meta.audience` and `_meta["openai/widgetSessionId"]`. Confirmed in the
+  `2.0.0` types: the SDK lifts the reserved `io.modelcontextprotocol/*` keys out of the
+  `_meta` handlers see into `ctx.mcpReq.envelope`, leaving everything else (all of ours,
+  which are outside that prefix) in `ctx.mcpReq._meta`. The convention should hold — assert
+  it with a test that round-trips a tool call carrying our keys rather than trusting the
+  prefix rule.

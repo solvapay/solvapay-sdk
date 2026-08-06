@@ -1,5 +1,12 @@
 # @solvapay/mcp-core changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- **`hideToolsByAudience`:** reads `User-Agent` from Web `Request` headers (primary ChatGPT detection path for 2026-era connections where `initialize` never runs). Uses public `setRequestHandler` when available instead of only the private handler-map reach-in.
+- **`zod` peer** is now `^4.2.0`; **`engines.node`** is `>=20`.
+
 ## 0.2.8
 
 ### Patch Changes

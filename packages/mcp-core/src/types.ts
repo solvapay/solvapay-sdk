@@ -58,7 +58,7 @@ export interface BootstrapCustomer {
 /**
  * MCP tool call result — a structural subset of the official SDK's
  * `CallToolResult` that every framework produces. Kept local to avoid
- * coupling to `@modelcontextprotocol/sdk/types.js` type churn.
+ * coupling to `@modelcontextprotocol/core` type churn.
  */
 /**
  * Routing hint surfaced on individual content blocks. Mirrors the MCP
@@ -337,7 +337,7 @@ export interface SolvaPayBootstrapResourceDescriptor {
 
 /**
  * One MCP prompt — rendered as `/<name>` in hosts with slash-command
- * support. Kept framework-neutral so every adapter (`@modelcontextprotocol/sdk`,
+ * support. Kept framework-neutral so every adapter (`@modelcontextprotocol/server`,
  * `fastmcp`, raw JSON-RPC) can map it to their own `registerPrompt`
  * shape.
  *
@@ -357,7 +357,7 @@ export interface SolvaPayPromptDescriptor {
 /**
  * Minimal `GetPromptResult` shape — structural subset of the official
  * SDK's type so adapters can forward it without importing
- * `@modelcontextprotocol/sdk/types.js`.
+ * `@modelcontextprotocol/core`.
  */
 export interface SolvaPayPromptResult {
   messages: Array<{
