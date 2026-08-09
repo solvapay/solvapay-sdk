@@ -46,12 +46,12 @@ type WireOption = Record<string, unknown>
 
 const USAGE_METER = 'requests'
 
-const CADENCE_BY_CYCLE: Record<string, WireOption> = {
-  weekly: { kind: 'cadence', interval: 'week' },
-  monthly: { kind: 'cadence', interval: 'month' },
-  quarterly: { kind: 'cadence', interval: 'month', count: 3 },
-  yearly: { kind: 'cadence', interval: 'year' },
-  custom: { kind: 'cadence', interval: 'month' },
+const BILLING_CYCLE_BY_CYCLE: Record<string, WireOption> = {
+  weekly: { kind: 'billingCycle', interval: 'week' },
+  monthly: { kind: 'billingCycle', interval: 'month' },
+  quarterly: { kind: 'billingCycle', interval: 'month', count: 3 },
+  yearly: { kind: 'billingCycle', interval: 'year' },
+  custom: { kind: 'billingCycle', interval: 'month' },
 }
 
 /**
@@ -139,10 +139,10 @@ function resolvePlanCurrency(opts: CreateTestPlanOptions): string {
  * Translate the declarative plan DSL into composable `options[]`.
  *
  * Mirrors platform QA `buildPlanOptions` / domain `legacyPlanToOptions`:
- *   recurring   -> cadence + flat charge (amount 0 = free)
- *   one-time    -> flat charge, no cadence
+ *   recurring   -> billingCycle + flat charge (amount 0 = free)
+ *   one-time    -> flat charge, no billingCycle
  *   usage-based -> per-unit charge on `requests` (+ included-unit limit)
- *   hybrid      -> cadence + flat base + per-unit (+ limit)
+ *   hybrid      -> billingCycle + flat base + per-unit (+ limit)
  *
  * A recurring plan authored with freeUnits > 0 (the old free-tier fixture shape)
  * is expressed as a pure-metered usage plan so the included allowance is
@@ -165,7 +165,7 @@ export function buildTestPlanOptions(opts: CreateTestPlanOptions): WireOption[] 
 
   const recurring = planType === 'recurring' || planType === 'hybrid'
   if (recurring) {
-    options.push(CADENCE_BY_CYCLE[opts.billingCycle ?? 'monthly'] ?? CADENCE_BY_CYCLE.monthly)
+    options.push(BILLING_CYCLE_BY_CYCLE[opts.billingCycle ?? 'monthly'] ?? BILLING_CYCLE_BY_CYCLE.monthly)
   }
 
   if (planType === 'recurring' || planType === 'one-time') {
@@ -207,7 +207,7 @@ export function buildTestPlanOptions(opts: CreateTestPlanOptions): WireOption[] 
   }
 
   if (opts.isDefault ?? true) {
-    options.push({ kind: 'default' })
+    options.push({ kind: 'autoAssigned' })
   }
 
   return options
