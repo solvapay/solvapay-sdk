@@ -1075,7 +1075,7 @@ export interface components {
               /** @enum {string} */
               interval: 'week' | 'month' | 'year'
               /** @enum {string} */
-              kind: 'cadence'
+              kind: 'billingCycle'
             }
           | {
               charge: {
@@ -1162,12 +1162,12 @@ export interface components {
             }
           | {
               /** @enum {string} */
-              kind: 'default'
+              kind: 'autoAssigned'
               label?: string
             }
           | {
               /** @enum {string} */
-              kind: 'enterprise'
+              kind: 'hidden'
               label?: string
             }
         )[]
@@ -1290,7 +1290,7 @@ export interface components {
             /** @enum {string} */
             interval: 'week' | 'month' | 'year'
             /** @enum {string} */
-            kind: 'cadence'
+            kind: 'billingCycle'
           }
         | {
             charge: {
@@ -1377,12 +1377,12 @@ export interface components {
           }
         | {
             /** @enum {string} */
-            kind: 'default'
+            kind: 'autoAssigned'
             label?: string
           }
         | {
             /** @enum {string} */
-            kind: 'enterprise'
+            kind: 'hidden'
             label?: string
           }
       )[]
@@ -1717,7 +1717,7 @@ export interface components {
               /** @enum {string} */
               interval: 'week' | 'month' | 'year'
               /** @enum {string} */
-              kind: 'cadence'
+              kind: 'billingCycle'
             }
           | {
               charge: {
@@ -1804,12 +1804,12 @@ export interface components {
             }
           | {
               /** @enum {string} */
-              kind: 'default'
+              kind: 'autoAssigned'
               label?: string
             }
           | {
               /** @enum {string} */
-              kind: 'enterprise'
+              kind: 'hidden'
               label?: string
             }
         )[]
@@ -2660,7 +2660,7 @@ export interface components {
             /** @enum {string} */
             interval: 'week' | 'month' | 'year'
             /** @enum {string} */
-            kind: 'cadence'
+            kind: 'billingCycle'
           }
         | {
             charge: {
@@ -2747,12 +2747,12 @@ export interface components {
           }
         | {
             /** @enum {string} */
-            kind: 'default'
+            kind: 'autoAssigned'
             label?: string
           }
         | {
             /** @enum {string} */
-            kind: 'enterprise'
+            kind: 'hidden'
             label?: string
           }
       )[]
