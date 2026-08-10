@@ -1,20 +1,5 @@
 # @solvapay/mcp changelog
 
-## 0.3.0
-
-### Minor Changes
-
-- Migrate to the official MCP TypeScript SDK v2 (`@modelcontextprotocol/server@2.0.0`, `@modelcontextprotocol/core@2.0.0`). Peer dependencies swap from `@modelcontextprotocol/sdk` to the split v2 packages; `zod` peer is now `^4.2.0` and `engines.node` is `>=20`.
-- **`createSolvaPayMcpFetchHandler` breaking shape change:** `server: McpServer` is replaced by `factory: McpServerFactory` (per-request server construction via `createMcpHandler`). The `McpHandlerMode` / `mode` option (`sse-stateful`, `json-stateless`, …) is removed — use `responseMode: 'json' | 'sse' | 'auto'` for modern-era shaping; legacy 2025-era clients remain served via the SDK's default `legacy: 'stateless'` leg.
-- Vendor the three server-side `ext-apps` symbols (`registerAppTool`, `registerAppResource`, `RESOURCE_MIME_TYPE`) — drop the `@modelcontextprotocol/ext-apps` server peer from this package. They are now **exported from `@solvapay/mcp`**: replace `import { registerAppTool } from '@modelcontextprotocol/ext-apps/server'` with `import { registerAppTool } from '@solvapay/mcp'`. Client-side `ext-apps` usage in iframe bundles is unchanged.
-- All `registerTool` / intent-tool schemas are explicitly `z.object()`-wrapped for zod 4.2+ compatibility with the SDK's bundled converter.
-- Fix `registerPayable` handler-arg inference. `InferHandlerArgs` was resolving a raw-shape `schema` to `Record<string, unknown>`, so merchant handlers saw `unknown` args instead of the inferred type. Raw shapes and `z.object()` schemas both infer correctly again.
-
-### Patch Changes
-
-- Updated dependencies
-  - @solvapay/mcp-core@0.3.0
-
 ## 0.2.8
 
 ### Patch Changes
