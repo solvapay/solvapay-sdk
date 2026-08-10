@@ -2040,7 +2040,7 @@
  *
  * Centered Terms · Privacy strip with optional `Provided by SolvaPay` /
  * `Powered by SolvaPay` attribution underneath. Mirrors the hosted
- * checkout's footer rhythm without bringing Chakra into the SDK.
+ * checkout's footer rhythm with self-contained styles in the SDK.
  * -------------------------------------------------------------------------- */
 
 [data-solvapay-legal-footer] {

@@ -22,7 +22,7 @@ pnpm dev
 
 ```bash
 # Provider user already authenticated (e.g. after `your-cli login`)
-curl -X POST http://localhost:3002/tasks \
+curl -X POST http://localhost:3031/tasks \
   -H "Content-Type: application/json" \
   -H "x-provider-user-id: auth0|demo-user" \
   -H "x-provider-user-email: demo@example.com" \

@@ -432,8 +432,8 @@ pickPlanButton}` and `currentPlan.startedOn` copy keys.
 
 - 92401d3: Add a `<LegalFooter>` primitive that renders a
   `Terms · Privacy / Provided by SolvaPay` strip pointing at SolvaPay's own
-  legal pages. Mirrors the hosted-checkout footer without bringing Chakra
-  into the SDK.
+  legal pages. Mirrors the hosted-checkout footer with self-contained styles
+  in the SDK.
   - New `legalFooter.{terms, privacy, providedBy, poweredBy}` keys on the
     i18n bundle, overridable via `<SolvaPayProvider config={{ copy }}>`.
   - `<PaymentForm>` and `<TopupForm>` expose a `LegalFooter` namespace
