@@ -1,6 +1,5 @@
 /**
- * `@solvapay/mcp` — official `@modelcontextprotocol/sdk` +
- * `@modelcontextprotocol/ext-apps` adapter for the SolvaPay MCP
+ * `@solvapay/mcp` — official `@modelcontextprotocol/server` adapter for the SolvaPay MCP
  * toolbox.
  *
  * This is the only SolvaPay package that imports
@@ -49,6 +48,18 @@ export type {
 
 export { registerPayableTool } from './registerPayableTool'
 export type { RegisterPayableToolOptions } from './registerPayableTool'
+
+// ---- MCP Apps server helpers ----
+// `@modelcontextprotocol/ext-apps` has no SDK v2 build, so the three server-side
+// symbols it provided are vendored here. Import them from `@solvapay/mcp`
+// instead of `@modelcontextprotocol/ext-apps/server`; the client-side ext-apps
+// entrypoint that runs inside the iframe is unaffected.
+export {
+  registerAppResource,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+  RESOURCE_URI_META_KEY,
+} from './internal/extAppsServer'
 
 // ---- Merchant-facing types re-exported from @solvapay/mcp-core ----
 // Everything a merchant needs to type a `registerPayable` handler for the

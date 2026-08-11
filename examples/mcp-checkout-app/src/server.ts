@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { McpServer } from '@modelcontextprotocol/server'
 import { createSolvaPayMcpServer } from '@solvapay/mcp'
 import type { SolvaPayMerchantBranding } from '@solvapay/mcp-core'
 import { getMerchantCore, isErrorResult } from '@solvapay/server'
@@ -101,7 +101,7 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
   })
 
   if (process.env.SOLVAPAY_DEBUG === 'true') {
-    // Deliberate escape hatch into `@modelcontextprotocol/sdk`'s private
+    // Deliberate escape hatch into `@modelcontextprotocol/server`'s private
     // `_registeredTools` bag so `SOLVAPAY_DEBUG=true` can dump the
     // effective `tools/list` descriptor shape (`_meta.ui.resourceUri`,
     // icons, annotations) without routing through an actual `tools/list`

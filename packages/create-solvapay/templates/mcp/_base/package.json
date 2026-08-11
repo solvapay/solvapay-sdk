@@ -15,8 +15,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.1",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "@solvapay/mcp": "^0.2.5",
+    "@modelcontextprotocol/core": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@solvapay/mcp": "^0.3.0",
     "@solvapay/react": "^1.2.0",
     "@solvapay/server": "^1.1.0",
     "react": "^19.2.5",

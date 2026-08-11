@@ -16,7 +16,7 @@ SEP-1865; merchant payable tools do NOT), the `BootstrapPayload`
 shape carried on `structuredContent`, Stripe CSP baseline, pure OAuth
 discovery JSON builders, and JWT bearer helpers.
 
-It does **not** depend on `@modelcontextprotocol/sdk`,
+It does **not** depend on `@modelcontextprotocol/core` / `@modelcontextprotocol/server`,
 `@modelcontextprotocol/ext-apps`, or any runtime-specific HTTP plumbing.
 The official `@modelcontextprotocol/*` adapter lives in
 [`@solvapay/mcp`](../mcp); Node `(req, res, next)` OAuth middleware ships
@@ -63,7 +63,7 @@ intent tool, which mounts the widget.
 ## Typical usage
 
 If you're starting a new SolvaPay MCP server on the official
-`@modelcontextprotocol/sdk`, don't use this package directly — use
+`@modelcontextprotocol/server`, don't use this package directly — use
 [`@solvapay/mcp`](../mcp), which wraps it with one-call ergonomics.
 
 If you need HTTP-level OAuth handlers, pair this package with either
@@ -99,7 +99,7 @@ myAdapter.registerResource(resource)
 
 ## See also
 
-- [`@solvapay/mcp`](../mcp) — official `@modelcontextprotocol/sdk` + `ext-apps` adapter (`createSolvaPayMcpServer`)
+- [`@solvapay/mcp`](../mcp) — official `@modelcontextprotocol/server` adapter, with the MCP Apps helpers vendored in (`createSolvaPayMcpServer`)
 - [`@solvapay/mcp/express`](../mcp/src/express) — Node `(req, res, next)` OAuth middleware stack
 - [`@solvapay/mcp/fetch`](../mcp/src/fetch) — fetch-first OAuth handlers + turnkey `createSolvaPayMcpFetchHandler` / `createSolvaPayMcpFetch`
 - [`@solvapay/server`](../server) — core SDK (paywall, webhooks, `*Core` helpers)

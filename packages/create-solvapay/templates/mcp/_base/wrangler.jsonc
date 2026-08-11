@@ -10,7 +10,7 @@
  *   binding required. Vite produces src/assets/mcp-app.html via the
  *   `build` script (see package.json).
  * - `nodejs_compat` is a safety net for any transitively Node-ish path
- *   in `@modelcontextprotocol/sdk`. The SolvaPay MCP surface itself is
+ *   in `@modelcontextprotocol/server`. The SolvaPay MCP surface itself is
  *   fetch-first; this flag prevents runtime surprises.
  * - `SOLVAPAY_SECRET_KEY`, `UPSTREAM_API_KEY`, `UPSTREAM_API_HEADERS`,
  *   and the `UPSTREAM_OAUTH_*` keys (`TOKEN_URL` / `CLIENT_ID` /

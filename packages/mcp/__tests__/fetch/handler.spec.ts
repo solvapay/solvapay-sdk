@@ -1,39 +1,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSolvaPayMcpFetchHandler } from '../../src/fetch/handler'
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-
-vi.mock('@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js', () => {
-  return {
-    WebStandardStreamableHTTPServerTransport: class MockTransport {
-      sessionIdGenerator?: () => string
-      enableJsonResponse?: boolean
-      constructor(opts: { sessionIdGenerator?: () => string; enableJsonResponse?: boolean } = {}) {
-        this.sessionIdGenerator = opts.sessionIdGenerator
-        this.enableJsonResponse = opts.enableJsonResponse
-      }
-      async handleRequest(req: Request) {
-        const sid = this.sessionIdGenerator?.()
-        return new Response(
-          JSON.stringify({ jsonrpc: '2.0', id: 1, result: { ok: true, sid, url: req.url } }),
-          { status: 200, headers: { 'content-type': 'application/json' } },
-        )
-      }
-      // Handler closes the transport per-request so the server's
-      // `_transport` slot is released for the next call.
-      async close() {}
-    },
-  }
-})
+import type { McpServerFactory } from '@modelcontextprotocol/server'
 
 const publicBaseUrl = 'https://mcp.example.com'
 const apiBaseUrl = 'https://api.solvapay.com'
 const productRef = 'prd_test_123'
 
-function mockServer(): McpServer {
-  return {
+function mockFactory(): McpServerFactory {
+  return vi.fn().mockReturnValue({
     connect: vi.fn().mockResolvedValue(undefined),
-  } as unknown as McpServer
+    close: vi.fn().mockResolvedValue(undefined),
+  })
 }
+
+vi.mock('@modelcontextprotocol/server', async importOriginal => {
+  const actual = await importOriginal<typeof import('@modelcontextprotocol/server')>()
+  return {
+    ...actual,
+    createMcpHandler: vi.fn((factory: McpServerFactory) => ({
+      fetch: vi.fn(async (req: Request) => {
+        factory({ era: 'legacy', requestInfo: req })
+        return new Response(
+          JSON.stringify({ jsonrpc: '2.0', id: 1, result: { ok: true, url: req.url } }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        )
+      }),
+      close: vi.fn().mockResolvedValue(undefined),
+      notify: {},
+      bus: {},
+    })),
+  }
+})
 
 describe('createSolvaPayMcpFetchHandler', () => {
   beforeEach(() => {
@@ -45,7 +42,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
 
   it('responds to CORS preflight on /mcp', async () => {
     const handler = createSolvaPayMcpFetchHandler({
-      server: mockServer(),
+      factory: mockFactory(),
       publicBaseUrl,
       apiBaseUrl,
       productRef,
@@ -62,7 +59,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
 
   it('serves OAuth discovery via the fetch router', async () => {
     const handler = createSolvaPayMcpFetchHandler({
-      server: mockServer(),
+      factory: mockFactory(),
       publicBaseUrl,
       apiBaseUrl,
       productRef,
@@ -77,7 +74,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
 
   it('returns 401 + WWW-Authenticate when no bearer is present on /mcp', async () => {
     const handler = createSolvaPayMcpFetchHandler({
-      server: mockServer(),
+      factory: mockFactory(),
       publicBaseUrl,
       apiBaseUrl,
       productRef,
@@ -95,10 +92,10 @@ describe('createSolvaPayMcpFetchHandler', () => {
     expect(body.id).toBe(7)
   })
 
-  it('forwards authenticated requests to the transport', async () => {
-    const server = mockServer()
+  it('forwards authenticated requests to createMcpHandler.fetch', async () => {
+    const factory = mockFactory()
     const handler = createSolvaPayMcpFetchHandler({
-      server,
+      factory,
       publicBaseUrl,
       apiBaseUrl,
       productRef,
@@ -120,15 +117,14 @@ describe('createSolvaPayMcpFetchHandler', () => {
       }),
     )
     expect(res.status).toBe(200)
-    expect(server.connect).toHaveBeenCalledTimes(1)
-    const body = (await res.json()) as { result: { ok: boolean; sid?: string } }
+    expect(factory).toHaveBeenCalledTimes(1)
+    const body = (await res.json()) as { result: { ok: boolean } }
     expect(body.result.ok).toBe(true)
-    expect(typeof body.result.sid).toBe('string')
   })
 
   it('skips auth when requireAuth=false and no Authorization header is present', async () => {
     const handler = createSolvaPayMcpFetchHandler({
-      server: mockServer(),
+      factory: mockFactory(),
       publicBaseUrl,
       apiBaseUrl,
       productRef,
@@ -146,7 +142,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
 
   it('returns 405 for unsupported methods on /mcp', async () => {
     const handler = createSolvaPayMcpFetchHandler({
-      server: mockServer(),
+      factory: mockFactory(),
       publicBaseUrl,
       apiBaseUrl,
       productRef,
@@ -158,7 +154,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
 
   it('returns 404 for unknown paths', async () => {
     const handler = createSolvaPayMcpFetchHandler({
-      server: mockServer(),
+      factory: mockFactory(),
       publicBaseUrl,
       apiBaseUrl,
       productRef,

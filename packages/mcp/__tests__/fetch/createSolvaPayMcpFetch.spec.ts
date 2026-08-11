@@ -62,7 +62,7 @@ function buildHandler(
     publicBaseUrl,
     apiBaseUrl,
     requireAuth: false,
-    mode: 'json-stateless',
+    responseMode: 'json',
     ...overrides,
   })
 }
@@ -312,7 +312,8 @@ describe('createSolvaPayMcpFetch', () => {
 
   it('invokes the additionalTools hook with { server, solvaPay, resourceUri, productRef }', async () => {
     const additional = vi.fn()
-    buildHandler({ additionalTools: additional })
+    const handler = buildHandler({ additionalTools: additional })
+    await initialize(handler)
     expect(additional).toHaveBeenCalledOnce()
     const ctx = additional.mock.calls[0][0]
     expect(ctx.productRef).toBe(productRef)
@@ -367,8 +368,8 @@ describe('createSolvaPayMcpFetch', () => {
     expect(source).not.toMatch(/from\s+['"]@solvapay\/mcp['"]/)
   })
 
-  it('passes mode: json-stateless through to the underlying handler (no sessionId header on initialize)', async () => {
-    const handler = buildHandler({ mode: 'json-stateless' })
+  it('defaults responseMode to json (no sessionId header on initialize)', async () => {
+    const handler = buildHandler({ responseMode: 'json' })
     const res = await handler(
       new Request(`${publicBaseUrl}/mcp`, {
         method: 'POST',
