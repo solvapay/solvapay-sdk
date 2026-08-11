@@ -133,13 +133,16 @@ export function registerVirtualToolsMcpImpl(
       ? wrapHandler(mappedDefinition.handler, mappedDefinition)
       : mappedDefinition.handler
 
+    const z = getZod()
     server.registerTool(
       mappedDefinition.name,
       {
         description: mappedDefinition.description,
-        inputSchema: jsonSchemaToZodRawShape(
-          mappedDefinition.inputSchema.properties as Record<string, JsonSchemaProperty>,
-          mappedDefinition.inputSchema.required || [],
+        inputSchema: (z as { object: (shape: ZodRawShape) => unknown }).object(
+          jsonSchemaToZodRawShape(
+            mappedDefinition.inputSchema.properties as Record<string, JsonSchemaProperty>,
+            mappedDefinition.inputSchema.required || [],
+          ),
         ),
       },
       wrappedHandler,

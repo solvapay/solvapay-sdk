@@ -215,6 +215,6 @@ The root [`.github/workflows/publish-preview.yml`](../../.github/workflows/publi
 ## See also
 
 - [`packages/mcp/src/fetch/`](../../packages/mcp/src/fetch/) — full fetch-first handler reference (the `@solvapay/mcp/fetch` subpath export)
-- [`packages/mcp/README.md`](../../packages/mcp/README.md) — the `@modelcontextprotocol/sdk` adapter used inside the handler
+- [`packages/mcp/README.md`](../../packages/mcp/README.md) — the `@modelcontextprotocol/server` adapter used inside the handler
 - [`examples/mcp-checkout-app/README.md`](../mcp-checkout-app/README.md) — same toolbox, Express transport
 - [`examples/supabase-edge/README.md`](../supabase-edge/README.md) — checkout REST functions (the non-MCP companion)

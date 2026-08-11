@@ -19,7 +19,7 @@
  *     readHtml: () => Deno.readTextFile('./mcp-app.html'),
  *     publicBaseUrl,
  *     apiBaseUrl,
- *     mode: 'json-stateless',
+ *     responseMode: 'json',
  *     // Trim the LLM-facing catalogue to the four intent tools.
  *     // The seven UI transport tools stay callable from the
  *     // SolvaPay iframe; ChatGPT-originated tools/list requests are
@@ -38,7 +38,7 @@
  * const server = createSolvaPayMcpServer({ …descriptorOptions })
  * Deno.serve(
  *   createSolvaPayMcpFetchHandler({
- *     server,
+ *     factory: () => createSolvaPayMcpServer({ …descriptorOptions }),
  *     publicBaseUrl,
  *     apiBaseUrl,
  *     productRef,
@@ -68,7 +68,8 @@ export {
 } from './cors'
 
 export { createSolvaPayMcpFetchHandler } from './handler'
-export type { CreateSolvaPayMcpFetchHandlerOptions, McpHandlerMode } from './handler'
+export type { CreateSolvaPayMcpFetchHandlerOptions, McpResponseMode } from './handler'
+export type { McpRequestContext, McpServerFactory } from './handler'
 
 export { createSolvaPayMcpFetch } from './createSolvaPayMcpFetch'
 export type { CreateSolvaPayMcpFetchOptions } from './createSolvaPayMcpFetch'

@@ -1,7 +1,7 @@
 /**
  * `createSolvaPayMcpServer` — batteries-included factory that
  * registers the full SolvaPay transport + bootstrap tool surface on a
- * fresh `McpServer` from the official `@modelcontextprotocol/sdk`,
+ * fresh `McpServer` from the official `@modelcontextprotocol/server`,
  * plus the UI resource the `open_*` tools reference.
  *
  * Internals delegate to `internal/buildMcpServer` (shared with the
@@ -10,11 +10,7 @@
  * bundle without duplicating the registration loop.
  */
 
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type {
-  AnySchema,
-  ZodRawShapeCompat,
-} from '@modelcontextprotocol/sdk/server/zod-compat.js'
+import type { McpServer } from '@modelcontextprotocol/server'
 import type { BuildSolvaPayDescriptorsOptions } from '@solvapay/mcp-core'
 import type { SolvaPay } from '@solvapay/server'
 import {
@@ -27,6 +23,7 @@ import {
 export type { HideToolsByAudienceConfig } from './internal/buildMcpServer'
 import {
   registerPayableTool,
+  type InputSchemaOption,
   type RegisterPayableToolOptions,
 } from './registerPayableTool'
 
@@ -46,10 +43,7 @@ export interface AdditionalToolsContext {
    * Zod `schema` flows through to the handler's `args` parameter so
    * merchants get inferred arg types without a second declaration.
    */
-  registerPayable: <
-    InputSchema extends ZodRawShapeCompat | AnySchema | undefined = undefined,
-    TData = unknown,
-  >(
+  registerPayable: <InputSchema extends InputSchemaOption = undefined, TData = unknown>(
     name: string,
     options: Omit<RegisterPayableToolOptions<InputSchema, TData>, 'solvaPay' | 'product'> & {
       product?: string
@@ -153,8 +147,7 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
         ...opts,
         product: opts.product ?? productRef,
         buildBootstrap: opts.buildBootstrap ?? descriptors.buildBootstrapPayload,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any)
+      })
     }
     additionalTools({ server, solvaPay, resourceUri, productRef, registerPayable })
   }

@@ -8,7 +8,7 @@
  *
  * This package is the single source of truth for shapes that cross the
  * server↔client boundary (bootstrap payload, tool names, view map). It
- * has no runtime dependency on `@modelcontextprotocol/sdk`,
+ * has no runtime dependency on `@modelcontextprotocol/core` / `/server`,
  * `@modelcontextprotocol/ext-apps`, Express, or any runtime-specific OAuth
  * middleware — those live in `@solvapay/mcp` (root entry),
  * `@solvapay/mcp/express`, and `@solvapay/mcp/fetch` respectively.
