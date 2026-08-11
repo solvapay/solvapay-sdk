@@ -2,7 +2,9 @@
   "minimumDependencyAge": 0,
   "nodeModulesDir": "auto",
   "imports": {
+    "@modelcontextprotocol/core": "npm:@modelcontextprotocol/core@^2.0.0",
     "@modelcontextprotocol/core/": "npm:/@modelcontextprotocol/core@^2.0.0/",
+    "@modelcontextprotocol/server": "npm:@modelcontextprotocol/server@^2.0.0",
     "@modelcontextprotocol/server/": "npm:/@modelcontextprotocol/server@^2.0.0/",
     "@modelcontextprotocol/ext-apps/": "npm:/@modelcontextprotocol/ext-apps@^1.7.1/",
     "@solvapay/mcp": "npm:@solvapay/mcp@preview",
