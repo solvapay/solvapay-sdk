@@ -379,7 +379,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       if (!withinLimits) {
         return {
           ...result,
-          checkoutUrl: `https://checkout.solvapay.com/demo?customer=${params.customerRef}&product=${params.productRef}`,
+          checkoutUrl: `https://customer.solvapay.com/demo?customer=${params.customerRef}&product=${params.productRef}`,
         }
       }
 
@@ -446,7 +446,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       queryParams.set('plan', params.planRef)
     }
 
-    const checkoutUrl = `https://checkout.solvapay.com/demo?${queryParams.toString()}`
+    const checkoutUrl = `https://customer.solvapay.com/demo?${queryParams.toString()}`
 
     this.log(`💳 Created checkout session for ${params.customerRef}: ${checkoutUrl}`)
 
