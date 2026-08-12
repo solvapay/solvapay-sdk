@@ -5,7 +5,7 @@
  * plus the UI resource the `open_*` tools reference.
  *
  * Internals delegate to `internal/buildMcpServer` (shared with the
- * `./fetch` subpath entry) so the two factories register the same 11
+ * `./fetch` subpath entry) so the two factories register the same 12
  * tools in the same order off the same `buildSolvaPayDescriptors`
  * bundle without duplicating the registration loop.
  */
@@ -83,7 +83,7 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
    * shape. Pass `['ui']` to keep the LLM-facing catalogue narrow to
    * the four intent tools (`upgrade` / `manage_account` /
    * `activate_plan` / `topup`) plus your own merchant-registered
-   * data tools, while leaving the seven UI transport tools
+   * data tools, while leaving the eight UI transport tools
    * (`create_payment_intent`, etc.) callable for the SolvaPay
    * iframe.
    *

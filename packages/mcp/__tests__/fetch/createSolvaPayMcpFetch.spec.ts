@@ -132,6 +132,7 @@ const UI_TOOLS = [
   MCP_TOOL_NAMES.processPayment,
   MCP_TOOL_NAMES.createCustomerSession,
   MCP_TOOL_NAMES.createTopupPayment,
+  MCP_TOOL_NAMES.attachBusinessDetails,
   MCP_TOOL_NAMES.cancelRenewal,
   MCP_TOOL_NAMES.reactivateRenewal,
 ]
@@ -176,7 +177,7 @@ describe('createSolvaPayMcpFetch', () => {
     expect(res.json.result?.serverInfo?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
   })
 
-  it('tools/list returns all 11 SolvaPay tools by default', async () => {
+  it('tools/list returns all 12 SolvaPay tools by default', async () => {
     const handler = buildHandler()
     const init = await initialize(handler)
     expect(init.status).toBe(200)

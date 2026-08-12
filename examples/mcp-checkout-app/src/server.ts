@@ -19,6 +19,52 @@ const DIST_DIR = import.meta.filename.endsWith('.ts')
 const RESOURCE_URI = 'ui://mcp-checkout-app/mcp-app.html'
 
 /**
+ * UI transport tools the embedded checkout auto-invokes. `attach_business_details`
+ * is called on every Payment-step mount to compute the tax breakdown, so a server
+ * that fails to register it blocks the whole flow — historically surfacing only as
+ * a cryptic client-side `MCP error -32602: Tool attach_business_details not found`
+ * (DEV-650). Kept as literal strings on purpose: this list is the example's own
+ * source of truth for what the checkout needs, so a stale/skewed `@solvapay/*`
+ * build (where even `MCP_TOOL_NAMES` might predate the tool) still trips the guard.
+ */
+const REQUIRED_TRANSPORT_TOOLS = [
+  'create_payment_intent',
+  'process_payment',
+  'create_topup_payment_intent',
+  'attach_business_details',
+] as const
+
+/**
+ * Fail loud at server construction if the running build didn't register the
+ * transport tools above, instead of letting the checkout die mid-payment with a
+ * `-32602`. Mirrors the private `_registeredTools` access the SOLVAPAY_DEBUG dump
+ * below uses; if the MCP SDK ever renames that field we log and skip rather than
+ * block boot on a guard we can't evaluate (the mcp/mcp-core unit tests still cover
+ * registration).
+ */
+function assertTransportToolsRegistered(server: McpServer): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const registered = (server as any)._registeredTools as Record<string, unknown> | undefined
+  if (!registered) {
+    console.error(
+      '[mcp-checkout-app] could not introspect registered tools; skipping transport-tool guard',
+    )
+    return
+  }
+  const names = new Set(Object.keys(registered))
+  const missing = REQUIRED_TRANSPORT_TOOLS.filter(name => !names.has(name))
+  if (missing.length > 0) {
+    throw new Error(
+      `[mcp-checkout-app] SolvaPay MCP server is missing required UI transport tool(s): ${missing.join(', ')}. ` +
+        'The checkout UI calls these on every checkout, so a stale or skewed @solvapay/* build blocks the ' +
+        'Payment step with "MCP error -32602: Tool <name> not found" (DEV-650). Rebuild the workspace packages ' +
+        '(`pnpm build:packages`) or run the server from source (`NODE_OPTIONS=--conditions=development`) so it ' +
+        'matches the Vite-built UI bundle.',
+    )
+  }
+}
+
+/**
  * Pre-fetch the merchant branding so every MCP `initialize` handshake
  * advertises the merchant's name + icon on the chrome strip instead of
  * a generic SolvaPay identity. Silent on failure — the server still
@@ -99,6 +145,8 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
       }
     },
   })
+
+  assertTransportToolsRegistered(server)
 
   if (process.env.SOLVAPAY_DEBUG === 'true') {
     // Deliberate escape hatch into `@modelcontextprotocol/server`'s private

@@ -9,16 +9,19 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./fetch": {
       "types": "./dist/fetch/index.d.ts",
+      "development": "./src/fetch/index.ts",
       "import": "./dist/fetch/index.js",
       "require": "./dist/fetch/index.cjs"
     },
     "./express": {
       "types": "./dist/express/index.d.ts",
+      "development": "./src/express/index.ts",
       "import": "./dist/express/index.js",
       "require": "./dist/express/index.cjs"
     }
@@ -28,7 +31,24 @@
     "README.md"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      },
+      "./fetch": {
+        "types": "./dist/fetch/index.d.ts",
+        "import": "./dist/fetch/index.js",
+        "require": "./dist/fetch/index.cjs"
+      },
+      "./express": {
+        "types": "./dist/express/index.d.ts",
+        "import": "./dist/express/index.js",
+        "require": "./dist/express/index.cjs"
+      }
+    }
   },
   "repository": {
     "type": "git",
