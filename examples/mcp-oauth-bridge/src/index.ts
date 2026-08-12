@@ -77,9 +77,13 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', server: 'mcp-oauth-bridge' })
 })
 
-// `toNodeHandler` streams SSE straight through and forwards `req.auth` (set by
-// the OAuth bridge) as the handler's `authInfo`.
-app.all('/mcp', toNodeHandler(mcpHandler))
+// Pass `req.body` explicitly — Express calls `(req, res, next)`, and
+// `toNodeHandler` must not treat `next` as the parsed body (stream already
+// consumed by `express.json()`).
+const handleMcp = toNodeHandler(mcpHandler)
+app.all('/mcp', (req, res) => {
+  void handleMcp(req, res, req.body)
+})
 
 app.listen(port, host, () => {
   const displayHost = host === '0.0.0.0' ? 'localhost' : host
