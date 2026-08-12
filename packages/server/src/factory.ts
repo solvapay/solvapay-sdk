@@ -786,7 +786,8 @@ export interface SolvaPay {
    * ```typescript
    * const virtualTools = solvaPay.getVirtualTools({
    *   product: 'prd_myapi',
-   *   getCustomerRef: (_args, extra) => String(extra?.authInfo?.extra?.customer_ref || 'anonymous'),
+   *   getCustomerRef: (_args, extra) =>
+   *     String(extra?.http?.authInfo?.extra?.customer_ref || 'anonymous'),
    * });
    *
    * // Register on your MCP server

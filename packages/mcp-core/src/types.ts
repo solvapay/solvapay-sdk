@@ -84,17 +84,36 @@ export interface SolvaPayCallToolResult {
 }
 
 /**
+ * Auth envelope carried on an MCP tool-handler context, as produced by
+ * `buildAuthInfoFromBearer`.
+ */
+export interface McpAuthInfo {
+  token?: string
+  clientId?: string
+  scopes?: string[]
+  expiresAt?: number
+  extra?: Record<string, unknown>
+}
+
+/**
  * Extra context passed into MCP tool handlers. Mirrors the `extra`
  * parameter shape used by the official SDK's `registerTool` callback.
+ *
+ * `authInfo` moved between SDK majors: v1 exposed it at the top level,
+ * v2 nests it under `http` (`BaseContext.http.authInfo`) because it is
+ * only populated by HTTP transports. Both are declared so this
+ * framework-neutral package keeps working across the official SDK v1/v2
+ * and third-party adapters (fastmcp, raw JSON-RPC) that still pass the
+ * flat shape. Always read them via `defaultGetCustomerRef` rather than
+ * reaching in directly.
  */
 export interface McpToolExtra {
-  authInfo?: {
-    token?: string
-    clientId?: string
-    scopes?: string[]
-    expiresAt?: number
-    extra?: Record<string, unknown>
+  /** Official SDK v2 location — populated by HTTP transports only. */
+  http?: {
+    authInfo?: McpAuthInfo
   }
+  /** Official SDK v1 location; still used by some third-party adapters. */
+  authInfo?: McpAuthInfo
   [key: string]: unknown
 }
 
