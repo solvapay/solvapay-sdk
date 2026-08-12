@@ -175,8 +175,8 @@ export interface BuildSolvaPayDescriptorsOptions {
   apiBaseUrl?: string
   /**
    * Override customer-ref extraction. Defaults to reading
-   * `extra.authInfo.extra.customer_ref` (populated by the MCP OAuth
-   * bridge).
+   * `extra.http.authInfo.extra.customer_ref` (populated by the MCP
+   * OAuth bridge), falling back to the SDK v1 flat `extra.authInfo`.
    */
   getCustomerRef?: (extra?: McpToolExtra) => string | null
   /**

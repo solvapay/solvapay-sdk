@@ -22,6 +22,8 @@
  * @example
  * ```ts
  * import express from 'express'
+ * import { createMcpHandler } from '@modelcontextprotocol/server'
+ * import { toNodeHandler } from '@modelcontextprotocol/node'
  * import { createMcpOAuthBridge } from '@solvapay/mcp/express'
  *
  * const app = express()
@@ -32,6 +34,12 @@
  *   apiBaseUrl: 'https://api.solvapay.com',
  *   productRef: 'prd_video',
  * }))
+ * // Pass `req.body` — Express supplies `next` as the 3rd arg, which
+ * // `toNodeHandler` must not treat as the pre-parsed body.
+ * const handleMcp = toNodeHandler(createMcpHandler(() => server))
+ * app.all('/mcp', (req, res) => {
+ *   void handleMcp(req, res, req.body)
+ * })
  * ```
  */
 

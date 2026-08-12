@@ -109,8 +109,19 @@ export function jsonSchemaToZodRawShape(
 }
 
 function defaultGetCustomerRef(_args: Record<string, unknown>, extra?: McpToolExtra): string {
-  const fromExtra = extra?.authInfo?.extra?.customer_ref
-  return typeof fromExtra === 'string' && fromExtra.trim() ? fromExtra.trim() : 'anonymous'
+  // `extra.http.authInfo` is the official SDK v2 location; the flat
+  // `extra.authInfo` is v1 and is still emitted by some third-party
+  // adapters.
+  const candidates = [
+    extra?.http?.authInfo?.extra?.customer_ref,
+    extra?.authInfo?.extra?.customer_ref,
+  ]
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim()
+    }
+  }
+  return 'anonymous'
 }
 
 export function registerVirtualToolsMcpImpl(

@@ -3,6 +3,11 @@
  * header. Populates `authInfo.extra.customer_ref` so downstream
  * `getCustomerRef` extractors (adapter + descriptor handlers) can read
  * the caller identity without re-parsing the token.
+ *
+ * The transport decides where this envelope lands on the tool-handler
+ * context: the official SDK v2 nests it at `extra.http.authInfo`, v1
+ * exposed it flat at `extra.authInfo`. `defaultGetCustomerRef` reads
+ * both.
  */
 
 import {

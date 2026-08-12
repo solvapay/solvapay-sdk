@@ -36,8 +36,14 @@ app.get('/health', (_req, res) => {
 })
 
 // `toNodeHandler` streams SSE straight through and forwards `req.auth` (set by
-// the OAuth bridge) as the handler's `authInfo`.
-app.all('/mcp', toNodeHandler(mcpHandler))
+// the OAuth bridge) as the handler's `authInfo`. Pass `req.body` explicitly —
+// Express invokes middleware as `(req, res, next)`, and `toNodeHandler` would
+// otherwise treat `next` as a function and discard it, then try to re-read the
+// already-consumed stream (→ "Parse error: Invalid JSON" after OAuth succeeds).
+const handleMcp = toNodeHandler(mcpHandler)
+app.all('/mcp', (req, res) => {
+  void handleMcp(req, res, req.body)
+})
 
 fetchBranding()
   .then(branding => {

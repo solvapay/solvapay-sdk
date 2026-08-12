@@ -52,14 +52,21 @@ export interface RetryOptions {
  * in lockstep — a `vitest` snapshot in `@solvapay/mcp` guards the
  * shape.
  */
+export interface McpAuthInfo {
+  token?: string
+  clientId?: string
+  scopes?: string[]
+  expiresAt?: number
+  extra?: Record<string, unknown>
+}
+
 export interface McpToolExtra {
-  authInfo?: {
-    token?: string
-    clientId?: string
-    scopes?: string[]
-    expiresAt?: number
-    extra?: Record<string, unknown>
+  /** Official SDK v2 location — populated by HTTP transports only. */
+  http?: {
+    authInfo?: McpAuthInfo
   }
+  /** Official SDK v1 location; still used by some third-party adapters. */
+  authInfo?: McpAuthInfo
   [key: string]: unknown
 }
 
