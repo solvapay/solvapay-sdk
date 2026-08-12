@@ -93,14 +93,24 @@ export function enrichPurchase(purchase: Record<string, unknown>): Record<string
 }
 
 /**
- * Default extractor for `customer_ref` out of the MCP OAuth bridge. Reads
- * `extra.authInfo.extra.customer_ref` (what `auth-bridge.ts` populates) and
- * trims it. Returns `null` when no ref is present.
+ * Default extractor for `customer_ref` out of the MCP OAuth bridge
+ * (what `auth-bridge.ts` populates), trimmed. Returns `null` when no
+ * ref is present.
+ *
+ * Checks `extra.http.authInfo` first — the official SDK v2 location —
+ * then falls back to the flat v1 `extra.authInfo` still emitted by some
+ * third-party adapters. Reading only the flat location silently
+ * de-authenticated every tool call under SDK v2.
  */
 export function defaultGetCustomerRef(extra?: McpToolExtra): string | null {
-  const fromExtra = extra?.authInfo?.extra?.customer_ref
-  if (typeof fromExtra === 'string' && fromExtra.trim()) {
-    return fromExtra.trim()
+  const candidates = [
+    extra?.http?.authInfo?.extra?.customer_ref,
+    extra?.authInfo?.extra?.customer_ref,
+  ]
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim()
+    }
   }
   return null
 }
