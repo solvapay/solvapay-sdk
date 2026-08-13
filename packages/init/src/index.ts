@@ -14,7 +14,6 @@ export type {
 export {
   ensureEnvInGitignore,
   readSolvaPayApiBaseUrlFromEnv,
-  readSolvaPayProductFromEnv,
   readSolvaPayProductRefFromEnv,
   readSolvaPaySecretKeyFromEnv,
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER,

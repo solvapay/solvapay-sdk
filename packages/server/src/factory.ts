@@ -30,6 +30,7 @@ import { createSolvaPayClient } from './client'
 import { PaywallError, SolvaPayPaywall, paywallErrorToClientPayload } from './paywall'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
+import { requireProductRef, resolveProductRef } from './resolve-product-ref'
 import { createVirtualTools } from './virtual-tools'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 import type { PaywallStructuredContent } from './types'
@@ -1051,8 +1052,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
-      const product =
-        options.productRef || options.product || process.env.SOLVAPAY_PRODUCT || 'default-product'
+      const product = resolveProductRef(options.productRef || options.product)
 
       const usageType = options.usageType || 'requests'
       const metadata = { product, usageType }
@@ -1153,7 +1153,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             return { kind: 'paywall', response, content: decision.gate }
           }
 
-          const productRef = decideMetadata.product || metadata.product || product
+          const productRef = requireProductRef(
+            decideMetadata.product || metadata.product || product,
+          )
           const meterName = decision.limits.meterName || decideMetadata.usageType || 'requests'
           const customerRef = decision.customerRef
           const ctx = gateOptions.ctx

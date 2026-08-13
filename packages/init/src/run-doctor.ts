@@ -6,7 +6,6 @@ import {
 import { verifyProductRef, verifySecretKey } from './browser-auth'
 import {
   readSolvaPayApiBaseUrlFromEnv,
-  readSolvaPayProductFromEnv,
   readSolvaPayProductRefFromEnv,
   readSolvaPaySecretKeyFromEnv,
 } from './env'
@@ -183,46 +182,6 @@ export const runDoctorInDirectory = async ({
         detail: verified.status === 'error' ? verified.message : 'could not verify',
       })
     }
-  }
-
-  // Pre-existing bugs to surface (detect, do not silently fix).
-  const legacyProductFromFile = await readSolvaPayProductFromEnv(cwd)
-  const legacyProduct = preferEnv(process.env.SOLVAPAY_PRODUCT, legacyProductFromFile)
-  if (productRef && legacyProduct && productRef !== legacyProduct) {
-    checks.push({
-      name: 'Env var mismatch (SOLVAPAY_PRODUCT)',
-      ok: false,
-      detail:
-        `SOLVAPAY_PRODUCT_REF="${productRef}" differs from SOLVAPAY_PRODUCT="${legacyProduct}". ` +
-        'MCP and payable() will bill different products.',
-    })
-  } else if (productRef && !legacyProduct) {
-    // Informational — MCP-only setups are fine; payable() without an explicit
-    // ref would silently bill "default-product".
-    checks.push({
-      name: 'Env var mismatch (SOLVAPAY_PRODUCT)',
-      ok: true,
-      detail:
-        'warning: SOLVAPAY_PRODUCT_REF is set but SOLVAPAY_PRODUCT is not. ' +
-        'payable()/paywall read SOLVAPAY_PRODUCT and fall back to "default-product". ' +
-        'OK for MCP with explicit productRef; set SOLVAPAY_PRODUCT if you use payable().',
-    })
-  } else if (legacyProduct && !productRef) {
-    checks.push({
-      name: 'Env var mismatch (SOLVAPAY_PRODUCT)',
-      ok: false,
-      detail:
-        'SOLVAPAY_PRODUCT is set but SOLVAPAY_PRODUCT_REF is not. MCP OAuth / descriptors ' +
-        'need SOLVAPAY_PRODUCT_REF.',
-    })
-  } else {
-    checks.push({
-      name: 'Env var mismatch (SOLVAPAY_PRODUCT)',
-      ok: true,
-      detail: legacyProduct
-        ? 'SOLVAPAY_PRODUCT and SOLVAPAY_PRODUCT_REF agree'
-        : 'neither SOLVAPAY_PRODUCT nor SOLVAPAY_PRODUCT_REF set',
-    })
   }
 
   const debugRaw = process.env.SOLVAPAY_DEBUG

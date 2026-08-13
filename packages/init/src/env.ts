@@ -7,8 +7,6 @@ import { SOLVAPAY_PRODUCT_REF_PLACEHOLDER as CORE_PRODUCT_REF_PLACEHOLDER } from
 
 const SOLVAPAY_SECRET_KEY = 'SOLVAPAY_SECRET_KEY'
 const SOLVAPAY_PRODUCT_REF = 'SOLVAPAY_PRODUCT_REF'
-/** Legacy env name read by `payable()` / paywall — not written by init/CLI. */
-const SOLVAPAY_PRODUCT = 'SOLVAPAY_PRODUCT'
 const SOLVAPAY_API_BASE_URL = 'SOLVAPAY_API_BASE_URL'
 
 export const SOLVAPAY_PRODUCT_REF_PLACEHOLDER = CORE_PRODUCT_REF_PLACEHOLDER
@@ -159,11 +157,6 @@ export const readSolvaPaySecretKeyFromEnv = async (
 export const readSolvaPayApiBaseUrlFromEnv = async (
   cwd: string = process.cwd(),
 ): Promise<string | undefined> => readEnvKeyFromFile(SOLVAPAY_API_BASE_URL, cwd)
-
-/** Legacy `SOLVAPAY_PRODUCT` — used by payable/paywall, not by MCP/init. */
-export const readSolvaPayProductFromEnv = async (
-  cwd: string = process.cwd(),
-): Promise<string | undefined> => readEnvKeyFromFile(SOLVAPAY_PRODUCT, cwd)
 
 export const writeSolvaPayProductRefToEnv = async (
   productRef: string,

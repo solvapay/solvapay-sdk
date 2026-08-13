@@ -10,14 +10,12 @@ vi.mock('./env', () => ({
   readSolvaPaySecretKeyFromEnv: vi.fn(),
   readSolvaPayApiBaseUrlFromEnv: vi.fn(),
   readSolvaPayProductRefFromEnv: vi.fn(),
-  readSolvaPayProductFromEnv: vi.fn(),
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER: '__SOLVAPAY_PRODUCT_REF__',
 }))
 
 import { verifyProductRef, verifySecretKey } from './browser-auth'
 import {
   readSolvaPayApiBaseUrlFromEnv,
-  readSolvaPayProductFromEnv,
   readSolvaPayProductRefFromEnv,
   readSolvaPaySecretKeyFromEnv,
 } from './env'
@@ -29,11 +27,9 @@ describe('runDoctorInDirectory', () => {
     vi.clearAllMocks()
     delete process.env.SOLVAPAY_SECRET_KEY
     delete process.env.SOLVAPAY_PRODUCT_REF
-    delete process.env.SOLVAPAY_PRODUCT
     delete process.env.SOLVAPAY_API_BASE_URL
     delete process.env.SOLVAPAY_DEBUG
     vi.mocked(readSolvaPayApiBaseUrlFromEnv).mockResolvedValue(undefined)
-    vi.mocked(readSolvaPayProductFromEnv).mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -90,28 +86,6 @@ describe('runDoctorInDirectory', () => {
 
     expect(report.ok).toBe(false)
     expect(report.checks.find(c => c.name === 'Product readiness')?.ok).toBe(false)
-  })
-
-  it('fails when SOLVAPAY_PRODUCT and SOLVAPAY_PRODUCT_REF disagree', async () => {
-    vi.mocked(readSolvaPaySecretKeyFromEnv).mockResolvedValue('sk_test')
-    vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue('prd_a')
-    vi.mocked(readSolvaPayProductFromEnv).mockResolvedValue('prd_b')
-    vi.mocked(verifySecretKey).mockResolvedValue({ ok: true })
-    vi.mocked(verifyProductRef).mockResolvedValue({
-      status: 'ok',
-      product: {
-        name: 'A',
-        status: 'active',
-        plans: [{ isActive: true }],
-      },
-    })
-
-    const report = await runDoctorInDirectory({ cwd: TEST_CWD })
-
-    expect(report.ok).toBe(false)
-    expect(report.checks.find(c => c.name === 'Env var mismatch (SOLVAPAY_PRODUCT)')?.ok).toBe(
-      false,
-    )
   })
 
   it('targets api-dev when --dev is set', async () => {
