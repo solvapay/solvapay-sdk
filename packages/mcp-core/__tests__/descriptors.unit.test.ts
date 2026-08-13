@@ -227,6 +227,42 @@ describe('buildSolvaPayDescriptors', () => {
     ).toThrow(/http\(s\)/)
   })
 
+  it('rejects empty productRef', () => {
+    expect(() =>
+      buildSolvaPayDescriptors({
+        solvaPay: makeSolvaPay(),
+        productRef: '',
+        resourceUri: 'ui://test/view.html',
+        readHtml: async () => '<html></html>',
+        publicBaseUrl: 'https://example.com',
+      }),
+    ).toThrow(/productRef is required/)
+  })
+
+  it('rejects scaffolder placeholder productRef', () => {
+    expect(() =>
+      buildSolvaPayDescriptors({
+        solvaPay: makeSolvaPay(),
+        productRef: '__SOLVAPAY_PRODUCT_REF__',
+        resourceUri: 'ui://test/view.html',
+        readHtml: async () => '<html></html>',
+        publicBaseUrl: 'https://example.com',
+      }),
+    ).toThrow(/scaffolder placeholder/)
+  })
+
+  it('rejects non-prd_ productRef shape', () => {
+    expect(() =>
+      buildSolvaPayDescriptors({
+        solvaPay: makeSolvaPay(),
+        productRef: 'product-1',
+        resourceUri: 'ui://test/view.html',
+        readHtml: async () => '<html></html>',
+        publicBaseUrl: 'https://example.com',
+      }),
+    ).toThrow(/prd_/)
+  })
+
   it('auto-includes apiBaseUrl origin in resourceDomains + connectDomains', () => {
     const { resource } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),

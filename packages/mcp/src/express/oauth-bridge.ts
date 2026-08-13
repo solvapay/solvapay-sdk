@@ -9,9 +9,12 @@
  */
 
 import {
+  assertValidProductRef,
   buildAuthInfoFromBearer,
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
+  logDcrFailureDiagnostic,
+  logMcpConfigOnce,
   McpBearerAuthError,
   resolveOAuthPaths,
   withoutTrailingSlash,
@@ -269,6 +272,15 @@ export function createOAuthRegisterHandler(options: OAuthRegisterHandlerOptions)
         headers: { 'content-type': 'application/json' },
         body: serializeRegisterBody(req.body),
       })
+      if (!response.ok) {
+        const bodyText = await response.clone().text()
+        logDcrFailureDiagnostic({
+          productRef: options.productRef,
+          apiBaseUrl: api,
+          status: response.status,
+          bodyText,
+        })
+      }
       applyCorsHeaders(req, res)
       await relayJsonResponse(response, res)
     } catch (error) {
@@ -406,6 +418,13 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     authorizationServerPath = '/.well-known/oauth-authorization-server',
     oauthPaths,
   } = options
+
+  assertValidProductRef(productRef, 'createMcpOAuthBridge')
+  logMcpConfigOnce({
+    apiBaseUrl: withoutTrailingSlash(apiBaseUrl),
+    productRef,
+    publicBaseUrl,
+  })
 
   const paths = resolveOAuthPaths(oauthPaths)
 

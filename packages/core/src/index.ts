@@ -152,4 +152,12 @@ export {
   type SellerIdentityRow,
 } from './seller-identity'
 
+export {
+  SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
+  assertValidProductRef,
+  evaluateProductReadiness,
+  type ProductReadinessInput,
+  type ProductReadinessResult,
+} from './product-readiness'
+
 export const version = '0.1.0'

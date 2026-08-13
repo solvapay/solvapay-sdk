@@ -12,8 +12,11 @@
  */
 
 import {
+  assertValidProductRef,
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
+  logDcrFailureDiagnostic,
+  logMcpConfigOnce,
   resolveOAuthPaths,
   withoutTrailingSlash,
   type OAuthBridgePaths,
@@ -138,6 +141,15 @@ export function createOAuthRegisterHandler(options: {
         headers: { 'content-type': req.headers.get('content-type') ?? 'application/json' },
         body,
       })
+      if (!upstreamResponse.ok) {
+        const bodyText = await upstreamResponse.clone().text()
+        logDcrFailureDiagnostic({
+          productRef: options.productRef,
+          apiBaseUrl: api,
+          status: upstreamResponse.status,
+          bodyText,
+        })
+      }
       return corsResponse(req, upstreamResponse)
     } catch {
       return upstreamUnreachable(req)
@@ -234,6 +246,13 @@ export function createOAuthRevokeHandler(options: {
  * to the MCP transport.
  */
 export function createOAuthFetchRouter(options: FetchOAuthOptions): FetchHandler {
+  assertValidProductRef(options.productRef, 'createOAuthFetchRouter')
+  logMcpConfigOnce({
+    apiBaseUrl: withoutTrailingSlash(options.apiBaseUrl),
+    productRef: options.productRef,
+    publicBaseUrl: options.publicBaseUrl,
+  })
+
   const paths = resolveOAuthPaths(options.oauthPaths)
   const handlers: FetchHandler[] = [
     createOpenidNotFoundHandler(),

@@ -17,6 +17,7 @@ import type {
   SolvaPayClient,
 } from './types'
 import { buildPaywallGate } from './paywall-gate'
+import { requireProductRef } from './resolve-product-ref'
 import { withRetry, createRequestDeduplicator } from './utils'
 
 // Re-export types for convenience
@@ -215,7 +216,7 @@ export class SolvaPayPaywall {
   }
 
   private resolveProduct(metadata: PaywallMetadata): string {
-    return metadata.product || process.env.SOLVAPAY_PRODUCT || 'default-product'
+    return requireProductRef(metadata.product)
   }
 
   private generateRequestId(): string {

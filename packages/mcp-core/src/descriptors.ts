@@ -33,6 +33,7 @@
  * doesn't consume the key.
  */
 
+import { assertValidProductRef } from '@solvapay/core'
 import {
   activatePlanCore,
   cancelPurchaseCore,
@@ -47,6 +48,7 @@ import {
   type SolvaPay,
 } from '@solvapay/server'
 import { z } from 'zod'
+import { logMcpConfigOnce } from './config-log'
 import {
   buildSolvaPayRequest,
   defaultGetCustomerRef as defaultGetCustomerRefHelper,
@@ -264,11 +266,19 @@ export function buildSolvaPayDescriptors(
     )
   }
 
+  assertValidProductRef(productRef, 'buildSolvaPayDescriptors')
+
   if (!htmlPath && !readHtml) {
     throw new Error(
       'buildSolvaPayDescriptors: either `htmlPath` (node) or `readHtml` (edge) must be provided.',
     )
   }
+
+  logMcpConfigOnce({
+    apiBaseUrl: apiBaseUrl ?? '(unset)',
+    productRef,
+    publicBaseUrl,
+  })
 
   const toolMeta = { ui: { resourceUri } }
   // State-change tools that need a server round-trip from inside the

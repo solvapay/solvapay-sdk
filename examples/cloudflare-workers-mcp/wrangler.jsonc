@@ -53,8 +53,10 @@
   // `vars` and `routes` are intentionally redeclared here because
   // wrangler does NOT inherit them from the top-level config; setting
   // `name` explicitly avoids wrangler's auto-suffix (which would
-  // produce `solvapay-mcp-workers-example-production`). `account_id`
-  // is set defensively even though it inherits.
+  // produce `solvapay-mcp-workers-example-production`). Account comes
+  // from the authenticated wrangler session — do not put a literal
+  // `${CLOUDFLARE_ACCOUNT_ID}` here; wrangler does not expand it and
+  // the API call fails with that string as the account path segment.
   //
   // Real `SOLVAPAY_PRODUCT_REF` / `MCP_PUBLIC_BASE_URL` /
   // `SOLVAPAY_API_BASE_URL` come from `.env.prod` via deploy.mjs's
@@ -67,7 +69,6 @@
   "env": {
     "production": {
       "name": "solvapay-mcp-goldberg-prod",
-      "account_id": "${CLOUDFLARE_ACCOUNT_ID}",
       "routes": [
         {
           "pattern": "goldberg-demo.solvapay.app",
