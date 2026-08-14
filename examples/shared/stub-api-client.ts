@@ -686,6 +686,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       description: 'A stubbed product for local development and example builds.',
       balance: 0,
       totalTransactions: 0,
+      isManagedMcp: false,
       isMcpPay: false,
       createdAt: now,
       updatedAt: now,

@@ -63,7 +63,7 @@ export interface paths {
     put?: never
     /**
      * Create a checkout session
-     * @description Creates a hosted checkout session for a customer to purchase a product plan. Returns a session ID and checkout URL for redirect.
+     * @description Creates a hosted checkout session for a customer to purchase a product plan, or to top up credits (`purpose: "credit_topup"`, which skips `productRef`). Returns a session ID and checkout URL for redirect.
      */
     post: operations['CheckoutSessionSdkController_createCheckoutSession']
     delete?: never
@@ -251,7 +251,7 @@ export interface paths {
     put?: never
     /**
      * Record a meter event
-     * @description Records a single usage event against a named meter.
+     * @description Records a single usage event against a named meter. When the customer is on a metered plan, credits are also debited for the event (the debit is not surfaced in the response).
      */
     post: operations['MeterEventsSdkController_recordEvent']
     delete?: never
@@ -271,7 +271,7 @@ export interface paths {
     put?: never
     /**
      * Record meter events in bulk
-     * @description Persists each event with recordUsage (same shape as single POST), after shared meter/customer checks.
+     * @description Persists the events with bulkRecordUsage (which records each event like the single POST), after shared meter/customer checks.
      */
     post: operations['MeterEventsSdkController_recordBulkEvents']
     delete?: never
@@ -295,7 +295,7 @@ export interface paths {
     put?: never
     /**
      * Create a payment intent
-     * @description Creates a new payment intent for a customer to purchase a plan. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
+     * @description Creates a new payment intent for a customer to purchase a plan, top up credits (`purpose: "credit_topup"`), or bill usage (`purpose: "usage_billing"`) with an explicit `amount`/`currency`. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
      */
     post: operations['PaymentIntentSdkController_createPaymentIntent']
     delete?: never
@@ -413,7 +413,7 @@ export interface paths {
     }
     /**
      * List products
-     * @description Retrieves a paginated list of products for the authenticated provider. Supports filtering by status, search term, and no-code MCP integration flag.
+     * @description Retrieves a paginated list of products for the authenticated provider. Supports filtering by status, search term, and Managed MCP integration flag.
      */
     get: operations['ProductSdkController_listProducts']
     put?: never
@@ -505,13 +505,13 @@ export interface paths {
     }
     /**
      * List plans for a product
-     * @description Retrieves the plans belonging to a product, paginated in-memory. Returns SDK-shaped plans with money serialized to wire units and unsupported plan types normalised to "recurring".
+     * @description Retrieves the plans belonging to a product, paginated in-memory. Returns SDK-shaped plans with option money serialized to integer minor units; hidden plans are excluded. The `type` field is derived from each plan's composable options.
      */
     get: operations['PlanSdkController_listPlans']
     put?: never
     /**
      * Create a plan for a product
-     * @description Creates a plan under the product. Unfinished pricing fields (setup fee, trial days, rollover, tiers, etc.) are stripped from SDK input, and unsupported plan types fall back to "recurring".
+     * @description Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts, rollovers). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.
      */
     post: operations['PlanSdkController_createPlan']
     delete?: never
@@ -534,7 +534,7 @@ export interface paths {
     get: operations['PlanSdkController_getPlan']
     /**
      * Update a plan for a product
-     * @description Updates a plan under the product. Unfinished pricing fields are stripped from SDK input, and unsupported plan types fall back to "recurring".
+     * @description Updates a plan under the product. Provided `options[]` replace the plan pricing and are validated for cross-option coherence (400 if invalid); money fields are integer minor units.
      */
     put: operations['PlanSdkController_updatePlan']
     post?: never
@@ -808,6 +808,10 @@ export interface components {
       /** @enum {string} */
       status: 'activated' | 'already_active' | 'topup_required' | 'payment_required' | 'invalid'
     }
+    AttachBusinessDetailsResponse: {
+      /** @description Calculated tax breakdown */
+      taxBreakdown: components['schemas']['TaxBreakdownDto']
+    }
     AutoRechargeConfigDto: {
       /**
        * Whether auto-recharge is enabled
@@ -871,9 +875,10 @@ export interface components {
       formatted: components['schemas']['AutoRechargeDisplayFormattedDto']
       /**
        * Source of the exchange rate
-       * @example live
+       * @example db
+       * @enum {string}
        */
-      rateSource: string
+      rateSource: 'parity' | 'db' | 'fallback'
       /**
        * Threshold amount in display-currency major units
        * @example 5
@@ -1399,6 +1404,7 @@ export interface components {
       }
       description?: string
       imageUrl?: string
+      isManagedMcp?: boolean
       isMcpPay?: boolean
       metadata?: {
         [key: string]: unknown
@@ -1451,8 +1457,8 @@ export interface components {
     }
     CreditDebitSuccessResponse: {
       /**
-       * Credits debited for this usage event
-       * @example 10
+       * Credits debited for this usage event (credits are USD-pegged at 100 credits per minor unit, so a 1¢/unit charge debits 100 credits/unit)
+       * @example 100
        */
       amount: number
       autoRecharge?: components['schemas']['AutoRechargeTriggeredResponse']
@@ -1494,7 +1500,7 @@ export interface components {
     }
     CustomerBalanceResponse: {
       /**
-       * Raw credit balance in credits (mils)
+       * Raw credit balance in credits (100 credits = 1 minor currency unit)
        * @example 4200
        */
       credits: number
@@ -1605,7 +1611,7 @@ export interface components {
       success: boolean
     }
     LimitBalanceDto: {
-      /** @description Credit balance in mils */
+      /** @description Credit balance in credits (100 credits = 1 minor currency unit) */
       creditBalance: number
       /** @description Credits per usage unit */
       creditsPerUnit: number
@@ -1654,7 +1660,7 @@ export interface components {
       checkoutUrl?: string
       /** @description Customer portal confirmation URL when activation is required (fallback when not starting checkout) */
       confirmationUrl?: string
-      /** @description Credit balance in mils (for pre-paid usage-based plans) */
+      /** @description Credit balance in credits (100 credits = 1 minor currency unit), for pre-paid usage-based plans */
       creditBalance?: number
       /** @description Credits per usage unit (for pre-paid usage-based plans) */
       creditsPerUnit?: number
@@ -1670,7 +1676,7 @@ export interface components {
       /** @description Product the limit check applies to */
       product?: components['schemas']['LimitProductBriefDto']
       /**
-       * Remaining usage units before hitting the limit
+       * Remaining usage units before hitting the limit. `-1` means unlimited (no finite cap).
        * @example 997
        */
       remaining: number
@@ -1832,6 +1838,7 @@ export interface components {
        * Created or updated MCP server identity
        * @example {
        *       "defaultPlanRef": "pln_FREE123",
+       *       "id": "507f1f77bcf86cd799439011",
        *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
        *       "reference": "mcp_ABC123",
        *       "subdomain": "acme-docs",
@@ -2228,7 +2235,7 @@ export interface components {
     }
     SdkPaymentIntentListItem: {
       /**
-       * Amount in the charge currency (minor units)
+       * Amount in USD minor units (ledger/normalised); `currency` is the presentment currency
        * @example 4999
        */
       amount: number
@@ -2243,7 +2250,7 @@ export interface components {
        */
       createdAt?: string
       /**
-       * ISO 4217 currency code
+       * ISO 4217 presentment (charge) currency code
        * @example usd
        */
       currency: string
@@ -2260,8 +2267,17 @@ export interface components {
       /**
        * Payment intent status
        * @example succeeded
+       * @enum {string}
        */
-      status: string
+      status:
+        | 'pending'
+        | 'requires_payment_method'
+        | 'requires_confirmation'
+        | 'requires_action'
+        | 'processing'
+        | 'succeeded'
+        | 'failed'
+        | 'cancelled'
     }
     SdkPaymentIntentListResponse: {
       paymentIntents: components['schemas']['SdkPaymentIntentListItem'][]
@@ -2278,7 +2294,7 @@ export interface components {
        */
       accountId?: string
       /**
-       * Amount in the charge currency (minor units)
+       * Amount in USD minor units (ledger/normalised). The charge-currency amount is `originalAmount` paired with `currency`.
        * @example 4999
        */
       amount: number
@@ -2293,7 +2309,7 @@ export interface components {
        */
       createdAt?: string
       /**
-       * ISO 4217 currency code
+       * ISO 4217 presentment (charge) currency code — pairs with `originalAmount`
        * @example usd
        */
       currency: string
@@ -2303,7 +2319,7 @@ export interface components {
        */
       customerRef?: string
       /**
-       * Exchange rate applied to the amount
+       * Exchange rate applied to convert to USD
        * @example 1
        */
       exchangeRate?: number
@@ -2313,7 +2329,7 @@ export interface components {
        */
       expiresAt?: string
       /**
-       * Original amount in the payment currency (minor units)
+       * Charge-currency amount in minor units (the currency the customer is billed in)
        * @example 4999
        */
       originalAmount?: number
@@ -2335,8 +2351,17 @@ export interface components {
       /**
        * Payment intent status
        * @example requires_payment_method
+       * @enum {string}
        */
-      status: string
+      status:
+        | 'pending'
+        | 'requires_payment_method'
+        | 'requires_confirmation'
+        | 'requires_action'
+        | 'processing'
+        | 'succeeded'
+        | 'failed'
+        | 'cancelled'
       /**
        * Ledger transaction ID
        * @example 507f1f77bcf86cd799439011
@@ -2356,6 +2381,11 @@ export interface components {
        * @example $
        */
       currencySymbol?: string
+      /**
+       * Plan description
+       * @example Best for teams getting started
+       */
+      description?: string
       /** @description Plan features */
       features?: {
         [key: string]: unknown
@@ -2405,11 +2435,6 @@ export interface components {
     }
     SdkPlanSnapshotDto: {
       /**
-       * Derived billing cycle
-       * @example monthly
-       */
-      billingCycle?: string | null
-      /**
        * Currency code
        * @example USD
        */
@@ -2418,16 +2443,6 @@ export interface components {
       features?: {
         [key: string]: unknown
       } | null
-      /**
-       * Derived included units for the metered allowance (0 = unlimited/none)
-       * @example 5000
-       */
-      includedUnits?: number
-      /**
-       * Meter key referenced by the plan options
-       * @example requests
-       */
-      meterRef?: string
       /**
        * Plan name captured at purchase time
        * @example Pro Monthly
@@ -2447,11 +2462,6 @@ export interface components {
        * @example pln_1A2B3C4D
        */
       reference?: string
-      /**
-       * Derived plan type
-       * @example recurring
-       */
-      type?: string
     }
     SdkPlatformConfigResponseDto: {
       /**
@@ -2475,7 +2485,13 @@ export interface components {
       /** @description URL to the product image */
       imageUrl?: string
       /**
-       * Whether this product uses the no-code MCP integration (SolvaPay reverse proxy)
+       * Whether this product uses the Managed MCP integration (SolvaPay reverse proxy)
+       * @example false
+       */
+      isManagedMcp: boolean
+      /**
+       * @deprecated
+       * @description Deprecated alias of isManagedMcp. Prefer isManagedMcp; still emitted for wire compatibility.
        * @example false
        */
       isMcpPay: boolean
@@ -2619,6 +2635,41 @@ export interface components {
       status: string
       /** @description Usage billing state for usage-based plans */
       usage?: components['schemas']['UsageBillingDto']
+    }
+    TaxBreakdownDto: {
+      /** @description ISO 4217 currency code */
+      currency: string
+      /** @description Whether tax is included in the listed price */
+      inclusive: boolean
+      /** @description Pre-tax amount in minor units */
+      subtotal: number
+      /** @description Tax amount in minor units */
+      taxAmount: number
+      /** @description Tax rate as a decimal (e.g. 0.25 for 25%) */
+      taxRate: number
+      /**
+       * Stripe tax type (e.g. vat, sales_tax, gst)
+       * @enum {string}
+       */
+      taxType?:
+        | 'amusement_tax'
+        | 'communications_tax'
+        | 'gst'
+        | 'hst'
+        | 'igst'
+        | 'jct'
+        | 'lease_tax'
+        | 'pst'
+        | 'qst'
+        | 'retail_delivery_fee'
+        | 'rst'
+        | 'sales_tax'
+        | 'service_tax'
+        | 'vat'
+      /** @description Total amount in minor units */
+      total: number
+      /** @enum {string} */
+      treatment: 'reverse_charge' | 'standard' | 'none' | 'not_collecting'
     }
     UpdateCustomerRequest: {
       description?: string
@@ -2821,6 +2872,10 @@ export interface components {
       features?: {
         [key: string]: unknown
       } | null
+      /**
+       * @deprecated
+       * @description Deprecated: always null. Limit data now lives in the plan snapshot options (`kind: "limit"`).
+       */
       limits?: {
         [key: string]: unknown
       } | null
@@ -2870,15 +2925,18 @@ export interface components {
     }
     UserInfoUsageDto: {
       /**
-       * Meter reference
-       * @example meter_ABC123
+       * Meter key referenced by the plan options
+       * @example requests
        */
       meterRef?: string | null
       /** @example 25 */
       percentUsed?: number | null
       /** @example 750 */
       remaining: number
-      /** @example 1000 */
+      /**
+       * Included allowance for the period. `0` means unlimited / no finite cap.
+       * @example 1000
+       */
       total: number
       /** @example 250 */
       used: number
@@ -2934,7 +2992,7 @@ export interface components {
     WebhookEventDto: {
       /**
        * API version that produced the event payload.
-       * @example 2024-01-01
+       * @example 2025-10-01
        */
       api_version: string
       /**
@@ -3699,7 +3757,9 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['AttachBusinessDetailsResponse']
+        }
       }
       /** @description Invalid request or business details */
       400: {
@@ -3863,7 +3923,12 @@ export interface operations {
         search?: string
         /** @description Filter by status */
         status?: 'active' | 'inactive'
-        /** @description Filter no-code MCP integration products */
+        /** @description Filter Managed MCP integration products */
+        isManagedMcp?: boolean
+        /**
+         * @deprecated
+         * @description Deprecated alias of isManagedMcp
+         */
         isMcpPay?: boolean
       }
       header?: never
