@@ -29,7 +29,7 @@ export interface PaywallMetadata {
   /**
    * @deprecated Use `meterName`. Still accepted as an alias of the meter name.
    */
-  usageType?: 'requests' | 'tokens'
+  usageType?: string
 }
 
 /**

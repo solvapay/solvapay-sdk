@@ -103,7 +103,7 @@ export interface PayableOptions {
   /**
    * @deprecated Use `meterName`. Still accepted as an alias of the meter name.
    */
-  usageType?: 'requests' | 'tokens'
+  usageType?: string
 
   /**
    * Optional function to extract customer reference from context
