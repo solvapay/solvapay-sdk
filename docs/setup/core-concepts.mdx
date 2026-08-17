@@ -6,7 +6,7 @@ description: "Understand products, plans, customers, paywall checks, and usage t
 ## Table of contents
 
 - [Products and plans](#products-and-plans)
-- [Plan types](#plan-types)
+- [Plan labels](#plan-labels)
 - [Meters](#meters)
 - [Customer references](#customer-references)
 - [Paywall protection flow](#paywall-protection-flow)
@@ -51,16 +51,18 @@ Plans are configured as part of product setup. Customers select a plan during ac
 - One default plan per product
 - Paywall checks verify plan access for a product
 
-## Plan types
+## Plan labels
 
-| Type | Description | Best for |
+A plan is an `options[]` list. These names are **derived labels**, not a `type` you send:
+
+| Label | Derived when | Best for |
 | --- | --- | --- |
-| Recurring | Fixed price billed on a cycle | SaaS subscriptions |
-| Usage-based | Pay-per-use tracked by a meter | APIs and token services |
-| Hybrid | Recurring fee plus usage overage | Enterprise mixed workloads |
-| One-time | Single purchase without recurring billing | Digital goods and lifetime access |
+| Recurring | Billing cycle, no meter | SaaS subscriptions |
+| Usage-based | Metered, no billing cycle | APIs and token services |
+| Hybrid | Billing cycle and a meter | Mixed workloads |
+| One-time | Flat charge, no cycle | Digital goods and lifetime access |
 
-See [Plans overview](/plans/overview) for full plan behavior.
+See [Plans](/plans/overview) to compose those options.
 
 ## Meters
 
