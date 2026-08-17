@@ -1,7 +1,7 @@
 /**
  * Validate optional `selections.plans` entries against the SolvaPay
- * default-plan guardrail (`Only free recurring or usage-based plans can
- * be set as default`) and the auto-enroll contract for MCP products.
+ * default-plan guardrail (`Only free plans can be auto-assigned`) and
+ * the auto-enroll contract for MCP products.
  *
  * Used by `scaffold.mjs` as a pre-flight check so agents get a clear
  * error before posting to the plan-create API.
@@ -21,11 +21,10 @@ export function planRequiresPayment(plan) {
   return Number(plan.price ?? 0) > 0
 }
 
-/** Mirrors `PlanCoreLib.isPlanEligibleForDefault` in solvapay-backend. */
+/** Mirrors domain `isEligibleForAutoAssign` (DEV-703): only free plans. */
 export function isPlanEligibleForDefault(plan) {
   const kind = getPlanKind(plan)
-  if (kind === 'usage-based') return true
-  if (kind !== 'recurring') return false
+  if (kind !== 'recurring' && kind !== 'usage-based') return false
   return !planRequiresPayment(plan)
 }
 
@@ -80,9 +79,10 @@ export function validatePlanSelections(plans) {
         const label = plan.name ?? plan.reference ?? `plans[${index}]`
         throw new Error(
           `selections.json: ${label} cannot be the default plan — ` +
-            `the SolvaPay API only accepts free recurring or usage-based defaults ` +
-            `(paid recurring, one-time, and hybrid defaults are rejected). ` +
-            `Use a free recurring plan (price: 0, freeUnits > 0) for MCP auto-enrollment on first tool call.`,
+            `only free plans can be auto-assigned. A plan that charges per unit ` +
+            `or has a positive price requires explicit customer activation. ` +
+            `Use a free recurring or usage-based plan (no per-unit charge, price: 0) ` +
+            `for MCP auto-enrollment on first tool call.`,
         )
       }
     }
