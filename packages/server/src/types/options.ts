@@ -96,9 +96,14 @@ export interface PayableOptions {
   productRef?: string
 
   /**
-   * Usage meter type to charge against (defaults to 'requests')
+   * Meter to charge against (defaults to `requests`).
    */
-  usageType?: 'requests' | 'tokens'
+  meterName?: string
+
+  /**
+   * @deprecated Use `meterName`. Still accepted as an alias of the meter name.
+   */
+  usageType?: string
 
   /**
    * Optional function to extract customer reference from context

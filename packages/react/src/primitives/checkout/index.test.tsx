@@ -837,7 +837,7 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
     // `paymentRequiredMessageNoBalance` interpolates the product
     // suffix; assert the canonical sentence is rendered.
     expect(screen.getByTestId('message').textContent).toContain(
-      "You've used your included messages",
+      "You've used your included requests",
     )
     expect(screen.getByTestId('message').textContent).toContain('Acme API')
   })

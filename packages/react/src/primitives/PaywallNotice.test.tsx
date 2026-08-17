@@ -338,7 +338,7 @@ describe('PaywallNotice.Message', () => {
       </PaywallNotice.Root>,
     )
     const text = screen.getByTestId('message').textContent ?? ''
-    expect(text).toContain('3 calls left')
+    expect(text).toContain('3 requests left')
   })
 
   it('uses activationRequiredMessage for activation_required — never the MCP-flavored server message', () => {
