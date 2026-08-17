@@ -732,9 +732,8 @@ You only need to make sure `returnUrl` points at the page that renders the form.
 
 ## Multi-Currency Plans & Top-Ups
 
-Plans can carry per-currency pricing through a `pricingOptions` array (`currency`, `price`,
-optional `basePrice` / `setupFee`, one entry marked `default`). Single-currency plans without the
-array behave as before.
+Plans price multiple currencies by repeating money options (`charge` or `tier`) that differ only
+by `currency`. Amounts are set per currency, not FX-converted. See [Plans](/plans/overview).
 
 ### Plan checkout
 
