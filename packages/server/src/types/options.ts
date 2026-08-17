@@ -96,7 +96,12 @@ export interface PayableOptions {
   productRef?: string
 
   /**
-   * Usage meter type to charge against (defaults to 'requests')
+   * Meter to charge against (defaults to `requests`).
+   */
+  meterName?: string
+
+  /**
+   * @deprecated Use `meterName`. Still accepted as an alias of the meter name.
    */
   usageType?: 'requests' | 'tokens'
 

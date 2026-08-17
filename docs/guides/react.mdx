@@ -320,14 +320,15 @@ function TopUpCredits() {
 - `returnUrl` — return URL used for redirect-based payment methods (defaults to the current URL).
 - `className` / `buttonClassName` — styling hooks.
 
-Credits are booked by SolvaPay's webhook handler. When your backend implements
-the `/api/process-topup-payment` route, `TopupForm` waits for that round-trip so
+Credits mint when the charge succeeds. The webhook is an idempotent backstop, not
+the primary booking path. When your backend implements the
+`/api/process-topup-payment` route, `TopupForm` waits for that round-trip so
 `onSuccess` only fires once the credit has actually landed. Transports without
 that route fall back to firing on Stripe confirmation.
 
 ### AutoRecharge
 
-A drop-in component that lets a customer turn on automatic credit top-ups. It
+A drop-in component that lets a customer turn on auto-recharge. It
 renders a summary card with a trigger that opens a modal for configuring a
 balance **threshold**, a **fixed top-up amount**, and an optional **monthly spend
 cap** (under **Advanced**). When enabled, SolvaPay charges the saved card

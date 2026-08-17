@@ -24,6 +24,11 @@ export interface PaywallArgs {
  */
 export interface PaywallMetadata {
   product?: string
+  /** Meter to charge against (defaults to `requests`). */
+  meterName?: string
+  /**
+   * @deprecated Use `meterName`. Still accepted as an alias of the meter name.
+   */
   usageType?: 'requests' | 'tokens'
 }
 

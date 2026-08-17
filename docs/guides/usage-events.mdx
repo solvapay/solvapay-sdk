@@ -5,13 +5,9 @@ description: 'Record metered customer usage, debit credits, grant credits, and r
 
 ## What are usage events?
 
-A usage event represents customer consumption in your app, such as an API call, token spend, or
-document generation.
-
-Usage events are distinct from [meter events](/meters/events):
-
-- Usage events: customer-level metering and credit debit for SDK integrations
-- Meter events: billing and limit enforcement
+A usage event is one recorded data point against a meter — an API request, token spend, or
+document generation. The HTTP path stays `POST /v1/sdk/meter-events`. See
+[Plans and billing glossary](/plans/glossary) for the meter noun and credit peg.
 
 ## Record usage
 
@@ -150,5 +146,5 @@ Use both when needed:
 
 - [Core concepts](../setup/core-concepts)
 - [Auto-recharge](./auto-recharge) — automatic balance refills when credits run low
-- [Meters overview](/meters/overview)
+- [Plans and billing glossary](/plans/glossary)
 - [Webhook handling](./webhooks) — `customer.credit.*` and `usage.*` events
