@@ -123,6 +123,7 @@ export interface CreateTestPlanOptions {
   freeUnits?: number
   limit?: number
   creditsPerUnit?: number
+  /** Auto-assign only when the plan is free. Paid + `true` throws. */
   isDefault?: boolean
 }
 
@@ -185,7 +186,8 @@ export function buildTestPlanOptions(opts: CreateTestPlanOptions): WireOption[] 
   }
 
   if (planType === 'usage-based' || planType === 'hybrid') {
-    // Pure-metered trials omit a positive per-unit rate (creditsPerUnit 0 / absent).
+    // `creditsPerUnit` here is the wire per-unit charge in minor units
+    // (1 = 1¢ = 100 credits). Pure-metered trials omit a positive rate.
     const amountMinor = opts.creditsPerUnit ?? 0
     options.push({
       kind: 'charge',
@@ -206,7 +208,22 @@ export function buildTestPlanOptions(opts: CreateTestPlanOptions): WireOption[] 
     }
   }
 
-  if (opts.isDefault ?? true) {
+  const charges =
+    planType === 'hybrid' ||
+    (planType === 'usage-based' && (opts.creditsPerUnit ?? 0) > 0) ||
+    ((planType === 'recurring' || planType === 'one-time') &&
+      (opts.price ??
+        opts.pricingOptions?.find(o => o.default)?.price ??
+        opts.pricingOptions?.[0]?.price ??
+        0) > 0)
+
+  if (opts.isDefault === true && charges) {
+    throw new Error(
+      'Only free plans can be auto-assigned — a plan that charges per unit or has a positive price requires explicit customer activation',
+    )
+  }
+
+  if (!charges && (opts.isDefault ?? true)) {
     options.push({ kind: 'autoAssigned' })
   }
 
