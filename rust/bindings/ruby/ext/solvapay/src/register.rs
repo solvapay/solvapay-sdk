@@ -5,6 +5,7 @@ use magnus::prelude::*;
 use magnus::{function, method, Error, RClass, RModule};
 
 use crate::client::SolvaPayClient;
+use crate::decisions::assert_valid_product_ref_binding;
 use crate::decisions::attach_business_details_validation_error_binding;
 use crate::decisions::build_create_customer_params_binding;
 use crate::decisions::build_gate_message_binding;
@@ -20,6 +21,7 @@ use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::decide_paywall_outcome_binding;
 use crate::decisions::evaluate_cached_limits_binding;
 use crate::decisions::evaluate_fresh_limits_binding;
+use crate::decisions::evaluate_product_readiness_binding;
 use crate::decisions::extract_backend_customer_ref_binding;
 use crate::decisions::is_cached_customer_ref_valid_binding;
 use crate::decisions::is_email_conflict_binding;
@@ -31,6 +33,7 @@ use crate::decisions::paywall_error_to_client_payload_binding;
 use crate::decisions::project_payment_intent_result_binding;
 use crate::decisions::project_topup_process_outcome_binding;
 use crate::decisions::project_usage_snapshot_binding;
+use crate::decisions::require_product_ref_binding;
 use crate::decisions::resolve_check_limits_params_binding;
 use crate::decisions::resolve_fallback_gate_limits_binding;
 use crate::decisions::resolve_product_ref_binding;
@@ -228,7 +231,19 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "paywall_error_to_client_payload",
         function!(paywall_error_to_client_payload_binding, 1),
     )?;
+    native.define_singleton_method(
+        "require_product_ref",
+        function!(require_product_ref_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "evaluate_product_readiness",
+        function!(evaluate_product_readiness_binding, 1),
+    )?;
     native.define_singleton_method("retry_next_delay_ms", function!(retry_next_delay_ms, 1))?;
+    native.define_singleton_method(
+        "assert_valid_product_ref",
+        function!(assert_valid_product_ref_binding, 1),
+    )?;
     native.define_singleton_method(
         "validate_business_details",
         function!(validate_business_details_binding, 1),

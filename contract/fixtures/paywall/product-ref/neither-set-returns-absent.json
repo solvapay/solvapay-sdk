@@ -1,6 +1,6 @@
 {
   "suite": "paywall",
-  "case": "resolve-default",
+  "case": "product-ref-neither-set-returns-absent",
   "input": {
     "fn": "resolveProductRef",
     "args": {}

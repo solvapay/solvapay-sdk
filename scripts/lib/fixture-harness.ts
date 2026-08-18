@@ -16,6 +16,8 @@ import {
   getTaxIdExample,
   getTaxIdFieldLabel,
   getTaxIdHelperText,
+  evaluateProductReadiness,
+  assertValidProductRef,
   installNativeCoreApi,
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
@@ -83,6 +85,7 @@ import {
   projectUsageSnapshot,
   resolveCheckLimitsParams,
   resolveProductRef,
+  requireProductRef,
   resolvePurchaseCustomerRef,
   resolveReturnUrl,
   selectActivePurchases,
@@ -1865,12 +1868,16 @@ export function createDefaultRegistry(): FixtureRegistry {
   registry.register('resolveCheckLimitsParams', {
     id: 'core',
     invoke: args => {
-      if (!isNullableString(args.productRef) || !isNullableString(args.meterName)) {
+      if (
+        !isNullableString(args.productRef) ||
+        !isNullableString(args.meterName) ||
+        !isNullableString(args.usageType)
+      ) {
         throw new Error(
-          'resolveCheckLimitsParams args.productRef/meterName must be string, null, or omitted',
+          'resolveCheckLimitsParams args.productRef/meterName/usageType must be string, null, or omitted',
         )
       }
-      return resolveCheckLimitsParams(args.productRef, args.meterName)
+      return resolveCheckLimitsParams(args.productRef, args.meterName, args.usageType)
     },
   })
 
@@ -1940,6 +1947,45 @@ export function createDefaultRegistry(): FixtureRegistry {
         )
       }
       return resolveProductRef(args.metadataProduct, args.envProduct)
+    },
+  })
+
+  registry.register('requireProductRef', {
+    id: 'core',
+    invoke: args => {
+      if (!isNullableString(args.metadataProduct) || !isNullableString(args.envProduct)) {
+        throw new Error(
+          'requireProductRef args.metadataProduct/envProduct must be string, null, or omitted',
+        )
+      }
+      return requireProductRef(args.metadataProduct, args.envProduct)
+    },
+  })
+
+  registry.register('evaluateProductReadiness', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.status !== 'string') {
+        throw new Error('evaluateProductReadiness args.status must be a string')
+      }
+      if (args.plans !== undefined && !Array.isArray(args.plans)) {
+        throw new Error('evaluateProductReadiness args.plans must be an array when provided')
+      }
+      return evaluateProductReadiness({
+        status: args.status,
+        plans: args.plans as Array<{ isActive: boolean }> | undefined,
+      })
+    },
+  })
+
+  registry.register('assertValidProductRef', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.productRef !== 'string' || typeof args.context !== 'string') {
+        throw new Error('assertValidProductRef args.productRef and args.context must be strings')
+      }
+      assertValidProductRef(args.productRef, args.context)
+      return null
     },
   })
 

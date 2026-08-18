@@ -136,6 +136,9 @@ export declare class NativeClient {
  */
 export declare function assertResponseResult(argsJson: string): string
 
+/** Binding for `assertValidProductRef`. Throws on empty, placeholder, or non-prd_ refs. */
+export declare function assertValidProductRef(argsJson: string): string
+
 /** Binding for `attachBusinessDetailsValidationError`. */
 export declare function attachBusinessDetailsValidationError(argsJson: string): string
 
@@ -198,6 +201,9 @@ export declare function evaluateCachedLimits(argsJson: string): string
 
 /** Binding for `evaluateFreshLimits`. */
 export declare function evaluateFreshLimits(argsJson: string): string
+
+/** Binding for `evaluateProductReadiness`. */
+export declare function evaluateProductReadiness(argsJson: string): string
 
 /** Binding for `extractBackendCustomerRef`. */
 export declare function extractBackendCustomerRef(argsJson: string): string
@@ -285,10 +291,13 @@ export declare function projectTopupProcessOutcome(argsJson: string): string
 /** Binding for `projectUsageSnapshot`. */
 export declare function projectUsageSnapshot(argsJson: string): string
 
+/** Binding for `requireProductRef`. Throws when neither source is set. */
+export declare function requireProductRef(argsJson: string): string
+
 /**
  * Binding for `resolveCheckLimitsParams`.
  *
- * Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
+ * Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is meterName, then usageType, then `requests`.
  */
 export declare function resolveCheckLimitsParams(argsJson: string): string
 

@@ -109,7 +109,10 @@ export type NativeSyncMethod =
   | 'buildNudgeMessage'
   | 'buildPaywallGate'
   | 'paywallErrorToClientPayload'
+  | 'requireProductRef'
+  | 'evaluateProductReadiness'
   | 'retryNextDelayMs'
+  | 'assertValidProductRef'
   // Step 37R-d — @solvapay/core pure logic
   | 'validateBusinessDetails'
   | 'deriveTaxIdType'

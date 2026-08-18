@@ -8,6 +8,7 @@
 import { describe, expectTypeOf, it } from 'vitest'
 import type { SolvaPayClient } from '../client'
 import type { SolvaPayClientGenerated } from '../client.generated'
+import type { components, operations } from '../generated'
 
 type Hand = SolvaPayClient
 type Gen = SolvaPayClientGenerated
@@ -37,5 +38,30 @@ describe('SolvaPayClient ↔ SolvaPayClientGenerated API-diff', () => {
   it('interfaces are mutually assignable (drop-in compatible)', () => {
     expectTypeOf<Hand>().toExtend<Gen>()
     expectTypeOf<Gen>().toExtend<Hand>()
+  })
+
+  it('LimitResponse carries onExceed outcome flags', () => {
+    type Flags = Pick<
+      components['schemas']['LimitResponse'],
+      'throttled' | 'overage' | 'needsTopUp' | 'needsUpgrade' | 'upgraded'
+    >
+    expectTypeOf<Flags>().toEqualTypeOf<{
+      throttled?: boolean
+      overage?: boolean
+      needsTopUp?: boolean
+      needsUpgrade?: boolean
+      upgraded?: boolean
+    }>()
+  })
+
+  it('product schemas expose isManagedMcp', () => {
+    expectTypeOf<components['schemas']['SdkProductResponse']['isManagedMcp']>().toEqualTypeOf<boolean>()
+  })
+
+  it('listPurchases accepts includeFree', () => {
+    type Params = NonNullable<
+      operations['PurchaseSdkController_listPurchases']['parameters']['query']
+    >
+    expectTypeOf<Params>().toMatchTypeOf<{ includeFree?: boolean }>()
   })
 })

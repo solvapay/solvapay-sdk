@@ -1,0 +1,18 @@
+{
+  "suite": "helper-limits",
+  "case": "meter-name-wins-usage-type",
+  "input": {
+    "fn": "resolveCheckLimitsParams",
+    "args": {
+      "productRef": "prd_1",
+      "meterName": "api_calls",
+      "usageType": "tokens"
+    }
+  },
+  "expect": {
+    "result": {
+      "productRef": "prd_1",
+      "meterName": "api_calls"
+    }
+  }
+}

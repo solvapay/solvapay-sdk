@@ -259,10 +259,12 @@ export function projectUsageSnapshot(
 export function resolveCheckLimitsParams(
   productRef: string | null | undefined,
   meterName: string | null | undefined,
+  usageType?: string | null,
 ): CheckLimitsParams | LimitsHelperError {
   return dispatchSync('resolveCheckLimitsParams', {
     productRef: productRef ?? null,
     meterName: meterName ?? null,
+    usageType: usageType ?? null,
   })
 }
 
@@ -307,8 +309,18 @@ export function validateGetProductParams(
 export function resolveProductRef(
   metadataProduct?: string | null,
   envProduct?: string | null,
-): string {
+): string | null {
   return dispatchSync('resolveProductRef', {
+    metadataProduct: metadataProduct ?? null,
+    envProduct: envProduct ?? null,
+  })
+}
+
+export function requireProductRef(
+  metadataProduct?: string | null,
+  envProduct?: string | null,
+): string {
+  return dispatchSync('requireProductRef', {
     metadataProduct: metadataProduct ?? null,
     envProduct: envProduct ?? null,
   })

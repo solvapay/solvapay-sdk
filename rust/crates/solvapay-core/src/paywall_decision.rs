@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::error::SdkError;
 use crate::paywall_gate::{build_paywall_gate, PaywallGate, PaywallGateLimits};
 use crate::serde_util::serialize_whole_f64;
 
@@ -54,15 +55,37 @@ pub enum PaywallOutcome {
 /// # Arguments
 ///
 /// * `metadata_product` - Product from paywall metadata.
-/// * `env_product` - Product from host env (`SOLVAPAY_PRODUCT`).
+/// * `env_product` - Product from host env (`SOLVAPAY_PRODUCT_REF`).
 ///
 /// # Returns
 ///
-/// Resolved product reference string.
-pub fn resolve_product_ref(metadata_product: Option<&str>, env_product: Option<&str>) -> String {
-    js_or_str(metadata_product)
-        .or_else(|| js_or_str(env_product))
-        .unwrap_or_else(|| "default-product".to_owned())
+/// Resolved product reference, or `None` when neither side is set.
+pub fn resolve_product_ref(
+    metadata_product: Option<&str>,
+    env_product: Option<&str>,
+) -> Option<String> {
+    js_or_str(metadata_product).or_else(|| js_or_str(env_product))
+}
+
+/// Frozen message when payable/paywall cannot resolve a product ref.
+pub const MISSING_PRODUCT_REF_MESSAGE: &str =
+    "No product ref resolved. Pass productRef to payable() or set SOLVAPAY_PRODUCT_REF. \
+Run `npx solvapay doctor` to diagnose.";
+
+/// Resolve a product ref or return a structured API error.
+///
+/// # Errors
+///
+/// Returns [`SdkError::Api`] when neither argument is a non-empty string.
+pub fn require_product_ref(
+    metadata_product: Option<&str>,
+    env_product: Option<&str>,
+) -> Result<String, SdkError> {
+    resolve_product_ref(metadata_product, env_product).ok_or_else(|| SdkError::Api {
+        message: MISSING_PRODUCT_REF_MESSAGE.to_owned(),
+        status: None,
+        code: Some("missing_product_ref".to_owned()),
+    })
 }
 
 /// Evaluate a fresh cache-hit `remaining` value.
@@ -192,24 +215,42 @@ mod tests {
     #[test]
     fn resolve_metadata_wins() {
         assert_eq!(
-            resolve_product_ref(Some("prd_meta"), Some("prd_env")),
-            "prd_meta"
+            resolve_product_ref(Some("prd_meta"), Some("prd_env")).as_deref(),
+            Some("prd_meta")
         );
     }
 
     #[test]
     fn resolve_env_fallback() {
-        assert_eq!(resolve_product_ref(None, Some("prd_env")), "prd_env");
+        assert_eq!(
+            resolve_product_ref(None, Some("prd_env")).as_deref(),
+            Some("prd_env")
+        );
     }
 
     #[test]
-    fn resolve_default() {
-        assert_eq!(resolve_product_ref(None, None), "default-product");
+    fn resolve_neither_set_returns_absent() {
+        assert_eq!(resolve_product_ref(None, None), None);
     }
 
     #[test]
     fn resolve_empty_string_falls_through() {
-        assert_eq!(resolve_product_ref(Some(""), Some("prd_env")), "prd_env");
+        assert_eq!(
+            resolve_product_ref(Some(""), Some("prd_env")).as_deref(),
+            Some("prd_env")
+        );
+    }
+
+    #[test]
+    fn require_missing_throws() {
+        let err = require_product_ref(None, None).unwrap_err();
+        match err {
+            SdkError::Api { message, code, .. } => {
+                assert_eq!(message, MISSING_PRODUCT_REF_MESSAGE);
+                assert_eq!(code.as_deref(), Some("missing_product_ref"));
+            }
+            other => panic!("expected Api error, got {other:?}"),
+        }
     }
 
     #[test]

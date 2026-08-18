@@ -28,6 +28,7 @@ pub mod paywall_payload;
 pub mod paywall_state;
 pub mod plans;
 pub mod product;
+pub mod product_readiness;
 pub mod purchase;
 pub mod renewal;
 pub mod retry;
@@ -83,9 +84,9 @@ pub use payment::{
     TopupProcessOutcome,
 };
 pub use paywall_decision::{
-    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits,
+    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits, require_product_ref,
     resolve_fallback_gate_limits, resolve_product_ref, CachedLimitsEvaluation,
-    FreshLimitsEvaluation, PaywallOutcome,
+    FreshLimitsEvaluation, PaywallOutcome, MISSING_PRODUCT_REF_MESSAGE,
 };
 pub use paywall_gate::{build_paywall_gate, PaywallGate, PaywallGateKind, PaywallGateLimits};
 pub use paywall_payload::{paywall_client_payload, PaywallClientPayload};
@@ -95,6 +96,10 @@ pub use paywall_state::{
 };
 pub use plans::validate_list_plans_params;
 pub use product::validate_get_product_params;
+pub use product_readiness::{
+    assert_valid_product_ref, evaluate_product_readiness, ProductReadinessInput,
+    ProductReadinessPlan, ProductReadinessResult, SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
+};
 pub use purchase::{
     is_cached_customer_ref_valid, resolve_purchase_customer_ref, select_active_purchases,
 };

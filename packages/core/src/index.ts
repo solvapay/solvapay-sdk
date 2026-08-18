@@ -146,6 +146,7 @@ export {
   evaluateFreshLimits,
   resolveFallbackGateLimits,
   resolveProductRef,
+  requireProductRef,
 } from './native-helpers'
 
 export {

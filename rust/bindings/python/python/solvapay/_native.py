@@ -93,7 +93,10 @@ SyncMethod = Literal[
     "build_nudge_message",
     "build_paywall_gate",
     "paywall_error_to_client_payload",
+    "require_product_ref",
+    "evaluate_product_readiness",
     "retry_next_delay_ms",
+    "assert_valid_product_ref",
     # --- @solvapay/core pure logic ---
     "validate_business_details",
     "derive_tax_id_type",

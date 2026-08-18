@@ -1,0 +1,18 @@
+{
+  "suite": "product-readiness",
+  "case": "no-plans",
+  "input": {
+    "fn": "evaluateProductReadiness",
+    "args": {
+      "status": "active"
+    }
+  },
+  "expect": {
+    "result": {
+      "ready": false,
+      "issues": ["no plans defined — customers have nothing to purchase"],
+      "activePlans": 0,
+      "totalPlans": 0
+    }
+  }
+}

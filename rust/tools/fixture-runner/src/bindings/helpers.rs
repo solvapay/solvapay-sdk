@@ -9,18 +9,20 @@ use solvapay_core::{
     map_route_error, normalize_cancel_response, normalize_reactivate_response,
     project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
     resolve_authenticated_user, resolve_check_limits_params, resolve_product_ref,
+    require_product_ref, evaluate_product_readiness, assert_valid_product_ref,
     resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
     validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, AuthResolutionInput, PaymentIntentSource,
-    RouteErrorInput, RouteErrorKind,
+    ProductReadinessInput, RouteErrorInput, RouteErrorKind,
 };
 
 use super::webhook::parse_iso8601_utc_to_unix_secs;
 use crate::model::FixtureInput;
 use crate::runner::{args_object, require_string_arg, BindingError};
+use crate::sdk_error::sdk_error_to_observation;
 
 /// Binding for `resolveAuthenticatedUser`.
 ///
@@ -367,7 +369,12 @@ pub fn invoke_project_usage_snapshot(input: &FixtureInput) -> Result<Value, Bind
 pub fn invoke_resolve_check_limits_params(input: &FixtureInput) -> Result<Value, BindingError> {
     let product_ref = optional_string_arg(input, "productRef")?;
     let meter_name = optional_string_arg(input, "meterName")?;
-    match resolve_check_limits_params(product_ref.as_deref(), meter_name.as_deref()) {
+    let usage_type = optional_string_arg(input, "usageType")?;
+    match resolve_check_limits_params(
+        product_ref.as_deref(),
+        meter_name.as_deref(),
+        usage_type.as_deref(),
+    ) {
         Ok(params) => {
             serde_json::to_value(params).map_err(|e| BindingError::Harness(e.to_string()))
         }
@@ -430,10 +437,39 @@ pub fn invoke_validate_get_product_params(input: &FixtureInput) -> Result<Value,
 pub fn invoke_resolve_product_ref(input: &FixtureInput) -> Result<Value, BindingError> {
     let metadata_product = optional_string_arg(input, "metadataProduct")?;
     let env_product = optional_string_arg(input, "envProduct")?;
-    Ok(Value::String(resolve_product_ref(
-        metadata_product.as_deref(),
-        env_product.as_deref(),
-    )))
+    match resolve_product_ref(metadata_product.as_deref(), env_product.as_deref()) {
+        Some(value) => Ok(Value::String(value)),
+        None => Ok(Value::Null),
+    }
+}
+
+/// Binding for `requireProductRef`.
+pub fn invoke_require_product_ref(input: &FixtureInput) -> Result<Value, BindingError> {
+    let metadata_product = optional_string_arg(input, "metadataProduct")?;
+    let env_product = optional_string_arg(input, "envProduct")?;
+    match require_product_ref(metadata_product.as_deref(), env_product.as_deref()) {
+        Ok(value) => Ok(Value::String(value)),
+        Err(err) => Err(BindingError::Sdk(sdk_error_to_observation(err))),
+    }
+}
+
+/// Binding for `evaluateProductReadiness`.
+pub fn invoke_evaluate_product_readiness(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_object(input);
+    let product: ProductReadinessInput =
+        serde_json::from_value(args).map_err(|e| BindingError::Harness(e.to_string()))?;
+    serde_json::to_value(evaluate_product_readiness(&product))
+        .map_err(|e| BindingError::Harness(e.to_string()))
+}
+
+/// Binding for `assertValidProductRef`.
+pub fn invoke_assert_valid_product_ref(input: &FixtureInput) -> Result<Value, BindingError> {
+    let product_ref = require_string_arg(input, "productRef")?;
+    let context = require_string_arg(input, "context")?;
+    match assert_valid_product_ref(&product_ref, &context) {
+        Ok(()) => Ok(Value::Null),
+        Err(err) => Err(BindingError::Sdk(sdk_error_to_observation(err))),
+    }
 }
 
 /// Binding for `evaluateCachedLimits`.

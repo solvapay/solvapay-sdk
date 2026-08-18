@@ -47,6 +47,7 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'McpAdapter',
   'Adapter',
   'createVirtualTools',
+  'verifyProductConfiguration',
   'VIRTUAL_TOOL_DEFINITIONS',
   'registerVirtualToolsMcp',
   'registerVirtualToolsMcpImpl',

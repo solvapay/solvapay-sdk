@@ -1,8 +1,7 @@
-import { SolvaPayError } from '@solvapay/core'
-
-const MISSING_PRODUCT_REF_MESSAGE =
-  'No product ref resolved. Pass productRef to payable() or set SOLVAPAY_PRODUCT_REF. ' +
-  'Run `npx solvapay doctor` to diagnose.'
+import {
+  requireProductRef as requireProductRefNative,
+  resolveProductRef as resolveProductRefNative,
+} from './native-decisions'
 
 function readEnvProductRef(): string | undefined {
   if (typeof process === 'undefined') return undefined
@@ -11,15 +10,11 @@ function readEnvProductRef(): string | undefined {
 
 /** Resolve an explicit option or `SOLVAPAY_PRODUCT_REF`. Does not throw. */
 export function resolveProductRef(explicit?: string): string | undefined {
-  if (explicit) return explicit
-  return readEnvProductRef()
+  const resolved = resolveProductRefNative(explicit, readEnvProductRef())
+  return resolved ?? undefined
 }
 
 /** Resolve a product ref or throw a named `SolvaPayError`. */
 export function requireProductRef(explicit?: string): string {
-  const resolved = resolveProductRef(explicit)
-  if (!resolved) {
-    throw new SolvaPayError(MISSING_PRODUCT_REF_MESSAGE)
-  }
-  return resolved
+  return requireProductRefNative(explicit, readEnvProductRef())
 }

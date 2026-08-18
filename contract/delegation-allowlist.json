@@ -42,6 +42,11 @@
     },
     {
       "package": "@solvapay/core",
+      "symbol": "SOLVAPAY_PRODUCT_REF_PLACEHOLDER",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/core",
       "symbol": "SolvaPayError",
       "reason": "section-8-exclusion"
     },
@@ -249,6 +254,11 @@
       "package": "@solvapay/server",
       "symbol": "trackUsageCore",
       "reason": "host-orchestration-decisions-delegated"
+    },
+    {
+      "package": "@solvapay/server",
+      "symbol": "verifyProductConfiguration",
+      "reason": "section-8-exclusion"
     },
     {
       "package": "@solvapay/server",

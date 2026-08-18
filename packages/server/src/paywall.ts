@@ -7,6 +7,7 @@
  * - Class-based and functional programming
  */
 
+import { SolvaPayError } from '@solvapay/core'
 import type {
   LimitResponseWithPlan,
   PaywallArgs,
@@ -27,7 +28,8 @@ import {
   extractBackendCustomerRef,
   isEmailConflict,
   paywallErrorToClientPayload as paywallErrorToClientPayloadDispatch,
-  resolveProductRef,
+  requireProductRef,
+  resolveCheckLimitsParams,
 } from './native-decisions'
 import { buildPaywallGate } from './paywall-gate'
 import { withRetry, createRequestDeduplicator } from './utils'
@@ -209,7 +211,15 @@ export class SolvaPayPaywall {
   }
 
   private resolveProduct(metadata: PaywallMetadata): string {
-    return resolveProductRef(metadata.product, process.env.SOLVAPAY_PRODUCT)
+    return requireProductRef(metadata.product, process.env.SOLVAPAY_PRODUCT_REF)
+  }
+
+  private resolveMeterName(product: string, metadata: PaywallMetadata): string {
+    const resolved = resolveCheckLimitsParams(product, metadata.meterName, metadata.usageType)
+    if ('error' in resolved) {
+      throw new SolvaPayError(resolved.error)
+    }
+    return resolved.meterName
   }
 
   private generateRequestId(): string {
@@ -240,7 +250,7 @@ export class SolvaPayPaywall {
     getCustomerRef?: (args: TArgs) => string,
   ): Promise<PaywallDecision<TArgs>> {
     const product = this.resolveProduct(metadata)
-    const usageType = metadata.usageType || 'requests'
+    const usageType = this.resolveMeterName(product, metadata)
     const requestId = this.generateRequestId()
     const startTime = Date.now()
 
@@ -397,7 +407,7 @@ export class SolvaPayPaywall {
     args: TArgs,
   ): Promise<TResult> {
     const product = this.resolveProduct(metadata)
-    const usageType = metadata.usageType || 'requests'
+    const usageType = this.resolveMeterName(product, metadata)
     const requestId = this.generateRequestId()
     const startTime = Date.now()
 

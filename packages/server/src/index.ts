@@ -234,6 +234,7 @@ export {
   resolveCheckLimitsParams,
   resolveFallbackGateLimits,
   resolveProductRef,
+  requireProductRef,
   resolvePurchaseCustomerRef,
   resolveReturnUrl,
   retryNextDelayMs,

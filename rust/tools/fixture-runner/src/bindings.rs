@@ -577,6 +577,27 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "requireProductRef",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_require_product_ref),
+        },
+    );
+    registry.register(
+        "evaluateProductReadiness",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_evaluate_product_readiness),
+        },
+    );
+    registry.register(
+        "assertValidProductRef",
+        Binding {
+            id: "core",
+            invoke: Box::new(helpers::invoke_assert_valid_product_ref),
+        },
+    );
+    registry.register(
         "evaluateCachedLimits",
         Binding {
             id: "core",

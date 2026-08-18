@@ -59,6 +59,7 @@ const {
 export default __napiModule.exports
 export const NativeClient = __napiModule.exports.NativeClient
 export const assertResponseResult = __napiModule.exports.assertResponseResult
+export const assertValidProductRef = __napiModule.exports.assertValidProductRef
 export const attachBusinessDetailsValidationError = __napiModule.exports.attachBusinessDetailsValidationError
 export const buildCreateCustomerParams = __napiModule.exports.buildCreateCustomerParams
 export const buildGateMessage = __napiModule.exports.buildGateMessage
@@ -80,6 +81,7 @@ export const deriveIcons = __napiModule.exports.deriveIcons
 export const deriveTaxIdType = __napiModule.exports.deriveTaxIdType
 export const evaluateCachedLimits = __napiModule.exports.evaluateCachedLimits
 export const evaluateFreshLimits = __napiModule.exports.evaluateFreshLimits
+export const evaluateProductReadiness = __napiModule.exports.evaluateProductReadiness
 export const extractBackendCustomerRef = __napiModule.exports.extractBackendCustomerRef
 export const getBusinessCountryOptions = __napiModule.exports.getBusinessCountryOptions
 export const getSellerTaxIdentifierDisplayLabel = __napiModule.exports.getSellerTaxIdentifierDisplayLabel
@@ -103,6 +105,7 @@ export const paywallToolResult = __napiModule.exports.paywallToolResult
 export const projectPaymentIntentResult = __napiModule.exports.projectPaymentIntentResult
 export const projectTopupProcessOutcome = __napiModule.exports.projectTopupProcessOutcome
 export const projectUsageSnapshot = __napiModule.exports.projectUsageSnapshot
+export const requireProductRef = __napiModule.exports.requireProductRef
 export const resolveCheckLimitsParams = __napiModule.exports.resolveCheckLimitsParams
 export const resolveFallbackGateLimits = __napiModule.exports.resolveFallbackGateLimits
 export const resolveProductRef = __napiModule.exports.resolveProductRef

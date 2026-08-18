@@ -103,7 +103,10 @@ export type WasmSyncMethod =
   | 'buildNudgeMessage'
   | 'buildPaywallGate'
   | 'paywallErrorToClientPayload'
+  | 'requireProductRef'
+  | 'evaluateProductReadiness'
   | 'retryNextDelayMs'
+  | 'assertValidProductRef'
   // @solvapay/core pure logic
   | 'validateBusinessDetails'
   | 'deriveTaxIdType'

@@ -2726,6 +2726,63 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+  evaluateProductReadiness:
+    names:
+      ts: evaluateProductReadiness
+      py: evaluate_product_readiness
+      rb: evaluate_product_readiness
+      go: EvaluateProductReadiness
+      rust: evaluate_product_readiness
+    params: []
+    docs:
+      summary: 'Evaluate whether a product can be sold (active status plus an active plan).'
+      params:
+        options: 'Product status and plans.'
+      returns: 'Readiness result with issues and plan counts.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  assertValidProductRef:
+    names:
+      ts: assertValidProductRef
+      py: assert_valid_product_ref
+      rb: assert_valid_product_ref
+      go: AssertValidProductRef
+      rust: assert_valid_product_ref
+    params: []
+    docs:
+      summary: 'Reject empty, placeholder, or non-prd_ product refs at construction time.'
+      params:
+        options: 'Product ref and call-site context name.'
+      returns: 'Throws when the ref is not a real prd_ identifier.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  requireProductRef:
+    names:
+      ts: requireProductRef
+      py: require_product_ref
+      rb: require_product_ref
+      go: RequireProductRef
+      rust: require_product_ref
+    params: []
+    docs:
+      summary: 'Resolve a product ref from metadata or env, or throw a named missing-ref error.'
+      params:
+        options: 'Optional metadata product and env product strings.'
+      returns: 'A product ref string, or throws when neither is set.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
 
 facade:
   createSolvaPay:
@@ -5358,6 +5415,11 @@ bindings:
         required: false
         extract: optionalString
         local: meter_name
+      - name: usageType
+        type: 'string?'
+        required: false
+        extract: optionalString
+        local: usage_type
     splitPathRefs: []
     return: value
     sync: sync
@@ -5370,7 +5432,7 @@ bindings:
 
 
       Ok and Err ([`HelperErrorResult`]) both serialize as the envelope
-      **value**.
+      **value**. Precedence is meterName, then usageType, then `requests`.
     rustFnName: resolve_check_limits_params_binding
     call:
       kind: wrap
@@ -5378,6 +5440,7 @@ bindings:
       args:
         - product_ref.as_deref()
         - meter_name.as_deref()
+        - usage_type.as_deref()
     coreCall: resolve_check_limits_params
     docWasm: Binding for `resolveCheckLimitsParams`.
   resolveFallbackGateLimits:
@@ -5443,11 +5506,122 @@ bindings:
     rustFnName: resolve_product_ref_binding
     call:
       kind: wrap
-      serialize: valueString
+      serialize: toValue
       args:
         - metadata_product.as_deref()
         - env_product.as_deref()
     coreCall: resolve_product_ref
+  requireProductRef:
+    core: solvapay_core::paywall_decision::require_product_ref
+    names:
+      ts: requireProductRef
+      py: require_product_ref
+      rb: require_product_ref
+      go: RequireProductRef
+      rust: require_product_ref
+    catalog:
+      kind: coreHelper
+      id: requireProductRef
+    args:
+      - name: metadataProduct
+        type: 'string?'
+        required: false
+        extract: optionalString
+        local: metadata_product
+      - name: envProduct
+        type: 'string?'
+        required: false
+        extract: optionalString
+        local: env_product
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 40
+    section: paywall-decision
+    doc: Binding for `requireProductRef`. Throws when neither source is set.
+    rustFnName: require_product_ref_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let metadata_product = optional_string(&args, "metadataProduct")?;
+              let env_product = optional_string(&args, "envProduct")?;
+              Ok(Value::String(require_product_ref(
+                  metadata_product.as_deref(),
+                  env_product.as_deref(),
+              )?))
+    coreCall: require_product_ref
+  evaluateProductReadiness:
+    core: solvapay_core::product_readiness::evaluate_product_readiness
+    names:
+      ts: evaluateProductReadiness
+      py: evaluate_product_readiness
+      rb: evaluate_product_readiness
+      go: EvaluateProductReadiness
+      rust: evaluate_product_readiness
+    catalog:
+      kind: coreHelper
+      id: evaluateProductReadiness
+    args: []
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 41
+    section: product-readiness
+    doc: Binding for `evaluateProductReadiness`.
+    rustFnName: evaluate_product_readiness_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let input: ProductReadinessInput = serde_json::from_str(&args_json).map_err(|err| {
+                  SdkError::transport(format!("invalid ProductReadinessInput: {err}"), false)
+              })?;
+              to_value(&evaluate_product_readiness(&input))
+    coreCall: evaluate_product_readiness
+  assertValidProductRef:
+    core: solvapay_core::product_readiness::assert_valid_product_ref
+    names:
+      ts: assertValidProductRef
+      py: assert_valid_product_ref
+      rb: assert_valid_product_ref
+      go: AssertValidProductRef
+      rust: assert_valid_product_ref
+    catalog:
+      kind: coreHelper
+      id: assertValidProductRef
+    args:
+      - name: productRef
+        type: string
+        required: true
+        extract: requireString
+        local: product_ref
+      - name: context
+        type: string
+        required: true
+        extract: requireString
+        local: context
+    splitPathRefs: []
+    return: value
+    sync: sync
+    envelope: sync
+    artifact: decisions
+    emitOrder: 42
+    section: product-readiness
+    doc: Binding for `assertValidProductRef`. Throws on empty, placeholder, or non-prd_ refs.
+    rustFnName: assert_valid_product_ref_binding
+    call:
+      kind: verbatim
+    verbatimBody: |-
+      let args = args_map(&args_json)?;
+              let product_ref = require_string(&args, "productRef")?;
+              let context = require_string(&args, "context")?;
+              assert_valid_product_ref(&product_ref, &context)?;
+              Ok(Value::Null)
+    coreCall: assert_valid_product_ref
   resolvePurchaseCustomerRef:
     core: solvapay_core::purchase::resolve_purchase_customer_ref
     names:

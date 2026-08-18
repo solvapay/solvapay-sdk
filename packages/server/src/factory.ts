@@ -28,6 +28,7 @@ import type {
 } from './types'
 import { createSolvaPayClient } from './client'
 import { PaywallError, SolvaPayPaywall, paywallErrorToClientPayload } from './paywall'
+import { resolveCheckLimitsParams } from './native-decisions'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
 import { requireProductRef, resolveProductRef } from './resolve-product-ref'
@@ -1050,9 +1051,11 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
       const product = resolveProductRef(options.productRef || options.product)
-
-      const usageType = options.meterName || options.usageType || 'requests'
-      const metadata = { product, meterName: usageType, usageType }
+      const metadata = {
+        product,
+        meterName: options.meterName,
+        usageType: options.usageType,
+      }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1153,11 +1156,15 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           const productRef = requireProductRef(
             decideMetadata.product || metadata.product || product,
           )
-          const meterName =
-            decision.limits.meterName ||
-            decideMetadata.meterName ||
-            decideMetadata.usageType ||
-            'requests'
+          const resolvedMeter = resolveCheckLimitsParams(
+            productRef,
+            decision.limits.meterName ?? decideMetadata.meterName,
+            decideMetadata.usageType,
+          )
+          if ('error' in resolvedMeter) {
+            throw new SolvaPayError(resolvedMeter.error)
+          }
+          const meterName = resolvedMeter.meterName
           const customerRef = decision.customerRef
           const ctx = gateOptions.ctx
 

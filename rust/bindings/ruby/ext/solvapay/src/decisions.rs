@@ -7,14 +7,15 @@
 
 use serde_json::Value;
 use solvapay_core::{
-    attach_business_details_validation_error, build_create_customer_params, build_gate_message,
-    build_nudge_message, build_paywall_gate, classify_cancel_error, classify_create_error,
-    classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, decide_paywall_outcome,
-    evaluate_cached_limits, evaluate_fresh_limits, extract_backend_customer_ref,
-    is_cached_customer_ref_valid, is_email_conflict, is_error_result, map_route_error,
-    normalize_cancel_response, normalize_reactivate_response, paywall_client_payload,
-    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
+    assert_valid_product_ref, attach_business_details_validation_error,
+    build_create_customer_params, build_gate_message, build_nudge_message, build_paywall_gate,
+    classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
+    classify_paywall_state, classify_reactivate_error, coerce_customer_options,
+    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits,
+    evaluate_product_readiness, extract_backend_customer_ref, is_cached_customer_ref_valid,
+    is_email_conflict, is_error_result, map_route_error, normalize_cancel_response,
+    normalize_reactivate_response, paywall_client_payload, project_payment_intent_result,
+    project_topup_process_outcome, project_usage_snapshot, require_product_ref,
     resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
     resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
     validate_activate_plan_params, validate_attach_business_details_params,
@@ -22,8 +23,8 @@ use solvapay_core::{
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, Backoff, GateContent, PaymentIntentSource, PaywallGate,
-    PaywallGateLimits, PaywallLimits, PaywallState, RetryPolicy, RouteErrorInput, RouteErrorKind,
-    SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
+    PaywallGateLimits, PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy,
+    RouteErrorInput, RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
 };
 
 use crate::args::{
@@ -362,15 +363,17 @@ pub fn project_usage_snapshot_binding(args_json: String) -> String {
 
 /// Binding for `resolveCheckLimitsParams`.
 ///
-/// Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
+/// Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is meterName, then usageType, then `requests`.
 pub fn resolve_check_limits_params_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;
         let product_ref = optional_string(&args, "productRef")?;
         let meter_name = optional_string(&args, "meterName")?;
+        let usage_type = optional_string(&args, "usageType")?;
         result_as_value(resolve_check_limits_params(
             product_ref.as_deref(),
             meter_name.as_deref(),
+            usage_type.as_deref(),
         ))
     })
 }
@@ -445,10 +448,10 @@ pub fn resolve_product_ref_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let metadata_product = optional_string(&args, "metadataProduct")?;
         let env_product = optional_string(&args, "envProduct")?;
-        Ok(Value::String(resolve_product_ref(
+        to_value(&resolve_product_ref(
             metadata_product.as_deref(),
             env_product.as_deref(),
-        )))
+        ))
     })
 }
 
@@ -551,6 +554,33 @@ pub fn paywall_error_to_client_payload_binding(args_json: String) -> String {
     })
 }
 
+// --- paywall-decision ---
+
+/// Binding for `requireProductRef`. Throws when neither source is set.
+pub fn require_product_ref_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let metadata_product = optional_string(&args, "metadataProduct")?;
+        let env_product = optional_string(&args, "envProduct")?;
+        Ok(Value::String(require_product_ref(
+            metadata_product.as_deref(),
+            env_product.as_deref(),
+        )?))
+    })
+}
+
+// --- product-readiness ---
+
+/// Binding for `evaluateProductReadiness`.
+pub fn evaluate_product_readiness_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let input: ProductReadinessInput = serde_json::from_str(&args_json).map_err(|err| {
+            SdkError::transport(format!("invalid ProductReadinessInput: {err}"), false)
+        })?;
+        to_value(&evaluate_product_readiness(&input))
+    })
+}
+
 // --- retry ---
 
 /// Binding for `retryNextDelayMs`.
@@ -594,6 +624,19 @@ pub fn retry_next_delay_ms(args_json: String) -> String {
                 Ok(Value::from(ms))
             }
         }
+    })
+}
+
+// --- product-readiness ---
+
+/// Binding for `assertValidProductRef`. Throws on empty, placeholder, or non-prd_ refs.
+pub fn assert_valid_product_ref_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let product_ref = require_string(&args, "productRef")?;
+        let context = require_string(&args, "context")?;
+        assert_valid_product_ref(&product_ref, &context)?;
+        Ok(Value::Null)
     })
 }
 

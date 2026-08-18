@@ -532,8 +532,10 @@ export const SHIM_JS_NAMES = [
   'classifyReactivateError',
   'coerceCustomerOptions',
   'decidePaywallOutcome',
+  'assertValidProductRef',
   'evaluateCachedLimits',
   'evaluateFreshLimits',
+  'evaluateProductReadiness',
   'extractBackendCustomerRef',
   'isCachedCustomerRefValid',
   'isEmailConflict',
@@ -547,6 +549,7 @@ export const SHIM_JS_NAMES = [
   'projectUsageSnapshot',
   'resolveCheckLimitsParams',
   'resolveFallbackGateLimits',
+  'requireProductRef',
   'resolveProductRef',
   'resolvePurchaseCustomerRef',
   'resolveReturnUrl',
@@ -624,6 +627,9 @@ export const BINDING_CATALOG_BOUNDARY_CORE_HELPERS = [
   'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE',
   'getSellerTaxIdentifierDisplayLabel',
   'resolveSellerIdentityDisplay',
+  'evaluateProductReadiness',
+  'assertValidProductRef',
+  'requireProductRef',
 ] as const
 
 export const SdkContractManifestSchema = z.object({

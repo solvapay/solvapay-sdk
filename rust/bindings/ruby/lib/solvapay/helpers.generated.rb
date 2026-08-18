@@ -3,6 +3,15 @@
 
 module SolvaPay
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = NativeDispatch.call_sync("SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE", {}).freeze
+  # Reject empty, placeholder, or non-prd_ product refs at construction time.
+  # @return Throws when the ref is not a real prd_ identifier.
+  def self.assert_valid_product_ref(product_ref:, context:)
+    args = {} #: Hash[String, untyped]
+    args["productRef"] = product_ref
+    args["context"] = context
+    NativeDispatch.call_sync("assert_valid_product_ref", args)
+  end
+
   # Build the human-readable paywall gate message from state and gate content.
   # @return Gate message string.
   def self.build_gate_message(input:)
@@ -52,6 +61,13 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["country"] = country
     NativeDispatch.call_sync("derive_tax_id_type", args)
+  end
+
+  # Evaluate whether a product can be sold (active status plus an active plan).
+  # @return Readiness result with issues and plan counts.
+  def self.evaluate_product_readiness
+    args = {} #: Hash[String, untyped]
+    NativeDispatch.call_sync("evaluate_product_readiness", args)
   end
 
   # Return the display label for a seller tax identifier type.
@@ -108,6 +124,15 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["error"] = error
     NativeDispatch.call_sync("paywall_error_to_client_payload", args)
+  end
+
+  # Resolve a product ref from metadata or env, or throw a named missing-ref error.
+  # @return A product ref string, or throws when neither is set.
+  def self.require_product_ref(metadata_product: nil, env_product: nil)
+    args = {} #: Hash[String, untyped]
+    args["metadataProduct"] = metadata_product unless metadata_product.nil?
+    args["envProduct"] = env_product unless env_product.nil?
+    NativeDispatch.call_sync("require_product_ref", args)
   end
 
   # Resolve seller identity fields into a display projection.

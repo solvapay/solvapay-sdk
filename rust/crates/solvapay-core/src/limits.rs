@@ -33,18 +33,25 @@ pub struct CheckLimitsParams {
 pub fn resolve_check_limits_params(
     product_ref: Option<&str>,
     meter_name: Option<&str>,
+    usage_type: Option<&str>,
 ) -> Result<CheckLimitsParams, HelperErrorResult> {
     let Some(product_ref) = product_ref.filter(|s| !s.is_empty()) else {
         return Err(HelperErrorResult::without_details(PRODUCT_REF_MISSING, 400));
     };
-    let meter = match meter_name {
-        Some(m) if !m.is_empty() => m.to_owned(),
-        _ => DEFAULT_METER_NAME.to_owned(),
-    };
+    let meter = js_or_str(meter_name)
+        .or_else(|| js_or_str(usage_type))
+        .unwrap_or_else(|| DEFAULT_METER_NAME.to_owned());
     Ok(CheckLimitsParams {
         product_ref: product_ref.to_owned(),
         meter_name: meter,
     })
+}
+
+fn js_or_str(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToOwned::to_owned)
 }
 
 #[cfg(test)]
@@ -60,33 +67,46 @@ mod tests {
 
     #[test]
     fn product_ref_missing() {
-        let err = resolve_check_limits_params(None, Some("requests")).unwrap_err();
+        let err = resolve_check_limits_params(None, Some("requests"), None).unwrap_err();
         assert_eq!(err.error, PRODUCT_REF_MISSING);
         assert_eq!(err.status, 400);
     }
 
     #[test]
     fn product_ref_empty() {
-        let err = resolve_check_limits_params(Some(""), Some("requests")).unwrap_err();
+        let err = resolve_check_limits_params(Some(""), Some("requests"), None).unwrap_err();
         assert_eq!(err.error, PRODUCT_REF_MISSING);
     }
 
     #[test]
     fn both_present() {
-        let params = resolve_check_limits_params(Some("prd_1"), Some("api_calls")).unwrap();
+        let params = resolve_check_limits_params(Some("prd_1"), Some("api_calls"), None).unwrap();
         assert_eq!(params.product_ref, "prd_1");
         assert_eq!(params.meter_name, "api_calls");
     }
 
     #[test]
     fn meter_name_defaults_when_absent() {
-        let params = resolve_check_limits_params(Some("prd_1"), None).unwrap();
+        let params = resolve_check_limits_params(Some("prd_1"), None, None).unwrap();
         assert_eq!(params.meter_name, DEFAULT_METER_NAME);
     }
 
     #[test]
     fn meter_name_defaults_when_empty() {
-        let params = resolve_check_limits_params(Some("prd_1"), Some("")).unwrap();
+        let params = resolve_check_limits_params(Some("prd_1"), Some(""), None).unwrap();
         assert_eq!(params.meter_name, DEFAULT_METER_NAME);
+    }
+
+    #[test]
+    fn usage_type_alias_when_meter_absent() {
+        let params = resolve_check_limits_params(Some("prd_1"), None, Some("tokens")).unwrap();
+        assert_eq!(params.meter_name, "tokens");
+    }
+
+    #[test]
+    fn meter_name_wins_over_usage_type() {
+        let params =
+            resolve_check_limits_params(Some("prd_1"), Some("api_calls"), Some("tokens")).unwrap();
+        assert_eq!(params.meter_name, "api_calls");
     }
 }

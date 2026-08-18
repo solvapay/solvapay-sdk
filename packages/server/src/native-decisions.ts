@@ -295,10 +295,12 @@ export function projectUsageSnapshot(
 export function resolveCheckLimitsParams(
   productRef: string | null | undefined,
   meterName: string | null | undefined,
+  usageType?: string | null,
 ): CheckLimitsParams | LimitsHelperError {
   return dispatchSync('resolveCheckLimitsParams', {
     productRef: productRef ?? null,
     meterName: meterName ?? null,
+    usageType: usageType ?? null,
   })
 }
 
@@ -339,11 +341,37 @@ export function validateGetProductParams(
 export function resolveProductRef(
   metadataProduct?: string | null,
   envProduct?: string | null,
-): string {
+): string | null {
   return dispatchSync('resolveProductRef', {
     metadataProduct: metadataProduct ?? null,
     envProduct: envProduct ?? null,
   })
+}
+
+export function requireProductRef(
+  metadataProduct?: string | null,
+  envProduct?: string | null,
+): string {
+  return dispatchSync('requireProductRef', {
+    metadataProduct: metadataProduct ?? null,
+    envProduct: envProduct ?? null,
+  })
+}
+
+export function evaluateProductReadiness(product: {
+  status: string
+  plans?: Array<{ isActive: boolean }>
+}): {
+  ready: boolean
+  issues: string[]
+  activePlans: number
+  totalPlans: number
+} {
+  return dispatchSync('evaluateProductReadiness', product)
+}
+
+export function assertValidProductRef(productRef: string, context: string): void {
+  dispatchSync('assertValidProductRef', { productRef, context })
 }
 
 export function evaluateCachedLimits(remaining: number): CachedLimitsEvaluation {

@@ -4,6 +4,7 @@
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
+use crate::decisions::assert_valid_product_ref_binding;
 use crate::decisions::attach_business_details_validation_error_binding;
 use crate::decisions::build_create_customer_params_binding;
 use crate::decisions::build_gate_message_binding;
@@ -19,6 +20,7 @@ use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::decide_paywall_outcome_binding;
 use crate::decisions::evaluate_cached_limits_binding;
 use crate::decisions::evaluate_fresh_limits_binding;
+use crate::decisions::evaluate_product_readiness_binding;
 use crate::decisions::extract_backend_customer_ref_binding;
 use crate::decisions::is_cached_customer_ref_valid_binding;
 use crate::decisions::is_email_conflict_binding;
@@ -30,6 +32,7 @@ use crate::decisions::paywall_error_to_client_payload_binding;
 use crate::decisions::project_payment_intent_result_binding;
 use crate::decisions::project_topup_process_outcome_binding;
 use crate::decisions::project_usage_snapshot_binding;
+use crate::decisions::require_product_ref_binding;
 use crate::decisions::resolve_check_limits_params_binding;
 use crate::decisions::resolve_fallback_gate_limits_binding;
 use crate::decisions::resolve_product_ref_binding;
@@ -138,7 +141,10 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
         paywall_error_to_client_payload_binding,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(require_product_ref_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(evaluate_product_readiness_binding, m)?)?;
     m.add_function(wrap_pyfunction!(retry_next_delay_ms, m)?)?;
+    m.add_function(wrap_pyfunction!(assert_valid_product_ref_binding, m)?)?;
     m.add_function(wrap_pyfunction!(validate_business_details_binding, m)?)?;
     m.add_function(wrap_pyfunction!(derive_tax_id_type_binding, m)?)?;
     m.add_function(wrap_pyfunction!(resolve_tax_behavior_binding, m)?)?;

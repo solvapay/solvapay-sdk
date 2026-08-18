@@ -144,6 +144,60 @@
       "verbatimBody": "let args = args_map(&args_json)?;\n        let value = args\n            .get(\"value\")\n            .cloned()\n            .ok_or_else(|| SdkError::transport(\"args.value is required\".to_owned(), false))?;\n        match assert_response_result(&value) {\n            Ok(v) => Ok(v),\n            Err(message) => Err(SdkError::transport(message.to_owned(), false)),\n        }",
       "verbatimBodyWasm": null
     },
+    "assertValidProductRef": {
+      "args": [
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "product_ref",
+          "name": "productRef",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireString",
+          "hostInjected": false,
+          "local": "context",
+          "name": "context",
+          "required": true,
+          "type": "string",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "assertValidProductRef",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::product_readiness::assert_valid_product_ref",
+      "coreCall": "assert_valid_product_ref",
+      "doc": "Binding for `assertValidProductRef`. Throws on empty, placeholder, or non-prd_ refs.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 42,
+      "envelope": "sync",
+      "names": {
+        "go": "AssertValidProductRef",
+        "py": "assert_valid_product_ref",
+        "rb": "assert_valid_product_ref",
+        "rust": "assert_valid_product_ref",
+        "ts": "assertValidProductRef"
+      },
+      "return": "value",
+      "rustFnName": "assert_valid_product_ref_binding",
+      "section": "product-readiness",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let product_ref = require_string(&args, \"productRef\")?;\n        let context = require_string(&args, \"context\")?;\n        assert_valid_product_ref(&product_ref, &context)?;\n        Ok(Value::Null)",
+      "verbatimBodyWasm": null
+    },
     "assignCredits": {
       "args": [],
       "artifact": "client",
@@ -1920,6 +1974,39 @@
       "verbatimBody": null,
       "verbatimBodyWasm": null
     },
+    "evaluateProductReadiness": {
+      "args": [],
+      "artifact": "decisions",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "evaluateProductReadiness",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::product_readiness::evaluate_product_readiness",
+      "coreCall": "evaluate_product_readiness",
+      "doc": "Binding for `evaluateProductReadiness`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 41,
+      "envelope": "sync",
+      "names": {
+        "go": "EvaluateProductReadiness",
+        "py": "evaluate_product_readiness",
+        "rb": "evaluate_product_readiness",
+        "rust": "evaluate_product_readiness",
+        "ts": "evaluateProductReadiness"
+      },
+      "return": "value",
+      "rustFnName": "evaluate_product_readiness_binding",
+      "section": "product-readiness",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let input: ProductReadinessInput = serde_json::from_str(&args_json).map_err(|err| {\n            SdkError::transport(format!(\"invalid ProductReadinessInput: {err}\"), false)\n        })?;\n        to_value(&evaluate_product_readiness(&input))",
+      "verbatimBodyWasm": null
+    },
     "extractBackendCustomerRef": {
       "args": [
         {
@@ -3449,6 +3536,60 @@
       "verbatimBody": null,
       "verbatimBodyWasm": null
     },
+    "requireProductRef": {
+      "args": [
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "metadata_product",
+          "name": "metadataProduct",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "env_product",
+          "name": "envProduct",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "kind": "verbatim"
+      },
+      "catalog": {
+        "id": "requireProductRef",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::paywall_decision::require_product_ref",
+      "coreCall": "require_product_ref",
+      "doc": "Binding for `requireProductRef`. Throws when neither source is set.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 40,
+      "envelope": "sync",
+      "names": {
+        "go": "RequireProductRef",
+        "py": "require_product_ref",
+        "rb": "require_product_ref",
+        "rust": "require_product_ref",
+        "ts": "requireProductRef"
+      },
+      "return": "value",
+      "rustFnName": "require_product_ref_binding",
+      "section": "paywall-decision",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let metadata_product = optional_string(&args, \"metadataProduct\")?;\n        let env_product = optional_string(&args, \"envProduct\")?;\n        Ok(Value::String(require_product_ref(\n            metadata_product.as_deref(),\n            env_product.as_deref(),\n        )?))",
+      "verbatimBodyWasm": null
+    },
     "resolveCheckLimitsParams": {
       "args": [
         {
@@ -3470,13 +3611,24 @@
           "type": "string?",
           "typedAs": null,
           "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": "usage_type",
+          "name": "usageType",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
         }
       ],
       "artifact": "decisions",
       "call": {
         "args": [
           "product_ref.as_deref()",
-          "meter_name.as_deref()"
+          "meter_name.as_deref()",
+          "usage_type.as_deref()"
         ],
         "kind": "wrap",
         "serialize": "resultAsValue"
@@ -3487,7 +3639,7 @@
       "clientCallArgs": [],
       "core": "solvapay_core::limits::resolve_check_limits_params",
       "coreCall": "resolve_check_limits_params",
-      "doc": "Binding for `resolveCheckLimitsParams`.\n\nOk and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.",
+      "doc": "Binding for `resolveCheckLimitsParams`.\n\nOk and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is meterName, then usageType, then `requests`.",
       "docWasm": "Binding for `resolveCheckLimitsParams`.",
       "dtoType": null,
       "emitOrder": 26,
@@ -3584,7 +3736,7 @@
           "env_product.as_deref()"
         ],
         "kind": "wrap",
-        "serialize": "valueString"
+        "serialize": "toValue"
       },
       "catalog": {
         "kind": "none"
