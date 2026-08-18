@@ -71,8 +71,10 @@ describe('supabase-edge example', () => {
       // Accept either the direct shape `Deno.serve(handler)` or the
       // config-wrapper shape `Deno.serve(handler({...}))` used by the
       // webhook handler which takes a secret + onEvent callback.
-      const directMatch = content.includes(`Deno.serve(${handlerName})`)
-      const wrappedMatch = content.includes(`Deno.serve(${handlerName}(`)
+      // Collapse whitespace so a pretty-printed multiline call still matches.
+      const collapsed = content.replace(/\s+/g, '')
+      const directMatch = collapsed.includes(`Deno.serve(${handlerName})`)
+      const wrappedMatch = collapsed.includes(`Deno.serve(${handlerName}(`)
 
       expect(
         directMatch || wrappedMatch,
@@ -86,13 +88,12 @@ describe('supabase-edge example', () => {
     const denoJson = JSON.parse(readFileSync(denoJsonPath, 'utf-8'))
 
     expect(denoJson.imports).toBeDefined()
-    // Bare `@solvapay/server` resolves to @latest (stable Node + edge
-    // entries). The subpath resolver `@solvapay/server/` picks up
-    // `@solvapay/server/fetch` from the @preview tag during the
-    // consolidation window; post-promotion the subpath resolver can
-    // be collapsed to the bare @latest entry.
+    // Stable @latest for the package and the fetch subpath. The
+    // `@solvapay/server/` → `@preview` prefix resolver was a
+    // consolidation-window workaround and is no longer used.
     expect(denoJson.imports['@solvapay/server']).toBe('npm:@solvapay/server')
-    expect(denoJson.imports['@solvapay/server/']).toBe('npm:/@solvapay/server@preview/')
+    expect(denoJson.imports['@solvapay/server/fetch']).toBe('npm:@solvapay/server/fetch')
+    expect(denoJson.imports['@solvapay/server/']).toBeUndefined()
     expect(denoJson.imports['@solvapay/auth']).toBe('npm:@solvapay/auth')
     expect(denoJson.imports['@solvapay/core']).toBe('npm:@solvapay/core')
     // @solvapay/fetch is unpublished; no longer expected in the map.
