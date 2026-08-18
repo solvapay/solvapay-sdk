@@ -132,9 +132,8 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         freeUnits: defaultPlan.freeUnits,
       })
 
-      // Credit-prepaid plan on its own product. Sharing the free-tier product
-      // lets checkLimits fall back to that plan's included allowance when
-      // activation returns topup_required (no purchase yet).
+      // Credit-prepaid plan on its own product. Paid usage plans cannot be
+      // auto-assigned (DEV-703); tests activate this plan explicitly.
       creditProduct = await createTestProduct(
         apiBaseUrl,
         SOLVAPAY_SECRET_KEY!,
@@ -146,10 +145,11 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         creditProduct.reference,
         {
           type: 'usage-based',
-          creditsPerUnit: 100,
+          // Wire charge is minor units. 1¢/request = 100 credits (USD peg).
+          creditsPerUnit: 1,
           freeUnits: 0,
           currency: providerCurrency,
-          isDefault: true,
+          isDefault: false,
         },
       )
 

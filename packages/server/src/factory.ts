@@ -172,7 +172,7 @@ export interface PayableGateOptions {
   ctx?: { waitUntil(p: Promise<unknown>): void }
   /**
    * Optional adapter metadata override. Falls back to the
-   * `productRef` / `usageType` configured on `payable({ … })` when
+   * `productRef` / `meterName` (or deprecated `usageType`) configured on `payable({ … })` when
    * omitted.
    */
   metadata?: import('./types').PaywallMetadata
@@ -553,6 +553,7 @@ export interface SolvaPay {
     productRef: string
     planRef?: string
     meterName?: string
+    /** @deprecated Use `meterName`. */
     usageType?: string
   }): Promise<{
     withinLimits: boolean
@@ -1054,8 +1055,8 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
     payable(options: PayableOptions = {}): PayableFunction {
       const product = resolveProductRef(options.productRef || options.product)
 
-      const usageType = options.usageType || 'requests'
-      const metadata = { product, usageType }
+      const usageType = options.meterName || options.usageType || 'requests'
+      const metadata = { product, meterName: usageType, usageType }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1156,7 +1157,11 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           const productRef = requireProductRef(
             decideMetadata.product || metadata.product || product,
           )
-          const meterName = decision.limits.meterName || decideMetadata.usageType || 'requests'
+          const meterName =
+            decision.limits.meterName ||
+            decideMetadata.meterName ||
+            decideMetadata.usageType ||
+            'requests'
           const customerRef = decision.customerRef
           const ctx = gateOptions.ctx
 

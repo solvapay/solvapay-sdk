@@ -65,7 +65,7 @@ describe('AutoRecharge (default-tree shim)', () => {
     renderShim()
     expect(document.querySelector('.solvapay-auto-recharge')).toBeInTheDocument()
     expect(document.querySelector('.solvapay-auto-recharge-card')).toBeInTheDocument()
-    expect(screen.getByText('Auto recharge')).toBeInTheDocument()
+    expect(screen.getByText('Auto-recharge')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Set up auto-recharge' })).toBeInTheDocument()
   })
 

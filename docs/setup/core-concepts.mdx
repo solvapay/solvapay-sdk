@@ -6,7 +6,7 @@ description: "Understand products, plans, customers, paywall checks, and usage t
 ## Table of contents
 
 - [Products and plans](#products-and-plans)
-- [Plan types](#plan-types)
+- [Plan labels](#plan-labels)
 - [Meters](#meters)
 - [Customer references](#customer-references)
 - [Paywall protection flow](#paywall-protection-flow)
@@ -51,28 +51,28 @@ Plans are configured as part of product setup. Customers select a plan during ac
 - One default plan per product
 - Paywall checks verify plan access for a product
 
-## Plan types
+## Plan labels
 
-| Type | Description | Best for |
+A plan is an `options[]` list. These names are **derived labels**, not a `type` you send:
+
+| Label | Derived when | Best for |
 | --- | --- | --- |
-| Recurring | Fixed price billed on a cycle | SaaS subscriptions |
-| Usage-based | Pay-per-use tracked by a meter | APIs and token services |
-| Hybrid | Recurring fee plus usage overage | Enterprise mixed workloads |
-| One-time | Single purchase without recurring billing | Digital goods and lifetime access |
+| Recurring | Billing cycle, no meter | SaaS subscriptions |
+| Usage-based | Metered, no billing cycle | APIs and token services |
+| Hybrid | Billing cycle and a meter | Mixed workloads |
+| One-time | Flat charge, no cycle | Digital goods and lifetime access |
 
-See [Plans overview](/plans/overview) for full plan behavior.
+See [Plans](/plans/overview) to compose those options.
 
 ## Meters
 
 Meters define what usage to measure.
 
-- Default meters: `api_requests`, `requests`, `api_calls`, `tokens`
+- Seeded default: `requests` (`name` / `displayName` / `unit`)
 - MCP tool meters: `tool:{toolName}`
 - Custom meters for business-specific usage
 
-Plans can enforce limits using meter data.
-
-See [Meters overview](/meters/overview) for details.
+Plans can enforce limits using meter data. Copy uses the meter's `unit` noun — see [Plans and billing glossary](/plans/glossary).
 
 ## Customer references
 
@@ -180,8 +180,8 @@ const result = await activatePlan(request, {
 Activation policy by plan type:
 
 - **Free** — always `activated`.
-- **Usage-based (PAYG)** — topup-first: returns `topup_required` at zero balance and only `activated` once the customer's credit balance covers at least one unit. Route the customer through a top-up (`createTopupPaymentIntent`) first, then re-run `activatePlan` to create the active purchase.
-- **Recurring / hybrid** — return `payment_required` when the customer has no card on file. Route them to checkout before granting access.
+- **Usage-based (metered, no billing cycle)** — `activated` immediately. A zero balance is not an activation gate. Empty-wallet access is enforced later as `topup_required` at usage time.
+- **Paid recurring, hybrid, or one-time** — `payment_required`. Complete checkout before the plan activates.
 
 When the customer already has an active purchase on a different plan, `activatePlan` automatically expires the old purchase and creates a new one.
 
@@ -222,4 +222,4 @@ Usage-based and hybrid plans enforce limits from meter data.
 - [CLI setup](./cli)
 - [Installation](./installation)
 - [Plans overview](/plans/overview)
-- [Meters overview](/meters/overview)
+- [Plans and billing glossary](/plans/glossary)

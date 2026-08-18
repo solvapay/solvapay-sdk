@@ -213,9 +213,9 @@ const Message = forwardRef<HTMLParagraphElement, LeafProps>(function PaywallNoti
  * Resolve a web-friendly paywall message, in this priority:
  *
  *   1. `payment_required` + balance with `remainingUnits > 0`
- *      → `paymentRequiredMessageRemaining` (e.g. "Only 3 calls left…")
+ *      → `paymentRequiredMessageRemaining` (e.g. "Only 3 requests left…")
  *   2. `payment_required` + balance with `remainingUnits === 0`
- *      → `paymentRequiredMessage` ("You've used all your included calls…")
+ *      → `paymentRequiredMessage` ("You've used all your included requests…")
  *   3. `payment_required` + no balance block
  *      → `paymentRequiredMessageNoBalance` (web-friendly fallback)
  *   4. `activation_required` + every available plan is PAYG
@@ -275,15 +275,21 @@ export function resolvePaywallMessage(
 
   if (content.kind === 'payment_required') {
     const balance = content.balance
+    const unitSingular = 'request'
+    const unitPlural = 'requests'
     if (!balance) {
-      return interpolate(paywallCopy.paymentRequiredMessageNoBalance, { forProduct })
+      return interpolate(paywallCopy.paymentRequiredMessageNoBalance, {
+        forProduct,
+        unit: unitPlural,
+      })
     }
     const remaining = balance.remainingUnits ?? 0
     if (remaining <= 0) {
-      return interpolate(paywallCopy.paymentRequiredMessage, { forProduct })
+      return interpolate(paywallCopy.paymentRequiredMessage, { forProduct, unit: unitPlural })
     }
     return interpolate(paywallCopy.paymentRequiredMessageRemaining, {
       remaining: String(remaining),
+      unit: remaining === 1 ? unitSingular : unitPlural,
       pluralSuffix: remaining === 1 ? '' : 's',
       forProduct,
     })

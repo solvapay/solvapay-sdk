@@ -192,7 +192,7 @@ const Label = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>
       </span>
     )
   }
-  const unit = ctx.usage.meterRef ?? 'units'
+  const unit = ctx.usage.meterRef ?? 'requests'
   const label =
     ctx.usage.total !== null
       ? interpolate(copy.usage.usedLabel, {

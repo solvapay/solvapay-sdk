@@ -45,6 +45,7 @@ export interface PurchaseInfo {
     name?: string | null
     price?: number
     meterRef?: string
+    meterId?: string
     limit?: number
     freeUnits?: number
     creditsPerUnit?: number

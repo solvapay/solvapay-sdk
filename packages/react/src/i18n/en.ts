@@ -45,7 +45,7 @@ export const enCopy: SolvaPayCopy = {
       return `By confirming, you authorize ${ctx.merchant.legalName} to charge ${ctx.amountFormatted}${product}. Credits are non-refundable once used. Payments are processed by SolvaPay.${termsSentence(ctx)}`
     },
     usageMetered: (ctx: MandateContext) => {
-      const measures = ctx.plan?.measures ?? 'unit'
+      const measures = ctx.plan?.measures ?? 'request'
       const cycle = ctx.plan?.billingCycle ?? 'monthly'
       const product = ctx.product?.name ?? 'the service'
       return `By confirming, you authorize ${ctx.merchant.legalName} to charge your payment method for metered usage of ${product} at ${ctx.amountFormatted} per ${measures}, billed ${cycle}. You can cancel any time. Payments are processed by SolvaPay.${termsSentence(ctx)}`
@@ -119,13 +119,13 @@ export const enCopy: SolvaPayCopy = {
     creditEstimateApprox: '~ {credits} credits',
   },
   autoRecharge: {
-    heading: 'Auto recharge',
+    heading: 'Auto-recharge',
     description:
-      'Automatically top up when your balance runs low, so you never run out. You can turn this off anytime.',
-    settingsHeading: 'Auto recharge settings',
+      'Automatically recharge when your balance runs low, so you never run out. You can turn this off anytime.',
+    settingsHeading: 'Auto-recharge settings',
     setupTriggerLabel: 'Set up auto-recharge',
     modifyTriggerLabel: 'Modify',
-    notConfiguredHint: 'Automatic top-ups are off. Set up auto-recharge if you want credits added when your balance runs low.',
+    notConfiguredHint: 'Auto-recharge is off. Set it up if you want credits added when your balance runs low.',
     enableLabel: 'Enable auto-recharge',
     enableQuestion: 'Would you like to set up automatic recharge?',
     enableSentence:
@@ -136,13 +136,13 @@ export const enCopy: SolvaPayCopy = {
     fixedAmountAriaLabel: 'Fixed top-up amount',
     saveButton: 'Save settings',
     cancelButton: 'Cancel',
-    disableButton: 'Disable automatic top-up',
-    savedMessage: 'Automatic top-up settings saved.',
-    disabledMessage: 'Automatic top-ups disabled.',
-    setupRequiredMessage: 'Confirm your card to activate automatic top-ups.',
+    disableButton: 'Disable auto-recharge',
+    savedMessage: 'Auto-recharge settings saved.',
+    disabledMessage: 'Auto-recharge disabled.',
+    setupRequiredMessage: 'Confirm your card to activate auto-recharge.',
     setupHeading: 'Authorize card',
     setupDescription:
-      'Authorize a card for automatic top-ups. You will not be charged now.',
+      'Authorize a card for auto-recharge. You will not be charged now.',
     setupSubmit: 'Save card for auto-recharge',
     setupProcessing: 'Authorizing...',
     setupAwaitingConfirmation: 'Card authorized. Finishing activation — this can take a moment.',
@@ -290,11 +290,11 @@ export const enCopy: SolvaPayCopy = {
     productContext: 'For {product}',
     balanceLine: 'You have {available} credits, need {required}.',
     paymentRequiredMessage:
-      "You've used all your included calls{forProduct}. Choose a plan below to keep going.",
+      "You've used all your included {unit}{forProduct}. Choose a plan below to keep going.",
     paymentRequiredMessageRemaining:
-      'Only {remaining} call{pluralSuffix} left{forProduct}. Choose a plan below to keep going.',
+      'Only {remaining} {unit} left{forProduct}. Choose a plan below to keep going.',
     paymentRequiredMessageNoBalance:
-      "You've used your included messages{forProduct}. Pick a plan below to keep chatting.",
+      "You've used your included {unit}{forProduct}. Pick a plan below to keep going.",
     activationRequiredMessage:
       'You need an active plan{forProduct} to continue. Pick one below.',
     topupRequiredMessage: "You're out of credits{forProduct}. Add more below to keep going.",
