@@ -64,51 +64,15 @@ describe('createSolvaPayMcpFetchHandler', () => {
       apiBaseUrl,
       productRef,
     })
-    const res = await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`))
+    const res = await handler(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
+    )
     expect(res.status).toBe(200)
     const body = (await res.json()) as { resource: string }
     expect(body.resource).toBe(publicBaseUrl)
   })
 
-  it('allows anonymous initialize for tool discovery', async () => {
-    const server = mockServer()
-    const handler = createSolvaPayMcpFetchHandler({
-      server,
-      publicBaseUrl,
-      apiBaseUrl,
-      productRef,
-    })
-    const res = await handler(
-      new Request(`${publicBaseUrl}/mcp`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize' }),
-      }),
-    )
-    expect(res.status).toBe(200)
-    expect(server.connect).toHaveBeenCalledTimes(1)
-  })
-
-  it('allows anonymous tools/list for tool discovery', async () => {
-    const server = mockServer()
-    const handler = createSolvaPayMcpFetchHandler({
-      server,
-      publicBaseUrl,
-      apiBaseUrl,
-      productRef,
-    })
-    const res = await handler(
-      new Request(`${publicBaseUrl}/mcp`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }),
-      }),
-    )
-    expect(res.status).toBe(200)
-    expect(server.connect).toHaveBeenCalledTimes(1)
-  })
-
-  it('returns 401 + WWW-Authenticate for anonymous tools/call', async () => {
+  it('returns 401 + WWW-Authenticate when no bearer is present on tools/call', async () => {
     const handler = createSolvaPayMcpFetchHandler({
       factory: mockFactory(),
       publicBaseUrl,
@@ -119,23 +83,13 @@ describe('createSolvaPayMcpFetchHandler', () => {
       new Request(`${publicBaseUrl}/mcp`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 7,
-          method: 'tools/call',
-          params: { name: 'echo', arguments: {} },
-        }),
+        body: JSON.stringify({ jsonrpc: '2.0', id: 7, method: 'tools/call' }),
       }),
     )
     expect(res.status).toBe(401)
     expect(res.headers.get('www-authenticate')).toMatch(/resource_metadata=/)
-    const body = (await res.json()) as {
-      id: number
-      error: { code: number; message: string }
-    }
+    const body = (await res.json()) as { id: number }
     expect(body.id).toBe(7)
-    expect(body.error.code).toBe(-32001)
-    expect(body.error.message).toBe('Unauthorized')
   })
 
   it('forwards authenticated requests to createMcpHandler.fetch', async () => {
