@@ -1671,6 +1671,12 @@ export interface components {
        * @example requests
        */
       meterName?: string
+      /** @description Access is blocked pending an auto-recharge top-up of the prepaid balance — `onExceed: top_up`. */
+      needsTopUp?: boolean
+      /** @description Access is blocked pending a plan switch to the limit's target pricing — `onExceed: auto_upgrade`. */
+      needsUpgrade?: boolean
+      /** @description Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`. */
+      overage?: boolean
       /** @description Active plans on the product available for activation or checkout */
       plans?: components['schemas']['LimitPlanItemDto'][]
       /** @description Product the limit check applies to */
@@ -1680,6 +1686,10 @@ export interface components {
        * @example 997
        */
       remaining: number
+      /** @description Access is granted but the caller should degrade/throttle service — the limit was exceeded with `onExceed: throttle`. */
+      throttled?: boolean
+      /** @description The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded. */
+      upgraded?: boolean
       /**
        * Whether the customer is within their usage limits
        * @example true
