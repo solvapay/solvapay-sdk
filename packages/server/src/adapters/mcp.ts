@@ -53,10 +53,14 @@ export class McpAdapter implements Adapter<McpContext, PaywallToolResult> {
       return AdapterUtils.ensureCustomerRef(ref)
     }
 
-    const customerRefFromExtra =
-      typeof extra?.authInfo?.extra?.customer_ref === 'string'
-        ? String(extra.authInfo.extra.customer_ref)
-        : undefined
+    // `extra.http.authInfo` is the official SDK v2 location; the flat
+    // `extra.authInfo` is v1 and is still emitted by some third-party
+    // adapters. Reading only the flat one made every v2 call fall
+    // through to `'anonymous'`.
+    const customerRefFromExtra = [
+      extra?.http?.authInfo?.extra?.customer_ref,
+      extra?.authInfo?.extra?.customer_ref,
+    ].find((candidate): candidate is string => typeof candidate === 'string')
     const customerRefFromArgs =
       typeof args.auth === 'object' &&
       args.auth !== null &&

@@ -41,6 +41,16 @@ cd examples/typescript/express-basic && pnpm dev   # stub mode — no API key
 
 See each example’s README for setup. Build all workspace examples: `pnpm build:examples`.
 
+## Local platform stack
+
+When pointing an example at a sibling [`platform`](../../platform) monorepo stack,
+start from [`.env.platform-local.example`](./.env.platform-local.example). Copy
+the vars you need into the target example's own `.env` — each package loads
+dotenv from its directory. Use `SOLVAPAY_API_BASE_URL=http://localhost:3010`
+(provider-app proxy) and remap MCP/example ports to `3030+` so they don't
+collide with platform services. Convenience scripts from the repo root:
+`pnpm mcp:checkout` / `pnpm mcp:checkout:tunnel`.
+
 ## Python
 
 | Example                               | Description                                                         |

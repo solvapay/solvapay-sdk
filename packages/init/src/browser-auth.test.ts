@@ -188,10 +188,28 @@ describe('verifyProductRef', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  it('returns ok for a verified ref', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }))
+  it('returns ok with product summary for a verified ref', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          name: 'Real Product',
+          status: 'active',
+          plans: [{ isActive: true }, { isActive: false }],
+        }),
+      }),
+    )
     const result = await verifyProductRef('https://api.solvapay.com', 'sk_test', 'prd_real')
-    expect(result.status).toBe('ok')
+    expect(result).toEqual({
+      status: 'ok',
+      product: {
+        name: 'Real Product',
+        status: 'active',
+        plans: [{ isActive: true }, { isActive: false }],
+      },
+    })
   })
 
   it('returns not_found for a 404', async () => {

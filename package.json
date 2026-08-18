@@ -75,6 +75,8 @@
     "delegation:check": "tsx scripts/check-delegation.ts",
     "server-superseded-ts:check": "tsx scripts/check-superseded-server-ts.ts",
     "test:clean-install": "pnpm --filter @solvapay/server-native test:clean-install",
+    "mcp:checkout": "pnpm --filter @example/mcp-checkout-app dev",
+    "mcp:checkout:tunnel": "pnpm --filter @example/mcp-checkout-app tunnel",
     "prepare": "husky || true"
   },
   "devDependencies": {

@@ -9,10 +9,12 @@
  */
 
 import {
+  assertValidProductRef,
   buildAuthInfoFromBearer,
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
-  isFreeMcpMethod,
+  logDcrFailureDiagnostic,
+  logMcpConfigOnce,
   McpBearerAuthError,
   resolveOAuthPaths,
   withoutTrailingSlash,
@@ -101,14 +103,6 @@ function getRequestJsonRpcId(body: unknown): JsonRpcId {
     return id ?? null
   }
   return null
-}
-
-function getRequestJsonRpcMethod(body: unknown): string | undefined {
-  if (body && typeof body === 'object' && 'method' in body) {
-    const method = (body as { method?: unknown }).method
-    return typeof method === 'string' ? method : undefined
-  }
-  return undefined
 }
 
 function makeUnauthorizedJsonRpc(id: JsonRpcId) {
@@ -278,6 +272,15 @@ export function createOAuthRegisterHandler(options: OAuthRegisterHandlerOptions)
         headers: { 'content-type': 'application/json' },
         body: serializeRegisterBody(req.body),
       })
+      if (!response.ok) {
+        const bodyText = await response.clone().text()
+        logDcrFailureDiagnostic({
+          productRef: options.productRef,
+          apiBaseUrl: api,
+          status: response.status,
+          bodyText,
+        })
+      }
       applyCorsHeaders(req, res)
       await relayJsonResponse(response, res)
     } catch (error) {
@@ -416,6 +419,13 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     oauthPaths,
   } = options
 
+  assertValidProductRef(productRef, 'createMcpOAuthBridge')
+  logMcpConfigOnce({
+    apiBaseUrl: withoutTrailingSlash(apiBaseUrl),
+    productRef,
+    publicBaseUrl,
+  })
+
   const paths = resolveOAuthPaths(oauthPaths)
 
   // SolvaPay is an OAuth 2.0 authorization server (RFC 8414), not an OpenID Provider.
@@ -499,10 +509,8 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
 
     const authHeader = getRequestAuthHeader(req)
     const id = getRequestJsonRpcId(req.body)
-    const method = getRequestJsonRpcMethod(req.body)
 
-    // requireAuth gates tools/call only — discovery methods stay open.
-    if (!authHeader && (!requireAuth || isFreeMcpMethod(method))) {
+    if (!authHeader && !requireAuth) {
       next()
       return
     }

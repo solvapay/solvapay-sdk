@@ -89,15 +89,16 @@ const Root = forwardRef<HTMLDivElement, UsageMeterRootProps>(function UsageMeter
   const loading = hookResult.loading && !usage
   const percentUsed = usage?.percentUsed ?? null
 
-  const state: UsageMeterState = loading
-    ? 'loading'
-    : percentUsed === null
-      ? 'safe'
-      : percentUsed >= criticalAt
-        ? 'critical'
-        : percentUsed >= warningAt
-          ? 'warning'
-          : 'safe'
+  const state: UsageMeterState =
+    loading
+      ? 'loading'
+      : percentUsed === null
+        ? 'safe'
+        : percentUsed >= criticalAt
+          ? 'critical'
+          : percentUsed >= warningAt
+            ? 'warning'
+            : 'safe'
 
   const ctx = useMemo<UsageMeterContextValue>(
     () => ({
@@ -126,9 +127,7 @@ const Root = forwardRef<HTMLDivElement, UsageMeterRootProps>(function UsageMeter
     ],
   )
 
-  const rootClass = [classNames?.root ?? 'solvapay-usage-meter', className]
-    .filter(Boolean)
-    .join(' ')
+  const rootClass = [classNames?.root ?? 'solvapay-usage-meter', className].filter(Boolean).join(' ')
   const Comp = asChild ? Slot : 'section'
   return (
     <UsageMeterContext.Provider value={ctx}>
@@ -150,7 +149,8 @@ const Bar = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(fun
   forwardedRef,
 ) {
   const ctx = useUsageMeterCtx('Bar')
-  const width = ctx.percentUsed === null ? 0 : Math.max(0, Math.min(100, ctx.percentUsed))
+  const width =
+    ctx.percentUsed === null ? 0 : Math.max(0, Math.min(100, ctx.percentUsed))
   return (
     <div
       ref={forwardedRef}
@@ -172,36 +172,15 @@ const Bar = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(fun
   )
 })
 
-const Label = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(
-  function UsageMeterLabel({ className, children, ...rest }, forwardedRef) {
-    const ctx = useUsageMeterCtx('Label')
-    const copy = useCopy()
-    if (!ctx.usage) return null
+const Label = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(function UsageMeterLabel(
+  { className, children, ...rest },
+  forwardedRef,
+) {
+  const ctx = useUsageMeterCtx('Label')
+  const copy = useCopy()
+  if (!ctx.usage) return null
 
-    if (ctx.isUnlimited) {
-      return (
-        <span
-          ref={forwardedRef}
-          data-solvapay-usage-meter-label=""
-          className={className ?? 'solvapay-usage-meter-label'}
-          {...rest}
-        >
-          {children ?? copy.usage.unlimitedLabel}
-        </span>
-      )
-    }
-    const unit = ctx.usage.meterRef ?? 'units'
-    const label =
-      ctx.usage.total !== null
-        ? interpolate(copy.usage.usedLabel, {
-            used: String(ctx.usage.used),
-            total: String(ctx.usage.total),
-            unit,
-          })
-        : interpolate(copy.usage.remainingLabel, {
-            remaining: String(ctx.usage.remaining ?? 0),
-            unit,
-          })
+  if (ctx.isUnlimited) {
     return (
       <span
         ref={forwardedRef}
@@ -209,32 +188,53 @@ const Label = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>
         className={className ?? 'solvapay-usage-meter-label'}
         {...rest}
       >
-        {children ?? label}
+        {children ?? copy.usage.unlimitedLabel}
       </span>
     )
-  },
-)
+  }
+  const unit = ctx.usage.meterRef ?? 'requests'
+  const label =
+    ctx.usage.total !== null
+      ? interpolate(copy.usage.usedLabel, {
+          used: String(ctx.usage.used),
+          total: String(ctx.usage.total),
+          unit,
+        })
+      : interpolate(copy.usage.remainingLabel, {
+          remaining: String(ctx.usage.remaining ?? 0),
+          unit,
+        })
+  return (
+    <span
+      ref={forwardedRef}
+      data-solvapay-usage-meter-label=""
+      className={className ?? 'solvapay-usage-meter-label'}
+      {...rest}
+    >
+      {children ?? label}
+    </span>
+  )
+})
 
-const Percentage = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(
-  function UsageMeterPercentage({ className, children, ...rest }, forwardedRef) {
-    const ctx = useUsageMeterCtx('Percentage')
-    const copy = useCopy()
-    if (ctx.percentUsed === null) return null
-    return (
-      <span
-        ref={forwardedRef}
-        data-solvapay-usage-meter-percentage=""
-        className={className ?? 'solvapay-usage-meter-percentage'}
-        {...rest}
-      >
-        {children ??
-          interpolate(copy.usage.percentUsedLabel, {
-            percent: String(Math.round(ctx.percentUsed)),
-          })}
-      </span>
-    )
-  },
-)
+const Percentage = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(function UsageMeterPercentage(
+  { className, children, ...rest },
+  forwardedRef,
+) {
+  const ctx = useUsageMeterCtx('Percentage')
+  const copy = useCopy()
+  if (ctx.percentUsed === null) return null
+  return (
+    <span
+      ref={forwardedRef}
+      data-solvapay-usage-meter-percentage=""
+      className={className ?? 'solvapay-usage-meter-percentage'}
+      {...rest}
+    >
+      {children ??
+        interpolate(copy.usage.percentUsedLabel, { percent: String(Math.round(ctx.percentUsed)) })}
+    </span>
+  )
+})
 
 /**
  * Compute a human-readable "resets in N days" label without reading
@@ -249,9 +249,7 @@ const Percentage = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElem
 function formatResetsIn(
   copy: ReturnType<typeof useCopy>,
   periodEnd: string,
-  nowMs: number = typeof performance !== 'undefined'
-    ? performance.timeOrigin + performance.now()
-    : 0,
+  nowMs: number = typeof performance !== 'undefined' ? performance.timeOrigin + performance.now() : 0,
 ): string | null {
   const end = new Date(periodEnd).getTime()
   if (Number.isNaN(end)) return null
@@ -261,65 +259,68 @@ function formatResetsIn(
     : interpolate(copy.usage.resetsOnLabel, { date: new Date(periodEnd).toLocaleDateString() })
 }
 
-const ResetsIn = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(
-  function UsageMeterResetsIn({ className, children, ...rest }, forwardedRef) {
-    const ctx = useUsageMeterCtx('ResetsIn')
-    const copy = useCopy()
-    const periodEnd = ctx.usage?.periodEnd
-    if (!periodEnd) return null
-    const label = formatResetsIn(copy, periodEnd)
-    if (!label) return null
-    return (
-      <span
-        ref={forwardedRef}
-        data-solvapay-usage-meter-resets-in=""
-        className={className ?? 'solvapay-usage-meter-resets-in'}
-        {...rest}
-      >
-        {children ?? label}
-      </span>
-    )
-  },
-)
+const ResetsIn = forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(function UsageMeterResetsIn(
+  { className, children, ...rest },
+  forwardedRef,
+) {
+  const ctx = useUsageMeterCtx('ResetsIn')
+  const copy = useCopy()
+  const periodEnd = ctx.usage?.periodEnd
+  if (!periodEnd) return null
+  const label = formatResetsIn(copy, periodEnd)
+  if (!label) return null
+  return (
+    <span
+      ref={forwardedRef}
+      data-solvapay-usage-meter-resets-in=""
+      className={className ?? 'solvapay-usage-meter-resets-in'}
+      {...rest}
+    >
+      {children ?? label}
+    </span>
+  )
+})
 
-const Loading = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  function UsageMeterLoading({ className, children, ...rest }, forwardedRef) {
-    const ctx = useUsageMeterCtx('Loading')
-    const copy = useCopy()
-    if (ctx.state !== 'loading') return null
-    return (
-      <div
-        ref={forwardedRef}
-        data-solvapay-usage-meter-loading=""
-        role="status"
-        className={className ?? 'solvapay-usage-meter-loading'}
-        {...rest}
-      >
-        {children ?? copy.usage.loadingLabel}
-      </div>
-    )
-  },
-)
+const Loading = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(function UsageMeterLoading(
+  { className, children, ...rest },
+  forwardedRef,
+) {
+  const ctx = useUsageMeterCtx('Loading')
+  const copy = useCopy()
+  if (ctx.state !== 'loading') return null
+  return (
+    <div
+      ref={forwardedRef}
+      data-solvapay-usage-meter-loading=""
+      role="status"
+      className={className ?? 'solvapay-usage-meter-loading'}
+      {...rest}
+    >
+      {children ?? copy.usage.loadingLabel}
+    </div>
+  )
+})
 
-const Empty = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  function UsageMeterEmpty({ className, children, ...rest }, forwardedRef) {
-    const ctx = useUsageMeterCtx('Empty')
-    const copy = useCopy()
-    // Only renders when there's no usage snapshot AND we're not loading — a
-    // non-usage-based plan is the canonical "empty" state.
-    if (ctx.loading || ctx.usage !== null) return null
-    return (
-      <div
-        ref={forwardedRef}
-        data-solvapay-usage-meter-empty=""
-        className={className ?? 'solvapay-usage-meter-empty'}
-        {...rest}
-      >
-        {children ?? copy.usage.emptyLabel}
-      </div>
-    )
-  },
-)
+const Empty = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(function UsageMeterEmpty(
+  { className, children, ...rest },
+  forwardedRef,
+) {
+  const ctx = useUsageMeterCtx('Empty')
+  const copy = useCopy()
+  // Only renders when there's no usage snapshot AND we're not loading — a
+  // non-usage-based plan is the canonical "empty" state.
+  if (ctx.loading || ctx.usage !== null) return null
+  return (
+    <div
+      ref={forwardedRef}
+      data-solvapay-usage-meter-empty=""
+      className={className ?? 'solvapay-usage-meter-empty'}
+      {...rest}
+    >
+      {children ?? copy.usage.emptyLabel}
+    </div>
+  )
+})
 
 export const UsageMeter = Object.assign(Root, {
   Root,

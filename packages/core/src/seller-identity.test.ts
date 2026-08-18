@@ -21,7 +21,7 @@ describe('getSellerTaxIdentifierDisplayLabel', () => {
   })
 
   it('falls back to Tax ID for unsupported countries', () => {
-    expect(getSellerTaxIdentifierDisplayLabel('CA')).toBe('Tax ID')
+    expect(getSellerTaxIdentifierDisplayLabel('BR')).toBe('Tax ID')
     expect(getSellerTaxIdentifierDisplayLabel(null)).toBe('Tax ID')
   })
 })
@@ -97,11 +97,11 @@ describe('resolveSellerIdentityDisplay', () => {
   it('shows taxId for unsupported countries', () => {
     expect(
       resolveSellerIdentityDisplay({
-        country: 'CA',
-        taxId: '123456789RT0001',
+        country: 'BR',
+        taxId: '01.234.456/5432-10',
       }),
     ).toEqual({
-      taxIdentifier: { label: 'Tax ID', value: '123456789RT0001' },
+      taxIdentifier: { label: 'Tax ID', value: '01.234.456/5432-10' },
       companyNumber: null,
     })
   })

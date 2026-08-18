@@ -153,6 +153,30 @@ describe('createOAuthRegisterHandler', () => {
     const body = (await res!.json()) as { error: string }
     expect(body.error).toBe('upstream_unreachable')
   })
+
+  it('logs a DCR diagnostic naming productRef when upstream returns non-2xx', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      jsonFetchResponse(400, {
+        message:
+          'Invalid identifier. Use mcp_server_id for hosted MCP, or product_ref for non-hosted MCP.',
+      }),
+    )
+    const handler = createOAuthRegisterHandler({ apiBaseUrl, productRef })
+    const res = await handler(
+      new Request(`${publicBaseUrl}/oauth/register`, {
+        method: 'POST',
+        body: '{}',
+      }),
+    )
+    expect(res!.status).toBe(400)
+    expect(warn).toHaveBeenCalled()
+    const message = warn.mock.calls.map(call => String(call[0])).join('\n')
+    expect(message).toContain(productRef)
+    expect(message).toContain(apiBaseUrl)
+    expect(message).toMatch(/did not resolve/i)
+    warn.mockRestore()
+  })
 })
 
 describe('createOAuthAuthorizeHandler', () => {
@@ -392,6 +416,19 @@ describe('createOAuthRevokeHandler', () => {
 })
 
 describe('createOAuthFetchRouter', () => {
+  it('rejects invalid productRef at construction', () => {
+    expect(() =>
+      createOAuthFetchRouter({
+        publicBaseUrl,
+        apiBaseUrl,
+        productRef: '__SOLVAPAY_PRODUCT_REF__',
+      }),
+    ).toThrow(/scaffolder placeholder/)
+    expect(() =>
+      createOAuthFetchRouter({ publicBaseUrl, apiBaseUrl, productRef: '' }),
+    ).toThrow(/productRef is required/)
+  })
+
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())
   })

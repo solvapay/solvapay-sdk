@@ -6,7 +6,7 @@
  * Renders a `Terms · Privacy · Provided by SolvaPay` strip pointing at
  * SolvaPay's own legal pages. Mirrors the hosted-checkout
  * `<LegalFooter>` (`solvapay-frontend/src/components/shared/LegalFooter.tsx`)
- * but Chakra-free so it can ship inside `<PaymentForm>` / `<TopupForm>`
+ * but dependency-free so it can ship inside `<PaymentForm>` / `<TopupForm>`
  * default trees and the MCP shell footer.
  *
  * Merchant terms/privacy URLs are *not* rendered here — those continue

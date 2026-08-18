@@ -8,7 +8,7 @@
  *
  * This package is the single source of truth for shapes that cross the
  * server↔client boundary (bootstrap payload, tool names, view map). It
- * has no runtime dependency on `@modelcontextprotocol/sdk`,
+ * has no runtime dependency on `@modelcontextprotocol/core` / `/server`,
  * `@modelcontextprotocol/ext-apps`, Express, or any runtime-specific OAuth
  * middleware — those live in `@solvapay/mcp` (root entry),
  * `@solvapay/mcp/express`, and `@solvapay/mcp/fetch` respectively.
@@ -83,12 +83,16 @@ export {
 } from './helpers'
 export type { BuildSolvaPayRequestOptions, SolvaPayToolMode } from './helpers'
 
-// ---- Credit → fiat display (re-exported from @solvapay/core for backward compat) ----
+// ---- Credit → fiat display + product-ref helpers (re-exported from @solvapay/core) ----
 export {
+  SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
+  assertValidProductRef,
   creditsToDisplayMinorUnits,
+  evaluateProductReadiness,
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
 } from '@solvapay/core'
+export type { ProductReadinessInput, ProductReadinessResult } from '@solvapay/core'
 
 // ---- Narrators (per-tool text-mode renderers) ----
 export {
@@ -167,6 +171,12 @@ export type {
 
 export { buildPayableHandler } from './payable-handler'
 export type { BuildPayableHandlerContext } from './payable-handler'
+
+// ---- Config logging + DCR diagnostics (framework-neutral) ----
+export { logMcpConfigOnce, resetMcpConfigLogForTests } from './config-log'
+export type { McpConfigLogInput } from './config-log'
+export { logDcrFailureDiagnostic } from './dcr-diagnostics'
+export type { DcrFailureDiagnosticInput } from './dcr-diagnostics'
 
 // ---- OAuth discovery (pure JSON, framework-neutral) ----
 export {

@@ -101,7 +101,7 @@ Shown on the summary card when auto-recharge is paused.
   <div style="flex:none;width:22px;height:22px;border-radius:50%;background:#dc2626;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px">!</div>
   <div>
     <div style="font-size:14px;font-weight:600;color:#b91c1c">Auto-recharge paused</div>
-    <div style="font-size:13px;color:#991b1b;margin-top:2px">Your last recharge failed. Update your payment method to re-enable automatic top-ups.</div>
+    <div style="font-size:13px;color:#991b1b;margin-top:2px">Your last recharge failed. Update your payment method to re-enable auto-recharge.</div>
     <button style="margin-top:10px;border:1px solid #dc2626;background:#fff;color:#b91c1c;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer">Update card</button>
   </div>
 </div>

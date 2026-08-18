@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@solvapay/mcp.svg)](https://www.npmjs.com/package/@solvapay/mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Official `@modelcontextprotocol/sdk` + `@modelcontextprotocol/ext-apps` adapter for SolvaPay MCP servers.
+Official `@modelcontextprotocol/server` adapter for SolvaPay MCP servers (v2 SDK; MCP protocol 2026-07-28).
 
 **When to use this package:** add paywalled tools and SolvaPay transport tools to an MCP server. For a **new** app, prefer the scaffolder first:
 
@@ -19,7 +19,7 @@ Guides: [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp) · [MCP app]
 
 ```bash
 pnpm add @solvapay/mcp @solvapay/server \
-  @modelcontextprotocol/sdk @modelcontextprotocol/ext-apps zod
+  @modelcontextprotocol/server @modelcontextprotocol/core zod
 ```
 
 ## Quickstart (advanced)

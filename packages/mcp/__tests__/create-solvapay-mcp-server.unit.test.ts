@@ -79,6 +79,7 @@ describe('createSolvaPayMcpServer', () => {
       MCP_TOOL_NAMES.activatePlan,
       MCP_TOOL_NAMES.createCheckoutSession,
       MCP_TOOL_NAMES.createCustomerSession,
+      MCP_TOOL_NAMES.attachBusinessDetails,
       MCP_TOOL_NAMES.upgrade,
       MCP_TOOL_NAMES.manageAccount,
       MCP_TOOL_NAMES.topup,
@@ -89,6 +90,18 @@ describe('createSolvaPayMcpServer', () => {
     // `check_usage` was removed when credits + usage folded into the
     // account view.
     expect(toolNames).not.toContain('check_usage')
+  })
+
+  it('registers attach_business_details so the checkout Payment step can compute tax (DEV-650)', () => {
+    // Regression guard: the descriptor list (mcp-core) already covered
+    // this tool, but the server-factory registration assertion did not —
+    // an omitted/stale registration surfaced only at runtime as
+    // `MCP error -32602: Tool attach_business_details not found` when the
+    // checkout auto-attached consumer details on the Payment step.
+    const { server } = buildTestServer()
+    // @ts-expect-error — accessing private _registeredTools for test coverage
+    const toolNames = Object.keys(server._registeredTools ?? {})
+    expect(toolNames).toContain(MCP_TOOL_NAMES.attachBusinessDetails)
   })
 
   it('gates intent tools on the views option', () => {

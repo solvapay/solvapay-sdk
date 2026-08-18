@@ -59,7 +59,8 @@ export interface BuildPayableHandlerContext {
   buildBootstrap?: BuildBootstrapPayloadFn
   /**
    * Override customer-ref extraction. Defaults to the MCP adapter's
-   * behavior (reads `extra.authInfo.extra.customer_ref`).
+   * behavior (reads `extra.http.authInfo.extra.customer_ref`, falling
+   * back to the SDK v1 flat `extra.authInfo`).
    */
   getCustomerRef?: (args: Record<string, unknown>, extra?: McpToolExtra) => string | Promise<string>
 }

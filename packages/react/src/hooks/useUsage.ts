@@ -6,7 +6,7 @@
  *
  * Reads directly off `usePurchase()` so no additional network call is made
  * when `checkPurchase` is already loaded. Usage-based plans expose a
- * `planSnapshot.limit` (plan quota), `planSnapshot.meterRef` (meter id),
+ * `planSnapshot.limit` (included cap), `planSnapshot.meterRef` (or `meterId`),
  * and a `usage` field on the purchase — `useUsage()` normalises those into
  * a single `{ used / total / remaining / percentUsed }` shape matching
  * `UserInfoUsageDto` on the backend.
@@ -31,7 +31,7 @@ export interface UseUsageReturn {
   isApproachingLimit: boolean
   /** Plan is usage-based, `percentUsed >= 100`. */
   isAtLimit: boolean
-  /** True when `usage.total === null` (no quota on this plan). */
+  /** True when `usage.total === null` (no included cap on this plan). */
   isUnlimited: boolean
   /** The meter reference (e.g. `'tokens'`). `null` when not usage-based. */
   meterRef: string | null
@@ -52,7 +52,7 @@ function deriveUsage(purchase: PurchaseInfo | null): UsageSnapshot | null {
   if (!purchase) return null
   const snap = purchase.planSnapshot
   const usage = purchase.usage
-  const meterRef = snap?.meterRef ?? null
+  const meterRef = snap?.meterRef ?? snap?.meterId ?? null
   const creditsPerUnit = snap?.creditsPerUnit
   const isCreditBased = typeof creditsPerUnit === 'number' && creditsPerUnit > 0
   const total = typeof snap?.limit === 'number' ? snap.limit : null

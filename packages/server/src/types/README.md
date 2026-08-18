@@ -5,6 +5,26 @@ This directory holds OpenAPI-derived and dto-gen-derived TypeScript artifacts.
 For the full five-surface SDK codegen runbook (manifest, bindings, CI gates), see
 [`docs/contributing/sdk-codegen.md`](../../../../docs/contributing/sdk-codegen.md).
 
+
+**Note:** Only routes starting with `/v1/sdk/` are included in the generated types.
+
+### Overriding the source
+
+If you have a single aggregated OpenAPI document (e.g. an API gateway, or the
+committed `docs/api-reference/openapi.json` served over HTTP), point the
+generator at it instead:
+
+```bash
+# Single aggregated source
+BACKEND_OPENAPI_URL="http://localhost:8080/v1/openapi.json" pnpm generate:types
+
+# Or an explicit list of per-service sources (comma or space separated)
+BACKEND_OPENAPI_URLS="http://localhost:3002/v1/openapi.json,http://localhost:3003/v1/openapi.json" pnpm generate:types
+```
+
+This mirrors `docs/scripts/sync-backend-openapi.ts`, which uses the same
+`BACKEND_OPENAPI_URL` / `BACKEND_OPENAPI_URLS` environment variables.
+
 ## Files
 
 | File                                                  | Producer                                                                            | Edit? |
@@ -49,3 +69,4 @@ Hand-written bridges that adapt wire shapes to SDK ergonomics live in nearby
 non-generated modules (e.g. mapped customer/plan helpers). Prefer extending the
 manifest `overlays:` catalog + `pnpm gen` when the shape should be
 cross-language.
+

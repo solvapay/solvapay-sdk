@@ -7,6 +7,7 @@
 
 // Integration test setup utilities
 export {
+  buildTestPlanOptions,
   createTestPlan,
   createMultiCurrencyPaidTestPlan,
   createTestProduct,

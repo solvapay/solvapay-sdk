@@ -209,7 +209,7 @@ The widget iframe payload (`mcp-app.html`, `src/mcp-app.tsx`, `vite.config.ts`) 
 
 ## Known limits
 
-- Bundle size: the Workers free tier caps at 1MB post-gzip. `@modelcontextprotocol/sdk` + `@solvapay/mcp` + `@solvapay/server` sit close to that ceiling. On the paid tier (10MB), there's plenty of headroom.
+- Bundle size: the Workers free tier caps at 1MB post-gzip. `@modelcontextprotocol/server` + `@solvapay/mcp` + `@solvapay/server` sit close to that ceiling. On the paid tier (10MB), there's plenty of headroom.
 - Cold start: expect ~50-150ms on the first request per isolate. Warm requests are sub-20ms. Measure for your own geography before committing.
 
 ## Upstream

@@ -43,8 +43,10 @@ runtime probe keeps us safe on hosts that don't.
 
 ## Prerequisites
 
-1. SolvaPay backend running (defaults to `http://localhost:3001`; port 3000 is the Next.js frontend)
-2. A product with at least one active plan
+1. SolvaPay platform stack running locally (`npm run dev` / `npm run local` in
+   the sibling `platform` repo). SDK calls go through the provider-app proxy at
+   `http://localhost:3010` — see [`../.env.platform-local.example`](../.env.platform-local.example).
+2. A product with at least one active plan (create in the console at `:3010`)
 3. `SOLVAPAY_SECRET_KEY` scoped to that product
 4. An MCP host such as [`basic-host`](https://github.com/modelcontextprotocol/basic-host)
    running at `http://localhost:8080`
@@ -52,11 +54,14 @@ runtime probe keeps us safe on hosts that don't.
 ## Configure
 
 ```bash
-cp .env.example .env
-# Fill in SOLVAPAY_SECRET_KEY and SOLVAPAY_PRODUCT_REF. The Stripe
-# publishable key used for embedded Elements is fetched from the
-# SolvaPay backend at boot (GET /sdk/platform-config) — no local
-# config needed.
+# Against a local platform stack, start from the shared template:
+cp ../.env.platform-local.example .env
+# Or: cp .env.example .env
+# Fill in SOLVAPAY_SECRET_KEY and SOLVAPAY_PRODUCT_REF. Keep
+# SOLVAPAY_API_BASE_URL=http://localhost:3010 and MCP_PORT=3030 (platform
+# owns 3001–3012). The Stripe publishable key used for embedded Elements is
+# fetched from the SolvaPay backend at boot (GET /sdk/platform-config) — no
+# local config needed.
 ```
 
 ## Run
@@ -71,9 +76,10 @@ Watch mode (rebuilds the UI bundle and restarts the server on changes):
 
 ```bash
 pnpm --filter @example/mcp-checkout-app dev
+# or from the SDK repo root: pnpm mcp:checkout
 ```
 
-Point `basic-host` at `http://localhost:3006/mcp` and open the app from
+Point `basic-host` at `http://localhost:3030/mcp` and open the app from
 its tool list. On `basic-host` and ChatGPT the iframe renders inline
 Stripe Elements; enter the test card `4242 4242 4242 4242` and pay
 without leaving the host. On Claude the probe detects that
@@ -82,6 +88,8 @@ button that opens hosted checkout in a new tab — returning to the host
 fires `refreshBootstrap()` (which calls `manage_account` under the
 hood) and flips the card to **Manage purchase**.
 
+For a public URL, run `pnpm tunnel` / `pnpm mcp:checkout:tunnel` (cloudflared)
+or enable the platform `mcpapp` ngrok tunnel on `:3030`.
 ## Flow
 
 ```mermaid
@@ -332,7 +340,7 @@ widget to mount on a data-tool call.
    balance-zeroing; the two paid plans exercise the brief's PAYG and
    Recurring activation branches.
 2. Start the example (`pnpm --filter @example/mcp-checkout-app dev`) and
-   point `basic-host` at `http://localhost:3006/mcp`.
+   point `basic-host` at `http://localhost:3030/mcp`.
 3. Customer is on Free by default. Call `/search_knowledge query: "hi"`
    N times; each call drains the free quota.
 4. When the Free quota exhausts, the next call returns a **paywall

@@ -40,6 +40,13 @@ warmWasm()
 export { createSolvaPayClient } from './client'
 export type { ServerClientOptions } from './client'
 
+// Opt-in product configuration check (never auto-invoked)
+export { verifyProductConfiguration } from './verify-product-configuration'
+export type {
+  ProductConfigurationStatus,
+  VerifyProductConfigurationOptions,
+} from './verify-product-configuration'
+
 // Re-export factory for unified API
 export { createSolvaPay } from './factory'
 export type {

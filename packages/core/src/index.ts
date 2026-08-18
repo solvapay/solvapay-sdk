@@ -102,6 +102,14 @@ export {
 } from './seller-identity'
 
 export {
+  SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
+  assertValidProductRef,
+  evaluateProductReadiness,
+  type ProductReadinessInput,
+  type ProductReadinessResult,
+} from './product-readiness'
+
+export {
   buildCreateCustomerParams,
   classifyCreateError,
   classifyCustomerRef,

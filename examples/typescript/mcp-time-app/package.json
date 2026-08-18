@@ -8,13 +8,15 @@
     "dev": "concurrently \"cross-env INPUT=mcp-app.html vite build --watch\" \"nodemon --watch src --watch dist/mcp-app.html --watch ../../../packages/server/dist --watch ../../../packages/core/dist --ext ts,css,html --exec \\\"tsx src/index.ts\\\"\""
   },
   "dependencies": {
+    "@modelcontextprotocol/core": "^2.0.0",
     "@modelcontextprotocol/ext-apps": "^1.7.1",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
     "@solvapay/auth": "workspace:^",
     "@solvapay/core": "workspace:*",
     "@solvapay/mcp": "workspace:*",
     "@solvapay/mcp-core": "workspace:*",
-    "@solvapay/server": "*",
+    "@solvapay/server": "workspace:*",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "zod": "^4.3.6"

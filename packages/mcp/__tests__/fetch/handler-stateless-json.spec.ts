@@ -1,56 +1,59 @@
 /**
- * End-to-end coverage for `createSolvaPayMcpFetchHandler({ mode:
- * 'json-stateless' })`. Unlike `handler.spec.ts` which mocks the
- * transport to cover the OAuth / CORS / auth-guard surface, this suite
- * exercises the real `WebStandardStreamableHTTPServerTransport` +
- * `McpServer` wiring so the mode/close/mutex interaction is
- * regression-tested end-to-end (initialize → notifications/initialized
- * → tools/list → tools/call, plus a concurrency check to guard against
- * "Already connected to a transport" re-entry bugs).
+ * End-to-end coverage for `createSolvaPayMcpFetchHandler({ responseMode: 'json' })`.
  */
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import {
+  CLIENT_CAPABILITIES_META_KEY,
+  CLIENT_INFO_META_KEY,
+  McpServer,
+  PROTOCOL_VERSION_META_KEY,
+} from '@modelcontextprotocol/server'
 import { createSolvaPayMcpFetchHandler } from '../../src/fetch/handler'
+
+/** The 2026-era revision this SDK serves on the modern path. */
+const MODERN_PROTOCOL_VERSION = '2026-07-28'
 
 const publicBaseUrl = 'https://mcp.example.com'
 const apiBaseUrl = 'https://api.solvapay.com'
 const productRef = 'prd_test_stateless'
 
-function buildEchoServer(): McpServer {
-  const server = new McpServer({ name: 'test-stateless', version: '0.0.0' })
-  server.registerTool(
-    'echo',
-    {
-      title: 'Echo',
-      description: 'Echoes back the provided message.',
-      inputSchema: { message: z.string() },
-    },
-    async ({ message }) => ({
-      content: [{ type: 'text' as const, text: message }],
-    }),
-  )
-  server.registerTool(
-    'reverse',
-    {
-      title: 'Reverse',
-      description: 'Reverses the provided message.',
-      inputSchema: { message: z.string() },
-    },
-    async ({ message }) => ({
-      content: [{ type: 'text' as const, text: message.split('').reverse().join('') }],
-    }),
-  )
-  return server
+function buildEchoFactory() {
+  return () => {
+    const server = new McpServer({ name: 'test-stateless', version: '0.0.0' })
+    server.registerTool(
+      'echo',
+      {
+        title: 'Echo',
+        description: 'Echoes back the provided message.',
+        inputSchema: z.object({ message: z.string() }),
+      },
+      async ({ message }) => ({
+        content: [{ type: 'text' as const, text: message }],
+      }),
+    )
+    server.registerTool(
+      'reverse',
+      {
+        title: 'Reverse',
+        description: 'Reverses the provided message.',
+        inputSchema: z.object({ message: z.string() }),
+      },
+      async ({ message }) => ({
+        content: [{ type: 'text' as const, text: message.split('').reverse().join('') }],
+      }),
+    )
+    return server
+  }
 }
 
 function buildHandler(): (req: Request) => Promise<Response> {
   return createSolvaPayMcpFetchHandler({
-    server: buildEchoServer(),
+    factory: buildEchoFactory(),
     publicBaseUrl,
     apiBaseUrl,
     productRef,
-    mode: 'json-stateless',
+    responseMode: 'json',
     requireAuth: false,
   })
 }
@@ -76,8 +79,19 @@ function rpcRequest(body: unknown): Request {
 async function callRpc<T>(
   handler: (req: Request) => Promise<Response>,
   body: unknown,
+  extraHeaders: Record<string, string> = {},
 ): Promise<{ status: number; json: JsonRpcResponse<T> }> {
-  const res = await handler(rpcRequest(body))
+  const res = await handler(
+    new Request(`${publicBaseUrl}/mcp`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        ...extraHeaders,
+      },
+      body: JSON.stringify(body),
+    }),
+  )
   return { status: res.status, json: (await res.json()) as JsonRpcResponse<T> }
 }
 
@@ -95,11 +109,10 @@ interface ToolsCallResult {
   content: Array<{ type: string; text?: string }>
 }
 
-describe('createSolvaPayMcpFetchHandler — mode: json-stateless', () => {
-  it('completes initialize → initialized → tools/list → tools/call against a real McpServer', async () => {
+describe('createSolvaPayMcpFetchHandler — responseMode: json (legacy era)', () => {
+  it('completes initialize → initialized → tools/list → tools/call', async () => {
     const handler = buildHandler()
 
-    // 1) initialize → 200 + JSON body with serverInfo
     const init = await callRpc<InitializeResult>(handler, {
       jsonrpc: '2.0',
       id: 1,
@@ -113,8 +126,6 @@ describe('createSolvaPayMcpFetchHandler — mode: json-stateless', () => {
     expect(init.status).toBe(200)
     expect(init.json.result?.serverInfo?.name).toBe('test-stateless')
 
-    // 2) notifications/initialized is a JSON-RPC notification (no id) →
-    //    202 Accepted with no body per the MCP transport spec.
     const initializedRes = await handler(
       rpcRequest({
         jsonrpc: '2.0',
@@ -123,7 +134,6 @@ describe('createSolvaPayMcpFetchHandler — mode: json-stateless', () => {
     )
     expect(initializedRes.status).toBe(202)
 
-    // 3) tools/list → 200 + JSON body with the echo tool present
     const list = await callRpc<ToolsListResult>(handler, {
       jsonrpc: '2.0',
       id: 2,
@@ -132,7 +142,6 @@ describe('createSolvaPayMcpFetchHandler — mode: json-stateless', () => {
     expect(list.status).toBe(200)
     expect(list.json.result?.tools?.map(t => t.name)).toContain('echo')
 
-    // 4) tools/call → 200 + JSON body with the echo result
     const call = await callRpc<ToolsCallResult>(handler, {
       jsonrpc: '2.0',
       id: 3,
@@ -143,15 +152,7 @@ describe('createSolvaPayMcpFetchHandler — mode: json-stateless', () => {
     expect(call.json.result?.content?.[0]).toMatchObject({ type: 'text', text: 'hello' })
   })
 
-  it('chains two tools/call requests in one session without minting Mcp-Session-Id (Goldberg regression)', async () => {
-    // Regression for the Goldberg ChatGPT topup failure
-    // (see solvapay-frontend/.cursor/plans/investigate_goldberg_topup_failure_ff1187a7.plan.md).
-    // ChatGPT's MCP connector was returning `-32000 MCP Resource not found`
-    // on the second `tools/call` of a session against a json-stateless
-    // Cloudflare Worker. The probe confirmed the worker itself routes
-    // every chained call cleanly; this test locks that SDK invariant in
-    // CI so a future handler refactor can't silently start dropping the
-    // second tools/call, even before any host-side bug is fixed.
+  it('chains two tools/call requests without minting Mcp-Session-Id', async () => {
     const handler = buildHandler()
 
     const init = await callRpc<InitializeResult>(handler, {
@@ -166,9 +167,6 @@ describe('createSolvaPayMcpFetchHandler — mode: json-stateless', () => {
     })
     expect(init.status).toBe(200)
 
-    // Stateless mode must never mint an Mcp-Session-Id — any value here
-    // would trick a stateful host into reusing it across stateless
-    // isolate restarts and reproducing the upstream failure shape.
     const initHeaderRes = await handler(
       rpcRequest({
         jsonrpc: '2.0',
@@ -212,11 +210,9 @@ describe('createSolvaPayMcpFetchHandler — mode: json-stateless', () => {
     expect(callB.json.result?.content?.[0]).toMatchObject({ type: 'text', text: 'olleh' })
   })
 
-  it('survives 50 concurrent tools/list calls without "Already connected" errors', async () => {
+  it('survives 50 concurrent tools/list calls without transport errors', async () => {
     const handler = buildHandler()
 
-    // Initialize first so subsequent calls aren't rejected by the
-    // transport's session validator on the first fan-out request.
     const init = await callRpc<InitializeResult>(handler, {
       jsonrpc: '2.0',
       id: 1,
@@ -240,13 +236,119 @@ describe('createSolvaPayMcpFetchHandler — mode: json-stateless', () => {
 
     for (const r of results) {
       expect(r.status).toBe(200)
-      // A re-entry bug surfaces as a JSON-RPC error with
-      // `Already connected to a transport` on `result.error.message`.
-      // The mutex + transport.close() in the handler's finally block
-      // keeps the server's `_transport` slot free for the next request,
-      // so every call here should carry a clean `tools` result.
       expect(r.json.error).toBeUndefined()
       expect(r.json.result?.tools?.map(t => t.name)).toContain('echo')
     }
+  })
+})
+
+describe('createSolvaPayMcpFetchHandler — modern era (2026-07-28)', () => {
+  /**
+   * Modern requests carry no `initialize` handshake — each one self-describes
+   * through the namespaced `_meta` envelope, and the presence of that claim is
+   * what routes the request to the modern path instead of the legacy leg.
+   */
+  function modernMeta(): Record<string, unknown> {
+    return {
+      [PROTOCOL_VERSION_META_KEY]: MODERN_PROTOCOL_VERSION,
+      [CLIENT_INFO_META_KEY]: { name: 'modern-client', version: '1.0.0' },
+      [CLIENT_CAPABILITIES_META_KEY]: {},
+    }
+  }
+
+  /**
+   * The modern path cross-checks routing headers against the body and answers
+   * `-32020` on any disagreement — including an *absent* header for a value the
+   * body carries. `tools/call` therefore needs `Mcp-Name` alongside
+   * `Mcp-Method`, mirroring `params.name`.
+   */
+  function modernHeaders(method: string, name?: string): Record<string, string> {
+    return {
+      'mcp-method': method,
+      'mcp-protocol-version': MODERN_PROTOCOL_VERSION,
+      ...(name !== undefined ? { 'mcp-name': name } : {}),
+    }
+  }
+
+  it('round-trips tools/list with no initialize handshake', async () => {
+    const handler = buildHandler()
+
+    const list = await callRpc<ToolsListResult>(
+      handler,
+      {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/list',
+        params: { _meta: modernMeta() },
+      },
+      modernHeaders('tools/list'),
+    )
+
+    expect(list.status).toBe(200)
+    expect(list.json.error).toBeUndefined()
+    expect(list.json.result?.tools?.map(t => t.name)).toEqual(
+      expect.arrayContaining(['echo', 'reverse']),
+    )
+  })
+
+  it('round-trips tools/call', async () => {
+    const handler = buildHandler()
+
+    const call = await callRpc<ToolsCallResult>(
+      handler,
+      {
+        jsonrpc: '2.0',
+        id: 3,
+        method: 'tools/call',
+        params: {
+          name: 'reverse',
+          arguments: { message: 'hello' },
+          _meta: modernMeta(),
+        },
+      },
+      modernHeaders('tools/call', 'reverse'),
+    )
+
+    expect(call.status).toBe(200)
+    expect(call.json.error).toBeUndefined()
+    expect(call.json.result?.content?.[0]).toMatchObject({ type: 'text', text: 'olleh' })
+  })
+
+  it('rejects a body whose method disagrees with the Mcp-Method header', async () => {
+    const handler = buildHandler()
+
+    const list = await callRpc<ToolsListResult>(
+      handler,
+      {
+        jsonrpc: '2.0',
+        id: 4,
+        method: 'tools/list',
+        params: { _meta: modernMeta() },
+      },
+      modernHeaders('tools/call'),
+    )
+
+    expect(list.status).toBe(400)
+    expect(list.json.error?.code).toBe(-32020)
+  })
+
+  it('rejects an envelope naming a revision the endpoint does not serve', async () => {
+    const handler = buildHandler()
+
+    const list = await callRpc<ToolsListResult>(
+      handler,
+      {
+        jsonrpc: '2.0',
+        id: 5,
+        method: 'tools/list',
+        params: {
+          _meta: { ...modernMeta(), [PROTOCOL_VERSION_META_KEY]: '2999-01-01' },
+        },
+      },
+      { 'mcp-method': 'tools/list' },
+    )
+
+    expect(list.json.result).toBeUndefined()
+    expect(list.json.error).toBeDefined()
   })
 })

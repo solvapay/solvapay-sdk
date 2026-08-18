@@ -52,14 +52,14 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 ### Package boundaries
 
 - **`@solvapay/mcp` has zero `@modelcontextprotocol/*` runtime dependencies.** This invariant is load-bearing. Do not violate it.
-- **`@solvapay/mcp` is the only package that imports the official `@modelcontextprotocol/sdk`.** If you need MCP types elsewhere, re-export them through `@solvapay/mcp-core` as structural aliases. `@solvapay/mcp-core` is intentionally framework-neutral with zero `@modelcontextprotocol/*` runtime dep — OAuth bridge middleware lives in `@solvapay/mcp-express` (Node) and `@solvapay/mcp-fetch` (fetch-first runtimes).
+- **`@solvapay/mcp` is the only package that imports the official SDK (`@modelcontextprotocol/core` / `/server`).** If you need MCP types elsewhere, re-export them through `@solvapay/mcp-core` as structural aliases. `@solvapay/mcp-core` is intentionally framework-neutral with zero `@modelcontextprotocol/*` runtime dep — OAuth bridge middleware lives in `@solvapay/mcp-express` (Node) and `@solvapay/mcp-fetch` (fetch-first runtimes).
 - **`@solvapay/react/mcp` is a subpath export.** Merchants using SolvaPay for non-MCP React surfaces do not pay the ext-apps peer dep cost.
 - **Do not ship a `@solvapay/sdk` umbrella package.** Three-package imports are fine. An umbrella adds maintenance without clarity.
 
 ### Spec compliance
 
 - **Every tool has annotations.** `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` are required. Not optional. Default for `registerPayable` is `{ readOnlyHint: true, openWorldHint: true }`.
-- **Every UI resource uses `mimeType: RESOURCE_MIME_TYPE`.** Never hardcode the string. Import from `@modelcontextprotocol/ext-apps/server`.
+- **Every UI resource uses `mimeType: RESOURCE_MIME_TYPE`.** Never hardcode the string. Import it — along with `registerAppTool` / `registerAppResource` — from `@solvapay/mcp`, which vendors the server-side ext-apps helpers because `@modelcontextprotocol/ext-apps` has no SDK v2 build. The client-side `@modelcontextprotocol/ext-apps` entrypoint that runs inside the iframe is unaffected and stays a direct dependency.
 - **`_meta.ui.resourceUri` lives only on the three intent-tool descriptors.** Merchant payable tools (`registerPayable`) deliberately do NOT advertise it — SEP-1865 says hosts MUST open the iframe on every call when the descriptor advertises it, which means auto-stamping flashed an empty widget on every silent data-tool success. Paywall / nudge / activation responses ship as plain-text narrations on `content[0].text` (naming the recovery intent tool) with `structuredContent = gate` for programmatic consumers. SolvaPay intent tools (`/upgrade`, `/manage_account`, `/topup`) keep descriptor-level `_meta.ui.resourceUri` because calling them is the user's explicit intent to open the UI.
 - **Stripe.js is loaded from `js.stripe.com/v3` at runtime.** Never bundled. The CSP baseline allows this origin.
 

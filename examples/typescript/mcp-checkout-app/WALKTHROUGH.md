@@ -42,14 +42,14 @@ return createSolvaPayMcpServer({
 
 What that line hides (from `@solvapay/mcp`):
 
-- **12 tools registered** — 5 intent tools (`upgrade`, `manage_account`,
-  `topup`, `check_usage`, `activate_plan`), 7 UI-only state-change
+- **12 tools registered** — 4 intent tools (`upgrade`, `manage_account`,
+  `topup`, `activate_plan`), 8 UI-only state-change
   tools (`create_checkout_session`, `create_customer_session`,
   `create_payment_intent`, `process_payment`,
-  `create_topup_payment_intent`, `cancel_renewal`,
-  `reactivate_renewal`).
-- **5 slash-command prompts registered** (`/upgrade`,
-  `/manage_account`, `/topup`, `/check_usage`, `/activate_plan`) —
+  `create_topup_payment_intent`, `attach_business_details`,
+  `cancel_renewal`, `reactivate_renewal`).
+- **4 slash-command prompts registered** (`/upgrade`,
+  `/manage_account`, `/topup`, `/activate_plan`) —
   additive for hosts that support prompts, silently ignored by hosts
   that don't. Opt out with `registerPrompts: false`.
 - **`docs://solvapay/overview.md` resource registered** — narrated

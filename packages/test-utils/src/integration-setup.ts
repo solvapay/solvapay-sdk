@@ -3,6 +3,11 @@
  *
  * These utilities help set up test fixtures for integration tests
  * against a real SolvaPay backend.
+ *
+ * Plan creation uses the composable pricing model: identity fields plus an
+ * ordered `options[]` list. Legacy scalars (type / billingCycle / price /
+ * freeUnits / pricingOptions) are authoring convenience only — translated here
+ * before POST.
  */
 
 export interface TestProviderSetup {
@@ -36,6 +41,19 @@ export interface TestPlanSetup {
   pricingOptions?: TestPlanPricingOption[]
 }
 
+/** A composable pricing option in wire form (money as integer minor units). */
+type WireOption = Record<string, unknown>
+
+const USAGE_METER = 'requests'
+
+const BILLING_CYCLE_BY_CYCLE: Record<string, WireOption> = {
+  weekly: { kind: 'billingCycle', interval: 'week' },
+  monthly: { kind: 'billingCycle', interval: 'month' },
+  quarterly: { kind: 'billingCycle', interval: 'month', count: 3 },
+  yearly: { kind: 'billingCycle', interval: 'year' },
+  custom: { kind: 'billingCycle', interval: 'month' },
+}
+
 /**
  * Create a test provider and secret key via backend API
  *
@@ -49,9 +67,8 @@ export async function createTestProvider(
   apiBaseUrl: string,
   adminKey?: string,
 ): Promise<TestProviderSetup> {
-  // TODO: Implement when backend exposes provider creation API
-  // For now, this documents the expected behavior
-
+  void apiBaseUrl
+  void adminKey
   throw new Error(
     'Provider creation via API not yet implemented. ' +
       'Please create a test provider manually and provide SOLVAPAY_SECRET_KEY. ' +
@@ -106,12 +123,117 @@ export interface CreateTestPlanOptions {
   freeUnits?: number
   limit?: number
   creditsPerUnit?: number
+  /** Auto-assign only when the plan is free. Paid + `true` throws. */
   isDefault?: boolean
+}
+
+function resolvePlanCurrency(opts: CreateTestPlanOptions): string {
+  return (
+    opts.currency ??
+    opts.pricingOptions?.find(o => o.default)?.currency ??
+    opts.pricingOptions?.[0]?.currency ??
+    'USD'
+  )
+}
+
+/**
+ * Translate the declarative plan DSL into composable `options[]`.
+ *
+ * Mirrors platform QA `buildPlanOptions` / domain `legacyPlanToOptions`:
+ *   recurring   -> billingCycle + flat charge (amount 0 = free)
+ *   one-time    -> flat charge, no billingCycle
+ *   usage-based -> per-unit charge on `requests` (+ included-unit limit)
+ *   hybrid      -> billingCycle + flat base + per-unit (+ limit)
+ *
+ * A recurring plan authored with freeUnits > 0 (the old free-tier fixture shape)
+ * is expressed as a pure-metered usage plan so the included allowance is
+ * enforceable — composable recurring plans have no freeUnits scalar, and a
+ * limit option requires a metered charge (R-style meter coherence).
+ */
+export function buildTestPlanOptions(opts: CreateTestPlanOptions): WireOption[] {
+  const freeUnits = opts.freeUnits ?? 5
+  const price = opts.price ?? 0
+  let planType = opts.type ?? 'recurring'
+
+  // Old free-tier fixture: recurring + freeUnits, no paid price → metered trial.
+  if (planType === 'recurring' && freeUnits > 0 && price === 0 && !opts.pricingOptions?.length) {
+    planType = 'usage-based'
+  }
+
+  const currency = resolvePlanCurrency(opts)
+  const wireCurrency = currency.toLowerCase()
+  const options: WireOption[] = []
+
+  const recurring = planType === 'recurring' || planType === 'hybrid'
+  if (recurring) {
+    options.push(BILLING_CYCLE_BY_CYCLE[opts.billingCycle ?? 'monthly'] ?? BILLING_CYCLE_BY_CYCLE.monthly)
+  }
+
+  if (planType === 'recurring' || planType === 'one-time') {
+    const amountMinor =
+      opts.price ??
+      opts.pricingOptions?.find(o => o.default)?.price ??
+      opts.pricingOptions?.[0]?.price ??
+      0
+    options.push({ kind: 'charge', per: 'flat', amountMinor, currency: wireCurrency })
+  } else if (planType === 'hybrid') {
+    options.push({
+      kind: 'charge',
+      per: 'flat',
+      amountMinor: opts.price ?? 0,
+      currency: wireCurrency,
+    })
+  }
+
+  if (planType === 'usage-based' || planType === 'hybrid') {
+    // `creditsPerUnit` here is the wire per-unit charge in minor units
+    // (1 = 1¢ = 100 credits). Pure-metered trials omit a positive rate.
+    const amountMinor = opts.creditsPerUnit ?? 0
+    options.push({
+      kind: 'charge',
+      per: 'unit',
+      amountMinor,
+      currency: wireCurrency,
+      meter: USAGE_METER,
+    })
+    const cap = opts.limit ?? opts.freeUnits
+    if (cap != null && cap > 0) {
+      options.push({
+        kind: 'limit',
+        cap,
+        scope: 'billing_period',
+        meter: USAGE_METER,
+        onExceed: amountMinor > 0 ? 'charge' : 'block',
+      })
+    }
+  }
+
+  const charges =
+    planType === 'hybrid' ||
+    (planType === 'usage-based' && (opts.creditsPerUnit ?? 0) > 0) ||
+    ((planType === 'recurring' || planType === 'one-time') &&
+      (opts.price ??
+        opts.pricingOptions?.find(o => o.default)?.price ??
+        opts.pricingOptions?.[0]?.price ??
+        0) > 0)
+
+  if (opts.isDefault === true && charges) {
+    throw new Error(
+      'Only free plans can be auto-assigned — a plan that charges per unit or has a positive price requires explicit customer activation',
+    )
+  }
+
+  if (!charges && (opts.isDefault ?? true)) {
+    options.push({ kind: 'autoAssigned' })
+  }
+
+  return options
 }
 
 /**
  * Create a test plan via SDK API.
- * Defaults to a free recurring plan if no options are provided.
+ * Defaults to a free metered plan with an included-unit allowance when only
+ * freeUnits are provided (the historical free-tier fixture).
  */
 export async function createTestPlan(
   apiBaseUrl: string,
@@ -122,38 +244,19 @@ export async function createTestPlan(
   const opts: CreateTestPlanOptions =
     typeof freeUnitsOrOptions === 'number' ? { freeUnits: freeUnitsOrOptions } : freeUnitsOrOptions
 
-  const planType = opts.type ?? 'recurring'
-  const price = opts.price ?? 0
   const freeUnits = opts.freeUnits ?? 5
-  const currency = opts.currency ?? 'USD'
+  const price = opts.price ?? 0
+  const currency = resolvePlanCurrency(opts)
+  let planType = opts.type ?? 'recurring'
+  if (planType === 'recurring' && freeUnits > 0 && price === 0 && !opts.pricingOptions?.length) {
+    planType = 'usage-based'
+  }
 
   const body: Record<string, unknown> = {
     name: opts.name ?? `SDK Test Plan ${Date.now()}`,
-    type: planType,
-    price,
     currency,
-    default: opts.isDefault ?? true,
-    freeUnits,
-    limit: opts.limit ?? freeUnits,
+    options: buildTestPlanOptions(opts),
     metadata: { tier: 'test' },
-  }
-
-  if (planType === 'recurring' || planType === 'hybrid') {
-    body.billingCycle = opts.billingCycle ?? 'monthly'
-  }
-
-  if (planType === 'usage-based') {
-    body.billingModel = 'pre-paid'
-    body.creditsPerUnit = opts.creditsPerUnit ?? 0
-  }
-
-  if (planType === 'hybrid') {
-    body.creditsPerUnit = opts.creditsPerUnit ?? 0
-    body.basePrice = price
-  }
-
-  if (opts.pricingOptions?.length) {
-    body.pricingOptions = opts.pricingOptions
   }
 
   const response = await fetch(`${apiBaseUrl}/v1/sdk/products/${productRef}/plans`, {
@@ -175,7 +278,7 @@ export async function createTestPlan(
     reference: data.data?.reference || data.reference,
     productRef,
     freeUnits,
-    type: planType,
+    type: data.data?.type || data.type || planType,
     price,
     creditsPerUnit: opts.creditsPerUnit,
     currency,
@@ -184,8 +287,8 @@ export async function createTestPlan(
 }
 
 /**
- * Create a paid recurring plan with explicit per-currency pricing options.
- * The default option must use the provider's default currency.
+ * Create a paid recurring plan. Multi-currency `pricingOptions` are collapsed
+ * to the default (composable pricings are single-currency).
  */
 export async function createMultiCurrencyPaidTestPlan(
   apiBaseUrl: string,
@@ -212,7 +315,6 @@ export async function createMultiCurrencyPaidTestPlan(
     billingCycle: 'monthly',
     freeUnits: 0,
     isDefault: false,
-    pricingOptions: params.pricingOptions,
   })
 }
 

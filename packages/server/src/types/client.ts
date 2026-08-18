@@ -37,7 +37,14 @@ export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
 }
 
 /**
- * Extended LimitResponse with SDK-added plan field
+ * Extended LimitResponse with SDK-added plan field.
+ *
+ * The backend `LimitResponse` now natively carries the `onExceed` outcome flags
+ * (`throttled` / `overage` / `needsTopUp` / `needsUpgrade` / `upgraded`, resolved
+ * by `decideLimit`), so they flow through from `generated.ts`. `throttled` /
+ * `overage` ride the allow path (`withinLimits: true`) so a protected handler
+ * can read them from `decision.limits` and degrade service or note overage; the
+ * others accompany a gate outcome.
  */
 export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & {
   plan: string

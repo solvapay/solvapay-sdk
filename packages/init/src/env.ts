@@ -3,12 +3,13 @@ import { constants } from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
+import { SOLVAPAY_PRODUCT_REF_PLACEHOLDER as CORE_PRODUCT_REF_PLACEHOLDER } from '@solvapay/core'
 
 const SOLVAPAY_SECRET_KEY = 'SOLVAPAY_SECRET_KEY'
 const SOLVAPAY_PRODUCT_REF = 'SOLVAPAY_PRODUCT_REF'
 const SOLVAPAY_API_BASE_URL = 'SOLVAPAY_API_BASE_URL'
 
-export const SOLVAPAY_PRODUCT_REF_PLACEHOLDER = '__SOLVAPAY_PRODUCT_REF__'
+export const SOLVAPAY_PRODUCT_REF_PLACEHOLDER = CORE_PRODUCT_REF_PLACEHOLDER
 
 const envValueRegex = (key: string) => new RegExp(`^\\s*${key}\\s*=\\s*(.*)$`, 'm')
 
@@ -126,8 +127,9 @@ export const writeSolvaPaySecretToEnv = async (
   return { filePath: envPath, action: 'updated' }
 }
 
-export const readSolvaPayProductRefFromEnv = async (
-  cwd: string = process.cwd(),
+const readEnvKeyFromFile = async (
+  key: string,
+  cwd: string,
 ): Promise<string | undefined> => {
   const envPath = path.join(cwd, '.env')
   const exists = await envFileExists(envPath)
@@ -136,7 +138,7 @@ export const readSolvaPayProductRefFromEnv = async (
   }
 
   const content = await readFile(envPath, 'utf8')
-  const match = content.match(envValueRegex(SOLVAPAY_PRODUCT_REF))
+  const match = content.match(envValueRegex(key))
   if (!match?.[1]) {
     return undefined
   }
@@ -144,6 +146,18 @@ export const readSolvaPayProductRefFromEnv = async (
   const value = parseEnvValue(match[1])
   return value.length > 0 ? value : undefined
 }
+
+export const readSolvaPayProductRefFromEnv = async (
+  cwd: string = process.cwd(),
+): Promise<string | undefined> => readEnvKeyFromFile(SOLVAPAY_PRODUCT_REF, cwd)
+
+export const readSolvaPaySecretKeyFromEnv = async (
+  cwd: string = process.cwd(),
+): Promise<string | undefined> => readEnvKeyFromFile(SOLVAPAY_SECRET_KEY, cwd)
+
+export const readSolvaPayApiBaseUrlFromEnv = async (
+  cwd: string = process.cwd(),
+): Promise<string | undefined> => readEnvKeyFromFile(SOLVAPAY_API_BASE_URL, cwd)
 
 export const writeSolvaPayProductRefToEnv = async (
   productRef: string,

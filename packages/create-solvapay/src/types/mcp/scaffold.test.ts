@@ -320,7 +320,8 @@ describe('patchSolvapayVersions', () => {
       name: 'demo-mcp',
       private: true,
       dependencies: {
-        '@modelcontextprotocol/sdk': '^1.29.0',
+        '@modelcontextprotocol/core': '^2.0.0',
+        '@modelcontextprotocol/server': '^2.0.0',
         '@solvapay/mcp': '^0.2.5',
         '@solvapay/react': '^1.2.0',
         '@solvapay/server': '^1.1.0',
@@ -346,7 +347,8 @@ describe('patchSolvapayVersions', () => {
       dependencies: Record<string, string>
     }
     expect(patched.dependencies).toEqual({
-      '@modelcontextprotocol/sdk': '^1.29.0',
+      '@modelcontextprotocol/core': '^2.0.0',
+      '@modelcontextprotocol/server': '^2.0.0',
       '@solvapay/mcp': '0.3.7',
       '@solvapay/react': '1.3.0',
       '@solvapay/server': '1.2.0',
@@ -423,7 +425,7 @@ describe('patchSolvapayVersions', () => {
     expect(pkg.dependencies['@solvapay/react']).toBe('1.3.0')
     expect(pkg.dependencies['@solvapay/server']).toBe('1.2.0')
     // Unrelated deps stay on their caret ranges (resolved at npm install time).
-    expect(pkg.dependencies['@modelcontextprotocol/sdk']).toMatch(/^\^/)
+    expect(pkg.dependencies['@modelcontextprotocol/server']).toMatch(/^\^/)
     expect(pkg.dependencies['zod']).toMatch(/^\^/)
   })
 })

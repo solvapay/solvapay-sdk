@@ -1,3 +1,4 @@
+import { SOLVAPAY_PRODUCT_REF_PLACEHOLDER } from '@solvapay/core'
 import open from 'open'
 
 const INIT_EXCHANGE_TIMEOUT_MS = 10 * 60 * 1000
@@ -119,21 +120,44 @@ export const waitForExchange = async (
   }
 }
 
-const PRODUCT_REF_PLACEHOLDER = '__SOLVAPAY_PRODUCT_REF__'
+export type VerifiedProductSummary = {
+  name: string
+  status: string
+  plans: Array<{ isActive: boolean }>
+}
 
 export type VerifyProductRefResult =
   | { status: 'skipped' }
-  | { status: 'ok' }
+  | { status: 'ok'; product: VerifiedProductSummary }
   | { status: 'invalid_placeholder' }
   | { status: 'not_found'; body: string }
   | { status: 'error'; message: string }
+
+const parseVerifiedProduct = (payload: unknown): VerifiedProductSummary | undefined => {
+  if (!payload || typeof payload !== 'object') return undefined
+  const root = payload as Record<string, unknown>
+  const data =
+    root.data && typeof root.data === 'object'
+      ? (root.data as Record<string, unknown>)
+      : root
+  const name = typeof data.name === 'string' ? data.name : undefined
+  const status = typeof data.status === 'string' ? data.status : undefined
+  if (!name || !status) return undefined
+
+  const rawPlans = Array.isArray(data.plans) ? data.plans : []
+  const plans = rawPlans
+    .filter((plan): plan is Record<string, unknown> => !!plan && typeof plan === 'object')
+    .map(plan => ({ isActive: plan.isActive === true }))
+
+  return { name, status, plans }
+}
 
 export const verifyProductRef = async (
   apiBaseUrl: string,
   secretKey: string,
   productRef: string,
 ): Promise<VerifyProductRefResult> => {
-  if (productRef === PRODUCT_REF_PLACEHOLDER) {
+  if (productRef === SOLVAPAY_PRODUCT_REF_PLACEHOLDER) {
     return { status: 'invalid_placeholder' }
   }
 
@@ -149,7 +173,15 @@ export const verifyProductRef = async (
     )
 
     if (response.ok) {
-      return { status: 'ok' }
+      const payload: unknown = await response.json()
+      const product = parseVerifiedProduct(payload)
+      if (!product) {
+        return {
+          status: 'error',
+          message: 'Product lookup succeeded but the response was missing name/status.',
+        }
+      }
+      return { status: 'ok', product }
     }
 
     const body = await response.text()

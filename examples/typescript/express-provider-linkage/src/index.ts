@@ -5,7 +5,7 @@ import { createStubClient } from '../../shared/stub-api-client'
 import { createTask, getTask, listTasks, deleteTask, getTaskCount } from '@solvapay/demo-services'
 
 const app: Express = express()
-const port = parseInt(process.env.PORT || '3002', 10)
+const port = parseInt(process.env.PORT || '3031', 10)
 
 const apiClient = createStubClient({
   freeTierLimit: 5,
@@ -63,7 +63,9 @@ app.get('/', (_req, res) => {
       simulateProviderLogin: 'x-provider-user-id (required)',
       optionalProfile: ['x-provider-user-email', 'x-provider-user-name'],
     },
-    example: ['curl -H "x-provider-user-id: auth0|demo-user" http://localhost:3002/tasks'],
+    example: [
+      `curl -H "x-provider-user-id: auth0|demo-user" http://localhost:${port}/tasks`,
+    ],
   })
 })
 

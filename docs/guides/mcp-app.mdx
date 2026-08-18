@@ -72,8 +72,7 @@ Your server only needs to implement the tools the UI actually uses. Unimplemente
 On the server, register each tool with the canonical name so the client adapter can find it. Import the constants so you never hand-type a string.
 
 ```ts
-import { registerAppTool } from '@modelcontextprotocol/ext-apps/server'
-import { MCP_TOOL_NAMES } from '@solvapay/mcp'
+import { MCP_TOOL_NAMES, registerAppTool } from '@solvapay/mcp'
 import { checkPurchaseCore, createCheckoutSessionCore } from '@solvapay/server'
 
 registerAppTool(

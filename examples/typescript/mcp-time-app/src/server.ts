@@ -1,12 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import {
-  registerAppResource,
-  registerAppTool,
-  RESOURCE_MIME_TYPE,
-} from '@modelcontextprotocol/ext-apps/server'
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
+import { McpServer } from '@modelcontextprotocol/server'
+import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/server'
+import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@solvapay/mcp'
 import { z } from 'zod'
 import { payable, paywallEnabled, solvaPay, solvapayProductRef } from './config'
 import type { McpToolExtra } from '@solvapay/mcp-core'
@@ -42,10 +38,12 @@ function registerVirtualAppTools(server: McpServer) {
   })
 
   for (const tool of virtualTools) {
-    const inputSchema = jsonSchemaToZodRawShape(
-      tool.inputSchema.properties as Record<string, JsonSchemaProperty>,
-      tool.inputSchema.required || [],
-    ) as unknown as Record<string, z.ZodTypeAny>
+    const inputSchema = z.object(
+      jsonSchemaToZodRawShape(
+        tool.inputSchema.properties as Record<string, JsonSchemaProperty>,
+        tool.inputSchema.required || [],
+      ) as unknown as Record<string, z.ZodTypeAny>,
+    )
 
     registerAppTool(
       server,
@@ -124,7 +122,7 @@ export function createServer() {
     {
       title: 'Get current time',
       description: 'Returns the current server time in a readable local format.',
-      inputSchema: {},
+      inputSchema: z.object({}),
       outputSchema: timeOutputSchema,
       _meta: {
         ui: {

@@ -5,9 +5,12 @@ import {
   applyHostStyleVariables,
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import './global.css'
 import './mcp-app.css'
+
+// Derived from the ext-apps client rather than imported from the server SDK:
+// the iframe bundle has no dependency on the official SDK packages.
+type CallToolResult = Awaited<ReturnType<App['callServerTool']>>
 
 type TimeResult = {
   currentTime?: string

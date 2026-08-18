@@ -203,6 +203,37 @@ describe('createOAuthRegisterHandler', () => {
     expect(state.body).toEqual({ error: 'invalid_redirect_uri', error_description: 'bad uri' })
   })
 
+  it('logs a DCR diagnostic naming productRef when upstream returns Invalid identifier', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    fetchMock.mockResolvedValueOnce(
+      jsonFetchResponse(400, {
+        message:
+          'Invalid identifier. Use mcp_server_id for hosted MCP, or product_ref for non-hosted MCP.',
+      }),
+    )
+
+    const handler = createOAuthRegisterHandler({ apiBaseUrl, productRef })
+    const { res, state } = mockRes()
+    await handler(
+      mockReq({
+        method: 'POST',
+        path: '/oauth/register',
+        headers: { 'content-type': 'application/json' },
+        body: { redirect_uris: ['cursor://callback'] },
+      }),
+      res,
+      vi.fn(),
+    )
+
+    expect(state.statusCode).toBe(400)
+    expect(warn).toHaveBeenCalled()
+    const message = warn.mock.calls.map(call => String(call[0])).join('\n')
+    expect(message).toContain(productRef)
+    expect(message).toContain(apiBaseUrl)
+    expect(message).toMatch(/did not resolve/i)
+    warn.mockRestore()
+  })
+
   it('returns 502 when upstream is unreachable', async () => {
     fetchMock.mockRejectedValueOnce(new Error('ECONNREFUSED'))
 
@@ -641,6 +672,23 @@ describe('createOAuthRevokeHandler', () => {
 })
 
 describe('createMcpOAuthBridge integration', () => {
+  it('rejects invalid productRef at construction', () => {
+    expect(() =>
+      createMcpOAuthBridge({
+        publicBaseUrl,
+        apiBaseUrl,
+        productRef: 'not-a-product',
+      }),
+    ).toThrow(/prd_/)
+    expect(() =>
+      createMcpOAuthBridge({
+        publicBaseUrl,
+        apiBaseUrl,
+        productRef: '',
+      }),
+    ).toThrow(/productRef is required/)
+  })
+
   let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {

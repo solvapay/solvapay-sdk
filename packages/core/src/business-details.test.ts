@@ -160,10 +160,23 @@ describe('validateBusinessDetails', () => {
     const result = validateBusinessDetails({
       isBusiness: true,
       businessName: 'Test Co',
-      country: 'JP',
-      taxId: 'JP123456789',
+      country: 'ZZ',
+      taxId: 'ZZ123456789',
     })
     expect(result.success).toBe(false)
+  })
+
+  it('accepts a Japanese business with a jp_trn', () => {
+    const result = validateBusinessDetails({
+      isBusiness: true,
+      businessName: 'K.K. Example',
+      country: 'JP',
+      taxId: 'T1234567891234',
+    })
+    expect(result.success).toBe(true)
+    if (result.success && result.data.isBusiness) {
+      expect(result.data.taxIdType).toBe('jp_trn')
+    }
   })
 
   it('rejects malformed VAT for the region', () => {

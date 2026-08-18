@@ -5,10 +5,17 @@ export {
   verifySecretKey,
   waitForExchange,
 } from './browser-auth'
-export type { ExchangeResponse, InitSessionResponse, VerifyProductRefResult } from './browser-auth'
+export type {
+  ExchangeResponse,
+  InitSessionResponse,
+  VerifiedProductSummary,
+  VerifyProductRefResult,
+} from './browser-auth'
 export {
   ensureEnvInGitignore,
+  readSolvaPayApiBaseUrlFromEnv,
   readSolvaPayProductRefFromEnv,
+  readSolvaPaySecretKeyFromEnv,
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
   writeSolvaPayApiBaseUrlToEnv,
   writeSolvaPayProductRefToEnv,
@@ -16,7 +23,11 @@ export {
 } from './env'
 export type { EnvWriteResult, GitignoreEnvResult } from './env'
 
-export { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from './install'
+export {
+  getInstallCommand,
+  getSolvaPayBasePackages,
+  installSolvaPaySdk,
+} from './install'
 export type { InstallResult } from './install'
 
 export {
@@ -34,3 +45,11 @@ export type { EnsureNodeProjectResult, PackageManager } from './project'
 
 export { runInitInDirectory } from './run-init'
 export type { InitCommandOptions, RunInitInDirectoryOptions } from './run-init'
+
+export { runDoctorInDirectory } from './run-doctor'
+export type {
+  DoctorCheckResult,
+  DoctorCommandOptions,
+  DoctorReport,
+  RunDoctorInDirectoryOptions,
+} from './run-doctor'
