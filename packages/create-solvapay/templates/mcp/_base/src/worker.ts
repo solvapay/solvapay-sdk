@@ -119,7 +119,7 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
     readHtml: async () => mcpAppHtml,
     publicBaseUrl: requireEnv(env, 'MCP_PUBLIC_BASE_URL'),
     apiBaseUrl,
-    mode: 'json-stateless',
+    responseMode: 'json',
     // Hide UI-only transport tools from the LLM-facing `tools/list`
     // (text hosts: Claude Desktop, MCPJam, Cursor) — keeps the model's
     // tool catalogue narrow to the four intent tools (`upgrade`,

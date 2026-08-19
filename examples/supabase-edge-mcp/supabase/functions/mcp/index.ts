@@ -93,7 +93,9 @@ const handler = createSolvaPayMcpFetch({
   // rewriteRequestPath strips FUNCTION_MOUNT_PREFIX ('/mcp') before the
   // handler sees the request, so the effective MCP root is '/' not '/mcp'.
   mcpPath: '/',
-  mode: 'json-stateless',
+  // Kept explicit rather than relying on the default: Supabase Edge cannot
+  // hold a stream, so single-JSON responses are load-bearing here.
+  responseMode: 'json',
   // Trim the LLM catalog to the four intent tools on text hosts
   // (Claude Desktop, MCPJam, Cursor); the SDK auto-bypasses for
   // ChatGPT so the iframe's transport tools stay callable.
