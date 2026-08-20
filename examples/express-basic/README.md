@@ -284,7 +284,7 @@ The adapter automatically handles errors:
   "success": false,
   "error": "Payment required",
   "product": "prd_NO8WYSX5",
-  "checkoutUrl": "https://checkout.solvapay.com/...",
+  "checkoutUrl": "https://customer.solvapay.com/...",
   "message": "Purchase required. Remaining: 0"
 }
 
@@ -349,7 +349,7 @@ Returned when user exceeds their usage limits:
   "success": false,
   "error": "Payment required",
   "product": "express-tasks-api",
-  "checkoutUrl": "https://checkout.solvapay.com/...",
+  "checkoutUrl": "https://customer.solvapay.com/...",
   "message": "Purchase required. Remaining: 0"
 }
 ```

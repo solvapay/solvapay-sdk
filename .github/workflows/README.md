@@ -9,6 +9,19 @@ the workflows do the rest.
 
 ## Workflows
 
+### `ci.yml` — PR gate
+
+**Trigger:** pull request into `main` or `dev`.
+
+Runs `deps:check`, `lint`, `build:packages`, `test`, and the **Deno
+gate** (`pnpm --filter @example/supabase-edge-mcp validate:workspace`).
+The Deno gate type-checks `examples/supabase-edge-mcp` under a real Deno
+binary against the **workspace source** of the `@solvapay/*` packages,
+so a feature branch proves its own SDK change still works for the
+canonical Supabase Edge consumer before it merges. See
+[`examples/supabase-edge-mcp/README.md`](../../examples/supabase-edge-mcp/README.md)
+for how `deno.workspace.json` resolves workspace source.
+
 ### `publish-preview.yml` — Preview Snapshot
 
 **Trigger:** push to `dev` (or manual `workflow_dispatch`).
@@ -20,11 +33,26 @@ Every push to `dev` runs the full pre-publish gate:
 3. `pnpm validate:fetch-runtime` — asserts `@solvapay/server/fetch` and
    `@solvapay/mcp/fetch` load cleanly in a bare Web-standards
    environment (no `node:`-prefixed imports, no leaked Node builtins).
-4. `pnpm changeset version --snapshot preview` — stamps a
+4. `validate:workspace` — the Deno gate, against workspace source.
+5. `pnpm changeset version --snapshot preview` — stamps a
    `0.0.0-preview-<shortsha>` version on every package with a pending
    changeset (plus anything that depends on one).
-5. `pnpm changeset publish --tag preview --no-git-tag` — publishes
+6. `pnpm changeset publish --tag preview --no-git-tag` — publishes
    each snapshot to the `@preview` npm dist-tag.
+7. `scripts/verify-npm-publishes.mjs` — confirms every package
+   Changesets claimed to ship is actually fetchable from the registry.
+8. `validate` — a **post-publish** re-run of the Deno gate, this time
+   against the `@preview` tag the run just moved.
+
+Step 8 is deliberately after the publish. It is the only check that
+exercises the assembled npm tarballs (their published `exports` maps and
+peer ranges) rather than workspace `dist/`, so it earns its place — but
+it must not gate the publish. It used to: a publish that broke the
+example froze the very tag the gate read, so every subsequent run failed
+on stale input and the run that would have fixed it could never get past
+its own gate. `@preview` sat 8 days stale in August 2026 for exactly
+this reason. The workspace gate at step 4 is the blocking one because it
+checks the code actually being shipped and has no such feedback loop.
 
 Consumers install with:
 
@@ -50,7 +78,13 @@ which runs in two distinct modes:
   git tags (`@solvapay/core@1.1.0`, `@solvapay/mcp@0.2.0`, …).
 
 Both modes run the same pre-publish gates as the preview workflow
-(tests, build, `validate-fetch-runtime`).
+(tests, build, `validate-fetch-runtime`, and the `validate:workspace`
+Deno gate).
+
+This workflow has no dist-tag-pinned Deno gate. It ships `@latest`, so a
+`@preview` gate would validate an artifact the run did not produce, and a
+`@latest` gate would validate the previous release. Worth revisiting once
+`0.3.0` reaches `@latest`.
 
 ## Release workflow summary
 
@@ -85,6 +119,7 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 | Write a changeset        | `pnpm changeset` (interactive)                                                 |
 | Inspect pending releases | `pnpm changeset status --verbose`                                              |
 | Verify fetch-runtime     | `pnpm validate:fetch-runtime` (or `pnpm tsx scripts/validate-fetch-runtime.ts`) |
+| Run the Deno gate        | `pnpm --filter @example/supabase-edge-mcp validate:workspace`                   |
 
 ## Troubleshooting
 
@@ -103,7 +138,31 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 - Deno 2.9+ blocks npm packages published within 24h by default. The
   supabase-edge-mcp import maps must set `"minimumDependencyAge": 0`
-  because the gate resolves mutable `@preview` tags.
+  because the post-publish gate resolves mutable `@preview` tags.
+
+### Deno gate fails with a cascade of `TS2307` / `TS7031` implicit-any errors
+
+- That shape of failure is a resolution problem, not a type problem.
+  `validate:workspace` resolves `@solvapay/*` through pnpm symlinks into
+  `packages/*`, which lands outside `node_modules` — so Deno stops
+  mapping the `./chunk-XYZ.js` specifiers tsup writes into its `.d.ts`
+  files onto their `.d.ts` siblings. `deno.workspace.json` must keep
+  `"unstable": ["sloppy-imports"]` (extension probing restores the
+  mapping), `"nodeModulesDir": "manual"`, and must stay at the example
+  root so Deno finds the pnpm-populated `node_modules`. Run
+  `pnpm build:packages` first — the gate reads `dist/`.
+
+### Deno gate fails only on `dev`/`main`, not on the PR
+
+- The pre-publish gate and the PR gate both run `validate:workspace`, so
+  a divergence means the merge commit differs from what CI saw. Rerun
+  `pnpm --filter @example/supabase-edge-mcp validate:workspace` locally
+  on the merged branch.
+- If the *post-publish* `validate` step is the one failing, the newly
+  published tarballs are broken (bad `exports` map or peer range), not
+  the source. The publish already happened; fix forward with a new
+  changeset. Locally, reproduce with `deno check --reload=npm: …` — Deno
+  caches npm metadata and will otherwise resolve a stale `@preview`.
 
 ### `changeset version --snapshot preview` publishes no packages
 

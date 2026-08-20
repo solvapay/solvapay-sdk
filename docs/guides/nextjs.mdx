@@ -32,7 +32,7 @@ Create a `.env.local` file:
 
 ```env
 SOLVAPAY_SECRET_KEY=sk_...
-NEXT_PUBLIC_SOLVAPAY_PRODUCT=prd_YOUR_PRODUCT_ID
+NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF=prd_YOUR_PRODUCT_ID
 ```
 
 ### 2. Initialize SolvaPay Client
@@ -60,7 +60,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { solvaPay } from '@/lib/solvapay'
 
 const payable = solvaPay.payable({
-  product: process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!,
+  product: process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF!,
 })
 
 // Your business logic
@@ -391,7 +391,7 @@ export default function CheckoutPage() {
   return (
     <PaymentForm
       planRef="pln_premium"
-      productRef={process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!}
+      productRef={process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF!}
       onSuccess={() => {
         router.push('/dashboard');
       }}
@@ -567,7 +567,7 @@ export default function CheckoutPage() {
       <h1>Subscribe to Premium</h1>
       <PaymentForm
         planRef="pln_premium"
-      productRef={process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!}
+      productRef={process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF!}
         onSuccess={() => {
           router.push('/dashboard');
         }}
@@ -644,7 +644,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { solvaPay } from '@/lib/solvapay'
 
 const payable = solvaPay.payable({
-  product: process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!,
+  product: process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF!,
 })
 
 async function createTask(req: NextRequest) {
@@ -674,7 +674,7 @@ export default function CheckoutPage() {
       <h1 className="text-3xl font-bold mb-8">Subscribe to Premium</h1>
       <PaymentForm
         planRef="pln_premium"
-        productRef={process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT!}
+        productRef={process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF!}
         onSuccess={() => router.push('/dashboard')}
       />
     </div>

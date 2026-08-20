@@ -30,6 +30,7 @@ import { createSolvaPayClient } from './client'
 import { PaywallError, SolvaPayPaywall, paywallErrorToClientPayload } from './paywall'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
+import { requireProductRef, resolveProductRef } from './resolve-product-ref'
 import { createVirtualTools } from './virtual-tools'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 import type { PaywallStructuredContent } from './types'
@@ -171,7 +172,7 @@ export interface PayableGateOptions {
   ctx?: { waitUntil(p: Promise<unknown>): void }
   /**
    * Optional adapter metadata override. Falls back to the
-   * `productRef` / `usageType` configured on `payable({ … })` when
+   * `productRef` / `meterName` (or deprecated `usageType`) configured on `payable({ … })` when
    * omitted.
    */
   metadata?: import('./types').PaywallMetadata
@@ -552,6 +553,7 @@ export interface SolvaPay {
     productRef: string
     planRef?: string
     meterName?: string
+    /** @deprecated Use `meterName`. */
     usageType?: string
   }): Promise<{
     withinLimits: boolean
@@ -786,7 +788,8 @@ export interface SolvaPay {
    * ```typescript
    * const virtualTools = solvaPay.getVirtualTools({
    *   product: 'prd_myapi',
-   *   getCustomerRef: (_args, extra) => String(extra?.authInfo?.extra?.customer_ref || 'anonymous'),
+   *   getCustomerRef: (_args, extra) =>
+   *     String(extra?.http?.authInfo?.extra?.customer_ref || 'anonymous'),
    * });
    *
    * // Register on your MCP server
@@ -1050,11 +1053,10 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
-      const product =
-        options.productRef || options.product || process.env.SOLVAPAY_PRODUCT || 'default-product'
+      const product = resolveProductRef(options.productRef || options.product)
 
-      const usageType = options.usageType || 'requests'
-      const metadata = { product, usageType }
+      const usageType = options.meterName || options.usageType || 'requests'
+      const metadata = { product, meterName: usageType, usageType }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1152,8 +1154,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             return { kind: 'paywall', response, content: decision.gate }
           }
 
-          const productRef = decideMetadata.product || metadata.product || product
-          const meterName = decision.limits.meterName || decideMetadata.usageType || 'requests'
+          const productRef = requireProductRef(
+            decideMetadata.product || metadata.product || product,
+          )
+          const meterName =
+            decision.limits.meterName ||
+            decideMetadata.meterName ||
+            decideMetadata.usageType ||
+            'requests'
           const customerRef = decision.customerRef
           const ctx = gateOptions.ctx
 

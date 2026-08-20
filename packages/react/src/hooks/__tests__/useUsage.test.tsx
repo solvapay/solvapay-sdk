@@ -104,6 +104,26 @@ describe('useUsage', () => {
     expect(result.current.isAtLimit).toBe(true)
   })
 
+  it('falls back to planSnapshot.meterId when meterRef is absent', () => {
+    setPurchase({
+      activePurchase: {
+        reference: 'pur_1',
+        productName: 'AI',
+        productRef: 'prd_ai',
+        status: 'active',
+        startDate: '2025-01-01',
+        planSnapshot: { limit: 1000, meterId: 'tokens' },
+        usage: { used: 100 },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+    })
+    setTransport()
+    const { result } = renderHook(() => useUsage())
+
+    expect(result.current.usage?.meterRef).toBe('tokens')
+    expect(result.current.meterRef).toBe('tokens')
+  })
+
   it('returns null usage when the active purchase is not usage-based', () => {
     setPurchase({
       activePurchase: {

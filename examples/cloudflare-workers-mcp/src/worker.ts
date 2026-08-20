@@ -3,11 +3,10 @@
  *
  * Single call into `createSolvaPayMcpFetch` from `@solvapay/mcp/fetch`
  * gives us a paywalled MCP server over the Workers runtime with the
- * full `@modelcontextprotocol/sdk` wiring, `hideToolsByAudience` for
+ * full `@modelcontextprotocol/server` wiring, `hideToolsByAudience` for
  * a trim LLM-facing catalogue (with auto-bypass on ChatGPT so the
- * iframe still works), and the `WebStandardStreamableHTTPServerTransport`
- * stateless-JSON preset (correct shape for Workers isolates, which
- * don't pin across requests).
+ * iframe still works), and `responseMode: 'json'` (correct shape for
+ * Workers isolates, which don't pin across requests).
  *
  * The only extra plumbing on top of the SDK handler is **browser-origin
  * CORS** — native-scheme clients (Cursor / VS Code / Claude Desktop)
@@ -91,7 +90,7 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
     readHtml: async () => mcpAppHtml,
     publicBaseUrl: requireEnv(env, 'MCP_PUBLIC_BASE_URL'),
     apiBaseUrl,
-    mode: 'json-stateless',
+    responseMode: 'json',
     // Hide UI-only transport tools from the LLM-facing `tools/list`
     // (text hosts: Claude Desktop, MCPJam, Cursor) — keeps the model's
     // tool catalogue narrow to the four intent tools (`upgrade`,

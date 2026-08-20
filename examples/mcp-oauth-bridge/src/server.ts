@@ -1,4 +1,4 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { McpServer } from '@modelcontextprotocol/server'
 import { createTask, deleteTask, getTask, listTasks } from '@solvapay/demo-services'
 import type { McpServerLike } from '@solvapay/server'
 import { z } from 'zod'
@@ -74,8 +74,8 @@ export function createMCPServer(): McpServer {
   )
 
   if (solvaPay) {
-    // MCP SDK 1.28 registerTool typing is broader than the current SolvaPay McpServerLike contract.
-    // Runtime shape is compatible; cast keeps this example type-safe until the SDK types are widened.
+    // The SDK's registerTool typing is broader than the SolvaPay McpServerLike contract.
+    // Runtime shape is compatible; the cast keeps this example type-safe.
     void solvaPay.registerVirtualToolsMcp(server as unknown as McpServerLike, {
       product: solvapayProductRef,
     })
@@ -86,10 +86,10 @@ export function createMCPServer(): McpServer {
     'create_task',
     {
       description: 'Create a new task (OAuth bearer token required)',
-      inputSchema: {
+      inputSchema: z.object({
         title: z.string().describe('Task title'),
         description: z.string().optional().describe('Task description'),
-      },
+      }),
     },
     async (args, extra) => createTaskHandler(args, extra),
   )
@@ -99,9 +99,9 @@ export function createMCPServer(): McpServer {
     'get_task',
     {
       description: 'Get task by ID (OAuth bearer token required)',
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string().describe('Task id'),
-      },
+      }),
     },
     async (args, extra) => getTaskHandler(args, extra),
   )
@@ -111,10 +111,10 @@ export function createMCPServer(): McpServer {
     'list_tasks',
     {
       description: 'List tasks (OAuth bearer token required)',
-      inputSchema: {
+      inputSchema: z.object({
         limit: z.number().optional(),
         offset: z.number().optional(),
-      },
+      }),
     },
     async (args, extra) => listTasksHandler(args, extra),
   )
@@ -124,9 +124,9 @@ export function createMCPServer(): McpServer {
     'delete_task',
     {
       description: 'Delete task by ID (OAuth bearer token required)',
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string().describe('Task id'),
-      },
+      }),
     },
     async (args, extra) => deleteTaskHandler(args, extra),
   )

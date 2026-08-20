@@ -50,6 +50,8 @@ const REQUIRED_FUNCTIONS: ReadonlyArray<keyof typeof edgeEntry> = [
   // Factory + client creation.
   'createSolvaPay',
   'createSolvaPayClient',
+  // Opt-in product configuration check.
+  'verifyProductConfiguration',
   // Error helpers.
   'paywallErrorToClientPayload',
   // Webhook verification.

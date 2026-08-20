@@ -4,13 +4,15 @@
   "type": "module",
   "scripts": {
     "build": "cross-env INPUT=mcp-app.html vite build && tsc",
-    "serve": "tsx src/index.ts",
-    "dev": "concurrently \"cross-env INPUT=mcp-app.html vite build --watch\" \"tsx watch --clear-screen=false --include .env --include dist/mcp-app.html --include '../../packages/*/src/**/*.ts' --include '../../packages/*/src/**/*.tsx' src/index.ts\"",
+    "serve": "cross-env NODE_OPTIONS=--conditions=development tsx src/index.ts",
+    "dev": "concurrently \"cross-env INPUT=mcp-app.html vite build --watch\" \"cross-env NODE_OPTIONS=--conditions=development tsx watch --clear-screen=false --include .env --include dist/mcp-app.html --include '../../packages/*/src/**/*.ts' --include '../../packages/*/src/**/*.tsx' src/index.ts\"",
     "tunnel": "node ../shared/tunnel.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/core": "^2.0.0",
     "@modelcontextprotocol/ext-apps": "^1.7.1",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
     "@solvapay/core": "workspace:*",
     "@solvapay/mcp": "workspace:*",
     "@solvapay/mcp-core": "workspace:*",
