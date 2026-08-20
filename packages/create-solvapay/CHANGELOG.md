@@ -1,5 +1,17 @@
 # create-solvapay
 
+## 0.6.0
+
+### Minor Changes
+
+- 12f446b: The `mcp` scaffold now generates an SDK v2 project: templates depend on `@modelcontextprotocol/core` and `@modelcontextprotocol/server` instead of `@modelcontextprotocol/sdk`, the generated worker builds its server through a per-request factory, and the pinned `@solvapay/mcp` runtime dependency moves to the `0.3.x` line.
+
+### Patch Changes
+
+- 1033383: Reject paid usage-based plans as the product default. Only free recurring or free usage-based plans can be auto-assigned; a per-unit charge now requires explicit customer activation.
+- Updated dependencies [3a310eb]
+  - @solvapay/init@0.4.0
+
 ## 0.5.0
 
 ### Minor Changes

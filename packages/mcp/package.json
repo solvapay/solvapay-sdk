@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/mcp",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "description": "Official @modelcontextprotocol/server adapter for the SolvaPay MCP toolbox (createSolvaPayMcpServer, registerPayableTool) with ./fetch + ./express subpath exports for runtime-specific OAuth bridges.",
   "type": "module",
   "main": "./dist/index.cjs",
