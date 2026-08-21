@@ -70,6 +70,9 @@ export const RepoPathsManifestSchema = z
     contractInputs: z.object({
       openapiSnapshot: FlaggedPath,
       sdkManifest: FlaggedPath,
+      coreSrc: FlaggedPath,
+      bindingResidue: FlaggedPath,
+      transportSrc: FlaggedPath,
       clientFixtures: FlaggedPath,
       fixtures: FlaggedPath,
     }),

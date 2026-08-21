@@ -589,6 +589,10 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points,
             binding_symbols,
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         }
     }
 
@@ -660,6 +664,7 @@ mod tests {
             dto_type: dto_type.map(str::to_owned),
             core_call: Some(rust.into()),
             client_call_args,
+            ts_wrapper: None,
         }
     }
 

@@ -3,7 +3,7 @@ import { parseArgs, suggestBindingStub } from './gen-bindings.js'
 import { deriveNames, type SdkContractManifest } from '../shared/manifest-schema.js'
 
 function opsOnly(operations: SdkContractManifest['operations']): SdkContractManifest {
-  return { operations, bindings: {} } as SdkContractManifest
+  return { operations } as SdkContractManifest
 }
 
 describe('gen-bindings', () => {

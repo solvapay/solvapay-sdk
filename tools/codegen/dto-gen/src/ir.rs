@@ -3,10 +3,10 @@
 //! Emitters consume only this IR (§5.6). Building the IR from the same snapshot
 //! must be deterministic (sorted maps / stable iteration).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Complete IR produced from one OpenAPI snapshot (+ optional manifest overlays).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Ir {
     /// Named wire types keyed by Rust type name (PascalCase), sorted.
     pub types: BTreeMap<String, IrType>,
@@ -22,6 +22,310 @@ pub struct Ir {
     pub entry_points: BTreeMap<String, IrEntryPoint>,
     /// Binding-boundary symbols (§5.7 / step 39G-a), keyed by canonical id.
     pub binding_symbols: BTreeMap<String, IrBindingSymbol>,
+    /// Exported `solvapay-core` structs/enums (Phase 2), keyed by Rust type name.
+    pub core_types: BTreeMap<String, IrCoreType>,
+    /// TS-only residue for the core boundary-type emitter (Phase 3a).
+    pub core_types_ts: IrCoreTypesTs,
+    /// Scanned `pub fn` signatures from `solvapay-core` (Phase 3b).
+    pub core_fns: BTreeMap<String, IrCoreFn>,
+    /// Scanned `pub fn` signatures from `solvapay-transport` (Phase 4b).
+    pub transport_fns: BTreeMap<String, IrCoreFn>,
+}
+
+/// Manifest overlay that maps Rust core types onto the public TypeScript surface.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct IrCoreTypesTs {
+    /// Rust type names that must not be emitted under their own name.
+    pub omit: BTreeSet<String>,
+    /// Extra TS names that alias a Rust type (with optional field omissions).
+    pub aliases: BTreeMap<String, IrCoreTsAlias>,
+    /// Rust type name → public TS type name.
+    pub rename: BTreeMap<String, String>,
+    /// Public TS type name → verbatim RHS (union / generic / inlined shape).
+    pub reshape: BTreeMap<String, String>,
+    /// Extra TS types with no Rust counterpart; value is the verbatim RHS.
+    pub extra: BTreeMap<String, String>,
+}
+
+/// One `boundaryTypesTs.aliases` entry.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct IrCoreTsAlias {
+    /// Rust type this alias copies.
+    pub of: String,
+    /// Wire field names to drop from the alias body.
+    pub omit_fields: BTreeSet<String>,
+}
+
+/// Parsed `#[solvapay_export(...)]` arguments (Phase 4).
+///
+/// Only what the signature cannot say. Missing keys stay `None` / empty.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct IrExportAttr {
+    /// Canonical binding id when it is not camelCase of the Rust fn.
+    pub id: Option<String>,
+    /// Generated shim file (`decisions` | `payloadBuilders` | `client` | `webhook`).
+    pub artifact: Option<String>,
+    /// Catalog kind (`none` | `operation` | `topLevel` | `coreHelper` | `facade`).
+    pub catalog: Option<String>,
+    /// Section marker preceding the symbol.
+    pub section: Option<String>,
+    /// Stable emit order within the artifact.
+    pub emit_order: Option<u32>,
+    /// Sync-kind override (`sync` | `async`).
+    pub sync: Option<String>,
+    /// Envelope-mode override (`sync` | `async` | `webhookThrow`).
+    pub envelope: Option<String>,
+    /// Arg camelCase names injected by the host adapter.
+    pub host_injected: Vec<String>,
+    /// Arg camelCase name → turbofish/annotation type for typed extracts.
+    pub typed_as: BTreeMap<String, String>,
+    /// Arg camelCase name → `turbofish` | `annotation`.
+    pub typed_style: BTreeMap<String, String>,
+    /// Arg camelCase name → extract kind override (`rawValueOrNull`, …).
+    pub extract: BTreeMap<String, String>,
+    /// Arg camelCase name → local binding name override.
+    pub local: BTreeMap<String, String>,
+    /// Rust param name → JSON arg key when they differ.
+    pub rename: BTreeMap<String, String>,
+    /// Shim fn name when it is not `{fn}_binding`.
+    pub rust_fn_name: Option<String>,
+    /// Client DTO parsed from args JSON.
+    pub dto_type: Option<String>,
+    /// Ordered path-ref split keys (client symbols).
+    pub split_path_refs: Vec<String>,
+}
+
+/// A scanned `solvapay-core` function signature.
+#[derive(Debug, Clone, PartialEq)]
+pub struct IrCoreFn {
+    /// Rust function identifier.
+    pub name: String,
+    /// Module path relative to `solvapay-core::`.
+    pub module: String,
+    /// Inherent-impl type name when this is a method (`RetryPolicy`), else `None`.
+    pub impl_ty: Option<String>,
+    /// Crate prefix (`solvapay_core` or `solvapay_transport`). Empty means core.
+    pub crate_name: String,
+    /// Joined `///` rustdoc body.
+    pub rustdoc: String,
+    /// Parameters in source order.
+    pub params: Vec<IrCoreParam>,
+    /// Return type (`optional` means `Option<T>`).
+    pub return_ty: IrCoreParamTy,
+    /// Present when the item carries `#[solvapay_export]`.
+    pub exported: Option<IrExportAttr>,
+    /// `async fn`.
+    pub is_async: bool,
+}
+
+impl IrCoreFn {
+    /// Crate used in `core` paths (`solvapay_core` when unset).
+    #[must_use]
+    pub fn crate_prefix(&self) -> &str {
+        if self.crate_name.is_empty() {
+            "solvapay_core"
+        } else {
+            &self.crate_name
+        }
+    }
+
+    /// Scanner index key (`{crate}::{module}::{name}`, full module path).
+    #[must_use]
+    pub fn core_path(&self) -> String {
+        Self::format_core(
+            self.crate_prefix(),
+            &self.module,
+            self.impl_ty.as_deref(),
+            &self.name,
+        )
+    }
+
+    /// Snapshot `core` path. Core uses the first module segment; transport omits
+    /// the module (`solvapay_transport::SolvaPayClient::{name}`).
+    #[must_use]
+    pub fn binding_core(&self) -> String {
+        if self.crate_prefix() == "solvapay_transport" {
+            return Self::format_core(self.crate_prefix(), "", self.impl_ty.as_deref(), &self.name);
+        }
+        let head = self.module.split("::").next().unwrap_or("");
+        Self::format_core(
+            self.crate_prefix(),
+            head,
+            self.impl_ty.as_deref(),
+            &self.name,
+        )
+    }
+
+    fn format_core(crate_name: &str, module: &str, impl_ty: Option<&str>, name: &str) -> String {
+        match (module, impl_ty) {
+            (m, Some(ty)) if !m.is_empty() => format!("{crate_name}::{m}::{ty}::{name}"),
+            (_, Some(ty)) => format!("{crate_name}::{ty}::{name}"),
+            (m, None) if !m.is_empty() => format!("{crate_name}::{m}::{name}"),
+            (_, None) => format!("{crate_name}::{name}"),
+        }
+    }
+}
+
+/// One scanned function parameter.
+#[derive(Debug, Clone, PartialEq)]
+pub struct IrCoreParam {
+    /// Rust parameter identifier (`_` when the source used a wildcard).
+    pub rust_name: String,
+    /// True when the source type is a reference (`&T`, `&str`, `&[T]`).
+    pub by_ref: bool,
+    /// Parameter type (`optional` means `Option<T>`).
+    pub ty: IrCoreParamTy,
+}
+
+/// Function parameter / return type after unwrapping a top-level `Option`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct IrCoreParamTy {
+    /// True when the Rust type is `Option<T>` (unwrapped into [`Self::ty`]).
+    pub optional: bool,
+    /// Unwrapped type.
+    pub ty: IrCoreFieldTy,
+}
+
+/// Which serde derives a core type carries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IrCoreSerde {
+    /// Neither `Serialize` nor `Deserialize`.
+    #[default]
+    None,
+    /// `Serialize` only.
+    Serialize,
+    /// `Deserialize` only.
+    Deserialize,
+    /// Both `Serialize` and `Deserialize`.
+    Both,
+}
+
+/// A `solvapay-core` struct or enum extracted by the Phase 2 scanner.
+#[derive(Debug, Clone, PartialEq)]
+pub struct IrCoreType {
+    /// Rust type name (PascalCase).
+    pub name: String,
+    /// Module path relative to `solvapay-core::` (`customer_sync`, `mcp::envelope`).
+    pub module: String,
+    /// Joined `///` rustdoc body (no `///` prefix).
+    pub rustdoc: String,
+    /// Serde derive presence.
+    pub serde: IrCoreSerde,
+    /// Optional `#[cfg(feature = "...")]` on the item.
+    pub cfg_feature: Option<String>,
+    /// Struct vs enum shape.
+    pub shape: IrCoreShape,
+}
+
+/// Structural shape of a core type, including serde tag/rename policy.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IrCoreShape {
+    /// Named-field struct.
+    Struct {
+        /// `#[serde(rename_all = "...")]` when present.
+        rename_all: Option<String>,
+        /// Fields in source order.
+        fields: Vec<IrCoreField>,
+    },
+    /// All-unit enum (string union on the wire).
+    UnitEnum {
+        /// `#[serde(rename_all = "...")]` when present.
+        rename_all: Option<String>,
+        /// Variants in source order.
+        variants: Vec<IrCoreVariant>,
+    },
+    /// Internally tagged enum (`#[serde(tag = "...")]`).
+    TaggedEnum {
+        /// Tag property name.
+        tag: String,
+        /// `#[serde(rename_all = "...")]` when present.
+        rename_all: Option<String>,
+        /// Variants in source order.
+        variants: Vec<IrCoreVariant>,
+    },
+    /// `#[serde(untagged)]` enum.
+    UntaggedEnum {
+        /// `#[serde(rename_all = "...")]` when present.
+        rename_all: Option<String>,
+        /// Variants in source order.
+        variants: Vec<IrCoreVariant>,
+    },
+}
+
+/// One struct field or named enum-variant field.
+#[derive(Debug, Clone, PartialEq)]
+pub struct IrCoreField {
+    /// Rust field identifier.
+    pub rust_name: String,
+    /// JSON key after serde rename / rename_all.
+    pub wire_name: String,
+    /// Field rustdoc body.
+    pub rustdoc: String,
+    /// True when the Rust type is `Option<T>` (unwrapped into [`Self::ty`]).
+    pub optional: bool,
+    /// `skip_serializing_if` path, when present.
+    pub skip_serializing_if: Option<String>,
+    /// `#[serde(default)]` on the field.
+    pub serde_default: bool,
+    /// `serialize_with` helper path, when present.
+    pub serialize_with: Option<String>,
+    /// Optional `#[cfg(feature = "...")]` on the field.
+    pub cfg_feature: Option<String>,
+    /// Unwrapped field type (`Option` is represented by [`Self::optional`]).
+    pub ty: IrCoreFieldTy,
+}
+
+/// One enum variant (unit or named-field).
+#[derive(Debug, Clone, PartialEq)]
+pub struct IrCoreVariant {
+    /// Rust variant identifier.
+    pub rust_name: String,
+    /// Wire tag / unit value after serde rename / rename_all.
+    pub wire_name: String,
+    /// Variant rustdoc body.
+    pub rustdoc: String,
+    /// Named fields (empty for a unit variant).
+    pub fields: Vec<IrCoreField>,
+    /// Optional `#[cfg(feature = "...")]` on the variant.
+    pub cfg_feature: Option<String>,
+}
+
+/// Field type after unwrapping a field-level `Option`.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IrCoreFieldTy {
+    /// `String`.
+    String,
+    /// `bool`.
+    Bool,
+    /// Unsigned 16-bit integer.
+    U16,
+    /// Unsigned 32-bit integer.
+    U32,
+    /// Unsigned 64-bit integer.
+    U64,
+    /// Signed 64-bit integer.
+    I64,
+    /// `f64` (may still carry `serialize_with` for whole-number JSON).
+    F64,
+    /// `serde_json::Value`.
+    Value,
+    /// `()` unit return (functions only).
+    Unit,
+    /// Anonymous tuple `(T, U, …)`.
+    Tuple(Vec<IrCoreFieldTy>),
+    /// `Vec<T>`.
+    Vec(Box<IrCoreFieldTy>),
+    /// `Map<String, V>` / `BTreeMap<String, V>`.
+    Map(Box<IrCoreFieldTy>),
+    /// Named core type (last path segment).
+    Named(String),
+    /// `Result<T, E>`.
+    Result {
+        /// Success type.
+        ok: Box<IrCoreFieldTy>,
+        /// Error type.
+        err: Box<IrCoreFieldTy>,
+    },
 }
 
 /// Envelope mode at the binding boundary (§5.7).
@@ -235,6 +539,39 @@ pub struct IrBindingSymbol {
     pub core_call: Option<String>,
     /// Client method call args (verbatim tokens) for `ClientSplit`.
     pub client_call_args: Vec<String>,
+    /// TypeScript dispatch-wrapper residue (`tsWrapper:`).
+    pub ts_wrapper: Option<IrTsWrapper>,
+}
+
+/// TS-only residue on a binding symbol for core/server dispatch wrappers (Phase 3c).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct IrTsWrapper {
+    /// Export name when it differs from `names.ts` (seller tax-label accessor).
+    pub export_name: Option<String>,
+    /// Generic clause including angle brackets (`<TGate>`).
+    pub generics: Option<String>,
+    /// Override for the TS return type.
+    pub return_type: Option<String>,
+    /// Per-parameter TS type overrides (including optionality syntax).
+    pub param_types: BTreeMap<String, String>,
+    /// Function-level optional-param style (`nullish` / `optional` / `optionalNull` / `undefined`).
+    pub optional_style: Option<String>,
+    /// Per-parameter optional style overrides.
+    pub param_style: BTreeMap<String, String>,
+    /// Force `dispatchSync(name, firstArg)` even when args could be wrapped.
+    pub pass_through: bool,
+    /// Treat the TS surface as a single object parameter.
+    pub object_param: bool,
+    /// Post-process the dispatch result (`nullToUndefined`).
+    pub post_process: Option<String>,
+    /// Verbatim object-literal fields passed to `dispatchSync`.
+    pub dispatch_args: Option<String>,
+    /// JSDoc body (no `/**` wrapper) for the core wrapper.
+    pub doc: Option<String>,
+    /// Inner comment emitted only on the server wrapper (before `return dispatchSync`).
+    pub server_comment: Option<String>,
+    /// Verbatim parameter list + return type (`input: { … }): PaywallOutcome<TGate>`).
+    pub signature: Option<String>,
 }
 
 /// Which catalog section an entry point belongs to.

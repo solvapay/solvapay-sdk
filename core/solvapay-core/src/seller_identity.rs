@@ -110,6 +110,13 @@ fn label_for_tax_id_type(tax_type: TaxIdType) -> &'static str {
 ///
 /// Static slice of `(type_key, label)` pairs matching
 /// [`SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`].
+#[crate::solvapay_export(
+    id = "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "seller-identity",
+    emit_order = 12
+)]
 pub fn seller_tax_identifier_display_label_by_type() -> &'static [(&'static str, &'static str)] {
     SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
 }
@@ -123,6 +130,12 @@ pub fn seller_tax_identifier_display_label_by_type() -> &'static [(&'static str,
 /// # Returns
 ///
 /// Owned label string — country-specific when supported, otherwise `"Tax ID"`.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "seller-identity",
+    emit_order = 11
+)]
 pub fn get_seller_tax_identifier_display_label(country: Option<&str>) -> String {
     match to_supported_country(country).and_then(|c| derive_tax_id_type(&c)) {
         Some(tax_type) => label_for_tax_id_type(tax_type).to_owned(),
@@ -142,6 +155,12 @@ pub fn get_seller_tax_identifier_display_label(country: Option<&str>) -> String 
 /// # Returns
 ///
 /// [`SellerIdentityDisplay`] with optional `tax_identifier` and `company_number` rows.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "seller-identity",
+    emit_order = 10
+)]
 pub fn resolve_seller_identity_display(input: &SellerIdentityInput) -> SellerIdentityDisplay {
     let country = normalize_optional_string(input.country.as_deref());
     let supported_country = to_supported_country(country.as_deref());

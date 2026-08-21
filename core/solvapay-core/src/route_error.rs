@@ -43,6 +43,12 @@ pub struct RouteErrorInput {
 /// # Returns
 ///
 /// Always includes `details` ([`HelperErrorResult::with_details`]).
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "error",
+    emit_order = 29
+)]
 pub fn map_route_error(input: &RouteErrorInput) -> HelperErrorResult {
     match input.kind {
         RouteErrorKind::SolvaPay => {
@@ -87,6 +93,13 @@ fn fallback_operation_message(input: &RouteErrorInput) -> String {
 /// # Returns
 ///
 /// `true` when `value` is an object with both `error` and `status` keys.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "error",
+    emit_order = 28,
+    extract = "result:rawValueOrNull"
+)]
 pub fn is_error_result(value: &Value) -> bool {
     match value {
         Value::Object(map) => map.contains_key("error") && map.contains_key("status"),

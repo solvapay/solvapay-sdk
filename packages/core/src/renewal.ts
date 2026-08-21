@@ -4,11 +4,9 @@
  * `isRenewalError` stays TypeScript — no Rust binding.
  */
 
-export type RenewalHelperError = {
-  error: string
-  status: number
-  details?: string
-}
+export type { RenewalHelperError } from './types/boundary.generated'
+
+import type { RenewalHelperError } from './types/boundary.generated'
 
 type PurchaseLike = Record<string, unknown>
 

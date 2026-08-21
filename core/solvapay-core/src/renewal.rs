@@ -39,6 +39,12 @@ fn is_nonempty(value: Option<&str>) -> bool {
 /// # Returns
 ///
 /// [`None`] when present and non-empty; otherwise the frozen 400.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "renewal",
+    emit_order = 24
+)]
 pub fn validate_purchase_ref(purchase_ref: Option<&str>) -> Option<HelperErrorResult> {
     if is_nonempty(purchase_ref) {
         None
@@ -87,6 +93,13 @@ fn unwrap_purchase(response: &Value) -> Option<&Value> {
 /// # Returns
 ///
 /// The unwrapped purchase object, or a frozen helper error.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "renewal",
+    emit_order = 22,
+    extract = "response:rawValueOrNull"
+)]
 pub fn normalize_cancel_response(response: &Value) -> Result<Value, HelperErrorResult> {
     let Some(purchase) = unwrap_purchase(response) else {
         return Err(HelperErrorResult::without_details(CANCEL_INVALID, 500));
@@ -129,6 +142,13 @@ pub fn normalize_cancel_response(response: &Value) -> Result<Value, HelperErrorR
 /// # Returns
 ///
 /// The unwrapped purchase object, or a frozen helper error.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "renewal",
+    emit_order = 23,
+    extract = "response:rawValueOrNull"
+)]
 pub fn normalize_reactivate_response(response: &Value) -> Result<Value, HelperErrorResult> {
     let Some(purchase) = unwrap_purchase(response) else {
         return Err(HelperErrorResult::without_details(REACTIVATE_INVALID, 500));
@@ -161,6 +181,12 @@ pub fn normalize_reactivate_response(response: &Value) -> Result<Value, HelperEr
 /// # Returns
 ///
 /// Frozen status/label with `details` = raw message.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "renewal",
+    emit_order = 20
+)]
 pub fn classify_cancel_error(message: &str) -> HelperErrorResult {
     if message.contains("not found") {
         return HelperErrorResult::with_details(PURCHASE_NOT_FOUND, 404, message);
@@ -180,6 +206,12 @@ pub fn classify_cancel_error(message: &str) -> HelperErrorResult {
 /// # Returns
 ///
 /// Frozen status/label with `details` = raw message.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "renewal",
+    emit_order = 21
+)]
 pub fn classify_reactivate_error(message: &str) -> HelperErrorResult {
     if message.contains("not found") {
         return HelperErrorResult::with_details(PURCHASE_NOT_FOUND, 404, message);

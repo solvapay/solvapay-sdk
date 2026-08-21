@@ -90,8 +90,8 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'BALANCE_RECONCILE_DELAYS_MS',
   'TOPUP_BALANCE_POLL_DELAYS_MS',
   // Pure helper decision cores (classifyCancelError, selectActivePurchases,
-  // validate*Params, …) are recognized via manifest.bindings names.ts — not
-  // allowlisted here. Adding a symbol to bindings is sufficient for parity.
+  // validate*Params, …) are recognized via derived binding names.ts — not
+  // allowlisted here. Adding a #[solvapay_export] symbol is sufficient for parity.
   // core package config / domain helpers (not in cross-language catalog)
   'getSellerTaxIdentifierDisplayLabelByType',
   'getSolvaPayConfig',
@@ -177,8 +177,8 @@ export interface CheckParityInput {
   clientMethods: Set<string>
   /** Method names present on SolvaPay facade (payable / protect / gate). */
   facadeMethods?: Set<string>
-  /** Extra exports that are TS-only framework glue (§2.5). */
-  allowlist?: readonly string[]
+  /** Extra binding `names.ts` from `binding-symbols.snapshot.json`. */
+  derivedBindings?: Record<string, { names: { ts: string } }>
 }
 
 /**
@@ -195,7 +195,7 @@ export function checkParity(input: CheckParityInput): ParityIssue[] {
   // Recognition-only: suppress "extra", do not require presence (some payload
   // builders are internal and not TS exports).
   const bindingTsNames = new Set(
-    Object.values(input.manifest.bindings).map(symbol => symbol.names.ts),
+    Object.values(input.derivedBindings ?? {}).map(symbol => symbol.names.ts),
   )
 
   for (const entry of catalog) {
@@ -267,7 +267,7 @@ export function checkParity(input: CheckParityInput): ParityIssue[] {
     }
     issues.push({
       kind: 'extra',
-      message: `Extra: uncatalogued portable export "${name}" (add to manifest.bindings or TS_ONLY_ALLOWLIST)`,
+      message: `Extra: uncatalogued portable export "${name}" (add a #[solvapay_export] symbol or TS_ONLY_ALLOWLIST)`,
     })
   }
 

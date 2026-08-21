@@ -27,6 +27,12 @@ fn is_nonempty(value: Option<&str>) -> bool {
 /// # Returns
 ///
 /// Purchases whose `status` is exactly `"active"`.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "purchase",
+    emit_order = 19
+)]
 pub fn select_active_purchases(purchases: &[Value]) -> Vec<Value> {
     purchases
         .iter()
@@ -50,6 +56,12 @@ pub fn select_active_purchases(purchases: &[Value]) -> Vec<Value> {
 /// # Returns
 ///
 /// `true` when the cache entry is valid for this user.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "purchase",
+    emit_order = 17
+)]
 pub fn is_cached_customer_ref_valid(
     external_ref: Option<&str>,
     user_id: &str,
@@ -71,6 +83,12 @@ pub fn is_cached_customer_ref_valid(
 /// # Returns
 ///
 /// The first truthy non-empty string.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "purchase",
+    emit_order = 18
+)]
 pub fn resolve_purchase_customer_ref(customer_ref: Option<&str>, user_id: &str) -> String {
     match customer_ref {
         Some(r) if !r.is_empty() => r.to_owned(),

@@ -4,12 +4,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { parse as parseYaml } from 'yaml'
 import {
   BINDING_CATALOG_BOUNDARY_CORE_HELPERS,
-  BINDING_CATALOG_BOUNDARY_TOP_LEVEL,
   EXPECTED_OPERATION_COUNT,
   EXPECTED_TOP_LEVEL_IDS,
   SHIM_JS_NAMES,
   deriveNames,
-  type BindingSymbol,
   type SdkContractManifest,
 } from '../shared/manifest-schema.js'
 import { runCli } from './manifest.js'
@@ -132,12 +130,12 @@ function buildFixtureManifest(): SdkContractManifest {
       refPrefixes: ['prd_', 'cus_'],
     },
     topLevel,
-    coreHelpers: {
-      validateBusinessDetails: {
-        names: deriveNames('validateBusinessDetails'),
-        sync: PURE_SYNC,
-      },
-    },
+    coreHelpers: Object.fromEntries(
+      BINDING_CATALOG_BOUNDARY_CORE_HELPERS.map(id => [
+        id,
+        { names: deriveNames(id), sync: PURE_SYNC },
+      ]),
+    ),
     facade: {
       createSolvaPay: { names: deriveNames('createSolvaPay'), sync: PURE_SYNC },
       createSolvaPayClient: {
@@ -210,45 +208,7 @@ function buildFixtureManifest(): SdkContractManifest {
       },
     },
     reservedWords: { ts: [], py: [], rb: [], go: [], rust: [] },
-    bindings: stubBindings(operations, {
-      validateBusinessDetails: {
-        names: deriveNames('validateBusinessDetails'),
-        sync: PURE_SYNC,
-      },
-    }),
   }
-}
-
-/** Minimal bindings covering the shim inventory + catalog linkers for fixtures. */
-function stubBindings(
-  operations: SdkContractManifest['operations'],
-  coreHelpers: SdkContractManifest['coreHelpers'],
-): Record<string, BindingSymbol> {
-  const topLevelBoundary = new Set<string>(BINDING_CATALOG_BOUNDARY_TOP_LEVEL)
-  const coreHelperBoundary = new Set<string>(BINDING_CATALOG_BOUNDARY_CORE_HELPERS)
-  const bindings: Record<string, BindingSymbol> = {}
-  for (const js of SHIM_JS_NAMES) {
-    let catalog: BindingSymbol['catalog'] = { kind: 'none' }
-    if (js in operations) {
-      catalog = { kind: 'operation', id: js }
-    } else if (topLevelBoundary.has(js)) {
-      catalog = { kind: 'topLevel', id: js }
-    } else if (coreHelperBoundary.has(js) && js in coreHelpers) {
-      catalog = { kind: 'coreHelper', id: js }
-    }
-    bindings[js] = {
-      core: `test::stub::${js}`,
-      names: deriveNames(js),
-      catalog,
-      args: [],
-      splitPathRefs: [],
-      return: 'value',
-      sync: catalog.kind === 'operation' ? 'async' : 'sync',
-      envelope:
-        js === 'verifyWebhook' ? 'webhookThrow' : catalog.kind === 'operation' ? 'async' : 'sync',
-    }
-  }
-  return bindings
 }
 
 function writeFixture(

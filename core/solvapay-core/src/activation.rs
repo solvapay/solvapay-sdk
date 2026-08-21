@@ -16,6 +16,12 @@ const MISSING_PARAMS: &str = "Missing required parameters: productRef and planRe
 ///
 /// [`None`] when both refs are present and non-empty; otherwise the frozen 400
 /// [`HelperErrorResult`] (no `details` field).
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "activation",
+    emit_order = 7
+)]
 pub fn validate_activate_plan_params(
     product_ref: Option<&str>,
     plan_ref: Option<&str>,

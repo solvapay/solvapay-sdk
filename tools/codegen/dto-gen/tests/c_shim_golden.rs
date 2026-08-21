@@ -15,7 +15,6 @@ use std::process::Command;
 
 use dto_gen::emit_bindings_rs::{emit_bindings, Toolchain};
 use dto_gen::ir::{Ir, IrBindingArtifact, IrErrorTemplates, IrSerializeKind};
-use dto_gen::lower_bindings::lower_bindings;
 use dto_gen::lower_catalog::lower_catalog;
 use dto_gen::manifest::Manifest;
 
@@ -35,9 +34,30 @@ fn lower_ir() -> Ir {
         error_templates: IrErrorTemplates::default(),
         entry_points: Default::default(),
         binding_symbols: Default::default(),
+        core_types: Default::default(),
+        core_types_ts: Default::default(),
+        core_fns: Default::default(),
+        transport_fns: Default::default(),
     };
     lower_catalog(&mut ir, &manifest).expect("lower catalog");
-    lower_bindings(&mut ir, &manifest).expect("lower bindings");
+    let residue = dto_gen::load_binding_residue(
+        &paths()
+            .contract_input("bindingResidue")
+            .expect("bindingResidue"),
+    )
+    .expect("residue");
+    dto_gen::lower_all_bindings(
+        &mut ir,
+        &manifest,
+        &paths().contract_input("coreSrc").expect("coreSrc"),
+        &residue,
+        Some(
+            &paths()
+                .contract_input("transportSrc")
+                .expect("transportSrc"),
+        ),
+    )
+    .expect("lower bindings");
     ir
 }
 
@@ -128,7 +148,8 @@ fn live_contract_ops() -> Vec<String> {
         if let Some(rest) = trimmed.strip_prefix('"') {
             if let Some(end) = rest.find('"') {
                 let name = &rest[..end];
-                if trimmed[1 + end..].contains("=>") && name.chars().next().is_some_and(char::is_alphabetic)
+                if trimmed[1 + end..].contains("=>")
+                    && name.chars().next().is_some_and(char::is_alphabetic)
                 {
                     ops.push(name.to_string());
                 }
@@ -150,10 +171,7 @@ fn c_column_emits_full_36_op_surface() {
     let formatted = rustfmt(&emitted.client_rs, "dispatch");
     for sym in &symbols {
         let arm = format!("\"{}\" =>", sym.id);
-        assert!(
-            formatted.contains(&arm),
-            "missing C dispatch arm {arm}"
-        );
+        assert!(formatted.contains(&arm), "missing C dispatch arm {arm}");
     }
 
     let mut saw_await = false;

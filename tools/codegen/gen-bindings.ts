@@ -30,7 +30,7 @@ import {
   type SdkContractManifest,
 } from '../shared/manifest-schema.js'
 import { REPO_ROOT } from '../shared/paths.js'
-import { contractInputPath, lookupPath } from '../shared/repo-paths.js'
+import { contractInputPath, generatedEntry, lookupPath } from '../shared/repo-paths.js'
 
 const DEFAULT_MANIFEST = contractInputPath('sdkManifest')
 const DEFAULT_SCHEMA_TS = lookupPath('manifestSchemaTs')
@@ -88,10 +88,13 @@ export function parseArgs(argv: string[]): CliOptions {
   return { mode, manifestPath, schemaTsPath }
 }
 
-function orphanOperationIds(manifest: SdkContractManifest): string[] {
+function orphanOperationIds(
+  manifest: SdkContractManifest,
+  derivedBindings?: Record<string, { catalog: { kind: string; id?: string } }>,
+): string[] {
   const linked = new Set<string>()
-  for (const symbol of Object.values(manifest.bindings)) {
-    if (symbol.catalog.kind === 'operation') {
+  for (const symbol of Object.values(derivedBindings ?? {})) {
+    if (symbol.catalog.kind === 'operation' && symbol.catalog.id !== undefined) {
       linked.add(symbol.catalog.id)
     }
   }
@@ -101,13 +104,8 @@ function orphanOperationIds(manifest: SdkContractManifest): string[] {
 }
 
 function nextClientEmitOrder(manifest: SdkContractManifest): number {
-  let max = -1
-  for (const symbol of Object.values(manifest.bindings)) {
-    if (symbol.artifact === 'client' && typeof symbol.emitOrder === 'number') {
-      max = Math.max(max, symbol.emitOrder)
-    }
-  }
-  return max + 1
+  void manifest
+  return 0
 }
 
 function sectionHasEntry(text: string, sectionName: string, entryId: string): boolean {
@@ -177,12 +175,24 @@ export function runBindings(options: CliOptions): CliResult {
     }
   }
   const manifest = loaded.data
-  const orphans = orphanOperationIds(manifest)
+  const snapshotPath = path.join(REPO_ROOT, ...generatedEntry('bindingSymbols').path.split('/'))
+  const snapshot = JSON.parse(readFileSync(snapshotPath, 'utf8')) as {
+    bindings: Record<string, { catalog: { kind: string; id?: string } }>
+  }
+  const orphans = orphanOperationIds(manifest, snapshot.bindings)
   if (orphans.length === 0) {
     return {
       exitCode: 0,
       stdout: 'No orphan operation bindings — reconciliation already green\n',
       stderr: '',
+    }
+  }
+
+  if (options.mode === 'fix') {
+    return {
+      exitCode: 1,
+      stdout: '',
+      stderr: `Orphan operations (add #[solvapay_export] on SolvaPayClient, not YAML bindings:): ${orphans.join(', ')}\n`,
     }
   }
 
@@ -198,8 +208,8 @@ export function runBindings(options: CliOptions): CliResult {
     return {
       exitCode: 0,
       stdout:
-        `Suggested bindings for ${stubs.length} orphan operation(s).\n` +
-        `Apply with: pnpm gen:bindings --fix\n\n` +
+        `Suggested #[solvapay_export] targets for ${stubs.length} orphan operation(s).\n` +
+        `Annotate SolvaPayClient methods; do not add YAML bindings:.\n\n` +
         yaml,
       stderr: '',
     }

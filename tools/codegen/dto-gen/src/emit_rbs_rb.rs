@@ -295,6 +295,10 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
             binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         };
         let output = emit_rbs_rb(&ir).unwrap();
         assert!(output.contains("class Client"));
@@ -321,6 +325,10 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
             binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         };
         ir.entry_points.insert(
             "deriveTaxIdType".into(),
@@ -403,6 +411,7 @@ mod tests {
                 dto_type: None,
                 core_call: None,
                 client_call_args: vec![],
+                ts_wrapper: None,
             },
         );
         let output = emit_rbs_rb(&ir).unwrap();

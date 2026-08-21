@@ -265,7 +265,7 @@ export function parseArgs(argv: string[]): ScaffoldOptions {
   let routePath: string | undefined
   let manifestPath = DEFAULT_MANIFEST
   let snapshotPath = DEFAULT_SNAPSHOT
-  let withBindings = true
+  let withBindings = false
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i]
@@ -381,8 +381,7 @@ export function scaffoldOperation(options: ScaffoldOptions): {
         emitOrder,
       })
       raw = insertSectionEntry(raw, 'bindings', options.id, bindBody)
-      lines.push(`Scaffolded bindings.${options.id} (emitOrder ${emitOrder})`)
-      lines.push(`Remember: add '${options.id}' to SHIM_JS_NAMES (or run pnpm gen:bindings --fix)`)
+      lines.push(`Add #[solvapay_export] on SolvaPayClient::${toSnakeCase(options.id)}`)
     }
   }
 

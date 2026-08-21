@@ -38,6 +38,14 @@ pub const VIEW_FOR_TOOL: &[(&str, &str)] = &[
 
 /// JSON object for the `MCP_TOOL_NAMES` fixture binding.
 #[must_use]
+#[crate::solvapay_export(
+    id = "MCP_TOOL_NAMES",
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 16,
+    rust_fn_name = "mcp_tool_names_binding"
+)]
 pub fn mcp_tool_names_json() -> Value {
     let mut map = Map::new();
     for (key, value) in MCP_TOOL_NAMES {
@@ -58,6 +66,12 @@ pub struct McpViewMaps {
 
 /// Build [`McpViewMaps`] from the const tables.
 #[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 17
+)]
 pub fn mcp_view_maps() -> McpViewMaps {
     McpViewMaps {
         tool_for_view: pairs_to_map(TOOL_FOR_VIEW),

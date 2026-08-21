@@ -166,39 +166,13 @@ export const BusinessDetailsSchema = z.object({
   taxIdType: z.enum(TAX_ID_TYPES).optional(),
 })
 
-export type BusinessDetailsInput = {
-  isBusiness: boolean
-  businessName?: string
-  country?: string
-  customerCountry?: string
-  customerName?: string
-  taxId?: string
-  taxIdType?: TaxIdType
-}
-
-export type BusinessDetails =
-  | { isBusiness: false; customerCountry?: SupportedBusinessCountry; customerName?: string }
-  | {
-      isBusiness: true
-      country: SupportedBusinessCountry
-      businessName?: string
-      taxId?: string
-      taxIdType?: TaxIdType
-      customerName?: string
-    }
-
-export type BusinessDetailsValidationIssue = {
-  path: PropertyKey[]
-  message: string
-}
-
-export type BusinessDetailsValidationError = {
-  issues: BusinessDetailsValidationIssue[]
-}
-
-export type ValidateBusinessDetailsResult =
-  | { success: true; data: BusinessDetails }
-  | { success: false; error: BusinessDetailsValidationError }
+export type {
+  BusinessDetails,
+  BusinessDetailsInput,
+  BusinessDetailsValidationError,
+  BusinessDetailsValidationIssue,
+  ValidateBusinessDetailsResult,
+} from './types/boundary.generated'
 
 export const TAX_BEHAVIORS = ['auto', 'inclusive', 'exclusive'] as const
 export type TaxBehavior = (typeof TAX_BEHAVIORS)[number]

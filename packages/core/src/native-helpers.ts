@@ -1,4 +1,8 @@
 /**
+ * @generated — do not edit. Regenerate with: pnpm gen
+ */
+
+/**
  * Sync helper pure-logic facade (Step 52).
  *
  * Phase-4/5 decision helpers dispatch to napi / WASM via the shared
@@ -44,10 +48,7 @@ export function coerceCustomerOptions(
   email: string | null | undefined,
   name: string | null | undefined,
 ): CoercedCustomerOptions {
-  return dispatchSync('coerceCustomerOptions', {
-    email: email ?? null,
-    name: name ?? null,
-  })
+  return dispatchSync('coerceCustomerOptions', { email: email ?? null, name: name ?? null })
 }
 
 export function buildCreateCustomerParams(
@@ -170,9 +171,7 @@ export function projectTopupProcessOutcome(status?: string, message?: string): T
 export function validateCheckoutSessionParams(
   productRef: string | null | undefined,
 ): CheckoutHelperError | null {
-  return dispatchSync('validateCheckoutSessionParams', {
-    productRef: productRef ?? null,
-  })
+  return dispatchSync('validateCheckoutSessionParams', { productRef: productRef ?? null })
 }
 
 export function resolveReturnUrl(
@@ -210,10 +209,7 @@ export function resolvePurchaseCustomerRef(
   customerRef: string | null | undefined,
   userId: string,
 ): string {
-  return dispatchSync('resolvePurchaseCustomerRef', {
-    customerRef: customerRef ?? null,
-    userId,
-  })
+  return dispatchSync('resolvePurchaseCustomerRef', { customerRef: customerRef ?? null, userId })
 }
 
 // --- renewal (isRenewalError stays in renewal.ts) ---
@@ -249,9 +245,7 @@ export function classifyReactivateError(message: string): RenewalHelperError {
 export function projectUsageSnapshot(
   activePurchase: UsageSnapshotPurchase | null | undefined,
 ): UsageSnapshot {
-  return dispatchSync('projectUsageSnapshot', {
-    activePurchase: activePurchase ?? null,
-  })
+  return dispatchSync('projectUsageSnapshot', { activePurchase: activePurchase ?? null })
 }
 
 // --- limits ---
@@ -273,9 +267,7 @@ export function resolveCheckLimitsParams(
 export function validateListPlansParams(
   productRef: string | null | undefined,
 ): PlansHelperError | null {
-  return dispatchSync('validateListPlansParams', {
-    productRef: productRef ?? null,
-  })
+  return dispatchSync('validateListPlansParams', { productRef: productRef ?? null })
 }
 
 // --- error ---
@@ -299,9 +291,7 @@ export function isErrorResult(result: unknown): result is RouteErrorResult {
 export function validateGetProductParams(
   productRef: string | null | undefined,
 ): ProductHelperError | null {
-  return dispatchSync('validateGetProductParams', {
-    productRef: productRef ?? null,
-  })
+  return dispatchSync('validateGetProductParams', { productRef: productRef ?? null })
 }
 
 // --- paywall-decision ---
@@ -338,9 +328,7 @@ export function evaluateFreshLimits(
 }
 
 export function resolveFallbackGateLimits(checkoutUrl?: string): PaywallDecisionLimits {
-  return dispatchSync('resolveFallbackGateLimits', {
-    checkoutUrl: checkoutUrl ?? null,
-  })
+  return dispatchSync('resolveFallbackGateLimits', { checkoutUrl: checkoutUrl ?? null })
 }
 
 /**

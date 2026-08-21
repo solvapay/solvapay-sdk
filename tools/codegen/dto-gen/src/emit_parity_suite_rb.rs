@@ -160,6 +160,10 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
             binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         };
         let output = emit_parity_suite_rb(&ir).unwrap();
         assert!(output.contains("DEFAULT_LIMITS_CACHE_TTL_MS"));

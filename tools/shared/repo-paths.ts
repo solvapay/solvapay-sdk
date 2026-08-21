@@ -30,7 +30,13 @@ export function loadRepoPathsManifest(root: string = REPO_ROOT): RepoPathsManife
 
 function dtoGenFlagPairs(manifest: RepoPathsManifest, root: string): string[] {
   const pairs: string[] = []
-  const inputs = [manifest.contractInputs.openapiSnapshot, manifest.contractInputs.sdkManifest]
+  const inputs = [
+    manifest.contractInputs.openapiSnapshot,
+    manifest.contractInputs.sdkManifest,
+    manifest.contractInputs.coreSrc,
+    manifest.contractInputs.bindingResidue,
+    manifest.contractInputs.transportSrc,
+  ]
   for (const item of inputs) {
     if (item.flag === undefined) {
       throw new Error(`contract input ${item.path} is missing a dto-gen flag`)

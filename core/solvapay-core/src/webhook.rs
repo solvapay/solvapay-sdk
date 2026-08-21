@@ -135,6 +135,12 @@ const TOLERANCE_SECS: u64 = 300;
 /// let value = verify_webhook(body, &signature, secret, timestamp).unwrap();
 /// assert_eq!(value["type"], "purchase.created");
 /// ```
+#[crate::solvapay_export(
+    artifact = "webhook",
+    catalog = "topLevel",
+    envelope = "webhookThrow",
+    host_injected = "nowUnixSecs"
+)]
 pub fn verify_webhook(
     body: &str,
     signature: &str,

@@ -5,7 +5,8 @@ then generated conformance harnesses. This is the design and implementation
 sequence; numbered migration steps stay in
 [`rust-migration-map.md`](./rust-migration-map.md) (after step 55).
 
-> **Status:** Phase 1 landed (C dispatch + fixture-runner registry emitters).
+> **Status:** Phase 4 landed (`bindings:` retired; descriptors derived from
+> `#[solvapay_export]`). Phase 5 is next.
 > Sequences **after** step 55. Steps 1–54 are Done; step 55 is in progress
 > (55-a/b/c in-repo done; maintainer branch-protection apply remain).
 > `parity:check` is green. Fixture-runner `parsed=550 executed=446 passed=446
@@ -19,8 +20,13 @@ Companion docs:
 
 ## The problem
 
-Today one public helper is described five times. Each copy can drift, and
-coverage stops wherever someone stopped hand-writing.
+One public helper is described five times. Each copy can drift, and coverage
+stops wherever someone stopped hand-writing.
+
+The table below is the **pre-Phase-1 baseline**, kept as the yardstick the
+phases are measured against — the first four axes are closed as of Phase 4, so
+read it as history rather than as the current tree. The fifth axis (replay
+harnesses) is still open and is what Phase 5 addresses.
 
 | Axis | Where | Size |
 | --- | --- | --- |
@@ -195,6 +201,10 @@ work. This is what unblocks Phase 3: wrappers cannot be typed from
 
 **Done when:** IR carries a type map for the exported core structs/enums;
 serde rename/skip round-trips in dto-gen tests; no TS still generated.
+**Landed:** `syn` scanner + `Ir.core_types`; roots are the named types on
+`#[solvapay_export]` signatures plus transitive closure; `--core-src` /
+`--dump-boundary-types` → `contract/manifest/boundary-types.snapshot.json`
+(drift-gated). No TypeScript emitted.
 
 ### Phase 3 — generate the TS layer
 
@@ -205,7 +215,22 @@ mechanical.
 
 **Done when:** those TS files carry `@generated`; byte-identical (or
 intentionally slimmed) below the header vs the hand-written sources they
-replace; both-flag unit suites unchanged.
+replace; `cargo test -p dto-gen`, `pnpm gen`, `pnpm gen:check`, package
+`tsc` / vitest, `pnpm test:contract`, and `parity:check` are green.
+
+Phase 3 needed a signature scan that Phase 2 did not ship: wrappers cannot be
+typed from `IrBindingSymbol.return_shape` (`"value"`) or coarse
+`IrBindingArg.ty`. Increment 3b added `Ir.core_fns` (`&T` / `&str` / `&[T]` /
+`Option<&str>`) and joined every Decisions / PayloadBuilders binding to a
+scanned `pub fn`. Client symbols stay in `solvapay-transport` and are skipped.
+
+**Landed:** `emit_core_types_ts` → `packages/core/src/types/boundary.generated.d.ts`
+with `boundaryTypesTs:` residue; `emit_core_wrappers_ts` →
+`native-dispatch.ts` / `native-core.ts` / `native-helpers.ts` /
+`packages/server/src/native-decisions.ts` (IR wrappers + chrome install gate
+and server paywall/retry postamble). `tsWrapper:` on binding symbols holds
+generics, `null`→`undefined` post-process, and the payment-intent `accountId`
+spread.
 
 ### Phase 4 — the full descriptor extractor
 
@@ -221,10 +246,29 @@ the implementation under review.
 `pnpm gen:check` and `.husky/pre-commit`) is **retained unchanged**. It remains
 the reviewed dump of what the IR believes the boundary is.
 
-**Done when:** `bindings:` is gone from `sdk-contract.yaml`; every current
-symbol is produced from `#[solvapay_export]`; snapshot byte-identical;
-`pnpm manifest:check` + `pnpm gen:check` green; 17 emitters consume the same IR
-shape they do today.
+**Done when:** `bindings:` and `boundaryTypes:` are gone from `sdk-contract.yaml`;
+every current symbol is produced from `#[solvapay_export]`; type roots close
+over annotated signatures; snapshot byte-identical; `pnpm manifest:check` +
+`pnpm gen:check` green; 17 emitters consume the same IR shape they do today.
+
+**Landed:** `core/solvapay-export` (a pass-through proc-macro — Rust has no
+stable user-definable inert attribute) plus `scan_core_types.rs` /
+`derive_bindings.rs` in dto-gen. All **105** symbols are derived from the
+attribute: 69 in `solvapay-core`, and the 36 client methods in
+`solvapay-transport/src/client.rs`. `sdk-contract.yaml` drops from 6,595 to
+3,159 lines, and `binding-symbols.snapshot.json` reproduces
+**byte-identically** — the migration is descriptor-preserving by construction.
+
+One deviation from the plan above: the **28 verbatim bodies were relocated, not
+retired.** Shim-emission residue that the AST cannot supply now lives in
+`contract/manifest/binding-residue.yaml` (1,377 lines, 104 keys, keyed by
+canonical id; dto-gen errors on a key with no matching exported symbol). Its
+field census is the escape-hatch list from
+[Derivable vs never derivable](#derivable-vs-never-derivable) — 27
+`verbatimBody` + 1 `verbatimBodyWasm`, 9 `clientCallArgs`, 26 `tsWrapper`, 24
+`omitCoreCall` — plus `args:`/`doc:`/`callArgs:` overrides. Net hand-maintained
+descriptor YAML falls by 2,197 lines. Shrinking that residue is follow-on work;
+do not let it grow.
 
 ### Phase 5 — generated facade conformance harnesses
 
@@ -399,12 +443,19 @@ Go/C) and for post-Phase-5 fixture emission (webhook suite first).
 
 ## Risks and open questions
 
-- **`syn` blindness.** Aliases, generics, and re-exports are invisible to a
-  scanner. The generated `assert_boundary::<T>()` is the backstop; a type the
-  scanner mis-read fails to compile rather than silently shipping.
-- **Verbatim residue.** 28 verbatim bodies must either become structured `wrap`
-  calls or stay as explicit attribute/overlay exceptions. Do not smuggle them
-  back into YAML.
+- **`syn` blindness — the backstop is not built yet.** Aliases, generics, and
+  re-exports are invisible to a scanner. Phases 2–4 shipped extraction (option
+  A) but **not** the `assert_boundary::<T>()` half of the hybrid: no emitter
+  writes one, so nothing in the repo defines it. Until it exists, a mis-read
+  type is caught only by the generated shims failing to compile or by a
+  reviewed `boundary-types.snapshot.json` diff — weaker than the design claims.
+  Closing this is the highest-value follow-up before Phase 5 widens the blast
+  radius to six conformance harnesses.
+- **Verbatim residue.** 28 verbatim bodies took the "explicit overlay
+  exception" branch: they live in `contract/manifest/binding-residue.yaml`, not
+  in `sdk-contract.yaml`. That keeps the contract clean and makes the residue
+  countable in review, but it is still Rust-inside-YAML. Structured `wrap`
+  calls remain the goal; the count must not grow.
 - **Client unbound in the runner.** Phase 1 generating `registry.rs` does not
   by itself register client methods. Treat stub-transport-in-the-runner as a
   follow-on, not a Phase 1 scope creep.

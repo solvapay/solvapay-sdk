@@ -30,6 +30,7 @@ hmac = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 subtle = { workspace = true, optional = true }
 solvapay-dto = { path = "../solvapay-dto", version = "0.1.0" }
+solvapay-export = { path = "../solvapay-export", version = "0.1.0" }
 
 [package.metadata.docs.rs]
 all-features = true

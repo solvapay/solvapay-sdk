@@ -72,7 +72,15 @@ impl RetryPolicy {
     /// # Returns
     ///
     /// `Some(Duration)` to wait before the next try, or `None` when exhausted.
-    pub fn next_delay(&self, attempt: u32) -> Option<Duration> {
+    #[crate::solvapay_export(
+    id = "retryNextDelayMs",
+    artifact = "decisions",
+    catalog = "none",
+    section = "retry",
+    emit_order = 41,
+    rust_fn_name = "retry_next_delay_ms"
+)]
+pub fn next_delay(&self, attempt: u32) -> Option<Duration> {
         if attempt >= self.max_retries {
             return None;
         }

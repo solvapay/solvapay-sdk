@@ -1,0 +1,1377 @@
+# Shim-emission residue for #[solvapay_export] symbols. Keyed by canonical id.
+# dto-gen errors if a key has no matching exported symbol.
+MCP_TOOL_NAMES:
+  verbatimBody: |-
+    let _args = args_map(&args_json)?;
+            Ok(mcp_tool_names_json())
+  args: []
+  omitCoreCall: true
+SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE:
+  tsWrapper:
+    exportName: getSellerTaxIdentifierDisplayLabelByType
+    returnType: Record<TaxIdType, string>
+    doc: Fixture-visible accessor; const export keeps `as const` identity for types.
+  verbatimBody: |-
+    let _args = args_map(&args_json)?;
+            let mut map = Map::new();
+            for (key, label) in seller_tax_identifier_display_label_by_type() {
+                map.insert((*key).to_owned(), Value::String((*label).to_owned()));
+            }
+            Ok(Value::Object(map))
+  verbatimBodyWasm: |-
+    let _args = args_map(&args_json)?;
+            let mut map = serde_json::Map::new();
+            for (key, label) in seller_tax_identifier_display_label_by_type() {
+                map.insert((*key).to_owned(), Value::String((*label).to_owned()));
+            }
+            Ok(Value::Object(map))
+  args: []
+  omitCoreCall: true
+assertResponseResult:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let value = args
+                .get("value")
+                .cloned()
+                .ok_or_else(|| SdkError::transport("args.value is required".to_owned(), false))?;
+            match assert_response_result(&value) {
+                Ok(v) => Ok(v),
+                Err(message) => Err(SdkError::transport(message.to_owned(), false)),
+            }
+  doc: |-
+    Binding for `assertResponseResult` — brand failures are Transport errors
+    (TS wrapper rethrows as plain `Error` for fixture name parity).
+  args:
+    - name: value
+      type: value
+      required: true
+  omitCoreCall: true
+attachBusinessDetailsValidationError:
+  tsWrapper:
+    optionalStyle: optional
+  args:
+    - name: firstIssueMessage
+      type: string?
+      required: false
+      extract: optionalString
+      local: first_issue_message
+  callArgs:
+    - first_issue_message.as_deref()
+buildCreateCustomerParams:
+  tsWrapper:
+    optionalStyle: undefined
+  doc: Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock string).
+  args:
+    - name: customerRef
+      type: string
+      required: true
+      extract: requireString
+      local: customer_ref
+    - name: externalRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: external_ref
+    - name: email
+      type: string?
+      required: false
+      extract: optionalString
+      local: email
+    - name: name
+      type: string?
+      required: false
+      extract: optionalString
+      local: name
+    - name: nowMs
+      type: i64
+      required: true
+      hostInjected: true
+      extract: requireI64
+      local: now_ms
+  callArgs:
+    - "&customer_ref"
+    - external_ref.as_deref()
+    - email.as_deref()
+    - name.as_deref()
+    - now_ms
+buildGateMessage:
+  args:
+    - name: state
+      type: value
+      required: true
+      extract: requireTyped
+      typedAs: PaywallState
+      local: state
+    - name: gate
+      type: value
+      required: true
+      extract: requireTyped
+      typedAs: GateContent
+      local: gate
+  callArgs:
+    - "&state"
+    - "&gate"
+buildNudgeMessage:
+  args:
+    - name: state
+      type: value
+      required: true
+      extract: requireTyped
+      typedAs: PaywallState
+      local: state
+    - name: limits
+      type: value
+      required: false
+      extract: optionalTyped
+      typedAs: PaywallLimits
+      local: limits
+  callArgs:
+    - "&state"
+    - limits.as_ref()
+buildPaywallGate:
+  args:
+    - name: productRef
+      type: string
+      required: true
+      extract: requireString
+      local: product_ref
+    - name: limits
+      type: value
+      required: true
+      extract: requireTyped
+      typedAs: PaywallGateLimits
+      local: limits
+  callArgs:
+    - "&product_ref"
+    - "&limits"
+buildPromptDescriptorMetadata:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let views = optional_views(&args)?;
+            let options = BuildPromptDescriptorMetadataOptions { views };
+            to_value(&build_prompt_descriptor_metadata(&options))
+  args:
+    - name: views
+      type: value
+      required: false
+  omitCoreCall: true
+buildPromptUserMessage:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let prompt_name = require_string(&args, "promptName")?;
+            let nested_args = match args.get("args") {
+                Some(Value::Object(_)) => args["args"].clone(),
+                Some(_) => {
+                    return Err(SdkError::transport(
+                        "args.args must be an object".to_owned(),
+                        false,
+                    ));
+                }
+                None => {
+                    return Err(SdkError::transport(
+                        "args.args is required".to_owned(),
+                        false,
+                    ));
+                }
+            };
+            to_value(&build_prompt_user_message(&prompt_name, &nested_args))
+  args:
+    - name: promptName
+      type: string
+      required: true
+    - name: args
+      type: value
+      required: true
+  omitCoreCall: true
+buildToolDescriptorMetadata:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let resource_uri = require_string(&args, "resourceUri")?;
+            let views = optional_views(&args)?;
+            let branding = optional_branding(&args)?;
+            let options = BuildToolDescriptorMetadataOptions {
+                resource_uri,
+                views,
+                branding,
+            };
+            to_value(&build_tool_descriptor_metadata(&options))
+  args:
+    - name: resourceUri
+      type: string
+      required: true
+    - name: views
+      type: value
+      required: false
+    - name: branding
+      type: value
+      required: false
+  omitCoreCall: true
+classifyCancelError:
+  args:
+    - name: message
+      type: string
+      required: true
+      extract: requireString
+      local: message
+  callArgs:
+    - "&message"
+classifyCreateError:
+  args:
+    - name: message
+      type: string
+      required: true
+      extract: requireString
+      local: message
+  callArgs:
+    - "&message"
+classifyCustomerRef:
+  args:
+    - name: customerRef
+      type: string
+      required: true
+      extract: requireString
+      local: customer_ref
+  callArgs:
+    - "&customer_ref"
+classifyLookupError:
+  args:
+    - name: message
+      type: string
+      required: true
+      extract: requireString
+      local: message
+  callArgs:
+    - "&message"
+classifyPaywallState:
+  args:
+    - name: limits
+      type: value
+      required: false
+      extract: optionalTyped
+      typedAs: PaywallLimits
+      local: limits
+  callArgs:
+    - limits.as_ref()
+classifyReactivateError:
+  args:
+    - name: message
+      type: string
+      required: true
+      extract: requireString
+      local: message
+  callArgs:
+    - "&message"
+coerceCustomerOptions:
+  args:
+    - name: email
+      type: string?
+      required: false
+      extract: optionalString
+      local: email
+    - name: name
+      type: string?
+      required: false
+      extract: optionalString
+      local: name
+  callArgs:
+    - email.as_deref()
+    - name.as_deref()
+creditsToDisplayMinorUnits:
+  tsWrapper:
+    returnType: number | null
+    signature: |-
+      input: {
+        credits: number
+        creditsPerMinorUnit: number
+        displayExchangeRate: number
+        displayCurrency: string
+      }): number | null
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let input = CreditsToDisplayInput {
+                credits: require_f64(&args, "credits")?,
+                credits_per_minor_unit: require_f64(&args, "creditsPerMinorUnit")?,
+                display_exchange_rate: require_f64(&args, "displayExchangeRate")?,
+                display_currency: require_string(&args, "displayCurrency")?,
+            };
+            match credits_to_display_minor_units(&input) {
+                Some(n) => Ok(Value::from(n)),
+                None => Ok(Value::Null),
+            }
+  doc: Binding for `creditsToDisplayMinorUnits` (`null` when undefined).
+  args:
+    - name: credits
+      type: f64
+      required: true
+    - name: creditsPerMinorUnit
+      type: f64
+      required: true
+    - name: displayExchangeRate
+      type: f64
+      required: true
+    - name: displayCurrency
+      type: string
+      required: true
+  omitCoreCall: true
+decidePaywallOutcome:
+  tsWrapper:
+    generics: <TGate>
+    signature: |-
+      input: {
+        withinLimits: boolean
+        product: string
+        limits: PaywallDecisionLimits | null
+        checkoutUrl?: string
+        buildGate: (product: string, limits: PaywallDecisionLimits) => TGate
+      }): PaywallOutcome<TGate>
+    dispatchArgs: |-
+      withinLimits: input.withinLimits,
+      product: input.product,
+      limits: input.limits,
+      checkoutUrl: input.checkoutUrl ?? null
+    doc: |-
+      Produce allow vs gate at the decision point.
+
+      `buildGate` is accepted for API compatibility with the former TS body; the
+      Rust path ignores it and uses in-crate `build_paywall_gate`.
+    serverComment: |-
+      Rust owns the gate build (in-crate `build_paywall_gate`); `buildGate` is
+      ignored — kept in the signature for source compatibility.
+  args:
+    - name: withinLimits
+      type: bool
+      required: true
+      extract: requireBool
+      local: within_limits
+    - name: product
+      type: string
+      required: true
+      extract: requireString
+      local: product
+    - name: checkoutUrl
+      type: string?
+      required: false
+      extract: optionalString
+      local: checkout_url
+    - name: limits
+      type: value
+      required: false
+      extract: optionalValue
+      local: limits
+  callArgs:
+    - within_limits
+    - "&product"
+    - limits.as_ref()
+    - checkout_url.as_deref()
+deriveIcons:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let branding = optional_branding(&args)?;
+            match derive_icons(branding.as_ref()) {
+                None => Ok(Value::Null),
+                Some(icons) => to_value(&icons),
+            }
+  doc: Binding for `deriveIcons` — absent/empty branding → JSON `null`.
+  args:
+    - name: branding
+      type: value
+      required: false
+  omitCoreCall: true
+deriveTaxIdType:
+  tsWrapper:
+    paramTypes:
+      country: SupportedBusinessCountry
+    returnType: TaxIdType
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let country = require_string(&args, "country")?;
+            match derive_tax_id_type(&country) {
+                Some(tax_type) => to_value(&tax_type),
+                None => Err(SdkError::transport(
+                    format!("unsupported country: {country}"),
+                    false,
+                )),
+            }
+  args:
+    - name: country
+      type: string
+      required: true
+  omitCoreCall: true
+evaluateCachedLimits:
+  args:
+    - name: remaining
+      type: f64
+      required: true
+      extract: requireF64
+      local: remaining
+  callArgs:
+    - remaining
+evaluateFreshLimits:
+  args:
+    - name: withinLimits
+      type: bool
+      required: true
+      extract: requireBool
+      local: within_limits
+    - name: remaining
+      type: f64
+      required: true
+      extract: requireF64
+      local: remaining
+  callArgs:
+    - within_limits
+    - remaining
+extractBackendCustomerRef:
+  tsWrapper:
+    paramTypes:
+      response: Record<string, unknown>
+  args:
+    - name: response
+      type: value
+      required: true
+      extract: requireObject
+      local: response
+    - name: fallback
+      type: string
+      required: true
+      extract: requireString
+      local: fallback
+  callArgs:
+    - response
+    - "&fallback"
+getBusinessCountryOptions:
+  tsWrapper:
+    doc: Fixture-visible accessor; `BUSINESS_COUNTRY_OPTIONS` const stays for types/React.
+  args: []
+getSellerTaxIdentifierDisplayLabel:
+  tsWrapper:
+    optionalStyle: nullish
+  args:
+    - name: country
+      type: string?
+      required: false
+      extract: optionalString
+      local: country
+  callArgs:
+    - country.as_deref()
+getTaxIdExample:
+  tsWrapper:
+    paramTypes:
+      country: SupportedBusinessCountry
+    returnType: string
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let country = require_string(&args, "country")?;
+            match get_tax_id_example(&country) {
+                Some(example) => Ok(Value::String(example.to_owned())),
+                None => Err(SdkError::transport(
+                    format!("unsupported country: {country}"),
+                    false,
+                )),
+            }
+  args:
+    - name: country
+      type: string
+      required: true
+  omitCoreCall: true
+getTaxIdFieldLabel:
+  tsWrapper:
+    paramTypes:
+      country: SupportedBusinessCountry
+    returnType: string
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let country = require_string(&args, "country")?;
+            match get_tax_id_field_label(&country) {
+                Some(label) => Ok(Value::String(label.to_owned())),
+                None => Err(SdkError::transport(
+                    format!("unsupported country: {country}"),
+                    false,
+                )),
+            }
+  args:
+    - name: country
+      type: string
+      required: true
+  omitCoreCall: true
+getTaxIdHelperText:
+  tsWrapper:
+    paramTypes:
+      country: SupportedBusinessCountry
+    returnType: string
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let country = require_string(&args, "country")?;
+            match get_tax_id_helper_text(&country) {
+                Some(text) => Ok(Value::String(text)),
+                None => Err(SdkError::transport(
+                    format!("unsupported country: {country}"),
+                    false,
+                )),
+            }
+  args:
+    - name: country
+      type: string
+      required: true
+  omitCoreCall: true
+isCachedCustomerRefValid:
+  args:
+    - name: externalRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: external_ref
+    - name: userId
+      type: string
+      required: true
+      extract: requireString
+      local: user_id
+    - name: customerRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: customer_ref
+  callArgs:
+    - external_ref.as_deref()
+    - "&user_id"
+    - customer_ref.as_deref()
+isEmailConflict:
+  args:
+    - name: message
+      type: string
+      required: true
+      extract: requireString
+      local: message
+  callArgs:
+    - "&message"
+isErrorResult:
+  tsWrapper:
+    returnType: result is RouteErrorResult
+  args:
+    - name: result
+      type: value
+      required: true
+      extract: rawValueOrNull
+      local: value
+  callArgs:
+    - "&value"
+isZeroDecimalCurrency:
+  args:
+    - name: currency
+      type: string
+      required: true
+      extract: requireString
+      local: currency
+  callArgs:
+    - "&currency"
+makeResponseResult:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let data = args
+                .get("data")
+                .cloned()
+                .ok_or_else(|| SdkError::transport("args.data is required".to_owned(), false))?;
+
+            let options = match args.get("options") {
+                None => None,
+                Some(Value::Null) => {
+                    return Err(SdkError::transport(
+                        "args.options must be an object when present".to_owned(),
+                        false,
+                    ));
+                }
+                Some(value) if value.is_object() => Some(value.clone()),
+                Some(_) => {
+                    return Err(SdkError::transport(
+                        "args.options must be an object when present".to_owned(),
+                        false,
+                    ));
+                }
+            };
+
+            let emitted_blocks = match args.get("emittedBlocks") {
+                None => Vec::new(),
+                Some(Value::Array(items)) => items.clone(),
+                Some(_) => {
+                    return Err(SdkError::transport(
+                        "args.emittedBlocks must be an array when present".to_owned(),
+                        false,
+                    ));
+                }
+            };
+
+            to_value(&make_response_result(data, options, emitted_blocks))
+  args:
+    - name: data
+      type: value
+      required: true
+    - name: options
+      type: value
+      required: false
+    - name: emittedBlocks
+      type: value
+      required: false
+  omitCoreCall: true
+mapRouteError:
+  tsWrapper:
+    dispatchArgs: |-
+      kind: input.kind,
+      message: input.message,
+      defaultMessage: input.defaultMessage ?? null,
+      operationName: input.operationName,
+      status: input.status ?? null
+  verbatimBody: >-
+    let args = args_map(&args_json)?;
+            let kind = match require_string(&args, "kind")?.as_str() {
+                "solvapay" => RouteErrorKind::SolvaPay,
+                "error" => RouteErrorKind::Error,
+                "unknown" => RouteErrorKind::Unknown,
+                other => {
+                    return Err(SdkError::transport(
+                        format!("args.kind must be 'solvapay' | 'error' | 'unknown', got {other:?}"),
+                        false,
+                    ));
+                }
+            };
+            let message = optional_string(&args, "message")?;
+            let default_message = optional_string(&args, "defaultMessage")?;
+            let operation_name = require_string(&args, "operationName")?;
+            let status = optional_u16(&args, "status")?;
+            to_value(&map_route_error(&RouteErrorInput {
+                kind,
+                message,
+                status,
+                operation_name,
+                default_message,
+            }))
+  doc: 'Binding for `mapRouteError` (`kind`: `"solvapay"` | `"error"` | `"unknown"`).'
+  args:
+    - name: kind
+      type: string
+      required: true
+    - name: message
+      type: string?
+      required: false
+    - name: defaultMessage
+      type: string?
+      required: false
+    - name: operationName
+      type: string
+      required: true
+    - name: status
+      type: f64?
+      required: false
+  omitCoreCall: true
+mcpViewMaps:
+  args: []
+minorUnitsPerMajor:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let currency = require_string(&args, "currency")?;
+            Ok(Value::from(minor_units_per_major(&currency)))
+  args:
+    - name: currency
+      type: string
+      required: true
+  omitCoreCall: true
+normalizeCancelResponse:
+  doc: |-
+    Binding for `normalizeCancelResponse`.
+
+    Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
+  docWasm: Binding for `normalizeCancelResponse`.
+  args:
+    - name: response
+      type: value
+      required: true
+      extract: rawValueOrNull
+      local: response
+  callArgs:
+    - "&response"
+normalizeReactivateResponse:
+  doc: |-
+    Binding for `normalizeReactivateResponse`.
+
+    Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
+  docWasm: Binding for `normalizeReactivateResponse`.
+  args:
+    - name: response
+      type: value
+      required: true
+      extract: rawValueOrNull
+      local: response
+  callArgs:
+    - "&response"
+paywallErrorToClientPayload:
+  doc: |-
+    Binding for `paywallErrorToClientPayload`.
+
+    Requires `message` + `structuredContent`; payload content comes from the gate
+    (message is unused for payload body — fixture-runner parity).
+  docWasm: Binding for `paywallErrorToClientPayload`.
+  args:
+    - name: message
+      type: string
+      required: true
+      extract: requireString
+      local: _message
+    - name: structuredContent
+      type: value
+      required: true
+      extract: requireTyped
+      typedAs: PaywallGate
+      local: gate
+  callArgs:
+    - "&gate"
+paywallToolResult:
+  doc: Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
+  args:
+    - name: message
+      type: string
+      required: true
+      extract: requireString
+      local: message
+    - name: structuredContent
+      type: value
+      required: true
+      extract: requireTyped
+      typedAs: PaywallGate
+      local: gate
+      typedStyle: annotation
+  callArgs:
+    - "&message"
+    - "&gate"
+projectPaymentIntentResult:
+  tsWrapper:
+    signature: "pi: PaymentIntentSource, customerRef: string): PaymentIntentProjection"
+    dispatchArgs: |-
+      processorPaymentId: pi.processorPaymentId,
+      clientSecret: pi.clientSecret,
+      publishableKey: pi.publishableKey,
+      ...(pi.accountId !== undefined ? { accountId: pi.accountId } : {}),
+      customerRef
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let processor_payment_id = require_string(&args, "processorPaymentId")?;
+            let client_secret = require_string(&args, "clientSecret")?;
+            let publishable_key = require_string(&args, "publishableKey")?;
+            let customer_ref = require_string(&args, "customerRef")?;
+            let account_id = optional_string(&args, "accountId")?;
+            to_value(&project_payment_intent_result(
+                &PaymentIntentSource {
+                    processor_payment_id,
+                    client_secret,
+                    publishable_key,
+                    account_id,
+                },
+                &customer_ref,
+            ))
+  args:
+    - name: processorPaymentId
+      type: string
+      required: true
+    - name: clientSecret
+      type: string
+      required: true
+    - name: publishableKey
+      type: string
+      required: true
+    - name: customerRef
+      type: string
+      required: true
+    - name: accountId
+      type: string?
+      required: false
+  omitCoreCall: true
+projectTopupProcessOutcome:
+  tsWrapper:
+    optionalStyle: optional
+  args:
+    - name: status
+      type: string?
+      required: false
+      extract: optionalString
+      local: status
+    - name: message
+      type: string?
+      required: false
+      extract: optionalString
+      local: message
+  callArgs:
+    - status.as_deref()
+    - message.as_deref()
+projectUsageSnapshot:
+  tsWrapper:
+    paramTypes:
+      activePurchase: UsageSnapshotPurchase | null | undefined
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let purchase = match args.get("activePurchase") {
+                None | Some(Value::Null) => None,
+                Some(v) => Some(v),
+            };
+            to_value(&project_usage_snapshot(purchase))
+  args:
+    - name: activePurchase
+      type: value
+      required: false
+  omitCoreCall: true
+resolveCheckLimitsParams:
+  tsWrapper:
+    paramStyle:
+      usageType: optionalNull
+  doc: >-
+    Binding for `resolveCheckLimitsParams`.
+
+
+    Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**. Precedence is
+    meterName, then usageType, then `requests`.
+  docWasm: Binding for `resolveCheckLimitsParams`.
+  args:
+    - name: productRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: product_ref
+    - name: meterName
+      type: string?
+      required: false
+      extract: optionalString
+      local: meter_name
+    - name: usageType
+      type: string?
+      required: false
+      extract: optionalString
+      local: usage_type
+  callArgs:
+    - product_ref.as_deref()
+    - meter_name.as_deref()
+    - usage_type.as_deref()
+resolveFallbackGateLimits:
+  tsWrapper:
+    optionalStyle: optional
+  args:
+    - name: checkoutUrl
+      type: string?
+      required: false
+      extract: optionalString
+      local: checkout_url
+  callArgs:
+    - checkout_url.as_deref()
+resolveProductRef:
+  tsWrapper:
+    optionalStyle: optionalNull
+  args:
+    - name: metadataProduct
+      type: string?
+      required: false
+      extract: optionalString
+      local: metadata_product
+    - name: envProduct
+      type: string?
+      required: false
+      extract: optionalString
+      local: env_product
+  callArgs:
+    - metadata_product.as_deref()
+    - env_product.as_deref()
+requireProductRef:
+  tsWrapper:
+    optionalStyle: optionalNull
+    returnType: string
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let metadata_product = optional_string(&args, "metadataProduct")?;
+            let env_product = optional_string(&args, "envProduct")?;
+            Ok(Value::String(require_product_ref(
+                metadata_product.as_deref(),
+                env_product.as_deref(),
+            )?))
+  doc: Binding for `requireProductRef`. Throws when neither source is set.
+  args:
+    - name: metadataProduct
+      type: string?
+      required: false
+      extract: optionalString
+      local: metadata_product
+    - name: envProduct
+      type: string?
+      required: false
+      extract: optionalString
+      local: env_product
+evaluateProductReadiness:
+  tsWrapper:
+    signature: |-
+      product: {
+        status: string
+        plans?: Array<{ isActive: boolean }>
+      }): {
+        ready: boolean
+        issues: string[]
+        activePlans: number
+        totalPlans: number
+      }
+  verbatimBody: |-
+    let input: ProductReadinessInput = serde_json::from_str(&args_json).map_err(|err| {
+                SdkError::transport(format!("invalid ProductReadinessInput: {err}"), false)
+            })?;
+            to_value(&evaluate_product_readiness(&input))
+  args: []
+assertValidProductRef:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let product_ref = require_string(&args, "productRef")?;
+            let context = require_string(&args, "context")?;
+            assert_valid_product_ref(&product_ref, &context)?;
+            Ok(Value::Null)
+  doc: Binding for `assertValidProductRef`. Throws on empty, placeholder, or non-prd_ refs.
+  args:
+    - name: productRef
+      type: string
+      required: true
+      extract: requireString
+      local: product_ref
+    - name: context
+      type: string
+      required: true
+      extract: requireString
+      local: context
+resolvePurchaseCustomerRef:
+  args:
+    - name: customerRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: customer_ref
+    - name: userId
+      type: string
+      required: true
+      extract: requireString
+      local: user_id
+  callArgs:
+    - customer_ref.as_deref()
+    - "&user_id"
+resolveReturnUrl:
+  tsWrapper:
+    optionalStyle: optionalNull
+    postProcess: nullToUndefined
+    returnType: string | undefined
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let body_return_url = optional_string(&args, "bodyReturnUrl")?;
+            let options_return_url = optional_string(&args, "optionsReturnUrl")?;
+            let origin = optional_string(&args, "origin")?;
+            match resolve_return_url(
+                body_return_url.as_deref(),
+                options_return_url.as_deref(),
+                origin.as_deref(),
+            ) {
+                None => Ok(Value::Null),
+                Some(url) => Ok(Value::String(url)),
+            }
+  args:
+    - name: bodyReturnUrl
+      type: string?
+      required: false
+    - name: optionsReturnUrl
+      type: string?
+      required: false
+    - name: origin
+      type: string?
+      required: false
+  omitCoreCall: true
+resolveSellerIdentityDisplay:
+  tsWrapper:
+    signature: |-
+      input: {
+        country?: string | null
+        vatNumber?: string | null
+        taxId?: string | null
+        companyNumber?: string | null
+      }): SellerIdentityDisplay
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let input = SellerIdentityInput {
+                country: optional_string(&args, "country")?,
+                vat_number: optional_string(&args, "vatNumber")?,
+                tax_id: optional_string(&args, "taxId")?,
+                company_number: optional_string(&args, "companyNumber")?,
+            };
+            to_value(&resolve_seller_identity_display(&input))
+  args:
+    - name: country
+      type: string?
+      required: false
+    - name: vatNumber
+      type: string?
+      required: false
+    - name: taxId
+      type: string?
+      required: false
+    - name: companyNumber
+      type: string?
+      required: false
+  omitCoreCall: true
+resolveTaxBehavior:
+  tsWrapper:
+    paramTypes:
+      behavior: TaxBehavior
+    returnType: "'inclusive' | 'exclusive'"
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let behavior = require_string(&args, "behavior")?;
+            let currency = require_string(&args, "currency")?;
+            match resolve_tax_behavior(&behavior, &currency) {
+                Some(resolved) => Ok(Value::String(resolved.to_owned())),
+                None => Err(SdkError::transport(
+                    format!("unsupported tax behavior: {behavior}"),
+                    false,
+                )),
+            }
+  args:
+    - name: behavior
+      type: string
+      required: true
+    - name: currency
+      type: string
+      required: true
+  omitCoreCall: true
+retryNextDelayMs:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let attempt = require_u32(&args, "attempt")?;
+            let mut policy = RetryPolicy {
+                max_retries: DEFAULT_MAX_RETRIES,
+                initial_delay_ms: DEFAULT_INITIAL_DELAY_MS,
+                backoff: Backoff::Fixed,
+            };
+            if let Some(max_retries) = optional_u32(&args, "maxRetries")? {
+                policy.max_retries = max_retries;
+            }
+            if let Some(initial_delay) = optional_u64(&args, "initialDelay")? {
+                policy.initial_delay_ms = initial_delay;
+            }
+            if let Some(strategy) = optional_string(&args, "backoffStrategy")? {
+                policy.backoff = match strategy.as_str() {
+                    "fixed" => Backoff::Fixed,
+                    "linear" => Backoff::Linear,
+                    "exponential" => Backoff::Exponential,
+                    other => {
+                        return Err(SdkError::transport(
+                            format!(
+                                "args.backoffStrategy must be fixed|linear|exponential, got {other}"
+                            ),
+                            false,
+                        ));
+                    }
+                };
+            }
+            match policy.next_delay(attempt) {
+                None => Ok(Value::Null),
+                Some(delay) => {
+                    let ms = u64::try_from(delay.as_millis()).unwrap_or(u64::MAX);
+                    Ok(Value::from(ms))
+                }
+            }
+  doc: |-
+    Binding for `retryNextDelayMs`.
+
+    Args: `{ maxRetries?, initialDelay?, backoffStrategy?, attempt }`.
+    Envelope value is delay milliseconds, or `null` when retries are exhausted.
+  docWasm: Binding for `retryNextDelayMs`.
+  args:
+    - name: attempt
+      type: f64
+      required: true
+    - name: maxRetries
+      type: f64?
+      required: false
+    - name: initialDelay
+      type: f64?
+      required: false
+    - name: backoffStrategy
+      type: string?
+      required: false
+  omitCoreCall: true
+selectActivePurchases:
+  tsWrapper:
+    generics: "<T extends { status?: string }>"
+    returnType: T[]
+    paramTypes:
+      purchases: T[]
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let purchases = require_array(&args, "purchases")?;
+            Ok(Value::Array(select_active_purchases(purchases)))
+  args:
+    - name: purchases
+      type: value
+      required: true
+  omitCoreCall: true
+validateActivatePlanParams:
+  args:
+    - name: productRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: product_ref
+    - name: planRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: plan_ref
+  callArgs:
+    - product_ref.as_deref()
+    - plan_ref.as_deref()
+validateAttachBusinessDetailsParams:
+  args:
+    - name: paymentIntentId
+      type: string?
+      required: false
+      extract: optionalString
+      local: payment_intent_id
+  callArgs:
+    - payment_intent_id.as_deref()
+validateBusinessDetails:
+  verbatimBody: |-
+    let input: BusinessDetailsInput = serde_json::from_str(&args_json).map_err(|err| {
+                SdkError::transport(format!("invalid BusinessDetailsInput: {err}"), false)
+            })?;
+            to_value(&validate_business_details(&input))
+  args: []
+  omitCoreCall: true
+validateCheckoutSessionParams:
+  args:
+    - name: productRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: product_ref
+  callArgs:
+    - product_ref.as_deref()
+validateCreatePaymentIntentParams:
+  args:
+    - name: planRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: plan_ref
+    - name: productRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: product_ref
+  callArgs:
+    - plan_ref.as_deref()
+    - product_ref.as_deref()
+validateGetProductParams:
+  args:
+    - name: productRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: product_ref
+  callArgs:
+    - product_ref.as_deref()
+validateListPlansParams:
+  args:
+    - name: productRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: product_ref
+  callArgs:
+    - product_ref.as_deref()
+validateProcessPaymentIntentParams:
+  args:
+    - name: paymentIntentId
+      type: string?
+      required: false
+      extract: optionalString
+      local: payment_intent_id
+    - name: productRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: product_ref
+  callArgs:
+    - payment_intent_id.as_deref()
+    - product_ref.as_deref()
+validatePublicBaseUrl:
+  verbatimBody: |-
+    let args = args_map(&args_json)?;
+            let public_base_url = require_string(&args, "publicBaseUrl")?;
+            match validate_public_base_url(&public_base_url) {
+                None => Ok(Value::Null),
+                Some(message) => Ok(Value::String(message.to_owned())),
+            }
+  doc: Binding for `validatePublicBaseUrl` — invalid → error message string; valid → `null`.
+  docWasm: Binding for `validatePublicBaseUrl` — invalid → error message; valid → `null`.
+  args:
+    - name: publicBaseUrl
+      type: string
+      required: true
+  omitCoreCall: true
+validatePurchaseRef:
+  args:
+    - name: purchaseRef
+      type: string?
+      required: false
+      extract: optionalString
+      local: purchase_ref
+  callArgs:
+    - purchase_ref.as_deref()
+validateTopupPaymentIntentParams:
+  args:
+    - name: amount
+      type: f64?
+      required: false
+      extract: optionalF64
+      local: amount
+    - name: currency
+      type: string?
+      required: false
+      extract: optionalString
+      local: currency
+  callArgs:
+    - amount
+    - currency.as_deref()
+verifyWebhook:
+  args:
+    - name: body
+      type: string
+      required: true
+    - name: signature
+      type: string
+      required: true
+    - name: secret
+      type: string
+      required: true
+    - name: nowUnixSecs
+      type: i64
+      required: true
+      hostInjected: true
+
+# Client shim residue (Phase 4b) — docs / call-arg tokens the signature cannot say.
+activatePlan:
+  doc: "`POST /v1/sdk/activate`"
+assignCredits:
+  doc: "Grant credits to a customer."
+attachBusinessDetails:
+  doc: "`POST /v1/sdk/payment-intents/{id}/business-details`"
+bootstrapMcpProduct:
+  doc: "`POST /v1/sdk/products/mcp/bootstrap`"
+cancelPurchase:
+  doc: "`POST /v1/sdk/purchases/{purchaseRef}/cancel`"
+checkLimits:
+  doc: "`POST /v1/sdk/limits`"
+cloneProduct:
+  doc: |-
+    `POST /v1/sdk/products/{productRef}/clone`
+    
+    Args JSON is `{ productRef, name? }`.
+  clientCallArgs:
+    - "&refs[0]"
+    - "Some(overrides)"
+configureMcpPlans:
+  doc: |-
+    `PUT /v1/sdk/products/{productRef}/mcp/plans`
+    
+    Args JSON is `{ productRef, ...params }`.
+  clientCallArgs:
+    - "&refs[0]"
+    - "params"
+createCheckoutSession:
+  doc: "Hosted checkout session."
+createCustomerSession:
+  doc: "Customer portal session."
+createPaymentIntent:
+  doc: "`POST /v1/sdk/payment-intents` (plan checkout)."
+createPlan:
+  doc: "`POST /v1/sdk/products/{productRef}/plans` (`productRef` in body)."
+createProduct:
+  doc: "`POST /v1/sdk/products`"
+createTopupPaymentIntent:
+  doc: "`POST /v1/sdk/payment-intents` (credit top-up)."
+deletePlan:
+  doc: |-
+    `DELETE /v1/sdk/products/{productRef}/plans/{planRef}`
+    
+    Args JSON is `{ productRef, planRef }`. Success value is `null`.
+  clientCallArgs:
+    - "&refs[0]"
+    - "&refs[1]"
+deleteProduct:
+  doc: |-
+    `DELETE /v1/sdk/products/{productRef}`
+    
+    Args JSON is `{ productRef }`. Success value is `null`.
+  clientCallArgs:
+    - "&refs[0]"
+disableAutoRecharge:
+  doc: "`DELETE /v1/sdk/auto-recharge`"
+getAutoRecharge:
+  doc: "`GET /v1/sdk/auto-recharge`"
+getCustomer:
+  doc: "Customer lookup by ref / externalRef / email."
+getCustomerBalance:
+  doc: "Credit balance for a customer."
+getMerchant:
+  doc: "Merchant profile (`args_json` ignored; pass `\"{}\"`)."
+getPaymentMethod:
+  doc: "`GET /v1/sdk/payment-method`"
+getPlatformConfig:
+  doc: "Platform config (`args_json` ignored; pass `\"{}\"`)."
+getProduct:
+  doc: |-
+    `GET /v1/sdk/products/{productRef}`
+    
+    Args JSON is `{ productRef }`.
+  clientCallArgs:
+    - "&refs[0]"
+getUserInfo:
+  doc: "User info for a customer/product pair."
+listPlans:
+  doc: |-
+    `GET /v1/sdk/products/{productRef}/plans`
+    
+    Args JSON is `{ productRef }`.
+  clientCallArgs:
+    - "&refs[0]"
+listProducts:
+  doc: "`GET /v1/sdk/products` (`args_json` ignored; pass `\"{}\"`)."
+processPaymentIntent:
+  doc: "`POST /v1/sdk/payment-intents/{id}/process`"
+reactivatePurchase:
+  doc: "`POST /v1/sdk/purchases/{purchaseRef}/reactivate`"
+saveAutoRecharge:
+  doc: "`PUT /v1/sdk/auto-recharge`"
+trackUsage:
+  doc: "`POST /v1/sdk/usages`"
+trackUsageBulk:
+  doc: "`POST /v1/sdk/usages/bulk`"
+updateCustomer:
+  doc: |-
+    `PATCH /v1/sdk/customers/{customerRef}`
+    
+    Args JSON is `{ customerRef, ...body }` — Rust splits path vs body.
+  clientCallArgs:
+    - "&refs[0]"
+    - "params"
+updatePlan:
+  doc: |-
+    `PUT /v1/sdk/products/{productRef}/plans/{planRef}`
+    
+    Args JSON is `{ productRef, planRef, ...params }`.
+  clientCallArgs:
+    - "&refs[0]"
+    - "&refs[1]"
+    - "params"
+updateProduct:
+  doc: |-
+    `PUT /v1/sdk/products/{productRef}`
+    
+    Args JSON is `{ productRef, ...params }`.
+  clientCallArgs:
+    - "&refs[0]"
+    - "params"

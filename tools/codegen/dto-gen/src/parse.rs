@@ -95,12 +95,8 @@ pub fn parse_openapi(root: &Value) -> GenResult<Ir> {
 
     Ok(Ir {
         types: ctx.types,
-        overlay_helpers: BTreeMap::new(),
-        overlays: BTreeMap::new(),
         routes,
-        error_templates: crate::ir::IrErrorTemplates::default(),
-        entry_points: BTreeMap::new(),
-        binding_symbols: BTreeMap::new(),
+        ..Ir::default()
     })
 }
 

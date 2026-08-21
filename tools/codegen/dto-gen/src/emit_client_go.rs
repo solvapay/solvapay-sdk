@@ -285,6 +285,10 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
             binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         };
         ir.entry_points.insert(
             "getMerchant".into(),
@@ -358,6 +362,7 @@ mod tests {
                 dto_type: None,
                 core_call: Some("get_merchant".into()),
                 client_call_args: vec![],
+                ts_wrapper: None,
             },
         );
 

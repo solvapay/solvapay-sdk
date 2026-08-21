@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 use std::fs;
 
-use dto_gen::generate_from_snapshot;
+use dto_gen::{generate_from_snapshot, GenOutputs};
 
 fn paths() -> repo_paths::RepoPaths {
     repo_paths::load().expect("repo-paths")
@@ -30,30 +30,25 @@ fn emits_all_ruby_artifacts_identically_twice() {
                 .expect("openapiSnapshot"),
             &dto,
             Some(&paths().contract_input("sdkManifest").expect("sdkManifest")),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            Some(&shims),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            Some(&native),
-            Some(&client),
-            Some(&rbs),
-            Some(&parity),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
+            Some(&paths().contract_input("coreSrc").expect("coreSrc")),
+            Some(
+                &paths()
+                    .contract_input("bindingResidue")
+                    .expect("bindingResidue"),
+            ),
+            Some(
+                &paths()
+                    .contract_input("transportSrc")
+                    .expect("transportSrc"),
+            ),
+            &GenOutputs {
+                ruby_bindings_out: Some(&shims),
+                native_rb_out: Some(&native),
+                rb_client_out: Some(&client),
+                rb_rbs_out: Some(&rbs),
+                rb_parity_out: Some(&parity),
+                ..GenOutputs::default()
+            },
         )
         .expect("generate Ruby")
     };

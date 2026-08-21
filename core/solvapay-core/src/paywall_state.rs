@@ -90,6 +90,12 @@ pub struct GateContent {
 /// # Returns
 ///
 /// Recovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall state / gate / payload",
+    emit_order = 36
+)]
 pub fn classify_paywall_state(limits: Option<&PaywallLimits>) -> PaywallState {
     let Some(limits) = limits else {
         return PaywallState::UpgradeRequired;
@@ -148,6 +154,12 @@ fn non_empty_url(url: Option<&str>) -> Option<&str> {
 /// # Returns
 ///
 /// Frozen copy string, byte-identical to the TypeScript helpers.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall state / gate / payload",
+    emit_order = 37
+)]
 pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
     let url = non_empty_url(gate.checkout_url.as_deref());
     let open_clause = url.map_or(String::new(), |u| format!(", or open {u} in a browser"));
@@ -179,6 +191,12 @@ pub fn build_gate_message(state: &PaywallState, gate: &GateContent) -> String {
 /// # Returns
 ///
 /// Frozen nudge string, byte-identical to the TypeScript helpers.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall state / gate / payload",
+    emit_order = 38
+)]
 pub fn build_nudge_message(state: &PaywallState, limits: Option<&PaywallLimits>) -> String {
     let url = limits.and_then(|l| non_empty_url(l.checkout_url.as_deref()));
     let visit_clause = url.map_or(String::new(), |u| format!(", or visit {u}"));

@@ -71,6 +71,12 @@ pub struct CreateCustomerParams {
 /// # Returns
 ///
 /// [`CustomerRefKind`] for the ensureCustomer early-return table.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "customer-sync",
+    emit_order = 0
+)]
 pub fn classify_customer_ref(customer_ref: &str) -> CustomerRefKind {
     if customer_ref == "anonymous" {
         CustomerRefKind::Anonymous
@@ -91,6 +97,12 @@ pub fn classify_customer_ref(customer_ref: &str) -> CustomerRefKind {
 /// # Returns
 ///
 /// Options with only non-empty fields present.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "customer-sync",
+    emit_order = 1
+)]
 pub fn coerce_customer_options(email: Option<&str>, name: Option<&str>) -> CoercedCustomerOptions {
     let coerce = |value: Option<&str>| -> Option<String> {
         match value {
@@ -117,6 +129,13 @@ pub fn coerce_customer_options(email: Option<&str>, name: Option<&str>) -> Coerc
 /// # Returns
 ///
 /// Params with `metadata: {}` and conditional `name` / `externalRef`.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "customer-sync",
+    emit_order = 2,
+    host_injected = "nowMs"
+)]
 pub fn build_create_customer_params(
     customer_ref: &str,
     external_ref: Option<&str>,
@@ -160,6 +179,13 @@ pub fn build_create_customer_params(
 /// # Returns
 ///
 /// Backend customer reference string.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "customer-sync",
+    emit_order = 3,
+    extract = "response:requireObject"
+)]
 pub fn extract_backend_customer_ref(response: &Map<String, Value>, fallback: &str) -> String {
     match response.get("customerRef") {
         Some(Value::String(s)) if !s.is_empty() => return s.clone(),
@@ -182,6 +208,12 @@ pub fn extract_backend_customer_ref(response: &Map<String, Value>, fallback: &st
 ///
 /// [`LookupErrorKind::ExpectedMissing`] when message contains `404` or
 /// `"not found"`; otherwise [`LookupErrorKind::Unexpected`].
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "customer-sync",
+    emit_order = 4
+)]
 pub fn classify_lookup_error(message: &str) -> LookupErrorKind {
     if message.contains("404") || message.contains("not found") {
         LookupErrorKind::ExpectedMissing
@@ -200,6 +232,12 @@ pub fn classify_lookup_error(message: &str) -> LookupErrorKind {
 ///
 /// [`CreateErrorKind::Conflict`] when message contains `409` or
 /// `"already exists"`; otherwise [`CreateErrorKind::Other`].
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "customer-sync",
+    emit_order = 5
+)]
 pub fn classify_create_error(message: &str) -> CreateErrorKind {
     if message.contains("409") || message.contains("already exists") {
         CreateErrorKind::Conflict
@@ -217,6 +255,12 @@ pub fn classify_create_error(message: &str) -> CreateErrorKind {
 /// # Returns
 ///
 /// `true` when message contains `"email"` or `"identifier email"`.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "customer-sync",
+    emit_order = 6
+)]
 pub fn is_email_conflict(message: &str) -> bool {
     message.contains("email") || message.contains("identifier email")
 }

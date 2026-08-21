@@ -1,0 +1,439 @@
+/**
+ * @generated — do not edit. Regenerate with: pnpm gen
+ */
+
+import type { SupportedBusinessCountry, TaxIdType } from '../business-details'
+
+/**
+ * Input shape for [`validate_business_details`] (parity with `BusinessDetailsInput` in TS).
+ */
+export type BusinessDetailsInput = {
+  /**
+   * Whether the purchaser is buying as a business.
+   */
+  isBusiness: boolean
+  /**
+   * Legal business name (trimmed when present).
+   */
+  businessName?: string
+  /**
+   * Business country ISO code (required when `is_business` is true).
+   */
+  country?: string
+  /**
+   * Billing country for non-business purchases (tax calculation).
+   */
+  customerCountry?: string
+  /**
+   * Customer display name (max 100 characters).
+   */
+  customerName?: string
+  /**
+   * Tax ID to validate against the business country matcher.
+   */
+  taxId?: string
+  /**
+   * Explicit tax-ID type override (normally derived from country).
+   */
+  taxIdType?: TaxIdType
+}
+
+/**
+ * Validation failure payload returned by [`validate_business_details`].
+ */
+export type BusinessDetailsValidationError = {
+  /**
+   * One or more field-level validation issues.
+   */
+  issues: BusinessDetailsValidationIssue[]
+}
+
+/**
+ * Cache-hit path evaluation (host applies `evict` to the Map).
+ */
+export type CachedLimitsEvaluation = {
+  /**
+   * Whether the request is within limits.
+   */
+  withinLimits: boolean
+  /**
+   * Remaining after optimistic decrement (or `0` on the block-once path).
+   */
+  remaining: number
+  /**
+   * When true, host must delete the cache entry.
+   */
+  evict: boolean
+}
+
+/**
+ * Resolved check-limits query params.
+ */
+export type CheckLimitsParams = {
+  /**
+   * Required product reference.
+   */
+  productRef: string
+  /**
+   * Meter name (`'requests'` when the input was falsy).
+   */
+  meterName: string
+}
+
+/**
+ * Coerced email/name options (`null`/`''` → omitted).
+ */
+export type CoercedCustomerOptions = {
+  /**
+   * Email when non-empty.
+   */
+  email?: string
+  /**
+   * Name when non-empty.
+   */
+  name?: string
+}
+
+/**
+ * createCustomer request params.
+ */
+export type CreateCustomerParams = {
+  /**
+   * Email (provided or generated fallback).
+   */
+  email: string
+  /**
+   * Optional display name.
+   */
+  name?: string
+  /**
+   * Optional external reference.
+   */
+  externalRef?: string
+  /**
+   * Always `{}` today.
+   */
+  metadata: Record<string, unknown>
+}
+
+/**
+ * createCustomer error classification for 409 recovery.
+ */
+export type CreateErrorKind = 'conflict' | 'other'
+
+/**
+ * Classification of a customerRef before ensure/lookup.
+ */
+export type CustomerRefKind = 'anonymous' | 'backend' | 'needsEnsure'
+
+/**
+ * Cache-miss path evaluation after `checkLimits` returns.
+ */
+export type FreshLimitsEvaluation = {
+  /**
+   * Whether the request is within limits.
+   */
+  withinLimits: boolean
+  /**
+   * Remaining after optimistic consume (unchanged when not consumed).
+   */
+  remaining: number
+  /**
+   * When true, host should write the decremented entry into the cache.
+   */
+  shouldCache: boolean
+}
+
+/**
+ * Lookup-error classification for getCustomer misses.
+ */
+export type LookupErrorKind = 'expectedMissing' | 'unexpected'
+
+/**
+ * Projected create-PI / create-topup helper return shape.
+ */
+export type PaymentIntentProjection = {
+  /**
+   * Processor payment id.
+   */
+  processorPaymentId: string
+  /**
+   * Client secret for confirmation.
+   */
+  clientSecret: string
+  /**
+   * Publishable key.
+   */
+  publishableKey: string
+  /**
+   * Connected account id (skip-absent when [`None`]).
+   */
+  accountId?: string
+  /**
+   * Synced customer reference.
+   */
+  customerRef: string
+}
+
+/**
+ * Result of [`evaluate_product_readiness`].
+ */
+export type ProductReadinessResult = {
+  /**
+   * True when status is active and at least one plan is active.
+   */
+  ready: boolean
+  /**
+   * Human-readable reasons `ready` is false. Empty when ready.
+   */
+  issues: string[]
+  /**
+   * Count of active plans.
+   */
+  activePlans: number
+  /**
+   * Total plan count (including inactive).
+   */
+  totalPlans: number
+}
+
+/**
+ * Resolved seller identity rows. Absent rows serialize as JSON `null`.
+ */
+export type SellerIdentityDisplay = {
+  /**
+   * Country-aware tax / VAT / EIN row, if a value is available.
+   */
+  taxIdentifier: SellerIdentityRow | null
+  /**
+   * Company-number row when distinct from the tax identifier.
+   */
+  companyNumber: SellerIdentityRow | null
+}
+
+/**
+ * One labeled identity row.
+ */
+export type SellerIdentityRow = {
+  /**
+   * Human-readable field label (e.g. `"VAT number"`).
+   */
+  label: string
+  /**
+   * Stored identifier value to display.
+   */
+  value: string
+}
+
+/**
+ * Usage snapshot projected from an active purchase (or none).
+ */
+export type UsageSnapshot = {
+  /**
+   * Meter reference (`meterRef` / `meterId` fallback); explicit `null` when absent.
+   */
+  meterRef: string | null
+  /**
+   * Plan limit; explicit `null` when absent.
+   */
+  total: number | null
+  /**
+   * Units used (defaults to `0`).
+   */
+  used: number
+  /**
+   * `max(0, total - used)` when `total` is known; else `null`.
+   */
+  remaining: number | null
+  /**
+   * 0–100 rounded to 2dp; `null` when `total` is unknown or zero.
+   */
+  percentUsed: number | null
+  /**
+   * Billing period start (skip-absent).
+   */
+  periodStart?: string
+  /**
+   * Billing period end (skip-absent).
+   */
+  periodEnd?: string
+  /**
+   * Purchase reference when an active purchase exists (skip-absent).
+   */
+  purchaseRef?: string
+}
+
+export type BusinessDetails =
+  | { isBusiness: false; customerCountry?: SupportedBusinessCountry; customerName?: string }
+  | {
+      isBusiness: true
+      country: SupportedBusinessCountry
+      businessName?: string
+      taxId?: string
+      taxIdType?: TaxIdType
+      customerName?: string
+    }
+
+export type BusinessDetailsValidationIssue = {
+  path: PropertyKey[]
+  message: string
+}
+
+export type PaymentIntentSource = {
+  processorPaymentId: string
+  clientSecret: string
+  publishableKey: string
+  accountId?: string
+}
+
+export type PaywallDecisionLimits = {
+  withinLimits?: boolean
+  remaining?: number
+  plan?: string
+  checkoutUrl?: string
+  confirmationUrl?: string
+  activationRequired?: boolean
+  plans?: unknown
+  balance?: unknown
+  product?: unknown
+  creditBalance?: number
+}
+
+export type PaywallOutcome<TGate = unknown> =
+  | { outcome: 'allow' }
+  | { outcome: 'gate'; gate: TGate }
+
+export type ProductReadinessInput = {
+  status: string
+  plans?: Array<{ isActive: boolean }>
+}
+
+export type RouteErrorInput = {
+  kind: RouteErrorKind
+  message: string | null
+  status?: number | null
+  operationName: string
+  defaultMessage?: string | null
+}
+
+export type RouteErrorKind = 'solvapay' | 'error' | 'unknown'
+
+export type TopupProcessOutcome =
+  | { status: 'timeout'; message?: string }
+  | { status: 'failed' }
+  | { status: 'cancelled' }
+  | { status: 'succeeded' }
+
+export type ValidateBusinessDetailsResult =
+  | { success: true; data: BusinessDetails }
+  | { success: false; error: BusinessDetailsValidationError }
+
+export type ActivatePlanValidationError = {
+  /**
+   * Human-readable error label (e.g. `"Unauthorized"`).
+   */
+  error: string
+  /**
+   * HTTP status code.
+   */
+  status: number
+}
+
+export type CheckoutHelperError = {
+  /**
+   * Human-readable error label (e.g. `"Unauthorized"`).
+   */
+  error: string
+  /**
+   * HTTP status code.
+   */
+  status: number
+}
+
+export type LimitsHelperError = {
+  /**
+   * Human-readable error label (e.g. `"Unauthorized"`).
+   */
+  error: string
+  /**
+   * HTTP status code.
+   */
+  status: number
+}
+
+export type PaymentHelperError = {
+  /**
+   * Human-readable error label (e.g. `"Unauthorized"`).
+   */
+  error: string
+  /**
+   * HTTP status code.
+   */
+  status: number
+}
+
+export type PlansHelperError = {
+  /**
+   * Human-readable error label (e.g. `"Unauthorized"`).
+   */
+  error: string
+  /**
+   * HTTP status code.
+   */
+  status: number
+}
+
+export type ProductHelperError = {
+  /**
+   * Human-readable error label (e.g. `"Unauthorized"`).
+   */
+  error: string
+  /**
+   * HTTP status code.
+   */
+  status: number
+}
+
+export type RenewalHelperError = {
+  /**
+   * Human-readable error label (e.g. `"Unauthorized"`).
+   */
+  error: string
+  /**
+   * HTTP status code.
+   */
+  status: number
+  /**
+   * Optional detail string; skipped when [`None`].
+   */
+  details?: string
+}
+
+export type RouteErrorResult = {
+  /**
+   * Human-readable error label (e.g. `"Unauthorized"`).
+   */
+  error: string
+  /**
+   * HTTP status code.
+   */
+  status: number
+  /**
+   * Optional detail string; skipped when [`None`].
+   */
+  details?: string
+}
+
+export type UsageSnapshotPurchase = {
+  reference?: string
+  planSnapshot?: {
+    meterRef?: string
+    meterId?: string
+    limit?: number
+  } | null
+  usage?: {
+    used?: number
+    periodStart?: string
+    periodEnd?: string
+  } | null
+}

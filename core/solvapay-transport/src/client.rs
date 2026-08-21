@@ -62,6 +62,12 @@ impl SolvaPayClient {
     /// `POST /v1/sdk/customers` — create a customer.
     ///
     /// Maps wire `reference || customerRef` onto [`CreateCustomerResult`].
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group A",
+        emit_order = 0,
+        dto_type = "CreateCustomerRequest"
+    )]
     pub async fn create_customer(
         &self,
         params: CreateCustomerRequest,
@@ -90,6 +96,13 @@ impl SolvaPayClient {
     ///
     /// Path segment uses JavaScript `encodeURIComponent` semantics. Result
     /// prefers wire `reference || customerRef`, then falls back to the input ref.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group A",
+        emit_order = 1,
+        dto_type = "UpdateCustomerParams",
+        split_path_refs = "customerRef"
+    )]
     pub async fn update_customer(
         &self,
         customer_ref: &str,
@@ -118,6 +131,12 @@ impl SolvaPayClient {
     /// Precedence (non-empty values): `externalRef`, then `email`, then
     /// `customerRef`. Missing params fail before transport. Query lookups accept
     /// direct object, bare array, `{ customer }`, or `{ customers }` shapes.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group A",
+        emit_order = 2,
+        dto_type = "GetCustomerParams"
+    )]
     pub async fn get_customer(
         &self,
         params: GetCustomerParams,
@@ -173,6 +192,12 @@ impl SolvaPayClient {
     ///
     /// Strips `customerRef` / `idempotencyKey` from the JSON body. Emits
     /// `Idempotency-Key` only when a non-empty caller key is supplied.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group A",
+        emit_order = 3,
+        dto_type = "AssignCreditsRequest"
+    )]
     pub async fn assign_credits(
         &self,
         params: AssignCreditsRequest,
@@ -199,6 +224,12 @@ impl SolvaPayClient {
     /// `GET /v1/sdk/customers/{customerRef}/balance` — credit balance.
     ///
     /// Path segment is unencoded (TypeScript parity).
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group A",
+        emit_order = 4,
+        dto_type = "GetCustomerBalanceParams"
+    )]
     pub async fn get_customer_balance(
         &self,
         params: GetCustomerBalanceParams,
@@ -216,6 +247,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/user-info` — customer/product user info.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group A",
+        emit_order = 5,
+        dto_type = "GetUserInfoParams"
+    )]
     pub async fn get_user_info(
         &self,
         params: GetUserInfoParams,
@@ -232,6 +269,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/checkout-sessions` — hosted checkout session.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group A",
+        emit_order = 6,
+        dto_type = "CreateCheckoutSessionRequest"
+    )]
     pub async fn create_checkout_session(
         &self,
         params: CreateCheckoutSessionRequest,
@@ -248,6 +291,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/customers/customer-sessions` — customer portal session.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group A",
+        emit_order = 7,
+        dto_type = "CreateCustomerSessionRequest"
+    )]
     pub async fn create_customer_session(
         &self,
         params: CreateCustomerSessionRequest,
@@ -264,6 +313,7 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/merchant` — merchant profile.
+    #[solvapay_core::solvapay_export(catalog = "operation", section = "Group A", emit_order = 8)]
     pub async fn get_merchant(&self) -> Result<SdkMerchantResponseDto, SdkError> {
         self.execute_typed(
             Method::Get,
@@ -277,6 +327,7 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/platform-config` — publishable platform config.
+    #[solvapay_core::solvapay_export(catalog = "operation", section = "Group A", emit_order = 9)]
     pub async fn get_platform_config(&self) -> Result<SdkPlatformConfigResponseDto, SdkError> {
         self.execute_typed(
             Method::Get,
@@ -293,6 +344,12 @@ impl SolvaPayClient {
     ///
     /// Body omits `idempotencyKey`; idempotency is caller key or auto
     /// `payment-{planRef}-{epochMs}-{random9}`.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group B",
+        emit_order = 10,
+        dto_type = "CreatePaymentIntentParams"
+    )]
     pub async fn create_payment_intent(
         &self,
         params: CreatePaymentIntentParams,
@@ -325,6 +382,12 @@ impl SolvaPayClient {
     ///
     /// Body includes constant `purpose: "credit_topup"`. Idempotency is caller
     /// key or auto `topup-{epochMs}-{random9}`.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group B",
+        emit_order = 11,
+        dto_type = "CreateTopupPaymentIntentParams"
+    )]
     pub async fn create_topup_payment_intent(
         &self,
         params: CreateTopupPaymentIntentParams,
@@ -359,6 +422,12 @@ impl SolvaPayClient {
     /// `POST /v1/sdk/payment-intents/{paymentIntentId}/process` — process payment.
     ///
     /// Path segment is unencoded (TypeScript parity). Body omits `paymentIntentId`.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group B",
+        emit_order = 12,
+        dto_type = "ProcessPaymentIntentParams"
+    )]
     pub async fn process_payment_intent(
         &self,
         params: ProcessPaymentIntentParams,
@@ -387,6 +456,12 @@ impl SolvaPayClient {
     ///
     /// Returns raw JSON (OpenAPI 200 has no response schema). Body omits
     /// `customerCountry` / `customerName` and `paymentIntentId`.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group B",
+        emit_order = 13,
+        dto_type = "AttachBusinessDetailsParams"
+    )]
     pub async fn attach_business_details(
         &self,
         params: AttachBusinessDetailsParams,
@@ -415,6 +490,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/activate` — activate a plan for a customer.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group B",
+        emit_order = 14,
+        dto_type = "ActivatePlanDto"
+    )]
     pub async fn activate_plan(
         &self,
         params: ActivatePlanDto,
@@ -433,6 +514,12 @@ impl SolvaPayClient {
     // --- Group C (step 24) ---------------------------------------------------
 
     /// `POST /v1/sdk/limits` — check usage limits for a customer/product.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 15,
+        dto_type = "CheckLimitsRequest"
+    )]
     pub async fn check_limits(&self, params: CheckLimitsRequest) -> Result<Value, SdkError> {
         self.execute_json(
             Method::Post,
@@ -446,6 +533,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/usages` — record a single usage event.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 16,
+        dto_type = "TrackUsageRequest"
+    )]
     pub async fn track_usage(&self, params: TrackUsageRequest) -> Result<Value, SdkError> {
         let mut body = serialize_body_ts_numbers(&params)?;
         // Overlay + flattened base both carry `customerRef`; keep the required overlay value.
@@ -467,6 +560,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/usages/bulk` — record multiple usage events.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 17,
+        dto_type = "TrackUsageBulkRequest"
+    )]
     pub async fn track_usage_bulk(&self, params: TrackUsageBulkRequest) -> Result<Value, SdkError> {
         let body = serialize_body_ts_numbers(&params)?;
         self.execute_value(
@@ -483,6 +582,12 @@ impl SolvaPayClient {
     /// `GET /v1/sdk/products/{productRef}` — fetch one product (data-merge normalization).
     ///
     /// Path segment uses JavaScript `encodeURIComponent` (TS `getProduct` only).
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 18,
+        split_path_refs = "productRef"
+    )]
     pub async fn get_product(&self, product_ref: &str) -> Result<Value, SdkError> {
         let path = format!("/v1/sdk/products/{}", encode_path_segment(product_ref));
         let result = self
@@ -499,6 +604,7 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/products` — list products (per-item data-wins merge).
+    #[solvapay_core::solvapay_export(catalog = "operation", section = "Group C", emit_order = 19)]
     pub async fn list_products(&self) -> Result<Value, SdkError> {
         let result = self
             .execute_json::<()>(
@@ -518,6 +624,12 @@ impl SolvaPayClient {
     /// Returns the full wire body (`SdkProductResponse` shape) as JSON to match
     /// the TypeScript client's `res.json()` passthrough (not the narrow
     /// `CreateProductResult` overlay).
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 20,
+        dto_type = "CreateProductRequest"
+    )]
     pub async fn create_product(&self, params: CreateProductRequest) -> Result<Value, SdkError> {
         self.execute_json(
             Method::Post,
@@ -531,6 +643,13 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}` — update a product (path ref unencoded).
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 21,
+        dto_type = "UpdateProductRequest",
+        split_path_refs = "productRef"
+    )]
     pub async fn update_product(
         &self,
         product_ref: &str,
@@ -549,6 +668,12 @@ impl SolvaPayClient {
     }
 
     /// `DELETE /v1/sdk/products/{productRef}` — delete a product (404 is success).
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 22,
+        split_path_refs = "productRef"
+    )]
     pub async fn delete_product(&self, product_ref: &str) -> Result<(), SdkError> {
         let path = format!("/v1/sdk/products/{product_ref}");
         let response = self
@@ -573,6 +698,13 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/products/{productRef}/clone` — clone a product.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 23,
+        dto_type = "CloneProductOverrides",
+        split_path_refs = "productRef"
+    )]
     pub async fn clone_product(
         &self,
         product_ref: &str,
@@ -592,6 +724,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/products/mcp/bootstrap` — bootstrap an MCP product.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 24,
+        dto_type = "McpBootstrapDto"
+    )]
     pub async fn bootstrap_mcp_product(&self, params: McpBootstrapDto) -> Result<Value, SdkError> {
         self.execute_json(
             Method::Post,
@@ -605,6 +743,13 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}/mcp/plans` — configure MCP plans.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 25,
+        dto_type = "ConfigureMcpPlansDto",
+        split_path_refs = "productRef"
+    )]
     pub async fn configure_mcp_plans(
         &self,
         product_ref: &str,
@@ -623,6 +768,12 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/products/{productRef}/plans` — list plans (unwrap + price precedence).
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 26,
+        split_path_refs = "productRef"
+    )]
     pub async fn list_plans(&self, product_ref: &str) -> Result<Value, SdkError> {
         let path = format!("/v1/sdk/products/{product_ref}/plans");
         let result = self
@@ -639,6 +790,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/products/{productRef}/plans` — create a plan (`productRef` in path + body).
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 27,
+        dto_type = "CreatePlanParams"
+    )]
     pub async fn create_plan(&self, params: CreatePlanParams) -> Result<Value, SdkError> {
         let path = format!("/v1/sdk/products/{}/plans", params.product_ref);
         let body = serialize_body_ts_numbers(&params)?;
@@ -654,6 +811,13 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/products/{productRef}/plans/{planRef}` — update a plan.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 28,
+        dto_type = "UpdatePlanRequest",
+        split_path_refs = "productRef,planRef"
+    )]
     pub async fn update_plan(
         &self,
         product_ref: &str,
@@ -674,6 +838,12 @@ impl SolvaPayClient {
     }
 
     /// `DELETE /v1/sdk/products/{productRef}/plans/{planRef}` — delete a plan (404 is success).
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 29,
+        split_path_refs = "productRef,planRef"
+    )]
     pub async fn delete_plan(&self, product_ref: &str, plan_ref: &str) -> Result<(), SdkError> {
         let path = format!("/v1/sdk/products/{product_ref}/plans/{plan_ref}");
         let response = self
@@ -698,6 +868,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/purchases/{purchaseRef}/cancel` — cancel a purchase.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 30,
+        dto_type = "CancelPurchaseParams"
+    )]
     pub async fn cancel_purchase(&self, params: CancelPurchaseParams) -> Result<Value, SdkError> {
         let path = format!("/v1/sdk/purchases/{}/cancel", params.purchase_ref);
         let body = non_empty_opt(params.reason.as_deref()).map(|reason| {
@@ -725,6 +901,12 @@ impl SolvaPayClient {
     }
 
     /// `POST /v1/sdk/purchases/{purchaseRef}/reactivate` — reactivate a purchase.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 31,
+        dto_type = "ReactivatePurchaseParams"
+    )]
     pub async fn reactivate_purchase(
         &self,
         params: ReactivatePurchaseParams,
@@ -750,6 +932,12 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/payment-method?customerRef=` — fetch a customer's payment method.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 32,
+        dto_type = "GetPaymentMethodParams"
+    )]
     pub async fn get_payment_method(
         &self,
         params: GetPaymentMethodParams,
@@ -768,6 +956,12 @@ impl SolvaPayClient {
     }
 
     /// `GET /v1/sdk/auto-recharge?customerRef=` — fetch auto-recharge config.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 33,
+        dto_type = "GetAutoRechargeParams"
+    )]
     pub async fn get_auto_recharge(
         &self,
         params: GetAutoRechargeParams,
@@ -786,6 +980,12 @@ impl SolvaPayClient {
     }
 
     /// `PUT /v1/sdk/auto-recharge` — save auto-recharge config.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 34,
+        dto_type = "SaveAutoRechargeParams"
+    )]
     pub async fn save_auto_recharge(
         &self,
         params: SaveAutoRechargeParams,
@@ -804,6 +1004,12 @@ impl SolvaPayClient {
     }
 
     /// `DELETE /v1/sdk/auto-recharge?customerRef=` — disable auto-recharge.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "Group C",
+        emit_order = 35,
+        dto_type = "DisableAutoRechargeParams"
+    )]
     pub async fn disable_auto_recharge(
         &self,
         params: DisableAutoRechargeParams,

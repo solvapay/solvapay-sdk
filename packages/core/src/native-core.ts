@@ -1,4 +1,8 @@
 /**
+ * @generated — do not edit. Regenerate with: pnpm gen
+ */
+
+/**
  * Sync core pure-logic facade (Step 37R-d / Step 52).
  *
  * `business-details` / `credit-display` / `seller-identity` dispatch to napi

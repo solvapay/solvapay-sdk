@@ -60,6 +60,14 @@ fn present(value: Option<&Value>) -> Option<&Value> {
 /// # Returns
 ///
 /// Serialized-ready [`PaywallClientPayload`] with branch-correct optional fields.
+#[crate::solvapay_export(
+    id = "paywallErrorToClientPayload",
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall state / gate / payload",
+    emit_order = 40,
+    rust_fn_name = "paywall_error_to_client_payload_binding"
+)]
 pub fn paywall_client_payload(gate: &PaywallGate) -> PaywallClientPayload {
     let (error, is_activation) = match gate.kind {
         PaywallGateKind::ActivationRequired => ("Activation required", true),

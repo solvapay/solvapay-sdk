@@ -139,6 +139,12 @@ pub struct BuildPromptDescriptorMetadataOptions {
 ///
 /// Returns `None` when branding is absent or has neither icon nor logo.
 #[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 18
+)]
 pub fn derive_icons(branding: Option<&MerchantBranding>) -> Option<Vec<ToolIcon>> {
     let branding = branding?;
     if let Some(icon_url) = branding.icon_url.as_deref().filter(|s| !s.is_empty()) {
@@ -158,6 +164,12 @@ pub fn derive_icons(branding: Option<&MerchantBranding>) -> Option<Vec<ToolIcon>
 
 /// Validate `publicBaseUrl` is http(s). Returns frozen error message or `None`.
 #[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 22
+)]
 pub fn validate_public_base_url(public_base_url: &str) -> Option<&'static str> {
     let lower = public_base_url.to_ascii_lowercase();
     if lower.starts_with("http://") || lower.starts_with("https://") {
@@ -223,6 +235,12 @@ fn require_tool_name(camel_key: &str) -> String {
 
 /// Ordered tool descriptor metadata.
 #[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 19
+)]
 pub fn build_tool_descriptor_metadata(
     options: &BuildToolDescriptorMetadataOptions,
 ) -> Vec<ToolDescriptorMetadata> {
@@ -355,6 +373,12 @@ pub fn build_tool_descriptor_metadata(
 
 /// Ordered prompt metadata for enabled views.
 #[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 20
+)]
 pub fn build_prompt_descriptor_metadata(
     options: &BuildPromptDescriptorMetadataOptions,
 ) -> Vec<PromptDescriptorMetadata> {
@@ -400,6 +424,12 @@ pub fn build_prompt_descriptor_metadata(
 
 /// Pure user-message text for a SolvaPay slash-command prompt.
 #[must_use]
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 21
+)]
 pub fn build_prompt_user_message(prompt_name: &str, args: &Value) -> PromptUserMessage {
     let text = prompt_user_message_text(prompt_name, args);
     PromptUserMessage {

@@ -14,11 +14,12 @@ import {
   SdkContractManifestSchema,
   crossCheckOpenApi,
   validateManifestSemantics,
+  type BindingReconcileEntry,
   type OpenApiSnapshot,
   type SdkContractManifest,
 } from '../shared/manifest-schema.js'
 import { REPO_ROOT } from '../shared/paths.js'
-import { contractInputPath } from '../shared/repo-paths.js'
+import { contractInputPath, generatedEntry } from '../shared/repo-paths.js'
 
 const DEFAULT_MANIFEST = contractInputPath('sdkManifest')
 const DEFAULT_SNAPSHOT = contractInputPath('openapiSnapshot')
@@ -129,6 +130,26 @@ function loadManifest(
   return { ok: true, manifest: result.data }
 }
 
+function loadDerivedBindings(): Record<string, BindingReconcileEntry> {
+  const rel = generatedEntry('bindingSymbols').path
+  const filePath = path.join(REPO_ROOT, ...rel.split('/'))
+  const raw = JSON.parse(readFileSync(filePath, 'utf8')) as {
+    bindings: Record<
+      string,
+      { core: string; catalog: BindingReconcileEntry['catalog']; names: { ts: string } }
+    >
+  }
+  const out: Record<string, BindingReconcileEntry> = {}
+  for (const [id, symbol] of Object.entries(raw.bindings)) {
+    out[id] = {
+      core: symbol.core,
+      catalog: symbol.catalog,
+      names: { ts: symbol.names.ts },
+    }
+  }
+  return out
+}
+
 function loadSnapshot(
   snapshotPath: string,
 ): { ok: true; snapshot: OpenApiSnapshot } | { ok: false; stderr: string } {
@@ -152,7 +173,7 @@ export function runCheck(options: CliOptions): CliResult {
     return { exitCode: 1, stdout: '', stderr: loaded.stderr }
   }
 
-  const semanticIssues = validateManifestSemantics(loaded.manifest)
+  const semanticIssues = validateManifestSemantics(loaded.manifest, loadDerivedBindings())
   if (semanticIssues.length > 0) {
     return {
       exitCode: 1,

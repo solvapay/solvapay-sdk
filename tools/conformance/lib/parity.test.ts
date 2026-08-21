@@ -123,7 +123,6 @@ function stubManifest(): SdkContractManifest {
       },
     },
     reservedWords: { go: [], py: [], rb: [], rust: [], ts: [] },
-    bindings: {},
   }
 }
 
@@ -185,18 +184,8 @@ describe('checkParity', () => {
     ).toBe(true)
   })
 
-  it('recognizes catalog:none bindings as catalogued (not extra)', () => {
+  it('recognizes catalog:none derived bindings as catalogued (not extra)', () => {
     const manifest = stubManifest()
-    manifest.bindings = {
-      classifyCancelError: {
-        core: 'solvapay_core::helpers::classify_cancel_error',
-        names: deriveNames('classifyCancelError'),
-        catalog: { kind: 'none' },
-        return: 'value',
-        sync: 'sync',
-        envelope: 'sync',
-      },
-    }
     const clientMethods = new Set(Object.keys(manifest.operations).map(id => deriveNames(id).ts))
     expect(
       checkParity({
@@ -204,6 +193,11 @@ describe('checkParity', () => {
         portableExports: completePortableExports(['classifyCancelError']),
         clientMethods,
         facadeMethods: completeFacadeMethods(),
+        derivedBindings: {
+          classifyCancelError: {
+            names: deriveNames('classifyCancelError'),
+          },
+        },
       }),
     ).toEqual([])
   })

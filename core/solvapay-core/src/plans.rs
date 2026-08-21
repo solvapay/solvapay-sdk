@@ -14,6 +14,12 @@ const PRODUCT_REF_MISSING: &str = "Missing required parameter: productRef";
 /// # Returns
 ///
 /// [`None`] when productRef is present and non-empty; otherwise the frozen 400.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "plans",
+    emit_order = 27
+)]
 pub fn validate_list_plans_params(product_ref: Option<&str>) -> Option<HelperErrorResult> {
     match product_ref {
         Some(r) if !r.is_empty() => None,

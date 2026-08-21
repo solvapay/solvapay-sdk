@@ -25,12 +25,42 @@ pub struct Manifest {
     /// Facade factory / payable surface.
     #[serde(default)]
     pub facade: BTreeMap<String, NamedEntry>,
-    /// Binding-boundary descriptors (§5.7 / step 39G-a).
-    #[serde(default)]
-    pub bindings: BTreeMap<String, BindingDef>,
+    /// TS-only residue for the core boundary-type emitter (Phase 3a).
+    #[serde(default, rename = "boundaryTypesTs")]
+    pub boundary_types_ts: BoundaryTypesTsDef,
     /// Manifest-frozen runtime defaults used by every language facade.
     #[serde(default)]
     pub defaults: DefaultsDef,
+}
+
+/// TS overlay for core boundary types (`boundaryTypesTs:`).
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+pub struct BoundaryTypesTsDef {
+    /// Rust type names not emitted under their own name.
+    #[serde(default)]
+    pub omit: Vec<String>,
+    /// Extra TS names copied from a Rust type.
+    #[serde(default)]
+    pub aliases: BTreeMap<String, BoundaryTypesTsAliasDef>,
+    /// Rust type name → public TS type name.
+    #[serde(default)]
+    pub rename: BTreeMap<String, String>,
+    /// Public TS type name → verbatim type RHS.
+    #[serde(default)]
+    pub reshape: BTreeMap<String, String>,
+    /// Extra TS types with no Rust counterpart.
+    #[serde(default)]
+    pub extra: BTreeMap<String, String>,
+}
+
+/// One `boundaryTypesTs.aliases` entry.
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+pub struct BoundaryTypesTsAliasDef {
+    /// Rust type this alias copies.
+    pub of: String,
+    /// Wire field names to drop from the alias body.
+    #[serde(default, rename = "omitFields")]
+    pub omit_fields: Vec<String>,
 }
 
 /// Runtime defaults frozen by `sdk-contract.yaml`.
@@ -93,111 +123,90 @@ const fn default_limits_cache_ttl() -> u64 {
     10_000
 }
 
-/// One `bindings:` entry from the contract manifest.
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-pub struct BindingDef {
-    /// Fully-qualified Rust core / transport fn path.
-    pub core: String,
-    /// Per-toolchain export names.
-    pub names: LangNames,
-    /// Catalog link (`kind: none` or section + id).
-    pub catalog: BindingCatalogLink,
-    /// Ordered JSON-args.
+/// `tsWrapper:` residue on a binding symbol (Phase 3c).
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+pub struct BindingTsWrapperDef {
+    /// Export name when it differs from `names.ts`.
+    #[serde(default, rename = "exportName")]
+    pub export_name: Option<String>,
+    /// Generic clause including angle brackets.
     #[serde(default)]
-    pub args: Vec<BindingArgDef>,
-    /// Ordered path-ref split keys.
-    #[serde(default, rename = "splitPathRefs")]
-    pub split_path_refs: Vec<String>,
-    /// Envelope success-value shape (`value`).
-    #[serde(rename = "return")]
-    pub return_shape: String,
-    /// `sync` or `async`.
-    pub sync: String,
-    /// `sync` | `async` | `webhookThrow`.
-    pub envelope: String,
-    /// Generated shim file: `decisions` | `payloadBuilders` | `client` | `webhook`.
-    #[serde(default)]
-    pub artifact: Option<String>,
-    /// Stable emit order within the artifact.
-    #[serde(default, rename = "emitOrder")]
-    pub emit_order: Option<u32>,
-    /// Section marker preceding the symbol.
-    #[serde(default)]
-    pub section: Option<String>,
-    /// Doc comment body (no `///` prefix; lines joined with `\n`).
+    pub generics: Option<String>,
+    /// Override for the TS return type.
+    #[serde(default, rename = "returnType")]
+    pub return_type: Option<String>,
+    /// Per-parameter TS type overrides.
+    #[serde(default, rename = "paramTypes")]
+    pub param_types: BTreeMap<String, String>,
+    /// Function-level optional-param style.
+    #[serde(default, rename = "optionalStyle")]
+    pub optional_style: Option<String>,
+    /// Per-parameter optional style overrides.
+    #[serde(default, rename = "paramStyle")]
+    pub param_style: BTreeMap<String, String>,
+    /// Force pass-through of the first TS argument to `dispatchSync`.
+    #[serde(default, rename = "passThrough")]
+    pub pass_through: bool,
+    /// Treat the TS surface as a single object parameter.
+    #[serde(default, rename = "objectParam")]
+    pub object_param: bool,
+    /// Post-process the dispatch result (`nullToUndefined`).
+    #[serde(default, rename = "postProcess")]
+    pub post_process: Option<String>,
+    /// Verbatim object-literal fields passed to `dispatchSync`.
+    #[serde(default, rename = "dispatchArgs")]
+    pub dispatch_args: Option<String>,
+    /// JSDoc body (no `/**` wrapper) for the core wrapper.
     #[serde(default)]
     pub doc: Option<String>,
-    /// Wasm doc override when the mirror doc differs from node.
-    #[serde(default, rename = "docWasm")]
-    pub doc_wasm: Option<String>,
-    /// Rust fn / method name (defaults to `names.rust`).
-    #[serde(default, rename = "rustFnName")]
-    pub rust_fn_name: Option<String>,
-    /// Shim body strategy.
+    /// Inner comment emitted only on the server wrapper.
+    #[serde(default, rename = "serverComment")]
+    pub server_comment: Option<String>,
+    /// Verbatim parameter list including the closing return type.
     #[serde(default)]
-    pub call: Option<BindingCallDef>,
-    /// Verbatim body source (Node) when `call.kind == verbatim`.
+    pub signature: Option<String>,
+}
+
+/// Shim-emission residue keyed by binding id (`binding-residue.yaml`).
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
+pub struct BindingResidueDef {
+    /// TypeScript dispatch-wrapper residue.
+    #[serde(default, rename = "tsWrapper")]
+    pub ts_wrapper: Option<BindingTsWrapperDef>,
+    /// Verbatim shim body (Node).
     #[serde(default, rename = "verbatimBody")]
     pub verbatim_body: Option<String>,
-    /// Verbatim body source override for Wasm when it differs.
+    /// Verbatim shim body override for Wasm.
     #[serde(default, rename = "verbatimBodyWasm")]
     pub verbatim_body_wasm: Option<String>,
     /// Client DTO parsed from args JSON.
     #[serde(default, rename = "dtoType")]
     pub dto_type: Option<String>,
-    /// Bare core call name (method / free fn).
-    #[serde(default, rename = "coreCall")]
-    pub core_call: Option<String>,
-    /// Client method call args (verbatim tokens) for `clientSplit`.
+    /// Client method call args for `clientSplit`.
     #[serde(default, rename = "clientCallArgs")]
     pub client_call_args: Vec<String>,
+    /// Doc override when it is not `Binding for \`id\`.`
+    #[serde(default)]
+    pub doc: Option<String>,
+    /// Wasm doc override.
+    #[serde(default, rename = "docWasm")]
+    pub doc_wasm: Option<String>,
+    /// Path-ref split keys (client symbols).
+    #[serde(default, rename = "splitPathRefs")]
+    pub split_path_refs: Vec<String>,
+    /// Full JSON-args override (`[]` means no JSON args). Absent → derive from signature.
+    #[serde(default)]
+    pub args: Option<Vec<BindingArgDef>>,
+    /// When true, omit `coreCall` (verbatim YAML often left it unset).
+    #[serde(default, rename = "omitCoreCall")]
+    pub omit_core_call: bool,
+    /// Wrap `call.args` tokens when they are not derivable from refness.
+    #[serde(default, rename = "callArgs")]
+    pub call_args: Option<Vec<String>>,
 }
 
-/// Shim body strategy on a binding symbol (step 39G-b).
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-pub struct BindingCallDef {
-    /// `wrap` (structured extract/serialize) or `verbatim`.
-    pub kind: String,
-    /// Serialize form for `wrap` (`toValue`, `valueBool`, `clientAwait`, …).
-    #[serde(default)]
-    pub serialize: Option<String>,
-    /// Positional args passed to the core call (verbatim tokens).
-    #[serde(default)]
-    pub args: Vec<String>,
-}
-
-/// Catalog link on a binding symbol.
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-#[serde(tag = "kind")]
-pub enum BindingCatalogLink {
-    /// Internal core (no catalog entry).
-    #[serde(rename = "none")]
-    None,
-    /// Client operation.
-    #[serde(rename = "operation")]
-    Operation {
-        /// Catalog operation id.
-        id: String,
-    },
-    /// Top-level helper.
-    #[serde(rename = "topLevel")]
-    TopLevel {
-        /// Catalog topLevel id.
-        id: String,
-    },
-    /// Core helper.
-    #[serde(rename = "coreHelper")]
-    CoreHelper {
-        /// Catalog coreHelpers id.
-        id: String,
-    },
-    /// Facade entry.
-    #[serde(rename = "facade")]
-    Facade {
-        /// Catalog facade id.
-        id: String,
-    },
-}
+/// Root of `binding-residue.yaml`: symbol id → residue.
+pub type BindingResidueManifest = BTreeMap<String, BindingResidueDef>;
 
 /// One ordered JSON-arg on a binding symbol.
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -734,64 +743,5 @@ topLevel:
             entry.docs.returns.as_deref(),
             Some("The callable's resolved value.")
         );
-    }
-
-    #[test]
-    fn deserializes_bindings_section() {
-        let yaml = r#"
-bindings:
-  updateCustomer:
-    core: solvapay_transport::SolvaPayClient::update_customer
-    names:
-      ts: updateCustomer
-      py: update_customer
-      rb: update_customer
-      go: UpdateCustomer
-      rust: update_customer
-    catalog:
-      kind: operation
-      id: updateCustomer
-    args: []
-    splitPathRefs:
-      - customerRef
-    return: value
-    sync: async
-    envelope: async
-  buildCreateCustomerParams:
-    core: solvapay_core::customer_sync::build_create_customer_params
-    names:
-      ts: buildCreateCustomerParams
-      py: build_create_customer_params
-      rb: build_create_customer_params
-      go: BuildCreateCustomerParams
-      rust: build_create_customer_params
-    catalog:
-      kind: none
-    args:
-      - name: customerRef
-        type: string
-        required: true
-      - name: nowMs
-        type: i64
-        required: true
-        hostInjected: true
-    splitPathRefs: []
-    return: value
-    sync: sync
-    envelope: sync
-"#;
-        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
-        assert_eq!(manifest.bindings.len(), 2);
-        let update = manifest.bindings.get("updateCustomer").unwrap();
-        assert_eq!(update.split_path_refs, vec!["customerRef".to_string()]);
-        assert_eq!(update.envelope, "async");
-        assert!(matches!(
-            update.catalog,
-            BindingCatalogLink::Operation { ref id } if id == "updateCustomer"
-        ));
-        let build = manifest.bindings.get("buildCreateCustomerParams").unwrap();
-        assert_eq!(build.args.len(), 2);
-        assert!(build.args[1].host_injected);
-        assert!(matches!(build.catalog, BindingCatalogLink::None));
     }
 }

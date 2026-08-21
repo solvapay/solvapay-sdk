@@ -5,12 +5,7 @@
 
 import type { TaxIdType } from './business-details'
 
-export type SellerIdentityRow = { label: string; value: string }
-
-export type SellerIdentityDisplay = {
-  taxIdentifier: SellerIdentityRow | null
-  companyNumber: SellerIdentityRow | null
-}
+export type { SellerIdentityDisplay, SellerIdentityRow } from './types/boundary.generated'
 
 /** Display labels for seller identity rows (distinct from form field labels). */
 export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: Record<TaxIdType, string> = {

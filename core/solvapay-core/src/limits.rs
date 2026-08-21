@@ -30,6 +30,12 @@ pub struct CheckLimitsParams {
 /// # Returns
 ///
 /// [`Ok`] with resolved params, or [`Err`] with the frozen 400.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "limits",
+    emit_order = 26
+)]
 pub fn resolve_check_limits_params(
     product_ref: Option<&str>,
     meter_name: Option<&str>,

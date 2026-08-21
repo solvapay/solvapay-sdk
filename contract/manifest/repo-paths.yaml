@@ -31,13 +31,22 @@ contractInputs:
   sdkManifest:
     path: contract/manifest/sdk-contract.yaml
     flag: --manifest
+  coreSrc:
+    path: core/solvapay-core/src
+    flag: --core-src
+  bindingResidue:
+    path: contract/manifest/binding-residue.yaml
+    flag: --binding-residue
+  transportSrc:
+    path: core/solvapay-transport/src
+    flag: --transport-src
   clientFixtures:
     path: contract/fixtures/client
   fixtures:
     path: contract/fixtures
 
-# dto-gen flag order is: flagged contractInputs (openapiSnapshot, sdkManifest),
-# then this list in order. Entries without `flag` are drift-only.
+# dto-gen flag order is: flagged contractInputs (openapiSnapshot, sdkManifest,
+# coreSrc, bindingResidue, transportSrc), then this list in order. Entries without `flag` are drift-only.
 generated:
   - id: rustDto
     path: core/solvapay-dto/src
@@ -55,6 +64,24 @@ generated:
   - id: bindingSymbols
     path: contract/manifest/binding-symbols.snapshot.json
     flag: --dump-bindings
+  - id: boundaryTypes
+    path: contract/manifest/boundary-types.snapshot.json
+    flag: --dump-boundary-types
+  - id: coreTypesTs
+    path: packages/core/src/types/boundary.generated.d.ts
+    flag: --core-types-ts-out
+  - id: coreDispatchTs
+    path: packages/core/src/native-dispatch.ts
+    flag: --core-dispatch-ts-out
+  - id: coreNativeTs
+    path: packages/core/src/native-core.ts
+    flag: --core-native-ts-out
+  - id: coreHelpersTs
+    path: packages/core/src/native-helpers.ts
+    flag: --core-helpers-ts-out
+  - id: serverDecisionsTs
+    path: packages/server/src/native-decisions.ts
+    flag: --server-decisions-ts-out
   - id: nodeBindings
     path: sdks/node-native/src
     flag: --node-bindings-out
@@ -157,6 +184,12 @@ drift:
   - nativeTs
   - wasmTs
   - bindingSymbols
+  - boundaryTypes
+  - coreTypesTs
+  - coreDispatchTs
+  - coreNativeTs
+  - coreHelpersTs
+  - serverDecisionsTs
   - nodeBindings
   - wasmBindings
   - pythonBindings

@@ -43,6 +43,12 @@ pub struct UsageSnapshot {
 /// # Returns
 ///
 /// Normalized usage snapshot (empty when no active purchase).
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "usage",
+    emit_order = 25
+)]
 pub fn project_usage_snapshot(active_purchase: Option<&Value>) -> UsageSnapshot {
     let Some(purchase) = active_purchase.filter(|v| !v.is_null()) else {
         return UsageSnapshot {

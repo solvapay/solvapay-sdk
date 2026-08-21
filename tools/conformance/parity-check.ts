@@ -10,7 +10,7 @@ import { parse as parseYaml } from 'yaml'
 import { SdkContractManifestSchema, type SdkContractManifest } from '../shared/manifest-schema.js'
 import { checkParity, formatParityReport } from './lib/parity.js'
 import { REPO_ROOT } from '../shared/paths.js'
-import { contractInputPath } from '../shared/repo-paths.js'
+import { contractInputPath, generatedEntry } from '../shared/repo-paths.js'
 import { readTsSurface } from './lib/ts-surface.js'
 
 const DEFAULT_MANIFEST = contractInputPath('sdkManifest')
@@ -28,11 +28,16 @@ function main(): number {
   }
   const manifest: SdkContractManifest = parsed.data
   const surface = readTsSurface(REPO_ROOT)
+  const snapshotPath = path.join(REPO_ROOT, ...generatedEntry('bindingSymbols').path.split('/'))
+  const snapshot = JSON.parse(readFileSync(snapshotPath, 'utf8')) as {
+    bindings: Record<string, { names: { ts: string } }>
+  }
   const issues = checkParity({
     manifest,
     portableExports: surface.portableExports,
     clientMethods: surface.clientMethods,
     facadeMethods: surface.facadeMethods,
+    derivedBindings: snapshot.bindings,
   })
   const report = formatParityReport(issues)
   if (issues.length > 0) {

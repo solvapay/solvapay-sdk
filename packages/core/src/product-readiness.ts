@@ -9,18 +9,9 @@ import { dispatchSync } from './native-dispatch'
 
 export const SOLVAPAY_PRODUCT_REF_PLACEHOLDER = '__SOLVAPAY_PRODUCT_REF__'
 
-export type ProductReadinessInput = {
-  status: string
-  plans?: Array<{ isActive: boolean }>
-}
+export type { ProductReadinessInput, ProductReadinessResult } from './types/boundary.generated'
 
-export type ProductReadinessResult = {
-  ready: boolean
-  /** Human-readable reasons `ready` is false. Empty when ready. */
-  issues: string[]
-  activePlans: number
-  totalPlans: number
-}
+import type { ProductReadinessInput, ProductReadinessResult } from './types/boundary.generated'
 
 /**
  * Whether a resolved product can be sold end-to-end: active status with

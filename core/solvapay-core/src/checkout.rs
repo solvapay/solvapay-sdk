@@ -19,6 +19,12 @@ fn is_nonempty(value: Option<&str>) -> bool {
 /// # Returns
 ///
 /// [`None`] when productRef is present and non-empty; otherwise the frozen 400.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "checkout",
+    emit_order = 16
+)]
 pub fn validate_checkout_session_params(product_ref: Option<&str>) -> Option<HelperErrorResult> {
     if is_nonempty(product_ref) {
         None
@@ -44,6 +50,12 @@ pub fn validate_checkout_session_params(product_ref: Option<&str>) -> Option<Hel
 /// # Returns
 ///
 /// The first non-empty candidate, or [`None`].
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "checkout",
+    emit_order = 15
+)]
 pub fn resolve_return_url(
     body_return_url: Option<&str>,
     options_return_url: Option<&str>,

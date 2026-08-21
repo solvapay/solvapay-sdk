@@ -39,6 +39,13 @@ pub struct McpPaywallToolResult {
 /// # Returns
 ///
 /// [`McpPaywallToolResult`] with `isError: false` and a single text content block.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 13,
+    typed_style = "structuredContent:annotation"
+)]
 pub fn paywall_tool_result(narration: &str, gate: &PaywallGate) -> McpPaywallToolResult {
     McpPaywallToolResult {
         is_error: false,

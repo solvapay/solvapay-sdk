@@ -34,6 +34,12 @@ pub struct ResponseEnvelope {
 /// # Returns
 ///
 /// Envelope with `__solvapayResponse: true` and skip-absent optionals.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 14
+)]
 pub fn make_response_result(
     data: Value,
     options: Option<Value>,
@@ -52,6 +58,12 @@ pub fn make_response_result(
 /// # Errors
 ///
 /// Returns the frozen merchant-actionable message when the brand check fails.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "MCP payload / descriptors",
+    emit_order = 15
+)]
 pub fn assert_response_result(value: &Value) -> Result<Value, &'static str> {
     let is_branded = value
         .as_object()

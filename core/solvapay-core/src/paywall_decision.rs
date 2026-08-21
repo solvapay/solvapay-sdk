@@ -60,6 +60,12 @@ pub enum PaywallOutcome {
 /// # Returns
 ///
 /// Resolved product reference, or `None` when neither side is set.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "paywall-decision",
+    emit_order = 31
+)]
 pub fn resolve_product_ref(
     metadata_product: Option<&str>,
     env_product: Option<&str>,
@@ -78,6 +84,12 @@ Run `npx solvapay doctor` to diagnose.";
 ///
 /// Returns [`SdkError::Api`] when neither argument is a non-empty string.
 #[allow(clippy::result_large_err)]
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "paywall-decision",
+    emit_order = 40
+)]
 pub fn require_product_ref(
     metadata_product: Option<&str>,
     env_product: Option<&str>,
@@ -98,6 +110,12 @@ pub fn require_product_ref(
 /// # Returns
 ///
 /// Within-limits flag, post-decrement remaining, and whether to evict.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "paywall-decision",
+    emit_order = 32
+)]
 pub fn evaluate_cached_limits(remaining: f64) -> CachedLimitsEvaluation {
     if remaining > 0.0 {
         let next = remaining - 1.0;
@@ -124,6 +142,12 @@ pub fn evaluate_cached_limits(remaining: f64) -> CachedLimitsEvaluation {
 /// # Returns
 ///
 /// Updated within/remaining and whether the host should cache.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "paywall-decision",
+    emit_order = 33
+)]
 pub fn evaluate_fresh_limits(within_limits: bool, remaining: f64) -> FreshLimitsEvaluation {
     let consumed_allowance = within_limits && remaining > 0.0;
     if consumed_allowance {
@@ -153,6 +177,12 @@ pub fn evaluate_fresh_limits(within_limits: bool, remaining: f64) -> FreshLimits
 /// # Returns
 ///
 /// [`PaywallOutcome::Allow`] or [`PaywallOutcome::Gate`] with assembled gate.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "paywall-decision",
+    emit_order = 34
+)]
 pub fn decide_paywall_outcome(
     within_limits: bool,
     product: &str,
@@ -192,6 +222,12 @@ fn js_or_str(value: Option<&str>) -> Option<String> {
 /// # Returns
 ///
 /// Minimal [`PaywallGateLimits`] suitable for [`build_paywall_gate`] on a gate path.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "paywall-decision",
+    emit_order = 35
+)]
 pub fn resolve_fallback_gate_limits(checkout_url: Option<&str>) -> PaywallGateLimits {
     PaywallGateLimits {
         remaining: Some(0.0),

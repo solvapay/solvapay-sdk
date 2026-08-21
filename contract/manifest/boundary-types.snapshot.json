@@ -1,0 +1,5752 @@
+{
+  "_comment": "generated — do not edit; regenerate with dto-gen --dump-boundary-types",
+  "fns": {
+    "solvapay_core::activation::validate_activate_plan_params": {
+      "implTy": null,
+      "module": "activation",
+      "name": "validate_activate_plan_params",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "product_ref",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "plan_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Validate activate-plan body refs (JS truthiness: empty string fails).\n\n# Arguments\n\n* `product_ref` - Product reference; empty/`None` fails.\n* `plan_ref` - Plan reference; empty/`None` fails.\n\n# Returns\n\n[`None`] when both refs are present and non-empty; otherwise the frozen 400\n[`HelperErrorResult`] (no `details` field)."
+    },
+    "solvapay_core::auth_resolution::resolve_authenticated_user": {
+      "implTy": null,
+      "module": "auth_resolution",
+      "name": "resolve_authenticated_user",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "input",
+          "ty": {
+            "kind": "named",
+            "name": "AuthResolutionInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          },
+          "kind": "result",
+          "ok": {
+            "kind": "named",
+            "name": "AuthenticatedUser"
+          }
+        }
+      },
+      "rustdoc": "Resolve authenticated user from explicit host inputs.\n\n# Arguments\n\n* `input` - Header / bearer / secret / flags / clock.\n\n# Returns\n\n[`AuthenticatedUser`] on success, or a 401 [`HelperErrorResult`] on the\nbearer failure paths. The header path never returns 401 for JWT problems."
+    },
+    "solvapay_core::balance_poll::BalancePollPolicy::delays": {
+      "implTy": "BalancePollPolicy",
+      "module": "balance_poll",
+      "name": "delays",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "kind": "u64"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Full delay table as a slice.\n\n# Returns\n\nThe underlying millisecond delay schedule."
+    },
+    "solvapay_core::balance_poll::BalancePollPolicy::from_delays": {
+      "implTy": "BalancePollPolicy",
+      "module": "balance_poll",
+      "name": "from_delays",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "delays",
+          "ty": {
+            "item": {
+              "kind": "u64"
+            },
+            "kind": "vec"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "Self"
+        }
+      },
+      "rustdoc": "Policy over an explicit static delay slice.\n\n# Arguments\n\n* `delays` - Millisecond delays consumed one per poll attempt.\n\n# Returns\n\nA policy that walks `delays`."
+    },
+    "solvapay_core::balance_poll::BalancePollPolicy::next_delay": {
+      "implTy": "BalancePollPolicy",
+      "module": "balance_poll",
+      "name": "next_delay",
+      "params": [
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "attempt",
+          "ty": {
+            "kind": "u32"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "u64"
+        }
+      },
+      "rustdoc": "Delay before poll attempt `attempt` (0-based), or `None` when exhausted.\n\n# Arguments\n\n* `attempt` - Zero-based index into the delay table.\n\n# Returns\n\n`Some(ms)` when a delay remains; `None` when the table is exhausted."
+    },
+    "solvapay_core::balance_poll::BalancePollPolicy::reconcile": {
+      "implTy": "BalancePollPolicy",
+      "module": "balance_poll",
+      "name": "reconcile",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "Self"
+        }
+      },
+      "rustdoc": "Policy using [`BALANCE_RECONCILE_DELAYS_MS`].\n\n# Returns\n\nA policy that walks the reconcile delay table."
+    },
+    "solvapay_core::balance_poll::BalancePollPolicy::topup": {
+      "implTy": "BalancePollPolicy",
+      "module": "balance_poll",
+      "name": "topup",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "Self"
+        }
+      },
+      "rustdoc": "Policy using [`TOPUP_BALANCE_POLL_DELAYS_MS`].\n\n# Returns\n\nA policy that walks the top-up delay table."
+    },
+    "solvapay_core::balance_poll::evaluate_balance_observation": {
+      "implTy": null,
+      "module": "balance_poll",
+      "name": "evaluate_balance_observation",
+      "params": [
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "baseline",
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "credits",
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "f64"
+        }
+      },
+      "rustdoc": "Decide whether observed credits constitute an increase over `baseline`.\n\nUses strict greater-than (equal credits are not an increase), matching the\nTypeScript `pollBalanceUntilIncreased` contract.\n\n# Arguments\n\n* `baseline` - Credits before polling began.\n* `credits` - Credits observed on the current poll.\n\n# Returns\n\n`Some(credits - baseline)` when `credits > baseline`; otherwise `None`."
+    },
+    "solvapay_core::business_details::derive_tax_id_type": {
+      "implTy": null,
+      "module": "business_details",
+      "name": "derive_tax_id_type",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "country",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "TaxIdType"
+        }
+      },
+      "rustdoc": "Derive tax-ID type from a supported country code.\n\n# Arguments\n\n* `country` - ISO 3166-1 alpha-2 country code (exact uppercase match against the\n  supported business-country catalog).\n\n# Returns\n\n[`Some`] [`TaxIdType`] for supported countries (`eu_vat`, `gb_vat`, or `us_ein`);\n[`None`] when `country` is not in the catalog."
+    },
+    "solvapay_core::business_details::get_business_country_options": {
+      "implTy": null,
+      "module": "business_details",
+      "name": "get_business_country_options",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "kind": "named",
+            "name": "BusinessCountryOption"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Business country select options sorted by English display label.\n\n# Returns\n\nA [`Vec`] of [`BusinessCountryOption`] for every supported business country,\nsorted lexicographically by English `label` (ASCII `localeCompare` parity)."
+    },
+    "solvapay_core::business_details::get_tax_id_example": {
+      "implTy": null,
+      "module": "business_details",
+      "name": "get_tax_id_example",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "country",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Example tax ID for a supported country.\n\n# Arguments\n\n* `country` - ISO 3166-1 alpha-2 country code (exact uppercase match).\n\n# Returns\n\n[`Some`] static example string that passes the country's matcher;\n[`None`] when `country` is unsupported."
+    },
+    "solvapay_core::business_details::get_tax_id_field_label": {
+      "implTy": null,
+      "module": "business_details",
+      "name": "get_tax_id_field_label",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "country",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Field label for the country's tax-ID type.\n\n# Arguments\n\n* `country` - ISO 3166-1 alpha-2 country code (exact uppercase match).\n\n# Returns\n\n[`Some`] UI label (`\"VAT ID\"`, `\"VAT Number\"`, or `\"EIN (Employer Identification Number)\"`);\n[`None`] when `country` is unsupported or has no derivable tax-ID type."
+    },
+    "solvapay_core::business_details::get_tax_id_helper_text": {
+      "implTy": null,
+      "module": "business_details",
+      "name": "get_tax_id_helper_text",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "country",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Helper text including the country example.\n\n# Arguments\n\n* `country` - ISO 3166-1 alpha-2 country code (exact uppercase match).\n\n# Returns\n\n[`Some`] formatted helper string with the country's example tax ID;\n[`None`] when `country` is unsupported."
+    },
+    "solvapay_core::business_details::is_supported_business_country": {
+      "implTy": null,
+      "module": "business_details",
+      "name": "is_supported_business_country",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "code",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      },
+      "rustdoc": "Whether `code` is a supported business country (exact uppercase match).\n\n# Arguments\n\n* `code` - ISO 3166-1 alpha-2 country code to test.\n\n# Returns\n\n`true` when `code` is in the supported business-country catalog; `false` otherwise."
+    },
+    "solvapay_core::business_details::resolve_tax_behavior": {
+      "implTy": null,
+      "module": "business_details",
+      "name": "resolve_tax_behavior",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "behavior",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "currency",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Resolve tax behavior for a currency (`auto` → inclusive/exclusive).\n\n`\"auto\"` maps USD and CAD to `\"exclusive\"` and all other currencies to `\"inclusive\"`.\n\n# Arguments\n\n* `behavior` - One of `\"auto\"`, `\"inclusive\"`, or `\"exclusive\"`.\n* `currency` - ISO currency code (case-insensitive; uppercased for `auto` resolution).\n\n# Returns\n\n[`Some`] `\"inclusive\"` or `\"exclusive\"` when `behavior` is recognized;\n[`None`] when `behavior` is not one of the supported values."
+    },
+    "solvapay_core::business_details::validate_business_details": {
+      "implTy": null,
+      "module": "business_details",
+      "name": "validate_business_details",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "input",
+          "ty": {
+            "kind": "named",
+            "name": "BusinessDetailsInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "ValidateBusinessDetailsResult"
+        }
+      },
+      "rustdoc": "Validate and normalize business / billing details (Zod schema parity).\n\nWhen `is_business` is false, validates optional `customer_country` and `customer_name`\n(max 100 characters) and returns normalized non-business details. When `is_business` is true,\nrequires a supported `country`, optionally validates `tax_id` against the country matcher,\nand derives `tax_id_type` when a tax ID is present.\n\n# Arguments\n\n* `input` - Raw business-details input (parity with TS `BusinessDetailsInput`).\n\n# Returns\n\n[`ValidateBusinessDetailsResult::Success`] with normalized [`BusinessDetails`] on valid input;\n[`ValidateBusinessDetailsResult::Failure`] with field-level issues when validation fails."
+    },
+    "solvapay_core::checkout::resolve_return_url": {
+      "implTy": null,
+      "module": "checkout",
+      "name": "resolve_return_url",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "body_return_url",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "options_return_url",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "origin",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Resolve returnUrl with JS-falsy precedence: body → options → origin → none.\n\nEmpty strings are falsy and fall through. `origin` is the already-parsed\nrequest origin (or [`None`] when URL parsing failed).\n\n# Arguments\n\n* `body_return_url` - `body.returnUrl`.\n* `options_return_url` - `options.returnUrl`.\n* `origin` - Parsed request origin.\n\n# Returns\n\nThe first non-empty candidate, or [`None`]."
+    },
+    "solvapay_core::checkout::validate_checkout_session_params": {
+      "implTy": null,
+      "module": "checkout",
+      "name": "validate_checkout_session_params",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "product_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Validate checkout-session body productRef (JS truthiness: empty string fails).\n\n# Arguments\n\n* `product_ref` - Product reference; empty/`None` fails.\n\n# Returns\n\n[`None`] when productRef is present and non-empty; otherwise the frozen 400."
+    },
+    "solvapay_core::credit_display::credits_to_display_minor_units": {
+      "implTy": null,
+      "module": "credit_display",
+      "name": "credits_to_display_minor_units",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "input",
+          "ty": {
+            "kind": "named",
+            "name": "CreditsToDisplayInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "i64"
+        }
+      },
+      "rustdoc": "Fiat value of a credit balance, in minor units of `display_currency`.\n\nA `display_exchange_rate` of `0.0` is treated as `1.0` (parity with JS `||`).\n\n# Arguments\n\n* `input` - Credits, rate factors, and display currency (see [`CreditsToDisplayInput`])\n\n# Returns\n\nRounded minor-unit amount, or `None` when `credits_per_minor_unit <= 0`."
+    },
+    "solvapay_core::credit_display::is_zero_decimal_currency": {
+      "implTy": null,
+      "module": "credit_display",
+      "name": "is_zero_decimal_currency",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "currency",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      },
+      "rustdoc": "Whether `currency` is a zero-decimal ISO code (case-insensitive).\n\n# Arguments\n\n* `currency` - ISO currency code; compared ignore-ascii-case to the zero-decimal list\n\n# Returns\n\n`true` when `currency` is in the zero-decimal set (e.g. `\"JPY\"`), otherwise `false`."
+    },
+    "solvapay_core::credit_display::minor_units_per_major": {
+      "implTy": null,
+      "module": "credit_display",
+      "name": "minor_units_per_major",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "currency",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "u32"
+        }
+      },
+      "rustdoc": "Minor units per major unit for `currency` (1 for zero-decimal, else 100).\n\n# Arguments\n\n* `currency` - ISO currency code passed to [`is_zero_decimal_currency`]\n\n# Returns\n\n`1` for zero-decimal currencies, otherwise `100`."
+    },
+    "solvapay_core::customer_sync::build_create_customer_params": {
+      "implTy": null,
+      "module": "customer_sync",
+      "name": "build_create_customer_params",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "customer_ref",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "external_ref",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "email",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "name",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "now_ms",
+          "ty": {
+            "kind": "i64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "CreateCustomerParams"
+        }
+      },
+      "rustdoc": "Build createCustomer params, including the fallback email template.\n\n# Arguments\n\n* `customer_ref` - App customer reference used in generated emails.\n* `external_ref` - Optional external reference to attach.\n* `email` - Optional provided email; empty/`None` → generated.\n* `name` - Optional name (JS truthy — empty omitted).\n* `now_ms` - Explicit clock in milliseconds.\n\n# Returns\n\nParams with `metadata: {}` and conditional `name` / `externalRef`."
+    },
+    "solvapay_core::customer_sync::classify_create_error": {
+      "implTy": null,
+      "module": "customer_sync",
+      "name": "classify_create_error",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "message",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "CreateErrorKind"
+        }
+      },
+      "rustdoc": "Classify a createCustomer failure message for 409 recovery.\n\n# Arguments\n\n* `message` - Error message string.\n\n# Returns\n\n[`CreateErrorKind::Conflict`] when message contains `409` or\n`\"already exists\"`; otherwise [`CreateErrorKind::Other`]."
+    },
+    "solvapay_core::customer_sync::classify_customer_ref": {
+      "implTy": null,
+      "module": "customer_sync",
+      "name": "classify_customer_ref",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "customer_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "CustomerRefKind"
+        }
+      },
+      "rustdoc": "Classify a customerRef before ensure/lookup.\n\n# Arguments\n\n* `customer_ref` - App or backend customer reference.\n\n# Returns\n\n[`CustomerRefKind`] for the ensureCustomer early-return table."
+    },
+    "solvapay_core::customer_sync::classify_lookup_error": {
+      "implTy": null,
+      "module": "customer_sync",
+      "name": "classify_lookup_error",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "message",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "LookupErrorKind"
+        }
+      },
+      "rustdoc": "Classify a getCustomer lookup failure message.\n\n# Arguments\n\n* `message` - Error message string.\n\n# Returns\n\n[`LookupErrorKind::ExpectedMissing`] when message contains `404` or\n`\"not found\"`; otherwise [`LookupErrorKind::Unexpected`]."
+    },
+    "solvapay_core::customer_sync::coerce_customer_options": {
+      "implTy": null,
+      "module": "customer_sync",
+      "name": "coerce_customer_options",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "email",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "name",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "CoercedCustomerOptions"
+        }
+      },
+      "rustdoc": "JS falsy coercion: `null` / `''` → omitted (`email || undefined`).\n\n# Arguments\n\n* `email` - Optional email (empty string treated as absent).\n* `name` - Optional name (empty string treated as absent).\n\n# Returns\n\nOptions with only non-empty fields present."
+    },
+    "solvapay_core::customer_sync::extract_backend_customer_ref": {
+      "implTy": null,
+      "module": "customer_sync",
+      "name": "extract_backend_customer_ref",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "response",
+          "ty": {
+            "kind": "map",
+            "value": {
+              "kind": "value"
+            }
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "fallback",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Prefer `customerRef`, then `reference`, then `fallback`.\n\n# Arguments\n\n* `response` - JSON object from createCustomer.\n* `fallback` - App customerRef used when both fields are absent/empty.\n\n# Returns\n\nBackend customer reference string."
+    },
+    "solvapay_core::customer_sync::is_email_conflict": {
+      "implTy": null,
+      "module": "customer_sync",
+      "name": "is_email_conflict",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "message",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      },
+      "rustdoc": "Email-uniqueness conflict branch inside ensureCustomer 409 recovery.\n\n# Arguments\n\n* `message` - Conflict error message.\n\n# Returns\n\n`true` when message contains `\"email\"` or `\"identifier email\"`."
+    },
+    "solvapay_core::envelope::err_envelope": {
+      "implTy": null,
+      "module": "envelope",
+      "name": "err_envelope",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "err",
+          "ty": {
+            "kind": "named",
+            "name": "SdkError"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Failure envelope: `{\"ok\":false,\"error\":<SdkError JSON>}`.\n\nSerialization failure becomes a Transport envelope (never panics)."
+    },
+    "solvapay_core::error::SdkError::api_from_template": {
+      "implTy": "SdkError",
+      "module": "error",
+      "name": "api_from_template",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "template",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "vars",
+          "ty": {
+            "kind": "map",
+            "value": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "byRef": false,
+          "optional": true,
+          "rustName": "status",
+          "ty": {
+            "kind": "u16"
+          }
+        },
+        {
+          "byRef": false,
+          "optional": true,
+          "rustName": "code",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "Self"
+        }
+      },
+      "rustdoc": "Builds [`SdkError::Api`] by rendering a manifest message template.\n\n# Arguments\n\n* `template` - Manifest template with `{name}` placeholders.\n* `vars` - Placeholder name → substitution value (e.g. `status`, `body`).\n* `status` - Optional HTTP status preserved on the error.\n* `code` - Optional free-form code preserved on the error.\n\n# Returns\n\nAn [`SdkError::Api`] whose `message` is the rendered template."
+    },
+    "solvapay_core::error::SdkError::kind_str": {
+      "implTy": "SdkError",
+      "module": "error",
+      "name": "kind_str",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Returns the serde `kind` tag string for this variant.\n\n# Returns\n\nOne of `Api`, `Paywall`, `Webhook`, or `Transport`."
+    },
+    "solvapay_core::error::SdkError::message": {
+      "implTy": "SdkError",
+      "module": "error",
+      "name": "message",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Returns the human-readable message for this error.\n\n# Returns\n\nThe `message` field of the active variant."
+    },
+    "solvapay_core::error::render_template": {
+      "implTy": null,
+      "module": "error",
+      "name": "render_template",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "template",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "vars",
+          "ty": {
+            "kind": "map",
+            "value": {
+              "kind": "string"
+            }
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Substitutes `{name}` placeholders in a manifest message template.\n\nUnknown placeholders are left unchanged. Substitution is a simple scan for\n`{…}` segments; nested braces are not supported.\n\n# Arguments\n\n* `template` - Template string (e.g. `\"Check limits failed ({status}): {body}\"`).\n* `vars` - Placeholder name → replacement value.\n\n# Returns\n\nThe rendered message with known placeholders replaced."
+    },
+    "solvapay_core::fuzz_oracle::EnvelopeFuzzInput::decode": {
+      "implTy": "EnvelopeFuzzInput",
+      "module": "fuzz_oracle",
+      "name": "decode",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "data",
+          "ty": {
+            "item": {
+              "kind": "named",
+              "name": "u8"
+            },
+            "kind": "vec"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "Self"
+        }
+      },
+      "rustdoc": "Decodes length-prefixed corpus bytes.\n\nReturns [`None`] when the buffer is truncated."
+    },
+    "solvapay_core::fuzz_oracle::EnvelopeFuzzInput::encode": {
+      "implTy": "EnvelopeFuzzInput",
+      "module": "fuzz_oracle",
+      "name": "encode",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "kind": "named",
+            "name": "u8"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Encodes this input as length-prefixed corpus bytes."
+    },
+    "solvapay_core::fuzz_oracle::WebhookFuzzInput::decode": {
+      "implTy": "WebhookFuzzInput",
+      "module": "fuzz_oracle",
+      "name": "decode",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "data",
+          "ty": {
+            "item": {
+              "kind": "named",
+              "name": "u8"
+            },
+            "kind": "vec"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "Self"
+        }
+      },
+      "rustdoc": "Decodes length-prefixed corpus bytes.\n\nReturns [`None`] when the buffer is truncated."
+    },
+    "solvapay_core::fuzz_oracle::WebhookFuzzInput::encode": {
+      "implTy": "WebhookFuzzInput",
+      "module": "fuzz_oracle",
+      "name": "encode",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "kind": "named",
+            "name": "u8"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Encodes this input as length-prefixed corpus bytes."
+    },
+    "solvapay_core::fuzz_oracle::check_envelope_invariants": {
+      "implTy": null,
+      "module": "fuzz_oracle",
+      "name": "check_envelope_invariants",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "op",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "args_json",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "OracleResult"
+        }
+      },
+      "rustdoc": "Default envelope producer used when no binding dispatch is available:\n`parse_args_json` plus a Transport envelope for every op (including the\nscaffold allowlist name). Real C dispatch is checked from `solvapay-c`."
+    },
+    "solvapay_core::fuzz_oracle::check_envelope_output": {
+      "implTy": null,
+      "module": "fuzz_oracle",
+      "name": "check_envelope_output",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "output",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "OracleResult"
+        }
+      },
+      "rustdoc": "Checks that `output` is a well-formed success or error envelope."
+    },
+    "solvapay_core::fuzz_oracle::check_webhook_invariants": {
+      "implTy": null,
+      "module": "fuzz_oracle",
+      "name": "check_webhook_invariants",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "input",
+          "ty": {
+            "kind": "named",
+            "name": "WebhookFuzzInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "OracleResult"
+        }
+      },
+      "rustdoc": "Checks webhook invariants against [`verify_webhook`]."
+    },
+    "solvapay_core::hmac_util::bytes_to_hex_lower": {
+      "implTy": null,
+      "module": "hmac_util",
+      "name": "bytes_to_hex_lower",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "bytes",
+          "ty": {
+            "item": {
+              "kind": "named",
+              "name": "u8"
+            },
+            "kind": "vec"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Encodes bytes as lowercase hexadecimal (no `hex` crate).\n\n# Arguments\n\n* `bytes` - Digest or other binary input.\n\n# Returns\n\nLowercase hex string with two characters per input byte."
+    },
+    "solvapay_core::hmac_util::constant_time_eq": {
+      "implTy": null,
+      "module": "hmac_util",
+      "name": "constant_time_eq",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "expected",
+          "ty": {
+            "item": {
+              "kind": "named",
+              "name": "u8"
+            },
+            "kind": "vec"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "received",
+          "ty": {
+            "item": {
+              "kind": "named",
+              "name": "u8"
+            },
+            "kind": "vec"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      },
+      "rustdoc": "Constant-time equality of two byte slices after a length check.\n\n# Arguments\n\n* `expected` - Locally computed bytes.\n* `received` - Candidate bytes.\n\n# Returns\n\n`true` when lengths match and bytes are equal under [`ConstantTimeEq`]."
+    },
+    "solvapay_core::hmac_util::constant_time_hex_eq": {
+      "implTy": null,
+      "module": "hmac_util",
+      "name": "constant_time_hex_eq",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "expected",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "received",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      },
+      "rustdoc": "Constant-time equality of two hex strings after a length check.\n\n# Arguments\n\n* `expected` - Lowercase hex digest computed locally.\n* `received` - Hex string from the wire.\n\n# Returns\n\n`true` when lengths match and UTF-8 bytes are equal under [`ConstantTimeEq`]."
+    },
+    "solvapay_core::limits::resolve_check_limits_params": {
+      "implTy": null,
+      "module": "limits",
+      "name": "resolve_check_limits_params",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "product_ref",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "meter_name",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "usage_type",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          },
+          "kind": "result",
+          "ok": {
+            "kind": "named",
+            "name": "CheckLimitsParams"
+          }
+        }
+      },
+      "rustdoc": "Validate check-limits query params (JS truthiness: empty string fails).\n\n# Arguments\n\n* `product_ref` - Product reference; empty/`None` fails.\n* `meter_name` - Optional meter; falsy → `\"requests\"`.\n\n# Returns\n\n[`Ok`] with resolved params, or [`Err`] with the frozen 400."
+    },
+    "solvapay_core::mcp::descriptors::build_prompt_descriptor_metadata": {
+      "implTy": null,
+      "module": "mcp::descriptors",
+      "name": "build_prompt_descriptor_metadata",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "options",
+          "ty": {
+            "kind": "named",
+            "name": "BuildPromptDescriptorMetadataOptions"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "kind": "named",
+            "name": "PromptDescriptorMetadata"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Ordered prompt metadata for enabled views."
+    },
+    "solvapay_core::mcp::descriptors::build_prompt_user_message": {
+      "implTy": null,
+      "module": "mcp::descriptors",
+      "name": "build_prompt_user_message",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "prompt_name",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "args",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "PromptUserMessage"
+        }
+      },
+      "rustdoc": "Pure user-message text for a SolvaPay slash-command prompt."
+    },
+    "solvapay_core::mcp::descriptors::build_tool_descriptor_metadata": {
+      "implTy": null,
+      "module": "mcp::descriptors",
+      "name": "build_tool_descriptor_metadata",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "options",
+          "ty": {
+            "kind": "named",
+            "name": "BuildToolDescriptorMetadataOptions"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "kind": "named",
+            "name": "ToolDescriptorMetadata"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Ordered tool descriptor metadata."
+    },
+    "solvapay_core::mcp::descriptors::derive_icons": {
+      "implTy": null,
+      "module": "mcp::descriptors",
+      "name": "derive_icons",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "branding",
+          "ty": {
+            "kind": "named",
+            "name": "MerchantBranding"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "item": {
+            "kind": "named",
+            "name": "ToolIcon"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Project branding → icons (`deriveIcons` parity).\n\nReturns `None` when branding is absent or has neither icon nor logo."
+    },
+    "solvapay_core::mcp::descriptors::validate_public_base_url": {
+      "implTy": null,
+      "module": "mcp::descriptors",
+      "name": "validate_public_base_url",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "public_base_url",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Validate `publicBaseUrl` is http(s). Returns frozen error message or `None`."
+    },
+    "solvapay_core::mcp::envelope::assert_response_result": {
+      "implTy": null,
+      "module": "mcp::envelope",
+      "name": "assert_response_result",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "value",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "err": {
+            "kind": "string"
+          },
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          }
+        }
+      },
+      "rustdoc": "Assert `value` is a branded response envelope.\n\n# Errors\n\nReturns the frozen merchant-actionable message when the brand check fails."
+    },
+    "solvapay_core::mcp::envelope::make_response_result": {
+      "implTy": null,
+      "module": "mcp::envelope",
+      "name": "make_response_result",
+      "params": [
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "data",
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "byRef": false,
+          "optional": true,
+          "rustName": "options",
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "emitted_blocks",
+          "ty": {
+            "item": {
+              "kind": "value"
+            },
+            "kind": "vec"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "ResponseEnvelope"
+        }
+      },
+      "rustdoc": "Construct a branded [`ResponseEnvelope`].\n\n# Arguments\n\n* `data` - Handler return data (including JSON `null`).\n* `options` - Optional options object; omitted from JSON when `None`.\n* `emitted_blocks` - Emitted content blocks; key omitted when empty.\n\n# Returns\n\nEnvelope with `__solvapayResponse: true` and skip-absent optionals."
+    },
+    "solvapay_core::mcp::paywall_tool_result::paywall_tool_result": {
+      "implTy": null,
+      "module": "mcp::paywall_tool_result",
+      "name": "paywall_tool_result",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "narration",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "gate",
+          "ty": {
+            "kind": "named",
+            "name": "PaywallGate"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "McpPaywallToolResult"
+        }
+      },
+      "rustdoc": "Build a text-only MCP paywall tool result.\n\n# Arguments\n\n* `narration` - Text placed in `content[0].text` (typically the gate message).\n* `gate` - Structured gate echoed on `structuredContent`.\n\n# Returns\n\n[`McpPaywallToolResult`] with `isError: false` and a single text content block."
+    },
+    "solvapay_core::mcp::tool_names::mcp_tool_names_json": {
+      "implTy": null,
+      "module": "mcp::tool_names",
+      "name": "mcp_tool_names_json",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
+        }
+      },
+      "rustdoc": "JSON object for the `MCP_TOOL_NAMES` fixture binding."
+    },
+    "solvapay_core::mcp::tool_names::mcp_view_maps": {
+      "implTy": null,
+      "module": "mcp::tool_names",
+      "name": "mcp_view_maps",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "McpViewMaps"
+        }
+      },
+      "rustdoc": "Build [`McpViewMaps`] from the const tables."
+    },
+    "solvapay_core::payment::attach_business_details_validation_error": {
+      "implTy": null,
+      "module": "payment",
+      "name": "attach_business_details_validation_error",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "first_issue_message",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Freeze the Zod-issue fallback used by attach-business-details.\n\n# Arguments\n\n* `first_issue_message` - First Zod issue message, if any.\n\n# Returns\n\nA 400 [`HelperErrorResult`] with the message or `\"Invalid business details\"`."
+    },
+    "solvapay_core::payment::project_payment_intent_result": {
+      "implTy": null,
+      "module": "payment",
+      "name": "project_payment_intent_result",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "pi",
+          "ty": {
+            "kind": "named",
+            "name": "PaymentIntentSource"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "customer_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "PaymentIntentProjection"
+        }
+      },
+      "rustdoc": "Project a create-PI / create-topup response down to the helper return shape.\n\n# Arguments\n\n* `pi` - Source payment-intent fields.\n* `customer_ref` - Synced customer reference.\n\n# Returns\n\n[`PaymentIntentProjection`] with skip-absent `accountId`."
+    },
+    "solvapay_core::payment::project_topup_process_outcome": {
+      "implTy": null,
+      "module": "payment",
+      "name": "project_topup_process_outcome",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "status",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "message",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "TopupProcessOutcome"
+        }
+      },
+      "rustdoc": "Project a process-payment result down to the topup outcome shape.\n\nUnknown / missing status fails closed to `{ status: \"failed\" }`.\nSucceeded returns the bare marker — balance polling stays host-side.\n\n# Arguments\n\n* `status` - Backend process status.\n* `message` - Optional timeout message.\n\n# Returns\n\nNarrowed [`TopupProcessOutcome`]."
+    },
+    "solvapay_core::payment::validate_attach_business_details_params": {
+      "implTy": null,
+      "module": "payment",
+      "name": "validate_attach_business_details_params",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "payment_intent_id",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Validate that `paymentIntentId` is present (attach-business-details / process-topup).\n\n# Arguments\n\n* `payment_intent_id` - Processor payment id.\n\n# Returns\n\n[`None`] when the id is present and non-empty."
+    },
+    "solvapay_core::payment::validate_create_payment_intent_params": {
+      "implTy": null,
+      "module": "payment",
+      "name": "validate_create_payment_intent_params",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "plan_ref",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "product_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Validate create-payment-intent body refs (JS truthiness: empty string fails).\n\n# Arguments\n\n* `plan_ref` - Plan reference; empty/`None` fails.\n* `product_ref` - Product reference; empty/`None` fails.\n\n# Returns\n\n[`None`] when both refs are present and non-empty; otherwise the frozen 400."
+    },
+    "solvapay_core::payment::validate_process_payment_intent_params": {
+      "implTy": null,
+      "module": "payment",
+      "name": "validate_process_payment_intent_params",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "payment_intent_id",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "product_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Validate process-payment-intent body refs (JS truthiness).\n\n# Arguments\n\n* `payment_intent_id` - Processor payment id.\n* `product_ref` - Product reference.\n\n# Returns\n\n[`None`] when both are present and non-empty."
+    },
+    "solvapay_core::payment::validate_topup_payment_intent_params": {
+      "implTy": null,
+      "module": "payment",
+      "name": "validate_topup_payment_intent_params",
+      "params": [
+        {
+          "byRef": false,
+          "optional": true,
+          "rustName": "amount",
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "currency",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Validate top-up payment-intent params (ordered: amount → currency presence → case).\n\n# Arguments\n\n* `amount` - Amount in minor units; must be a positive finite number.\n* `currency` - Uppercase ISO 4217 code.\n\n# Returns\n\n[`None`] when valid; otherwise the first failing branch's frozen 400."
+    },
+    "solvapay_core::paywall_decision::decide_paywall_outcome": {
+      "implTy": null,
+      "module": "paywall_decision",
+      "name": "decide_paywall_outcome",
+      "params": [
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "within_limits",
+          "ty": {
+            "kind": "bool"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "product",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "limits",
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "checkout_url",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "PaywallOutcome"
+        }
+      },
+      "rustdoc": "Produce allow vs gate at the decision point.\n\n# Arguments\n\n* `within_limits` - Resolved within-limits flag after cache/fresh evaluation.\n* `product` - Resolved product reference.\n* `limits` - `LimitResponseWithPlan` JSON (or `None`/`Null` for fallback).\n* `checkout_url` - Feeds fallback-limits synthesis when `limits` is absent.\n  Presence (including empty string) is preserved; absent means skip-absent.\n\n# Returns\n\n[`PaywallOutcome::Allow`] or [`PaywallOutcome::Gate`] with assembled gate."
+    },
+    "solvapay_core::paywall_decision::evaluate_cached_limits": {
+      "implTy": null,
+      "module": "paywall_decision",
+      "name": "evaluate_cached_limits",
+      "params": [
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "remaining",
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "CachedLimitsEvaluation"
+        }
+      },
+      "rustdoc": "Evaluate a fresh cache-hit `remaining` value.\n\n# Arguments\n\n* `remaining` - Cached remaining allowance.\n\n# Returns\n\nWithin-limits flag, post-decrement remaining, and whether to evict."
+    },
+    "solvapay_core::paywall_decision::evaluate_fresh_limits": {
+      "implTy": null,
+      "module": "paywall_decision",
+      "name": "evaluate_fresh_limits",
+      "params": [
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "within_limits",
+          "ty": {
+            "kind": "bool"
+          }
+        },
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "remaining",
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "FreshLimitsEvaluation"
+        }
+      },
+      "rustdoc": "Evaluate a fresh `checkLimits` response (pre-request allowance).\n\n# Arguments\n\n* `within_limits` - Backend `withinLimits` flag.\n* `remaining` - Backend pre-request remaining.\n\n# Returns\n\nUpdated within/remaining and whether the host should cache."
+    },
+    "solvapay_core::paywall_decision::require_product_ref": {
+      "implTy": null,
+      "module": "paywall_decision",
+      "name": "require_product_ref",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "metadata_product",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "env_product",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "err": {
+            "kind": "named",
+            "name": "SdkError"
+          },
+          "kind": "result",
+          "ok": {
+            "kind": "string"
+          }
+        }
+      },
+      "rustdoc": "Resolve a product ref or return a structured API error.\n\n# Errors\n\nReturns [`SdkError::Api`] when neither argument is a non-empty string."
+    },
+    "solvapay_core::paywall_decision::resolve_fallback_gate_limits": {
+      "implTy": null,
+      "module": "paywall_decision",
+      "name": "resolve_fallback_gate_limits",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "checkout_url",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "PaywallGateLimits"
+        }
+      },
+      "rustdoc": "Synthesize fallback limits when `lastLimitsCheck` is absent on a gate path.\n\n`checkout_url` is skip-absent (`Some` including empty string is preserved).\n\n# Arguments\n\n* `checkout_url` - Optional checkout URL carried onto the synthesized limits.\n\n# Returns\n\nMinimal [`PaywallGateLimits`] suitable for [`build_paywall_gate`] on a gate path."
+    },
+    "solvapay_core::paywall_decision::resolve_product_ref": {
+      "implTy": null,
+      "module": "paywall_decision",
+      "name": "resolve_product_ref",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "metadata_product",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "env_product",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Resolve product ref with JS `||` falsy semantics (empty string falls through).\n\n# Arguments\n\n* `metadata_product` - Product from paywall metadata.\n* `env_product` - Product from host env (`SOLVAPAY_PRODUCT_REF`).\n\n# Returns\n\nResolved product reference, or `None` when neither side is set."
+    },
+    "solvapay_core::paywall_gate::build_paywall_gate": {
+      "implTy": null,
+      "module": "paywall_gate",
+      "name": "build_paywall_gate",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "product_ref",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "limits",
+          "ty": {
+            "kind": "named",
+            "name": "PaywallGateLimits"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "PaywallGate"
+        }
+      },
+      "rustdoc": "Assemble the paywall gate for a product from a limits response.\n\nClassifies the recovery [`PaywallState`], optionally reclassifies a PAYG\n`topup_required` state onto the activation branch (so downstream UI can show\ntopup-flavored copy with plans attached), computes the effective checkout\nURL, then emits the branch-specific fields and the rendered message.\n\n# Arguments\n\n* `product_ref` - Product reference echoed onto the gate.\n* `limits` - Limits response driving classification and pass-through.\n\n# Returns\n\nA [`PaywallGate`] ready to serialize into a 402 response."
+    },
+    "solvapay_core::paywall_payload::paywall_client_payload": {
+      "implTy": null,
+      "module": "paywall_payload",
+      "name": "paywall_client_payload",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "gate",
+          "ty": {
+            "kind": "named",
+            "name": "PaywallGate"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "PaywallClientPayload"
+        }
+      },
+      "rustdoc": "Map a paywall gate into the stable 402 client payload.\n\n# Arguments\n\n* `gate` - Assembled gate (`PaywallStructuredContent` shape).\n\n# Returns\n\nSerialized-ready [`PaywallClientPayload`] with branch-correct optional fields."
+    },
+    "solvapay_core::paywall_state::build_gate_message": {
+      "implTy": null,
+      "module": "paywall_state",
+      "name": "build_gate_message",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "state",
+          "ty": {
+            "kind": "named",
+            "name": "PaywallState"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "gate",
+          "ty": {
+            "kind": "named",
+            "name": "GateContent"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Produce the terminal-friendly gate message for `state`.\n\nInlines `gate.checkout_url` when non-empty, except for\n[`PaywallState::ReactivationRequired`] which never inlines the URL.\n\n# Arguments\n\n* `state` - Classified paywall state.\n* `gate` - Structured gate content (only `checkout_url` is read).\n\n# Returns\n\nFrozen copy string, byte-identical to the TypeScript helpers."
+    },
+    "solvapay_core::paywall_state::build_nudge_message": {
+      "implTy": null,
+      "module": "paywall_state",
+      "name": "build_nudge_message",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "state",
+          "ty": {
+            "kind": "named",
+            "name": "PaywallState"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "limits",
+          "ty": {
+            "kind": "named",
+            "name": "PaywallLimits"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Produce low-balance / approaching-cap nudge copy for `state`.\n\n# Arguments\n\n* `state` - Classified paywall state (as if the customer had tripped the gate).\n* `limits` - Limits used only for optional `checkout_url` inlining.\n\n# Returns\n\nFrozen nudge string, byte-identical to the TypeScript helpers."
+    },
+    "solvapay_core::paywall_state::classify_paywall_state": {
+      "implTy": null,
+      "module": "paywall_state",
+      "name": "classify_paywall_state",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "limits",
+          "ty": {
+            "kind": "named",
+            "name": "PaywallLimits"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "PaywallState"
+        }
+      },
+      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` trumps everything.\n2. Usage-based out of credits → `topup_required` (plan type, or balance-block\n   proxy; credit channels then `remaining === 0` fallback).\n3. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`]."
+    },
+    "solvapay_core::plans::validate_list_plans_params": {
+      "implTy": null,
+      "module": "plans",
+      "name": "validate_list_plans_params",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "product_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Validate list-plans query productRef (JS truthiness: empty string fails).\n\n# Arguments\n\n* `product_ref` - Product reference; empty/`None` fails.\n\n# Returns\n\n[`None`] when productRef is present and non-empty; otherwise the frozen 400."
+    },
+    "solvapay_core::product::validate_get_product_params": {
+      "implTy": null,
+      "module": "product",
+      "name": "validate_get_product_params",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "product_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Validate get-product query productRef (JS truthiness: empty string fails).\n\n# Arguments\n\n* `product_ref` - Product reference; empty/`None` fails.\n\n# Returns\n\n[`None`] when productRef is present and non-empty; otherwise the frozen 400\nwithout `details`."
+    },
+    "solvapay_core::product_readiness::assert_valid_product_ref": {
+      "implTy": null,
+      "module": "product_readiness",
+      "name": "assert_valid_product_ref",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "product_ref",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "context",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "err": {
+            "kind": "named",
+            "name": "SdkError"
+          },
+          "kind": "result",
+          "ok": {
+            "kind": "unit"
+          }
+        }
+      },
+      "rustdoc": "Synchronous shape check for a product ref.\n\n# Errors\n\nReturns [`SdkError::Api`] when the ref is empty, the scaffolder\nplaceholder, or not `prd_`-shaped. Messages name `context`."
+    },
+    "solvapay_core::product_readiness::evaluate_product_readiness": {
+      "implTy": null,
+      "module": "product_readiness",
+      "name": "evaluate_product_readiness",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "product",
+          "ty": {
+            "kind": "named",
+            "name": "ProductReadinessInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "ProductReadinessResult"
+        }
+      },
+      "rustdoc": "Whether a resolved product can be sold end-to-end."
+    },
+    "solvapay_core::purchase::is_cached_customer_ref_valid": {
+      "implTy": null,
+      "module": "purchase",
+      "name": "is_cached_customer_ref_valid",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "external_ref",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "user_id",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "customer_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      },
+      "rustdoc": "Fast-path predicate: cached customer is usable when `customerRef` is truthy\nand `externalRef` is truthy and equals `user_id`.\n\nMirrors `customer && customer.customerRef` then\n`customer.externalRef && customer.externalRef === userId`.\n\n# Arguments\n\n* `external_ref` - Customer `externalRef` field.\n* `user_id` - Authenticated user id.\n* `customer_ref` - Customer `customerRef` field.\n\n# Returns\n\n`true` when the cache entry is valid for this user."
+    },
+    "solvapay_core::purchase::resolve_purchase_customer_ref": {
+      "implTy": null,
+      "module": "purchase",
+      "name": "resolve_purchase_customer_ref",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "customer_ref",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "user_id",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Resolve response `customerRef` with JS-falsy fallback: `customerRef || userId`.\n\n# Arguments\n\n* `customer_ref` - Backend customer ref (may be empty/`None`).\n* `user_id` - Authenticated user id fallback.\n\n# Returns\n\nThe first truthy non-empty string."
+    },
+    "solvapay_core::purchase::select_active_purchases": {
+      "implTy": null,
+      "module": "purchase",
+      "name": "select_active_purchases",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "purchases",
+          "ty": {
+            "item": {
+              "kind": "value"
+            },
+            "kind": "vec"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "kind": "value"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Filter purchases to those with `status === \"active\"`.\n\n# Arguments\n\n* `purchases` - JSON array of purchase objects.\n\n# Returns\n\nPurchases whose `status` is exactly `\"active\"`."
+    },
+    "solvapay_core::renewal::classify_cancel_error": {
+      "implTy": null,
+      "module": "renewal",
+      "name": "classify_cancel_error",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "message",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Classify a cancel SolvaPayError message into a helper error (with details).\n\n# Arguments\n\n* `message` - SolvaPayError.message.\n\n# Returns\n\nFrozen status/label with `details` = raw message."
+    },
+    "solvapay_core::renewal::classify_reactivate_error": {
+      "implTy": null,
+      "module": "renewal",
+      "name": "classify_reactivate_error",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "message",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Classify a reactivate SolvaPayError message into a helper error (with details).\n\n# Arguments\n\n* `message` - SolvaPayError.message.\n\n# Returns\n\nFrozen status/label with `details` = raw message."
+    },
+    "solvapay_core::renewal::normalize_cancel_response": {
+      "implTy": null,
+      "module": "renewal",
+      "name": "normalize_cancel_response",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "response",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          },
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          }
+        }
+      },
+      "rustdoc": "Normalize a cancel-purchase API response.\n\nUnwraps nested `.purchase`, requires truthy `reference`, and requires\n`status === \"cancelled\"` or truthy `cancelledAt`.\n\n# Arguments\n\n* `response` - Raw API JSON value.\n\n# Returns\n\nThe unwrapped purchase object, or a frozen helper error."
+    },
+    "solvapay_core::renewal::normalize_reactivate_response": {
+      "implTy": null,
+      "module": "renewal",
+      "name": "normalize_reactivate_response",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "response",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          },
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          }
+        }
+      },
+      "rustdoc": "Normalize a reactivate-purchase API response.\n\nUnwraps nested `.purchase`, requires truthy `reference`, and rejects\ntruthy `cancelledAt`.\n\n# Arguments\n\n* `response` - Raw API JSON value.\n\n# Returns\n\nThe unwrapped purchase object, or a frozen helper error."
+    },
+    "solvapay_core::renewal::validate_purchase_ref": {
+      "implTy": null,
+      "module": "renewal",
+      "name": "validate_purchase_ref",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "purchase_ref",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Validate purchaseRef (JS truthiness: empty string fails).\n\n# Arguments\n\n* `purchase_ref` - Purchase reference; empty/`None` fails.\n\n# Returns\n\n[`None`] when present and non-empty; otherwise the frozen 400."
+    },
+    "solvapay_core::retry::RetryPolicy::next_delay": {
+      "implTy": "RetryPolicy",
+      "module": "retry",
+      "name": "next_delay",
+      "params": [
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "attempt",
+          "ty": {
+            "kind": "u32"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "Duration"
+        }
+      },
+      "rustdoc": "Delay before the next retry after a failed call at `attempt` (0-based).\n\nWhen retries are exhausted (`attempt >= max_retries`), returns `None`\nwithout computing a delay. The last attempt therefore never consults\nhost-side `shouldRetry` / `onRetry` callbacks.\n\nDelay formulas (saturating on overflow):\n- fixed: `d`\n- linear: `d * (attempt + 1)`\n- exponential: `d * 2^attempt`\n\n# Arguments\n\n* `attempt` - Zero-based index of the failed call (0 = first failure)\n\n# Returns\n\n`Some(Duration)` to wait before the next try, or `None` when exhausted."
+    },
+    "solvapay_core::route_error::is_error_result": {
+      "implTy": null,
+      "module": "route_error",
+      "name": "is_error_result",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "value",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      },
+      "rustdoc": "Check if a JSON value is an error result (`error` + `status` keys).\n\nMirrors TS: `typeof result === 'object' && result !== null && 'error' in result && 'status' in result`.\n\n# Arguments\n\n* `value` - Arbitrary JSON value.\n\n# Returns\n\n`true` when `value` is an object with both `error` and `status` keys."
+    },
+    "solvapay_core::route_error::map_route_error": {
+      "implTy": null,
+      "module": "route_error",
+      "name": "map_route_error",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "input",
+          "ty": {
+            "kind": "named",
+            "name": "RouteErrorInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "HelperErrorResult"
+        }
+      },
+      "rustdoc": "Map a narrowed route error into the helper [`HelperErrorResult`] shape.\n\n- [`RouteErrorKind::SolvaPay`] → `{ error: message, status: status ?? 500, details: message }`\n- [`RouteErrorKind::Error`] / [`RouteErrorKind::Unknown`] →\n  `{ error: defaultMessage || \"{operationName} failed\", status: 500, details }`\n\n# Arguments\n\n* `input` - Narrowed error fields from the host shim.\n\n# Returns\n\nAlways includes `details` ([`HelperErrorResult::with_details`])."
+    },
+    "solvapay_core::seller_identity::get_seller_tax_identifier_display_label": {
+      "implTy": null,
+      "module": "seller_identity",
+      "name": "get_seller_tax_identifier_display_label",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "country",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Country-aware tax-identifier display label (VAT number / EIN / Tax ID).\n\n# Arguments\n\n* `country` - Optional seller country; used to derive [`TaxIdType`] when supported\n\n# Returns\n\nOwned label string — country-specific when supported, otherwise `\"Tax ID\"`."
+    },
+    "solvapay_core::seller_identity::resolve_seller_identity_display": {
+      "implTy": null,
+      "module": "seller_identity",
+      "name": "resolve_seller_identity_display",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "input",
+          "ty": {
+            "kind": "named",
+            "name": "SellerIdentityInput"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "SellerIdentityDisplay"
+        }
+      },
+      "rustdoc": "Resolve labeled tax + company rows for seller display.\n\nPrefers VAT for supported non-US countries and tax ID (or company number) for US.\nThe company-number row is omitted when it would duplicate the tax-identifier value.\n\n# Arguments\n\n* `input` - Raw seller identity fields (see [`SellerIdentityInput`])\n\n# Returns\n\n[`SellerIdentityDisplay`] with optional `tax_identifier` and `company_number` rows."
+    },
+    "solvapay_core::seller_identity::seller_tax_identifier_display_label_by_type": {
+      "implTy": null,
+      "module": "seller_identity",
+      "name": "seller_tax_identifier_display_label_by_type",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "elems": [
+              {
+                "kind": "string"
+              },
+              {
+                "kind": "string"
+              }
+            ],
+            "kind": "tuple"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Display labels keyed by tax-ID type (`eu_vat` / `gb_vat` / `us_ein`).\n\n# Returns\n\nStatic slice of `(type_key, label)` pairs matching\n[`SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`]."
+    },
+    "solvapay_core::usage::project_usage_snapshot": {
+      "implTy": null,
+      "module": "usage",
+      "name": "project_usage_snapshot",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "active_purchase",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "UsageSnapshot"
+        }
+      },
+      "rustdoc": "Project an active purchase JSON object (or `null`) into [`UsageSnapshot`].\n\n# Arguments\n\n* `active_purchase` - Purchase object or `None`/`Null`.\n\n# Returns\n\nNormalized usage snapshot (empty when no active purchase)."
+    },
+    "solvapay_core::webhook::WebhookError::message": {
+      "implTy": "WebhookError",
+      "module": "webhook",
+      "name": "message",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Returns the frozen human-readable message for this error code.\n\nMessages are pinned by the golden fixtures and must not change.\n\n# Returns\n\nOne of the five fixture-pinned message strings."
+    },
+    "solvapay_core::webhook::WebhookError::new": {
+      "implTy": "WebhookError",
+      "module": "webhook",
+      "name": "new",
+      "params": [
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "code",
+          "ty": {
+            "kind": "named",
+            "name": "WebhookErrorCode"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "Self"
+        }
+      },
+      "rustdoc": "Builds a [`WebhookError`] for the given code.\n\n# Arguments\n\n* `code` - Stable webhook error code.\n\n# Returns\n\nA new [`WebhookError`] wrapping `code`."
+    },
+    "solvapay_core::webhook::WebhookErrorCode::as_str": {
+      "implTy": "WebhookErrorCode",
+      "module": "webhook",
+      "name": "as_str",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      },
+      "rustdoc": "Returns the snake_case wire string for this code.\n\n# Returns\n\nOne of `missing_signature`, `malformed_signature`, `timestamp_too_old`,\n`invalid_signature`, or `invalid_payload`."
+    },
+    "solvapay_core::webhook::verify_webhook": {
+      "implTy": null,
+      "module": "webhook",
+      "name": "verify_webhook",
+      "params": [
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "body",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "signature",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": false,
+          "rustName": "secret",
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "now_unix_secs",
+          "ty": {
+            "kind": "i64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "err": {
+            "kind": "named",
+            "name": "WebhookError"
+          },
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          }
+        }
+      },
+      "rustdoc": "Verifies a SolvaPay webhook signature and parses the JSON body (§6.1).\n\nSteps: parse `t=`/`v1=` header → ±300 s tolerance → HMAC-SHA256 over\n`\"{timestamp}.{body}\"` → constant-time hex-string compare → `JSON.parse(body)`.\n\n# Arguments\n\n* `body` - Raw request body string (must match the signed bytes).\n* `signature` - `SV-Signature` header value (`t=…,v1=…`).\n* `secret` - Webhook secret including the `whsec_` prefix.\n* `now_unix_secs` - Explicit clock as unix seconds (host-owned; no timers in core).\n\n# Returns\n\nParsed JSON [`serde_json::Value`] on success (typed `WebhookEvent` DTO arrives at step 15).\n\n# Errors\n\nReturns [`WebhookError`] with one of the five [`WebhookErrorCode`] values:\n- [`WebhookErrorCode::MissingSignature`] — empty signature\n- [`WebhookErrorCode::MalformedSignature`] — missing/empty parts or non-numeric `t`\n- [`WebhookErrorCode::TimestampTooOld`] — outside ±300 s\n- [`WebhookErrorCode::InvalidSignature`] — HMAC / length mismatch\n- [`WebhookErrorCode::InvalidPayload`] — body is not valid JSON\n\n# Examples\n\n```\nuse hmac::{Hmac, KeyInit, Mac};\nuse sha2::Sha256;\nuse solvapay_core::verify_webhook;\n\nlet body = r#\"{\"type\":\"purchase.created\"}\"#;\nlet secret = \"whsec_test\";\nlet timestamp = 1_000_000_i64;\nlet Ok(mut mac) = Hmac::<Sha256>::new_from_slice(secret.as_bytes()) else {\n    panic!(\"HMAC-SHA256 accepts any key length\");\n};\nmac.update(format!(\"{timestamp}.{body}\").as_bytes());\nlet hex: String = mac\n    .finalize()\n    .into_bytes()\n    .iter()\n    .map(|b| format!(\"{b:02x}\"))\n    .collect();\nlet signature = format!(\"t={timestamp},v1={hex}\");\nlet value = verify_webhook(body, &signature, secret, timestamp).unwrap();\nassert_eq!(value[\"type\"], \"purchase.created\");\n```"
+    }
+  },
+  "types": {
+    "BuildPromptDescriptorMetadataOptions": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "Options for [`build_prompt_descriptor_metadata`].",
+      "serde": "none",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "views",
+            "rustdoc": "Enabled views (default: all three).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "string"
+              },
+              "kind": "vec"
+            },
+            "wireName": "views"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "BuildToolDescriptorMetadataOptions": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "Options for [`build_tool_descriptor_metadata`].",
+      "serde": "none",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "resource_uri",
+            "rustdoc": "UI resource URI.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "resource_uri"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "views",
+            "rustdoc": "Enabled views (default: all three).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "string"
+              },
+              "kind": "vec"
+            },
+            "wireName": "views"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "branding",
+            "rustdoc": "Optional merchant branding.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "MerchantBranding"
+            },
+            "wireName": "branding"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "BusinessCountryOption": {
+      "cfgFeature": null,
+      "module": "business_details",
+      "rustdoc": "Sorted `{ value, label }` options (localeCompare by English label).",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "value",
+            "rustdoc": "ISO 3166-1 alpha-2 country code.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "value"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "label",
+            "rustdoc": "English display label for the country select.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "label"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "BusinessDetails": {
+      "cfgFeature": null,
+      "module": "business_details",
+      "rustdoc": "Normalized business-details output (absent fields omitted in JSON).",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "is_business",
+            "rustdoc": "Whether the purchaser is buying as a business.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "isBusiness"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "country",
+            "rustdoc": "Uppercase business country ISO code.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "country"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "business_name",
+            "rustdoc": "Trimmed business name.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "businessName"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "tax_id",
+            "rustdoc": "Normalized uppercase tax ID.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "taxId"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "tax_id_type",
+            "rustdoc": "Derived or supplied Stripe tax-ID type.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "named",
+              "name": "TaxIdType"
+            },
+            "wireName": "taxIdType"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "customer_country",
+            "rustdoc": "Uppercase billing country for non-business purchases.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "customerCountry"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "customer_name",
+            "rustdoc": "Trimmed customer display name.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "customerName"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "BusinessDetailsInput": {
+      "cfgFeature": null,
+      "module": "business_details",
+      "rustdoc": "Input shape for [`validate_business_details`] (parity with `BusinessDetailsInput` in TS).",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "is_business",
+            "rustdoc": "Whether the purchaser is buying as a business.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "isBusiness"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "business_name",
+            "rustdoc": "Legal business name (trimmed when present).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "businessName"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "country",
+            "rustdoc": "Business country ISO code (required when `is_business` is true).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "country"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "customer_country",
+            "rustdoc": "Billing country for non-business purchases (tax calculation).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "customerCountry"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "customer_name",
+            "rustdoc": "Customer display name (max 100 characters).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "customerName"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "tax_id",
+            "rustdoc": "Tax ID to validate against the business country matcher.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "taxId"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "tax_id_type",
+            "rustdoc": "Explicit tax-ID type override (normally derived from country).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "named",
+              "name": "TaxIdType"
+            },
+            "wireName": "taxIdType"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "BusinessDetailsValidationError": {
+      "cfgFeature": null,
+      "module": "business_details",
+      "rustdoc": "Validation failure payload returned by [`validate_business_details`].",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "issues",
+            "rustdoc": "One or more field-level validation issues.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "named",
+                "name": "BusinessDetailsValidationIssue"
+              },
+              "kind": "vec"
+            },
+            "wireName": "issues"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "BusinessDetailsValidationIssue": {
+      "cfgFeature": null,
+      "module": "business_details",
+      "rustdoc": "Contract issue shape — React form errors must not change.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "path",
+            "rustdoc": "Field path segments (e.g. `[\"taxId\"]`).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "string"
+              },
+              "kind": "vec"
+            },
+            "wireName": "path"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "message",
+            "rustdoc": "User-facing validation message (Zod parity).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "message"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "CachedLimitsEvaluation": {
+      "cfgFeature": null,
+      "module": "paywall_decision",
+      "rustdoc": "Cache-hit path evaluation (host applies `evict` to the Map).",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "within_limits",
+            "rustdoc": "Whether the request is within limits.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "withinLimits"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "remaining",
+            "rustdoc": "Remaining after optimistic decrement (or `0` on the block-once path).",
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "remaining"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "evict",
+            "rustdoc": "When true, host must delete the cache entry.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "evict"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "CheckLimitsParams": {
+      "cfgFeature": null,
+      "module": "limits",
+      "rustdoc": "Resolved check-limits query params.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "product_ref",
+            "rustdoc": "Required product reference.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "productRef"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "meter_name",
+            "rustdoc": "Meter name (`'requests'` when the input was falsy).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "meterName"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "CoercedCustomerOptions": {
+      "cfgFeature": null,
+      "module": "customer_sync",
+      "rustdoc": "Coerced email/name options (`null`/`''` → omitted).",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "email",
+            "rustdoc": "Email when non-empty.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "email"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "name",
+            "rustdoc": "Name when non-empty.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "name"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "CreateCustomerParams": {
+      "cfgFeature": null,
+      "module": "customer_sync",
+      "rustdoc": "createCustomer request params.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "email",
+            "rustdoc": "Email (provided or generated fallback).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "email"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "name",
+            "rustdoc": "Optional display name.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "name"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "external_ref",
+            "rustdoc": "Optional external reference.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "externalRef"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "metadata",
+            "rustdoc": "Always `{}` today.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "map",
+              "value": {
+                "kind": "value"
+              }
+            },
+            "wireName": "metadata"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "CreateErrorKind": {
+      "cfgFeature": null,
+      "module": "customer_sync",
+      "rustdoc": "createCustomer error classification for 409 recovery.",
+      "serde": "both",
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "Conflict",
+            "rustdoc": "Conflict (`409` / `\"already exists\"`).",
+            "wireName": "conflict"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "Other",
+            "rustdoc": "Non-conflict failure — rethrow.",
+            "wireName": "other"
+          }
+        ]
+      }
+    },
+    "CreditsToDisplayInput": {
+      "cfgFeature": null,
+      "module": "credit_display",
+      "rustdoc": "Input for [`credits_to_display_minor_units`].",
+      "serde": "none",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "credits",
+            "rustdoc": "Credit balance to convert.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "credits"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "credits_per_minor_unit",
+            "rustdoc": "Credits per USD cent (`creditsPerMinorUnit` in the backend contract).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "credits_per_minor_unit"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "display_exchange_rate",
+            "rustdoc": "USD → display-currency rate; `0.0` is treated as `1.0` (JS `||` parity).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "display_exchange_rate"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "display_currency",
+            "rustdoc": "ISO display currency code (case-insensitive for zero-decimal lookup).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "display_currency"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "CustomerRefKind": {
+      "cfgFeature": null,
+      "module": "customer_sync",
+      "rustdoc": "Classification of a customerRef before ensure/lookup.",
+      "serde": "both",
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "Anonymous",
+            "rustdoc": "Literal `\"anonymous\"` — returned as-is.",
+            "wireName": "anonymous"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "Backend",
+            "rustdoc": "Backend id (`cus_` prefix) — returned as-is.",
+            "wireName": "backend"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "NeedsEnsure",
+            "rustdoc": "Needs lookup/create ensure flow.",
+            "wireName": "needsEnsure"
+          }
+        ]
+      }
+    },
+    "FreshLimitsEvaluation": {
+      "cfgFeature": null,
+      "module": "paywall_decision",
+      "rustdoc": "Cache-miss path evaluation after `checkLimits` returns.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "within_limits",
+            "rustdoc": "Whether the request is within limits.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "withinLimits"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "remaining",
+            "rustdoc": "Remaining after optimistic consume (unchanged when not consumed).",
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "remaining"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "should_cache",
+            "rustdoc": "When true, host should write the decremented entry into the cache.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "shouldCache"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "GateContent": {
+      "cfgFeature": null,
+      "module": "paywall_state",
+      "rustdoc": "Gate structured-content fields read by [`build_gate_message`].",
+      "serde": "deserialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "checkout_url",
+            "rustdoc": "Checkout URL inlined into gate copy when non-empty.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "checkoutUrl"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "HelperErrorResult": {
+      "cfgFeature": null,
+      "module": "helper_error",
+      "rustdoc": "Route-helper error object (matches TS `ErrorResult`).\n\n`details` is omitted when absent (skip-absent), unlike auth `email`/`name`\nwhich serialize as explicit `null`.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "error",
+            "rustdoc": "Human-readable error label (e.g. `\"Unauthorized\"`).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "error"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "status",
+            "rustdoc": "HTTP status code.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "u16"
+            },
+            "wireName": "status"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "details",
+            "rustdoc": "Optional detail string; skipped when [`None`].",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "details"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "LookupErrorKind": {
+      "cfgFeature": null,
+      "module": "customer_sync",
+      "rustdoc": "Lookup-error classification for getCustomer misses.",
+      "serde": "both",
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "ExpectedMissing",
+            "rustdoc": "Expected miss (`404` / `\"not found\"` substring).",
+            "wireName": "expectedMissing"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "Unexpected",
+            "rustdoc": "Unexpected error — log and continue.",
+            "wireName": "unexpected"
+          }
+        ]
+      }
+    },
+    "McpContentBlock": {
+      "cfgFeature": null,
+      "module": "mcp::paywall_tool_result",
+      "rustdoc": "Single MCP content block (`content[0]` narration).",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "block_type",
+            "rustdoc": "Always `\"text\"` for the paywall narration path.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "type"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "text",
+            "rustdoc": "Narration text (gate message).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "text"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "McpPaywallToolResult": {
+      "cfgFeature": null,
+      "module": "mcp::paywall_tool_result",
+      "rustdoc": "MCP tool result for a paywall gate (`PaywallToolResult` parity).\n\n`is_error` is deliberately always `false` (§6.5): paywall is a\nuser-actionable gate, not a tool execution failure.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "is_error",
+            "rustdoc": "Always `false` — paywall is not an MCP tool error.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "isError"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "content",
+            "rustdoc": "One text block carrying the narration.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "named",
+                "name": "McpContentBlock"
+              },
+              "kind": "vec"
+            },
+            "wireName": "content"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "structured_content",
+            "rustdoc": "Machine-readable gate payload (verbatim [`PaywallGate`]).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallGate"
+            },
+            "wireName": "structuredContent"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "McpViewMaps": {
+      "cfgFeature": null,
+      "module": "mcp::tool_names",
+      "rustdoc": "Combined view-map payload for the `mcpViewMaps` fixture binding.",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "tool_for_view",
+            "rustdoc": "`TOOL_FOR_VIEW`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "map",
+              "value": {
+                "kind": "value"
+              }
+            },
+            "wireName": "TOOL_FOR_VIEW"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "view_for_tool",
+            "rustdoc": "`VIEW_FOR_TOOL`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "map",
+              "value": {
+                "kind": "value"
+              }
+            },
+            "wireName": "VIEW_FOR_TOOL"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "SCREAMING_SNAKE_CASE"
+      }
+    },
+    "MerchantBranding": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "Merchant branding input for icon projection.",
+      "serde": "none",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "brand_name",
+            "rustdoc": "Display name (unused by icon projection).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "brand_name"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "icon_url",
+            "rustdoc": "Preferred square icon URL.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "icon_url"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "logo_url",
+            "rustdoc": "Landscape logo fallback URL.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "logo_url"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "PaymentIntentProjection": {
+      "cfgFeature": null,
+      "module": "payment",
+      "rustdoc": "Projected create-PI / create-topup helper return shape.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "processor_payment_id",
+            "rustdoc": "Processor payment id.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "processorPaymentId"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "client_secret",
+            "rustdoc": "Client secret for confirmation.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "clientSecret"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "publishable_key",
+            "rustdoc": "Publishable key.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "publishableKey"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "account_id",
+            "rustdoc": "Connected account id (skip-absent when [`None`]).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "accountId"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "customer_ref",
+            "rustdoc": "Synced customer reference.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "customerRef"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "PaymentIntentSource": {
+      "cfgFeature": null,
+      "module": "payment",
+      "rustdoc": "Source fields from a create-PI / create-topup client response.",
+      "serde": "none",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "processor_payment_id",
+            "rustdoc": "Processor payment id.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "processor_payment_id"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "client_secret",
+            "rustdoc": "Client secret.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "client_secret"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "publishable_key",
+            "rustdoc": "Publishable key.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "publishable_key"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "account_id",
+            "rustdoc": "Optional connected account id.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "account_id"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "PaywallBalance": {
+      "cfgFeature": null,
+      "module": "paywall_state",
+      "rustdoc": "Nested balance block from newer backend responses.",
+      "serde": "deserialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "credit_balance",
+            "rustdoc": "Credit balance in credits (nested channel).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "creditBalance"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "PaywallClientPayload": {
+      "cfgFeature": null,
+      "module": "paywall_payload",
+      "rustdoc": "Stable 402 client payload (`paywallErrorToClientPayload` parity).\n\nAlways emits `success: false`, a kind-derived `error` label, and the\ngate's `product` / `checkoutUrl` / `message` / `kind`. Optional blocks\nfollow activation-vs-payment branch asymmetry (payment never emits\n`plans` / `confirmationUrl`); absent/`null` options are skipped.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "success",
+            "rustdoc": "Always `false` for gate payloads.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "success"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "error",
+            "rustdoc": "Human-readable label: `\"Activation required\"` or `\"Payment required\"`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "error"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "product",
+            "rustdoc": "Product reference echoed from the gate.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "product"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "checkout_url",
+            "rustdoc": "Checkout / confirmation URL echoed from the gate.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "checkoutUrl"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "message",
+            "rustdoc": "Gate message echoed verbatim.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "message"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "kind",
+            "rustdoc": "Recovery discriminator.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallGateKind"
+            },
+            "wireName": "kind"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "plans",
+            "rustdoc": "Activation-only: plans when present on the gate.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "plans"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "balance",
+            "rustdoc": "Quota balance when present on the gate.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "balance"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "product_details",
+            "rustdoc": "Rich product context when present on the gate.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "productDetails"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "confirmation_url",
+            "rustdoc": "Activation-only: confirmation URL when present (including `\"\"`).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "confirmationUrl"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "PaywallGate": {
+      "cfgFeature": null,
+      "module": "paywall_gate",
+      "rustdoc": "Ready-to-serialize paywall gate (`PaywallStructuredContent` parity).\n\n`checkout_url` and `message` are always present (`checkout_url` may be `\"\"`).\nThe four optional blocks are emitted only when present in the input (never\n`null`); the payment branch never emits `plans` / `confirmation_url`.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "kind",
+            "rustdoc": "Recovery discriminator.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallGateKind"
+            },
+            "wireName": "kind"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "product",
+            "rustdoc": "Product reference echoed from the caller.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "product"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "checkout_url",
+            "rustdoc": "Best checkout / confirmation URL (may be an empty string).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "checkoutUrl"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "message",
+            "rustdoc": "Frozen gate copy from [`build_gate_message`].",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "message"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "confirmation_url",
+            "rustdoc": "Confirmation URL echoed on the activation branch when present in the input.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "confirmationUrl"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "plans",
+            "rustdoc": "Product plans echoed verbatim on the activation branch when present.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "plans"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "balance",
+            "rustdoc": "Quota balance echoed verbatim when present in the input.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "balance"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "product_details",
+            "rustdoc": "Rich product context echoed verbatim (input `product` → `productDetails`).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "productDetails"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "PaywallGateKind": {
+      "cfgFeature": null,
+      "module": "paywall_gate",
+      "rustdoc": "Recovery discriminator emitted on the wire as `kind`.",
+      "serde": "both",
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "snake_case",
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "PaymentRequired",
+            "rustdoc": "Generic paid remediation (upgrade / pay).",
+            "wireName": "payment_required"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "ActivationRequired",
+            "rustdoc": "Activation or PAYG-topup remediation (plans may be attached).",
+            "wireName": "activation_required"
+          }
+        ]
+      }
+    },
+    "PaywallGateLimits": {
+      "cfgFeature": null,
+      "module": "paywall_gate",
+      "rustdoc": "Limits input read by [`build_paywall_gate`].\n\nPass-through blocks (`plans`, `balance`, `product`) are kept as raw\n[`Value`]s so extra keys (`creditsPerUnit`, `currency`, arbitrary product\ncontext, …) are echoed verbatim; the typed [`PaywallBalance`] /\n[`PaywallPlanSummary`] views are derived only to feed the classifier.\n\nEvery field is optional and defaults to absent. JSON `null` collapses to\n`None` at the serde boundary (null ≡ absent), matching the convention\ndocumented on [`crate::paywall_state`].",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "activation_required",
+            "rustdoc": "Explicit backend flag that no plan is live yet.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "activationRequired"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "plan",
+            "rustdoc": "Active plan reference (matched against plan summaries by the classifier).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "plan"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "plans",
+            "rustdoc": "Available plans; raw pass-through plus PAYG / classify source.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "value"
+              },
+              "kind": "vec"
+            },
+            "wireName": "plans"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "balance",
+            "rustdoc": "Structured balance block; raw pass-through plus usage proxy / credit source.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "balance"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "credit_balance",
+            "rustdoc": "Top-level credit balance (older / alternate channel).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "creditBalance"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "remaining",
+            "rustdoc": "Remaining allowance (usage-based fallback when credit channels are absent).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "remaining"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "checkout_url",
+            "rustdoc": "Checkout URL (`||` semantics: empty string is treated as absent).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "checkoutUrl"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "confirmation_url",
+            "rustdoc": "Confirmation URL; takes precedence over `checkout_url` on the activation branch.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "confirmationUrl"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "product",
+            "rustdoc": "Rich product context; raw pass-through emitted as `productDetails`.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "product"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "PaywallLimits": {
+      "cfgFeature": null,
+      "module": "paywall_state",
+      "rustdoc": "Minimal deserializable limits input for classification and nudge copy.\n\nTyped DTOs arrive at step 15; this mirrors the fields the TS helpers read.",
+      "serde": "deserialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "activation_required",
+            "rustdoc": "Explicit backend flag that no plan is live yet.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "activationRequired"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "plan",
+            "rustdoc": "Active plan reference (matched against [`PaywallPlanSummary::reference`]).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "plan"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "plans",
+            "rustdoc": "Available plans on the product.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "named",
+                "name": "PaywallPlanSummary"
+              },
+              "kind": "vec"
+            },
+            "wireName": "plans"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "balance",
+            "rustdoc": "Structured balance block (presence is a usage-based proxy).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallBalance"
+            },
+            "wireName": "balance"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "credit_balance",
+            "rustdoc": "Top-level credit balance (older / alternate channel).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "creditBalance"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "remaining",
+            "rustdoc": "Remaining allowance (usage-based fallback when credit channels are absent).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "remaining"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "checkout_url",
+            "rustdoc": "Checkout URL inlined into nudge copy when non-empty.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "checkoutUrl"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "PaywallOutcome": {
+      "cfgFeature": null,
+      "module": "paywall_decision",
+      "rustdoc": "Decision-point outcome (`allow` or `gate` with assembled gate).",
+      "serde": "both",
+      "shape": {
+        "kind": "taggedEnum",
+        "renameAll": "camelCase",
+        "tag": "outcome",
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "Allow",
+            "rustdoc": "Request may proceed.",
+            "wireName": "allow"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "gate",
+                "rustdoc": "Assembled paywall gate (skip-absent on the allow arm via enum shape).",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "PaywallGate"
+                },
+                "wireName": "gate"
+              }
+            ],
+            "rustName": "Gate",
+            "rustdoc": "Request is gated; `gate` is the transport-agnostic structured content.",
+            "wireName": "gate"
+          }
+        ]
+      }
+    },
+    "PaywallPlanSummary": {
+      "cfgFeature": null,
+      "module": "paywall_state",
+      "rustdoc": "Minimal plan summary used by the classifier.",
+      "serde": "deserialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "reference",
+            "rustdoc": "Plan reference matching [`PaywallLimits::plan`].",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "reference"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "plan_type",
+            "rustdoc": "Plan type wire string (`usage-based`, `recurring`, …).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "type"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "requires_payment",
+            "rustdoc": "Whether the plan requires payment (unused by classification; kept for DTO shape).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "requiresPayment"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "PaywallState": {
+      "cfgFeature": null,
+      "module": "paywall_state",
+      "rustdoc": "Discriminated paywall recovery path (`kind` on the wire).\n\n`ReactivationRequired` is kept for parity with the TypeScript union but is\nunreachable from [`classify_paywall_state`] under current backend behaviour.",
+      "serde": "both",
+      "shape": {
+        "kind": "taggedEnum",
+        "renameAll": "snake_case",
+        "tag": "kind",
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "ActivationRequired",
+            "rustdoc": "No plan is live yet; primary recovery is `activate_plan`.",
+            "wireName": "activation_required"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "TopupRequired",
+            "rustdoc": "Usage-based plan out of credits; primary recovery is `topup`.",
+            "wireName": "topup_required"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "UpgradeRequired",
+            "rustdoc": "Everything else (including null/degraded limits); primary recovery is `upgrade`.",
+            "wireName": "upgrade_required"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "ReactivationRequired",
+            "rustdoc": "Previous plan inactive (type-only; classifier never returns this today).",
+            "wireName": "reactivation_required"
+          }
+        ]
+      }
+    },
+    "ProductReadinessInput": {
+      "cfgFeature": null,
+      "module": "product_readiness",
+      "rustdoc": "Input to [`evaluate_product_readiness`].",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "status",
+            "rustdoc": "Product status (`active`, `draft`, …).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "status"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "plans",
+            "rustdoc": "Plans; omitted treated as empty.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "named",
+                "name": "ProductReadinessPlan"
+              },
+              "kind": "vec"
+            },
+            "wireName": "plans"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "ProductReadinessPlan": {
+      "cfgFeature": null,
+      "module": "product_readiness",
+      "rustdoc": "Plan activity flag used by readiness evaluation.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "is_active",
+            "rustdoc": "Whether the plan can currently be purchased.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "isActive"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "ProductReadinessResult": {
+      "cfgFeature": null,
+      "module": "product_readiness",
+      "rustdoc": "Result of [`evaluate_product_readiness`].",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "ready",
+            "rustdoc": "True when status is active and at least one plan is active.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "ready"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "issues",
+            "rustdoc": "Human-readable reasons `ready` is false. Empty when ready.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "string"
+              },
+              "kind": "vec"
+            },
+            "wireName": "issues"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "active_plans",
+            "rustdoc": "Count of active plans.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "u32"
+            },
+            "wireName": "activePlans"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "total_plans",
+            "rustdoc": "Total plan count (including inactive).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "u32"
+            },
+            "wireName": "totalPlans"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "PromptContent": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "Prompt content block.",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "content_type",
+            "rustdoc": "Always `\"text\"`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "type"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "text",
+            "rustdoc": "Message text.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "text"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "PromptDescriptorMetadata": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "Prompt metadata without `argsSchema` / `handler`.",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "name",
+            "rustdoc": "Prompt name (matches tool name).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "name"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "title",
+            "rustdoc": "Prompt title.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "title"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "description",
+            "rustdoc": "Prompt description.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "description"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "PromptMessage": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "One prompt message.",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "role",
+            "rustdoc": "Role (`user`).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "role"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "content",
+            "rustdoc": "Text content block.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "PromptContent"
+            },
+            "wireName": "content"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "PromptUserMessage": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "Prompt user-message result (`SolvaPayPromptResult` parity).",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "messages",
+            "rustdoc": "Message list (always one user text message).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "item": {
+                "kind": "named",
+                "name": "PromptMessage"
+              },
+              "kind": "vec"
+            },
+            "wireName": "messages"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "ResponseEnvelope": {
+      "cfgFeature": null,
+      "module": "mcp::envelope",
+      "rustdoc": "Branded response envelope (`ResponseResult` parity).\n\n`options` is omitted when `None`; `emitted_blocks` is omitted when empty.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "solvapay_response",
+            "rustdoc": "Opaque brand marker — always `true`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "__solvapayResponse"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "data",
+            "rustdoc": "Merchant handler data payload.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "data"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "options",
+            "rustdoc": "Optional response options (raw pass-through).",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "options"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "emitted_blocks",
+            "rustdoc": "Content blocks queued via `ctx.emit` before `respond`.",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "skipSerializingIf": "Vec::is_empty",
+            "ty": {
+              "item": {
+                "kind": "value"
+              },
+              "kind": "vec"
+            },
+            "wireName": "emittedBlocks"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "RouteErrorInput": {
+      "cfgFeature": null,
+      "module": "route_error",
+      "rustdoc": "Input to [`map_route_error`] after host narrowing.",
+      "serde": "none",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "kind",
+            "rustdoc": "Error kind.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "RouteErrorKind"
+            },
+            "wireName": "kind"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "message",
+            "rustdoc": "Error message (`None` for unknown throws).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "message"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "status",
+            "rustdoc": "Optional HTTP status from `SolvaPayError.status`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "u16"
+            },
+            "wireName": "status"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "operation_name",
+            "rustdoc": "Operation name used in the default failure label.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "operation_name"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "default_message",
+            "rustdoc": "Optional custom default message.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "default_message"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "RouteErrorKind": {
+      "cfgFeature": null,
+      "module": "route_error",
+      "rustdoc": "Narrowed error kind after host-side `instanceof` checks.",
+      "serde": "none",
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": null,
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "SolvaPay",
+            "rustdoc": "`instanceof SolvaPayError`.",
+            "wireName": "SolvaPay"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "Error",
+            "rustdoc": "`instanceof Error` (non-SolvaPay).",
+            "wireName": "Error"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "Unknown",
+            "rustdoc": "Non-Error throw.",
+            "wireName": "Unknown"
+          }
+        ]
+      }
+    },
+    "SdkError": {
+      "cfgFeature": null,
+      "module": "error",
+      "rustdoc": "Single structured error surface for all SolvaPay bindings (§4.4).",
+      "serde": "both",
+      "shape": {
+        "kind": "taggedEnum",
+        "renameAll": null,
+        "tag": "kind",
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "message",
+                "rustdoc": "Human-readable message (often from a manifest template).",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "string"
+                },
+                "wireName": "message"
+              },
+              {
+                "cfgFeature": null,
+                "optional": true,
+                "rustName": "status",
+                "rustdoc": "HTTP status when the failure came from a non-OK response.",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "u16"
+                },
+                "wireName": "status"
+              },
+              {
+                "cfgFeature": null,
+                "optional": true,
+                "rustName": "code",
+                "rustdoc": "Optional free-form machine-readable code.",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "string"
+                },
+                "wireName": "code"
+              }
+            ],
+            "rustName": "Api",
+            "rustdoc": "Maps to TypeScript `SolvaPayError`.",
+            "wireName": "Api"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "message",
+                "rustdoc": "Short throw message (`\"Payment required\"` / `\"Activation required\"`).",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "string"
+                },
+                "wireName": "message"
+              },
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "gate",
+                "rustdoc": "Transport-agnostic gate (`PaywallStructuredContent` parity).",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "PaywallGate"
+                },
+                "wireName": "gate"
+              }
+            ],
+            "rustName": "Paywall",
+            "rustdoc": "Maps to TypeScript `PaywallError`; carries the full gate for 402 formatting.",
+            "wireName": "Paywall"
+          },
+          {
+            "cfgFeature": "webhook-verify",
+            "fields": [
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "message",
+                "rustdoc": "Frozen human-readable message for the code.",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "string"
+                },
+                "wireName": "message"
+              },
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "code",
+                "rustdoc": "Stable snake_case code.",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "WebhookErrorCode"
+                },
+                "wireName": "code"
+              }
+            ],
+            "rustName": "Webhook",
+            "rustdoc": "Webhook verification failures with stable codes.",
+            "wireName": "Webhook"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "message",
+                "rustdoc": "Human-readable message.",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "string"
+                },
+                "wireName": "message"
+              },
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "retryable",
+                "rustdoc": "Whether a retry may help.",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "bool"
+                },
+                "wireName": "retryable"
+              }
+            ],
+            "rustName": "Transport",
+            "rustdoc": "Transport / I/O failures. The *only* transport error surface (step 19+).",
+            "wireName": "Transport"
+          }
+        ]
+      }
+    },
+    "SellerIdentityDisplay": {
+      "cfgFeature": null,
+      "module": "seller_identity",
+      "rustdoc": "Resolved seller identity rows. Absent rows serialize as JSON `null`.",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "tax_identifier",
+            "rustdoc": "Country-aware tax / VAT / EIN row, if a value is available.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "SellerIdentityRow"
+            },
+            "wireName": "taxIdentifier"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "company_number",
+            "rustdoc": "Company-number row when distinct from the tax identifier.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "SellerIdentityRow"
+            },
+            "wireName": "companyNumber"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "SellerIdentityInput": {
+      "cfgFeature": null,
+      "module": "seller_identity",
+      "rustdoc": "Input for [`resolve_seller_identity_display`].",
+      "serde": "none",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "country",
+            "rustdoc": "Seller country code (trimmed / uppercased when supported).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "country"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "vat_number",
+            "rustdoc": "VAT number (preferred tax value for non-US supported countries).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "vat_number"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "tax_id",
+            "rustdoc": "Generic tax ID (US EIN / fallback when VAT is absent).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "tax_id"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "company_number",
+            "rustdoc": "Company registration number; also used as US tax value when `tax_id` is empty.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "company_number"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "SellerIdentityRow": {
+      "cfgFeature": null,
+      "module": "seller_identity",
+      "rustdoc": "One labeled identity row.",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "label",
+            "rustdoc": "Human-readable field label (e.g. `\"VAT number\"`).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "label"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "value",
+            "rustdoc": "Stored identifier value to display.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "value"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "TaxIdType": {
+      "cfgFeature": null,
+      "module": "business_details",
+      "rustdoc": "Stripe tax-ID type for a supported business country (parity with `TaxIdType` in TS).",
+      "serde": "both",
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "snake_case",
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "EuVat",
+            "rustdoc": "EU VAT ID (`eu_vat`).",
+            "wireName": "eu_vat"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "GbVat",
+            "rustdoc": "UK VAT number (`gb_vat`).",
+            "wireName": "gb_vat"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "UsEin",
+            "rustdoc": "US employer identification number (`us_ein`).",
+            "wireName": "us_ein"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "JpTrn",
+            "rustdoc": "Japan invoice registration number (`jp_trn`).",
+            "wireName": "jp_trn"
+          }
+        ]
+      }
+    },
+    "ToolAnnotations": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "Portable MCP tool annotations (only set flags are serialized).",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "open_world_hint",
+            "rustdoc": "Always `true` for SolvaPay tools.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "openWorldHint"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "read_only_hint",
+            "rustdoc": "Read-only hint.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "readOnlyHint"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "destructive_hint",
+            "rustdoc": "Destructive hint.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "destructiveHint"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "idempotent_hint",
+            "rustdoc": "Idempotent hint.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "idempotentHint"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "ToolDescriptorMetadata": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "Tool metadata without `inputSchema` / `handler`.",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "name",
+            "rustdoc": "Tool name (snake_case wire name).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "name"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "title",
+            "rustdoc": "Optional human title.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "title"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "description",
+            "rustdoc": "Tool description (byte-exact, including prefix/hint concatenations).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "description"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "annotations",
+            "rustdoc": "Annotation flags.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "ToolAnnotations"
+            },
+            "wireName": "annotations"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "meta",
+            "rustdoc": "Descriptor `_meta` envelope.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "value"
+            },
+            "wireName": "meta"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "icons",
+            "rustdoc": "Brand icons when branding provided.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "item": {
+                "kind": "named",
+                "name": "ToolIcon"
+              },
+              "kind": "vec"
+            },
+            "wireName": "icons"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "ToolIcon": {
+      "cfgFeature": null,
+      "module": "mcp::descriptors",
+      "rustdoc": "One MCP tool icon entry.",
+      "serde": "serialize",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "src",
+            "rustdoc": "Absolute URL or `data:` URI.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "src"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "sizes",
+            "rustdoc": "Size hints (omit when unset — skip-absent).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "item": {
+                "kind": "string"
+              },
+              "kind": "vec"
+            },
+            "wireName": "sizes"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "TopupProcessOutcome": {
+      "cfgFeature": null,
+      "module": "payment",
+      "rustdoc": "Topup process outcome (poll / creditsAdded stay host-side).",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "status",
+            "rustdoc": "Narrowed status.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "status"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "message",
+            "rustdoc": "Timeout message (skip-absent when [`None`]).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "message"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "UsageSnapshot": {
+      "cfgFeature": null,
+      "module": "usage",
+      "rustdoc": "Usage snapshot projected from an active purchase (or none).",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "meter_ref",
+            "rustdoc": "Meter reference (`meterRef` / `meterId` fallback); explicit `null` when absent.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "meterRef"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "total",
+            "rustdoc": "Plan limit; explicit `null` when absent.",
+            "serdeDefault": false,
+            "serializeWith": "serialize_opt_whole_f64",
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "total"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "used",
+            "rustdoc": "Units used (defaults to `0`).",
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "used"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "remaining",
+            "rustdoc": "`max(0, total - used)` when `total` is known; else `null`.",
+            "serdeDefault": false,
+            "serializeWith": "serialize_opt_whole_f64",
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "remaining"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "percent_used",
+            "rustdoc": "0–100 rounded to 2dp; `null` when `total` is unknown or zero.",
+            "serdeDefault": false,
+            "serializeWith": "serialize_opt_whole_f64",
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "percentUsed"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "period_start",
+            "rustdoc": "Billing period start (skip-absent).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "periodStart"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "period_end",
+            "rustdoc": "Billing period end (skip-absent).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "periodEnd"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "purchase_ref",
+            "rustdoc": "Purchase reference when an active purchase exists (skip-absent).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "purchaseRef"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "ValidateBusinessDetailsResult": {
+      "cfgFeature": null,
+      "module": "business_details",
+      "rustdoc": "Result of [`validate_business_details`] (untagged JSON: `{ success, data }` or `{ success, error }`).",
+      "serde": "both",
+      "shape": {
+        "kind": "untaggedEnum",
+        "renameAll": null,
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "success",
+                "rustdoc": "Always `true` on success (contract tag for untagged JSON).",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "bool"
+                },
+                "wireName": "success"
+              },
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "data",
+                "rustdoc": "Normalized business-details payload.",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "BusinessDetails"
+                },
+                "wireName": "data"
+              }
+            ],
+            "rustName": "Success",
+            "rustdoc": "Validation passed; `data` holds normalized fields.",
+            "wireName": "Success"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "success",
+                "rustdoc": "Always `false` on failure (contract tag for untagged JSON).",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "bool"
+                },
+                "wireName": "success"
+              },
+              {
+                "cfgFeature": null,
+                "optional": false,
+                "rustName": "error",
+                "rustdoc": "Field-level validation errors.",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "skipSerializingIf": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "BusinessDetailsValidationError"
+                },
+                "wireName": "error"
+              }
+            ],
+            "rustName": "Failure",
+            "rustdoc": "Validation failed; `error` lists field issues.",
+            "wireName": "Failure"
+          }
+        ]
+      }
+    },
+    "WebhookError": {
+      "cfgFeature": null,
+      "module": "webhook",
+      "rustdoc": "Thin domain error for webhook verification failures.\n\nFolds into [`crate::SdkError::Webhook`] via [`From`]; do not build a parallel taxonomy.",
+      "serde": "none",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "code",
+            "rustdoc": "Stable machine-readable code.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "named",
+              "name": "WebhookErrorCode"
+            },
+            "wireName": "code"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": null
+      }
+    },
+    "WebhookErrorCode": {
+      "cfgFeature": null,
+      "module": "webhook",
+      "rustdoc": "Stable webhook verification error codes (snake_case on the wire).",
+      "serde": "both",
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "snake_case",
+        "variants": [
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "MissingSignature",
+            "rustdoc": "Signature header was missing or empty.",
+            "wireName": "missing_signature"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "MalformedSignature",
+            "rustdoc": "Signature header could not be parsed (`t=` / `v1=`).",
+            "wireName": "malformed_signature"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "TimestampTooOld",
+            "rustdoc": "Timestamp outside the ±300 s tolerance window.",
+            "wireName": "timestamp_too_old"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "InvalidSignature",
+            "rustdoc": "HMAC mismatch (including length / non-hex `v1` compared as hex text).",
+            "wireName": "invalid_signature"
+          },
+          {
+            "cfgFeature": null,
+            "fields": [],
+            "rustName": "InvalidPayload",
+            "rustdoc": "Body is not valid JSON.",
+            "wireName": "invalid_payload"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,4 +1,8 @@
 /**
+ * @generated — do not edit. Regenerate with: pnpm gen
+ */
+
+/**
  * Sync decision-core dispatch layer (Step 37R-c → Step 53).
  *
  * Pure logic surfaces (`@solvapay/core` extracts + paywall/retry) dispatch to

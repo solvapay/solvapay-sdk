@@ -1,65 +1,33 @@
-//! Lower `bindings:` descriptors into `Ir.binding_symbols` (§5.7 / step 39G-a).
+//! Binding-symbol dump and extract/sync/envelope lowering helpers.
 
 use crate::error::{GenError, GenResult};
 use crate::ir::{
     Ir, IrBindingArg, IrBindingArtifact, IrBindingCall, IrBindingCatalogLink, IrBindingSymbol,
-    IrBoundaryType, IrEnvelopeMode, IrExtractKind, IrLangNames, IrSerializeKind, IrSyncKind,
-    IrTypedStyle,
+    IrBoundaryType, IrEnvelopeMode, IrExtractKind, IrSerializeKind, IrSyncKind, IrTypedStyle,
 };
-use crate::manifest::{
-    BindingArgDef, BindingCallDef, BindingCatalogLink, BindingDef, LangNames, Manifest,
-};
+use crate::manifest::BindingArgDef;
 
-/// Populates `ir.binding_symbols` from the contract manifest `bindings:` section.
-///
-/// # Errors
-///
-/// Returns parse errors when a boundary type, sync kind, or envelope mode is unknown.
-pub fn lower_bindings(ir: &mut Ir, manifest: &Manifest) -> GenResult<()> {
-    for (id, def) in &manifest.bindings {
-        let symbol = lower_binding(id, def)?;
-        ir.binding_symbols.insert(id.clone(), symbol);
+pub(crate) fn lower_ts_wrapper(
+    def: &crate::manifest::BindingTsWrapperDef,
+) -> crate::ir::IrTsWrapper {
+    crate::ir::IrTsWrapper {
+        export_name: def.export_name.clone(),
+        generics: def.generics.clone(),
+        return_type: def.return_type.clone(),
+        param_types: def.param_types.clone(),
+        optional_style: def.optional_style.clone(),
+        param_style: def.param_style.clone(),
+        pass_through: def.pass_through,
+        object_param: def.object_param,
+        post_process: def.post_process.clone(),
+        dispatch_args: def.dispatch_args.clone(),
+        doc: def.doc.clone(),
+        server_comment: def.server_comment.clone(),
+        signature: def.signature.clone(),
     }
-    Ok(())
 }
 
-fn lower_binding(id: &str, def: &BindingDef) -> GenResult<IrBindingSymbol> {
-    let mut args = Vec::with_capacity(def.args.len());
-    for arg in &def.args {
-        args.push(lower_arg(id, arg)?);
-    }
-    let envelope = lower_envelope(id, &def.envelope)?;
-    let artifact = lower_artifact(id, def.artifact.as_deref(), envelope)?;
-    let call = lower_call(id, def.call.as_ref())?;
-    Ok(IrBindingSymbol {
-        id: id.to_string(),
-        core: def.core.clone(),
-        names: to_ir_names(def.names.clone()),
-        catalog: lower_catalog_link(&def.catalog),
-        args,
-        split_path_refs: def.split_path_refs.clone(),
-        return_shape: def.return_shape.clone(),
-        sync: lower_sync(id, &def.sync)?,
-        envelope,
-        artifact,
-        emit_order: def.emit_order.unwrap_or(0),
-        section: def.section.clone(),
-        doc: def.doc.clone().unwrap_or_default(),
-        doc_wasm: def.doc_wasm.clone(),
-        rust_fn_name: def
-            .rust_fn_name
-            .clone()
-            .unwrap_or_else(|| def.names.rust.clone()),
-        call,
-        verbatim_body: def.verbatim_body.clone(),
-        verbatim_body_wasm: def.verbatim_body_wasm.clone(),
-        dto_type: def.dto_type.clone(),
-        core_call: def.core_call.clone(),
-        client_call_args: def.client_call_args.clone(),
-    })
-}
-
-fn lower_arg(owner: &str, arg: &BindingArgDef) -> GenResult<IrBindingArg> {
+pub(crate) fn lower_arg(owner: &str, arg: &BindingArgDef) -> GenResult<IrBindingArg> {
     let ty = lower_boundary_type(owner, &arg.name, &arg.ty)?;
     let extract = match &arg.extract {
         Some(raw) => lower_extract_kind(owner, &arg.name, raw)?,
@@ -87,7 +55,7 @@ fn lower_arg(owner: &str, arg: &BindingArgDef) -> GenResult<IrBindingArg> {
     })
 }
 
-fn lower_artifact(
+pub(crate) fn lower_artifact(
     owner: &str,
     raw: Option<&str>,
     envelope: IrEnvelopeMode,
@@ -107,48 +75,7 @@ fn lower_artifact(
     }
 }
 
-fn lower_call(owner: &str, def: Option<&BindingCallDef>) -> GenResult<IrBindingCall> {
-    let Some(def) = def else {
-        return Ok(IrBindingCall::Wrap {
-            serialize: IrSerializeKind::ToValue,
-            args: vec![],
-        });
-    };
-    match def.kind.as_str() {
-        "verbatim" => Ok(IrBindingCall::Verbatim),
-        "wrap" => {
-            let serialize = def.serialize.as_deref().ok_or_else(|| {
-                GenError::Parse(format!("bindings.{owner}.call: wrap requires serialize"))
-            })?;
-            Ok(IrBindingCall::Wrap {
-                serialize: lower_serialize_kind(owner, serialize)?,
-                args: def.args.clone(),
-            })
-        }
-        other => Err(GenError::Parse(format!(
-            "bindings.{owner}.call: unknown kind {other:?}"
-        ))),
-    }
-}
-
-fn lower_serialize_kind(owner: &str, raw: &str) -> GenResult<IrSerializeKind> {
-    match raw {
-        "toValue" => Ok(IrSerializeKind::ToValue),
-        "valueBool" => Ok(IrSerializeKind::ValueBool),
-        "valueString" => Ok(IrSerializeKind::ValueString),
-        "valueArray" => Ok(IrSerializeKind::ValueArray),
-        "optionHelperErr" => Ok(IrSerializeKind::OptionHelperErr),
-        "resultAsValue" => Ok(IrSerializeKind::ResultAsValue),
-        "clientAwait" => Ok(IrSerializeKind::ClientAwait),
-        "clientSplit" => Ok(IrSerializeKind::ClientSplit),
-        "clientIgnore" => Ok(IrSerializeKind::ClientIgnore),
-        other => Err(GenError::Parse(format!(
-            "bindings.{owner}.call: unknown serialize {other:?}"
-        ))),
-    }
-}
-
-fn lower_extract_kind(owner: &str, arg: &str, raw: &str) -> GenResult<IrExtractKind> {
+pub(crate) fn lower_extract_kind(owner: &str, arg: &str, raw: &str) -> GenResult<IrExtractKind> {
     match raw {
         "requireString" => Ok(IrExtractKind::RequireString),
         "optionalString" => Ok(IrExtractKind::OptionalString),
@@ -172,7 +99,7 @@ fn lower_extract_kind(owner: &str, arg: &str, raw: &str) -> GenResult<IrExtractK
     }
 }
 
-fn default_extract(ty: IrBoundaryType, required: bool) -> IrExtractKind {
+pub(crate) fn default_extract(ty: IrBoundaryType, required: bool) -> IrExtractKind {
     match (ty, required) {
         (IrBoundaryType::String, true) => IrExtractKind::RequireString,
         (IrBoundaryType::String | IrBoundaryType::StringOpt, false)
@@ -184,16 +111,6 @@ fn default_extract(ty: IrBoundaryType, required: bool) -> IrExtractKind {
         (IrBoundaryType::I64, _) => IrExtractKind::RequireI64,
         (IrBoundaryType::Bool, _) => IrExtractKind::RequireBool,
         (IrBoundaryType::Value, _) => IrExtractKind::OptionalValue,
-    }
-}
-
-fn lower_catalog_link(link: &BindingCatalogLink) -> IrBindingCatalogLink {
-    match link {
-        BindingCatalogLink::None => IrBindingCatalogLink::None,
-        BindingCatalogLink::Operation { id } => IrBindingCatalogLink::Operation(id.clone()),
-        BindingCatalogLink::TopLevel { id } => IrBindingCatalogLink::TopLevel(id.clone()),
-        BindingCatalogLink::CoreHelper { id } => IrBindingCatalogLink::CoreHelper(id.clone()),
-        BindingCatalogLink::Facade { id } => IrBindingCatalogLink::Facade(id.clone()),
     }
 }
 
@@ -212,7 +129,7 @@ fn lower_boundary_type(owner: &str, arg: &str, raw: &str) -> GenResult<IrBoundar
     }
 }
 
-fn lower_sync(owner: &str, raw: &str) -> GenResult<IrSyncKind> {
+pub(crate) fn lower_sync(owner: &str, raw: &str) -> GenResult<IrSyncKind> {
     match raw {
         "sync" => Ok(IrSyncKind::Sync),
         "async" => Ok(IrSyncKind::Async),
@@ -222,7 +139,7 @@ fn lower_sync(owner: &str, raw: &str) -> GenResult<IrSyncKind> {
     }
 }
 
-fn lower_envelope(owner: &str, raw: &str) -> GenResult<IrEnvelopeMode> {
+pub(crate) fn lower_envelope(owner: &str, raw: &str) -> GenResult<IrEnvelopeMode> {
     match raw {
         "sync" => Ok(IrEnvelopeMode::Sync),
         "async" => Ok(IrEnvelopeMode::Async),
@@ -230,16 +147,6 @@ fn lower_envelope(owner: &str, raw: &str) -> GenResult<IrEnvelopeMode> {
         other => Err(GenError::Parse(format!(
             "bindings.{owner}: unknown envelope {other:?}"
         ))),
-    }
-}
-
-fn to_ir_names(names: LangNames) -> IrLangNames {
-    IrLangNames {
-        ts: names.ts,
-        py: names.py,
-        rb: names.rb,
-        go: names.go,
-        rust: names.rust,
     }
 }
 
@@ -419,130 +326,56 @@ fn envelope_str(envelope: IrEnvelopeMode) -> &'static str {
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
-    use std::collections::BTreeMap;
+    use crate::ir::IrLangNames;
 
-    fn empty_ir() -> Ir {
-        Ir {
-            types: BTreeMap::new(),
-            overlay_helpers: BTreeMap::new(),
-            overlays: BTreeMap::new(),
-            routes: vec![],
-            error_templates: crate::ir::IrErrorTemplates::default(),
-            entry_points: BTreeMap::new(),
-            binding_symbols: BTreeMap::new(),
+    fn names(id: &str) -> IrLangNames {
+        IrLangNames {
+            ts: id.into(),
+            py: id.into(),
+            rb: id.into(),
+            go: id.into(),
+            rust: id.into(),
+        }
+    }
+
+    fn symbol(id: &str) -> IrBindingSymbol {
+        IrBindingSymbol {
+            id: id.into(),
+            core: format!("solvapay_core::example::{id}"),
+            names: names(id),
+            catalog: IrBindingCatalogLink::None,
+            args: vec![],
+            split_path_refs: vec![],
+            return_shape: "value".into(),
+            sync: IrSyncKind::Sync,
+            envelope: IrEnvelopeMode::Sync,
+            artifact: IrBindingArtifact::Decisions,
+            emit_order: 0,
+            section: None,
+            doc: format!("Binding for `{id}`."),
+            doc_wasm: None,
+            rust_fn_name: format!("{id}_binding"),
+            call: IrBindingCall::Wrap {
+                serialize: IrSerializeKind::ToValue,
+                args: vec![],
+            },
+            verbatim_body: None,
+            verbatim_body_wasm: None,
+            dto_type: None,
+            core_call: Some(id.into()),
+            client_call_args: vec![],
+            ts_wrapper: None,
         }
     }
 
     #[test]
-    fn lowers_binding_symbols() {
-        let yaml = r#"
-bindings:
-  updateCustomer:
-    core: solvapay_transport::SolvaPayClient::update_customer
-    names:
-      ts: updateCustomer
-      py: update_customer
-      rb: update_customer
-      go: UpdateCustomer
-      rust: update_customer
-    catalog:
-      kind: operation
-      id: updateCustomer
-    args: []
-    splitPathRefs:
-      - customerRef
-    return: value
-    sync: async
-    envelope: async
-  buildCreateCustomerParams:
-    core: solvapay_core::customer_sync::build_create_customer_params
-    names:
-      ts: buildCreateCustomerParams
-      py: build_create_customer_params
-      rb: build_create_customer_params
-      go: BuildCreateCustomerParams
-      rust: build_create_customer_params
-    catalog:
-      kind: none
-    args:
-      - name: nowMs
-        type: i64
-        required: true
-        hostInjected: true
-    splitPathRefs: []
-    return: value
-    sync: sync
-    envelope: sync
-"#;
-        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
-        let mut ir = empty_ir();
-        lower_bindings(&mut ir, &manifest).unwrap();
-        assert_eq!(ir.binding_symbols.len(), 2);
-        let update = ir.binding_symbols.get("updateCustomer").unwrap();
-        assert_eq!(update.split_path_refs, vec!["customerRef".to_string()]);
-        assert_eq!(update.sync, IrSyncKind::Async);
-        assert_eq!(update.envelope, IrEnvelopeMode::Async);
-        assert!(matches!(
-            &update.catalog,
-            IrBindingCatalogLink::Operation(id) if id == "updateCustomer"
-        ));
-        let build = ir.binding_symbols.get("buildCreateCustomerParams").unwrap();
-        assert!(build.args[0].host_injected);
-        assert_eq!(build.args[0].ty, IrBoundaryType::I64);
-    }
-
-    #[test]
-    fn binding_symbols_idempotent_across_two_lowers() {
-        let yaml = r#"
-bindings:
-  classifyCustomerRef:
-    core: solvapay_core::customer_sync::classify_customer_ref
-    names:
-      ts: classifyCustomerRef
-      py: classify_customer_ref
-      rb: classify_customer_ref
-      go: ClassifyCustomerRef
-      rust: classify_customer_ref
-    catalog:
-      kind: none
-    args:
-      - name: customerRef
-        type: string
-        required: true
-    splitPathRefs: []
-    return: value
-    sync: sync
-    envelope: sync
-  verifyWebhook:
-    core: solvapay_core::webhook::verify_webhook
-    names:
-      ts: verifyWebhook
-      py: verify_webhook
-      rb: verify_webhook
-      go: VerifyWebhook
-      rust: verify_webhook
-    catalog:
-      kind: topLevel
-      id: verifyWebhook
-    args:
-      - name: body
-        type: string
-        required: true
-      - name: nowUnixSecs
-        type: i64
-        required: true
-        hostInjected: true
-    splitPathRefs: []
-    return: value
-    sync: sync
-    envelope: webhookThrow
-"#;
-        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
-        let mut ir_a = empty_ir();
-        lower_bindings(&mut ir_a, &manifest).unwrap();
-        let mut ir_b = empty_ir();
-        lower_bindings(&mut ir_b, &manifest).unwrap();
-        assert_eq!(ir_a.binding_symbols, ir_b.binding_symbols);
-        assert_eq!(dump_binding_symbols(&ir_a), dump_binding_symbols(&ir_b));
+    fn dump_is_byte_idempotent() {
+        let mut ir = Ir::default();
+        ir.binding_symbols
+            .insert("classifyCustomerRef".into(), symbol("classifyCustomerRef"));
+        let first = dump_binding_symbols(&ir);
+        let second = dump_binding_symbols(&ir);
+        assert_eq!(first, second);
+        assert!(first.contains("\"classifyCustomerRef\""));
     }
 }

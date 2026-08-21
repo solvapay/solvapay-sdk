@@ -780,6 +780,10 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
             binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         };
         let emitted = emit_crate(&ir).expect("emit");
         assert!(emitted.schemas_rs.contains("#[serde(untagged)]"));
@@ -834,6 +838,10 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
             binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         };
         let lib = emit_lib(&ir);
         assert!(lib.contains("crate root → overlays"));

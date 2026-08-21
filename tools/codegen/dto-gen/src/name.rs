@@ -49,6 +49,34 @@ pub fn to_snake_case(input: &str) -> String {
     out.trim_matches('_').to_string()
 }
 
+/// Converts `snake_case` / `PascalCase` to `camelCase`.
+#[must_use]
+pub fn to_camel_case(input: &str) -> String {
+    let pascal = rust_type_name(input);
+    let mut chars = pascal.chars();
+    match chars.next() {
+        Some(first) => first.to_ascii_lowercase().to_string() + chars.as_str(),
+        None => String::new(),
+    }
+}
+
+/// True when `id` is `SCREAMING_SNAKE` (letters, digits, underscores).
+#[must_use]
+pub fn is_screaming_snake(id: &str) -> bool {
+    let mut has_letter = false;
+    for ch in id.chars() {
+        if ch.is_ascii_alphabetic() {
+            if !ch.is_ascii_uppercase() {
+                return false;
+            }
+            has_letter = true;
+        } else if ch != '_' && !ch.is_ascii_digit() {
+            return false;
+        }
+    }
+    has_letter
+}
+
 /// Converts an arbitrary wire label to a safe snake_case Rust field/ident.
 pub fn rust_field_name(wire: &str) -> String {
     let mut snake = to_snake_case(wire);
@@ -132,5 +160,20 @@ mod tests {
     fn type_name_pascal() {
         assert_eq!(rust_type_name("customer_ref"), "CustomerRef");
         assert_eq!(rust_type_name("one-time"), "OneTime");
+    }
+
+    #[test]
+    fn camel_case_from_snake() {
+        assert_eq!(
+            to_camel_case("classify_customer_ref"),
+            "classifyCustomerRef"
+        );
+        assert_eq!(to_camel_case("MCP_TOOL_NAMES"), "mcpToolNames");
+    }
+
+    #[test]
+    fn screaming_snake_detection() {
+        assert!(is_screaming_snake("MCP_TOOL_NAMES"));
+        assert!(!is_screaming_snake("classifyCustomerRef"));
     }
 }

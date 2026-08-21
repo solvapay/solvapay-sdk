@@ -1068,6 +1068,12 @@ fn success(data: BusinessDetails) -> ValidateBusinessDetailsResult {
 ///
 /// [`ValidateBusinessDetailsResult::Success`] with normalized [`BusinessDetails`] on valid input;
 /// [`ValidateBusinessDetailsResult::Failure`] with field-level issues when validation fails.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 0
+)]
 pub fn validate_business_details(input: &BusinessDetailsInput) -> ValidateBusinessDetailsResult {
     // Zod `.max(100)` runs before `superRefine` — byte-exact default message.
     if let Some(name) = input.customer_name.as_deref() {
@@ -1186,6 +1192,12 @@ fn trimmed_nonempty(value: Option<&str>) -> Option<String> {
 ///
 /// [`Some`] [`TaxIdType`] for supported countries (`eu_vat`, `gb_vat`, or `us_ein`);
 /// [`None`] when `country` is not in the catalog.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 1
+)]
 pub fn derive_tax_id_type(country: &str) -> Option<TaxIdType> {
     find_country(country).map(|c| c.tax_id_type)
 }
@@ -1200,6 +1212,12 @@ pub fn derive_tax_id_type(country: &str) -> Option<TaxIdType> {
 ///
 /// [`Some`] static example string that passes the country's matcher;
 /// [`None`] when `country` is unsupported.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 3
+)]
 pub fn get_tax_id_example(country: &str) -> Option<&'static str> {
     find_country(country).map(|c| c.example)
 }
@@ -1214,6 +1232,12 @@ pub fn get_tax_id_example(country: &str) -> Option<&'static str> {
 ///
 /// [`Some`] UI label (`"VAT ID"`, `"VAT Number"`, or `"EIN (Employer Identification Number)"`);
 /// [`None`] when `country` is unsupported or has no derivable tax-ID type.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 4
+)]
 pub fn get_tax_id_field_label(country: &str) -> Option<&'static str> {
     let tax_type = derive_tax_id_type(country)?;
     Some(match tax_type {
@@ -1234,6 +1258,12 @@ pub fn get_tax_id_field_label(country: &str) -> Option<&'static str> {
 ///
 /// [`Some`] formatted helper string with the country's example tax ID;
 /// [`None`] when `country` is unsupported.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 5
+)]
 pub fn get_tax_id_helper_text(country: &str) -> Option<String> {
     let example = get_tax_id_example(country)?;
     let tax_type = derive_tax_id_type(country)?;
@@ -1255,6 +1285,12 @@ pub fn get_tax_id_helper_text(country: &str) -> Option<String> {
 ///
 /// A [`Vec`] of [`BusinessCountryOption`] for every supported business country,
 /// sorted lexicographically by English `label` (ASCII `localeCompare` parity).
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "none",
+    section = "business-details",
+    emit_order = 6
+)]
 pub fn get_business_country_options() -> Vec<BusinessCountryOption> {
     let mut options: Vec<BusinessCountryOption> = COUNTRIES
         .iter()
@@ -1287,6 +1323,12 @@ pub const TAX_EXCLUSIVE_CURRENCIES: [&str; 2] = ["USD", "CAD"];
 ///
 /// [`Some`] `"inclusive"` or `"exclusive"` when `behavior` is recognized;
 /// [`None`] when `behavior` is not one of the supported values.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "business-details",
+    emit_order = 2
+)]
 pub fn resolve_tax_behavior(behavior: &str, currency: &str) -> Option<&'static str> {
     match behavior {
         "inclusive" => Some("inclusive"),

@@ -207,9 +207,10 @@ High-level groups:
 | -------------------- | ------------------------------------------------------------------------------- |
 | Rust DTOs            | `core/solvapay-dto/src/{schemas,routes,overlays,error_templates,lib}.rs` |
 | TS overlays + client | `packages/server/src/types/{overlays,client}.generated.d.ts`                    |
-| TS marshalling       | `packages/server/src/{native,wasm}.ts`                                          |
+| TS marshalling       | `packages/server/src/{native,wasm}.ts`, `packages/core/src/native-{dispatch,core,helpers}.ts`, `packages/server/src/native-decisions.ts` |
 | TS parity            | `packages/server/src/__generated__/signature-parity.generated.test.ts`          |
 | Binding dump         | `contract/manifest/binding-symbols.snapshot.json`                               |
+| Boundary-type dump   | `contract/manifest/boundary-types.snapshot.json`                                |
 | Node / Wasm shims    | `sdks/{node-native,wasm}/src/{args,decisions,payload_builders,*_client}.rs`   |
 | Python               | PyO3 shims, `_native.py`, `__init__.pyi`, parity test                           |
 | Ruby                 | Magnus shims, `_native.rb`, `client.rb`, RBS, parity test                       |

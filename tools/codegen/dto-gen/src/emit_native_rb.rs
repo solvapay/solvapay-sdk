@@ -88,6 +88,10 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
             binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         }
     }
 
@@ -123,6 +127,7 @@ mod tests {
             dto_type: None,
             core_call: None,
             client_call_args: vec![],
+            ts_wrapper: None,
         }
     }
 

@@ -41,6 +41,8 @@ pub mod usage;
 #[cfg(feature = "webhook-verify")]
 pub mod webhook;
 
+pub use solvapay_export::solvapay_export;
+
 pub use activation::validate_activate_plan_params;
 #[cfg(feature = "client-full")]
 pub use auth_resolution::{resolve_authenticated_user, AuthResolutionInput, AuthenticatedUser};

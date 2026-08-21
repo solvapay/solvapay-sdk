@@ -359,7 +359,9 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_norway",
+ "syn",
  "thiserror",
+ "walkdir",
 ]
 
 [[package]]
@@ -1707,6 +1709,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "solvapay-dto",
+ "solvapay-export",
  "subtle",
 ]
 
@@ -1720,6 +1723,10 @@ dependencies = [
  "serde_json",
  "walkdir",
 ]
+
+[[package]]
+name = "solvapay-export"
+version = "0.1.0"
 
 [[package]]
 name = "solvapay-go-wasm"

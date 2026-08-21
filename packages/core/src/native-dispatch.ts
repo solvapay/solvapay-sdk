@@ -1,4 +1,8 @@
 /**
+ * @generated — do not edit. Regenerate with: pnpm gen
+ */
+
+/**
  * Shared install-gated sync dispatch for `@solvapay/core` (Step 52).
  *
  * Node (`@solvapay/server`) and vitest setup call {@link installNativeCoreApi}.

@@ -27,6 +27,10 @@ fn lower_ir() -> Ir {
         error_templates: IrErrorTemplates::default(),
         entry_points: Default::default(),
         binding_symbols: Default::default(),
+        core_types: Default::default(),
+        core_types_ts: Default::default(),
+        core_fns: Default::default(),
+        transport_fns: Default::default(),
     };
     lower_catalog(&mut ir, &manifest).expect("lower catalog");
     ir

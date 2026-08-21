@@ -5,7 +5,7 @@
 use std::fs;
 
 use dto_gen::ir::{Ir, IrErrorTemplates, IrRubyReceiver};
-use dto_gen::{check_doc_coverage, emit_client_rb, lower_bindings, lower_catalog, Manifest};
+use dto_gen::{check_doc_coverage, emit_client_rb, lower_catalog, Manifest};
 
 fn paths() -> repo_paths::RepoPaths {
     repo_paths::load().expect("repo-paths")
@@ -23,10 +23,31 @@ fn ir() -> Ir {
         error_templates: IrErrorTemplates::default(),
         entry_points: Default::default(),
         binding_symbols: Default::default(),
+        core_types: Default::default(),
+        core_types_ts: Default::default(),
+        core_fns: Default::default(),
+        transport_fns: Default::default(),
     };
     lower_catalog(&mut ir, &manifest).expect("lower catalog");
     check_doc_coverage(&ir).expect("IR doc coverage");
-    lower_bindings(&mut ir, &manifest).expect("lower bindings");
+    let residue = dto_gen::load_binding_residue(
+        &paths()
+            .contract_input("bindingResidue")
+            .expect("bindingResidue"),
+    )
+    .expect("residue");
+    dto_gen::lower_all_bindings(
+        &mut ir,
+        &manifest,
+        &paths().contract_input("coreSrc").expect("coreSrc"),
+        &residue,
+        Some(
+            &paths()
+                .contract_input("transportSrc")
+                .expect("transportSrc"),
+        ),
+    )
+    .expect("lower bindings");
     ir
 }
 

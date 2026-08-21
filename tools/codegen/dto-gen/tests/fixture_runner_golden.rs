@@ -6,8 +6,7 @@
 use std::fs;
 
 use dto_gen::emit_fixture_runner_rs::emit_fixture_runner;
-use dto_gen::ir::{Ir, IrBindingArtifact, IrBindingCall, IrErrorTemplates};
-use dto_gen::lower_bindings::lower_bindings;
+use dto_gen::ir::{Ir, IrBindingArtifact, IrBindingCall};
 use dto_gen::lower_catalog::lower_catalog;
 use dto_gen::manifest::Manifest;
 
@@ -19,23 +18,36 @@ fn lower_ir() -> Ir {
     let manifest_path = paths().contract_input("sdkManifest").expect("sdkManifest");
     let raw = fs::read_to_string(&manifest_path).expect("read manifest");
     let manifest: Manifest = serde_norway::from_str(&raw).expect("parse manifest");
-    let mut ir = Ir {
-        types: Default::default(),
-        overlay_helpers: Default::default(),
-        overlays: Default::default(),
-        routes: vec![],
-        error_templates: IrErrorTemplates::default(),
-        entry_points: Default::default(),
-        binding_symbols: Default::default(),
-    };
+    let mut ir = Ir::default();
     lower_catalog(&mut ir, &manifest).expect("lower catalog");
-    lower_bindings(&mut ir, &manifest).expect("lower bindings");
+    let residue = dto_gen::load_binding_residue(
+        &paths()
+            .contract_input("bindingResidue")
+            .expect("bindingResidue"),
+    )
+    .expect("residue");
+    dto_gen::lower_all_bindings(
+        &mut ir,
+        &manifest,
+        &paths().contract_input("coreSrc").expect("coreSrc"),
+        &residue,
+        Some(
+            &paths()
+                .contract_input("transportSrc")
+                .expect("transportSrc"),
+        ),
+    )
+    .expect("lower bindings");
     ir
 }
 
 fn committed_register_ids() -> Vec<String> {
-    let src = fs::read_to_string(paths().generated_path("fixtureRunner").expect("fixtureRunner"))
-        .expect("registry.rs");
+    let src = fs::read_to_string(
+        paths()
+            .generated_path("fixtureRunner")
+            .expect("fixtureRunner"),
+    )
+    .expect("registry.rs");
     let mut ids = Vec::new();
     let mut rest = src.as_str();
     while let Some(idx) = rest.find("registry.register(") {

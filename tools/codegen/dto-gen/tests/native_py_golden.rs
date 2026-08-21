@@ -8,7 +8,6 @@ use std::path::Path;
 
 use dto_gen::emit_native_py;
 use dto_gen::ir::{Ir, IrErrorTemplates};
-use dto_gen::lower_bindings::lower_bindings;
 use dto_gen::manifest::Manifest;
 
 fn paths() -> repo_paths::RepoPaths {
@@ -27,8 +26,29 @@ fn lower_ir() -> Ir {
         error_templates: IrErrorTemplates::default(),
         entry_points: Default::default(),
         binding_symbols: Default::default(),
+        core_types: Default::default(),
+        core_types_ts: Default::default(),
+        core_fns: Default::default(),
+        transport_fns: Default::default(),
     };
-    lower_bindings(&mut ir, &manifest).expect("lower bindings");
+    let residue = dto_gen::load_binding_residue(
+        &paths()
+            .contract_input("bindingResidue")
+            .expect("bindingResidue"),
+    )
+    .expect("residue");
+    dto_gen::lower_all_bindings(
+        &mut ir,
+        &manifest,
+        &paths().contract_input("coreSrc").expect("coreSrc"),
+        &residue,
+        Some(
+            &paths()
+                .contract_input("transportSrc")
+                .expect("transportSrc"),
+        ),
+    )
+    .expect("lower bindings");
     ir
 }
 

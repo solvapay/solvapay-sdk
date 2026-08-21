@@ -4,7 +4,7 @@ use std::env;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use dto_gen::{generate_from_snapshot, GenError};
+use dto_gen::{generate_from_snapshot, GenError, GenOutputs};
 
 /// CLI entry point.
 ///
@@ -54,6 +54,15 @@ fn run() -> Result<(), GenError> {
     let mut go_parity_out: Option<PathBuf> = None;
     let mut c_bindings_out: Option<PathBuf> = None;
     let mut fixture_runner_out: Option<PathBuf> = None;
+    let mut core_src: Option<PathBuf> = None;
+    let mut binding_residue: Option<PathBuf> = None;
+    let mut transport_src: Option<PathBuf> = None;
+    let mut dump_boundary_types: Option<PathBuf> = None;
+    let mut core_types_ts_out: Option<PathBuf> = None;
+    let mut core_dispatch_ts_out: Option<PathBuf> = None;
+    let mut core_native_ts_out: Option<PathBuf> = None;
+    let mut core_helpers_ts_out: Option<PathBuf> = None;
+    let mut server_decisions_ts_out: Option<PathBuf> = None;
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -138,6 +147,33 @@ fn run() -> Result<(), GenError> {
             "--fixture-runner-out" => {
                 fixture_runner_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--core-src" => {
+                core_src = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--binding-residue" => {
+                binding_residue = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--transport-src" => {
+                transport_src = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--dump-boundary-types" => {
+                dump_boundary_types = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--core-types-ts-out" => {
+                core_types_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--core-dispatch-ts-out" => {
+                core_dispatch_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--core-native-ts-out" => {
+                core_native_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--core-helpers-ts-out" => {
+                core_helpers_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--server-decisions-ts-out" => {
+                server_decisions_ts_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "-h" | "--help" => return Err(GenError::Usage),
             _ => return Err(GenError::Usage),
         }
@@ -148,29 +184,40 @@ fn run() -> Result<(), GenError> {
         &snapshot,
         &out,
         manifest.as_deref(),
-        ts_out.as_deref(),
-        ts_client_out.as_deref(),
-        ts_parity_out.as_deref(),
-        dump_bindings.as_deref(),
-        node_bindings_out.as_deref(),
-        wasm_bindings_out.as_deref(),
-        python_bindings_out.as_deref(),
-        ruby_bindings_out.as_deref(),
-        go_bindings_out.as_deref(),
-        native_ts_out.as_deref(),
-        wasm_ts_out.as_deref(),
-        native_py_out.as_deref(),
-        py_stub_out.as_deref(),
-        py_parity_out.as_deref(),
-        native_rb_out.as_deref(),
-        rb_client_out.as_deref(),
-        rb_rbs_out.as_deref(),
-        rb_parity_out.as_deref(),
-        rs_client_out.as_deref(),
-        rs_parity_out.as_deref(),
-        go_client_out.as_deref(),
-        go_parity_out.as_deref(),
-        c_bindings_out.as_deref(),
-        fixture_runner_out.as_deref(),
+        core_src.as_deref(),
+        binding_residue.as_deref(),
+        transport_src.as_deref(),
+        &GenOutputs {
+            ts_out: ts_out.as_deref(),
+            ts_client_out: ts_client_out.as_deref(),
+            ts_parity_out: ts_parity_out.as_deref(),
+            dump_bindings: dump_bindings.as_deref(),
+            dump_boundary_types: dump_boundary_types.as_deref(),
+            core_types_ts_out: core_types_ts_out.as_deref(),
+            core_dispatch_ts_out: core_dispatch_ts_out.as_deref(),
+            core_native_ts_out: core_native_ts_out.as_deref(),
+            core_helpers_ts_out: core_helpers_ts_out.as_deref(),
+            server_decisions_ts_out: server_decisions_ts_out.as_deref(),
+            node_bindings_out: node_bindings_out.as_deref(),
+            wasm_bindings_out: wasm_bindings_out.as_deref(),
+            python_bindings_out: python_bindings_out.as_deref(),
+            ruby_bindings_out: ruby_bindings_out.as_deref(),
+            go_bindings_out: go_bindings_out.as_deref(),
+            native_ts_out: native_ts_out.as_deref(),
+            wasm_ts_out: wasm_ts_out.as_deref(),
+            native_py_out: native_py_out.as_deref(),
+            py_stub_out: py_stub_out.as_deref(),
+            py_parity_out: py_parity_out.as_deref(),
+            native_rb_out: native_rb_out.as_deref(),
+            rb_client_out: rb_client_out.as_deref(),
+            rb_rbs_out: rb_rbs_out.as_deref(),
+            rb_parity_out: rb_parity_out.as_deref(),
+            rs_client_out: rs_client_out.as_deref(),
+            rs_parity_out: rs_parity_out.as_deref(),
+            go_client_out: go_client_out.as_deref(),
+            go_parity_out: go_parity_out.as_deref(),
+            c_bindings_out: c_bindings_out.as_deref(),
+            fixture_runner_out: fixture_runner_out.as_deref(),
+        },
     )
 }

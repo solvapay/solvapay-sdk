@@ -643,11 +643,7 @@ fn strip_envelope_await<'a>(inner: &'a str, id: &str) -> GenResult<&'a str> {
     inner
         .strip_suffix(".await")
         .map(str::trim_end)
-        .ok_or_else(|| {
-            GenError::Parse(format!(
-                "{id} expected client_call_body to end in .await"
-            ))
-        })
+        .ok_or_else(|| GenError::Parse(format!("{id} expected client_call_body to end in .await")))
 }
 
 /// Emits the C ABI `dispatch.rs` match table (full Groups A–C surface).
@@ -1171,12 +1167,23 @@ fn mcp_symbol_ids(chrome: &Value) -> GenResult<Vec<String>> {
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
-    use crate::lower_bindings::lower_bindings;
-    use crate::manifest::Manifest;
+    use crate::ir::{
+        IrBindingCall, IrBindingCatalogLink, IrEnvelopeMode, IrLangNames, IrSerializeKind,
+        IrSyncKind,
+    };
     use std::collections::BTreeMap;
 
-    fn ir_from_yaml(yaml: &str) -> Ir {
-        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+    fn names(ts: &str, rust: &str) -> IrLangNames {
+        IrLangNames {
+            ts: ts.into(),
+            py: rust.into(),
+            rb: rust.into(),
+            go: rust.into(),
+            rust: rust.into(),
+        }
+    }
+
+    fn ir_with(symbols: Vec<IrBindingSymbol>) -> Ir {
         let mut ir = Ir {
             types: BTreeMap::new(),
             overlay_helpers: BTreeMap::new(),
@@ -1185,9 +1192,53 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
             binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         };
-        lower_bindings(&mut ir, &manifest).unwrap();
+        for symbol in symbols {
+            ir.binding_symbols.insert(symbol.id.clone(), symbol);
+        }
         ir
+    }
+
+    fn client_op(
+        id: &str,
+        rust: &str,
+        emit_order: u32,
+        serialize: IrSerializeKind,
+        split: &[&str],
+        dto: Option<&str>,
+        client_call_args: &[&str],
+    ) -> IrBindingSymbol {
+        IrBindingSymbol {
+            id: id.into(),
+            core: format!("solvapay_transport::SolvaPayClient::{rust}"),
+            names: names(id, rust),
+            catalog: IrBindingCatalogLink::Operation(id.into()),
+            args: vec![],
+            split_path_refs: split.iter().map(|s| (*s).to_string()).collect(),
+            return_shape: "value".into(),
+            sync: IrSyncKind::Async,
+            envelope: IrEnvelopeMode::Async,
+            artifact: IrBindingArtifact::Client,
+            emit_order,
+            section: Some("Group A".into()),
+            doc: format!("`{id}`"),
+            doc_wasm: None,
+            rust_fn_name: rust.into(),
+            call: IrBindingCall::Wrap {
+                serialize,
+                args: vec![],
+            },
+            verbatim_body: None,
+            verbatim_body_wasm: None,
+            dto_type: dto.map(ToOwned::to_owned),
+            core_call: Some(rust.into()),
+            client_call_args: client_call_args.iter().map(|s| (*s).to_string()).collect(),
+            ts_wrapper: None,
+        }
     }
 
     #[test]
@@ -1270,35 +1321,30 @@ mod tests {
 
     #[test]
     fn emits_verbatim_body_for_retry() {
-        let yaml = r#"
-bindings:
-  retryNextDelayMs:
-    core: solvapay_core::retry::retry_next_delay_ms
-    names:
-      ts: retryNextDelayMs
-      py: retry_next_delay_ms
-      rb: retry_next_delay_ms
-      go: RetryNextDelayMs
-      rust: retry_next_delay_ms
-    catalog:
-      kind: none
-    args: []
-    splitPathRefs: []
-    return: value
-    sync: sync
-    envelope: sync
-    artifact: decisions
-    emitOrder: 0
-    section: retry
-    doc: Binding for `retryNextDelayMs`.
-    rustFnName: retry_next_delay_ms
-    call:
-      kind: verbatim
-    verbatimBody: |-
-      let x = 1;
-      Ok(Value::from(x))
-"#;
-        let ir = ir_from_yaml(yaml);
+        let ir = ir_with(vec![IrBindingSymbol {
+            id: "retryNextDelayMs".into(),
+            core: "solvapay_core::retry::retry_next_delay_ms".into(),
+            names: names("retryNextDelayMs", "retry_next_delay_ms"),
+            catalog: IrBindingCatalogLink::None,
+            args: vec![],
+            split_path_refs: vec![],
+            return_shape: "value".into(),
+            sync: IrSyncKind::Sync,
+            envelope: IrEnvelopeMode::Sync,
+            artifact: IrBindingArtifact::Decisions,
+            emit_order: 0,
+            section: Some("retry".into()),
+            doc: "Binding for `retryNextDelayMs`.".into(),
+            doc_wasm: None,
+            rust_fn_name: "retry_next_delay_ms".into(),
+            call: IrBindingCall::Verbatim,
+            verbatim_body: Some("let x = 1;\nOk(Value::from(x))".into()),
+            verbatim_body_wasm: None,
+            dto_type: None,
+            core_call: None,
+            client_call_args: vec![],
+            ts_wrapper: None,
+        }]);
         let sym = ir.binding_symbols.get("retryNextDelayMs").unwrap();
         let out = emit_sync_fn(sym, Toolchain::Node);
         assert!(out.contains("#[napi(js_name = \"retryNextDelayMs\")]"));
@@ -1308,66 +1354,26 @@ bindings:
 
     #[test]
     fn emits_client_await_and_split() {
-        let yaml = r#"
-bindings:
-  createCustomer:
-    core: solvapay_transport::SolvaPayClient::create_customer
-    names:
-      ts: createCustomer
-      py: create_customer
-      rb: create_customer
-      go: CreateCustomer
-      rust: create_customer
-    catalog:
-      kind: operation
-      id: createCustomer
-    args: []
-    splitPathRefs: []
-    return: value
-    sync: async
-    envelope: async
-    artifact: client
-    emitOrder: 0
-    section: Group A
-    doc: "`POST /v1/sdk/customers`"
-    rustFnName: create_customer
-    dtoType: CreateCustomerRequest
-    coreCall: create_customer
-    call:
-      kind: wrap
-      serialize: clientAwait
-  updateCustomer:
-    core: solvapay_transport::SolvaPayClient::update_customer
-    names:
-      ts: updateCustomer
-      py: update_customer
-      rb: update_customer
-      go: UpdateCustomer
-      rust: update_customer
-    catalog:
-      kind: operation
-      id: updateCustomer
-    args: []
-    splitPathRefs:
-      - customerRef
-    return: value
-    sync: async
-    envelope: async
-    artifact: client
-    emitOrder: 1
-    section: Group A
-    doc: "`PATCH /v1/sdk/customers/{customerRef}`"
-    rustFnName: update_customer
-    dtoType: UpdateCustomerParams
-    coreCall: update_customer
-    clientCallArgs:
-      - "&refs[0]"
-      - params
-    call:
-      kind: wrap
-      serialize: clientSplit
-"#;
-        let ir = ir_from_yaml(yaml);
+        let ir = ir_with(vec![
+            client_op(
+                "createCustomer",
+                "create_customer",
+                0,
+                IrSerializeKind::ClientAwait,
+                &[],
+                Some("CreateCustomerRequest"),
+                &[],
+            ),
+            client_op(
+                "updateCustomer",
+                "update_customer",
+                1,
+                IrSerializeKind::ClientSplit,
+                &["customerRef"],
+                Some("UpdateCustomerParams"),
+                &["&refs[0]", "params"],
+            ),
+        ]);
         let create = ir.binding_symbols.get("createCustomer").unwrap();
         let node = emit_client_method(create, Toolchain::Node).unwrap();
         assert!(node.contains("let client = Arc::clone(&self.client);"));
@@ -1408,11 +1414,7 @@ bindings:
         assert!(go_split.contains("pollster::block_on(run_envelope"));
 
         let c_emitted = emit_bindings(&ir, Toolchain::C).unwrap();
-        assert!(
-            c_emitted
-                .client_rs
-                .contains("\"createCustomer\" =>")
-        );
+        assert!(c_emitted.client_rs.contains("\"createCustomer\" =>"));
         assert!(c_emitted.client_rs.contains("runtime::runtime().block_on"));
         assert!(c_emitted
             .client_rs
@@ -1435,61 +1437,26 @@ bindings:
 
     #[test]
     fn emits_full_ruby_client_and_registration() {
-        let yaml = r#"
-bindings:
-  getMerchant:
-    core: solvapay_transport::SolvaPayClient::get_merchant
-    names:
-      ts: getMerchant
-      py: get_merchant
-      rb: get_merchant
-      go: GetMerchant
-      rust: get_merchant
-    catalog:
-      kind: operation
-      id: getMerchant
-    args: []
-    splitPathRefs: []
-    return: value
-    sync: async
-    envelope: async
-    artifact: client
-    emitOrder: 0
-    section: Group A
-    doc: Merchant profile (`args_json` ignored; pass `"{}"`).
-    rustFnName: get_merchant
-    call:
-      kind: wrap
-      serialize: clientIgnore
-    coreCall: get_merchant
-  createCustomer:
-    core: solvapay_transport::SolvaPayClient::create_customer
-    names:
-      ts: createCustomer
-      py: create_customer
-      rb: create_customer
-      go: CreateCustomer
-      rust: create_customer
-    catalog:
-      kind: operation
-      id: createCustomer
-    args: []
-    splitPathRefs: []
-    return: value
-    sync: async
-    envelope: async
-    artifact: client
-    emitOrder: 1
-    section: Group A
-    doc: "`POST /v1/sdk/customers`"
-    rustFnName: create_customer
-    dtoType: CreateCustomerRequest
-    coreCall: create_customer
-    call:
-      kind: wrap
-      serialize: clientAwait
-"#;
-        let ir = ir_from_yaml(yaml);
+        let ir = ir_with(vec![
+            client_op(
+                "getMerchant",
+                "get_merchant",
+                0,
+                IrSerializeKind::ClientIgnore,
+                &[],
+                None,
+                &[],
+            ),
+            client_op(
+                "createCustomer",
+                "create_customer",
+                1,
+                IrSerializeKind::ClientAwait,
+                &[],
+                Some("CreateCustomerRequest"),
+                &[],
+            ),
+        ]);
         let emitted = emit_bindings(&ir, Toolchain::Ruby).unwrap();
         assert!(emitted
             .client_rs

@@ -31,6 +31,12 @@ pub struct CreditsToDisplayInput {
 /// # Returns
 ///
 /// `true` when `currency` is in the zero-decimal set (e.g. `"JPY"`), otherwise `false`.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "credit-display",
+    emit_order = 8
+)]
 pub fn is_zero_decimal_currency(currency: &str) -> bool {
     ZERO_DECIMAL
         .iter()
@@ -46,6 +52,12 @@ pub fn is_zero_decimal_currency(currency: &str) -> bool {
 /// # Returns
 ///
 /// `1` for zero-decimal currencies, otherwise `100`.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "credit-display",
+    emit_order = 9
+)]
 pub fn minor_units_per_major(currency: &str) -> u32 {
     if is_zero_decimal_currency(currency) {
         1
@@ -65,6 +77,12 @@ pub fn minor_units_per_major(currency: &str) -> u32 {
 /// # Returns
 ///
 /// Rounded minor-unit amount, or `None` when `credits_per_minor_unit <= 0`.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "credit-display",
+    emit_order = 7
+)]
 pub fn credits_to_display_minor_units(input: &CreditsToDisplayInput) -> Option<i64> {
     if input.credits_per_minor_unit <= 0.0 {
         return None;

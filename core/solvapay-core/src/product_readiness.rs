@@ -47,6 +47,12 @@ pub struct ProductReadinessResult {
 }
 
 /// Whether a resolved product can be sold end-to-end.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "product-readiness",
+    emit_order = 41
+)]
 pub fn evaluate_product_readiness(product: &ProductReadinessInput) -> ProductReadinessResult {
     let plans = product.plans.as_deref().unwrap_or(&[]);
     let active_plans = plans.iter().filter(|plan| plan.is_active).count() as u32;
@@ -78,6 +84,12 @@ pub fn evaluate_product_readiness(product: &ProductReadinessInput) -> ProductRea
 /// Returns [`SdkError::Api`] when the ref is empty, the scaffolder
 /// placeholder, or not `prd_`-shaped. Messages name `context`.
 #[allow(clippy::result_large_err)]
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "product-readiness",
+    emit_order = 42
+)]
 pub fn assert_valid_product_ref(product_ref: &str, context: &str) -> Result<(), SdkError> {
     let trimmed = product_ref.trim();
     if trimmed.is_empty() {

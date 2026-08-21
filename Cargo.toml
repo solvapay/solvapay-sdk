@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "core/solvapay-core",
   "core/solvapay-dto",
+  "core/solvapay-export",
   "core/solvapay-transport",
   "sdks/rust",
   "sdks/node-native",
@@ -41,6 +42,8 @@ sha2 = "0.11.0"
 subtle = "2.6.1"
 thiserror = "2.0.18"
 walkdir = "2.5.0"
+# dto-gen Phase 2: parse solvapay-core items (already in the lockfile via wasm-bindgen).
+syn = { version = "2.0.119", features = ["full"] }
 # Native HTTP (step 19): rustls only — no OpenSSL / default-tls.
 reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls"] }
 # Dev-only: mock-server round-trips + async test runtime (not in production graphs).

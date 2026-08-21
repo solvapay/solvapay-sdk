@@ -382,24 +382,6 @@ export const BINDING_EXTRACT_KINDS = [
 ] as const
 export type BindingExtractKind = (typeof BINDING_EXTRACT_KINDS)[number]
 
-/** Envelope serialize forms for structured shim bodies (§5.7 / step 39G-b). */
-export const BINDING_SERIALIZE_KINDS = [
-  'toValue',
-  'valueBool',
-  'valueString',
-  'valueArray',
-  'optionHelperErr',
-  'resultAsValue',
-  'clientAwait',
-  'clientSplit',
-  'clientIgnore',
-] as const
-export type BindingSerializeKind = (typeof BINDING_SERIALIZE_KINDS)[number]
-
-/** Generated shim files a binding symbol can land in (§5.7 / step 39G-b). */
-export const BINDING_ARTIFACTS = ['decisions', 'payloadBuilders', 'client', 'webhook'] as const
-export type BindingArtifact = (typeof BINDING_ARTIFACTS)[number]
-
 const BindingArgSchema = z.object({
   name: z.string().min(1),
   type: BoundaryTypeRefSchema,
@@ -416,65 +398,50 @@ const BindingArgSchema = z.object({
   local: z.string().min(1).optional(),
 })
 
-const BindingCallSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('verbatim') }),
-  z.object({
-    kind: z.literal('wrap'),
-    serialize: z.enum(BINDING_SERIALIZE_KINDS),
-    args: z.array(z.string()).default([]),
-  }),
-])
+const BindingTsWrapperSchema = z
+  .object({
+    exportName: z.string().min(1).optional(),
+    generics: z.string().min(1).optional(),
+    returnType: z.string().min(1).optional(),
+    paramTypes: z.record(z.string(), z.string()).default({}),
+    optionalStyle: z.enum(['nullish', 'optional', 'optionalNull', 'undefined']).optional(),
+    paramStyle: z
+      .record(z.string(), z.enum(['nullish', 'optional', 'optionalNull', 'undefined']))
+      .default({}),
+    passThrough: z.boolean().default(false),
+    objectParam: z.boolean().default(false),
+    postProcess: z.enum(['nullToUndefined']).optional(),
+    dispatchArgs: z.string().optional(),
+    doc: z.string().optional(),
+    serverComment: z.string().optional(),
+    signature: z.string().optional(),
+  })
+  .optional()
 
-const BindingCatalogLinkSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('none') }),
-  z.object({ kind: z.literal('operation'), id: z.string().min(1) }),
-  z.object({ kind: z.literal('topLevel'), id: z.string().min(1) }),
-  z.object({ kind: z.literal('coreHelper'), id: z.string().min(1) }),
-  z.object({ kind: z.literal('facade'), id: z.string().min(1) }),
-])
+export type BindingCatalogLink =
+  | { kind: 'none' }
+  | { kind: 'operation'; id: string }
+  | { kind: 'topLevel'; id: string }
+  | { kind: 'coreHelper'; id: string }
+  | { kind: 'facade'; id: string }
 
-const BindingSymbolSchema = z.object({
-  /** Fully-qualified Rust core / transport fn path. */
-  core: z.string().min(1),
-  /** Per-toolchain export names (`ts` is today's `js_name`). */
-  names: LangNames,
-  catalog: BindingCatalogLinkSchema,
-  /** Ordered JSON-args keys extracted inside the shim. */
-  args: z.array(BindingArgSchema).default([]),
-  /** Ordered path-ref keys split from the combined args JSON (§15 note 34). */
-  splitPathRefs: z.array(z.string().min(1)).default([]),
-  /** Envelope success-value shape (opaque JSON today). */
-  return: z.literal('value'),
-  sync: z.enum(['sync', 'async']),
-  envelope: z.enum(['sync', 'async', 'webhookThrow']),
-  /** Generated shim file (`webhook` is not emitted as a shim). */
-  artifact: z.enum(BINDING_ARTIFACTS).optional(),
-  /** Stable emit order within the artifact. */
-  emitOrder: z.number().int().min(0).optional(),
-  /** Section marker (`// --- section ---`) preceding the symbol. */
-  section: z.string().min(1).optional(),
-  /** Doc comment body (no `///` prefix; lines joined with `\n`). */
-  doc: z.string().optional(),
-  /** Wasm doc override when the mirror doc differs from node. */
-  docWasm: z.string().optional(),
-  /** Rust fn / method name (defaults to `names.rust`). */
-  rustFnName: z.string().min(1).optional(),
-  /** Shim body strategy. */
-  call: BindingCallSchema.optional(),
-  /** Verbatim body source (Node) when `call.kind === 'verbatim'`. */
+/** Shim-emission residue keyed by binding id (`binding-residue.yaml`). */
+export const BindingResidueSchema = z.object({
+  tsWrapper: BindingTsWrapperSchema,
   verbatimBody: z.string().optional(),
-  /** Verbatim body source override for Wasm when it differs from Node. */
   verbatimBodyWasm: z.string().optional(),
-  /** Client DTO parsed from args JSON. */
   dtoType: z.string().min(1).optional(),
-  /** Bare core call name (method / free fn). */
-  coreCall: z.string().min(1).optional(),
-  /** Client method call args (verbatim tokens) for `clientSplit`. */
   clientCallArgs: z.array(z.string()).default([]),
+  doc: z.string().optional(),
+  docWasm: z.string().optional(),
+  splitPathRefs: z.array(z.string().min(1)).default([]),
+  args: z.array(BindingArgSchema).optional(),
+  omitCoreCall: z.boolean().default(false),
+  callArgs: z.array(z.string()).optional(),
 })
 
-export type BindingSymbol = z.infer<typeof BindingSymbolSchema>
-export type BindingCatalogLink = z.infer<typeof BindingCatalogLinkSchema>
+export const BindingResidueManifestSchema = z.record(z.string(), BindingResidueSchema)
+export type BindingResidue = z.infer<typeof BindingResidueSchema>
 
 /**
  * Committed node/wasm shim `js_name` inventory (37R/38R). Node and wasm mirror
@@ -640,10 +607,48 @@ export const SdkContractManifestSchema = z.object({
   coreHelpers: z.record(z.string(), NamedEntry),
   facade: z.record(z.string(), NamedEntry),
   /**
-   * Binding-boundary descriptors (§5.7 / step 39G-a). Keys are canonical
-   * symbol ids (today equal to the shim `js_name`).
+   * Retired YAML binding descriptors. Must be absent or empty; symbols come
+   * from `#[solvapay_export]`.
    */
-  bindings: z.record(z.string(), BindingSymbolSchema).default({}),
+  bindings: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .default({})
+    .refine(value => Object.keys(value).length === 0, {
+      message: 'bindings: was retired; annotate #[solvapay_export]',
+    }),
+  /**
+   * Retired explicit core-type roots. Must be absent or empty; roots are the
+   * named types on annotated signatures.
+   */
+  boundaryTypes: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .refine(value => value.length === 0, {
+      message: 'boundaryTypes: was retired; roots close over #[solvapay_export] signatures',
+    }),
+  /**
+   * TS-only residue for the core boundary-type emitter (aliases, renames,
+   * union reshapes). Nothing derivable from Rust belongs here.
+   */
+  boundaryTypesTs: z
+    .object({
+      omit: z.array(z.string().min(1)).default([]),
+      aliases: z
+        .record(
+          z.string(),
+          z.object({
+            of: z.string().min(1),
+            omitFields: z.array(z.string().min(1)).default([]),
+          }),
+        )
+        .default({}),
+      rename: z.record(z.string(), z.string().min(1)).default({}),
+      reshape: z.record(z.string(), z.string().min(1)).default({}),
+      extra: z.record(z.string(), z.string().min(1)).default({}),
+    })
+    .default({}),
   /** Global shadow-mode volatile rules (step 25). */
   shadow: GlobalShadow,
   errors: z
@@ -1125,10 +1130,21 @@ export function crossCheckOpenApi(
  *     non-§8 catalog entry that crosses the boundary has exactly one linker;
  * (b) committed shim `js_name`s (minus infra allowlist) match `bindings` export names;
  * (c) core fn paths are unique.
+ *
+ * `derivedBindings` is the `#[solvapay_export]` snapshot (`binding-symbols.snapshot.json`).
  */
-export function assertBindingReconciliation(manifest: SdkContractManifest): string[] {
+export type BindingReconcileEntry = {
+  core: string
+  catalog: BindingCatalogLink
+  names: { ts: string }
+}
+
+export function assertBindingReconciliation(
+  manifest: SdkContractManifest,
+  derivedBindings: Record<string, BindingReconcileEntry> = {},
+): string[] {
   const issues: string[] = []
-  const bindings = manifest.bindings
+  const bindings = derivedBindings
 
   // (c) unique core paths
   const coreOwners = new Map<string, string>()
@@ -1176,7 +1192,7 @@ export function assertBindingReconciliation(manifest: SdkContractManifest): stri
     const key = `operation.${opId}`
     if (!linkers.has(key)) {
       issues.push(
-        `Bindings: orphan catalog entry ${key} has no binding linker (fix: pnpm gen:bindings --fix)`,
+        `Bindings: orphan catalog entry ${key} has no binding linker (add #[solvapay_export])`,
       )
     }
   }
@@ -1224,7 +1240,10 @@ export function assertBindingReconciliation(manifest: SdkContractManifest): stri
   return issues
 }
 
-export function validateManifestSemantics(manifest: SdkContractManifest): string[] {
+export function validateManifestSemantics(
+  manifest: SdkContractManifest,
+  derivedBindings?: Record<string, BindingReconcileEntry>,
+): string[] {
   return [
     ...assertOperationCount(manifest),
     ...assertTopLevelSet(manifest),
@@ -1232,6 +1251,6 @@ export function validateManifestSemantics(manifest: SdkContractManifest): string
     ...assertNameCorrectness(manifest),
     ...assertNoNameCollisions(manifest),
     ...assertParamsCoverage(manifest),
-    ...assertBindingReconciliation(manifest),
+    ...assertBindingReconciliation(manifest, derivedBindings),
   ]
 }

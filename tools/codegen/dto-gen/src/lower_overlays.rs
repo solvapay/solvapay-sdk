@@ -389,6 +389,10 @@ mod tests {
             error_templates: crate::ir::IrErrorTemplates::default(),
             entry_points: BTreeMap::new(),
             binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
         }
     }
 
@@ -434,7 +438,7 @@ mod tests {
             top_level: BTreeMap::new(),
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
-            bindings: BTreeMap::new(),
+            boundary_types_ts: Default::default(),
             defaults: Default::default(),
         };
         lower_overlays(&mut ir, &manifest).expect("lower");
@@ -530,7 +534,7 @@ mod tests {
             top_level: BTreeMap::new(),
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
-            bindings: BTreeMap::new(),
+            boundary_types_ts: Default::default(),
             defaults: Default::default(),
         };
         lower_overlays(&mut ir, &manifest).expect("lower");

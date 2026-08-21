@@ -201,6 +201,12 @@ fn classifier_view(limits: &PaywallGateLimits, balance: Option<&Value>) -> Paywa
 /// # Returns
 ///
 /// A [`PaywallGate`] ready to serialize into a 402 response.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall state / gate / payload",
+    emit_order = 39
+)]
 pub fn build_paywall_gate(product_ref: &str, limits: &PaywallGateLimits) -> PaywallGate {
     // Normalize `null` pass-through blocks to absent (never-`null` guarantee).
     let balance = present(limits.balance.as_ref());

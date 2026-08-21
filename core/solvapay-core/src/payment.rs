@@ -73,6 +73,12 @@ fn is_nonempty(value: Option<&str>) -> bool {
 /// # Returns
 ///
 /// [`None`] when both refs are present and non-empty; otherwise the frozen 400.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "payment",
+    emit_order = 8
+)]
 pub fn validate_create_payment_intent_params(
     plan_ref: Option<&str>,
     product_ref: Option<&str>,
@@ -104,6 +110,12 @@ fn is_invalid_amount(amount: Option<f64>) -> bool {
 /// # Returns
 ///
 /// [`None`] when valid; otherwise the first failing branch's frozen 400.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "payment",
+    emit_order = 9
+)]
 pub fn validate_topup_payment_intent_params(
     amount: Option<f64>,
     currency: Option<&str>,
@@ -141,6 +153,12 @@ pub fn validate_topup_payment_intent_params(
 /// # Returns
 ///
 /// [`None`] when both are present and non-empty.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "payment",
+    emit_order = 10
+)]
 pub fn validate_process_payment_intent_params(
     payment_intent_id: Option<&str>,
     product_ref: Option<&str>,
@@ -161,6 +179,12 @@ pub fn validate_process_payment_intent_params(
 /// # Returns
 ///
 /// [`None`] when the id is present and non-empty.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "payment",
+    emit_order = 11
+)]
 pub fn validate_attach_business_details_params(
     payment_intent_id: Option<&str>,
 ) -> Option<HelperErrorResult> {
@@ -183,6 +207,12 @@ pub fn validate_attach_business_details_params(
 /// # Returns
 ///
 /// A 400 [`HelperErrorResult`] with the message or `"Invalid business details"`.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "payment",
+    emit_order = 12
+)]
 pub fn attach_business_details_validation_error(
     first_issue_message: Option<&str>,
 ) -> HelperErrorResult {
@@ -199,6 +229,12 @@ pub fn attach_business_details_validation_error(
 /// # Returns
 ///
 /// [`PaymentIntentProjection`] with skip-absent `accountId`.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "payment",
+    emit_order = 13
+)]
 pub fn project_payment_intent_result(
     pi: &PaymentIntentSource,
     customer_ref: &str,
@@ -225,6 +261,12 @@ pub fn project_payment_intent_result(
 /// # Returns
 ///
 /// Narrowed [`TopupProcessOutcome`].
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "payment",
+    emit_order = 14
+)]
 pub fn project_topup_process_outcome(
     status: Option<&str>,
     message: Option<&str>,
