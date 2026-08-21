@@ -1,35 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../factory', () => ({
-  createSolvaPay: vi.fn(),
-}))
-
-vi.mock('./auth', () => ({
-  getAuthenticatedUserCore: vi.fn(),
-}))
-
-vi.mock('./error', () => ({
-  isErrorResult: vi.fn(
-    (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
-  ),
-  handleRouteError: vi.fn((_error: unknown, opName: string, msg?: string) => ({
-    error: msg || `${opName} failed`,
-    status: 500,
-  })),
-}))
-
-vi.mock('./purchase', () => ({
-  checkPurchaseCore: vi.fn(),
-}))
-
-import { createSolvaPay } from '../factory'
-import { getAuthenticatedUserCore } from './auth'
-import { checkPurchaseCore } from './purchase'
+import * as factory from '../factory'
+import * as auth from './auth'
+import * as purchase from './purchase'
 import { getUsageCore, trackUsageCore } from './usage'
 
-const mockGetAuth = vi.mocked(getAuthenticatedUserCore)
-const mockCreateSolvaPay = vi.mocked(createSolvaPay)
-const mockCheckPurchase = vi.mocked(checkPurchaseCore)
+const mockCreateSolvaPay = vi.fn()
+const mockGetAuth = vi.fn()
+const mockCheckPurchase = vi.fn()
 
 function fakeRequest() {
   return new Request('http://localhost/api/track-usage', {
@@ -40,7 +18,8 @@ function fakeRequest() {
 
 describe('getUsageCore', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockCheckPurchase.mockReset()
+    vi.spyOn(purchase, 'checkPurchaseCore').mockImplementation(mockCheckPurchase)
   })
 
   it('propagates checkPurchaseCore errors verbatim', async () => {
@@ -159,8 +138,12 @@ describe('trackUsageCore', () => {
   const mockEnsureCustomer = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks()
-
+    mockGetAuth.mockReset()
+    mockEnsureCustomer.mockReset()
+    mockTrackUsage.mockReset()
+    mockCreateSolvaPay.mockReset()
+    vi.spyOn(auth, 'getAuthenticatedUserCore').mockImplementation(mockGetAuth)
+    vi.spyOn(factory, 'createSolvaPay').mockImplementation(mockCreateSolvaPay)
     mockEnsureCustomer.mockResolvedValue('cus_ABC')
     mockTrackUsage.mockResolvedValue({
       success: true,

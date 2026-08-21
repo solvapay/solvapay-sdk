@@ -1,43 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../factory', () => ({
-  createSolvaPay: vi.fn(),
-}))
-
-vi.mock('../client', () => ({
-  createSolvaPayClient: vi.fn(),
-}))
-
-vi.mock('@solvapay/core', async importOriginal => {
-  const actual = await importOriginal<typeof import('@solvapay/core')>()
-  return {
-    ...actual,
-    getSolvaPayConfig: vi.fn(),
-  }
-})
-
-vi.mock('./error', () => ({
-  handleRouteError: vi.fn((_error: unknown, opName: string, msg?: string) => ({
-    error: msg || `${opName} failed`,
-    status: 500,
-  })),
-}))
-
-import { getSolvaPayConfig } from '@solvapay/core'
+import * as core from '@solvapay/core'
+import * as error from './error'
 import { getProductCore } from './product'
-
-const mockGetConfig = vi.mocked(getSolvaPayConfig)
 
 describe('getProductCore', () => {
   const mockGetProduct = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
+    mockGetProduct.mockReset()
     mockGetProduct.mockResolvedValue({
       reference: 'prd_1',
       name: 'API Access',
     })
-    mockGetConfig.mockReturnValue({ apiKey: 'sk_test' })
+    vi.spyOn(core, 'getSolvaPayConfig').mockReturnValue({ apiKey: 'sk_test' })
+    vi.spyOn(error, 'handleRouteError').mockImplementation(
+      (_error: unknown, opName: string, msg?: string) => ({
+        error: msg || `${opName} failed`,
+        status: 500,
+      }),
+    )
   })
 
   it('rejects missing productRef with status 400', async () => {
@@ -79,7 +62,7 @@ describe('getProductCore', () => {
   })
 
   it('returns 500 when secret key config is missing and no solvaPay is provided', async () => {
-    mockGetConfig.mockReturnValue({ apiKey: '' })
+    vi.mocked(core.getSolvaPayConfig).mockReturnValue({ apiKey: '' })
 
     const result = await getProductCore(
       new Request('http://localhost/api/get-product?productRef=prd_1'),

@@ -137,7 +137,7 @@ fn ruby_full_surface_matches_committed() {
 
     let decisions = names_for(&ir, IrBindingArtifact::Decisions);
     let payloads = names_for(&ir, IrBindingArtifact::PayloadBuilders);
-    assert_eq!(decisions.len(), 42);
+    assert_eq!(decisions.len(), 45);
     assert_eq!(payloads.len(), 23);
     assert!(emitted.args_rs.contains("fn args_map"));
     for name in decisions.iter().chain(payloads.iter()) {

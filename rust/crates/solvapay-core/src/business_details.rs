@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Tax ID type discriminants (Stripe-aligned).
-pub const TAX_ID_TYPES: [&str; 3] = ["eu_vat", "gb_vat", "us_ein"];
+pub const TAX_ID_TYPES: [&str; 4] = ["eu_vat", "gb_vat", "us_ein", "jp_trn"];
 
 /// Stripe tax-ID type for a supported business country (parity with `TaxIdType` in TS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -18,6 +18,8 @@ pub enum TaxIdType {
     GbVat,
     /// US employer identification number (`us_ein`).
     UsEin,
+    /// Japan invoice registration number (`jp_trn`).
+    JpTrn,
 }
 
 /// Static metadata and validator for one supported business country.
@@ -141,6 +143,13 @@ const COUNTRIES: &[CountryEntry] = &[
         tax_id_type: TaxIdType::EuVat,
         example: "IT12345678912",
         matcher: match_it,
+    },
+    CountryEntry {
+        code: "JP",
+        display_name: "Japan",
+        tax_id_type: TaxIdType::JpTrn,
+        example: "T1234567891234",
+        matcher: match_jp,
     },
     CountryEntry {
         code: "LV",
@@ -850,6 +859,20 @@ fn match_us(s: &str) -> bool {
     false
 }
 
+/// Japan tax-ID matcher: `T` + 13 digits (`/^T\d{13}$/`).
+///
+/// # Arguments
+///
+/// * `s` - Normalized tax ID (trimmed, no internal whitespace, uppercase).
+///
+/// # Returns
+///
+/// `true` when `s` is `T` followed by exactly 13 digits; `false` otherwise.
+fn match_jp(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() == 14 && starts_with_prefix(s, "T") && all_digits(&b[1..])
+}
+
 /// Trim, strip internal whitespace, and uppercase a tax ID for matching and storage.
 ///
 /// # Arguments
@@ -1197,6 +1220,7 @@ pub fn get_tax_id_field_label(country: &str) -> Option<&'static str> {
         TaxIdType::EuVat => "VAT ID",
         TaxIdType::GbVat => "VAT Number",
         TaxIdType::UsEin => "EIN (Employer Identification Number)",
+        TaxIdType::JpTrn => "Registration number (Tōroku Bangō)",
     })
 }
 
@@ -1221,6 +1245,7 @@ pub fn get_tax_id_helper_text(country: &str) -> Option<String> {
         TaxIdType::EuVat => {
             format!("Enter your full VAT ID including the country code, e.g. {example}")
         }
+        TaxIdType::JpTrn => format!("Enter your tax ID, e.g. {example}"),
     })
 }
 
@@ -1305,6 +1330,25 @@ mod tests {
             ValidateBusinessDetailsResult::Success { data, .. } => {
                 assert!(!data.is_business);
                 assert!(data.customer_country.is_none());
+            }
+            ValidateBusinessDetailsResult::Failure { .. } => panic!("expected success"),
+        }
+    }
+
+    #[test]
+    fn validate_japanese_jp_trn() {
+        let result = validate_business_details(&BusinessDetailsInput {
+            is_business: true,
+            business_name: Some("K.K. Example".into()),
+            country: Some("JP".into()),
+            customer_country: None,
+            customer_name: None,
+            tax_id: Some("T1234567891234".into()),
+            tax_id_type: None,
+        });
+        match result {
+            ValidateBusinessDetailsResult::Success { data, .. } => {
+                assert_eq!(data.tax_id_type, Some(TaxIdType::JpTrn));
             }
             ValidateBusinessDetailsResult::Failure { .. } => panic!("expected success"),
         }
@@ -1421,7 +1465,9 @@ mod tests {
         assert_eq!(derive_tax_id_type("SE"), Some(TaxIdType::EuVat));
         assert_eq!(derive_tax_id_type("GB"), Some(TaxIdType::GbVat));
         assert_eq!(derive_tax_id_type("US"), Some(TaxIdType::UsEin));
+        assert_eq!(derive_tax_id_type("JP"), Some(TaxIdType::JpTrn));
         assert_eq!(get_tax_id_example("GR"), Some("EL123456789"));
+        assert_eq!(get_tax_id_example("JP"), Some("T1234567891234"));
         assert_eq!(get_tax_id_field_label("SE"), Some("VAT ID"));
         assert!(get_tax_id_helper_text("US").unwrap().contains("12-3456789"));
     }

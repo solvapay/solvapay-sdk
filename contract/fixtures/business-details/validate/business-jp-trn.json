@@ -1,0 +1,25 @@
+{
+  "suite": "business-details",
+  "case": "business-jp-trn",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "businessName": "K.K. Example",
+      "country": "JP",
+      "taxId": "T1234567891234"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "businessName": "K.K. Example",
+        "country": "JP",
+        "taxId": "T1234567891234",
+        "taxIdType": "jp_trn"
+      }
+    }
+  }
+}

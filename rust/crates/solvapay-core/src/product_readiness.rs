@@ -77,6 +77,7 @@ pub fn evaluate_product_readiness(product: &ProductReadinessInput) -> ProductRea
 ///
 /// Returns [`SdkError::Api`] when the ref is empty, the scaffolder
 /// placeholder, or not `prd_`-shaped. Messages name `context`.
+#[allow(clippy::result_large_err)]
 pub fn assert_valid_product_ref(product_ref: &str, context: &str) -> Result<(), SdkError> {
     let trimmed = product_ref.trim();
     if trimmed.is_empty() {
@@ -143,7 +144,10 @@ mod tests {
             plans: Some(vec![ProductReadinessPlan { is_active: true }]),
         });
         assert!(!result.ready);
-        assert!(result.issues.iter().any(|i| i == "product status is \"draft\""));
+        assert!(result
+            .issues
+            .iter()
+            .any(|i| i == "product status is \"draft\""));
         assert_eq!(result.active_plans, 1);
     }
 

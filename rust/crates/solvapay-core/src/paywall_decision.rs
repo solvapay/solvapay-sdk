@@ -77,6 +77,7 @@ Run `npx solvapay doctor` to diagnose.";
 /// # Errors
 ///
 /// Returns [`SdkError::Api`] when neither argument is a non-empty string.
+#[allow(clippy::result_large_err)]
 pub fn require_product_ref(
     metadata_product: Option<&str>,
     env_product: Option<&str>,

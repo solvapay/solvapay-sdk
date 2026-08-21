@@ -5,7 +5,7 @@
     "fn": "validateBusinessDetails",
     "args": {
       "isBusiness": true,
-      "country": "JP"
+      "country": "ZZ"
     }
   },
   "expect": {

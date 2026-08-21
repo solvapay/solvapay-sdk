@@ -17,4 +17,5 @@ export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: Record<TaxIdType, stri
   eu_vat: 'VAT number',
   gb_vat: 'VAT number',
   us_ein: 'EIN',
+  jp_trn: 'Registration number',
 }

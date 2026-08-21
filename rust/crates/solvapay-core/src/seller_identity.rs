@@ -12,6 +12,7 @@ pub const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: &[(&str, &str)] = &[
     ("eu_vat", "VAT number"),
     ("gb_vat", "VAT number"),
     ("us_ein", "EIN"),
+    ("jp_trn", "Registration number"),
 ];
 
 /// Fallback label when country is missing or unsupported.
@@ -99,6 +100,7 @@ fn label_for_tax_id_type(tax_type: TaxIdType) -> &'static str {
         TaxIdType::EuVat => "VAT number",
         TaxIdType::GbVat => "VAT number",
         TaxIdType::UsEin => "EIN",
+        TaxIdType::JpTrn => "Registration number",
     }
 }
 

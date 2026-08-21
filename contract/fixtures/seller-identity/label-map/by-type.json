@@ -9,7 +9,8 @@
     "result": {
       "eu_vat": "VAT number",
       "gb_vat": "VAT number",
-      "us_ein": "EIN"
+      "us_ein": "EIN",
+      "jp_trn": "Registration number"
     }
   }
 }

@@ -1152,7 +1152,7 @@ fn local_api_error(template: &str, vars: &[(&str, &str)]) -> SdkError {
 
 /// Treats empty strings as absent (JS truthiness parity).
 fn non_empty_opt(value: Option<&str>) -> Option<&str> {
-    value.and_then(|s| if s.is_empty() { None } else { Some(s) })
+    value.filter(|s| !s.is_empty())
 }
 
 /// Caller-supplied idempotency key, or auto-rendered from `format` + `vars`.

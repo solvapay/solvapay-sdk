@@ -1,32 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('../factory', () => ({
-  createSolvaPay: vi.fn(),
-}))
-
-vi.mock('./customer', () => ({
-  syncCustomerCore: vi.fn(),
-}))
-
-vi.mock('./error', () => ({
-  isErrorResult: vi.fn(
-    (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
-  ),
-  handleRouteError: vi.fn((_error: unknown, opName: string, msg?: string) => ({
-    error: msg || `${opName} failed`,
-    status: 500,
-  })),
-}))
-
-import { createSolvaPay } from '../factory'
-import { syncCustomerCore } from './customer'
+import * as factory from '../factory'
+import * as customer from './customer'
 import {
   createPaymentIntentCore,
   processTopupPaymentIntentCore,
   attachBusinessDetailsCore,
 } from './payment'
 
-const mockCreateSolvaPay = vi.mocked(createSolvaPay)
+const mockCreateSolvaPay = vi.fn()
 
 function fakeRequest() {
   return new Request('http://localhost/api/process-topup-payment', {
@@ -36,11 +18,15 @@ function fakeRequest() {
 }
 
 describe('createPaymentIntentCore', () => {
-  const mockSyncCustomer = vi.mocked(syncCustomerCore)
+  const mockSyncCustomer = vi.fn()
   const mockCreatePaymentIntent = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockSyncCustomer.mockReset()
+    mockCreatePaymentIntent.mockReset()
+    mockCreateSolvaPay.mockReset()
+    vi.spyOn(customer, 'syncCustomerCore').mockImplementation(mockSyncCustomer)
+    vi.spyOn(factory, 'createSolvaPay').mockImplementation(mockCreateSolvaPay)
     mockSyncCustomer.mockResolvedValue('cus_ABC')
     mockCreatePaymentIntent.mockResolvedValue({
       processorPaymentId: 'pi_test',
@@ -114,12 +100,15 @@ describe('createPaymentIntentCore', () => {
 })
 
 describe('processTopupPaymentIntentCore', () => {
-  const mockSyncCustomer = vi.mocked(syncCustomerCore)
+  const mockSyncCustomer = vi.fn()
   const mockProcessPaymentIntent = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockSyncCustomer.mockResolvedValue('cus_ABC')
+    mockSyncCustomer.mockReset().mockResolvedValue('cus_ABC')
+    mockProcessPaymentIntent.mockReset()
+    mockCreateSolvaPay.mockReset()
+    vi.spyOn(customer, 'syncCustomerCore').mockImplementation(mockSyncCustomer)
+    vi.spyOn(factory, 'createSolvaPay').mockImplementation(mockCreateSolvaPay)
     mockCreateSolvaPay.mockReturnValue({
       processPaymentIntent: mockProcessPaymentIntent,
     } as never)
@@ -230,6 +219,7 @@ describe('processTopupPaymentIntentCore', () => {
     expect(result).toEqual({
       error: 'Topup payment processing failed',
       status: 500,
+      details: 'Backend exploded',
     })
   })
 
@@ -263,13 +253,15 @@ describe('processTopupPaymentIntentCore', () => {
 // ------------------------------------------------------------------
 
 describe('processTopupPaymentIntentCore — post-success balance polling', () => {
-  const mockSyncCustomer = vi.mocked(syncCustomerCore)
+  const mockSyncCustomer = vi.fn()
   const mockProcessPaymentIntent = vi.fn()
   const mockGetCustomerBalance = vi.fn()
 
   beforeEach(() => {
     vi.useFakeTimers()
     mockSyncCustomer.mockReset().mockResolvedValue('cus_ABC')
+    vi.spyOn(customer, 'syncCustomerCore').mockImplementation(mockSyncCustomer)
+    vi.spyOn(factory, 'createSolvaPay').mockImplementation(mockCreateSolvaPay)
     mockProcessPaymentIntent.mockReset()
     mockGetCustomerBalance.mockReset()
     mockCreateSolvaPay.mockReset().mockReturnValue({
@@ -451,7 +443,9 @@ describe('attachBusinessDetailsCore', () => {
   const mockAttachBusinessDetails = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockAttachBusinessDetails.mockReset()
+    mockCreateSolvaPay.mockReset()
+    vi.spyOn(factory, 'createSolvaPay').mockImplementation(mockCreateSolvaPay)
     mockCreateSolvaPay.mockReturnValue({
       attachBusinessDetails: mockAttachBusinessDetails,
     } as never)

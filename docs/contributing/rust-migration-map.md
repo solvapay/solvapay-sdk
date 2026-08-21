@@ -10,7 +10,7 @@ Living **state / progress / handoff** layer for the Rust core SDK redesign. Comp
 
 Session workflow (redesign §14): pick the next incomplete step in redesign §9 → implement only that step → prove its "done when" → update **this map** (status + handoff bullets). At each phase close, finalize that phase's handoff entry before opening the next phase's first PR.
 
-**Current progress (2026-08-18):** Steps 1–54 remain Done as recorded 2026-07-24. `feat/rust-core-dev-sync` merged `origin/dev` onto the Rust-only `@solvapay/core` / `@solvapay/server` facades and re-landed product-ref hard-fail, product readiness, and `meterName` precedence as Rust + `pnpm gen`. Fixture-runner `executed=445` (was 431). **Next:** Step **55** or MCP-authoring track. **Known-not-green:** `parity:check` still reports the 24 Step-52 uncatalogued core-surface extras.
+**Current progress (2026-08-21):** Steps 1–54 remain Done as recorded 2026-07-24. `feat/rust-core-dev-sync` re-merged `origin/dev` (August release, Deno workspace-source gate, react-supabase preview fix) onto the Rust facades. Product-ref hard-fail, product readiness, `meterName` precedence, MCP v2 `http.authInfo` customer-ref, doctor readiness, and paid-plan auto-assign (test-utils) are already on this branch. Fixture-runner `executed=446 passed=446 failed=0 skipped-unbound=104`. **Blocked:** OpenAPI snapshot refresh (`pnpm snapshot:openapi --from-url`) needs the platform stack on `localhost:3001` — rust `LimitResponse` still lacks the `onExceed` flags that `packages/server/src/types/generated.ts` already has. **Next:** that snapshot+`pnpm gen` cycle, then Step **55**. **Known-not-green:** `parity:check` still reports the 24 Step-52 uncatalogued core-surface extras.
 
 ## Status legend
 

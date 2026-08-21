@@ -1,4 +1,4 @@
-export type TaxIdType = 'eu_vat' | 'gb_vat' | 'us_ein'
+export type TaxIdType = 'eu_vat' | 'gb_vat' | 'us_ein' | 'jp_trn'
 
 export type EuMemberCountry =
   | 'AT'
@@ -29,7 +29,7 @@ export type EuMemberCountry =
   | 'ES'
   | 'SE'
 
-export type SupportedBusinessCountry = EuMemberCountry | 'GB' | 'US'
+export type SupportedBusinessCountry = EuMemberCountry | 'GB' | 'US' | 'JP'
 
 export declare const TAX_ID_TYPES: readonly TaxIdType[]
 

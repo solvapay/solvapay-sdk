@@ -47,6 +47,7 @@ pub fn resolve_check_limits_params(
     })
 }
 
+/// JS `||` string: `None` / empty / whitespace-only → absent.
 fn js_or_str(value: Option<&str>) -> Option<String> {
     value
         .map(str::trim)

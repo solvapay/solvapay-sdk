@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const TAX_ID_TYPES = ['eu_vat', 'gb_vat', 'us_ein'] as const
+export const TAX_ID_TYPES = ['eu_vat', 'gb_vat', 'us_ein', 'jp_trn'] as const
 export type TaxIdType = (typeof TAX_ID_TYPES)[number]
 
 /** EU member states (ISO 3166-1 alpha-2) supported for eu_vat. */
@@ -36,7 +36,7 @@ const EU_MEMBER_COUNTRIES = [
 
 export type EuMemberCountry = (typeof EU_MEMBER_COUNTRIES)[number]
 
-export const SUPPORTED_BUSINESS_COUNTRIES = [...EU_MEMBER_COUNTRIES, 'GB', 'US'] as const
+export const SUPPORTED_BUSINESS_COUNTRIES = [...EU_MEMBER_COUNTRIES, 'GB', 'US', 'JP'] as const
 export type SupportedBusinessCountry = (typeof SUPPORTED_BUSINESS_COUNTRIES)[number]
 
 /** Stripe Connect English display names for supported business countries. */
@@ -56,6 +56,7 @@ export const BUSINESS_COUNTRY_DISPLAY_NAMES: Record<SupportedBusinessCountry, st
   HU: 'Hungary',
   IE: 'Ireland',
   IT: 'Italy',
+  JP: 'Japan',
   LV: 'Latvia',
   LT: 'Lithuania',
   LU: 'Luxembourg',
@@ -100,6 +101,7 @@ export const COUNTRY_TO_TAX_ID_TYPE: Record<SupportedBusinessCountry, TaxIdType>
   HU: 'eu_vat',
   IE: 'eu_vat',
   IT: 'eu_vat',
+  JP: 'jp_trn',
   LV: 'eu_vat',
   LT: 'eu_vat',
   LU: 'eu_vat',
@@ -133,6 +135,7 @@ export const TAX_ID_EXAMPLE_BY_COUNTRY: Record<SupportedBusinessCountry, string>
   HU: 'HU12345678',
   IE: 'IE1234567AB',
   IT: 'IT12345678912',
+  JP: 'T1234567891234',
   LV: 'LV12345678912',
   LT: 'LT123456789',
   LU: 'LU12345678',

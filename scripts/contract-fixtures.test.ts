@@ -138,6 +138,7 @@ const NON_CLIENT_FIXTURES = [
   'business-details/tax-id-by-country/us-reject.json',
   'business-details/validate/business-country-only-omits-optional.json',
   'business-details/validate/business-invalid-tax-id.json',
+  'business-details/validate/business-jp-trn.json',
   'business-details/validate/business-missing-country.json',
   'business-details/validate/business-unsupported-country.json',
   'business-details/validate/business-whitespace-only-tax-id-omitted.json',
