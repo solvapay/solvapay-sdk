@@ -37,7 +37,9 @@ use crate::runner::{args_object, require_string_arg, BindingError};
 /// # Errors
 ///
 /// Returns [`BindingError::Harness`] when deserialization or serialization fails.
-pub(crate) fn invoke_validate_business_details(input: &FixtureInput) -> Result<Value, BindingError> {
+pub(crate) fn invoke_validate_business_details(
+    input: &FixtureInput,
+) -> Result<Value, BindingError> {
     let args = args_object(input);
     let parsed: BusinessDetailsInput = serde_json::from_value(args)
         .map_err(|e| BindingError::Harness(format!("invalid BusinessDetailsInput: {e}")))?;
@@ -110,8 +112,8 @@ pub(crate) fn invoke_resolve_seller_identity_display(
 /// Binding for `deriveTaxIdType`.
 pub(crate) fn invoke_derive_tax_id_type(input: &FixtureInput) -> Result<Value, BindingError> {
     let country = require_string_arg(input, "country")?;
-    let tax_type = derive_tax_id_type(&country)
-        .ok_or_else(|| format!("unsupported country: {country}"))?;
+    let tax_type =
+        derive_tax_id_type(&country).ok_or_else(|| format!("unsupported country: {country}"))?;
     serde_json::to_value(tax_type).map_err(|e| BindingError::Harness(e.to_string()))
 }
 
@@ -127,8 +129,8 @@ pub(crate) fn invoke_resolve_tax_behavior(input: &FixtureInput) -> Result<Value,
 /// Binding for `getTaxIdExample`.
 pub(crate) fn invoke_get_tax_id_example(input: &FixtureInput) -> Result<Value, BindingError> {
     let country = require_string_arg(input, "country")?;
-    let example = get_tax_id_example(&country)
-        .ok_or_else(|| format!("unsupported country: {country}"))?;
+    let example =
+        get_tax_id_example(&country).ok_or_else(|| format!("unsupported country: {country}"))?;
     Ok(Value::String(example.to_owned()))
 }
 

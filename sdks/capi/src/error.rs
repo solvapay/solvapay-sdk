@@ -143,9 +143,10 @@ mod tests {
 
     #[test]
     fn run_envelope_wraps_ok_and_err() {
-        let ok = parse_envelope(&crate::runtime::runtime().block_on(run_envelope(async {
-            Ok::<_, SdkError>(json!({"x": 1}))
-        })));
+        let ok = parse_envelope(
+            &crate::runtime::runtime()
+                .block_on(run_envelope(async { Ok::<_, SdkError>(json!({"x": 1})) })),
+        );
         assert_eq!(ok["ok"], true);
         assert_eq!(ok["value"]["x"], 1);
 

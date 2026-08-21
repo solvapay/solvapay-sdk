@@ -30,9 +30,10 @@ fn walk_rs(dir: &Path, acc: &mut Vec<PathBuf>) {
         let entry = entry.unwrap();
         let path = entry.path();
         if path.is_dir() {
-            if path.file_name().is_some_and(|name| {
-                name == "target" || name == "node_modules" || name == ".git"
-            }) {
+            if path
+                .file_name()
+                .is_some_and(|name| name == "target" || name == "node_modules" || name == ".git")
+            {
                 continue;
             }
             walk_rs(&path, acc);

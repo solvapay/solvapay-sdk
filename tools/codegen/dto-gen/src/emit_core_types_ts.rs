@@ -38,25 +38,17 @@ pub fn emit_core_types_ts(ir: &Ir) -> GenResult<String> {
         write_core_type(&mut out, ty, &ts_name);
     }
 
-    let mut reshape_names: Vec<_> = overlay.reshape.keys().cloned().collect();
-    reshape_names.sort();
-    for name in reshape_names {
-        let rhs = overlay.reshape.get(&name).expect("reshape key");
-        write_verbatim_type(&mut out, &name, rhs);
+    // `BoundaryTypesTsDef` uses `BTreeMap`, so iteration is already key-sorted.
+    for (name, rhs) in &overlay.reshape {
+        write_verbatim_type(&mut out, name, rhs);
     }
 
-    let mut alias_names: Vec<_> = overlay.aliases.keys().cloned().collect();
-    alias_names.sort();
-    for name in alias_names {
-        let alias = overlay.aliases.get(&name).expect("alias key");
-        write_alias(&mut out, ir, &name, alias)?;
+    for (name, alias) in &overlay.aliases {
+        write_alias(&mut out, ir, name, alias)?;
     }
 
-    let mut extra_names: Vec<_> = overlay.extra.keys().cloned().collect();
-    extra_names.sort();
-    for name in extra_names {
-        let rhs = overlay.extra.get(&name).expect("extra key");
-        write_verbatim_type(&mut out, &name, rhs);
+    for (name, rhs) in &overlay.extra {
+        write_verbatim_type(&mut out, name, rhs);
     }
 
     while out.ends_with("\n\n") {

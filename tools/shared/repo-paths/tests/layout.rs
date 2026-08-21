@@ -65,7 +65,7 @@ fn core_dir_and_sdk_surfaces_exist() {
         Some("core")
     );
     assert!(
-        paths.manifest().dirs.get("rust").is_none(),
+        !paths.manifest().dirs.contains_key("rust"),
         "dirs.rust must be dropped after the Tier 3 hoist"
     );
     for key in [
@@ -113,6 +113,7 @@ fn generated_ids_match_enumerated_expectation() {
         "nativePy",
         "pyStub",
         "pyParity",
+        "pyConformance",
         "nativeRb",
         "rbClient",
         "rubyHelpers",

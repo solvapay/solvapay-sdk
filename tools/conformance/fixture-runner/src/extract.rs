@@ -10,7 +10,11 @@ use crate::runner::BindingError;
 
 /// Copies fixture `input.args` into a serde_json object map.
 pub fn args_map(input: &FixtureInput) -> Map<String, Value> {
-    input.args.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+    input
+        .args
+        .iter()
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect()
 }
 
 /// Serializes `value` to JSON, mapping failures to a harness error.
@@ -41,7 +45,9 @@ pub fn result_as_value<T: Serialize>(
 pub fn require_string(args: &Map<String, Value>, key: &str) -> Result<String, BindingError> {
     match args.get(key) {
         Some(Value::String(s)) => Ok(s.clone()),
-        Some(_) => Err(BindingError::Harness(format!("args.{key} must be a string"))),
+        Some(_) => Err(BindingError::Harness(format!(
+            "args.{key} must be a string"
+        ))),
         None => Err(BindingError::Harness(format!("args.{key} is required"))),
     }
 }
@@ -74,10 +80,12 @@ pub fn require_bool(args: &Map<String, Value>, key: &str) -> Result<bool, Bindin
 /// Reads a required f64 arg.
 pub fn require_f64(args: &Map<String, Value>, key: &str) -> Result<f64, BindingError> {
     match args.get(key) {
-        Some(Value::Number(n)) => n.as_f64().ok_or_else(|| {
-            BindingError::Harness(format!("args.{key} must be a finite number"))
-        }),
-        Some(_) => Err(BindingError::Harness(format!("args.{key} must be a number"))),
+        Some(Value::Number(n)) => n
+            .as_f64()
+            .ok_or_else(|| BindingError::Harness(format!("args.{key} must be a finite number"))),
+        Some(_) => Err(BindingError::Harness(format!(
+            "args.{key} must be a number"
+        ))),
         None => Err(BindingError::Harness(format!("args.{key} is required"))),
     }
 }
@@ -86,9 +94,10 @@ pub fn require_f64(args: &Map<String, Value>, key: &str) -> Result<f64, BindingE
 pub fn optional_f64(args: &Map<String, Value>, key: &str) -> Result<Option<f64>, BindingError> {
     match args.get(key) {
         None | Some(Value::Null) => Ok(None),
-        Some(Value::Number(n)) => n.as_f64().map(Some).ok_or_else(|| {
-            BindingError::Harness(format!("args.{key} must be a finite number"))
-        }),
+        Some(Value::Number(n)) => n
+            .as_f64()
+            .map(Some)
+            .ok_or_else(|| BindingError::Harness(format!("args.{key} must be a finite number"))),
         Some(_) => Err(BindingError::Harness(format!(
             "args.{key} must be a number or null"
         ))),
@@ -101,7 +110,9 @@ pub fn require_i64(args: &Map<String, Value>, key: &str) -> Result<i64, BindingE
         Some(Value::Number(n)) => n
             .as_i64()
             .ok_or_else(|| BindingError::Harness(format!("args.{key} must be an integer"))),
-        Some(_) => Err(BindingError::Harness(format!("args.{key} must be a number"))),
+        Some(_) => Err(BindingError::Harness(format!(
+            "args.{key} must be a number"
+        ))),
         None => Err(BindingError::Harness(format!("args.{key} is required"))),
     }
 }
@@ -113,7 +124,9 @@ pub fn require_u32(args: &Map<String, Value>, key: &str) -> Result<u32, BindingE
             .as_u64()
             .and_then(|v| u32::try_from(v).ok())
             .ok_or_else(|| BindingError::Harness(format!("args.{key} must be a u32"))),
-        Some(_) => Err(BindingError::Harness(format!("args.{key} must be a number"))),
+        Some(_) => Err(BindingError::Harness(format!(
+            "args.{key} must be a number"
+        ))),
         None => Err(BindingError::Harness(format!("args.{key} is required"))),
     }
 }
@@ -223,14 +236,16 @@ pub fn optional_typed<T: serde::de::DeserializeOwned>(
 
 /// Host-injected millisecond clock from `input.clock`.
 pub fn require_clock_ms(input: &FixtureInput) -> Result<i64, BindingError> {
-    let clock = input.clock.as_deref().ok_or_else(|| {
-        BindingError::Harness("input.clock is required".to_owned())
-    })?;
-    let secs = crate::bindings::webhook::parse_iso8601_utc_to_unix_secs(clock).ok_or_else(|| {
-        BindingError::Harness(format!(
-            "input.clock must be YYYY-MM-DDTHH:MM:SSZ, got {clock:?}"
-        ))
-    })?;
+    let clock = input
+        .clock
+        .as_deref()
+        .ok_or_else(|| BindingError::Harness("input.clock is required".to_owned()))?;
+    let secs =
+        crate::bindings::webhook::parse_iso8601_utc_to_unix_secs(clock).ok_or_else(|| {
+            BindingError::Harness(format!(
+                "input.clock must be YYYY-MM-DDTHH:MM:SSZ, got {clock:?}"
+            ))
+        })?;
     Ok(secs.saturating_mul(1000))
 }
 

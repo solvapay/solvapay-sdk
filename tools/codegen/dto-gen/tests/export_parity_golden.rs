@@ -30,11 +30,13 @@ fn derived_core_symbols_match_snapshot() {
     let ir = yaml_ir();
     let residue = load_residue();
     let scan_symbols = derive_all_export_bindings(&ir, &residue).expect("derive");
-    let mut derived_ir = Ir::default();
-    derived_ir.binding_symbols = scan_symbols
-        .into_iter()
-        .filter(|(_, symbol)| symbol.core.starts_with("solvapay_core::"))
-        .collect();
+    let derived_ir = Ir {
+        binding_symbols: scan_symbols
+            .into_iter()
+            .filter(|(_, symbol)| symbol.core.starts_with("solvapay_core::"))
+            .collect(),
+        ..Ir::default()
+    };
     let derived_doc: Value =
         serde_json::from_str(&dump_binding_symbols(&derived_ir)).expect("derived json");
     let snapshot: Value = serde_json::from_str(
@@ -110,11 +112,13 @@ fn derived_client_symbols_match_snapshot() {
     let ir = yaml_ir();
     let residue = load_residue();
     let derived = derive_all_export_bindings(&ir, &residue).expect("derive");
-    let mut derived_ir = Ir::default();
-    derived_ir.binding_symbols = derived
-        .into_iter()
-        .filter(|(_, symbol)| symbol.core.starts_with("solvapay_transport::"))
-        .collect();
+    let derived_ir = Ir {
+        binding_symbols: derived
+            .into_iter()
+            .filter(|(_, symbol)| symbol.core.starts_with("solvapay_transport::"))
+            .collect(),
+        ..Ir::default()
+    };
     let derived_doc: Value =
         serde_json::from_str(&dump_binding_symbols(&derived_ir)).expect("derived json");
     let snapshot: Value = serde_json::from_str(

@@ -12,7 +12,9 @@ use crate::ir::{
     IrCoreTypesTs,
 };
 use crate::manifest::{BoundaryTypesTsDef, Manifest};
-use crate::scan_core_types::{named_refs, named_refs_in_field_ty, scan_core_file_skipping_unsupported, CoreScan};
+use crate::scan_core_types::{
+    named_refs, named_refs_in_field_ty, scan_core_file_skipping_unsupported, CoreScan,
+};
 
 /// Scan every `.rs` file under `core_src`, index by type name, then keep the
 /// transitive closure of `roots`.
@@ -130,8 +132,7 @@ pub fn index_core_fns(fns: Vec<IrCoreFn>) -> GenResult<BTreeMap<String, IrCoreFn
     let mut index: BTreeMap<String, IrCoreFn> = BTreeMap::new();
     for func in fns {
         let path = func.core_path();
-        if index.contains_key(&path) {
-            let existing = index.get(&path).expect("contains_key");
+        if let Some(existing) = index.get(&path) {
             return Err(GenError::Parse(format!(
                 "duplicate core fn path {path} ({} and {})",
                 existing.module, func.module

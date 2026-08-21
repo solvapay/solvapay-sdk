@@ -11,13 +11,13 @@ pub mod sdk_error;
 
 pub use sdk_error::sdk_error_to_observation;
 
-pub use registry::create_default_registry;
 pub use discover::{discover_fixtures, DiscoveredFixture};
 pub use error::{RunnerError, RunnerResult};
 pub use model::{
     parse_fixture, Fixture, FixtureErrorExpect, FixtureExpect, FixtureInput, HttpMethod, Wire,
     WireRequest, WireResponse,
 };
+pub use registry::create_default_registry;
 pub use runner::{
     format_summary, run_suite, Binding, BindingError, BindingRegistry, ErrorObservation,
     FixtureFailure, SuiteSummary,

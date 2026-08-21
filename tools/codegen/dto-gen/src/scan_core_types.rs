@@ -298,11 +298,7 @@ fn scan_inherent_impl(
         if cfg_is_test(&method.attrs) {
             continue;
         }
-        push_or_skip_fn(
-            scan_method(&method, module, &ty_name),
-            skip_unsupported,
-            out,
-        )?;
+        push_or_skip_fn(scan_method(method, module, &ty_name), skip_unsupported, out)?;
     }
     Ok(())
 }

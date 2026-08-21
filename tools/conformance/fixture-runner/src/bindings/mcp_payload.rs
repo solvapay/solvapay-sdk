@@ -77,4 +77,3 @@ pub(crate) fn invoke_assert_response_result(input: &FixtureInput) -> Result<Valu
         })),
     }
 }
-
