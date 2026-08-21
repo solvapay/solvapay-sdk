@@ -172,6 +172,8 @@ def reconstruct_envelope_error(error: dict[str, Any]) -> Exception:
             gate = {}
         return PaywallError(message, gate)
     err = SolvaPayError(message)
+    if isinstance(kind, str):
+        setattr(err, "kind", kind)
     if kind == "Api":
         if isinstance(error.get("status"), int):
             setattr(err, "status", error["status"])

@@ -164,8 +164,8 @@ func run() (int, error) {
 }
 
 func defaultOutPath() string {
-	// Expected cwd is sdks/go (module root) → repo root is ../../..
-	abs, err := filepath.Abs(filepath.Join("..", "..", "..", "contract", "shadow", "output", "go-live-report.json"))
+	// Expected cwd is sdks/go (module root) → repo root is ../..
+	abs, err := filepath.Abs(filepath.Join("..", "..", "contract", "shadow", "output", "go-live-report.json"))
 	if err != nil {
 		return "contract/shadow/output/go-live-report.json"
 	}

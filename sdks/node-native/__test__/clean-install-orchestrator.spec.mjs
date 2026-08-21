@@ -6,7 +6,10 @@
 
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
+import { existsSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { describe, it } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import {
   assertChildOk,
   assertEmptyConsumerDir,
@@ -22,6 +25,13 @@ import {
 import { WASI_TARGET } from '../scripts/targets.mjs'
 
 describe('clean-install orchestrator', () => {
+  it('resolves the monorepo root two levels above sdks/node-native', () => {
+    const bindingRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+    const repoRoot = resolve(bindingRoot, '../..')
+    assert.equal(existsSync(join(repoRoot, 'pnpm-workspace.yaml')), true)
+    assert.equal(existsSync(join(repoRoot, 'package.json')), true)
+  })
+
   it('refuses a non-empty consumer directory', () => {
     assert.throws(
       () =>

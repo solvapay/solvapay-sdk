@@ -377,10 +377,14 @@ jobs:
           sccache: 'true'
 
       # maturin-action runs the manylinux container as root and leaves a
-      # root-owned target/; its own fix-up only covers the crate dir.
+      # root-owned workspace `target/` (repo root). Job default cwd is sdks/python.
       - name: Reclaim workspace target dir ownership
         if: matrix.smoke && runner.os == 'Linux'
-        run: sudo chown -R "$(id -u):$(id -g)" target
+        working-directory: ${{ github.workspace }}
+        run: |
+          if [ -d target ]; then
+            sudo chown -R "$(id -u):$(id -g)" target
+          fi
 
       - name: cargo test -p solvapay-python
         if: matrix.smoke

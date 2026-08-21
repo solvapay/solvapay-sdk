@@ -39,7 +39,13 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const BINDING_ROOT = join(__dirname, '..')
-const REPO_ROOT = resolve(BINDING_ROOT, '../../..')
+const REPO_ROOT = resolve(BINDING_ROOT, '../..')
+
+if (!existsSync(join(REPO_ROOT, 'pnpm-workspace.yaml'))) {
+  throw new Error(
+    `prepare-clean-install-packages: repo root marker missing at ${REPO_ROOT}`,
+  )
+}
 
 /**
  * @param {string[]} argv

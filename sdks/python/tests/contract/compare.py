@@ -37,7 +37,10 @@ def outcome_from_exception(exc: BaseException) -> Outcome:
         status = getattr(exc, "status", None)
         code = getattr(exc, "code", None)
         name = type(exc).__name__
-        kind = "Api" if isinstance(status, int) else None
+        kind_attr = getattr(exc, "kind", None)
+        kind = kind_attr if isinstance(kind_attr, str) else None
+        if kind is None and isinstance(status, int):
+            kind = "Api"
         if isinstance(code, str) and code in {
             "invalid_signature",
             "timestamp_too_old",

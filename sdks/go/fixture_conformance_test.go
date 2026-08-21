@@ -268,8 +268,8 @@ func loadClientFixtures(t *testing.T) []fixtureFile {
 
 func fixturesRoot(t *testing.T) string {
 	t.Helper()
-	// sdks/go → repo root is ../../..
-	root, err := filepath.Abs(filepath.Join("..", "..", "..", "contract", "fixtures", "client"))
+	// sdks/go → repo root is ../..
+	root, err := filepath.Abs(filepath.Join("..", "..", "contract", "fixtures", "client"))
 	if err != nil {
 		t.Fatalf("fixtures root: %v", err)
 	}

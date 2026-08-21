@@ -40,6 +40,34 @@ class NativeEnvelopeTests(unittest.TestCase):
         self.assertEqual(str(err), "bad request")
         self.assertEqual(err.status, 400)
         self.assertEqual(err.code, "invalid_request")
+        self.assertEqual(err.kind, "Api")
+
+    def test_reconstruct_api_error_without_status_preserves_kind(self) -> None:
+        err = reconstruct_envelope_error(
+            {
+                "kind": "Api",
+                "message": "missing ref",
+                "code": "missing_product_ref",
+            },
+        )
+        self.assertIsInstance(err, SolvaPayError)
+        self.assertEqual(err.code, "missing_product_ref")
+        self.assertEqual(err.kind, "Api")
+        self.assertFalse(hasattr(err, "status") and isinstance(err.status, int))
+        self.assertEqual(err.kind, "Api")
+
+    def test_reconstruct_api_error_without_status_keeps_kind(self) -> None:
+        err = reconstruct_envelope_error(
+            {
+                "kind": "Api",
+                "message": "No product ref resolved.",
+                "code": "missing_product_ref",
+            },
+        )
+        self.assertIsInstance(err, SolvaPayError)
+        self.assertEqual(err.code, "missing_product_ref")
+        self.assertEqual(err.kind, "Api")
+        self.assertIsNone(getattr(err, "status", None))
 
     def test_reconstruct_paywall_error(self) -> None:
         gate = {"kind": "gate", "message": "upgrade"}
