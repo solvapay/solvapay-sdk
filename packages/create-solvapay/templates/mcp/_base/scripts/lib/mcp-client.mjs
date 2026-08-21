@@ -7,7 +7,7 @@
  * Single-request POSTs with `Accept: application/json,
  * text/event-stream` — matches the SDK's `WebStandardStreamableHTTP`
  * stateless preset (the default in `createSolvaPayMcpFetch` with
- * `mode: 'json-stateless'`).
+ * `responseMode: 'json'`).
  *
  * No session pinning, no batching. Each call opens a fresh JSON-RPC
  * request and parses the JSON response (or first SSE `data:` line when

@@ -38,6 +38,14 @@ jobs:
         with:
           version: 9.6.0
 
+      - name: Setup Deno
+        run: |
+          DENO_VERSION=2.7.4
+          curl -fsSL "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip" -o /tmp/deno.zip
+          unzip -o /tmp/deno.zip -d /tmp/deno
+          sudo install -m 755 /tmp/deno/deno /usr/local/bin/deno
+          deno --version
+
       - name: Get pnpm store directory
         id: pnpm-cache
         shell: bash
@@ -100,6 +108,12 @@ jobs:
       - name: client.generated.d.ts + signature-parity typecheck
         working-directory: packages/server
         run: pnpm test:types
+
+      # Deno gate — type-checks examples/typescript/supabase-edge-mcp against
+      # the workspace source of the `@solvapay/*` packages it imports (see
+      # examples/typescript/supabase-edge-mcp/deno.workspace.json).
+      - name: Deno gate (supabase-edge-mcp type-check against workspace source)
+        run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
   rust:
     name: Rust

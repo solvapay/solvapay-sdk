@@ -25,7 +25,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20251124.0",
+    "@cloudflare/workers-types": "^5.20260815.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -33,6 +33,6 @@
     "typescript": "^5.9.2",
     "vite": "^8.0.6",
     "vite-plugin-singlefile": "^2.3.2",
-    "wrangler": "^4.47.0"
+    "wrangler": "^4.110.0"
   }
 }
