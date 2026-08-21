@@ -6,7 +6,7 @@ into each language's idiomatic exception type (see [architecture.md](./architect
 
 ## The `SdkError` model (Rust core)
 
-`rust/crates/solvapay-core/src/error.rs` defines `SdkError`, the single
+`core/solvapay-core/src/error.rs` defines `SdkError`, the single
 cross-language error surface. It has four kinds:
 
 | Kind        | Meaning                                                            | Maps to (TS)                     |

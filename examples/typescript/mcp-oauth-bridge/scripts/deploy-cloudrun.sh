@@ -94,8 +94,8 @@ if [[ "$PAYWALL" == "true" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MONOREPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-DOCKERFILE="${MONOREPO_ROOT}/examples/mcp-oauth-bridge/Dockerfile"
+MONOREPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+DOCKERFILE="${MONOREPO_ROOT}/examples/typescript/mcp-oauth-bridge/Dockerfile"
 IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT}/${REGISTRY_REPO}/${IMAGE_NAME}:${TAG}"
 
 echo "==> Ensuring Artifact Registry repository exists..."

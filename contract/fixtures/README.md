@@ -2,7 +2,7 @@
 
 JSON behavioral fixtures for the Rust core SDK migration (Phase 0 / Steps 3–7, plus Phase 1 business-details / credit-display / seller-identity / retry-schedule).
 
-Each fixture is replayed by the TypeScript harness in `scripts/lib/fixture-harness.ts` against `@solvapay/server` and `@solvapay/core`. The Rust `fixture-runner` replays bound suites against `solvapay-core` (retry schedules use a host-side adapter that records callback/sleep observations without sleeping); unbound suites are skipped.
+Each fixture is replayed by the TypeScript harness in `tools/conformance/lib/fixture-harness.ts` against `@solvapay/server` and `@solvapay/core`. The Rust `fixture-runner` replays bound suites against `solvapay-core` (retry schedules use a host-side adapter that records callback/sleep observations without sleeping); unbound suites are skipped.
 
 ## Format (§5.3)
 
@@ -48,11 +48,11 @@ pnpm build:packages
 pnpm test:contract
 
 # Fixture discovery + replay only
-pnpm exec vitest run scripts/contract-fixtures.test.ts
+pnpm exec vitest run tools/conformance/contract-fixtures.test.ts
 
 # Rust runner (bound pure-core suites incl. error-model; unbound suites skipped).
 # Retry fixtures simulate shouldRetry / onRetry / sleep host-side.
-cd rust && cargo run -q -p fixture-runner -- ../contract/fixtures
+cargo run -q -p fixture-runner -- contract/fixtures
 ```
 
 ## Error model (Step 17 / §4.4)

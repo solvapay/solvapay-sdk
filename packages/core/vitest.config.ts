@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
+import { sdkDir } from '../../tools/shared/paths.js'
 
 export default defineConfig({
   resolve: {
@@ -7,7 +8,7 @@ export default defineConfig({
       '@solvapay/core': resolve(__dirname, './src'),
       // Allow vitest.setup to load the Node native dispatcher without a
       // published dependency edge from core → server.
-      '@solvapay/server-native': resolve(__dirname, '../../rust/bindings/node'),
+      '@solvapay/server-native': sdkDir('node-native'),
     },
   },
   test: {

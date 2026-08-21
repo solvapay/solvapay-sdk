@@ -36,7 +36,7 @@ Derives the snapshot from the committed source, diffs against the committed snap
 
 ## Shared pipeline
 
-Filter / prune / placeholder / canonicalize live in `scripts/lib/openapi-pipeline.ts`. Both `scripts/snapshot-openapi.ts` and `packages/server/scripts/generate-types.ts` import that module so the two paths cannot drift.
+Filter / prune / placeholder / canonicalize live in `tools/codegen/lib/openapi-pipeline.ts`. Both `tools/codegen/snapshot-openapi.ts` and `packages/server/scripts/generate-types.ts` import that module so the two paths cannot drift.
 
 ## Backend artifact handoff
 

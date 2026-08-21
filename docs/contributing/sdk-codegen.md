@@ -3,6 +3,9 @@
 How to regenerate SolvaPay’s five language surfaces from the OpenAPI snapshot and
 contract manifest. This is the day-to-day runbook; architecture rationale lives
 in [`rust-core-sdk-redesign-v2.md`](./rust-core-sdk-redesign-v2.md) (§5.6 / §5.7).
+Collapsing the hand-mirrored `bindings:` / harness layers into Rust-derived
+descriptors is sequenced in [`codegen-ast-derivation.md`](./codegen-ast-derivation.md)
+(after step 55).
 
 ## Mental model
 
@@ -17,9 +20,25 @@ SDK contract manifest (reviewed) ──────────┘
 | `contract/openapi/sdk-v1.snapshot.json` | Filtered `/v1/sdk/*` wire contract                      | Regenerated from live backend or source |
 | `contract/manifest/sdk-contract.yaml`   | Public API catalog, overlays, bindings, docs, defaults  | Humans (reviewed diff)                  |
 | Generated outputs                       | DTOs, facades, shims, parity suites, native marshalling | **Only** `pnpm gen`                     |
+| `contract/manifest/repo-paths.yaml`     | On-disk layout (dirs, SDK surfaces, dto-gen flags, drift set) | Humans, when a directory moves     |
 
 **Principle:** automate mechanical toil; keep curated decisions (names, prose docs,
 behavioral fixtures, sync/async intent) human-owned in the manifest.
+
+## Repo layout (single source of truth)
+
+Cross-directory paths are not hop-counted from `import.meta.url` or
+`CARGO_MANIFEST_DIR`. They live in [`contract/manifest/repo-paths.yaml`](../../contract/manifest/repo-paths.yaml).
+
+| Consumer | Loader |
+| --- | --- |
+| `tools/` (including `pnpm gen`) | `tools/shared/paths.ts` + `tools/shared/repo-paths.ts` |
+| Rust tests and unpublished tools | `tools/shared/repo-paths` (`publish = false`) |
+
+Two guard tests fail the build if a new hardcoded layout path appears:
+`tools/repo/no-hardcoded-paths.test.ts` and
+`tools/shared/repo-paths/tests/no_hardcoded_paths.rs`. Moving a generated file or
+binding crate is a one-file YAML edit plus regenerating via `pnpm gen`.
 
 ## Commands (cheat sheet)
 
@@ -31,7 +50,7 @@ Run from the repo root (`solvapay-sdk/`).
 | `pnpm snapshot:openapi:check`                              | Offline: re-derive snapshot from source, fail on drift                      |
 | `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert `operations:` (+ optional `bindings:`) stub from OpenAPI DTOs        |
 | `pnpm gen:bindings` / `pnpm gen:bindings --fix`            | Suggest or insert missing `bindings:` for orphan operations                 |
-| `pnpm gen`                                                 | Regenerate **all** dto-gen outputs (canonical flag set in `scripts/gen.ts`) |
+| `pnpm gen`                                                 | Regenerate **all** dto-gen outputs (canonical flag set in `tools/codegen/gen.ts`) |
 | `pnpm gen:check`                                           | Same as `gen`, then `git diff` against HEAD — CI drift gate                 |
 | `pnpm gen:all`                                             | Live snapshot (if backend up) → `gen` → `manifest:check` → `parity:check`   |
 | `pnpm manifest:check`                                      | Schema + semantics + OpenAPI cross-check + binding reconciliation           |
@@ -43,7 +62,7 @@ humans both call `pnpm gen` / `pnpm gen:check`.
 ## Prerequisites
 
 - **Node / pnpm** — for the TS scripts above
-- **Rust toolchain** — `pnpm gen` runs `cargo run -p dto-gen` from `rust/`
+- **Rust toolchain** — `pnpm gen` runs `cargo run -p dto-gen` from the repo root
 - **Live backend** (optional) — only for refreshing the OpenAPI snapshot:
   `http://localhost:3001/v1/openapi.json`
 
@@ -144,8 +163,9 @@ pnpm manifest:check
 ```
 
 Review the inserted `bindings:` block (especially `core` and `call.serialize`)
-before committing. Descriptors are derived from catalog params/route — not yet
-from Rust AST (that is a later optional phase).
+before committing. Descriptors are still authored in the manifest; deriving them
+from Rust (`#[solvapay_export]`) is [`codegen-ast-derivation.md`](./codegen-ast-derivation.md)
+Phase 4.
 
 ---
 
@@ -156,11 +176,6 @@ No new route:
 1. Edit `contract/manifest/sdk-contract.yaml` (`overlays:`, `docs:`, `defaults:`, …).
 2. `pnpm gen`
 3. `pnpm manifest:check`
-
-Historical one-shot backfills (do **not** use for new work):
-
-- `pnpm exec tsx scripts/populate-manifest-params.ts`
-- `pnpm exec tsx scripts/populate-manifest-docs.ts`
 
 ---
 
@@ -185,17 +200,17 @@ pnpm gen
 
 ## What `pnpm gen` regenerates
 
-Canonical paths are listed in `scripts/gen.ts` (`DTO_GEN_ARGS` + `GENERATED_PATHS`).
+Canonical paths are listed in `tools/codegen/gen.ts` (`DTO_GEN_ARGS` + `GENERATED_PATHS`).
 High-level groups:
 
 | Group                | Examples                                                                        |
 | -------------------- | ------------------------------------------------------------------------------- |
-| Rust DTOs            | `rust/crates/solvapay-dto/src/{schemas,routes,overlays,error_templates,lib}.rs` |
+| Rust DTOs            | `core/solvapay-dto/src/{schemas,routes,overlays,error_templates,lib}.rs` |
 | TS overlays + client | `packages/server/src/types/{overlays,client}.generated.d.ts`                    |
 | TS marshalling       | `packages/server/src/{native,wasm}.ts`                                          |
 | TS parity            | `packages/server/src/__generated__/signature-parity.generated.test.ts`          |
 | Binding dump         | `contract/manifest/binding-symbols.snapshot.json`                               |
-| Node / Wasm shims    | `rust/bindings/{node,wasm}/src/{args,decisions,payload_builders,*_client}.rs`   |
+| Node / Wasm shims    | `sdks/{node-native,wasm}/src/{args,decisions,payload_builders,*_client}.rs`   |
 | Python               | PyO3 shims, `_native.py`, `__init__.pyi`, parity test                           |
 | Ruby                 | Magnus shims, `_native.rb`, `client.rb`, RBS, parity test                       |
 | Rust facade          | `client_generated.rs`, `blocking_generated.rs`, parity test                     |
@@ -205,8 +220,11 @@ Hand-editing any of these fails CI (`@generated` header gate + `pnpm gen:check`)
 
 ### C ABI note
 
-`rust/bindings/c/` still uses a hand-maintained `dispatch.rs` allowlist. New ops
-do **not** appear in C until the deferred `Toolchain::C` emitter lands.
+`sdks/capi/` still uses a hand-maintained `dispatch.rs` allowlist (step 54
+scaffold: `getMerchant` + `verifyWebhook` / `version`). New ops do **not** appear
+in C until the `Toolchain::C` emitter column lands — Phase 1 of
+[`codegen-ast-derivation.md`](./codegen-ast-derivation.md), which is also the
+prerequisite for C fixture-parity in that doc’s Phase 5.
 
 ---
 
@@ -241,16 +259,18 @@ godoc / rustdoc.
 
 | Path                              | Responsibility                                        |
 | --------------------------------- | ----------------------------------------------------- |
-| `scripts/gen.ts`                  | **Only** place that lists dto-gen flags + drift paths |
-| `scripts/gen-all.ts`              | Full local pipeline                                   |
-| `scripts/gen-scaffold.ts`         | Manifest operation (+ bindings) scaffolder            |
-| `scripts/gen-bindings.ts`         | Orphan binding suggest/fix                            |
-| `scripts/lib/manifest-edit.ts`    | Surgical YAML block edits                             |
-| `scripts/lib/manifest-schema.ts`  | Zod schema, `deriveNames`, reconciliation             |
-| `scripts/lib/openapi-pipeline.ts` | Filter/prune/canonicalize OpenAPI                     |
-| `scripts/snapshot-openapi.ts`     | Snapshot write / check                                |
-| `scripts/manifest.ts`             | `manifest:validate` / `manifest:check` CLI            |
-| `rust/tools/dto-gen/`             | IR lower + emitters                                   |
+| `tools/codegen/gen.ts`                  | **Only** place that lists dto-gen flags + drift paths |
+| `tools/codegen/gen-all.ts`              | Full local pipeline                                   |
+| `tools/codegen/gen-scaffold.ts`         | Manifest operation (+ bindings) scaffolder            |
+| `tools/codegen/gen-bindings.ts`         | Orphan binding suggest/fix                            |
+| `tools/codegen/lib/manifest-edit.ts`    | Surgical YAML block edits                             |
+| `tools/shared/manifest-schema.ts`       | Zod schema, `deriveNames`, reconciliation             |
+| `tools/codegen/lib/openapi-pipeline.ts` | Filter/prune/canonicalize OpenAPI                     |
+| `tools/codegen/snapshot-openapi.ts`     | Snapshot write / check                                |
+| `tools/codegen/manifest.ts`             | `manifest:validate` / `manifest:check` CLI            |
+| `tools/codegen/dto-gen/`             | IR lower + emitters (`Toolchain::C`, fixture-runner registry) |
+| `tools/codegen/dto-gen/assets/c-emit.snapshot.json` | C `dispatch.rs` chrome (`extract-c-emit.mjs`) |
+| `tools/codegen/dto-gen/assets/fixture-runner-emit.snapshot.json` | Registry routing / extras / skip (`extract-fixture-runner-emit.mjs`) |
 
 ---
 
@@ -261,7 +281,8 @@ godoc / rustdoc.
 - Behavioral golden fixtures under `contract/fixtures/`
 - Sync/async and idempotency intent in the manifest
 - Rust core/transport implementation behind `bindings.*.core`
-- C ABI allowlist (`dispatch.rs`) until a C emitter exists
+- Verbatim fixture-runner bodies (32) and C smoke (`ctest/smoke.c` still one op);
+  generated `dispatch.rs` / `registry.rs` come from `pnpm gen`
 
 The reviewed manifest (and fixture) diff remains the forcing function; codegen
 removes boilerplate around it, not the review.

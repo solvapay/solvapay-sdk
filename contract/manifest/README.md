@@ -25,7 +25,7 @@ Runs the validate checks, then cross-checks every operation route and non-overla
 
 ## Shared schema
 
-Zod schema, `deriveNames`, and coverage helpers live in `scripts/lib/manifest-schema.ts`. The CLI is `scripts/manifest.ts`.
+Zod schema, `deriveNames`, and coverage helpers live in `tools/shared/manifest-schema.ts`. The CLI is `tools/codegen/manifest.ts`.
 
 ## Name overrides
 

@@ -12,12 +12,12 @@ Please also review our [Code of Conduct](./CODE_OF_CONDUCT.md) before contributi
 - **pnpm** (package manager)
 - **TypeScript** >= 5.0
 
-**Rust toolchain** — required only when touching the `rust/` workspace or running
-`pnpm gen` (it invokes `cargo run -p dto-gen`). The channel, components, and the
-`wasm32-unknown-unknown` target are pinned by `rust/rust-toolchain.toml`, so a
-`rustup`-managed install picks them up automatically. TypeScript-only changes do
-**not** need Rust — committed generated/WASM artifacts let `pnpm build:packages`
-run without it.
+**Rust toolchain** — required only when touching the Cargo workspace (`core/`,
+`sdks/`, `tools/`) or running `pnpm gen` (it invokes `cargo run -p dto-gen`).
+The channel, components, and the `wasm32-unknown-unknown` target are pinned by
+`rust-toolchain.toml`, so a `rustup`-managed install picks them up automatically.
+TypeScript-only changes do **not** need Rust — committed generated/WASM artifacts
+let `pnpm build:packages` run without it.
 
 Optional, per language surface you actually build/test locally:
 
@@ -56,15 +56,15 @@ pnpm -F @solvapay/server test
 pnpm -F @solvapay/server dev
 ```
 
-### The `rust/` workspace
+### The Cargo workspace
 
 Shared SDK semantics (validation, retry, webhook verify, paywall, helper
-decision cores, the HTTP client, MCP payload builders) live once in the Rust
-workspace under `rust/`, and the language facades delegate to it. TypeScript-only
-work generally doesn't touch `rust/`; committed generated + WASM artifacts let
-`pnpm build:packages` run without a Rust toolchain. Reach for `rust/` when
-changing shared behavior, the transport, or a binding — build/test it with
-`cargo` from the `rust/` directory (`cargo test --workspace`, `cargo clippy`).
+decision cores, the HTTP client, MCP payload builders) live once in
+`core/solvapay-*`, and the language facades under `sdks/` delegate to it.
+TypeScript-only work generally doesn't touch those trees; committed generated +
+WASM artifacts let `pnpm build:packages` run without a Rust toolchain. Reach for
+`core/` / `sdks/` when changing shared behavior, the transport, or a binding —
+build/test from the repo root (`cargo test --workspace`, `cargo clippy`).
 See [SDK architecture](./docs/contributing/architecture.md) for the crate/binding
 map.
 
@@ -106,16 +106,16 @@ Each package has specific constraints:
 | `@solvapay/auth`           | Server-side auth adapters, Edge-compatible                              |
 | `@solvapay/next`           | Next.js-specific, peer dep on Next.js                                   |
 
-The Rust workspace under `rust/` holds the shared semantic core the facades
+The Cargo workspace at the repo root holds the shared semantic core the facades
 delegate to:
 
 | Path                             | Constraints                                                                         |
 | -------------------------------- | ---------------------------------------------------------------------------------- |
-| `rust/crates/solvapay-core`      | Pure logic; `serde`/`hmac` only — **no** `reqwest`, `tokio`, or `wasm-bindgen`; no env reads, no timers |
-| `rust/crates/solvapay-dto`       | Generated wire models + overlays — **never hand-edited** (produced by `pnpm gen`)   |
-| `rust/crates/solvapay-transport` | `Transport` trait + reqwest/fetch impls + client shell; runtime-agnostic async     |
-| `rust/crates/solvapay`           | Public crates.io facade — ergonomics only, no new semantic logic                   |
-| `rust/bindings/{node,wasm,python,ruby,go,c}` | Per-language bindings; thin type-conversion shims over the core          |
+| `core/solvapay-core`      | Pure logic; `serde`/`hmac` only — **no** `reqwest`, `tokio`, or `wasm-bindgen`; no env reads, no timers |
+| `core/solvapay-dto`       | Generated wire models + overlays — **never hand-edited** (produced by `pnpm gen`)   |
+| `core/solvapay-transport` | `Transport` trait + reqwest/fetch impls + client shell; runtime-agnostic async     |
+| `sdks/rust`               | Public crates.io facade — ergonomics only, no new semantic logic                   |
+| `sdks/{node-native,wasm,python,ruby,go,capi}` | Per-language bindings; thin type-conversion shims over the core          |
 
 **Generated-file gate:** files carrying an `@generated` header (Rust DTOs, TS
 overlays/marshalling, binding shims, parity suites) are produced by `pnpm gen` and

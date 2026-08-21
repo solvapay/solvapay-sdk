@@ -10,7 +10,7 @@ anywhere in SDK docs; cite the budgets below.**
 
 ## WASM size and cold-start budgets
 
-Budgets live in [`rust/bindings/wasm/budgets.json`](../../rust/bindings/wasm/budgets.json)
+Budgets live in [`sdks/wasm/budgets.json`](../../sdks/wasm/budgets.json)
 and are the source of truth. It records, per profile (`browser`, `edge`):
 
 - `baselines` — measured raw bytes, gzip bytes, and cold-start ms (p20)
@@ -36,7 +36,7 @@ baseline update.
 
 ## Measurement methodology
 
-`rust/bindings/wasm/scripts/measure-wasm.mjs` produces the numbers:
+`sdks/wasm/scripts/measure-wasm.mjs` produces the numbers:
 
 - deterministic raw + gzip level-9 byte counts (exact comparison)
 - multiple isolated child processes (`samplesPerMetric`); discard the first

@@ -1,0 +1,247 @@
+//! Repo layout loaded from `contract/manifest/repo-paths.yaml`.
+//!
+//! Root discovery walks ancestors for `pnpm-workspace.yaml` and never counts
+//! `CARGO_MANIFEST_DIR` hops. Callers in other crates should use [`load`] /
+//! [`try_repo_root`] instead of `env!("CARGO_MANIFEST_DIR")`.
+
+use std::collections::BTreeMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use serde::Deserialize;
+use thiserror::Error;
+
+/// Marker file that identifies the solvapay-sdk monorepo root.
+const WORKSPACE_MARKER: &str = "pnpm-workspace.yaml";
+
+/// Repo-root-relative location of the layout manifest.
+const MANIFEST_REL: &str = "contract/manifest/repo-paths.yaml";
+
+/// Failures locating the repo or loading the layout manifest.
+#[derive(Debug, Error)]
+pub enum RepoPathsError {
+    /// No `pnpm-workspace.yaml` between `start` and the filesystem root.
+    #[error("pnpm-workspace.yaml not found walking up from {start}")]
+    RootNotFound {
+        /// Directory the walk started from.
+        start: PathBuf,
+    },
+    /// Filesystem error reading a path.
+    #[error("read {path}: {source}")]
+    Io {
+        /// Path that could not be read.
+        path: PathBuf,
+        /// Underlying OS error.
+        #[source]
+        source: std::io::Error,
+    },
+    /// YAML did not match the expected layout schema.
+    #[error("parse {path}: {message}")]
+    Parse {
+        /// Manifest path that failed to parse.
+        path: PathBuf,
+        /// Parser or schema message.
+        message: String,
+    },
+    /// `generated` id is not in the manifest.
+    #[error("unknown generated artifact id: {0}")]
+    UnknownGenerated(String),
+    /// `lookups` key is not in the manifest.
+    #[error("unknown repo-paths lookup: {0}")]
+    UnknownLookup(String),
+    /// `contractInputs` key is not in the manifest.
+    #[error("unknown contract input: {0}")]
+    UnknownContractInput(String),
+}
+
+/// Result alias for this crate.
+pub type Result<T> = std::result::Result<T, RepoPathsError>;
+
+/// Walk `start` and its ancestors until `pnpm-workspace.yaml` is found.
+pub fn try_repo_root_from(start: &Path) -> Result<PathBuf> {
+    let mut dir = start.to_path_buf();
+    loop {
+        if dir.join(WORKSPACE_MARKER).is_file() {
+            return Ok(dir);
+        }
+        let Some(parent) = dir.parent() else {
+            return Err(RepoPathsError::RootNotFound {
+                start: start.to_path_buf(),
+            });
+        };
+        if parent == dir {
+            return Err(RepoPathsError::RootNotFound {
+                start: start.to_path_buf(),
+            });
+        }
+        dir = parent.to_path_buf();
+    }
+}
+
+/// Repo root discovered by walking up from this crate's manifest directory.
+pub fn try_repo_root() -> Result<PathBuf> {
+    try_repo_root_from(Path::new(env!("CARGO_MANIFEST_DIR")))
+}
+
+/// One dto-gen / drift artifact from the `generated:` list.
+#[derive(Debug, Clone, Deserialize)]
+pub struct GeneratedEntry {
+    /// Stable id used by tests and lookup helpers.
+    pub id: String,
+    /// Repo-root-relative path (dto-gen `--flag` target, or drift-only file).
+    pub path: String,
+    /// dto-gen flag, when this artifact is emitted explicitly.
+    pub flag: Option<String>,
+    /// Alternate drift path (crate dir instead of `src/`).
+    #[serde(rename = "driftPath")]
+    pub drift_path: Option<String>,
+    /// Expanded drift files when `path` is a directory of generated sources.
+    #[serde(rename = "driftPaths")]
+    pub drift_paths: Option<Vec<String>>,
+}
+
+/// Flagged or unflagged contract input.
+#[derive(Debug, Clone, Deserialize)]
+pub struct FlaggedPath {
+    /// Repo-root-relative path.
+    pub path: String,
+    /// Optional dto-gen flag.
+    pub flag: Option<String>,
+}
+
+/// Deserialized `repo-paths.yaml` document.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Manifest {
+    /// Schema version (must be 1).
+    pub version: u32,
+    /// Top-level directory names relative to the repo root.
+    pub dirs: BTreeMap<String, String>,
+    /// Language / binding surface directories.
+    pub sdks: BTreeMap<String, String>,
+    /// OpenAPI snapshot, contract manifest, fixture trees.
+    #[serde(rename = "contractInputs")]
+    pub contract_inputs: BTreeMap<String, FlaggedPath>,
+    /// Generated artifacts (dto-gen flag order, plus drift-only entries).
+    pub generated: Vec<GeneratedEntry>,
+    /// Ordered generated ids matching today's `GENERATED_PATHS`.
+    pub drift: Vec<String>,
+    /// Extra named paths (live report, fuzz corpus, allowlists).
+    #[serde(default)]
+    pub lookups: BTreeMap<String, String>,
+}
+
+/// Loaded layout: absolute repo root plus the parsed manifest.
+#[derive(Debug, Clone)]
+pub struct RepoPaths {
+    /// Absolute monorepo root.
+    root: PathBuf,
+    /// Parsed YAML document.
+    manifest: Manifest,
+}
+
+impl RepoPaths {
+    /// Absolute monorepo root.
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// Parsed manifest.
+    pub fn manifest(&self) -> &Manifest {
+        &self.manifest
+    }
+
+    /// Join a repo-root-relative posix path onto the root.
+    pub fn abs(&self, rel: &str) -> PathBuf {
+        let mut out = self.root.clone();
+        for part in rel.split('/') {
+            if !part.is_empty() {
+                out.push(part);
+            }
+        }
+        out
+    }
+
+    /// `contract/fixtures`.
+    pub fn contract_fixtures(&self) -> Result<PathBuf> {
+        self.contract_input("fixtures")
+    }
+
+    /// `contract/fixtures/client`.
+    pub fn client_fixtures(&self) -> Result<PathBuf> {
+        self.contract_input("clientFixtures")
+    }
+
+    /// Absolute path for a `contractInputs` key.
+    pub fn contract_input(&self, key: &str) -> Result<PathBuf> {
+        let entry = self
+            .manifest
+            .contract_inputs
+            .get(key)
+            .ok_or_else(|| RepoPathsError::UnknownContractInput(key.to_owned()))?;
+        Ok(self.abs(&entry.path))
+    }
+
+    /// Absolute path for a `generated` id (`path`, not drift expansion).
+    pub fn generated_path(&self, id: &str) -> Result<PathBuf> {
+        let entry = self
+            .manifest
+            .generated
+            .iter()
+            .find(|item| item.id == id)
+            .ok_or_else(|| RepoPathsError::UnknownGenerated(id.to_owned()))?;
+        Ok(self.abs(&entry.path))
+    }
+
+    /// Absolute path for a `lookups` key.
+    pub fn lookup(&self, key: &str) -> Result<PathBuf> {
+        let rel = self
+            .manifest
+            .lookups
+            .get(key)
+            .ok_or_else(|| RepoPathsError::UnknownLookup(key.to_owned()))?;
+        Ok(self.abs(rel))
+    }
+
+    /// Ids of every `generated` entry, in manifest order.
+    pub fn generated_ids(&self) -> Vec<&str> {
+        self.manifest
+            .generated
+            .iter()
+            .map(|item| item.id.as_str())
+            .collect()
+    }
+}
+
+/// Load the layout manifest, discovering the repo root from this crate.
+pub fn load() -> Result<RepoPaths> {
+    load_from(&try_repo_root()?)
+}
+
+/// Load the layout manifest given an already-resolved repo root.
+pub fn load_from(root: &Path) -> Result<RepoPaths> {
+    let path = {
+        let mut p = root.to_path_buf();
+        for part in MANIFEST_REL.split('/') {
+            p.push(part);
+        }
+        p
+    };
+    let raw = fs::read_to_string(&path).map_err(|source| RepoPathsError::Io {
+        path: path.clone(),
+        source,
+    })?;
+    let manifest: Manifest = serde_norway::from_str(&raw).map_err(|err| RepoPathsError::Parse {
+        path: path.clone(),
+        message: err.to_string(),
+    })?;
+    if manifest.version != 1 {
+        return Err(RepoPathsError::Parse {
+            path,
+            message: format!("unsupported repo-paths version {}", manifest.version),
+        });
+    }
+    Ok(RepoPaths {
+        root: root.to_path_buf(),
+        manifest,
+    })
+}

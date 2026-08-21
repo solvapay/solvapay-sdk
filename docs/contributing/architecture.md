@@ -107,27 +107,29 @@ solvapay-sdk/
 │  ├─ demo-services/    # private
 │  ├─ test-utils/       # private
 │  └─ tsconfig/         # private
-├─ rust/                # Rust workspace (semantic core + bindings + tools)
-│  ├─ crates/
-│  │  ├─ solvapay-core/       # pure logic; serde/hmac only; no HTTP, no tokio
-│  │  ├─ solvapay-dto/        # generated wire models + SDK overlays
-│  │  ├─ solvapay-transport/  # transport trait, reqwest/fetch impls, client shell
-│  │  └─ solvapay/            # public crates.io facade crate
-│  ├─ bindings/
-│  │  ├─ node/          # napi-rs (Node native + WASI fallback)
-│  │  ├─ wasm/          # wasm-bindgen (edge + browser profiles)
-│  │  ├─ python/        # PyO3 + maturin
-│  │  ├─ ruby/          # Magnus + rb-sys
-│  │  ├─ go/            # wazero + embedded wasm32-wasip1 core
-│  │  └─ c/             # optional cbindgen C ABI
-│  └─ tools/
-│     ├─ dto-gen/        # OpenAPI + manifest → IR → all surfaces
-│     ├─ fixture-runner/ # replays Phase 0 golden fixtures against the core
-│     ├─ live-contract/  # live wire-contract checks
-│     └─ shadow-invoker/ # shadow-mode parity harness (Rust side)
+├─ core/                # Semantic crates (published to crates.io except as noted)
+│  ├─ solvapay-core/       # pure logic; serde/hmac only; no HTTP, no tokio
+│  ├─ solvapay-dto/        # generated wire models + SDK overlays
+│  └─ solvapay-transport/  # transport trait, reqwest/fetch impls, client shell
+├─ sdks/                # Language SDKs / bindings
+│  ├─ rust/             # public crates.io facade crate (`solvapay`)
+│  ├─ node-native/      # napi-rs (Node native + WASI fallback)
+│  ├─ wasm/             # wasm-bindgen (edge + browser profiles)
+│  ├─ python/           # PyO3 + maturin
+│  ├─ ruby/             # Magnus + rb-sys
+│  ├─ go/               # wazero + embedded wasm32-wasip1 core
+│  └─ capi/             # optional cbindgen C ABI
+├─ tools/
+│  ├─ shared/           # layout loaders + `repo-paths` crate
+│  ├─ codegen/          # dto-gen + TS gen wrappers
+│  ├─ conformance/      # fixture-runner, live-contract, shadow-invoker
+│  └─ repo/             # repo gates (required-checks, unwrap, publish graph)
+├─ internal/
+│  └─ fuzz/             # detached libFuzzer workspace (not a cargo member)
 ├─ contract/            # OpenAPI snapshot, manifest, golden fixtures
 ├─ examples/            # per-language examples (go/python/ruby/rust/typescript)
 ├─ docs/
+├─ Cargo.toml           # Cargo workspace (members under core/, sdks/, tools/)
 ├─ pnpm-workspace.yaml
 ├─ turbo.json
 └─ package.json
@@ -149,7 +151,7 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 
 **Pure logic — `solvapay-core`:**
 
-- **Webhook verify** → `rust/crates/solvapay-core/src/webhook.rs` (+ shared
+- **Webhook verify** → `core/solvapay-core/src/webhook.rs` (+ shared
   `hmac_util.rs`) ← `packages/server/src/{webhook-native,webhook-wasm}.ts`
 - **Retry policy** (schedules, not sleeps) → `.../src/retry.rs`
 - **Paywall** → `paywall_state.rs`, `paywall_gate.rs`, `paywall_decision.rs`,
@@ -167,13 +169,13 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 **HTTP client — `solvapay-transport`:** the `Transport` trait plus the reqwest
 (native) and Fetch (wasm32) implementations and the client shell that wires auth
 headers, idempotency, and retry, with all 36 client methods →
-`rust/crates/solvapay-transport/src/{transport,reqwest_transport,fetch_transport,shell,client}.rs`.
+`core/solvapay-transport/src/{transport,reqwest_transport,fetch_transport,shell,client}.rs`.
 
 **TypeScript delegation glue:**
 
 - Node → `packages/server/src/native.ts` (+ `native-decisions.ts`,
-  `native-registry.ts`) over `rust/bindings/node/src/*` (napi-rs)
-- Edge/browser → `packages/server/src/wasm.ts` over `rust/bindings/wasm`
+  `native-registry.ts`) over `sdks/node-native/src/*` (napi-rs)
+- Edge/browser → `packages/server/src/wasm.ts` over `sdks/wasm`
   (wasm-bindgen)
 - `@solvapay/core` is Rust-backed (its helpers delegate to the core via the
   same bindings)
@@ -190,7 +192,7 @@ capabilities; only syntax differs (cross-surface parity is enforced in CI).
 | Ruby           | Magnus + rb-sys (platform gems)                           | Built + tested in CI; publish gated (not GA)                                  |
 | Go             | wazero + embedded `wasm32-wasip1` core (`//go:embed`)     | Built + tested in CI; subtree module release (not GA)                         |
 | Rust           | `solvapay` crate (thin facade, no FFI) + `blocking` feature | Built + tested in CI; crates.io publish gated (not GA)                        |
-| C ABI (opt.)   | cbindgen + opaque handles (`rust/bindings/c`)            | Scaffold only — hand-maintained `dispatch.rs` allowlist; no codegen emitter yet |
+| C ABI (opt.)   | cbindgen + opaque handles (`sdks/capi`)            | Scaffold only — hand-maintained `dispatch.rs` allowlist; no codegen emitter yet |
 
 The TypeScript surface further splits by runtime:
 
@@ -212,7 +214,7 @@ import style:
 
 **Capability-separated builds** (redesign-v2 §7.1) keep secret-key operations out
 of the browser: the `browser` profile compiles only the public-safe subset, and a
-CI symbol audit (`rust/bindings/wasm/scripts/check-browser-symbols.mjs`)
+CI symbol audit (`sdks/wasm/scripts/check-browser-symbols.mjs`)
 allowlists exactly the public-safe exports. Webhook verification and the
 transport client are `edge`-gated, so no secret-key `WasmClient` symbol can enter
 the browser module. The structural gate is the Cargo feature graph plus the
@@ -276,6 +278,7 @@ Some surfaces are deliberately hand-written and never move to Rust (redesign-v2
 ## Where to read next
 
 - [`sdk-codegen.md`](./sdk-codegen.md) — regenerating DTOs, facades, binding glue (`pnpm gen`)
+- [`codegen-ast-derivation.md`](./codegen-ast-derivation.md) — derive binding descriptors and conformance harnesses from Rust (after step 55)
 - [`rust-core-sdk-redesign-v2.md`](./rust-core-sdk-redesign-v2.md) — deep spec, decisions, and rationale
 - [`rust-migration-map.md`](./rust-migration-map.md) — per-step migration status
 - [`testing.md`](./testing.md) — fixtures, dual-impl suites, parity, cargo gates

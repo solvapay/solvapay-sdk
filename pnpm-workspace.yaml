@@ -1,5 +1,4 @@
 packages:
-  - 'apps/*'
   - 'packages/*'
   - 'examples/typescript/*'
-  - 'rust/bindings/*'
+  - 'sdks/*'

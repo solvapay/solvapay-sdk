@@ -4,3 +4,4 @@
 pnpm gen:check || exit 1
 pnpm manifest:check || exit 1
 pnpm parity:check || exit 1
+pnpm checks:required || exit 1

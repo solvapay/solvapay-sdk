@@ -10,6 +10,7 @@ dist
 .npmrc
 .pnpm-store
 .turbo
+.wrangler
 .cursor/*
 !.cursor/rules/
 !.cursor/plans/
@@ -38,23 +39,23 @@ docs/api.json
 research-tmp/
 
 # Contract / snapshot CLI test scratch
-scripts/.tmp/
+tools/.tmp/
 
 # Shadow-mode live/selftest report output (step 25)
 contract/shadow/output/
 
 # Rust / Cargo build artifacts
-rust/target/
+target/
 **/*.rs.bk
 *.pdb
 
 # napi-rs Node binding (step 36) — native/WASI binaries (loaders are committed)
-rust/bindings/node/*.node
-rust/bindings/node/*.wasm
-rust/bindings/node/node_modules/
-rust/bindings/node/npm/**/*.node
-rust/bindings/node/npm/**/*.wasm
-rust/bindings/node/npm/wasm32-wasi/server-native.wasi*
-rust/bindings/node/npm/wasm32-wasi/wasi-worker*
-rust/bindings/node/artifacts/
-rust/bindings/node/clean-install-bundle/
+sdks/node-native/*.node
+sdks/node-native/*.wasm
+sdks/node-native/node_modules/
+sdks/node-native/npm/**/*.node
+sdks/node-native/npm/**/*.wasm
+sdks/node-native/npm/wasm32-wasi/server-native.wasi*
+sdks/node-native/npm/wasm32-wasi/wasi-worker*
+sdks/node-native/artifacts/
+sdks/node-native/clean-install-bundle/

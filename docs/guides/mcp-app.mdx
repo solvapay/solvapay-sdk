@@ -96,7 +96,7 @@ registerAppTool(
 )
 ```
 
-Pair this with `createMcpOAuthBridge` from `@solvapay/mcp/fetch` (or `/express`) to surface `customer_ref` on `extra.authInfo` — the core helpers read it from the synthesised request headers. For the full batteries-included setup use `createSolvaPayMcpServer` from `@solvapay/mcp`. A complete working server lives at [`examples/mcp-checkout-app/src/server.ts`](https://github.com/solvapay/solvapay-sdk/blob/main/examples/mcp-checkout-app/src/server.ts).
+Pair this with `createMcpOAuthBridge` from `@solvapay/mcp/fetch` (or `/express`) to surface `customer_ref` on `extra.authInfo` — the core helpers read it from the synthesised request headers. For the full batteries-included setup use `createSolvaPayMcpServer` from `@solvapay/mcp`. A complete working server lives at [`examples/typescript/mcp-checkout-app/src/server.ts`](https://github.com/solvapay/solvapay-sdk/blob/main/examples/typescript/mcp-checkout-app/src/server.ts).
 
 ## Authentication
 
@@ -173,7 +173,7 @@ The MCP App surface uses SolvaPay's **text-only paywall**. A `registerPayable` t
 
 ## Complete example
 
-A full working example — server, client, OAuth bridge, polling, and the five-state purchase flow — lives in the SDK repo at [`examples/mcp-checkout-app`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/mcp-checkout-app). Clone it, set `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF`, point `basic-host` at `http://localhost:3006/mcp`, and you have an end-to-end paywalled MCP App running locally.
+A full working example — server, client, OAuth bridge, polling, and the five-state purchase flow — lives in the SDK repo at [`examples/typescript/mcp-checkout-app`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-checkout-app). Clone it, set `SOLVAPAY_SECRET_KEY` and `SOLVAPAY_PRODUCT_REF`, point `basic-host` at `http://localhost:3006/mcp`, and you have an end-to-end paywalled MCP App running locally.
 
 ## Known boundaries
 

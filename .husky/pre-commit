@@ -16,28 +16,30 @@ pnpm gen || exit 1
 
 # Re-stage generated artifacts that gen may have rewritten.
 git add -- \
-  rust/crates/solvapay-dto \
+  core/solvapay-dto \
   packages/server/src/types/overlays.generated.d.ts \
   packages/server/src/types/client.generated.d.ts \
   packages/server/src/__generated__/signature-parity.generated.test.ts \
   packages/server/src/native.ts \
   packages/server/src/wasm.ts \
   contract/manifest/binding-symbols.snapshot.json \
-  rust/bindings/node/src \
-  rust/bindings/wasm/src \
-  rust/bindings/python/src \
-  rust/bindings/python/python/solvapay/_native.py \
-  rust/bindings/python/python/solvapay/__init__.pyi \
-  rust/bindings/python/tests/signature_parity_generated_test.py \
-  rust/bindings/ruby/ext/solvapay/src \
-  rust/bindings/ruby/lib/solvapay/_native.rb \
-  rust/bindings/ruby/lib/solvapay/client.rb \
-  rust/bindings/ruby/lib/solvapay/helpers.generated.rb \
-  rust/bindings/ruby/sig/solvapay.rbs \
-  rust/bindings/ruby/test/signature_parity_generated_test.rb \
-  rust/crates/solvapay/src/client_generated.rs \
-  rust/crates/solvapay/src/blocking_generated.rs \
-  rust/crates/solvapay/tests/signature_parity_generated.rs \
-  rust/bindings/go/wasm/src \
-  rust/bindings/go/client_generated.go \
-  rust/bindings/go/signature_parity_generated_test.go
+  sdks/node-native/src \
+  sdks/wasm/src \
+  sdks/python/src \
+  sdks/python/python/solvapay/_native.py \
+  sdks/python/python/solvapay/__init__.pyi \
+  sdks/python/tests/signature_parity_generated_test.py \
+  sdks/ruby/ext/solvapay/src \
+  sdks/ruby/lib/solvapay/_native.rb \
+  sdks/ruby/lib/solvapay/client.rb \
+  sdks/ruby/lib/solvapay/helpers.generated.rb \
+  sdks/ruby/sig/solvapay.rbs \
+  sdks/ruby/test/signature_parity_generated_test.rb \
+  sdks/rust/src/client_generated.rs \
+  sdks/rust/src/blocking_generated.rs \
+  sdks/rust/tests/signature_parity_generated.rs \
+  sdks/go/wasm/src \
+  sdks/go/client_generated.go \
+  sdks/go/signature_parity_generated_test.go \
+  sdks/capi/src \
+  tools/conformance/fixture-runner/src/registry.rs

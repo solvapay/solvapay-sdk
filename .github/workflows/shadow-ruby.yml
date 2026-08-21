@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: rust/bindings/ruby
+        working-directory: sdks/ruby
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: true
           cargo-cache: true
-          working-directory: rust/bindings/ruby
+          working-directory: sdks/ruby
 
       - name: Bundle install
         run: bundle install

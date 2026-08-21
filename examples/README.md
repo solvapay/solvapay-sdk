@@ -70,7 +70,7 @@ python -m pytest -q
 
 ```bash
 cd examples/ruby/get_merchant
-ruby -I../../../rust/bindings/ruby/lib test/get_merchant_test.rb
+ruby -I../../../sdks/ruby/lib test/get_merchant_test.rb
 ```
 
 ## Go

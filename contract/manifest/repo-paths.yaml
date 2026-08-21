@@ -1,0 +1,192 @@
+version: 1
+
+dirs:
+  contract: contract
+  core: core
+  packages: packages
+  docs: docs
+  examples: examples
+  tools: tools
+  toolsShared: tools/shared
+  toolsCodegen: tools/codegen
+  toolsConformance: tools/conformance
+  toolsRepo: tools/repo
+  workflows: .github/workflows
+  changeset: .changeset
+
+sdks:
+  node-native: sdks/node-native
+  wasm: sdks/wasm
+  python: sdks/python
+  ruby: sdks/ruby
+  go: sdks/go
+  capi: sdks/capi
+  rust: sdks/rust
+  typescript: packages/server
+
+contractInputs:
+  openapiSnapshot:
+    path: contract/openapi/sdk-v1.snapshot.json
+    flag: --snapshot
+  sdkManifest:
+    path: contract/manifest/sdk-contract.yaml
+    flag: --manifest
+  clientFixtures:
+    path: contract/fixtures/client
+  fixtures:
+    path: contract/fixtures
+
+# dto-gen flag order is: flagged contractInputs (openapiSnapshot, sdkManifest),
+# then this list in order. Entries without `flag` are drift-only.
+generated:
+  - id: rustDto
+    path: core/solvapay-dto/src
+    flag: --out
+    driftPath: core/solvapay-dto
+  - id: tsOverlays
+    path: packages/server/src/types/overlays.generated.d.ts
+    flag: --ts-out
+  - id: tsClient
+    path: packages/server/src/types/client.generated.d.ts
+    flag: --ts-client-out
+  - id: tsParity
+    path: packages/server/src/__generated__/signature-parity.generated.test.ts
+    flag: --ts-parity-out
+  - id: bindingSymbols
+    path: contract/manifest/binding-symbols.snapshot.json
+    flag: --dump-bindings
+  - id: nodeBindings
+    path: sdks/node-native/src
+    flag: --node-bindings-out
+    driftPaths:
+      - sdks/node-native/src/args.rs
+      - sdks/node-native/src/decisions.rs
+      - sdks/node-native/src/payload_builders.rs
+      - sdks/node-native/src/native_client.rs
+  - id: wasmBindings
+    path: sdks/wasm/src
+    flag: --wasm-bindings-out
+    driftPaths:
+      - sdks/wasm/src/args.rs
+      - sdks/wasm/src/decisions.rs
+      - sdks/wasm/src/payload_builders.rs
+      - sdks/wasm/src/wasm_client.rs
+  - id: pythonBindings
+    path: sdks/python/src
+    flag: --python-bindings-out
+    driftPaths:
+      - sdks/python/src/args.rs
+      - sdks/python/src/decisions.rs
+      - sdks/python/src/payload_builders.rs
+      - sdks/python/src/client.rs
+      - sdks/python/src/register.rs
+  - id: rubyBindings
+    path: sdks/ruby/ext/solvapay/src
+    flag: --ruby-bindings-out
+    driftPaths:
+      - sdks/ruby/ext/solvapay/src/args.rs
+      - sdks/ruby/ext/solvapay/src/decisions.rs
+      - sdks/ruby/ext/solvapay/src/payload_builders.rs
+      - sdks/ruby/ext/solvapay/src/client.rs
+      - sdks/ruby/ext/solvapay/src/register.rs
+  - id: nativeTs
+    path: packages/server/src/native.ts
+    flag: --native-ts-out
+  - id: wasmTs
+    path: packages/server/src/wasm.ts
+    flag: --wasm-ts-out
+  - id: nativePy
+    path: sdks/python/python/solvapay/_native.py
+    flag: --native-py-out
+  - id: pyStub
+    path: sdks/python/python/solvapay/__init__.pyi
+    flag: --py-stub-out
+  - id: pyParity
+    path: sdks/python/tests/signature_parity_generated_test.py
+    flag: --py-parity-out
+  - id: nativeRb
+    path: sdks/ruby/lib/solvapay/_native.rb
+    flag: --native-rb-out
+  - id: rbClient
+    path: sdks/ruby/lib/solvapay/client.rb
+    flag: --rb-client-out
+  - id: rubyHelpers
+    path: sdks/ruby/lib/solvapay/helpers.generated.rb
+  - id: rbRbs
+    path: sdks/ruby/sig/solvapay.rbs
+    flag: --rb-rbs-out
+  - id: rbParity
+    path: sdks/ruby/test/signature_parity_generated_test.rb
+    flag: --rb-parity-out
+  - id: rsClient
+    path: sdks/rust/src/client_generated.rs
+    flag: --rs-client-out
+  - id: rsBlocking
+    path: sdks/rust/src/blocking_generated.rs
+  - id: rsParity
+    path: sdks/rust/tests/signature_parity_generated.rs
+    flag: --rs-parity-out
+  - id: goBindings
+    path: sdks/go/wasm/src
+    flag: --go-bindings-out
+    driftPaths:
+      - sdks/go/wasm/src/args.rs
+      - sdks/go/wasm/src/client.rs
+      - sdks/go/wasm/src/webhook.rs
+  - id: goClient
+    path: sdks/go/client_generated.go
+    flag: --go-client-out
+  - id: goParity
+    path: sdks/go/signature_parity_generated_test.go
+    flag: --go-parity-out
+  - id: cBindings
+    path: sdks/capi/src
+    flag: --c-bindings-out
+    driftPaths:
+      - sdks/capi/src/dispatch.rs
+  - id: fixtureRunner
+    path: tools/conformance/fixture-runner/src/registry.rs
+    flag: --fixture-runner-out
+
+# GENERATED_PATHS order (not the same as dto-gen flag order).
+drift:
+  - rustDto
+  - tsOverlays
+  - tsClient
+  - tsParity
+  - nativeTs
+  - wasmTs
+  - bindingSymbols
+  - nodeBindings
+  - wasmBindings
+  - pythonBindings
+  - nativePy
+  - pyStub
+  - pyParity
+  - rubyBindings
+  - nativeRb
+  - rbClient
+  - rubyHelpers
+  - rbRbs
+  - rbParity
+  - rsClient
+  - rsBlocking
+  - rsParity
+  - goBindings
+  - goClient
+  - goParity
+  - cBindings
+  - fixtureRunner
+
+lookups:
+  rustLiveReport: contract/shadow/output/rust-live-report.json
+  fuzzCorpus: internal/fuzz/corpus
+  fuzzRoot: internal/fuzz
+  requiredChecks: contract/required-checks.yaml
+  delegationAllowlist: contract/delegation-allowlist.json
+  openapiDir: contract/openapi
+  shadowOutput: contract/shadow/output
+  webhookFixtures: contract/fixtures/webhook-verification
+  manifestSchemaTs: tools/shared/manifest-schema.ts
+  syntheticOpenapi: tools/codegen/fixtures/synthetic-openapi.json
+  scriptsTmp: tools/.tmp

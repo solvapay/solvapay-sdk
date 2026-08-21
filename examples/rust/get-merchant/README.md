@@ -25,17 +25,10 @@ From the repo root:
 cargo run --manifest-path examples/rust/get-merchant/Cargo.toml
 ```
 
-Or from `rust/`:
-
-```bash
-cargo run --manifest-path ../examples/rust/get-merchant/Cargo.toml
-```
-
 ## Live integration test (facade crate)
 
 ```bash
-cd rust
-cargo test -p solvapay live_dev_get_merchant_from_env -- --ignored --nocapture
+cargo test -p solvapay -- --ignored --nocapture
 ```
 
 Requires `examples/rust/get-merchant/.env`.

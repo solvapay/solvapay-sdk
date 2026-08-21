@@ -1,10 +1,10 @@
 import { defineConfig } from 'vitest/config'
-import { resolve } from 'path'
+import { sdkDir } from '../../tools/shared/paths.js'
 
 export default defineConfig({
   resolve: {
     alias: {
-      '@solvapay/server-native': resolve(__dirname, '../../rust/bindings/node'),
+      '@solvapay/server-native': sdkDir('node-native'),
     },
   },
   test: {

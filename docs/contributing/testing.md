@@ -17,11 +17,11 @@ shapes, and every helper decision core). Each fixture is a language-neutral
 input → expected-output record. These are the source of truth for behavior; every
 surface must reproduce them byte-for-byte.
 
-- **TypeScript side:** the fixture harness (`scripts/lib/fixture-harness.ts`)
+- **TypeScript side:** the fixture harness (`tools/conformance/lib/fixture-harness.ts`)
   replays fixtures against the TS facades. Run via `pnpm test:contract`.
-- **Rust side:** `rust/tools/fixture-runner` replays the same fixtures against
-  the Rust core (`cargo run -q -p fixture-runner -- ../contract/fixtures` from
-  `rust/`), reporting `parsed`/`executed`/`passed`/`failed` counts.
+- **Rust side:** `tools/conformance/fixture-runner` replays the same fixtures against
+  the Rust core (`cargo run -q -p fixture-runner -- contract/fixtures` from the
+  repo root), reporting `parsed`/`executed`/`passed`/`failed` counts.
 
 A behavior change is a fixture diff, reviewed like code.
 
@@ -42,8 +42,8 @@ pnpm shadow:selftest   # offline: IDENTICAL + intentional-divergence self-check
 pnpm shadow:run        # live comparison (SOLVAPAY_SHADOW_* env, manual/dispatch)
 ```
 
-The Rust side is `rust/tools/shadow-invoker`; the TS driver is
-`scripts/shadow/`.
+The Rust side is `tools/conformance/shadow-invoker`; the TS driver is
+`tools/conformance/shadow/`.
 
 ### Cross-language signature parity
 
@@ -54,12 +54,12 @@ Rust/Go generated parity tests). Offline drift is caught by `pnpm parity:check`.
 
 ### Rust gates
 
-Run from the `rust/` directory:
+Run from the repo root:
 
 ```bash
 cargo test --workspace          # core, transport, dto-gen, bindings
 cargo clippy --workspace --all-targets -- -D warnings
-./scripts/check-no-unwrap.sh    # bans .unwrap()/.expect()/panic outside #[cfg(test)]
+./tools/repo/check-no-unwrap.sh # bans .unwrap()/.expect()/panic outside #[cfg(test)]
 ```
 
 CI also builds/tests the wasm32 target, each language binding
@@ -137,7 +137,7 @@ Before opening a PR, make sure:
 - fixtures pass on both sides (`pnpm test:contract` + the `fixture-runner`) when
   you change behavior
 - Rust gates pass (`cargo test --workspace`, `cargo clippy`, `check-no-unwrap.sh`)
-  when you touch `rust/`
+  when you touch `core/` or `sdks/`
 - new behavior has coverage in unit, integration, or fixture tests
 - docs links are valid (`pnpm docs:validate-links`)
 

@@ -38,7 +38,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     defaults:
       run:
-        working-directory: rust/bindings/python
+        working-directory: sdks/python
     strategy:
       fail-fast: false
       matrix:
@@ -112,7 +112,7 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           args: ${{ matrix.maturin-args }}
-          working-directory: rust/bindings/python
+          working-directory: sdks/python
           sccache: 'true'
         env:
           SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
@@ -122,7 +122,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: publish-python-wheel-${{ matrix.platform }}
-          path: rust/bindings/python/dist/*.whl
+          path: sdks/python/dist/*.whl
           if-no-files-found: error
 
   build-sdist:
@@ -130,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: rust/bindings/python
+        working-directory: sdks/python
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -174,7 +174,7 @@ jobs:
         with:
           command: sdist
           args: --out dist
-          working-directory: rust/bindings/python
+          working-directory: sdks/python
         env:
           SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
           SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}
@@ -183,7 +183,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: publish-python-sdist
-          path: rust/bindings/python/dist/*.tar.gz
+          path: sdks/python/dist/*.tar.gz
           if-no-files-found: error
 
   publish:
@@ -194,7 +194,7 @@ jobs:
       - build-sdist
     defaults:
       run:
-        working-directory: rust/bindings/python
+        working-directory: sdks/python
     permissions:
       contents: read
       id-token: write
@@ -210,7 +210,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: rust/bindings/python/dist-in
+          path: sdks/python/dist-in
           pattern: publish-python-*
           merge-multiple: true
 
@@ -229,11 +229,11 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          packages-dir: rust/bindings/python/dist
+          packages-dir: sdks/python/dist
           skip-existing: true
 
       - name: Publish to PyPI
         if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_pypi == true) || startsWith(github.ref, 'refs/tags/solvapay-python-v') }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: rust/bindings/python/dist
+          packages-dir: sdks/python/dist

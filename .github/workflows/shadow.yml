@@ -49,7 +49,6 @@ jobs:
           toolchain: '1.96.0'
 
       - name: Build shadow-invoker
-        working-directory: rust
         run: cargo build -p shadow-invoker
 
       - name: Run shadow suite

@@ -23,9 +23,6 @@ jobs:
   shadow-rust-live:
     name: Rust live contract
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: rust
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

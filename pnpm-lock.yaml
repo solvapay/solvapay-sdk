@@ -103,7 +103,7 @@ importers:
         version: 8.58.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
@@ -222,10 +222,10 @@ importers:
         version: link:../shared
       '@solvapay/server-native':
         specifier: workspace:*
-        version: link:../../../rust/bindings/node
+        version: link:../../../sdks/node-native
       '@solvapay/server-wasm':
         specifier: workspace:*
-        version: link:../../../rust/bindings/wasm
+        version: link:../../../sdks/wasm
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -267,7 +267,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.3
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
       wrangler:
         specifier: ^4.86.0
         version: 4.98.0(@cloudflare/workers-types@4.20260425.1)
@@ -373,7 +373,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.3
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   examples/typescript/express-provider-linkage:
     dependencies:
@@ -413,7 +413,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.3
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   examples/typescript/hosted-checkout-demo:
     dependencies:
@@ -459,10 +459,10 @@ importers:
         version: link:../shared
       '@solvapay/server-native':
         specifier: workspace:*
-        version: link:../../../rust/bindings/node
+        version: link:../../../sdks/node-native
       '@solvapay/server-wasm':
         specifier: workspace:*
-        version: link:../../../rust/bindings/wasm
+        version: link:../../../sdks/wasm
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -501,7 +501,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.3
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   examples/typescript/mcp-checkout-app:
     dependencies:
@@ -760,10 +760,10 @@ importers:
         version: link:../shared
       '@solvapay/server-native':
         specifier: workspace:*
-        version: link:../../../rust/bindings/node
+        version: link:../../../sdks/node-native
       '@solvapay/server-wasm':
         specifier: workspace:*
-        version: link:../../../rust/bindings/wasm
+        version: link:../../../sdks/wasm
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -790,7 +790,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.3
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   examples/typescript/shadcn-checkout:
     dependencies:
@@ -851,10 +851,10 @@ importers:
     devDependencies:
       '@solvapay/server-native':
         specifier: workspace:*
-        version: link:../../../rust/bindings/node
+        version: link:../../../sdks/node-native
       '@solvapay/server-wasm':
         specifier: workspace:*
-        version: link:../../../rust/bindings/wasm
+        version: link:../../../sdks/wasm
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -1009,10 +1009,10 @@ importers:
     devDependencies:
       '@solvapay/server-native':
         specifier: workspace:*
-        version: link:../../../rust/bindings/node
+        version: link:../../../sdks/node-native
       '@solvapay/server-wasm':
         specifier: workspace:*
-        version: link:../../../rust/bindings/wasm
+        version: link:../../../sdks/wasm
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -1071,7 +1071,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/core:
     dependencies:
@@ -1081,7 +1081,7 @@ importers:
     optionalDependencies:
       '@solvapay/server-wasm':
         specifier: workspace:*
-        version: link:../../rust/bindings/wasm
+        version: link:../../sdks/wasm
     devDependencies:
       tsup:
         specifier: ^8.5.1
@@ -1091,7 +1091,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/create-solvapay:
     dependencies:
@@ -1107,7 +1107,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/demo-services:
     dependencies:
@@ -1142,7 +1142,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/mcp:
     devDependencies:
@@ -1169,7 +1169,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -1194,7 +1194,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -1225,7 +1225,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/react:
     dependencies:
@@ -1286,7 +1286,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/react-supabase:
     dependencies:
@@ -1308,7 +1308,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/server:
     dependencies:
@@ -1317,11 +1317,11 @@ importers:
         version: link:../core
       '@solvapay/server-wasm':
         specifier: workspace:*
-        version: link:../../rust/bindings/wasm
+        version: link:../../sdks/wasm
     optionalDependencies:
       '@solvapay/server-native':
         specifier: workspace:*
-        version: link:../../rust/bindings/node
+        version: link:../../sdks/node-native
     devDependencies:
       '@solvapay/auth':
         specifier: workspace:*
@@ -1352,7 +1352,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -1364,9 +1364,9 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
-  rust/bindings/node:
+  sdks/node-native:
     dependencies:
       '@napi-rs/wasm-runtime':
         specifier: ^1.1.6
@@ -1374,31 +1374,31 @@ importers:
     optionalDependencies:
       '@solvapay/server-native-darwin-arm64':
         specifier: file:npm/darwin-arm64
-        version: file:rust/bindings/node/npm/darwin-arm64
+        version: file:sdks/node-native/npm/darwin-arm64
       '@solvapay/server-native-darwin-x64':
         specifier: file:npm/darwin-x64
-        version: file:rust/bindings/node/npm/darwin-x64
+        version: file:sdks/node-native/npm/darwin-x64
       '@solvapay/server-native-linux-arm64-gnu':
         specifier: file:npm/linux-arm64-gnu
-        version: file:rust/bindings/node/npm/linux-arm64-gnu
+        version: file:sdks/node-native/npm/linux-arm64-gnu
       '@solvapay/server-native-linux-arm64-musl':
         specifier: file:npm/linux-arm64-musl
-        version: file:rust/bindings/node/npm/linux-arm64-musl
+        version: file:sdks/node-native/npm/linux-arm64-musl
       '@solvapay/server-native-linux-x64-gnu':
         specifier: file:npm/linux-x64-gnu
-        version: file:rust/bindings/node/npm/linux-x64-gnu
+        version: file:sdks/node-native/npm/linux-x64-gnu
       '@solvapay/server-native-linux-x64-musl':
         specifier: file:npm/linux-x64-musl
-        version: file:rust/bindings/node/npm/linux-x64-musl
+        version: file:sdks/node-native/npm/linux-x64-musl
       '@solvapay/server-native-wasm32-wasi':
         specifier: file:npm/wasm32-wasi
-        version: file:rust/bindings/node/npm/wasm32-wasi
+        version: file:sdks/node-native/npm/wasm32-wasi
       '@solvapay/server-native-win32-arm64-msvc':
         specifier: file:npm/win32-arm64-msvc
-        version: file:rust/bindings/node/npm/win32-arm64-msvc
+        version: file:sdks/node-native/npm/win32-arm64-msvc
       '@solvapay/server-native-win32-x64-msvc':
         specifier: file:npm/win32-x64-msvc
-        version: file:rust/bindings/node/npm/win32-x64-msvc
+        version: file:sdks/node-native/npm/win32-x64-msvc
     devDependencies:
       '@emnapi/core':
         specifier: 1.11.2
@@ -1411,12 +1411,12 @@ importers:
         version: 3.7.3(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@25.5.2)
       '@tybys/wasm-util':
         specifier: ^0.10.1
-        version: 0.10.1
+        version: 0.10.3
       emnapi:
         specifier: 1.11.2
         version: 1.11.2
 
-  rust/bindings/wasm:
+  sdks/wasm:
     devDependencies:
       binaryen:
         specifier: 131.0.0
@@ -4228,59 +4228,59 @@ packages:
     resolution: {integrity: sha512-oTt3OP9NcJkrySCSCCdSbP6XLSMNgOmt/ulaiYtb0Ng6tfEWtXQ1mwfyqmLd+GapmDUjbU2mgkf7QIq9H4ij/g==}
     engines: {node: '>=18.0.0'}
 
-  '@solvapay/server-native-darwin-arm64@file:rust/bindings/node/npm/darwin-arm64':
-    resolution: {directory: rust/bindings/node/npm/darwin-arm64, type: directory}
+  '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
+    resolution: {directory: sdks/node-native/npm/darwin-arm64, type: directory}
     engines: {node: '>= 18'}
     cpu: [arm64]
     os: [darwin]
 
-  '@solvapay/server-native-darwin-x64@file:rust/bindings/node/npm/darwin-x64':
-    resolution: {directory: rust/bindings/node/npm/darwin-x64, type: directory}
+  '@solvapay/server-native-darwin-x64@file:sdks/node-native/npm/darwin-x64':
+    resolution: {directory: sdks/node-native/npm/darwin-x64, type: directory}
     engines: {node: '>= 18'}
     cpu: [x64]
     os: [darwin]
 
-  '@solvapay/server-native-linux-arm64-gnu@file:rust/bindings/node/npm/linux-arm64-gnu':
-    resolution: {directory: rust/bindings/node/npm/linux-arm64-gnu, type: directory}
+  '@solvapay/server-native-linux-arm64-gnu@file:sdks/node-native/npm/linux-arm64-gnu':
+    resolution: {directory: sdks/node-native/npm/linux-arm64-gnu, type: directory}
     engines: {node: '>= 18'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@solvapay/server-native-linux-arm64-musl@file:rust/bindings/node/npm/linux-arm64-musl':
-    resolution: {directory: rust/bindings/node/npm/linux-arm64-musl, type: directory}
+  '@solvapay/server-native-linux-arm64-musl@file:sdks/node-native/npm/linux-arm64-musl':
+    resolution: {directory: sdks/node-native/npm/linux-arm64-musl, type: directory}
     engines: {node: '>= 18'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@solvapay/server-native-linux-x64-gnu@file:rust/bindings/node/npm/linux-x64-gnu':
-    resolution: {directory: rust/bindings/node/npm/linux-x64-gnu, type: directory}
+  '@solvapay/server-native-linux-x64-gnu@file:sdks/node-native/npm/linux-x64-gnu':
+    resolution: {directory: sdks/node-native/npm/linux-x64-gnu, type: directory}
     engines: {node: '>= 18'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@solvapay/server-native-linux-x64-musl@file:rust/bindings/node/npm/linux-x64-musl':
-    resolution: {directory: rust/bindings/node/npm/linux-x64-musl, type: directory}
+  '@solvapay/server-native-linux-x64-musl@file:sdks/node-native/npm/linux-x64-musl':
+    resolution: {directory: sdks/node-native/npm/linux-x64-musl, type: directory}
     engines: {node: '>= 18'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@solvapay/server-native-wasm32-wasi@file:rust/bindings/node/npm/wasm32-wasi':
-    resolution: {directory: rust/bindings/node/npm/wasm32-wasi, type: directory}
+  '@solvapay/server-native-wasm32-wasi@file:sdks/node-native/npm/wasm32-wasi':
+    resolution: {directory: sdks/node-native/npm/wasm32-wasi, type: directory}
     engines: {node: '>= 18'}
     cpu: [wasm32]
 
-  '@solvapay/server-native-win32-arm64-msvc@file:rust/bindings/node/npm/win32-arm64-msvc':
-    resolution: {directory: rust/bindings/node/npm/win32-arm64-msvc, type: directory}
+  '@solvapay/server-native-win32-arm64-msvc@file:sdks/node-native/npm/win32-arm64-msvc':
+    resolution: {directory: sdks/node-native/npm/win32-arm64-msvc, type: directory}
     engines: {node: '>= 18'}
     cpu: [arm64]
     os: [win32]
 
-  '@solvapay/server-native-win32-x64-msvc@file:rust/bindings/node/npm/win32-x64-msvc':
-    resolution: {directory: rust/bindings/node/npm/win32-x64-msvc, type: directory}
+  '@solvapay/server-native-win32-x64-msvc@file:sdks/node-native/npm/win32-x64-msvc':
+    resolution: {directory: sdks/node-native/npm/win32-x64-msvc, type: directory}
     engines: {node: '>= 18'}
     cpu: [x64]
     os: [win32]
@@ -4508,9 +4508,6 @@ packages:
     resolution: {integrity: sha512-dlko15TQVu/BFYmIY018Y3covWMRQlUgAkD+OOk+Rokcfj6VY02Vv4mCfT/Zns6B4q8jGbOd6IZhnCFYsE8Viw==}
     cpu: [arm64]
     os: [win32]
-
-  '@tybys/wasm-util@0.10.1':
-    resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
   '@tybys/wasm-util@0.10.3':
     resolution: {integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==}
@@ -9172,7 +9169,7 @@ snapshots:
     dependencies:
       '@simple-libs/child-process-utils': 1.0.2
       '@simple-libs/stream-utils': 1.2.0
-      semver: 7.7.4
+      semver: 7.8.5
     optionalDependencies:
       conventional-commits-filter: 5.0.0
       conventional-commits-parser: 6.4.0
@@ -10997,35 +10994,35 @@ snapshots:
       '@smithy/core': 3.24.6
       tslib: 2.8.1
 
-  '@solvapay/server-native-darwin-arm64@file:rust/bindings/node/npm/darwin-arm64':
+  '@solvapay/server-native-darwin-arm64@file:sdks/node-native/npm/darwin-arm64':
     optional: true
 
-  '@solvapay/server-native-darwin-x64@file:rust/bindings/node/npm/darwin-x64':
+  '@solvapay/server-native-darwin-x64@file:sdks/node-native/npm/darwin-x64':
     optional: true
 
-  '@solvapay/server-native-linux-arm64-gnu@file:rust/bindings/node/npm/linux-arm64-gnu':
+  '@solvapay/server-native-linux-arm64-gnu@file:sdks/node-native/npm/linux-arm64-gnu':
     optional: true
 
-  '@solvapay/server-native-linux-arm64-musl@file:rust/bindings/node/npm/linux-arm64-musl':
+  '@solvapay/server-native-linux-arm64-musl@file:sdks/node-native/npm/linux-arm64-musl':
     optional: true
 
-  '@solvapay/server-native-linux-x64-gnu@file:rust/bindings/node/npm/linux-x64-gnu':
+  '@solvapay/server-native-linux-x64-gnu@file:sdks/node-native/npm/linux-x64-gnu':
     optional: true
 
-  '@solvapay/server-native-linux-x64-musl@file:rust/bindings/node/npm/linux-x64-musl':
+  '@solvapay/server-native-linux-x64-musl@file:sdks/node-native/npm/linux-x64-musl':
     optional: true
 
-  '@solvapay/server-native-wasm32-wasi@file:rust/bindings/node/npm/wasm32-wasi':
+  '@solvapay/server-native-wasm32-wasi@file:sdks/node-native/npm/wasm32-wasi':
     dependencies:
       '@emnapi/core': 1.11.2
       '@emnapi/runtime': 1.11.2
       '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
     optional: true
 
-  '@solvapay/server-native-win32-arm64-msvc@file:rust/bindings/node/npm/win32-arm64-msvc':
+  '@solvapay/server-native-win32-arm64-msvc@file:sdks/node-native/npm/win32-arm64-msvc':
     optional: true
 
-  '@solvapay/server-native-win32-x64-msvc@file:rust/bindings/node/npm/win32-x64-msvc':
+  '@solvapay/server-native-win32-x64-msvc@file:sdks/node-native/npm/win32-x64-msvc':
     optional: true
 
   '@speed-highlight/core@1.2.15': {}
@@ -11247,10 +11244,6 @@ snapshots:
 
   '@turbo/windows-arm64@2.9.4':
     optional: true
-
-  '@tybys/wasm-util@0.10.1':
-    dependencies:
-      tslib: 2.8.1
 
   '@tybys/wasm-util@0.10.3':
     dependencies:
@@ -11483,7 +11476,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+      vitest: 4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
 
   '@vitest/expect@4.1.3':
     dependencies:
@@ -15299,35 +15292,6 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.9.0
 
-  vitest@4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2(@noble/hashes@2.0.1))(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0)):
-    dependencies:
-      '@vitest/expect': 4.1.3
-      '@vitest/mocker': 4.1.3(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
-      '@vitest/pretty-format': 4.1.3
-      '@vitest/runner': 4.1.3
-      '@vitest/snapshot': 4.1.3
-      '@vitest/spy': 4.1.3
-      '@vitest/utils': 4.1.3
-      es-module-lexer: 2.0.0
-      expect-type: 1.3.0
-      magic-string: 0.30.21
-      obug: 2.1.1
-      pathe: 2.0.3
-      picomatch: 4.0.4
-      std-env: 4.0.0
-      tinybench: 2.9.0
-      tinyexec: 1.1.1
-      tinyglobby: 0.2.15
-      tinyrainbow: 3.1.0
-      vite: 8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@types/node': 25.5.2
-      '@vitest/coverage-v8': 4.1.3(vitest@4.1.3)
-      jsdom: 29.0.2(@noble/hashes@2.0.1)
-    transitivePeerDependencies:
-      - msw
-
   vitest@4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.3
@@ -15349,6 +15313,35 @@ snapshots:
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
       vite: 8.0.6(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.5.2
+      '@vitest/coverage-v8': 4.1.3(vitest@4.1.3)
+      jsdom: 29.0.2(@noble/hashes@2.0.1)
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.3(@types/node@25.5.2)(@vitest/coverage-v8@4.1.3)(jsdom@29.0.2)(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0)):
+    dependencies:
+      '@vitest/expect': 4.1.3
+      '@vitest/mocker': 4.1.3(vite@8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0))
+      '@vitest/pretty-format': 4.1.3
+      '@vitest/runner': 4.1.3
+      '@vitest/snapshot': 4.1.3
+      '@vitest/spy': 4.1.3
+      '@vitest/utils': 4.1.3
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.4
+      std-env: 4.0.0
+      tinybench: 2.9.0
+      tinyexec: 1.1.1
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.1.0
+      vite: 8.0.6(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.16.9)(tsx@4.21.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.5.2

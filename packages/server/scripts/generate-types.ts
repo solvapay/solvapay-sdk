@@ -7,7 +7,7 @@ import {
   PATH_PREFIX,
   pruneUnreferencedSchemas,
   type OpenApiSpec,
-} from '../../../scripts/lib/openapi-pipeline'
+} from '../../../tools/codegen/lib/openapi-pipeline'
 
 const OPENAPI_URL = 'http://localhost:3001/v1/openapi.json'
 const OUTPUT_FILE = './src/types/generated.ts'

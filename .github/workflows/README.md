@@ -11,34 +11,26 @@ the workflows do the rest.
 
 Triggered on `pull_request` to `main`/`dev` (and `workflow_dispatch`). There is no duplicate full-suite `push` trigger — required PR checks are the gate for commits entering those branches.
 
+The authoritative list of expanded check names (including every matrix cell) and the redesign §13 gate each enforces lives in [`contract/required-checks.yaml`](../../contract/required-checks.yaml). Drift is gated by `pnpm checks:required`. To print the `main` branch-protection payload: `node tools/repo/apply-branch-protection.mjs` (`--apply` is maintainer-opt-in).
+
 ### Node binding / clean-install (Steps 36–39)
 
-| Check name                                            | What it proves                                                                                                                                                             |
-| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `node-binding (<triple>)`                             | Builds each §7.7 native target; in-tree `node --test` smoke on host-native legs (Node 22)                                                                                  |
-| `node-binding (wasm32-wasip1-threads + FORCE_WASI)`   | In-tree WASI build + `NAPI_RS_FORCE_WASI=error` smoke                                                                                                                      |
-| `node-binding artifact gate`                          | `napi artifacts` + `check-artifacts.mjs` 9/9; packs publish-shaped tarball bundle `server-clean-install-packages`                                                          |
-| `node-binding conformance (Rust-only server/core)` | Workspace-linked `@solvapay/server` + `@solvapay/core` unit suites on Rust binding (Steps 52–53)                                                                             |
-| `wasm-binding (Step 38 edge/browser)`                 | wasm-bindgen edge/browser budgets, symbol audit, Deno smoke (separate from napi WASI)                                                                                      |
-| `node clean install (native, <target>, Node <major>)` | **Step 39:** fresh `npm install` of packed `.tgz` into an empty temp project + public `@solvapay/server` `verifyWebhook`; 8 targets × Node 22/24/26 |
-| `node clean install (WASI, Node <major>)`             | **Step 39:** WASI-only packed install (`NAPI_RS_FORCE_WASI=error`, no `.node`); Node 22/24/26 on Linux x64                                                                 |
-
-**Local entry points** (from repo root, after building host + WASI bindings and placing via `napi artifacts`):
+Local entry points (from repo root, after building host + WASI bindings and placing via `napi artifacts`):
 
 ```bash
 # Pack (partial local bundle — CI requires all 9 targets)
-node rust/bindings/node/scripts/prepare-clean-install-packages.mjs \
-  --out-dir rust/bindings/node/clean-install-bundle \
+node sdks/node-native/scripts/prepare-clean-install-packages.mjs \
+  --out-dir sdks/node-native/clean-install-bundle \
   --targets darwin-arm64,wasm32-wasi --allow-partial
 
 # Host-native clean install
-node rust/bindings/node/scripts/clean-install-smoke.mjs \
-  --bundle-dir rust/bindings/node/clean-install-bundle \
+node sdks/node-native/scripts/clean-install-smoke.mjs \
+  --bundle-dir sdks/node-native/clean-install-bundle \
   --mode native --target darwin-arm64
 
 # WASI-only clean install
-node rust/bindings/node/scripts/clean-install-smoke.mjs \
-  --bundle-dir rust/bindings/node/clean-install-bundle \
+node sdks/node-native/scripts/clean-install-smoke.mjs \
+  --bundle-dir sdks/node-native/clean-install-bundle \
   --mode wasi --target wasm32-wasi
 ```
 
@@ -50,16 +42,16 @@ Success evidence line: `CLEAN_INSTALL_OK mode=… node=… os=… arch=… libc=
 
 Runs `deps:check`, `lint`, `build:packages`, `test`, and the **Deno
 gate** (`pnpm --filter @example/supabase-edge-mcp validate:workspace`).
-The Deno gate type-checks `examples/supabase-edge-mcp` under a real Deno
+The Deno gate type-checks `examples/typescript/supabase-edge-mcp` under a real Deno
 binary against the **workspace source** of the `@solvapay/*` packages,
 so a feature branch proves its own SDK change still works for the
 canonical Supabase Edge consumer before it merges. See
-[`examples/supabase-edge-mcp/README.md`](../../examples/supabase-edge-mcp/README.md)
+[`examples/typescript/supabase-edge-mcp/README.md`](../../examples/typescript/supabase-edge-mcp/README.md)
 for how `deno.workspace.json` resolves workspace source.
 
 ### `publish-preview.yml` — Preview Snapshot
 
-**Trigger:** push to `dev` (or manual `workflow_dispatch`).
+**Trigger:** push to `dev` (or manual `workflow_dispatch`). Manual dispatch defaults to `dry_run=true`: the pre-publish gates still run, then `changeset status` + `pnpm -r publish --dry-run` (no `NPM_TOKEN`); snapshot version/publish/verify and the post-publish Deno gate are skipped. Push to `dev`, or dispatch with `dry_run=false`, still cuts a real `@preview` snapshot. `workflow_dispatch` inputs resolve against the default branch.
 
 Every push to `dev` runs the full pre-publish gate:
 
@@ -74,7 +66,7 @@ Every push to `dev` runs the full pre-publish gate:
    changeset (plus anything that depends on one).
 6. `pnpm changeset publish --tag preview --no-git-tag` — publishes
    each snapshot to the `@preview` npm dist-tag.
-7. `scripts/verify-npm-publishes.mjs` — confirms every package
+7. `tools/repo/verify-npm-publishes.mjs` — confirms every package
    Changesets claimed to ship is actually fetchable from the registry.
 8. `validate` — a **post-publish** re-run of the Deno gate, this time
    against the `@preview` tag the run just moved.
@@ -97,7 +89,7 @@ pnpm add @solvapay/core@preview
 
 ### `publish.yml` — Stable Release
 
-**Trigger:** push to `main` (or manual `workflow_dispatch`).
+**Trigger:** push to `main` (or manual `workflow_dispatch`). Manual dispatch defaults to `dry_run=true`: the pre-publish gates still run, then `changeset status` + `pnpm -r publish --dry-run` (no `NPM_TOKEN`, no GitHub App token); `changesets/action` is skipped. Push to `main`, or dispatch with `dry_run=false`, takes the real Version-PR / publish path. `workflow_dispatch` inputs resolve against the default branch, so a dry-run dispatch of this input is a post-merge action until the workflow lands on `main`.
 
 Uses [`changesets/action@v1`](https://github.com/changesets/action),
 which runs in two distinct modes:
@@ -153,7 +145,8 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 | Cut stable release       | Push to `main` (auto-opens Version Packages PR), then merge the generated PR    |
 | Write a changeset        | `pnpm changeset` (interactive)                                                  |
 | Inspect pending releases | `pnpm changeset status --verbose`                                               |
-| Verify fetch-runtime     | `pnpm validate:fetch-runtime` (or `pnpm tsx scripts/validate-fetch-runtime.ts`) |
+| Local npm publish dry-run | `pnpm release:dryrun` (gates + `pnpm -r publish --dry-run`, no `NPM_TOKEN`)    |
+| Verify fetch-runtime     | `pnpm validate:fetch-runtime` (or `pnpm tsx tools/repo/validate-fetch-runtime.ts`) |
 | Run the Deno gate        | `pnpm --filter @example/supabase-edge-mcp validate:workspace`                   |
 
 ## Troubleshooting
@@ -214,4 +207,4 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 - [`.changeset/README.md`](../../.changeset/README.md) — changeset file format
 - [`CONTRIBUTING.md`](../../CONTRIBUTING.md) — development workflow
-- [`scripts/README.md`](../../scripts/README.md) — helper scripts (incl. `validate-fetch-runtime`)
+- [`tools/README.md`](../../tools/README.md) — helper scripts (incl. `validate-fetch-runtime`)

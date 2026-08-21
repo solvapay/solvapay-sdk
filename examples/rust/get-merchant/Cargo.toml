@@ -1,3 +1,5 @@
+[workspace]
+
 [package]
 name = "solvapay-example-get-merchant"
 version = "0.1.0"
@@ -16,7 +18,7 @@ name = "solvapay_example_get_merchant"
 path = "src/lib.rs"
 
 [dependencies]
-solvapay = { path = "../../../rust/crates/solvapay" }
+solvapay = { path = "../../../sdks/rust" }
 solvapay-rust-examples-env = { path = "../env" }
 tokio = { version = "1.52.4", features = ["rt", "macros"] }
 

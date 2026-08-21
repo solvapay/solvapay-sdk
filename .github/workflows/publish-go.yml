@@ -1,7 +1,7 @@
 name: Publish Go (solvapay-go)
 
 # Separate from the npm Changesets workflow (`.github/workflows/publish.yml`).
-# git-subtree-splits `rust/bindings/go` into the external `solvapay/solvapay-go`
+# git-subtree-splits `sdks/go` into the external `solvapay/solvapay-go`
 # module repo and tags `vX.Y.Z`. The embedded `solvapay_core.wasm` ships inside
 # the same module tarball as the facade (one git tag = one module+wasm), so
 # there is no facade↔native skew guard (same reasoning as Note 53 for Rust).
@@ -46,7 +46,6 @@ jobs:
           fetch-depth: 0
 
       - name: Install Rust toolchain + WASI target
-        working-directory: rust
         run: rustup show && rustup target add wasm32-wasip1
 
       - name: Setup Go
@@ -68,30 +67,29 @@ jobs:
           echo "core_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Rebuild embedded WASI guest
-        working-directory: rust
-        run: ./bindings/go/scripts/build-wasm.sh
+        run: ./sdks/go/scripts/build-wasm.sh
 
       - name: WASM staleness check (committed artifact matches source)
         run: |
-          if ! git diff --exit-code -- rust/bindings/go/solvapay_core.wasm; then
-            echo "rust/bindings/go/solvapay_core.wasm is stale — rebuild and commit:" >&2
-            echo "  ./rust/bindings/go/scripts/build-wasm.sh" >&2
+          if ! git diff --exit-code -- sdks/go/solvapay_core.wasm; then
+            echo "sdks/go/solvapay_core.wasm is stale — rebuild and commit:" >&2
+            echo "  ./sdks/go/scripts/build-wasm.sh" >&2
             exit 1
           fi
           echo "OK: embedded solvapay_core.wasm is up to date"
 
       - name: go build + vet (monorepo module)
-        working-directory: rust/bindings/go
+        working-directory: sdks/go
         run: |
           go build ./...
           go vet ./...
 
-      - name: Subtree split rust/bindings/go
+      - name: Subtree split sdks/go
         id: split
         shell: bash
         run: |
           set -euo pipefail
-          SPLIT_SHA="$(git subtree split --prefix rust/bindings/go HEAD)"
+          SPLIT_SHA="$(git subtree split --prefix sdks/go HEAD)"
           echo "split_sha=${SPLIT_SHA}" >> "$GITHUB_OUTPUT"
           echo "split SHA=${SPLIT_SHA}"
 

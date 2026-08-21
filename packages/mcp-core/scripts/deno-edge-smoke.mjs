@@ -6,12 +6,15 @@
  * Permissions: --allow-read (local committed WASM under the workspace pkg/).
  *
  * Usage (from repo root, after pnpm build:packages):
- *   deno run --allow-read=packages,rust/bindings/wasm,node_modules \
+ *   deno run --allow-read=. \
  *     packages/mcp-core/scripts/deno-edge-smoke.mjs
  */
-const repoRoot = new URL('../../..', import.meta.url)
-const serverEdge = new URL('packages/server/dist/edge.js', repoRoot).href
-const mcpCore = new URL('packages/mcp-core/dist/index.js', repoRoot).href
+import { pathToFileURL } from 'node:url'
+import { join } from 'node:path'
+import { PACKAGES_DIR } from '../../../tools/shared/paths.ts'
+
+const serverEdge = pathToFileURL(join(PACKAGES_DIR, 'server', 'dist', 'edge.js')).href
+const mcpCore = pathToFileURL(join(PACKAGES_DIR, 'mcp-core', 'dist', 'index.js')).href
 
 const { verifyWebhook, classifyPaywallState, buildPaywallGate } = await import(serverEdge)
 const { MCP_TOOL_NAMES, getMcpToolNamesTable } = await import(mcpCore)

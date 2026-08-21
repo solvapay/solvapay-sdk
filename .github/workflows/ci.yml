@@ -99,6 +99,9 @@ jobs:
       - name: Check TS surface parity (offline)
         run: pnpm parity:check
 
+      - name: Check required-checks manifest (offline)
+        run: pnpm checks:required
+
       - name: overlays.generated.d.ts tsc gate
         working-directory: packages/server
         run: |
@@ -118,9 +121,6 @@ jobs:
   rust:
     name: Rust
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: rust
 
     permissions:
       contents: read
@@ -147,7 +147,7 @@ jobs:
         run: cargo clippy --workspace --exclude solvapay-wasm --all-targets -- -D warnings
 
       - name: no-unwrap ripgrep gate
-        run: ./scripts/check-no-unwrap.sh
+        run: ./tools/repo/check-no-unwrap.sh
 
       - name: cargo build (native)
         run: cargo build --workspace --exclude solvapay-wasm
@@ -162,7 +162,7 @@ jobs:
 
       - name: crates.io packageability (Step 48)
         run: |
-          ./scripts/check-publish-graph.sh
+          ./tools/repo/check-publish-graph.sh
           # Leaf crate: full dry-run + verify (works before any crates.io upload).
           # Dependents resolve versioned deps from the index after first publish.
           cargo publish -p solvapay-dto --dry-run --allow-dirty
@@ -208,52 +208,54 @@ jobs:
         run: cargo test -q -p dto-gen --lib doc_coverage -- --nocapture
 
       - name: solvapay-dto regen drift
-        # Canonical flag set lives in scripts/gen.ts — humans and CI share `pnpm gen` / `pnpm gen:check`.
+        # Canonical flag set lives in tools/codegen/gen.ts — humans and CI share `pnpm gen` / `pnpm gen:check`.
         working-directory: .
         run: pnpm gen:check
 
       - name: '@generated header gate'
         run: |
           for f in \
-            ../packages/server/src/types/overlays.generated.d.ts \
-            ../packages/server/src/types/client.generated.d.ts \
-            ../packages/server/src/__generated__/signature-parity.generated.test.ts \
-            ../packages/server/src/native.ts \
-            ../packages/server/src/wasm.ts \
-            bindings/node/src/args.rs \
-            bindings/node/src/decisions.rs \
-            bindings/node/src/payload_builders.rs \
-            bindings/node/src/native_client.rs \
-            bindings/wasm/src/args.rs \
-            bindings/wasm/src/decisions.rs \
-            bindings/wasm/src/payload_builders.rs \
-            bindings/wasm/src/wasm_client.rs \
-            bindings/python/src/args.rs \
-            bindings/python/src/decisions.rs \
-            bindings/python/src/payload_builders.rs \
-            bindings/python/src/client.rs \
-            bindings/python/src/register.rs \
-            bindings/python/python/solvapay/_native.py \
-            bindings/python/python/solvapay/__init__.pyi \
-            bindings/python/tests/signature_parity_generated_test.py \
-            bindings/ruby/ext/solvapay/src/args.rs \
-            bindings/ruby/ext/solvapay/src/decisions.rs \
-            bindings/ruby/ext/solvapay/src/payload_builders.rs \
-            bindings/ruby/ext/solvapay/src/client.rs \
-            bindings/ruby/ext/solvapay/src/register.rs \
-            bindings/ruby/lib/solvapay/_native.rb \
-            bindings/ruby/lib/solvapay/client.rb \
-            bindings/ruby/lib/solvapay/helpers.generated.rb \
-            bindings/ruby/sig/solvapay.rbs \
-            bindings/ruby/test/signature_parity_generated_test.rb \
-            crates/solvapay/src/client_generated.rs \
-            crates/solvapay/src/blocking_generated.rs \
-            crates/solvapay/tests/signature_parity_generated.rs \
-            bindings/go/wasm/src/args.rs \
-            bindings/go/wasm/src/client.rs \
-            bindings/go/wasm/src/webhook.rs \
-            bindings/go/client_generated.go \
-            bindings/go/signature_parity_generated_test.go
+            packages/server/src/types/overlays.generated.d.ts \
+            packages/server/src/types/client.generated.d.ts \
+            packages/server/src/__generated__/signature-parity.generated.test.ts \
+            packages/server/src/native.ts \
+            packages/server/src/wasm.ts \
+            sdks/node-native/src/args.rs \
+            sdks/node-native/src/decisions.rs \
+            sdks/node-native/src/payload_builders.rs \
+            sdks/node-native/src/native_client.rs \
+            sdks/wasm/src/args.rs \
+            sdks/wasm/src/decisions.rs \
+            sdks/wasm/src/payload_builders.rs \
+            sdks/wasm/src/wasm_client.rs \
+            sdks/python/src/args.rs \
+            sdks/python/src/decisions.rs \
+            sdks/python/src/payload_builders.rs \
+            sdks/python/src/client.rs \
+            sdks/python/src/register.rs \
+            sdks/python/python/solvapay/_native.py \
+            sdks/python/python/solvapay/__init__.pyi \
+            sdks/python/tests/signature_parity_generated_test.py \
+            sdks/ruby/ext/solvapay/src/args.rs \
+            sdks/ruby/ext/solvapay/src/decisions.rs \
+            sdks/ruby/ext/solvapay/src/payload_builders.rs \
+            sdks/ruby/ext/solvapay/src/client.rs \
+            sdks/ruby/ext/solvapay/src/register.rs \
+            sdks/ruby/lib/solvapay/_native.rb \
+            sdks/ruby/lib/solvapay/client.rb \
+            sdks/ruby/lib/solvapay/helpers.generated.rb \
+            sdks/ruby/sig/solvapay.rbs \
+            sdks/ruby/test/signature_parity_generated_test.rb \
+            sdks/rust/src/client_generated.rs \
+            sdks/rust/src/blocking_generated.rs \
+            sdks/rust/tests/signature_parity_generated.rs \
+            sdks/go/wasm/src/args.rs \
+            sdks/go/wasm/src/client.rs \
+            sdks/go/wasm/src/webhook.rs \
+            sdks/go/client_generated.go \
+            sdks/go/signature_parity_generated_test.go \
+            sdks/capi/src/dispatch.rs \
+            tools/conformance/fixture-runner/src/registry.rs
           do
             if ! grep -q '@generated' "$f"; then
               echo "missing @generated header: $f" >&2
@@ -291,7 +293,7 @@ jobs:
         run: cargo clippy -p solvapay-transport --target wasm32-unknown-unknown --all-targets -- -D warnings
 
       - name: wasm Fetch transport round-trip
-        run: ./scripts/test-wasm-transport.sh
+        run: ./tools/conformance/test-wasm-transport.sh
 
       - name: assert tokio absent from solvapay-core / solvapay-transport graphs
         run: |
@@ -307,7 +309,7 @@ jobs:
           done
 
       - name: fixture suite (bound pure-core suites; unbound skipped)
-        run: cargo run -q -p fixture-runner -- ../contract/fixtures
+        run: cargo run -q -p fixture-runner -- contract/fixtures
 
   # Step 40 — PyO3/maturin Python binding abi3 wheel matrix (§7.7) + artifact gate.
   python-binding:
@@ -316,7 +318,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: rust/bindings/python
+        working-directory: sdks/python
     strategy:
       fail-fast: false
       matrix:
@@ -363,7 +365,6 @@ jobs:
           python-version: '3.12'
 
       - name: Install Rust toolchain
-        working-directory: rust
         run: rustup show
 
       - name: Build abi3 wheel
@@ -372,19 +373,17 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           args: ${{ matrix.maturin-args }}
-          working-directory: rust/bindings/python
+          working-directory: sdks/python
           sccache: 'true'
 
       # maturin-action runs the manylinux container as root and leaves a
-      # root-owned rust/target; its own fix-up only covers the crate dir.
+      # root-owned target/; its own fix-up only covers the crate dir.
       - name: Reclaim workspace target dir ownership
         if: matrix.smoke && runner.os == 'Linux'
-        working-directory: rust
         run: sudo chown -R "$(id -u):$(id -g)" target
 
       - name: cargo test -p solvapay-python
         if: matrix.smoke
-        working-directory: rust
         # maturin-action with sccache:'true' leaks RUSTC_WRAPPER=sccache into the
         # job env from the manylinux container; the host has no sccache binary.
         env:
@@ -428,7 +427,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-wheel-${{ matrix.platform }}
-          path: rust/bindings/python/dist/*.whl
+          path: sdks/python/dist/*.whl
           if-no-files-found: error
 
   python-binding-artifacts:
@@ -438,7 +437,7 @@ jobs:
       - python-binding
     defaults:
       run:
-        working-directory: rust/bindings/python
+        working-directory: sdks/python
     permissions:
       contents: read
     steps:
@@ -453,7 +452,7 @@ jobs:
       - name: Download all python wheel artifacts
         uses: actions/download-artifact@v4
         with:
-          path: rust/bindings/python/wheels
+          path: sdks/python/wheels
           pattern: python-wheel-*
           merge-multiple: true
 
@@ -473,7 +472,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: rust/bindings/ruby
+        working-directory: sdks/ruby
     strategy:
       fail-fast: false
       matrix:
@@ -508,7 +507,7 @@ jobs:
           # oxidize-rb cargo-binstall has no aarch64-unknown-linux-musl cargo-cache
           # binary; that hard-fails Setup on ubuntu-24.04-arm.
           cargo-cache: ${{ matrix.platform != 'aarch64-linux' }}
-          working-directory: rust/bindings/ruby
+          working-directory: sdks/ruby
 
       - name: Bundle install
         run: bundle install
@@ -518,7 +517,6 @@ jobs:
 
       - name: cargo test -p solvapay-ruby
         if: matrix.smoke
-        working-directory: rust
         run: cargo test -p solvapay-ruby --lib
 
       - name: Source-gem compile + smoke
@@ -537,7 +535,7 @@ jobs:
         if: matrix.full
         working-directory: ${{ github.workspace }}
         run: |
-          ruby -I"$GITHUB_WORKSPACE/rust/bindings/ruby/lib" \
+          ruby -I"$GITHUB_WORKSPACE/sdks/ruby/lib" \
             examples/ruby/get_merchant/test/get_merchant_test.rb
 
       - name: Ruby type-strictness + lint (Step 45T / D18)
@@ -550,7 +548,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ruby-gem-${{ matrix.platform }}
-          path: rust/bindings/ruby/pkg/*.gem
+          path: sdks/ruby/pkg/*.gem
           if-no-files-found: error
 
   ruby-binding-artifacts:
@@ -560,7 +558,7 @@ jobs:
       - ruby-binding
     defaults:
       run:
-        working-directory: rust/bindings/ruby
+        working-directory: sdks/ruby
     permissions:
       contents: read
     steps:
@@ -575,7 +573,7 @@ jobs:
       - name: Download all ruby gem artifacts
         uses: actions/download-artifact@v4
         with:
-          path: rust/bindings/ruby/gems
+          path: sdks/ruby/gems
           pattern: ruby-gem-*
           merge-multiple: true
 
@@ -589,7 +587,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: rust/bindings/node
+        working-directory: sdks/node-native
     strategy:
       fail-fast: false
       matrix:
@@ -640,7 +638,6 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Install Rust toolchain
-        working-directory: rust
         run: rustup show && rustup target add ${{ matrix.settings.target }}
 
       - name: Setup zig (musl cross)
@@ -674,14 +671,14 @@ jobs:
         with:
           name: bindings-${{ matrix.settings.target }}
           path: |
-            rust/bindings/node/server-native.*.node
-            rust/bindings/node/server-native.*.wasm
-            rust/bindings/node/server-native.wasi.cjs
-            rust/bindings/node/server-native.wasi-browser.js
-            rust/bindings/node/wasi-worker*.mjs
-            rust/bindings/node/index.js
-            rust/bindings/node/index.d.ts
-            rust/bindings/node/browser.js
+            sdks/node-native/server-native.*.node
+            sdks/node-native/server-native.*.wasm
+            sdks/node-native/server-native.wasi.cjs
+            sdks/node-native/server-native.wasi-browser.js
+            sdks/node-native/wasi-worker*.mjs
+            sdks/node-native/index.js
+            sdks/node-native/index.d.ts
+            sdks/node-native/browser.js
           if-no-files-found: error
 
   node-binding-wasi:
@@ -689,7 +686,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: rust/bindings/node
+        working-directory: sdks/node-native
     permissions:
       contents: read
     steps:
@@ -702,7 +699,6 @@ jobs:
           node-version: '22'
 
       - name: Install Rust toolchain + WASI target
-        working-directory: rust
         run: rustup show && rustup target add wasm32-wasip1-threads
 
       - name: Install npm deps
@@ -723,10 +719,10 @@ jobs:
         with:
           name: bindings-wasm32-wasip1-threads
           path: |
-            rust/bindings/node/server-native.*.wasm
-            rust/bindings/node/server-native.wasi.cjs
-            rust/bindings/node/server-native.wasi-browser.js
-            rust/bindings/node/wasi-worker*.mjs
+            sdks/node-native/server-native.*.wasm
+            sdks/node-native/server-native.wasi.cjs
+            sdks/node-native/server-native.wasi-browser.js
+            sdks/node-native/wasi-worker*.mjs
           if-no-files-found: error
 
   node-binding-artifacts:
@@ -737,7 +733,7 @@ jobs:
       - node-binding-wasi
     defaults:
       run:
-        working-directory: rust/bindings/node
+        working-directory: sdks/node-native
     permissions:
       contents: read
     steps:
@@ -763,7 +759,7 @@ jobs:
       - name: Download all binding artifacts
         uses: actions/download-artifact@v4
         with:
-          path: rust/bindings/node/ci-artifacts
+          path: sdks/node-native/ci-artifacts
           pattern: bindings-*
           merge-multiple: true
 
@@ -799,20 +795,20 @@ jobs:
       - name: Pack clean-install package bundle
         working-directory: .
         run: |
-          mkdir -p rust/bindings/node/clean-install-bundle
-          node rust/bindings/node/scripts/prepare-clean-install-packages.mjs \
-            --out-dir rust/bindings/node/clean-install-bundle \
+          mkdir -p sdks/node-native/clean-install-bundle
+          node sdks/node-native/scripts/prepare-clean-install-packages.mjs \
+            --out-dir sdks/node-native/clean-install-bundle \
             --require-all
 
       - name: Upload clean-install package bundle
         uses: actions/upload-artifact@v4
         with:
           name: server-clean-install-packages
-          path: rust/bindings/node/clean-install-bundle/
+          path: sdks/node-native/clean-install-bundle/
           if-no-files-found: error
 
   # Step 39 — fresh npm install + public @solvapay/server verifyWebhook (native matrix).
-  # Target/host metadata mirrors rust/bindings/node/scripts/targets.mjs (8 × Node 22/24/26 = 24).
+  # Target/host metadata mirrors sdks/node-native/scripts/targets.mjs (8 × Node 22/24/26 = 24).
   node-clean-install-native:
     name: node clean install (native, ${{ matrix.target.id }}, Node ${{ matrix.node }})
     needs:
@@ -869,7 +865,7 @@ jobs:
         if: matrix.target.musl == 'false'
         shell: bash
         run: |
-          node rust/bindings/node/scripts/clean-install-smoke.mjs \
+          node sdks/node-native/scripts/clean-install-smoke.mjs \
             --bundle-dir clean-install-bundle \
             --mode native \
             --target "${{ matrix.target.id }}" \
@@ -885,7 +881,7 @@ jobs:
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -v "$PWD/clean-install-bundle:/bundle:ro" \
-            -v "$PWD/rust/bindings/node/scripts:/scripts:ro" \
+            -v "$PWD/sdks/node-native/scripts:/scripts:ro" \
             -e HOME=/tmp \
             -w /tmp \
             "$IMAGE" \
@@ -925,7 +921,7 @@ jobs:
       - name: Clean-install smoke (WASI)
         shell: bash
         run: |
-          node rust/bindings/node/scripts/clean-install-smoke.mjs \
+          node sdks/node-native/scripts/clean-install-smoke.mjs \
             --bundle-dir clean-install-bundle \
             --mode wasi \
             --target wasm32-wasi \
@@ -952,7 +948,6 @@ jobs:
           version: 9.6.0
 
       - name: Install Rust toolchain (host)
-        working-directory: rust
         run: rustup show
 
       - name: Get pnpm store directory
@@ -1067,7 +1062,6 @@ jobs:
           version: 9.6.0
 
       - name: Install Rust toolchain
-        working-directory: rust
         run: rustup show
 
       - name: Cache wasm-bindgen-cli
@@ -1102,13 +1096,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Rebuild wasm artifacts + drift check
-        working-directory: rust/bindings/wasm
+        working-directory: sdks/wasm
         run: |
           pnpm build:wasm
           pnpm build:check-drift
 
       - name: Cargo feature / exclusivity checks
-        working-directory: rust
         run: |
           cargo check -p solvapay-core
           cargo check -p solvapay-core --no-default-features --features browser
@@ -1124,24 +1117,23 @@ jobs:
           fi
 
       - name: Native binding unit tests + clippy/fmt gates (wasm crate)
-        working-directory: rust
         run: |
           cargo test -p solvapay-wasm --no-default-features --features edge --lib
           cargo fmt --all -- --check
           cargo clippy -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features edge -- -D warnings
           cargo clippy -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features browser -- -D warnings
-          ./scripts/check-no-unwrap.sh
+          ./tools/repo/check-no-unwrap.sh
 
       - name: Browser symbol audit
-        working-directory: rust/bindings/wasm
+        working-directory: sdks/wasm
         run: pnpm symbols:check
 
       - name: Size / cold-start budget check
-        working-directory: rust/bindings/wasm
+        working-directory: sdks/wasm
         run: pnpm measure
 
       - name: Node smoke (edge wrapper)
-        working-directory: rust/bindings/wasm
+        working-directory: sdks/wasm
         run: pnpm test
 
       - name: Build core, auth, server-wasm, server-native, server, mcp-core, mcp
@@ -1160,7 +1152,7 @@ jobs:
         run: pnpm --filter @solvapay/server test:unit:edge
 
       - name: Webhook edge corpus (WASM)
-        run: node scripts/replay-webhook-edge-wasm.mjs
+        run: node tools/conformance/replay-webhook-edge-wasm.mjs
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -1169,7 +1161,7 @@ jobs:
 
       - name: Deno edge + mcp-core smoke
         run: |
-          deno run --allow-read=packages,rust/bindings/wasm,node_modules \
+          deno run --allow-read=. \
             packages/mcp-core/scripts/deno-edge-smoke.mjs
 
       - name: Fetch-runtime validation
@@ -1188,7 +1180,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain + WASI target
-        working-directory: rust
         # rust-toolchain.toml pins the channel + wasm32-wasip1; be explicit anyway.
         run: rustup show && rustup target add wasm32-wasip1
 
@@ -1198,8 +1189,7 @@ jobs:
           go-version: '1.23'
 
       - name: Rebuild embedded WASI guest
-        working-directory: rust
-        run: ./bindings/go/scripts/build-wasm.sh
+        run: ./sdks/go/scripts/build-wasm.sh
 
       - name: WASM freshness note (CI uses rebuilt artifact)
         # cargo wasm32-wasip1 output is not bit-stable across hosts (mac vs
@@ -1207,17 +1197,17 @@ jobs:
         # Always rebuild above; subsequent Go steps use that file. Warn when the
         # committed blob drifts so local `go test` without a rebuild stays honest.
         run: |
-          if ! git diff --exit-code -- rust/bindings/go/solvapay_core.wasm; then
+          if ! git diff --exit-code -- sdks/go/solvapay_core.wasm; then
             echo "::warning::committed solvapay_core.wasm differs from this runner's rebuild (cross-host wasm is not bit-stable). CI tests use the rebuilt artifact."
             echo "Refresh the committed blob from linux/amd64 when go-wasm/core sources change:"
             echo "  docker run --rm --platform linux/amd64 -v \"\$PWD:/workspace\" -w /workspace/rust \\"
-            echo "    rust:1.96.0-bookworm bash -c 'export PATH=/usr/local/cargo/bin:\$PATH; rustup target add wasm32-wasip1; ./bindings/go/scripts/build-wasm.sh'"
+            echo "    rust:1.96.0-bookworm bash -c 'export PATH=/usr/local/cargo/bin:\$PATH; rustup target add wasm32-wasip1; ./sdks/go/scripts/build-wasm.sh'"
           else
             echo "OK: committed solvapay_core.wasm matches this runner's rebuild"
           fi
 
       - name: gofmt
-        working-directory: rust/bindings/go
+        working-directory: sdks/go
         run: |
           unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then
@@ -1228,11 +1218,11 @@ jobs:
           echo "OK: gofmt clean"
 
       - name: go vet
-        working-directory: rust/bindings/go
+        working-directory: sdks/go
         run: go vet ./...
 
       - name: go test -race
-        working-directory: rust/bindings/go
+        working-directory: sdks/go
         run: go test -race ./...
 
       - name: Go example build+test (Step 51)
@@ -1244,7 +1234,7 @@ jobs:
         run: |
           set -euo pipefail
           WORK="$(mktemp -d)"
-          BINDING="${GITHUB_WORKSPACE}/rust/bindings/go"
+          BINDING="${GITHUB_WORKSPACE}/sdks/go"
           printf '%s\n' \
             'module github.com/solvapay/solvapay-go-smoke' \
             '' \
@@ -1287,41 +1277,36 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        working-directory: rust
         run: rustup show
 
       - name: Install C toolchain
         run: sudo apt-get update && sudo apt-get install -y build-essential
 
       - name: cargo build -p solvapay-c
-        working-directory: rust
         run: cargo build -p solvapay-c
 
       - name: cbindgen header drift check
         run: |
-          if ! git diff --exit-code -- rust/bindings/c/include/solvapay.h; then
-            echo "rust/bindings/c/include/solvapay.h is stale — rebuild and commit:" >&2
+          if ! git diff --exit-code -- sdks/capi/include/solvapay.h; then
+            echo "sdks/capi/include/solvapay.h is stale — rebuild and commit:" >&2
             echo "  cargo build -p solvapay-c" >&2
             exit 1
           fi
-          if ! grep -q '@generated' rust/bindings/c/include/solvapay.h; then
-            echo "missing @generated header: rust/bindings/c/include/solvapay.h" >&2
+          if ! grep -q '@generated' sdks/capi/include/solvapay.h; then
+            echo "missing @generated header: sdks/capi/include/solvapay.h" >&2
             exit 1
           fi
           echo "OK: solvapay.h up to date and @generated"
 
       - name: cargo test -p solvapay-c
-        working-directory: rust
         # Handle registry is process-global; parallel lib tests race on reuse assertions.
         run: cargo test -p solvapay-c -- --test-threads=1
 
       - name: cargo clippy -p solvapay-c
-        working-directory: rust
         run: cargo clippy -p solvapay-c --all-targets -- -D warnings
 
       - name: C smoke (create/call/free + handle misuse)
-        working-directory: rust
-        run: ./bindings/c/ctest/run.sh
+        run: ./sdks/capi/ctest/run.sh
 
   # Step 51 — pure-Go + embedded wasm cross-compiles without cgo across the
   # supported GOOS/GOARCH matrix (build + vet only; no off-host runtime).
@@ -1337,7 +1322,7 @@ jobs:
         goarch: [amd64, arm64]
     defaults:
       run:
-        working-directory: rust/bindings/go
+        working-directory: sdks/go
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -1408,7 +1393,7 @@ jobs:
       - name: Validate documentation links
         id: validate-links
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.skip_link_validation != 'true'
-        run: pnpm exec tsx scripts/validate-doc-links.ts --skip-api
+        run: pnpm exec tsx tools/repo/validate-doc-links.ts --skip-api
         continue-on-error: false
         # Validates non-generated documentation links (skips docs/api/** which are generated by docs repo)
         # Note: Documentation is built by the docs repo, not in this CI workflow

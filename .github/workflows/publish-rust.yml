@@ -41,9 +41,6 @@ jobs:
   publish:
     name: publish
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: rust
     permissions:
       contents: read
       id-token: write
@@ -86,10 +83,10 @@ jobs:
 
           version = os.environ["VERSION"]
           crates = [
-              "crates/solvapay-dto/Cargo.toml",
-              "crates/solvapay-core/Cargo.toml",
-              "crates/solvapay-transport/Cargo.toml",
-              "crates/solvapay/Cargo.toml",
+              "core/solvapay-dto/Cargo.toml",
+              "core/solvapay-core/Cargo.toml",
+              "core/solvapay-transport/Cargo.toml",
+              "sdks/rust/Cargo.toml",
           ]
           for rel in crates:
               path = Path(rel)
@@ -117,7 +114,7 @@ jobs:
         run: cargo build --workspace
 
       - name: Publish graph metadata check
-        run: ./scripts/check-publish-graph.sh
+        run: ./tools/repo/check-publish-graph.sh
 
       - name: Dry-run publish (dependency order)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io != true }}

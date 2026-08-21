@@ -36,7 +36,24 @@ This mirrors `docs/scripts/sync-backend-openapi.ts`, which uses the same
 | `../__generated__/signature-parity.generated.test.ts` | `pnpm gen` (dto-gen)                                                                | No    |
 
 Only `/v1/sdk/*` paths are included (agents routes excluded). See
-`scripts/lib/openapi-pipeline.ts`.
+`tools/codegen/lib/openapi-pipeline.ts`.
+
+## Relationship to dto-gen
+
+`generated.ts` is the OpenAPI-derived substrate, not a parallel leftover next to
+dto-gen. The dto-gen artifacts in this directory (`overlays.generated.d.ts`,
+`client.generated.d.ts`) import from it:
+
+```typescript
+import type { components, operations } from './generated'
+```
+
+The two pipelines are layered: `pnpm --filter @solvapay/server generate:types`
+refreshes the wire types from live OpenAPI; `pnpm gen` emits facades against
+that substrate. `generated.ts` is also re-exported from `types/index.ts`
+(`paths`, `components`, `operations`) and is the independent reference
+`src/types/__tests__/api-diff.test-d.ts` uses to validate dto-gen's
+`client.generated.d.ts`.
 
 ## Typical flows
 
