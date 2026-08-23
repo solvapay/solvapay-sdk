@@ -224,6 +224,7 @@ impl RepoPaths {
         self.package_dir("internal", &self.manifest.internal_packages, id)
     }
 
+    /// Resolve a package id from a kind-tagged relative-path map.
     fn package_dir(&self, kind: &str, map: &BTreeMap<String, String>, id: &str) -> Result<PathBuf> {
         let rel = map.get(id).ok_or_else(|| RepoPathsError::UnknownPackage {
             kind: kind.to_owned(),
