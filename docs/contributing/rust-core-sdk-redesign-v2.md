@@ -12,8 +12,8 @@ Implementation-oriented architecture decision document for migrating SolvaPay's 
 
 - Current package layout and runtime strategy: [`architecture.md`](./architecture.md)
 - **Day-to-day codegen runbook:** [`sdk-codegen.md`](./sdk-codegen.md) (`pnpm gen`, scaffold, bindings fix, gates)
-- Public TypeScript surface: [`packages/server/src/index.ts`](../../packages/server/src/index.ts), [`packages/server/src/client.ts`](../../packages/server/src/client.ts), [`packages/react/src/index.tsx`](../../packages/react/src/index.tsx)
-- OpenAPI type generation today: [`packages/server/scripts/generate-types.ts`](../../packages/server/scripts/generate-types.ts)
+- Public TypeScript surface: [`packages/server/src/index.ts`](../../sdks/typescript/server/src/index.ts), [`packages/server/src/client.ts`](../../sdks/typescript/server/src/client.ts), [`packages/react/src/index.tsx`](../../sdks/typescript/react/src/index.tsx)
+- OpenAPI type generation today: [`packages/server/scripts/generate-types.ts`](../../sdks/typescript/server/scripts/generate-types.ts)
 
 ---
 
@@ -48,7 +48,7 @@ All five surfaces must expose, with equivalent semantics:
 
 | Category            | Current TypeScript anchors                                                                                         |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Client factory      | `createSolvaPayClient` ([`client.ts`](../../packages/server/src/client.ts))                                        |
+| Client factory      | `createSolvaPayClient` ([`client.ts`](../../sdks/typescript/server/src/client.ts))                                        |
 | Client methods      | Every `SolvaPayClient` method (full catalog in §2.3)                                                               |
 | Top-level functions | `verifyWebhook`, `withRetry`                                                                                       |
 | Paywall helpers     | `buildPaywallGate`, `buildGateMessage`, `buildNudgeMessage`, `classifyPaywallState`, `paywallErrorToClientPayload` |
@@ -58,7 +58,7 @@ All five surfaces must expose, with equivalent semantics:
 
 ### 2.3 `SolvaPayClient` method catalog
 
-The interface in [`types/client.ts`](../../packages/server/src/types/client.ts) currently declares 36 methods. Grouped by domain, with the wire route each hits:
+The interface in [`types/client.ts`](../../sdks/typescript/server/src/types/client.ts) currently declares 36 methods. Grouped by domain, with the wire route each hits:
 
 | Domain                         | Method                                                                                          | Route                                                        |
 | ------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -103,7 +103,7 @@ The interface in [`types/client.ts`](../../packages/server/src/types/client.ts) 
 
 ### 2.4 High-level ergonomic facade — idiomatic equivalent required
 
-`createSolvaPay(...)` in [`factory.ts`](../../packages/server/src/factory.ts) and its `payable` / `protect` gating ergonomics must have an idiomatic counterpart in Python, Ruby, Go, and Rust, driven by the same shared paywall decision core so gate/allow/paywall outcomes and copy match byte-for-byte across languages.
+`createSolvaPay(...)` in [`factory.ts`](../../sdks/typescript/server/src/factory.ts) and its `payable` / `protect` gating ergonomics must have an idiomatic counterpart in Python, Ruby, Go, and Rust, driven by the same shared paywall decision core so gate/allow/paywall outcomes and copy match byte-for-byte across languages.
 
 What the facade owns today (stays language-side; decisions move to Rust):
 
@@ -175,9 +175,9 @@ All five call the same Rust decision core (`classify → build gate → decide`)
 Framework glue does **not** need a Python/Ruby/Go/Rust equivalent:
 
 - `@solvapay/react`, `@solvapay/next`, `@solvapay/react-supabase`
-- Framework adapters in [`packages/server/src/adapters`](../../packages/server/src/adapters/index.ts) (`http.ts`, `next.ts`, `mcp.ts`)
-- Fetch route handlers in [`packages/server/src/fetch`](../../packages/server/src/fetch/index.ts)
-- MCP SDK registration glue ([`register-virtual-tools-mcp.ts`](../../packages/server/src/register-virtual-tools-mcp.ts)) and `createVirtualTools`
+- Framework adapters in [`packages/server/src/adapters`](../../sdks/typescript/server/src/adapters/index.ts) (`http.ts`, `next.ts`, `mcp.ts`)
+- Fetch route handlers in [`packages/server/src/fetch`](../../sdks/typescript/server/src/fetch/index.ts)
+- MCP SDK registration glue ([`register-virtual-tools-mcp.ts`](../../sdks/typescript/server/src/register-virtual-tools-mcp.ts)) and `createVirtualTools`
 - `@solvapay/auth`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init`
 
 Python, Ruby, Go, and Rust still get the underlying decision cores those adapters call into (paywall gate, virtual-tool payload builders), just not the JS framework wiring. A Python FastAPI, Ruby Rack, Go middleware, or Rust Axum adapter is a possible _future_ package but is out of scope for the 55 steps. Go and Rust get decision cores and the high-level facade (`Payable`/`gate`); they do **not** get first-party framework adapters in this plan.
@@ -223,29 +223,29 @@ Today the SDK is TypeScript-only across the monorepo (see [`architecture.md`](./
 
 | Module                                                                                                                | LOC       | Role                                                                                                           | Fate                                                                                      |
 | --------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [`packages/core/src/business-details.ts`](../../packages/core/src/business-details.ts) + `business-details-public.ts` | ~430      | Tax-ID validation, country/tax-type derivation, Zod schema                                                     | → Rust (step 9)                                                                           |
-| [`packages/core/src/credit-display.ts`](../../packages/core/src/credit-display.ts)                                    | ~50       | Zero-decimal currency handling, credit → minor-unit conversion                                                 | → Rust (step 10)                                                                          |
-| [`packages/core/src/seller-identity.ts`](../../packages/core/src/seller-identity.ts)                                  | ~90       | Seller tax-identifier display resolution                                                                       | → Rust (step 10)                                                                          |
-| [`packages/core/src/index.ts`](../../packages/core/src/index.ts)                                                      | ~155      | `SolvaPayError` (`status`, `code`), `Env` Zod schema, `getSolvaPayConfig`                                      | Error → Rust (step 17); config facade stays TS                                            |
-| [`packages/server/src/client.ts`](../../packages/server/src/client.ts)                                                | ~1 020    | All 36 client methods + normalization quirks (§2.3)                                                            | → Rust (steps 22–24)                                                                      |
-| [`packages/server/src/utils.ts`](../../packages/server/src/utils.ts)                                                  | ~320      | `withRetry` (3 backoff strategies), `createRequestDeduplicator` (Workers-safe lazy interval)                   | Retry policy → Rust (step 11); deduplicator stays host-side (timers/maps are per-runtime) |
-| [`packages/server/src/index.ts`](../../packages/server/src/index.ts) `verifyWebhook`                                  | ~50       | Node-sync HMAC verification                                                                                    | → Rust (step 12)                                                                          |
-| [`packages/server/src/edge.ts`](../../packages/server/src/edge.ts) `verifyWebhook`                                    | ~60       | Async Web Crypto duplicate of the same logic                                                                   | Deleted by the same step 12 (one Rust impl, two facades)                                  |
-| [`packages/server/src/paywall-state.ts`](../../packages/server/src/paywall-state.ts)                                  | ~155      | `classifyPaywallState`, gate/nudge copy builders                                                               | → Rust (step 13)                                                                          |
-| [`packages/server/src/paywall-gate.ts`](../../packages/server/src/paywall-gate.ts)                                    | ~100      | `buildPaywallGate`, PAYG-topup reclassification                                                                | → Rust (step 14)                                                                          |
-| [`packages/server/src/paywall.ts`](../../packages/server/src/paywall.ts)                                              | ~1 160    | `SolvaPayPaywall` (caches, customer resolution, decide/protect), `PaywallError`, `paywallErrorToClientPayload` | Decision core → Rust (steps 32–33); cache/plumbing stays TS facade                        |
-| [`packages/server/src/factory.ts`](../../packages/server/src/factory.ts)                                              | ~1 230    | `createSolvaPay`, `payable` adapters, `gate()`                                                                 | Stays TS; Python/Ruby/Go/Rust get idiomatic equivalents (§2.4)                            |
-| [`packages/server/src/helpers/*`](../../packages/server/src/helpers/index.ts)                                                  | ~1 900    | 24 framework-agnostic route cores (`*Core`), `handleRouteError`, balance-poll schedules                        | → Rust (steps 26–31); `Request` parsing stays thin TS                                     |
-| [`packages/server/src/types/generated.ts`](../../packages/server/src/types/generated.ts)                              | generated | OpenAPI DTOs via `openapi-typescript`                                                                          | Replaced by generated Rust DTOs + generated TS decls (steps 15, 18)                       |
-| [`packages/server/src/types/client.ts`](../../packages/server/src/types/client.ts)                                    | ~550      | Hand-maintained SDK overlays (§6.3)                                                                            | Encoded in manifest + generator (step 16)                                                 |
-| [`packages/mcp-core`](../../packages/mcp-core) pure parts                                                             | ~450      | `paywallToolResult`, `response-envelope`, `tool-names`, `descriptors`                                          | → Rust (steps 34–35)                                                                      |
-| [`packages/mcp-core`](../../packages/mcp-core) transport parts                                                        | ~2 000    | OAuth bridge, bearer, CSP, narrate, response-context                                                           | Stays TS                                                                                  |
-| [`packages/react`](../../packages/react), `@solvapay/next`, adapters, fetch handlers, auth, cli                       | large     | Product/framework surface                                                                                      | Never moves (§8)                                                                          |
+| [`packages/core/src/business-details.ts`](../../sdks/typescript/core/src/business-details.ts) + `business-details-public.ts` | ~430      | Tax-ID validation, country/tax-type derivation, Zod schema                                                     | → Rust (step 9)                                                                           |
+| [`packages/core/src/credit-display.ts`](../../sdks/typescript/core/src/credit-display.ts)                                    | ~50       | Zero-decimal currency handling, credit → minor-unit conversion                                                 | → Rust (step 10)                                                                          |
+| [`packages/core/src/seller-identity.ts`](../../sdks/typescript/core/src/seller-identity.ts)                                  | ~90       | Seller tax-identifier display resolution                                                                       | → Rust (step 10)                                                                          |
+| [`packages/core/src/index.ts`](../../sdks/typescript/core/src/index.ts)                                                      | ~155      | `SolvaPayError` (`status`, `code`), `Env` Zod schema, `getSolvaPayConfig`                                      | Error → Rust (step 17); config facade stays TS                                            |
+| [`packages/server/src/client.ts`](../../sdks/typescript/server/src/client.ts)                                                | ~1 020    | All 36 client methods + normalization quirks (§2.3)                                                            | → Rust (steps 22–24)                                                                      |
+| [`packages/server/src/utils.ts`](../../sdks/typescript/server/src/utils.ts)                                                  | ~320      | `withRetry` (3 backoff strategies), `createRequestDeduplicator` (Workers-safe lazy interval)                   | Retry policy → Rust (step 11); deduplicator stays host-side (timers/maps are per-runtime) |
+| [`packages/server/src/index.ts`](../../sdks/typescript/server/src/index.ts) `verifyWebhook`                                  | ~50       | Node-sync HMAC verification                                                                                    | → Rust (step 12)                                                                          |
+| [`packages/server/src/edge.ts`](../../sdks/typescript/server/src/edge.ts) `verifyWebhook`                                    | ~60       | Async Web Crypto duplicate of the same logic                                                                   | Deleted by the same step 12 (one Rust impl, two facades)                                  |
+| [`packages/server/src/paywall-state.ts`](../../sdks/typescript/server/src/paywall-state.ts)                                  | ~155      | `classifyPaywallState`, gate/nudge copy builders                                                               | → Rust (step 13)                                                                          |
+| [`packages/server/src/paywall-gate.ts`](../../sdks/typescript/server/src/paywall-gate.ts)                                    | ~100      | `buildPaywallGate`, PAYG-topup reclassification                                                                | → Rust (step 14)                                                                          |
+| [`packages/server/src/paywall.ts`](../../sdks/typescript/server/src/paywall.ts)                                              | ~1 160    | `SolvaPayPaywall` (caches, customer resolution, decide/protect), `PaywallError`, `paywallErrorToClientPayload` | Decision core → Rust (steps 32–33); cache/plumbing stays TS facade                        |
+| [`packages/server/src/factory.ts`](../../sdks/typescript/server/src/factory.ts)                                              | ~1 230    | `createSolvaPay`, `payable` adapters, `gate()`                                                                 | Stays TS; Python/Ruby/Go/Rust get idiomatic equivalents (§2.4)                            |
+| [`packages/server/src/helpers/*`](../../sdks/typescript/server/src/helpers/index.ts)                                                  | ~1 900    | 24 framework-agnostic route cores (`*Core`), `handleRouteError`, balance-poll schedules                        | → Rust (steps 26–31); `Request` parsing stays thin TS                                     |
+| [`packages/server/src/types/generated.ts`](../../sdks/typescript/server/src/types/generated.ts)                              | generated | OpenAPI DTOs via `openapi-typescript`                                                                          | Replaced by generated Rust DTOs + generated TS decls (steps 15, 18)                       |
+| [`packages/server/src/types/client.ts`](../../sdks/typescript/server/src/types/client.ts)                                    | ~550      | Hand-maintained SDK overlays (§6.3)                                                                            | Encoded in manifest + generator (step 16)                                                 |
+| [`packages/mcp-core`](../../sdks/typescript/mcp-core) pure parts                                                             | ~450      | `paywallToolResult`, `response-envelope`, `tool-names`, `descriptors`                                          | → Rust (steps 34–35)                                                                      |
+| [`packages/mcp-core`](../../sdks/typescript/mcp-core) transport parts                                                        | ~2 000    | OAuth bridge, bearer, CSP, narrate, response-context                                                           | Stays TS                                                                                  |
+| [`packages/react`](../../sdks/typescript/react), `@solvapay/next`, adapters, fetch handlers, auth, cli                       | large     | Product/framework surface                                                                                      | Never moves (§8)                                                                          |
 
 Key facts about the current runtime strategy that constrain the design:
 
 - `@solvapay/server` uses **export conditions**: Node runtimes get `node:crypto` sync `verifyWebhook`; edge/Deno/Workers resolve to `dist/edge.js` with an async Web Crypto implementation. `@solvapay/mcp-core` imports `@solvapay/server` top-level and Deno resolves it to the edge build — so the edge surface is a real, consumed contract, not a fallback.
-- The OpenAPI pipeline ([`generate-types.ts`](../../packages/server/scripts/generate-types.ts)) fetches `http://localhost:3001/v1/openapi.json`, filters to `/v1/sdk/*` (excluding `/v1/sdk/agents`, which has known-invalid refs), prunes unreachable schemas, inserts placeholder schemas for unresolved `$ref`s, runs `openapi-typescript`, and rewrites `@description` tags. The Rust DTO generator (step 15) inherits all four of those behaviors.
+- The OpenAPI pipeline ([`generate-types.ts`](../../sdks/typescript/server/scripts/generate-types.ts)) fetches `http://localhost:3001/v1/openapi.json`, filters to `/v1/sdk/*` (excluding `/v1/sdk/agents`, which has known-invalid refs), prunes unreachable schemas, inserts placeholder schemas for unresolved `$ref`s, runs `openapi-typescript`, and rewrites `@description` tags. The Rust DTO generator (step 15) inherits all four of those behaviors.
 - Nothing in this redesign changes public npm import paths or React component APIs during migration. Cutover happens under the existing facades.
 
 ---
@@ -516,7 +516,7 @@ Ordering locked by Step 5 fixtures: last attempt consults neither callback; `sho
 
 ### 5.1 Two inputs
 
-1. **Checked-in filtered OpenAPI snapshot** — `/v1/sdk/*` paths, excluding `/v1/sdk/agents`, with the same prune/placeholder logic as today's [`generate-types.ts`](../../packages/server/scripts/generate-types.ts). Source of truth for wire DTOs. Upstream authorities: backend Zod schemas and the webhook event catalog. The snapshot is a file in this repo, diffed in CI against a fresh fetch, so backend drift is a visible PR, not a silent break.
+1. **Checked-in filtered OpenAPI snapshot** — `/v1/sdk/*` paths, excluding `/v1/sdk/agents`, with the same prune/placeholder logic as today's [`generate-types.ts`](../../sdks/typescript/server/scripts/generate-types.ts). Source of truth for wire DTOs. Upstream authorities: backend Zod schemas and the webhook event catalog. The snapshot is a file in this repo, diffed in CI against a fresh fetch, so backend drift is a visible PR, not a silent break.
 2. **SDK contract manifest** — non-wire behavior and overlays. Schema-validated (JSON Schema or Zod), checked in, and the single input to parity checks.
 
 Manifest entry sketch (one operation):
@@ -620,7 +620,7 @@ Client fixtures add a `wire` block (expected request method/path/headers/body + 
 
 ### 5.4 Known schema blockers (fix before generation cutover)
 
-These currently live as hand-maintained overlays in [`types/client.ts`](../../packages/server/src/types/client.ts) and must be encoded in OpenAPI and/or the manifest before step 15's cutover:
+These currently live as hand-maintained overlays in [`types/client.ts`](../../sdks/typescript/server/src/types/client.ts) and must be encoded in OpenAPI and/or the manifest before step 15's cutover:
 
 | Blocker                                     | Today                                                                                                                                                      | Required before gen cutover                                                                                                                                                    |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -813,7 +813,7 @@ This section pins the _semantics_ Phase 0 fixtures must capture. It exists so a 
 
 ### 6.1 Webhook verification
 
-One algorithm, currently duplicated in [`index.ts`](../../packages/server/src/index.ts) (Node sync, `node:crypto`) and [`edge.ts`](../../packages/server/src/edge.ts) (async, Web Crypto):
+One algorithm, currently duplicated in [`index.ts`](../../sdks/typescript/server/src/index.ts) (Node sync, `node:crypto`) and [`edge.ts`](../../sdks/typescript/server/src/edge.ts) (async, Web Crypto):
 
 1. Header format `t={unix-seconds},v1={hex-hmac}` from the `SV-Signature` header; missing → `missing_signature`, unparsable → `malformed_signature`.
 2. Tolerance: reject when `|now - t|` > **300 s** → `timestamp_too_old`.
@@ -825,11 +825,11 @@ The Rust implementation (step 12) replaces both copies; the Node facade stays sy
 
 ### 6.2 Retry engine
 
-From [`utils.ts`](../../packages/server/src/utils.ts): defaults `maxRetries: 2`, `initialDelay: 500`, `backoffStrategy: 'fixed'` (also `contract/manifest/sdk-contract.yaml` `defaults.retry`). Delay computation: fixed → `d`, linear → `d*(attempt+1)`, exponential → `d*2^attempt`. `attempt` is zero-based; `maxRetries` counts retries after the initial call. Semantics to preserve exactly: when `next_delay(attempt)` returns `None` (exhausted), the host rejects without consulting `shouldRetry` or `onRetry`; otherwise `shouldRetry(error, attempt)` may veto; `onRetry(error, attempt)` fires _after_ the retry decision, _before_ the host-owned sleep. Overflow-safe in Rust via saturating/`checked_shl` arithmetic. Fixture axes (`contract/fixtures/retry-schedule/`, 13 cases): all three strategies × attempts 0–3, shouldRetry veto paths, onRetry ordering, non-`Error` throwables (host wraps via `String(error)` — coercion stays out of `solvapay-core`).
+From [`utils.ts`](../../sdks/typescript/server/src/utils.ts): defaults `maxRetries: 2`, `initialDelay: 500`, `backoffStrategy: 'fixed'` (also `contract/manifest/sdk-contract.yaml` `defaults.retry`). Delay computation: fixed → `d`, linear → `d*(attempt+1)`, exponential → `d*2^attempt`. `attempt` is zero-based; `maxRetries` counts retries after the initial call. Semantics to preserve exactly: when `next_delay(attempt)` returns `None` (exhausted), the host rejects without consulting `shouldRetry` or `onRetry`; otherwise `shouldRetry(error, attempt)` may veto; `onRetry(error, attempt)` fires _after_ the retry decision, _before_ the host-owned sleep. Overflow-safe in Rust via saturating/`checked_shl` arithmetic. Fixture axes (`contract/fixtures/retry-schedule/`, 13 cases): all three strategies × attempts 0–3, shouldRetry veto paths, onRetry ordering, non-`Error` throwables (host wraps via `String(error)` — coercion stays out of `solvapay-core`).
 
 ### 6.3 Paywall state, gate, and payload
 
-From [`paywall-state.ts`](../../packages/server/src/paywall-state.ts) / [`paywall-gate.ts`](../../packages/server/src/paywall-gate.ts) / [`paywall.ts`](../../packages/server/src/paywall.ts):
+From [`paywall-state.ts`](../../sdks/typescript/server/src/paywall-state.ts) / [`paywall-gate.ts`](../../sdks/typescript/server/src/paywall-gate.ts) / [`paywall.ts`](../../sdks/typescript/server/src/paywall.ts):
 
 - **Classification precedence** (`classifyPaywallState`): (1) `activationRequired === true` trumps all → `activation_required`; (2) usage-based plan out of credits → `topup_required`, where "usage-based" is `activePlan.type === 'usage-based'` **or** presence of the `balance` block, and "out of credits" checks `balance.creditBalance === 0`, then top-level `creditBalance === 0`, then falls back to `remaining === 0` when both credit channels are absent; (3) everything else (including `limits === null`) → `upgrade_required`. `reactivation_required` exists in the type but is never returned under current backend behavior — keep it in the Rust enum, keep it unreachable.
 - **Gate/nudge copy** (`buildGateMessage` / `buildNudgeMessage`): exact strings, including the backtick-quoted tool names (`` `activate_plan` ``, `` `topup` ``, `` `upgrade` ``, `` `manage_account` ``) and the conditional `, or open {url} in a browser` / `, or visit {url}` clauses. These are byte-for-byte fixtures — the copy is consumed verbatim by MCP hosts.
@@ -844,7 +844,7 @@ Cross-language plug-in rule: wrappers do not re-encode domain failures. They map
 
 ### 6.5 MCP contracts (pure parts only)
 
-From [`packages/mcp-core`](../../packages/mcp-core): `MCP_TOOL_NAMES` (12 canonical names, e.g. `create_payment_intent`, `upgrade`, `manage_account`, `topup`), `paywallToolResult` (deliberately `isError: false` — a paywall is a user-actionable gate, not a tool failure; narration in `content[0].text`, gate on `structuredContent`), and `response-envelope` / `descriptors`. The OAuth bridge, bearer handling, CSP, and narration engine stay TypeScript.
+From [`packages/mcp-core`](../../sdks/typescript/mcp-core): `MCP_TOOL_NAMES` (12 canonical names, e.g. `create_payment_intent`, `upgrade`, `manage_account`, `topup`), `paywallToolResult` (deliberately `isError: false` — a paywall is a user-actionable gate, not a tool failure; narration in `content[0].text`, gate on `structuredContent`), and `response-envelope` / `descriptors`. The OAuth bridge, bearer handling, CSP, and narration engine stay TypeScript.
 
 ---
 
@@ -964,12 +964,12 @@ This table is the **exhaustive** list of what keeps logic in facade languages �
 
 | Area                                                                                                                                                                                              | Reason                                                                                                                                                                                       | Compatibility guarantee                                                                                                                                                                                                                                                                                                                                     |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entire [`packages/react`](../../packages/react)                                                                                                                                                   | Components, hooks, primitives, Stripe.js glue, i18n, transport wiring                                                                                                                        | Consumes only the TS facade of `@solvapay/server` / `@solvapay/core` and its transport layer; the binding beneath (wasm-bindgen in browser/edge, napi-rs in Node — never the C ABI) is invisible. After Step 52, React eagerly imports `@solvapay/core/browser-wasm` at runtime and installs napi in `vitest.setup.ts` (tests stub the browser-wasm entry). |
-| Framework adapters ([`adapters`](../../packages/server/src/adapters/index.ts): `http.ts`, `next.ts`, `mcp.ts`) + [`fetch`](../../packages/server/src/fetch/index.ts) handlers                                       | Thin TS shells over framework types                                                                                                                                                          | Delegate to Rust decision/client cores                                                                                                                                                                                                                                                                                                                      |
-| `createSolvaPay` factory ergonomics ([`factory.ts`](../../packages/server/src/factory.ts))                                                                                                        | Language-idiomatic; Python/Ruby/Go/Rust get their own facades (§2.4)                                                                                                                         | Only the decisions it calls into move                                                                                                                                                                                                                                                                                                                       |
+| Entire [`packages/react`](../../sdks/typescript/react)                                                                                                                                                   | Components, hooks, primitives, Stripe.js glue, i18n, transport wiring                                                                                                                        | Consumes only the TS facade of `@solvapay/server` / `@solvapay/core` and its transport layer; the binding beneath (wasm-bindgen in browser/edge, napi-rs in Node — never the C ABI) is invisible. After Step 52, React eagerly imports `@solvapay/core/browser-wasm` at runtime and installs napi in `vitest.setup.ts` (tests stub the browser-wasm entry). |
+| Framework adapters ([`adapters`](../../sdks/typescript/server/src/adapters/index.ts): `http.ts`, `next.ts`, `mcp.ts`) + [`fetch`](../../sdks/typescript/server/src/fetch/index.ts) handlers                                       | Thin TS shells over framework types                                                                                                                                                          | Delegate to Rust decision/client cores                                                                                                                                                                                                                                                                                                                      |
+| `createSolvaPay` factory ergonomics ([`factory.ts`](../../sdks/typescript/server/src/factory.ts))                                                                                                        | Language-idiomatic; Python/Ruby/Go/Rust get their own facades (§2.4)                                                                                                                         | Only the decisions it calls into move                                                                                                                                                                                                                                                                                                                       |
 | `createRequestDeduplicator` + limits cache plumbing                                                                                                                                               | Host timers, host maps, Workers-safe lazy intervals — per-runtime by nature                                                                                                                  | Behavior unchanged; caches sit _above_ the Rust client                                                                                                                                                                                                                                                                                                      |
 | `@solvapay/auth`, `@solvapay/next`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init`                                                                                                          | Product/framework glue                                                                                                                                                                       | Unchanged                                                                                                                                                                                                                                                                                                                                                   |
-| MCP SDK registration glue ([`register-virtual-tools-mcp.ts`](../../packages/server/src/register-virtual-tools-mcp.ts)), `@solvapay/mcp-core` transport parts (OAuth bridge, bearer, CSP, narrate) | JS SDK types and Node/fetch middleware                                                                                                                                                       | Payload builders move (steps 34–35); registration and middleware stay TS                                                                                                                                                                                                                                                                                    |
+| MCP SDK registration glue ([`register-virtual-tools-mcp.ts`](../../sdks/typescript/server/src/register-virtual-tools-mcp.ts)), `@solvapay/mcp-core` transport parts (OAuth bridge, bearer, CSP, narrate) | JS SDK types and Node/fetch middleware                                                                                                                                                       | Payload builders move (steps 34–35); registration and middleware stay TS                                                                                                                                                                                                                                                                                    |
 | Per-language MCP-authoring adapters (`solvapay-mcp-<lang>`)                                                                                                                                       | Layer-1 MCP protocol/transport comes from each language's own MCP SDK (never reimplemented in Rust); the layer-3 `registerPayable` / `ctx.respond` ergonomic is idiomatic, hand-written glue | Consume the shared layer-2 Rust decision core (paywall/envelope/descriptors, steps 32/34/35); named future track in §9, not in steps 1–55                                                                                                                                                                                                                   |
 | Per-language examples (`examples/<language>/`)                                                                                                                                                    | Idiomatic, hand-written demonstrations of the facade surface — same category as `@solvapay/react` and the MCP adapters; not generated                                                        | Each example consumes only the published facade; runnable + tested in CI (§9 "Examples", §10.3). Current TS examples relocate to `examples/typescript/`                                                                                                                                                                                                     |
 
@@ -1032,22 +1032,22 @@ flowchart LR
   FX -->|"replayed against"| TS0
 ```
 
-1. **OpenAPI snapshot + regen script.** Check in the filtered `/v1/sdk/*` snapshot plus a script that re-fetches, re-filters (same exclusion of `/v1/sdk/agents`, same prune + placeholder logic as [`generate-types.ts`](../../packages/server/scripts/generate-types.ts)), and diffs.
+1. **OpenAPI snapshot + regen script.** Check in the filtered `/v1/sdk/*` snapshot plus a script that re-fetches, re-filters (same exclusion of `/v1/sdk/agents`, same prune + placeholder logic as [`generate-types.ts`](../../sdks/typescript/server/scripts/generate-types.ts)), and diffs.
    _Scope:_ snapshot file, `scripts/snapshot-openapi.ts`, CI job.
    _Gotcha:_ the backend must be running for regeneration (`localhost:3001`); the CI diff job runs against a recorded spec artifact from the backend repo's CI, not a live server.
    **Done when:** regeneration is idempotent in CI (running it twice produces no diff).
 
 2. **SDK contract manifest.** Write the manifest (§5.1) as the single canonical public-API catalog: operation names, per-language method names, normalization rules, retry/idempotency semantics, error codes + message templates, sync/async availability, and the `createSolvaPay` / `payable` / `protect` / `gate` facade entry points. Include a schema and a validation script.
-   _Gotcha:_ the catalog must cover all 36 client methods (§2.3 — including `updateProduct` and `getUserInfo`, which are easy to miss because integration docs rarely mention them), every top-level export in [`index.ts`](../../packages/server/src/index.ts), and the `@solvapay/core` helpers.
+   _Gotcha:_ the catalog must cover all 36 client methods (§2.3 — including `updateProduct` and `getUserInfo`, which are easy to miss because integration docs rarely mention them), every top-level export in [`index.ts`](../../sdks/typescript/server/src/index.ts), and the `@solvapay/core` helpers.
    **Done when:** manifest validates and a coverage script confirms every catalogued entry point maps to an idiomatic name in all five languages (TS, Python, Ruby, Go, Rust).
 
 3. **Fixture harness.** Build the TS runner that replays JSON fixtures (§5.3) against the TS SDK: injected clock, seeded RNG (idempotency keys), mock transport for `wire` fixtures.
    **Done when:** one sample fixture passes end to end.
 
-4. **Webhook-signature fixtures.** Capture the full §6.1 axis set (accept / five error codes / boundary timestamps / malformed variants) from `verifyWebhook` in [`index.ts`](../../packages/server/src/index.ts) _and_ [`edge.ts`](../../packages/server/src/edge.ts) — both implementations must produce identical fixture results (this is itself a useful check that the current duplication hasn't drifted).
+4. **Webhook-signature fixtures.** Capture the full §6.1 axis set (accept / five error codes / boundary timestamps / malformed variants) from `verifyWebhook` in [`index.ts`](../../sdks/typescript/server/src/index.ts) _and_ [`edge.ts`](../../sdks/typescript/server/src/edge.ts) — both implementations must produce identical fixture results (this is itself a useful check that the current duplication hasn't drifted).
    **Done when:** fixtures pass via the harness against both implementations.
 
-5. **Retry-schedule fixtures.** Capture §6.2 from `withRetry` in [`utils.ts`](../../packages/server/src/utils.ts): all three backoff strategies, `shouldRetry` veto paths, `onRetry` ordering, non-Error throwables.
+5. **Retry-schedule fixtures.** Capture §6.2 from `withRetry` in [`utils.ts`](../../sdks/typescript/server/src/utils.ts): all three backoff strategies, `shouldRetry` veto paths, `onRetry` ordering, non-Error throwables.
    _Gotcha:_ fixtures assert the _computed delay sequence_ and callback ordering, not wall-clock time.
    **Done when:** fixtures pass via the harness.
 
@@ -1077,11 +1077,11 @@ flowchart LR
 8. **Scaffold cargo workspace.** `solvapay-core` crate (deps: serde, serde_json, hmac/sha2, subtle — serde_json added at step 12 for webhook body parse), workspace layout from §4.3, CI build (stable Rust, pinned toolchain file), Rust fixture runner reading the Phase 0 JSON format, the `wasm32-unknown-unknown` compile check from §7.4, and the no-unwrap Clippy/deny gate (§4.4).
    **Done when:** CI builds native + wasm32, runs an empty fixture suite, and fails if production code uses `.unwrap()` / `.expect()`.
 
-9. **Business details.** Translate [`business-details.ts`](../../packages/core/src/business-details.ts) + [`business-details-public.ts`](../../packages/core/src/business-details-public.ts): country tables, tax-ID derivation and examples, `validateBusinessDetails`, tax-behavior resolution.
+9. **Business details.** Translate [`business-details.ts`](../../sdks/typescript/core/src/business-details.ts) + [`business-details-public.ts`](../../sdks/typescript/core/src/business-details-public.ts): country tables, tax-ID derivation and examples, `validateBusinessDetails`, tax-behavior resolution.
    _Gotcha:_ the Zod schema's issue shapes are part of the contract (`BusinessDetailsValidationIssue`); the Rust validator must emit the same issue codes/paths so React form errors don't change.
    **Done when:** its fixtures pass in Rust.
 
-10. **Credit display + seller identity.** Translate [`credit-display.ts`](../../packages/core/src/credit-display.ts) (zero-decimal currency table, `creditsToDisplayMinorUnits`, `minorUnitsPerMajor`) and [`seller-identity.ts`](../../packages/core/src/seller-identity.ts) (display-label tables, `resolveSellerIdentityDisplay`).
+10. **Credit display + seller identity.** Translate [`credit-display.ts`](../../sdks/typescript/core/src/credit-display.ts) (zero-decimal currency table, `creditsToDisplayMinorUnits`, `minorUnitsPerMajor`) and [`seller-identity.ts`](../../sdks/typescript/core/src/seller-identity.ts) (display-label tables, `resolveSellerIdentityDisplay`).
     **Done when:** their fixtures pass in Rust.
 
 11. **Retry policy engine.** Implement `RetryPolicy` (§4.4): policy computation only, timers stay host-side; document how the facade weaves `shouldRetry`/`onRetry` around it.
@@ -1090,10 +1090,10 @@ flowchart LR
 12. **Webhook verification.** One implementation of §6.1 (parse, tolerance, HMAC-SHA256, constant-time compare via `subtle`), replacing the Node-sync/edge-async split. Clock is an explicit parameter.
     **Done when:** step 4 fixtures pass in Rust.
 
-13. **Paywall state.** Translate `classifyPaywallState`, `buildGateMessage`, `buildNudgeMessage` from [`paywall-state.ts`](../../packages/server/src/paywall-state.ts), including the `reactivation_required` unreachable variant.
+13. **Paywall state.** Translate `classifyPaywallState`, `buildGateMessage`, `buildNudgeMessage` from [`paywall-state.ts`](../../sdks/typescript/server/src/paywall-state.ts), including the `reactivation_required` unreachable variant.
     **Done when:** their fixtures pass in Rust, copy byte-for-byte.
 
-14. **Paywall gate.** Translate `buildPaywallGate` from [`paywall-gate.ts`](../../packages/server/src/paywall-gate.ts): `allPaidPlansArePayg`, the `useActivationForTopup` branch, conditional field emission (skip-absent, never `null`).
+14. **Paywall gate.** Translate `buildPaywallGate` from [`paywall-gate.ts`](../../sdks/typescript/server/src/paywall-gate.ts): `allPaidPlansArePayg`, the `useActivationForTopup` branch, conditional field emission (skip-absent, never `null`).
     **Done when:** its fixtures pass in Rust byte-for-byte, including JSON field-presence assertions.
 
 ---
@@ -1110,11 +1110,11 @@ flowchart LR
   TSDECL --> PARITY["API-diff + TS parity gate"]
 ```
 
-15. **Rust DTO generator.** Build `tools/dto-gen` emitting `solvapay-dto` from the OpenAPI snapshot (replacing the role of [`types/generated.ts`](../../packages/server/src/types/generated.ts) as source of truth). Must reproduce the pipeline's prune/placeholder behavior and preserve `oneOf` discriminators as Rust enums.
+15. **Rust DTO generator.** Build `tools/dto-gen` emitting `solvapay-dto` from the OpenAPI snapshot (replacing the role of [`types/generated.ts`](../../sdks/typescript/server/src/types/generated.ts) as source of truth). Must reproduce the pipeline's prune/placeholder behavior and preserve `oneOf` discriminators as Rust enums.
     _Gotcha (resolved):_ `ProcessPaymentResult` `status` discriminator is non-unique across three `succeeded` branches — emitter special-cases an untagged enum with specific→bare ordering (§15 note 10). Manifest overlays remain step 16.
     **Done when:** generated crate compiles and round-trips the step 7 fixtures (serialize → deserialize → byte-equal JSON).
 
-16. **SDK-only overlays.** Encode every §5.4 overlay from [`types/client.ts`](../../packages/server/src/types/client.ts) in the manifest and generator: `includeCheckoutSession`, `LimitResponseWithPlan`, `CustomerResponseMapped` mapping rules, `TopupProcessResult` projection, auto-recharge/display blocks, MCP bootstrap shapes.
+16. **SDK-only overlays.** Encode every §5.4 overlay from [`types/client.ts`](../../sdks/typescript/server/src/types/client.ts) in the manifest and generator: `includeCheckoutSession`, `LimitResponseWithPlan`, `CustomerResponseMapped` mapping rules, `TopupProcessResult` projection, auto-recharge/display blocks, MCP bootstrap shapes.
     **Done when:** overlay types generate and compile in Rust and TS outputs.
 
 17. **Error model.** Implement `SdkError` (§4.4) as the single cross-language error surface; map `SolvaPayError` / `PaywallError` construction paths; freeze message templates in the manifest; document the one conversion layer each binding must use (§6.4).
@@ -1189,27 +1189,27 @@ flowchart LR
   TSH --> BT
 ```
 
-26. [`customer.ts`](../../packages/server/src/helpers/customer.ts), [`auth.ts`](../../packages/server/src/helpers/auth.ts), [`activation.ts`](../../packages/server/src/helpers/activation.ts) — customer sync/ensure logic, authenticated-user resolution core, activation flow.
+26. [`customer.ts`](../../sdks/typescript/server/src/helpers/customer.ts), [`auth.ts`](../../sdks/typescript/server/src/helpers/auth.ts), [`activation.ts`](../../sdks/typescript/server/src/helpers/activation.ts) — customer sync/ensure logic, authenticated-user resolution core, activation flow.
     **Done when:** existing helper tests pass against the binding.
     **Step 26 note:** conformance landed via golden fixtures (`helper-auth` / `helper-customer-sync` / `helper-activation`) + Rust `fixture-runner` (Phase 1 precedent); literal binding conformance deferred to step 37. Decision-only `ensureCustomer` scope; caches/HTTP stay TS. See migration-map Step 26 decisions + §15 note 18.
 
-27. [`payment.ts`](../../packages/server/src/helpers/payment.ts) (541 LOC — the largest helper; budget the whole session for it), [`payment-method.ts`](../../packages/server/src/helpers/payment-method.ts), [`checkout.ts`](../../packages/server/src/helpers/checkout.ts).
+27. [`payment.ts`](../../sdks/typescript/server/src/helpers/payment.ts) (541 LOC — the largest helper; budget the whole session for it), [`payment-method.ts`](../../sdks/typescript/server/src/helpers/payment-method.ts), [`checkout.ts`](../../sdks/typescript/server/src/helpers/checkout.ts).
     **Done when:** existing helper tests pass against the binding.
     **Step 27 note:** decision/normalization cores only (`validate*`, `projectPaymentIntentResult`, `projectTopupProcessOutcome`, `resolveReturnUrl`); `payment-method.ts` has nil decision core (orchestration-only). Conformance via `helper-payment` / `helper-checkout` fixtures + characterization suites; balance poll stays host (step 28). See migration-map Step 27 decisions + §15 note 19.
 
-28. [`auto-recharge.ts`](../../packages/server/src/helpers/auto-recharge.ts), [`balance-poll.ts`](../../packages/server/src/helpers/balance-poll.ts) — `BALANCE_RECONCILE_DELAYS_MS` / `TOPUP_BALANCE_POLL_DELAYS_MS` become policy data in Rust; the poll loop's timers stay host-side (same pattern as retries).
+28. [`auto-recharge.ts`](../../sdks/typescript/server/src/helpers/auto-recharge.ts), [`balance-poll.ts`](../../sdks/typescript/server/src/helpers/balance-poll.ts) — `BALANCE_RECONCILE_DELAYS_MS` / `TOPUP_BALANCE_POLL_DELAYS_MS` become policy data in Rust; the poll loop's timers stay host-side (same pattern as retries).
     **Done when:** existing helper tests pass against the binding.
     **Step 28 note:** nil auto-recharge decision core (orchestration-only, like payment-method); balance-poll tables + `evaluate_balance_observation` in `solvapay-core::balance_poll`; host-side poll loop / timers (step-11 precedent). Conformance via `helper-balance-poll` fixtures + characterization suites; no TS extract (withRetry precedent). See migration-map Step 28 decisions + §15 note 20.
 
-29. [`purchase.ts`](../../packages/server/src/helpers/purchase.ts), [`renewal.ts`](../../packages/server/src/helpers/renewal.ts).
+29. [`purchase.ts`](../../sdks/typescript/server/src/helpers/purchase.ts), [`renewal.ts`](../../sdks/typescript/server/src/helpers/renewal.ts).
     **Done when:** existing helper tests pass against the binding.
     **Step 29 note:** decision/normalization cores only (`selectActivePurchases`, cache-ref predicate, `validatePurchaseRef`, cancel/reactivate normalize + classify); settle delay / auth / HTTP stay host. Conformance via `helper-purchase` / `helper-renewal` fixtures + characterization suites; shared `is_truthy` for JS field presence. See migration-map Step 29 decisions + §15 note 21.
 
-30. [`usage.ts`](../../packages/server/src/helpers/usage.ts), [`limits.ts`](../../packages/server/src/helpers/limits.ts), [`plans.ts`](../../packages/server/src/helpers/plans.ts).
+30. [`usage.ts`](../../sdks/typescript/server/src/helpers/usage.ts), [`limits.ts`](../../sdks/typescript/server/src/helpers/limits.ts), [`plans.ts`](../../sdks/typescript/server/src/helpers/plans.ts).
     **Done when:** existing helper tests pass against the binding.
     **Step 30 note:** decision/normalization cores only (`projectUsageSnapshot`, `resolveCheckLimitsParams`, `validateListPlansParams`); `trackUsageCore` / auth / HTTP / config guards stay host. Conformance via `helper-usage` / `helper-limits` / `helper-plans` fixtures + characterization suites; frozen productRef message differs from checkout; shared `serialize_whole_f64` for integer emission. See migration-map Step 30 decisions + §15 note 22.
 
-31. [`merchant.ts`](../../packages/server/src/helpers/merchant.ts), [`product.ts`](../../packages/server/src/helpers/product.ts), [`error.ts`](../../packages/server/src/helpers/error.ts) — `handleRouteError` / `isErrorResult` status-mapping core.
+31. [`merchant.ts`](../../sdks/typescript/server/src/helpers/merchant.ts), [`product.ts`](../../sdks/typescript/server/src/helpers/product.ts), [`error.ts`](../../sdks/typescript/server/src/helpers/error.ts) — `handleRouteError` / `isErrorResult` status-mapping core.
     **Done when:** existing helper tests pass against the binding.
     **Step 31 note:** decision/normalization cores only (`mapRouteError`, `isErrorResult`, `validateGetProductParams`); `merchant.ts` / config / HTTP / `console.error` / `instanceof` narrowing stay host. Conformance via `helper-error` / `helper-product` fixtures + characterization suites; reuse `HelperErrorResult` with/without details. See migration-map Step 31 decisions + §15 note 23.
 
@@ -1224,7 +1224,7 @@ flowchart LR
   MCP["mcp-core pure builders:<br/>paywallToolResult / envelope / names / descriptors"] --> R5
 ```
 
-32. **Paywall decision core.** Translate the decision core of [`paywall.ts`](../../packages/server/src/paywall.ts): limit evaluation and `PaywallDecision` production. Handler/context plumbing, the customer-lookup deduplicator, and the 10 s limits cache with optimistic decrement all **stay TS** (§8) — the Rust core is called at the decision point with resolved inputs.
+32. **Paywall decision core.** Translate the decision core of [`paywall.ts`](../../sdks/typescript/server/src/paywall.ts): limit evaluation and `PaywallDecision` production. Handler/context plumbing, the customer-lookup deduplicator, and the 10 s limits cache with optimistic decrement all **stay TS** (§8) — the Rust core is called at the decision point with resolved inputs.
     **Done when:** decision fixtures pass.
     **Step 32 note:** decision cores only (`resolveProductRef`, `evaluateCachedLimits`, `evaluateFreshLimits`, `decidePaywallOutcome`); cache Map/TTL, ensureCustomer, checkLimits HTTP, trackUsage stay host. Gate reuses step-14 `build_paywall_gate` (TS injects `buildGate`). Conformance via `paywall/decision` fixtures + `paywall.unit.test.ts`. See migration-map Step 32 decisions + §15 note 24.
 
@@ -1232,11 +1232,11 @@ flowchart LR
     **Done when:** payload fixtures pass, field-presence exact.
     **Step 33 note:** `solvapay-core::paywall_payload` (`paywall_client_payload` + `PaywallClientPayload`); no TS extract — fixtures bind the existing `@solvapay/server` export directly (withRetry / step-28 precedent). Payment branch never emits `plans` / `confirmationUrl`; `confirmationUrl: ""` is emitted (presence `!== undefined`); input null ≡ absent pinned. Conformance via `paywall/client-payload` (9, was 4). See migration-map Step 33 decisions + §15 note 25.
 
-34. **MCP payload builders.** Translate the pure builders from [`packages/mcp-core`](../../packages/mcp-core): `paywallToolResult` (preserving the deliberate `isError: false`, §6.5) and `response-envelope`.
+34. **MCP payload builders.** Translate the pure builders from [`packages/mcp-core`](../../sdks/typescript/mcp-core): `paywallToolResult` (preserving the deliberate `isError: false`, §6.5) and `response-envelope`.
     **Done when:** `@solvapay/server` and `@solvapay/mcp-core` produce identical payloads from shared fixtures.
     **Step 34 note:** `solvapay-core::mcp` (`paywall_tool_result` + envelope); no TS extract — dual-binding fixtures (`mcp-core` + `server` `formatGate`) prove identical payloads. Typed `PaywallGate` input; `message === gate.message` pin; envelope skip-absent `options` / empty `emittedBlocks`; `assertResponseResult` message frozen in `errors.mcp.messages.rawHandlerReturn`. Conformance via `mcp/` (19). See migration-map Step 34 decisions + §15 note 26.
 
-35. **MCP names + descriptors.** Translate [`tool-names.ts`](../../packages/mcp-core/src/tool-names.ts) (the 12-name `MCP_TOOL_NAMES` table — single source of truth stays single) and the pure parts of [`descriptors.ts`](../../packages/mcp-core/src/descriptors.ts).
+35. **MCP names + descriptors.** Translate [`tool-names.ts`](../../sdks/typescript/mcp-core/src/tool-names.ts) (the 12-name `MCP_TOOL_NAMES` table — single source of truth stays single) and the pure parts of [`descriptors.ts`](../../sdks/typescript/mcp-core/src/descriptors.ts).
     **Done when:** descriptor fixtures pass.
     **Step 35 note:** `solvapay-core::mcp::{tool_names,descriptors}` + TS pure extract `descriptor-metadata.ts` rewired into `buildSolvaPayDescriptors` / `buildSolvaPayPrompts`. Handlers / zod / fs / crypto / CSP / narration stay host. Conformance via `mcp/{tool-names,derive-icons,descriptors,prompts}` (+20 → corpus 431). See migration-map Step 35 decisions + §15 note 27.
 
@@ -1462,7 +1462,7 @@ flowchart TB
 
 - **Layer 1 (reused, never Rust):** the MCP protocol and transport come from each ecosystem's own MCP SDK. Maintaining a competing five-language MCP implementation in Rust would be strictly worse than reusing the mature ecosystem SDKs, so layer 1 is _never_ reimplemented in the core.
 - **Layer 2 (shared, already built):** the SolvaPay decision core — classify → build gate → decide, `paywallToolResult`/envelope, tool-names, descriptors, `checkLimits`/`trackUsage` — is the Rust core delivered by steps 32/34/35 and Phases 3–4. Gate copy and structured content are byte-identical across languages because they come from this one core.
-- **Layer 3 (new, hand-written):** the only new surface — a thin per-language facade that wraps a merchant handler with the layer-2 pre-check and registers it on a layer-1 server object. This mirrors what `@solvapay/mcp` does today via [`registerPayableTool.ts`](../../packages/mcp/src/registerPayableTool.ts) + [`payable-handler.ts`](../../packages/mcp-core/src/payable-handler.ts) (whose header already anticipates future adapters) over [`buildMcpServer.ts`](../../packages/mcp/src/internal/buildMcpServer.ts).
+- **Layer 3 (new, hand-written):** the only new surface — a thin per-language facade that wraps a merchant handler with the layer-2 pre-check and registers it on a layer-1 server object. This mirrors what `@solvapay/mcp` does today via [`registerPayableTool.ts`](../../sdks/typescript/mcp/src/registerPayableTool.ts) + [`payable-handler.ts`](../../sdks/typescript/mcp-core/src/payable-handler.ts) (whose header already anticipates future adapters) over [`buildMcpServer.ts`](../../sdks/typescript/mcp/src/internal/buildMcpServer.ts).
 
 Lettered step ids keep steps 1–55 intact (same convention as `37R` / `6G`). The canonical authoring skill is `create-mcp-app`.
 
