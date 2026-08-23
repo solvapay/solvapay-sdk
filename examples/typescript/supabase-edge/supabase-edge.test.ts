@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import * as fetchExports from '../../../packages/server/src/fetch/index'
+import * as fetchExports from '../../../sdks/typescript/server/src/fetch/index'
 
 const FUNCTIONS_DIR = join(__dirname, 'supabase/functions')
 

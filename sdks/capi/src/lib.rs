@@ -3,13 +3,15 @@
 //! Surface: opaque generation-counted client handles + generic JSON-envelope
 //! dispatch (`solvapay_client_call`) + sync `solvapay_verify_webhook` /
 //! `solvapay_version` / `solvapay_abi_version`. Every FFI edge uses
-//! `catch_unwind` (§7.6). Full 36-op dispatch is deferred.
+//! `catch_unwind` (§7.6). Full 36-op dispatch is generated (`Toolchain::C`).
 
 #![allow(clippy::result_large_err)]
 
 mod abi;
 mod dispatch;
 mod error;
+#[cfg(feature = "fixture-host")]
+mod fixture_host;
 pub mod fuzz_oracle;
 mod handle;
 mod runtime;

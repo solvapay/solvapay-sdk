@@ -10,13 +10,13 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "paths": {
-      "@solvapay/core": ["../../../packages/core/src/index.ts"],
-      "@solvapay/mcp": ["../../../packages/mcp/src/index.ts"],
-      "@solvapay/mcp/express": ["../../../packages/mcp/src/express/index.ts"],
-      "@solvapay/mcp/fetch": ["../../../packages/mcp/src/fetch/index.ts"],
-      "@solvapay/mcp-core": ["../../../packages/mcp-core/src/index.ts"],
-      "@solvapay/server": ["../../../packages/server/src/index.ts"],
-      "@solvapay/react": ["../../../packages/react/dist/index.d.ts"]
+      "@solvapay/core": ["../../../sdks/typescript/core/src/index.ts"],
+      "@solvapay/mcp": ["../../../sdks/typescript/mcp/src/index.ts"],
+      "@solvapay/mcp/express": ["../../../sdks/typescript/mcp/src/express/index.ts"],
+      "@solvapay/mcp/fetch": ["../../../sdks/typescript/mcp/src/fetch/index.ts"],
+      "@solvapay/mcp-core": ["../../../sdks/typescript/mcp-core/src/index.ts"],
+      "@solvapay/server": ["../../../sdks/typescript/server/src/index.ts"],
+      "@solvapay/react": ["../../../sdks/typescript/react/dist/index.d.ts"]
     },
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true

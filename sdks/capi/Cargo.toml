@@ -18,6 +18,12 @@ solvapay-transport = { path = "../../core/solvapay-transport" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
+fixture-runner = { path = "../../tools/conformance/fixture-runner", optional = true }
+repo-paths = { path = "../../tools/shared/repo-paths", optional = true }
+
+[features]
+default = []
+fixture-host = ["dep:fixture-runner", "dep:repo-paths"]
 
 [build-dependencies]
 cbindgen = "0.29.0"

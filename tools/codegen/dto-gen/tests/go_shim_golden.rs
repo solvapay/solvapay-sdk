@@ -188,8 +188,26 @@ fn go_client_exports_full_36_op_surface() {
     assert!(saw_await, "expected at least one ClientAwait op");
     assert!(saw_split, "expected at least one ClientSplit op");
 
-    assert!(emitted.decisions_rs.is_empty());
-    assert!(emitted.payload_builders_rs.is_empty());
+    let mut sync: Vec<_> = ir
+        .binding_symbols
+        .values()
+        .filter(|s| {
+            matches!(
+                s.artifact,
+                IrBindingArtifact::Decisions | IrBindingArtifact::PayloadBuilders
+            )
+        })
+        .collect();
+    assert_eq!(sync.len(), 68, "expected 68 sync helper binding symbols");
+    sync.sort_by(|a, b| a.emit_order.cmp(&b.emit_order).then(a.id.cmp(&b.id)));
+    for sym in &sync {
+        let export = format!("sv_{}(", sym.rust_fn_name);
+        let in_decisions = emitted.decisions_rs.contains(&export);
+        let in_payload = emitted.payload_builders_rs.contains(&export);
+        assert!(in_decisions || in_payload, "missing sync export {export}");
+    }
+    assert!(!emitted.decisions_rs.is_empty());
+    assert!(!emitted.payload_builders_rs.is_empty());
     assert!(emitted.register_rs.is_empty());
     assert!(
         !emitted.client_rs.contains("hello-world scaffold"),
@@ -204,6 +222,16 @@ fn go_shims_match_committed_files() {
     let src = paths().generated_path("goBindings").expect("goBindings");
 
     assert_matches(&emitted.args_rs, &src.join("args.rs"), "go_args");
+    assert_matches(
+        &emitted.decisions_rs,
+        &src.join("decisions.rs"),
+        "go_decisions",
+    );
+    assert_matches(
+        &emitted.payload_builders_rs,
+        &src.join("payload_builders.rs"),
+        "go_payload",
+    );
     assert_matches(&emitted.client_rs, &src.join("client.rs"), "go_client");
     assert_matches(&emitted.webhook_rs, &src.join("webhook.rs"), "go_webhook");
 }

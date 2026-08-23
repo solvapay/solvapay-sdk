@@ -11,10 +11,16 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 import {
+  INTERNAL_PACKAGE_IDS,
   parseRepoPathsManifest,
   SDK_SURFACE_IDS,
+  TOOL_PACKAGE_IDS,
+  TS_PACKAGE_IDS,
+  type InternalPackageId,
   type RepoPathsManifest,
   type SdkSurfaceId,
+  type ToolPackageId,
+  type TsPackageId,
 } from './repo-paths-schema.js'
 
 const WORKSPACE_MARKER = 'pnpm-workspace.yaml'
@@ -62,8 +68,10 @@ export const REPO_PATHS: RepoPathsManifest = LAYOUT
 export const CONTRACT_DIR = joinRoot(LAYOUT.dirs.contract)
 /** Absolute path to `core/`. */
 export const CORE_DIR = joinRoot(LAYOUT.dirs.core)
-/** Absolute path to `packages/`. */
-export const PACKAGES_DIR = joinRoot(LAYOUT.dirs.packages)
+/** Absolute path to `sdks/typescript/`. */
+export const SDKS_TYPESCRIPT_DIR = joinRoot(LAYOUT.dirs.sdksTypescript)
+/** Absolute path to `internal/`. */
+export const INTERNAL_DIR = joinRoot(LAYOUT.dirs.internal)
 /** Absolute path to `docs/`. */
 export const DOCS_DIR = joinRoot(LAYOUT.dirs.docs)
 /** Absolute path to `examples/`. */
@@ -85,8 +93,54 @@ export const CHANGESET_DIR = joinRoot(LAYOUT.dirs.changeset)
 
 export const SDK_SURFACES = SDK_SURFACE_IDS
 export type SdkSurface = SdkSurfaceId
+export { INTERNAL_PACKAGE_IDS, TOOL_PACKAGE_IDS, TS_PACKAGE_IDS }
+export type { InternalPackageId, ToolPackageId, TsPackageId }
+
+/** Join a repo-root-relative posix path onto an arbitrary root. */
+export function joinRel(root: string, rel: string, ...extra: string[]): string {
+  return path.join(root, ...rel.split('/'), ...extra)
+}
+
+/** Repo-root-relative path for a `lookups` key. */
+export function lookupRel(key: string): string {
+  const rel = LAYOUT.lookups[key]
+  if (rel === undefined) {
+    throw new Error(`unknown repo-paths lookup: ${key}`)
+  }
+  return rel
+}
 
 /** Absolute directory for a language / binding surface. */
 export function sdkDir(surface: SdkSurface): string {
   return joinRoot(LAYOUT.sdks[surface])
+}
+
+/** Repo-root-relative directory for a published TypeScript SDK package. */
+export function tsPackageRel(id: TsPackageId): string {
+  return LAYOUT.tsPackages[id]
+}
+
+/** Absolute directory for a published TypeScript SDK package. */
+export function tsPackageDir(id: TsPackageId): string {
+  return joinRoot(tsPackageRel(id))
+}
+
+/** Repo-root-relative directory for a user-facing tool package. */
+export function toolPackageRel(id: ToolPackageId): string {
+  return LAYOUT.toolPackages[id]
+}
+
+/** Absolute directory for a user-facing tool package. */
+export function toolPackageDir(id: ToolPackageId): string {
+  return joinRoot(toolPackageRel(id))
+}
+
+/** Repo-root-relative directory for an internal TypeScript package. */
+export function internalPackageRel(id: InternalPackageId): string {
+  return LAYOUT.internalPackages[id]
+}
+
+/** Absolute directory for an internal TypeScript package. */
+export function internalPackageDir(id: InternalPackageId): string {
+  return joinRoot(internalPackageRel(id))
 }

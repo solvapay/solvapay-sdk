@@ -3,12 +3,13 @@
  * superseded TypeScript semantic implementations (webhook crypto, client
  * fetch bodies, paywall/retry TS modules, tsFallback dispatch).
  *
- * Scans only `packages/server/src`. §8 host/orchestration TypeScript is
+ * Scans only `@solvapay/server` `src/`. §8 host/orchestration TypeScript is
  * retained by path/symbol scope, not by a broad "allow TypeScript" exemption.
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
+import { joinRel, tsPackageRel } from '../../shared/paths.js'
 
 export type SupersededIssue = {
   file: string
@@ -127,10 +128,10 @@ function firstMatchLine(source: string, pattern: RegExp): number | undefined {
 }
 
 /**
- * Run the superseded-TS gate against `packages/server/src` under `repoRoot`.
+ * Run the superseded-TS gate against `@solvapay/server` src under `repoRoot`.
  */
 export function runSupersededServerTsCheck(repoRoot: string): SupersededIssue[] {
-  const srcRoot = path.join(repoRoot, 'packages', 'server', 'src')
+  const srcRoot = joinRel(repoRoot, tsPackageRel('server'), 'src')
   const issues: SupersededIssue[] = []
 
   for (const basename of FORBIDDEN_FILES) {
@@ -147,7 +148,7 @@ export function runSupersededServerTsCheck(repoRoot: string): SupersededIssue[] 
   if (!existsSync(srcRoot)) {
     issues.push({
       file: path.relative(repoRoot, srcRoot),
-      token: path.join('packages', 'server', 'src'),
+      token: path.join(tsPackageRel('server'), 'src'),
       remediation: 'Expected the server package src directory to exist for the superseded-TS scan.',
     })
     return issues

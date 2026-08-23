@@ -1689,6 +1689,7 @@ name = "solvapay-c"
 version = "0.1.0"
 dependencies = [
  "cbindgen",
+ "fixture-runner",
  "repo-paths",
  "serde",
  "serde_json",

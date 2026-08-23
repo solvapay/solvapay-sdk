@@ -8,6 +8,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { parse as parseYaml } from 'yaml'
 
 function findRepoRoot(startDir) {
   let dir = resolve(startDir)
@@ -23,11 +24,31 @@ function findRepoRoot(startDir) {
   }
 }
 
+function loadLayout(repoRoot) {
+  let layoutPath = repoRoot
+  for (const part of ['contract', 'manifest', 'repo-paths.yaml']) {
+    layoutPath = join(layoutPath, part)
+  }
+  const layout = parseYaml(readFileSync(layoutPath, 'utf8'))
+  if (typeof layout !== 'object' || layout === null) {
+    throw new Error(`invalid repo-paths manifest at ${layoutPath}`)
+  }
+  return layout
+}
+
+function absRel(repoRoot, rel, ...extra) {
+  if (typeof rel !== 'string' || rel.length === 0) {
+    throw new Error('missing repo-paths entry')
+  }
+  return join(repoRoot, ...rel.split('/'), ...extra)
+}
+
 const repoRoot = findRepoRoot(process.cwd())
-const fixturesDir = join(repoRoot, 'contract', 'fixtures', 'webhook-verification')
+const layout = loadLayout(repoRoot)
+const fixturesDir = absRel(repoRoot, layout.lookups?.webhookFixtures)
 
 const { verifyWebhook } = await import(
-  pathToFileURL(join(repoRoot, 'packages', 'server', 'dist', 'edge.js')).href
+  pathToFileURL(absRel(repoRoot, layout.tsPackages?.server, 'dist', 'edge.js')).href
 )
 
 const RealDateNow = Date.now

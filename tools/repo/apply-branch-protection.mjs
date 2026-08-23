@@ -29,7 +29,19 @@ function findRepoRoot(startDir: string): string {
 }
 
 const repoRoot = findRepoRoot(process.cwd())
-const manifestPath = path.join(repoRoot, 'contract', 'required-checks.yaml')
+let layoutPath = repoRoot
+for (const part of ['contract', 'manifest', 'repo-paths.yaml']) {
+  layoutPath = path.join(layoutPath, part)
+}
+const layout = parseYaml(readFileSync(layoutPath, 'utf8'))
+if (typeof layout !== 'object' || layout === null || typeof layout.lookups !== 'object' || layout.lookups === null) {
+  throw new Error(`invalid repo-paths manifest at ${layoutPath}`)
+}
+const requiredChecksRel = layout.lookups.requiredChecks
+if (typeof requiredChecksRel !== 'string') {
+  throw new Error('missing lookups.requiredChecks')
+}
+const manifestPath = path.join(repoRoot, ...requiredChecksRel.split('/'))
 const apply = process.argv.includes('--apply')
 
 const raw = parseYaml(readFileSync(manifestPath, 'utf8'))

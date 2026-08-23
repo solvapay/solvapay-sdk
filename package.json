@@ -59,7 +59,7 @@
     "docs:validate": "pnpm docs:validate-links && pnpm docs:check && pnpm docs:build",
     "deps:check": "tsx tools/repo/check-dependency-health.ts",
     "loc": "tsx tools/repo/count-loc.ts",
-    "test:contract": "vitest run tools --exclude '**/shadow/selftest.test.ts'",
+    "test:contract": "vitest run tools/shared tools/codegen tools/conformance tools/repo --exclude '**/shadow/selftest.test.ts'",
     "shadow:run": "tsx tools/conformance/shadow/run-shadow.ts",
     "shadow:selftest": "vitest run tools/conformance/shadow/",
     "snapshot:openapi": "tsx tools/codegen/snapshot-openapi.ts",

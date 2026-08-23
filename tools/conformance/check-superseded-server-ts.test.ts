@@ -9,6 +9,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { joinRel, tsPackageRel } from '../shared/paths.js'
 import {
   formatSupersededReport,
   runSupersededServerTsCheck,
@@ -16,7 +17,7 @@ import {
 
 function makeRepo(files: Record<string, string>): string {
   const root = mkdtempSync(path.join(tmpdir(), 'superseded-server-ts-'))
-  const src = path.join(root, 'packages', 'server', 'src')
+  const src = joinRel(root, tsPackageRel('server'), 'src')
   mkdirSync(src, { recursive: true })
   for (const [basename, body] of Object.entries(files)) {
     writeFileSync(path.join(src, basename), body)

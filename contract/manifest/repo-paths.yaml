@@ -3,7 +3,6 @@ version: 1
 dirs:
   contract: contract
   core: core
-  packages: packages
   docs: docs
   examples: examples
   tools: tools
@@ -13,6 +12,8 @@ dirs:
   toolsRepo: tools/repo
   workflows: .github/workflows
   changeset: .changeset
+  sdksTypescript: sdks/typescript
+  internal: internal
 
 sdks:
   node-native: sdks/node-native
@@ -22,7 +23,27 @@ sdks:
   go: sdks/go
   capi: sdks/capi
   rust: sdks/rust
-  typescript: packages/server
+  typescript: sdks/typescript
+
+tsPackages:
+  auth: sdks/typescript/auth
+  core: sdks/typescript/core
+  mcp: sdks/typescript/mcp
+  mcp-core: sdks/typescript/mcp-core
+  next: sdks/typescript/next
+  react: sdks/typescript/react
+  react-supabase: sdks/typescript/react-supabase
+  server: sdks/typescript/server
+
+toolPackages:
+  cli: tools/cli
+  create-solvapay: tools/create-solvapay
+  init: tools/init
+
+internalPackages:
+  demo-services: internal/demo-services
+  test-utils: internal/test-utils
+  tsconfig: internal/tsconfig
 
 contractInputs:
   openapiSnapshot:
@@ -53,13 +74,13 @@ generated:
     flag: --out
     driftPath: core/solvapay-dto
   - id: tsOverlays
-    path: packages/server/src/types/overlays.generated.d.ts
+    path: sdks/typescript/server/src/types/overlays.generated.d.ts
     flag: --ts-out
   - id: tsClient
-    path: packages/server/src/types/client.generated.d.ts
+    path: sdks/typescript/server/src/types/client.generated.d.ts
     flag: --ts-client-out
   - id: tsParity
-    path: packages/server/src/__generated__/signature-parity.generated.test.ts
+    path: sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts
     flag: --ts-parity-out
   - id: bindingSymbols
     path: contract/manifest/binding-symbols.snapshot.json
@@ -68,19 +89,19 @@ generated:
     path: contract/manifest/boundary-types.snapshot.json
     flag: --dump-boundary-types
   - id: coreTypesTs
-    path: packages/core/src/types/boundary.generated.d.ts
+    path: sdks/typescript/core/src/types/boundary.generated.d.ts
     flag: --core-types-ts-out
   - id: coreDispatchTs
-    path: packages/core/src/native-dispatch.ts
+    path: sdks/typescript/core/src/native-dispatch.ts
     flag: --core-dispatch-ts-out
   - id: coreNativeTs
-    path: packages/core/src/native-core.ts
+    path: sdks/typescript/core/src/native-core.ts
     flag: --core-native-ts-out
   - id: coreHelpersTs
-    path: packages/core/src/native-helpers.ts
+    path: sdks/typescript/core/src/native-helpers.ts
     flag: --core-helpers-ts-out
   - id: serverDecisionsTs
-    path: packages/server/src/native-decisions.ts
+    path: sdks/typescript/server/src/native-decisions.ts
     flag: --server-decisions-ts-out
   - id: nodeBindings
     path: sdks/node-native/src
@@ -117,10 +138,10 @@ generated:
       - sdks/ruby/ext/solvapay/src/client.rs
       - sdks/ruby/ext/solvapay/src/register.rs
   - id: nativeTs
-    path: packages/server/src/native.ts
+    path: sdks/typescript/server/src/native.ts
     flag: --native-ts-out
   - id: wasmTs
-    path: packages/server/src/wasm.ts
+    path: sdks/typescript/server/src/wasm.ts
     flag: --wasm-ts-out
   - id: nativePy
     path: sdks/python/python/solvapay/_native.py
@@ -131,6 +152,18 @@ generated:
   - id: pyParity
     path: sdks/python/tests/signature_parity_generated_test.py
     flag: --py-parity-out
+  - id: pyConformance
+    path: sdks/python/tests/contract
+    flag: --py-conformance-out
+    driftPaths:
+      - sdks/python/tests/contract/__init__.py
+      - sdks/python/tests/contract/clock.py
+      - sdks/python/tests/contract/names.py
+      - sdks/python/tests/contract/fixture_loader.py
+      - sdks/python/tests/contract/compare.py
+      - sdks/python/tests/contract/stub_backend.py
+      - sdks/python/tests/contract/host_adapters.py
+      - sdks/python/tests/contract/dispatch.py
   - id: nativeRb
     path: sdks/ruby/lib/solvapay/_native.rb
     flag: --native-rb-out
@@ -145,6 +178,17 @@ generated:
   - id: rbParity
     path: sdks/ruby/test/signature_parity_generated_test.rb
     flag: --rb-parity-out
+  - id: rbConformance
+    path: sdks/ruby/test/contract
+    flag: --rb-conformance-out
+    driftPaths:
+      - sdks/ruby/test/contract/clock.rb
+      - sdks/ruby/test/contract/names.rb
+      - sdks/ruby/test/contract/fixture_loader.rb
+      - sdks/ruby/test/contract/compare.rb
+      - sdks/ruby/test/contract/stub_backend.rb
+      - sdks/ruby/test/contract/host_adapters.rb
+      - sdks/ruby/test/contract/dispatch.rb
   - id: rsClient
     path: sdks/rust/src/client_generated.rs
     flag: --rs-client-out
@@ -158,6 +202,8 @@ generated:
     flag: --go-bindings-out
     driftPaths:
       - sdks/go/wasm/src/args.rs
+      - sdks/go/wasm/src/decisions.rs
+      - sdks/go/wasm/src/payload_builders.rs
       - sdks/go/wasm/src/client.rs
       - sdks/go/wasm/src/webhook.rs
   - id: goClient
@@ -166,11 +212,33 @@ generated:
   - id: goParity
     path: sdks/go/signature_parity_generated_test.go
     flag: --go-parity-out
+  - id: goConformance
+    path: sdks/go/internal/contract
+    flag: --go-conformance-out
+    driftPaths:
+      - sdks/go/internal/contract/clock.go
+      - sdks/go/internal/contract/names.go
+      - sdks/go/internal/contract/fixture_loader.go
+      - sdks/go/internal/contract/compare.go
+      - sdks/go/internal/contract/stub_backend.go
+      - sdks/go/internal/contract/host_adapters.go
+      - sdks/go/internal/contract/dispatch.go
   - id: cBindings
     path: sdks/capi/src
     flag: --c-bindings-out
     driftPaths:
       - sdks/capi/src/dispatch.rs
+  - id: cConformance
+    path: sdks/capi/ctest/contract
+    flag: --c-conformance-out
+    driftPaths:
+      - sdks/capi/ctest/contract/dispatch.c
+      - sdks/capi/ctest/contract/dispatch.h
+      - sdks/capi/ctest/contract/harness.c
+      - sdks/capi/ctest/contract/harness.h
+  - id: cParity
+    path: sdks/capi/ctest/signature_parity_generated.c
+    flag: --c-parity-out
   - id: fixtureRunner
     path: tools/conformance/fixture-runner/src/registry.rs
     flag: --fixture-runner-out
@@ -196,19 +264,24 @@ drift:
   - nativePy
   - pyStub
   - pyParity
+  - pyConformance
   - rubyBindings
   - nativeRb
   - rbClient
   - rubyHelpers
   - rbRbs
   - rbParity
+  - rbConformance
   - rsClient
   - rsBlocking
   - rsParity
   - goBindings
   - goClient
   - goParity
+  - goConformance
   - cBindings
+  - cConformance
+  - cParity
   - fixtureRunner
 
 lookups:

@@ -26,7 +26,7 @@ import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
-import { PACKAGES_DIR, REPO_ROOT } from '../shared/paths.js'
+import { REPO_ROOT, tsPackageDir } from '../shared/paths.js'
 
 const require = createRequire(import.meta.url)
 
@@ -46,7 +46,7 @@ const TARGETS: TargetPackage[] = [
   {
     name: '@solvapay/server/fetch',
     filterName: '@solvapay/server',
-    distEsm: path.join(PACKAGES_DIR, 'server', 'dist', 'fetch', 'index.js'),
+    distEsm: path.join(tsPackageDir('server'), 'dist', 'fetch', 'index.js'),
     expectedExports: [
       'checkPurchase',
       'createPaymentIntent',
@@ -71,7 +71,7 @@ const TARGETS: TargetPackage[] = [
   {
     name: '@solvapay/mcp/fetch',
     filterName: '@solvapay/mcp',
-    distEsm: path.join(PACKAGES_DIR, 'mcp', 'dist', 'fetch', 'index.js'),
+    distEsm: path.join(tsPackageDir('mcp'), 'dist', 'fetch', 'index.js'),
     expectedExports: [
       'createSolvaPayMcpFetch',
       'createSolvaPayMcpFetchHandler',

@@ -129,7 +129,7 @@ function checkLink(
   resolvedPath: string,
   skipApiValidation: boolean = false,
 ): 'broken' | 'valid' {
-  const apiPath = join(ROOT_DIR, 'docs', 'api')
+  const apiPath = join(DOCS_DIR, 'api')
 
   // Special case: Links to docs/api/**
   if (resolvedPath.startsWith(apiPath)) {

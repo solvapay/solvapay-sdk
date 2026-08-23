@@ -255,9 +255,9 @@ function findPackedTarball(outDir, packageName) {
 
 /** @type {Record<string, string>} */
 const WORKSPACE_PACKAGE_DIRS = {
-  [CORE_PACKAGE_NAME]: join(REPO_ROOT, 'packages/core'),
+  [CORE_PACKAGE_NAME]: join(REPO_ROOT, 'sdks/typescript/core'),
   [SERVER_WASM_PACKAGE_NAME]: join(REPO_ROOT, 'sdks/wasm'),
-  [FACADE_PACKAGE_NAME]: join(REPO_ROOT, 'packages/server'),
+  [FACADE_PACKAGE_NAME]: join(REPO_ROOT, 'sdks/typescript/server'),
 }
 
 /**

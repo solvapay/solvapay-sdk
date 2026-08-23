@@ -30,6 +30,16 @@ include = [
   "solvapay_client_free",
   "solvapay_free_string",
 ]
+exclude = [
+  "solvapay_fh_call_sync",
+  "solvapay_fh_fixture_count",
+  "solvapay_fh_fixture_fn",
+  "solvapay_fh_fixture_args",
+  "solvapay_fh_fixture_label",
+  "solvapay_fh_assert",
+  "solvapay_fh_stub_start",
+  "solvapay_fh_stub_assert",
+]
 item_types = ["enums", "structs", "functions", "constants"]
 
 [export.rename]

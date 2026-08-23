@@ -93,8 +93,8 @@ pub fn emit_bindings(ir: &Ir, toolchain: Toolchain) -> GenResult<EmittedBindings
     if toolchain == Toolchain::Go {
         return Ok(EmittedBindings {
             args_rs: emit_go_args(),
-            decisions_rs: String::new(),
-            payload_builders_rs: String::new(),
+            decisions_rs: emit_go_decisions(ir)?,
+            payload_builders_rs: emit_go_payload_builders(ir)?,
             client_rs: emit_go_client(ir)?,
             webhook_rs: emit_go_webhook(),
             register_rs: String::new(),
@@ -252,7 +252,9 @@ fn emit_payload_builders(
             ))
         }
         Toolchain::Ruby => unreachable!("Ruby uses emit_ruby_payload_builders"),
-        Toolchain::Go => unreachable!("Go emits no payload builders in the scaffold"),
+        Toolchain::Go => {
+            unreachable!("Go payload builders are emitted via emit_go_payload_builders")
+        }
         Toolchain::C => unreachable!("C emits client dispatch only"),
     }
 }
@@ -432,8 +434,9 @@ fn ruby_client_section(section: &str) -> String {
 const GO_ARGS_RS: &str = r#"//! Shared JSON-args helpers for the WASI guest shims (Step 50).
 
 use serde::Deserialize;
+use serde::Serialize;
 use serde_json::{Map, Value};
-use solvapay_core::SdkError;
+use solvapay_core::{HelperErrorResult, SdkError};
 
 use crate::error::parse_args_json;
 
@@ -479,6 +482,256 @@ pub(crate) fn split_path_refs(
         refs.push(value);
     }
     Ok((refs, Value::Object(map)))
+}
+
+/// Parses args JSON into an object map.
+pub(crate) fn args_map(args_json: &str) -> Result<Map<String, Value>, SdkError> {
+    parse_args_json(args_json)
+}
+
+/// Serializes `value` to JSON, mapping failures to Transport.
+pub(crate) fn to_value<T: Serialize>(value: &T) -> Result<Value, SdkError> {
+    serde_json::to_value(value)
+        .map_err(|err| SdkError::transport(format!("serialize failed: {err}"), false))
+}
+
+/// `Option<HelperErrorResult>` → `null` or serialized error (fixture parity).
+pub(crate) fn option_helper_err(
+    opt: Option<HelperErrorResult>,
+) -> Result<Value, SdkError> {
+    match opt {
+        None => Ok(Value::Null),
+        Some(err) => to_value(&err),
+    }
+}
+
+/// `Result<T, HelperErrorResult>` → Ok or Err as the envelope **value**.
+pub(crate) fn result_as_value<T: Serialize>(
+    result: Result<T, HelperErrorResult>,
+) -> Result<Value, SdkError> {
+    match result {
+        Ok(value) => to_value(&value),
+        Err(err) => to_value(&err),
+    }
+}
+
+/// Reads a required string arg.
+pub(crate) fn require_string(args: &Map<String, Value>, key: &str) -> Result<String, SdkError> {
+    match args.get(key) {
+        Some(Value::String(s)) => Ok(s.clone()),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a string"),
+            false,
+        )),
+        None => Err(SdkError::transport(
+            format!("args.{key} is required"),
+            false,
+        )),
+    }
+}
+
+/// Reads an optional string arg (`null`/absent → `None`).
+pub(crate) fn optional_string(
+    args: &Map<String, Value>,
+    key: &str,
+) -> Result<Option<String>, SdkError> {
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(s)) => Ok(Some(s.clone())),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a string or null"),
+            false,
+        )),
+    }
+}
+
+/// Reads a required boolean arg.
+pub(crate) fn require_bool(args: &Map<String, Value>, key: &str) -> Result<bool, SdkError> {
+    match args.get(key) {
+        Some(Value::Bool(b)) => Ok(*b),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a boolean"),
+            false,
+        )),
+        None => Err(SdkError::transport(
+            format!("args.{key} is required"),
+            false,
+        )),
+    }
+}
+
+/// Reads a required f64 arg.
+pub(crate) fn require_f64(args: &Map<String, Value>, key: &str) -> Result<f64, SdkError> {
+    match args.get(key) {
+        Some(Value::Number(n)) => n.as_f64().ok_or_else(|| {
+            SdkError::transport(format!("args.{key} must be a finite number"), false)
+        }),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a number"),
+            false,
+        )),
+        None => Err(SdkError::transport(
+            format!("args.{key} is required"),
+            false,
+        )),
+    }
+}
+
+/// Reads an optional f64 arg (`null`/absent → `None`).
+pub(crate) fn optional_f64(args: &Map<String, Value>, key: &str) -> Result<Option<f64>, SdkError> {
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Number(n)) => n.as_f64().map(Some).ok_or_else(|| {
+            SdkError::transport(format!("args.{key} must be a finite number"), false)
+        }),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a number or null"),
+            false,
+        )),
+    }
+}
+
+/// Reads a required i64 arg.
+pub(crate) fn require_i64(args: &Map<String, Value>, key: &str) -> Result<i64, SdkError> {
+    match args.get(key) {
+        Some(Value::Number(n)) => n
+            .as_i64()
+            .ok_or_else(|| SdkError::transport(format!("args.{key} must be an integer"), false)),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a number"),
+            false,
+        )),
+        None => Err(SdkError::transport(
+            format!("args.{key} is required"),
+            false,
+        )),
+    }
+}
+
+/// Reads a required u32 arg.
+pub(crate) fn require_u32(args: &Map<String, Value>, key: &str) -> Result<u32, SdkError> {
+    match args.get(key) {
+        Some(Value::Number(n)) => n
+            .as_u64()
+            .and_then(|v| u32::try_from(v).ok())
+            .ok_or_else(|| SdkError::transport(format!("args.{key} must be a u32"), false)),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a number"),
+            false,
+        )),
+        None => Err(SdkError::transport(
+            format!("args.{key} is required"),
+            false,
+        )),
+    }
+}
+
+/// Reads an optional u32 arg (`null`/absent → `None`).
+pub(crate) fn optional_u32(args: &Map<String, Value>, key: &str) -> Result<Option<u32>, SdkError> {
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Number(n)) => n
+            .as_u64()
+            .and_then(|v| u32::try_from(v).ok())
+            .map(Some)
+            .ok_or_else(|| SdkError::transport(format!("args.{key} must be a u32"), false)),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a number or null"),
+            false,
+        )),
+    }
+}
+
+/// Reads an optional u64 arg (`null`/absent → `None`).
+pub(crate) fn optional_u64(args: &Map<String, Value>, key: &str) -> Result<Option<u64>, SdkError> {
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Number(n)) => n
+            .as_u64()
+            .map(Some)
+            .ok_or_else(|| SdkError::transport(format!("args.{key} must be a u64"), false)),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a number or null"),
+            false,
+        )),
+    }
+}
+
+/// Reads an optional u16 arg (`null`/absent → `None`).
+pub(crate) fn optional_u16(args: &Map<String, Value>, key: &str) -> Result<Option<u16>, SdkError> {
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Number(n)) => n
+            .as_u64()
+            .and_then(|v| u16::try_from(v).ok())
+            .map(Some)
+            .ok_or_else(|| SdkError::transport(format!("args.{key} must be a u16"), false)),
+        Some(_) => Err(SdkError::transport(
+            format!("args.{key} must be a number or null"),
+            false,
+        )),
+    }
+}
+
+/// Reads a required object arg as a map reference.
+pub(crate) fn require_object<'a>(
+    args: &'a Map<String, Value>,
+    key: &str,
+) -> Result<&'a Map<String, Value>, SdkError> {
+    match args.get(key) {
+        Some(Value::Object(map)) => Ok(map),
+        Some(_) | None => Err(SdkError::transport(
+            format!("args.{key} must be an object"),
+            false,
+        )),
+    }
+}
+
+/// Reads a required array arg.
+pub(crate) fn require_array<'a>(
+    args: &'a Map<String, Value>,
+    key: &str,
+) -> Result<&'a [Value], SdkError> {
+    match args.get(key) {
+        Some(Value::Array(arr)) => Ok(arr.as_slice()),
+        Some(_) | None => Err(SdkError::transport(
+            format!("args.{key} must be an array"),
+            false,
+        )),
+    }
+}
+
+/// Optional raw JSON value (`null`/absent → `None`).
+pub(crate) fn optional_value(args: &Map<String, Value>, key: &str) -> Option<Value> {
+    match args.get(key) {
+        None | Some(Value::Null) => None,
+        Some(value) => Some(value.clone()),
+    }
+}
+
+/// Deserializes a required typed arg.
+pub(crate) fn require_typed<T: serde::de::DeserializeOwned>(
+    args: &Map<String, Value>,
+    key: &str,
+) -> Result<T, SdkError> {
+    let value = args
+        .get(key)
+        .ok_or_else(|| SdkError::transport(format!("args.{key} is required"), false))?;
+    serde_json::from_value(value.clone())
+        .map_err(|err| SdkError::transport(format!("invalid args.{key}: {err}"), false))
+}
+
+/// Deserializes an optional typed arg (`null`/absent → `None`).
+pub(crate) fn optional_typed<T: serde::de::DeserializeOwned>(
+    args: &Map<String, Value>,
+    key: &str,
+) -> Result<Option<T>, SdkError> {
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(value) => serde_json::from_value(value.clone())
+            .map(Some)
+            .map_err(|err| SdkError::transport(format!("invalid args.{key}: {err}"), false)),
+    }
 }
 "#;
 
@@ -635,6 +888,172 @@ fn emit_go_client_method(sym: &IrBindingSymbol) -> GenResult<String> {
 /// Emits the Go guest `webhook.rs` (static `sv_verify_webhook` shim).
 fn emit_go_webhook() -> String {
     with_generated_header(GO_WEBHOOK_RS)
+}
+
+const GO_DECISIONS_HEADER: &str = r#"//! WASI guest decision / paywall / retry shims.
+
+use serde_json::Value;
+use solvapay_core::{
+    assert_valid_product_ref, attach_business_details_validation_error,
+    build_create_customer_params, build_gate_message, build_nudge_message, build_paywall_gate,
+    classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
+    classify_paywall_state, classify_reactivate_error, coerce_customer_options,
+    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits,
+    evaluate_product_readiness, extract_backend_customer_ref, is_cached_customer_ref_valid,
+    is_email_conflict, is_error_result, map_route_error, normalize_cancel_response,
+    normalize_reactivate_response, paywall_client_payload, project_payment_intent_result,
+    project_topup_process_outcome, project_usage_snapshot, require_product_ref,
+    resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
+    resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
+    validate_activate_plan_params, validate_attach_business_details_params,
+    validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
+    validate_process_payment_intent_params, validate_purchase_ref,
+    validate_topup_payment_intent_params, Backoff, GateContent, PaymentIntentSource, PaywallGate,
+    PaywallGateLimits, PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy,
+    RouteErrorInput, RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
+};
+
+use crate::abi::{pack, read_string};
+use crate::args::{
+    args_map, option_helper_err, optional_f64, optional_string, optional_typed, optional_u16,
+    optional_u32, optional_u64, optional_value, require_array, require_bool, require_f64,
+    require_i64, require_object, require_string, require_typed, require_u32, result_as_value,
+    to_value,
+};
+use crate::error::run_envelope_sync;
+"#;
+
+const GO_PAYLOAD_HEADER: &str = r#"//! WASI guest payload-builder shims.
+
+use serde_json::{Map, Value};
+use solvapay_core::{
+    assert_response_result, build_prompt_descriptor_metadata, build_prompt_user_message,
+    build_tool_descriptor_metadata, credits_to_display_minor_units, derive_icons,
+    derive_tax_id_type, get_business_country_options, get_seller_tax_identifier_display_label,
+    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, is_zero_decimal_currency,
+    make_response_result, mcp_tool_names_json, mcp_view_maps, minor_units_per_major,
+    paywall_tool_result, resolve_seller_identity_display, resolve_tax_behavior,
+    seller_tax_identifier_display_label_by_type, validate_business_details,
+    validate_public_base_url, BuildPromptDescriptorMetadataOptions,
+    BuildToolDescriptorMetadataOptions, BusinessDetailsInput, CreditsToDisplayInput,
+    MerchantBranding, PaywallGate, SdkError, SellerIdentityInput,
+};
+
+use crate::abi::{pack, read_string};
+use crate::args::{
+    args_map, optional_string, require_f64, require_string, require_typed, to_value,
+};
+use crate::error::run_envelope_sync;
+"#;
+
+const GO_PAYLOAD_HELPERS: &str = r#"fn optional_views(args: &Map<String, Value>) -> Result<Option<Vec<String>>, SdkError> {
+    match args.get("views") {
+        None => Ok(None),
+        Some(Value::Array(items)) => {
+            let mut views = Vec::with_capacity(items.len());
+            for item in items {
+                match item.as_str() {
+                    Some(s) => views.push(s.to_owned()),
+                    None => {
+                        return Err(SdkError::transport(
+                            "args.views must be an array of strings".to_owned(),
+                            false,
+                        ));
+                    }
+                }
+            }
+            Ok(Some(views))
+        }
+        Some(_) => Err(SdkError::transport(
+            "args.views must be an array when present".to_owned(),
+            false,
+        )),
+    }
+}
+
+fn optional_branding(args: &Map<String, Value>) -> Result<Option<MerchantBranding>, SdkError> {
+    match args.get("branding") {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Object(map)) => Ok(Some(MerchantBranding {
+            brand_name: optional_string_field(map, "brandName")?,
+            icon_url: optional_string_field(map, "iconUrl")?,
+            logo_url: optional_string_field(map, "logoUrl")?,
+        })),
+        Some(_) => Err(SdkError::transport(
+            "args.branding must be an object when present".to_owned(),
+            false,
+        )),
+    }
+}
+
+fn optional_string_field(map: &Map<String, Value>, key: &str) -> Result<Option<String>, SdkError> {
+    match map.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(s)) => Ok(Some(s.clone())),
+        Some(_) => Err(SdkError::transport(
+            format!("args.branding.{key} must be a string when present"),
+            false,
+        )),
+    }
+}
+"#;
+
+fn emit_go_decisions(ir: &Ir) -> GenResult<String> {
+    Ok(emit_go_sync_artifact(
+        ir,
+        IrBindingArtifact::Decisions,
+        GO_DECISIONS_HEADER,
+        "",
+    ))
+}
+
+fn emit_go_payload_builders(ir: &Ir) -> GenResult<String> {
+    Ok(emit_go_sync_artifact(
+        ir,
+        IrBindingArtifact::PayloadBuilders,
+        GO_PAYLOAD_HEADER,
+        GO_PAYLOAD_HELPERS,
+    ))
+}
+
+fn emit_go_sync_artifact(
+    ir: &Ir,
+    artifact: IrBindingArtifact,
+    header: &str,
+    helpers: &str,
+) -> String {
+    let symbols = symbols_for(ir, artifact);
+    let mut chunks: Vec<String> = Vec::new();
+    let mut prev_section: Option<&str> = None;
+    for sym in &symbols {
+        maybe_push_section(&mut chunks, &mut prev_section, sym, plain_section);
+        chunks.push(emit_go_sync_fn(sym));
+    }
+    let helper_block = if helpers.is_empty() {
+        String::new()
+    } else {
+        format!("\n\n{helpers}")
+    };
+    format!(
+        "{}{}{helper_block}",
+        with_generated_header(header),
+        chunks.join("\n\n"),
+    )
+}
+
+fn emit_go_sync_fn(sym: &IrBindingSymbol) -> String {
+    let doc = render_doc(pick_doc(sym, Toolchain::Go));
+    let fn_name = &sym.rust_fn_name;
+    let body = sync_body(sym, Toolchain::Go);
+    let doc_prefix = if doc.is_empty() {
+        String::new()
+    } else {
+        format!("{doc}\n")
+    };
+    format!(
+        "{doc_prefix}///\n/// # Safety\n///\n/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.\n#[no_mangle]\npub unsafe extern \"C\" fn sv_{fn_name}(args_ptr: *mut u8, args_len: usize) -> u64 {{\n    let args_json = read_string(args_ptr, args_len);\n    pack(run_envelope_sync(|| {{\n{body}\n    }}))\n}}"
+    )
 }
 
 /// Strips the trailing `.await` from a [`client_call_body`] expression so a

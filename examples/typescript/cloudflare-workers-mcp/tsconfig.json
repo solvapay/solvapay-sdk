@@ -15,9 +15,9 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "paths": {
-      "@solvapay/react/mcp": ["../../../packages/react/src/mcp/index.ts"],
-      "@solvapay/react/styles.css": ["../../../packages/react/src/styles.css"],
-      "@solvapay/react/mcp/styles.css": ["../../../packages/react/src/mcp/styles.css"]
+      "@solvapay/react/mcp": ["../../../sdks/typescript/react/src/mcp/index.ts"],
+      "@solvapay/react/styles.css": ["../../../sdks/typescript/react/src/styles.css"],
+      "@solvapay/react/mcp/styles.css": ["../../../sdks/typescript/react/src/mcp/styles.css"]
     }
   },
   // Worker TS: check the Cloudflare Worker entrypoint, the demo

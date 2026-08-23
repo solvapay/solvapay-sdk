@@ -33,9 +33,9 @@ struct MethodRow<'a> {
 }
 
 #[derive(Debug, Clone)]
-struct RustParam {
-    name: String,
-    ty: String,
+pub(crate) struct RustParam {
+    pub(crate) name: String,
+    pub(crate) ty: String,
 }
 
 /// Emits async + blocking Rust facade client methods with rustdoc.
@@ -244,7 +244,10 @@ fn split_param_doc(line: &str) -> (&str, &str) {
     }
 }
 
-fn rust_params(entry: &IrEntryPoint, binding: &IrBindingSymbol) -> GenResult<Vec<RustParam>> {
+pub(crate) fn rust_params(
+    entry: &IrEntryPoint,
+    binding: &IrBindingSymbol,
+) -> GenResult<Vec<RustParam>> {
     let kind = serialize_kind(binding)?;
     match kind {
         IrSerializeKind::ClientIgnore => Ok(Vec::new()),
@@ -301,7 +304,7 @@ fn rust_params(entry: &IrEntryPoint, binding: &IrBindingSymbol) -> GenResult<Vec
     }
 }
 
-fn rust_ok_type(entry: &IrEntryPoint) -> String {
+pub(crate) fn rust_ok_type(entry: &IrEntryPoint) -> String {
     match entry.response.as_deref() {
         None | Some("void") => "()".into(),
         Some(_) if VALUE_OK_OPS.contains(&entry.id.as_str()) => "Value".into(),

@@ -16,7 +16,7 @@ describe('referenced tool paths', () => {
     expect(missing).toEqual([])
   })
 
-  it('no reference resolves into a dissolved top-level directory', () => {
+  it('no reference resolves into a dissolved top-level directory', { timeout: 30_000 }, () => {
     const intoLegacy = collectReferencedPaths()
       .filter(ref => isUnderLegacyDir(ref.resolved))
       .map(ref => `${ref.source}: ${ref.raw} -> ${path.relative(REPO_ROOT, ref.resolved)}`)

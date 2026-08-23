@@ -19,8 +19,8 @@ pub use model::{
 };
 pub use registry::create_default_registry;
 pub use runner::{
-    format_summary, run_suite, Binding, BindingError, BindingRegistry, ErrorObservation,
-    FixtureFailure, SuiteSummary,
+    assert_expect, format_summary, run_suite, Binding, BindingError, BindingRegistry,
+    ErrorObservation, FixtureFailure, SuiteSummary,
 };
 
 #[cfg(test)]

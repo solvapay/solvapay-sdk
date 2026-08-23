@@ -29,11 +29,16 @@ pub enum GenError {
          [--ts-parity-out <signature-parity.generated.test.ts>] \
          [--native-py-out <_native.py>] [--py-stub-out <__init__.pyi>] \
          [--py-parity-out <signature_parity_generated_test.py>] \
+         [--py-conformance-out <tests/contract>] \
          [--native-rb-out <_native.rb>] [--rb-client-out <client.rb>] \
          [--rb-rbs-out <solvapay.rbs>] [--rb-parity-out <signature-parity.rb>] \
+         [--rb-conformance-out <test/contract>] \
+         [--go-conformance-out <internal/contract>] \
          [--rs-client-out <client_generated.rs>] [--rs-parity-out <signature_parity_generated.rs>] \
          [--go-bindings-out <bindings/go/wasm/src>] \
-         [--go-client-out <client_generated.go>] [--go-parity-out <signature_parity_generated_test.go>]"
+         [--go-client-out <client_generated.go>] [--go-parity-out <signature_parity_generated_test.go>] \
+         [--c-bindings-out <sdks/capi/src>] [--c-conformance-out <ctest/contract>] \
+         [--c-parity-out <signature_parity_generated.c>]"
     )]
     Usage,
 

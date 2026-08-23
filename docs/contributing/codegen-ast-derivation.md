@@ -6,7 +6,9 @@ sequence; numbered migration steps stay in
 [`rust-migration-map.md`](./rust-migration-map.md) (after step 55).
 
 > **Status:** Phase 4 landed (`bindings:` retired; descriptors derived from
-> `#[solvapay_export]`). Phase 5 is next.
+> `#[solvapay_export]`). Phase 5 steps 1–5 landed (generated Python, Ruby, Go,
+> and C fixture-conformance harnesses; C also gained `emit_parity_suite_c.rs`;
+> signature-parity suites now emit each language’s assertion ceiling).
 > Sequences **after** step 55. Steps 1–54 are Done; step 55 is in progress
 > (55-a/b/c in-repo done; maintainer branch-protection apply remain).
 > `parity:check` is green. Fixture-runner `parsed=550 executed=446 passed=446
@@ -280,12 +282,12 @@ The corpus is 550 fixtures. What each surface actually replays today:
 
 | Surface | Fixtures replayed | Signature-parity suite | Notable gap |
 | --- | --- | --- | --- |
-| Python | 550 (full) | `emit_parity_suite_py.rs` — presence only, no arity | — |
-| Ruby | 550 (full) | `emit_parity_suite_rb.rs` — presence + exact keyword arity | Full suite runs **only** on the `x86_64-linux` `full: true` CI leg; macOS/aarch64 runs `smoke_test.rb` alone |
-| TypeScript | 550 via the JS harness | `emit_parity_suite_ts.rs` — type-level only | napi/WASM binaries are not fixture-replayed for client ops in CI (webhook-only smoke) |
-| Go | **104** (`client/` only — `fixture_conformance_test.go` skips `suite != "client"`) | `emit_parity_suite_go.rs` — reflect arity | **~446 fixtures never replayed**: paywall, business-details, retry, helper-\*, mcp |
-| Rust facade | 104 (`client/`) | `emit_parity_suite_rs.rs` — compile-time refs | Non-client suites go through `fixture-runner`, not the facade |
-| C ABI | **0** | **none** | `ctest/smoke.c` covers exactly one op (`getMerchant`); 35 client ops and every helper are untested |
+| Python | 550 (full) | `emit_parity_suite_py.rs` — exact method census + `(self, args_json)` signature + awaitable vs blocking-str matrix + `__init__.pyi` AST cross-check. Per-op param names do not exist at the JSON envelope, so argument order cannot be asserted at runtime. | — |
+| Ruby | 550 (full) | `emit_parity_suite_rb.rs` — presence + exact `Method#parameters` keyword arity (ceiling) | — |
+| TypeScript | 550 via the JS harness | `emit_parity_suite_ts.rs` — `expectTypeOf` full method types (ceiling); runtime defaults compared to `withRetry` / `retryNextDelayMs` / paywall TTL | napi/WASM binaries are not fixture-replayed for client ops in CI (webhook-only smoke) |
+| Go | **550** (full) | `emit_parity_suite_go.rs` — reflect arity + per-slot `In(i)`/`Out(i)` types + exact exported-method census (`Close` allow-listed). Reflect never yields param names. | Client wire asserts method/path only (`ClientConfig` has no `clockMs`/`rngSeed`) |
+| Rust facade | 104 (`client/`) | `emit_parity_suite_rs.rs` — compile-time typed call assertions (`_assert_typed_surface` / blocking twin) using the same `rust_params` / `rust_ok_type` as the client emitter | Non-client suites go through `fixture-runner`, not the facade |
+| C ABI | **550** (full) | `emit_parity_suite_c.rs` — link-time ABI refs + per-op dispatch presence + sequential probe of every `split_path_refs` key. The envelope reports only the first missing key, so the suite fills prior keys and asserts the next name; it does not change the production error path. C has no signatures, so argument order is observable only as that missing-key sequence. | Client wire asserts method/path/query/body, not headers (`ClientConfig` has no `clockMs`/`rngSeed`, same caveat as Go) |
 
 Two conclusions. First, “add native-language facade tests” is mostly
 **gap-closing**, not greenfield — Python and Ruby already do the thing. Second,
@@ -306,16 +308,40 @@ Order so each step is independently shippable:
 1. **Python first.** Generate the harness for a surface that already has full
    coverage, and require all 550 fixtures to stay green. Validates the emitter
    against a known-good baseline before it is used to *add* coverage.
+   **Landed:** `emit_conformance_py.rs` + `assets/conformance-py-emit.snapshot.json`
+   (`--py-conformance-out`); header-only ratchet vs the hand-written
+   `sdks/python/tests/contract/*.py`.
 2. **Ruby.** Regenerate, and fix the CI-matrix gap so the full suite runs on
    every platform leg, not only `x86_64-linux`.
-3. **Go.** Drop the `suite != "client"` skip. This alone takes Go from 104 to
-   550 fixtures.
+   **Landed:** `emit_conformance_rb.rs` + `assets/conformance-rb-emit.snapshot.json`
+   (`--rb-conformance-out`); header-only ratchet vs `sdks/ruby/test/contract/*.rb`.
+   Every `ruby-binding` CI leg sets `contract: true`. Non-`full` legs run
+   `test/contract_fixtures_test.rb` after smoke; `x86_64-linux` still owns
+   `rake test` (which already includes the corpus). Measured on `arm64-darwin`:
+   551 runs in 0.14s (0.73s including interpreter startup) after `rake compile`.
+3. **Go.** Generate the harness, export the 68 sync helpers on the wazero guest,
+   and replay the full corpus.
+   **Landed:** `emit_conformance_go.rs` + `assets/conformance-go-emit.snapshot.json`
+   (`--go-conformance-out`); `Toolchain::Go` now emits `decisions.rs` /
+   `payload_builders.rs` (`sv_*` helpers) plus `internal/nativecall.CallSync`.
+   `contract_fixtures_test.go` asserts a 550/550 census. Go client wire
+   assertions stay method/path-only until `clockMs`/`rngSeed` land on
+   `ClientConfig`.
 4. **C.** Pair with a new `emit_parity_suite_c.rs` (the only surface with no
    parity emitter). Depends on Phase 1’s `Toolchain::C` column.
-5. **Normalize parity assertions.** Today they differ per language (TS
-   type-level, Python presence-only, Ruby exact keyword arity, Go reflect
-   arity). Presence-only cannot catch a wrong argument order. Pick the strongest
-   assertion each language can express and generate to that.
+   **Landed:** `emit_conformance_c.rs` + `assets/conformance-c-emit.snapshot.json`
+   (`--c-conformance-out`) plus `emit_parity_suite_c.rs` (`--c-parity-out`).
+   A test-only `--features fixture-host` ABI in `sdks/capi` reuses
+   `fixture-runner` for the 446 helper fixtures; the 104 client fixtures go
+   through `solvapay_client_call` against a single-shot TCP stub.
+   `ctest/contract.sh` asserts a 550/550 census. C client wire assertions cover
+   method/path/query/body, not `clockMs`/`rngSeed`-derived idempotency headers.
+5. **Normalize parity assertions.** **Landed:** each emitter generates the
+   strongest check the boundary can express (see table above). Permanent proof is
+   a negative dto-gen unit test (mutated IR must change the emitted suite).
+   Presence-only cannot catch a wrong argument order; Python and C still cannot
+   express catalog argument order at all (JSON envelope / `solvapay_client_call`),
+   which is the ceiling, not a remaining gap.
 
 **TypeScript is last and may stay partly hand-written.** `fixture-harness.ts` is
 2,201 lines because it carries genuine host concerns the other surfaces do not
@@ -463,9 +489,10 @@ Go/C) and for post-Phase-5 fixture emission (webhook suite first).
   `parsed=550 executed=446 passed=446 failed=0 skipped-unbound=104`. Do not
   start later phases until that summary (or its documented successor) is
   re-locked, or the regen ratchet will encode extras.
-- **Ruby CI matrix.** Full-suite-on-every-leg may be slow; measure before
-  requiring it on every PR, but the generated harness must *be able* to run
-  everywhere.
+- **Ruby contract suite on every CI leg.** Measured on `arm64-darwin` after
+  `rake compile`: `bundle exec ruby -Itest -Ilib test/contract_fixtures_test.rb`
+  is 551 runs / 0.14s (0.73s including interpreter startup). The gap was CI
+  policy, not cross-compilation — every leg already builds natively.
 
 ## Out of scope
 

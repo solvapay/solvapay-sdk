@@ -7,9 +7,20 @@
  * requires all six publish workflows to expose a dry-run default.
  */
 
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { parse as parseYaml } from 'yaml'
+import {
+  INTERNAL_PACKAGE_IDS,
+  REPO_PATHS,
+  SDK_SURFACES,
+  TOOL_PACKAGE_IDS,
+  TS_PACKAGE_IDS,
+  internalPackageRel,
+  joinRel,
+  toolPackageRel,
+  tsPackageRel,
+} from '../../shared/paths.js'
 
 export const PUBLISH_WORKFLOW_FILES = [
   'publish.yml',
@@ -24,7 +35,20 @@ export const PRERELEASE_RE = /-(?:preview|canary|rc|alpha|beta|next|snapshot)\b/
 
 const WORKSPACE_PROTOCOL_RE = /^workspace:/
 
-const PACKAGE_SCAN_DIRS = [['packages'], ['sdks']] as const
+function workspacePackageRels(): string[] {
+  const rels = [
+    ...TS_PACKAGE_IDS.map(tsPackageRel),
+    ...TOOL_PACKAGE_IDS.map(toolPackageRel),
+    ...INTERNAL_PACKAGE_IDS.map(internalPackageRel),
+  ]
+  for (const surface of SDK_SURFACES) {
+    if (surface === 'typescript') {
+      continue
+    }
+    rels.push(REPO_PATHS.sdks[surface])
+  }
+  return rels
+}
 
 export type ReleaseDryrunIssueKind =
   | 'prerelease-version'
@@ -176,22 +200,12 @@ function readJson(filePath: string): unknown {
 
 function listPackageJsonPaths(repoRoot: string): string[] {
   const out: string[] = []
-  for (const rel of PACKAGE_SCAN_DIRS) {
-    const dir = path.join(repoRoot, ...rel)
-    let entries
+  for (const rel of workspacePackageRels()) {
+    const pkgPath = joinRel(repoRoot, rel, 'package.json')
     try {
-      entries = readdirSync(dir, { withFileTypes: true })
+      if (statSync(pkgPath).isFile()) out.push(pkgPath)
     } catch {
-      continue
-    }
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue
-      const pkgPath = path.join(dir, entry.name, 'package.json')
-      try {
-        if (statSync(pkgPath).isFile()) out.push(pkgPath)
-      } catch {
-        // No package.json in this directory — skip.
-      }
+      // No package.json in this directory — skip.
     }
   }
   return out

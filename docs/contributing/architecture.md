@@ -92,26 +92,16 @@ The monorepo holds both the TypeScript packages and the Rust workspace.
 
 ```text
 solvapay-sdk/
-├─ packages/            # TypeScript packages (published to npm)
-│  ├─ core/             # shared types + Rust-core-backed helpers
-│  ├─ server/           # server runtime SDK (paywall, client, webhooks)
-│  ├─ react/            # provider, hooks, checkout UI (TS-only)
-│  ├─ react-supabase/   # Supabase adapter for @solvapay/react
-│  ├─ mcp/              # official MCP SDK adapter
-│  ├─ mcp-core/         # framework-neutral MCP contracts
-│  ├─ auth/             # auth adapters and request helpers
-│  ├─ next/             # Next.js wrappers
-│  ├─ cli/              # `solvapay` CLI (npx solvapay init)
-│  ├─ create-solvapay/  # scaffolder for new MCP apps
-│  ├─ init/             # shared init/env logic
-│  ├─ demo-services/    # private
-│  ├─ test-utils/       # private
-│  └─ tsconfig/         # private
-├─ core/                # Semantic crates (published to crates.io except as noted)
-│  ├─ solvapay-core/       # pure logic; serde/hmac only; no HTTP, no tokio
-│  ├─ solvapay-dto/        # generated wire models + SDK overlays
-│  └─ solvapay-transport/  # transport trait, reqwest/fetch impls, client shell
 ├─ sdks/                # Language SDKs / bindings
+│  ├─ typescript/       # published @solvapay/* TypeScript packages
+│  │  ├─ core/
+│  │  ├─ server/
+│  │  ├─ react/
+│  │  ├─ react-supabase/
+│  │  ├─ mcp/
+│  │  ├─ mcp-core/
+│  │  ├─ auth/
+│  │  └─ next/
 │  ├─ rust/             # public crates.io facade crate (`solvapay`)
 │  ├─ node-native/      # napi-rs (Node native + WASI fallback)
 │  ├─ wasm/             # wasm-bindgen (edge + browser profiles)
@@ -119,13 +109,23 @@ solvapay-sdk/
 │  ├─ ruby/             # Magnus + rb-sys
 │  ├─ go/               # wazero + embedded wasm32-wasip1 core
 │  └─ capi/             # optional cbindgen C ABI
+├─ core/                # Semantic crates (published to crates.io except as noted)
+│  ├─ solvapay-core/       # pure logic; serde/hmac only; no HTTP, no tokio
+│  ├─ solvapay-dto/        # generated wire models + SDK overlays
+│  └─ solvapay-transport/  # transport trait, reqwest/fetch impls, client shell
 ├─ tools/
 │  ├─ shared/           # layout loaders + `repo-paths` crate
 │  ├─ codegen/          # dto-gen + TS gen wrappers
 │  ├─ conformance/      # fixture-runner, live-contract, shadow-invoker
-│  └─ repo/             # repo gates (required-checks, unwrap, publish graph)
+│  ├─ repo/             # repo gates (required-checks, unwrap, publish graph)
+│  ├─ cli/              # `solvapay` CLI (npx solvapay init)
+│  ├─ create-solvapay/  # scaffolder for new MCP apps
+│  └─ init/             # shared init/env logic
 ├─ internal/
-│  └─ fuzz/             # detached libFuzzer workspace (not a cargo member)
+│  ├─ fuzz/             # detached libFuzzer workspace (not a cargo member)
+│  ├─ demo-services/    # private
+│  ├─ test-utils/       # private
+│  └─ tsconfig/         # private `@solvapay/tsconfig`
 ├─ contract/            # OpenAPI snapshot, manifest, golden fixtures
 ├─ examples/            # per-language examples (go/python/ruby/rust/typescript)
 ├─ docs/

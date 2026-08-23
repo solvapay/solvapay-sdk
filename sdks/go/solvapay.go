@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/solvapay/solvapay-go/internal/nativecall"
 	"github.com/solvapay/solvapay-go/internal/runtime"
 )
 
@@ -30,6 +31,10 @@ var (
 	sharedRT   *runtime.Runtime
 	sharedErr  error
 )
+
+func init() {
+	nativecall.Bind(shared)
+}
 
 func shared(ctx context.Context) (*runtime.Runtime, error) {
 	sharedOnce.Do(func() {

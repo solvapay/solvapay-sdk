@@ -21,6 +21,21 @@ pub enum HttpMethod {
 }
 
 impl HttpMethod {
+    /// Returns the uppercase wire-method token (`GET`, `POST`, …).
+    ///
+    /// # Returns
+    ///
+    /// The HTTP verb as a static string matching the fixture schema.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Get => "GET",
+            Self::Post => "POST",
+            Self::Put => "PUT",
+            Self::Patch => "PATCH",
+            Self::Delete => "DELETE",
+        }
+    }
+
     /// Parses a wire-method string into an [`HttpMethod`] variant.
     ///
     /// Mirrors the five verbs allowed by the TS fixture schema on `wire.request.method`.

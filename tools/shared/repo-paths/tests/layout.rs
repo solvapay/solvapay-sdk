@@ -68,6 +68,14 @@ fn core_dir_and_sdk_surfaces_exist() {
         !paths.manifest().dirs.contains_key("rust"),
         "dirs.rust must be dropped after the Tier 3 hoist"
     );
+    assert_eq!(
+        paths.manifest().sdks.get("typescript").map(String::as_str),
+        Some("sdks/typescript")
+    );
+    assert!(
+        !paths.root().join("packages").exists(),
+        "top-level packages/ must be gone after the Tier 4 split"
+    );
     for key in [
         "node-native",
         "wasm",
@@ -85,6 +93,25 @@ fn core_dir_and_sdk_surfaces_exist() {
             .unwrap_or_else(|| panic!("missing sdk {key}"));
         let abs = paths.abs(rel);
         assert!(abs.exists(), "sdk {key} missing at {}", abs.display());
+    }
+    for rel in [
+        "sdks/typescript/server",
+        "sdks/typescript/core",
+        "sdks/typescript/auth",
+        "sdks/typescript/mcp",
+        "sdks/typescript/mcp-core",
+        "sdks/typescript/next",
+        "sdks/typescript/react",
+        "sdks/typescript/react-supabase",
+        "tools/cli",
+        "tools/create-solvapay",
+        "tools/init",
+        "internal/demo-services",
+        "internal/test-utils",
+        "internal/tsconfig",
+    ] {
+        let abs = paths.abs(rel);
+        assert!(abs.exists(), "{rel} missing at {}", abs.display());
     }
 }
 
@@ -119,13 +146,17 @@ fn generated_ids_match_enumerated_expectation() {
         "rubyHelpers",
         "rbRbs",
         "rbParity",
+        "rbConformance",
         "rsClient",
         "rsBlocking",
         "rsParity",
         "goBindings",
         "goClient",
         "goParity",
+        "goConformance",
         "cBindings",
+        "cConformance",
+        "cParity",
         "fixtureRunner",
     ];
     assert_eq!(ids, expected);

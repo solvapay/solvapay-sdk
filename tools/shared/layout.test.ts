@@ -26,7 +26,14 @@ describe('tools layout', () => {
     expect(REPO_PATHS.sdks.python).toBe('sdks/python')
     expect(REPO_PATHS.sdks.ruby).toBe('sdks/ruby')
     expect(REPO_PATHS.sdks.go).toBe('sdks/go')
-    expect(REPO_PATHS.sdks.typescript).toBe('packages/server')
+    expect(REPO_PATHS.sdks.typescript).toBe('sdks/typescript')
+    expect(existsSync(joinRoot('sdks/typescript/server'))).toBe(true)
+    expect(existsSync(joinRoot('tools/cli'))).toBe(true)
+    expect(existsSync(joinRoot('internal/tsconfig'))).toBe(true)
+  })
+
+  it('has no top-level packages/ directory', () => {
+    expect(existsSync(joinRoot('packages'))).toBe(false)
   })
 
   it('has no top-level scripts/ directory', () => {

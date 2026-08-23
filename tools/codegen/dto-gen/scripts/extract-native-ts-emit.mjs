@@ -7,16 +7,48 @@
 // Everything else (imports, loaders, envelope reconstructor, helpers) is
 // captured here as chrome.
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
+function findRepoRoot(startDir) {
+  let dir = startDir;
+  while (true) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
+      return dir;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) {
+      throw new Error(`Could not find repo root (pnpm-workspace.yaml) from ${startDir}`);
+    }
+    dir = parent;
+  }
+}
+
+function loadLayout(repoRoot) {
+  let layoutPath = repoRoot;
+  for (const part of ['contract', 'manifest', 'repo-paths.yaml']) {
+    layoutPath = join(layoutPath, part);
+  }
+  const layout = parseYaml(readFileSync(layoutPath, 'utf8'));
+  if (typeof layout !== 'object' || layout === null) {
+    throw new Error(`invalid repo-paths manifest at ${layoutPath}`);
+  }
+  return layout;
+}
+
+function absRel(repoRoot, rel, ...extra) {
+  if (typeof rel !== 'string' || rel.length === 0) {
+    throw new Error('missing repo-paths entry');
+  }
+  return join(repoRoot, ...rel.split('/'), ...extra);
+}
+
+const REPO_ROOT = findRepoRoot(dirname(fileURLToPath(import.meta.url)));
+const LAYOUT = loadLayout(REPO_ROOT);
 const OUT_PATH = join(
-  REPO_ROOT,
-  'tools',
-  'codegen',
+  absRel(REPO_ROOT, LAYOUT.dirs.toolsCodegen),
   'dto-gen',
   'assets',
   'native-ts-emit.snapshot.json',
@@ -24,12 +56,12 @@ const OUT_PATH = join(
 
 const FILES = {
   native: {
-    path: join(REPO_ROOT, 'packages', 'server', 'src', 'native.ts'),
+    path: join(absRel(REPO_ROOT, LAYOUT.tsPackages.server), 'src', 'native.ts'),
     clientType: 'NativeClientMethod',
     syncType: 'NativeSyncMethod',
   },
   wasm: {
-    path: join(REPO_ROOT, 'packages', 'server', 'src', 'wasm.ts'),
+    path: join(absRel(REPO_ROOT, LAYOUT.tsPackages.server), 'src', 'wasm.ts'),
     clientType: 'WasmClientMethod',
     syncType: 'WasmSyncMethod',
   },

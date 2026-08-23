@@ -10,6 +10,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { parse as parseYaml } from 'yaml'
+import { joinRel, lookupRel } from '../../shared/paths.js'
 
 export const PERMITTED_REASONS = [
   'c-abi-smoke-only',
@@ -282,7 +283,7 @@ export function requiredCheckNames(manifest: RequiredChecksManifest): string[] {
 
 export function runRequiredChecks(repoRoot: string): RequiredCheckIssue[] {
   const workflowPath = path.join(repoRoot, '.github', 'workflows', 'ci.yml')
-  const manifestPath = path.join(repoRoot, 'contract', 'required-checks.yaml')
+  const manifestPath = joinRel(repoRoot, lookupRel('requiredChecks'))
   const jobs = parseWorkflowJobs(readFileSync(workflowPath, 'utf8'))
   const manifest = loadRequiredChecksManifest(manifestPath)
   return checkRequiredChecks(jobs, manifest)

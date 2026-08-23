@@ -3,10 +3,11 @@
 /**
  * Count lines of code across the SolvaPay SDK monorepo.
  *
- * By default, scans every workspace under `packages/` and breaks down the
- * count into total / blank / comment / code lines, separating production
- * source from test files. Pass `--include-examples` or `--include-tools`
- * to widen the scope. Pass `--json` for machine-readable output.
+ * By default, scans every TypeScript workspace package from the layout
+ * manifest and breaks down the count into total / blank / comment / code
+ * lines, separating production source from test files. Pass `--include-examples`
+ * or `--include-tools` to widen the scope. Pass `--json` for machine-readable
+ * output.
  *
  * Usage:
  *   pnpm tsx tools/repo/count-loc.ts
@@ -16,7 +17,20 @@
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
-import { PACKAGES_DIR, EXAMPLES_DIR, TOOLS_DIR, DOCS_DIR } from '../shared/paths.js'
+import {
+  DOCS_DIR,
+  EXAMPLES_DIR,
+  INTERNAL_PACKAGE_IDS,
+  TOOL_PACKAGE_IDS,
+  TOOLS_DIR,
+  TS_PACKAGE_IDS,
+  internalPackageDir,
+  internalPackageRel,
+  toolPackageDir,
+  toolPackageRel,
+  tsPackageDir,
+  tsPackageRel,
+} from '../shared/paths.js'
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'])
 
@@ -181,11 +195,17 @@ const walk = (dir: string, group: GroupCounters, groupRoot: string) => {
 }
 
 const collectPackageGroups = (): Group[] => {
-  const packagesDir = PACKAGES_DIR
-  return readdirSync(packagesDir)
-    .map(name => ({ name, fullPath: path.join(packagesDir, name) }))
-    .filter(({ fullPath }) => statSync(fullPath).isDirectory())
-    .map(({ name, fullPath }) => ({ label: path.join('packages', name), rootDir: fullPath }))
+  const groups: Group[] = []
+  for (const id of TS_PACKAGE_IDS) {
+    groups.push({ label: tsPackageRel(id), rootDir: tsPackageDir(id) })
+  }
+  for (const id of TOOL_PACKAGE_IDS) {
+    groups.push({ label: toolPackageRel(id), rootDir: toolPackageDir(id) })
+  }
+  for (const id of INTERNAL_PACKAGE_IDS) {
+    groups.push({ label: internalPackageRel(id), rootDir: internalPackageDir(id) })
+  }
+  return groups
 }
 
 const collectAdditionalGroups = (): Group[] => {

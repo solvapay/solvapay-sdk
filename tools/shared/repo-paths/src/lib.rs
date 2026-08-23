@@ -52,6 +52,14 @@ pub enum RepoPathsError {
     /// `contractInputs` key is not in the manifest.
     #[error("unknown contract input: {0}")]
     UnknownContractInput(String),
+    /// Package map key is not in the manifest.
+    #[error("unknown {kind} package: {id}")]
+    UnknownPackage {
+        /// Package map (`ts`, `tool`, or `internal`).
+        kind: String,
+        /// Package id.
+        id: String,
+    },
 }
 
 /// Result alias for this crate.
@@ -118,6 +126,15 @@ pub struct Manifest {
     pub dirs: BTreeMap<String, String>,
     /// Language / binding surface directories.
     pub sdks: BTreeMap<String, String>,
+    /// Published TypeScript SDK packages.
+    #[serde(rename = "tsPackages")]
+    pub ts_packages: BTreeMap<String, String>,
+    /// User-facing tool packages (CLI, scaffolder, init).
+    #[serde(rename = "toolPackages")]
+    pub tool_packages: BTreeMap<String, String>,
+    /// Internal TypeScript packages (not published).
+    #[serde(rename = "internalPackages")]
+    pub internal_packages: BTreeMap<String, String>,
     /// OpenAPI snapshot, contract manifest, fixture trees.
     #[serde(rename = "contractInputs")]
     pub contract_inputs: BTreeMap<String, FlaggedPath>,
@@ -190,6 +207,29 @@ impl RepoPaths {
             .find(|item| item.id == id)
             .ok_or_else(|| RepoPathsError::UnknownGenerated(id.to_owned()))?;
         Ok(self.abs(&entry.path))
+    }
+
+    /// Absolute directory for a published TypeScript SDK package.
+    pub fn ts_package(&self, id: &str) -> Result<PathBuf> {
+        self.package_dir("ts", &self.manifest.ts_packages, id)
+    }
+
+    /// Absolute directory for a user-facing tool package.
+    pub fn tool_package(&self, id: &str) -> Result<PathBuf> {
+        self.package_dir("tool", &self.manifest.tool_packages, id)
+    }
+
+    /// Absolute directory for an internal TypeScript package.
+    pub fn internal_package(&self, id: &str) -> Result<PathBuf> {
+        self.package_dir("internal", &self.manifest.internal_packages, id)
+    }
+
+    fn package_dir(&self, kind: &str, map: &BTreeMap<String, String>, id: &str) -> Result<PathBuf> {
+        let rel = map.get(id).ok_or_else(|| RepoPathsError::UnknownPackage {
+            kind: kind.to_owned(),
+            id: id.to_owned(),
+        })?;
+        Ok(self.abs(rel))
     }
 
     /// Absolute path for a `lookups` key.

@@ -7,21 +7,21 @@ FROM base AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-COPY packages/tsconfig/ packages/tsconfig/
-COPY packages/core/package.json packages/core/
-COPY packages/auth/package.json packages/auth/
-COPY packages/server/package.json packages/server/
-COPY packages/demo-services/package.json packages/demo-services/
+COPY internal/tsconfig/ internal/tsconfig/
+COPY sdks/typescript/core/package.json sdks/typescript/core/
+COPY sdks/typescript/auth/package.json sdks/typescript/auth/
+COPY sdks/typescript/server/package.json sdks/typescript/server/
+COPY internal/demo-services/package.json internal/demo-services/
 COPY examples/typescript/mcp-oauth-bridge/package.json examples/typescript/mcp-oauth-bridge/
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app ./
-COPY packages/core/ packages/core/
-COPY packages/auth/ packages/auth/
-COPY packages/server/ packages/server/
-COPY packages/demo-services/ packages/demo-services/
+COPY sdks/typescript/core/ sdks/typescript/core/
+COPY sdks/typescript/auth/ sdks/typescript/auth/
+COPY sdks/typescript/server/ sdks/typescript/server/
+COPY internal/demo-services/ internal/demo-services/
 COPY examples/typescript/mcp-oauth-bridge/ examples/typescript/mcp-oauth-bridge/
 RUN pnpm --filter @example/mcp-oauth-bridge... build
 RUN pnpm --filter @example/mcp-oauth-bridge deploy --prod /app/deployed

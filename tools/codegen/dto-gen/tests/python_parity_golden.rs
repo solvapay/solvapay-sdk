@@ -59,6 +59,11 @@ fn python_parity_suite_matches_committed() {
     );
     assert!(emitted.contains("check_limits"));
     assert!(emitted.contains("10000"));
+    assert!(emitted.contains("test_client_method_census"));
+    assert!(emitted.contains("test_stub_cross_check"));
+    assert!(emitted.contains("['self', 'args_json']"));
+    assert!(!emitted.contains("test_client_method_presence"));
+    assert!(!emitted.contains("assert async_expected"));
     assert!(!emitted.contains("or True"));
     assert!(!emitted.contains("2 == 2"));
 }

@@ -31,9 +31,15 @@ mod args;
 #[cfg(target_arch = "wasm32")]
 mod client;
 #[cfg(target_arch = "wasm32")]
+mod decisions;
+#[cfg(target_arch = "wasm32")]
 mod error;
 #[cfg(target_arch = "wasm32")]
+mod fixture_host;
+#[cfg(target_arch = "wasm32")]
 mod host_transport;
+#[cfg(target_arch = "wasm32")]
+mod payload_builders;
 #[cfg(target_arch = "wasm32")]
 mod webhook;
 

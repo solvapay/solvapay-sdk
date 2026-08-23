@@ -19,22 +19,69 @@ const HEADER: &str = "\
 pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
     let mut out = String::new();
     out.push_str(HEADER);
-    out.push_str("import { describe, expect, expectTypeOf, it } from 'vitest'\n");
+    out.push_str("import { describe, expect, expectTypeOf, it, vi } from 'vitest'\n");
     out.push_str("import { SolvaPayError } from '@solvapay/core'\n");
     out.push_str("import { PaywallError } from '../paywall'\n");
     out.push_str("import type { SolvaPayClient } from '../types/client'\n");
-    out.push_str("import type { SolvaPayClientGenerated } from '../types/client.generated'\n\n");
+    out.push_str("import type { SolvaPayClientGenerated } from '../types/client.generated'\n");
+    out.push_str("import * as nativeDecisions from '../native-decisions'\n");
+    out.push_str("import { withRetry } from '../utils'\n\n");
 
     out.push_str("describe('signature-parity (generated)', () => {\n");
 
-    // Frozen defaults from contract/manifest/sdk-contract.yaml `defaults:`
+    let defaults = ir
+        .entry_points
+        .values()
+        .next()
+        .map(|entry| entry.defaults.clone())
+        .unwrap_or_default();
+    let _ = writeln!(
+        out,
+        "  const expectedMaxRetries = {}\n\
+         \x20 const expectedInitialDelayMs = {}\n\
+         \x20 const expectedLimitsCacheTTLMs = {}\n",
+        defaults.max_retries, defaults.initial_delay_ms, defaults.limits_cache_ttl_ms
+    );
+
     out.push_str(
         "  describe('defaults', () => {\n\
-            it('documents frozen retry / webhook / cache defaults', () => {\n\
-                expect(2).toBe(2) // maxRetries\n\
-                expect(500).toBe(500) // initialDelayMs\n\
-                expect(300).toBe(300) // webhookToleranceSec\n\
-                expect(10_000).toBe(10_000) // limitsCacheTTLMs\n\
+            it('withRetry uses frozen retry defaults', async () => {\n\
+                const seen: { maxRetries: number; initialDelay: number }[] = []\n\
+                const spy = vi.spyOn(nativeDecisions, 'retryNextDelayMs').mockImplementation((opts) => {\n\
+                  seen.push({ maxRetries: opts.maxRetries, initialDelay: opts.initialDelay })\n\
+                  return null\n\
+                })\n\
+                await expect(withRetry(async () => {\n\
+                  throw new Error('retry-once')\n\
+                })).rejects.toThrow('retry-once')\n\
+                spy.mockRestore()\n\
+                expect(seen[0]?.maxRetries).toBe(expectedMaxRetries)\n\
+                expect(seen[0]?.initialDelay).toBe(expectedInitialDelayMs)\n\
+             })\n\
+             it('retryNextDelayMs saturates at the frozen maxRetries', () => {\n\
+                expect(\n\
+                  nativeDecisions.retryNextDelayMs({\n\
+                    maxRetries: expectedMaxRetries,\n\
+                    initialDelay: expectedInitialDelayMs,\n\
+                    backoffStrategy: 'fixed',\n\
+                    attempt: 0,\n\
+                  }),\n\
+                ).toBe(expectedInitialDelayMs)\n\
+                expect(\n\
+                  nativeDecisions.retryNextDelayMs({\n\
+                    maxRetries: expectedMaxRetries,\n\
+                    initialDelay: expectedInitialDelayMs,\n\
+                    backoffStrategy: 'fixed',\n\
+                    attempt: expectedMaxRetries,\n\
+                  }),\n\
+                ).toBeNull()\n\
+             })\n\
+             it('paywall cache TTL default matches the frozen limitsCacheTTLMs', async () => {\n\
+                const { SolvaPayPaywall } = await import('../paywall')\n\
+                const paywall = new SolvaPayPaywall({} as never)\n\
+                expect((paywall as { limitsCacheTTL: number }).limitsCacheTTL).toBe(\n\
+                  expectedLimitsCacheTTLMs,\n\
+                )\n\
              })\n\
            })\n\n",
     );
@@ -58,17 +105,6 @@ pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
              })\n\
            })\n\n",
     );
-
-    if !ir.error_templates.webhook_messages.is_empty() {
-        out.push_str(
-            "  describe('error templates (IR)', () => {\n\
-                it('webhook message map is non-empty in IR emission', () => {\n\
-                    // Presence gate — template strings are regenerated with dto-gen.\n\
-                    expect(true).toBe(true)\n\
-                 })\n\
-               })\n\n",
-        );
-    }
 
     out.push_str("  describe('client methods', () => {\n");
     for ep in ir.entry_points.values() {
@@ -181,5 +217,8 @@ mod tests {
         assert!(out.contains("SolvaPayClient['checkLimits']"));
         assert!(out.contains("type ExpectedArity = 0"));
         assert!(out.contains("Promise<unknown>"));
+        assert!(out.contains("withRetry uses frozen retry defaults"));
+        assert!(!out.contains("expect(2).toBe(2)"));
+        assert!(!out.contains("expect(true).toBe(true)"));
     }
 }

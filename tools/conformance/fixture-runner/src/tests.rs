@@ -9,7 +9,8 @@ use crate::create_default_registry;
 use crate::discover::discover_fixtures;
 use crate::model::{parse_fixture, FixtureErrorExpect, FixtureExpect, FixtureInput};
 use crate::runner::{
-    format_summary, run_one, run_suite, Binding, BindingError, BindingRegistry, ErrorObservation,
+    assert_expect, format_summary, run_one, run_suite, Binding, BindingError, BindingRegistry,
+    ErrorObservation,
 };
 
 fn fixtures_root() -> PathBuf {
@@ -342,6 +343,14 @@ fn error_expect_fails_on_kind_or_code_mismatch() {
         err.contains("kind:") && err.contains("code:"),
         "unexpected error: {err}"
     );
+}
+
+#[test]
+fn public_assert_expect_matches_success_and_reports_mismatch() {
+    let expect = FixtureExpect::Result(json!({"ok": true}));
+    assert_expect(&expect, Ok(json!({"ok": true}))).expect("matching result");
+    let err = assert_expect(&expect, Ok(json!({"ok": false}))).expect_err("mismatch");
+    assert!(err.contains("result mismatch"), "unexpected error: {err}");
 }
 
 #[test]

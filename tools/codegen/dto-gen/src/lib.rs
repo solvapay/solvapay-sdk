@@ -10,11 +10,17 @@ pub mod emit_client_go;
 pub mod emit_client_rb;
 pub mod emit_client_rs;
 pub mod emit_client_ts;
+pub mod emit_conformance_c;
+pub mod emit_conformance_chrome;
+pub mod emit_conformance_go;
+pub mod emit_conformance_py;
+pub mod emit_conformance_rb;
 pub mod emit_core_types_ts;
 pub mod emit_core_wrappers_ts;
 pub mod emit_fixture_runner_rs;
 pub mod emit_native_py;
 pub mod emit_native_rb;
+pub mod emit_parity_suite_c;
 pub mod emit_parity_suite_go;
 pub mod emit_parity_suite_py;
 pub mod emit_parity_suite_rb;
@@ -44,11 +50,16 @@ pub use emit_client_go::emit_client_go;
 pub use emit_client_rb::{emit_client_rb, EmittedRubyPublic};
 pub use emit_client_rs::{emit_client_rs, EmittedRustClient};
 pub use emit_client_ts::emit_client_ts;
+pub use emit_conformance_c::emit_conformance_c;
+pub use emit_conformance_go::emit_conformance_go;
+pub use emit_conformance_py::emit_conformance_py;
+pub use emit_conformance_rb::emit_conformance_rb;
 pub use emit_core_types_ts::emit_core_types_ts;
 pub use emit_core_wrappers_ts::{emit_core_wrappers_ts, CoreWrapperKind};
 pub use emit_fixture_runner_rs::emit_fixture_runner;
 pub use emit_native_py::emit_native_py;
 pub use emit_native_rb::emit_native_rb;
+pub use emit_parity_suite_c::emit_parity_suite_c;
 pub use emit_parity_suite_go::emit_parity_suite_go;
 pub use emit_parity_suite_py::emit_parity_suite_py;
 pub use emit_parity_suite_rb::emit_parity_suite_rb;
@@ -151,6 +162,8 @@ pub struct GenOutputs<'a> {
     pub py_stub_out: Option<&'a Path>,
     /// `--py-parity-out`
     pub py_parity_out: Option<&'a Path>,
+    /// `--py-conformance-out`
+    pub py_conformance_out: Option<&'a Path>,
     /// `--native-rb-out`
     pub native_rb_out: Option<&'a Path>,
     /// `--rb-client-out`
@@ -159,6 +172,10 @@ pub struct GenOutputs<'a> {
     pub rb_rbs_out: Option<&'a Path>,
     /// `--rb-parity-out`
     pub rb_parity_out: Option<&'a Path>,
+    /// `--rb-conformance-out`
+    pub rb_conformance_out: Option<&'a Path>,
+    /// `--go-conformance-out`
+    pub go_conformance_out: Option<&'a Path>,
     /// `--rs-client-out`
     pub rs_client_out: Option<&'a Path>,
     /// `--rs-parity-out`
@@ -169,6 +186,10 @@ pub struct GenOutputs<'a> {
     pub go_parity_out: Option<&'a Path>,
     /// `--c-bindings-out`
     pub c_bindings_out: Option<&'a Path>,
+    /// `--c-conformance-out`
+    pub c_conformance_out: Option<&'a Path>,
+    /// `--c-parity-out`
+    pub c_parity_out: Option<&'a Path>,
     /// `--fixture-runner-out`
     pub fixture_runner_out: Option<&'a Path>,
 }
@@ -332,6 +353,17 @@ pub fn generate_from_snapshot(
         write_c_shim(dir, &emitted)?;
     }
 
+    if let Some(dir) = outputs.c_conformance_out {
+        let files = emit_conformance_c(&ir)?;
+        write_conformance_dir(dir, &files)?;
+    }
+
+    if let Some(path) = outputs.c_parity_out {
+        let c = emit_parity_suite_c(&ir)?;
+        create_parent(path)?;
+        write_file(path, &c)?;
+    }
+
     if let Some(path) = outputs.fixture_runner_out {
         let rs = emit_fixture_runner(&ir)?;
         create_parent(path)?;
@@ -389,6 +421,11 @@ pub fn generate_from_snapshot(
         write_file(py_parity_path, &py)?;
     }
 
+    if let Some(dir) = outputs.py_conformance_out {
+        let files = emit_conformance_py(&ir)?;
+        write_conformance_dir(dir, &files)?;
+    }
+
     if let Some(native_rb_path) = outputs.native_rb_out {
         let ruby = emit_native_rb(&ir)?;
         create_parent(native_rb_path)?;
@@ -415,6 +452,16 @@ pub fn generate_from_snapshot(
         let ruby = emit_parity_suite_rb(&ir)?;
         create_parent(rb_parity_path)?;
         write_file(rb_parity_path, &ruby)?;
+    }
+
+    if let Some(dir) = outputs.rb_conformance_out {
+        let files = emit_conformance_rb(&ir)?;
+        write_conformance_dir(dir, &files)?;
+    }
+
+    if let Some(dir) = outputs.go_conformance_out {
+        let files = emit_conformance_go(&ir)?;
+        write_conformance_dir(dir, &files)?;
     }
 
     if let Some(rs_client_path) = outputs.rs_client_out {
@@ -450,6 +497,28 @@ pub fn generate_from_snapshot(
 
     Ok(())
 }
+
+/// Writes named conformance-harness files into `dir`.
+///
+/// # Errors
+///
+/// Returns [`GenError::Parse`] when a relative name contains `/`, `\`, or `..`.
+fn write_conformance_dir(dir: &Path, files: &[(String, String)]) -> GenResult<()> {
+    fs::create_dir_all(dir).map_err(|source| GenError::Io {
+        path: dir.to_path_buf(),
+        source,
+    })?;
+    for (name, contents) in files {
+        if name.contains('/') || name.contains('\\') || name.contains("..") {
+            return Err(GenError::Parse(format!(
+                "illegal emitted conformance path {name}"
+            )));
+        }
+        write_file(&dir.join(name), contents)?;
+    }
+    Ok(())
+}
+
 fn create_parent(path: &Path) -> GenResult<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|source| GenError::Io {
@@ -501,12 +570,16 @@ fn write_go_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
     })?;
     let paths = [
         dir.join("args.rs"),
+        dir.join("decisions.rs"),
+        dir.join("payload_builders.rs"),
         dir.join("client.rs"),
         dir.join("webhook.rs"),
     ];
     write_file(&paths[0], &emitted.args_rs)?;
-    write_file(&paths[1], &emitted.client_rs)?;
-    write_file(&paths[2], &emitted.webhook_rs)?;
+    write_file(&paths[1], &emitted.decisions_rs)?;
+    write_file(&paths[2], &emitted.payload_builders_rs)?;
+    write_file(&paths[3], &emitted.client_rs)?;
+    write_file(&paths[4], &emitted.webhook_rs)?;
     rustfmt_files(&paths)?;
     Ok(())
 }

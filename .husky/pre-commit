@@ -17,11 +17,11 @@ pnpm gen || exit 1
 # Re-stage generated artifacts that gen may have rewritten.
 git add -- \
   core/solvapay-dto \
-  packages/server/src/types/overlays.generated.d.ts \
-  packages/server/src/types/client.generated.d.ts \
-  packages/server/src/__generated__/signature-parity.generated.test.ts \
-  packages/server/src/native.ts \
-  packages/server/src/wasm.ts \
+  sdks/typescript/server/src/types/overlays.generated.d.ts \
+  sdks/typescript/server/src/types/client.generated.d.ts \
+  sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts \
+  sdks/typescript/server/src/native.ts \
+  sdks/typescript/server/src/wasm.ts \
   contract/manifest/binding-symbols.snapshot.json \
   sdks/node-native/src \
   sdks/wasm/src \
@@ -29,17 +29,21 @@ git add -- \
   sdks/python/python/solvapay/_native.py \
   sdks/python/python/solvapay/__init__.pyi \
   sdks/python/tests/signature_parity_generated_test.py \
+  sdks/python/tests/contract \
   sdks/ruby/ext/solvapay/src \
   sdks/ruby/lib/solvapay/_native.rb \
   sdks/ruby/lib/solvapay/client.rb \
   sdks/ruby/lib/solvapay/helpers.generated.rb \
   sdks/ruby/sig/solvapay.rbs \
   sdks/ruby/test/signature_parity_generated_test.rb \
+  sdks/ruby/test/contract \
   sdks/rust/src/client_generated.rs \
   sdks/rust/src/blocking_generated.rs \
   sdks/rust/tests/signature_parity_generated.rs \
   sdks/go/wasm/src \
   sdks/go/client_generated.go \
   sdks/go/signature_parity_generated_test.go \
+  sdks/go/internal/contract \
   sdks/capi/src \
+  sdks/capi/ctest \
   tools/conformance/fixture-runner/src/registry.rs

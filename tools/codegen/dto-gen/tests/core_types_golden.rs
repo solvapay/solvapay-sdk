@@ -257,7 +257,10 @@ fn currently_drifts(ty: &IrCoreType, ts: &TsShape) -> bool {
 #[test]
 fn ts_cross_check_ratchet() {
     let closed = lowered();
-    let ts_dir = paths().abs("packages/core/src");
+    let ts_dir = paths()
+        .ts_package("core")
+        .expect("tsPackages.core")
+        .join("src");
     let ts_types = parse_ts_types(&ts_dir);
     let skip = overlay_skip_rust_names();
 

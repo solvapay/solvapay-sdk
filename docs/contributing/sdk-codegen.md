@@ -212,20 +212,20 @@ High-level groups:
 | Binding dump         | `contract/manifest/binding-symbols.snapshot.json`                               |
 | Boundary-type dump   | `contract/manifest/boundary-types.snapshot.json`                                |
 | Node / Wasm shims    | `sdks/{node-native,wasm}/src/{args,decisions,payload_builders,*_client}.rs`   |
-| Python               | PyO3 shims, `_native.py`, `__init__.pyi`, parity test                           |
-| Ruby                 | Magnus shims, `_native.rb`, `client.rb`, RBS, parity test                       |
+| Python               | PyO3 shims, `_native.py`, `__init__.pyi`, parity test, fixture-conformance harness (`--py-conformance-out`) |
+| Ruby                 | Magnus shims, `_native.rb`, `client.rb`, RBS, parity test, fixture-conformance harness (`--rb-conformance-out`) |
 | Rust facade          | `client_generated.rs`, `blocking_generated.rs`, parity test                     |
-| Go                   | WASI guest shims, `client_generated.go`, parity test                            |
+| Go                   | WASI guest shims (client + decisions + payload builders), `client_generated.go`, parity test, fixture-conformance harness (`--go-conformance-out`) |
+| C ABI                | Generated 36-op dispatch (`--c-bindings-out`), fixture-conformance harness (`--c-conformance-out`), signature parity (`--c-parity-out`) |
 
 Hand-editing any of these fails CI (`@generated` header gate + `pnpm gen:check`).
 
-### C ABI note
+### C ABI
 
-`sdks/capi/` still uses a hand-maintained `dispatch.rs` allowlist (step 54
-scaffold: `getMerchant` + `verifyWebhook` / `version`). New ops do **not** appear
-in C until the `Toolchain::C` emitter column lands — Phase 1 of
-[`codegen-ast-derivation.md`](./codegen-ast-derivation.md), which is also the
-prerequisite for C fixture-parity in that doc’s Phase 5.
+`sdks/capi/` dispatch is generated (`Toolchain::C`, `--c-bindings-out`). The
+C fixture census (`sdks/capi/ctest/contract.sh`) replays all 550 golden
+fixtures via a test-only fixture-host feature. Signature parity is
+`--c-parity-out`.
 
 ---
 
@@ -272,6 +272,9 @@ godoc / rustdoc.
 | `tools/codegen/dto-gen/`             | IR lower + emitters (`Toolchain::C`, fixture-runner registry) |
 | `tools/codegen/dto-gen/assets/c-emit.snapshot.json` | C `dispatch.rs` chrome (`extract-c-emit.mjs`) |
 | `tools/codegen/dto-gen/assets/fixture-runner-emit.snapshot.json` | Registry routing / extras / skip (`extract-fixture-runner-emit.mjs`) |
+| `tools/codegen/dto-gen/assets/conformance-py-emit.snapshot.json` | Python `tests/contract/*.py` chrome (`extract-conformance-py-emit.mjs`) |
+| `tools/codegen/dto-gen/assets/conformance-rb-emit.snapshot.json` | Ruby `test/contract/*.rb` chrome (`extract-conformance-rb-emit.mjs`) |
+| `tools/codegen/dto-gen/assets/conformance-go-emit.snapshot.json` | Go `internal/contract/*.go` chrome (`extract-conformance-go-emit.mjs`) |
 
 ---
 

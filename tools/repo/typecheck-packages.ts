@@ -9,7 +9,13 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
-import { REPO_ROOT } from '../shared/paths.js'
+import {
+  REPO_ROOT,
+  internalPackageRel,
+  joinRel,
+  toolPackageRel,
+  tsPackageRel,
+} from '../shared/paths.js'
 
 type PackageTypecheck = {
   dir: string
@@ -18,21 +24,21 @@ type PackageTypecheck = {
 
 /** Dependency order keeps logs readable; each project is checked independently. */
 const PACKAGES: PackageTypecheck[] = [
-  { dir: path.join('packages', 'core'), projects: ['tsconfig.build.json'] },
-  { dir: path.join('packages', 'auth'), projects: ['tsconfig.build.json'] },
-  { dir: path.join('packages', 'init'), projects: ['tsconfig.build.json'] },
-  { dir: path.join('packages', 'mcp-core'), projects: ['tsconfig.build.json'] },
-  { dir: path.join('packages', 'server'), projects: ['tsconfig.build.json'] },
-  { dir: path.join('packages', 'mcp'), projects: ['tsconfig.build.json'] },
-  { dir: path.join('packages', 'next'), projects: ['tsconfig.build.json'] },
+  { dir: tsPackageRel('core'), projects: ['tsconfig.build.json'] },
+  { dir: tsPackageRel('auth'), projects: ['tsconfig.build.json'] },
+  { dir: toolPackageRel('init'), projects: ['tsconfig.build.json'] },
+  { dir: tsPackageRel('mcp-core'), projects: ['tsconfig.build.json'] },
+  { dir: tsPackageRel('server'), projects: ['tsconfig.build.json'] },
+  { dir: tsPackageRel('mcp'), projects: ['tsconfig.build.json'] },
+  { dir: tsPackageRel('next'), projects: ['tsconfig.build.json'] },
   {
-    dir: path.join('packages', 'react'),
+    dir: tsPackageRel('react'),
     projects: ['tsconfig.build.json', path.join('__tests__', 'tsconfig.types.json')],
   },
-  { dir: path.join('packages', 'react-supabase'), projects: ['tsconfig.build.json'] },
-  { dir: path.join('packages', 'demo-services'), projects: ['tsconfig.build.json'] },
-  { dir: path.join('packages', 'cli'), projects: ['tsconfig.build.json'] },
-  { dir: path.join('packages', 'create-solvapay'), projects: ['tsconfig.build.json'] },
+  { dir: tsPackageRel('react-supabase'), projects: ['tsconfig.build.json'] },
+  { dir: internalPackageRel('demo-services'), projects: ['tsconfig.build.json'] },
+  { dir: toolPackageRel('cli'), projects: ['tsconfig.build.json'] },
+  { dir: toolPackageRel('create-solvapay'), projects: ['tsconfig.build.json'] },
 ]
 
 function runTsc(projectPath: string): number {
@@ -46,7 +52,7 @@ function runTsc(projectPath: string): number {
 function main(): void {
   for (const pkg of PACKAGES) {
     for (const project of pkg.projects) {
-      const projectPath = path.join(REPO_ROOT, pkg.dir, project)
+      const projectPath = joinRel(REPO_ROOT, pkg.dir, project)
       if (!existsSync(projectPath)) {
         console.error(`typecheck: missing project file ${projectPath}`)
         process.exit(1)

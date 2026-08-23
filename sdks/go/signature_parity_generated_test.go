@@ -10,50 +10,56 @@ import (
 	solvapay "github.com/solvapay/solvapay-go"
 )
 
-// operationSignature is one catalogued client method: name → param names (excluding ctx).
+// operationSignature is one catalogued client method: name → param names and reflect types (excluding ctx).
 type operationSignature struct {
-	name   string
-	params []string
+	name       string
+	params     []string
+	paramTypes []string
 }
 
-// operationSignatures locks the Go facade surface (presence + arity + names).
+// operationSignatures locks the Go facade surface (presence + arity + per-slot types).
 var operationSignatures = []operationSignature{
-	{"ActivatePlan", []string{"params"}},
-	{"AssignCredits", []string{"params"}},
-	{"AttachBusinessDetails", []string{"params"}},
-	{"BootstrapMcpProduct", []string{"params"}},
-	{"CancelPurchase", []string{"params"}},
-	{"CheckLimits", []string{"params"}},
-	{"CloneProduct", []string{"productRef", "overrides"}},
-	{"ConfigureMcpPlans", []string{"productRef", "params"}},
-	{"CreateCheckoutSession", []string{"params"}},
-	{"CreateCustomer", []string{"params"}},
-	{"CreateCustomerSession", []string{"params"}},
-	{"CreatePaymentIntent", []string{"params"}},
-	{"CreatePlan", []string{"params"}},
-	{"CreateProduct", []string{"params"}},
-	{"CreateTopupPaymentIntent", []string{"params"}},
-	{"DeletePlan", []string{"productRef", "planRef"}},
-	{"DeleteProduct", []string{"productRef"}},
-	{"DisableAutoRecharge", []string{"params"}},
-	{"GetAutoRecharge", []string{"params"}},
-	{"GetCustomer", []string{"params"}},
-	{"GetCustomerBalance", []string{"params"}},
-	{"GetMerchant", nil},
-	{"GetPaymentMethod", []string{"params"}},
-	{"GetPlatformConfig", nil},
-	{"GetProduct", []string{"productRef"}},
-	{"GetUserInfo", []string{"params"}},
-	{"ListPlans", []string{"productRef"}},
-	{"ListProducts", nil},
-	{"ProcessPaymentIntent", []string{"params"}},
-	{"ReactivatePurchase", []string{"params"}},
-	{"SaveAutoRecharge", []string{"params"}},
-	{"TrackUsage", []string{"params"}},
-	{"TrackUsageBulk", []string{"params"}},
-	{"UpdateCustomer", []string{"customerRef", "params"}},
-	{"UpdatePlan", []string{"productRef", "planRef", "params"}},
-	{"UpdateProduct", []string{"productRef", "params"}},
+	{"ActivatePlan", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AssignCredits", []string{"params"}, []string{"map[string]interface {}"}},
+	{"AttachBusinessDetails", []string{"params"}, []string{"map[string]interface {}"}},
+	{"BootstrapMcpProduct", []string{"params"}, []string{"map[string]interface {}"}},
+	{"CancelPurchase", []string{"params"}, []string{"map[string]interface {}"}},
+	{"CheckLimits", []string{"params"}, []string{"map[string]interface {}"}},
+	{"CloneProduct", []string{"productRef", "overrides"}, []string{"string", "map[string]interface {}"}},
+	{"ConfigureMcpPlans", []string{"productRef", "params"}, []string{"string", "map[string]interface {}"}},
+	{"CreateCheckoutSession", []string{"params"}, []string{"map[string]interface {}"}},
+	{"CreateCustomer", []string{"params"}, []string{"map[string]interface {}"}},
+	{"CreateCustomerSession", []string{"params"}, []string{"map[string]interface {}"}},
+	{"CreatePaymentIntent", []string{"params"}, []string{"map[string]interface {}"}},
+	{"CreatePlan", []string{"params"}, []string{"map[string]interface {}"}},
+	{"CreateProduct", []string{"params"}, []string{"map[string]interface {}"}},
+	{"CreateTopupPaymentIntent", []string{"params"}, []string{"map[string]interface {}"}},
+	{"DeletePlan", []string{"productRef", "planRef"}, []string{"string", "string"}},
+	{"DeleteProduct", []string{"productRef"}, []string{"string"}},
+	{"DisableAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
+	{"GetAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
+	{"GetCustomer", []string{"params"}, []string{"map[string]interface {}"}},
+	{"GetCustomerBalance", []string{"params"}, []string{"map[string]interface {}"}},
+	{"GetMerchant", nil, nil},
+	{"GetPaymentMethod", []string{"params"}, []string{"map[string]interface {}"}},
+	{"GetPlatformConfig", nil, nil},
+	{"GetProduct", []string{"productRef"}, []string{"string"}},
+	{"GetUserInfo", []string{"params"}, []string{"map[string]interface {}"}},
+	{"ListPlans", []string{"productRef"}, []string{"string"}},
+	{"ListProducts", nil, nil},
+	{"ProcessPaymentIntent", []string{"params"}, []string{"map[string]interface {}"}},
+	{"ReactivatePurchase", []string{"params"}, []string{"map[string]interface {}"}},
+	{"SaveAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
+	{"TrackUsage", []string{"params"}, []string{"map[string]interface {}"}},
+	{"TrackUsageBulk", []string{"params"}, []string{"map[string]interface {}"}},
+	{"UpdateCustomer", []string{"customerRef", "params"}, []string{"string", "map[string]interface {}"}},
+	{"UpdatePlan", []string{"productRef", "planRef", "params"}, []string{"string", "string", "map[string]interface {}"}},
+	{"UpdateProduct", []string{"productRef", "params"}, []string{"string", "map[string]interface {}"}},
+}
+
+// extraClientMethods are exported Client methods that are not catalog operations.
+var extraClientMethods = map[string]struct{}{
+	"Close": {},
 }
 
 // Frozen limits-cache TTL from the contract manifest `defaults:`.
@@ -139,9 +145,42 @@ func TestOperationSignaturesMatchMethodTypes(t *testing.T) {
 		if m.Type.In(1).String() != "context.Context" {
 			t.Fatalf("%s first param = %s, want context.Context", sig.name, m.Type.In(1))
 		}
+		for i, want := range sig.paramTypes {
+			if got := m.Type.In(i + 2).String(); got != want {
+				t.Fatalf("%s param %d = %s, want %s", sig.name, i, got, want)
+			}
+		}
 		if m.Type.NumOut() != 2 {
 			t.Fatalf("%s NumOut = %d, want 2", sig.name, m.Type.NumOut())
 		}
+		if m.Type.Out(0).String() != "interface {}" {
+			t.Fatalf("%s Out(0) = %s, want interface {}", sig.name, m.Type.Out(0))
+		}
+		if m.Type.Out(1).String() != "error" {
+			t.Fatalf("%s Out(1) = %s, want error", sig.name, m.Type.Out(1))
+		}
+	}
+}
+
+func TestExportedClientMethodsMatchCensus(t *testing.T) {
+	t.Helper()
+	clientType := reflect.TypeOf((*solvapay.Client)(nil))
+	want := make(map[string]struct{}, len(operationSignatures)+len(extraClientMethods))
+	for _, sig := range operationSignatures {
+		want[sig.name] = struct{}{}
+	}
+	for name := range extraClientMethods {
+		want[name] = struct{}{}
+	}
+	for i := 0; i < clientType.NumMethod(); i++ {
+		name := clientType.Method(i).Name
+		if _, ok := want[name]; !ok {
+			t.Fatalf("unexpected exported Client method %s", name)
+		}
+		delete(want, name)
+	}
+	for name := range want {
+		t.Fatalf("missing exported Client method %s", name)
 	}
 }
 

@@ -10,11 +10,13 @@ const ALLOWLIST = new Set([
   'shared/paths.test.ts',
   'shared/repo-paths-manifest.test.ts',
   'shared/layout.test.ts',
+  'shared/ts-packages.test.ts',
   'shared/cargo-layout.test.ts',
   'shared/bucket-boundaries.test.ts',
   'repo/lib/referenced-paths.ts',
   'repo/no-hardcoded-paths.test.ts',
   'repo/check-referenced-paths.test.ts',
+  'repo/package-locality.test.ts',
   'conformance/wasm-fixture-server.mjs',
 ])
 
@@ -24,7 +26,10 @@ const ROOT_ARITHMETIC = [
 ]
 
 const HARDCODED_PATH =
-  /['"`]((?:rust|packages|contract|docs|examples|scripts|tools|\.github)\/[^'"`\n]+)/g
+  /['"`]((?:rust|packages|sdks|core|internal|contract|docs|examples|scripts|tools|\.github)\/[^'"`\n]+)/g
+
+const HARDCODED_JOIN =
+  /\bjoin\(\s*[^)]*?['"`](packages|sdks|core|internal|tools|contract|docs|examples)['"`]/g
 
 function stripComments(src: string): string {
   const withoutBlock = src.replace(/\/\*[\s\S]*?\*\//g, block =>
@@ -42,12 +47,17 @@ function stripComments(src: string): string {
     .join('\n')
 }
 
+const PUBLISHED_TOOL_PACKAGES = new Set(['cli', 'create-solvapay', 'init'])
+
 function listTools(dir: string, acc: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const full = path.join(dir, name)
     const st = statSync(full)
     if (st.isDirectory()) {
       if (name === 'target' || name === 'node_modules') {
+        continue
+      }
+      if (dir === TOOLS_DIR && PUBLISHED_TOOL_PACKAGES.has(name)) {
         continue
       }
       // Rust crates live inside tools/ buckets after the hoist; they are not TS.
@@ -84,6 +94,10 @@ describe('no hardcoded repo paths in tools/', () => {
       let match: RegExpExecArray | null
       while ((match = HARDCODED_PATH.exec(src)) !== null) {
         violations.push(`${key}: hardcoded path ${match[1]}`)
+      }
+      HARDCODED_JOIN.lastIndex = 0
+      while ((match = HARDCODED_JOIN.exec(src)) !== null) {
+        violations.push(`${key}: hardcoded join(${match[1]})`)
       }
     }
     expect(violations).toEqual([])

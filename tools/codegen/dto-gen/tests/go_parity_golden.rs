@@ -63,6 +63,9 @@ fn go_parity_matches_committed_and_has_real_defaults() {
     assert!(emitted.contains("expectedInitialDelayMs = 500"));
     assert!(emitted.contains("_ = (*solvapay.Client).CheckLimits"));
     assert!(emitted.contains("TestSyncOnlyMatrix"));
+    assert!(emitted.contains("paramTypes"));
+    assert!(emitted.contains("TestExportedClientMethodsMatchCensus"));
+    assert!(emitted.contains("map[string]interface {}"));
     assert!(!emitted.contains("2 == 2"));
     assert!(!emitted.contains("|| true"));
 }

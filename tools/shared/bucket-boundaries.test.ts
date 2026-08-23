@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from './paths.js'
 
 const BUCKETS = ['shared', 'codegen', 'conformance', 'repo'] as const
+const PUBLISHED_TOOL_PACKAGES = ['cli', 'create-solvapay', 'init'] as const
 
 const RELATIVE_IMPORT = /(?:from|import|export)\s+(?:type\s+)?(?:.+\s+from\s+)?['"](\.[^'"]+)['"]/g
 
@@ -41,6 +42,9 @@ function bucketOf(abs: string): string | undefined {
   if (top !== undefined && (BUCKETS as readonly string[]).includes(top)) {
     return top
   }
+  if (top !== undefined && (PUBLISHED_TOOL_PACKAGES as readonly string[]).includes(top)) {
+    return top
+  }
   return undefined
 }
 
@@ -48,6 +52,12 @@ describe('tools bucket boundaries', () => {
   it('has the four bucket directories', () => {
     for (const bucket of BUCKETS) {
       expect(existsSync(path.join(toolsRoot(), bucket)), bucket).toBe(true)
+    }
+  })
+
+  it('has published tool packages next to the four buckets', () => {
+    for (const name of PUBLISHED_TOOL_PACKAGES) {
+      expect(existsSync(path.join(toolsRoot(), name)), name).toBe(true)
     }
   })
 

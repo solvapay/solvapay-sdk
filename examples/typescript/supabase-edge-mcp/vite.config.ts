@@ -3,7 +3,7 @@ import { defineConfig, type Plugin } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import react from '@vitejs/plugin-react'
 
-const packagesDir = fileURLToPath(new URL('../../../packages', import.meta.url))
+const packagesDir = fileURLToPath(new URL('../../../sdks/typescript', import.meta.url))
 
 const input = process.env.INPUT
 if (!input) {

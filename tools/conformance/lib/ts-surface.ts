@@ -7,6 +7,7 @@
 
 import path from 'node:path'
 import ts from 'typescript'
+import { joinRel, tsPackageRel } from '../../shared/paths.js'
 
 export interface TsSurface {
   portableExports: Set<string>
@@ -116,13 +117,15 @@ function interfaceMethodsOf(
  * points and `SolvaPayClient` methods from `client.ts`.
  */
 export function readTsSurface(repoRoot: string): TsSurface {
-  const serverEntry = path.join(repoRoot, 'packages', 'server', 'src', 'index.ts')
-  const coreEntry = path.join(repoRoot, 'packages', 'core', 'src', 'index.ts')
-  const clientFile = path.join(repoRoot, 'packages', 'server', 'src', 'types', 'client.ts')
-  const factoryFile = path.join(repoRoot, 'packages', 'server', 'src', 'factory.ts')
+  const serverRoot = tsPackageRel('server')
+  const coreRoot = tsPackageRel('core')
+  const serverEntry = joinRel(repoRoot, serverRoot, 'src', 'index.ts')
+  const coreEntry = joinRel(repoRoot, coreRoot, 'src', 'index.ts')
+  const clientFile = joinRel(repoRoot, serverRoot, 'src', 'types', 'client.ts')
+  const factoryFile = joinRel(repoRoot, serverRoot, 'src', 'factory.ts')
 
   const configPath = ts.findConfigFile(
-    path.join(repoRoot, 'packages', 'server'),
+    joinRel(repoRoot, serverRoot),
     ts.sys.fileExists,
     'tsconfig.json',
   )
@@ -153,7 +156,7 @@ export function readTsSurface(repoRoot: string): TsSurface {
     ...interfaceMethodsOf(program, factoryFile, 'PayableFunction'),
   ])
   // `protect` is exposed via createPaywall() return shape in paywall.ts
-  const paywallFile = path.join(repoRoot, 'packages', 'server', 'src', 'paywall.ts')
+  const paywallFile = joinRel(repoRoot, serverRoot, 'src', 'paywall.ts')
   for (const name of interfaceMethodsOf(program, paywallFile, 'SolvaPayPaywall')) {
     facadeMethods.add(name)
   }

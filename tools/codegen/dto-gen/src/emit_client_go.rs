@@ -143,12 +143,12 @@ fn write_split_marshal(
 }
 
 #[derive(Debug, Clone)]
-struct GoParam {
-    name: String,
-    ty: String,
+pub(crate) struct GoParam {
+    pub(crate) name: String,
+    pub(crate) ty: String,
 }
 
-fn go_params(entry: &IrEntryPoint, kind: IrSerializeKind) -> GenResult<Vec<GoParam>> {
+pub(crate) fn go_params(entry: &IrEntryPoint, kind: IrSerializeKind) -> GenResult<Vec<GoParam>> {
     match kind {
         IrSerializeKind::ClientIgnore => Ok(Vec::new()),
         IrSerializeKind::ClientAwait => Ok(vec![GoParam {
@@ -191,7 +191,7 @@ fn format_go_params(params: &[GoParam]) -> String {
     format!(", {}", parts.join(", "))
 }
 
-fn serialize_kind(binding: &IrBindingSymbol) -> GenResult<IrSerializeKind> {
+pub(crate) fn serialize_kind(binding: &IrBindingSymbol) -> GenResult<IrSerializeKind> {
     match &binding.call {
         crate::ir::IrBindingCall::Wrap { serialize, .. } => Ok(*serialize),
         crate::ir::IrBindingCall::Verbatim => Err(GenError::Parse(format!(

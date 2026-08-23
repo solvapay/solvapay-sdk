@@ -1,4 +1,4 @@
-//! CLI: `dto-gen --snapshot <path> --out <dir> [...binding outputs] [--go-bindings-out <dir>] [--go-client-out <file>] [--go-parity-out <file>] [--native-rb-out <file>] [--rb-client-out <file>] [--rb-rbs-out <file>] [--rb-parity-out <file>] [--rs-client-out <file>] [--rs-parity-out <file>]`
+//! CLI: `dto-gen --snapshot <path> --out <dir> [...binding outputs] [--go-bindings-out <dir>] [--go-client-out <file>] [--go-parity-out <file>] [--native-rb-out <file>] [--rb-client-out <file>] [--rb-rbs-out <file>] [--rb-parity-out <file>] [--rb-conformance-out <dir>] [--rs-client-out <file>] [--rs-parity-out <file>]`
 
 use std::env;
 use std::path::PathBuf;
@@ -44,15 +44,20 @@ fn run() -> Result<(), GenError> {
     let mut native_py_out: Option<PathBuf> = None;
     let mut py_stub_out: Option<PathBuf> = None;
     let mut py_parity_out: Option<PathBuf> = None;
+    let mut py_conformance_out: Option<PathBuf> = None;
     let mut native_rb_out: Option<PathBuf> = None;
     let mut rb_client_out: Option<PathBuf> = None;
     let mut rb_rbs_out: Option<PathBuf> = None;
     let mut rb_parity_out: Option<PathBuf> = None;
+    let mut rb_conformance_out: Option<PathBuf> = None;
+    let mut go_conformance_out: Option<PathBuf> = None;
     let mut rs_client_out: Option<PathBuf> = None;
     let mut rs_parity_out: Option<PathBuf> = None;
     let mut go_client_out: Option<PathBuf> = None;
     let mut go_parity_out: Option<PathBuf> = None;
     let mut c_bindings_out: Option<PathBuf> = None;
+    let mut c_conformance_out: Option<PathBuf> = None;
+    let mut c_parity_out: Option<PathBuf> = None;
     let mut fixture_runner_out: Option<PathBuf> = None;
     let mut core_src: Option<PathBuf> = None;
     let mut binding_residue: Option<PathBuf> = None;
@@ -117,6 +122,9 @@ fn run() -> Result<(), GenError> {
             "--py-parity-out" => {
                 py_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--py-conformance-out" => {
+                py_conformance_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "--native-rb-out" => {
                 native_rb_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
@@ -128,6 +136,12 @@ fn run() -> Result<(), GenError> {
             }
             "--rb-parity-out" => {
                 rb_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--rb-conformance-out" => {
+                rb_conformance_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--go-conformance-out" => {
+                go_conformance_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
             "--rs-client-out" => {
                 rs_client_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
@@ -143,6 +157,12 @@ fn run() -> Result<(), GenError> {
             }
             "--c-bindings-out" => {
                 c_bindings_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--c-conformance-out" => {
+                c_conformance_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--c-parity-out" => {
+                c_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
             "--fixture-runner-out" => {
                 fixture_runner_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
@@ -208,15 +228,20 @@ fn run() -> Result<(), GenError> {
             native_py_out: native_py_out.as_deref(),
             py_stub_out: py_stub_out.as_deref(),
             py_parity_out: py_parity_out.as_deref(),
+            py_conformance_out: py_conformance_out.as_deref(),
             native_rb_out: native_rb_out.as_deref(),
             rb_client_out: rb_client_out.as_deref(),
             rb_rbs_out: rb_rbs_out.as_deref(),
             rb_parity_out: rb_parity_out.as_deref(),
+            rb_conformance_out: rb_conformance_out.as_deref(),
+            go_conformance_out: go_conformance_out.as_deref(),
             rs_client_out: rs_client_out.as_deref(),
             rs_parity_out: rs_parity_out.as_deref(),
             go_client_out: go_client_out.as_deref(),
             go_parity_out: go_parity_out.as_deref(),
             c_bindings_out: c_bindings_out.as_deref(),
+            c_conformance_out: c_conformance_out.as_deref(),
+            c_parity_out: c_parity_out.as_deref(),
             fixture_runner_out: fixture_runner_out.as_deref(),
         },
     )

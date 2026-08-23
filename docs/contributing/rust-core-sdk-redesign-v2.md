@@ -367,6 +367,7 @@ core/
 ├─ solvapay-dto/              # generated from OpenAPI snapshot + manifest overlays
 └─ solvapay-transport/        # transport trait, reqwest impl, fetch impl, client shell
 sdks/
+├─ typescript/                # published @solvapay/* packages
 ├─ rust/                      # public facade crate (crates.io); re-exports + ergonomics
 ├─ node-native/               # napi-rs
 ├─ wasm/                      # wasm-bindgen
@@ -376,7 +377,15 @@ sdks/
 └─ capi/                      # optional cbindgen C ABI
 tools/
 ├─ codegen/dto-gen/           # OpenAPI + manifest → IR → TS/Py/Rb/Go/Rust/C outputs
-└─ conformance/fixture-runner/# replays Phase 0 golden fixtures
+├─ conformance/fixture-runner/# replays Phase 0 golden fixtures
+├─ cli/                       # npm package `solvapay` (directory only; name unchanged)
+├─ create-solvapay/
+└─ init/
+internal/
+├─ fuzz/
+├─ demo-services/
+├─ test-utils/
+└─ tsconfig/
 ```
 
 | Crate                | Responsibility                                                                                                                                                                                                    | Dependency discipline                                                                                                                                                                                                                                    |

@@ -172,7 +172,7 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 - That shape of failure is a resolution problem, not a type problem.
   `validate:workspace` resolves `@solvapay/*` through pnpm symlinks into
-  `packages/*`, which lands outside `node_modules` — so Deno stops
+  `sdks/typescript/*`, which lands outside `node_modules` — so Deno stops
   mapping the `./chunk-XYZ.js` specifiers tsup writes into its `.d.ts`
   files onto their `.d.ts` siblings. `deno.workspace.json` must keep
   `"unstable": ["sloppy-imports"]` (extension probing restores the

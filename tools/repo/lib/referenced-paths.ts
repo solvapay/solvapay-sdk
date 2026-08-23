@@ -22,18 +22,18 @@ export type PathReference = {
 }
 
 const IMPORTERS = [
-  'packages/core/vitest.config.ts',
-  'packages/init/vitest.config.ts',
-  'packages/react/vitest.config.ts',
+  'sdks/typescript/core/vitest.config.ts',
+  'tools/init/vitest.config.ts',
+  'sdks/typescript/react/vitest.config.ts',
   'examples/typescript/checkout-demo/vitest.config.ts',
-  'packages/server/scripts/generate-types.ts',
-  'packages/mcp-core/scripts/deno-edge-smoke.mjs',
+  'sdks/typescript/server/scripts/generate-types.ts',
+  'sdks/typescript/mcp-core/scripts/deno-edge-smoke.mjs',
 ] as const
 
 const SKIP_TOKEN = /\$|\{\{/
 
 /** Top-level directories that used to exist and must not be referenced. */
-const DISSOLVED_ROOTS = ['scripts'] as const
+const DISSOLVED_ROOTS = ['scripts', 'packages'] as const
 
 const FROM_IMPORT = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g
 const CARGO_PATH = /path\s*=\s*"([^"]+)"/g

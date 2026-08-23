@@ -7,11 +7,26 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
+
+// compilationCache is process-wide so each New() does not recompile the 1.5MB
+// WASI guest (wazero's ARM64 backend takes several seconds per CompileModule).
+var (
+	compilationCacheOnce sync.Once
+	compilationCache     wazero.CompilationCache
+)
+
+func sharedCompilationCache() wazero.CompilationCache {
+	compilationCacheOnce.Do(func() {
+		compilationCache = wazero.NewCompilationCache()
+	})
+	return compilationCache
+}
 
 // Config controls how a Runtime instantiates guest modules.
 type Config struct {
@@ -36,7 +51,7 @@ func New(ctx context.Context, wasm []byte, cfg Config) (*Runtime, error) {
 		cfg.MaxInstances = 1
 	}
 
-	wz := wazero.NewRuntime(ctx)
+	wz := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithCompilationCache(sharedCompilationCache()))
 	if _, err := wasi_snapshot_preview1.Instantiate(ctx, wz); err != nil {
 		_ = wz.Close(ctx)
 		return nil, fmt.Errorf("solvapay: instantiate wasi: %w", err)

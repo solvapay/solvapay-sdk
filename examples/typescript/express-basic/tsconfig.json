@@ -6,9 +6,9 @@
     "composite": false,
     "skipLibCheck": true,
     "paths": {
-      "@solvapay/core": ["../../../packages/core/dist/index.d.ts"],
-      "@solvapay/demo-services": ["../../../packages/demo-services/dist/index.d.ts"],
-      "@solvapay/server": ["../../../packages/server/dist/index.d.ts"]
+      "@solvapay/core": ["../../../sdks/typescript/core/dist/index.d.ts"],
+      "@solvapay/demo-services": ["../../../internal/demo-services/dist/index.d.ts"],
+      "@solvapay/server": ["../../../sdks/typescript/server/dist/index.d.ts"]
     }
   }
 }

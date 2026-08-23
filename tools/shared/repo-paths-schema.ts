@@ -40,13 +40,27 @@ export const SDK_SURFACE_IDS = [
   'typescript',
 ] as const
 
+export const TS_PACKAGE_IDS = [
+  'auth',
+  'core',
+  'mcp',
+  'mcp-core',
+  'next',
+  'react',
+  'react-supabase',
+  'server',
+] as const
+
+export const TOOL_PACKAGE_IDS = ['cli', 'create-solvapay', 'init'] as const
+
+export const INTERNAL_PACKAGE_IDS = ['demo-services', 'test-utils', 'tsconfig'] as const
+
 export const RepoPathsManifestSchema = z
   .object({
     version: z.literal(1),
     dirs: z.object({
       contract: RelPath,
       core: RelPath,
-      packages: RelPath,
       docs: RelPath,
       examples: RelPath,
       tools: RelPath,
@@ -56,6 +70,8 @@ export const RepoPathsManifestSchema = z
       toolsRepo: RelPath,
       workflows: RelPath,
       changeset: RelPath,
+      sdksTypescript: RelPath,
+      internal: RelPath,
     }),
     sdks: z.object({
       'node-native': RelPath,
@@ -66,6 +82,26 @@ export const RepoPathsManifestSchema = z
       capi: RelPath,
       rust: RelPath,
       typescript: RelPath,
+    }),
+    tsPackages: z.object({
+      auth: RelPath,
+      core: RelPath,
+      mcp: RelPath,
+      'mcp-core': RelPath,
+      next: RelPath,
+      react: RelPath,
+      'react-supabase': RelPath,
+      server: RelPath,
+    }),
+    toolPackages: z.object({
+      cli: RelPath,
+      'create-solvapay': RelPath,
+      init: RelPath,
+    }),
+    internalPackages: z.object({
+      'demo-services': RelPath,
+      'test-utils': RelPath,
+      tsconfig: RelPath,
     }),
     contractInputs: z.object({
       openapiSnapshot: FlaggedPath,
@@ -114,6 +150,9 @@ export const RepoPathsManifestSchema = z
 export type RepoPathsManifest = z.infer<typeof RepoPathsManifestSchema>
 export type GeneratedEntry = z.infer<typeof GeneratedEntry>
 export type SdkSurfaceId = (typeof SDK_SURFACE_IDS)[number]
+export type TsPackageId = (typeof TS_PACKAGE_IDS)[number]
+export type ToolPackageId = (typeof TOOL_PACKAGE_IDS)[number]
+export type InternalPackageId = (typeof INTERNAL_PACKAGE_IDS)[number]
 
 export function parseRepoPathsManifest(raw: unknown): RepoPathsManifest {
   return RepoPathsManifestSchema.parse(raw)

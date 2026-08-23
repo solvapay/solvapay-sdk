@@ -17,6 +17,7 @@
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
+import { joinRel, tsPackageRel } from '../../shared/paths.js'
 
 export const DELEGATION_MARKERS = [
   'dispatchClient',
@@ -286,11 +287,12 @@ export function loadAllowlist(filePath: string): DelegationAllowlist {
  * Build the live export inventory from package source entry points.
  */
 export function buildExportInventory(repoRoot: string): ExportInventoryEntry[] {
-  const serverEntry = path.join(repoRoot, 'packages', 'server', 'src', 'index.ts')
-  const coreEntry = path.join(repoRoot, 'packages', 'core', 'src', 'index.ts')
+  const serverRoot = tsPackageRel('server')
+  const serverEntry = joinRel(repoRoot, serverRoot, 'src', 'index.ts')
+  const coreEntry = joinRel(repoRoot, tsPackageRel('core'), 'src', 'index.ts')
 
   const configPath = ts.findConfigFile(
-    path.join(repoRoot, 'packages', 'server'),
+    joinRel(repoRoot, serverRoot),
     ts.sys.fileExists,
     'tsconfig.json',
   )

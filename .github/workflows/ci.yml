@@ -103,13 +103,13 @@ jobs:
         run: pnpm checks:required
 
       - name: overlays.generated.d.ts tsc gate
-        working-directory: packages/server
+        working-directory: sdks/typescript/server
         run: |
           npx tsc --noEmit --strict --moduleResolution bundler --module esnext --target es2022 \
             src/types/overlays.generated.d.ts
 
       - name: client.generated.d.ts + signature-parity typecheck
-        working-directory: packages/server
+        working-directory: sdks/typescript/server
         run: pnpm test:types
 
       # Deno gate — type-checks examples/typescript/supabase-edge-mcp against
@@ -215,11 +215,11 @@ jobs:
       - name: '@generated header gate'
         run: |
           for f in \
-            packages/server/src/types/overlays.generated.d.ts \
-            packages/server/src/types/client.generated.d.ts \
-            packages/server/src/__generated__/signature-parity.generated.test.ts \
-            packages/server/src/native.ts \
-            packages/server/src/wasm.ts \
+            sdks/typescript/server/src/types/overlays.generated.d.ts \
+            sdks/typescript/server/src/types/client.generated.d.ts \
+            sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts \
+            sdks/typescript/server/src/native.ts \
+            sdks/typescript/server/src/wasm.ts \
             sdks/node-native/src/args.rs \
             sdks/node-native/src/decisions.rs \
             sdks/node-native/src/payload_builders.rs \
@@ -236,6 +236,14 @@ jobs:
             sdks/python/python/solvapay/_native.py \
             sdks/python/python/solvapay/__init__.pyi \
             sdks/python/tests/signature_parity_generated_test.py \
+            sdks/python/tests/contract/__init__.py \
+            sdks/python/tests/contract/clock.py \
+            sdks/python/tests/contract/names.py \
+            sdks/python/tests/contract/fixture_loader.py \
+            sdks/python/tests/contract/compare.py \
+            sdks/python/tests/contract/stub_backend.py \
+            sdks/python/tests/contract/host_adapters.py \
+            sdks/python/tests/contract/dispatch.py \
             sdks/ruby/ext/solvapay/src/args.rs \
             sdks/ruby/ext/solvapay/src/decisions.rs \
             sdks/ruby/ext/solvapay/src/payload_builders.rs \
@@ -246,15 +254,36 @@ jobs:
             sdks/ruby/lib/solvapay/helpers.generated.rb \
             sdks/ruby/sig/solvapay.rbs \
             sdks/ruby/test/signature_parity_generated_test.rb \
+            sdks/ruby/test/contract/clock.rb \
+            sdks/ruby/test/contract/names.rb \
+            sdks/ruby/test/contract/fixture_loader.rb \
+            sdks/ruby/test/contract/compare.rb \
+            sdks/ruby/test/contract/stub_backend.rb \
+            sdks/ruby/test/contract/host_adapters.rb \
+            sdks/ruby/test/contract/dispatch.rb \
             sdks/rust/src/client_generated.rs \
             sdks/rust/src/blocking_generated.rs \
             sdks/rust/tests/signature_parity_generated.rs \
             sdks/go/wasm/src/args.rs \
+            sdks/go/wasm/src/decisions.rs \
+            sdks/go/wasm/src/payload_builders.rs \
             sdks/go/wasm/src/client.rs \
             sdks/go/wasm/src/webhook.rs \
             sdks/go/client_generated.go \
             sdks/go/signature_parity_generated_test.go \
+            sdks/go/internal/contract/clock.go \
+            sdks/go/internal/contract/names.go \
+            sdks/go/internal/contract/fixture_loader.go \
+            sdks/go/internal/contract/compare.go \
+            sdks/go/internal/contract/stub_backend.go \
+            sdks/go/internal/contract/host_adapters.go \
+            sdks/go/internal/contract/dispatch.go \
             sdks/capi/src/dispatch.rs \
+            sdks/capi/ctest/contract/dispatch.c \
+            sdks/capi/ctest/contract/dispatch.h \
+            sdks/capi/ctest/contract/harness.c \
+            sdks/capi/ctest/contract/harness.h \
+            sdks/capi/ctest/signature_parity_generated.c \
             tools/conformance/fixture-runner/src/registry.rs
           do
             if ! grep -q '@generated' "$f"; then
@@ -485,18 +514,22 @@ jobs:
             os: ubuntu-latest
             smoke: true
             full: true
+            contract: true
           - platform: aarch64-linux
             os: ubuntu-24.04-arm
             smoke: false
             full: false
+            contract: true
           - platform: x86_64-darwin
             os: macos-15-intel
             smoke: false
             full: false
+            contract: true
           - platform: arm64-darwin
             os: macos-latest
             smoke: true
             full: false
+            contract: true
     permissions:
       contents: read
     steps:
@@ -528,6 +561,12 @@ jobs:
         run: |
           bundle exec rake compile
           bundle exec ruby -Itest -Ilib test/smoke_test.rb
+
+      # Every leg replays the 550-fixture corpus; the full leg already covers it
+      # via `rake test`, so skip the duplicate there.
+      - name: Ruby contract fixture suite
+        if: matrix.contract && !matrix.full
+        run: bundle exec ruby -Itest -Ilib test/contract_fixtures_test.rb
 
       - name: Full Ruby suite + RBS
         if: matrix.full
@@ -1165,8 +1204,8 @@ jobs:
 
       - name: Deno edge + mcp-core smoke
         run: |
-          deno run --allow-read=. \
-            packages/mcp-core/scripts/deno-edge-smoke.mjs
+          deno run --sloppy-imports --allow-env --allow-read=. \
+            sdks/typescript/mcp-core/scripts/deno-edge-smoke.mjs
 
       - name: Fetch-runtime validation
         run: pnpm validate:fetch-runtime
@@ -1304,13 +1343,48 @@ jobs:
 
       - name: cargo test -p solvapay-c
         # Handle registry is process-global; parallel lib tests race on reuse assertions.
-        run: cargo test -p solvapay-c -- --test-threads=1
+        run: cargo test -p solvapay-c --features fixture-host -- --test-threads=1
 
       - name: cargo clippy -p solvapay-c
-        run: cargo clippy -p solvapay-c --all-targets -- -D warnings
+        run: cargo clippy -p solvapay-c --all-targets --features fixture-host -- -D warnings
+
+      - name: cbindgen fixture-host header drift check
+        run: |
+          cargo build -p solvapay-c --features fixture-host
+          if ! git diff --exit-code -- sdks/capi/include/solvapay.h sdks/capi/include/solvapay_fixture_host.h; then
+            echo "C headers stale — rebuild and commit:" >&2
+            echo "  cargo build -p solvapay-c --features fixture-host" >&2
+            exit 1
+          fi
+          if grep -q 'solvapay_fh_' sdks/capi/include/solvapay.h; then
+            echo "solvapay.h must not export fixture-host symbols" >&2
+            exit 1
+          fi
+          if ! grep -q '@generated' sdks/capi/include/solvapay_fixture_host.h; then
+            echo "missing @generated header: sdks/capi/include/solvapay_fixture_host.h" >&2
+            exit 1
+          fi
+          echo "OK: solvapay_fixture_host.h up to date and @generated"
 
       - name: C smoke (create/call/free + handle misuse)
         run: ./sdks/capi/ctest/run.sh
+
+      - name: C fixture conformance (550)
+        run: ./sdks/capi/ctest/contract.sh
+
+      - name: C signature parity
+        run: |
+          cargo build -p solvapay-c
+          TARGET_DIR="$(cargo metadata --format-version=1 --no-deps | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')"
+          LIB_DIR="${TARGET_DIR}/debug"
+          cc -std=c11 -Wall -Wextra -Werror \
+            -I sdks/capi/include \
+            sdks/capi/ctest/signature_parity_generated.c \
+            -L "$LIB_DIR" \
+            -lsolvapay_c \
+            -lpthread -ldl -lm \
+            -o /tmp/solvapay-c-parity
+          LD_LIBRARY_PATH="$LIB_DIR" /tmp/solvapay-c-parity
 
   # Step 51 — pure-Go + embedded wasm cross-compiles without cgo across the
   # supported GOOS/GOARCH matrix (build + vet only; no off-host runtime).

@@ -35,13 +35,13 @@ checks:
     gate: Platform build matrices; Ruby contract suite; Dynamic-language type-strictness; Per-language examples
   - name: ruby-binding (aarch64-linux)
     jobId: ruby-binding
-    gate: Platform build matrices
+    gate: Platform build matrices; Ruby contract suite
   - name: ruby-binding (x86_64-darwin)
     jobId: ruby-binding
-    gate: Platform build matrices
+    gate: Platform build matrices; Ruby contract suite
   - name: ruby-binding (arm64-darwin)
     jobId: ruby-binding
-    gate: Platform build matrices
+    gate: Platform build matrices; Ruby contract suite
   - name: ruby-binding artifact gate
     jobId: ruby-binding-artifacts
     gate: Pre-publish artifact gate
@@ -167,14 +167,10 @@ checks:
     gate: Browser-WASM symbol audit; Performance regression; Shared fixture conformance
   - name: go-binding (wazero WASI guest)
     jobId: go-binding
-    gate: Platform build matrices; Shared fixture conformance; Per-language examples
-    deferred: go-client-suite-only
+    gate: Shared fixture conformance; Per-language examples
   - name: c-binding (native C ABI)
     jobId: c-binding
     gate: Shared fixture conformance; Fuzzing (C ABI corpus replay); No-unwrap / no-expect deny
-    # Dispatch is the full 36-op generated table; ctest/smoke.c still exercises
-    # one op. Full C fixture replay is Phase 5.
-    deferred: c-abi-smoke-only
   - name: go-crosscompile (linux/amd64)
     jobId: go-crosscompile
     gate: Platform build matrices

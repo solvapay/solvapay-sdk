@@ -303,7 +303,12 @@ fn emitted_surface_matches_handwritten() {
     let mut got = BTreeMap::new();
     extract_types(&emitted, &mut got);
 
-    let want = handwritten_surface(&paths().abs("packages/core/src"));
+    let want = handwritten_surface(
+        &paths()
+            .ts_package("core")
+            .expect("tsPackages.core")
+            .join("src"),
+    );
 
     let got_names: BTreeSet<_> = got.keys().cloned().collect();
     let want_names: BTreeSet<_> = want.keys().cloned().collect();

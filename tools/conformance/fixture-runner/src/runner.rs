@@ -240,11 +240,29 @@ fn execute(
     ))
 }
 
-/// Invokes one binding and deep-compares the result against the fixture expectation.
+/// Deep-compares a binding outcome against a fixture expectation.
 ///
 /// Success expectations deep-compare JSON. Error expectations compare structured
 /// [`ErrorObservation`] fields against [`FixtureErrorExpect`] (message always;
 /// `name` / `status` / `kind` / `code` when present in the fixture).
+///
+/// # Arguments
+///
+/// * `expect` - Success or error expectation from the fixture.
+/// * `outcome` - Binding result or structured SDK / harness error.
+///
+/// # Returns
+///
+/// `Ok(())` when `outcome` matches `expect`; `Err(message)` on harness failure,
+/// unexpected success/error, or field mismatch.
+pub fn assert_expect(
+    expect: &FixtureExpect,
+    outcome: Result<Value, BindingError>,
+) -> Result<(), String> {
+    compare_outcome("host", expect, outcome)
+}
+
+/// Invokes one binding and deep-compares the result against the fixture expectation.
 ///
 /// # Arguments
 ///
@@ -261,40 +279,53 @@ pub(crate) fn run_one(
     input: &FixtureInput,
     binding: &Binding,
 ) -> Result<(), String> {
-    let outcome = (binding.invoke)(input);
+    compare_outcome(binding.id, expect, (binding.invoke)(input))
+}
 
+/// Shared comparison used by [`assert_expect`] and [`run_one`].
+///
+/// # Arguments
+///
+/// * `binding_id` - Label included in mismatch messages.
+/// * `expect` - Success or error expectation from the fixture.
+/// * `outcome` - Binding result or structured SDK / harness error.
+///
+/// # Returns
+///
+/// `Ok(())` when `outcome` matches `expect`; `Err(message)` otherwise.
+fn compare_outcome(
+    binding_id: &str,
+    expect: &FixtureExpect,
+    outcome: Result<Value, BindingError>,
+) -> Result<(), String> {
     match (expect, outcome) {
         (FixtureExpect::Result(expected), Ok(actual)) => {
             if &actual == expected {
                 Ok(())
             } else {
                 Err(format!(
-                    "result mismatch for binding {}\n  expected: {}\n  actual:   {}",
-                    binding.id,
+                    "result mismatch for binding {binding_id}\n  expected: {}\n  actual:   {}",
                     compact_json(expected),
                     compact_json(&actual)
                 ))
             }
         }
         (FixtureExpect::Result(_), Err(BindingError::Sdk(actual))) => Err(format!(
-            "binding {} returned error but fixture expects a result\n  actual error: {}",
-            binding.id,
+            "binding {binding_id} returned error but fixture expects a result\n  actual error: {}",
             format_error_observation(&actual)
         )),
         (FixtureExpect::Result(_), Err(BindingError::Harness(message))) => {
-            Err(format!("binding {} harness error: {message}", binding.id))
+            Err(format!("binding {binding_id} harness error: {message}"))
         }
         (FixtureExpect::Error(_), Ok(actual)) => Err(format!(
-            "binding {} produced a result but fixture expects an error\n  actual: {}",
-            binding.id,
+            "binding {binding_id} produced a result but fixture expects an error\n  actual: {}",
             compact_json(&actual)
         )),
         (FixtureExpect::Error(expected), Err(BindingError::Sdk(actual))) => {
-            compare_expected_error(binding.id, expected, &actual)
+            compare_expected_error(binding_id, expected, &actual)
         }
         (FixtureExpect::Error(_), Err(BindingError::Harness(message))) => Err(format!(
-            "binding {} harness error (fixture expects SDK error): {message}",
-            binding.id
+            "binding {binding_id} harness error (fixture expects SDK error): {message}"
         )),
     }
 }
