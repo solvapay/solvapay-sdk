@@ -79,9 +79,7 @@ pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
              it('paywall cache TTL default matches the frozen limitsCacheTTLMs', async () => {\n\
                 const { SolvaPayPaywall } = await import('../paywall')\n\
                 const paywall = new SolvaPayPaywall({} as never)\n\
-                expect((paywall as { limitsCacheTTL: number }).limitsCacheTTL).toBe(\n\
-                  expectedLimitsCacheTTLMs,\n\
-                )\n\
+                expect(Reflect.get(paywall, 'limitsCacheTTL')).toBe(expectedLimitsCacheTTLMs)\n\
              })\n\
            })\n\n",
     );

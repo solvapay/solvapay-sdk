@@ -51,9 +51,7 @@ attempt: expectedMaxRetries,
 it('paywall cache TTL default matches the frozen limitsCacheTTLMs', async () => {
 const { SolvaPayPaywall } = await import('../paywall')
 const paywall = new SolvaPayPaywall({} as never)
-expect((paywall as { limitsCacheTTL: number }).limitsCacheTTL).toBe(
-expectedLimitsCacheTTLMs,
-)
+expect(Reflect.get(paywall, 'limitsCacheTTL')).toBe(expectedLimitsCacheTTLMs)
 })
 })
 
