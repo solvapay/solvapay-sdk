@@ -123,9 +123,9 @@ Full reference: [Server SDK docs](https://docs.solvapay.com/sdks/typescript/intr
 
 Type generation and integration-test details live in contributor docs — not duplicated here:
 
-- [SDK testing guide](../../docs/contributing/testing.md)
-- [Type generation](../../packages/server/src/types/README.md) — `pnpm --filter @solvapay/server generate:types`
-- [Architecture](../../docs/contributing/architecture.md)
+- [SDK testing guide](../../../docs/contributing/testing.md)
+- [Type generation](./src/types/README.md) — `pnpm --filter @solvapay/server generate:types`
+- [Architecture](../../../docs/contributing/architecture.md)
 
 ## See also
 

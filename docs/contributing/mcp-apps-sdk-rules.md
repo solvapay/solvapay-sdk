@@ -1,6 +1,6 @@
 # SolvaPay MCP Apps SDK — rules
 
-Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `packages/mcp-core`, `packages/mcp`, `packages/mcp-express`, `packages/mcp-fetch`, `packages/react/mcp`, or `examples/typescript/mcp-checkout-app` / `examples/typescript/supabase-edge-mcp`.
+Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `sdks/typescript/mcp-core`, `sdks/typescript/mcp` (including `src/express` and `src/fetch`), `sdks/typescript/react/src/mcp`, or `examples/typescript/mcp-checkout-app` / `examples/typescript/supabase-edge-mcp`.
 
 ## North Star
 

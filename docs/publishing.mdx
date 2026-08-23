@@ -289,7 +289,7 @@ All packages are published with **public access**:
 
 ### CLI release lines
 
-`solvapay`, `@solvapay/init`, and `create-solvapay` evolve on **independent semver lines** (no `linked` entry in `.changeset/config.json`). The SDK fixed-version workflow does not apply to them — bump them via changesets only when the corresponding `packages/cli/`, `packages/init/`, or `packages/create-solvapay/` directory changes.
+`solvapay`, `@solvapay/init`, and `create-solvapay` evolve on **independent semver lines** (no `linked` entry in `.changeset/config.json`). The SDK fixed-version workflow does not apply to them — bump them via changesets only when the corresponding `tools/cli/`, `tools/init/`, or `tools/create-solvapay/` directory changes.
 
 ## SDK internals (maintainers)
 
@@ -300,8 +300,7 @@ working on the SDK itself, not when integrating the SDK in an app.
 
 ```text
 solvapay-sdk/
-├─ examples/
-├─ packages/
+├─ sdks/typescript/        # published @solvapay/* TypeScript packages
 │  ├─ core
 │  ├─ server
 │  ├─ react
@@ -309,13 +308,16 @@ solvapay-sdk/
 │  ├─ auth
 │  ├─ next
 │  ├─ mcp
-│  ├─ mcp-core
+│  └─ mcp-core
+├─ tools/
 │  ├─ cli                  (published as `solvapay`)
 │  ├─ init                 (published as `@solvapay/init`)
-│  ├─ create-solvapay      (published as `create-solvapay`)
+│  └─ create-solvapay      (published as `create-solvapay`)
+├─ internal/
 │  ├─ demo-services
 │  ├─ test-utils
 │  └─ tsconfig
+├─ examples/
 ├─ docs/
 ├─ pnpm-workspace.yaml
 ├─ turbo.json

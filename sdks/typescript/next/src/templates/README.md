@@ -15,7 +15,7 @@ These templates are reference files. Users should copy the code from the documen
 
 For detailed setup instructions, see:
 
-- `packages/next/README.md` - Package documentation
+- `../../README.md` - Package documentation
 
 ## File Location Summary
 

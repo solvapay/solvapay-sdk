@@ -33,8 +33,8 @@ harnesses) is still open and is what Phase 5 addresses.
 | Axis | Where | Size |
 | --- | --- | --- |
 | Binding descriptors | `bindings:` in `contract/manifest/sdk-contract.yaml` (lines 2899–6473) | **3,574 of 6,595 lines (54%)** |
-| Boundary types | `packages/core/src/*.ts` (`customer-sync.ts`, `paywall-decision.ts`, `product-readiness.ts`, `business-details-public.ts`, `renewal.ts`, `usage.ts`, `payment.ts`, `seller-identity.ts`, …) | ~300 lines of TS mirroring Rust structs/enums. **None carry `@generated`.** |
-| Dispatch wrappers | `packages/server/src/native-decisions.ts` (454), `packages/core/src/native-helpers.ts` (365), `native-core.ts` (109), `native-dispatch.ts` (92) | ~1,020 lines |
+| Boundary types | `sdks/typescript/core/src/*.ts` (`customer-sync.ts`, `paywall-decision.ts`, `product-readiness.ts`, `business-details-public.ts`, `renewal.ts`, `usage.ts`, `payment.ts`, `seller-identity.ts`, …) | ~300 lines of TS mirroring Rust structs/enums. **None carry `@generated`.** |
+| Dispatch wrappers | `sdks/typescript/server/src/native-decisions.ts` (454), `sdks/typescript/core/src/native-helpers.ts` (365), `native-core.ts` (109), `native-dispatch.ts` (92) | ~1,020 lines |
 | Fixture-runner registry | `tools/conformance/fixture-runner/src/registry.rs` (`@generated`) + hand-written residue in `bindings.rs` / `bindings/*.rs` | Generated 73-entry table + 41 wrap bodies; 32 verbatim/extra bodies stay hand-written |
 | Per-language replay harnesses | See table below | **4,171 lines** |
 
@@ -226,10 +226,10 @@ typed from `IrBindingSymbol.return_shape` (`"value"`) or coarse
 `Option<&str>`) and joined every Decisions / PayloadBuilders binding to a
 scanned `pub fn`. Client symbols stay in `solvapay-transport` and are skipped.
 
-**Landed:** `emit_core_types_ts` → `packages/core/src/types/boundary.generated.d.ts`
+**Landed:** `emit_core_types_ts` → `sdks/typescript/core/src/types/boundary.generated.d.ts`
 with `boundaryTypesTs:` residue; `emit_core_wrappers_ts` →
 `native-dispatch.ts` / `native-core.ts` / `native-helpers.ts` /
-`packages/server/src/native-decisions.ts` (IR wrappers + chrome install gate
+`sdks/typescript/server/src/native-decisions.ts` (IR wrappers + chrome install gate
 and server paywall/retry postamble). `tsWrapper:` on binding symbols holds
 generics, `null`→`undefined` post-process, and the payment-intent `accountId`
 spread.
@@ -414,10 +414,10 @@ survives as the language-neutral interchange every other runner consumes.
    `fetch` bodies). `tools/conformance/lib/superseded-server-ts-check.ts` currently
    reports `OK`. There is no TypeScript oracle left:
 
-   - `packages/server/src/edge.ts` calls `verifyWebhookWasm`, which loads the
+   - `sdks/typescript/server/src/edge.ts` calls `verifyWebhookWasm`, which loads the
      binding, injects `Math.floor(Date.now()/1000)`, calls the **sync** Rust
      `verifyWebhook` export, and `JSON.parse`s the result. Zero `crypto.subtle`
-     / `createHmac` / `timingSafeEqual` in any `packages/**/src/**` file.
+     / `createHmac` / `timingSafeEqual` in any `sdks/typescript/**/src/**` file.
    - The client wire suite also delegates: `tools/conformance/lib/fixture-harness.ts`
      loads the real `@solvapay/server-wasm` `WasmClient` and patches only
      `globalThis.fetch`. URL, method, headers, and body are built by Rust

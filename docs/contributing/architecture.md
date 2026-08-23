@@ -112,6 +112,7 @@ solvapay-sdk/
 ├─ core/                # Semantic crates (published to crates.io except as noted)
 │  ├─ solvapay-core/       # pure logic; serde/hmac only; no HTTP, no tokio
 │  ├─ solvapay-dto/        # generated wire models + SDK overlays
+│  ├─ solvapay-export/     # proc-macro marker scanned by dto-gen
 │  └─ solvapay-transport/  # transport trait, reqwest/fetch impls, client shell
 ├─ tools/
 │  ├─ shared/           # layout loaders + `repo-paths` crate
@@ -141,6 +142,7 @@ solvapay-sdk/
 | -------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | `solvapay-core`      | Validation, retry policy, webhook verify, helper decision cores, paywall, business/credit/seller logic, MCP payload builders, error model | `serde`, `hmac`/`sha2`, `subtle`. **No** `reqwest`, **no** `tokio`, **no** `wasm-bindgen` — this is what keeps browser WASM small |
 | `solvapay-dto`       | Generated wire models + SDK overlays                                                                     | `serde` only; generated — never hand-edited                                    |
+| `solvapay-export`    | Inert `#[solvapay_export]` marker scanned by dto-gen                                                     | Proc-macro crate; no runtime logic                                             |
 | `solvapay-transport` | `Transport` trait, `reqwest`/rustls (native) + Fetch (wasm32) impls, client shell, all 36 methods       | Depends on core + dto; async but runtime-agnostic                             |
 | `solvapay`           | Public crates.io facade: idiomatic re-exports + `blocking` feature                                       | Depends on transport + core; ergonomics only, no new logic                    |
 
@@ -152,7 +154,7 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 **Pure logic — `solvapay-core`:**
 
 - **Webhook verify** → `core/solvapay-core/src/webhook.rs` (+ shared
-  `hmac_util.rs`) ← `packages/server/src/{webhook-native,webhook-wasm}.ts`
+  `hmac_util.rs`) ← `sdks/typescript/server/src/{webhook-native,webhook-wasm}.ts`
 - **Retry policy** (schedules, not sleeps) → `.../src/retry.rs`
 - **Paywall** → `paywall_state.rs`, `paywall_gate.rs`, `paywall_decision.rs`,
   `paywall_payload.rs`
@@ -173,9 +175,9 @@ headers, idempotency, and retry, with all 36 client methods →
 
 **TypeScript delegation glue:**
 
-- Node → `packages/server/src/native.ts` (+ `native-decisions.ts`,
+- Node → `sdks/typescript/server/src/native.ts` (+ `native-decisions.ts`,
   `native-registry.ts`) over `sdks/node-native/src/*` (napi-rs)
-- Edge/browser → `packages/server/src/wasm.ts` over `sdks/wasm`
+- Edge/browser → `sdks/typescript/server/src/wasm.ts` over `sdks/wasm`
   (wasm-bindgen)
 - `@solvapay/core` is Rust-backed (its helpers delegate to the core via the
   same bindings)

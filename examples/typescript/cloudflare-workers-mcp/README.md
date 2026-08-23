@@ -216,6 +216,6 @@ The widget iframe payload (`mcp-app.html`, `src/mcp-app.tsx`, `vite.config.ts`) 
 
 This example lives in the [SolvaPay SDK monorepo](https://github.com/solvapay/solvapay-sdk). File issues, PRs, and `@preview` feedback there. The SDK surfaces it relies on are:
 
-- [`@solvapay/server`](../../../packages/server/README.md) — merchant client + paywall runtime
-- [`@solvapay/mcp`](../../../packages/mcp/README.md) — MCP toolbox; imported at the `./fetch` subpath
-- [`@solvapay/mcp-core`](../../../packages/mcp-core/README.md) — framework-neutral descriptor builder (transitive; rarely imported directly)
+- [`@solvapay/server`](../../../sdks/typescript/server/README.md) — merchant client + paywall runtime
+- [`@solvapay/mcp`](../../../sdks/typescript/mcp/README.md) — MCP toolbox; imported at the `./fetch` subpath
+- [`@solvapay/mcp-core`](../../../sdks/typescript/mcp-core/README.md) — framework-neutral descriptor builder (transitive; rarely imported directly)

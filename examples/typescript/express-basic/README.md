@@ -593,7 +593,7 @@ The test suite (`api.test.ts`) verifies:
 
 ### SDK Integration Tests
 
-For comprehensive backend integration tests of the SolvaPay SDK itself, see the [Server SDK tests](../../../packages/server/__tests__/).
+For comprehensive backend integration tests of the SolvaPay SDK itself, see the [Server SDK tests](../../../sdks/typescript/server/__tests__/).
 
 ## Related Documentation
 
@@ -612,8 +612,8 @@ For comprehensive backend integration tests of the SolvaPay SDK itself, see the 
 
 ### API Reference
 
-- [Server SDK API Reference](../../../packages/server/README.md) - Complete API documentation
-- [Server SDK README](../../../packages/server/README.md) - Package documentation
+- [Server SDK API Reference](../../../sdks/typescript/server/README.md) - Complete API documentation
+- [Server SDK README](../../../sdks/typescript/server/README.md) - Package documentation
 
 ### Additional Resources
 

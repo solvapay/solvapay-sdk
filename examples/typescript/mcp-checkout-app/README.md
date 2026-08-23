@@ -135,7 +135,7 @@ sequenceDiagram
    `resourceDomains` / `connectDomains` / `frameDomains` — hosts that
    implement the spec propagate these to the iframe's CSP.
 2. The bundle renders `<McpApp app={app} />` from
-   [`@solvapay/react/mcp`](../../../packages/react/src/mcp). `McpApp` runs
+   [`@solvapay/react/mcp`](../../../sdks/typescript/react/src/mcp). `McpApp` runs
    `app.connect()`, calls the matching intent tool (`upgrade`,
    `manage_account`, `topup`, `check_usage`, or `activate_plan`), seeds
    the provider's module caches via `seedMcpCaches(initial, config)`,

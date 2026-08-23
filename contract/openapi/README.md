@@ -7,7 +7,7 @@ Checked-in OpenAPI inputs for the Rust core SDK migration (Phase 0 / Step 1).
 | `sdk-v1.source.json`   | Recorded backend OpenAPI **restricted to `/v1/sdk/*` paths**, schemas intact (unpruned). Offline CI input.  |
 | `sdk-v1.snapshot.json` | Derived deliverable: path-filtered, schemas pruned, dangling `$ref` placeholders added, keys canonicalized. |
 
-`/v1/sdk/agents` is excluded (parity with `packages/server/scripts/generate-types.ts`). That exclusion is currently a no-op if the route is absent upstream.
+`/v1/sdk/agents` is excluded (parity with `sdks/typescript/server/scripts/generate-types.ts`). That exclusion is currently a no-op if the route is absent upstream.
 
 ## Refresh (dev)
 
@@ -36,7 +36,7 @@ Derives the snapshot from the committed source, diffs against the committed snap
 
 ## Shared pipeline
 
-Filter / prune / placeholder / canonicalize live in `tools/codegen/lib/openapi-pipeline.ts`. Both `tools/codegen/snapshot-openapi.ts` and `packages/server/scripts/generate-types.ts` import that module so the two paths cannot drift.
+Filter / prune / placeholder / canonicalize live in `tools/codegen/lib/openapi-pipeline.ts`. Both `tools/codegen/snapshot-openapi.ts` and `sdks/typescript/server/scripts/generate-types.ts` import that module so the two paths cannot drift.
 
 ## Backend artifact handoff
 

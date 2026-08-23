@@ -42,7 +42,7 @@ Need full layout control? Compose the SDK primitives directly:
 - `<ActivationFlow>` — styled usage-based activation state machine
 - `<AmountPicker>` — quick-amount pills + custom input + credit estimate
 
-Same behavior, you own the surrounding layout. See the [SDK README](../../../packages/react/README.md#custom-composition-pick-the-primitives-you-need) for slot examples.
+Same behavior, you own the surrounding layout. See the [SDK README](../../../sdks/typescript/react/README.md#custom-composition-pick-the-primitives-you-need) for slot examples.
 
 ## Custom activation UI
 
@@ -156,7 +156,7 @@ ngrok. Use the **tunnel URL** for Google/Supabase auth so the OAuth callback
 lands back on the same origin. For Next-only without a tunnel: `pnpm dev:local`.
 
 **SDK package changes:** checkout-demo imports `@solvapay/react` from the built
-`packages/react/dist` bundle (not TypeScript source). After editing SDK primitives
+`sdks/typescript/react/dist` bundle (not TypeScript source). After editing SDK primitives
 or components, rebuild before the demo picks up UI changes:
 
 ```bash
@@ -422,7 +422,7 @@ import { SolvaPayProvider } from '@solvapay/react'
 ```
 
 To override individual methods, pass a custom `transport` on the config. See
-[`@solvapay/react` README](../../../packages/react/README.md#fully-custom-implementation).
+[`@solvapay/react` README](../../../sdks/typescript/react/README.md#fully-custom-implementation).
 
 ### 2. Authentication Setup
 
@@ -730,7 +730,7 @@ All components accept any styling approach:
 
 Need full control over the surrounding layout? Compose `<PlanSelector>`,
 `<PaymentForm>`, and `<ActivationFlow>` directly. See the
-[SDK README](../../../packages/react/README.md#custom-composition-pick-the-primitives-you-need)
+[SDK README](../../../sdks/typescript/react/README.md#custom-composition-pick-the-primitives-you-need)
 for slot usage and render-prop escape hatches.
 
 ## Best Practices
@@ -746,7 +746,7 @@ Always wrap your app with `SolvaPayProvider` at the root level:
 
 Pass a custom transport only when you need to override the default HTTP
 routing (e.g. MCP App). See
-[`@solvapay/react` README](../../../packages/react/README.md#fully-custom-implementation).
+[`@solvapay/react` README](../../../sdks/typescript/react/README.md#fully-custom-implementation).
 
 ### 2. Error Handling
 
@@ -950,9 +950,9 @@ This error occurs when Google doesn't recognize the redirect URI that Supabase i
 
 ### API Reference
 
-- [React SDK API Reference](../../../packages/react/README.md) - Complete React component documentation
-- [Server SDK API Reference](../../../packages/server/README.md) - Backend API documentation
-- [Next.js SDK API Reference](../../../packages/next/README.md) - Next.js helper documentation
+- [React SDK API Reference](../../../sdks/typescript/react/README.md) - Complete React component documentation
+- [Server SDK API Reference](../../../sdks/typescript/server/README.md) - Backend API documentation
+- [Next.js SDK API Reference](../../../sdks/typescript/next/README.md) - Next.js helper documentation
 
 ### Additional Resources
 

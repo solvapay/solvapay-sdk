@@ -10,12 +10,12 @@ From the monorepo root:
 pnpm gen
 ```
 
-That runs `dto-gen` with the canonical flag set in [`scripts/gen.ts`](../../../scripts/gen.ts)
+That runs `dto-gen` with the canonical flag set in [`tools/codegen/gen.ts`](../../tools/codegen/gen.ts)
 (OpenAPI snapshot + contract manifest → this crate plus all language surfaces).
 
 Drift gate: `pnpm gen:check` (also used in CI).
 
-Full contributor runbook: [`docs/contributing/sdk-codegen.md`](../../../docs/contributing/sdk-codegen.md).
+Full contributor runbook: [`docs/contributing/sdk-codegen.md`](../../docs/contributing/sdk-codegen.md).
 
 ## Consumers
 

@@ -148,4 +148,4 @@ Before opening a PR, make sure:
 - [`sdk-codegen.md`](./sdk-codegen.md) for OpenAPI → five-surface regeneration
 - [`error-handling.md`](./error-handling.md) for the cross-language error model
 - `examples/` for runnable integration references
-- `packages/*/README.md` for package-specific usage constraints
+- `sdks/typescript/*/README.md` for package-specific usage constraints

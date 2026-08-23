@@ -2,9 +2,9 @@
 
 Full SolvaPay MCP server running on [**Supabase Edge Functions**](https://supabase.com/docs/guides/functions). The same paywalled demo toolbox that ships in [`../mcp-checkout-app`](../mcp-checkout-app) — deployed at the network edge, no Node server, no Express middleware.
 
-- Unified MCP + HTTP factory — [`createSolvaPayMcpFetch`](../../../packages/mcp/src/fetch/createSolvaPayMcpFetch.ts) from the `@solvapay/mcp/fetch` subpath (Web-standards `Request`/`Response` handler with the full SolvaPay tool surface + OAuth bridge baked in)
-- Underlying MCP server — built via [`buildSolvaPayMcpServer`](../../../packages/mcp/src/internal/buildMcpServer.ts) (framework-neutral descriptors + payable handler)
-- OAuth bridge — the fetch-first `/oauth/{register,authorize,token,revoke}` routes composed into the unified factory by [`createOAuthFetchRouter`](../../../packages/mcp/src/fetch/oauth-bridge.ts)
+- Unified MCP + HTTP factory — [`createSolvaPayMcpFetch`](../../../sdks/typescript/mcp/src/fetch/createSolvaPayMcpFetch.ts) from the `@solvapay/mcp/fetch` subpath (Web-standards `Request`/`Response` handler with the full SolvaPay tool surface + OAuth bridge baked in)
+- Underlying MCP server — built via [`buildSolvaPayMcpServer`](../../../sdks/typescript/mcp/src/internal/buildMcpServer.ts) (framework-neutral descriptors + payable handler)
+- OAuth bridge — the fetch-first `/oauth/{register,authorize,token,revoke}` routes composed into the unified factory by [`createOAuthFetchRouter`](../../../sdks/typescript/mcp/src/fetch/oauth-bridge.ts)
 - Paywalled tools — [`demo-tools.ts`](./supabase/functions/mcp/demo-tools.ts), the two Goldberg stock-predictor Oracle tools (trimmed from `mcp-checkout-app`'s full toolbox)
 
 > **Sibling example:** [`../cloudflare-workers-mcp/`](../cloudflare-workers-mcp/) is the same paywalled toolbox on the Cloudflare Workers runtime. The widget iframe source (`mcp-app.html`, `src/mcp-app.tsx`, `vite.config.ts`, `demo-tools.ts` tool handlers) is byte-for-byte duplicated between the two until we extract a shared package. **Sync edits in both places** if you change the widget or the demo tools.
@@ -178,14 +178,14 @@ The function source uses bare specifiers only (`import … from '@solvapay/mcp'`
 | ---------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------- |
 | `supabase/functions/mcp/deno.json`       | production `supabase functions deploy`         | `npm:@solvapay/mcp@preview` — the deployed function must consume published packages |
 | `supabase/functions/mcp/deno.local.json` | `pnpm serve:local` + the post-publish CI check  | same `@preview` pins                                                             |
-| `deno.workspace.json`                    | `pnpm validate:workspace` — the blocking gate  | workspace source under `packages/*`                                              |
+| `deno.workspace.json`                    | `pnpm validate:workspace` — the blocking gate  | workspace source under `sdks/typescript/*`                                              |
 
-`deno.local.json` stays on `@preview` for `serve:local` because the Supabase CLI runs the function inside a Docker edge runtime that mounts only `supabase/functions` — symlinks escaping to `../../../../packages/*` are unreachable from inside the container.
+`deno.local.json` stays on `@preview` for `serve:local` because the Supabase CLI runs the function inside a Docker edge runtime that mounts only `supabase/functions` — symlinks escaping to `../../../../sdks/typescript/*` are unreachable from inside the container.
 
 `deno.workspace.json` gets workspace source by dropping the `@preview` suffix while keeping the `npm:` prefix, under `"nodeModulesDir": "manual"`. Deno then resolves those specifiers through the pnpm symlinks in `node_modules/@solvapay/*` and, because it goes through node-module resolution, honours each package's `exports` map — pairing `dist/*.js` with its sibling `dist/*.d.ts`. Three things about it are load-bearing:
 
 - **It lives at the example root, not beside the other two.** `nodeModulesDir: "manual"` makes Deno look for `node_modules` next to the config file; only at the example root does it find the pnpm-populated tree.
-- **`"unstable": ["sloppy-imports"]`.** Resolving through the symlink lands on the real `packages/*/dist` path, which Deno no longer treats as being inside `node_modules` — so it stops mapping the `./chunk-XYZ.js` specifiers that tsup writes into its `.d.ts` files onto their `.d.ts` siblings. Extension probing restores that. Without it the gate reports a cascade of spurious `TS2307`/`TS7031` errors instead of real ones.
+- **`"unstable": ["sloppy-imports"]`.** Resolving through the symlink lands on the real `sdks/typescript/*/dist` path, which Deno no longer treats as being inside `node_modules` — so it stops mapping the `./chunk-XYZ.js` specifiers that tsup writes into its `.d.ts` files onto their `.d.ts` siblings. Extension probing restores that. Without it the gate reports a cascade of spurious `TS2307`/`TS7031` errors instead of real ones.
 - **Do not map to `dist/index.js` file paths instead.** That bypasses `exports` and orphans the `.d.ts`, which is the variant that produced the implicit-any cascade the first time this was attempted.
 
 `manual` also means Deno installs nothing, so every package in the type graph must be a real dependency. That is why `package.json` declares `@modelcontextprotocol/core` and `@modelcontextprotocol/server` (`demo-tools.ts` genuinely imports the latter) and `openai` — the last is not used by any source file here; it is referenced by the type declarations behind `import 'jsr:@supabase/functions-js/edge-runtime.d.ts'`. Under the `@preview` configs Deno fetched these on demand and the gap went unnoticed.
@@ -203,7 +203,7 @@ Because the workspace gate reads the branch rather than a dist-tag, a feature br
 | `/mcp` (or whatever you set `mcpPath` to)                                                                               | JSON-RPC MCP transport. Bearer-authenticated; 401 + `WWW-Authenticate` challenge on missing/invalid token.                                                        |
 | `OPTIONS *`                                                                                                             | CORS preflight. Mirrors `Origin` only when it matches `/^(cursor                                                                                                  | vscode | vscode-webview | claude):\/\/.+$/` — native-scheme clients only. |
 
-See [`packages/mcp-fetch/src/handler.ts`](../../../packages/mcp-fetch/src/handler.ts) for the exact implementation.
+See [`sdks/typescript/mcp/src/fetch/handler.ts`](../../../sdks/typescript/mcp/src/fetch/handler.ts) for the exact implementation.
 
 ## Trying the demo tools
 
@@ -236,7 +236,7 @@ The workspace gate is the blocking one everywhere, because it checks the code th
 
 ## See also
 
-- [`packages/mcp/src/fetch/`](../../../packages/mcp/src/fetch/) — full fetch-first handler reference (the `@solvapay/mcp/fetch` subpath export)
-- [`packages/mcp/README.md`](../../../packages/mcp/README.md) — the `@modelcontextprotocol/server` adapter used inside the handler
+- [`sdks/typescript/mcp/src/fetch/`](../../../sdks/typescript/mcp/src/fetch/) — full fetch-first handler reference (the `@solvapay/mcp/fetch` subpath export)
+- [`sdks/typescript/mcp/README.md`](../../../sdks/typescript/mcp/README.md) — the `@modelcontextprotocol/server` adapter used inside the handler
 - [`examples/typescript/mcp-checkout-app/README.md`](../mcp-checkout-app/README.md) — same toolbox, Express transport
 - [`examples/typescript/supabase-edge/README.md`](../supabase-edge/README.md) — checkout REST functions (the non-MCP companion)

@@ -58,22 +58,22 @@ The SDK ships **10 published npm packages**:
 
 | Package                                                 | Purpose                                      |
 | ------------------------------------------------------- | -------------------------------------------- |
-| [`solvapay`](./packages/cli)                            | CLI — `npx solvapay init` for existing repos |
-| [`create-solvapay`](./packages/create-solvapay)         | Scaffold new MCP apps                        |
-| [`@solvapay/server`](./packages/server)                 | Paywall, API client, webhooks (Node + Edge)  |
-| [`@solvapay/react`](./packages/react)                   | Headless checkout UI and hooks               |
-| [`@solvapay/next`](./packages/next)                     | Next.js API route helpers                    |
-| [`@solvapay/mcp`](./packages/mcp)                       | Official MCP SDK adapter                     |
-| [`@solvapay/mcp-core`](./packages/mcp-core)             | Framework-neutral MCP contracts              |
-| [`@solvapay/auth`](./packages/auth)                     | Auth adapters                                |
-| [`@solvapay/react-supabase`](./packages/react-supabase) | Supabase auth for React                      |
-| [`@solvapay/core`](./packages/core)                     | Shared types and utilities                   |
+| [`solvapay`](./tools/cli)                                | CLI — `npx solvapay init` for existing repos |
+| [`create-solvapay`](./tools/create-solvapay)             | Scaffold new MCP apps                        |
+| [`@solvapay/server`](./sdks/typescript/server)          | Paywall, API client, webhooks (Node + Edge)  |
+| [`@solvapay/react`](./sdks/typescript/react)            | Headless checkout UI and hooks               |
+| [`@solvapay/next`](./sdks/typescript/next)              | Next.js API route helpers                    |
+| [`@solvapay/mcp`](./sdks/typescript/mcp)                | Official MCP SDK adapter                     |
+| [`@solvapay/mcp-core`](./sdks/typescript/mcp-core)      | Framework-neutral MCP contracts              |
+| [`@solvapay/auth`](./sdks/typescript/auth)              | Auth adapters                                |
+| [`@solvapay/react-supabase`](./sdks/typescript/react-supabase) | Supabase auth for React               |
+| [`@solvapay/core`](./sdks/typescript/core)              | Shared types and utilities                   |
 
-Each package README is the npm landing page for that surface. Under the hood, shared SDK behavior lives in a Rust semantic core (in the `rust/` workspace) that every language surface delegates to; see [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) for the as-built architecture (Rust core + five language surfaces).
+Each package README is the npm landing page for that surface. Under the hood, shared SDK behavior lives in a Rust semantic core (in the `core/` crates) that every language surface delegates to; see [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) for the as-built architecture (Rust core + five language surfaces).
 
 ## Usage at a glance
 
-**Server paywall** — see [`@solvapay/server`](./packages/server/README.md):
+**Server paywall** — see [`@solvapay/server`](./sdks/typescript/server/README.md):
 
 ```typescript
 import { createSolvaPay } from '@solvapay/server'
@@ -85,7 +85,7 @@ app.post('/tasks', payable.http(handler)) // Express
 export const POST = payable.next(handler) // Next.js App Router
 ```
 
-**Client checkout** — see [`@solvapay/react`](./packages/react/README.md):
+**Client checkout** — see [`@solvapay/react`](./sdks/typescript/react/README.md):
 
 ```tsx
 import { SolvaPayProvider, CheckoutLayout } from '@solvapay/react'
@@ -94,9 +94,9 @@ import { SolvaPayProvider, CheckoutLayout } from '@solvapay/react'
 </SolvaPayProvider>
 ```
 
-**Next.js API routes** — see [`@solvapay/next`](./packages/next/README.md) (not duplicated here).
+**Next.js API routes** — see [`@solvapay/next`](./sdks/typescript/next/README.md) (not duplicated here).
 
-**Supabase Edge** — one-liner handlers via [`@solvapay/server/fetch`](./packages/server/README.md#web-standards-runtimes--solvapayserverfetch-subpath).
+**Supabase Edge** — one-liner handlers via [`@solvapay/server/fetch`](./sdks/typescript/server/README.md#web-standards-runtimes--solvapayserverfetch-subpath).
 
 ## Examples
 

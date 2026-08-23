@@ -670,9 +670,9 @@ const handleManagePurchase = async () => {
 
 ### API Reference
 
-- [React SDK API Reference](../../../packages/react/README.md) - Complete React component documentation
-- [Server SDK API Reference](../../../packages/server/README.md) - Backend API documentation
-- [Next.js SDK API Reference](../../../packages/next/README.md) - Next.js helper documentation
+- [React SDK API Reference](../../../sdks/typescript/react/README.md) - Complete React component documentation
+- [Server SDK API Reference](../../../sdks/typescript/server/README.md) - Backend API documentation
+- [Next.js SDK API Reference](../../../sdks/typescript/next/README.md) - Next.js helper documentation
 
 ### Additional Resources
 
