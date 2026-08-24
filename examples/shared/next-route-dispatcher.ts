@@ -17,30 +17,45 @@ import {
   checkPurchase,
   createPaymentIntent,
   createTopupPaymentIntent,
+  disableAutoRecharge,
+  getAutoRecharge,
   getCustomerBalance,
   getMerchant,
+  getPaymentMethod,
   getProduct,
   listPlans,
   processPaymentIntent,
+  processTopupPaymentIntent,
   reactivateRenewal,
+  saveAutoRecharge,
   syncCustomer,
+  attachBusinessDetails,
 } from '@solvapay/next'
 import type { SolvaPay } from '@solvapay/server'
 
-type Handler = (request: NextRequest) => Promise<NextResponse>
+/** Route handlers accept the web-standard `Request` so `@solvapay/next` helpers compiled against a different Next.js patch version stay assignable. */
+type Handler = (request: Request) => Promise<Response>
 
 export type SolvaPayRouteHandlers = {
   GET: (
-    request: NextRequest,
+    request: Request,
     ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<NextResponse>
+  ) => Promise<Response>
   POST: (
+    request: Request,
+    ctx: { params: Promise<{ solvapay: string[] }> },
+  ) => Promise<Response>
+  PUT: (
     request: NextRequest,
     ctx: { params: Promise<{ solvapay: string[] }> },
-  ) => Promise<NextResponse>
+  ) => Promise<Response>
+  DELETE: (
+    request: NextRequest,
+    ctx: { params: Promise<{ solvapay: string[] }> },
+  ) => Promise<Response>
 }
 
-async function bodyJson(request: NextRequest): Promise<Record<string, unknown>> {
+async function bodyJson(request: Request): Promise<Record<string, unknown>> {
   try {
     return (await request.json()) as Record<string, unknown>
   } catch {
@@ -48,9 +63,7 @@ async function bodyJson(request: NextRequest): Promise<Record<string, unknown>> 
   }
 }
 
-async function resolveRouteKey(
-  params: Promise<{ solvapay: string[] }>,
-): Promise<string | null> {
+async function resolveRouteKey(params: Promise<{ solvapay: string[] }>): Promise<string | null> {
   const resolved = await params
   return resolved.solvapay?.[0] ?? null
 }
@@ -68,10 +81,12 @@ async function resolveRouteKey(
 export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHandlers {
   const getRoutes: Record<string, Handler> = {
     'list-plans': request => listPlans(request, { solvaPay }),
-    'merchant': request => getMerchant(request, { solvaPay }),
+    merchant: request => getMerchant(request, { solvaPay }),
     'get-product': request => getProduct(request, { solvaPay }),
     'customer-balance': request => getCustomerBalance(request, { solvaPay }),
     'check-purchase': request => checkPurchase(request, { solvaPay }),
+    'payment-method': request => getPaymentMethod(request, { solvaPay }),
+    'auto-recharge': request => getAutoRecharge(request, { solvaPay }),
   }
 
   const postRoutes: Record<string, Handler> = {
@@ -112,6 +127,35 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
         { solvaPay },
       )
     },
+    'process-topup-payment': async request => {
+      const body = await bodyJson(request)
+      return processTopupPaymentIntent(
+        request,
+        { paymentIntentId: String(body.paymentIntentId) },
+        { solvaPay },
+      )
+    },
+    'attach-business-details': async request => {
+      const body = await bodyJson(request)
+      const taxIdTypeRaw = body.taxIdType
+      const taxIdType =
+        taxIdTypeRaw === 'eu_vat' || taxIdTypeRaw === 'gb_vat' || taxIdTypeRaw === 'us_ein'
+          ? taxIdTypeRaw
+          : undefined
+      return attachBusinessDetails(
+        request,
+        {
+          paymentIntentId: String(body.paymentIntentId),
+          isBusiness: Boolean(body.isBusiness),
+          ...(body.businessName ? { businessName: String(body.businessName) } : {}),
+          ...(body.country ? { country: String(body.country) } : {}),
+          ...(body.taxId ? { taxId: String(body.taxId) } : {}),
+          ...(taxIdType ? { taxIdType } : {}),
+          ...(body.customerRef ? { customerRef: String(body.customerRef) } : {}),
+        },
+        { solvaPay },
+      )
+    },
     'activate-plan': async request => {
       const body = await bodyJson(request)
       return activatePlan(
@@ -133,18 +177,22 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
     },
     'reactivate-renewal': async request => {
       const body = await bodyJson(request)
-      return reactivateRenewal(
-        request,
-        { purchaseRef: String(body.purchaseRef) },
-        { solvaPay },
-      )
+      return reactivateRenewal(request, { purchaseRef: String(body.purchaseRef) }, { solvaPay })
     },
   }
 
+  const putRoutes: Record<string, Handler> = {
+    'auto-recharge': request => saveAutoRecharge(request, { solvaPay }),
+  }
+
+  const deleteRoutes: Record<string, Handler> = {
+    'auto-recharge': request => disableAutoRecharge(request, { solvaPay }),
+  }
+
   async function GET(
-    request: NextRequest,
+    request: Request,
     { params }: { params: Promise<{ solvapay: string[] }> },
-  ): Promise<NextResponse> {
+  ): Promise<Response> {
     const key = await resolveRouteKey(params)
     const handler = key ? getRoutes[key] : undefined
     if (!handler) {
@@ -154,9 +202,9 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
   }
 
   async function POST(
-    request: NextRequest,
+    request: Request,
     { params }: { params: Promise<{ solvapay: string[] }> },
-  ): Promise<NextResponse> {
+  ): Promise<Response> {
     const key = await resolveRouteKey(params)
     const handler = key ? postRoutes[key] : undefined
     if (!handler) {
@@ -165,5 +213,29 @@ export function createSolvaPayRouteHandlers(solvaPay: SolvaPay): SolvaPayRouteHa
     return handler(request)
   }
 
-  return { GET, POST }
+  async function PUT(
+    request: NextRequest,
+    { params }: { params: Promise<{ solvapay: string[] }> },
+  ): Promise<Response> {
+    const key = await resolveRouteKey(params)
+    const handler = key ? putRoutes[key] : undefined
+    if (!handler) {
+      return NextResponse.json({ error: `Unknown PUT route: ${key}` }, { status: 404 })
+    }
+    return handler(request)
+  }
+
+  async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ solvapay: string[] }> },
+  ): Promise<Response> {
+    const key = await resolveRouteKey(params)
+    const handler = key ? deleteRoutes[key] : undefined
+    if (!handler) {
+      return NextResponse.json({ error: `Unknown DELETE route: ${key}` }, { status: 404 })
+    }
+    return handler(request)
+  }
+
+  return { GET, POST, PUT, DELETE }
 }

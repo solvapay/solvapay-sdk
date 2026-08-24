@@ -1,5 +1,34 @@
 # create-solvapay
 
+## 0.6.0
+
+### Minor Changes
+
+- 12f446b: The `mcp` scaffold now generates an SDK v2 project: templates depend on `@modelcontextprotocol/core` and `@modelcontextprotocol/server` instead of `@modelcontextprotocol/sdk`, the generated worker builds its server through a per-request factory, and the pinned `@solvapay/mcp` runtime dependency moves to the `0.3.x` line.
+
+### Patch Changes
+
+- 1033383: Reject paid usage-based plans as the product default. Only free recurring or free usage-based plans can be auto-assigned; a per-unit charge now requires explicit customer activation.
+- Updated dependencies [3a310eb]
+  - @solvapay/init@0.4.0
+
+## 0.5.0
+
+### Minor Changes
+
+- 2de7fd8: Add Auth0 identity adapters across `@solvapay/auth`, `@solvapay/react`, and `@solvapay/next` (`createAuth0AuthMiddleware`), plus a `next-auth0` scaffolder template. The Next.js middleware now strips client-supplied identity headers (`x-user-id`, `authorization`) before forwarding a verified session identity downstream.
+
+## 0.4.0
+
+### Minor Changes
+
+- 254498f: Harden the OpenAPI-to-MCP scaffold: require explicit upstream base URLs when specs omit usable servers, share OpenAPI advisories across CLI and agent paths, and prevent non-interactive init from binding an unconfirmed product.
+
+### Patch Changes
+
+- Updated dependencies [254498f]
+  - @solvapay/init@0.3.0
+
 ## 0.3.0
 
 ### Minor Changes

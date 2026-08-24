@@ -19,7 +19,7 @@
  * into `account`.
  */
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useState } from 'react'
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
@@ -53,9 +53,10 @@ export interface McpAppShellProps {
   footer?: boolean
   /**
    * Refresh the bootstrap snapshot. Wired by `<McpApp>` to
-   * `SolvaPayProvider.refreshInitial`. The shell calls this once on
-   * mount so stale caches get re-seeded when the user re-opens the
-   * MCP app after backgrounding it. Errors are swallowed (soft signal).
+   * `SolvaPayProvider.refreshInitial`. Passed through to views that
+   * need an explicit post-commit refresh (e.g. after payment); the shell
+   * does not invoke this on mount — the opening intent-tool result is
+   * already authoritative and re-fetching would duplicate the server call.
    */
   onRefreshBootstrap?: () => void | Promise<void>
   /**
@@ -107,22 +108,6 @@ export function McpAppShell({
 
   const resolvedView = resolveSurface(bootstrap.view)
   const effectiveView: McpViewKind = overrideView ?? resolvedView
-
-  // Refresh the bootstrap once on mount if the caller wired it. The
-  // tabbed shell used to do this on every tab switch; with a single
-  // surface per invocation we only need it at mount time so a user
-  // re-opening the iframe after backgrounding it sees fresh data.
-  // A ref guard keeps it to one call per `onRefreshBootstrap` identity
-  // (protects against strict-mode double-mount).
-  const refreshedRef = useRef(false)
-  useEffect(() => {
-    if (!onRefreshBootstrap) return
-    if (refreshedRef.current) return
-    refreshedRef.current = true
-    void Promise.resolve(onRefreshBootstrap()).catch(() => {
-      /* best-effort. */
-    })
-  }, [onRefreshBootstrap, bootstrap.view])
 
   const showFooter = footer ?? true
   // The sidebar (seller + customer details cards) carries the

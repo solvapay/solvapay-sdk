@@ -11,12 +11,16 @@ import type { PurchaseInfo } from '../../types'
 // specifically want a balance transaction override with `planSnapshot: undefined`.
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
+  customerRef: 'cus_123',
   productName: 'Test Product',
   productRef: 'prd_123',
   status: 'active',
   startDate: '2024-01-01T00:00:00Z',
+  createdAt: '2024-01-01T00:00:00Z',
+  currency: 'USD',
+  isRecurring: true,
   amount: 1000,
-  planSnapshot: { reference: 'pln_default', planType: 'recurring' },
+  planSnapshot: { reference: 'pln_default', currency: 'USD', price: 1000, isMetered: false },
   ...overrides,
 })
 

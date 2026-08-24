@@ -4,6 +4,7 @@ import React from 'react'
 import { UpdatePaymentMethodButton } from './UpdatePaymentMethodButton'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue, SolvaPayConfig } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 function buildCtxWithTransport(
   overrides: Partial<SolvaPayConfig['transport']>,
@@ -46,15 +47,7 @@ function buildCtxWithTransport(
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     _config: { transport: transport as any },
   }

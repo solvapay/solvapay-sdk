@@ -13,11 +13,12 @@ import type {
   TransportCustomerSessionResult,
 } from './types'
 import { buildRequestHeaders } from '../utils/headers'
+import { readErrorMessage } from '../utils/readErrorMessage'
 
 type FetchFn = typeof fetch
 
 interface RouteOptions {
-  method: 'GET' | 'POST'
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: unknown
   onErrorContext: string
   errorPrefix: string
@@ -37,14 +38,8 @@ async function request<T>(
 
   const res = await fetchFn(url, init)
   if (!res.ok) {
-    let serverMessage: string | undefined
-    try {
-      const data = (await res.clone().json()) as { error?: string }
-      serverMessage = data?.error
-    } catch {
-      // ignore: response may not be JSON
-    }
-    const error = new Error(serverMessage || `${opts.errorPrefix}: ${res.statusText || res.status}`)
+    const message = await readErrorMessage(res, opts.errorPrefix)
+    const error = new Error(message)
     config?.onError?.(error, opts.onErrorContext)
     throw error
   }
@@ -57,6 +52,7 @@ export const DEFAULT_ROUTES = {
   processPayment: '/api/process-payment',
   createTopupPayment: '/api/create-topup-payment-intent',
   processTopupPayment: '/api/process-topup-payment',
+  attachBusinessDetails: '/api/attach-business-details',
   customerBalance: '/api/customer-balance',
   cancelRenewal: '/api/cancel-renewal',
   reactivateRenewal: '/api/reactivate-renewal',
@@ -67,14 +63,12 @@ export const DEFAULT_ROUTES = {
   getProduct: '/api/get-product',
   listPlans: '/api/list-plans',
   getPaymentMethod: '/api/payment-method',
+  autoRecharge: '/api/auto-recharge',
   getUsage: '/api/usage',
   getLimits: '/api/limits',
 } as const
 
-function routeFor(
-  config: SolvaPayConfig | undefined,
-  key: keyof typeof DEFAULT_ROUTES,
-): string {
+function routeFor(config: SolvaPayConfig | undefined, key: keyof typeof DEFAULT_ROUTES): string {
   const configured = config?.api?.[key as keyof NonNullable<SolvaPayConfig['api']>]
   return configured || DEFAULT_ROUTES[key]
 }
@@ -92,6 +86,7 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
       const body: Record<string, unknown> = {}
       if (params.planRef) body.planRef = params.planRef
       if (params.productRef) body.productRef = params.productRef
+      if (params.currency) body.currency = params.currency
       if (params.customer && (params.customer.name || params.customer.email)) {
         body.customer = params.customer
       }
@@ -114,7 +109,11 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
     createTopupPayment: params =>
       request(config, routeFor(config, 'createTopupPayment'), {
         method: 'POST',
-        body: { amount: params.amount, currency: params.currency },
+        body: {
+          amount: params.amount,
+          currency: params.currency,
+          ...(params.autoRecharge ? { autoRecharge: params.autoRecharge } : {}),
+        },
         onErrorContext: 'createTopupPayment',
         errorPrefix: 'Failed to create topup payment',
       }),
@@ -125,6 +124,14 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         body: { paymentIntentId: params.paymentIntentId },
         onErrorContext: 'processTopupPayment',
         errorPrefix: 'Failed to process topup payment',
+      }),
+
+    attachBusinessDetails: params =>
+      request(config, routeFor(config, 'attachBusinessDetails'), {
+        method: 'POST',
+        body: params,
+        onErrorContext: 'attachBusinessDetails',
+        errorPrefix: 'Failed to attach business details',
       }),
 
     getBalance: () =>
@@ -176,16 +183,12 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
     },
 
     createCustomerSession: () =>
-      request<TransportCustomerSessionResult>(
-        config,
-        routeFor(config, 'createCustomerSession'),
-        {
-          method: 'POST',
-          body: {},
-          onErrorContext: 'createCustomerSession',
-          errorPrefix: 'Failed to create customer session',
-        },
-      ),
+      request<TransportCustomerSessionResult>(config, routeFor(config, 'createCustomerSession'), {
+        method: 'POST',
+        body: {},
+        onErrorContext: 'createCustomerSession',
+        errorPrefix: 'Failed to create customer session',
+      }),
 
     getMerchant: () =>
       request(config, routeFor(config, 'getMerchant'), {
@@ -225,6 +228,28 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         method: 'GET',
         onErrorContext: 'getPaymentMethod',
         errorPrefix: 'Failed to load payment method',
+      }),
+
+    getAutoRecharge: () =>
+      request(config, routeFor(config, 'autoRecharge'), {
+        method: 'GET',
+        onErrorContext: 'getAutoRecharge',
+        errorPrefix: 'Failed to load auto-recharge',
+      }),
+
+    saveAutoRecharge: input =>
+      request(config, routeFor(config, 'autoRecharge'), {
+        method: 'PUT',
+        body: input,
+        onErrorContext: 'saveAutoRecharge',
+        errorPrefix: 'Failed to save auto-recharge',
+      }),
+
+    disableAutoRecharge: () =>
+      request(config, routeFor(config, 'autoRecharge'), {
+        method: 'DELETE',
+        onErrorContext: 'disableAutoRecharge',
+        errorPrefix: 'Failed to disable auto-recharge',
       }),
 
     getUsage: () =>

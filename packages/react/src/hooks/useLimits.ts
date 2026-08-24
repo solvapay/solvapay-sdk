@@ -61,6 +61,16 @@ function cacheKey(
   return `${customerRef ?? 'anonymous'}:${productRef}:${meterName}`
 }
 
+/**
+ * True when a `LimitResponse.remaining` carries the backend's unlimited
+ * sentinel. The wire contract is exactly `-1`, but any negative value
+ * means "no finite cap" — never a real count — so treat the whole range
+ * as unlimited rather than letting an unexpected `-2` read as exhausted.
+ */
+export function isUnlimited(remaining: number): boolean {
+  return remaining < 0
+}
+
 export interface UseLimitsOptions {
   productRef: string | undefined
   /** Defaults to `'requests'` (mirrors the backend default). */
@@ -70,8 +80,21 @@ export interface UseLimitsOptions {
 }
 
 export interface UseLimitsReturn {
-  /** Pre-request allowance the customer has on this meter. `null` while loading or when disabled. */
+  /**
+   * Pre-request allowance the customer has on this meter. `null` while
+   * loading or when disabled, and `-1` — the backend's unlimited
+   * sentinel — when the plan carries no finite cap. Branch on
+   * `unlimited` rather than comparing this number directly; a naive
+   * `remaining <= 0` reads the sentinel as "exhausted".
+   */
   remaining: number | null
+  /**
+   * True when the plan has no finite cap on this meter (the backend's
+   * `remaining: -1` sentinel). `null` while loading or when disabled.
+   * Consumers rendering an "X left" counter should suppress it — and
+   * any "upgrade" CTA derived from it — while this is true.
+   */
+  unlimited: boolean | null
   /**
    * False when the customer would be gated by the next request. `null` while loading.
    * Usually tracks `remaining > 0`, but the backend can gate independently
@@ -98,6 +121,9 @@ export interface UseLimitsReturn {
    * applies an 8 s grace window, then automatically refetches to converge
    * on the authoritative value. Use after a chat send / tool call so the
    * pill reacts instantly without waiting for the next refetch.
+   *
+   * No-op on an unlimited allowance: there is no counter to nudge, and
+   * arithmetic on the `-1` sentinel would corrupt it into a real number.
    */
   adjustRemaining: (delta: number) => void
 }
@@ -145,9 +171,19 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
     setData(null)
   }
 
+  const unlimited = data === null ? null : isUnlimited(data.remaining)
+
   // Track the optimistic-update timer so back-to-back adjusts share a
   // single trailing refetch (matches `adjustBalance`'s behaviour).
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Mirrors `unlimited` for `adjustRemaining`, which reads the latest
+  // value from a ref rather than a dep so its identity stays stable
+  // across counter ticks (see the callback's own note).
+  const unlimitedRef = useRef(false)
+  useEffect(() => {
+    unlimitedRef.current = unlimited === true
+  }, [unlimited])
 
   useEffect(() => {
     return () => {
@@ -251,6 +287,10 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
   const adjustRemaining = useCallback(
     (delta: number) => {
       if (!productRef || !enabled) return
+      // An unlimited allowance has no counter to nudge. Falling through
+      // would run `Math.max(0, -1 + delta)` and replace the sentinel
+      // with a real number, flipping the customer to "exhausted".
+      if (unlimitedRef.current) return
       const key = cacheKey(customerRef, productRef, meterName)
       // Read the latest value via the setter callback so `data` falls
       // out of the dep array — keeps `adjustRemaining` referentially
@@ -286,6 +326,7 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
 
   return {
     remaining: data?.remaining ?? null,
+    unlimited,
     withinLimits: data?.withinLimits ?? null,
     meterName: data?.meterName ?? null,
     activationRequired: data?.activationRequired ?? null,

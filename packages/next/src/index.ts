@@ -114,11 +114,7 @@ export async function checkPurchase(
 }
 
 // Re-export cache functions for backward compatibility
-export {
-  clearPurchaseCache,
-  clearAllPurchaseCache,
-  getPurchaseCacheStats,
-} from './cache'
+export { clearPurchaseCache, clearAllPurchaseCache, getPurchaseCacheStats } from './cache'
 
 // Export route helpers
 export {
@@ -129,6 +125,7 @@ export {
   createTopupPaymentIntent,
   processPaymentIntent,
   processTopupPaymentIntent,
+  attachBusinessDetails,
   createCheckoutSession,
   createCustomerSession,
   activatePlan,
@@ -138,10 +135,18 @@ export {
   getMerchant,
   getProduct,
   getPaymentMethod,
+  getAutoRecharge,
+  saveAutoRecharge,
+  disableAutoRecharge,
   trackUsage,
+  createAuth0AuthMiddleware,
   createAuthMiddleware,
   createSupabaseAuthMiddleware,
 } from './helpers'
 
 // Export middleware types
-export type { AuthMiddlewareOptions, SupabaseAuthMiddlewareOptions } from './helpers'
+export type {
+  Auth0AuthMiddlewareOptions,
+  AuthMiddlewareOptions,
+  SupabaseAuthMiddlewareOptions,
+} from './helpers'

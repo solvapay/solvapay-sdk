@@ -50,11 +50,12 @@ export const PlanStep = memo(function PlanStep({
   activationError,
   cx,
 }: PlanStepProps) {
-  const { selectedPlan, selectedPlanRef } = usePlanSelector()
+  const { selectedPlan, selectedPlanRef, getSelectedOption } = usePlanSelector()
   const locale = useHostLocale()
   const copy = useCopy()
   const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
-  const ctaLabel = formatContinueLabel(selectedPlanShape, locale)
+  const pricingOption = selectedPlan ? getSelectedOption(selectedPlan) : undefined
+  const ctaLabel = formatContinueLabel(selectedPlanShape, locale, pricingOption)
   const showBanner = fromPaywall && !hideUpgradeBanner
 
   return (
@@ -63,7 +64,10 @@ export const PlanStep = memo(function PlanStep({
 
       {showBanner ? <UpgradeBanner kind={paywallKind} cx={cx} /> : null}
 
-      <h2 className={cx.heading}>Choose a plan</h2>
+      <div className="solvapay-mcp-plan-step-header">
+        <h2 className={cx.heading}>Choose a plan</h2>
+        <PlanSelector.CurrencySwitcher className="solvapay-plan-selector-currency-switcher" />
+      </div>
 
       <PlanSelector.Grid className="solvapay-plan-selector-grid">
         <PlanSelector.Card className="solvapay-plan-selector-card">

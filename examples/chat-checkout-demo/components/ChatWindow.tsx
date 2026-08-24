@@ -83,6 +83,13 @@ interface ChatWindowProps {
    */
   limitRemaining: number | null
   /**
+   * `useLimits().unlimited` — true when the active product's plan has no
+   * finite cap on the meter, which the backend signals with
+   * `remaining: -1`. Suppresses the counter, the approaching/exhausted
+   * ramp and the upgrade CTA: an unlimited customer is never running out.
+   */
+  unlimitedAllowance: boolean
+  /**
    * True only when the parent is silently activating a free plan in
    * the background (`useLimits.activationRequired === true` AND a
    * free plan is configured for the active product). Keeps the pill
@@ -140,6 +147,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onSendMessage,
   onUpgrade,
   limitRemaining,
+  unlimitedAllowance,
   autoActivatingFreePlan,
   purchaseLoading,
   messageLimit,
@@ -187,9 +195,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // with no auto-activation in progress fall through to `limitRemaining`,
   // which the skeleton gate below masks while still resolving.
   const remaining = autoActivatingFreePlan ? messageLimit : (limitRemaining ?? messageLimit)
-  const approaching = isFreeTier && remaining > 0 && remaining <= 2
-  const exhausted = isFreeTier && remaining <= 0
-  const showUpgradeCta = isFreeTier && (approaching || exhausted)
+  // `remaining` carries the `-1` unlimited sentinel when the plan has no
+  // finite cap, so every threshold below has to clear `unlimitedAllowance`
+  // first — a bare `remaining <= 0` reads the sentinel as exhausted and
+  // paints "0 left" + an upgrade CTA over a customer with unlimited access.
+  const countsDown = isFreeTier && !unlimitedAllowance
+  const approaching = countsDown && remaining > 0 && remaining <= 2
+  const exhausted = countsDown && remaining <= 0
+  const showUpgradeCta = approaching || exhausted
   const upgradeLabel =
     currentScenario === ScenarioType.TOPUP
       ? 'Add credits'
@@ -265,9 +278,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       ? currentScenario === ScenarioType.SUBSCRIPTION
         ? 'Premium'
         : 'Lifetime'
-      : exhausted
-        ? '0 left'
-        : `${remaining.toLocaleString()} left`
+      : unlimitedAllowance
+        ? 'Unlimited'
+        : exhausted
+          ? '0 left'
+          : `${remaining.toLocaleString()} left`
 
   const statusPill = (
     <span
@@ -305,7 +320,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   )
 
   const renderHeader = () => (
-    <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-white/80 backdrop-blur-sm rounded-t-2xl">
+    <header className="relative z-20 px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-white/80 backdrop-blur-sm rounded-t-2xl">
       <IdentityStrip
         fallbackName="Agent Chat"
         fallbackSubline="Example end-user chat"
@@ -370,18 +385,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         </div>
         {checkoutState ? (
           <div className="absolute inset-0 overflow-y-auto bg-white/95 backdrop-blur-sm">
-            <InlineCheckout
-              state={checkoutState}
-              onSuccess={onFormSuccess}
-              onUnlock={onUnlock}
-            />
+            {/* `min-h-full` + `justify-end` anchors the drawer to the bottom
+                (where the input normally sits) while still letting taller
+                checkout steps grow downward and scroll from the top. */}
+            <div className="min-h-full flex flex-col justify-end">
+              <InlineCheckout
+                state={checkoutState}
+                onSuccess={onFormSuccess}
+                onUnlock={onUnlock}
+              />
+            </div>
           </div>
-        ) : (
-          <div className="absolute bottom-0 inset-x-0">
-            <ChatInput onSendMessage={onSendMessage} />
-          </div>
-        )}
+        ) : null}
       </div>
+      {checkoutState ? null : (
+        <div className="shrink-0 border-t border-slate-100 bg-white rounded-b-2xl">
+          <ChatInput onSendMessage={onSendMessage} />
+        </div>
+      )}
     </div>
   )
 }

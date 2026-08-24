@@ -19,11 +19,18 @@ import type {
   McpBootstrapResponse,
   ConfigureMcpPlansRequest,
   ConfigureMcpPlansResponse,
+  TrackUsageRequest,
+  TrackUsageResponse,
+  TrackUsageBulkRequest,
+  TrackUsageBulkResponse,
+  AssignCreditsRequest,
+  AssignCreditsResponse,
 } from './types'
 import { createSolvaPayClient } from './client'
 import { PaywallError, SolvaPayPaywall, paywallErrorToClientPayload } from './paywall'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
+import { requireProductRef, resolveProductRef } from './resolve-product-ref'
 import { createVirtualTools } from './virtual-tools'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 import type { PaywallStructuredContent } from './types'
@@ -165,7 +172,7 @@ export interface PayableGateOptions {
   ctx?: { waitUntil(p: Promise<unknown>): void }
   /**
    * Optional adapter metadata override. Falls back to the
-   * `productRef` / `usageType` configured on `payable({ … })` when
+   * `productRef` / `meterName` (or deprecated `usageType`) configured on `payable({ … })` when
    * omitted.
    */
   metadata?: import('./types').PaywallMetadata
@@ -350,12 +357,12 @@ export interface PayableFunction {
  * const solvaPay = createSolvaPay();
  *
  * // Create payable handlers
-   * const payable = solvaPay.payable({ product: 'prd_myapi' });
-   *
-   * // Manage customers
-   * const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
-   *   email: 'user@example.com'
-   * });
+ * const payable = solvaPay.payable({ product: 'prd_myapi' });
+ *
+ * // Manage customers
+ * const customerRef = await solvaPay.ensureCustomer('user_123', 'user_123', {
+ *   email: 'user@example.com'
+ * });
  * ```
  */
 export interface SolvaPay {
@@ -438,6 +445,7 @@ export interface SolvaPay {
     productRef: string
     planRef: string
     customerRef: string
+    currency?: string
     idempotencyKey?: string
   }): Promise<{
     processorPaymentId: string
@@ -459,6 +467,7 @@ export interface SolvaPay {
     currency: string
     description?: string
     idempotencyKey?: string
+    autoRecharge?: import('./types/client').AutoRechargeInput
   }): Promise<{
     processorPaymentId: string
     clientSecret: string
@@ -502,6 +511,20 @@ export interface SolvaPay {
   }): Promise<import('./types/client').ProcessPaymentResult>
 
   /**
+   * Attach business purchase details to a payment intent
+   * and retrieve the computed tax breakdown.
+   */
+  attachBusinessDetails(params: {
+    paymentIntentId: string
+    customerRef?: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: import('@solvapay/core').TaxIdType
+  }): Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
+
+  /**
    * Check if customer is within usage limits for a product.
    *
    * This method checks purchase status and usage limits without
@@ -530,6 +553,7 @@ export interface SolvaPay {
     productRef: string
     planRef?: string
     meterName?: string
+    /** @deprecated Use `meterName`. */
     usageType?: string
   }): Promise<{
     withinLimits: boolean
@@ -569,19 +593,12 @@ export interface SolvaPay {
    * });
    * ```
    */
-  trackUsage(params: {
-    customerRef: string
-    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
-    units?: number
-    outcome?: 'success' | 'paywall' | 'fail'
-    productRef?: string
-    purchaseRef?: string
-    description?: string
-    metadata?: Record<string, unknown>
-    duration?: number
-    timestamp?: string
-    idempotencyKey?: string
-  }): Promise<void>
+  trackUsage(params: TrackUsageRequest): Promise<TrackUsageResponse>
+
+  /**
+   * Track usage events in bulk.
+   */
+  trackUsageBulk(params: TrackUsageBulkRequest): Promise<TrackUsageBulkResponse>
 
   /**
    * Create a new customer in SolvaPay backend.
@@ -638,6 +655,11 @@ export interface SolvaPay {
   }): Promise<CustomerResponseMapped>
 
   /**
+   * Assign credits to a customer balance.
+   */
+  assignCredits(params: AssignCreditsRequest): Promise<AssignCreditsResponse>
+
+  /**
    * Get credits for a customer.
    *
    * @param params - Credits query parameters
@@ -646,7 +668,13 @@ export interface SolvaPay {
    */
   getCustomerBalance(params: {
     customerRef: string
-  }): Promise<{ customerRef: string; credits: number; displayCurrency: string; creditsPerMinorUnit: number; displayExchangeRate: number }>
+  }): Promise<{
+    customerRef: string
+    credits: number
+    displayCurrency: string
+    creditsPerMinorUnit: number
+    displayExchangeRate: number
+  }>
 
   /**
    * Create a hosted checkout session for a customer.
@@ -760,7 +788,8 @@ export interface SolvaPay {
    * ```typescript
    * const virtualTools = solvaPay.getVirtualTools({
    *   product: 'prd_myapi',
-   *   getCustomerRef: (_args, extra) => String(extra?.authInfo?.extra?.customer_ref || 'anonymous'),
+   *   getCustomerRef: (_args, extra) =>
+   *     String(extra?.http?.authInfo?.extra?.customer_ref || 'anonymous'),
    * });
    *
    * // Register on your MCP server
@@ -822,7 +851,7 @@ export interface SolvaPay {
  *
  * This factory function creates a SolvaPay instance that can be used to
  * protect API endpoints, functions, and MCP tools with usage limits and
-   * purchase checks.
+ * purchase checks.
  *
  * @param config - Optional configuration object
  * @param config.apiKey - API key for production use (defaults to `SOLVAPAY_SECRET_KEY` env var)
@@ -932,12 +961,28 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return apiClient.processPaymentIntent(params)
     },
 
+    attachBusinessDetails(params) {
+      if (!apiClient.attachBusinessDetails) {
+        throw new SolvaPayError(
+          'attachBusinessDetails is not available on this API client',
+        )
+      }
+      return apiClient.attachBusinessDetails(params)
+    },
+
     checkLimits(params) {
       return apiClient.checkLimits(params)
     },
 
     trackUsage(params) {
       return apiClient.trackUsage(params)
+    },
+
+    trackUsageBulk(params) {
+      if (!apiClient.trackUsageBulk) {
+        throw new SolvaPayError('trackUsageBulk is not available on this API client')
+      }
+      return apiClient.trackUsageBulk(params)
     },
 
     createCustomer(params) {
@@ -949,6 +994,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     getCustomer(params) {
       return apiClient.getCustomer(params)
+    },
+
+    assignCredits(params) {
+      if (!apiClient.assignCredits) {
+        throw new SolvaPayError('assignCredits is not available on this API client')
+      }
+      return apiClient.assignCredits(params)
     },
 
     getCustomerBalance(params) {
@@ -995,23 +1047,16 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       return createVirtualTools(apiClient, options)
     },
 
-    async registerVirtualToolsMcp(
-      server: McpServerLike,
-      options: RegisterVirtualToolsMcpOptions,
-    ) {
+    async registerVirtualToolsMcp(server: McpServerLike, options: RegisterVirtualToolsMcpOptions) {
       await registerVirtualToolsMcpImpl(server, apiClient, options)
     },
 
     // Payable API for framework-specific handlers
     payable(options: PayableOptions = {}): PayableFunction {
-      const product =
-        options.productRef ||
-        options.product ||
-        process.env.SOLVAPAY_PRODUCT ||
-        'default-product'
+      const product = resolveProductRef(options.productRef || options.product)
 
-      const usageType = options.usageType || 'requests'
-      const metadata = { product, usageType }
+      const usageType = options.meterName || options.usageType || 'requests'
+      const metadata = { product, meterName: usageType, usageType }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1074,7 +1119,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ): Promise<(args: any) => Promise<T>> {
           const getCustomerRef = (args: PaywallArgs): string => {
-            const configuredRef = options.getCustomerRef?.(args as unknown as Record<string, unknown>)
+            const configuredRef = options.getCustomerRef?.(
+              args as unknown as Record<string, unknown>,
+            )
             if (typeof configuredRef === 'string') {
               return configuredRef
             }
@@ -1083,10 +1130,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           return paywall.protect(businessLogic, metadata, getCustomerRef)
         },
 
-        async gate(
-          req: Request,
-          gateOptions: PayableGateOptions = {},
-        ): Promise<PayableGateResult> {
+        async gate(req: Request, gateOptions: PayableGateOptions = {}): Promise<PayableGateResult> {
           const inputCustomerRef = await resolveCustomerRefFromRequest(req, gateOptions)
           const args: PaywallArgs = { auth: { customer_ref: inputCustomerRef } }
 
@@ -1102,9 +1146,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
               decision.gate.kind === 'activation_required'
                 ? 'Activation required'
                 : 'Payment required'
-            const body = paywallErrorToClientPayload(
-              new PaywallError(errorMessage, decision.gate),
-            )
+            const body = paywallErrorToClientPayload(new PaywallError(errorMessage, decision.gate))
             const response = new Response(JSON.stringify(body), {
               status: 402,
               headers: { 'content-type': 'application/json' },
@@ -1112,9 +1154,14 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             return { kind: 'paywall', response, content: decision.gate }
           }
 
-          const productRef =
-            decideMetadata.product || metadata.product || product
-          const meterName = decision.limits.meterName || decideMetadata.usageType || 'requests'
+          const productRef = requireProductRef(
+            decideMetadata.product || metadata.product || product,
+          )
+          const meterName =
+            decision.limits.meterName ||
+            decideMetadata.meterName ||
+            decideMetadata.usageType ||
+            'requests'
           const customerRef = decision.customerRef
           const ctx = gateOptions.ctx
 
@@ -1135,10 +1182,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             const errMeta =
               opts?.error !== undefined
                 ? {
-                    error:
-                      opts.error instanceof Error
-                        ? opts.error.message
-                        : String(opts.error),
+                    error: opts.error instanceof Error ? opts.error.message : String(opts.error),
                   }
                 : {}
             const trackPromise = apiClient.trackUsage({
@@ -1163,7 +1207,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             kind: 'allow',
             decision,
             customerRef,
-            trackSuccess: (opts) => trackOnce('success', opts),
+            trackSuccess: opts => trackOnce('success', opts),
             trackFail: (err, opts) => trackOnce('fail', { ...opts, error: err }),
           }
         },

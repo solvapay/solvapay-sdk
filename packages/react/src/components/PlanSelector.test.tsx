@@ -202,6 +202,33 @@ describe('PlanSelector (default-tree shim)', () => {
     )
     await waitFor(() => expect(screen.getByText('$199 / year')).toBeTruthy())
   })
+
+  it('renders CurrencySwitcher above the grid and not inside card buttons', async () => {
+    const multiMonthly: Plan = {
+      ...monthly,
+      pricingOptions: [
+        { currency: 'USD', price: 1999, default: true },
+        { currency: 'EUR', price: 1799 },
+      ],
+    }
+    seed([multiMonthly, yearly])
+    render(
+      <SolvaPayProvider config={{}}>
+        <ShimPlanSelector productRef="prd_x" />
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByText('Monthly')).toBeTruthy())
+    const switcher = document.querySelector(
+      '[data-solvapay-plan-selector-currency-switcher]',
+    ) as HTMLSelectElement
+    expect(switcher).toBeTruthy()
+    expect(
+      screen
+        .getByText('Monthly')
+        .closest('[data-solvapay-plan-selector-card]')
+        ?.querySelector('[data-solvapay-plan-selector-card-currency]'),
+    ).toBeNull()
+  })
 })
 
 describe('PlanSelector primitive', () => {
@@ -323,7 +350,7 @@ describe('PlanSelector primitive', () => {
     spy.mockRestore()
   })
 
-  it('CardPrice renders a per-call rate for usage-based (PAYG) plans', async () => {
+  it('CardPrice renders a usage label for usage-based (PAYG) plans', async () => {
     const payg: Plan = {
       reference: 'pln_payg',
       name: 'Pay as you go',
@@ -346,9 +373,8 @@ describe('PlanSelector primitive', () => {
         </PlanSelector.Root>
       </SolvaPayProvider>,
     )
-    await waitFor(() => expect(screen.getByText('$0.01 / call')).toBeTruthy())
-    // PAYG plans shouldn't render a cycle suffix — that's a per-call rate,
-    // not a per-cycle charge.
+    await waitFor(() => expect(screen.getByText('Usage-based')).toBeTruthy())
+    // PAYG plans shouldn't render a cycle suffix — usage is not per-cycle.
     expect(screen.queryByText('/month')).toBeNull()
     expect(screen.queryByText('/year')).toBeNull()
   })
@@ -417,5 +443,84 @@ describe('PlanSelector primitive', () => {
     await waitFor(() => expect(screen.getByText('Plan')).toBeTruthy())
     expect(screen.getByText('Pay as you go')).toBeTruthy()
     expect(screen.getByText('Free')).toBeTruthy()
+  })
+
+  it('CurrencySwitcher stays hidden for single-currency products', async () => {
+    seed([monthly, yearly])
+    render(
+      <SolvaPayProvider config={{}}>
+        <PlanSelector.Root productRef="prd_x">
+          <PlanSelector.CurrencySwitcher data-testid="currency-switcher" />
+          <PlanSelector.Grid>
+            <PlanSelector.Card>
+              <PlanSelector.CardName />
+              <PlanSelector.CardPrice />
+            </PlanSelector.Card>
+          </PlanSelector.Grid>
+        </PlanSelector.Root>
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByText('Monthly')).toBeTruthy())
+    expect(screen.queryByTestId('currency-switcher')).toBeNull()
+  })
+
+  it('CurrencySwitcher updates CardPrice and selectedCurrency when switched', async () => {
+    const multiMonthly: Plan = {
+      ...monthly,
+      pricingOptions: [
+        { currency: 'USD', price: 1999, default: true },
+        { currency: 'EUR', price: 1799 },
+      ],
+    }
+    seed([multiMonthly])
+    render(
+      <SolvaPayProvider config={{}}>
+        <PlanSelector.Root productRef="prd_x" initialPlanRef="pln_monthly">
+          <PlanSelector.CurrencySwitcher aria-label="Currency" />
+          <PlanSelector.Grid>
+            <PlanSelector.Card>
+              <PlanSelector.CardPrice />
+            </PlanSelector.Card>
+          </PlanSelector.Grid>
+        </PlanSelector.Root>
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByText('$19.99')).toBeTruthy())
+    const switcher = screen.getByRole('combobox', { name: 'Currency' })
+    fireEvent.change(switcher, { target: { value: 'EUR' } })
+    await waitFor(() => expect(screen.getByText('€17.99')).toBeTruthy())
+  })
+
+  it('CardCurrency override still wins after a global CurrencySwitcher change', async () => {
+    const multiMonthly: Plan = {
+      ...monthly,
+      pricingOptions: [
+        { currency: 'USD', price: 1999, default: true },
+        { currency: 'EUR', price: 1799 },
+      ],
+    }
+    seed([multiMonthly])
+    render(
+      <SolvaPayProvider config={{}}>
+        <PlanSelector.Root productRef="prd_x" initialPlanRef="pln_monthly">
+          <PlanSelector.CurrencySwitcher aria-label="Global currency" />
+          <PlanSelector.Grid>
+            <PlanSelector.Card>
+              <PlanSelector.CardCurrency aria-label="Card currency" />
+              <PlanSelector.CardPrice data-testid="card-price" />
+            </PlanSelector.Card>
+          </PlanSelector.Grid>
+        </PlanSelector.Root>
+      </SolvaPayProvider>,
+    )
+    await waitFor(() => expect(screen.getByTestId('card-price').textContent).toBe('$19.99'))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Global currency' }), {
+      target: { value: 'EUR' },
+    })
+    await waitFor(() => expect(screen.getByTestId('card-price').textContent).toBe('€17.99'))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Card currency' }), {
+      target: { value: 'USD' },
+    })
+    await waitFor(() => expect(screen.getByTestId('card-price').textContent).toBe('$19.99'))
   })
 })

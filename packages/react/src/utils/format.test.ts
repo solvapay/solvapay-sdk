@@ -42,6 +42,21 @@ describe('formatPrice', () => {
       expect(formatPrice(1000, 'USD')).toBe('$10')
       expect(formatPrice(1000, 'Usd')).toBe('$10')
     })
+
+    it('renders currency code when currencyDisplay is code', () => {
+      expect(
+        formatPrice(1000, 'usd', { locale: 'en', currencyDisplay: 'code' }).replace(
+          /\u00A0/g,
+          ' ',
+        ),
+      ).toBe('USD 10')
+      expect(
+        formatPrice(5000, 'gbp', { locale: 'en', currencyDisplay: 'code' }).replace(
+          /\u00A0/g,
+          ' ',
+        ),
+      ).toBe('GBP 50')
+    })
   })
 
   describe('zero-decimal currencies', () => {

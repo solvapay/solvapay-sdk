@@ -6,6 +6,7 @@
  */
 
 import type { AuthenticatedUser, ErrorResult } from './types'
+import { SOLVAPAY_USER_ID_HEADER } from '@solvapay/auth'
 import { handleRouteError } from './error'
 
 /**
@@ -136,7 +137,7 @@ function unauthorized(details: string): ErrorResult {
  * the standard Web API Request (Express, Fastify, Next.js, Edge Functions, etc.).
  *
  * Resolution order:
- * 1. `x-user-id` header — set by Next.js-style middleware (unchanged).
+ * 1. `SOLVAPAY_USER_ID_HEADER` header — set by Next.js-style middleware (unchanged).
  * 2. `Authorization: Bearer <jwt>` — verified via HS256 when a secret is
  *    configured (`SOLVAPAY_JWT_SECRET` or `SUPABASE_JWT_SECRET`), or
  *    unverified-decoded when no secret is configured. The unverified path
@@ -182,7 +183,7 @@ export async function getAuthenticatedUserCore(
     const includeEmail = options.includeEmail !== false
     const includeName = options.includeName !== false
 
-    const headerUserId = request.headers.get('x-user-id')
+    const headerUserId = request.headers.get(SOLVAPAY_USER_ID_HEADER)
     if (headerUserId) {
       let email: string | null = null
       let name: string | null = null

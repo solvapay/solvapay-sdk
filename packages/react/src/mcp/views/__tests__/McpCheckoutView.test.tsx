@@ -30,11 +30,7 @@ vi.mock('../../../primitives/TopupForm', () => {
     children?: React.ReactNode
   }> = ({ onSuccess, children }) => (
     <div data-testid="topup-form-stub">
-      <button
-        type="button"
-        data-testid="topup-form-submit"
-        onClick={() => onSuccess?.()}
-      >
+      <button type="button" data-testid="topup-form-submit" onClick={() => onSuccess?.()}>
         submit topup
       </button>
       {children}
@@ -46,6 +42,21 @@ vi.mock('../../../primitives/TopupForm', () => {
   const SubmitButton: React.FC<{ children?: React.ReactNode; className?: string }> = ({
     children,
   }) => <span data-testid="topup-submit-label">{children}</span>
+  const BusinessDetails = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Toggle: () => null,
+    BusinessName: () => null,
+    Country: () => null,
+    TaxId: () => null,
+    Fields: () => null,
+  }
+  const Summary = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Subtotal: () => null,
+    Tax: () => null,
+    Total: () => null,
+    Rows: () => null,
+  }
   return {
     TopupForm: {
       Root,
@@ -53,6 +64,8 @@ vi.mock('../../../primitives/TopupForm', () => {
       PaymentElement,
       Error: ErrorSlot,
       SubmitButton,
+      BusinessDetails,
+      Summary,
     },
   }
 })
@@ -83,6 +96,22 @@ vi.mock('../../../primitives/PaymentForm', () => {
     children,
   }) => <span data-testid="payment-submit-label">{children}</span>
   const MandateText: React.FC = () => <p data-testid="payment-mandate-text" />
+  const BusinessDetails = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Toggle: () => null,
+    BusinessName: () => null,
+    Country: () => null,
+    TaxId: () => null,
+    Fields: () => null,
+  }
+  const TaxSummary = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Subtotal: () => null,
+    Tax: () => null,
+    Total: () => null,
+    TaxNote: () => null,
+    Rows: () => null,
+  }
   return {
     PaymentForm: {
       Root,
@@ -91,6 +120,8 @@ vi.mock('../../../primitives/PaymentForm', () => {
       Error: ErrorSlot,
       SubmitButton,
       MandateText,
+      BusinessDetails,
+      TaxSummary,
     },
   }
 })
@@ -110,9 +141,11 @@ vi.mock('../../useStripeProbe', () => ({
 import { McpCheckoutView } from '../McpCheckoutView'
 import { plansCache } from '../../../hooks/usePlans'
 import { merchantCache } from '../../../hooks/useMerchant'
+import { createTransportCacheKey } from '../../../transport/cache-key'
 import { McpBridgeProvider, type McpBridgeAppLike } from '../../bridge'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import type {
+  Merchant,
   Plan,
   PurchaseInfo,
   SolvaPayConfig,
@@ -123,6 +156,21 @@ import type {
 // Fixtures
 // ------------------------------------------------------------------
 
+/**
+ * Fixtures mirror the real plans wire. These previously spread a
+ * `planType` field in through `as any` casts and set scalar
+ * `billingCycle` / `creditsPerUnit`; the backend sends none of those —
+ * the cycle and the per-unit rate live in `options[]`, and "free" is
+ * `requiresPayment: false`.
+ */
+const monthly = { kind: 'billingCycle' as const, interval: 'month' }
+const flatCharge = (amountMinor: number, currency = 'usd') => ({
+  kind: 'charge' as const,
+  per: 'flat' as const,
+  amountMinor,
+  currency,
+})
+
 const freePlan: Plan = {
   reference: 'pln_free',
   name: 'Free',
@@ -130,20 +178,16 @@ const freePlan: Plan = {
   currency: 'usd',
   requiresPayment: false,
   type: 'one-time',
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ...({ planType: 'free' } as any),
+  options: [],
 }
 
 const paygPlan: Plan = {
   reference: 'pln_payg',
   name: 'Pay as you go',
-  price: 1, // $0.01 / call
   currency: 'usd',
   requiresPayment: true,
   type: 'usage-based',
-  creditsPerUnit: 1,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ...({ planType: 'usage-based' } as any),
+  options: [{ kind: 'charge', per: 'unit', amountMinor: 1, currency: 'usd', meter: 'requests' }],
 }
 
 const proPlan: Plan = {
@@ -153,28 +197,13 @@ const proPlan: Plan = {
   currency: 'usd',
   requiresPayment: true,
   type: 'recurring',
-  billingCycle: 'monthly',
-  creditsPerUnit: 0,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ...({ planType: 'recurring' } as any),
+  options: [monthly, flatCharge(1800)],
 }
 
 // Bootstrap-shaped plans for the `plans` prop threaded into
-// `McpCheckoutView` by the shell.
-const bootstrapPlans = [
-  // Intentionally includes the Free plan to exercise the filter.
-  { ...freePlan, planType: 'free' } as unknown as {
-    reference: string
-    name: string
-    type: string
-    planType: string
-    price: number
-    currency: string
-    requiresPayment: boolean
-  },
-  { ...paygPlan, planType: 'usage-based' } as never,
-  { ...proPlan, planType: 'recurring' } as never,
-]
+// `McpCheckoutView` by the shell. Intentionally includes the Free plan
+// to exercise the filter.
+const bootstrapPlans = [freePlan, paygPlan, proPlan] as never[]
 
 const productRef = 'prd_test'
 
@@ -201,11 +230,8 @@ function makeTransport(
   } as any
 }
 
-function buildCtx(
-  config: SolvaPayConfig,
-  purchases: PurchaseInfo[] = [],
-): SolvaPayContextValue {
-  const active = purchases.find((p) => p.status === 'active') ?? null
+function buildCtx(config: SolvaPayConfig, purchases: PurchaseInfo[] = []): SolvaPayContextValue {
+  const active = purchases.find(p => p.status === 'active') ?? null
   return {
     purchase: {
       loading: false,
@@ -336,7 +362,7 @@ describe('<McpCheckoutView> — plan step', () => {
       status: 'active',
       startDate: new Date().toISOString(),
       amount: 0,
-      planSnapshot: { reference: 'pln_free', name: 'Free', planType: 'free' },
+      planSnapshot: { reference: 'pln_free', name: 'Free', options: [] },
     } as unknown as PurchaseInfo
     const ctx = buildCtx(config, [activeFreePurchase])
     plansCache.set(productRef, {
@@ -382,18 +408,14 @@ describe('<McpCheckoutView> — plan step', () => {
     act(() => {
       fireEvent.click(freeCard)
     })
-    expect(
-      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-    ).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Continue with Pay as you go/ })).toBeTruthy()
   })
 
-  it("CTA label tracks the selected plan", async () => {
+  it('CTA label tracks the selected plan', async () => {
     renderView({ fromPaywall: true })
     // PAYG is auto-selected via popularPlanRef + autoSelectFirstPaid.
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      ).toBeTruthy()
+      expect(screen.getByRole('button', { name: /Continue with Pay as you go/ })).toBeTruthy()
     })
     // Select Pro → CTA updates.
     const proCard = screen.getByText('Pro').closest('[data-solvapay-plan-selector-card]')
@@ -418,18 +440,13 @@ describe('<McpCheckoutView> — plan step', () => {
     // MCPJam), where `onClose` alone leaves the iframe stuck.
     const sendMessage = vi.fn().mockResolvedValue({})
     const onClose = vi.fn()
-    const { transport } = renderView(
-      { fromPaywall: true, onClose },
-      { bridgeApp: { sendMessage } },
-    )
+    const { transport } = renderView({ fromPaywall: true, onClose }, { bridgeApp: { sendMessage } })
     act(() => {
       fireEvent.click(screen.getByText('Stay on Free'))
     })
     expect(sendMessage).toHaveBeenCalledWith({
       role: 'user',
-      content: [
-        { type: 'text', text: 'Sticking with the free tier for now.' },
-      ],
+      content: [{ type: 'text', text: 'Sticking with the free tier for now.' }],
     })
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(transport.activatePlan).not.toHaveBeenCalled()
@@ -455,28 +472,18 @@ describe('<McpCheckoutView> — back to my account link', () => {
 
   it('does not render the BackLink when onBack is omitted', () => {
     renderView({ fromPaywall: true })
-    expect(
-      screen.queryByRole('button', { name: /back to my account/i }),
-    ).toBeNull()
+    expect(screen.queryByRole('button', { name: /back to my account/i })).toBeNull()
   })
 
   it('hides the BackLink once the user advances past the plan step', async () => {
     renderView({ fromPaywall: true, onBack: vi.fn() })
-    expect(
-      screen.getByRole('button', { name: /back to my account/i }),
-    ).toBeTruthy()
-    await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-    )
+    expect(screen.getByRole('button', { name: /back to my account/i })).toBeTruthy()
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     })
     await waitFor(() => screen.getByText(/How many credits/))
-    expect(
-      screen.queryByRole('button', { name: /back to my account/i }),
-    ).toBeNull()
+    expect(screen.queryByRole('button', { name: /back to my account/i })).toBeNull()
   })
 })
 
@@ -491,14 +498,10 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     ;(transport as unknown as { activatePlan: typeof activate }).activatePlan = activate
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      ).toBeTruthy()
+      expect(screen.getByRole('button', { name: /Continue with Pay as you go/ })).toBeTruthy()
     })
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     })
 
     // The plan-step Continue click drives activation; the amount picker
@@ -522,14 +525,10 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     })
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      ).toBeTruthy()
+      expect(screen.getByRole('button', { name: /Continue with Pay as you go/ })).toBeTruthy()
     })
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     })
     // Wait for the amount step so we know activation completed.
     await waitFor(() => expect(screen.getByText(/How many credits/)).toBeTruthy())
@@ -554,15 +553,11 @@ describe('<McpCheckoutView> — PAYG branch', () => {
 
   it('BackLink returns from amount to plan and clears any activation error', async () => {
     renderView({ fromPaywall: true })
-    await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-    )
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     // Plan-step Continue now awaits activate_plan — click needs to flush the
     // async state update before the amount step renders.
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     })
     await waitFor(() => expect(screen.getByText(/How many credits/)).toBeTruthy())
     // BackLink's arrow glyph is aria-hidden, so the accessible name is
@@ -571,24 +566,16 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /^Back$/ }))
     })
-    await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-    )
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
   })
 
   it('BackLink on PAYG payment step returns to amount (does not re-fire activatePlan)', async () => {
     const { transport } = renderView({ fromPaywall: true })
-    await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-    )
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     })
-    const customInput = await waitFor(() =>
-      screen.getByPlaceholderText('0.00'),
-    )
+    const customInput = await waitFor(() => screen.getByPlaceholderText('0.00'))
     act(() => {
       fireEvent.change(customInput, { target: { value: '18' } })
     })
@@ -608,17 +595,11 @@ describe('<McpCheckoutView> — PAYG branch', () => {
   it('success step renders the PAYG receipt with no CTA — agent continues from the auto-sent chat message', async () => {
     const onClose = vi.fn()
     renderView({ fromPaywall: true, onClose })
-    await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-    )
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     })
-    const amountInput = await waitFor(() =>
-      screen.getByPlaceholderText('0.00'),
-    )
+    const amountInput = await waitFor(() => screen.getByPlaceholderText('0.00'))
     act(() => {
       fireEvent.change(amountInput, {
         target: { value: '18' },
@@ -641,6 +622,11 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     expect(screen.getByText('Credits')).toBeTruthy()
     expect(screen.getByText('Plan')).toBeTruthy()
     expect(screen.getByText('Rate')).toBeTruthy()
+    // 1 minor unit per call against the balance peg of 100 credits per
+    // minor unit. The old fixture asserted "1 credit / call" off a
+    // fabricated `creditsPerUnit`, contradicting the peg this same file
+    // pins for the order summary below.
+    expect(screen.getByText('100 credits / call')).toBeTruthy()
 
     // Regression guard: the success step previously rendered a
     // `Back to chat` button that called `app.requestTeardown()`,
@@ -662,17 +648,11 @@ describe('<McpCheckoutView> — PAYG branch', () => {
   // any other product of the debit rate.
   it('PAYG surfaces credit counts via the balance mint rate (creditsPerMinorUnit), not plan.creditsPerUnit', async () => {
     renderView({ fromPaywall: true })
-    await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-    )
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     })
-    const amountInput = await waitFor(() =>
-      screen.getByPlaceholderText('0.00'),
-    )
+    const amountInput = await waitFor(() => screen.getByPlaceholderText('0.00'))
     act(() => {
       fireEvent.change(amountInput, {
         target: { value: '18' },
@@ -710,9 +690,7 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     act(() => {
       fireEvent.click(proCard)
     })
-    await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pro/ }),
-    )
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pro/ }))
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
     })
@@ -775,6 +753,165 @@ describe('<McpCheckoutView> — Recurring branch', () => {
 })
 
 // ------------------------------------------------------------------
+// Multi-currency plan selection
+// ------------------------------------------------------------------
+
+describe('<McpCheckoutView> — multi-currency plans', () => {
+  // A multi-currency plan carries one flat charge per currency in
+  // `options[]`; the first is the default. There is no `pricingOptions`
+  // field on the wire.
+  const multiProPlan: Plan = {
+    ...proPlan,
+    options: [monthly, flatCharge(1800, 'usd'), flatCharge(1600, 'eur')],
+  }
+
+  function renderMultiCurrencyView(
+    props: Partial<React.ComponentProps<typeof McpCheckoutView>> = {},
+  ) {
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    const ctx = buildCtx(config)
+    plansCache.set(productRef, {
+      plans: [freePlan, paygPlan, multiProPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    return {
+      ctx,
+      transport,
+      ...render(
+        <SolvaPayContext.Provider value={ctx}>
+          <McpBridgeProvider app={{}}>
+            <McpCheckoutView
+              productRef={productRef}
+              publishableKey="pk_test"
+              returnUrl="https://example.test/r"
+              plans={[freePlan, paygPlan, multiProPlan] as never[]}
+              fromPaywall
+              {...props}
+            />
+          </McpBridgeProvider>
+        </SolvaPayContext.Provider>,
+      ),
+    }
+  }
+
+  it('renders the currency switcher when a plan exposes multiple pricing options', async () => {
+    renderMultiCurrencyView()
+    await waitFor(() => expect(screen.getByText('Pro')).toBeTruthy())
+    expect(document.querySelector('[data-solvapay-plan-selector-currency-switcher]')).toBeTruthy()
+  })
+
+  it('does not render the currency switcher for single-currency plans', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() => expect(screen.getByText('Pro')).toBeTruthy())
+    expect(document.querySelector('[data-solvapay-plan-selector-currency-switcher]')).toBeNull()
+  })
+
+  it('updates the continue label and recurring payment summary when currency is switched', async () => {
+    renderMultiCurrencyView()
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen
+      .getByText('Pro')
+      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pro — \$18(\.00)?\/mo/ }))
+
+    const switcher = document.querySelector(
+      '[data-solvapay-plan-selector-currency-switcher]',
+    ) as HTMLSelectElement
+    act(() => {
+      fireEvent.change(switcher, { target: { value: 'EUR' } })
+    })
+
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pro — €16(\.00)?\/mo/ }))
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro — €16(\.00)?\/mo/ }))
+    })
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    expect(screen.getByTestId('payment-submit-label').textContent).toMatch(/€16(\.00)?\/mo/)
+  })
+})
+
+// ------------------------------------------------------------------
+// PAYG amount step — currency code labels when switcher is shown
+// ------------------------------------------------------------------
+
+describe('<McpCheckoutView> — PAYG amount step currency labels', () => {
+  const multiCurrencyMerchant: Merchant = {
+    displayName: 'Acme',
+    legalName: 'Acme Inc.',
+    defaultCurrency: 'usd',
+    supportedTopupCurrencies: ['usd', 'eur', 'gbp'],
+  }
+
+  const singleCurrencyMerchant: Merchant = {
+    displayName: 'Acme',
+    legalName: 'Acme Inc.',
+    defaultCurrency: 'usd',
+  }
+
+  function seedMerchant(merchant: Merchant, config: SolvaPayConfig) {
+    merchantCache.set(createTransportCacheKey(config, '/api/merchant'), {
+      merchant,
+      promise: null,
+      timestamp: Date.now(),
+    })
+  }
+
+  async function advanceToAmountStepWithMerchant(merchant: Merchant) {
+    const transport = makeTransport()
+    const config: SolvaPayConfig = { transport }
+    seedMerchant(merchant, config)
+    plansCache.set(productRef, {
+      plans: [freePlan, paygPlan, proPlan],
+      timestamp: Date.now(),
+      promise: null,
+    })
+    const ctx = buildCtx(config)
+    const bridgeApp: McpBridgeAppLike = {}
+    const view = render(
+      <SolvaPayContext.Provider value={ctx}>
+        <McpBridgeProvider app={bridgeApp}>
+          <McpCheckoutView
+            productRef={productRef}
+            publishableKey="pk_test"
+            returnUrl="https://example.test/r"
+            plans={bootstrapPlans}
+            fromPaywall
+          />
+        </McpBridgeProvider>
+      </SolvaPayContext.Provider>,
+    )
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    })
+    await waitFor(() => screen.getByText(/How many credits/))
+    return view
+  }
+
+  it('renders currency codes in amount pills when the topup switcher is shown', async () => {
+    const { container } = await advanceToAmountStepWithMerchant(multiCurrencyMerchant)
+    await screen.findByLabelText('Topup currency')
+    const pill = container.querySelector('[data-amount="10"]')
+    expect(pill?.textContent?.replace(/\u00A0/g, ' ')).toBe('USD 10')
+    expect(pill?.textContent).not.toMatch(/^\$/)
+  })
+
+  it('keeps currency symbols in amount pills for single-currency merchants', async () => {
+    await advanceToAmountStepWithMerchant(singleCurrencyMerchant)
+    await screen.findByText(/How many credits/)
+    expect(screen.queryByLabelText('Topup currency')).toBeNull()
+    expect(screen.getByRole('button', { name: '$10' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'USD 10' })).toBeNull()
+  })
+})
+
+// ------------------------------------------------------------------
 // CSS hooks — guard the markup classes/attributes that the MCP
 // stylesheet hangs rules off. A silent rename here = unstyled view,
 // so pin the critical selectors with explicit assertions.
@@ -783,13 +920,9 @@ describe('<McpCheckoutView> — Recurring branch', () => {
 describe('<McpCheckoutView> — CSS hooks', () => {
   async function advanceToAmountStep() {
     const utils = renderView({ fromPaywall: true })
-    await waitFor(() =>
-      screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-    )
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     act(() => {
-      fireEvent.click(
-        screen.getByRole('button', { name: /Continue with Pay as you go/ }),
-      )
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
     })
     await waitFor(() => screen.getByText(/How many credits/))
     return utils
@@ -826,17 +959,13 @@ describe('<McpCheckoutView> — CSS hooks', () => {
 
   it('AmountStep marks the recommended preset with data-popular', async () => {
     const { container } = await advanceToAmountStep()
-    const popular = container.querySelectorAll(
-      '.solvapay-mcp-amount-option[data-popular]',
-    )
+    const popular = container.querySelectorAll('.solvapay-mcp-amount-option[data-popular]')
     expect(popular).toHaveLength(1)
   })
 
   it('PaygPaymentStep renders order-summary + save-card CSS hooks', async () => {
     const { container } = await advanceToPaygPayment()
-    expect(
-      container.querySelector('.solvapay-mcp-checkout-order-summary'),
-    ).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-checkout-order-summary')).toBeTruthy()
     expect(
       container.querySelectorAll('.solvapay-mcp-checkout-order-summary-row').length,
     ).toBeGreaterThan(0)
@@ -845,12 +974,10 @@ describe('<McpCheckoutView> — CSS hooks', () => {
 
   it('PAYG SuccessStep renders success-check + receipt CSS hooks', async () => {
     const { container } = await advanceToPaygSuccess()
-    expect(
-      container.querySelector('.solvapay-mcp-checkout-success-check'),
-    ).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-checkout-success-check')).toBeTruthy()
     expect(container.querySelector('.solvapay-mcp-checkout-receipt')).toBeTruthy()
-    expect(
-      container.querySelectorAll('.solvapay-mcp-checkout-receipt-row').length,
-    ).toBeGreaterThan(0)
+    expect(container.querySelectorAll('.solvapay-mcp-checkout-receipt-row').length).toBeGreaterThan(
+      0,
+    )
   })
 })

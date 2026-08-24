@@ -58,7 +58,7 @@ export interface BootstrapCustomer {
 /**
  * MCP tool call result — a structural subset of the official SDK's
  * `CallToolResult` that every framework produces. Kept local to avoid
- * coupling to `@modelcontextprotocol/sdk/types.js` type churn.
+ * coupling to `@modelcontextprotocol/core` type churn.
  */
 /**
  * Routing hint surfaced on individual content blocks. Mirrors the MCP
@@ -84,17 +84,36 @@ export interface SolvaPayCallToolResult {
 }
 
 /**
+ * Auth envelope carried on an MCP tool-handler context, as produced by
+ * `buildAuthInfoFromBearer`.
+ */
+export interface McpAuthInfo {
+  token?: string
+  clientId?: string
+  scopes?: string[]
+  expiresAt?: number
+  extra?: Record<string, unknown>
+}
+
+/**
  * Extra context passed into MCP tool handlers. Mirrors the `extra`
  * parameter shape used by the official SDK's `registerTool` callback.
+ *
+ * `authInfo` moved between SDK majors: v1 exposed it at the top level,
+ * v2 nests it under `http` (`BaseContext.http.authInfo`) because it is
+ * only populated by HTTP transports. Both are declared so this
+ * framework-neutral package keeps working across the official SDK v1/v2
+ * and third-party adapters (fastmcp, raw JSON-RPC) that still pass the
+ * flat shape. Always read them via `defaultGetCustomerRef` rather than
+ * reaching in directly.
  */
 export interface McpToolExtra {
-  authInfo?: {
-    token?: string
-    clientId?: string
-    scopes?: string[]
-    expiresAt?: number
-    extra?: Record<string, unknown>
+  /** Official SDK v2 location — populated by HTTP transports only. */
+  http?: {
+    authInfo?: McpAuthInfo
   }
+  /** Official SDK v1 location; still used by some third-party adapters. */
+  authInfo?: McpAuthInfo
   [key: string]: unknown
 }
 
@@ -322,8 +341,22 @@ export interface SolvaPayDocsResourceDescriptor {
 }
 
 /**
+ * Bootstrap snapshot resource — a JSON `BootstrapPayload` the widget can
+ * `resources/read` when the host scrubs `structuredContent` from the
+ * opening tool-result notification. Auth-aware via `readPayload(extra)`.
+ */
+export interface SolvaPayBootstrapResourceDescriptor {
+  uri: string
+  name: string
+  title?: string
+  description: string
+  mimeType: string
+  readPayload: (extra?: McpToolExtra) => Promise<BootstrapPayload>
+}
+
+/**
  * One MCP prompt — rendered as `/<name>` in hosts with slash-command
- * support. Kept framework-neutral so every adapter (`@modelcontextprotocol/sdk`,
+ * support. Kept framework-neutral so every adapter (`@modelcontextprotocol/server`,
  * `fastmcp`, raw JSON-RPC) can map it to their own `registerPrompt`
  * shape.
  *
@@ -343,7 +376,7 @@ export interface SolvaPayPromptDescriptor {
 /**
  * Minimal `GetPromptResult` shape — structural subset of the official
  * SDK's type so adapters can forward it without importing
- * `@modelcontextprotocol/sdk/types.js`.
+ * `@modelcontextprotocol/core`.
  */
 export interface SolvaPayPromptResult {
   messages: Array<{

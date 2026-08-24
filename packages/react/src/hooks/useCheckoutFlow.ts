@@ -13,6 +13,12 @@
  * the user's current plan selection from `usePlanSelector()` so the
  * plan grid and the flow share state.
  *
+ * Stripe 3DS / redirect returns: when `payment_intent_client_secret` is
+ * present in the URL on mount, the hook starts on the `payment` step so
+ * `<CheckoutSteps.Payment>` (or a mounted `PaymentForm` / `TopupForm`) can
+ * resume verification. Return-path resume itself lives in those form
+ * primitives — see `readPaymentIntentClientSecret` / `stripPaymentIntentParams`.
+ *
  * Lifecycle hooks fire at well-defined points:
  *  - `onPlanSelect(planRef, plan)` — every selectPlan() call
  *  - `onAmountSelect(amountMinor, currency)` — every selectAmount() call
@@ -27,6 +33,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { PaymentIntent } from '@stripe/stripe-js'
 import { usePlanSelector } from '../primitives/PlanSelector'
+import { usePlanSelection } from '../components/PlanSelectionContext'
 import { useBalance } from './useBalance'
 import { useMerchant } from './useMerchant'
 import { useSolvaPay } from './useSolvaPay'
@@ -35,12 +42,20 @@ import { useLocale } from './useCopy'
 import type { Plan } from '../types'
 import {
   formatPaygRate,
-  inferIncludedCredits,
+  inferIncludedUnits,
   isPayg,
-  type BootstrapPlanLike,
+  planMeterName,
+  toBootstrapPlanLike,
   type CheckoutStep,
   type SuccessMeta,
 } from '../primitives/checkout/shared'
+import { resolvePlanPricingOption } from '../utils/planPricing'
+import { readPaymentIntentClientSecret } from '../primitives/paymentIntentReturn'
+
+function resolveInitialCheckoutStep(initialStep: CheckoutStep): CheckoutStep {
+  if (typeof window === 'undefined') return initialStep
+  return readPaymentIntentClientSecret(window.location.search) ? 'payment' : initialStep
+}
 
 export type CheckoutStatus = 'idle' | 'activating' | 'paying' | 'error'
 
@@ -92,11 +107,12 @@ export interface UseCheckoutFlowReturn {
   /** Returns the active branch — `null` when no plan is selected. */
   branch: 'payg' | 'recurring' | null
   /**
-   * Currency for the PAYG topup branch, resolved from the
-   * `topupCurrency` option (when set) or `merchant.defaultCurrency`.
+   * Currency for the PAYG topup branch, resolved in order:
+   * top-up step override → plan-picker `preferredCurrency` (when
+   * supported) → `topupCurrency` option or `merchant.defaultCurrency`.
    * `null` while the merchant is still loading and no explicit
-   * option was passed. **Plan currency is never consulted** — credit
-   * topups are merchant-wide, not plan-specific.
+   * option was passed. Plan `currency` / `selectedCurrency` are never
+   * consulted — credit topups are merchant-wide, not plan-specific.
    */
   topupCurrency: string | null
   /**
@@ -105,6 +121,20 @@ export interface UseCheckoutFlowReturn {
    * misleading default while the merchant fetch is in flight.
    */
   topupCurrencyReady: boolean
+  /**
+   * Full set of currencies the customer may pay topups in — the
+   * merchant's `supportedTopupCurrencies` (which already includes the
+   * default) or, for single-currency merchants, just the resolved
+   * `topupCurrency`. Always uppercased and deduped. The amount step
+   * renders a switcher only when this has more than one entry.
+   */
+  topupCurrencies: string[]
+  /**
+   * Override the topup currency from a picker. Accepts any code in
+   * `topupCurrencies`; ignored otherwise. Resets to the merchant default
+   * resolution on `reset()`.
+   */
+  setTopupCurrency: (code: string) => void
   /**
    * Whether the current step has a meaningful previous step to return
    * to. `<CheckoutSteps.BackLink>` reads this to suppress itself when
@@ -134,18 +164,11 @@ export interface UseCheckoutFlowReturn {
    * locally-computed estimate and bumps `balance.adjustBalance` for
    * an instant UI update.
    */
-  notifyPaymentSuccess: (
-    intent?: PaymentIntent,
-    extras?: { creditsAdded?: number },
-  ) => void
+  notifyPaymentSuccess: (intent?: PaymentIntent, extras?: { creditsAdded?: number }) => void
 }
 
 export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowReturn {
-  const {
-    productRef,
-    initialStep = 'plan',
-    initialAmountMinor = null,
-  } = opts
+  const { productRef, initialStep = 'plan', initialAmountMinor = null } = opts
   const onPlanSelectRef = useRef(opts.onPlanSelect)
   const onAmountSelectRef = useRef(opts.onAmountSelect)
   const onPurchaseSuccessRef = useRef(opts.onPurchaseSuccess)
@@ -156,6 +179,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   onErrorRef.current = opts.onError
 
   const planCtx = usePlanSelector()
+  const planSelection = usePlanSelection()
   const transport = useTransport()
   const locale = useLocale()
   const balance = useBalance()
@@ -163,18 +187,47 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
   const { refetchPurchase } = useSolvaPay()
   const { merchant } = useMerchant()
 
-  // Resolve PAYG topup currency strictly from the `topupCurrency` option
-  // (forwarded by `<CheckoutSteps.Root topupCurrency={…}>` and friends)
-  // or the merchant's `defaultCurrency`. Plan currency is intentionally
-  // never consulted: credit topups settle into the merchant-wide wallet,
-  // independent of which plan the customer picked. While the merchant
-  // fetch is in flight (and no explicit prop was passed), `topupCurrency`
-  // stays `null` and step components render a skeleton/disabled state.
-  const topupCurrency: string | null =
+  // Resolve PAYG topup currency from (in order): the amount-step override,
+  // the plan-picker's `preferredCurrency` (when supported), then the
+  // `topupCurrency` option or merchant `defaultCurrency`. Plan `currency` /
+  // `selectedCurrency` are intentionally never consulted — credit topups
+  // settle into the merchant-wide wallet. While the merchant fetch is in
+  // flight (and no explicit prop was passed), `topupCurrency` stays `null`
+  // and step components render a skeleton/disabled state.
+  const [topupCurrencyOverride, setTopupCurrencyOverride] = useState<string | null>(null)
+
+  // Full set of pay currencies. The merchant payload already includes the
+  // default in `supportedTopupCurrencies`; single-currency merchants omit it,
+  // so we fall back to the resolved default code.
+  const topupCurrencies = useMemo<string[]>(() => {
+    const fromMerchant = (merchant?.supportedTopupCurrencies ?? [])
+      .map(code => code.toUpperCase())
+      .filter(Boolean)
+    const fallback =
+      opts.topupCurrency?.toUpperCase() ?? merchant?.defaultCurrency?.toUpperCase() ?? null
+    const list = fromMerchant.length > 0 ? fromMerchant : fallback ? [fallback] : []
+    return Array.from(new Set(list))
+  }, [merchant?.supportedTopupCurrencies, merchant?.defaultCurrency, opts.topupCurrency])
+
+  const resolvedDefaultTopupCurrency: string | null =
     opts.topupCurrency?.toUpperCase() ?? merchant?.defaultCurrency?.toUpperCase() ?? null
+  const planPickerCurrency = planCtx.preferredCurrency?.toUpperCase() ?? null
+  const topupCurrency: string | null =
+    (topupCurrencyOverride && topupCurrencies.includes(topupCurrencyOverride)
+      ? topupCurrencyOverride
+      : null) ??
+    (planPickerCurrency && topupCurrencies.includes(planPickerCurrency)
+      ? planPickerCurrency
+      : null) ??
+    resolvedDefaultTopupCurrency
   const topupCurrencyReady = topupCurrency != null
 
-  const [step, setStep] = useState<CheckoutStep>(initialStep)
+  const setTopupCurrency = useCallback((code: string) => {
+    const normalized = code.toUpperCase()
+    setTopupCurrencyOverride(normalized)
+  }, [])
+
+  const [step, setStep] = useState<CheckoutStep>(() => resolveInitialCheckoutStep(initialStep))
   const [status, setStatus] = useState<CheckoutStatus>('idle')
   const [selectedAmountMinor, setSelectedAmountMinor] = useState<number | null>(initialAmountMinor)
   const [successMeta, setSuccessMeta] = useState<SuccessMeta | null>(null)
@@ -187,7 +240,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
 
   const selectedPlan = planCtx.selectedPlan
   const selectedPlanRef = planCtx.selectedPlanRef
-  const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
+  const selectedPlanShape = toBootstrapPlanLike(selectedPlan)
 
   const branch: 'payg' | 'recurring' | null = selectedPlanShape
     ? isPayg(selectedPlanShape)
@@ -236,6 +289,12 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     setError(null)
     setStatus('activating')
     try {
+      // Topup-first: for a zero-balance PAYG plan the backend returns
+      // `topup_required` here and creates NO purchase — that's the
+      // expected result, not an error. We treat it as "proceed to the
+      // top-up amount step" and DO NOT consider the plan active. The
+      // active purchase only materializes after a successful top-up
+      // (see `recordPaygSuccess`, which re-activates once credits land).
       await transport.activatePlan({ productRef, planRef: selectedPlanRef })
       setStatus('idle')
       setStep('amount')
@@ -302,6 +361,20 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       if (creditsAddedFromBackend !== undefined && creditsAddedFromBackend > 0) {
         adjustBalance(creditsAddedFromBackend)
       }
+      // Topup-first: the plan purchase does NOT exist yet — the plan-step
+      // `activatePlan` returned `topup_required` (zero balance) and
+      // created nothing. Now that the top-up has landed (TopupForm awaits
+      // backend confirmation before firing success), re-activate to
+      // materialize the active PAYG purchase, mirroring the
+      // `ActivationFlow` primitive's self-healing re-activation. Idempotent
+      // — the backend short-circuits to `already_active` if it somehow
+      // exists. Fire-and-forget like the refetch below; `useLimits`
+      // re-reads on the resulting `purchases` change.
+      if (selectedPlanRef) {
+        Promise.resolve(transport.activatePlan({ productRef, planRef: selectedPlanRef })).catch(
+          () => {},
+        )
+      }
       // Drive `useLimits` (it auto-refetches on `purchases` ref change)
       // and the balance side-effect (it picks up the credit via the
       // `purchases-change` effect inside `useBalance`'s caller). One
@@ -316,7 +389,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
         currency,
         creditsAdded,
         plan: selectedPlanShape,
-        rateLabel: formatPaygRate(selectedPlanShape, locale),
+        rateLabel: formatPaygRate(selectedPlanShape, locale, balance),
       }
       setSuccessMeta(meta)
       setStep('success')
@@ -324,31 +397,42 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     },
     [
       adjustBalance,
+      balance,
       creditsPerMinorUnit,
       displayExchangeRate,
       locale,
+      productRef,
       refetchPurchase,
       selectedAmountMinor,
+      selectedPlanRef,
       selectedPlanShape,
       topupCurrency,
+      transport,
     ],
   )
 
   const recordRecurringSuccess = useCallback(() => {
     if (!selectedPlanShape) return
-    const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
+    const pricingOption = selectedPlan
+      ? resolvePlanPricingOption(selectedPlan, planSelection?.selectedCurrency)
+      : {
+          currency: selectedPlanShape.currency ?? 'USD',
+          price: selectedPlanShape.price ?? 0,
+        }
+    const currency = pricingOption.currency.toUpperCase()
     const meta: SuccessMeta = {
       branch: 'recurring',
       plan: selectedPlanShape,
-      creditsIncluded: inferIncludedCredits(selectedPlanShape),
-      chargedTodayMinor: selectedPlanShape.price ?? 0,
+      includedUnits: inferIncludedUnits(selectedPlanShape),
+      meterName: planMeterName(selectedPlanShape),
+      chargedTodayMinor: pricingOption.price ?? 0,
       currency,
       nextRenewalLabel: null,
     }
     setSuccessMeta(meta)
     setStep('success')
     onPurchaseSuccessRef.current?.(meta)
-  }, [selectedPlanShape])
+  }, [selectedPlanShape, selectedPlan, planSelection?.selectedCurrency])
 
   const advance = useCallback(async () => {
     if (step === 'plan') {
@@ -400,6 +484,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     setSuccessMeta(null)
     setError(null)
     setStatus('idle')
+    setTopupCurrencyOverride(null)
   }, [])
 
   const retry = useCallback(async () => {
@@ -432,6 +517,8 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       branch,
       topupCurrency,
       topupCurrencyReady,
+      topupCurrencies,
+      setTopupCurrency,
       canGoBack,
       selectPlan,
       selectAmount,
@@ -452,6 +539,8 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       branch,
       topupCurrency,
       topupCurrencyReady,
+      topupCurrencies,
+      setTopupCurrency,
       canGoBack,
       selectPlan,
       selectAmount,

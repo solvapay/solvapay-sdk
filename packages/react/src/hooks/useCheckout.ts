@@ -2,6 +2,8 @@ import { useState, useCallback, useRef } from 'react'
 import { loadStripe, Stripe, StripeConstructorOptions } from '@stripe/stripe-js'
 import { useSolvaPay } from './useSolvaPay'
 import { buildRequestHeaders } from '../utils/headers'
+import { readErrorMessage } from '../utils/readErrorMessage'
+import { usePlanSelection } from '../components/PlanSelectionContext'
 import type { Plan, PrefillCustomer, SolvaPayConfig } from '../types'
 
 export interface UseCheckoutReturn {
@@ -9,6 +11,7 @@ export interface UseCheckoutReturn {
   error: Error | null
   stripePromise: Promise<Stripe | null> | null
   clientSecret: string | null
+  processorPaymentId: string | null
   resolvedPlanRef: string | null
   startCheckout: () => Promise<void>
   reset: () => void
@@ -41,7 +44,11 @@ async function resolvePlanRef(
   const res = await fetchFn(url, { method: 'GET', headers })
 
   if (!res.ok) {
-    throw new Error(`Failed to fetch plans for product "${productRef}": ${res.statusText}`)
+    const message = await readErrorMessage(
+      res,
+      `Failed to fetch plans for product "${productRef}"`,
+    )
+    throw new Error(message)
   }
 
   const data = (await res.json()) as { plans?: Plan[] }
@@ -95,14 +102,17 @@ async function resolvePlanRef(
 export function useCheckout(options: {
   planRef?: string
   productRef?: string
+  currency?: string
   customer?: PrefillCustomer
 }): UseCheckoutReturn {
-  const { planRef, productRef, customer } = options
+  const { planRef, productRef, currency: currencyOverride, customer } = options
+  const planSelection = usePlanSelection()
   const { createPayment, customerRef, updateCustomerRef, _config } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
   const [resolvedPlanRef, setResolvedPlanRef] = useState<string | null>(planRef || null)
   const isStartingRef = useRef(false)
 
@@ -137,9 +147,11 @@ export function useCheckout(options: {
         throw new Error('Could not determine plan reference for checkout')
       }
 
+      const selectedCurrency = currencyOverride ?? planSelection?.selectedCurrency ?? undefined
       const result = await createPayment({
         planRef: effectivePlanRef,
         productRef,
+        ...(selectedCurrency && { currency: selectedCurrency }),
         customer,
       })
 
@@ -174,6 +186,9 @@ export function useCheckout(options: {
 
       setStripePromise(stripe)
       setClientSecret(result.clientSecret)
+      if (result.processorPaymentId) {
+        setProcessorPaymentId(result.processorPaymentId)
+      }
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start checkout')
       setError(error)
@@ -181,7 +196,17 @@ export function useCheckout(options: {
       setLoading(false)
       isStartingRef.current = false
     }
-  }, [planRef, productRef, customer, createPayment, updateCustomerRef, loading, _config])
+  }, [
+    planRef,
+    productRef,
+    currencyOverride,
+    planSelection?.selectedCurrency,
+    customer,
+    createPayment,
+    updateCustomerRef,
+    loading,
+    _config,
+  ])
 
   const reset = useCallback(() => {
     isStartingRef.current = false
@@ -189,6 +214,7 @@ export function useCheckout(options: {
     setError(null)
     setStripePromise(null)
     setClientSecret(null)
+    setProcessorPaymentId(null)
     setResolvedPlanRef(planRef || null)
   }, [planRef])
 
@@ -197,6 +223,7 @@ export function useCheckout(options: {
     error,
     stripePromise,
     clientSecret,
+    processorPaymentId,
     resolvedPlanRef,
     startCheckout,
     reset,

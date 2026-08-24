@@ -18,6 +18,8 @@ export interface PlanSelectionContextValue {
   productRef: string | undefined
   selectedPlanRef: string | null
   setSelectedPlanRef: (planRef: string | null) => void
+  selectedCurrency: string | null
+  setSelectedCurrency: (currency: string | null) => void
   plans: Plan[]
   loading: boolean
   error: Error | null

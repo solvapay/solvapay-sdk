@@ -118,6 +118,26 @@ Pick the right bump level per affected package:
 
 The changeset body is a short markdown description that ends up verbatim in each affected package's `CHANGELOG.md`. Lead with **what changed for consumers**, not implementation detail.
 
+After editing changesets, always run `pnpm changeset status --verbose` and confirm the plan ends with **"would release NO packages as a major"** — unless a package genuinely ships a breaking change backed by its own `major` changeset.
+
+### Internal peer dependencies — avoid major-version cascades
+
+When one `@solvapay/*` package lists another as a **peerDependency**, use `workspace:^`, **never** `workspace:*`.
+
+```jsonc
+// ✅ correct
+"peerDependencies": { "@solvapay/auth": "workspace:^" }
+
+// ❌ wrong — exact pin cascades a major bump onto every dependent
+"peerDependencies": { "@solvapay/auth": "workspace:*" }
+```
+
+`.changeset/config.json` sets `onlyUpdatePeerDependentsWhenOutOfRange: true`, and a peer-range change is a **major** bump by convention. `workspace:*` publishes as the *exact* current version, so **any** bump to that peer — even a patch — puts the range out of range and forces Changesets to bump **every dependent to a new major**. `workspace:^` publishes as `^<version>`, so patch/minor peer bumps stay in range.
+
+> **Pre-1.0 peers:** `workspace:^` on a `0.x` peer publishes as `^0.2.4`, which only satisfies `0.2.x` — a future `0.3.0` will still cascade. That is correct semver; discuss with the team before choosing a looser range.
+
+When you change an internal peer range, add a **patch** changeset for each edited package (`*`→`^` is a widening) and run `pnpm install` to refresh the lockfile. Never hand-edit a `version` field — let Changesets compute it.
+
 ### Branches & dist-tags
 
 - **`dev`** — primary development branch. Every merge auto-publishes a

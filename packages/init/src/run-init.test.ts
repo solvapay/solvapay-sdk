@@ -279,7 +279,10 @@ describe('runInitInDirectory', () => {
   it('keeps an existing verified product when the user confirms keep', async () => {
     mockSuccessfulAuth()
     vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue('prd_REAL')
-    vi.mocked(verifyProductRef).mockResolvedValue({ status: 'ok' })
+    vi.mocked(verifyProductRef).mockResolvedValue({
+      status: 'ok',
+      product: { name: 'Newest Product', status: 'active', plans: [{ isActive: true }] },
+    })
     vi.mocked(listProducts).mockResolvedValue({
       ok: true,
       products: [{ ...mockProduct, reference: 'prd_REAL', name: 'Real Product' }],
@@ -298,7 +301,10 @@ describe('runInitInDirectory', () => {
   it('runs the picker when the user declines to keep the existing product', async () => {
     mockSuccessfulAuth()
     vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue('prd_REAL')
-    vi.mocked(verifyProductRef).mockResolvedValue({ status: 'ok' })
+    vi.mocked(verifyProductRef).mockResolvedValue({
+      status: 'ok',
+      product: { name: 'Newest Product', status: 'active', plans: [{ isActive: true }] },
+    })
     vi.mocked(listProducts).mockResolvedValue({
       ok: true,
       products: [{ ...mockProduct, reference: 'prd_REAL', name: 'Real Product' }],
@@ -382,7 +388,10 @@ describe('runInitInDirectory', () => {
 
   it('verifies and writes an explicit productRef option without running the picker', async () => {
     mockSuccessfulAuth()
-    vi.mocked(verifyProductRef).mockResolvedValue({ status: 'ok' })
+    vi.mocked(verifyProductRef).mockResolvedValue({
+      status: 'ok',
+      product: { name: 'Newest Product', status: 'active', plans: [{ isActive: true }] },
+    })
     vi.mocked(writeSolvaPayProductRefToEnv).mockResolvedValue({
       filePath: '/tmp/.env',
       action: 'updated',

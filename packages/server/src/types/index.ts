@@ -10,6 +10,7 @@ export type { paths, components, operations } from './generated'
 
 // Re-export client types from types/client.ts
 export type {
+  PurchaseInfo,
   LimitResponseWithPlan,
   CustomerResponseMapped,
   UsageMeterType,
@@ -22,6 +23,14 @@ export type {
   ConfigureMcpPlansResponse,
   McpToolPlanMappingInput,
   ToolPlanMappingInput,
+  CreditDebitSkipReason,
+  CreditDebitResult,
+  TrackUsageRequest,
+  TrackUsageResponse,
+  TrackUsageBulkRequest,
+  TrackUsageBulkResponse,
+  AssignCreditsRequest,
+  AssignCreditsResponse,
 } from './client'
 // Re-export SolvaPayClient interface from types/client.ts
 export type { SolvaPayClient } from './client'

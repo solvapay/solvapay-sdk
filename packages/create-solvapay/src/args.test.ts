@@ -22,6 +22,12 @@ describe('parseArgs', () => {
     expect(result.type).toBe('mcp')
   })
 
+  it('parses --auth <provider>', () => {
+    const result = parseArgs(['my-app', '--auth', 'auth0'])
+    expect(result.projectName).toBe('my-app')
+    expect(result.auth).toBe('auth0')
+  })
+
   it('parses --list-types', () => {
     expect(parseArgs(['--list-types']).listTypes).toBe(true)
   })
@@ -74,6 +80,11 @@ describe('parseArgs', () => {
   it('flags missing value for value-flags', () => {
     const result = parseArgs(['--type'])
     expect(result.unknownFlag).toContain('--type requires a value')
+  })
+
+  it('flags missing value for --auth', () => {
+    const result = parseArgs(['--auth'])
+    expect(result.unknownFlag).toContain('--auth requires a value')
   })
 
   it('does not capture MCP-specific flags at the top level', () => {

@@ -18,7 +18,7 @@
     "@solvapay/examples-shared": "workspace:*",
     "@solvapay/next": "workspace:*",
     "@solvapay/react": "workspace:*",
-    "@solvapay/server": "*",
+    "@solvapay/server": "workspace:*",
     "@stripe/react-stripe-js": "^6.0.0",
     "@stripe/stripe-js": "^9.0.0",
     "class-variance-authority": "^0.7.1",

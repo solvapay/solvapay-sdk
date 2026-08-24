@@ -130,6 +130,39 @@ describe('createTopupPaymentIntentCore', () => {
     })
   })
 
+  it('forwards autoRecharge in the topup payment intent request', async () => {
+    mockSyncCustomer.mockResolvedValueOnce('cus_TOPUP1')
+
+    const autoRecharge = {
+      enabled: true,
+      triggerType: 'balance' as const,
+      thresholdAmountMajor: 5,
+      topupAmountMajor: 10,
+      currency: 'USD',
+    }
+
+    const mockSolvaPay = {
+      createTopupPaymentIntent: vi.fn().mockResolvedValueOnce({
+        processorPaymentId: 'pi_topup_auto',
+        clientSecret: 'cs_auto',
+        publishableKey: 'pk_test',
+      }),
+    }
+    mockCreateSolvaPay.mockReturnValueOnce(mockSolvaPay as any)
+
+    await createTopupPaymentIntentCore(
+      makeRequest(),
+      { amount: 5000, currency: 'USD', autoRecharge },
+    )
+
+    expect(mockSolvaPay.createTopupPaymentIntent).toHaveBeenCalledWith({
+      customerRef: 'cus_TOPUP1',
+      amount: 5000,
+      currency: 'USD',
+      autoRecharge,
+    })
+  })
+
   it('returns customerRef in successful response', async () => {
     mockSyncCustomer.mockResolvedValueOnce('cus_REF_42')
 

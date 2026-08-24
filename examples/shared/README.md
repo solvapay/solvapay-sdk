@@ -73,7 +73,7 @@ The stub client implements the `SolvaPayClient` interface from `@solvapay/server
 ```typescript
 interface SolvaPayClient {
   checkLimits(params: {...}): Promise<{...}>;
-  trackUsage(params: {...}): Promise<void>;
+  trackUsage(params: {...}): Promise<{ success: boolean; reference: string }>;
   createCustomer?(params: {...}): Promise<{...}>;
   getCustomer?(params: {...}): Promise<{...}>;
 }

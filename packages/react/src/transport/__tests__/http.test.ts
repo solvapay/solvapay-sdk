@@ -40,6 +40,25 @@ describe('createHttpTransport — default routes', () => {
     expect(JSON.parse(init.body as string)).toEqual({ planRef: 'pln_pro' })
   })
 
+  it('forwards optional currency on createPayment', async () => {
+    const fetchFn = makeFetch({ clientSecret: 'cs_x', publishableKey: 'pk_x' })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    await transport.createPayment({
+      planRef: 'pln_pro',
+      productRef: 'prd_x',
+      currency: 'EUR',
+      customer: {},
+    })
+
+    const [, init] = fetchFn.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(init.body as string)).toEqual({
+      planRef: 'pln_pro',
+      productRef: 'prd_x',
+      currency: 'EUR',
+    })
+  })
+
   it('honours config.api overrides', async () => {
     const fetchFn = makeFetch({})
     const transport = createHttpTransport({
@@ -208,5 +227,71 @@ describe('createHttpTransport — default routes', () => {
 
     await expect(transport.getBalance!()).rejects.toThrow()
     expect(onError).toHaveBeenCalledWith(expect.any(Error), 'getBalance')
+  })
+
+  it('default autoRecharge route maps GET, PUT, and DELETE to /api/auto-recharge', async () => {
+    const fetchFn = makeFetch({ success: true })
+    const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
+
+    await transport.getAutoRecharge!()
+    await transport.saveAutoRecharge!({
+      enabled: true,
+      triggerType: 'balance',
+      thresholdAmountMajor: 10,
+      topupAmountMajor: 50,
+      currency: 'USD',
+    })
+    await transport.disableAutoRecharge!()
+
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      1,
+      DEFAULT_ROUTES.autoRecharge,
+      expect.objectContaining({ method: 'GET' }),
+    )
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      2,
+      DEFAULT_ROUTES.autoRecharge,
+      expect.objectContaining({ method: 'PUT' }),
+    )
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      3,
+      DEFAULT_ROUTES.autoRecharge,
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+  })
+
+  it('a single api.autoRecharge override redirects GET, PUT, and DELETE', async () => {
+    const fetchFn = makeFetch({ success: true })
+    const customRoute = '/api/v2/auto-recharge'
+    const transport = createHttpTransport({
+      fetch: fetchFn as unknown as typeof fetch,
+      api: { autoRecharge: customRoute },
+    })
+
+    await transport.getAutoRecharge!()
+    await transport.saveAutoRecharge!({
+      enabled: true,
+      triggerType: 'balance',
+      thresholdAmountMajor: 10,
+      topupAmountMajor: 50,
+      currency: 'USD',
+    })
+    await transport.disableAutoRecharge!()
+
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      1,
+      customRoute,
+      expect.objectContaining({ method: 'GET' }),
+    )
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      2,
+      customRoute,
+      expect.objectContaining({ method: 'PUT' }),
+    )
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      3,
+      customRoute,
+      expect.objectContaining({ method: 'DELETE' }),
+    )
   })
 })

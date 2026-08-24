@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 ## See also
 
 - [`@solvapay/server`](../server) — paywall adapters with `getCustomerRef`
-- [`@solvapay/next`](../next) — Next.js helpers + `createSupabaseAuthMiddleware`
+- [`@solvapay/next`](../next) — Next.js helpers + `createSupabaseAuthMiddleware` / `createAuth0AuthMiddleware`
 - [`@solvapay/react-supabase`](../react-supabase) — client-side Supabase adapter
 
 ## Support

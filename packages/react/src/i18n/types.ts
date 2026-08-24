@@ -90,6 +90,7 @@ export interface SolvaPayCopy {
     currentBadge: string
     popularBadge: string
     freeBadge: string
+    usageRateLabel: string
     perIntervalShort: string
     continueButton: string
     backButton: string
@@ -100,6 +101,51 @@ export interface SolvaPayCopy {
     customAmountLabel: string
     creditEstimateExact: string
     creditEstimateApprox: string
+  }
+  autoRecharge: {
+    heading: string
+    description: string
+    settingsHeading: string
+    setupTriggerLabel: string
+    modifyTriggerLabel: string
+    notConfiguredHint: string
+    enableLabel: string
+    enableQuestion: string
+    enableSentence: string
+    thresholdLabel: string
+    thresholdAriaLabel: string
+    fixedAmountLabel: string
+    fixedAmountAriaLabel: string
+    saveButton: string
+    cancelButton: string
+    disableButton: string
+    savedMessage: string
+    disabledMessage: string
+    setupRequiredMessage: string
+    setupHeading: string
+    setupDescription: string
+    setupSubmit: string
+    setupProcessing: string
+    setupAwaitingConfirmation: string
+    setupAuthFailed: string
+    invalidThreshold: string
+    thresholdTooLow: string
+    minTopupAmount: string
+    topupBelowThreshold: string
+    invalidMaxMonthlySpend: string
+    maxMonthlySpendBelowTopup: string
+    maxMonthlySpendLabel: string
+    maxMonthlySpendAriaLabel: string
+    maxMonthlySpendPlaceholder: string
+    maxMonthlySpendHelper: string
+    monthlySpendLine: string
+    statusMonthlyCapReached: string
+    creditsPerRecharge: string
+    creditsPerRechargeApprox: string
+    currencyPerRecharge: string
+    currencyPerRechargeApprox: string
+    taxDisclosure: string
+    statusFailed: string
   }
   activationFlow: {
     heading: string
@@ -252,8 +298,11 @@ export interface SolvaPayCopy {
     unknownError: string
     stripeUnavailable: string
     paymentIntentUnavailable: string
+    paymentElementMissing: string
+    /** @deprecated Use `paymentElementMissing`. Slated for removal in the next major. */
     cardElementMissing: string
     paymentUnexpected: string
+    paymentPending: string
     paymentProcessingFailed: string
     paymentRequires3ds: string
     paymentProcessingTimeout: string

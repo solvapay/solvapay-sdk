@@ -39,34 +39,47 @@ Example app: [`examples/checkout-demo`](../../examples/checkout-demo)
 
 ## Helper reference
 
-| Helper | Purpose |
-| --- | --- |
-| `checkPurchase` | Purchase status (deduped + cached) |
-| `syncCustomer` | Ensure customer exists |
-| `createPaymentIntent` / `processPayment` | Embedded checkout |
-| `createCheckoutSession` | Hosted redirect checkout |
-| `createCustomerSession` | Customer portal |
-| `listPlans` | Public plan listing |
-| `cancelRenewal` / `reactivateRenewal` / `activatePlan` | Plan lifecycle |
-| `trackUsage` | Server-side usage metering |
-| `getAuthenticatedUser` | User ID, email, name from headers |
-| `clearPurchaseCache` / `getPurchaseCacheStats` | Cache management |
+| Helper                                                 | Purpose                            |
+| ------------------------------------------------------ | ---------------------------------- |
+| `checkPurchase`                                        | Purchase status (deduped + cached) |
+| `syncCustomer`                                         | Ensure customer exists             |
+| `createPaymentIntent` / `processPayment`               | Embedded checkout                  |
+| `createCheckoutSession`                                | Hosted redirect checkout           |
+| `createCustomerSession`                                | Customer portal                    |
+| `listPlans`                                            | Public plan listing                |
+| `cancelRenewal` / `reactivateRenewal` / `activatePlan` | Plan lifecycle                     |
+| `trackUsage`                                           | Server-side usage metering         |
+| `getAuthenticatedUser`                                 | User ID, email, name from headers  |
+| `clearPurchaseCache` / `getPurchaseCacheStats`         | Cache management                   |
 
 Full signatures and options: [Next.js guide](https://docs.solvapay.com/sdks/typescript/guides/nextjs)
 
-## Middleware
+## Proxy
 
-Helpers expect `x-user-id` from middleware. Quick setup with Supabase:
+Helpers expect `x-user-id` from the Next.js proxy. Quick setup with Supabase:
 
 ```typescript
-// middleware.ts (Next.js 15) or src/proxy.ts (Next.js 16)
+// proxy.ts
 import { createSupabaseAuthMiddleware } from '@solvapay/next'
 
-export const middleware = createSupabaseAuthMiddleware({
+export const proxy = createSupabaseAuthMiddleware({
   publicRoutes: ['/api/list-plans'],
 })
 
 export const config = { matcher: ['/api/:path*'] }
+```
+
+Auth0 has the same high-level API:
+
+```typescript
+import { createAuth0AuthMiddleware } from '@solvapay/next/middleware'
+import { auth0 } from './lib/auth0'
+
+export const proxy = createAuth0AuthMiddleware({ auth0 })
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)'],
+}
 ```
 
 Next.js 16 renamed middleware to proxy — use `@solvapay/next/middleware` and export `proxy` instead of `middleware` when required.

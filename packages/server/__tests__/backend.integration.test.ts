@@ -72,6 +72,8 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
   let testCustomerRef: string
   let defaultProduct: { reference: string; name: string }
   let defaultPlan: { reference: string; freeUnits?: number }
+  /** Separate product so credit checkLimits is not shadowed by the free default plan. */
+  let creditProduct: { reference: string; name: string }
   let creditPlan: { reference: string; freeUnits: number; creditsPerUnit?: number; currency: string }
 
   beforeAll(async () => {
@@ -130,26 +132,29 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         freeUnits: defaultPlan.freeUnits,
       })
 
-      const rawCreditPlan = await createTestPlan(
+      // Credit-prepaid plan on its own product. Paid usage plans cannot be
+      // auto-assigned (DEV-703); tests activate this plan explicitly.
+      creditProduct = await createTestProduct(
         apiBaseUrl,
         SOLVAPAY_SECRET_KEY!,
-        defaultProduct.reference,
+        `${fixtureName} Credits`,
+      )
+      creditPlan = await createTestPlan(
+        apiBaseUrl,
+        SOLVAPAY_SECRET_KEY!,
+        creditProduct.reference,
         {
           type: 'usage-based',
-          creditsPerUnit: 100,
-          freeUnits: 5,
+          // Wire charge is minor units. 1¢/request = 100 credits (USD peg).
+          creditsPerUnit: 1,
+          freeUnits: 0,
           currency: providerCurrency,
           isDefault: false,
         },
       )
 
-      // Backend zeroes freeUnits for usage-based plans on create, so patch via updatePlan
-      await apiClient.updatePlan(defaultProduct.reference, rawCreditPlan.reference, {
-        freeUnits: 5,
-      })
-      creditPlan = { ...rawCreditPlan, freeUnits: 5 }
-
-      console.log('✅ Created credit plan:', {
+      console.log('✅ Created credit product/plan:', {
+        product: creditProduct.reference,
         reference: creditPlan.reference,
         freeUnits: creditPlan.freeUnits,
         creditsPerUnit: creditPlan.creditsPerUnit,
@@ -170,9 +175,14 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       console.log()
     } catch (error) {
       // Best-effort cleanup for partial setup failures (e.g., product created but plan creation fails).
-      if (SOLVAPAY_SECRET_KEY && defaultProduct?.reference) {
+      if (SOLVAPAY_SECRET_KEY) {
         const apiBaseUrl = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
-        await deleteTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY, defaultProduct.reference)
+        if (creditProduct?.reference) {
+          await deleteTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY, creditProduct.reference)
+        }
+        if (defaultProduct?.reference) {
+          await deleteTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY, defaultProduct.reference)
+        }
       }
 
       console.log()
@@ -197,8 +207,11 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     if (!SOLVAPAY_SECRET_KEY) return
 
     console.log()
+    const apiBaseUrl = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
+    if (creditProduct?.reference) {
+      await deleteTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY, creditProduct.reference)
+    }
     if (defaultProduct?.reference) {
-      const apiBaseUrl = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
       await deleteTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY, defaultProduct.reference)
     }
 
@@ -238,21 +251,23 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       expect(typeof result.remaining).toBe('number')
     })
 
-    it('should successfully track usage events without errors', async () => {
+    it('should successfully track usage events and return a usage response', async () => {
       // Use paywall's ensureCustomer for consistent customer creation
       const customerRef = await solvaPay.ensureCustomer(testCustomerRef)
 
-      // trackUsage returns void - just verify it doesn't throw
-      await expect(
-        apiClient.trackUsage({
-          customerRef: customerRef,
-          actionType: 'api_call',
-          units: 1,
-          outcome: 'success',
-          productRef: defaultProduct.reference,
-          timestamp: new Date().toISOString(),
-        }),
-      ).resolves.toBeUndefined()
+      const result = await apiClient.trackUsage({
+        customerRef: customerRef,
+        actionType: 'api_call',
+        units: 1,
+        outcome: 'success',
+        productRef: defaultProduct.reference,
+        timestamp: new Date().toISOString(),
+      })
+
+      expect(result).toMatchObject({
+        success: true,
+        reference: expect.any(String),
+      })
     })
 
     it('should correctly identify when customer exceeds their usage limit', async () => {
@@ -309,7 +324,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       // Track usage exactly (remainingUnits + 1) times to exceed the limit
       // Note: trackUsage deducts from allowance, checkLimits only checks status
       const usageCount = remainingUnits + 1
-      const usageRequests: Promise<void>[] = []
+      const usageRequests: Array<ReturnType<typeof apiClient.trackUsage>> = []
 
       for (let i = 0; i < usageCount; i++) {
         usageRequests.push(
@@ -1176,7 +1191,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     async function activateCreditPlan(customerRef: string) {
       const activation = await apiClient.activatePlan({
         customerRef,
-        productRef: defaultProduct.reference,
+        productRef: creditProduct.reference,
         planRef: creditPlan.reference,
       })
       // Usage-based plans no longer auto-grant credits on activation.
@@ -1192,7 +1207,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           actionType: 'api_call',
           units: 1,
           outcome: 'success',
-          productRef: defaultProduct.reference,
+          productRef: creditProduct.reference,
           planRef: creditPlan.reference,
           timestamp: new Date().toISOString(),
         })
@@ -1211,7 +1226,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       const result = await apiClient.checkLimits({
         customerRef,
-        productRef: defaultProduct.reference,
+        productRef: creditProduct.reference,
         planRef: creditPlan.reference,
         includeCheckoutSession: true,
       })
@@ -1253,6 +1268,128 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       console.log(`✅ getCustomerBalance: credits=${balanceResult.credits}, currency=${balanceResult.displayCurrency}`)
     })
 
+    it('should assign credits and debit them once for idempotent usage retries', async () => {
+      const customer = `test_credit_assign_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+      await activateCreditPlan(customerRef)
+
+      const grantKey = `grant-${customerRef}`
+      const firstGrant = await apiClient.assignCredits({
+        customerRef,
+        credits: 500,
+        reason: 'signup_bonus',
+        idempotencyKey: grantKey,
+      })
+      const secondGrant = await apiClient.assignCredits({
+        customerRef,
+        credits: 500,
+        reason: 'signup_bonus',
+        idempotencyKey: grantKey,
+      })
+
+      expect(firstGrant).toMatchObject({
+        success: true,
+        customerRef,
+        credits: 500,
+        balance: 500,
+        reason: 'signup_bonus',
+      })
+      expect(secondGrant).toEqual(firstGrant)
+
+      const usageKey = `usage-${customerRef}`
+      const firstUsage = await apiClient.trackUsage({
+        customerRef,
+        actionType: 'api_call',
+        units: 1,
+        outcome: 'success',
+        productRef: creditProduct.reference,
+        planRef: creditPlan.reference,
+        idempotencyKey: usageKey,
+      })
+      const secondUsage = await apiClient.trackUsage({
+        customerRef,
+        actionType: 'api_call',
+        units: 1,
+        outcome: 'success',
+        productRef: creditProduct.reference,
+        planRef: creditPlan.reference,
+        idempotencyKey: usageKey,
+      })
+
+      expect(firstUsage).toMatchObject({
+        success: true,
+        reference: expect.any(String),
+        creditDebit: {
+          debited: true,
+          amount: 100,
+          unitsRemaining: 4,
+        },
+      })
+      expect(secondUsage).toMatchObject({
+        success: true,
+        reference: firstUsage.reference,
+        creditDebit: {
+          debited: false,
+          reason: 'duplicate',
+        },
+      })
+
+      const balance = await apiClient.getCustomerBalance({ customerRef })
+      expect(balance.credits).toBe(400)
+    })
+
+    it('should assign credits and return per-event debit results from trackUsageBulk', async () => {
+      const customer = `test_credit_bulk_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const customerRef = await solvaPay.ensureCustomer(customer)
+      await activateCreditPlan(customerRef)
+
+      await apiClient.assignCredits({
+        customerRef,
+        credits: 300,
+        reason: 'signup_bonus',
+        idempotencyKey: `grant-${customerRef}`,
+      })
+
+      const result = await apiClient.trackUsageBulk({
+        events: [
+          {
+            customerRef,
+            actionType: 'api_call',
+            units: 1,
+            outcome: 'success',
+            productRef: creditProduct.reference,
+            planRef: creditPlan.reference,
+          },
+          {
+            customerRef,
+            actionType: 'api_call',
+            units: 1,
+            outcome: 'success',
+            productRef: creditProduct.reference,
+            planRef: creditPlan.reference,
+          },
+        ],
+      })
+
+      expect(result).toMatchObject({
+        success: true,
+        inserted: 2,
+      })
+      expect(result.results).toHaveLength(2)
+      for (const usage of result.results) {
+        expect(usage).toMatchObject({
+          reference: expect.any(String),
+          creditDebit: {
+            debited: true,
+            amount: 100,
+          },
+        })
+      }
+
+      const balance = await apiClient.getCustomerBalance({ customerRef })
+      expect(balance.credits).toBe(100)
+    })
+
     // NOTE: Credit-deduction-on-consumption tests are covered by the payment
     // integration suite (packages/server/__tests__/payment-stripe.integration.test.ts)
     // because they require a real top-up payment flow. Usage-based plans no
@@ -1279,7 +1416,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       const exhausted = await apiClient.checkLimits({
         customerRef,
-        productRef: defaultProduct.reference,
+        productRef: creditProduct.reference,
         planRef: creditPlan.reference,
         includeCheckoutSession: true,
       })
@@ -1295,7 +1432,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
       const payable = freshSolvaPay.payable({
-        productRef: defaultProduct.reference,
+        productRef: creditProduct.reference,
         planRef: creditPlan.reference,
       })
       const protectedHandler = await payable.function(createTask)
@@ -1305,7 +1442,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           title: 'Should be blocked',
           auth: { customer_ref: customer },
         }),
-      ).rejects.toThrow('Payment required')
+      ).rejects.toThrow(/Payment required|Activation required/)
 
       console.log(`✅ Paywall fired on topup-required activation: checkoutUrl=${exhausted.checkoutUrl}, confirmationUrl=${exhausted.confirmationUrl}`)
     })
@@ -1319,7 +1456,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       const freshSolvaPay = createSolvaPay({ apiClient, limitsCacheTTL: 0 })
       const payable = freshSolvaPay.payable({
-        productRef: defaultProduct.reference,
+        productRef: creditProduct.reference,
         planRef: creditPlan.reference,
       })
       const mcpHandler = payable.mcp(listTasks)

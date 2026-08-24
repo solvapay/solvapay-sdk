@@ -76,6 +76,20 @@ async function main(): Promise<void> {
   const target = resolve(process.cwd(), projectName)
 
   let typeId = args.type
+  if (args.auth) {
+    if (args.auth === 'auth0') {
+      if (typeId && typeId !== 'next-auth0') {
+        process.stderr.write('--auth auth0 is only compatible with --type next-auth0.\n')
+        process.exitCode = 2
+        return
+      }
+      typeId = 'next-auth0'
+    } else {
+      process.stderr.write(`Unknown --auth value: ${args.auth}. Valid: auth0\n`)
+      process.exitCode = 2
+      return
+    }
+  }
   if (!typeId) {
     if (nonInteractive) {
       process.stderr.write(

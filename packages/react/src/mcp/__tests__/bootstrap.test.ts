@@ -2,12 +2,14 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   classifyHostEntry,
   fetchMcpBootstrap,
+  fetchMcpBootstrapViaResource,
   isTransportToolName,
   parseBootstrapFromToolResult,
   SOLVAPAY_TRANSPORT_TOOL_NAMES,
   waitForInitialToolResult,
 } from '../bootstrap'
 import type { McpAppBootstrapLike, ToolResultNotificationParams } from '../bootstrap'
+import { SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
 
 function mockApp(opts: {
   toolName?: string
@@ -137,6 +139,57 @@ describe('fetchMcpBootstrap', () => {
     })
 
     await expect(fetchMcpBootstrap(app)).rejects.toThrow('customer_ref missing')
+  })
+})
+
+describe('fetchMcpBootstrapViaResource', () => {
+  function mockResourceApp(opts: {
+    toolName?: string
+    resourceText?: string
+    resourceFails?: boolean
+    omitReadServerResource?: boolean
+  }): McpAppBootstrapLike {
+    const base = mockApp({ toolName: opts.toolName })
+    if (opts.omitReadServerResource) return base
+    return {
+      ...base,
+      readServerResource: opts.resourceFails
+        ? vi.fn().mockRejectedValue(new Error('resource unavailable'))
+        : vi.fn().mockResolvedValue({
+            contents: [{ text: opts.resourceText ?? JSON.stringify({
+              view: 'account',
+              productRef: 'prod_123',
+              returnUrl: 'https://example.test/return',
+            }) }],
+          }),
+    }
+  }
+
+  it('parses bootstrap JSON and forces view from host context', async () => {
+    const app = mockResourceApp({ toolName: 'topup' })
+    const result = await fetchMcpBootstrapViaResource(app)
+    expect(app.readServerResource).toHaveBeenCalledWith({ uri: SOLVAPAY_BOOTSTRAP_URI })
+    expect(result.view).toBe('topup')
+    expect(result.productRef).toBe('prod_123')
+  })
+
+  it('throws when readServerResource is unavailable', async () => {
+    const app = mockResourceApp({ omitReadServerResource: true })
+    await expect(fetchMcpBootstrapViaResource(app)).rejects.toThrow(/readServerResource/)
+  })
+
+  it('throws when resource body is missing', async () => {
+    const app = mockApp({})
+    app.readServerResource = vi.fn().mockResolvedValue({ contents: [{}] })
+    await expect(fetchMcpBootstrapViaResource(app)).rejects.toThrow(/no text content/)
+  })
+
+  it('throws when resource body is invalid JSON', async () => {
+    const app = mockApp({})
+    app.readServerResource = vi.fn().mockResolvedValue({
+      contents: [{ text: 'not-json' }],
+    })
+    await expect(fetchMcpBootstrapViaResource(app)).rejects.toThrow(/invalid JSON/)
   })
 })
 

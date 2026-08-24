@@ -311,6 +311,50 @@ app.post(
 )
 ```
 
+### Streaming Responses with payable.gate()
+
+`payable.http()` owns the whole response, which doesn't fit streaming or SSE endpoints. For those,
+use `payable.gate()` — it returns a **decision** instead of wrapping a handler, so you keep full
+control of the response and report usage yourself:
+
+```typescript
+app.post('/api/chat', async (req, res) => {
+  const gate = await payable.gate(req)
+
+  if (gate.kind === 'paywall') {
+    // gate.content has the structured paywall body (checkoutUrl, message, ...)
+    return res.status(402).json(gate.content)
+  }
+
+  // gate.kind === 'allow' — stream the response, then report the outcome
+  const startTime = Date.now()
+  res.setHeader('Content-Type', 'text/event-stream')
+
+  try {
+    for await (const chunk of generateChatStream(req.body)) {
+      res.write(`data: ${JSON.stringify(chunk)}\n\n`)
+    }
+    res.end()
+    gate.trackSuccess({ duration: Date.now() - startTime })
+  } catch (error) {
+    res.end()
+    gate.trackFail(error, { duration: Date.now() - startTime })
+  }
+})
+```
+
+The `allow` result carries:
+
+- `customerRef` — the resolved customer (defaults to the `x-customer-ref` header)
+- `trackSuccess(opts?)` / `trackFail(error, opts?)` — fire-and-forget usage reporting; call
+  exactly one of them after the stream finishes
+- `decision` — the underlying paywall decision, if you need plan details
+
+Options: `getCustomerRef(req)` overrides customer resolution, and `ctx` accepts a
+Workers-style `waitUntil` so tracking outlives the response on edge runtimes. See
+`examples/chat-checkout-demo` in the SDK repo for a complete SSE chat endpoint built on
+`payable.gate()`.
+
 ### Response Formatting
 
 The HTTP adapter automatically formats responses. Your business logic should return:

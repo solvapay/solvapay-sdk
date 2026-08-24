@@ -20,7 +20,8 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useCheckoutFlow } from './useCheckoutFlow'
-import { PlanSelector } from '../primitives/PlanSelector'
+import { readPaymentIntentClientSecret } from '../primitives/paymentIntentReturn'
+import { PlanSelector, usePlanSelector } from '../primitives/PlanSelector'
 import { plansCache } from './usePlans'
 import { merchantCache } from './useMerchant'
 import { SolvaPayContext } from '../SolvaPayProvider'
@@ -34,6 +35,14 @@ import type {
 } from '../types'
 
 const productRef = 'prd_test'
+
+vi.mock('../primitives/paymentIntentReturn', async importOriginal => {
+  const actual = await importOriginal<typeof import('../primitives/paymentIntentReturn')>()
+  return {
+    ...actual,
+    readPaymentIntentClientSecret: vi.fn(actual.readPaymentIntentClientSecret),
+  }
+})
 
 const paygPlan: Plan = {
   reference: 'pln_payg',
@@ -179,6 +188,10 @@ function makeWrapper(opts: WrapperOptions = {}): {
 beforeEach(() => {
   plansCache.clear()
   merchantCache.clear()
+  vi.mocked(readPaymentIntentClientSecret).mockImplementation(search => {
+    const value = new URLSearchParams(search).get('payment_intent_client_secret')
+    return value && value.length > 0 ? value : undefined
+  })
 })
 
 afterEach(() => {
@@ -207,6 +220,29 @@ describe('useCheckoutFlow — initial state', () => {
     const { result } = renderHook(() => useCheckoutFlow({ productRef, initialStep: 'amount' }), {
       wrapper: Wrapper,
     })
+    expect(result.current.step).toBe('amount')
+  })
+})
+
+describe('useCheckoutFlow — Stripe return resume', () => {
+  it('starts on the payment step when payment_intent_client_secret is in the URL', async () => {
+    vi.mocked(readPaymentIntentClientSecret).mockReturnValueOnce('pi_return_secret')
+
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    expect(result.current.step).toBe('payment')
+  })
+
+  it('keeps the configured initialStep when no Stripe return params are present', () => {
+    vi.mocked(readPaymentIntentClientSecret).mockReturnValueOnce(undefined)
+
+    const { Wrapper } = makeWrapper()
+    const { result } = renderHook(
+      () => useCheckoutFlow({ productRef, initialStep: 'amount' }),
+      { wrapper: Wrapper },
+    )
     expect(result.current.step).toBe('amount')
   })
 })
@@ -285,11 +321,16 @@ describe('useCheckoutFlow — PAYG branch', () => {
     const purchases: PurchaseInfo[] = [
       {
         reference: 'prc_payg_active',
+        customerRef: 'cus_payg',
         productName: 'Widget API',
         productRef,
         status: 'active',
         startDate: new Date().toISOString(),
-        planSnapshot: { reference: 'pln_payg' },
+        createdAt: new Date().toISOString(),
+        currency: 'USD',
+        amount: 0,
+        isRecurring: false,
+        planSnapshot: { reference: 'pln_payg', currency: 'USD', price: 0, isMetered: true },
       },
     ]
     const { Wrapper, transport } = makeWrapper({
@@ -428,6 +469,41 @@ describe('useCheckoutFlow — PAYG branch', () => {
     })
     expect(onPurchaseSuccess).toHaveBeenCalledTimes(1)
     expect(onPurchaseSuccess).toHaveBeenCalledWith(expect.objectContaining({ branch: 'payg' }))
+  })
+
+  it('re-activates the plan on PAYG success so the purchase materializes after top-up (topup-first)', async () => {
+    // Topup-first: the plan-step activate returns `topup_required` (no
+    // purchase). The active PAYG purchase must be created AFTER the top-up
+    // lands — so `activatePlan` is called a second time on success.
+    const activate = vi.fn().mockResolvedValue({ status: 'activated' })
+    const { Wrapper } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+    await act(async () => {
+      await result.current.advance()
+    })
+    // Plan-step probe.
+    expect(activate).toHaveBeenCalledTimes(1)
+    act(() => {
+      result.current.selectAmount(1800)
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    await act(async () => {
+      await result.current.advance()
+    })
+    expect(result.current.step).toBe('success')
+    // Second activation creates the plan purchase now that credits landed.
+    expect(activate).toHaveBeenCalledTimes(2)
+    expect(activate).toHaveBeenLastCalledWith({ productRef, planRef: 'pln_payg' })
   })
 })
 
@@ -1129,5 +1205,151 @@ describe('useCheckoutFlow — synchronous refetch on PAYG success', () => {
     // doesn't refetch (and never optimistically minted credits).
     expect(adjustBalance).not.toHaveBeenCalled()
     expect(refetchPurchase).not.toHaveBeenCalled()
+  })
+})
+
+// ------------------------------------------------------------------
+// Topup currency (multi-currency PAYG)
+// ------------------------------------------------------------------
+
+describe('useCheckoutFlow — topup currency', () => {
+  it('single-currency merchant: exposes only the default and resolves topupCurrency to it', () => {
+    const { Wrapper } = makeWrapper({ merchant: { ...defaultMerchant, defaultCurrency: 'sek' } })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    expect(result.current.topupCurrencies).toEqual(['SEK'])
+    expect(result.current.topupCurrency).toBe('SEK')
+    expect(result.current.topupCurrencyReady).toBe(true)
+  })
+
+  it('multi-currency merchant: exposes the full supported set (uppercased, deduped)', () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'EUR', 'eur', 'gbp'],
+      },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    expect(result.current.topupCurrencies).toEqual(['USD', 'EUR', 'GBP'])
+    expect(result.current.topupCurrency).toBe('USD')
+  })
+
+  it('setTopupCurrency switches to a supported currency', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'eur'],
+      },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    act(() => {
+      result.current.setTopupCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.topupCurrency).toBe('EUR'))
+  })
+
+  it('setTopupCurrency ignores a currency outside the supported set', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'eur'],
+      },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    act(() => {
+      result.current.setTopupCurrency('gbp')
+    })
+    await waitFor(() => expect(result.current.topupCurrency).toBe('USD'))
+  })
+
+  it('reset clears a currency override back to the default', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'eur'],
+      },
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), { wrapper: Wrapper })
+    act(() => {
+      result.current.setTopupCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.topupCurrency).toBe('EUR'))
+    act(() => {
+      result.current.reset()
+    })
+    await waitFor(() => expect(result.current.topupCurrency).toBe('USD'))
+  })
+
+  it('plan-picker preferredCurrency flows into topupCurrency when supported', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'sek',
+        supportedTopupCurrencies: ['sek', 'eur'],
+      },
+    })
+    const { result } = renderHook(
+      () => {
+        const flow = useCheckoutFlow({ productRef })
+        const planCtx = usePlanSelector()
+        return { flow, planCtx }
+      },
+      { wrapper: Wrapper },
+    )
+    act(() => {
+      result.current.planCtx.setPreferredCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.flow.topupCurrency).toBe('EUR'))
+  })
+
+  it('plan-picker preferredCurrency is ignored when not in supportedTopupCurrencies', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'sek',
+        supportedTopupCurrencies: ['sek'],
+      },
+    })
+    const { result } = renderHook(
+      () => {
+        const flow = useCheckoutFlow({ productRef })
+        const planCtx = usePlanSelector()
+        return { flow, planCtx }
+      },
+      { wrapper: Wrapper },
+    )
+    act(() => {
+      result.current.planCtx.setPreferredCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.flow.topupCurrency).toBe('SEK'))
+  })
+
+  it('top-up switcher override wins over plan-picker preferredCurrency', async () => {
+    const { Wrapper } = makeWrapper({
+      merchant: {
+        ...defaultMerchant,
+        defaultCurrency: 'usd',
+        supportedTopupCurrencies: ['usd', 'eur', 'sek'],
+      },
+    })
+    const { result } = renderHook(
+      () => {
+        const flow = useCheckoutFlow({ productRef })
+        const planCtx = usePlanSelector()
+        return { flow, planCtx }
+      },
+      { wrapper: Wrapper },
+    )
+    act(() => {
+      result.current.planCtx.setPreferredCurrency('eur')
+    })
+    await waitFor(() => expect(result.current.flow.topupCurrency).toBe('EUR'))
+    act(() => {
+      result.current.flow.setTopupCurrency('sek')
+    })
+    await waitFor(() => expect(result.current.flow.topupCurrency).toBe('SEK'))
   })
 })

@@ -23,7 +23,10 @@ import { createSolvaPay } from '@solvapay/server'
 const solvaPay = createSolvaPay({ apiKey: process.env.SOLVAPAY_SECRET_KEY })
 const payable = solvaPay.payable({ product: 'prd_YOUR_PRODUCT' })
 
-app.post('/tasks', payable.http(async args => ({ id: 'task_1', ...args })))
+app.post(
+  '/tasks',
+  payable.http(async args => ({ id: 'task_1', ...args })),
+)
 ```
 
 Guide: [Express integration](https://docs.solvapay.com/sdks/typescript/guides/express)
@@ -68,12 +71,12 @@ server.setRequestHandler(..., payable.mcp(handler)) // MCP (low-level)
 const fn = await payable.function(handler)          // Direct / jobs / tests
 ```
 
-| Adapter | Use when |
-| --- | --- |
-| `payable.http()` | Express, Fastify, traditional HTTP |
-| `payable.next()` | Next.js App Router |
-| `payable.mcp()` | MCP tool handlers (low-level) |
-| `payable.function()` | Tests, cron, non-HTTP contexts |
+| Adapter              | Use when                           |
+| -------------------- | ---------------------------------- |
+| `payable.http()`     | Express, Fastify, traditional HTTP |
+| `payable.next()`     | Next.js App Router                 |
+| `payable.mcp()`      | MCP tool handlers (low-level)      |
+| `payable.function()` | Tests, cron, non-HTTP contexts     |
 
 ### Authentication
 
@@ -109,7 +112,9 @@ Guide: [MCP](https://docs.solvapay.com/sdks/typescript/guides/mcp)
 `createSolvaPayClient` implements:
 
 - `checkLimits(params)` — usage limits; auto-enrolls on first call for free default plans
-- `trackUsage(params)` — metered billing
+- `trackUsage(params)` — metered billing; returns the recorded usage reference and any credit debit result
+- `trackUsageBulk({ events })` — record several metered usage events in one request
+- `assignCredits(params)` — grant credits to a customer balance with optional idempotency
 - `createCustomer(params)` / `getCustomer(params)` — customer lifecycle
 
 Full reference: [Server SDK docs](https://docs.solvapay.com/sdks/typescript/intro)

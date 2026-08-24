@@ -15,6 +15,15 @@
  * is still well-formed.
  */
 
+import {
+  billingCycle,
+  creditsPerUnitFromBalance,
+  creditsToDisplayMinorUnits,
+  headlineCharges,
+  isZeroDecimalCurrency,
+  trialDays,
+  type PricingOptionLike,
+} from '@solvapay/core'
 import type { BootstrapPayload } from './types'
 
 export interface NarratorOutput {
@@ -24,38 +33,69 @@ export interface NarratorOutput {
 
 export type IntentTool = 'upgrade' | 'manage_account' | 'topup' | 'activate_plan'
 
+/**
+ * A plan as `GET /v1/sdk/products/:ref/plans` actually ships it. Pricing
+ * lives in `options[]`; the only scalars the backend derives onto the
+ * wire are the coarse `type` label, the headline `price`/`currency`, and
+ * `requiresPayment`. There is no `planType`, `creditsPerUnit`,
+ * `billingCycle`, or `pricingOptions` — read those through the
+ * `@solvapay/core` option helpers.
+ */
 interface PlanShape {
   name?: string
-  planType?: string
+  type?: string
   price?: number
   currency?: string
-  billingCycle?: string | null
-  meterRef?: string | null
-  limit?: number | null
-  creditsPerUnit?: number | null
+  requiresPayment?: boolean
+  options?: PricingOptionLike[]
+  reference?: string
+}
+
+/**
+ * Frozen plan captured on a purchase. Deliberately separate from
+ * `PlanShape`: the snapshot carries `isMetered` and no `type` or
+ * `requiresPayment`. It does carry the plan's `options[]` frozen at
+ * purchase time, which is what the customer is actually billed on.
+ */
+interface PlanSnapshotShape {
+  name?: string
+  price?: number
+  currency?: string
+  options?: PricingOptionLike[]
+  isMetered?: boolean
   reference?: string
 }
 
 interface PurchaseShape {
   planRef?: string
-  planSnapshot?: PlanShape | null
+  planSnapshot?: PlanSnapshotShape | null
   amount?: number
   currency?: string
   endDate?: string
+  isRecurring?: boolean
+  /** Lives on the purchase, not the snapshot, which freezes only `options`. */
+  billingCycle?: string | null
+  metadata?: { purpose?: string }
 }
 
 interface CustomerShape {
   ref?: string
-  balance?: { credits?: number | null; displayCurrency?: string; displayExchangeRate?: number } | null
+  balance?: {
+    credits?: number | null
+    displayCurrency?: string
+    displayExchangeRate?: number
+    creditsPerMinorUnit?: number
+  } | null
   usage?: { used?: number; limit?: number; resetsAt?: string } | null
   purchase?: { purchases?: PurchaseShape[] } | null
 }
 
-const ZERO_DECIMAL = new Set(['bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf'])
-
-function formatMoney(amountMinor: number | null | undefined, currency: string | null | undefined): string | null {
+function formatMoney(
+  amountMinor: number | null | undefined,
+  currency: string | null | undefined,
+): string | null {
   if (amountMinor == null || !currency) return null
-  const zero = ZERO_DECIMAL.has(currency.toLowerCase())
+  const zero = isZeroDecimalCurrency(currency)
   const major = zero ? amountMinor : amountMinor / 100
   try {
     return new Intl.NumberFormat('en-US', {
@@ -71,15 +111,23 @@ function formatMoney(amountMinor: number | null | undefined, currency: string | 
 function formatDate(iso: string | null | undefined): string | null {
   if (!iso) return null
   try {
-    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    return new Date(iso).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
   } catch {
     return null
   }
 }
 
+function isPlanPurchase(purchase: PurchaseShape): boolean {
+  return !!purchase.planSnapshot && purchase.metadata?.purpose !== 'credit_topup'
+}
+
 function activePurchase(customer: CustomerShape | null | undefined): PurchaseShape | null {
   const list = customer?.purchase?.purchases ?? []
-  return list[0] ?? null
+  return list.find(isPlanPurchase) ?? null
 }
 
 function productName(data: BootstrapPayload): string {
@@ -103,35 +151,37 @@ function balanceRow(customer: CustomerShape | null | undefined): string | null {
   const credits = customer.balance.credits ?? 0
   if (!credits && credits !== 0) return null
   const currency = customer.balance.displayCurrency
-  const rate = customer.balance.displayExchangeRate ?? 1
-  // Credits are minor-unit-equivalent on display currency; rate is
-  // already applied by the server.
-  const majorMinor = currency ? Math.round(credits / rate) : null
-  const money = formatMoney(majorMinor, currency ?? null)
+  const creditsPerMinorUnit = customer.balance.creditsPerMinorUnit
+  const displayMinor =
+    currency && typeof creditsPerMinorUnit === 'number' && creditsPerMinorUnit > 0
+      ? creditsToDisplayMinorUnits({
+          credits,
+          creditsPerMinorUnit,
+          displayExchangeRate: customer.balance.displayExchangeRate ?? 1,
+          displayCurrency: currency,
+        })
+      : null
+  const money = formatMoney(displayMinor, currency ?? null)
   const fmt = new Intl.NumberFormat('en-US').format(credits)
   return money ? `Balance: ${fmt} credits (~${money})` : `Balance: ${fmt} credits`
 }
 
-function resolveCreditsPerCall(active: PurchaseShape, plans: PlanShape[]): number | null {
-  const snapshot = active.planSnapshot
-  if (snapshot?.planType === 'usage-based') {
-    const fromSnapshot = snapshot.creditsPerUnit
-    if (typeof fromSnapshot === 'number' && fromSnapshot > 0) return fromSnapshot
-  }
-
-  const planRef = active.planRef
-  if (planRef) {
-    const match = plans.find(p => p.reference === planRef)
-    if (
-      match?.planType === 'usage-based' &&
-      typeof match.creditsPerUnit === 'number' &&
-      match.creditsPerUnit > 0
-    ) {
-      return match.creditsPerUnit
-    }
-  }
-
-  return null
+/**
+ * Cost of one metered call, in credits.
+ *
+ * The rate is the per-unit charge frozen onto the purchase's own
+ * `planSnapshot.options` — what the customer is billed on, which may
+ * differ from the live plan's current price. Converting that charge to
+ * credits needs the USD→charge-currency rate; `creditsPerUnitFromBalance`
+ * returns `null` when the balance peg doesn't cover the charge's
+ * currency, and the row is then skipped rather than guessed.
+ */
+function resolveCreditsPerCall(
+  active: PurchaseShape,
+  customer: CustomerShape | null | undefined,
+): number | null {
+  if (active.planSnapshot?.isMetered !== true) return null
+  return creditsPerUnitFromBalance(active.planSnapshot, customer?.balance)
 }
 
 function costPerCallRow(creditsPerUnit: number): string {
@@ -140,26 +190,63 @@ function costPerCallRow(creditsPerUnit: number): string {
 }
 
 function commandsLine(commands: string[]): string {
-  return `Commands: ${commands.map((c) => `\`/${c}\``).join(' ')}`
+  return `Commands: ${commands.map(c => `\`/${c}\``).join(' ')}`
+}
+
+/**
+ * Every currency the plan prices its headline charge in. A
+ * multi-currency plan carries one flat charge per currency in
+ * `options[]`; the derived top-level `price` collapses that to the
+ * default currency, so it is only a fallback for plans whose options
+ * this SDK can't read.
+ */
+function formatPlanPrices(p: PlanShape): string {
+  const charges = headlineCharges(p)
+  const priced =
+    charges.length > 0
+      ? charges.map(charge => formatMoney(charge.amountMinor, charge.currency))
+      : [formatMoney(p.price, p.currency)]
+
+  return priced.filter((value): value is string => value != null).join(' · ')
+}
+
+/** A free plan is one that requires no payment — there is no `'free'` plan type. */
+function isFreePlan(p: PlanShape): boolean {
+  return p.requiresPayment === false
+}
+
+function planTypeLabel(p: PlanShape): string {
+  if (isFreePlan(p)) return 'no payment required'
+  switch (p.type) {
+    case 'usage-based':
+      return 'pay as you go'
+    case 'hybrid':
+      return 'subscription + usage'
+    case 'one-time':
+      return 'one-time'
+    default:
+      return 'recurring'
+  }
+}
+
+function formatCycle(p: PlanShape): string {
+  const cycle = billingCycle(p)
+  if (!cycle) return ''
+  return cycle.count ? `/${cycle.count} ${cycle.interval}s` : `/${cycle.interval}`
 }
 
 function plansListLines(plans: PlanShape[]): string[] {
-  return plans.map((p) => {
+  return plans.map(p => {
     const name = p.name ?? 'Plan'
-    const price = formatMoney(p.price, p.currency)
-    const cycle = p.billingCycle ? `/${p.billingCycle}` : ''
-    const type =
-      p.planType === 'free'
-        ? 'no payment required'
-        : p.planType === 'usage-based'
-          ? 'pay as you go'
-          : p.planType === 'trial'
-            ? 'trial'
-            : 'recurring'
-    if (price && p.planType !== 'free') {
-      return `${name} · ${type} · ${price}${cycle}`
-    }
-    return `${name} · ${type}`
+    const parts = [name, planTypeLabel(p)]
+
+    const price = formatPlanPrices(p)
+    if (price && !isFreePlan(p)) parts.push(`${price}${formatCycle(p)}`)
+
+    const trial = trialDays(p)
+    if (trial) parts.push(`${trial}-day trial`)
+
+    return parts.join(' · ')
   })
 }
 
@@ -183,6 +270,8 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
   if (!active) {
     lines.push(`**Welcome to ${name}**`)
     lines.push('')
+    const bal = balanceRow(customer)
+    if (bal) lines.push(bal)
     const plans = (data.plans ?? []) as PlanShape[]
     if (plans.length > 0) {
       lines.push('No active plan. Plans available:')
@@ -199,16 +288,16 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
     if (plan) {
       const planName = plan.name ?? 'Plan'
       const price = formatMoney(plan.price, plan.currency)
-      const cycle = plan.billingCycle ? `/${plan.billingCycle}` : ''
+      const cycle = active.billingCycle ? `/${active.billingCycle}` : ''
       const end = formatDate(active.endDate)
       const parts = [planName]
-      if (price && plan.planType !== 'free') parts.push(`${price}${cycle}`)
+      if (price) parts.push(`${price}${cycle}`)
       if (end) parts.push(`renews ${end}`)
       lines.push(`Plan: ${parts.join(' · ')}`)
     }
     const bal = balanceRow(customer)
     if (bal) lines.push(bal)
-    const creditsPerCall = resolveCreditsPerCall(active, (data.plans ?? []) as PlanShape[])
+    const creditsPerCall = resolveCreditsPerCall(active, customer)
     if (creditsPerCall != null) lines.push(costPerCallRow(creditsPerCall))
     lines.push('')
     lines.push(commandsLine(['topup', 'upgrade']))
@@ -224,7 +313,7 @@ export function narrateUpgrade(data: BootstrapPayload): NarratorOutput {
   const lines: string[] = []
   lines.push(`**Upgrade — ${productName(data)}**`)
   lines.push('')
-  const plans = ((data.plans ?? []) as PlanShape[]).filter((p) => p.planType !== 'free')
+  const plans = ((data.plans ?? []) as PlanShape[]).filter(p => !isFreePlan(p))
   if (plans.length > 0) {
     lines.push('Plans available:')
     lines.push(...plansListLines(plans))
@@ -244,7 +333,7 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
   if (bal) lines.push(bal)
   const currency = (data.customer as CustomerShape | null)?.balance?.displayCurrency ?? 'USD'
   const presets = [1000, 2500, 5000, 10_000]
-    .map((m) => formatMoney(m, currency))
+    .map(m => formatMoney(m, currency))
     .filter(Boolean)
     .join(' · ')
   if (presets) lines.push(`Top-up presets: ${presets}`)
@@ -277,10 +366,17 @@ export const NARRATORS: Record<IntentTool, (data: BootstrapPayload) => NarratorO
 }
 
 const UI_OPENED_VERB: Record<IntentTool, (productName: string) => string> = {
-  topup: (p) => `Opened ${p} top-up.`,
-  upgrade: (p) => `Opened ${p} upgrade.`,
-  manage_account: (p) => `Opened your ${p} account.`,
-  activate_plan: (p) => `Opened ${p} plan picker.`,
+  topup: p => `Opened ${p} top-up.`,
+  upgrade: p => `Opened ${p} upgrade.`,
+  manage_account: p => `Opened your ${p} account.`,
+  activate_plan: p => `Opened ${p} plan picker.`,
+}
+
+const UI_PANEL_SHOWN: Record<IntentTool, string> = {
+  topup: 'Top-up options are shown in the panel.',
+  upgrade: 'Plans and checkout are shown in the panel.',
+  manage_account: 'Account details are shown in the panel.',
+  activate_plan: 'Plan options are shown in the panel.',
 }
 
 /**
@@ -289,15 +385,12 @@ const UI_OPENED_VERB: Record<IntentTool, (productName: string) => string> = {
  * surface opened + balance when available) without flooding the user
  * pane with the full narrated markdown that the iframe already covers.
  */
-export function uiPlaceholder(
-  tool: IntentTool,
-  data: BootstrapPayload,
-): string {
+export function uiPlaceholder(tool: IntentTool, data: BootstrapPayload): string {
   const name = productName(data)
   const opened = UI_OPENED_VERB[tool](name)
   const balance = balanceSummary(data.customer as CustomerShape | null)
   const parts = [opened]
   if (balance) parts.push(`Balance: ${balance}.`)
-  parts.push("Pass `mode: 'text'` for a markdown summary.")
+  parts.push(UI_PANEL_SHOWN[tool])
   return parts.join(' ')
 }

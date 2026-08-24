@@ -1,5 +1,82 @@
 # chat-checkout-demo
 
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [800f081]
+- Updated dependencies [800f081]
+- Updated dependencies [848e235]
+- Updated dependencies [800f081]
+- Updated dependencies [f9543de]
+- Updated dependencies [c6d3ddc]
+- Updated dependencies [fd41b64]
+- Updated dependencies [12f446b]
+- Updated dependencies [3a310eb]
+- Updated dependencies [12f446b]
+  - @solvapay/server@2.1.0
+  - @solvapay/core@1.3.0
+  - @solvapay/react@1.7.0
+
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [ede9365]
+- Updated dependencies [215d045]
+- Updated dependencies [dc46d8e]
+- Updated dependencies [b5515d3]
+- Updated dependencies [ee15454]
+- Updated dependencies [6de3d97]
+- Updated dependencies [985acd1]
+  - @solvapay/core@1.2.0
+  - @solvapay/react@1.6.0
+  - @solvapay/server@2.0.0
+
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [853e13f]
+  - @solvapay/react@1.5.0
+  - @solvapay/server@1.4.0
+
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [6e4f5cf]
+- Updated dependencies [2644836]
+- Updated dependencies [349777e]
+- Updated dependencies [5aa4aee]
+- Updated dependencies [349777e]
+  - @solvapay/react@1.4.0
+  - @solvapay/server@1.3.0
+  - @solvapay/core@1.1.1
+
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [2de7fd8]
+- Updated dependencies [cf495a3]
+- Updated dependencies [4892771]
+- Updated dependencies [c2a1169]
+- Updated dependencies [7a03c7f]
+- Updated dependencies [2de7fd8]
+  - @solvapay/auth@1.1.0
+  - @solvapay/react@1.3.0
+  - @solvapay/server@1.2.1
+  - @solvapay/core@1.1.0
+
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [254498f]
+  - @solvapay/server@1.2.0
+  - @solvapay/react@1.2.1
+
 ## 0.0.2
 
 ### Patch Changes

@@ -1,5 +1,59 @@
 # @solvapay/mcp changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- 12f446b: Migrate to the official MCP TypeScript SDK v2 (`@modelcontextprotocol/server@2.0.0`, `@modelcontextprotocol/core@2.0.0`). The peer dependency swaps from `@modelcontextprotocol/sdk` to the split v2 packages, the `zod` peer is now `^4.2.0`, and `engines.node` is `>=20`.
+
+  **`createSolvaPayMcpFetchHandler` changes shape.** `server: McpServer` is replaced by `factory: McpServerFactory`, so a fresh server is constructed per request via `createMcpHandler`. The `McpHandlerMode` / `mode` option (`sse-stateful`, `json-stateless`, …) is removed — use `responseMode: 'json' | 'sse' | 'auto'` to shape modern-era responses. 2025-era clients are still served through the SDK's default `legacy: 'stateless'` leg, so existing hosts keep working.
+
+  **MCP Apps helpers now come from `@solvapay/mcp`.** `@modelcontextprotocol/ext-apps` has no v2 build, so its three server-side symbols (`registerAppTool`, `registerAppResource`, `RESOURCE_MIME_TYPE`) are vendored here and exported from this package alongside `RESOURCE_URI_META_KEY`; the ext-apps server peer is dropped. Replace `import { registerAppTool } from '@modelcontextprotocol/ext-apps/server'` with `import { registerAppTool } from '@solvapay/mcp'`. Client-side ext-apps usage inside iframe bundles is unaffected.
+
+  All `registerTool` and intent-tool schemas are explicitly `z.object()`-wrapped for zod 4.2+ compatibility with the SDK's bundled converter.
+
+  Fixes `registerPayable` handler-arg inference: `InferHandlerArgs` resolved a raw-shape `schema` to `Record<string, unknown>`, so handlers saw `unknown` args instead of the inferred type. Raw shapes and `z.object()` schemas both infer correctly again.
+
+  The `@solvapay/mcp-core` peer is now the explicit range `^0.3.0` — the two packages ship in lockstep and this release requires the new `hideToolsByAudience` surface.
+
+### Patch Changes
+
+- 800f081: Fix the documented Express mounting pattern for `@solvapay/mcp/express`. Express calls middleware as `(req, res, next)`, so `toNodeHandler(handler)` mounted directly with `app.all('/mcp', ...)` receives `next` where it expects the pre-parsed body, then tries to re-read a stream that `express.json()` has already consumed — every authenticated `/mcp` call failed with `Parse error: Invalid JSON` right after OAuth succeeded. Pass `req.body` explicitly:
+
+  ```ts
+  const handleMcp = toNodeHandler(createMcpHandler(() => server))
+  app.all('/mcp', (req, res) => {
+    void handleMcp(req, res, req.body)
+  })
+  ```
+
+- 3a310eb: Add tiered product config validation: sync `productRef` shape checks + one-line MCP config logging, enriched OAuth DCR failure diagnostics, opt-in `verifyProductConfiguration()` on `@solvapay/server`, and `solvapay doctor` for explicit network checks (secret key, product existence, readiness).
+
+## 0.2.8
+
+### Patch Changes
+
+- e8490d8: Widen the `@solvapay/server` peer dependency range to `^1.4.0 || ^2.0.0`. Both packages consume only stable `@solvapay/server` exports (paywall helpers, nudge builders, the `SolvaPay` type) and are unaffected by the auto-recharge breaking change in `@solvapay/server@2.0.0`. Declaring the wider range keeps them installable against both `server@1.x` and `server@2.x`, so a `server` major no longer forces a false-major cascade onto `@solvapay/mcp` / `@solvapay/mcp-core` (and onward to `@solvapay/react` / `@solvapay/react-supabase`).
+
+## 0.2.7
+
+### Patch Changes
+
+- 4892771: Stop upgrade/topup intent tools from inviting model retries in default `ui` mode by including assistant-audience plan narration alongside the UI placeholder, rewriting the placeholder to confirm the panel is shown, and marking checkout/topup as idempotent for dedupe-aware hosts. Replace `<McpApp>`'s timer-based `waitForInitialToolResult` mount race with an event-driven flow keyed on `classifyHostEntry`: intent entries consume the host's one-shot opening `toolresult` via the live handler (no duplicate intent-tool call), while `other` entries fetch bootstrap once.
+
+  Add an idempotent `solvapay://bootstrap.json` MCP resource so widget remounts on hosts that scrub `structuredContent` (e.g. MCPJam) recover via `readServerResource` instead of replaying intent tools. Explicit refresh paths still use `fetchMcpBootstrap`.
+
+- c2a1169: Loosen internal `@solvapay/*` peerDependency ranges from `workspace:*` (exact) to `workspace:^` so a patch/minor bump of a peer no longer forces a major bump on its dependents. Affects `@solvapay/react` → `@solvapay/mcp-core`, `@solvapay/server` → `@solvapay/auth`, and `@solvapay/mcp` → `@solvapay/mcp-core`. This is a widening of the published peer range and is non-breaking for consumers.
+- 0eebbdb: Intent tools (`upgrade`, `topup`, `manage_account`) are now annotated `{ readOnlyHint: true, idempotentHint: true }` — they only open the UI or return a read-only bootstrap snapshot. UI-only transport tools dual-stamp `_meta.ui.visibility: ["app"]` and `_meta["openai/widgetAccessible"]: true` so the embedded iframe can invoke them on the ChatGPT Apps SDK runtime.
+- 1ec6297: UI-only transport tools (`create_payment_intent`, etc.) now carry SEP-1865 `_meta.ui.visibility: ["app"]` so MCP Apps hosts hide them from the model while the embedded iframe can still invoke them. The proprietary `_meta.audience: "ui"` tag remains for server-side `hideToolsByAudience` on non-SEP-1865 hosts.
+
+## 0.2.6
+
+### Patch Changes
+
+- Updated dependencies [254498f]
+  - @solvapay/mcp-core@0.2.5
+
 ## 0.2.5
 
 ### Patch Changes

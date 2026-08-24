@@ -329,7 +329,7 @@ describe('<McpAppShell>', () => {
     expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
   })
 
-  it('calls onRefreshBootstrap once on mount', async () => {
+  it('does not auto-refresh bootstrap on mount (opening tool result is authoritative)', async () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
     const onRefresh = vi.fn().mockResolvedValue(undefined)
@@ -342,10 +342,9 @@ describe('<McpAppShell>', () => {
       { onRefreshBootstrap: onRefresh },
     )
     await act(async () => {
-      // wait a tick so the mount effect flushes.
       await Promise.resolve()
     })
-    expect(onRefresh).toHaveBeenCalledTimes(1)
+    expect(onRefresh).not.toHaveBeenCalled()
   })
 
   it('emits no tour anchors (data-tour-step gone)', () => {

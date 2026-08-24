@@ -4,6 +4,7 @@ import {
   narrateUpgrade,
   narrateTopup,
   narrateActivatePlan,
+  balanceSummary,
 } from './narrate'
 import { narratedToolResult, parseMode } from './helpers'
 import type { BootstrapPayload } from './types'
@@ -22,23 +23,150 @@ function basePayload(overrides: Partial<BootstrapPayload> = {}): BootstrapPayloa
   }
 }
 
+/**
+ * Plan fixtures mirror `GET /v1/sdk/products/:ref/plans` verbatim: pricing
+ * in `options[]`, a derived `type` label, and `requiresPayment` marking a
+ * free plan. The narrators previously read a `planType` field — including
+ * `'free'` and `'trial'` values no backend ever produced — and every test
+ * here fabricated it, so the suite passed while the narrator rendered every
+ * real plan as "recurring".
+ */
+const cycle = (interval = 'month') => ({ kind: 'billingCycle', interval })
+const flat = (amountMinor: number, currency = 'usd') => ({
+  kind: 'charge',
+  per: 'flat',
+  amountMinor,
+  currency,
+})
+const perUnit = (amountMinor: number, currency = 'usd', meter = 'requests') => ({
+  kind: 'charge',
+  per: 'unit',
+  amountMinor,
+  currency,
+  meter,
+})
+
+const usdBalance = {
+  credits: 5000,
+  displayCurrency: 'USD',
+  displayExchangeRate: 1,
+  creditsPerMinorUnit: 100,
+}
+
+describe('balanceSummary', () => {
+  it('shows SEK fiat estimate using creditsPerMinorUnit and USD→SEK rate', () => {
+    const summary = balanceSummary({
+      balance: {
+        credits: 159_600,
+        displayCurrency: 'SEK',
+        displayExchangeRate: 9.46,
+        creditsPerMinorUnit: 100,
+      },
+    })
+    expect(summary).toContain('159,600 credits')
+    expect(summary).toContain('~SEK\u00a0150.98')
+  })
+
+  it('omits fiat suffix when creditsPerMinorUnit is absent', () => {
+    const summary = balanceSummary({
+      balance: {
+        credits: 1000,
+        displayCurrency: 'USD',
+        displayExchangeRate: 1,
+      },
+    })
+    expect(summary).toBe('1,000 credits')
+    expect(summary).not.toContain('~')
+  })
+})
+
 describe('narrateManageAccount', () => {
+  it('lists all currency options for multi-currency plans', () => {
+    // A multi-currency plan carries one flat charge per currency; the
+    // derived top-level `price` only reflects the default one.
+    const { text } = narrateManageAccount(
+      basePayload({
+        plans: [
+          {
+            type: 'recurring',
+            name: 'Global',
+            price: 1000,
+            currency: 'USD',
+            requiresPayment: true,
+            options: [cycle(), flat(1000, 'usd'), flat(900, 'eur')],
+          },
+        ] as never,
+      }),
+    )
+
+    expect(text).toContain('Global')
+    expect(text).toContain('$10.00')
+    expect(text).toContain('€9.00')
+    expect(text).toContain('/month')
+  })
+
   it('produces a cold-start welcome with plan list', () => {
     const { text } = narrateManageAccount(
       basePayload({
         plans: [
-          { planType: 'free', name: 'Free' },
-          { planType: 'usage-based', name: 'Starter', price: 1, currency: 'USD' },
-          { planType: 'recurring', name: 'Unlimited', price: 50000, currency: 'USD', billingCycle: 'monthly' },
+          { type: 'recurring', name: 'Free', requiresPayment: false, options: [cycle(), flat(0)] },
+          {
+            type: 'usage-based',
+            name: 'Starter',
+            requiresPayment: true,
+            options: [perUnit(1)],
+          },
+          {
+            type: 'recurring',
+            name: 'Unlimited',
+            price: 50000,
+            currency: 'USD',
+            requiresPayment: true,
+            options: [cycle(), flat(50000)],
+          },
         ] as never,
       }),
     )
     expect(text.startsWith('**Welcome to Acme Knowledge Base**')).toBe(true)
     expect(text).toContain('No active plan.')
-    expect(text).toContain('Free')
-    expect(text).toContain('Starter')
-    expect(text).toContain('Unlimited')
+    expect(text).toContain('Free · no payment required')
+    expect(text).toContain('Starter · pay as you go')
+    expect(text).toContain('Unlimited · recurring · $500.00/month')
     expect(text).toContain('Commands: `/activate_plan` `/upgrade`')
+  })
+
+  it('labels one-time and hybrid plans distinctly instead of collapsing them to recurring', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        plans: [
+          { type: 'one-time', name: 'Lifetime', requiresPayment: true, options: [flat(9900)] },
+          {
+            type: 'hybrid',
+            name: 'Team',
+            requiresPayment: true,
+            options: [cycle(), flat(4900), perUnit(2)],
+          },
+        ] as never,
+      }),
+    )
+    expect(text).toContain('Lifetime · one-time · $99.00')
+    expect(text).toContain('Team · subscription + usage · $49.00/month')
+  })
+
+  it('surfaces a trial from the trial option', () => {
+    const { text } = narrateManageAccount(
+      basePayload({
+        plans: [
+          {
+            type: 'recurring',
+            name: 'Pro',
+            requiresPayment: true,
+            options: [cycle(), flat(2900), { kind: 'trial', days: 14, onEnd: 'convert' }],
+          },
+        ] as never,
+      }),
+    )
+    expect(text).toContain('Pro · recurring · $29.00/month · 14-day trial')
   })
 
   it('produces an account summary when there is an active purchase', () => {
@@ -51,17 +179,19 @@ describe('narrateManageAccount', () => {
             {
               planSnapshot: {
                 name: 'Unlimited',
-                planType: 'recurring',
+                isMetered: false,
                 price: 50000,
                 currency: 'USD',
-                billingCycle: 'monthly',
+                options: [cycle(), flat(50000)],
               },
+              // The cycle lives on the purchase; the snapshot freezes only options.
+              billingCycle: 'monthly',
               endDate: '2026-05-01T00:00:00Z',
             },
           ],
         } as never,
         paymentMethod: null,
-        balance: { credits: 100, displayCurrency: 'USD', displayExchangeRate: 1 } as never,
+        balance: { ...usdBalance, credits: 100 } as never,
         usage: null,
       } as never,
     })
@@ -73,42 +203,79 @@ describe('narrateManageAccount', () => {
     expect(text).toContain('Balance: 100 credits')
   })
 
-  it('shows cost per call for usage-based plans from planSnapshot.creditsPerUnit', () => {
-    const { text } = narrateManageAccount(
-      basePayload({
-        customer: {
-          ref: 'cus_1',
-          purchase: {
-            customerRef: 'cus_1',
-            purchases: [
-              {
-                planSnapshot: {
-                  name: 'Pay as you go',
-                  planType: 'usage-based',
-                  creditsPerUnit: 1000,
-                },
+  function meteredAccount(
+    snapshotOptions: unknown[] | undefined,
+    balance: Record<string, unknown> = usdBalance,
+  ) {
+    return basePayload({
+      customer: {
+        ref: 'cus_1',
+        purchase: {
+          customerRef: 'cus_1',
+          purchases: [
+            {
+              planRef: 'pln_payg',
+              planSnapshot: {
+                name: 'Pay as you go',
+                isMetered: true,
+                ...(snapshotOptions ? { options: snapshotOptions } : {}),
               },
-            ],
-          } as never,
-          paymentMethod: null,
-          balance: { credits: 5000, displayCurrency: 'USD', displayExchangeRate: 1 } as never,
-          usage: null,
+            },
+          ],
         } as never,
+        paymentMethod: null,
+        balance: balance as never,
+        usage: null,
+      } as never,
+    })
+  }
+
+  it('prices a metered call from the rate frozen on the purchase snapshot', () => {
+    // 2 minor units at parity, pegged at 100 credits per minor unit.
+    const { text } = narrateManageAccount(meteredAccount([perUnit(2)]))
+    expect(text).toContain('Cost per call: 200 credits')
+  })
+
+  it('applies the balance exchange rate to a non-USD charge', () => {
+    const { text } = narrateManageAccount(
+      meteredAccount([perUnit(100, 'sek')], {
+        credits: 5000,
+        displayCurrency: 'SEK',
+        displayExchangeRate: 9.46,
+        creditsPerMinorUnit: 100,
       }),
     )
-    expect(text).toContain('Cost per call: 1,000 credits')
+    expect(text).toContain('Cost per call: 1,057 credits')
+  })
+
+  it('omits cost per call when the charge currency is not the balance currency', () => {
+    // The balance peg only carries the rate for its own display currency;
+    // reusing it for a EUR charge would be wrong by the FX ratio.
+    const { text } = narrateManageAccount(meteredAccount([perUnit(2, 'eur')]))
+    expect(text).not.toContain('Cost per call')
     expect(text).toContain('Balance: 5,000 credits')
   })
 
-  it('falls back to data.plans when planSnapshot omits creditsPerUnit', () => {
+  it('omits cost per call for a snapshot frozen before options existed', () => {
+    const { text } = narrateManageAccount(meteredAccount(undefined))
+    expect(text).not.toContain('Cost per call')
+    expect(text).toContain('Balance: 5,000 credits')
+  })
+
+  it('omits cost per call for a zero-rate meter, which costs nothing', () => {
+    const { text } = narrateManageAccount(meteredAccount([perUnit(0)]))
+    expect(text).not.toContain('Cost per call')
+  })
+
+  it('shows balance and no-plan welcome when only a credit_topup purchase exists', () => {
     const { text } = narrateManageAccount(
       basePayload({
         plans: [
           {
-            reference: 'pln_payg',
+            type: 'usage-based',
             name: 'Pay as you go',
-            planType: 'usage-based',
-            creditsPerUnit: 1000,
+            requiresPayment: true,
+            options: [perUnit(2)],
           } as never,
         ],
         customer: {
@@ -117,36 +284,49 @@ describe('narrateManageAccount', () => {
             customerRef: 'cus_1',
             purchases: [
               {
-                planRef: 'pln_payg',
-                planSnapshot: {
-                  name: 'Pay as you go',
-                  planType: 'usage-based',
-                },
+                metadata: { purpose: 'credit_topup' },
+                planSnapshot: null,
               },
             ],
           } as never,
           paymentMethod: null,
-          balance: { credits: 2000, displayCurrency: 'USD', displayExchangeRate: 1 } as never,
+          balance: { ...usdBalance, credits: 865_500 } as never,
           usage: null,
         } as never,
       }),
     )
-    expect(text).toContain('Cost per call: 1,000 credits')
+    expect(text.startsWith('**Welcome to Acme Knowledge Base**')).toBe(true)
+    expect(text).toContain('Balance: 865,500 credits')
+    expect(text).toContain('No active plan.')
+    expect(text).not.toContain('**Acme Knowledge Base — your account**')
+    expect(text).toContain('Commands: `/activate_plan` `/upgrade`')
   })
 })
 
 describe('narrateUpgrade', () => {
-  it('lists paid plans', () => {
+  it('lists paid plans and hides the free one', () => {
+    // A free plan is `requiresPayment: false` — there is no `'free'` plan
+    // type, and filtering on one let the upgrade surface offer a $0 plan.
     const { text } = narrateUpgrade(
       basePayload({
         plans: [
-          { planType: 'free', name: 'Free' } as never,
-          { planType: 'recurring', name: 'Pro', price: 20000, currency: 'USD', billingCycle: 'monthly' } as never,
+          {
+            type: 'recurring',
+            name: 'Free',
+            requiresPayment: false,
+            options: [cycle(), flat(0)],
+          } as never,
+          {
+            type: 'recurring',
+            name: 'Pro',
+            requiresPayment: true,
+            options: [cycle(), flat(20000)],
+          } as never,
         ],
       }),
     )
     expect(text).toContain('**Upgrade — Acme Knowledge Base**')
-    expect(text).toContain('Pro')
+    expect(text).toContain('Pro · recurring · $200.00/month')
     expect(text).not.toContain('Free')
   })
 })
@@ -159,7 +339,7 @@ describe('narrateTopup', () => {
           ref: 'cus_1',
           purchase: null,
           paymentMethod: null,
-          balance: { credits: 865500, displayCurrency: 'USD', displayExchangeRate: 1 } as never,
+          balance: { ...usdBalance, credits: 865_500 } as never,
           usage: null,
         } as never,
       }),
@@ -171,18 +351,23 @@ describe('narrateTopup', () => {
 })
 
 describe('narrateActivatePlan', () => {
-  it('lists all plans', () => {
+  it('lists every plan, free ones included', () => {
     const { text } = narrateActivatePlan(
       basePayload({
         plans: [
-          { planType: 'free', name: 'Free' } as never,
-          { planType: 'usage-based', name: 'Starter' } as never,
+          { type: 'recurring', name: 'Free', requiresPayment: false, options: [cycle()] } as never,
+          {
+            type: 'usage-based',
+            name: 'Starter',
+            requiresPayment: true,
+            options: [perUnit(1)],
+          } as never,
         ],
       }),
     )
     expect(text).toContain('**Activate a plan — Acme Knowledge Base**')
-    expect(text).toContain('Free')
-    expect(text).toContain('Starter')
+    expect(text).toContain('Free · no payment required')
+    expect(text).toContain('Starter · pay as you go')
   })
 })
 
@@ -204,7 +389,7 @@ describe('narratedToolResult', () => {
       ref: 'cus_1',
       purchase: {
         customerRef: 'cus_1',
-        purchases: [{ planSnapshot: { name: 'Pro', planType: 'recurring' } }],
+        purchases: [{ planSnapshot: { name: 'Pro', isMetered: false } }],
       } as never,
       paymentMethod: null,
       balance: null,
@@ -212,18 +397,25 @@ describe('narratedToolResult', () => {
     } as never,
   })
 
-  it('default (ui) emits placeholder + _meta.ui', () => {
+  it('default (ui) emits placeholder + assistant narrated block + _meta.ui', () => {
     const r = narratedToolResult('manage_account', payload, undefined, {
       ui: { resourceUri: 'ui://x' },
     })
-    expect(r.content).toHaveLength(1)
+    expect(r.content).toHaveLength(2)
     expect(r.content[0].type).toBe('text')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[0] as any).text).toContain('Opened your Acme Knowledge Base account.')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).text).toContain("mode: 'text'")
+    expect((r.content[0] as any).text).toContain('Account details are shown in the panel.')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((r.content[0] as any).text).not.toContain("mode: 'text'")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[0] as any).annotations).toBeUndefined()
+    expect(r.content[1].type).toBe('text')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((r.content[1] as any).text).toContain('Acme Knowledge Base')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((r.content[1] as any).annotations).toEqual({ audience: ['assistant'] })
     expect(r._meta).toEqual({ ui: { resourceUri: 'ui://x' } })
     expect(r.structuredContent).toEqual(payload)
   })
@@ -251,13 +443,39 @@ describe('narratedToolResult', () => {
     expect((r.content[0] as any).annotations).toEqual({ audience: ['assistant'] })
   })
 
-  it('mode=ui replaces narrated text with one-line placeholder', () => {
+  it('mode=ui emits placeholder plus assistant-audience narrated block', () => {
     const r = narratedToolResult('manage_account', payload, 'ui', {
       ui: { resourceUri: 'ui://x' },
     })
+    expect(r.content).toHaveLength(2)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[0] as any).text).toContain('Opened your Acme Knowledge Base account.')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((r.content[0] as any).text).not.toContain("mode: 'text'")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((r.content[1] as any).annotations).toEqual({ audience: ['assistant'] })
     expect(r._meta).toEqual({ ui: { resourceUri: 'ui://x' } })
+  })
+
+  it('mode=ui upgrade includes plan list in assistant narrated block', () => {
+    const upgradePayload = basePayload({
+      view: 'checkout',
+      plans: [
+        {
+          type: 'recurring',
+          name: 'Pro',
+          requiresPayment: true,
+          options: [cycle(), flat(2000)],
+        },
+      ] as never,
+    })
+    const r = narratedToolResult('upgrade', upgradePayload, 'ui', { ui: { resourceUri: 'ui://x' } })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((r.content[0] as any).text).toContain('Plans and checkout are shown in the panel.')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((r.content[1] as any).text).toContain('Pro')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((r.content[1] as any).text).toContain('Plans available:')
   })
 
   it('ui placeholder carries balance when the customer snapshot has one', () => {
@@ -266,7 +484,12 @@ describe('narratedToolResult', () => {
         ref: 'cus_1',
         purchase: null,
         paymentMethod: null,
-        balance: { credits: 865500, displayCurrency: 'USD', displayExchangeRate: 1 } as never,
+        balance: {
+          credits: 865500,
+          displayCurrency: 'USD',
+          displayExchangeRate: 1,
+          creditsPerMinorUnit: 100,
+        } as never,
         usage: null,
       } as never,
     })

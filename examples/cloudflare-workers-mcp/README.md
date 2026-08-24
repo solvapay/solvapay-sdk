@@ -13,6 +13,7 @@ Ships with a toy paywalled demo toolbox (`predict_price_chart`, `predict_directi
 - The SolvaPay MCP tool surface (`check_purchase`, `create_payment_intent`, `process_payment`, `upgrade`, `manage_account`, `topup`, …)
 - A text-only paywall narration when a paywalled tool is called past the customer's plan limit, routing the LLM to the right recovery intent (`upgrade` / `topup` / `activate_plan`)
 - The SolvaPay MCP widget iframe (`ui://cloudflare-workers-mcp/mcp-app.html`) with CSP auto-including your `apiBaseUrl`
+- Multi-currency plans: configure per-plan `pricingOptions` in the SolvaPay Console; the checkout widget shows a currency switcher automatically when a plan exposes more than one currency
 
 ## Prerequisites
 
@@ -190,13 +191,13 @@ const handler = createSolvaPayMcpFetch({
   readHtml: async () => mcpAppHtml,
   publicBaseUrl,
   apiBaseUrl,
-  mode: 'json-stateless',
+  responseMode: 'json',
   hideToolsByAudience: ['ui'],
   additionalTools: registerDemoTools,
 })
 ```
 
-`mode: 'json-stateless'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the seven UI transport tools (`create_payment_intent`, `create_topup_payment_intent`, `process_payment`, `create_checkout_session`, `create_customer_session`, `cancel_renewal`, `reactivate_renewal`) from `tools/list` so the LLM only sees the four intent tools — `upgrade`, `manage_account`, `activate_plan`, `topup` — alongside your own demo tools. ChatGPT-originated `tools/list` requests are auto-detected (matching `user-agent: openai-mcp/...`) and receive the full catalog, so the iframe's transport calls still pass ChatGPT's gateway catalogue check.
+`responseMode: 'json'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the seven UI transport tools (`create_payment_intent`, `create_topup_payment_intent`, `process_payment`, `create_checkout_session`, `create_customer_session`, `cancel_renewal`, `reactivate_renewal`) from `tools/list` so the LLM only sees the four intent tools — `upgrade`, `manage_account`, `activate_plan`, `topup` — alongside your own demo tools. ChatGPT-originated `tools/list` requests are auto-detected (matching `user-agent: openai-mcp/...`) and receive the full catalog, so the iframe's transport calls still pass ChatGPT's gateway catalogue check.
 
 ## Swapping in your own tools
 
@@ -208,7 +209,7 @@ The widget iframe payload (`mcp-app.html`, `src/mcp-app.tsx`, `vite.config.ts`) 
 
 ## Known limits
 
-- Bundle size: the Workers free tier caps at 1MB post-gzip. `@modelcontextprotocol/sdk` + `@solvapay/mcp` + `@solvapay/server` sit close to that ceiling. On the paid tier (10MB), there's plenty of headroom.
+- Bundle size: the Workers free tier caps at 1MB post-gzip. `@modelcontextprotocol/server` + `@solvapay/mcp` + `@solvapay/server` sit close to that ceiling. On the paid tier (10MB), there's plenty of headroom.
 - Cold start: expect ~50-150ms on the first request per isolate. Warm requests are sub-20ms. Measure for your own geography before committing.
 
 ## Upstream

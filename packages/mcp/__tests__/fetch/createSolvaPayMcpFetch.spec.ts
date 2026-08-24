@@ -16,7 +16,7 @@
 import { readFile } from 'node:fs/promises'
 import * as path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
+import { MCP_TOOL_NAMES, SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
 import { createSolvaPayMcpFetch } from '../../src/fetch/createSolvaPayMcpFetch'
@@ -36,6 +36,17 @@ function makeSolvaPay() {
       .fn()
       .mockResolvedValue({ sessionId: 'sess_1', checkoutUrl: 'https://example.com/sess_1' }),
     getPlatformConfig: vi.fn().mockResolvedValue({ stripePublishableKey: 'pk_test_123' }),
+    getMerchant: vi.fn().mockResolvedValue({ displayName: 'Acme', legalName: 'Acme Inc' }),
+    getProduct: vi.fn().mockResolvedValue({ reference: productRef, name: 'Test product' }),
+    listPlans: vi.fn().mockResolvedValue([{ reference: 'pln_basic', name: 'Basic' }]),
+    getPaymentMethod: vi.fn().mockResolvedValue({ kind: 'none' }),
+    getCustomerBalance: vi.fn().mockResolvedValue({
+      customerRef: 'cus_existing',
+      credits: 0,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: 1,
+      displayExchangeRate: 1,
+    }),
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }
@@ -51,7 +62,7 @@ function buildHandler(
     publicBaseUrl,
     apiBaseUrl,
     requireAuth: false,
-    mode: 'json-stateless',
+    responseMode: 'json',
     ...overrides,
   })
 }
@@ -121,6 +132,7 @@ const UI_TOOLS = [
   MCP_TOOL_NAMES.processPayment,
   MCP_TOOL_NAMES.createCustomerSession,
   MCP_TOOL_NAMES.createTopupPayment,
+  MCP_TOOL_NAMES.attachBusinessDetails,
   MCP_TOOL_NAMES.cancelRenewal,
   MCP_TOOL_NAMES.reactivateRenewal,
 ]
@@ -165,7 +177,7 @@ describe('createSolvaPayMcpFetch', () => {
     expect(res.json.result?.serverInfo?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
   })
 
-  it('tools/list returns all 11 SolvaPay tools by default', async () => {
+  it('tools/list returns all 12 SolvaPay tools by default', async () => {
     const handler = buildHandler()
     const init = await initialize(handler)
     expect(init.status).toBe(200)
@@ -258,6 +270,25 @@ describe('createSolvaPayMcpFetch', () => {
     expect(entry?._meta?.ui?.prefersBorder).toBe(false)
   })
 
+  it('resources/read returns bootstrap JSON at solvapay://bootstrap.json', async () => {
+    const handler = buildHandler()
+    await initialize(handler)
+
+    const read = await callRpc<ResourceReadResult>(handler, {
+      jsonrpc: '2.0',
+      id: 31,
+      method: 'resources/read',
+      params: { uri: SOLVAPAY_BOOTSTRAP_URI },
+    })
+    expect(read.status).toBe(200)
+    const entry = read.json.result?.contents?.[0]
+    expect(entry?.uri).toBe(SOLVAPAY_BOOTSTRAP_URI)
+    expect(entry?.mimeType).toBe('application/json')
+    const payload = JSON.parse(entry?.text ?? '{}') as { productRef?: string; returnUrl?: string }
+    expect(payload.productRef).toBe(productRef)
+    expect(payload.returnUrl).toBe(publicBaseUrl)
+  })
+
   it('tools/call reaches the upgrade intent handler with default mode', async () => {
     const handler = buildHandler()
     await initialize(handler)
@@ -282,7 +313,8 @@ describe('createSolvaPayMcpFetch', () => {
 
   it('invokes the additionalTools hook with { server, solvaPay, resourceUri, productRef }', async () => {
     const additional = vi.fn()
-    buildHandler({ additionalTools: additional })
+    const handler = buildHandler({ additionalTools: additional })
+    await initialize(handler)
     expect(additional).toHaveBeenCalledOnce()
     const ctx = additional.mock.calls[0][0]
     expect(ctx.productRef).toBe(productRef)
@@ -337,8 +369,8 @@ describe('createSolvaPayMcpFetch', () => {
     expect(source).not.toMatch(/from\s+['"]@solvapay\/mcp['"]/)
   })
 
-  it('passes mode: json-stateless through to the underlying handler (no sessionId header on initialize)', async () => {
-    const handler = buildHandler({ mode: 'json-stateless' })
+  it('defaults responseMode to json (no sessionId header on initialize)', async () => {
+    const handler = buildHandler({ responseMode: 'json' })
     const res = await handler(
       new Request(`${publicBaseUrl}/mcp`, {
         method: 'POST',

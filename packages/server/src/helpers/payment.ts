@@ -5,12 +5,18 @@
  * Works with standard Web API Request (works everywhere).
  */
 
+import {
+  validateBusinessDetails,
+  type BusinessDetailsInput,
+  type TaxBreakdown,
+} from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import type { TopupProcessResult } from '../types/client'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { syncCustomerCore } from './customer'
+import { pollBalanceUntilIncreased, TOPUP_BALANCE_POLL_DELAYS_MS } from './balance-poll'
 
 /**
  * Create a payment intent for a customer to purchase a plan.
@@ -57,6 +63,7 @@ export async function createPaymentIntentCore(
   body: {
     planRef: string
     productRef: string
+    currency?: string
   },
   options: {
     solvaPay?: SolvaPay
@@ -99,6 +106,7 @@ export async function createPaymentIntentCore(
       productRef: body.productRef,
       planRef: body.planRef,
       customerRef,
+      ...(body.currency && { currency: body.currency }),
     })
 
     return {
@@ -134,6 +142,7 @@ export async function createTopupPaymentIntentCore(
     amount: number
     currency: string
     description?: string
+    autoRecharge?: import('../types/client').AutoRechargeInput
   },
   options: {
     solvaPay?: SolvaPay
@@ -191,6 +200,7 @@ export async function createTopupPaymentIntentCore(
       amount: body.amount,
       currency: body.currency,
       description: body.description,
+      ...(body.autoRecharge ? { autoRecharge: body.autoRecharge } : {}),
     })
 
     return {
@@ -290,15 +300,6 @@ export async function processPaymentIntentCore(
 }
 
 /**
- * Backoff schedule for the post-process balance poll. Sums to ~7.5s,
- * leaving meaningful headroom over the backend's PI-status poll (~10s)
- * for the credit-booking tail (processor-fee lookups, slow Mongo
- * writes) without making the user wait noticeably longer than the
- * previous 2s post-PI buffer.
- */
-const TOPUP_BALANCE_POLL_DELAYS_MS = [500, 1000, 2000, 4000] as const
-
-/**
  * Process a credit-topup payment intent after client-side confirmation.
  *
  * Mirrors {@link processPaymentIntentCore} but for credit top-ups —
@@ -370,6 +371,75 @@ const TOPUP_BALANCE_POLL_DELAYS_MS = [500, 1000, 2000, 4000] as const
  * }
  * ```
  */
+/**
+ * Attach business purchase details to a credit-topup payment intent and
+ * retrieve the computed tax breakdown.
+ *
+ * Validates business fields client-side via `@solvapay/core` before
+ * forwarding to the SolvaPay backend.
+ */
+export async function attachBusinessDetailsCore(
+  request: Request,
+  body: {
+    paymentIntentId: string
+    customerRef?: string
+  } & BusinessDetailsInput,
+  options: {
+    solvaPay?: SolvaPay
+  } = {},
+): Promise<{ taxBreakdown: TaxBreakdown } | ErrorResult> {
+  try {
+    if (!body.paymentIntentId) {
+      return {
+        error: 'paymentIntentId is required',
+        status: 400,
+      }
+    }
+
+    const validation = validateBusinessDetails({
+      isBusiness: body.isBusiness,
+      businessName: body.businessName,
+      country: body.country,
+      customerCountry: body.customerCountry,
+      customerName: body.customerName,
+      taxId: body.taxId,
+      taxIdType: body.taxIdType,
+    })
+
+    if (!validation.success) {
+      const firstIssue = validation.error.issues[0]
+      return {
+        error: firstIssue?.message ?? 'Invalid business details',
+        status: 400,
+      }
+    }
+
+    const solvaPay = options.solvaPay || createSolvaPay()
+
+    if (typeof solvaPay.attachBusinessDetails !== 'function') {
+      return {
+        error: 'attachBusinessDetails is not available on this SolvaPay client',
+        status: 501,
+      }
+    }
+
+    const details = validation.data
+    const result = await solvaPay.attachBusinessDetails({
+      paymentIntentId: body.paymentIntentId,
+      ...(body.customerRef !== undefined && { customerRef: body.customerRef }),
+      ...details,
+    })
+
+    return result
+  } catch (error) {
+    return handleRouteError(
+      error,
+      'Attach business details',
+      'Failed to attach business details',
+    )
+  }
+}
+
 export async function processTopupPaymentIntentCore(
   request: Request,
   body: {
@@ -449,16 +519,13 @@ export async function processTopupPaymentIntentCore(
       return { status: 'succeeded' }
     }
 
-    for (const delay of TOPUP_BALANCE_POLL_DELAYS_MS) {
-      await new Promise<void>(resolve => setTimeout(resolve, delay))
-      try {
-        const post = await solvaPay.getCustomerBalance({ customerRef })
-        if (post.credits > preCredits) {
-          return { status: 'succeeded', creditsAdded: post.credits - preCredits }
-        }
-      } catch {
-        // ignore — try the next delay
-      }
+    const pollResult = await pollBalanceUntilIncreased(
+      () => solvaPay.getCustomerBalance({ customerRef }),
+      preCredits,
+      TOPUP_BALANCE_POLL_DELAYS_MS,
+    )
+    if (pollResult) {
+      return { status: 'succeeded', creditsAdded: pollResult.creditsAdded }
     }
 
     // Soft success — webhook was genuinely stalled; downstream

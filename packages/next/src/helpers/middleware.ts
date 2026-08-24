@@ -2,12 +2,14 @@
  * Next.js Middleware Helpers
  *
  * Helpers for creating authentication middleware in Next.js.
- * Works with any AuthAdapter implementation (Supabase, custom, etc.)
+ * Works with any AuthAdapter implementation (Supabase, Auth0, custom, etc.)
  */
 
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import type { AuthAdapter } from '@solvapay/auth'
+import { SOLVAPAY_AUTHORIZATION_HEADER, SOLVAPAY_USER_ID_HEADER } from '@solvapay/auth'
+import { createAuth0AuthAdapter, type Auth0ClientLike } from '@solvapay/auth/auth0'
 
 /**
  * Configuration options for authentication middleware
@@ -26,221 +28,204 @@ export interface AuthMiddlewareOptions {
   publicRoutes?: string[]
 
   /**
-   * Header name to store the user ID (default: 'x-user-id')
+   * Header name to store the user ID (default: `x-user-id`)
    */
   userIdHeader?: string
+
+  /**
+   * When true, process all matched routes (not only `/api/*`).
+   * Use with session-based adapters (Auth0) that refresh cookies on every request.
+   * Default: false (legacy Supabase API-only behaviour).
+   */
+  processAllRoutes?: boolean
+
+  /**
+   * When `processAllRoutes` is true, only enforce 401 on paths starting with this prefix.
+   * Default: `/api`
+   */
+  protectedRoutePrefix?: string
+}
+
+function mergeSetCookies(target: NextResponse, source: Response): void {
+  for (const cookie of source.headers.getSetCookie()) {
+    target.headers.append('set-cookie', cookie)
+  }
+}
+
+async function resolveIdentity(
+  adapter: AuthAdapter,
+  req: NextRequest,
+): Promise<{ userId: string; claimsToken?: string } | null> {
+  if (adapter.getIdentityFromRequest) {
+    return adapter.getIdentityFromRequest(req)
+  }
+
+  const userId = await adapter.getUserIdFromRequest(req)
+  if (!userId) {
+    return null
+  }
+
+  return { userId }
+}
+
+function buildForwardResponse(
+  req: NextRequest,
+  userIdHeader: string,
+  identity: { userId: string; claimsToken?: string } | null,
+): NextResponse {
+  const requestHeaders = new Headers(req.headers)
+
+  // Strip client-supplied identity headers so they can never be spoofed past
+  // the middleware. We only re-set them below from a verified session identity.
+  requestHeaders.delete(userIdHeader)
+  requestHeaders.delete(SOLVAPAY_AUTHORIZATION_HEADER)
+
+  if (identity) {
+    requestHeaders.set(userIdHeader, identity.userId)
+    if (identity.claimsToken) {
+      requestHeaders.set(SOLVAPAY_AUTHORIZATION_HEADER, `Bearer ${identity.claimsToken}`)
+    }
+  }
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
+}
+
+function getPathname(req: NextRequest): string {
+  if (req.nextUrl) {
+    return req.nextUrl.pathname
+  }
+  return new URL(req.url).pathname
 }
 
 /**
  * Creates a Next.js middleware function for authentication
- *
- * This helper:
- * 1. Uses the provided AuthAdapter to extract userId from requests
- * 2. Handles public vs protected routes
- * 3. Adds userId to request headers for downstream routes
- * 4. Returns appropriate error responses for auth failures
- *
- * @param options - Configuration options
- * @returns Next.js middleware function (can be exported as `middleware` or `proxy`)
- *
- * @example Next.js 15
- * ```typescript
- * // middleware.ts (at project root)
- * import { createAuthMiddleware } from '@solvapay/next';
- * import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
- *
- * const adapter = new SupabaseAuthAdapter({
- *   jwtSecret: process.env.SUPABASE_JWT_SECRET!,
- * });
- *
- * export const middleware = createAuthMiddleware({
- *   adapter,
- *   publicRoutes: ['/api/list-plans'],
- * });
- *
- * export const config = {
- *   matcher: ['/api/:path*'],
- * };
- * ```
- *
- * @example Next.js 16 with src/ folder
- * ```typescript
- * // src/proxy.ts (in src/ folder, not project root)
- * import { createAuthMiddleware } from '@solvapay/next';
- * import { SupabaseAuthAdapter } from '@solvapay/auth/supabase';
- *
- * const adapter = new SupabaseAuthAdapter({
- *   jwtSecret: process.env.SUPABASE_JWT_SECRET!,
- * });
- *
- * // Use 'proxy' export for Next.js 16 (no deprecation warning)
- * export const proxy = createAuthMiddleware({
- *   adapter,
- *   publicRoutes: ['/api/list-plans'],
- * });
- *
- * export const config = {
- *   matcher: ['/api/:path*'],
- * };
- * ```
- *
- * @example Custom adapter
- * ```typescript
- * import { createAuthMiddleware } from '@solvapay/next';
- * import type { AuthAdapter } from '@solvapay/auth';
- *
- * const myAdapter: AuthAdapter = {
- *   async getUserIdFromRequest(req) {
- *     // Your custom auth logic
- *     return userId;
- *   },
- * };
- *
- * export const middleware = createAuthMiddleware({
- *   adapter: myAdapter,
- * });
- * ```
- *
- * **File Location Notes:**
- * - **Next.js 15**: Place `middleware.ts` at project root
- * - **Next.js 16 without `src/` folder**: Place `middleware.ts` or `proxy.ts` at project root
- * - **Next.js 16 with `src/` folder**: Place `src/proxy.ts` or `src/middleware.ts` (in `src/` folder, not root)
- *
- * **Note:** Next.js 16 renamed "middleware" to "proxy". You can export the return value as either
- * `middleware` or `proxy` - both work, but `proxy` is recommended to avoid deprecation warnings.
  */
 export function createAuthMiddleware(options: AuthMiddlewareOptions) {
-  const { adapter, publicRoutes = [], userIdHeader = 'x-user-id' } = options
+  const {
+    adapter,
+    publicRoutes = [],
+    userIdHeader = SOLVAPAY_USER_ID_HEADER,
+    processAllRoutes = false,
+    protectedRoutePrefix = '/api',
+  } = options
 
   return async function middleware(request: NextRequest) {
     const req = request
-    const { pathname } = req.nextUrl
+    const pathname = getPathname(req)
 
-    // Only process API routes
-    if (!pathname.startsWith('/api')) {
+    if (!processAllRoutes && !pathname.startsWith('/api')) {
       return NextResponse.next()
     }
 
-    // Check if route is public
-    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+    const handleResult = adapter.handleRequest ? await adapter.handleRequest(req) : null
 
-    // Extract userId from request using the adapter
-    const userId = await adapter.getUserIdFromRequest(req)
-
-    // For public routes, allow access even without auth, but still set userId if available
-    if (isPublicRoute) {
-      const requestHeaders = new Headers(req.headers)
-      if (userId) {
-        requestHeaders.set(userIdHeader, userId)
-      }
-      return NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      })
+    if (handleResult?.ownsRequest && handleResult.response) {
+      return handleResult.response
     }
 
-    // For protected routes, require authentication
-    if (!userId) {
-      return NextResponse.json(
+    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+    const identity = await resolveIdentity(adapter, req)
+    const userId = identity?.userId ?? null
+
+    const isProtectedApiRoute =
+      pathname.startsWith(protectedRoutePrefix) && !isPublicRoute
+
+    if (isProtectedApiRoute && !userId) {
+      const unauthorized = NextResponse.json(
         { error: 'Unauthorized', details: 'Valid authentication required' },
         { status: 401 },
       )
+      if (handleResult?.sessionResponse) {
+        mergeSetCookies(unauthorized, handleResult.sessionResponse)
+      }
+      return unauthorized
     }
 
-    // Clone request headers and add userId for downstream routes
-    const requestHeaders = new Headers(req.headers)
-    requestHeaders.set(userIdHeader, userId)
+    const forward = buildForwardResponse(req, userIdHeader, identity)
 
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    })
+    if (handleResult?.sessionResponse) {
+      mergeSetCookies(forward, handleResult.sessionResponse)
+    }
+
+    return forward
   }
+}
+
+/**
+ * Configuration options for Auth0 authentication middleware
+ */
+export interface Auth0AuthMiddlewareOptions {
+  /**
+   * Auth0 client instance used by the adapter.
+   */
+  auth0: Auth0ClientLike
+
+  /**
+   * Public routes that don't require authentication.
+   */
+  publicRoutes?: string[]
+
+  /**
+   * Route prefix owned by Auth0 (default: `/auth`).
+   */
+  authRoutePrefix?: string
+
+  /**
+   * Header name to store the user ID (default: `x-user-id`)
+   */
+  userIdHeader?: string
+
+  /**
+   * Route prefix that enforces 401 when unauthenticated (default: `/api`)
+   */
+  protectedRoutePrefix?: string
+}
+
+/**
+ * Creates a Next.js middleware function for Auth0 authentication.
+ */
+export function createAuth0AuthMiddleware(options: Auth0AuthMiddlewareOptions) {
+  const {
+    auth0,
+    authRoutePrefix,
+    publicRoutes = [],
+    userIdHeader = SOLVAPAY_USER_ID_HEADER,
+    protectedRoutePrefix = '/api',
+  } = options
+
+  return createAuthMiddleware({
+    adapter: createAuth0AuthAdapter({ auth0, authRoutePrefix }),
+    publicRoutes,
+    userIdHeader,
+    protectedRoutePrefix,
+    processAllRoutes: true,
+  })
 }
 
 /**
  * Configuration options for Supabase authentication middleware
  */
 export interface SupabaseAuthMiddlewareOptions {
-  /**
-   * Supabase JWT secret (from Supabase dashboard: Settings → API → JWT Secret)
-   * If not provided, will use SUPABASE_JWT_SECRET environment variable
-   */
   jwtSecret?: string
-
-  /**
-   * Public routes that don't require authentication
-   * Routes are matched using pathname.startsWith()
-   */
   publicRoutes?: string[]
-
-  /**
-   * Header name to store the user ID (default: 'x-user-id')
-   */
   userIdHeader?: string
 }
 
 /**
  * Creates a Next.js middleware function for Supabase authentication
- *
- * Convenience function that creates a SupabaseAuthAdapter and wraps it with createAuthMiddleware.
- * Only use this if you're using Supabase - otherwise use createAuthMiddleware with your own adapter.
- *
- * Uses dynamic import to avoid requiring Supabase as a dependency in @solvapay/next.
- *
- * @param options - Configuration options
- * @returns Next.js middleware function (can be exported as `middleware` or `proxy`)
- *
- * @example Next.js 15
- * ```typescript
- * // middleware.ts (at project root)
- * import { createSupabaseAuthMiddleware } from '@solvapay/next';
- *
- * export const middleware = createSupabaseAuthMiddleware({
- *   publicRoutes: ['/api/list-plans'],
- * });
- *
- * export const config = {
- *   matcher: ['/api/:path*'],
- * };
- * ```
- *
- * @example Next.js 16 with src/ folder
- * ```typescript
- * // src/proxy.ts (in src/ folder, not project root)
- * import { createSupabaseAuthMiddleware } from '@solvapay/next';
- *
- * // Use 'proxy' export for Next.js 16 (no deprecation warning)
- * export const proxy = createSupabaseAuthMiddleware({
- *   publicRoutes: ['/api/list-plans'],
- * });
- *
- * export const config = {
- *   matcher: ['/api/:path*'],
- * };
- * ```
- *
- * **File Location Notes:**
- * - **Next.js 15**: Place `middleware.ts` at project root
- * - **Next.js 16 without `src/` folder**: Place `middleware.ts` or `proxy.ts` at project root
- * - **Next.js 16 with `src/` folder**: Place `src/proxy.ts` or `src/middleware.ts` (in `src/` folder, not root)
- *
- * **Note:** Next.js 16 renamed "middleware" to "proxy". You can export the return value as either
- * `middleware` or `proxy` - both work, but `proxy` is recommended to avoid deprecation warnings.
  */
 export function createSupabaseAuthMiddleware(options: SupabaseAuthMiddlewareOptions = {}) {
-  const { jwtSecret, publicRoutes = [], userIdHeader = 'x-user-id' } = options
+  const { jwtSecret, publicRoutes = [], userIdHeader = SOLVAPAY_USER_ID_HEADER } = options
 
-  // Lazy initialization of auth adapter (Edge runtime compatible)
   let authAdapter: AuthAdapter | null = null
   let adapterPromise: Promise<AuthAdapter> | null = null
 
-  // Create a wrapper adapter that lazily initializes the Supabase adapter
   const lazyAdapter: AuthAdapter = {
     async getUserIdFromRequest(req) {
-      // Initialize adapter on first use (with dynamic import)
       if (!authAdapter) {
         if (!adapterPromise) {
           adapterPromise = (async () => {
@@ -254,8 +239,6 @@ export function createSupabaseAuthMiddleware(options: SupabaseAuthMiddlewareOpti
               )
             }
 
-            // Dynamic import to avoid requiring Supabase as a dependency
-            // This allows the package to work without Supabase dependencies
             const { SupabaseAuthAdapter } = await import('@solvapay/auth/supabase')
             authAdapter = new SupabaseAuthAdapter({ jwtSecret: secret })
             return authAdapter
@@ -273,5 +256,6 @@ export function createSupabaseAuthMiddleware(options: SupabaseAuthMiddlewareOpti
     adapter: lazyAdapter,
     publicRoutes,
     userIdHeader,
+    processAllRoutes: false,
   })
 }

@@ -20,13 +20,18 @@ describe('plan-selections', () => {
     ).not.toThrow()
   })
 
-  it('accepts usage-based defaults regardless of price', () => {
-    expect(isPlanEligibleForDefault({ type: 'usage-based', creditsPerUnit: 100 })).toBe(true)
+  it('accepts a free usage-based default', () => {
+    expect(isPlanEligibleForDefault({ type: 'usage-based', creditsPerUnit: 0 })).toBe(true)
     expect(() =>
-      validatePlanSelections([
-        { type: 'usage-based', creditsPerUnit: 100, default: true },
-      ]),
+      validatePlanSelections([{ type: 'usage-based', creditsPerUnit: 0, default: true }]),
     ).not.toThrow()
+  })
+
+  it('rejects a paid usage-based default', () => {
+    expect(isPlanEligibleForDefault({ type: 'usage-based', creditsPerUnit: 100 })).toBe(false)
+    expect(() =>
+      validatePlanSelections([{ type: 'usage-based', creditsPerUnit: 100, default: true }]),
+    ).toThrow(/cannot be the default plan/)
   })
 
   it('rejects paid recurring defaults', () => {

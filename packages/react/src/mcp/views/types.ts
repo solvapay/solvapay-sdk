@@ -24,6 +24,10 @@ export interface McpViewClassNames {
   topupForm?: string
   topupAmountHero?: string
   topupBalanceContext?: string
+  businessDetails?: string
+  businessToggle?: string
+  businessField?: string
+  taxSummary?: string
   activationFlow?: string
   /** Root wrapper of `<AppHeader>` (icon + merchant name row). */
   appHeader?: string
@@ -73,6 +77,10 @@ export const DEFAULT_MCP_CLASS_NAMES: Required<McpViewClassNames> = {
   topupForm: 'solvapay-mcp-topup-form',
   topupAmountHero: 'solvapay-mcp-topup-amount-hero',
   topupBalanceContext: 'solvapay-mcp-topup-balance-context',
+  businessDetails: 'solvapay-mcp-business-details',
+  businessToggle: 'solvapay-mcp-business-toggle',
+  businessField: 'solvapay-mcp-business-field',
+  taxSummary: 'solvapay-mcp-tax-summary',
   activationFlow: 'solvapay-mcp-activation-flow',
   appHeader: 'solvapay-mcp-app-header',
   appHeaderIcon: 'solvapay-mcp-app-header-icon',

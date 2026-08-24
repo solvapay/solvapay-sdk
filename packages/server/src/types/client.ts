@@ -5,6 +5,19 @@
  */
 
 import type { components, operations } from './generated'
+import type { BusinessDetailsInput, TaxBreakdown } from '@solvapay/core'
+
+/** SDK purchase row. Generated from the OpenAPI `SdkPurchaseResponse` schema. */
+export type PurchaseInfo = components['schemas']['SdkPurchaseResponse']
+
+export type AttachBusinessDetailsParams = {
+  paymentIntentId: string
+  customerRef?: string
+} & BusinessDetailsInput
+
+export type AttachBusinessDetailsResult = {
+  taxBreakdown: TaxBreakdown
+}
 
 export type UsageMeterType = 'requests' | 'tokens'
 export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
@@ -27,7 +40,14 @@ export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
 }
 
 /**
- * Extended LimitResponse with SDK-added plan field
+ * Extended LimitResponse with SDK-added plan field.
+ *
+ * The backend `LimitResponse` now natively carries the `onExceed` outcome flags
+ * (`throttled` / `overage` / `needsTopUp` / `needsUpgrade` / `upgraded`, resolved
+ * by `decideLimit`), so they flow through from `generated.ts`. `throttled` /
+ * `overage` ride the allow path (`withinLimits: true`) so a protected handler
+ * can read them from `decision.limits` and degrade service or note overage; the
+ * others accompany a gate outcome.
  */
 export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & {
   plan: string
@@ -36,8 +56,7 @@ export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & {
 /**
  * Extended CustomerResponse with proper field mapping
  *
- * Note: The backend API returns purchases as PurchaseInfo objects.
- * Additional fields (paidAt, nextBillingDate) may be present in the response.
+ * Note: The backend API returns purchases as SdkPurchaseResponse objects.
  */
 export type CustomerResponseMapped = {
   customerRef: string
@@ -45,12 +64,7 @@ export type CustomerResponseMapped = {
   name?: string
   externalRef?: string
   plan?: string
-  purchases?: Array<
-    components['schemas']['PurchaseInfo'] & {
-      paidAt?: string
-      nextBillingDate?: string
-    }
-  >
+  purchases?: PurchaseInfo[]
 }
 
 /**
@@ -58,11 +72,13 @@ export type CustomerResponseMapped = {
  */
 export interface OneTimePurchaseInfo {
   reference: string
+  customerRef: string
   productRef?: string
   amount: number
   currency: string
   creditsAdded?: number
   completedAt: string
+  createdAt: string
 }
 
 /**
@@ -84,7 +100,7 @@ export type ProcessPaymentResult =
   | {
       status: 'succeeded'
       type: 'recurring'
-      purchase: components['schemas']['PurchaseInfo']
+      purchase: PurchaseInfo
     }
   | {
       status: 'succeeded'
@@ -92,6 +108,7 @@ export type ProcessPaymentResult =
       oneTimePurchase: OneTimePurchaseInfo
     }
   | { status: 'succeeded' }
+  | { status: 'processing' }
   | { status: 'timeout'; message?: string }
   | { status: 'failed' }
   | { status: 'cancelled' }
@@ -123,6 +140,7 @@ export type ProcessPaymentResult =
  */
 export type TopupProcessResult =
   | { status: 'succeeded'; creditsAdded?: number }
+  | { status: 'processing' }
   | { status: 'timeout'; message?: string }
   | { status: 'failed' }
   | { status: 'cancelled' }
@@ -141,6 +159,72 @@ export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto'
 export type PaymentMethodInfo =
   operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
 
+export type AutoRechargeStatus = 'active' | 'disabled' | 'failed' | 'pending_setup'
+
+export type AutoRechargeConfig = {
+  enabled: boolean
+  trigger: { type: 'balance'; thresholdAmountMinor: number }
+  topup: { mode: 'fixed'; amountMinor: number; currency: string }
+  fundingSourceType?: 'saved_card' | 'tokenized_card'
+  paymentMethodId?: string
+  status: AutoRechargeStatus
+  failureCount: number
+  maxMonthlySpendMinor?: number
+  monthlySpendMinor: number
+  monthlySpendPeriod?: string
+  lastChargeAt?: string
+  updatedAt?: string
+  /** Backend-computed display values — render verbatim; do not derive from trigger fields. */
+  display?: AutoRechargeDisplayBlock
+}
+
+export type AutoRechargeDisplayBlock = {
+  thresholdAmountMajor: number
+  topupAmountMajor: number
+  currency: string
+  formatted: {
+    threshold: string
+    topup: string
+  }
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
+}
+
+export type CreditDisplayBlock = {
+  amountMajor: number
+  currency: string
+  formatted: string
+  exchangeRate: number
+  rateSource: 'parity' | 'db' | 'fallback'
+}
+
+export type AutoRechargeInput = {
+  enabled: boolean
+  triggerType: 'balance'
+  thresholdAmountMajor?: number
+  topupAmountMajor?: number
+  maxMonthlySpendMajor?: number
+  currency: string
+}
+
+/** PUT /sdk/auto-recharge — input plus request-only flags. */
+export type SaveAutoRechargeInput = AutoRechargeInput & {
+  deferSetupIntent?: boolean
+}
+
+export type AutoRechargeResponse = {
+  config: AutoRechargeConfig | null
+  display?: AutoRechargeDisplayBlock
+}
+
+export type SaveAutoRechargeResponse = {
+  config: AutoRechargeConfig
+  display?: AutoRechargeDisplayBlock
+  setupClientSecret?: string
+  publishableKey?: string
+  stripeAccountId?: string
+}
+
 /**
  * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
  */
@@ -158,6 +242,41 @@ export type SdkPlatformConfigResponse = components['schemas']['SdkPlatformConfig
 
 /** SDK-facing product projection. Sourced from the existing OpenAPI spec. */
 export type SdkProductResponse = components['schemas']['SdkProductResponse']
+
+export type CreditDebitSkipReason = components['schemas']['CreditDebitSkippedResponse']['reason']
+
+export type CreditDebitResult =
+  | components['schemas']['CreditDebitSuccessResponse']
+  | components['schemas']['CreditDebitSkippedResponse']
+
+/**
+ * When `debited: true` and `autoRecharge.triggered: true`, the server initiated
+ * an off-session charge — credits are booked asynchronously via webhook, not inline.
+ */
+export type CreditDebitSuccess = components['schemas']['CreditDebitSuccessResponse']
+
+export type TrackUsageRequest = Omit<
+  Partial<components['schemas']['CreateUsageRequest']>,
+  'customerRef' | 'metadata'
+> & {
+  customerRef: string
+  metadata?: Record<string, unknown>
+}
+
+export type TrackUsageResponse = components['schemas']['UsageRecordResponse']
+
+export interface TrackUsageBulkRequest {
+  events: TrackUsageRequest[]
+}
+
+export type TrackUsageBulkResponse = components['schemas']['BulkUsageResponse']
+
+export type AssignCreditsRequest = components['schemas']['GrantCustomerCreditsRequest'] & {
+  customerRef: string
+  idempotencyKey?: string
+}
+
+export type AssignCreditsResponse = components['schemas']['GrantCustomerCreditsResponse']
 
 export type McpBootstrapPlanInput = NonNullable<
   components['schemas']['McpBootstrapDto']['plans']
@@ -213,19 +332,10 @@ export interface SolvaPayClient {
   checkLimits(params: CheckLimitsRequest): Promise<LimitResponseWithPlan>
 
   // POST: /v1/sdk/usages
-  trackUsage(params: {
-    customerRef: string
-    actionType?: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
-    units?: number
-    outcome?: 'success' | 'paywall' | 'fail'
-    productRef?: string
-    purchaseRef?: string
-    description?: string
-    metadata?: Record<string, unknown>
-    duration?: number
-    timestamp?: string
-    idempotencyKey?: string
-  }): Promise<void>
+  trackUsage(params: TrackUsageRequest): Promise<TrackUsageResponse>
+
+  // POST: /v1/sdk/usages/bulk
+  trackUsageBulk?(params: TrackUsageBulkRequest): Promise<TrackUsageBulkResponse>
 
   // POST: /v1/sdk/customers
   createCustomer?(
@@ -256,6 +366,9 @@ export interface SolvaPayClient {
     email?: string
   }): Promise<CustomerResponseMapped>
 
+  // POST: /v1/sdk/customers/{customerRef}/credits
+  assignCredits?(params: AssignCreditsRequest): Promise<AssignCreditsResponse>
+
   /**
    * SDK-facing merchant identity (GET /v1/sdk/merchant).
    * Returns the subset of provider fields safe for browser consumption —
@@ -283,7 +396,6 @@ export interface SolvaPayClient {
       reference: string
       name: string
       description?: string
-      status?: string
     }>
   >
 
@@ -343,12 +455,20 @@ export interface SolvaPayClient {
     productRef: string
     planRef: string
     customerRef: string
+    currency?: string
     idempotencyKey?: string
   }): Promise<{
     processorPaymentId: string
     clientSecret: string
     publishableKey: string
     accountId?: string
+    /** USD ledger amount in minor units. */
+    amount: number
+    /** Presentment amount in minor units (matches `currency`). */
+    originalAmount?: number
+    currency?: string
+    exchangeRate?: number
+    status?: string
   }>
 
   // POST: /v1/sdk/payment-intents (purpose: credit_topup)
@@ -358,6 +478,7 @@ export interface SolvaPayClient {
     currency: string
     description?: string
     idempotencyKey?: string
+    autoRecharge?: AutoRechargeInput
   }): Promise<{
     processorPaymentId: string
     clientSecret: string
@@ -369,12 +490,12 @@ export interface SolvaPayClient {
   cancelPurchase?(params: {
     purchaseRef: string
     reason?: string
-  }): Promise<components['schemas']['PurchaseInfo']>
+  }): Promise<PurchaseInfo>
 
   // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
   reactivatePurchase?(params: {
     purchaseRef: string
-  }): Promise<components['schemas']['PurchaseInfo']>
+  }): Promise<PurchaseInfo>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
   // `productRef` is optional because credit-topup PIs (no product) are
@@ -387,6 +508,9 @@ export interface SolvaPayClient {
     planRef?: string
   }): Promise<ProcessPaymentResult>
 
+  // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
+  attachBusinessDetails?(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
+
   // POST: /v1/sdk/user-info
   getUserInfo?(params: {
     customerRef: string
@@ -394,14 +518,13 @@ export interface SolvaPayClient {
   }): Promise<components['schemas']['UserInfoResponse']>
 
   // GET: /v1/sdk/customers/:customerRef/credits
-  getCustomerBalance?(params: {
-    customerRef: string
-  }): Promise<{
+  getCustomerBalance?(params: { customerRef: string }): Promise<{
     customerRef: string
     credits: number
     displayCurrency: string
     creditsPerMinorUnit: number
     displayExchangeRate: number
+    display?: CreditDisplayBlock
   }>
 
   // POST: /v1/sdk/checkout-sessions
@@ -419,4 +542,15 @@ export interface SolvaPayClient {
 
   // GET: /v1/sdk/payment-method?customerRef=...
   getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>
+
+  // GET: /v1/sdk/auto-recharge?customerRef=...
+  getAutoRecharge?(params: { customerRef: string }): Promise<AutoRechargeResponse>
+
+  // PUT: /v1/sdk/auto-recharge
+  saveAutoRecharge?(
+    params: SaveAutoRechargeInput & { customerRef: string },
+  ): Promise<SaveAutoRechargeResponse>
+
+  // DELETE: /v1/sdk/auto-recharge?customerRef=...
+  disableAutoRecharge?(params: { customerRef: string }): Promise<{ success: true }>
 }

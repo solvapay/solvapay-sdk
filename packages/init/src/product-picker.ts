@@ -86,7 +86,7 @@ export const pickProductInteractive = async (
 
   const { products, total } = listResult
 
-  if (products.length === 0) {
+  if (total === 0) {
     process.stdout.write(
       `⚠️ No products found on your SolvaPay account. Create one at ${CONSOLE_PRODUCTS_URL} and re-run \`solvapay init\`.\n`,
     )

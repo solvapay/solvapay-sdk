@@ -2,6 +2,16 @@
 
 This directory contains example applications demonstrating how to use the SolvaPay SDK in different environments.
 
+## Local platform stack
+
+When pointing an example at a sibling [`platform`](../../platform) monorepo stack,
+start from [`.env.platform-local.example`](./.env.platform-local.example). Copy
+the vars you need into the target example's own `.env` — each package loads
+dotenv from its directory. Use `SOLVAPAY_API_BASE_URL=http://localhost:3010`
+(provider-app proxy) and remap MCP/example ports to `3030+` so they don't
+collide with platform services. Convenience scripts from the repo root:
+`pnpm mcp:checkout` / `pnpm mcp:checkout:tunnel`.
+
 ## Shared Utilities
 
 The `shared/` folder contains reusable utilities used across multiple examples:
@@ -15,6 +25,27 @@ The `shared/` folder contains reusable utilities used across multiple examples:
 See [`shared/README.md`](./shared/README.md) for detailed documentation.
 
 ## Available Examples
+
+### Next.js Auth0 (`nextjs-auth0`)
+
+A minimal Next.js App Router starter with Auth0 login, shadcn/ui, Tailwind CSS, and a per-user task board:
+
+- Auth0 v4 session auth via `proxy.ts`
+- Protected dashboard and `/api/tasks` CRUD
+- In-memory storage keyed by `session.user.sub`
+- No SolvaPay dependencies (natural follow-up: paywall on task limits)
+
+**Run the example:**
+
+```bash
+cd examples/nextjs-auth0
+cp .env.example .env.local
+# Add Auth0 credentials — see README.md
+pnpm install
+pnpm dev
+```
+
+The application will start on `http://localhost:3013`
 
 ### Express Basic (`express-basic`)
 
@@ -110,7 +141,7 @@ A non-hosted MCP server example demonstrating:
 ```bash
 cd examples/mcp-oauth-bridge
 pnpm install
-cp .env.example .env
+cp ../.env.platform-local.example .env   # or cp .env.example .env
 pnpm dev
 ```
 
@@ -128,7 +159,7 @@ A Model Context Protocol (MCP) app example demonstrating:
 ```bash
 cd examples/mcp-time-app
 pnpm install
-cp .env.example .env
+cp ../.env.platform-local.example .env   # or cp .env.example .env
 pnpm dev
 ```
 

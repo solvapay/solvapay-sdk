@@ -116,9 +116,9 @@ function PlanTypeLine({
   className?: string
 }) {
   const copy = useCopy()
-  const planType = purchase.planSnapshot?.planType ?? 'one-time'
+  const isMetered = purchase.planSnapshot?.isMetered === true
 
-  if (planType === 'recurring' || purchase.isRecurring) {
+  if (purchase.isRecurring) {
     const date = formatDate(purchase.nextBillingDate)
     if (!date) return null
     return (
@@ -131,7 +131,7 @@ function PlanTypeLine({
     )
   }
 
-  if (planType === 'usage-based') {
+  if (isMetered) {
     // Usage-based plans show a balance badge instead of a date.
     return null
   }
@@ -200,18 +200,26 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
 
   if (!activePurchase) return null
 
-  const planType = activePurchase.planSnapshot?.planType ?? 'one-time'
-  const isUsageBased = planType === 'usage-based'
+  const isUsageBased = activePurchase.planSnapshot?.isMetered === true
+  const planType = activePurchase.isRecurring
+    ? 'recurring'
+    : isUsageBased
+      ? 'usage-based'
+      : 'one-time'
 
   // Prefer `originalAmount` (customer-currency minor units) so the label
   // matches `currency`. `amount` is always USD cents — pairing it with a
   // non-USD `currency` would render e.g. "SEK 54.26" for a 500 SEK charge.
   const amount = activePurchase.originalAmount ?? activePurchase.amount ?? 0
   const currency = activePurchase.currency ?? 'usd'
-  const cycleKey = (activePurchase.billingCycle ??
-    activePurchase.planSnapshot?.billingCycle ??
-    undefined) as keyof typeof copy.currentPlan.cycleUnit | undefined
-  const intervalLabel = cycleKey ? copy.currentPlan.cycleUnit[cycleKey] ?? cycleKey : undefined
+  const rawCycle = activePurchase.billingCycle
+  const cycleKey =
+    rawCycle && rawCycle in copy.currentPlan.cycleUnit
+      ? (rawCycle as keyof typeof copy.currentPlan.cycleUnit)
+      : undefined
+  const intervalLabel = cycleKey
+    ? (copy.currentPlan.cycleUnit[cycleKey] ?? rawCycle)
+    : rawCycle
   const priceLabel = formatPrice(amount, currency, {
     interval: intervalLabel,
   })
@@ -245,7 +253,7 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
     !shouldShowCancelledNotice
 
   return (
-    <div
+    <section
       className={rootClass}
       data-solvapay-current-plan-card=""
       data-plan-type={planType}
@@ -261,27 +269,27 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
       )}
 
       {productContext && !hideProductContext && (
-        <div
+        <p
           className={overrides?.productContext ?? 'solvapay-current-plan-product-context'}
           data-solvapay-current-plan-product-context=""
         >
           {productContext}
-        </div>
+        </p>
       )}
 
-      <div
+      <h3
         className={overrides?.planName ?? 'solvapay-current-plan-name'}
         data-solvapay-current-plan-name=""
       >
         {planName}
-      </div>
+      </h3>
 
-      <div
+      <p
         className={overrides?.price ?? 'solvapay-current-plan-price'}
         data-solvapay-current-plan-price=""
       >
         {priceLabel}
-      </div>
+      </p>
 
       <PlanTypeLine
         purchase={activePurchase}
@@ -311,8 +319,8 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
         </span>
       )}
 
-      {isUsageBased && !hideUsageMeter && (
-        <div
+      {isUsageBased && activePurchase.isRecurring && !hideUsageMeter && (
+        <section
           className={overrides?.usageMeter ?? 'solvapay-current-plan-usage-meter'}
           data-solvapay-current-plan-usage-meter=""
         >
@@ -323,16 +331,16 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
             <UsageMeter.ResetsIn />
             <UsageMeter.Loading />
           </UsageMeter.Root>
-        </div>
+        </section>
       )}
 
       {isUsageBased && (
-        <div
+        <p
           className={overrides?.balanceLine ?? 'solvapay-current-plan-balance-line'}
           data-solvapay-current-plan-balance-line=""
         >
           <BalanceBadge />
-        </div>
+        </p>
       )}
 
       {shouldShowPaymentMethod && paymentMethod && (
@@ -342,19 +350,19 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
         />
       )}
 
-      <div
+      <section
         className={overrides?.actions ?? 'solvapay-current-plan-actions'}
         data-solvapay-current-plan-actions=""
       >
         {!hideUpdatePaymentButton && <UpdatePaymentMethodButton />}
         {showCancelButton && <CancelPlanButton />}
-      </div>
+      </section>
 
       {shouldShowCancelledNotice && !hideCancelledNotice && (
         <CancelledPlanNotice
           className={overrides?.cancelledNotice ?? 'solvapay-current-plan-cancelled-notice'}
         />
       )}
-    </div>
+    </section>
   )
 }

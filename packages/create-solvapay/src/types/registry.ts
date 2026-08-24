@@ -10,6 +10,7 @@ export type ProjectType = {
 
 export const PROJECT_TYPES: Record<string, () => Promise<ProjectType>> = {
   mcp: () => import('./mcp/index.js').then(m => m.mcpProjectType),
+  'next-auth0': () => import('./next-auth0/index.js').then(m => m.nextAuth0ProjectType),
   // cli: () => import('./cli/index.js').then(m => m.cliProjectType), // future
 }
 

@@ -28,6 +28,11 @@
   ],
   "author": "SolvaPay Inc.",
   "license": "MIT",
+  "pnpm": {
+    "overrides": {
+      "next": "16.2.7"
+    }
+  },
   "scripts": {
     "build": "turbo build --concurrency 16",
     "build:examples": "turbo build --filter=@example/*",
@@ -36,11 +41,12 @@
     "dev": "turbo dev --no-cache --concurrency 16 --continue",
     "test": "turbo run test --filter=!@example/*",
     "lint": "turbo run lint",
+    "typecheck": "tsx scripts/typecheck-packages.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .prettierignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .prettierignore",
     "release": "turbo run release",
     "changeset": "changeset",
-    "changeset:version": "changeset version",
+    "changeset:version": "changeset version && pnpm install --lockfile-only",
     "changeset:publish": "changeset publish",
     "changeset:status": "changeset status",
     "changeset:snapshot": "changeset version --snapshot preview && changeset publish --tag preview --no-git-tag",
@@ -52,7 +58,9 @@
     "docs:validate-links": "tsx scripts/validate-doc-links.ts",
     "docs:validate": "pnpm docs:validate-links && pnpm docs:check && pnpm docs:build",
     "deps:check": "tsx scripts/check-dependency-health.ts",
-    "loc": "tsx scripts/count-loc.ts"
+    "loc": "tsx scripts/count-loc.ts",
+    "mcp:checkout": "pnpm --filter @example/mcp-checkout-app dev",
+    "mcp:checkout:tunnel": "pnpm --filter @example/mcp-checkout-app tunnel"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.10",

@@ -5,6 +5,7 @@ import { BalanceBadge } from './BalanceBadge'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { BalanceStatus, SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 function ctxWith(overrides: Partial<BalanceStatus> = {}): SolvaPayContextValue {
   return {
@@ -26,16 +27,13 @@ function ctxWith(overrides: Partial<BalanceStatus> = {}): SolvaPayContextValue {
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
+    balance: mockBalanceStatus({
       credits: 500,
       displayCurrency: 'USD',
       creditsPerMinorUnit: 100,
       displayExchangeRate: 1,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
       ...overrides,
-    },
+    }),
   }
 }
 
@@ -54,6 +52,26 @@ describe('BalanceBadge primitive', () => {
     expect(badge.getAttribute('data-state')).toBe('ok')
     expect(badge.textContent).toContain('500')
     expect(badge.textContent).toContain('credits')
+    expect(badge.textContent).toContain('$0.05')
+  })
+
+  it('shows SEK equivalent for credits at USD→SEK rate (not 100x inflated)', () => {
+    render(
+      <Wrap
+        ctx={ctxWith({
+          credits: 159_600,
+          displayCurrency: 'SEK',
+          creditsPerMinorUnit: 100,
+          displayExchangeRate: 9.46,
+        })}
+      >
+        <BalanceBadge data-testid="badge" />
+      </Wrap>,
+    )
+    const badge = screen.getByTestId('badge')
+    expect(badge.textContent).toContain('159,600')
+    expect(badge.textContent).toMatch(/150\.98/i)
+    expect(badge.textContent).not.toContain('15,103')
   })
 
   it('emits data-state=zero when balance is 0', () => {

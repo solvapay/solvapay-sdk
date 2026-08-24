@@ -1,5 +1,66 @@
 # @solvapay/mcp-core changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- 12f446b: `hideToolsByAudience` now reads `User-Agent` from Web `Request` headers. This is the primary ChatGPT detection path for 2026-era connections, where `initialize` never runs and the previous detection had nothing to key off.
+
+  The `zod` peer narrows to `^4.2.0` and `engines.node` moves to `>=20`. Consumers still on zod 3 or Node 18 must upgrade.
+
+### Patch Changes
+
+- c6d3ddc: Fix `customer_ref` never resolving on the official MCP SDK v2, which left every authenticated tool call unauthenticated.
+
+  SDK v2 moved the auth envelope on the tool-handler context from the flat `extra.authInfo` to `extra.http.authInfo`. The customer-ref extractors still read the v1 location, so `getCustomerRef` resolved to `null` even when the OAuth bridge had authenticated the request correctly.
+
+  The failure was silent in most paths: intent tools returned a bootstrap payload with `customer: null`, rendering an empty "no active plan" account panel for paying customers, and `registerPayable` tools billed against `'anonymous'`. Only `create_checkout_session` failed loudly, with `customer_ref missing from MCP auth context`.
+
+  `defaultGetCustomerRef`, the MCP paywall adapter, and the virtual-tools extractor now read `extra.http.authInfo` first and fall back to the flat `extra.authInfo` that some third-party adapters still emit. `McpToolExtra` gained a typed `http.authInfo` member.
+
+- 3a310eb: Add tiered product config validation: sync `productRef` shape checks + one-line MCP config logging, enriched OAuth DCR failure diagnostics, opt-in `verifyProductConfiguration()` on `@solvapay/server`, and `solvapay doctor` for explicit network checks (secret key, product existence, readiness).
+- Updated dependencies [800f081]
+- Updated dependencies [3a310eb]
+  - @solvapay/core@1.3.0
+
+## 0.2.8
+
+### Patch Changes
+
+- 215d045: Add business purchase / VAT support to plan checkout (`PaymentForm.BusinessDetails`, tax-aware summary, attach-before-confirm) and MCP embedded surfaces via the new `attach_business_details` transport tool.
+- e8490d8: Widen the `@solvapay/server` peer dependency range to `^1.4.0 || ^2.0.0`. Both packages consume only stable `@solvapay/server` exports (paywall helpers, nudge builders, the `SolvaPay` type) and are unaffected by the auto-recharge breaking change in `@solvapay/server@2.0.0`. Declaring the wider range keeps them installable against both `server@1.x` and `server@2.x`, so a `server` major no longer forces a false-major cascade onto `@solvapay/mcp` / `@solvapay/mcp-core` (and onward to `@solvapay/react` / `@solvapay/react-supabase`).
+- Updated dependencies [ede9365]
+- Updated dependencies [985acd1]
+  - @solvapay/core@1.2.0
+
+## 0.2.7
+
+### Patch Changes
+
+- Updated dependencies [349777e]
+  - @solvapay/core@1.1.1
+
+## 0.2.6
+
+### Patch Changes
+
+- 5a9ec8d: `manage_account` narration no longer treats credit top-ups as an active plan and shows the customer's balance in the no-plan welcome path so credited-but-planless users are routed to `activate_plan`.
+- 4892771: Stop upgrade/topup intent tools from inviting model retries in default `ui` mode by including assistant-audience plan narration alongside the UI placeholder, rewriting the placeholder to confirm the panel is shown, and marking checkout/topup as idempotent for dedupe-aware hosts. Replace `<McpApp>`'s timer-based `waitForInitialToolResult` mount race with an event-driven flow keyed on `classifyHostEntry`: intent entries consume the host's one-shot opening `toolresult` via the live handler (no duplicate intent-tool call), while `other` entries fetch bootstrap once.
+
+  Add an idempotent `solvapay://bootstrap.json` MCP resource so widget remounts on hosts that scrub `structuredContent` (e.g. MCPJam) recover via `readServerResource` instead of replaying intent tools. Explicit refresh paths still use `fetchMcpBootstrap`.
+
+- 0eebbdb: Intent tools (`upgrade`, `topup`, `manage_account`) are now annotated `{ readOnlyHint: true, idempotentHint: true }` — they only open the UI or return a read-only bootstrap snapshot. UI-only transport tools dual-stamp `_meta.ui.visibility: ["app"]` and `_meta["openai/widgetAccessible"]: true` so the embedded iframe can invoke them on the ChatGPT Apps SDK runtime.
+- 1ec6297: UI-only transport tools (`create_payment_intent`, etc.) now carry SEP-1865 `_meta.ui.visibility: ["app"]` so MCP Apps hosts hide them from the model while the embedded iframe can still invoke them. The proprietary `_meta.audience: "ui"` tag remains for server-side `hideToolsByAudience` on non-SEP-1865 hosts.
+- 7a03c7f: Credit → fiat display helpers (`creditsToDisplayMinorUnits`, `minorUnitsPerMajor`, `isZeroDecimalCurrency`) now live in `@solvapay/core` so Next.js client components can import them without pulling the Node-only `@solvapay/mcp-core` server bundle. `@solvapay/mcp-core` re-exports the same symbols for backward compatibility.
+- Updated dependencies [7a03c7f]
+  - @solvapay/core@1.1.0
+
+## 0.2.5
+
+### Patch Changes
+
+- 254498f: Preserve OAuth resource metadata in bearer auth by exposing `extra.resource`, instead of inferring MCP client identity from resource-only `aud` claims.
+
 ## 0.2.4
 
 ### Patch Changes

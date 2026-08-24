@@ -25,6 +25,13 @@ export type {
 export { createSolvaPayClient } from './client'
 export type { ServerClientOptions } from './client'
 
+// Opt-in product configuration check (never auto-invoked)
+export { verifyProductConfiguration } from './verify-product-configuration'
+export type {
+  ProductConfigurationStatus,
+  VerifyProductConfigurationOptions,
+} from './verify-product-configuration'
+
 /**
  * Verify webhook signature from SolvaPay backend.
  *
@@ -165,12 +172,20 @@ export type {
 
 // Export payment processing types
 export type {
+  PurchaseInfo,
   OneTimePurchaseInfo,
   ProcessPaymentResult,
   TopupProcessResult,
   CustomerResponseMapped,
   ActivatePlanResult,
   PaymentMethodInfo,
+  AutoRechargeConfig,
+  AutoRechargeDisplayBlock,
+  CreditDisplayBlock,
+  AutoRechargeInput,
+  SaveAutoRechargeInput,
+  AutoRechargeResponse,
+  SaveAutoRechargeResponse,
   McpBootstrapRequest,
   McpBootstrapResponse,
   McpBootstrapPlanInput,
@@ -180,6 +195,14 @@ export type {
   ToolPlanMappingInput,
   SdkMerchantResponse,
   SdkProductResponse,
+  CreditDebitSkipReason,
+  CreditDebitResult,
+  TrackUsageRequest,
+  TrackUsageResponse,
+  TrackUsageBulkRequest,
+  TrackUsageBulkResponse,
+  AssignCreditsRequest,
+  AssignCreditsResponse,
 } from './types/client'
 
 // Export utilities for general use
@@ -194,12 +217,16 @@ export {
   createTopupPaymentIntentCore,
   processPaymentIntentCore,
   processTopupPaymentIntentCore,
+  attachBusinessDetailsCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
   cancelPurchaseCore,
   reactivatePurchaseCore,
   activatePlanCore,
   getPaymentMethodCore,
+  getAutoRechargeCore,
+  saveAutoRechargeCore,
+  disableAutoRechargeCore,
   checkPurchaseCore,
   trackUsageCore,
   getUsageCore,
@@ -209,6 +236,9 @@ export {
   getProductCore,
   isErrorResult,
   handleRouteError,
+  pollBalanceUntilIncreased,
+  BALANCE_RECONCILE_DELAYS_MS,
+  TOPUP_BALANCE_POLL_DELAYS_MS,
 } from './helpers'
 export type {
   ErrorResult,

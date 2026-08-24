@@ -1,5 +1,17 @@
 # @solvapay/react-supabase changelog
 
+## 1.0.11
+
+### Patch Changes
+
+- ca6d80b: Republish so the `@preview` dist-tag tracks the current family. It was left on `2.0.0-preview-2c722a7c` from a false-major cascade that never shipped to `@latest` (`1.0.10`). That snapshot peers `@solvapay/react@^2.0.0-preview-2c722a7c`, so `npm install @solvapay/react@preview @solvapay/react-supabase@preview` cannot resolve against `react@1.7.0-preview`.
+
+## 1.0.10
+
+### Patch Changes
+
+- 2de7fd8: Add Auth0 identity adapters across `@solvapay/auth`, `@solvapay/react`, and `@solvapay/next` (`createAuth0AuthMiddleware`), plus a `next-auth0` scaffolder template. The Next.js middleware now strips client-supplied identity headers (`x-user-id`, `authorization`) before forwarding a verified session identity downstream.
+
 ## 1.0.9
 
 ### Patch Changes
