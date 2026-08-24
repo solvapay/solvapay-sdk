@@ -118,11 +118,14 @@ jobs:
         run: pnpm validate:fetch-runtime
 
       # Deno gate — type-checks examples/supabase-edge-mcp against the
-      # last-published `@preview` versions of the workspace packages it
-      # imports. See publish-preview.yml for the rationale around the
-      # "one-commit-late" detection window.
-      - name: Validate fetch-runtime — Deno gate (supabase-edge-mcp type-check)
-        run: pnpm --filter @example/supabase-edge-mcp validate
+      # workspace source of the packages this run publishes. There is
+      # deliberately no dist-tag-pinned counterpart here: this workflow
+      # ships `@latest`, so gating on `@preview` would validate an
+      # artifact the run did not produce, and gating on `@latest` would
+      # validate the *previous* release. Revisit adding a `@latest` gate
+      # once 0.3.0 has shipped and `@latest` carries `responseMode`.
+      - name: Validate fetch-runtime — Deno gate (workspace source)
+        run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
       - name: Create Release PR or publish
         id: changesets

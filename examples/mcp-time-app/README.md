@@ -25,8 +25,9 @@ Required for paywall-enabled mode:
 
 Optional:
 
-- `SOLVAPAY_API_BASE_URL` (defaults to `http://localhost:3000`)
-- `MCP_PORT` (defaults to `3005`)
+- `SOLVAPAY_API_BASE_URL` — against a local platform stack use
+  `http://localhost:3010` (see [`../.env.platform-local.example`](../.env.platform-local.example))
+- `MCP_PORT` — use `3030+` locally so you don't collide with platform services
 - `MCP_HOST` (defaults to `localhost`)
 - `PAYWALL_ENABLED` (`true` by default, set to `false` to disable auth/paywall)
 

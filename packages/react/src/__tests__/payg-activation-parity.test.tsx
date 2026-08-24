@@ -18,23 +18,48 @@ const PAYG_ACTIVATION_RESPONSE = {
   purchases: [
     {
       reference: 'pur_payg',
+      customerRef: 'cus_test',
       productName: 'Widget API',
       productRef: 'prd_api',
       status: 'active',
       startDate: '2026-01-01',
+      createdAt: '2026-01-01',
       amount: 0,
       currency: 'USD',
+      isRecurring: false,
       planRef: 'plan_payg',
       planSnapshot: {
-        planType: 'usage-based',
         reference: 'plan_payg',
         name: 'Pay as you go',
-        creditsPerUnit: 4,
-        meterRef: 'requests',
+        currency: 'USD',
+        price: 0,
+        isMetered: true,
       },
       usage: { used: 0 },
     },
   ],
+}
+
+/**
+ * Credits buy a finite number of metered items, so the allowance endpoint
+ * answers with a real count — never the `-1` unlimited sentinel. This is
+ * what keeps the card off the "Unlimited" label (DEV-545).
+ */
+const PAYG_LIMITS_RESPONSE = {
+  remaining: 25,
+  withinLimits: true,
+  meterName: 'requests',
+  activationRequired: false,
+}
+
+function respond(url: string) {
+  const json =
+    typeof url === 'string' && url.includes('payment-method')
+      ? { kind: 'none' }
+      : typeof url === 'string' && url.includes('/api/limits')
+        ? PAYG_LIMITS_RESPONSE
+        : PAYG_ACTIVATION_RESPONSE
+  return Promise.resolve({ ok: true, json: () => Promise.resolve(json) })
 }
 
 function createWrapper(props?: Record<string, unknown>) {
@@ -63,18 +88,7 @@ describe('PAYG activation parity (zero-amount active purchase)', () => {
     localStorage.clear()
     paymentMethodCache.clear()
 
-    fetchSpy = vi.fn().mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('payment-method')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ kind: 'none' }),
-        })
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(PAYG_ACTIVATION_RESPONSE),
-      })
-    })
+    fetchSpy = vi.fn().mockImplementation((url: string) => respond(url))
     vi.stubGlobal('fetch', fetchSpy)
   })
 
@@ -148,18 +162,7 @@ describe('manage account parity (DEV-545)', () => {
     localStorage.clear()
     paymentMethodCache.clear()
 
-    fetchSpy = vi.fn().mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('payment-method')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ kind: 'none' }),
-        })
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(PAYG_ACTIVATION_RESPONSE),
-      })
-    })
+    fetchSpy = vi.fn().mockImplementation((url: string) => respond(url))
     vi.stubGlobal('fetch', fetchSpy)
   })
 
@@ -197,7 +200,7 @@ describe('manage account parity (DEV-545)', () => {
     })
 
     // Manage: PurchaseCard with active purchase; SDK: activePurchase populated
-    expect(result.current.purchase.activePurchase?.planSnapshot?.planType).toBe('usage-based')
+    expect(result.current.purchase.activePurchase?.planSnapshot?.isMetered).toBe(true)
     expect(result.current.purchase.activePurchase?.amount).toBe(0)
     expect(result.current.purchase.hasPaidPurchase).toBe(false)
     expect(result.current.purchase.activePaidPurchase).toBeNull()

@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/core",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -8,6 +8,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
@@ -23,7 +24,19 @@
     "README.md"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      },
+      "./business-details": {
+        "types": "./dist/business-details-public.d.ts",
+        "import": "./dist/business-details-public.js",
+        "require": "./dist/business-details-public.cjs"
+      }
+    }
   },
   "repository": {
     "type": "git",

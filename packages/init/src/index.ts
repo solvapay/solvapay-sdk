@@ -8,11 +8,14 @@ export {
 export type {
   ExchangeResponse,
   InitSessionResponse,
+  VerifiedProductSummary,
   VerifyProductRefResult,
 } from './browser-auth'
 export {
   ensureEnvInGitignore,
+  readSolvaPayApiBaseUrlFromEnv,
   readSolvaPayProductRefFromEnv,
+  readSolvaPaySecretKeyFromEnv,
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
   writeSolvaPayApiBaseUrlToEnv,
   writeSolvaPayProductRefToEnv,
@@ -42,3 +45,11 @@ export type { EnsureNodeProjectResult, PackageManager } from './project'
 
 export { runInitInDirectory } from './run-init'
 export type { InitCommandOptions, RunInitInDirectoryOptions } from './run-init'
+
+export { runDoctorInDirectory } from './run-doctor'
+export type {
+  DoctorCheckResult,
+  DoctorCommandOptions,
+  DoctorReport,
+  RunDoctorInDirectoryOptions,
+} from './run-doctor'

@@ -10,6 +10,7 @@ export type { paths, components, operations } from './generated'
 
 // Re-export client types from types/client.ts
 export type {
+  PurchaseInfo,
   LimitResponseWithPlan,
   CustomerResponseMapped,
   UsageMeterType,

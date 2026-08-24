@@ -3,11 +3,10 @@
  *
  * Single call into `createSolvaPayMcpFetch` from `@solvapay/mcp/fetch`
  * gives us a paywalled MCP server over Deno with the full
- * `@modelcontextprotocol/sdk` wiring, `hideToolsByAudience` for a
+ * `@modelcontextprotocol/server` wiring, `hideToolsByAudience` for a
  * trim LLM-facing catalogue (with auto-bypass on ChatGPT so the
- * iframe still works), and the `WebStandardStreamableHTTPServerTransport`
- * stateless-JSON preset. The only things the Edge deployment still
- * hand-rolls are:
+ * iframe still works), and `responseMode: 'json'`. The only things the
+ * Edge deployment still hand-rolls are:
  *
  *  1. **Supabase mount-prefix rewrite** — the edge gateway strips
  *     `/functions/v1` but still delivers paths beginning with `/mcp`
@@ -94,7 +93,9 @@ const handler = createSolvaPayMcpFetch({
   // rewriteRequestPath strips FUNCTION_MOUNT_PREFIX ('/mcp') before the
   // handler sees the request, so the effective MCP root is '/' not '/mcp'.
   mcpPath: '/',
-  mode: 'json-stateless',
+  // Kept explicit rather than relying on the default: Supabase Edge cannot
+  // hold a stream, so single-JSON responses are load-bearing here.
+  responseMode: 'json',
   // Trim the LLM catalog to the four intent tools on text hosts
   // (Claude Desktop, MCPJam, Cursor); the SDK auto-bypasses for
   // ChatGPT so the iframe's transport tools stay callable.

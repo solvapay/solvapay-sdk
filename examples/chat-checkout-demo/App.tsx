@@ -1,10 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import {
   getOrCreateAnonymousCustomerRef,
+  isPaidPurchase,
+  isPlanPurchase,
   useAutoActivateFreePlan,
   useLimits,
   usePlans,
   usePurchase,
+  type PurchaseInfo,
 } from '@solvapay/react'
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { Message as MessageType, UserType, ScenarioType } from './types'
@@ -13,17 +16,16 @@ import { ChatWindow } from './components/ChatWindow'
 import type { InlineCheckoutMode } from './components/InlineCheckout'
 import { env } from './src/lib/env'
 
-function getActivePurchaseFor(
-  purchases: Array<{ planSnapshot?: { planType?: string }; status?: string; endDate?: string }>,
-  planType: 'recurring' | 'one-time',
-): boolean {
+function hasActivePaidPlan(purchases: PurchaseInfo[], productRef: string): boolean {
   const now = Date.now()
-  return purchases.some(p => {
-    if (p.planSnapshot?.planType !== planType) return false
-    if (p.status !== 'active') return false
-    if (p.endDate && new Date(p.endDate).getTime() <= now) return false
-    return true
-  })
+  return purchases.some(
+    p =>
+      p.status === 'active' &&
+      p.productRef === productRef &&
+      isPlanPurchase(p) &&
+      isPaidPurchase(p) &&
+      !(p.endDate && new Date(p.endDate).getTime() <= now),
+  )
 }
 
 function productRefForScenario(scenario: ScenarioType): string {
@@ -56,8 +58,14 @@ const App: React.FC = () => {
 
   const { purchases, loading: purchaseLoading } = usePurchase()
 
-  const isPremium = useMemo(() => getActivePurchaseFor(purchases, 'recurring'), [purchases])
-  const hasLifetimeAccess = useMemo(() => getActivePurchaseFor(purchases, 'one-time'), [purchases])
+  const isPremium = useMemo(
+    () => hasActivePaidPlan(purchases, env.subscription.productRef),
+    [purchases],
+  )
+  const hasLifetimeAccess = useMemo(
+    () => hasActivePaidPlan(purchases, env.lifetime.productRef),
+    [purchases],
+  )
 
   const productRef = productRefForScenario(currentScenario)
 
@@ -70,7 +78,15 @@ const App: React.FC = () => {
   // `adjustBalance` pattern. The hook also auto-refetches when
   // `usePurchase().purchases` flips (post-payment / post-topup), so the
   // pill converges on the new allowance without a demo-side polling loop.
-  const { remaining: limitRemaining, adjustRemaining } = useLimits({
+  //
+  // `unlimited` is true when the plan carries no finite cap (the backend's
+  // `remaining: -1`). It has to gate the pill's counter, because `remaining`
+  // then holds the sentinel rather than a count.
+  const {
+    remaining: limitRemaining,
+    unlimited: unlimitedAllowance,
+    adjustRemaining,
+  } = useLimits({
     productRef: productRef || undefined,
     meterName: 'requests',
   })
@@ -357,6 +373,7 @@ const App: React.FC = () => {
             onSendMessage={handleSendMessage}
             onUpgrade={handleUpgrade}
             limitRemaining={limitRemaining}
+            unlimitedAllowance={unlimitedAllowance === true}
             autoActivatingFreePlan={autoActivatingFreePlan}
             purchaseLoading={purchaseLoading}
             messageLimit={messageLimit}

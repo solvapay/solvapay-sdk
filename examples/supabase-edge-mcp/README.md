@@ -22,6 +22,7 @@ examples/supabase-edge-mcp/
 ├── package.json                           vite + validate + deploy scripts
 ├── vite.config.ts                         single-file iframe bundle
 ├── mcp-app.html                           iframe chrome (bundled)
+├── deno.workspace.json                    TYPE-CHECK GATE import map → workspace source
 ├── src/
 │   └── mcp-app.tsx                        iframe entrypoint (copied from mcp-checkout-app)
 └── supabase/
@@ -30,7 +31,7 @@ examples/supabase-edge-mcp/
             ├── index.ts                   Deno.serve(createSolvaPayMcpFetch(…))
             ├── demo-tools.ts              paywalled tool handlers (runtime-neutral copy)
             ├── deno.json                  PRODUCTION import map → npm:@solvapay/*@preview
-            ├── deno.local.json            CI validate + local serve → same @preview pins
+            ├── deno.local.json            local serve + post-publish check → @preview pins
             └── mcp-app.html               build artefact (copied from ../../../dist/)
 ```
 
@@ -169,16 +170,27 @@ curl -s http://localhost:54321/functions/v1/mcp/.well-known/oauth-authorization-
 # → "http://localhost:54321/functions/v1/mcp"
 ```
 
-### Two import maps, one source file
+### Three import maps, one source file
 
-The function ships with **two** deno.json files side by side:
+The function source uses bare specifiers only (`import … from '@solvapay/mcp'`, never `'npm:@solvapay/mcp'`), so the import map alone decides where `@solvapay/*` resolves. Three configs cover three genuinely different jobs:
 
-| File                                      | Mode                      | Bare specifier resolution                                       |
-| ----------------------------------------- | ------------------------- | --------------------------------------------------------------- |
-| `supabase/functions/mcp/deno.json`        | production deploy         | `"@solvapay/mcp": "npm:@solvapay/mcp@preview"` — mutable preview dist-tag |
-| `supabase/functions/mcp/deno.local.json`  | CI validate + local serve | same `@preview` pins (checks last-published preview, not workspace source) |
+| File                                     | Job                                            | `@solvapay/*` resolves to                                                        |
+| ---------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| `supabase/functions/mcp/deno.json`       | production `supabase functions deploy`         | `npm:@solvapay/mcp@preview` — the deployed function must consume published packages |
+| `supabase/functions/mcp/deno.local.json` | `pnpm serve:local` + the post-publish CI check  | same `@preview` pins                                                             |
+| `deno.workspace.json`                    | `pnpm validate:workspace` — the blocking gate  | workspace source under `packages/*`                                              |
 
-The function source uses bare specifiers only (`import … from '@solvapay/mcp'`, never `'npm:@solvapay/mcp'`) so the import map alone picks the resolution. `supabase functions deploy` picks up `deno.json`; `pnpm validate` and `pnpm serve:local` pass `--config=…/deno.local.json` explicitly so CI type-checks against the last-published `@preview` npm release (one-commit-late regression detection).
+`deno.local.json` stays on `@preview` for `serve:local` because the Supabase CLI runs the function inside a Docker edge runtime that mounts only `supabase/functions` — symlinks escaping to `../../../../packages/*` are unreachable from inside the container.
+
+`deno.workspace.json` gets workspace source by dropping the `@preview` suffix while keeping the `npm:` prefix, under `"nodeModulesDir": "manual"`. Deno then resolves those specifiers through the pnpm symlinks in `node_modules/@solvapay/*` and, because it goes through node-module resolution, honours each package's `exports` map — pairing `dist/*.js` with its sibling `dist/*.d.ts`. Three things about it are load-bearing:
+
+- **It lives at the example root, not beside the other two.** `nodeModulesDir: "manual"` makes Deno look for `node_modules` next to the config file; only at the example root does it find the pnpm-populated tree.
+- **`"unstable": ["sloppy-imports"]`.** Resolving through the symlink lands on the real `packages/*/dist` path, which Deno no longer treats as being inside `node_modules` — so it stops mapping the `./chunk-XYZ.js` specifiers that tsup writes into its `.d.ts` files onto their `.d.ts` siblings. Extension probing restores that. Without it the gate reports a cascade of spurious `TS2307`/`TS7031` errors instead of real ones.
+- **Do not map to `dist/index.js` file paths instead.** That bypasses `exports` and orphans the `.d.ts`, which is the variant that produced the implicit-any cascade the first time this was attempted.
+
+`manual` also means Deno installs nothing, so every package in the type graph must be a real dependency. That is why `package.json` declares `@modelcontextprotocol/core` and `@modelcontextprotocol/server` (`demo-tools.ts` genuinely imports the latter) and `openai` — the last is not used by any source file here; it is referenced by the type declarations behind `import 'jsr:@supabase/functions-js/edge-runtime.d.ts'`. Under the `@preview` configs Deno fetched these on demand and the gap went unnoticed.
+
+Because the workspace gate reads the branch rather than a dist-tag, a feature branch can prove its SDK change still type-checks under Deno before merging — and the gate cannot deadlock the way a `@preview`-pinned pre-publish gate could.
 
 ## What the function does on each request
 
@@ -210,11 +222,21 @@ supabase secrets set DEMO_TOOLS=false
 
 ## CI gate
 
-The root [`.github/workflows/publish-preview.yml`](../../.github/workflows/publish-preview.yml) runs `pnpm --filter @example/supabase-edge-mcp validate` as a required gate before publishing `@solvapay/mcp` snapshots. The gate runs `deno check` against this function using the local import map, so **any change that breaks the canonical Supabase Edge consumer blocks the preview publish** — not a test, a type-check under a real Deno binary.
+This example is type-checked under a real Deno binary in three places — not a test, an actual `deno check`. **Any change that breaks the canonical Supabase Edge consumer blocks the merge.**
+
+| Workflow                                                                     | Step                    | Reads                     |
+| ---------------------------------------------------------------------------- | ----------------------- | ------------------------- |
+| [`ci.yml`](../../.github/workflows/ci.yml) (every PR)                        | `validate:workspace`    | workspace source          |
+| [`publish-preview.yml`](../../.github/workflows/publish-preview.yml) (`dev`)  | `validate:workspace` pre-publish, then `validate` after the npm verification | source, then the published `@preview` tarballs |
+| [`publish.yml`](../../.github/workflows/publish.yml) (`main`)                 | `validate:workspace`    | workspace source          |
+
+The workspace gate is the blocking one everywhere, because it checks the code the run is actually shipping. The `@preview` gate runs only *after* `publish-preview.yml` has published and verified the tag: it is the only check that exercises the assembled npm tarballs — their published `exports` maps and peer ranges — rather than workspace `dist/`, but it must not gate the publish. When it did, a broken publish froze the very tag the gate read, so the run that would have fixed it could never get past its own gate.
+
+`publish.yml` has no dist-tag-pinned gate at all: it ships `@latest`, so `@preview` would validate an artifact the run did not produce and `@latest` would validate the previous release.
 
 ## See also
 
 - [`packages/mcp/src/fetch/`](../../packages/mcp/src/fetch/) — full fetch-first handler reference (the `@solvapay/mcp/fetch` subpath export)
-- [`packages/mcp/README.md`](../../packages/mcp/README.md) — the `@modelcontextprotocol/sdk` adapter used inside the handler
+- [`packages/mcp/README.md`](../../packages/mcp/README.md) — the `@modelcontextprotocol/server` adapter used inside the handler
 - [`examples/mcp-checkout-app/README.md`](../mcp-checkout-app/README.md) — same toolbox, Express transport
 - [`examples/supabase-edge/README.md`](../supabase-edge/README.md) — checkout REST functions (the non-MCP companion)

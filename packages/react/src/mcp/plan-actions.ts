@@ -7,9 +7,31 @@
  * share the same matrix as the MCP shell — "one plan-shape matrix,
  * two surfaces" — and makes the 4 × 2 × 3 test matrix from the plan a
  * pure-function target (no RTL needed).
+ *
+ * The shape is derived from the wire's `options[]` through the
+ * `@solvapay/core` readers. These helpers previously keyed off
+ * `planType`, `meterRef`, `meterId`, and `limit`, none of which the
+ * backend sends: every plan fell through to the unknown branch, so a
+ * pay-as-you-go plan (which has no headline `price`) resolved to
+ * `'free'` and metered subscriptions were indistinguishable from
+ * unlimited ones.
  */
 
-export type PlanShape = 'free' | 'trial' | 'usage-based' | 'recurring-unlimited' | 'recurring-metered'
+import {
+  billingCycle,
+  charges,
+  includedUnits,
+  perUnitCharge,
+  trialDays,
+  type PricingOptionLike,
+} from '@solvapay/core'
+
+export type PlanShape =
+  | 'free'
+  | 'trial'
+  | 'usage-based'
+  | 'recurring-unlimited'
+  | 'recurring-metered'
 
 /**
  * Strategy the Plan tab uses when the user clicks a plan card:
@@ -22,14 +44,22 @@ export type PlanShape = 'free' | 'trial' | 'usage-based' | 'recurring-unlimited'
  */
 export type ActivationStrategy = 'activate' | 'topup-first' | 'paid-checkout'
 
+/**
+ * The subset of a plan — or of the plan snapshot frozen onto a purchase
+ * — that the shape derivation reads. The two differ: a plan carries
+ * `requiresPayment`, a snapshot carries `isMetered`, and neither
+ * carries both. Everything else comes out of `options[]`.
+ */
 export interface PlanLike {
-  /** `'free' | 'trial' | 'usage-based' | 'recurring'`. */
-  planType?: string | null
+  /** Composable pricing options: charges, billing cycle, limit, trial. */
+  options?: PricingOptionLike[] | null
+  /** `false` marks a free plan. Only present on a plan, not a snapshot. */
+  requiresPayment?: boolean | null
+  /** Set on a frozen purchase snapshot when the plan meters usage. */
+  isMetered?: boolean | null
+  /** Derived headline amount; only a fallback for snapshots frozen before `options[]`. */
   price?: number | null
   currency?: string | null
-  meterRef?: string | null
-  meterId?: string | null
-  limit?: number | null
 }
 
 export interface PurchaseSnapshotLike {
@@ -39,41 +69,57 @@ export interface PurchaseSnapshotLike {
 }
 
 /**
+ * Whether the plan charges anything at all.
+ *
+ * A plan says so outright with `requiresPayment`. A frozen snapshot has
+ * no such field, so fall back to the charges it carries — and, for
+ * snapshots frozen before `options[]` existed, to the headline price.
+ */
+function isPaidPlan(plan: PlanLike): boolean {
+  if (plan.requiresPayment === false) return false
+  if (charges(plan).some(charge => charge.amountMinor > 0)) return true
+  return (plan.price ?? 0) > 0
+}
+
+/** Whether the plan counts usage: a per-unit charge, an included allowance, or a frozen flag. */
+function isMeteredPlan(plan: PlanLike): boolean {
+  if (plan.isMetered === true) return true
+  return perUnitCharge(plan) != null || includedUnits(plan) != null
+}
+
+/**
  * Map a `BootstrapPlan` / `PlanSnapshot` to its concrete shape. The
- * four shapes are distinct in UX: each drives a different summary
- * string, a different set of CTAs, and a different activity-strip
- * variant.
+ * shapes are distinct in UX: each drives a different summary string, a
+ * different set of CTAs, and a different activity-strip variant.
+ *
+ * A billing cycle is what separates a subscription from a one-off, and
+ * metering is what separates capped from unlimited. A paid plan with
+ * neither is a one-time purchase, which this matrix has no member for
+ * and folds into `'recurring-unlimited'` — the same bucket it landed in
+ * before, and the one that routes it to paid checkout.
  */
 export function resolvePlanShape(plan: PlanLike | null | undefined): PlanShape | null {
   if (!plan) return null
-  const type = plan.planType
-  if (type === 'free') return 'free'
-  if (type === 'trial') return 'trial'
-  if (type === 'usage-based') return 'usage-based'
-  if (type === 'recurring') {
-    const hasMeter = Boolean(plan.meterRef || plan.meterId)
-    const hasLimit = plan.limit != null && plan.limit > 0
-    return hasMeter || hasLimit ? 'recurring-metered' : 'recurring-unlimited'
-  }
-  // Unknown / null planType — treat zero-priced as activate, paid as
-  // checkout.
-  if ((plan.price ?? 0) === 0) return 'free'
-  return 'recurring-unlimited'
+  if ((trialDays(plan) ?? 0) > 0) return 'trial'
+  if (!isPaidPlan(plan)) return 'free'
+
+  const metered = isMeteredPlan(plan)
+  if (billingCycle(plan)) return metered ? 'recurring-metered' : 'recurring-unlimited'
+  return metered ? 'usage-based' : 'recurring-unlimited'
 }
 
 /**
  * Pick the activation strategy for a plan the user just clicked.
  *
- * Rules match the plan's pressure-test: free / trial activate instantly;
- * usage-based always tops up first; zero-priced recurring activates
- * instantly; paid recurring goes to Stripe checkout.
+ * Free and trial plans activate instantly, usage-based always tops up
+ * first, and everything else goes to Stripe checkout. A zero-priced
+ * plan needs no separate branch: it resolves to `'free'`, because
+ * charging nothing is what makes a plan free.
  */
 export function resolveActivationStrategy(plan: PlanLike | null | undefined): ActivationStrategy {
   const shape = resolvePlanShape(plan)
   if (shape === 'usage-based') return 'topup-first'
   if (shape === 'free' || shape === 'trial') return 'activate'
-  // recurring-*: zero-priced still activates inline.
-  if ((plan?.price ?? 0) === 0) return 'activate'
   return 'paid-checkout'
 }
 
@@ -109,7 +155,11 @@ export interface PlanActionsInput {
   paidPlanCount: number
 }
 
-export function resolvePlanActions({ purchase, planCount, paidPlanCount }: PlanActionsInput): PlanActions {
+export function resolvePlanActions({
+  purchase,
+  planCount,
+  paidPlanCount,
+}: PlanActionsInput): PlanActions {
   const shape = resolvePlanShape(purchase?.planSnapshot)
   const hasPaymentMethod = Boolean(purchase?.hasPaymentMethod)
   const canOfferChange = planCount > 1
@@ -118,7 +168,11 @@ export function resolvePlanActions({ purchase, planCount, paidPlanCount }: PlanA
 
   return {
     topUp: shape === 'usage-based',
-    cancel: shape === 'recurring-unlimited' || shape === 'recurring-metered' || shape === 'free' || shape === 'trial',
+    cancel:
+      shape === 'recurring-unlimited' ||
+      shape === 'recurring-metered' ||
+      shape === 'free' ||
+      shape === 'trial',
     changePlan: canOfferChange && !canUpgrade,
     managePortal: hasPaymentMethod,
     upgrade: canUpgrade,
@@ -137,7 +191,9 @@ export type ActivityStripKind =
   | 'recurring-metered-usage'
   | 'free-usage'
 
-export function resolveActivityStrip(purchase: PurchaseSnapshotLike | null | undefined): ActivityStripKind {
+export function resolveActivityStrip(
+  purchase: PurchaseSnapshotLike | null | undefined,
+): ActivityStripKind {
   const shape = resolvePlanShape(purchase?.planSnapshot)
   if (!shape) return 'none'
   if (shape === 'usage-based') return 'payg-balance'

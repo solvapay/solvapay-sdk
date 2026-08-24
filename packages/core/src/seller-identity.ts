@@ -4,11 +4,16 @@
  */
 
 import {
-  SUPPORTED_BUSINESS_COUNTRIES,
+  DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL,
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
   deriveTaxIdType,
-  type SupportedBusinessCountry,
-  type TaxIdType,
-} from './business-details'
+  isStripeTaxBuyerCountry,
+} from './tax-jurisdictions'
+
+export {
+  DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL,
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+}
 
 export type SellerIdentityRow = { label: string; value: string }
 
@@ -17,14 +22,6 @@ export type SellerIdentityDisplay = {
   companyNumber: SellerIdentityRow | null
 }
 
-/** Display labels for seller identity rows (distinct from form field labels in getTaxIdFieldLabel). */
-export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: Record<TaxIdType, string> = {
-  eu_vat: 'VAT number',
-  gb_vat: 'VAT number',
-  us_ein: 'EIN',
-}
-
-const DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL = 'Tax ID'
 const COMPANY_NUMBER_LABEL = 'Company number'
 
 function normalizeOptionalString(value: string | null | undefined): string | undefined {
@@ -33,18 +30,13 @@ function normalizeOptionalString(value: string | null | undefined): string | und
   return trimmed.length > 0 ? trimmed : undefined
 }
 
-function toSupportedCountry(country: string | undefined): SupportedBusinessCountry | undefined {
-  if (!country) return undefined
-  const normalized = country.toUpperCase()
-  return (SUPPORTED_BUSINESS_COUNTRIES as readonly string[]).includes(normalized)
-    ? (normalized as SupportedBusinessCountry)
-    : undefined
-}
-
 export function getSellerTaxIdentifierDisplayLabel(country: string | null | undefined): string {
-  const supported = toSupportedCountry(normalizeOptionalString(country))
-  if (supported) {
-    return SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE[deriveTaxIdType(supported)]
+  const normalized = normalizeOptionalString(country)?.toUpperCase()
+  if (normalized && isStripeTaxBuyerCountry(normalized)) {
+    const type = deriveTaxIdType(normalized)
+    if (type) {
+      return SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE[type] ?? DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL
+    }
   }
   return DEFAULT_TAX_IDENTIFIER_DISPLAY_LABEL
 }
@@ -56,7 +48,8 @@ export function resolveSellerIdentityDisplay(input: {
   companyNumber?: string | null
 }): SellerIdentityDisplay {
   const country = normalizeOptionalString(input.country)
-  const supportedCountry = toSupportedCountry(country)
+  const supportedCountry =
+    country && isStripeTaxBuyerCountry(country.toUpperCase()) ? country.toUpperCase() : undefined
   const vatNumber = normalizeOptionalString(input.vatNumber)
   const taxId = normalizeOptionalString(input.taxId)
   const companyNumber = normalizeOptionalString(input.companyNumber)

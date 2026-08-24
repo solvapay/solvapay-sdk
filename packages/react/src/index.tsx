@@ -63,7 +63,7 @@ export { configToAutoRechargeInput } from './helpers/auto-recharge-form'
 export { useTransport } from './hooks/useTransport'
 export { useUsage } from './hooks/useUsage'
 export type { UsageSnapshot, UseUsageReturn } from './hooks/useUsage'
-export { useLimits } from './hooks/useLimits'
+export { useLimits, isUnlimited } from './hooks/useLimits'
 export type { UseLimitsOptions, UseLimitsReturn } from './hooks/useLimits'
 export { useAutoActivateFreePlan } from './hooks/useAutoActivateFreePlan'
 export type {

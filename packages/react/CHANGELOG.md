@@ -1,5 +1,20 @@
 # @solvapay/react changelog
 
+## 1.7.0
+
+### Minor Changes
+
+- 848e235: Prefer `meterName` over the deprecated `usageType` on `payable()` options, paywall metadata, and `checkLimits`. `usageType` stays accepted as an alias and is now typed as `string` rather than `'requests' | 'tokens'`, so a custom meter name type-checks on either field.
+
+  React copy uses the meter noun (`{unit}`) instead of generic "calls" / "messages", and `useUsage` falls back from `meterRef` to `meterId` when resolving the meter off a plan snapshot.
+
+### Patch Changes
+
+- 12f446b: Widen the `@solvapay/mcp-core` peer range to `^0.2.8 || ^0.3.0`, so this package stays installable against both lines. It consumes only stable type and constant exports and does not touch the `hideToolsByAudience` surface or zod schema construction that changed in `0.3.0`.
+- Updated dependencies [800f081]
+- Updated dependencies [3a310eb]
+  - @solvapay/core@1.3.0
+
 ## 1.6.0
 
 ### Minor Changes
@@ -432,8 +447,8 @@ pickPlanButton}` and `currentPlan.startedOn` copy keys.
 
 - 92401d3: Add a `<LegalFooter>` primitive that renders a
   `Terms · Privacy / Provided by SolvaPay` strip pointing at SolvaPay's own
-  legal pages. Mirrors the hosted-checkout footer without bringing Chakra
-  into the SDK.
+  legal pages. Mirrors the hosted-checkout footer with self-contained styles
+  in the SDK.
   - New `legalFooter.{terms, privacy, providedBy, poweredBy}` keys on the
     i18n bundle, overridable via `<SolvaPayProvider config={{ copy }}>`.
   - `<PaymentForm>` and `<TopupForm>` expose a `LegalFooter` namespace

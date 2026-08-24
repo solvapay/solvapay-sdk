@@ -29,11 +29,7 @@ import {
 import { PaymentForm } from '../PaymentForm'
 import { TopupForm } from '../TopupForm'
 import { MandateText } from '../MandateText'
-import {
-  isTopupGate,
-  resolvePaywallMessage,
-  usePaywallNoticeOptional,
-} from '../PaywallNotice'
+import { isTopupGate, resolvePaywallMessage, usePaywallNoticeOptional } from '../PaywallNotice'
 import { Slot } from '../slot'
 import { useBalance } from '../../hooks/useBalance'
 import { useCopy, useLocale } from '../../hooks/useCopy'
@@ -46,6 +42,7 @@ import { usePlans } from '../../hooks/usePlans'
 import {
   buildDefaultCheckoutPlanFilter,
   formatContinueLabel,
+  planBillingInterval,
   planSortByPaygFirstThenAsc,
   shortCycle,
   type BootstrapPlanLike,
@@ -354,35 +351,34 @@ const StepHeading = forwardRef<HTMLHeadingElement, StepLeafProps>(function Check
  *  - `amount` — `checkout.stepMessage.amount`.
  *  - `payment` — branch- and plan-shape-aware:
  *    - `payg` -> `paymentPayg`,
- *    - `recurring` with `billingCycle` -> `paymentRecurring`
+ *    - `recurring` with a billing interval -> `paymentRecurring`
  *      (interpolates `{planName}`),
- *    - `recurring` without `billingCycle` (one-time / lifetime) ->
+ *    - `recurring` without one (one-time / lifetime) ->
  *      `paymentOneTime`.
  *  - `success` — renders nothing.
  */
-const StepMessage = forwardRef<HTMLParagraphElement, StepLeafProps>(function CheckoutStepsStepMessage(
-  { asChild, children, className, ...rest },
-  forwardedRef,
-) {
-  const flow = useCheckoutContext('StepMessage')
-  const copy = useCopy()
-  const paywallCtx = usePaywallNoticeOptional()
-  if (flow.step === 'success') return null
-  const defaultText = resolveStepMessage(flow, copy, paywallCtx?.content ?? null)
-  if (!defaultText && children == null) return null
-  const Comp = asChild ? Slot : 'p'
-  return (
-    <Comp
-      ref={forwardedRef}
-      data-solvapay-checkout-step-message=""
-      data-step={flow.step}
-      className={className ?? 'solvapay-checkout-step-message'}
-      {...rest}
-    >
-      {children ?? defaultText}
-    </Comp>
-  )
-})
+const StepMessage = forwardRef<HTMLParagraphElement, StepLeafProps>(
+  function CheckoutStepsStepMessage({ asChild, children, className, ...rest }, forwardedRef) {
+    const flow = useCheckoutContext('StepMessage')
+    const copy = useCopy()
+    const paywallCtx = usePaywallNoticeOptional()
+    if (flow.step === 'success') return null
+    const defaultText = resolveStepMessage(flow, copy, paywallCtx?.content ?? null)
+    if (!defaultText && children == null) return null
+    const Comp = asChild ? Slot : 'p'
+    return (
+      <Comp
+        ref={forwardedRef}
+        data-solvapay-checkout-step-message=""
+        data-step={flow.step}
+        className={className ?? 'solvapay-checkout-step-message'}
+        {...rest}
+      >
+        {children ?? defaultText}
+      </Comp>
+    )
+  },
+)
 
 function resolveStepHeading(
   step: CheckoutStep,
@@ -420,7 +416,7 @@ function resolveStepMessage(
     const plan = flow.selectedPlan
     if (flow.branch === 'recurring' && plan) {
       const planName = plan.name ?? 'your'
-      if (plan.billingCycle) {
+      if (planBillingInterval(plan)) {
         return interpolate(copy.checkout.stepMessage.paymentRecurring, { planName })
       }
       return copy.checkout.stepMessage.paymentOneTime
@@ -498,11 +494,7 @@ function AmountPicker({ className, children }: AmountPickerProps) {
   // and disappears the moment merchant data arrives.
   if (!flow.topupCurrencyReady || flow.topupCurrency == null) {
     return (
-      <div
-        className={className ?? 'solvapay-amount-picker'}
-        data-state="loading"
-        aria-busy="true"
-      >
+      <div className={className ?? 'solvapay-amount-picker'} data-state="loading" aria-busy="true">
         <div className="solvapay-amount-picker-pills">
           {[0, 1, 2, 3].map(i => (
             <span
@@ -707,9 +699,9 @@ function RecurringPayment({ className }: { className?: string }) {
   // into the merchant-wide wallet via `flow.topupCurrency`.
   const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
   const amountMinor = selectedPlanShape.price ?? 0
-  const cycle = selectedPlanShape.billingCycle
+  const cycle = planBillingInterval(selectedPlanShape)
   const planName = selectedPlanShape.name ?? 'Plan'
-  // A plan is recurring iff it carries a `billingCycle`. One-time /
+  // A plan is recurring iff it carries a billing-cycle option. One-time /
   // lifetime plans (no cycle) get `Pay $X` copy + a single-line order
   // summary so they don't read as a subscription.
   const isRecurring = !!cycle
@@ -846,10 +838,12 @@ function Success({ className, children }: SuccessProps) {
             <dt>Plan</dt>
             <dd>{meta.plan.name ?? 'Pay as you go'}</dd>
           </div>
-          <div className="solvapay-checkout-receipt-row">
-            <dt>Rate</dt>
-            <dd>{meta.rateLabel}</dd>
-          </div>
+          {meta.rateLabel ? (
+            <div className="solvapay-checkout-receipt-row">
+              <dt>Rate</dt>
+              <dd>{meta.rateLabel}</dd>
+            </div>
+          ) : null}
         </dl>
       </div>
     )
@@ -868,10 +862,12 @@ function Success({ className, children }: SuccessProps) {
           <dt>Plan</dt>
           <dd>{meta.plan.name ?? 'Plan'}</dd>
         </div>
-        {meta.creditsIncluded > 0 ? (
+        {meta.includedUnits != null ? (
           <div className="solvapay-checkout-receipt-row">
-            <dt>Credits</dt>
-            <dd>+{meta.creditsIncluded.toLocaleString(locale)}</dd>
+            <dt>Included</dt>
+            <dd>
+              {meta.includedUnits.toLocaleString(locale)} {meta.meterName ?? 'units'}
+            </dd>
           </div>
         ) : null}
         <div className="solvapay-checkout-receipt-row">

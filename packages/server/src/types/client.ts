@@ -7,6 +7,9 @@
 import type { components, operations } from './generated'
 import type { BusinessDetailsInput, TaxBreakdown } from '@solvapay/core'
 
+/** SDK purchase row. Generated from the OpenAPI `SdkPurchaseResponse` schema. */
+export type PurchaseInfo = components['schemas']['SdkPurchaseResponse']
+
 export type AttachBusinessDetailsParams = {
   paymentIntentId: string
   customerRef?: string
@@ -37,7 +40,14 @@ export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
 }
 
 /**
- * Extended LimitResponse with SDK-added plan field
+ * Extended LimitResponse with SDK-added plan field.
+ *
+ * The backend `LimitResponse` now natively carries the `onExceed` outcome flags
+ * (`throttled` / `overage` / `needsTopUp` / `needsUpgrade` / `upgraded`, resolved
+ * by `decideLimit`), so they flow through from `generated.ts`. `throttled` /
+ * `overage` ride the allow path (`withinLimits: true`) so a protected handler
+ * can read them from `decision.limits` and degrade service or note overage; the
+ * others accompany a gate outcome.
  */
 export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & {
   plan: string
@@ -46,8 +56,7 @@ export type LimitResponseWithPlan = components['schemas']['LimitResponse'] & {
 /**
  * Extended CustomerResponse with proper field mapping
  *
- * Note: The backend API returns purchases as PurchaseInfo objects.
- * Additional fields (paidAt, nextBillingDate) may be present in the response.
+ * Note: The backend API returns purchases as SdkPurchaseResponse objects.
  */
 export type CustomerResponseMapped = {
   customerRef: string
@@ -55,12 +64,7 @@ export type CustomerResponseMapped = {
   name?: string
   externalRef?: string
   plan?: string
-  purchases?: Array<
-    components['schemas']['PurchaseInfo'] & {
-      paidAt?: string
-      nextBillingDate?: string
-    }
-  >
+  purchases?: PurchaseInfo[]
 }
 
 /**
@@ -68,11 +72,13 @@ export type CustomerResponseMapped = {
  */
 export interface OneTimePurchaseInfo {
   reference: string
+  customerRef: string
   productRef?: string
   amount: number
   currency: string
   creditsAdded?: number
   completedAt: string
+  createdAt: string
 }
 
 /**
@@ -94,7 +100,7 @@ export type ProcessPaymentResult =
   | {
       status: 'succeeded'
       type: 'recurring'
-      purchase: components['schemas']['PurchaseInfo']
+      purchase: PurchaseInfo
     }
   | {
       status: 'succeeded'
@@ -484,12 +490,12 @@ export interface SolvaPayClient {
   cancelPurchase?(params: {
     purchaseRef: string
     reason?: string
-  }): Promise<components['schemas']['PurchaseInfo']>
+  }): Promise<PurchaseInfo>
 
   // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
   reactivatePurchase?(params: {
     purchaseRef: string
-  }): Promise<components['schemas']['PurchaseInfo']>
+  }): Promise<PurchaseInfo>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
   // `productRef` is optional because credit-topup PIs (no product) are

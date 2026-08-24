@@ -29,6 +29,40 @@ type ActivatePlanResult = Awaited<ReturnType<NonNullable<SolvaPayClient['activat
 type CustomerBalanceResult = Awaited<ReturnType<NonNullable<SolvaPayClient['getCustomerBalance']>>>
 type ProductResponse = Awaited<ReturnType<NonNullable<SolvaPayClient['getProduct']>>>
 type MerchantResponse = Awaited<ReturnType<NonNullable<SolvaPayClient['getMerchant']>>>
+type StubPlan = ListPlansResponse[number]
+
+/**
+ * Mirrors platform `shapeSdkPlanResponse`: root `price` is a derived headline
+ * (the flat recurring or one-time charge in the plan currency). Money is
+ * authored only on `options[]`; a pure-metered plan has no flat charge and
+ * omits `price`.
+ */
+function deriveHeadlinePrice(
+  options: StubPlan['options'],
+  currency = 'USD',
+): number | undefined {
+  const cur = currency.toUpperCase()
+  const opts = options as Array<Record<string, unknown>>
+  const isFlat = (option: Record<string, unknown>, oneTime: boolean) =>
+    option.kind === 'charge' && option.per === 'flat' && Boolean(option.oneTime) === oneTime
+  const inCur = (option: Record<string, unknown>) => String(option.currency).toUpperCase() === cur
+  const flat =
+    opts.find(option => isFlat(option, false) && inCur(option)) ??
+    opts.find(option => isFlat(option, true) && inCur(option)) ??
+    opts.find(option => isFlat(option, false)) ??
+    opts.find(option => isFlat(option, true))
+  return typeof flat?.amountMinor === 'number' ? flat.amountMinor : undefined
+}
+
+/** Authoring fallback when a stub caller omits `options[]`. */
+function defaultPlanOptions(
+  type: StubPlan['type'],
+  currency: string,
+  amountMinor: number,
+): StubPlan['options'] {
+  const charge = { kind: 'charge' as const, per: 'flat' as const, amountMinor, currency }
+  return type === 'recurring' ? [{ kind: 'billingCycle', interval: 'month' }, charge] : [charge]
+}
 
 interface FreeTierData {
   [customerPlanKey: string]: {
@@ -379,7 +413,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       if (!withinLimits) {
         return {
           ...result,
-          checkoutUrl: `https://checkout.solvapay.com/demo?customer=${params.customerRef}&product=${params.productRef}`,
+          checkoutUrl: `https://customer.solvapay.com/demo?customer=${params.customerRef}&product=${params.productRef}`,
         }
       }
 
@@ -446,7 +480,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       queryParams.set('plan', params.planRef)
     }
 
-    const checkoutUrl = `https://checkout.solvapay.com/demo?${queryParams.toString()}`
+    const checkoutUrl = `https://customer.solvapay.com/demo?${queryParams.toString()}`
 
     this.log(`💳 Created checkout session for ${params.customerRef}: ${checkoutUrl}`)
 
@@ -582,12 +616,15 @@ export class StubSolvaPayClient implements SolvaPayClient {
     type RecurringResult = Extract<ProcessPaymentResult, { type: 'recurring' }>
     const purchase: RecurringResult['purchase'] = {
       reference: `pur_stub_${Math.random().toString(36).slice(2, 10)}`,
+      customerRef: params.customerRef,
       productName: 'Demo Product',
       productRef: params.productRef,
       status: 'active',
       startDate: now.toISOString(),
+      createdAt: now.toISOString(),
       amount: isProPlan ? 2900 : 0,
       currency: 'USD',
+      isRecurring: true,
       planRef: params.planRef,
     }
 
@@ -684,8 +721,10 @@ export class StubSolvaPayClient implements SolvaPayClient {
       reference: productRef,
       name: 'Demo Product',
       description: 'A stubbed product for local development and example builds.',
+      status: 'active',
       balance: 0,
       totalTransactions: 0,
+      isManagedMcp: false,
       isMcpPay: false,
       createdAt: now,
       updatedAt: now,
@@ -929,38 +968,49 @@ export class StubSolvaPayClient implements SolvaPayClient {
     this.log(`📡 Stub Request: GET /v1/sdk/products/${productRef}/plans`)
 
     const now = new Date().toISOString()
+    const freeOptions: StubPlan['options'] = [
+      { kind: 'charge', per: 'unit', amountMinor: 0, currency: 'usd', meter: 'requests' },
+      {
+        kind: 'limit',
+        cap: this.freeTierLimit,
+        meter: 'requests',
+        onExceed: 'block',
+        scope: 'billing_period',
+      },
+    ]
+    const proOptions: StubPlan['options'] = [
+      { kind: 'billingCycle', interval: 'month' },
+      { kind: 'charge', per: 'flat', amountMinor: 2900, currency: 'usd' },
+    ]
 
     return [
       {
-        type: 'recurring',
+        type: 'usage-based',
         reference: 'plan_free',
-        price: 0,
+        name: 'Free',
         currency: 'USD',
         currencySymbol: '$',
-        billingCycle: 'monthly',
         requiresPayment: false,
         isActive: true,
         status: 'active',
         createdAt: now,
         updatedAt: now,
-        freeUnits: this.freeTierLimit,
-        limit: this.freeTierLimit,
-        hidden: false,
+        options: freeOptions,
+        price: deriveHeadlinePrice(freeOptions),
       },
       {
         type: 'recurring',
         reference: 'plan_pro',
-        price: 29,
+        name: 'Pro',
         currency: 'USD',
         currencySymbol: '$',
-        billingCycle: 'monthly',
         requiresPayment: true,
         isActive: true,
         status: 'active',
         createdAt: now,
         updatedAt: now,
-        limit: 0,
-        hidden: false,
+        options: proOptions,
+        price: deriveHeadlinePrice(proOptions),
       },
     ]
   }
@@ -979,17 +1029,24 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
     const now = new Date().toISOString()
     const reference = `plan_${Math.random().toString(36).slice(2, 10)}`
+    const currency = (params.currency as string) || 'USD'
+    const type = (params.type as StubPlan['type']) || 'recurring'
+    const options: StubPlan['options'] = Array.isArray(params.options)
+      ? (params.options as StubPlan['options'])
+      : defaultPlanOptions(type, currency.toLowerCase(), params.price ?? 0)
+    const price = deriveHeadlinePrice(options, currency)
     return {
-      type: (params.type as ListPlansResponse[number]['type']) || 'recurring',
+      type,
       reference,
-      price: params.price ?? 0,
-      currency: (params.currency as string) || 'USD',
-      requiresPayment: (params.price ?? 0) > 0,
+      name: typeof params.name === 'string' ? params.name : 'Demo plan',
+      currency,
+      requiresPayment: (price ?? 0) > 0,
       isActive: true,
       status: 'active',
       createdAt: now,
       updatedAt: now,
-      hidden: false,
+      options,
+      price,
     }
   }
 
@@ -1004,17 +1061,24 @@ export class StubSolvaPayClient implements SolvaPayClient {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
     this.log(`📡 Stub Request: PUT /v1/sdk/products/${productRef}/plans/${planRef}`)
     const now = new Date().toISOString()
+    const currency = (params.currency as string) || 'USD'
+    const type = (params.type as StubPlan['type']) || 'recurring'
+    const options: StubPlan['options'] = Array.isArray(params.options)
+      ? (params.options as StubPlan['options'])
+      : defaultPlanOptions(type, currency.toLowerCase(), (params.price as number) ?? 0)
+    const price = deriveHeadlinePrice(options, currency)
     return {
-      type: (params.type as ListPlansResponse[number]['type']) || 'recurring',
+      type,
       reference: planRef,
-      price: (params.price as number) ?? 0,
-      currency: (params.currency as string) || 'USD',
-      requiresPayment: ((params.price as number) ?? 0) > 0,
+      name: typeof params.name === 'string' ? params.name : 'Demo plan',
+      currency,
+      requiresPayment: (price ?? 0) > 0,
       isActive: true,
       status: 'active',
       createdAt: now,
       updatedAt: now,
-      hidden: false,
+      options,
+      price,
     }
   }
 

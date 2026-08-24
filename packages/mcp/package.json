@@ -1,7 +1,7 @@
 {
   "name": "@solvapay/mcp",
-  "version": "0.2.8",
-  "description": "Official @modelcontextprotocol/sdk + @modelcontextprotocol/ext-apps adapter for the SolvaPay MCP toolbox (createSolvaPayMcpServer, registerPayableTool) with ./fetch + ./express subpath exports for runtime-specific OAuth bridges.",
+  "version": "0.3.0",
+  "description": "Official @modelcontextprotocol/server adapter for the SolvaPay MCP toolbox (createSolvaPayMcpServer, registerPayableTool) with ./fetch + ./express subpath exports for runtime-specific OAuth bridges.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -9,16 +9,19 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./fetch": {
       "types": "./dist/fetch/index.d.ts",
+      "development": "./src/fetch/index.ts",
       "import": "./dist/fetch/index.js",
       "require": "./dist/fetch/index.cjs"
     },
     "./express": {
       "types": "./dist/express/index.d.ts",
+      "development": "./src/express/index.ts",
       "import": "./dist/express/index.js",
       "require": "./dist/express/index.cjs"
     }
@@ -28,7 +31,24 @@
     "README.md"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      },
+      "./fetch": {
+        "types": "./dist/fetch/index.d.ts",
+        "import": "./dist/fetch/index.js",
+        "require": "./dist/fetch/index.cjs"
+      },
+      "./express": {
+        "types": "./dist/express/index.d.ts",
+        "import": "./dist/express/index.js",
+        "require": "./dist/express/index.cjs"
+      }
+    }
   },
   "repository": {
     "type": "git",
@@ -36,7 +56,7 @@
     "directory": "packages/mcp"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20"
   },
   "sideEffects": false,
   "scripts": {
@@ -49,11 +69,11 @@
     "lint:fix": "eslint src --fix"
   },
   "peerDependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.7.1",
-    "@modelcontextprotocol/sdk": "^1.28.0",
-    "@solvapay/mcp-core": "workspace:^",
+    "@modelcontextprotocol/core": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@solvapay/mcp-core": "^0.3.0",
     "@solvapay/server": "^1.4.0 || ^2.0.0",
-    "zod": "^3.25.0 || ^4.0.0"
+    "zod": "^4.2.0"
   },
   "peerDependenciesMeta": {
     "zod": {
@@ -61,8 +81,8 @@
     }
   },
   "devDependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.7.1",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
     "@solvapay/mcp-core": "workspace:*",
     "@solvapay/server": "workspace:*",
     "@solvapay/test-utils": "workspace:^",

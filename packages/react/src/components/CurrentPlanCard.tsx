@@ -116,9 +116,9 @@ function PlanTypeLine({
   className?: string
 }) {
   const copy = useCopy()
-  const planType = purchase.planSnapshot?.planType ?? 'one-time'
+  const isMetered = purchase.planSnapshot?.isMetered === true
 
-  if (planType === 'recurring' || purchase.isRecurring) {
+  if (purchase.isRecurring) {
     const date = formatDate(purchase.nextBillingDate)
     if (!date) return null
     return (
@@ -131,7 +131,7 @@ function PlanTypeLine({
     )
   }
 
-  if (planType === 'usage-based') {
+  if (isMetered) {
     // Usage-based plans show a balance badge instead of a date.
     return null
   }
@@ -200,16 +200,19 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
 
   if (!activePurchase) return null
 
-  const planType = activePurchase.planSnapshot?.planType ?? 'one-time'
-  const isUsageBased = planType === 'usage-based'
+  const isUsageBased = activePurchase.planSnapshot?.isMetered === true
+  const planType = activePurchase.isRecurring
+    ? 'recurring'
+    : isUsageBased
+      ? 'usage-based'
+      : 'one-time'
 
   // Prefer `originalAmount` (customer-currency minor units) so the label
   // matches `currency`. `amount` is always USD cents — pairing it with a
   // non-USD `currency` would render e.g. "SEK 54.26" for a 500 SEK charge.
   const amount = activePurchase.originalAmount ?? activePurchase.amount ?? 0
   const currency = activePurchase.currency ?? 'usd'
-  const rawCycle =
-    activePurchase.billingCycle ?? activePurchase.planSnapshot?.billingCycle ?? undefined
+  const rawCycle = activePurchase.billingCycle
   const cycleKey =
     rawCycle && rawCycle in copy.currentPlan.cycleUnit
       ? (rawCycle as keyof typeof copy.currentPlan.cycleUnit)
@@ -316,7 +319,7 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
         </span>
       )}
 
-      {isUsageBased && !hideUsageMeter && (
+      {isUsageBased && activePurchase.isRecurring && !hideUsageMeter && (
         <section
           className={overrides?.usageMeter ?? 'solvapay-current-plan-usage-meter'}
           data-solvapay-current-plan-usage-meter=""

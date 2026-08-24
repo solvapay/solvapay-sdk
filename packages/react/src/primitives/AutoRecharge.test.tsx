@@ -278,7 +278,7 @@ describe('AutoRecharge primitive', () => {
         </AutoRecharge.Body>
       </>
     ))
-    expect(screen.getByRole('button', { name: 'Disable automatic top-up' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Disable auto-recharge' })).toBeInTheDocument()
   })
 
   it('shows loading state', () => {
@@ -355,9 +355,9 @@ describe('AutoRecharge primitive', () => {
     )
     expect(screen.queryByTestId('stripe-elements')).not.toBeInTheDocument()
     expect(
-      screen.queryByText('Automatic top-up settings staged — complete payment to activate.'),
+      screen.queryByText('Auto-recharge settings staged — complete payment to activate.'),
     ).not.toBeInTheDocument()
-    expect(screen.getByText('Automatic top-up settings saved.')).toBeInTheDocument()
+    expect(screen.getByText('Auto-recharge settings saved.')).toBeInTheDocument()
   })
 
   it('with deferCardSetup, shows saved summary on card after save', async () => {
@@ -493,7 +493,7 @@ describe('AutoRecharge modal flow', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     openModal()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('Auto recharge settings')).toBeInTheDocument()
+    expect(screen.getByText('Auto-recharge settings')).toBeInTheDocument()
   })
 
   it('shows checkbox enable control and question in the dialog', () => {

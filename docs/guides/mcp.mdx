@@ -20,11 +20,11 @@ description: "Protect Model Context Protocol (MCP) tools with SolvaPay using cre
 Install the SDK packages plus the official MCP SDK and Zod:
 
 ```bash
-npm install @solvapay/mcp @solvapay/server @modelcontextprotocol/sdk zod
+npm install @solvapay/mcp @solvapay/server @modelcontextprotocol/server @modelcontextprotocol/core zod
 # or
-pnpm add @solvapay/mcp @solvapay/server @modelcontextprotocol/sdk zod
+pnpm add @solvapay/mcp @solvapay/server @modelcontextprotocol/server @modelcontextprotocol/core zod
 # or
-yarn add @solvapay/mcp @solvapay/server @modelcontextprotocol/sdk zod
+yarn add @solvapay/mcp @solvapay/server @modelcontextprotocol/server @modelcontextprotocol/core zod
 ```
 
 `@solvapay/mcp` is the only package that imports `@modelcontextprotocol/*`. The framework-neutral contracts (bearer helpers, paywall envelope) live in `@solvapay/mcp-core`, which is installed transitively.
@@ -141,7 +141,7 @@ Deno.serve(
     readHtml: () => Deno.readTextFile('./mcp-app.html'),
     publicBaseUrl,
     apiBaseUrl,
-    mode: 'json-stateless',
+    responseMode: 'json',
   }),
 )
 ```
@@ -222,7 +222,7 @@ The handler `ctx` also exposes `ctx.customer` (`balance`, `remaining`, `withinLi
 Plan activation and upgrades are handled by the built-in intent tools that `createSolvaPayMcpServer` registers — you rarely implement them by hand. `activate_plan`, `upgrade`, and `topup` already map to the underlying flows:
 
 - **Free plan** — activates immediately; the customer can start calling paid tools.
-- **Usage-based plan** — activates immediately even at a zero balance; top-up is optional and flows through the `topup` tool.
+- **Usage-based plan** — topup-first: a customer with credits activates immediately, while a zero-balance customer gets `topup_required` and is routed through the `topup` tool. The plan activates as part of the successful top-up.
 - **Recurring / hybrid plan** — returns a hosted `checkoutUrl` when the customer has no balance and no card on file, which the agent surfaces as a checkout link.
 
 Plans are managed on the product in the SolvaPay Console. Customers select a plan during activation and the SDK resolves the correct plan from their purchase automatically.
@@ -251,8 +251,8 @@ import 'dotenv/config'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import express, { type Request, type Response } from 'express'
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
+import { createMcpHandler } from '@modelcontextprotocol/server'
+import { isLegacyRequest } from '@modelcontextprotocol/server'
 import { createSolvaPayMcpServer } from '@solvapay/mcp'
 import { createMcpOAuthBridge } from '@solvapay/mcp/express'
 import { createSolvaPay } from '@solvapay/server'
@@ -335,7 +335,7 @@ app.listen(3006, () => {
 
 ### Stateless and text-only deployments
 
-- **Stateless edge runtimes** — use `createSolvaPayMcpFetch({ ..., mode: 'json-stateless' })` from `@solvapay/mcp/fetch` so each request is handled without a persistent session store.
+- **Stateless edge runtimes** — use `createSolvaPayMcpFetch({ ..., responseMode: 'json' })` from `@solvapay/mcp/fetch` so each request returns a single JSON body (required on Workers / Supabase Edge).
 - **Text-only hosts** — pass `hideToolsByAudience: ['ui']` to keep the LLM-facing `tools/list` narrow to the four intent tools plus your own data tools, while leaving the UI transport tools callable from the SolvaPay iframe. ChatGPT-originated `tools/list` requests are auto-detected and still receive the full catalog.
 
 ## Low-level Adapter (escape hatch)
@@ -345,7 +345,7 @@ Prefer `createSolvaPayMcpServer` + `registerPayable`. Reach for the low-level ad
 `solvaPay.payable({ product }).mcp(fn)` wraps a single business-logic function with the paywall and returns an MCP tool result. When you want full control over the gate response shape, call `solvaPay.paywall.decide(...)` and format the gate with `paywallToolResult` from `@solvapay/mcp-core`:
 
 ```typescript
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { McpServer } from '@modelcontextprotocol/server'
 import { paywallToolResult } from '@solvapay/mcp-core'
 
 const server = new McpServer({ name: 'my-server', version: '1.0.0' })

@@ -159,7 +159,7 @@ async function main(): Promise<void> {
 
 main()
   .then(() => {
-    // Some transport dependencies (e.g. `@modelcontextprotocol/sdk`)
+    // Some transport dependencies (e.g. `@modelcontextprotocol/server`)
     // initialise lazy timers that keep the event loop alive past the
     // smoke. Force-exit so the pre-publish gate finishes in CI.
     process.exit(0)

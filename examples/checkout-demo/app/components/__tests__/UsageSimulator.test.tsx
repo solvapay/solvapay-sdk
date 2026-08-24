@@ -35,7 +35,6 @@ function mockDefaults() {
     activePurchase: {
       productRef: 'prd_TEST',
       productName: 'Test Product',
-      planSnapshot: { creditsPerUnit: 1000 },
     },
     loading: false,
   } as ReturnType<typeof usePurchase>)
@@ -218,19 +217,22 @@ describe('UsageSimulator', () => {
     })
   })
 
-  it('falls back to PAYG meter when subscription snapshot has creditsPerUnit 0', () => {
+  it('reads the credit rate from the PAYG plan, not the active purchase', () => {
     vi.mocked(usePurchase).mockReturnValue({
       activePurchase: {
         productRef: 'prd_TEST',
         productName: 'Subscription',
-        planSnapshot: { creditsPerUnit: 0, type: 'recurring' },
       },
       loading: false,
     } as ReturnType<typeof usePurchase>)
+    vi.mocked(usePlans).mockReturnValue({
+      plans: [{ reference: 'pln_payg', type: 'usage-based', creditsPerUnit: 250 }],
+      loading: false,
+    } as ReturnType<typeof usePlans>)
 
     render(<UsageSimulator />)
 
-    expect(screen.getByText('1,000')).toBeInTheDocument()
+    expect(screen.getByText('250')).toBeInTheDocument()
   })
 
   it('shows error state when API call fails', async () => {

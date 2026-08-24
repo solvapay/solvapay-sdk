@@ -74,14 +74,16 @@ jobs:
         run: pnpm validate:fetch-runtime
 
       # Deno gate — type-checks examples/supabase-edge-mcp against the
-      # last-published `@preview` versions of the workspace packages it
-      # imports. Catches Deno-incompatibility regressions one commit
-      # late (the commit that introduced the break publishes, and the
-      # next push's gate fails), which we accept as the simplest
-      # workable tradeoff for pre-publish validation without juggling
-      # local-dist / file: URL resolution.
-      - name: Validate fetch-runtime — Deno gate (supabase-edge-mcp type-check)
-        run: pnpm --filter @example/supabase-edge-mcp validate
+      # workspace source of the packages this run is about to publish,
+      # via examples/supabase-edge-mcp/deno.workspace.json. This is the
+      # blocking gate: it validates the exact code being shipped, and
+      # unlike a gate pinned to the `@preview` dist-tag it cannot
+      # deadlock (a broken publish used to freeze the tag that the gate
+      # read, so the run that would have fixed it could never get past
+      # its own gate). The same check runs on PRs in ci.yml, so a break
+      # is normally caught before merge.
+      - name: Validate fetch-runtime — Deno gate (workspace source)
+        run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
       - name: Version snapshot
         run: pnpm changeset version --snapshot preview
@@ -104,3 +106,16 @@ jobs:
       # window.
       - name: Verify published packages landed on npm
         run: node scripts/verify-npm-publishes.mjs publish.log
+
+      # Post-publish `@preview` gate — re-type-checks the same example
+      # against the tag this run just moved, using
+      # supabase/functions/mcp/deno.local.json. It is the only check
+      # that exercises the assembled npm tarballs (their published
+      # `exports` maps and peer ranges) rather than workspace `dist/`,
+      # so it catches packaging faults the workspace gate structurally
+      # cannot see. It runs *after* the registry verification above so
+      # propagation is already confirmed, and after the publish so a
+      # failure reports a broken published preview loudly instead of
+      # withholding the publish that would fix it.
+      - name: Validate fetch-runtime — Deno gate (published @preview tarballs)
+        run: pnpm --filter @example/supabase-edge-mcp validate

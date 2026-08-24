@@ -4,99 +4,7 @@
  */
 
 export interface paths {
-  '/v1/sdk/merchant': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get merchant identity for the authenticated provider
-     * @description Returns the subset of provider data safe to render in a customer-facing checkout: display name, legal name, support contact, terms and privacy URLs, and logo. Used by SDK components like MandateText and CheckoutSummary.
-     */
-    get: operations['getMerchant']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/platform-config': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get environment-aware platform config for the authenticated provider
-     * @description Returns browser-safe platform values resolved against the provider environment. Today: the SolvaPay platform Stripe publishable key. This endpoint is the canonical home for future platform-wide, environment-gated SDK config (API version hints, feature flags, public hosted URLs) — additions land here instead of bloating /sdk/merchant (strictly provider identity) or /sdk/payment-intents (runs too late for pre-intent UI decisions).
-     */
-    get: operations['getPlatformConfig']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/products': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * List products
-     * @description Retrieves a paginated list of products for the authenticated provider. Supports filtering by status, search term, and no-code MCP integration flag.
-     */
-    get: operations['ProductSdkController_listProducts']
-    put?: never
-    /**
-     * Create a product
-     * @description Creates a new product for the authenticated provider.
-     */
-    post: operations['ProductSdkController_createProduct']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/products/{productRef}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get a product by reference
-     * @description Retrieves a product by its reference or ID, including embedded plans.
-     */
-    get: operations['ProductSdkController_getProduct']
-    /**
-     * Update a product
-     * @description Updates an existing product. Only provided fields are updated.
-     */
-    put: operations['ProductSdkController_updateProduct']
-    post?: never
-    /**
-     * Delete a product
-     * @description Deletes a product permanently in sandbox. In live mode, soft-deletes (preserves data but hides from listings). If the product has purchases in live mode, deactivates instead.
-     */
-    delete: operations['ProductSdkController_deleteProduct']
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/products/mcp/bootstrap': {
+  '/v1/sdk/activate': {
     parameters: {
       query?: never
       header?: never
@@ -106,37 +14,45 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Bootstrap MCP product integration
-     * @description Creates an MCP-enabled product with a unified plans array, configures origin URL, and maps tools to plans in one request.
+     * Activate a plan for a customer
+     * @description Activates a specific plan on a product for a customer. Usage-based plans (metered, no billing cycle) and free plans activate immediately. A zero credit balance is not an activation gate — empty-wallet access is enforced later as `topup_required` at usage time. Paid recurring, hybrid, or one-time plans return `payment_required`.
      */
-    post: operations['ProductSdkController_bootstrapMcpProduct']
+    post: operations['ActivateSdkController_activate']
     delete?: never
     options?: never
     head?: never
     patch?: never
     trace?: never
   }
-  '/v1/sdk/products/{productRef}/mcp/plans': {
+  '/v1/sdk/auto-recharge': {
     parameters: {
       query?: never
       header?: never
       path?: never
       cookie?: never
     }
-    get?: never
     /**
-     * Configure MCP plans on an MCP product
-     * @description Configures plans and optional tool-to-plan mappings for an MCP product.
+     * Get auto-recharge config for a customer
+     * @description Returns the stored auto-recharge configuration (and display block) for the given customer, or a null config when none is set.
      */
-    put: operations['ProductSdkController_configureMcpPlans']
+    get: operations['AutoRechargeSdkController_getAutoRecharge']
+    /**
+     * Set or update auto-recharge config for a customer
+     * @description Persists the auto-recharge configuration for a customer. When no reusable card is on file, a Stripe SetupIntent client secret is returned so the caller can collect one.
+     */
+    put: operations['AutoRechargeSdkController_putAutoRecharge']
     post?: never
-    delete?: never
+    /**
+     * Disable auto-recharge for a customer
+     * @description Disables auto-recharge for the given customer. Idempotent.
+     */
+    delete: operations['AutoRechargeSdkController_deleteAutoRecharge']
     options?: never
     head?: never
     patch?: never
     trace?: never
   }
-  '/v1/sdk/products/{productRef}/clone': {
+  '/v1/sdk/checkout-sessions': {
     parameters: {
       query?: never
       header?: never
@@ -146,63 +62,11 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Clone a product
-     * @description Deep-copies a product including all its plans. Generates new references for the clone.
+     * Create a checkout session
+     * @description Creates a hosted checkout session for a customer to purchase a product plan, or to top up credits (`purpose: "credit_topup"`, which skips `productRef`). Returns a session ID and checkout URL for redirect.
      */
-    post: operations['ProductSdkController_cloneProduct']
+    post: operations['CheckoutSessionSdkController_createCheckoutSession']
     delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/products/{productRef}/plans': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * List plans for a product
-     * @description Retrieves the plans belonging to a product, paginated in-memory. Returns SDK-shaped plans with money serialized to wire units and unsupported plan types normalised to "recurring".
-     */
-    get: operations['PlanSdkController_listPlans']
-    put?: never
-    /**
-     * Create a plan for a product
-     * @description Creates a plan under the product. Unfinished pricing fields (setup fee, trial days, rollover, tiers, etc.) are stripped from SDK input, and unsupported plan types fall back to "recurring".
-     */
-    post: operations['PlanSdkController_createPlan']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/products/{productRef}/plans/{planRef}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get a plan for a product
-     * @description Retrieves a single plan by reference or ID within the given product.
-     */
-    get: operations['PlanSdkController_getPlan']
-    /**
-     * Update a plan for a product
-     * @description Updates a plan under the product. Unfinished pricing fields are stripped from SDK input, and unsupported plan types fall back to "recurring".
-     */
-    put: operations['PlanSdkController_updatePlan']
-    post?: never
-    /**
-     * Delete a plan from a product
-     * @description Removes a plan from the product.
-     */
-    delete: operations['PlanSdkController_deletePlan']
     options?: never
     head?: never
     patch?: never
@@ -336,7 +200,7 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/v1/sdk/user-info': {
+  '/v1/sdk/limits': {
     parameters: {
       query?: never
       header?: never
@@ -346,10 +210,154 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Get user info and purchase status
-     * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL.
+     * Check usage limits for a customer and product
+     * @description Checks whether a customer has an active purchase for a product and is within their usage limits. Returns a checkout URL if payment is required.
      */
-    post: operations['UserInfoSdkController_getUserInfo']
+    post: operations['LimitsSdkController_checkLimits']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/merchant': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get merchant identity for the authenticated provider
+     * @description Returns the subset of provider data safe to render in a customer-facing checkout: display name, legal name, support contact, terms and privacy URLs, and logo. Used by SDK components like MandateText and CheckoutSummary.
+     */
+    get: operations['getMerchant']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/meter-events': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Record a meter event
+     * @description Records a single usage event against a named meter. When the customer is on a metered plan, credits are also debited for the event (the debit is not surfaced in the response).
+     */
+    post: operations['MeterEventsSdkController_recordEvent']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/meter-events/bulk': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Record meter events in bulk
+     * @description Persists the events with bulkRecordUsage (which records each event like the single POST), after shared meter/customer checks.
+     */
+    post: operations['MeterEventsSdkController_recordBulkEvents']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/payment-intents': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List payment intents for the provider
+     * @description Retrieves a paginated list of all payment intents created by the authenticated provider. Supports pagination through limit and offset query parameters.
+     */
+    get: operations['PaymentIntentSdkController_getPaymentIntents']
+    put?: never
+    /**
+     * Create a payment intent
+     * @description Creates a new payment intent for a customer to purchase a plan, top up credits (`purpose: "credit_topup"`), or bill usage (`purpose: "usage_billing"`) with an explicit `amount`/`currency`. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
+     */
+    post: operations['PaymentIntentSdkController_createPaymentIntent']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/payment-intents/{processorPaymentId}/business-details': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Attach business tax details to a payment intent
+     * @description Applies business or consumer tax location to a payment intent and returns the calculated tax breakdown.
+     */
+    post: operations['PaymentIntentSdkController_attachBusinessDetails']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/payment-intents/{processorPaymentId}/process': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Process payment intent after client-side confirmation
+     * @description Processes a payment intent that has been confirmed on the client side. Polls the database for payment intent status to become succeeded. Returns the current status of the payment intent; on success, the response is enriched with the Purchase row created by the webhook handler.
+     */
+    post: operations['PaymentIntentSdkController_processPaymentIntent']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/payment-intents/{reference}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get a specific payment intent
+     * @description Retrieves detailed information about a specific payment intent including amount, currency, and client secret.
+     */
+    get: operations['PaymentIntentSdkController_getPaymentIntent']
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -376,6 +384,190 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/sdk/platform-config': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get environment-aware platform config for the authenticated provider
+     * @description Returns browser-safe platform values resolved against the provider environment. Today: the SolvaPay platform Stripe publishable key. This endpoint is the canonical home for future platform-wide, environment-gated SDK config (API version hints, feature flags, public hosted URLs) — additions land here instead of bloating /sdk/merchant (strictly provider identity) or /sdk/payment-intents (runs too late for pre-intent UI decisions).
+     */
+    get: operations['getPlatformConfig']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/products': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List products
+     * @description Retrieves a paginated list of products for the authenticated provider. Supports filtering by status, search term, and Managed MCP integration flag.
+     */
+    get: operations['ProductSdkController_listProducts']
+    put?: never
+    /**
+     * Create a product
+     * @description Creates a new product for the authenticated provider.
+     */
+    post: operations['ProductSdkController_createProduct']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/products/{productRef}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get a product by reference
+     * @description Retrieves a product by its reference or ID, including embedded plans.
+     */
+    get: operations['ProductSdkController_getProduct']
+    /**
+     * Update a product
+     * @description Updates an existing product. Only provided fields are updated.
+     */
+    put: operations['ProductSdkController_updateProduct']
+    post?: never
+    /**
+     * Delete a product
+     * @description Deletes a product permanently in sandbox. In live mode, soft-deletes (preserves data but hides from listings). If the product has purchases in live mode, deactivates instead.
+     */
+    delete: operations['ProductSdkController_deleteProduct']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/products/{productRef}/clone': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Clone a product
+     * @description Deep-copies a product including all its plans. Generates new references for the clone.
+     */
+    post: operations['ProductSdkController_cloneProduct']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/products/{productRef}/mcp/plans': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Configure MCP plans on an MCP product
+     * @description Configures plans and optional tool-to-plan mappings for an MCP product.
+     */
+    put: operations['ProductSdkController_configureMcpPlans']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/products/{productRef}/plans': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List plans for a product
+     * @description Retrieves the plans belonging to a product, paginated in-memory. Returns SDK-shaped plans with option money serialized to integer minor units; hidden plans are excluded. The `type` field is derived from each plan's composable options.
+     */
+    get: operations['PlanSdkController_listPlans']
+    put?: never
+    /**
+     * Create a plan for a product
+     * @description Creates a plan under the product from its composable pricing `options[]` (charges, billing cycle, tiers, limits, entitlements, trials, discounts, rollovers). Options are validated for cross-option coherence and rejected with 400 if invalid; money fields are integer minor units.
+     */
+    post: operations['PlanSdkController_createPlan']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/products/{productRef}/plans/{planRef}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get a plan for a product
+     * @description Retrieves a single plan by reference or ID within the given product.
+     */
+    get: operations['PlanSdkController_getPlan']
+    /**
+     * Update a plan for a product
+     * @description Updates a plan under the product. Provided `options[]` replace the plan pricing and are validated for cross-option coherence (400 if invalid); money fields are integer minor units.
+     */
+    put: operations['PlanSdkController_updatePlan']
+    post?: never
+    /**
+     * Delete a plan from a product
+     * @description Removes a plan from the product.
+     */
+    delete: operations['PlanSdkController_deletePlan']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/sdk/products/mcp/bootstrap': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Bootstrap MCP product integration
+     * @description Creates an MCP-enabled product with a unified plans array, configures origin URL, and maps tools to plans in one request.
+     */
+    post: operations['ProductSdkController_bootstrapMcpProduct']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/sdk/purchases': {
     parameters: {
       query?: never
@@ -388,46 +580,6 @@ export interface paths {
      * @description Retrieves all purchases for the authenticated provider with optional filtering by status, product, or customer.
      */
     get: operations['PurchaseSdkController_listPurchases']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/purchases/customer/{customerRef}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get purchases for a customer
-     * @description Retrieves all purchases for a specific customer. Useful for billing history and access checks.
-     */
-    get: operations['PurchaseSdkController_getPurchasesForCustomer']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/purchases/product/{productRef}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get purchases for a product
-     * @description Retrieves all purchases for a specific product. Each billing period creates a new purchase document.
-     */
-    get: operations['PurchaseSdkController_getPurchasesForProduct']
     put?: never
     post?: never
     delete?: never
@@ -496,47 +648,7 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/v1/sdk/limits': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Check usage limits for a customer and product
-     * @description Checks whether a customer has an active purchase for a product and is within their usage limits. Returns a checkout URL if payment is required.
-     */
-    post: operations['LimitsSdkController_checkLimits']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/activate': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Activate a plan for a customer
-     * @description Activates a specific plan on a product for a customer. Usage-based (PAYG) plans activate eagerly (returning an active purchase so the SDK can proceed to the top-up step), while free, recurring, and hybrid plans keep strict semantics and may return `payment_required` or `topup_required`.
-     */
-    post: operations['ActivateSdkController_activate']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/payment-intents': {
+  '/v1/sdk/purchases/customer/{customerRef}': {
     parameters: {
       query?: never
       header?: never
@@ -544,34 +656,10 @@ export interface paths {
       cookie?: never
     }
     /**
-     * List payment intents for the provider
-     * @description Retrieves a paginated list of all payment intents created by the authenticated provider. Supports pagination through limit and offset query parameters.
+     * Get purchases for a customer
+     * @description Retrieves all purchases for a specific customer. Useful for billing history and access checks.
      */
-    get: operations['PaymentIntentSdkController_getPaymentIntents']
-    put?: never
-    /**
-     * Create a payment intent
-     * @description Creates a new payment intent for a customer to purchase a plan. Requires an idempotency key to prevent duplicate charges. Returns client secret and publishable key needed for frontend integration.
-     */
-    post: operations['PaymentIntentSdkController_createPaymentIntent']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/payment-intents/{reference}': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get a specific payment intent
-     * @description Retrieves detailed information about a specific payment intent including amount, currency, and client secret.
-     */
-    get: operations['PaymentIntentSdkController_getPaymentIntent']
+    get: operations['PurchaseSdkController_getPurchasesForCustomer']
     put?: never
     post?: never
     delete?: never
@@ -580,69 +668,21 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/v1/sdk/payment-intents/{processorPaymentId}/process': {
+  '/v1/sdk/purchases/product/{productRef}': {
     parameters: {
       query?: never
       header?: never
       path?: never
       cookie?: never
     }
-    get?: never
+    /**
+     * Get purchases for a product
+     * @description Retrieves all purchases for a specific product. Each billing period creates a new purchase document.
+     */
+    get: operations['PurchaseSdkController_getPurchasesForProduct']
     put?: never
-    /**
-     * Process payment intent after client-side confirmation
-     * @description Processes a payment intent that has been confirmed on the client side. Polls the database for payment intent status to become succeeded. Returns the current status of the payment intent; on success, the response is enriched with the Purchase row created by the webhook handler.
-     */
-    post: operations['PaymentIntentSdkController_processPaymentIntent']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/checkout-sessions': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Create a checkout session
-     * @description Creates a hosted checkout session for a customer to purchase a product plan. Returns a session ID and checkout URL for redirect.
-     */
-    post: operations['CheckoutSessionSdkController_createCheckoutSession']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/auto-recharge': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Get auto-recharge config for a customer
-     * @description Returns the stored auto-recharge configuration (and display block) for the given customer, or a null config when none is set.
-     */
-    get: operations['AutoRechargeSdkController_getAutoRecharge']
-    /**
-     * Set or update auto-recharge config for a customer
-     * @description Persists the auto-recharge configuration for a customer. When no reusable card is on file, a Stripe SetupIntent client secret is returned so the caller can collect one.
-     */
-    put: operations['AutoRechargeSdkController_putAutoRecharge']
     post?: never
-    /**
-     * Disable auto-recharge for a customer
-     * @description Disables auto-recharge for the given customer. Idempotent.
-     */
-    delete: operations['AutoRechargeSdkController_deleteAutoRecharge']
+    delete?: never
     options?: never
     head?: never
     patch?: never
@@ -688,7 +728,7 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/v1/sdk/meter-events': {
+  '/v1/sdk/user-info': {
     parameters: {
       query?: never
       header?: never
@@ -698,50 +738,10 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Record a meter event
-     * @description Records a single usage event against a named meter.
+     * Get user info and purchase status
+     * @description Returns customer profile, active purchase details including usage and plan info, and a customer portal URL.
      */
-    post: operations['MeterEventsSdkController_recordEvent']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/meter-events/bulk': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Record meter events in bulk
-     * @description Persists each event with recordUsage (same shape as single POST), after shared meter/customer checks.
-     */
-    post: operations['MeterEventsSdkController_recordBulkEvents']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/v1/sdk/webhooks/event-types': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * List webhook event types
-     * @description Returns the catalog of webhook event types you can subscribe to, grouped by category. Use these `type` values when configuring an endpoint’s `enabledEvents`.
-     */
-    get: operations['WebhookSdkController_listEventTypes']
-    put?: never
-    post?: never
+    post: operations['UserInfoSdkController_getUserInfo']
     delete?: never
     options?: never
     head?: never
@@ -768,1551 +768,55 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/sdk/webhooks/event-types': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List webhook event types
+     * @description Returns the catalog of webhook event types you can subscribe to, grouped by category. Use these `type` values when configuring an endpoint’s `enabledEvents`.
+     */
+    get: operations['WebhookSdkController_listEventTypes']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
-    SdkMerchantResponseDto: {
-      /**
-       * Brand name shown in UI
-       * @example Acme
-       */
-      displayName: string
-      /**
-       * Legal entity name used in SCA mandate copy
-       * @example Acme Inc.
-       */
-      legalName: string
-      /** @example support@acme.com */
-      supportEmail?: string
-      /** @example https://acme.com/support */
-      supportUrl?: string
-      /** @example https://acme.com/terms */
-      termsUrl?: string
-      /** @example https://acme.com/privacy */
-      privacyUrl?: string
-      /**
-       * ISO-3166 alpha-2 country code of the merchant
-       * @example US
-       */
-      country?: string
-      /**
-       * Company registration number (EIN, Companies House No, Org No)
-       * @example HRB12345
-       */
-      companyNumber?: string
-      /**
-       * Tax identification number (US: EIN)
-       * @example 12-3456789
-       */
-      taxId?: string
-      /**
-       * VAT identification number (UK/EU)
-       * @example DE123456789
-       */
-      vatNumber?: string
-      /**
-       * ISO-4217 default settlement currency
-       * @example usd
-       */
-      defaultCurrency?: string
-      /**
-       * Full set of currencies a customer may pay credit topups in, including the default currency. Omitted/single-entry means single-currency behavior.
-       * @example [
-       *       "USD",
-       *       "EUR",
-       *       "GBP"
-       *     ]
-       */
-      supportedTopupCurrencies?: string[]
-      /**
-       * Descriptor appearing on the customer card statement
-       * @example ACME INC
-       */
-      statementDescriptor?: string
-      /**
-       * Absolute URL to the merchant logo
-       * @example https://cdn.acme.com/logo.png
-       */
-      logoUrl?: string
-      /**
-       * Absolute URL to the square app icon / logomark. Consumed by MCP host chromes, mobile avatar slots, and any surface where the landscape `logoUrl` would need letterboxing.
-       * @example https://cdn.acme.com/icon.png
-       */
-      iconUrl?: string
-    }
-    SdkPlatformConfigResponseDto: {
-      /**
-       * SolvaPay's platform Stripe publishable key for the authenticated provider's environment. Safe to expose browser-side; paired with the connected `accountId` returned from `create-payment-intent` for Stripe Connect direct charges. Omitted when not configured so callers can fall back cleanly to a hosted flow.
-       * @example pk_test_...
-       */
-      stripePublishableKey?: string
-    }
-    CreateProductRequest: {
-      name: string
-      description?: string
-      imageUrl?: string
-      productType?: string
-      isMcpPay?: boolean
-      config: {
-        fulfillmentType?: string
-        validityPeriod?: number
-        deliveryMethod?: string
-      }
-      metadata: {
-        [key: string]: unknown
-      }
-      /** @enum {string} */
-      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
-    }
-    ProductConfigDto: {
-      /**
-       * Fulfillment type
-       * @example digital
-       */
-      fulfillmentType?: string
-      /**
-       * Validity period in days
-       * @example 30
-       */
-      validityPeriod?: number
-      /**
-       * Delivery method
-       * @example api
-       */
-      deliveryMethod?: string
-    }
-    SdkPlanResponse: {
-      /**
-       * Plan reference
-       * @example pln_1A2B3C4D
-       */
-      reference: string
-      /**
-       * Plan price in cents
-       * @example 2999
-       */
-      price: number
-      /**
-       * Currency code (ISO 4217)
-       * @example USD
-       */
-      currency: string
-      /**
-       * Currency symbol
-       * @example $
-       */
-      currencySymbol?: string
-      /**
-       * One-time setup fee
-       * @example 500
-       */
-      setupFee?: number
-      /**
-       * Free trial period in days
-       * @example 14
-       */
-      trialDays?: number
-      /**
-       * Billing cycle
-       * @example monthly
-       */
-      billingCycle?: string
-      /**
-       * Billing model
-       * @example pre-paid
-       */
-      billingModel?: string
-      /**
-       * Credits per usage unit (integer, >= 1)
-       * @example 1
-       */
-      creditsPerUnit?: number
-      /**
-       * What the plan measures for usage tracking
-       * @example requests
-       */
-      measures?: string
-      /**
-       * Meter reference for usage-based limits
-       * @example mtr_1A2B3C4D
-       */
-      meterRef?: string
-      /**
-       * Usage limit for the meter
-       * @example 10000
-       */
-      limit?: number
-      /**
-       * Whether unused units roll over to next period
-       * @example false
-       */
-      rolloverUnusedUnits?: boolean
-      /**
-       * Included free units
-       * @example 1000
-       */
-      freeUnits?: number
-      /** @description Usage limits */
-      limits?: {
-        [key: string]: unknown
-      }
-      /** @description Plan features */
-      features?: {
-        [key: string]: unknown
-      }
-      /**
-       * Whether payment is required
-       * @example true
-       */
-      requiresPayment: boolean
-      /**
-       * Whether the plan is hidden from the customer-facing catalog. Enterprise plans (true) do not appear in checkout or the SDK catalog and can only be granted via direct assignment.
-       * @example false
-       */
-      hidden: boolean
-      /**
-       * Whether the plan is active
-       * @example true
-       */
-      isActive: boolean
-      /**
-       * Plan status
-       * @example active
-       */
-      status: string
-      /** @description Creation timestamp */
-      createdAt: string
-      /** @description Last update timestamp */
-      updatedAt: string
-    }
-    SdkProductResponse: {
-      /**
-       * Product reference
-       * @example prd_1A2B3C4D
-       */
-      reference: string
-      /**
-       * Product name
-       * @example AI Writing Assistant
-       */
-      name: string
-      /** @description Product description */
-      description?: string
-      /** @description URL to the product image */
-      imageUrl?: string
-      /** @description Free-form product type */
-      productType?: string
-      /**
-       * Product balance in cents
-       * @example 0
-       */
-      balance: number
-      /**
-       * Total number of transactions
-       * @example 0
-       */
-      totalTransactions: number
-      /**
-       * Whether this product uses the no-code MCP integration (SolvaPay reverse proxy)
-       * @example false
-       */
-      isMcpPay: boolean
-      /** @description Product-specific configuration */
-      config?: components['schemas']['ProductConfigDto']
-      /** @description Arbitrary key-value metadata */
-      metadata?: {
-        [key: string]: unknown
-      }
-      /** @description Creation timestamp */
-      createdAt: string
-      /** @description Last update timestamp */
-      updatedAt: string
-      /** @description Plans associated with this product */
-      plans?: components['schemas']['SdkPlanResponse'][]
-      /**
-       * MCP linkage details for MCP-enabled products
-       * @example {
-       *       "mcpServerRef": "mcp_ABC123",
-       *       "mcpSubdomain": "acme-docs",
-       *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
-       *       "originUrl": "https://origin.example.com/mcp",
-       *       "defaultPlanRef": "pln_FREE123"
-       *     }
-       */
-      mcp?: {
-        [key: string]: unknown
-      }
-    }
-    UpdateProductRequest: {
-      name?: string
-      description?: string
-      imageUrl?: string
-      productType?: string
-      config: {
-        fulfillmentType?: string
-        validityPeriod?: number
-        deliveryMethod?: string
-      }
-      metadata: {
-        [key: string]: unknown
-      }
-      /** @enum {string} */
-      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
-    }
-    McpBootstrapDto: {
-      name?: string
-      description?: string
-      imageUrl?: string
-      productType?: string
-      /** Format: uri */
-      originUrl: string
-      mcpDomain?: string
-      authHeaderName?: string
-      authApiKey?: string
-      plans?: {
-        key: string
-        name: string
-        price: number
-        currency: string
-        pricingOptions?: {
-          currency: string
-          price: number
-          basePrice?: number
-          setupFee?: number
-          default?: boolean
-        }[]
-        /** @enum {string} */
-        billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-        /** @enum {string} */
-        type?: 'recurring' | 'one-time' | 'usage-based'
-        creditsPerUnit?: number
-        /** @enum {string} */
-        billingModel?: 'pre-paid' | 'post-paid'
-        freeUnits?: number
-        limit?: number
-        features?: {
-          [key: string]: unknown
-        }
-      }[]
-      tools?: {
-        name: string
-        description?: string
-        noPlan?: boolean
-        planKeys?: string[]
-      }[]
-      metadata: {
-        [key: string]: unknown
-      }
-    }
-    McpBootstrapResult: {
-      /** @description Created product */
-      product: components['schemas']['SdkProductResponse']
-      /**
-       * Created or updated MCP server identity
-       * @example {
-       *       "reference": "mcp_ABC123",
-       *       "subdomain": "acme-docs",
-       *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
-       *       "url": "https://origin.example.com/mcp",
-       *       "defaultPlanRef": "pln_FREE123"
-       *     }
-       */
-      mcpServer: {
-        [key: string]: unknown
-      }
-      /**
-       * Resolved plan mapping by bootstrap key
-       * @example {
-       *       "free": {
-       *         "reference": "pln_FREE123",
-       *         "name": "Free"
-       *       }
-       *     }
-       */
-      planMap: {
-        [key: string]: unknown
-      }
-      /**
-       * True when tools were auto-discovered from origin because the request omitted tools
-       * @example true
-       */
-      toolsAutoMapped?: boolean
-      /** @description Auto-discovered tools used during bootstrap */
-      autoMappedTools?: {
-        name?: string
-        description?: string
-      }[]
-    }
-    ConfigureMcpPlansDto: {
-      plans?: {
-        key: string
-        name: string
-        price: number
-        currency: string
-        pricingOptions?: {
-          currency: string
-          price: number
-          basePrice?: number
-          setupFee?: number
-          default?: boolean
-        }[]
-        /** @enum {string} */
-        billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-        /** @enum {string} */
-        type?: 'recurring' | 'one-time' | 'usage-based'
-        creditsPerUnit?: number
-        /** @enum {string} */
-        billingModel?: 'pre-paid' | 'post-paid'
-        freeUnits?: number
-        limit?: number
-        features?: {
-          [key: string]: unknown
-        }
-      }[]
-      toolMapping?: {
-        name: string
-        planKeys: string[]
-      }[]
-    }
-    ConfigureMcpPlansResult: {
-      /** @description Updated product */
-      product: components['schemas']['SdkProductResponse']
-      /** @description Updated MCP server identity */
-      mcpServer: {
-        [key: string]: unknown
-      }
-      /** @description Resolved plan mapping by key (includes existing free plan) */
-      planMap: {
-        [key: string]: unknown
-      }
-    }
-    CloneProductDto: {
-      name?: string
-    }
-    CreatePlanRequest: {
-      name: string
-      description?: string
-      /** @enum {string} */
-      type?: 'recurring' | 'usage-based' | 'one-time' | 'hybrid'
-      /** @enum {string} */
-      billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-      price?: number
-      creditsPerUnit?: number
-      currency?: string
-      pricingOptions?: {
-        currency: string
-        price: number
-        basePrice?: number
-        setupFee?: number
-        default?: boolean
-      }[]
-      /** @enum {string} */
-      billingModel?: 'pre-paid' | 'post-paid'
-      freeUnits?: number
-      limit?: number
-      basePrice?: number
-      setupFee?: number
-      trialDays?: number
-      rolloverUnusedUnits?: boolean
-      autoRenew?: boolean
-      usageTracking: {
-        /** @enum {string} */
-        method?: 'automatic' | 'manual' | 'hybrid'
-        /** @enum {string} */
-        granularity?: 'hourly' | 'daily' | 'weekly' | 'monthly'
-      }
-      limits: {
-        [key: string]: unknown
-      }
-      metadata: {
-        [key: string]: unknown
-      }
-      features: {
-        [key: string]: unknown
-      }
-      /** @enum {string} */
-      status?: 'active' | 'inactive' | 'archived'
-      maxActiveUsers?: number
-      accessExpiryDays?: number
-      default?: boolean
-      hidden?: boolean
-      /** @enum {string} */
-      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
-    }
-    PlanPricingOptionDto: {
-      /**
-       * ISO 4217 currency code
-       * @example USD
-       */
-      currency: string
-      /**
-       * Price in smallest currency unit (e.g. cents)
-       * @example 2999
-       */
-      price: number
-      /**
-       * Base price in smallest currency unit (hybrid plans)
-       * @example 1999
-       */
-      basePrice?: number
-      /**
-       * One-time setup fee in smallest currency unit
-       * @example 500
-       */
-      setupFee?: number
-      /**
-       * Whether this is the default currency option for the plan
-       * @example true
-       */
-      default?: boolean
-    }
-    Plan: {
-      /**
-       * Plan type exposed in SDK
-       * @example recurring
-       * @enum {string}
-       */
-      type: 'recurring' | 'one-time' | 'usage-based' | 'hybrid'
-      /**
-       * Plan reference
-       * @example pln_1A2B3C4D
-       */
-      reference: string
-      /**
-       * Meter reference for usage-based plans
-       * @example mtr_1A2B3C4D
-       */
-      meterRef?: string
-      /**
-       * Plan name
-       * @example Starter
-       */
-      name?: string
-      /**
-       * Plan description
-       * @example Best for teams getting started
-       */
-      description?: string
-      /**
-       * Plan price in cents
-       * @example 2999
-       */
-      price: number
-      /**
-       * Currency code (ISO 4217)
-       * @example USD
-       */
-      currency: string
-      /** @description Per-currency price options for this plan */
-      pricingOptions?: components['schemas']['PlanPricingOptionDto'][]
-      /**
-       * Currency symbol (derived from currency)
-       * @example $
-       */
-      currencySymbol?: string
-      /**
-       * Number of free units included
-       * @example 100
-       */
-      freeUnits?: number
-      /**
-       * One-time setup fee
-       * @example 500
-       */
-      setupFee?: number
-      /**
-       * Free trial period in days
-       * @example 14
-       */
-      trialDays?: number
-      /**
-       * Billing cycle
-       * @example monthly
-       */
-      billingCycle?: string
-      /**
-       * Billing model
-       * @example pre-paid
-       * @enum {string}
-       */
-      billingModel?: 'pre-paid' | 'post-paid'
-      /**
-       * Credits per usage unit (integer, >= 1)
-       * @example 1
-       */
-      creditsPerUnit?: number
-      /**
-       * What the plan measures for usage tracking
-       * @example requests
-       */
-      measures?: string
-      /**
-       * Usage limit for the meter
-       * @example 10000
-       */
-      limit?: number
-      /**
-       * Whether unused units roll over to next period
-       * @example false
-       */
-      rolloverUnusedUnits?: boolean
-      /** @description Usage limits */
-      limits?: {
-        [key: string]: unknown
-      }
-      /** @description Plan features */
-      features?: {
-        [key: string]: unknown
-      }
-      /**
-       * Whether payment is required
-       * @example true
-       */
-      requiresPayment: boolean
-      /**
-       * Whether the plan is hidden from customer-facing surfaces. When true, the plan does not appear in checkout or the SDK catalog and can only be granted via direct assignment (enterprise plans).
-       * @example false
-       */
-      hidden: boolean
-      /**
-       * Whether the plan is active (derived from status)
-       * @example true
-       */
-      isActive: boolean
-      /** @description Maximum number of active users */
-      maxActiveUsers?: number
-      /** @description Access expiry in days */
-      accessExpiryDays?: number
-      /**
-       * Plan status
-       * @example active
-       */
-      status: string
-      /** @description Creation timestamp */
-      createdAt: string
-      /** @description Last update timestamp */
-      updatedAt: string
-      /**
-       * Tax inclusion behavior for business checkout
-       * @enum {string}
-       */
-      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
-    }
-    UpdatePlanRequest: {
-      name?: string
-      description?: string
-      /** @enum {string} */
-      billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
-      price?: number
-      creditsPerUnit?: number
-      currency?: string
-      pricingOptions?: {
-        currency: string
-        price: number
-        basePrice?: number
-        setupFee?: number
-        default?: boolean
-      }[]
-      /** @enum {string} */
-      billingModel?: 'pre-paid' | 'post-paid'
-      freeUnits?: number
-      limit?: number
-      limits: {
-        [key: string]: unknown
-      }
-      features: {
-        [key: string]: unknown
-      }
-      /** @enum {string} */
-      status?: 'active' | 'inactive' | 'archived'
-      maxActiveUsers?: number
-      accessExpiryDays?: number
-      metadata: {
-        [key: string]: unknown
-      }
-      default?: boolean
-      hidden?: boolean
-      /** @enum {string} */
-      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
-    }
-    CreateCustomerRequest: {
-      /** Format: email */
-      email: string
-      name?: string
-      telephone?: string
-      metadata: {
-        [key: string]: unknown
-      }
-      externalRef?: string
-    }
-    GrantCustomerCreditsRequest: {
-      credits: number
-      reason?: string
-    }
-    GrantCustomerCreditsResponse: {
-      /** @description Whether the grant was recorded */
-      success: boolean
-      /** @description Customer reference identifier */
-      customerRef: string
-      /** @description Granted credit amount */
-      credits: number
-      /** @description Customer credit balance after the grant */
-      balance: number
-      /** @description Machine-readable grant reason */
-      reason?: string
-    }
-    CreateCustomerSessionRequest: {
-      customerRef: string
-      productRef?: string
-    }
-    PurchaseInfo: {
-      /**
-       * Purchase reference
-       * @example pur_1A2B3C4D
-       */
-      reference: string
-      /**
-       * Product name
-       * @example API Gateway Manager
-       */
-      productName: string
-      /**
-       * Product reference
-       * @example prd_abc123
-       */
-      productRef?: string
-      /**
-       * Purchase status
-       * @example active
-       */
-      status: string
-      /**
-       * Start date
-       * @example 2025-10-27T10:00:00Z
-       */
-      startDate: string
-      /**
-       * Amount in USD cents (normalised for aggregation)
-       * @example 9900
-       */
-      amount: number
-      /**
-       * Original amount in the payment currency (minor units)
-       * @example 7500
-       */
-      originalAmount?: number
-      /**
-       * ISO 4217 currency code of the customer-facing charge
-       * @example GBP
-       */
-      currency: string
-      /**
-       * Exchange rate from original currency to USD
-       * @example 1.32
-       */
-      exchangeRate?: number
-      /**
-       * End date of purchase
-       * @example 2025-11-27T10:00:00Z
-       */
-      endDate?: string
-      /**
-       * When purchase was cancelled
-       * @example 2025-10-28T10:00:00Z
-       */
-      cancelledAt?: string
-      /**
-       * Reason for cancellation
-       * @example Customer request
-       */
-      cancellationReason?: string
-      /**
-       * Plan reference from the plan snapshot, for reliable plan matching
-       * @example pln_abc123
-       */
-      planRef?: string
-      /** @description Snapshot of the plan at time of purchase */
-      planSnapshot?: Record<string, never>
-    }
-    CustomerResponse: {
-      /**
-       * Customer reference identifier
-       * @example cus_3c4d5e6f7g8h
-       */
-      reference: string
-      /**
-       * Customer full name
-       * @example John Doe
-       */
-      name: string
-      /**
-       * Customer email address
-       * @example customer@example.com
-       */
-      email: string
-      /**
-       * External reference ID from your auth system (if set during creation or update)
-       * @example auth_user_12345
-       */
-      externalRef?: string
-      /** @description Active purchases */
-      purchases?: components['schemas']['PurchaseInfo'][]
-    }
-    UpdateCustomerRequest: {
-      /** Format: email */
-      email?: string
-      name?: string
-      telephone?: string
-      metadata?: unknown
-      externalRef?: string
-    }
-    CustomerBalanceDisplayDto: {
-      /**
-       * Balance amount in the display currency major units (e.g. dollars)
-       * @example 42
-       */
-      amountMajor: number
-      /**
-       * ISO 4217 display currency code
-       * @example USD
-       */
-      currency: string
-      /**
-       * Human-readable formatted balance
-       * @example $42.00
-       */
-      formatted: string
-      /**
-       * Exchange rate applied from USD to the display currency
-       * @example 1
-       */
-      exchangeRate: number
-      /**
-       * Source of the exchange rate used
-       * @example parity
-       * @enum {string}
-       */
-      rateSource: 'parity' | 'db' | 'fallback'
-    }
-    CustomerBalanceResponse: {
-      /**
-       * Customer reference identifier
-       * @example cus_3c4d5e6f7g8h
-       */
-      customerRef: string
-      /**
-       * Raw credit balance in credits (mils)
-       * @example 4200
-       */
-      credits: number
-      /**
-       * ISO 4217 display currency code
-       * @example USD
-       */
-      displayCurrency: string
-      /**
-       * Number of credits per minor currency unit
-       * @example 100
-       */
-      creditsPerMinorUnit: number
-      /**
-       * Exchange rate from USD to the display currency
-       * @example 1
-       */
-      displayExchangeRate: number
-      /** @description Formatted balance display block for the display currency */
-      display: components['schemas']['CustomerBalanceDisplayDto']
-    }
-    CreateCustomerSessionResponse: {
-      /**
-       * Customer session ID/token
-       * @example e3f1c2d4b6a89f001122334455667788
-       */
-      sessionId: string
-      /**
-       * Full customer URL based on backend configuration (ready to redirect customer)
-       * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
-       */
-      customerUrl: string
-    }
-    GetCustomerSessionResponse: {
-      /**
-       * Customer session ID/token
-       * @example e3f1c2d4b6a89f001122334455667788
-       */
-      sessionId: string
-      /**
-       * Session status
-       * @example active
-       * @enum {string}
-       */
-      status: 'active' | 'expired' | 'used'
-      /**
-       * Full customer URL based on backend configuration (ready to redirect customer)
-       * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
-       */
-      customerUrl: string
-      /**
-       * Session expiration date
-       * @example 2025-01-01T12:00:00.000Z
-       */
-      expiresAt: string
-      /** @description Customer object from session data */
-      customer: components['schemas']['CustomerResponse']
-      /**
-       * Session creation date
-       * @example 2025-01-01T11:45:00.000Z
-       */
-      createdAt: string
-      /**
-       * Session last update date
-       * @example 2025-01-01T11:45:00.000Z
-       */
-      updatedAt: string
-    }
-    UserInfoRequest: {
-      customerRef: string
-      productRef: string
-    }
-    UserInfoUserDto: {
-      /** @example cus_3C4D5E6F */
-      reference: string
-      /** @example John Doe */
-      name?: string | null
-      /** @example john@example.com */
-      email: string
-      /** @example auth_user_12345 */
-      externalRef?: string | null
-    }
-    UserInfoUsageDto: {
-      /** @example 1000 */
-      total: number
-      /** @example 250 */
-      used: number
-      /** @example 750 */
-      remaining: number
-      /**
-       * Meter reference
-       * @example meter_ABC123
-       */
-      meterRef?: string | null
-      /** @example 25 */
-      percentUsed?: number | null
-    }
-    UserInfoPlanDto: {
-      /** @example pln_2B3C4D5E */
-      reference: string
-      /**
-       * Price in minor currency units (e.g. cents)
-       * @example 2999
-       */
-      price: number
-      /** @example USD */
-      currency: string
-      /** @example recurring */
-      type: string
-      /** @example monthly */
-      billingCycle?: string | null
-      features?: string[] | null
-      limits?: {
-        [key: string]: unknown
-      } | null
-    }
-    UserInfoPurchaseDto: {
-      /** @example pur_1A2B3C4D */
-      reference: string
-      /** @example active */
-      status: string
-      /** @example My API Product */
-      productName: string
-      /** @example recurring */
-      planType: string
-      /** @example 2025-10-27T10:00:00Z */
-      startDate?: string | null
-      /** @example 2025-11-27T10:00:00Z */
-      endDate?: string | null
-      usage?: components['schemas']['UserInfoUsageDto']
-      plan?: components['schemas']['UserInfoPlanDto']
-    }
-    UserInfoResponse: {
-      /**
-       * Human-readable status summary
-       * @example Active subscription: My API Product (25% usage consumed)
-       */
-      status: string
-      /**
-       * Customer portal session URL
-       * @example https://solvapay.com/customer/manage?id=abc123
-       */
-      verifyUrl?: string | null
-      user?: components['schemas']['UserInfoUserDto']
-      purchase?: components['schemas']['UserInfoPurchaseDto']
-    }
-    UsageBillingDto: {
-      /**
-       * Units consumed in current period
-       * @example 150
-       */
-      used: number
-      /**
-       * Units exceeding the plan limit
-       * @example 0
-       */
-      overageUnits: number
-      /**
-       * Overage cost in cents
-       * @example 0
-       */
-      overageCost: number
-      /**
-       * Period start date
-       * @example 2025-10-01T00:00:00Z
-       */
-      periodStart?: string
-      /**
-       * Period end date
-       * @example 2025-11-01T00:00:00Z
-       */
-      periodEnd?: string
-    }
-    CancelPurchaseRequest: {
-      reason?: string
-    }
-    SdkPlanSnapshotDto: {
-      /**
-       * Plan reference
-       * @example pln_1A2B3C4D
-       */
-      reference?: string
-      /**
-       * Plan name captured at purchase time
-       * @example Pro Monthly
-       */
-      name?: string
-      /**
-       * Plan price in cents
-       * @example 2999
-       */
-      price: number
-      /**
-       * Currency code
-       * @example USD
-       */
-      currency: string
-      /**
-       * Plan type
-       * @example recurring
-       */
-      planType: string
-      /**
-       * Billing cycle
-       * @example monthly
-       */
-      billingCycle?: string | null
-      /** @description Plan features */
-      features?: {
-        [key: string]: unknown
-      } | null
-      /** @description Usage limits */
-      limits?: {
-        [key: string]: unknown
-      } | null
-      /**
-       * Meter reference
-       * @example mtr_1A2B3C4D
-       */
-      meterRef?: string
-      /**
-       * Usage limit for the meter
-       * @example 5000
-       */
-      limit?: number
-      /**
-       * Number of free units included
-       * @example 100
-       */
-      freeUnits?: number
-      /**
-       * Credits per usage unit (integer, >= 1)
-       * @example 1
-       */
-      creditsPerUnit?: number
-    }
-    SdkPurchaseResponse: {
-      /**
-       * Purchase reference
-       * @example pur_1A2B3C4D
-       */
-      reference: string
-      /**
-       * Customer reference
-       * @example cus_3C4D5E6F
-       */
-      customerRef: string
-      /**
-       * Customer email
-       * @example customer@example.com
-       */
-      customerEmail: string
-      /**
-       * Product reference
-       * @example prd_1A2B3C4D
-       */
-      productRef: string
-      /**
-       * Product name
-       * @example API Gateway Manager
-       */
-      productName?: string
-      /** @description Plan snapshot at time of purchase (null for credit topups) */
-      planSnapshot?: components['schemas']['SdkPlanSnapshotDto']
-      /**
-       * Purchase status
-       * @example active
-       */
-      status: string
-      /**
-       * Amount in USD cents (normalised for aggregation)
-       * @example 9900
-       */
-      amount: number
-      /**
-       * Original amount in the payment currency (cents/pence)
-       * @example 10000
-       */
-      originalAmount?: number
-      /**
-       * Original payment currency code
-       * @example GBP
-       */
-      currency: string
-      /**
-       * Exchange rate from original currency to USD
-       * @example 1.3082
-       */
-      exchangeRate?: number
-      /** @description Start date */
-      startDate: string
-      /** @description End date */
-      endDate?: string
-      /** @description Paid at timestamp */
-      paidAt?: string
-      /** @description Usage billing state for usage-based plans */
-      usage?: components['schemas']['UsageBillingDto']
-      /**
-       * Is recurring
-       * @example true
-       */
-      isRecurring: boolean
-      /**
-       * Billing cycle
-       * @enum {string}
-       */
-      billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly'
-      /** @description Next billing date */
-      nextBillingDate?: string
-      /** @description Auto-renew enabled */
-      autoRenew?: boolean
-      /** @description Cancelled at */
-      cancelledAt?: string
-      /** @description Cancellation reason */
-      cancellationReason?: string
-      /** @description Arbitrary metadata attached to the purchase */
-      metadata?: {
-        [key: string]: unknown
-      }
-      /** @description Created at */
-      createdAt: string
-    }
-    CheckLimitRequest: {
-      customerRef: string
-      productRef: string
-      meterName?: string
-      usageType?: string
-      includeCheckoutSession?: boolean
-    }
-    LimitPlanItemDto: {
-      reference: string
-      name?: string
-      type: string
-      /** @description Price in smallest currency unit (e.g. cents) */
-      price: number
-      currency: string
-      requiresPayment: boolean
-      freeUnits?: number
-      /** @description Credits per usage unit (usage-based plans) */
-      creditsPerUnit?: number
-      billingModel?: string
-      billingCycle?: string
-      /** @description Per-currency price options for this plan */
-      pricingOptions?: components['schemas']['PlanPricingOptionDto'][]
-    }
-    LimitBalanceDto: {
-      /** @description Credit balance in mils */
-      creditBalance: number
-      /** @description Credits per usage unit */
-      creditsPerUnit: number
-      currency: string
-      /** @description Estimated whole units remaining from prepaid credit balance */
-      remainingUnits?: number
-    }
-    LimitProductBriefDto: {
-      reference: string
-      name?: string
-    }
-    LimitResponse: {
-      /**
-       * Whether the customer is within their usage limits
-       * @example true
-       */
-      withinLimits: boolean
-      /**
-       * Remaining usage units before hitting the limit
-       * @example 997
-       */
-      remaining: number
-      /**
-       * Checkout session ID if payment is required
-       * @example e3f1c2d4b6a89f001122334455667788
-       */
-      checkoutSessionId?: string
-      /**
-       * Checkout URL if payment is required
-       * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
-       */
-      checkoutUrl?: string
-      /**
-       * The meter name to use when tracking usage events
-       * @example requests
-       */
-      meterName?: string
-      /** @description Credit balance in mils (for pre-paid usage-based plans) */
-      creditBalance?: number
-      /** @description Credits per usage unit (for pre-paid usage-based plans) */
-      creditsPerUnit?: number
-      /** @description ISO 4217 currency code for credit fields */
-      currency?: string
-      /** @description True when the customer must activate a priced default plan before usage is allowed */
-      activationRequired?: boolean
-      /** @description Active plans on the product available for activation or checkout */
-      plans?: components['schemas']['LimitPlanItemDto'][]
-      /** @description Prepaid usage balance context when the default plan is usage-based */
-      balance?: components['schemas']['LimitBalanceDto']
-      /** @description Product the limit check applies to */
-      product?: components['schemas']['LimitProductBriefDto']
-      /** @description Customer portal confirmation URL when activation is required (fallback when not starting checkout) */
-      confirmationUrl?: string
-    }
     ActivatePlanDto: {
       customerRef: string
-      productRef: string
       planRef: string
+      productRef: string
     }
     ActivatePlanResponseDto: {
-      /** @enum {string} */
-      status: 'activated' | 'already_active' | 'topup_required' | 'payment_required' | 'invalid'
-      purchaseRef?: string
-      message?: string
+      checkoutSessionId?: string
+      checkoutUrl?: string
       creditBalance?: number
       creditsPerUnit?: number
       currency?: string
-      checkoutUrl?: string
-      checkoutSessionId?: string
-    }
-    CreatePaymentIntentDto: {
-      productRef?: string
-      customerRef: string
-      planRef?: string
-      pricingTier?: string
-      /**
-       * @default product
-       * @enum {string}
-       */
-      purpose: 'product' | 'credit_topup' | 'usage_billing'
-      amount?: number
-      currency?: string
-      description?: string
-      autoRecharge: {
-        enabled?: boolean
-        /** @enum {string} */
-        triggerType?: 'balance'
-        thresholdAmountMajor?: number
-        topupAmountMajor?: number
-        maxMonthlySpendMajor?: number
-        currency?: string
-      }
-    }
-    CreateCheckoutSessionRequest: {
-      customerRef: string
-      productRef?: string
-      planRef?: string
-      returnUrl?: string
-      /** @enum {string} */
-      purpose?: 'credit_topup'
-    }
-    DisableAutoRechargeResponse: {
-      /**
-       * Always true on success
-       * @example true
-       * @enum {number}
-       */
-      success: true
-    }
-    ProcessPaymentSucceededRecurring: {
-      /**
-       * discriminator enum property added by openapi-typescript
-       * @enum {string}
-       */
-      status: 'ProcessPaymentSucceededRecurring'
-      /**
-       * @example recurring
-       * @enum {string}
-       */
-      type: 'recurring'
-      purchase: components['schemas']['PurchaseInfo']
-    }
-    OneTimePurchaseInfo: {
-      /**
-       * Purchase reference
-       * @example pur_1A2B3C4D
-       */
-      reference: string
-      /**
-       * Product reference
-       * @example prd_abc123
-       */
-      productRef?: string
-      /**
-       * Amount in USD cents (normalised for aggregation)
-       * @example 9900
-       */
-      amount: number
-      /**
-       * ISO 4217 currency code of the customer-facing charge
-       * @example USD
-       */
-      currency: string
-      /**
-       * When the one-time purchase was completed
-       * @example 2025-10-27T10:00:00Z
-       */
-      completedAt: string
-    }
-    ProcessPaymentSucceededOneTime: {
-      /**
-       * discriminator enum property added by openapi-typescript
-       * @enum {string}
-       */
-      status: 'ProcessPaymentSucceededOneTime'
-      /**
-       * @example one-time
-       * @enum {string}
-       */
-      type: 'one-time'
-      oneTimePurchase: components['schemas']['OneTimePurchaseInfo']
-    }
-    ProcessPaymentSucceededBare: {
-      /**
-       * discriminator enum property added by openapi-typescript
-       * @enum {string}
-       */
-      status: 'ProcessPaymentSucceededBare'
-    }
-    ProcessPaymentProcessing: {
-      /**
-       * discriminator enum property added by openapi-typescript
-       * @enum {string}
-       */
-      status: 'ProcessPaymentProcessing'
-    }
-    ProcessPaymentTimeout: {
-      /**
-       * discriminator enum property added by openapi-typescript
-       * @enum {string}
-       */
-      status: 'ProcessPaymentTimeout'
-      /** @description Detail message describing the timeout */
       message?: string
+      purchaseRef?: string
+      /** @enum {string} */
+      status:
+        | 'activated'
+        | 'already_active'
+        | 'already_purchased'
+        | 'topup_required'
+        | 'payment_required'
+        | 'invalid'
     }
-    ProcessPaymentFailed: {
-      /**
-       * discriminator enum property added by openapi-typescript
-       * @enum {string}
-       */
-      status: 'ProcessPaymentFailed'
-    }
-    ProcessPaymentCancelled: {
-      /**
-       * discriminator enum property added by openapi-typescript
-       * @enum {string}
-       */
-      status: 'ProcessPaymentCancelled'
-    }
-    SdkPaymentIntentResponse: {
-      /**
-       * Payment processor payment intent ID
-       * @example pi_1a2b3c4d5e6f7g8h
-       */
-      processorPaymentId: string
-      /**
-       * Plan reference
-       * @example pln_2b3c4d5e6f7g
-       */
-      planRef?: string
-      /**
-       * Customer reference
-       * @example cus_3c4d5e6f7g8h
-       */
-      customerRef?: string
-      /**
-       * Amount in the charge currency (minor units)
-       * @example 4999
-       */
-      amount: number
-      /**
-       * Original amount in the payment currency (minor units)
-       * @example 4999
-       */
-      originalAmount?: number
-      /**
-       * ISO 4217 currency code
-       * @example usd
-       */
-      currency: string
-      /**
-       * Exchange rate applied to the amount
-       * @example 1
-       */
-      exchangeRate?: number
-      /**
-       * Payment intent status
-       * @example requires_payment_method
-       */
-      status: string
-      /**
-       * Client secret used to confirm the payment on the client
-       * @example pi_1a2b3c4d5e6f7g8h_secret_AbCdEf123456
-       */
-      clientSecret: string
-      /**
-       * Stripe publishable key for the environment
-       * @example pk_test_...
-       */
-      publishableKey: string
-      /**
-       * Connected Stripe account ID (only present on create)
-       * @example acct_1A2B3C4D
-       */
-      accountId?: string
-      /**
-       * Ledger transaction ID
-       * @example 507f1f77bcf86cd799439011
-       */
-      transactionId?: string
-      /**
-       * Expiry timestamp of the payment intent
-       * @example 2025-10-19T10:30:00.000Z
-       */
-      expiresAt?: string
-      /**
-       * Creation timestamp
-       * @example 2025-10-18T10:30:00.000Z
-       */
-      createdAt?: string
-    }
-    SdkPaymentIntentListItem: {
-      /**
-       * Payment processor payment intent ID
-       * @example pi_1a2b3c4d5e6f7g8h
-       */
-      processorPaymentId: string
-      /**
-       * Plan reference
-       * @example pln_2b3c4d5e6f7g
-       */
-      planRef?: string
-      /**
-       * Amount in the charge currency (minor units)
-       * @example 4999
-       */
-      amount: number
-      /**
-       * ISO 4217 currency code
-       * @example usd
-       */
-      currency: string
-      /**
-       * Client secret used to confirm the payment on the client
-       * @example pi_1a2b3c4d5e6f7g8h_secret_xxx
-       */
-      clientSecret?: string
-      /**
-       * Payment intent status
-       * @example succeeded
-       */
-      status: string
-      /**
-       * Creation timestamp
-       * @example 2025-10-11T10:30:00.000Z
-       */
-      createdAt?: string
-    }
-    SdkPaymentIntentListResponse: {
-      paymentIntents: components['schemas']['SdkPaymentIntentListItem'][]
-      /**
-       * Number of payment intents returned
-       * @example 1
-       */
-      total: number
-    }
-    ProcessPaymentIntentDto: {
-      productRef?: string
-      customerRef: string
-      planRef?: string
-    }
-    CreateCheckoutSessionResponse: {
-      /**
-       * Checkout session ID/token
-       * @example e3f1c2d4b6a89f001122334455667788
-       */
-      sessionId: string
-      /**
-       * Full checkout URL based on backend configuration (ready to redirect customer)
-       * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
-       */
-      checkoutUrl: string
-    }
-    AutoRechargeTriggerDto: {
-      /**
-       * Trigger kind
-       * @example balance
-       * @enum {string}
-       */
-      type: 'balance'
-      /**
-       * Display-currency minor units for the balance threshold
-       * @example 500
-       */
-      thresholdAmountMinor: number
-    }
-    AutoRechargeTopupDto: {
-      /**
-       * Top-up mode
-       * @example fixed
-       * @enum {string}
-       */
-      mode: 'fixed'
-      /**
-       * Top-up amount in currency minor units
-       * @example 2000
-       */
-      amountMinor: number
-      /**
-       * ISO 4217 currency code
-       * @example USD
-       */
-      currency: string
+    AttachBusinessDetailsResponse: {
+      /** @description Calculated tax breakdown */
+      taxBreakdown: components['schemas']['TaxBreakdownDto']
     }
     AutoRechargeConfigDto: {
       /**
@@ -2320,25 +824,22 @@ export interface components {
        * @example true
        */
       enabled: boolean
-      trigger: components['schemas']['AutoRechargeTriggerDto']
-      topup: components['schemas']['AutoRechargeTopupDto']
-      /**
-       * Funding source type
-       * @enum {string}
-       */
-      fundingSourceType: 'saved_card' | 'tokenized_card'
-      /** @description Saved payment method ID backing the recharge */
-      paymentMethodId?: string
-      /**
-       * Current config status
-       * @enum {string}
-       */
-      status: 'active' | 'disabled' | 'failed' | 'pending_setup'
       /**
        * Consecutive failure count
        * @example 0
        */
       failureCount: number
+      /**
+       * Funding source type
+       * @enum {string}
+       */
+      fundingSourceType: 'saved_card' | 'tokenized_card'
+      /** @description PaymentIntent ID of an in-flight recharge */
+      inFlightPaymentIntentId?: string
+      /** @description Timestamp of the last successful charge */
+      lastChargeAt?: string
+      /** @description Timestamp the processing lock was acquired */
+      lockAcquiredAt?: string
       /**
        * Optional monthly spend cap in topup.currency minor units
        * @example 10000
@@ -2354,14 +855,46 @@ export interface components {
        * @example 2026-07
        */
       monthlySpendPeriod?: string
-      /** @description Timestamp of the last successful charge */
-      lastChargeAt?: string
-      /** @description PaymentIntent ID of an in-flight recharge */
-      inFlightPaymentIntentId?: string
-      /** @description Timestamp the processing lock was acquired */
-      lockAcquiredAt?: string
+      /** @description Saved payment method ID backing the recharge */
+      paymentMethodId?: string
+      /**
+       * Current config status
+       * @enum {string}
+       */
+      status: 'active' | 'disabled' | 'failed' | 'pending_setup'
+      topup: components['schemas']['AutoRechargeTopupDto']
+      trigger: components['schemas']['AutoRechargeTriggerDto']
       /** @description Last update timestamp */
       updatedAt: string
+    }
+    AutoRechargeDisplayDto: {
+      /**
+       * Display currency code
+       * @example USD
+       */
+      currency: string
+      /**
+       * Exchange rate used for display conversion
+       * @example 1
+       */
+      exchangeRate: number
+      formatted: components['schemas']['AutoRechargeDisplayFormattedDto']
+      /**
+       * Source of the exchange rate
+       * @example db
+       * @enum {string}
+       */
+      rateSource: 'parity' | 'db' | 'fallback'
+      /**
+       * Threshold amount in display-currency major units
+       * @example 5
+       */
+      thresholdAmountMajor: number
+      /**
+       * Top-up amount in display-currency major units
+       * @example 20
+       */
+      topupAmountMajor: number
     }
     AutoRechargeDisplayFormattedDto: {
       /**
@@ -2375,62 +908,43 @@ export interface components {
        */
       topup: string
     }
-    AutoRechargeDisplayDto: {
-      /**
-       * Threshold amount in display-currency major units
-       * @example 5
-       */
-      thresholdAmountMajor: number
-      /**
-       * Top-up amount in display-currency major units
-       * @example 20
-       */
-      topupAmountMajor: number
-      /**
-       * Display currency code
-       * @example USD
-       */
-      currency: string
-      formatted: components['schemas']['AutoRechargeDisplayFormattedDto']
-      /**
-       * Exchange rate used for display conversion
-       * @example 1
-       */
-      exchangeRate: number
-      /**
-       * Source of the exchange rate
-       * @example live
-       */
-      rateSource: string
-    }
     AutoRechargeGetResponse: {
       /** @description Current auto-recharge config, or null when not configured */
       config?: components['schemas']['AutoRechargeConfigDto'] | null
       display?: components['schemas']['AutoRechargeDisplayDto']
+      /** @description Validation metadata for the auto-recharge form (always present) */
+      validation: components['schemas']['AutoRechargeValidationMetaResponse']
     }
-    PutAutoRechargeSdkDto: {
-      enabled: boolean
-      /** @enum {string} */
-      triggerType: 'balance'
-      thresholdAmountMajor?: number
-      topupAmountMajor?: number
-      maxMonthlySpendMajor?: number
+    AutoRechargeTopupDto: {
+      /**
+       * Top-up amount in currency minor units
+       * @example 2000
+       */
+      amountMinor: number
+      /**
+       * ISO 4217 currency code
+       * @example USD
+       */
       currency: string
-      deferSetupIntent?: boolean
-      customerRef: string
-      /** Format: email */
-      customerEmail?: string
-      customerName?: string
+      /**
+       * Top-up mode
+       * @example fixed
+       * @enum {string}
+       */
+      mode: 'fixed'
     }
-    SaveAutoRechargeResponse: {
-      config: components['schemas']['AutoRechargeConfigDto']
-      display?: components['schemas']['AutoRechargeDisplayDto']
-      /** @description Stripe SetupIntent client secret for card collection */
-      setupClientSecret?: string
-      /** @description Stripe publishable key for the resolved environment */
-      publishableKey?: string
-      /** @description Connected Stripe account ID */
-      stripeAccountId?: string
+    AutoRechargeTriggerDto: {
+      /**
+       * Display-currency minor units for the balance threshold
+       * @example 500
+       */
+      thresholdAmountMinor: number
+      /**
+       * Trigger kind
+       * @example balance
+       * @enum {string}
+       */
+      type: 'balance'
     }
     AutoRechargeTriggeredResponse: {
       /**
@@ -2439,20 +953,575 @@ export interface components {
        */
       triggered: boolean
     }
-    CreditDebitSuccessResponse: {
-      /** @enum {number} */
-      debited: true
+    AutoRechargeValidationMetaResponse: {
       /**
-       * Credits debited for this usage event
-       * @example 10
+       * Maximum display-currency major units accepted for threshold/top-up
+       * @example 10000
        */
-      amount: number
+      maxAmountMajor: number
       /**
-       * Estimated remaining units after debit
-       * @example 99
+       * Stripe minimum charge in minor units, keyed by ISO 4217 currency
+       * @example {
+       *       "GBP": 30,
+       *       "USD": 50
+       *     }
        */
-      unitsRemaining: number
-      autoRecharge?: components['schemas']['AutoRechargeTriggeredResponse']
+      stripeMinimumMinorByCurrency: {
+        [key: string]: number
+      }
+    }
+    BulkCreateUsageRequest: {
+      events: {
+        /**
+         * @default api_call
+         * @enum {string}
+         */
+        actionType: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+        customerRef: string
+        description?: string
+        duration?: number
+        errorMessage?: string
+        idempotencyKey?: string
+        metadata?: {
+          [key: string]: unknown
+        }
+        /**
+         * @default success
+         * @enum {string}
+         */
+        outcome: 'success' | 'paywall' | 'fail'
+        productRef?: string
+        purchaseRef?: string
+        /** Format: date-time */
+        timestamp: string
+        /** @default 1 */
+        units: number
+      }[]
+    }
+    BulkUsageResponse: {
+      /**
+       * Number of usage events inserted
+       * @example 2
+       */
+      inserted: number
+      results: components['schemas']['BulkUsageResultResponse'][]
+      /** @example true */
+      success: boolean
+    }
+    BulkUsageResultResponse: {
+      creditDebit?:
+        | components['schemas']['CreditDebitSuccessResponse']
+        | components['schemas']['CreditDebitSkippedResponse']
+      /** @example usage_A1B2C3D4 */
+      reference: string
+    }
+    BusinessDetailsDto: {
+      /** @description Legal business name */
+      businessName?: string
+      /** @description ISO 3166-1 alpha-2 country code */
+      country?: string
+      /** @description Billing city */
+      customerCity?: string
+      /** @description ISO 3166-1 alpha-2 billing country (non-business consumers) */
+      customerCountry?: string
+      /** @description Billing address line 1 */
+      customerLine1?: string
+      /** @description Billing address line 2 */
+      customerLine2?: string
+      /** @description Customer full name */
+      customerName?: string
+      /** @description Billing postal code (required by Stripe Tax for US) */
+      customerPostalCode?: string
+      /** @description Customer reference to persist business tax details on the customer record. Only honored by the payment-intent business-details endpoint; ignored on the checkout-session endpoint. */
+      customerRef?: string
+      /** @description Billing state/region */
+      customerState?: string
+      /** @description Whether the purchase is on behalf of a business */
+      isBusiness: boolean
+      /** @description Tax / VAT identification number */
+      taxId?: string
+      /**
+       * Tax ID type
+       * @enum {string}
+       */
+      taxIdType?:
+        | 'ae_trn'
+        | 'al_tin'
+        | 'am_tin'
+        | 'ao_tin'
+        | 'au_abn'
+        | 'aw_tin'
+        | 'az_tin'
+        | 'ba_tin'
+        | 'bb_tin'
+        | 'bd_bin'
+        | 'bf_ifu'
+        | 'bh_vat'
+        | 'bj_ifu'
+        | 'bs_tin'
+        | 'by_tin'
+        | 'ca_gst_hst'
+        | 'cd_nif'
+        | 'ch_vat'
+        | 'cl_tin'
+        | 'cm_niu'
+        | 'co_nit'
+        | 'cr_tin'
+        | 'cv_nif'
+        | 'ec_ruc'
+        | 'eg_tin'
+        | 'et_tin'
+        | 'eu_vat'
+        | 'gb_vat'
+        | 'ge_vat'
+        | 'gn_nif'
+        | 'hk_br'
+        | 'id_npwp'
+        | 'in_gst'
+        | 'is_vat'
+        | 'jp_trn'
+        | 'ke_pin'
+        | 'kg_tin'
+        | 'kh_tin'
+        | 'kr_brn'
+        | 'kz_bin'
+        | 'la_tin'
+        | 'li_vat'
+        | 'lk_vat'
+        | 'ma_vat'
+        | 'md_vat'
+        | 'me_pib'
+        | 'mk_vat'
+        | 'mr_nif'
+        | 'mx_rfc'
+        | 'my_sst'
+        | 'ng_tin'
+        | 'no_vat'
+        | 'np_pan'
+        | 'nz_gst'
+        | 'om_vat'
+        | 'pe_ruc'
+        | 'ph_tin'
+        | 'rs_pib'
+        | 'ru_inn'
+        | 'sa_vat'
+        | 'sg_gst'
+        | 'sn_ninea'
+        | 'sr_fin'
+        | 'th_vat'
+        | 'tj_tin'
+        | 'tr_tin'
+        | 'tw_vat'
+        | 'tz_vat'
+        | 'ua_vat'
+        | 'ug_tin'
+        | 'us_ein'
+        | 'uy_ruc'
+        | 'uz_vat'
+        | 'vn_tin'
+        | 'za_vat'
+        | 'zm_tin'
+        | 'zw_tin'
+    }
+    CancelPurchaseRequest: {
+      reason?: string
+    }
+    CheckLimitRequest: {
+      customerRef: string
+      includeCheckoutSession?: boolean
+      meterName?: string
+      productRef: string
+      usageType?: string
+    }
+    CloneProductDto: {
+      name?: string
+    }
+    ConfigureMcpPlansDto: {
+      plans?: {
+        currency?: string
+        features?: {
+          [key: string]: unknown
+        }
+        key: string
+        name: string
+        options: (
+          | {
+              amountMinor: number
+              currency: string
+              /** @enum {string} */
+              kind: 'charge'
+              label?: string
+              meter?: string
+              oneTime?: boolean
+              /** @enum {string} */
+              per: 'unit' | 'seat' | 'flat'
+            }
+          | {
+              /** Format: date-time */
+              anchor?: string
+              count?: number
+              /** @enum {string} */
+              interval: 'week' | 'month' | 'year'
+              /** @enum {string} */
+              kind: 'billingCycle'
+            }
+          | {
+              charge: {
+                amountMinor: number
+                currency: string
+                label?: string
+                meter?: string
+                /** @enum {string} */
+                per: 'unit' | 'seat' | 'flat'
+              }
+              from: number
+              /** @enum {string} */
+              kind: 'tier'
+              label?: string
+              /** @enum {string} */
+              mode: 'graduated' | 'volume'
+              to: number | null
+            }
+          | {
+              cap: number
+              /** @enum {string} */
+              kind: 'limit'
+              label?: string
+              meter: string
+              /** @enum {string} */
+              onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+              onExceedPricingId?: string
+              /** @enum {string} */
+              scope: 'billing_period' | 'lifetime' | 'rolling_window'
+              /** @enum {string} */
+              uiHint?: 'upgrade_prompt' | 'soft_warning'
+              windowDays?: number
+            }
+          | {
+              feature: string
+              /** @enum {string} */
+              kind: 'entitlement'
+              label?: string
+              scope?: string
+              value: boolean | number | string
+            }
+          | {
+              days: number
+              downgradeToPricingId?: string
+              /** @enum {string} */
+              kind: 'trial'
+              label?: string
+              /** @enum {string} */
+              onEnd: 'convert' | 'cancel' | 'downgrade'
+              requireCard?: boolean
+            }
+          | {
+              /** @enum {string} */
+              kind: 'prepaid'
+              label?: string
+              lowBalanceUnits?: number
+              minTopUpMinor?: number
+            }
+          | {
+              /** @enum {string} */
+              appliesTo?: 'recurring' | 'setup' | 'usage' | 'all'
+              currency?: string
+              cycles?: number
+              /** @enum {string} */
+              duration: 'once' | 'repeating' | 'forever'
+              /** @enum {string} */
+              kind: 'discount'
+              label?: string
+              /** @enum {string} */
+              mode: 'percentage' | 'fixed'
+              value: number
+            }
+          | {
+              capUnits?: number
+              currency?: string
+              /** @enum {string} */
+              kind: 'rollover'
+              label?: string
+              maxCycles?: number
+              meter: string
+              rateMinor?: number
+              /** @enum {string} */
+              treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
+            }
+          | {
+              /** @enum {string} */
+              kind: 'autoAssigned'
+              label?: string
+            }
+          | {
+              /** @enum {string} */
+              kind: 'hidden'
+              label?: string
+            }
+        )[]
+      }[]
+      toolMapping?: {
+        name: string
+        planKeys: string[]
+      }[]
+    }
+    ConfigureMcpPlansResult: {
+      /** @description Updated MCP server identity */
+      mcpServer: {
+        [key: string]: unknown
+      }
+      /** @description Resolved plan mapping by key (includes existing free plan) */
+      planMap: {
+        [key: string]: unknown
+      }
+      /** @description Updated product */
+      product: components['schemas']['SdkProductResponse']
+    }
+    CreateCheckoutSessionRequest: {
+      customerRef: string
+      planRef?: string
+      productRef?: string
+      /** @enum {string} */
+      purpose?: 'credit_topup'
+      returnUrl?: string
+    }
+    CreateCheckoutSessionResponse: {
+      /**
+       * Full checkout URL based on backend configuration (ready to redirect customer)
+       * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+       */
+      checkoutUrl: string
+      /**
+       * Checkout session ID/token
+       * @example e3f1c2d4b6a89f001122334455667788
+       */
+      sessionId: string
+    }
+    CreateCustomerRequest: {
+      description?: string
+      /** Format: email */
+      email: string
+      externalRef?: string
+      metadata?: {
+        [key: string]: unknown
+      }
+      name?: string
+      telephone?: string | ''
+    }
+    CreateCustomerSessionRequest: {
+      customerRef: string
+      productRef?: string
+    }
+    CreateCustomerSessionResponse: {
+      /**
+       * Full customer URL based on backend configuration (ready to redirect customer)
+       * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+       */
+      customerUrl: string
+      /**
+       * Customer session ID/token
+       * @example e3f1c2d4b6a89f001122334455667788
+       */
+      sessionId: string
+    }
+    CreatePaymentIntentDto: {
+      amount?: number
+      autoRecharge?: {
+        currency?: string
+        enabled?: boolean
+        maxMonthlySpendMajor?: number
+        thresholdAmountMajor?: number
+        topupAmountMajor?: number
+        /** @enum {string} */
+        triggerType?: 'balance'
+      }
+      currency?: string
+      customerRef: string
+      description?: string
+      planRef?: string
+      pricingTier?: string
+      productRef?: string
+      /**
+       * @default product
+       * @enum {string}
+       */
+      purpose: 'product' | 'credit_topup' | 'usage_billing'
+    }
+    CreatePlanRequest: {
+      accessExpiryDays?: number
+      currency?: string
+      description?: string
+      features?: {
+        [key: string]: unknown
+      }
+      maxActiveUsers?: number
+      metadata?: {
+        [key: string]: unknown
+      }
+      name: string
+      options: (
+        | {
+            amountMinor: number
+            currency: string
+            /** @enum {string} */
+            kind: 'charge'
+            label?: string
+            meter?: string
+            oneTime?: boolean
+            /** @enum {string} */
+            per: 'unit' | 'seat' | 'flat'
+          }
+        | {
+            /** Format: date-time */
+            anchor?: string
+            count?: number
+            /** @enum {string} */
+            interval: 'week' | 'month' | 'year'
+            /** @enum {string} */
+            kind: 'billingCycle'
+          }
+        | {
+            charge: {
+              amountMinor: number
+              currency: string
+              label?: string
+              meter?: string
+              /** @enum {string} */
+              per: 'unit' | 'seat' | 'flat'
+            }
+            from: number
+            /** @enum {string} */
+            kind: 'tier'
+            label?: string
+            /** @enum {string} */
+            mode: 'graduated' | 'volume'
+            to: number | null
+          }
+        | {
+            cap: number
+            /** @enum {string} */
+            kind: 'limit'
+            label?: string
+            meter: string
+            /** @enum {string} */
+            onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+            onExceedPricingId?: string
+            /** @enum {string} */
+            scope: 'billing_period' | 'lifetime' | 'rolling_window'
+            /** @enum {string} */
+            uiHint?: 'upgrade_prompt' | 'soft_warning'
+            windowDays?: number
+          }
+        | {
+            feature: string
+            /** @enum {string} */
+            kind: 'entitlement'
+            label?: string
+            scope?: string
+            value: boolean | number | string
+          }
+        | {
+            days: number
+            downgradeToPricingId?: string
+            /** @enum {string} */
+            kind: 'trial'
+            label?: string
+            /** @enum {string} */
+            onEnd: 'convert' | 'cancel' | 'downgrade'
+            requireCard?: boolean
+          }
+        | {
+            /** @enum {string} */
+            kind: 'prepaid'
+            label?: string
+            lowBalanceUnits?: number
+            minTopUpMinor?: number
+          }
+        | {
+            /** @enum {string} */
+            appliesTo?: 'recurring' | 'setup' | 'usage' | 'all'
+            currency?: string
+            cycles?: number
+            /** @enum {string} */
+            duration: 'once' | 'repeating' | 'forever'
+            /** @enum {string} */
+            kind: 'discount'
+            label?: string
+            /** @enum {string} */
+            mode: 'percentage' | 'fixed'
+            value: number
+          }
+        | {
+            capUnits?: number
+            currency?: string
+            /** @enum {string} */
+            kind: 'rollover'
+            label?: string
+            maxCycles?: number
+            meter: string
+            rateMinor?: number
+            /** @enum {string} */
+            treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
+          }
+        | {
+            /** @enum {string} */
+            kind: 'autoAssigned'
+            label?: string
+          }
+        | {
+            /** @enum {string} */
+            kind: 'hidden'
+            label?: string
+          }
+      )[]
+      /** @enum {string} */
+      status?: 'active' | 'inactive' | 'archived'
+      /** @enum {string} */
+      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
+    }
+    CreateProductRequest: {
+      config?: {
+        deliveryMethod?: string
+        fulfillmentType?: string
+        validityPeriod?: number
+      }
+      description?: string
+      imageUrl?: string
+      isManagedMcp?: boolean
+      isMcpPay?: boolean
+      metadata?: {
+        [key: string]: unknown
+      }
+      name: string
+      productType?: string
+      /** @enum {string} */
+      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
+    }
+    CreateUsageRequest: {
+      /**
+       * @default api_call
+       * @enum {string}
+       */
+      actionType: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
+      customerRef: string
+      description?: string
+      duration?: number
+      errorMessage?: string
+      idempotencyKey?: string
+      metadata?: {
+        [key: string]: unknown
+      }
+      /**
+       * @default success
+       * @enum {string}
+       */
+      outcome: 'success' | 'paywall' | 'fail'
+      productRef?: string
+      purchaseRef?: string
+      /** Format: date-time */
+      timestamp: string
+      /** @default 1 */
+      units: number
     }
     CreditDebitSkippedResponse: {
       /** @enum {number} */
@@ -2469,107 +1538,1556 @@ export interface components {
         | 'no_active_purchase'
         | 'plan_not_credit_based'
     }
-    UsageRecordResponse: {
-      /** @example true */
-      success: boolean
-      /** @example usage_A1B2C3D4 */
-      reference: string
-      creditDebit?:
-        | components['schemas']['CreditDebitSuccessResponse']
-        | components['schemas']['CreditDebitSkippedResponse']
-    }
-    BulkUsageResultResponse: {
-      /** @example usage_A1B2C3D4 */
-      reference: string
-      creditDebit?:
-        | components['schemas']['CreditDebitSuccessResponse']
-        | components['schemas']['CreditDebitSkippedResponse']
-    }
-    BulkUsageResponse: {
-      /** @example true */
-      success: boolean
+    CreditDebitSuccessResponse: {
       /**
-       * Number of usage events inserted
-       * @example 2
+       * Credits debited for this usage event (credits are USD-pegged at 100 credits per minor unit, so a 1¢/unit charge debits 100 credits/unit)
+       * @example 100
        */
-      inserted: number
-      results: components['schemas']['BulkUsageResultResponse'][]
+      amount: number
+      autoRecharge?: components['schemas']['AutoRechargeTriggeredResponse']
+      /** @enum {number} */
+      debited: true
+      /**
+       * How many metered items the remaining credit balance still covers
+       * @example 99
+       */
+      remainingUnits: number
+      /**
+       * @deprecated
+       * @description Deprecated alias of remainingUnits. Prefer remainingUnits.
+       * @example 99
+       */
+      unitsRemaining: number
     }
-    CreateUsageRequest: {
+    CustomerBalanceDisplayDto: {
+      /**
+       * Balance amount in the display currency major units (e.g. dollars)
+       * @example 42
+       */
+      amountMajor: number
+      /**
+       * ISO 4217 display currency code
+       * @example USD
+       */
+      currency: string
+      /**
+       * Exchange rate applied from USD to the display currency
+       * @example 1
+       */
+      exchangeRate: number
+      /**
+       * Human-readable formatted balance
+       * @example $42.00
+       */
+      formatted: string
+      /**
+       * Source of the exchange rate used
+       * @example parity
+       * @enum {string}
+       */
+      rateSource: 'parity' | 'db' | 'fallback'
+    }
+    CustomerBalanceResponse: {
+      /**
+       * Raw credit balance in credits (100 credits = 1 minor currency unit)
+       * @example 4200
+       */
+      credits: number
+      /**
+       * Number of credits per minor currency unit
+       * @example 100
+       */
+      creditsPerMinorUnit: number
+      /**
+       * Customer reference identifier
+       * @example cus_3c4d5e6f7g8h
+       */
       customerRef: string
+      /** @description Formatted balance display block for the display currency */
+      display: components['schemas']['CustomerBalanceDisplayDto']
       /**
-       * @default api_call
+       * ISO 4217 display currency code
+       * @example USD
+       */
+      displayCurrency: string
+      /**
+       * Exchange rate from USD to the display currency
+       * @example 1
+       */
+      displayExchangeRate: number
+    }
+    CustomerResponse: {
+      /**
+       * Customer email address
+       * @example customer@example.com
+       */
+      email: string
+      /**
+       * External reference ID from your auth system (if set during creation or update)
+       * @example auth_user_12345
+       */
+      externalRef?: string
+      /**
+       * Customer full name
+       * @example John Doe
+       */
+      name: string
+      /** @description Active purchases */
+      purchases?: components['schemas']['SdkPurchaseResponse'][]
+      /**
+       * Customer reference identifier
+       * @example cus_3c4d5e6f7g8h
+       */
+      reference: string
+    }
+    DisableAutoRechargeResponse: {
+      /**
+       * Always true on success
+       * @example true
+       * @enum {number}
+       */
+      success: true
+    }
+    GetCustomerSessionResponse: {
+      /**
+       * Session creation date
+       * @example 2025-01-01T11:45:00.000Z
+       */
+      createdAt: string
+      /** @description Customer object from session data */
+      customer: components['schemas']['CustomerResponse']
+      /**
+       * Full customer URL based on backend configuration (ready to redirect customer)
+       * @example https://solvapay.com/customer/manage?id=e3f1c2d4b6a89f001122334455667788
+       */
+      customerUrl: string
+      /**
+       * Session expiration date
+       * @example 2025-01-01T12:00:00.000Z
+       */
+      expiresAt: string
+      /**
+       * Customer session ID/token
+       * @example e3f1c2d4b6a89f001122334455667788
+       */
+      sessionId: string
+      /**
+       * Session status
+       * @example active
        * @enum {string}
        */
-      actionType: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
-      /** @default 1 */
-      units: number
+      status: 'active' | 'expired' | 'used'
       /**
-       * @default success
-       * @enum {string}
+       * Session last update date
+       * @example 2025-01-01T11:45:00.000Z
        */
-      outcome: 'success' | 'paywall' | 'fail'
-      productRef?: string
-      purchaseRef?: string
+      updatedAt: string
+    }
+    GrantCustomerCreditsRequest: {
+      credits: number
+      reason?: string
+    }
+    GrantCustomerCreditsResponse: {
+      /** @description Customer credit balance after the grant */
+      balance: number
+      /** @description Granted credit amount */
+      credits: number
+      /** @description Customer reference identifier */
+      customerRef: string
+      /** @description Machine-readable grant reason */
+      reason?: string
+      /** @description Whether the grant was recorded */
+      success: boolean
+    }
+    LimitBalanceDto: {
+      /** @description Credit balance in credits (100 credits = 1 minor currency unit) */
+      creditBalance: number
+      /** @description Credits deducted per metered item (wallet coverage: remainingUnits = balance / creditsPerUnit) */
+      creditsPerUnit: number
+      currency: string
+      /** @description How many metered items the credit balance still covers (`balance / creditsPerUnit`) */
+      remainingUnits?: number
+    }
+    LimitPlanItemDto: {
+      /** @description Derived billing cycle */
+      billingCycle?: string
+      /**
+       * @deprecated
+       * @description Deprecated alias of perUnitChargeMinor. Same minor-units value — not credits. Prefer perUnitChargeMinor.
+       */
+      creditsPerUnit?: number
+      currency: string
+      /** @description Derived included allowance for the metered meter. `0` is the unlimited sentinel (`LimitOption.cap === 0`). */
+      freeUnits?: number
+      name?: string
+      /** @description Composable pricing options for this plan */
+      options?: {
+        [key: string]: unknown
+      }[]
+      /** @description Per-request charge in minor currency units (usage-based plans) */
+      perUnitChargeMinor?: number
+      /** @description Headline price in smallest currency unit (e.g. cents) */
+      price: number
+      reference: string
+      requiresPayment: boolean
+      /** @description Derived plan type */
+      type: string
+    }
+    LimitProductBriefDto: {
+      name?: string
+      reference: string
+    }
+    LimitResponse: {
+      /** @description True when the customer must activate a priced default plan before usage is allowed */
+      activationRequired?: boolean
+      /** @description Prepaid usage balance context when the default plan is usage-based */
+      balance?: components['schemas']['LimitBalanceDto']
+      /**
+       * Checkout session ID if payment is required
+       * @example e3f1c2d4b6a89f001122334455667788
+       */
+      checkoutSessionId?: string
+      /**
+       * Checkout URL if payment is required
+       * @example https://solvapay.com/customer/checkout?id=e3f1c2d4b6a89f001122334455667788
+       */
+      checkoutUrl?: string
+      /** @description Customer portal confirmation URL when activation is required (fallback when not starting checkout) */
+      confirmationUrl?: string
+      /** @description Credit balance in credits (100 credits = 1 minor currency unit), for pre-paid usage-based plans */
+      creditBalance?: number
+      /** @description Credits deducted per metered item (for prepaid usage-based plans) */
+      creditsPerUnit?: number
+      /** @description ISO 4217 currency code for credit fields */
+      currency?: string
+      /**
+       * The meter name to use when tracking usage events
+       * @example requests
+       */
+      meterName?: string
+      /** @description Access is blocked pending an auto-recharge top-up of the prepaid balance — `onExceed: top_up`. */
+      needsTopUp?: boolean
+      /** @description Access is blocked pending a plan switch to the limit's target pricing — `onExceed: auto_upgrade`. */
+      needsUpgrade?: boolean
+      /** @description Access is granted and usage beyond the included cap accrues an overage charge — `onExceed: charge`. */
+      overage?: boolean
+      /** @description Active plans on the product available for activation or checkout */
+      plans?: components['schemas']['LimitPlanItemDto'][]
+      /** @description Product the limit check applies to */
+      product?: components['schemas']['LimitProductBriefDto']
+      /**
+       * Remaining usage units before hitting the limit. `-1` means unlimited (no finite cap).
+       * @example 997
+       */
+      remaining: number
+      /** @description Access is granted but the caller should degrade/throttle service — the limit was exceeded with `onExceed: throttle`. */
+      throttled?: boolean
+      /** @description The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded. */
+      upgraded?: boolean
+      /**
+       * Whether the customer is within their usage limits
+       * @example true
+       */
+      withinLimits: boolean
+    }
+    McpBootstrapDto: {
+      authApiKey?: string
+      authHeaderName?: string
       description?: string
-      errorMessage?: string
-      metadata: {
+      imageUrl?: string
+      mcpDomain?: string
+      metadata?: {
         [key: string]: unknown
       }
-      duration?: number
-      /** Format: date-time */
-      timestamp: string
-      idempotencyKey?: string
-    }
-    BulkCreateUsageRequest: {
-      events: {
-        customerRef: string
-        /**
-         * @default api_call
-         * @enum {string}
-         */
-        actionType: 'transaction' | 'api_call' | 'hour' | 'email' | 'storage' | 'custom'
-        /** @default 1 */
-        units: number
-        /**
-         * @default success
-         * @enum {string}
-         */
-        outcome: 'success' | 'paywall' | 'fail'
-        productRef?: string
-        purchaseRef?: string
-        description?: string
-        errorMessage?: string
-        metadata?: {
+      name?: string
+      originUrl: string
+      plans?: {
+        currency?: string
+        features?: {
           [key: string]: unknown
         }
-        duration?: number
-        /** Format: date-time */
-        timestamp: string
-        idempotencyKey?: string
+        key: string
+        name: string
+        options: (
+          | {
+              amountMinor: number
+              currency: string
+              /** @enum {string} */
+              kind: 'charge'
+              label?: string
+              meter?: string
+              oneTime?: boolean
+              /** @enum {string} */
+              per: 'unit' | 'seat' | 'flat'
+            }
+          | {
+              /** Format: date-time */
+              anchor?: string
+              count?: number
+              /** @enum {string} */
+              interval: 'week' | 'month' | 'year'
+              /** @enum {string} */
+              kind: 'billingCycle'
+            }
+          | {
+              charge: {
+                amountMinor: number
+                currency: string
+                label?: string
+                meter?: string
+                /** @enum {string} */
+                per: 'unit' | 'seat' | 'flat'
+              }
+              from: number
+              /** @enum {string} */
+              kind: 'tier'
+              label?: string
+              /** @enum {string} */
+              mode: 'graduated' | 'volume'
+              to: number | null
+            }
+          | {
+              cap: number
+              /** @enum {string} */
+              kind: 'limit'
+              label?: string
+              meter: string
+              /** @enum {string} */
+              onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+              onExceedPricingId?: string
+              /** @enum {string} */
+              scope: 'billing_period' | 'lifetime' | 'rolling_window'
+              /** @enum {string} */
+              uiHint?: 'upgrade_prompt' | 'soft_warning'
+              windowDays?: number
+            }
+          | {
+              feature: string
+              /** @enum {string} */
+              kind: 'entitlement'
+              label?: string
+              scope?: string
+              value: boolean | number | string
+            }
+          | {
+              days: number
+              downgradeToPricingId?: string
+              /** @enum {string} */
+              kind: 'trial'
+              label?: string
+              /** @enum {string} */
+              onEnd: 'convert' | 'cancel' | 'downgrade'
+              requireCard?: boolean
+            }
+          | {
+              /** @enum {string} */
+              kind: 'prepaid'
+              label?: string
+              lowBalanceUnits?: number
+              minTopUpMinor?: number
+            }
+          | {
+              /** @enum {string} */
+              appliesTo?: 'recurring' | 'setup' | 'usage' | 'all'
+              currency?: string
+              cycles?: number
+              /** @enum {string} */
+              duration: 'once' | 'repeating' | 'forever'
+              /** @enum {string} */
+              kind: 'discount'
+              label?: string
+              /** @enum {string} */
+              mode: 'percentage' | 'fixed'
+              value: number
+            }
+          | {
+              capUnits?: number
+              currency?: string
+              /** @enum {string} */
+              kind: 'rollover'
+              label?: string
+              maxCycles?: number
+              meter: string
+              rateMinor?: number
+              /** @enum {string} */
+              treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
+            }
+          | {
+              /** @enum {string} */
+              kind: 'autoAssigned'
+              label?: string
+            }
+          | {
+              /** @enum {string} */
+              kind: 'hidden'
+              label?: string
+            }
+        )[]
+      }[]
+      productType?: string
+      tools?: {
+        description?: string
+        name: string
+        noPlan?: boolean
+        planKeys?: string[]
       }[]
     }
-    RecordMeterEventZodDto: {
-      meterName: string
-      customerRef: string
-      value?: number
-      properties: {
+    McpBootstrapResult: {
+      /** @description Auto-discovered tools used during bootstrap */
+      autoMappedTools?: {
+        description?: string
+        name?: string
+      }[]
+      /**
+       * Created or updated MCP server identity
+       * @example {
+       *       "defaultPlanRef": "pln_FREE123",
+       *       "id": "507f1f77bcf86cd799439011",
+       *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
+       *       "reference": "mcp_ABC123",
+       *       "subdomain": "acme-docs",
+       *       "url": "https://origin.example.com/mcp"
+       *     }
+       */
+      mcpServer: {
         [key: string]: unknown
       }
+      /**
+       * Resolved plan mapping by bootstrap key
+       * @example {
+       *       "free": {
+       *         "name": "Free",
+       *         "reference": "pln_FREE123"
+       *       }
+       *     }
+       */
+      planMap: {
+        [key: string]: unknown
+      }
+      /** @description Created product */
+      product: components['schemas']['SdkProductResponse']
+      /**
+       * True when tools were auto-discovered from origin because the request omitted tools
+       * @example true
+       */
+      toolsAutoMapped?: boolean
+    }
+    OneTimePurchaseInfo: {
+      /**
+       * Amount in USD cents (normalised for aggregation)
+       * @example 9900
+       */
+      amount: number
+      /**
+       * When the one-time purchase was completed
+       * @example 2025-10-27T10:00:00Z
+       */
+      completedAt: string
+      /** @description Created at */
+      createdAt: string
+      /**
+       * ISO 4217 currency code of the customer-facing charge
+       * @example USD
+       */
+      currency: string
+      /**
+       * Customer reference
+       * @example cus_3C4D5E6F
+       */
+      customerRef: string
+      /**
+       * Product reference
+       * @example prd_abc123
+       */
       productRef?: string
-      timestamp?: string
+      /**
+       * Purchase reference
+       * @example pur_1A2B3C4D
+       */
+      reference: string
+    }
+    Plan: {
+      /** @description Access expiry in days */
+      accessExpiryDays?: number
+      /** @description Creation timestamp */
+      createdAt: string
+      /**
+       * Currency code (ISO 4217)
+       * @example USD
+       */
+      currency?: string
+      /**
+       * Currency symbol (derived from currency)
+       * @example $
+       */
+      currencySymbol?: string
+      /**
+       * Plan description
+       * @example Best for teams getting started
+       */
+      description?: string
+      /** @description Plan features */
+      features?: {
+        [key: string]: unknown
+      }
+      /**
+       * Whether the plan is active (derived from status)
+       * @example true
+       */
+      isActive: boolean
+      /** @description Maximum number of active users */
+      maxActiveUsers?: number
+      /**
+       * Plan name
+       * @example Starter
+       */
+      name?: string
+      /** @description Composable pricing options (money as integer minor units) */
+      options: {
+        [key: string]: unknown
+      }[]
+      /**
+       * Derived headline price in minor units (the base or one-time charge)
+       * @example 2999
+       */
+      price?: number
+      /**
+       * Plan reference
+       * @example pln_1A2B3C4D
+       */
+      reference: string
+      /**
+       * Whether payment is required
+       * @example true
+       */
+      requiresPayment?: boolean
+      /**
+       * Plan status
+       * @example active
+       */
+      status: string
+      /**
+       * Derived plan type (read from options)
+       * @example recurring
+       * @enum {string}
+       */
+      type: 'recurring' | 'one-time' | 'usage-based' | 'hybrid'
+      /** @description Last update timestamp */
+      updatedAt: string
+    }
+    ProcessPaymentCancelled: {
+      /**
+       * discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: 'ProcessPaymentCancelled'
+    }
+    ProcessPaymentFailed: {
+      /**
+       * discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: 'ProcessPaymentFailed'
+    }
+    ProcessPaymentIntentDto: {
+      customerRef: string
+      planRef?: string
+      productRef?: string
+    }
+    ProcessPaymentProcessing: {
+      /**
+       * discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: 'ProcessPaymentProcessing'
+    }
+    ProcessPaymentSucceededBare: {
+      /**
+       * discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: 'ProcessPaymentSucceededBare'
+    }
+    ProcessPaymentSucceededOneTime: {
+      oneTimePurchase: components['schemas']['OneTimePurchaseInfo']
+      /**
+       * discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: 'ProcessPaymentSucceededOneTime'
+      /**
+       * @example one-time
+       * @enum {string}
+       */
+      type: 'one-time'
+    }
+    ProcessPaymentSucceededRecurring: {
+      purchase: components['schemas']['SdkPurchaseResponse']
+      /**
+       * discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: 'ProcessPaymentSucceededRecurring'
+      /**
+       * @example recurring
+       * @enum {string}
+       */
+      type: 'recurring'
+    }
+    ProcessPaymentTimeout: {
+      /** @description Detail message describing the timeout */
+      message?: string
+      /**
+       * discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: 'ProcessPaymentTimeout'
+    }
+    ProductConfigDto: {
+      /**
+       * Delivery method
+       * @example api
+       */
+      deliveryMethod?: string
+      /**
+       * Fulfillment type
+       * @example digital
+       */
+      fulfillmentType?: string
+      /**
+       * Validity period in days
+       * @example 30
+       */
+      validityPeriod?: number
+    }
+    PutAutoRechargeSdkDto: {
+      currency: string
+      /** Format: email */
+      customerEmail?: string
+      customerName?: string
+      customerRef: string
+      deferSetupIntent?: boolean
+      enabled: boolean
+      maxMonthlySpendMajor?: number
+      thresholdAmountMajor?: number
+      topupAmountMajor?: number
+      /** @enum {string} */
+      triggerType: 'balance'
     }
     RecordBulkMeterEventsZodDto: {
       events: {
-        meterName: string
         customerRef: string
-        value?: number
+        meterName: string
+        productRef?: string
         properties?: {
           [key: string]: unknown
         }
-        productRef?: string
         timestamp?: string
+        value?: number
       }[]
+    }
+    RecordMeterEventZodDto: {
+      customerRef: string
+      meterName: string
+      productRef?: string
+      properties?: {
+        [key: string]: unknown
+      }
+      timestamp?: string
+      value?: number
+    }
+    SaveAutoRechargeResponse: {
+      config: components['schemas']['AutoRechargeConfigDto']
+      display?: components['schemas']['AutoRechargeDisplayDto']
+      /** @description Stripe publishable key for the resolved environment */
+      publishableKey?: string
+      /** @description Stripe SetupIntent client secret for card collection */
+      setupClientSecret?: string
+      /** @description Connected Stripe account ID */
+      stripeAccountId?: string
+    }
+    SdkMerchantResponseDto: {
+      /**
+       * Company registration number (EIN, Companies House No, Org No)
+       * @example HRB12345
+       */
+      companyNumber?: string
+      /**
+       * ISO-3166 alpha-2 country code of the merchant
+       * @example US
+       */
+      country?: string
+      /**
+       * ISO-4217 default settlement currency
+       * @example usd
+       */
+      defaultCurrency?: string
+      /**
+       * Brand name shown in UI
+       * @example Acme
+       */
+      displayName: string
+      /**
+       * Absolute URL to the square app icon / logomark. Consumed by MCP host chromes, mobile avatar slots, and any surface where the landscape `logoUrl` would need letterboxing.
+       * @example https://cdn.acme.com/icon.png
+       */
+      iconUrl?: string
+      /**
+       * Legal entity name used in SCA mandate copy
+       * @example Acme Inc.
+       */
+      legalName: string
+      /**
+       * Absolute URL to the merchant logo
+       * @example https://cdn.acme.com/logo.png
+       */
+      logoUrl?: string
+      /** @example https://acme.com/privacy */
+      privacyUrl?: string
+      /**
+       * Descriptor appearing on the customer card statement
+       * @example ACME INC
+       */
+      statementDescriptor?: string
+      /**
+       * Full set of currencies a customer may pay credit topups in, including the default currency. Omitted/single-entry means single-currency behavior.
+       * @example [
+       *       "USD",
+       *       "EUR",
+       *       "GBP"
+       *     ]
+       */
+      supportedTopupCurrencies?: string[]
+      /** @example support@acme.com */
+      supportEmail?: string
+      /** @example https://acme.com/support */
+      supportUrl?: string
+      /**
+       * Tax identification number (US: EIN)
+       * @example 12-3456789
+       */
+      taxId?: string
+      /** @example https://acme.com/terms */
+      termsUrl?: string
+      /**
+       * VAT identification number (UK/EU)
+       * @example DE123456789
+       */
+      vatNumber?: string
+    }
+    SdkPaymentIntentListItem: {
+      /**
+       * Amount in USD minor units (ledger/normalised); `currency` is the presentment currency
+       * @example 4999
+       */
+      amount: number
+      /**
+       * Client secret used to confirm the payment on the client
+       * @example pi_1a2b3c4d5e6f7g8h_secret_xxx
+       */
+      clientSecret?: string
+      /**
+       * Creation timestamp
+       * @example 2025-10-11T10:30:00.000Z
+       */
+      createdAt?: string
+      /**
+       * ISO 4217 presentment (charge) currency code
+       * @example usd
+       */
+      currency: string
+      /**
+       * Plan reference
+       * @example pln_2b3c4d5e6f7g
+       */
+      planRef?: string
+      /**
+       * Payment processor payment intent ID
+       * @example pi_1a2b3c4d5e6f7g8h
+       */
+      processorPaymentId: string
+      /**
+       * Payment intent status
+       * @example succeeded
+       * @enum {string}
+       */
+      status:
+        | 'pending'
+        | 'requires_payment_method'
+        | 'requires_confirmation'
+        | 'requires_action'
+        | 'processing'
+        | 'succeeded'
+        | 'failed'
+        | 'cancelled'
+    }
+    SdkPaymentIntentListResponse: {
+      paymentIntents: components['schemas']['SdkPaymentIntentListItem'][]
+      /**
+       * Number of payment intents returned
+       * @example 1
+       */
+      total: number
+    }
+    SdkPaymentIntentResponse: {
+      /**
+       * Connected Stripe account ID (only present on create)
+       * @example acct_1A2B3C4D
+       */
+      accountId?: string
+      /**
+       * Amount in USD minor units (ledger/normalised). The charge-currency amount is `originalAmount` paired with `currency`.
+       * @example 4999
+       */
+      amount: number
+      /**
+       * Client secret used to confirm the payment on the client
+       * @example pi_1a2b3c4d5e6f7g8h_secret_AbCdEf123456
+       */
+      clientSecret: string
+      /**
+       * Creation timestamp
+       * @example 2025-10-18T10:30:00.000Z
+       */
+      createdAt?: string
+      /**
+       * ISO 4217 presentment (charge) currency code — pairs with `originalAmount`
+       * @example usd
+       */
+      currency: string
+      /**
+       * Customer reference
+       * @example cus_3c4d5e6f7g8h
+       */
+      customerRef?: string
+      /**
+       * Exchange rate applied to convert to USD
+       * @example 1
+       */
+      exchangeRate?: number
+      /**
+       * Expiry timestamp of the payment intent
+       * @example 2025-10-19T10:30:00.000Z
+       */
+      expiresAt?: string
+      /**
+       * Charge-currency amount in minor units (the currency the customer is billed in)
+       * @example 4999
+       */
+      originalAmount?: number
+      /**
+       * Plan reference
+       * @example pln_2b3c4d5e6f7g
+       */
+      planRef?: string
+      /**
+       * Payment processor payment intent ID
+       * @example pi_1a2b3c4d5e6f7g8h
+       */
+      processorPaymentId: string
+      /**
+       * Stripe publishable key for the environment
+       * @example pk_test_...
+       */
+      publishableKey: string
+      /**
+       * Payment intent status
+       * @example requires_payment_method
+       * @enum {string}
+       */
+      status:
+        | 'pending'
+        | 'requires_payment_method'
+        | 'requires_confirmation'
+        | 'requires_action'
+        | 'processing'
+        | 'succeeded'
+        | 'failed'
+        | 'cancelled'
+      /**
+       * Ledger transaction ID
+       * @example 507f1f77bcf86cd799439011
+       */
+      transactionId?: string
+    }
+    SdkPlanResponse: {
+      /** @description Creation timestamp */
+      createdAt: string
+      /**
+       * Currency code (ISO 4217)
+       * @example USD
+       */
+      currency: string
+      /**
+       * Currency symbol
+       * @example $
+       */
+      currencySymbol?: string
+      /**
+       * Plan description
+       * @example Best for teams getting started
+       */
+      description?: string
+      /** @description Plan features */
+      features?: {
+        [key: string]: unknown
+      }
+      /**
+       * Whether the plan is active
+       * @example true
+       */
+      isActive: boolean
+      /**
+       * Plan name
+       * @example Starter
+       */
+      name?: string
+      /** @description Composable pricing options (money as integer minor units) */
+      options: {
+        [key: string]: unknown
+      }[]
+      /**
+       * Derived headline price in minor units (base or one-time charge)
+       * @example 2999
+       */
+      price?: number
+      /**
+       * Plan reference
+       * @example pln_1A2B3C4D
+       */
+      reference: string
+      /**
+       * Whether payment is required
+       * @example true
+       */
+      requiresPayment: boolean
+      /**
+       * Plan status
+       * @example active
+       */
+      status: string
+      /**
+       * Derived plan type (read from options)
+       * @example recurring
+       * @enum {string}
+       */
+      type: 'recurring' | 'one-time' | 'usage-based' | 'hybrid'
+      /** @description Last update timestamp */
+      updatedAt: string
+    }
+    SdkPlanSnapshotDto: {
+      /**
+       * Currency code
+       * @example USD
+       */
+      currency: string
+      /** @description Plan features */
+      features?: {
+        [key: string]: unknown
+      } | null
+      /**
+       * Whether the frozen plan meters usage
+       * @example true
+       */
+      isMetered?: boolean
+      /**
+       * Plan name captured at purchase time
+       * @example Pro Monthly
+       */
+      name?: string
+      /** @description Frozen composable pricing options captured at purchase time */
+      options?: {
+        [key: string]: unknown
+      }[]
+      /**
+       * Headline plan price in minor units (e.g. cents)
+       * @example 2999
+       */
+      price: number
+      /**
+       * Plan reference
+       * @example pln_1A2B3C4D
+       */
+      reference?: string
+    }
+    SdkPlatformConfigResponseDto: {
+      /**
+       * SolvaPay's platform Stripe publishable key for the authenticated provider's environment. Safe to expose browser-side; paired with the connected `accountId` returned from `create-payment-intent` for Stripe Connect direct charges. Omitted when not configured so callers can fall back cleanly to a hosted flow.
+       * @example pk_test_...
+       */
+      stripePublishableKey?: string
+    }
+    SdkProductResponse: {
+      /**
+       * Product balance in cents
+       * @example 0
+       */
+      balance: number
+      /** @description Product-specific configuration */
+      config?: components['schemas']['ProductConfigDto']
+      /** @description Creation timestamp */
+      createdAt: string
+      /** @description Product description */
+      description?: string
+      /** @description URL to the product image */
+      imageUrl?: string
+      /**
+       * Whether this product uses the Managed MCP integration (SolvaPay reverse proxy)
+       * @example false
+       */
+      isManagedMcp: boolean
+      /**
+       * @deprecated
+       * @description Deprecated alias of isManagedMcp. Prefer isManagedMcp; still emitted for wire compatibility.
+       * @example false
+       */
+      isMcpPay: boolean
+      /**
+       * MCP linkage details for MCP-enabled products
+       * @example {
+       *       "defaultPlanRef": "pln_FREE123",
+       *       "mcpProxyUrl": "https://acme-docs.mcp.solvapay.com/mcp",
+       *       "mcpServerRef": "mcp_ABC123",
+       *       "mcpSubdomain": "acme-docs",
+       *       "originUrl": "https://origin.example.com/mcp"
+       *     }
+       */
+      mcp?: {
+        [key: string]: unknown
+      }
+      /** @description Arbitrary key-value metadata */
+      metadata?: {
+        [key: string]: unknown
+      }
+      /**
+       * Product name
+       * @example AI Writing Assistant
+       */
+      name: string
+      /** @description Plans associated with this product */
+      plans?: components['schemas']['SdkPlanResponse'][]
+      /** @description Free-form product type */
+      productType?: string
+      /**
+       * Product reference
+       * @example prd_1A2B3C4D
+       */
+      reference: string
+      /**
+       * Product status
+       * @example active
+       */
+      status: string
+      /**
+       * Total number of transactions
+       * @example 0
+       */
+      totalTransactions: number
+      /** @description Last update timestamp */
+      updatedAt: string
+    }
+    SdkPurchaseResponse: {
+      /**
+       * Amount in USD cents (normalised for aggregation)
+       * @example 9900
+       */
+      amount: number
+      /** @description Auto-renew enabled */
+      autoRenew?: boolean
+      /**
+       * Billing cycle
+       * @enum {string}
+       */
+      billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+      /**
+       * Reason for cancellation
+       * @example Customer request
+       */
+      cancellationReason?: string
+      /**
+       * When purchase was cancelled
+       * @example 2025-10-28T10:00:00Z
+       */
+      cancelledAt?: string
+      /** @description Created at */
+      createdAt: string
+      /**
+       * ISO 4217 currency code of the customer-facing charge
+       * @example GBP
+       */
+      currency: string
+      /**
+       * Customer email
+       * @example customer@example.com
+       */
+      customerEmail?: string
+      /**
+       * Customer reference
+       * @example cus_3C4D5E6F
+       */
+      customerRef: string
+      /**
+       * End date of purchase
+       * @example 2025-11-27T10:00:00Z
+       */
+      endDate?: string
+      /**
+       * Exchange rate from original currency to USD
+       * @example 1.32
+       */
+      exchangeRate?: number
+      /**
+       * Whether the purchase is recurring
+       * @example true
+       */
+      isRecurring: boolean
+      /** @description Arbitrary metadata attached to the purchase */
+      metadata?: {
+        [key: string]: unknown
+      }
+      /** @description Next billing date */
+      nextBillingDate?: string
+      /**
+       * How the purchase originated
+       * @example paid
+       * @enum {string}
+       */
+      origin?: 'paid' | 'free_default' | 'manual' | 'one_time' | 'credit_topup' | 'admin_assignment'
+      /**
+       * Original amount in the payment currency (minor units)
+       * @example 7500
+       */
+      originalAmount?: number
+      /** @description Paid at timestamp */
+      paidAt?: string
+      /**
+       * Plan reference from the plan snapshot, for reliable plan matching
+       * @example pln_abc123
+       */
+      planRef?: string
+      /** @description Snapshot of the plan at time of purchase */
+      planSnapshot?: components['schemas']['SdkPlanSnapshotDto']
+      /**
+       * Product name
+       * @example API Gateway Manager
+       */
+      productName?: string
+      /**
+       * Product reference
+       * @example prd_abc123
+       */
+      productRef?: string
+      /**
+       * Purchase reference
+       * @example pur_1A2B3C4D
+       */
+      reference: string
+      /**
+       * Whether the purchase requires payment
+       * @example false
+       */
+      requiresPayment?: boolean
+      /**
+       * Start date
+       * @example 2025-10-27T10:00:00Z
+       */
+      startDate: string
+      /**
+       * Purchase status
+       * @example active
+       */
+      status: string
+      /** @description Usage billing state for usage-based plans */
+      usage?: components['schemas']['UsageBillingDto']
+    }
+    TaxBreakdownDto: {
+      /** @description ISO 4217 currency code */
+      currency: string
+      /** @description Whether tax is included in the listed price */
+      inclusive: boolean
+      /** @description True when Stripe reports taxability_reason not_collecting (no registration) */
+      notRegistered?: boolean
+      /** @description Pre-tax amount in minor units */
+      subtotal: number
+      /** @description Tax amount in minor units */
+      taxAmount: number
+      /** @description Tax rate as a decimal (e.g. 0.25 for 25%) */
+      taxRate: number
+      /**
+       * Stripe tax type (e.g. vat, sales_tax, gst)
+       * @enum {string}
+       */
+      taxType?:
+        | 'amusement_tax'
+        | 'communications_tax'
+        | 'gst'
+        | 'hst'
+        | 'igst'
+        | 'jct'
+        | 'lease_tax'
+        | 'pst'
+        | 'qst'
+        | 'retail_delivery_fee'
+        | 'rst'
+        | 'sales_tax'
+        | 'service_tax'
+        | 'vat'
+      /** @description Total amount in minor units */
+      total: number
+      /** @enum {string} */
+      treatment: 'reverse_charge' | 'standard' | 'none' | 'not_collecting' | 'not_supported'
+    }
+    UpdateCustomerRequest: {
+      description?: string
+      /** Format: email */
+      email?: string
+      externalRef?: string
+      metadata?: unknown
+      name?: string
+      telephone?: string | ''
+    }
+    UpdatePlanRequest: {
+      accessExpiryDays?: number
+      currency?: string
+      description?: string
+      features?: {
+        [key: string]: unknown
+      }
+      maxActiveUsers?: number
+      metadata?: {
+        [key: string]: unknown
+      }
+      name?: string
+      options?: (
+        | {
+            amountMinor: number
+            currency: string
+            /** @enum {string} */
+            kind: 'charge'
+            label?: string
+            meter?: string
+            oneTime?: boolean
+            /** @enum {string} */
+            per: 'unit' | 'seat' | 'flat'
+          }
+        | {
+            /** Format: date-time */
+            anchor?: string
+            count?: number
+            /** @enum {string} */
+            interval: 'week' | 'month' | 'year'
+            /** @enum {string} */
+            kind: 'billingCycle'
+          }
+        | {
+            charge: {
+              amountMinor: number
+              currency: string
+              label?: string
+              meter?: string
+              /** @enum {string} */
+              per: 'unit' | 'seat' | 'flat'
+            }
+            from: number
+            /** @enum {string} */
+            kind: 'tier'
+            label?: string
+            /** @enum {string} */
+            mode: 'graduated' | 'volume'
+            to: number | null
+          }
+        | {
+            cap: number
+            /** @enum {string} */
+            kind: 'limit'
+            label?: string
+            meter: string
+            /** @enum {string} */
+            onExceed: 'block' | 'throttle' | 'charge' | 'notify' | 'top_up' | 'auto_upgrade'
+            onExceedPricingId?: string
+            /** @enum {string} */
+            scope: 'billing_period' | 'lifetime' | 'rolling_window'
+            /** @enum {string} */
+            uiHint?: 'upgrade_prompt' | 'soft_warning'
+            windowDays?: number
+          }
+        | {
+            feature: string
+            /** @enum {string} */
+            kind: 'entitlement'
+            label?: string
+            scope?: string
+            value: boolean | number | string
+          }
+        | {
+            days: number
+            downgradeToPricingId?: string
+            /** @enum {string} */
+            kind: 'trial'
+            label?: string
+            /** @enum {string} */
+            onEnd: 'convert' | 'cancel' | 'downgrade'
+            requireCard?: boolean
+          }
+        | {
+            /** @enum {string} */
+            kind: 'prepaid'
+            label?: string
+            lowBalanceUnits?: number
+            minTopUpMinor?: number
+          }
+        | {
+            /** @enum {string} */
+            appliesTo?: 'recurring' | 'setup' | 'usage' | 'all'
+            currency?: string
+            cycles?: number
+            /** @enum {string} */
+            duration: 'once' | 'repeating' | 'forever'
+            /** @enum {string} */
+            kind: 'discount'
+            label?: string
+            /** @enum {string} */
+            mode: 'percentage' | 'fixed'
+            value: number
+          }
+        | {
+            capUnits?: number
+            currency?: string
+            /** @enum {string} */
+            kind: 'rollover'
+            label?: string
+            maxCycles?: number
+            meter: string
+            rateMinor?: number
+            /** @enum {string} */
+            treatment: 'forfeit' | 'carry_forward' | 'credit_units' | 'credit_money'
+          }
+        | {
+            /** @enum {string} */
+            kind: 'autoAssigned'
+            label?: string
+          }
+        | {
+            /** @enum {string} */
+            kind: 'hidden'
+            label?: string
+          }
+      )[]
+      /** @enum {string} */
+      status?: 'active' | 'inactive' | 'archived'
+      /** @enum {string} */
+      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
+    }
+    UpdateProductRequest: {
+      config?: {
+        deliveryMethod?: string
+        fulfillmentType?: string
+        validityPeriod?: number
+      }
+      description?: string
+      imageUrl?: string
+      metadata?: {
+        [key: string]: unknown
+      }
+      name?: string
+      productType?: string
+      /** @enum {string} */
+      taxBehavior?: 'auto' | 'inclusive' | 'exclusive'
+    }
+    UsageBillingDto: {
+      /**
+       * Overage cost in cents
+       * @example 0
+       */
+      overageCost: number
+      /**
+       * Units exceeding the plan included amount
+       * @example 0
+       */
+      overageUnits: number
+      /**
+       * Period end date
+       * @example 2025-11-01T00:00:00Z
+       */
+      periodEnd?: string
+      /**
+       * Period start date
+       * @example 2025-10-01T00:00:00Z
+       */
+      periodStart?: string
+      /**
+       * Units consumed in current period
+       * @example 150
+       */
+      used: number
+    }
+    UsageRecordResponse: {
+      creditDebit?:
+        | components['schemas']['CreditDebitSuccessResponse']
+        | components['schemas']['CreditDebitSkippedResponse']
+      /** @example usage_A1B2C3D4 */
+      reference: string
+      /** @example true */
+      success: boolean
+    }
+    UserInfoPlanDto: {
+      /** @example monthly */
+      billingCycle?: string | null
+      /** @example USD */
+      currency: string
+      features?: {
+        [key: string]: unknown
+      } | null
+      /**
+       * @deprecated
+       * @description Deprecated: always null. Limit data now lives in the plan snapshot options (`kind: "limit"`).
+       */
+      limits?: {
+        [key: string]: unknown
+      } | null
+      /**
+       * Price in minor currency units (e.g. cents)
+       * @example 2999
+       */
+      price?: number
+      /** @example pln_2B3C4D5E */
+      reference?: string
+      /** @example recurring */
+      type: string
+    }
+    UserInfoPurchaseDto: {
+      /** @example 2025-11-27T10:00:00Z */
+      endDate?: string | null
+      plan?: components['schemas']['UserInfoPlanDto'] | null
+      /** @example recurring */
+      planType?: string
+      /** @example My API Product */
+      productName: string
+      /** @example pur_1A2B3C4D */
+      reference: string
+      /** @example 2025-10-27T10:00:00Z */
+      startDate?: string | null
+      /** @example active */
+      status: string
+      usage?: components['schemas']['UserInfoUsageDto'] | null
+    }
+    UserInfoRequest: {
+      customerRef: string
+      productRef: string
+    }
+    UserInfoResponse: {
+      purchase?: components['schemas']['UserInfoPurchaseDto'] | null
+      /**
+       * Human-readable status summary
+       * @example Active subscription: My API Product (25% usage consumed)
+       */
+      status: string
+      user?: components['schemas']['UserInfoUserDto'] | null
+      /**
+       * Customer portal session URL
+       * @example https://solvapay.com/customer/manage?id=abc123
+       */
+      verifyUrl?: string | null
+    }
+    UserInfoUsageDto: {
+      /**
+       * Meter key referenced by the plan options
+       * @example requests
+       */
+      meterRef?: string | null
+      /** @example 25 */
+      percentUsed?: number | null
+      /** @example 750 */
+      remaining: number
+      /**
+       * Included allowance for the period. `0` means unlimited / no finite cap.
+       * @example 1000
+       */
+      total: number
+      /** @example 250 */
+      used: number
+    }
+    UserInfoUserDto: {
+      /** @example john@example.com */
+      email: string
+      /** @example auth_user_12345 */
+      externalRef?: string | null
+      /** @example John Doe */
+      name?: string | null
+      /** @example cus_3C4D5E6F */
+      reference: string
+    }
+    WebhookEventCategoryDto: {
+      /**
+       * Category key.
+       * @example purchase
+       */
+      category: string
+      /** @description Category description. */
+      description: string
+      /** @description Events in this category. */
+      events: components['schemas']['WebhookEventDefinitionDto'][]
+      /**
+       * Human-readable category label.
+       * @example Purchases & subscriptions
+       */
+      label: string
+    }
+    WebhookEventDataDto: {
+      /** @description The resource that the event relates to. */
+      object: {
+        [key: string]: unknown
+      }
+      /** @description For *.updated events, the previous values of changed attributes. */
+      previous_attributes?: {
+        [key: string]: unknown
+      } | null
+    }
+    WebhookEventDefinitionDto: {
+      /** @description Human-readable description of the event. */
+      description: string
+      /**
+       * Emission status.
+       * @example live
+       * @enum {string}
+       */
+      status: 'live' | 'planned'
+      /** @example purchase.created */
+      type: components['schemas']['WebhookEventType']
+    }
+    WebhookEventDto: {
+      /**
+       * API version that produced the event payload.
+       * @example 2025-10-01
+       */
+      api_version: string
+      /**
+       * Unix timestamp (seconds) when the event was created.
+       * @example 1717000000
+       */
+      created: number
+      /** @description Event payload envelope. */
+      data: components['schemas']['WebhookEventDataDto']
+      /**
+       * Unique event ID.
+       * @example evt_1A2B3C4D
+       */
+      id: string
+      /**
+       * True for live-mode events, false for sandbox.
+       * @example true
+       */
+      livemode: boolean
+      /** @description Context about the triggering API request. */
+      request: components['schemas']['WebhookEventRequestDto']
+      /** @example purchase.created */
+      type: components['schemas']['WebhookEventType']
+    }
+    WebhookEventRequestDto: {
+      /** @description ID of the API request that triggered the event. */
+      id: Record<string, never> | null
+      /** @description Idempotency key of the triggering request. */
+      idempotency_key: Record<string, never> | null
     }
     /**
      * Event type.
@@ -2623,78 +3141,6 @@ export interface components {
       | 'plan.created'
       | 'plan.updated'
       | 'plan.archived'
-    WebhookEventDefinitionDto: {
-      /** @example purchase.created */
-      type: components['schemas']['WebhookEventType']
-      /** @description Human-readable description of the event. */
-      description: string
-      /**
-       * Emission status.
-       * @example live
-       * @enum {string}
-       */
-      status: 'live' | 'planned'
-    }
-    WebhookEventCategoryDto: {
-      /**
-       * Category key.
-       * @example purchase
-       */
-      category: string
-      /**
-       * Human-readable category label.
-       * @example Purchases & subscriptions
-       */
-      label: string
-      /** @description Category description. */
-      description: string
-      /** @description Events in this category. */
-      events: components['schemas']['WebhookEventDefinitionDto'][]
-    }
-    WebhookEventDataDto: {
-      /** @description The resource that the event relates to. */
-      object: {
-        [key: string]: unknown
-      }
-      /** @description For *.updated events, the previous values of changed attributes. */
-      previous_attributes?: {
-        [key: string]: unknown
-      } | null
-    }
-    WebhookEventRequestDto: {
-      /** @description ID of the API request that triggered the event. */
-      id: Record<string, never> | null
-      /** @description Idempotency key of the triggering request. */
-      idempotency_key: Record<string, never> | null
-    }
-    WebhookEventDto: {
-      /**
-       * Unique event ID.
-       * @example evt_1A2B3C4D
-       */
-      id: string
-      /** @example purchase.created */
-      type: components['schemas']['WebhookEventType']
-      /**
-       * Unix timestamp (seconds) when the event was created.
-       * @example 1717000000
-       */
-      created: number
-      /**
-       * API version that produced the event payload.
-       * @example 2024-01-01
-       */
-      api_version: string
-      /** @description Event payload envelope. */
-      data: components['schemas']['WebhookEventDataDto']
-      /**
-       * True for live-mode events, false for sandbox.
-       * @example true
-       */
-      livemode: boolean
-      /** @description Context about the triggering API request. */
-      request: components['schemas']['WebhookEventRequestDto']
-    }
   }
   responses: never
   parameters: never
@@ -2704,93 +3150,7 @@ export interface components {
 }
 export type $defs = Record<string, never>
 export interface operations {
-  getMerchant: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Merchant identity */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['SdkMerchantResponseDto']
-        }
-      }
-      /** @description Provider not found in the requested environment. Body includes a `code` (`provider_not_found_in_environment`), the `requestedEnvironment`, and `providerExistsInSandbox` so the SDK / CLI can branch on the recovery path. */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getPlatformConfig: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Platform config */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['SdkPlatformConfigResponseDto']
-        }
-      }
-    }
-  }
-  ProductSdkController_listProducts: {
-    parameters: {
-      query?: {
-        /** @description Max results (1-100) */
-        limit?: number
-        /** @description Pagination offset */
-        offset?: number
-        /** @description Search by name or description */
-        search?: string
-        /** @description Filter by status */
-        status?: 'active' | 'inactive'
-        /** @description Filter no-code MCP integration products */
-        isMcpPay?: boolean
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Products retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            products?: components['schemas']['SdkProductResponse'][]
-            /** @description Total number of products matching the filters */
-            total?: number
-            /** @description Applied page size (clamped to 1-100) */
-            limit?: number
-            /** @description Applied pagination offset */
-            offset?: number
-          }
-        }
-      }
-    }
-  }
-  ProductSdkController_createProduct: {
+  ActivateSdkController_activate: {
     parameters: {
       query?: never
       header?: never
@@ -2799,20 +3159,42 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['CreateProductRequest']
+        'application/json': components['schemas']['ActivatePlanDto']
       }
     }
     responses: {
-      /** @description Product created successfully */
-      201: {
+      /** @description Plan activation result */
+      200: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['SdkProductResponse']
+          'application/json': components['schemas']['ActivatePlanResponseDto']
         }
       }
-      /** @description Missing required fields or validation error */
+    }
+  }
+  AutoRechargeSdkController_getAutoRecharge: {
+    parameters: {
+      query: {
+        customerRef: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Current auto-recharge config, if present. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AutoRechargeGetResponse']
+        }
+      }
+      /** @description customerRef query parameter is required */
       400: {
         headers: {
           [name: string]: unknown
@@ -2821,108 +3203,7 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_getProduct: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Product reference or ID */
-        productRef: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Product retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['SdkProductResponse']
-        }
-      }
-      /** @description Product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  ProductSdkController_updateProduct: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Product reference or ID */
-        productRef: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateProductRequest']
-      }
-    }
-    responses: {
-      /** @description Product updated successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['SdkProductResponse']
-        }
-      }
-      /** @description Product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  ProductSdkController_deleteProduct: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Product reference or ID */
-        productRef: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Product deleted or deactivated successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            success?: boolean
-            /**
-             * Outcome of the delete: hard delete in sandbox, soft-delete or deactivation in live depending on existing purchases
-             * @enum {string}
-             */
-            action?: 'deleted' | 'deactivated' | 'soft_deleted'
-          }
-        }
-      }
-      /** @description Product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  ProductSdkController_bootstrapMcpProduct: {
+  AutoRechargeSdkController_putAutoRecharge: {
     parameters: {
       query?: never
       header?: never
@@ -2931,20 +3212,20 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['McpBootstrapDto']
+        'application/json': components['schemas']['PutAutoRechargeSdkDto']
       }
     }
     responses: {
-      /** @description MCP product bootstrapped successfully */
-      201: {
+      /** @description Saved auto-recharge config and optional SetupIntent details. */
+      200: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['McpBootstrapResult']
+          'application/json': components['schemas']['SaveAutoRechargeResponse']
         }
       }
-      /** @description Invalid bootstrap request */
+      /** @description customerRef is required, or customer email is required to configure auto-recharge */
       400: {
         headers: {
           [name: string]: unknown
@@ -2953,251 +3234,59 @@ export interface operations {
       }
     }
   }
-  ProductSdkController_configureMcpPlans: {
+  AutoRechargeSdkController_deleteAutoRecharge: {
     parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Product reference or ID */
-        productRef: string
+      query: {
+        customerRef: string
       }
+      header?: never
+      path?: never
       cookie?: never
     }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ConfigureMcpPlansDto']
-      }
-    }
+    requestBody?: never
     responses: {
-      /** @description MCP plans configured successfully */
+      /** @description Auto-recharge was disabled. */
       200: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['ConfigureMcpPlansResult']
+          'application/json': components['schemas']['DisableAutoRechargeResponse']
         }
       }
-      /** @description Invalid MCP plans request or product is not MCP-enabled */
+      /** @description customerRef query parameter is required */
       400: {
         headers: {
           [name: string]: unknown
         }
         content?: never
       }
-      /** @description Product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
     }
   }
-  ProductSdkController_cloneProduct: {
+  CheckoutSessionSdkController_createCheckoutSession: {
     parameters: {
       query?: never
       header?: never
-      path: {
-        /** @description Product reference or ID to clone */
-        productRef: string
-      }
+      path?: never
       cookie?: never
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['CloneProductDto']
+        'application/json': components['schemas']['CreateCheckoutSessionRequest']
       }
     }
     responses: {
-      /** @description Product cloned successfully */
+      /** @description Checkout session created */
       201: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['SdkProductResponse']
+          'application/json': components['schemas']['CreateCheckoutSessionResponse']
         }
       }
-      /** @description Product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PlanSdkController_listPlans: {
-    parameters: {
-      query?: {
-        /** @description Max results (default 50) */
-        limit?: number
-        /** @description Pagination offset (default 0) */
-        offset?: number
-      }
-      header?: never
-      path: {
-        /** @description Product reference or ID */
-        productRef: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Plans retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            plans?: components['schemas']['Plan'][]
-            /** @description Total number of plans for the product */
-            total?: number
-            limit?: number
-            offset?: number
-          }
-        }
-      }
-      /** @description Product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PlanSdkController_createPlan: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Product reference or ID */
-        productRef: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreatePlanRequest']
-      }
-    }
-    responses: {
-      /** @description Plan created successfully */
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['Plan']
-        }
-      }
-      /** @description Product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PlanSdkController_getPlan: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Product reference or ID */
-        productRef: string
-        /** @description Plan reference or ID */
-        planRef: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Plan retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['Plan']
-        }
-      }
-      /** @description Plan or product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PlanSdkController_updatePlan: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Product reference or ID */
-        productRef: string
-        /** @description Plan reference or ID */
-        planRef: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdatePlanRequest']
-      }
-    }
-    responses: {
-      /** @description Plan updated successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['Plan']
-        }
-      }
-      /** @description Plan or product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PlanSdkController_deletePlan: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Product reference or ID */
-        productRef: string
-        /** @description Plan reference or ID */
-        planRef: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Plan deleted successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            success?: boolean
-          }
-        }
-      }
-      /** @description Plan or product not found */
-      404: {
+      /** @description Missing customerRef or productRef */
+      400: {
         headers: {
           [name: string]: unknown
         }
@@ -3502,7 +3591,7 @@ export interface operations {
       }
     }
   }
-  UserInfoSdkController_getUserInfo: {
+  LimitsSdkController_checkLimits: {
     parameters: {
       query?: never
       header?: never
@@ -3511,17 +3600,17 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['UserInfoRequest']
+        'application/json': components['schemas']['CheckLimitRequest']
       }
     }
     responses: {
-      /** @description User info with purchase status */
+      /** @description Limit check result */
       200: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['UserInfoResponse']
+          'application/json': components['schemas']['LimitResponse']
         }
       }
       /** @description Missing customerRef or productRef */
@@ -3537,6 +3626,296 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+    }
+  }
+  getMerchant: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Merchant identity */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkMerchantResponseDto']
+        }
+      }
+      /** @description Provider not found in the requested environment. Body includes a `code` (`provider_not_found_in_environment`), the `requestedEnvironment`, and `providerExistsInSandbox` so the SDK / CLI can branch on the recovery path. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  MeterEventsSdkController_recordEvent: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RecordMeterEventZodDto']
+      }
+    }
+    responses: {
+      /** @description Event recorded */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /** @example true */
+            success?: boolean
+          }
+        }
+      }
+      /** @description Invalid meter name or meter is archived */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Customer not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  MeterEventsSdkController_recordBulkEvents: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RecordBulkMeterEventsZodDto']
+      }
+    }
+    responses: {
+      /** @description Events recorded */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /** @example 50 */
+            inserted?: number
+            /** @example true */
+            success?: boolean
+          }
+        }
+      }
+      /** @description Invalid meter name or meter is archived */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description One or more customers not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PaymentIntentSdkController_getPaymentIntents: {
+    parameters: {
+      query?: {
+        /** @description Maximum number of results */
+        limit?: number
+        /** @description Pagination offset */
+        offset?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Payment intents retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkPaymentIntentListResponse']
+        }
+      }
+    }
+  }
+  PaymentIntentSdkController_createPaymentIntent: {
+    parameters: {
+      query?: never
+      header: {
+        /** @description Unique idempotency key to prevent duplicate payments (required) */
+        'idempotency-key': string
+      }
+      path?: never
+      cookie?: never
+    }
+    /** @description Payment intent creation data */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreatePaymentIntentDto']
+      }
+    }
+    responses: {
+      /** @description Payment intent created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkPaymentIntentResponse']
+        }
+      }
+      /** @description Missing required fields or invalid data */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PaymentIntentSdkController_attachBusinessDetails: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Stripe payment intent ID (pi_…) */
+        processorPaymentId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BusinessDetailsDto']
+      }
+    }
+    responses: {
+      /** @description Business details applied and tax breakdown returned */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AttachBusinessDetailsResponse']
+        }
+      }
+      /** @description Invalid request or business details */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Payment intent not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PaymentIntentSdkController_processPaymentIntent: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Payment processor ID returned from createPaymentIntent */
+        processorPaymentId: string
+      }
+      cookie?: never
+    }
+    /** @description Payment processing data */
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ProcessPaymentIntentDto']
+      }
+    }
+    responses: {
+      /** @description Payment intent status with optional purchase enrichment on success */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json':
+            | components['schemas']['ProcessPaymentSucceededRecurring']
+            | components['schemas']['ProcessPaymentSucceededOneTime']
+            | components['schemas']['ProcessPaymentSucceededBare']
+            | components['schemas']['ProcessPaymentProcessing']
+            | components['schemas']['ProcessPaymentTimeout']
+            | components['schemas']['ProcessPaymentFailed']
+            | components['schemas']['ProcessPaymentCancelled']
+        }
+      }
+      /** @description Payment not succeeded, invalid request, or forbidden */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+    }
+  }
+  PaymentIntentSdkController_getPaymentIntent: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Payment intent reference or processor payment ID */
+        reference: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Payment intent retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkPaymentIntentResponse']
+        }
+      }
+      /** @description Payment intent not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
       }
     }
   }
@@ -3560,22 +3939,501 @@ export interface operations {
         content: {
           'application/json':
             | {
-                /** @enum {string} */
-                kind: 'card'
                 /** @example visa */
                 brand: string
-                /** @example 4242 */
-                last4: string
                 /** @example 12 */
                 expMonth: number
                 /** @example 2030 */
                 expYear: number
+                /** @enum {string} */
+                kind: 'card'
+                /** @example 4242 */
+                last4: string
               }
             | {
                 /** @enum {string} */
                 kind: 'none'
               }
         }
+      }
+    }
+  }
+  getPlatformConfig: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Platform config */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkPlatformConfigResponseDto']
+        }
+      }
+    }
+  }
+  ProductSdkController_listProducts: {
+    parameters: {
+      query?: {
+        /** @description Max results (1-100) */
+        limit?: number
+        /** @description Pagination offset */
+        offset?: number
+        /** @description Search by name or description */
+        search?: string
+        /** @description Filter by status */
+        status?: 'active' | 'inactive'
+        /** @description Filter Managed MCP integration products */
+        isManagedMcp?: boolean
+        /**
+         * @deprecated
+         * @description Deprecated alias of isManagedMcp
+         */
+        isMcpPay?: boolean
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Products retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /** @description Applied page size (clamped to 1-100) */
+            limit?: number
+            /** @description Applied pagination offset */
+            offset?: number
+            products?: components['schemas']['SdkProductResponse'][]
+            /** @description Total number of products matching the filters */
+            total?: number
+          }
+        }
+      }
+    }
+  }
+  ProductSdkController_createProduct: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateProductRequest']
+      }
+    }
+    responses: {
+      /** @description Product created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkProductResponse']
+        }
+      }
+      /** @description Missing required fields or validation error */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ProductSdkController_getProduct: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Product reference or ID */
+        productRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Product retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkProductResponse']
+        }
+      }
+      /** @description Product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ProductSdkController_updateProduct: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Product reference or ID */
+        productRef: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateProductRequest']
+      }
+    }
+    responses: {
+      /** @description Product updated successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkProductResponse']
+        }
+      }
+      /** @description Product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ProductSdkController_deleteProduct: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Product reference or ID */
+        productRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Product deleted or deactivated successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            /**
+             * Outcome of the delete: hard delete in sandbox, soft-delete or deactivation in live depending on existing purchases
+             * @enum {string}
+             */
+            action?: 'deleted' | 'deactivated' | 'soft_deleted'
+            success?: boolean
+          }
+        }
+      }
+      /** @description Product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ProductSdkController_cloneProduct: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Product reference or ID to clone */
+        productRef: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CloneProductDto']
+      }
+    }
+    responses: {
+      /** @description Product cloned successfully */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkProductResponse']
+        }
+      }
+      /** @description Product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ProductSdkController_configureMcpPlans: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Product reference or ID */
+        productRef: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfigureMcpPlansDto']
+      }
+    }
+    responses: {
+      /** @description MCP plans configured successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ConfigureMcpPlansResult']
+        }
+      }
+      /** @description Invalid MCP plans request or product is not MCP-enabled */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PlanSdkController_listPlans: {
+    parameters: {
+      query?: {
+        /** @description Max results (default 50) */
+        limit?: number
+        /** @description Pagination offset (default 0) */
+        offset?: number
+      }
+      header?: never
+      path: {
+        /** @description Product reference or ID */
+        productRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Plans retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            limit?: number
+            offset?: number
+            plans?: components['schemas']['Plan'][]
+            /** @description Total number of plans for the product */
+            total?: number
+          }
+        }
+      }
+      /** @description Product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PlanSdkController_createPlan: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Product reference or ID */
+        productRef: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreatePlanRequest']
+      }
+    }
+    responses: {
+      /** @description Plan created successfully */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Plan']
+        }
+      }
+      /** @description Product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PlanSdkController_getPlan: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Product reference or ID */
+        productRef: string
+        /** @description Plan reference or ID */
+        planRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Plan retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Plan']
+        }
+      }
+      /** @description Plan or product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PlanSdkController_updatePlan: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Product reference or ID */
+        productRef: string
+        /** @description Plan reference or ID */
+        planRef: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdatePlanRequest']
+      }
+    }
+    responses: {
+      /** @description Plan updated successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Plan']
+        }
+      }
+      /** @description Plan or product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PlanSdkController_deletePlan: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Product reference or ID */
+        productRef: string
+        /** @description Plan reference or ID */
+        planRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Plan deleted successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            success?: boolean
+          }
+        }
+      }
+      /** @description Plan or product not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  ProductSdkController_bootstrapMcpProduct: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['McpBootstrapDto']
+      }
+    }
+    responses: {
+      /** @description MCP product bootstrapped successfully */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['McpBootstrapResult']
+        }
+      }
+      /** @description Invalid bootstrap request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -3615,6 +4473,113 @@ export interface operations {
             purchases?: components['schemas']['SdkPurchaseResponse'][]
           }
         }
+      }
+    }
+  }
+  PurchaseSdkController_getPurchase: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Purchase reference or ID */
+        purchaseRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Purchase retrieved successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SdkPurchaseResponse']
+        }
+      }
+      /** @description Purchase not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PurchaseSdkController_cancelPurchase: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Purchase reference or ID */
+        purchaseRef: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CancelPurchaseRequest']
+      }
+    }
+    responses: {
+      /** @description Purchase cancelled successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            purchase?: components['schemas']['SdkPurchaseResponse']
+            success?: boolean
+          }
+        }
+      }
+      /** @description Purchase not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  PurchaseSdkController_reactivatePurchase: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Purchase reference or ID */
+        purchaseRef: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Purchase reactivated successfully */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': {
+            purchase?: components['schemas']['SdkPurchaseResponse']
+            success?: boolean
+          }
+        }
+      }
+      /** @description Purchase cannot be reactivated */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Purchase not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -3685,433 +4650,6 @@ export interface operations {
       }
     }
   }
-  PurchaseSdkController_getPurchase: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Purchase reference or ID */
-        purchaseRef: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Purchase retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['SdkPurchaseResponse']
-        }
-      }
-      /** @description Purchase not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PurchaseSdkController_cancelPurchase: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Purchase reference or ID */
-        purchaseRef: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CancelPurchaseRequest']
-      }
-    }
-    responses: {
-      /** @description Purchase cancelled successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            success?: boolean
-            purchase?: components['schemas']['SdkPurchaseResponse']
-          }
-        }
-      }
-      /** @description Purchase not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  PurchaseSdkController_reactivatePurchase: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Purchase reference or ID */
-        purchaseRef: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Purchase reactivated successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            success?: boolean
-            purchase?: components['schemas']['SdkPurchaseResponse']
-          }
-        }
-      }
-      /** @description Purchase cannot be reactivated */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      /** @description Purchase not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  LimitsSdkController_checkLimits: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CheckLimitRequest']
-      }
-    }
-    responses: {
-      /** @description Limit check result */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['LimitResponse']
-        }
-      }
-      /** @description Missing customerRef or productRef */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      /** @description Customer or product not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  ActivateSdkController_activate: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ActivatePlanDto']
-      }
-    }
-    responses: {
-      /** @description Plan activation result */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['ActivatePlanResponseDto']
-        }
-      }
-    }
-  }
-  PaymentIntentSdkController_getPaymentIntents: {
-    parameters: {
-      query?: {
-        /** @description Maximum number of results */
-        limit?: number
-        /** @description Pagination offset */
-        offset?: number
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Payment intents retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['SdkPaymentIntentListResponse']
-        }
-      }
-    }
-  }
-  PaymentIntentSdkController_createPaymentIntent: {
-    parameters: {
-      query?: never
-      header: {
-        /** @description Unique idempotency key to prevent duplicate payments (required) */
-        'idempotency-key': string
-      }
-      path?: never
-      cookie?: never
-    }
-    /** @description Payment intent creation data */
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreatePaymentIntentDto']
-      }
-    }
-    responses: {
-      /** @description Payment intent created successfully */
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['SdkPaymentIntentResponse']
-        }
-      }
-      /** @description Missing required fields or invalid data */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': unknown
-        }
-      }
-    }
-  }
-  PaymentIntentSdkController_getPaymentIntent: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Payment intent reference or processor payment ID */
-        reference: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Payment intent retrieved successfully */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['SdkPaymentIntentResponse']
-        }
-      }
-      /** @description Payment intent not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': unknown
-        }
-      }
-    }
-  }
-  PaymentIntentSdkController_processPaymentIntent: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Payment processor ID returned from createPaymentIntent */
-        processorPaymentId: string
-      }
-      cookie?: never
-    }
-    /** @description Payment processing data */
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ProcessPaymentIntentDto']
-      }
-    }
-    responses: {
-      /** @description Payment intent status with optional purchase enrichment on success */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json':
-            | components['schemas']['ProcessPaymentSucceededRecurring']
-            | components['schemas']['ProcessPaymentSucceededOneTime']
-            | components['schemas']['ProcessPaymentSucceededBare']
-            | components['schemas']['ProcessPaymentProcessing']
-            | components['schemas']['ProcessPaymentTimeout']
-            | components['schemas']['ProcessPaymentFailed']
-            | components['schemas']['ProcessPaymentCancelled']
-        }
-      }
-      /** @description Payment not succeeded, invalid request, or forbidden */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': unknown
-        }
-      }
-    }
-  }
-  CheckoutSessionSdkController_createCheckoutSession: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateCheckoutSessionRequest']
-      }
-    }
-    responses: {
-      /** @description Checkout session created */
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['CreateCheckoutSessionResponse']
-        }
-      }
-      /** @description Missing customerRef or productRef */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  AutoRechargeSdkController_getAutoRecharge: {
-    parameters: {
-      query: {
-        customerRef: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Current auto-recharge config, if present. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['AutoRechargeGetResponse']
-        }
-      }
-      /** @description customerRef query parameter is required */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  AutoRechargeSdkController_putAutoRecharge: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PutAutoRechargeSdkDto']
-      }
-    }
-    responses: {
-      /** @description Saved auto-recharge config and optional SetupIntent details. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['SaveAutoRechargeResponse']
-        }
-      }
-      /** @description customerRef is required, or customer email is required to configure auto-recharge */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  AutoRechargeSdkController_deleteAutoRecharge: {
-    parameters: {
-      query: {
-        customerRef: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Auto-recharge was disabled. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['DisableAutoRechargeResponse']
-        }
-      }
-      /** @description customerRef query parameter is required */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
   UsageSdkController_recordUsage: {
     parameters: {
       query?: never
@@ -4174,7 +4712,7 @@ export interface operations {
       }
     }
   }
-  MeterEventsSdkController_recordEvent: {
+  UserInfoSdkController_getUserInfo: {
     parameters: {
       query?: never
       header?: never
@@ -4183,97 +4721,32 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['RecordMeterEventZodDto']
+        'application/json': components['schemas']['UserInfoRequest']
       }
     }
     responses: {
-      /** @description Event recorded */
+      /** @description User info with purchase status */
       200: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': {
-            /** @example true */
-            success?: boolean
-          }
+          'application/json': components['schemas']['UserInfoResponse']
         }
       }
-      /** @description Invalid meter name or meter is archived */
+      /** @description Missing customerRef or productRef */
       400: {
         headers: {
           [name: string]: unknown
         }
         content?: never
       }
-      /** @description Customer not found */
+      /** @description Customer or product not found */
       404: {
         headers: {
           [name: string]: unknown
         }
         content?: never
-      }
-    }
-  }
-  MeterEventsSdkController_recordBulkEvents: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['RecordBulkMeterEventsZodDto']
-      }
-    }
-    responses: {
-      /** @description Events recorded */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': {
-            /** @example true */
-            success?: boolean
-            /** @example 50 */
-            inserted?: number
-          }
-        }
-      }
-      /** @description Invalid meter name or meter is archived */
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      /** @description One or more customers not found */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  WebhookSdkController_listEventTypes: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['WebhookEventCategoryDto'][]
-        }
       }
     }
   }
@@ -4292,6 +4765,25 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['WebhookEventDto']
+        }
+      }
+    }
+  }
+  WebhookSdkController_listEventTypes: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WebhookEventCategoryDto'][]
         }
       }
     }

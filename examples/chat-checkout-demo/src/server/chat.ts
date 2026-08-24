@@ -21,10 +21,7 @@ const GEMINI_THINKING_BUDGET = 0
 // while the worker/server is warm.
 const SYSTEM_INSTRUCTION_TTL_MS = 60_000
 
-const systemInstructionCache = new Map<
-  string,
-  { value: Promise<string>; expiresAt: number }
->()
+const systemInstructionCache = new Map<string, { value: Promise<string>; expiresAt: number }>()
 
 interface ChatRequestBody {
   productRef: string
@@ -190,10 +187,22 @@ async function buildSystemInstruction(solvaPay: SolvaPay, productRef: string): P
   const lines = paidPlans.map(p => {
     const price = ((p.price ?? 0) / 100).toFixed(2)
     const currency = (p.currency ?? 'USD').toUpperCase()
-    const cycle = p.billingCycle ? `/${p.billingCycle}` : ''
-    return `${p.name ?? p.reference}: ${currency} ${price}${cycle}`
+    return `${p.name ?? p.reference}: ${currency} ${price}${billingCycleSuffix(p.options)}`
   })
   return `${SYSTEM_INSTRUCTION_BASE} Pricing (only mention if asked): ${lines.join('; ')}.`
+}
+
+/**
+ * Plan pricing is a composable `options[]` array — the recurring cadence
+ * lives in the `billingCycle` option (`interval` plus an optional `count`),
+ * and one-time plans carry no such option.
+ */
+function billingCycleSuffix(options: Array<{ [key: string]: unknown }>): string {
+  const cycle = options.find(option => option.kind === 'billingCycle')
+  const interval = typeof cycle?.interval === 'string' ? cycle.interval : null
+  if (!interval) return ''
+  const count = typeof cycle?.count === 'number' ? cycle.count : 1
+  return count > 1 ? `/${count} ${interval}s` : `/${interval}`
 }
 
 function jsonResponse(status: number, body: unknown): Response {

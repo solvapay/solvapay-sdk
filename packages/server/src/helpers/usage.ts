@@ -28,8 +28,12 @@ export interface GetUsageResult {
 /**
  * Fetch the authenticated customer's usage snapshot for the active purchase.
  *
- * Derives the values from `checkPurchaseCore` — no extra backend call.
- * Returns `null` values when no usage-based plan is active.
+ * Consumption (`used`, period window) comes from `checkPurchaseCore`. The cap
+ * (`total`, `remaining`, `meterRef`) comes from `checkLimits` — the plan
+ * snapshot no longer carries `limit` or `meterRef` on the wire, so a metered
+ * plan costs one extra backend call. Non-metered plans skip it.
+ *
+ * Returns `null` values when no metered plan is active.
  */
 export async function getUsageCore(
   request: Request,
@@ -51,28 +55,49 @@ export async function getUsageCore(
     }
   }
 
-  const snap = activePurchase.planSnapshot as
-    | { meterRef?: string; meterId?: string; limit?: number; freeUnits?: number }
-    | undefined
-  const usage = activePurchase.usage as
-    | { used?: number; periodStart?: string; periodEnd?: string }
-    | undefined
-
-  const meterRef = snap?.meterRef ?? snap?.meterId ?? null
-  const total = typeof snap?.limit === 'number' ? snap.limit : null
+  const usage = activePurchase.usage
   const used = typeof usage?.used === 'number' ? usage.used : 0
-  const remaining = total !== null ? Math.max(0, total - used) : null
+  const period = {
+    ...(usage?.periodStart ? { periodStart: usage.periodStart } : {}),
+    ...(usage?.periodEnd ? { periodEnd: usage.periodEnd } : {}),
+  }
+
+  const isMetered = activePurchase.planSnapshot?.isMetered === true
+  if (!isMetered || !activePurchase.productRef) {
+    return {
+      meterRef: null,
+      total: null,
+      used,
+      remaining: null,
+      percentUsed: null,
+      ...period,
+      purchaseRef: activePurchase.reference,
+    }
+  }
+
+  const solvaPay = options.solvaPay || createSolvaPay()
+  const limits = await solvaPay.apiClient.checkLimits({
+    customerRef: purchaseResult.customerRef,
+    productRef: activePurchase.productRef,
+  })
+
+  // `remaining: -1` is the backend's "no finite cap" sentinel — any
+  // negative value means uncapped, never a real count. An uncapped meter
+  // has no total to report, so `percentUsed` stays null rather than
+  // fabricating a denominator.
+  const hasFiniteCap = limits.remaining >= 0
+  const remaining = hasFiniteCap ? limits.remaining : null
+  const total = remaining === null ? null : used + remaining
   const percentUsed =
     total !== null && total > 0 ? Math.min(100, Math.round((used / total) * 10000) / 100) : null
 
   return {
-    meterRef,
+    meterRef: limits.meterName ?? null,
     total,
     used,
     remaining,
     percentUsed,
-    ...(usage?.periodStart ? { periodStart: usage.periodStart } : {}),
-    ...(usage?.periodEnd ? { periodEnd: usage.periodEnd } : {}),
+    ...period,
     purchaseRef: activePurchase.reference,
   }
 }
