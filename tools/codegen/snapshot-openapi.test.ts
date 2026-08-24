@@ -89,6 +89,29 @@ describe('snapshot-openapi CLI', () => {
     expect(readFileSync(path.join(outDir, 'sdk-v1.snapshot.json'), 'utf8')).toBe(committed)
   })
 
+  it('--check --from-stack exits 0 when the merged snapshot matches', async () => {
+    const source = JSON.parse(readFileSync(lookupPath('openapiSource'), 'utf8')) as OpenApiSpec
+    const result = await runCli(['--check', '--from-stack'], {
+      fetchJson: async () => source,
+    })
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toMatch(/matches the running stack/i)
+  })
+
+  it('--check --from-stack fails when the stack snapshot drifted', async () => {
+    const source = JSON.parse(readFileSync(lookupPath('openapiSource'), 'utf8')) as OpenApiSpec
+    const drifted: OpenApiSpec = structuredClone(source)
+    drifted.paths = {
+      ...(source.paths ?? {}),
+      '/v1/sdk/drift-probe': { get: { responses: { '200': { description: 'probe' } } } },
+    }
+    const result = await runCli(['--check', '--from-stack'], {
+      fetchJson: async () => drifted,
+    })
+    expect(result.exitCode).not.toBe(0)
+    expect(`${result.stdout}${result.stderr}`).toMatch(/mismatch|differ/i)
+  })
+
   it('should error naming the port when one stack service is unreachable', async () => {
     const outDir = makeTempDir()
     const source = JSON.parse(readFileSync(lookupPath('openapiSource'), 'utf8')) as OpenApiSpec

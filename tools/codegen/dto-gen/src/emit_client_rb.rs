@@ -113,26 +113,41 @@ fn emit_helpers(ir: &Ir) -> String {
     output
 }
 
-fn emit_method(output: &mut String, entry: &IrEntryPoint, native_name: &str, client: bool) {
-    write_yard(output, entry, "    ");
-    let signature = ruby_signature(entry);
-    let _ = writeln!(output, "    def {}{signature}", entry.ruby_target.name);
-    output.push_str("      args = {} #: Hash[String, untyped]\n");
+fn emit_args_hash(output: &mut String, entry: &IrEntryPoint, indent: &str) {
+    if let [param] = entry.params.as_slice() {
+        if param.name == "params" {
+            let _ = writeln!(
+                output,
+                "{indent}args = {} #: Hash[String, untyped]",
+                param.names.rb
+            );
+            return;
+        }
+    }
+    output.push_str(indent);
+    output.push_str("args = {} #: Hash[String, untyped]\n");
     for param in &entry.params {
         if param.required {
             let _ = writeln!(
                 output,
-                "      args[\"{}\"] = {}",
+                "{indent}args[\"{}\"] = {}",
                 param.name, param.names.rb
             );
         } else {
             let _ = writeln!(
                 output,
-                "      args[\"{}\"] = {} unless {}.nil?",
+                "{indent}args[\"{}\"] = {} unless {}.nil?",
                 param.name, param.names.rb, param.names.rb
             );
         }
     }
+}
+
+fn emit_method(output: &mut String, entry: &IrEntryPoint, native_name: &str, client: bool) {
+    write_yard(output, entry, "    ");
+    let signature = ruby_signature(entry);
+    let _ = writeln!(output, "    def {}{signature}", entry.ruby_target.name);
+    emit_args_hash(output, entry, "      ");
     if client {
         let _ = writeln!(
             output,
@@ -172,8 +187,8 @@ fn emit_module_helper(output: &mut String, entry: &IrEntryPoint, binding: &IrBin
         ruby_signature(entry)
     };
     let _ = writeln!(output, "  def self.{}{signature}", entry.ruby_target.name);
-    output.push_str("    args = {} #: Hash[String, untyped]\n");
     if entry.params.is_empty() {
+        output.push_str("    args = {} #: Hash[String, untyped]\n");
         for arg in binding.args.iter().filter(|arg| !arg.host_injected) {
             let ruby_name = snake(&arg.name);
             if arg.required {
@@ -187,17 +202,7 @@ fn emit_module_helper(output: &mut String, entry: &IrEntryPoint, binding: &IrBin
             }
         }
     } else {
-        for param in &entry.params {
-            if param.required {
-                let _ = writeln!(output, "    args[\"{}\"] = {}", param.name, param.names.rb);
-            } else {
-                let _ = writeln!(
-                    output,
-                    "    args[\"{}\"] = {} unless {}.nil?",
-                    param.name, param.names.rb, param.names.rb
-                );
-            }
-        }
+        emit_args_hash(output, entry, "    ");
     }
     let _ = writeln!(
         output,
@@ -344,6 +349,43 @@ mod tests {
         assert!(output.contains("def sample(customer_ref:, metadata: nil)"));
         assert!(output.contains("args[\"customerRef\"] = customer_ref"));
         assert!(output.contains("unless metadata.nil?"));
+    }
+
+    #[test]
+    fn emits_whole_body_params_as_the_args_hash() {
+        let entry = IrEntryPoint {
+            id: "createPlan".into(),
+            section: IrEntrySection::Operation,
+            names: names("create_plan"),
+            optional_on_client: true,
+            params: vec![param(
+                "params",
+                "params",
+                true,
+                "Plan creation fields including product ref.",
+            )],
+            type_params: vec![],
+            request: None,
+            response: None,
+            availability: availability(),
+            sync_ts: IrSyncKind::Async,
+            ruby_target: IrRubyTarget {
+                owner: "SolvaPay::Client".into(),
+                name: "create_plan".into(),
+                receiver: IrRubyReceiver::ClientInstance,
+                takes_block: false,
+            },
+            defaults: IrDefaults::default(),
+            errors: vec![IrErrorKind::Api],
+            docs: IrDocModel::default(),
+        };
+        let mut output = String::new();
+        emit_method(&mut output, &entry, "create_plan", true);
+        assert!(output.contains("args = params #: Hash[String, untyped]"));
+        assert!(
+            !output.contains("args[\"params\"]"),
+            "whole-body params must not nest under a params key: {output}"
+        );
     }
 
     #[test]

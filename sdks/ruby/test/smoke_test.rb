@@ -72,11 +72,70 @@ class SmokeTest < Minitest::Test
     end
   end
 
+  def test_public_client_create_plan_sends_flat_body
+    recorded = []
+    plan_json = '{"reference":"plan_smoke","name":"Smoke Plan","currency":"usd"}'
+    base = start_recording_stub(recorded, plan_json)
+    begin
+      client = SolvaPay::Client.new(api_key: "sk_test_smoke", api_base_url: base)
+      value = client.create_plan(
+        params: {
+          "productRef" => "prd_smoke",
+          "name" => "Smoke Plan",
+          "currency" => "usd",
+          "options" => [
+            { "kind" => "billingCycle", "interval" => "month" },
+            { "kind" => "charge", "per" => "flat", "amountMinor" => 1000, "currency" => "usd" },
+          ],
+        },
+      )
+      assert_equal "plan_smoke", value["reference"]
+      refute_empty recorded
+      body = JSON.parse(recorded.last)
+      refute body.key?("params"), "create_plan must send a flat body, got #{body.inspect}"
+      assert_equal "Smoke Plan", body["name"]
+      assert_equal "usd", body["currency"]
+    ensure
+      stop_merchant_stub
+    end
+  end
+
   private
 
   def sign(body, secret, now)
     digest = OpenSSL::HMAC.hexdigest("SHA256", secret, "#{now}.#{body}")
     "t=#{now},v1=#{digest}"
+  end
+
+  def start_recording_stub(recorded, response_body)
+    @server = TCPServer.new("127.0.0.1", 0)
+    port = @server.addr[1]
+    @thread = Thread.new do
+      loop do
+        client = @server.accept
+        Thread.new(client) do |sock|
+          request = +""
+          while (line = sock.gets)
+            request << line
+            break if line == "\r\n"
+          end
+          content_length = request[/Content-Length:\s*(\d+)/i, 1].to_i
+          recorded << sock.read(content_length) if content_length.positive?
+          sock.write(
+            "HTTP/1.1 200 OK\r\n" \
+            "Content-Type: application/json\r\n" \
+            "Content-Length: #{response_body.bytesize}\r\n" \
+            "Connection: close\r\n\r\n#{response_body}",
+          )
+          sock.close
+        rescue StandardError
+          # stub teardown races
+        end
+      rescue StandardError
+        break
+      end
+    end
+    "http://127.0.0.1:#{port}"
   end
 
   def start_merchant_stub

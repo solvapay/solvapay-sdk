@@ -42,8 +42,7 @@ var SCENARIOS = []Scenario{
 	},
 	{
 		ID: "cloneProduct", Op: "cloneProduct",
-		Args:        map[string]any{"productRef": "{productRef}", "name": "Shadow Product Clone {sideTag}"},
-		ExpectError: true,
+		Args: map[string]any{"productRef": "{productRef}", "name": "Shadow Product Clone {sideTag}"},
 	},
 	{
 		ID: "bootstrapMcpProduct", Op: "bootstrapMcpProduct",
@@ -58,12 +57,13 @@ var SCENARIOS = []Scenario{
 	{
 		ID: "createPlan", Op: "createPlan",
 		Args: map[string]any{
-			"productRef":   "{productRef}",
-			"name":         "Shadow Plan",
-			"type":         "recurring",
-			"billingCycle": "monthly",
-			"price":        1000,
-			"currency":     "usd",
+			"productRef": "{productRef}",
+			"name":       "Shadow Plan",
+			"currency":   "usd",
+			"options": []any{
+				map[string]any{"kind": "billingCycle", "interval": "month"},
+				map[string]any{"kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd"},
+			},
 		},
 	},
 	{ID: "listPlans", Op: "listPlans", Args: map[string]any{"productRef": "{productRef}"}},

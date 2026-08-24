@@ -28,9 +28,9 @@
     "cross-env": "^10.1.0",
     "nodemon": "^3.1.14",
     "rollup": "^4.60.1",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "vite": "^8.0.6",
-    "vite-plugin-singlefile": "^2.3.2"
+    "vite-plugin-singlefile": "^2.3.3"
   }
 }

@@ -32,13 +32,13 @@
   "devDependencies": {
     "@solvapay/server-native": "workspace:*",
     "@solvapay/server-wasm": "workspace:*",
-    "@tailwindcss/postcss": "^4.2.2",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
-    "tailwindcss": "^4.2.2",
+    "tailwindcss": "^4.3.3",
     "tw-animate-css": "^1.3.0",
     "typescript": "^5.9.3"
   }

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AuthAdapter } from '@solvapay/auth'
+type ServerAuthAdapter = {
+  getUserIdFromRequest: (req: Request) => Promise<string | null>
+}
 
 export interface AuthAdapterContractOptions {
   name: string
-  createAdapter: () => AuthAdapter
+  createAdapter: () => ServerAuthAdapter
   authenticatedRequest: Request
   unauthenticatedRequest: Request
   expectedUserId: string

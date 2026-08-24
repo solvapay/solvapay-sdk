@@ -1,62 +1,23 @@
-import { writeFileSync, unlinkSync, readFileSync } from 'fs'
+import { writeFileSync, readFileSync } from 'fs'
 import { execSync } from 'child_process'
-import {
-  addMissingSchemaPlaceholders,
-  EXCLUDED_PATH_PREFIXES,
-  filterSdkPaths,
-  PATH_PREFIX,
-  pruneUnreferencedSchemas,
-  type OpenApiSpec,
-} from '../../../../tools/codegen/lib/openapi-pipeline'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const OPENAPI_URL = 'http://localhost:3001/v1/openapi.json'
-const OUTPUT_FILE = './src/types/generated.ts'
-const TEMP_SPEC_FILE = './temp-filtered-openapi.json'
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
+const SNAPSHOT_PATH = path.resolve(SCRIPT_DIR, '../../../../contract/openapi/sdk-v1.snapshot.json')
+const OUTPUT_FILE = path.join(SCRIPT_DIR, '../src/types/generated.ts')
 
 async function main(): Promise<void> {
-  console.log('Fetching OpenAPI spec from', OPENAPI_URL)
+  console.log('Reading OpenAPI snapshot from', SNAPSHOT_PATH)
 
   try {
-    const response = await fetch(OPENAPI_URL)
-    if (!response.ok) {
-      throw new Error(`Failed to fetch OpenAPI spec: ${response.status} ${response.statusText}`)
-    }
-
-    const spec = (await response.json()) as OpenApiSpec
-    console.log(`Fetched OpenAPI spec with ${Object.keys(spec.paths || {}).length} paths`)
-
-    const excludedPaths = Object.keys(spec.paths || {}).filter(path =>
-      EXCLUDED_PATH_PREFIXES.some(prefix => path.startsWith(prefix)),
-    )
-
-    const filtered = filterSdkPaths(spec)
-    console.log(
-      `Filtered to ${Object.keys(filtered.paths || {}).length} SDK paths (matching ${PATH_PREFIX}*)`,
-    )
-    if (excludedPaths.length > 0) {
-      console.warn(
-        `Skipping ${excludedPaths.length} SDK paths due to known invalid refs: ${excludedPaths.join(
-          ', ',
-        )}`,
-      )
-    }
-
-    const { spec: prunedSpec, pruned: prunedSchemas } = pruneUnreferencedSchemas(filtered)
-    console.log(`Pruned ${prunedSchemas} unreachable schemas`)
-
-    const { spec: finalSpec, added: missingSchemasAdded } = addMissingSchemaPlaceholders(prunedSpec)
-    if (missingSchemasAdded > 0) {
-      console.warn(
-        `Added ${missingSchemasAdded} placeholder component schema(s) for unresolved $ref values`,
-      )
-    }
-
-    // Keep non-canonical JSON.stringify so openapi-typescript input matches prior behavior.
-    console.log('Writing filtered spec to', TEMP_SPEC_FILE)
-    writeFileSync(TEMP_SPEC_FILE, JSON.stringify(finalSpec, null, 2))
+    readFileSync(SNAPSHOT_PATH, 'utf8')
 
     console.log('Generating TypeScript types...')
-    execSync(`npx openapi-typescript ${TEMP_SPEC_FILE} -o ${OUTPUT_FILE}`, { stdio: 'inherit' })
+    execSync(`npx openapi-typescript ${SNAPSHOT_PATH} -o ${OUTPUT_FILE}`, {
+      stdio: 'inherit',
+      cwd: path.join(SCRIPT_DIR, '..'),
+    })
 
     console.log('Converting @description tags to TypeDoc-compatible format...')
     let generatedContent = readFileSync(OUTPUT_FILE, 'utf-8')
@@ -70,20 +31,11 @@ async function main(): Promise<void> {
 
     writeFileSync(OUTPUT_FILE, generatedContent)
 
-    console.log('Cleaning up...')
-    unlinkSync(TEMP_SPEC_FILE)
-
     console.log('✅ Types generated successfully!')
   } catch (error) {
-    try {
-      unlinkSync(TEMP_SPEC_FILE)
-    } catch {
-      // Temp file may not exist
-    }
-
     console.error('❌ Error generating types:', error instanceof Error ? error.message : error)
     process.exit(1)
   }
 }
 
-main()
+void main()

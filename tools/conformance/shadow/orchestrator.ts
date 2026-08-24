@@ -10,6 +10,7 @@
 import path from 'node:path'
 import {
   SHADOW_SCENARIOS,
+  COMPOSABLE_RECURRING_PLAN,
   resolveArgs,
   type ShadowScenario,
   type SideRefs,
@@ -80,10 +81,7 @@ async function setupSide(
   const planOutcome = await invoke('createPlan', {
     productRef,
     name: `Shadow Plan ${sideTag}`,
-    type: 'recurring',
-    billingCycle: 'monthly',
-    price: 1000,
-    currency: 'usd',
+    ...COMPOSABLE_RECURRING_PLAN,
   })
   if (!planOutcome.ok) {
     throw new Error(`${label} setup createPlan failed: ${JSON.stringify(planOutcome.value)}`)

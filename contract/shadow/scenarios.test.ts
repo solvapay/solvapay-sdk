@@ -2,13 +2,19 @@ import { describe, expect, it } from 'vitest'
 import { SHADOW_SCENARIOS } from './scenarios.js'
 
 describe('shadow scenario live-backend readiness', () => {
-  it('includes billingCycle so live recurring-plan creates succeed', () => {
+  it('uses composable options[] for live recurring-plan creates', () => {
     const createPlan = SHADOW_SCENARIOS.find(s => s.id === 'createPlan')
     expect(createPlan).toBeDefined()
     expect(createPlan?.args).toMatchObject({
-      billingCycle: 'monthly',
-      type: 'recurring',
+      currency: 'usd',
+      options: [
+        { kind: 'billingCycle', interval: 'month' },
+        { kind: 'charge', per: 'flat', amountMinor: 1000, currency: 'usd' },
+      ],
     })
+    expect(createPlan?.args).not.toHaveProperty('billingCycle')
+    expect(createPlan?.args).not.toHaveProperty('type')
+    expect(createPlan?.args).not.toHaveProperty('price')
   })
 
   it('scopes product names with {sideTag} to avoid unique-index collisions', () => {

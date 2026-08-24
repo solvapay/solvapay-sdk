@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { SURFACES, nativeSurfaces, coreSurfaces } from './surfaces.js'
+import { SURFACES, nativeSurfaces, coreSurfaces, nativePrepareTasks } from './surfaces.js'
 
 describe('surfaces registry', () => {
   it('should keep core and native partitions disjoint and non-empty', () => {
@@ -30,5 +30,17 @@ describe('surfaces registry', () => {
         expect((surface.prepare ?? []).length, surface.id).toBeGreaterThan(0)
       }
     }
+  })
+
+  it('should prefer prepare over build so Python is importable in place', () => {
+    const python = nativePrepareTasks().find(task => task.id.startsWith('python.'))
+    expect(python?.id).toBe('python.prepare')
+    expect(python?.args).toEqual(['develop', '--release'])
+  })
+
+  it('should fall back to build when a native surface has no prepare', () => {
+    const ids = nativePrepareTasks().map(task => task.id)
+    expect(ids).toContain('go-guest.build')
+    expect(ids.some(id => id.startsWith('rust.'))).toBe(false)
   })
 })

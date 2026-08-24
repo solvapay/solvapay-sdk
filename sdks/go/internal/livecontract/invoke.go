@@ -40,12 +40,13 @@ func SetupSide(ctx context.Context, client *solvapay.Client, runID string) (map[
 	}
 
 	plan := Invoke(ctx, client, "createPlan", map[string]any{
-		"productRef":   productRef,
-		"name":         fmt.Sprintf("Shadow Plan %s", sideTag),
-		"type":         "recurring",
-		"billingCycle": "monthly",
-		"price":        1000,
-		"currency":     "usd",
+		"productRef": productRef,
+		"name":       fmt.Sprintf("Shadow Plan %s", sideTag),
+		"currency":   "usd",
+		"options": []any{
+			map[string]any{"kind": "billingCycle", "interval": "month"},
+			map[string]any{"kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd"},
+		},
 	})
 	if plan["ok"] != true {
 		return nil, fmt.Errorf("setup createPlan failed: %v", plan)

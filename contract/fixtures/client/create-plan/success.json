@@ -5,8 +5,11 @@
     "args": {
       "productRef": "prd_fixture",
       "name": "Basic",
-      "price": 1000,
-      "currency": "usd"
+      "currency": "usd",
+      "options": [
+        { "kind": "billingCycle", "interval": "month" },
+        { "kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd" }
+      ]
     },
     "clock": "2026-07-01T00:00:00Z"
   },
@@ -22,8 +25,11 @@
       "body": {
         "productRef": "prd_fixture",
         "name": "Basic",
-        "price": 1000,
-        "currency": "usd"
+        "currency": "usd",
+        "options": [
+          { "kind": "billingCycle", "interval": "month" },
+          { "kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd" }
+        ]
       }
     },
     "response": {
@@ -31,7 +37,6 @@
       "body": {
         "reference": "plan_basic",
         "name": "Basic",
-        "price": 1000,
         "currency": "usd"
       }
     }
@@ -40,7 +45,6 @@
     "result": {
       "reference": "plan_basic",
       "name": "Basic",
-      "price": 1000,
       "currency": "usd"
     }
   }

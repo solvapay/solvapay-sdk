@@ -15,6 +15,7 @@ const LEGACY_GENERATED_PATHS = [
   'core/solvapay-dto',
   'sdks/typescript/server/src/types/overlays.generated.d.ts',
   'sdks/typescript/server/src/types/client.generated.d.ts',
+  'sdks/typescript/server/src/types/generated.ts',
   'sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts',
   'sdks/typescript/server/src/native.ts',
   'sdks/typescript/server/src/wasm.ts',

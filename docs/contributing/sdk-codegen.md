@@ -194,18 +194,11 @@ No new route:
 
 ## Workflow D — OpenAPI-only type refresh (TS `generated.ts`)
 
-`sdks/typescript/server/src/types/generated.ts` is produced by the server package’s
-OpenAPI → TypeScript path (separate from dto-gen facades):
+`sdks/typescript/server/src/types/generated.ts` is produced from the committed
+OpenAPI snapshot as part of `pnpm gen` (not a live fetch):
 
 ```bash
-# Live backend required
-pnpm --filter @solvapay/server generate:types
-```
-
-Then still run the SDK surface pipeline if wire shapes affect clients:
-
-```bash
-pnpm snapshot:openapi --from-url
+pnpm snapshot:openapi --from-stack
 pnpm gen
 ```
 
@@ -219,7 +212,7 @@ High-level groups:
 | Group                | Examples                                                                                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rust DTOs            | `core/solvapay-dto/src/{schemas,routes,overlays,error_templates,lib}.rs`                                                                                      |
-| TS overlays + client | `sdks/typescript/server/src/types/{overlays,client}.generated.d.ts`                                                                                           |
+| TS overlays + client | `sdks/typescript/server/src/types/{generated.ts,overlays,client}.generated.d.ts`                                                                  |
 | TS marshalling       | `sdks/typescript/server/src/{native,wasm}.ts`, `sdks/typescript/core/src/native-{dispatch,core,helpers}.ts`, `sdks/typescript/server/src/native-decisions.ts` |
 | TS parity            | `sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts`                                                                                 |
 | Binding dump         | `contract/manifest/binding-symbols.snapshot.json`                                                                                                             |

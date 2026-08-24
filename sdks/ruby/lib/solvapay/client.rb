@@ -16,8 +16,7 @@ module SolvaPay
     # @param params Plan activation request fields.
     # @return Activation result projection.
     def activate_plan(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "activate_plan", args)
     end
 
@@ -25,8 +24,7 @@ module SolvaPay
     # @param params Credit grant request (customer, amount, and reason).
     # @return Credit assignment response.
     def assign_credits(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "assign_credits", args)
     end
 
@@ -34,8 +32,7 @@ module SolvaPay
     # @param params Business details payload.
     # @return Attached business details result.
     def attach_business_details(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "attach_business_details", args)
     end
 
@@ -43,8 +40,7 @@ module SolvaPay
     # @param params MCP bootstrap request payload.
     # @return Bootstrap result including product and plan refs.
     def bootstrap_mcp_product(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "bootstrap_mcp_product", args)
     end
 
@@ -52,8 +48,7 @@ module SolvaPay
     # @param params Cancel request identifying the purchase.
     # @return Updated purchase info after cancellation.
     def cancel_purchase(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "cancel_purchase", args)
     end
 
@@ -61,8 +56,7 @@ module SolvaPay
     # @param params Limits request including customer and product refs.
     # @return Current remaining limits, optionally including plan details.
     def check_limits(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "check_limits", args)
     end
 
@@ -90,8 +84,7 @@ module SolvaPay
     # @param params Checkout session creation fields.
     # @return Created checkout session projection.
     def create_checkout_session(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "create_checkout_session", args)
     end
 
@@ -99,8 +92,7 @@ module SolvaPay
     # @param params Customer creation fields (email, external refs, metadata).
     # @return The created customer projection.
     def create_customer(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "create_customer", args)
     end
 
@@ -108,8 +100,7 @@ module SolvaPay
     # @param params Customer session creation fields.
     # @return Created customer session projection.
     def create_customer_session(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "create_customer_session", args)
     end
 
@@ -117,8 +108,7 @@ module SolvaPay
     # @param params Payment intent creation fields.
     # @return Created payment intent projection.
     def create_payment_intent(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "create_payment_intent", args)
     end
 
@@ -126,8 +116,7 @@ module SolvaPay
     # @param params Plan creation fields including product ref.
     # @return The created plan projection.
     def create_plan(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "create_plan", args)
     end
 
@@ -135,8 +124,7 @@ module SolvaPay
     # @param params Product creation fields.
     # @return The created product projection.
     def create_product(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "create_product", args)
     end
 
@@ -144,8 +132,7 @@ module SolvaPay
     # @param params Top-up payment intent fields.
     # @return Created top-up payment intent projection.
     def create_topup_payment_intent(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "create_topup_payment_intent", args)
     end
 
@@ -168,8 +155,7 @@ module SolvaPay
     # @param params Disable request identifying the customer.
     # @return Updated auto-recharge status after disable.
     def disable_auto_recharge(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "disable_auto_recharge", args)
     end
 
@@ -177,8 +163,7 @@ module SolvaPay
     # @param params Auto-recharge lookup options.
     # @return Auto-recharge configuration projection.
     def get_auto_recharge(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "get_auto_recharge", args)
     end
 
@@ -186,8 +171,7 @@ module SolvaPay
     # @param params Lookup options including the customer reference.
     # @return The customer projection.
     def get_customer(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "get_customer", args)
     end
 
@@ -195,8 +179,7 @@ module SolvaPay
     # @param params Balance request identifying the customer.
     # @return Customer balance display projection.
     def get_customer_balance(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "get_customer_balance", args)
     end
 
@@ -211,8 +194,7 @@ module SolvaPay
     # @param params Payment-method lookup options.
     # @return Payment method info, when present.
     def get_payment_method(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "get_payment_method", args)
     end
 
@@ -235,8 +217,7 @@ module SolvaPay
     # @param params User-info request options.
     # @return User info projection.
     def get_user_info(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "get_user_info", args)
     end
 
@@ -259,8 +240,7 @@ module SolvaPay
     # @param params Process request identifying the payment intent.
     # @return Normalized process-payment result (purchase, top-up, or error branch).
     def process_payment_intent(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "process_payment_intent", args)
     end
 
@@ -268,8 +248,7 @@ module SolvaPay
     # @param params Reactivate request identifying the purchase.
     # @return Updated purchase info after reactivation.
     def reactivate_purchase(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "reactivate_purchase", args)
     end
 
@@ -277,8 +256,7 @@ module SolvaPay
     # @param params Auto-recharge settings to persist.
     # @return Saved auto-recharge configuration.
     def save_auto_recharge(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "save_auto_recharge", args)
     end
 
@@ -286,8 +264,7 @@ module SolvaPay
     # @param params Usage event payload (customer, meter, and amount).
     # @return The recorded usage event response.
     def track_usage(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "track_usage", args)
     end
 
@@ -295,8 +272,7 @@ module SolvaPay
     # @param params Bulk usage payload with one or more events.
     # @return Bulk usage recording response.
     def track_usage_bulk(params:)
-      args = {} #: Hash[String, untyped]
-      args["params"] = params
+      args = params #: Hash[String, untyped]
       NativeDispatch.call_client(@native_client, "track_usage_bulk", args)
     end
 

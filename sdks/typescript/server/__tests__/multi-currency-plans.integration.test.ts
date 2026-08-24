@@ -16,12 +16,20 @@ import {
  * Prereqs (same as backend.integration.test.ts):
  *   USE_REAL_BACKEND=true
  *   SOLVAPAY_SECRET_KEY=<valid provider key>
- *   SOLVAPAY_API_BASE_URL=http://localhost:3010
+ *   SOLVAPAY_API_BASE_URL=http://localhost:3010  (required when USE_REAL_BACKEND=true)
  */
+
+function resolveLiveApiBaseUrl(): string {
+  const url = process.env.SOLVAPAY_API_BASE_URL
+  if (process.env.USE_REAL_BACKEND === 'true' && (url === undefined || url === '')) {
+    throw new Error('SOLVAPAY_API_BASE_URL is required when USE_REAL_BACKEND=true')
+  }
+  return url ?? ''
+}
 
 const USE_REAL_BACKEND = process.env.USE_REAL_BACKEND === 'true'
 const SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY
-const SOLVAPAY_API_BASE_URL = process.env.SOLVAPAY_API_BASE_URL
+const SOLVAPAY_API_BASE_URL = resolveLiveApiBaseUrl()
 
 const describeIntegration = USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY ? describe : describe.skip
 
@@ -55,7 +63,7 @@ describeIntegration('Paid plan payment intents — Real Backend', () => {
     providerCurrency = (merchant?.defaultCurrency || 'USD').toUpperCase()
 
     const fixtureName = `SDK Paid Plan Fixture ${Date.now()}`
-    const apiBaseUrl = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
+    const apiBaseUrl = SOLVAPAY_API_BASE_URL
 
     testProduct = await createTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY!, fixtureName)
 
@@ -72,7 +80,7 @@ describeIntegration('Paid plan payment intents — Real Backend', () => {
 
   afterAll(async () => {
     if (!SOLVAPAY_SECRET_KEY || !testProduct?.reference) return
-    const apiBaseUrl = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
+    const apiBaseUrl = SOLVAPAY_API_BASE_URL
     await deleteTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY, testProduct.reference)
   })
 
@@ -137,7 +145,7 @@ if (!USE_REAL_BACKEND || !SOLVAPAY_SECRET_KEY) {
       console.log('\n📋 To run paid-plan integration tests:')
       console.log('   1. Set USE_REAL_BACKEND=true')
       console.log('   2. Set SOLVAPAY_SECRET_KEY=<your_secret_key>')
-      console.log('   3. Optionally set SOLVAPAY_API_BASE_URL=http://localhost:3010')
+      console.log('   3. Set SOLVAPAY_API_BASE_URL=http://localhost:3010 (required when USE_REAL_BACKEND=true)')
       console.log('   4. Run: pnpm test:integration:multi-currency\n')
     })
   })

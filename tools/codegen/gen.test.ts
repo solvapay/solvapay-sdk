@@ -14,5 +14,6 @@ describe('gen CLI', () => {
     expect(DTO_GEN_ARGS).toContain('--go-parity-out')
     expect(GENERATED_PATHS.length).toBeGreaterThan(20)
     expect(GENERATED_PATHS).toContain(generatedEntry('nativeTs').path)
+    expect(GENERATED_PATHS).toContain(generatedEntry('tsGenerated').path)
   })
 })

@@ -3,12 +3,8 @@
  */
 
 import { spawn } from 'node:child_process'
-import { existsSync, statSync } from 'node:fs'
-import path from 'node:path'
 import type { SideOutcome, WireExchange } from './compare.js'
 import { REPO_ROOT } from '../../shared/paths.js'
-
-const DEFAULT_DEBUG_BIN = path.join(REPO_ROOT, 'target', 'debug', 'shadow-invoker')
 
 export type RustInvokerRequest = {
   fn: string
@@ -24,32 +20,11 @@ type InvokerResponse = {
   wire?: WireExchange[]
 }
 
-function cargoTargetDebugBin(): string | undefined {
-  const targetDir = process.env.CARGO_TARGET_DIR
-  if (!targetDir) return undefined
-  return path.join(targetDir, 'debug', 'shadow-invoker')
-}
-
-/** Pick the newest existing invoker binary across CARGO_TARGET_DIR and workspace target. */
-function resolveInvokerBin(explicit?: string): { command: string; args: string[] } {
-  if (explicit) {
-    return { command: explicit, args: [] }
-  }
-  if (process.env.SHADOW_INVOKER_BIN) {
-    return { command: process.env.SHADOW_INVOKER_BIN, args: [] }
-  }
-  const candidates = [cargoTargetDebugBin(), DEFAULT_DEBUG_BIN].filter(
-    (p): p is string => typeof p === 'string' && existsSync(p),
-  )
-  let best: { path: string; mtime: number } | undefined
-  for (const candidate of candidates) {
-    const mtime = statSync(candidate).mtimeMs
-    if (!best || mtime > best.mtime) {
-      best = { path: candidate, mtime }
-    }
-  }
-  if (best) {
-    return { command: best.path, args: [] }
+/** Honor SHADOW_INVOKER_BIN or cargo-run so a stale target/debug binary cannot be selected. */
+export function resolveInvokerBin(explicit?: string): { command: string; args: string[] } {
+  const override = explicit ?? process.env.SHADOW_INVOKER_BIN
+  if (override !== undefined) {
+    return { command: override, args: [] }
   }
   return { command: 'cargo', args: ['run', '-q', '-p', 'shadow-invoker'] }
 }

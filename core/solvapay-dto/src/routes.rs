@@ -223,7 +223,7 @@ const ROUTES: &[RouteMatch] = &[
         method: "POST",
         path_template: "/v1/sdk/payment-intents/{processorPaymentId}/business-details",
         operation_id: "PaymentIntentSdkController_attachBusinessDetails",
-        response_type: None,
+        response_type: Some("AttachBusinessDetailsResponse"),
     },
     RouteMatch {
         method: "POST",
@@ -352,6 +352,11 @@ fn roundtrip_by_type(type_name: &str, body: &Value) -> Result<Value, String> {
     match type_name {
         "ActivatePlanResponseDto" => {
             let parsed: schemas::ActivatePlanResponseDto =
+                serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
+            serde_json::to_value(parsed).map_err(|e| e.to_string())
+        }
+        "AttachBusinessDetailsResponse" => {
+            let parsed: schemas::AttachBusinessDetailsResponse =
                 serde_json::from_value(body.clone()).map_err(|e| e.to_string())?;
             serde_json::to_value(parsed).map_err(|e| e.to_string())
         }

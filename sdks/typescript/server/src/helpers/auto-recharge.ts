@@ -68,7 +68,7 @@ export async function saveAutoRechargeCore(
 export async function disableAutoRechargeCore(
   request: Request,
   options: HelperOptions = {},
-): Promise<{ success: true } | ErrorResult> {
+): Promise<{ success: boolean } | ErrorResult> {
   try {
     const customerRef = await resolveCustomerRef(request, options)
     if (isErrorResult(customerRef)) return customerRef

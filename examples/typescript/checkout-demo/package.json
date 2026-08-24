@@ -38,7 +38,7 @@
     "@solvapay/examples-shared": "workspace:*",
     "@solvapay/server-native": "workspace:*",
     "@solvapay/server-wasm": "workspace:*",
-    "@tailwindcss/postcss": "^4.2.2",
+    "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^25.5.0",
@@ -49,7 +49,7 @@
     "dotenv-cli": "^8.0.0",
     "jsdom": "^29.0.1",
     "postcss": "^8.5.8",
-    "tailwindcss": "^4.2.2",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.3",
     "wrangler": "^4.86.0"

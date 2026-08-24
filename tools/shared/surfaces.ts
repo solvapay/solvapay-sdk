@@ -281,6 +281,13 @@ export function nativeSurfaces(): Surface[] {
   return SURFACES.filter(surface => surface.tier === 'native')
 }
 
+/** Native-tier tasks that make each binding importable/runnable in place. */
+export function nativePrepareTasks(): Task[] {
+  return nativeSurfaces().flatMap(surface =>
+    surface.prepare !== undefined ? [...surface.prepare] : [...surface.build],
+  )
+}
+
 export interface SelectFlags {
   native: boolean
   nativeOnly: boolean

@@ -6,6 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { lookupPath, sdkPath } from '../shared/repo-paths.js'
 import { REPO_ROOT } from '../shared/paths.js'
+import { nativePrepareTasks } from '../shared/surfaces.js'
 import { renderRun, runTasks, type RunnerDeps, type Task } from '../shared/task-runner.js'
 
 const PROVIDER_PROXY = 'http://localhost:3010'
@@ -31,19 +32,37 @@ export function resolveLiveEnv(
     env: {
       SOLVAPAY_SHADOW_BASE_URL: baseUrl,
       SOLVAPAY_SHADOW_API_KEY: apiKey,
+      SOLVAPAY_API_BASE_URL: baseUrl,
       USE_REAL_BACKEND: 'true',
       SOLVAPAY_SECRET_KEY: apiKey,
     },
   }
 }
 
-function liveTasks(extraEnv: Record<string, string>): Task[] {
+export function liveTasks(
+  extraEnv: Record<string, string>,
+  options: { skipBuild?: boolean } = {},
+): Task[] {
   const goCwd = sdkPath('go')
   const pythonScript = lookupPath('pythonLiveContract')
   const rubyScript = lookupPath('rubyLiveContract')
   const shadowOut = lookupPath('shadowOutput')
   const env = extraEnv
-  return [
+  const buildPhase: Task[] =
+    options.skipBuild === true
+      ? []
+      : [
+          ...nativePrepareTasks(),
+          {
+            id: 'live.build.shadow-invoker',
+            label: 'shadow-invoker',
+            command: 'cargo',
+            args: ['build', '-p', 'shadow-invoker'],
+            cwd: REPO_ROOT,
+            requires: [{ bin: 'cargo', install: 'https://rustup.rs' }],
+          },
+        ]
+  const drivers: Task[] = [
     {
       id: 'live.ts',
       label: 'TypeScript shadow',
@@ -63,18 +82,21 @@ function liveTasks(extraEnv: Record<string, string>): Task[] {
     {
       id: 'live.python',
       label: 'Python live-contract',
-      command: 'python3',
-      args: [pythonScript],
-      cwd: REPO_ROOT,
+      command: 'uv',
+      args: ['run', 'python', pythonScript],
+      cwd: sdkPath('python'),
       env,
     },
     {
       id: 'live.ruby',
       label: 'Ruby live-contract',
-      command: 'bundle',
-      args: ['exec', 'ruby', rubyScript],
+      command: 'ruby',
+      args: [rubyScript],
       cwd: sdkPath('ruby'),
       env,
+      requires: [
+        { bin: 'ruby', install: 'https://www.ruby-lang.org/en/documentation/installation/' },
+      ],
     },
     {
       id: 'live.go',
@@ -97,6 +119,7 @@ function liveTasks(extraEnv: Record<string, string>): Task[] {
     // Keep the report directory discoverable in the summary reproduce line.
     label: `${task.label} (${shadowOut})`,
   }))
+  return [...buildPhase, ...drivers]
 }
 
 export interface LiveDeps extends Partial<RunnerDeps> {
@@ -113,6 +136,7 @@ export interface CliResult {
 export async function runCli(argv: string[], deps: LiveDeps = {}): Promise<CliResult> {
   const json = argv.includes('--json')
   const bail = argv.includes('--bail')
+  const skipBuild = argv.includes('--no-build')
   const resolved = resolveLiveEnv(deps.env ?? process.env)
   if ('error' in resolved) {
     return { exitCode: 1, stdout: '', stderr: `${resolved.error}\n` }
@@ -138,7 +162,7 @@ export async function runCli(argv: string[], deps: LiveDeps = {}): Promise<CliRe
   }
 
   const summary = await runTasks(
-    liveTasks(resolved.env),
+    liveTasks(resolved.env, { skipBuild }),
     { command: 'test:live', json, bail },
     deps,
   )

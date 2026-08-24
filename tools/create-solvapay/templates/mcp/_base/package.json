@@ -32,7 +32,7 @@
     "cross-env": "^10.1.0",
     "typescript": "^5.9.2",
     "vite": "^8.0.6",
-    "vite-plugin-singlefile": "^2.3.2",
+    "vite-plugin-singlefile": "^2.3.3",
     "wrangler": "^4.110.0"
   }
 }

@@ -17,12 +17,20 @@ import type { SolvaPayClient } from '../src/types'
  * Prereqs (same as backend.integration.test.ts):
  *   USE_REAL_BACKEND=true
  *   SOLVAPAY_SECRET_KEY=<valid provider key>
- *   SOLVAPAY_API_BASE_URL=http://localhost:3001  (optional, defaults to api.solvapay.com)
+ *   SOLVAPAY_API_BASE_URL=http://localhost:3001  (required when USE_REAL_BACKEND=true)
  */
+
+function resolveLiveApiBaseUrl(): string {
+  const url = process.env.SOLVAPAY_API_BASE_URL
+  if (process.env.USE_REAL_BACKEND === 'true' && (url === undefined || url === '')) {
+    throw new Error('SOLVAPAY_API_BASE_URL is required when USE_REAL_BACKEND=true')
+  }
+  return url ?? ''
+}
 
 const USE_REAL_BACKEND = process.env.USE_REAL_BACKEND === 'true'
 const SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY
-const SOLVAPAY_API_BASE_URL = process.env.SOLVAPAY_API_BASE_URL
+const SOLVAPAY_API_BASE_URL = resolveLiveApiBaseUrl()
 
 const describeIntegration = USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY ? describe : describe.skip
 
@@ -147,7 +155,7 @@ if (!USE_REAL_BACKEND || !SOLVAPAY_SECRET_KEY) {
       console.log('\n📋 To run this integration test:')
       console.log('   1. Set USE_REAL_BACKEND=true')
       console.log('   2. Set SOLVAPAY_SECRET_KEY=<valid sandbox key>')
-      console.log('   3. (optional) Set SOLVAPAY_API_BASE_URL=http://localhost:3001')
+      console.log('   3. Set SOLVAPAY_API_BASE_URL=http://localhost:3001 (required when USE_REAL_BACKEND=true)')
       console.log('   4. Run: pnpm exec vitest run __tests__/customer-update.integration.test.ts\n')
     })
   })

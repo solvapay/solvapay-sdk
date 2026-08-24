@@ -22,9 +22,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from solvapay._native import unwrap_envelope
-from solvapay._solvapay import SolvaPayClient
-from solvapay.errors import PaywallError, SolvaPayError
+try:
+    from solvapay._native import unwrap_envelope
+    from solvapay._solvapay import SolvaPayClient
+    from solvapay.errors import PaywallError, SolvaPayError
+except ModuleNotFoundError as exc:
+    raise SystemExit(
+        "No module named 'solvapay'. From sdks/python run: maturin develop --release",
+    ) from exc
 
 REPO_ROOT = Path(__file__).resolve().parents[4]  # sdks/python/scripts → repo
 DEFAULT_OUT = REPO_ROOT / "contract" / "shadow" / "output" / "python-live-report.json"
@@ -62,10 +67,6 @@ SCENARIOS: list[Scenario] = [
         "cloneProduct",
         "cloneProduct",
         {"productRef": "{productRef}", "name": "Shadow Product Clone {sideTag}"},
-        # Sandbox currently rejects clone without providerId (structured 500).
-        # Dual-side shadow treats matching errors as IDENTICAL; single-side live
-        # asserts the structured error path instead of success.
-        expect_error=True,
     ),
     Scenario(
         "bootstrapMcpProduct",
@@ -87,10 +88,11 @@ SCENARIOS: list[Scenario] = [
         {
             "productRef": "{productRef}",
             "name": "Shadow Plan",
-            "type": "recurring",
-            "billingCycle": "monthly",
-            "price": 1000,
             "currency": "usd",
+            "options": [
+                {"kind": "billingCycle", "interval": "month"},
+                {"kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd"},
+            ],
         },
     ),
     Scenario("listPlans", "listPlans", {"productRef": "{productRef}"}),
@@ -404,10 +406,11 @@ def setup_side(client: SolvaPayClient, run_id: str) -> dict[str, str]:
         {
             "productRef": product_ref,
             "name": f"Shadow Plan {side_tag}",
-            "type": "recurring",
-            "billingCycle": "monthly",
-            "price": 1000,
             "currency": "usd",
+            "options": [
+                {"kind": "billingCycle", "interval": "month"},
+                {"kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd"},
+            ],
         },
     )
     if not plan["ok"]:

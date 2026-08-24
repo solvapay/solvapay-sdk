@@ -170,3 +170,24 @@ fn json_values_equal(left: &Value, right: &Value) -> bool {
         _ => false,
     }
 }
+
+#[test]
+fn create_plan_params_round_trip_composable_options() {
+    let input = serde_json::json!({
+        "productRef": "prd_fixture",
+        "name": "Basic",
+        "currency": "usd",
+        "options": [
+            { "kind": "billingCycle", "interval": "month" },
+            { "kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd" }
+        ]
+    });
+    let parsed: solvapay_dto::CreatePlanParams =
+        serde_json::from_value(input.clone()).expect("parse CreatePlanParams");
+    let output = serde_json::to_value(&parsed).expect("serialize CreatePlanParams");
+    assert_eq!(
+        output.get("options"),
+        input.get("options"),
+        "composable options must survive typed serde round-trip: {output}"
+    );
+}

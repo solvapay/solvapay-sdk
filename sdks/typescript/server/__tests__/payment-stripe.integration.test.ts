@@ -55,15 +55,23 @@ import {
  *
  * - `USE_REAL_BACKEND=true` - Enable integration tests
  * - `SOLVAPAY_SECRET_KEY` - SolvaPay secret key
- * - `SOLVAPAY_API_BASE_URL` - Backend URL (optional)
+ * - `SOLVAPAY_API_BASE_URL` - Backend URL (required when USE_REAL_BACKEND=true)
  * - `STRIPE_TEST_SECRET_KEY` - Stripe test mode secret key
  * - `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret (optional)
  * - `ENABLE_WEBHOOK_TESTS=true` - Enable E2E webhook tests (requires Stripe CLI)
  */
 
+function resolveLiveApiBaseUrl(): string {
+  const url = process.env.SOLVAPAY_API_BASE_URL
+  if (process.env.USE_REAL_BACKEND === 'true' && (url === undefined || url === '')) {
+    throw new Error('SOLVAPAY_API_BASE_URL is required when USE_REAL_BACKEND=true')
+  }
+  return url ?? ''
+}
+
 const USE_REAL_BACKEND = process.env.USE_REAL_BACKEND === 'true'
 const SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY
-const SOLVAPAY_API_BASE_URL = process.env.SOLVAPAY_API_BASE_URL
+const SOLVAPAY_API_BASE_URL = resolveLiveApiBaseUrl()
 const STRIPE_TEST_SECRET_KEY = process.env.STRIPE_TEST_SECRET_KEY
 const _STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
 // Enable webhook tests only when explicitly requested (requires Stripe CLI webhook forwarding)
@@ -107,7 +115,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
     console.log('║     Payment Integration Tests - Stripe Flow              ║')
     console.log('╚═══════════════════════════════════════════════════════════╝')
     console.log()
-    console.log('📍 Backend URL:', SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com')
+    console.log('📍 Backend URL:', SOLVAPAY_API_BASE_URL)
     console.log('🔑 Secret Key:', SOLVAPAY_SECRET_KEY.substring(0, 50) + '...')
     console.log('💳 Stripe:', STRIPE_TEST_SECRET_KEY.substring(0, 15) + '...')
     console.log()
@@ -777,7 +785,7 @@ if (!USE_REAL_BACKEND || !SOLVAPAY_SECRET_KEY || !STRIPE_TEST_SECRET_KEY) {
       console.log('   1. Set USE_REAL_BACKEND=true')
       console.log('   2. Set SOLVAPAY_SECRET_KEY=<your_secret_key>')
       console.log('   3. Set STRIPE_TEST_SECRET_KEY=<your_stripe_test_key>')
-      console.log('   4. Optionally set SOLVAPAY_API_BASE_URL')
+      console.log('   4. Set SOLVAPAY_API_BASE_URL (required when USE_REAL_BACKEND=true)')
       console.log('   5. Optionally set STRIPE_WEBHOOK_SECRET')
       console.log('   6. Run: pnpm test:integration\n')
     })

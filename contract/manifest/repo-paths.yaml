@@ -79,6 +79,8 @@ generated:
   - id: tsClient
     path: sdks/typescript/server/src/types/client.generated.d.ts
     flag: --ts-client-out
+  - id: tsGenerated
+    path: sdks/typescript/server/src/types/generated.ts
   - id: tsParity
     path: sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts
     flag: --ts-parity-out
@@ -248,6 +250,7 @@ drift:
   - rustDto
   - tsOverlays
   - tsClient
+  - tsGenerated
   - tsParity
   - nativeTs
   - wasmTs
@@ -301,6 +304,9 @@ lookups:
   scriptsTmp: tools/.tmp
   pythonLiveContract: sdks/python/scripts/live_contract.py
   rubyLiveContract: sdks/ruby/scripts/live_contract.rb
+  rustLiveScenarios: tools/conformance/live-contract/src/scenarios.rs
+  goLiveScenarios: sdks/go/internal/livecontract/scenarios.go
+  generateTypesScript: sdks/typescript/server/scripts/generate-types.ts
   goLiveContract: sdks/go/cmd/live-contract
   goWasmBuild: sdks/go/scripts/build-wasm.sh
   capiCtestRun: sdks/capi/ctest/run.sh

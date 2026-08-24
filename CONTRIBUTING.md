@@ -75,6 +75,7 @@ map.
 - [SDK testing](./docs/contributing/testing.md)
 - [SDK error handling](./docs/contributing/error-handling.md)
 - [SDK performance](./docs/contributing/performance.md)
+- [Dependency deprecations](./docs/contributing/dependency-deprecations.md)
 
 ### Running Examples
 

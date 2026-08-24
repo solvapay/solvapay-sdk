@@ -16,7 +16,7 @@ import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { REPO_ROOT } from '../shared/paths.js'
-import { dtoGenArgs, generatedDriftPaths } from '../shared/repo-paths.js'
+import { dtoGenArgs, generatedDriftPaths, lookupPath } from '../shared/repo-paths.js'
 
 /** dto-gen argv (paths relative to the repo root). Derived from repo-paths.yaml. */
 export const DTO_GEN_ARGS = dtoGenArgs()
@@ -82,6 +82,32 @@ function runDtoGen(): CliResult {
   }
 }
 
+function runGenerateTypes(): CliResult {
+  const result = spawnSync('tsx', [lookupPath('generateTypesScript')], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  })
+  if (result.error) {
+    return {
+      exitCode: 1,
+      stdout: result.stdout ?? '',
+      stderr: `Failed to generate TypeScript OpenAPI types: ${result.error.message}\n`,
+    }
+  }
+  if (result.status !== 0) {
+    return {
+      exitCode: result.status ?? 1,
+      stdout: result.stdout ?? '',
+      stderr: result.stderr || 'generate-types failed\n',
+    }
+  }
+  return {
+    exitCode: 0,
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+  }
+}
+
 function checkDrift(): CliResult {
   const result = spawnSync('git', ['diff', '--exit-code', '--', ...GENERATED_PATHS], {
     cwd: REPO_ROOT,
@@ -115,18 +141,26 @@ export function runGen(options: CliOptions): CliResult {
   if (gen.exitCode !== 0) {
     return gen
   }
+  const types = runGenerateTypes()
+  if (types.exitCode !== 0) {
+    return {
+      exitCode: types.exitCode,
+      stdout: `${gen.stdout}${types.stdout}`,
+      stderr: `${gen.stderr}${types.stderr}`,
+    }
+  }
   if (!options.check) {
     return {
       exitCode: 0,
-      stdout: `${gen.stdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
-      stderr: gen.stderr,
+      stdout: `${gen.stdout}${types.stdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
+      stderr: `${gen.stderr}${types.stderr}`,
     }
   }
   const drift = checkDrift()
   return {
     exitCode: drift.exitCode,
-    stdout: `${gen.stdout}${drift.stdout}`,
-    stderr: `${gen.stderr}${drift.stderr}`,
+    stdout: `${gen.stdout}${types.stdout}${drift.stdout}`,
+    stderr: `${gen.stderr}${types.stderr}${drift.stderr}`,
   }
 }
 

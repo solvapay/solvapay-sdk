@@ -556,5 +556,5 @@ export interface SolvaPayClient {
   ): Promise<SaveAutoRechargeResponse>
 
   // DELETE: /v1/sdk/auto-recharge?customerRef=...
-  disableAutoRecharge?(params: { customerRef: string }): Promise<{ success: true }>
+  disableAutoRecharge?(params: { customerRef: string }): Promise<{ success: boolean }>
 }

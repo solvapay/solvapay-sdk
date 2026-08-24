@@ -46,7 +46,7 @@ import {
  * # Set required environment variables
  * export USE_REAL_BACKEND=true
  * export SOLVAPAY_SECRET_KEY="sp_sandbox_your_key_here"
- * export SOLVAPAY_API_BASE_URL="http://localhost:3001"  # Optional
+ * export SOLVAPAY_API_BASE_URL="http://localhost:3001"  # required when USE_REAL_BACKEND=true
  *
  * # Run integration tests
  * pnpm test:integration
@@ -56,12 +56,20 @@ import {
  *
  * - `USE_REAL_BACKEND=true` - Enable integration tests (otherwise skipped)
  * - `SOLVAPAY_SECRET_KEY` - Secret key for test provider (required)
- * - `SOLVAPAY_API_BASE_URL` - Backend URL (optional, defaults to api.solvapay.com)
+ * - `SOLVAPAY_API_BASE_URL` - Backend URL (required when USE_REAL_BACKEND=true)
  */
+
+function resolveLiveApiBaseUrl(): string {
+  const url = process.env.SOLVAPAY_API_BASE_URL
+  if (process.env.USE_REAL_BACKEND === 'true' && (url === undefined || url === '')) {
+    throw new Error('SOLVAPAY_API_BASE_URL is required when USE_REAL_BACKEND=true')
+  }
+  return url ?? ''
+}
 
 const USE_REAL_BACKEND = process.env.USE_REAL_BACKEND === 'true'
 const SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY
-const SOLVAPAY_API_BASE_URL = process.env.SOLVAPAY_API_BASE_URL
+const SOLVAPAY_API_BASE_URL = resolveLiveApiBaseUrl()
 
 // Skip all tests if not configured for backend integration
 const describeIntegration = USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY ? describe : describe.skip
@@ -89,7 +97,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     console.log('║              (Isolated Test Fixtures)                    ║')
     console.log('╚═══════════════════════════════════════════════════════════╝')
     console.log()
-    console.log('📍 Backend URL:', SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com')
+    console.log('📍 Backend URL:', SOLVAPAY_API_BASE_URL)
     console.log('🔑 Secret Key:', SOLVAPAY_SECRET_KEY.substring(0, 15) + '...')
     console.log()
 
@@ -105,12 +113,11 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       // Step 2: Create deterministic product/plan fixtures for this test run
       console.log('Step 2: Creating isolated product and plan fixtures...')
-      const apiBaseUrl = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
-      const fixtureName = `SDK Integration Fixture ${Date.now()}`
+      const apiBaseUrl = SOLVAPAY_API_BASE_URL      const fixtureName = `SDK Integration Fixture ${Date.now()}`
 
-      // Backend rejects plans whose currency doesn't match the provider's
-      // default (e.g. a SEK-only provider). Resolve the provider currency
-      // once so all fixture plans in this run use the same code.
+      // Provider `defaultCurrency` is a fallback in plan authoring (rule R10
+      // requires the plan's top-level currency to be one of its priced
+      // currencies). Resolve it once so fixture plans stay self-consistent.
       const merchant = await apiClient.getMerchant()
       const providerCurrency: string = merchant?.defaultCurrency || 'USD'
       console.log(`📍 Provider currency: ${providerCurrency}`)
@@ -176,7 +183,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     } catch (error) {
       // Best-effort cleanup for partial setup failures (e.g., product created but plan creation fails).
       if (SOLVAPAY_SECRET_KEY) {
-        const apiBaseUrl = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
+        const apiBaseUrl = SOLVAPAY_API_BASE_URL
         if (creditProduct?.reference) {
           await deleteTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY, creditProduct.reference)
         }
@@ -207,8 +214,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     if (!SOLVAPAY_SECRET_KEY) return
 
     console.log()
-    const apiBaseUrl = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
-    if (creditProduct?.reference) {
+    const apiBaseUrl = SOLVAPAY_API_BASE_URL    if (creditProduct?.reference) {
       await deleteTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY, creditProduct.reference)
     }
     if (defaultProduct?.reference) {
@@ -830,7 +836,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
   // ============================================================================
 
   describe('Usage Recording - End-to-End', () => {
-    const BASE_URL = SOLVAPAY_API_BASE_URL || 'https://api.solvapay.com'
+    const BASE_URL = SOLVAPAY_API_BASE_URL
     const authHeaders = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${SOLVAPAY_SECRET_KEY}`,
@@ -1200,6 +1206,18 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       return activation
     }
 
+    async function creditsPerUnitFor(customerRef: string): Promise<number> {
+      const limits = await apiClient.checkLimits({
+        customerRef,
+        productRef: creditProduct.reference,
+        planRef: creditPlan.reference,
+      })
+      if (typeof limits.creditsPerUnit !== 'number') {
+        throw new Error('checkLimits did not return creditsPerUnit after activating the credit plan')
+      }
+      return limits.creditsPerUnit
+    }
+
     async function burnCredits(customerRef: string, units: number) {
       for (let i = 0; i < units; i++) {
         await apiClient.trackUsage({
@@ -1296,6 +1314,11 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
       expect(secondGrant).toEqual(firstGrant)
 
+      const creditsPerUnit = await creditsPerUnitFor(customerRef)
+      const usageUnits = 1
+      const debitAmount = usageUnits * creditsPerUnit
+      const remainingCredits = 500 - debitAmount
+
       const usageKey = `usage-${customerRef}`
       const firstUsage = await apiClient.trackUsage({
         customerRef,
@@ -1321,8 +1344,8 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         reference: expect.any(String),
         creditDebit: {
           debited: true,
-          amount: 100,
-          unitsRemaining: 4,
+          amount: debitAmount,
+          unitsRemaining: Math.floor(remainingCredits / creditsPerUnit),
         },
       })
       expect(secondUsage).toMatchObject({
@@ -1335,7 +1358,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       })
 
       const balance = await apiClient.getCustomerBalance({ customerRef })
-      expect(balance.credits).toBe(400)
+      expect(balance.credits).toBe(remainingCredits)
     })
 
     it('should assign credits and return per-event debit results from trackUsageBulk', async () => {
@@ -1349,6 +1372,10 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
         reason: 'signup_bonus',
         idempotencyKey: `grant-${customerRef}`,
       })
+
+      const creditsPerUnit = await creditsPerUnitFor(customerRef)
+      const usageUnits = 1
+      const debitAmount = usageUnits * creditsPerUnit
 
       const result = await apiClient.trackUsageBulk({
         events: [
@@ -1381,13 +1408,13 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
           reference: expect.any(String),
           creditDebit: {
             debited: true,
-            amount: 100,
+            amount: debitAmount,
           },
         })
       }
 
       const balance = await apiClient.getCustomerBalance({ customerRef })
-      expect(balance.credits).toBe(100)
+      expect(balance.credits).toBe(300 - 2 * debitAmount)
     })
 
     // NOTE: Credit-deduction-on-consumption tests are covered by the payment
@@ -1512,7 +1539,7 @@ if (!USE_REAL_BACKEND || !SOLVAPAY_SECRET_KEY) {
       console.log('\n📋 To run SDK backend integration tests:')
       console.log('   1. Set USE_REAL_BACKEND=true')
       console.log('   2. Set SOLVAPAY_SECRET_KEY=<your_secret_key>')
-      console.log('   3. Optionally set SOLVAPAY_API_BASE_URL')
+      console.log('   3. Set SOLVAPAY_API_BASE_URL (required when USE_REAL_BACKEND=true)')
       console.log('   4. Run: pnpm test:integration\n')
     })
   })

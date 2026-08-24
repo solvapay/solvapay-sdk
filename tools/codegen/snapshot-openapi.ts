@@ -5,8 +5,12 @@
  *   --from-url [url]   Fetch live OpenAPI (default: http://localhost:3001/v1/openapi.json)
  *                      and write source + snapshot under --out.
  *   --from-file <path> Derive source + snapshot from a recorded/full OpenAPI JSON file.
+ *   --from-stack       Merge each service's /v1/openapi.json from local-stack.yaml.
  *   --check            Offline CI gate: derive snapshot from source, diff vs committed
  *                      snapshot, and confirm double-derive is byte-identical.
+ *   --check --from-stack
+ *                      Stack-aware drift gate: merge the running stack, derive the
+ *                      snapshot, and fail on any diff vs the committed file.
  *
  * Never invokes openapi-typescript or writes generated.ts.
  */
@@ -78,6 +82,7 @@ function printUsage(): string {
   pnpm snapshot:openapi --from-stack [origin] [--out <dir>]
   pnpm snapshot:openapi --from-file <path> [--out <dir>]
   pnpm snapshot:openapi:check
+  pnpm snapshot:openapi:check --from-stack [origin]
 `
 }
 
@@ -150,6 +155,21 @@ export function parseArgs(argv: string[]): CliOptions {
   }
 
   if (check) {
+    if (fromUrl !== undefined) {
+      throw new Error('--check does not support --from-url')
+    }
+    if (fromFile !== undefined && fromStack !== undefined) {
+      throw new Error('Use only one of --from-file or --from-stack with --check')
+    }
+    if (fromStack !== undefined) {
+      return {
+        mode: 'check',
+        fromStack,
+        outDir,
+        sourcePath,
+        snapshotPath,
+      }
+    }
     if (fromFile) {
       sourcePath = path.resolve(fromFile)
     }
@@ -342,6 +362,27 @@ export function runCheck(options: CliOptions): CliResult {
   }
 }
 
+export async function runStackCheck(
+  options: CliOptions,
+  deps: SnapshotDeps = {},
+): Promise<CliResult> {
+  const spec = await loadSpec(options, deps.fetchJson)
+  const derived = serializeSnapshot(deriveSnapshot(spec))
+  const committed = readFileSync(options.snapshotPath, 'utf8')
+  if (derived !== committed) {
+    return {
+      exitCode: 1,
+      stdout: '',
+      stderr: `OpenAPI snapshot mismatch against running stack: derived snapshot differs from committed file\n${unifiedDiff(committed, derived)}\n`,
+    }
+  }
+  return {
+    exitCode: 0,
+    stdout: 'OpenAPI snapshot matches the running stack (zero diff)\n',
+    stderr: '',
+  }
+}
+
 export async function runCli(argv: string[], deps: SnapshotDeps = {}): Promise<CliResult> {
   let options: CliOptions
   try {
@@ -357,6 +398,9 @@ export async function runCli(argv: string[], deps: SnapshotDeps = {}): Promise<C
 
   try {
     if (options.mode === 'check') {
+      if (options.fromStack !== undefined) {
+        return await runStackCheck(options, deps)
+      }
       return runCheck(options)
     }
 

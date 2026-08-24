@@ -86,7 +86,7 @@ pub static SCENARIOS: LazyLock<Vec<Scenario>> = LazyLock::new(|| {
             op: "cloneProduct",
             args: json!({"productRef": "{productRef}", "name": "Shadow Product Clone {sideTag}"}),
             requires: None,
-            expect_error: true,
+            expect_error: false,
             skip_reason: None,
         },
         Scenario {
@@ -111,10 +111,11 @@ pub static SCENARIOS: LazyLock<Vec<Scenario>> = LazyLock::new(|| {
             args: json!({
                 "productRef": "{productRef}",
                 "name": "Shadow Plan",
-                "type": "recurring",
-                "billingCycle": "monthly",
-                "price": 1000,
-                "currency": "usd"
+                "currency": "usd",
+                "options": [
+                    { "kind": "billingCycle", "interval": "month" },
+                    { "kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd" }
+                ]
             }),
             requires: None,
             expect_error: false,

@@ -57,8 +57,6 @@ module SolvaPay
         id: "cloneProduct",
         op: "cloneProduct",
         args: { "productRef" => "{productRef}", "name" => "Shadow Product Clone {sideTag}" },
-        # Sandbox currently rejects clone without providerId (structured 500).
-        expect_error: true,
       ),
       Scenario.new(
         id: "bootstrapMcpProduct",
@@ -78,10 +76,11 @@ module SolvaPay
         args: {
           "productRef" => "{productRef}",
           "name" => "Shadow Plan",
-          "type" => "recurring",
-          "billingCycle" => "monthly",
-          "price" => 1000,
           "currency" => "usd",
+          "options" => [
+            { "kind" => "billingCycle", "interval" => "month" },
+            { "kind" => "charge", "per" => "flat", "amountMinor" => 1000, "currency" => "usd" },
+          ],
         },
       ),
       Scenario.new(id: "listPlans", op: "listPlans", args: { "productRef" => "{productRef}" }),
@@ -446,10 +445,11 @@ module SolvaPay
         {
           "productRef" => product_ref,
           "name" => "Shadow Plan #{side_tag}",
-          "type" => "recurring",
-          "billingCycle" => "monthly",
-          "price" => 1000,
           "currency" => "usd",
+          "options" => [
+            { "kind" => "billingCycle", "interval" => "month" },
+            { "kind" => "charge", "per" => "flat", "amountMinor" => 1000, "currency" => "usd" },
+          ],
         },
       )
       raise "setup createPlan failed: #{plan}" unless plan["ok"]

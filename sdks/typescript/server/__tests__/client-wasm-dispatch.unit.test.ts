@@ -324,10 +324,11 @@ describe('createSolvaPayClient Group B/C WASM dispatch', () => {
       await client.createPlan!({
         productRef: 'prod_1',
         name: 'Basic',
-        price: 1000,
         currency: 'usd',
-        type: 'recurring',
-        billingCycle: 'month',
+        options: [
+          { kind: 'billingCycle', interval: 'month' },
+          { kind: 'charge', per: 'flat', amountMinor: 1000, currency: 'usd' },
+        ],
       }),
     ).toEqual({ fromWasm: 'createPlan' })
     expect(await client.updatePlan!('prod_1', 'plan_1', { name: 'Pro' })).toEqual({

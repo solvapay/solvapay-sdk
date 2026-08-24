@@ -26,6 +26,15 @@ export type ShadowScenario = {
   skipReason?: string
 }
 
+/** Composable recurring $10/month plan body. Currency is self-consistent so R10 passes. */
+export const COMPOSABLE_RECURRING_PLAN = {
+  currency: 'usd',
+  options: [
+    { kind: 'billingCycle', interval: 'month' },
+    { kind: 'charge', per: 'flat', amountMinor: 1000, currency: 'usd' },
+  ],
+} as const
+
 export type SideRefs = {
   productRef: string
   planRef: string
@@ -110,6 +119,7 @@ export const SHADOW_SCENARIOS: ShadowScenario[] = [
       originUrl: 'https://mcp.shadow.example.com',
       metadata: {},
     },
+    expectError: true,
   },
   {
     id: 'configureMcpPlans',
@@ -118,6 +128,7 @@ export const SHADOW_SCENARIOS: ShadowScenario[] = [
       productRef: '{productRef}',
       plans: [],
     },
+    expectError: true,
   },
 
   // Plans
@@ -127,10 +138,7 @@ export const SHADOW_SCENARIOS: ShadowScenario[] = [
     args: {
       productRef: '{productRef}',
       name: 'Shadow Plan',
-      type: 'recurring',
-      billingCycle: 'monthly',
-      price: 1000,
-      currency: 'usd',
+      ...COMPOSABLE_RECURRING_PLAN,
     },
   },
   { id: 'listPlans', op: 'listPlans', args: { productRef: '{productRef}' } },

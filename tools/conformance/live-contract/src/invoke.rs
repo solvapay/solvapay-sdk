@@ -100,10 +100,11 @@ pub fn setup_side(
         &serde_json::json!({
             "productRef": product_ref,
             "name": format!("Shadow Plan {side_tag}"),
-            "type": "recurring",
-            "billingCycle": "monthly",
-            "price": 1000,
-            "currency": "usd"
+            "currency": "usd",
+            "options": [
+                { "kind": "billingCycle", "interval": "month" },
+                { "kind": "charge", "per": "flat", "amountMinor": 1000, "currency": "usd" }
+            ]
         }),
     );
     if plan.get("ok") != Some(&Value::Bool(true)) {
