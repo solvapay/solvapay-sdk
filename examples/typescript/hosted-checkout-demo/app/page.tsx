@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { usePurchase, usePurchaseStatus } from '@solvapay/react'
-import { getAccessToken } from './lib/supabase'
+import { identityHeaders } from './lib/identity'
 import {
   acquireCheckoutLock,
   releaseCheckoutLock,
@@ -49,14 +49,9 @@ export default function HomePage() {
       setError(null)
 
       try {
-        const accessToken = await getAccessToken()
-
-        const headers: HeadersInit = {
+        const headers = {
           'Content-Type': 'application/json',
-        }
-
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`
+          ...(await identityHeaders()),
         }
 
         const requestBody: { productRef: string; planRef?: string } = {
@@ -103,14 +98,9 @@ export default function HomePage() {
     setError(null)
 
     try {
-      const accessToken = await getAccessToken()
-
-      const headers: HeadersInit = {
+      const headers = {
         'Content-Type': 'application/json',
-      }
-
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`
+        ...(await identityHeaders()),
       }
 
       const response = await fetch('/api/create-customer-session', {

@@ -8,8 +8,8 @@ vi.mock('@solvapay/react', () => ({
   usePurchaseStatus: vi.fn(),
 }))
 
-vi.mock('../lib/supabase', () => ({
-  getAccessToken: vi.fn(() => Promise.resolve('test-token')),
+vi.mock('../lib/identity', () => ({
+  identityHeaders: vi.fn(() => Promise.resolve({ Authorization: 'Bearer test-token' })),
 }))
 
 import { usePurchase, usePurchaseStatus } from '@solvapay/react'

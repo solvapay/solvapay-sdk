@@ -13,20 +13,14 @@
  * Full workflow: docs/contributing/sdk-codegen.md (Workflow B).
  */
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
+import { renderYamlFragment } from './lib/manifest-edit.js'
+import { bindingStubFields, clientBindingsFromYaml, nextClientEmitOrder } from './lib/binding-stub.js'
+import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 import {
-  insertIntoStringArrayConst,
-  insertSectionEntry,
-  renderYamlFragment,
-  sectionBounds,
-} from './lib/manifest-edit.js'
-import {
-  deriveNames,
   SdkContractManifestSchema,
-  toSnakeCase,
   type SdkContractManifest,
 } from '../shared/manifest-schema.js'
 import { REPO_ROOT } from '../shared/paths.js'
@@ -39,12 +33,6 @@ export interface CliOptions {
   mode: 'suggest' | 'fix'
   manifestPath: string
   schemaTsPath: string
-}
-
-export interface CliResult {
-  exitCode: number
-  stdout: string
-  stderr: string
 }
 
 function printUsage(): string {
@@ -103,16 +91,6 @@ function orphanOperationIds(
     .sort((a, b) => a.localeCompare(b))
 }
 
-function nextClientEmitOrder(manifest: SdkContractManifest): number {
-  void manifest
-  return 0
-}
-
-function sectionHasEntry(text: string, sectionName: string, entryId: string): boolean {
-  const { bodyStart, bodyEnd } = sectionBounds(text, sectionName)
-  return new RegExp(`^  ${entryId}:\\n`, 'm').test(text.slice(bodyStart, bodyEnd))
-}
-
 export function suggestBindingStub(
   manifest: SdkContractManifest,
   opId: string,
@@ -122,45 +100,21 @@ export function suggestBindingStub(
   if (op === undefined) {
     throw new Error(`Unknown operation: ${opId}`)
   }
-  const names = deriveNames(opId)
-  const snake = toSnakeCase(opId)
   const pathRefs = op.params
     .filter((p): p is typeof p & { type: 'string' } => 'type' in p && p.type === 'string')
     .map(p => p.name)
   const bodyParam = op.params.find(
     (p): p is typeof p & { ref: string } => 'ref' in p && typeof p.ref === 'string',
   )
-  const dtoType = op.request ?? bodyParam?.ref
-  const isSplit = pathRefs.length > 0
-  const clientCallArgs = [
-    ...pathRefs.map((_, i) => `&refs[${i}]`),
-    ...(bodyParam !== undefined
-      ? [bodyParam.name === 'overrides' ? 'Some(overrides)' : bodyParam.name]
-      : []),
-  ]
-
-  return {
-    core: `solvapay_transport::SolvaPayClient::${snake}`,
-    names,
-    catalog: { kind: 'operation', id: opId },
-    args: [],
-    splitPathRefs: pathRefs,
-    return: 'value',
-    sync: 'async',
-    envelope: 'async',
-    artifact: 'client',
+  return bindingStubFields({
+    id: opId,
+    method: op.route.method,
+    routePath: op.route.path,
+    pathRefs,
+    bodyParamName: bodyParam?.name,
+    dtoType: op.request ?? bodyParam?.ref,
     emitOrder,
-    section: 'Group B',
-    doc: `\`${op.route.method} ${op.route.path}\``,
-    rustFnName: snake,
-    call: {
-      kind: 'wrap',
-      serialize: isSplit ? 'clientSplit' : 'clientAwait',
-    },
-    coreCall: snake,
-    ...(dtoType !== undefined ? { dtoType } : {}),
-    ...(isSplit ? { clientCallArgs } : {}),
-  }
+  })
 }
 
 export function runBindings(options: CliOptions): CliResult {
@@ -196,47 +150,20 @@ export function runBindings(options: CliOptions): CliResult {
     }
   }
 
-  let emitOrder = nextClientEmitOrder(manifest)
+  let emitOrder = nextClientEmitOrder(clientBindingsFromYaml(parsed))
   const stubs: Array<{ id: string; stub: Record<string, unknown> }> = []
   for (const id of orphans) {
     stubs.push({ id, stub: suggestBindingStub(manifest, id, emitOrder) })
     emitOrder += 1
   }
 
-  if (options.mode === 'suggest') {
-    const yaml = stubs.map(({ id, stub }) => `  ${id}:\n${renderYamlFragment(stub, 4)}`).join('')
-    return {
-      exitCode: 0,
-      stdout:
-        `Suggested #[solvapay_export] targets for ${stubs.length} orphan operation(s).\n` +
-        `Annotate SolvaPayClient methods; do not add YAML bindings:.\n\n` +
-        yaml,
-      stderr: '',
-    }
-  }
-
-  let nextRaw = raw
-  let schemaTs = readFileSync(options.schemaTsPath, 'utf8')
-  const applied: string[] = []
-
-  for (const { id, stub } of stubs) {
-    if (sectionHasEntry(nextRaw, 'bindings', id)) {
-      continue
-    }
-    nextRaw = insertSectionEntry(nextRaw, 'bindings', id, renderYamlFragment(stub, 4))
-    schemaTs = insertIntoStringArrayConst(schemaTs, 'SHIM_JS_NAMES', id)
-    applied.push(id)
-  }
-
-  writeFileSync(options.manifestPath, nextRaw)
-  writeFileSync(options.schemaTsPath, schemaTs)
-
+  const yaml = stubs.map(({ id, stub }) => `  ${id}:\n${renderYamlFragment(stub, 4)}`).join('')
   return {
     exitCode: 0,
     stdout:
-      `Inserted bindings for: ${applied.join(', ')}\n` +
-      `Updated SHIM_JS_NAMES in ${path.relative(REPO_ROOT, options.schemaTsPath)}\n` +
-      `Next: pnpm gen && pnpm manifest:check\n`,
+      `Suggested #[solvapay_export] targets for ${stubs.length} orphan operation(s).\n` +
+      `Annotate SolvaPayClient methods; do not add YAML bindings:.\n\n` +
+      yaml,
     stderr: '',
   }
 }
@@ -246,8 +173,7 @@ export async function runCli(argv: string[]): Promise<CliResult> {
   try {
     options = parseArgs(argv)
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return { exitCode: 1, stdout: '', stderr: `${message}\n${printUsage()}` }
+    return parseErrorResult(error, printUsage())
   }
   try {
     return runBindings(options)
@@ -260,20 +186,6 @@ export async function runCli(argv: string[]): Promise<CliResult> {
   }
 }
 
-async function main(): Promise<void> {
-  const result = await runCli(process.argv.slice(2))
-  if (result.stdout) {
-    process.stdout.write(result.stdout)
-  }
-  if (result.stderr) {
-    process.stderr.write(result.stderr)
-  }
-  process.exit(result.exitCode)
-}
-
-const isDirectRun =
-  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-
-if (isDirectRun) {
-  void main()
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runScriptMain(runCli)
 }

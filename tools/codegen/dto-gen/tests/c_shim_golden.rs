@@ -9,79 +9,18 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+mod support;
+
 use std::fs;
-use std::io::Write;
-use std::process::Command;
 
 use dto_gen::emit_bindings_rs::{emit_bindings, Toolchain};
 use dto_gen::ir::{Ir, IrBindingArtifact, IrErrorTemplates, IrSerializeKind};
-use dto_gen::lower_catalog::lower_catalog;
-use dto_gen::manifest::Manifest;
 
-fn paths() -> repo_paths::RepoPaths {
-    repo_paths::load().expect("repo-paths")
-}
 
-fn lower_ir() -> Ir {
-    let manifest_path = paths().contract_input("sdkManifest").expect("sdkManifest");
-    let raw = fs::read_to_string(&manifest_path).expect("read manifest");
-    let manifest: Manifest = serde_norway::from_str(&raw).expect("parse manifest");
-    let mut ir = Ir {
-        types: Default::default(),
-        overlay_helpers: Default::default(),
-        overlays: Default::default(),
-        routes: vec![],
-        error_templates: IrErrorTemplates::default(),
-        entry_points: Default::default(),
-        binding_symbols: Default::default(),
-        core_types: Default::default(),
-        core_types_ts: Default::default(),
-        core_fns: Default::default(),
-        transport_fns: Default::default(),
-    };
-    lower_catalog(&mut ir, &manifest).expect("lower catalog");
-    let residue = dto_gen::load_binding_residue(
-        &paths()
-            .contract_input("bindingResidue")
-            .expect("bindingResidue"),
-    )
-    .expect("residue");
-    dto_gen::lower_all_bindings(
-        &mut ir,
-        &manifest,
-        &paths().contract_input("coreSrc").expect("coreSrc"),
-        &residue,
-        Some(
-            &paths()
-                .contract_input("transportSrc")
-                .expect("transportSrc"),
-        ),
-    )
-    .expect("lower bindings");
-    ir
-}
 
-fn rustfmt(source: &str, tag: &str) -> String {
-    let mut path = std::env::temp_dir();
-    path.push(format!(
-        "dto_gen_c_golden_{}_{}.rs",
-        std::process::id(),
-        tag
-    ));
-    {
-        let mut f = fs::File::create(&path).expect("create temp");
-        f.write_all(source.as_bytes()).expect("write temp");
-    }
-    let status = Command::new("rustfmt")
-        .arg("--edition=2021")
-        .arg(&path)
-        .status()
-        .expect("spawn rustfmt");
-    assert!(status.success(), "rustfmt failed for {tag}");
-    let out = fs::read_to_string(&path).expect("read temp");
-    let _ = fs::remove_file(&path);
-    out
-}
+
+
+
 
 fn client_symbols(ir: &Ir) -> Vec<&dto_gen::ir::IrBindingSymbol> {
     let mut symbols: Vec<_> = ir
@@ -94,7 +33,7 @@ fn client_symbols(ir: &Ir) -> Vec<&dto_gen::ir::IrBindingSymbol> {
 }
 
 fn committed_dispatch() -> String {
-    let src = paths()
+    let src = support::paths()
         .generated_path("cBindings")
         .expect("cBindings")
         .join("dispatch.rs");
@@ -140,7 +79,7 @@ fn extract_get_merchant_arm(src: &str) -> String {
 }
 
 fn live_contract_ops() -> Vec<String> {
-    let path = paths().abs("tools/conformance/live-contract/src/invoke.rs");
+    let path = support::paths().abs("tools/conformance/live-contract/src/invoke.rs");
     let src = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     let mut ops = Vec::new();
     for line in src.lines() {
@@ -163,12 +102,12 @@ fn live_contract_ops() -> Vec<String> {
 
 #[test]
 fn c_column_emits_full_36_op_surface() {
-    let ir = lower_ir();
+    let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::C).expect("emit C");
     let symbols = client_symbols(&ir);
     assert_eq!(symbols.len(), 36, "expected 36 client binding symbols");
 
-    let formatted = rustfmt(&emitted.client_rs, "dispatch");
+    let formatted = support::rustfmt_source(&emitted.client_rs, "dispatch");
     for sym in &symbols {
         let arm = format!("\"{}\" =>", sym.id);
         assert!(formatted.contains(&arm), "missing C dispatch arm {arm}");
@@ -220,9 +159,9 @@ fn c_column_emits_full_36_op_surface() {
 
 #[test]
 fn c_chrome_unknown_op_and_tests_match_committed() {
-    let ir = lower_ir();
+    let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::C).expect("emit C");
-    let formatted = rustfmt(&emitted.client_rs, "chrome");
+    let formatted = support::rustfmt_source(&emitted.client_rs, "chrome");
     let committed = committed_dispatch();
 
     assert_eq!(
@@ -239,9 +178,9 @@ fn c_chrome_unknown_op_and_tests_match_committed() {
 
 #[test]
 fn c_get_merchant_arm_keeps_client_call_and_block_on() {
-    let ir = lower_ir();
+    let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::C).expect("emit C");
-    let formatted = rustfmt(&emitted.client_rs, "get_merchant");
+    let formatted = support::rustfmt_source(&emitted.client_rs, "get_merchant");
     let arm = extract_get_merchant_arm(&formatted);
     assert!(
         arm.contains("client.get_merchant()"),
@@ -259,9 +198,9 @@ fn c_get_merchant_arm_keeps_client_call_and_block_on() {
 
 #[test]
 fn c_ops_cover_live_contract_invoke_table() {
-    let ir = lower_ir();
+    let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::C).expect("emit C");
-    let formatted = rustfmt(&emitted.client_rs, "live_contract");
+    let formatted = support::rustfmt_source(&emitted.client_rs, "live_contract");
     let live = live_contract_ops();
     assert!(!live.is_empty(), "live-contract invoke.rs produced no ops");
     for op in live {

@@ -5,12 +5,8 @@ use std::fmt::Write as _;
 use crate::doc_render::render_entry_doc_lines;
 use crate::emit_ts::{ts_alias_target, ts_named, ts_type_ref, write_ts_doc};
 use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{Ir, IrEntryPoint, IrEntrySection, IrParam, IrTypeRef};
-
-const CLIENT_HEADER: &str = "\
-/**\n\
- * @generated — do not edit. Regenerate with: pnpm gen\n\
- */\n\n";
 
 /// Hand-written type names from `client.ts` preferred over overlays for API-diff
 /// mutual assignability (frozen contract until Phase 6 cutover).
@@ -73,7 +69,8 @@ fn is_hand_type(name: &str) -> bool {
 /// Returns formatting errors as [`GenError`] (none expected for string writes).
 pub fn emit_client_ts(ir: &Ir) -> GenResult<String> {
     let mut out = String::new();
-    out.push_str(CLIENT_HEADER);
+    out.push_str(&generated_header(CommentStyle::Block, "ts-client-out"));
+    out.push('\n');
     out.push_str("import type { components, operations } from './generated'\n");
     out.push_str("import type * as overlays from './overlays.generated'\n");
     out.push_str("import type {\n");
@@ -99,7 +96,7 @@ pub fn emit_client_ts(ir: &Ir) -> GenResult<String> {
 }
 
 fn emit_client_method(out: &mut String, ir: &Ir, ep: &IrEntryPoint) {
-    write_ts_doc(out, &render_tsdoc(ep));
+    write_ts_doc(out, &render_tsdoc(ep), "");
     let optional = if ep.optional_on_client { "?" } else { "" };
     let params = emit_params(ir, &ep.params);
     let ret = match &ep.response {
@@ -110,7 +107,7 @@ fn emit_client_method(out: &mut String, ir: &Ir, ep: &IrEntryPoint) {
 }
 
 fn emit_with_retry(out: &mut String, ir: &Ir, ep: &IrEntryPoint) {
-    write_ts_doc(out, &render_tsdoc(ep));
+    write_ts_doc(out, &render_tsdoc(ep), "");
     let type_params = if ep.type_params.is_empty() {
         String::new()
     } else {

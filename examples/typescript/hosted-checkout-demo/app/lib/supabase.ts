@@ -4,16 +4,18 @@
  * Creates and exports the Supabase client for authentication.
  */
 
-import { createClient, type Session } from '@supabase/supabase-js'
+import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase environment variables not configured. Authentication will not work.')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// createClient throws on empty url/key. The demo also runs in anonymous mode
+// (see auth-mode.ts), where nothing in this module is ever called, so keep the
+// client constructible with placeholders instead of breaking that path at import.
+export const supabase: SupabaseClient = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'public-anon-key',
+)
 
 /**
  * Get the current user's ID from Supabase session

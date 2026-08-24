@@ -8,11 +8,11 @@
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
 import { REPO_ROOT } from '../shared/paths.js'
 import { loadRepoPathsManifest } from '../shared/repo-paths.js'
 import type { RepoPathsManifest } from '../shared/repo-paths-schema.js'
 import { runGen } from './gen.js'
+import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 
 export interface CleanTarget {
   id: string
@@ -41,12 +41,6 @@ export interface CleanResult {
 
 export interface VerifyReport {
   missing: string[]
-}
-
-export interface CliResult {
-  exitCode: number
-  stdout: string
-  stderr: string
 }
 
 function isFilePath(rel: string): boolean {
@@ -270,11 +264,7 @@ export function runCli(argv: string[], deps: CleanCliDeps = {}): CliResult {
   try {
     options = parseArgs(argv)
   } catch (error) {
-    return {
-      exitCode: 1,
-      stdout: '',
-      stderr: `${error instanceof Error ? error.message : String(error)}\n`,
-    }
+    return parseErrorResult(error, 'Usage: pnpm gen:clean | pnpm gen:verify\n')
   }
 
   const plan = planClean()
@@ -320,20 +310,6 @@ export function runCli(argv: string[], deps: CleanCliDeps = {}): CliResult {
   }
 }
 
-async function main(): Promise<void> {
-  const result = runCli(process.argv.slice(2))
-  if (result.stdout) {
-    process.stdout.write(result.stdout)
-  }
-  if (result.stderr) {
-    process.stderr.write(result.stderr)
-  }
-  process.exit(result.exitCode)
-}
-
-const isDirectRun =
-  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-
-if (isDirectRun) {
-  void main()
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runScriptMain(async argv => runCli(argv))
 }

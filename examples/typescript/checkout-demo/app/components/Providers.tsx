@@ -1,8 +1,13 @@
 'use client'
 
-import { SolvaPayProvider } from '@solvapay/react'
+import {
+  SolvaPayProvider,
+  createAnonymousAuthAdapter,
+  getOrCreateAnonymousCustomerRef,
+} from '@solvapay/react'
 import { createSupabaseAuthAdapter } from '@solvapay/react-supabase'
 import { useMemo } from 'react'
+import { demoAuthMode } from '../lib/auth-mode'
 import { supabase } from '../lib/supabase'
 
 // --- Optional: ship your own copy bundle for non-English locales -------------
@@ -19,22 +24,23 @@ import { supabase } from '../lib/supabase'
 // -----------------------------------------------------------------------------
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const supabaseAdapter = useMemo(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      return undefined
+  const config = useMemo(() => {
+    if (demoAuthMode === 'anonymous') {
+      // The ref is persisted in the browser, so it is stable across reloads.
+      // `proxy.ts` promotes the header to `x-user-id` for the API routes.
+      const customerRef = getOrCreateAnonymousCustomerRef()
+      return {
+        auth: { adapter: createAnonymousAuthAdapter(customerRef) },
+        headers: { 'x-customer-ref': customerRef },
+      }
     }
-    return createSupabaseAuthAdapter({ client: supabase })
+
+    return {
+      auth: { adapter: createSupabaseAuthAdapter({ client: supabase }) },
+      // locale: 'sv-SE',
+      // copy: svSECopy,
+    }
   }, [])
 
-  return (
-    <SolvaPayProvider
-      config={{
-        ...(supabaseAdapter ? { auth: { adapter: supabaseAdapter } } : {}),
-        // locale: 'sv-SE',
-        // copy: svSECopy,
-      }}
-    >
-      {children}
-    </SolvaPayProvider>
-  )
+  return <SolvaPayProvider config={config}>{children}</SolvaPayProvider>
 }

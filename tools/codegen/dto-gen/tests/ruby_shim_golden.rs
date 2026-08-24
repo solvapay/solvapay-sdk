@@ -10,80 +10,19 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+mod support;
+
 use std::fs;
-use std::io::Write;
 use std::path::Path;
-use std::process::Command;
 
 use dto_gen::emit_bindings_rs::{emit_bindings, Toolchain};
 use dto_gen::ir::{Ir, IrBindingArtifact, IrErrorTemplates};
-use dto_gen::lower_catalog::lower_catalog;
-use dto_gen::manifest::Manifest;
 
-fn paths() -> repo_paths::RepoPaths {
-    repo_paths::load().expect("repo-paths")
-}
 
-fn lower_ir() -> Ir {
-    let manifest_path = paths().contract_input("sdkManifest").expect("sdkManifest");
-    let raw = fs::read_to_string(&manifest_path).expect("read manifest");
-    let manifest: Manifest = serde_norway::from_str(&raw).expect("parse manifest");
-    let mut ir = Ir {
-        types: Default::default(),
-        overlay_helpers: Default::default(),
-        overlays: Default::default(),
-        routes: vec![],
-        error_templates: IrErrorTemplates::default(),
-        entry_points: Default::default(),
-        binding_symbols: Default::default(),
-        core_types: Default::default(),
-        core_types_ts: Default::default(),
-        core_fns: Default::default(),
-        transport_fns: Default::default(),
-    };
-    lower_catalog(&mut ir, &manifest).expect("lower catalog");
-    let residue = dto_gen::load_binding_residue(
-        &paths()
-            .contract_input("bindingResidue")
-            .expect("bindingResidue"),
-    )
-    .expect("residue");
-    dto_gen::lower_all_bindings(
-        &mut ir,
-        &manifest,
-        &paths().contract_input("coreSrc").expect("coreSrc"),
-        &residue,
-        Some(
-            &paths()
-                .contract_input("transportSrc")
-                .expect("transportSrc"),
-        ),
-    )
-    .expect("lower bindings");
-    ir
-}
 
-fn rustfmt(source: &str, tag: &str) -> String {
-    let mut path = std::env::temp_dir();
-    path.push(format!(
-        "dto_gen_rb_golden_{}_{}.rs",
-        std::process::id(),
-        tag
-    ));
-    {
-        let mut f = fs::File::create(&path).expect("create temp");
-        f.write_all(source.as_bytes()).expect("write temp");
-    }
-    let status = Command::new("rustfmt")
-        .arg("--edition=2021")
-        .arg(&path)
-        .status()
-        .expect("spawn rustfmt");
-    assert!(status.success(), "rustfmt failed for {tag}");
-    let out = fs::read_to_string(&path).expect("read temp");
-    let _ = fs::remove_file(&path);
-    out
-}
+
+
+
 
 fn strip_module_doc(src: &str) -> String {
     let mut rest: Vec<&str> = Vec::new();
@@ -101,7 +40,7 @@ fn strip_module_doc(src: &str) -> String {
 fn assert_matches(emitted: &str, committed_path: &Path, tag: &str) {
     let committed = fs::read_to_string(committed_path)
         .unwrap_or_else(|e| panic!("read committed {}: {e}", committed_path.display()));
-    let formatted = rustfmt(emitted, tag);
+    let formatted = support::rustfmt_source(emitted, tag);
     let got = strip_module_doc(&formatted);
     let want = strip_module_doc(&committed);
     if got != want {
@@ -137,9 +76,9 @@ fn names_for(ir: &Ir, artifact: IrBindingArtifact) -> Vec<String> {
 
 #[test]
 fn ruby_full_surface_matches_committed() {
-    let ir = lower_ir();
+    let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::Ruby).expect("emit ruby");
-    let src = paths()
+    let src = support::paths()
         .generated_path("rubyBindings")
         .expect("rubyBindings");
 

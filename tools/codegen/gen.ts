@@ -13,10 +13,9 @@
  */
 
 import { spawnSync } from 'node:child_process'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { REPO_ROOT } from '../shared/paths.js'
 import { dtoGenArgs, generatedDriftPaths, lookupPath } from '../shared/repo-paths.js'
+import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 
 /** dto-gen argv (paths relative to the repo root). Derived from repo-paths.yaml. */
 export const DTO_GEN_ARGS = dtoGenArgs()
@@ -26,12 +25,6 @@ export const GENERATED_PATHS = generatedDriftPaths()
 
 export interface CliOptions {
   check: boolean
-}
-
-export interface CliResult {
-  exitCode: number
-  stdout: string
-  stderr: string
 }
 
 function printUsage(): string {
@@ -169,30 +162,11 @@ export async function runCli(argv: string[]): Promise<CliResult> {
   try {
     options = parseArgs(argv)
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return {
-      exitCode: 1,
-      stdout: '',
-      stderr: `${message}\n${printUsage()}`,
-    }
+    return parseErrorResult(error, printUsage())
   }
   return runGen(options)
 }
 
-async function main(): Promise<void> {
-  const result = await runCli(process.argv.slice(2))
-  if (result.stdout) {
-    process.stdout.write(result.stdout)
-  }
-  if (result.stderr) {
-    process.stderr.write(result.stderr)
-  }
-  process.exit(result.exitCode)
-}
-
-const isDirectRun =
-  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-
-if (isDirectRun) {
-  void main()
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runScriptMain(runCli)
 }

@@ -3,13 +3,8 @@
 use std::fmt::Write as _;
 
 use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{Ir, IrEntrySection, IrSyncKind};
-
-const HEADER: &str = "\
-/**\n\
- * @generated — do not edit. Regenerate with dto-gen --ts-parity-out.\n\
- * Signature-parity suite (§2.8) — presence, arity, sync matrix, defaults, errors.\n\
- */\n\n";
 
 /// Emits `signature-parity.generated.test.ts` contents.
 ///
@@ -18,7 +13,10 @@ const HEADER: &str = "\
 /// Returns formatting errors as [`crate::error::GenError`] (none expected for string writes).
 pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
     let mut out = String::new();
-    out.push_str(HEADER);
+    out.push_str(&generated_header(CommentStyle::Block, "ts-parity-out"));
+    out.push_str(
+        "/** Signature-parity suite (§2.8) — presence, arity, sync matrix, defaults, errors. */\n\n",
+    );
     out.push_str("import { describe, expect, expectTypeOf, it, vi } from 'vitest'\n");
     out.push_str("import { SolvaPayError } from '@solvapay/core'\n");
     out.push_str("import { PaywallError } from '../paywall'\n");

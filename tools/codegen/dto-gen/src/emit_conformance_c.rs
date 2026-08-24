@@ -2,6 +2,7 @@
 
 use crate::emit_conformance_chrome::emit_chrome_files;
 use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{Ir, IrBindingArtifact};
 
 const SNAPSHOT: &str = include_str!("../assets/conformance-c-emit.snapshot.json");
@@ -19,6 +20,7 @@ pub fn emit_conformance_c(ir: &Ir) -> GenResult<Vec<(String, String)>> {
     emit_chrome_files(
         SNAPSHOT,
         "conformance-c-emit snapshot",
+        &format!("{}\n", generated_header(CommentStyle::CBlock, "c-conformance-out")),
         FILE_ORDER,
         &[("dispatch.c", "{{CLIENT_OPS}}", &client_ops)],
     )
@@ -47,6 +49,7 @@ mod tests {
     #[test]
     fn snapshot_declares_every_emitted_file() {
         let chrome: Value = serde_json::from_str(SNAPSHOT).unwrap();
+        assert!(chrome.get("header").is_none(), "banners must not live in the snapshot");
         let files = chrome.get("files").and_then(Value::as_object).unwrap();
         for name in FILE_ORDER {
             assert!(files.contains_key(*name), "missing {name}");

@@ -3,10 +3,9 @@
 use std::fmt::Write as _;
 
 use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{Ir, IrCoreField, IrCoreFieldTy, IrCoreShape, IrCoreTsAlias, IrCoreType};
-
-const GENERATED_HEADER: &str =
-    "/**\n * @generated — do not edit. Regenerate with: pnpm gen\n */\n\n";
+use crate::emit_ts::{escape_ts, write_ts_doc};
 
 /// Emits the consolidated TypeScript boundary-type declarations.
 ///
@@ -18,7 +17,8 @@ const GENERATED_HEADER: &str =
 pub fn emit_core_types_ts(ir: &Ir) -> GenResult<String> {
     let overlay = &ir.core_types_ts;
     let mut out = String::new();
-    out.push_str(GENERATED_HEADER);
+    out.push_str(&generated_header(CommentStyle::Block, "core-types-ts-out"));
+    out.push('\n');
     out.push_str(
         "import type { SupportedBusinessCountry, TaxIdType } from '../business-details'\n\n",
     );
@@ -268,22 +268,6 @@ fn map_ty(ty: &IrCoreFieldTy) -> String {
         IrCoreFieldTy::Named(name) => name.clone(),
         IrCoreFieldTy::Result { .. } => "unknown".into(),
     }
-}
-
-fn write_ts_doc(out: &mut String, doc: &str, indent: &str) {
-    let trimmed = doc.trim();
-    if trimmed.is_empty() {
-        return;
-    }
-    let _ = writeln!(out, "{indent}/**");
-    for line in trimmed.lines() {
-        let _ = writeln!(out, "{indent} * {line}");
-    }
-    let _ = writeln!(out, "{indent} */");
-}
-
-fn escape_ts(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('\'', "\\'")
 }
 
 #[cfg(test)]

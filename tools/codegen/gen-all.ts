@@ -9,24 +9,26 @@
 
 import { spawnSync } from 'node:child_process'
 import { REPO_ROOT } from '../shared/paths.js'
+import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 import { loadLocalStack } from './snapshot-openapi.js'
 
 const STACK_ORIGIN = 'http://localhost'
 
-function run(command: string, args: string[], opts?: { allowFail?: boolean }): number {
+export interface AllCliDeps {
+  liveStack?: () => Promise<boolean>
+  run?: (command: string, args: string[]) => number
+}
+
+function defaultRun(command: string, args: string[]): number {
   const result = spawnSync(command, args, {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     stdio: 'inherit',
   })
-  const code = result.status ?? 1
-  if (code !== 0 && !opts?.allowFail) {
-    process.exit(code)
-  }
-  return code
+  return result.status ?? 1
 }
 
-async function liveStackAvailable(): Promise<boolean> {
+export async function liveStackAvailable(): Promise<boolean> {
   for (const service of loadLocalStack()) {
     const url = `${STACK_ORIGIN}:${service.port}/v1/openapi.json`
     try {
@@ -41,18 +43,48 @@ async function liveStackAvailable(): Promise<boolean> {
   return true
 }
 
-async function main(): Promise<void> {
-  if (await liveStackAvailable()) {
-    console.log(`Live OpenAPI stack at ${STACK_ORIGIN} — refreshing snapshot via --from-stack…`)
-    run('pnpm', ['snapshot:openapi', '--from-stack', STACK_ORIGIN])
+export async function runCli(_argv: string[] = [], deps: AllCliDeps = {}): Promise<CliResult> {
+  const lines: string[] = []
+  const run = deps.run ?? defaultRun
+  const stackUp = await (deps.liveStack ?? liveStackAvailable)()
+  if (stackUp) {
+    lines.push(`Live OpenAPI stack at ${STACK_ORIGIN} — refreshing snapshot via --from-stack…`)
+    const snapshotCode = run('pnpm', ['snapshot:openapi', '--from-stack', STACK_ORIGIN])
+    if (snapshotCode !== 0) {
+      return {
+        exitCode: snapshotCode,
+        stdout: `${lines.join('\n')}\n`,
+        stderr: `snapshot:openapi exited ${snapshotCode}\n`,
+      }
+    }
   } else {
-    console.log(`No live OpenAPI stack at ${STACK_ORIGIN} — using committed OpenAPI snapshot`)
+    lines.push(`No live OpenAPI stack at ${STACK_ORIGIN} — using committed OpenAPI snapshot`)
   }
 
-  run('pnpm', ['gen'])
-  run('pnpm', ['manifest:check'])
-  run('pnpm', ['parity:check'])
-  console.log('gen:all complete')
+  for (const args of [['gen'], ['manifest:check'], ['parity:check']] as const) {
+    const code = run('pnpm', [...args])
+    if (code !== 0) {
+      return {
+        exitCode: code,
+        stdout: `${lines.join('\n')}\n`,
+        stderr: `pnpm ${args[0]} exited ${code}\n`,
+      }
+    }
+  }
+  lines.push('gen:all complete')
+  return { exitCode: 0, stdout: `${lines.join('\n')}\n`, stderr: '' }
 }
 
-void main()
+export async function runCliEntry(argv: string[]): Promise<CliResult> {
+  if (argv.includes('--help') || argv.includes('-h')) {
+    return parseErrorResult(new Error('Usage: pnpm gen:all'), '')
+  }
+  if (argv.length > 0) {
+    return parseErrorResult(new Error(`Unknown argument: ${argv[0]}`), 'Usage: pnpm gen:all\n')
+  }
+  return runCli()
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runScriptMain(runCliEntry)
+}

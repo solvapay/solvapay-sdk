@@ -6,9 +6,9 @@
 
 import { stringify } from 'yaml'
 
-/** Whether `  entryId:` already exists as a top-level-under-section key. */
-function hasEntry(text: string, entryId: string): boolean {
-  return new RegExp(`^  ${entryId}:\\n`, 'm').test(text)
+export function sectionHasEntry(text: string, sectionName: string, entryId: string): boolean {
+  const { bodyStart, bodyEnd } = sectionBounds(text, sectionName)
+  return new RegExp(`^  ${entryId}:\\n`, 'm').test(text.slice(bodyStart, bodyEnd))
 }
 
 /** Render a YAML fragment at the given indent (spaces). */
@@ -59,7 +59,7 @@ export function insertSectionEntry(
   entryId: string,
   bodyYaml: string,
 ): string {
-  if (hasEntry(text, entryId)) {
+  if (sectionHasEntry(text, sectionName, entryId)) {
     throw new Error(`Entry already exists: ${entryId}`)
   }
   const { bodyStart, bodyEnd } = sectionBounds(text, sectionName)

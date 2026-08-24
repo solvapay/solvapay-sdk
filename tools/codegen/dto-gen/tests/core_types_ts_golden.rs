@@ -2,13 +2,13 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+mod support;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
 use dto_gen::emit_core_types_ts::emit_core_types_ts;
-use dto_gen::ir::{Ir, IrErrorTemplates};
-use dto_gen::manifest::Manifest;
 
 /// Hand-written modules whose `export type` / `export interface` names must
 /// survive on the generated boundary surface.
@@ -50,47 +50,9 @@ enum TsShape {
     Union,
 }
 
-fn paths() -> repo_paths::RepoPaths {
-    repo_paths::load().expect("repo-paths")
-}
 
-fn lower_ir() -> Ir {
-    let manifest_path = paths().contract_input("sdkManifest").expect("sdkManifest");
-    let raw = fs::read_to_string(&manifest_path).expect("read manifest");
-    let manifest: Manifest = serde_norway::from_str(&raw).expect("parse manifest");
-    let mut ir = Ir {
-        types: Default::default(),
-        overlay_helpers: Default::default(),
-        overlays: Default::default(),
-        routes: vec![],
-        error_templates: IrErrorTemplates::default(),
-        entry_points: Default::default(),
-        binding_symbols: Default::default(),
-        core_types: Default::default(),
-        core_types_ts: Default::default(),
-        core_fns: Default::default(),
-        transport_fns: Default::default(),
-    };
-    let residue = dto_gen::load_binding_residue(
-        &paths()
-            .contract_input("bindingResidue")
-            .expect("bindingResidue"),
-    )
-    .expect("residue");
-    dto_gen::lower_all_bindings(
-        &mut ir,
-        &manifest,
-        &paths().contract_input("coreSrc").expect("coreSrc"),
-        &residue,
-        Some(
-            &paths()
-                .contract_input("transportSrc")
-                .expect("transportSrc"),
-        ),
-    )
-    .expect("lower bindings");
-    ir
-}
+
+
 
 fn extract_types(src: &str, out: &mut BTreeMap<String, TsShape>) {
     let mut rest = src;
@@ -293,7 +255,7 @@ fn handwritten_surface(core_src: &Path) -> BTreeMap<String, TsShape> {
 
 #[test]
 fn emitted_surface_matches_handwritten() {
-    let ir = lower_ir();
+    let ir = support::lower_bindings_ir();
     let emitted = emit_core_types_ts(&ir).expect("emit");
     assert!(
         emitted.contains("@generated"),
@@ -304,7 +266,7 @@ fn emitted_surface_matches_handwritten() {
     extract_types(&emitted, &mut got);
 
     let want = handwritten_surface(
-        &paths()
+        &support::paths()
             .ts_package("core")
             .expect("tsPackages.core")
             .join("src"),

@@ -30,6 +30,8 @@ pub mod emit_pyi_py;
 pub mod emit_rbs_rb;
 pub mod emit_ts;
 pub mod error;
+pub mod header;
+pub mod chrome;
 pub mod ir;
 pub mod lower_bindings;
 pub mod lower_catalog;
@@ -246,82 +248,39 @@ pub fn generate_from_snapshot(
     let emitted = emit_crate(&ir)?;
     write_emitted(out_dir, &emitted)?;
 
-    if let Some(ts_path) = outputs.ts_out {
-        let ts = emit_overlays_ts(&ir)?;
-        if let Some(parent) = ts_path.parent() {
-            fs::create_dir_all(parent).map_err(|source| GenError::Io {
-                path: parent.to_path_buf(),
-                source,
-            })?;
-        }
-        write_file(ts_path, &ts)?;
-    }
-
-    if let Some(ts_client_path) = outputs.ts_client_out {
-        let ts = emit_client_ts(&ir)?;
-        if let Some(parent) = ts_client_path.parent() {
-            fs::create_dir_all(parent).map_err(|source| GenError::Io {
-                path: parent.to_path_buf(),
-                source,
-            })?;
-        }
-        write_file(ts_client_path, &ts)?;
-    }
-
-    if let Some(ts_parity_path) = outputs.ts_parity_out {
-        let ts = emit_parity_suite_ts(&ir)?;
-        if let Some(parent) = ts_parity_path.parent() {
-            fs::create_dir_all(parent).map_err(|source| GenError::Io {
-                path: parent.to_path_buf(),
-                source,
-            })?;
-        }
-        write_file(ts_parity_path, &ts)?;
-    }
-
-    if let Some(bindings_path) = outputs.dump_bindings {
-        let json = dump_binding_symbols(&ir);
-        if let Some(parent) = bindings_path.parent() {
-            fs::create_dir_all(parent).map_err(|source| GenError::Io {
-                path: parent.to_path_buf(),
-                source,
-            })?;
-        }
-        write_file(bindings_path, &json)?;
-    }
-
-    if let Some(path) = outputs.dump_boundary_types {
-        let json = dump_core_types(&ir)?;
-        create_parent(path)?;
-        write_file(path, &json)?;
-    }
-
-    if let Some(path) = outputs.core_types_ts_out {
-        let ts = emit_core_types_ts(&ir)?;
-        create_parent(path)?;
-        write_file(path, &ts)?;
-    }
-
-    if let Some(path) = outputs.core_dispatch_ts_out {
-        let ts = emit_core_wrappers_ts(&ir, CoreWrapperKind::Dispatch)?;
-        create_parent(path)?;
-        write_file(path, &ts)?;
-    }
-    if let Some(path) = outputs.core_native_ts_out {
-        let ts = emit_core_wrappers_ts(&ir, CoreWrapperKind::NativeCore)?;
-        create_parent(path)?;
-        write_file(path, &ts)?;
-    }
-    if let Some(path) = outputs.core_helpers_ts_out {
-        let ts = emit_core_wrappers_ts(&ir, CoreWrapperKind::NativeHelpers)?;
-        create_parent(path)?;
-        write_file(path, &ts)?;
-    }
-    if let Some(path) = outputs.server_decisions_ts_out {
-        let ts = emit_core_wrappers_ts(&ir, CoreWrapperKind::NativeDecisions)?;
-        create_parent(path)?;
-        write_file(path, &ts)?;
-    }
+    write_file_outputs(
+        &ir,
+        &[
+            ("--ts-out", outputs.ts_out, emit_overlays_ts, false),
+            ("--ts-client-out", outputs.ts_client_out, emit_client_ts, false),
+            ("--ts-parity-out", outputs.ts_parity_out, emit_parity_suite_ts, false),
+            ("--dump-bindings", outputs.dump_bindings, dump_bindings_text, false),
+            ("--dump-boundary-types", outputs.dump_boundary_types, dump_core_types, false),
+            ("--core-types-ts-out", outputs.core_types_ts_out, emit_core_types_ts, false),
+            ("--core-dispatch-ts-out", outputs.core_dispatch_ts_out, emit_dispatch_ts, false),
+            ("--core-native-ts-out", outputs.core_native_ts_out, emit_native_core_ts, false),
+            ("--core-helpers-ts-out", outputs.core_helpers_ts_out, emit_native_helpers_ts, false),
+            (
+                "--server-decisions-ts-out",
+                outputs.server_decisions_ts_out,
+                emit_native_decisions_ts,
+                false,
+            ),
+            ("--c-parity-out", outputs.c_parity_out, emit_parity_suite_c, false),
+            ("--fixture-runner-out", outputs.fixture_runner_out, emit_fixture_runner, true),
+            ("--native-ts-out", outputs.native_ts_out, emit_native_ts_node, false),
+            ("--wasm-ts-out", outputs.wasm_ts_out, emit_native_ts_wasm, false),
+            ("--native-py-out", outputs.native_py_out, emit_native_py, false),
+            ("--py-stub-out", outputs.py_stub_out, emit_pyi_py, false),
+            ("--py-parity-out", outputs.py_parity_out, emit_parity_suite_py, false),
+            ("--native-rb-out", outputs.native_rb_out, emit_native_rb, false),
+            ("--rb-rbs-out", outputs.rb_rbs_out, emit_rbs_rb, false),
+            ("--rb-parity-out", outputs.rb_parity_out, emit_parity_suite_rb, false),
+            ("--rs-parity-out", outputs.rs_parity_out, emit_parity_suite_rs, true),
+            ("--go-client-out", outputs.go_client_out, emit_client_go, false),
+            ("--go-parity-out", outputs.go_parity_out, emit_parity_suite_go, false),
+        ],
+    )?;
 
     if let Some(dir) = outputs.node_bindings_out {
         let emitted = emit_bindings(&ir, Toolchain::Node)?;
@@ -358,100 +317,18 @@ pub fn generate_from_snapshot(
         write_conformance_dir(dir, &files)?;
     }
 
-    if let Some(path) = outputs.c_parity_out {
-        let c = emit_parity_suite_c(&ir)?;
-        create_parent(path)?;
-        write_file(path, &c)?;
-    }
-
-    if let Some(path) = outputs.fixture_runner_out {
-        let rs = emit_fixture_runner(&ir)?;
-        create_parent(path)?;
-        write_file(path, &rs)?;
-        rustfmt_files(&[path.to_path_buf()])?;
-    }
-
-    if let Some(native_ts_path) = outputs.native_ts_out {
-        let ts = emit_native_ts(&ir, Toolchain::Node)?;
-        if let Some(parent) = native_ts_path.parent() {
-            fs::create_dir_all(parent).map_err(|source| GenError::Io {
-                path: parent.to_path_buf(),
-                source,
-            })?;
-        }
-        write_file(native_ts_path, &ts)?;
-    }
-
-    if let Some(wasm_ts_path) = outputs.wasm_ts_out {
-        let ts = emit_native_ts(&ir, Toolchain::Wasm)?;
-        if let Some(parent) = wasm_ts_path.parent() {
-            fs::create_dir_all(parent).map_err(|source| GenError::Io {
-                path: parent.to_path_buf(),
-                source,
-            })?;
-        }
-        write_file(wasm_ts_path, &ts)?;
-    }
-
-    if let Some(native_py_path) = outputs.native_py_out {
-        let py = emit_native_py(&ir)?;
-        if let Some(parent) = native_py_path.parent() {
-            fs::create_dir_all(parent).map_err(|source| GenError::Io {
-                path: parent.to_path_buf(),
-                source,
-            })?;
-        }
-        write_file(native_py_path, &py)?;
-    }
-
-    if let Some(py_stub_path) = outputs.py_stub_out {
-        let pyi = emit_pyi_py(&ir)?;
-        create_parent(py_stub_path)?;
-        write_file(py_stub_path, &pyi)?;
-    }
-
-    if let Some(py_parity_path) = outputs.py_parity_out {
-        let py = emit_parity_suite_py(&ir)?;
-        if let Some(parent) = py_parity_path.parent() {
-            fs::create_dir_all(parent).map_err(|source| GenError::Io {
-                path: parent.to_path_buf(),
-                source,
-            })?;
-        }
-        write_file(py_parity_path, &py)?;
-    }
-
     if let Some(dir) = outputs.py_conformance_out {
         let files = emit_conformance_py(&ir)?;
         write_conformance_dir(dir, &files)?;
     }
 
-    if let Some(native_rb_path) = outputs.native_rb_out {
-        let ruby = emit_native_rb(&ir)?;
-        create_parent(native_rb_path)?;
-        write_file(native_rb_path, &ruby)?;
-    }
-
     if let Some(rb_client_path) = outputs.rb_client_out {
         let ruby = emit_client_rb(&ir)?;
-        create_parent(rb_client_path)?;
-        write_file(rb_client_path, &ruby.client_rb)?;
+        write_contents(rb_client_path, &ruby.client_rb)?;
         let parent = rb_client_path.parent().ok_or_else(|| {
             GenError::Parse("--rb-client-out must have a parent directory".into())
         })?;
-        write_file(&parent.join("helpers.generated.rb"), &ruby.helpers_rb)?;
-    }
-
-    if let Some(rb_rbs_path) = outputs.rb_rbs_out {
-        let rbs = emit_rbs_rb(&ir)?;
-        create_parent(rb_rbs_path)?;
-        write_file(rb_rbs_path, &rbs)?;
-    }
-
-    if let Some(rb_parity_path) = outputs.rb_parity_out {
-        let ruby = emit_parity_suite_rb(&ir)?;
-        create_parent(rb_parity_path)?;
-        write_file(rb_parity_path, &ruby)?;
+        write_contents(&parent.join("helpers.generated.rb"), &ruby.helpers_rb)?;
     }
 
     if let Some(dir) = outputs.rb_conformance_out {
@@ -466,35 +343,61 @@ pub fn generate_from_snapshot(
 
     if let Some(rs_client_path) = outputs.rs_client_out {
         let rust = emit_client_rs(&ir)?;
-        create_parent(rs_client_path)?;
-        write_file(rs_client_path, &rust.client_generated_rs)?;
+        write_contents(rs_client_path, &rust.client_generated_rs)?;
         let parent = rs_client_path.parent().ok_or_else(|| {
             GenError::Parse("--rs-client-out must have a parent directory".into())
         })?;
         let blocking_path = parent.join("blocking_generated.rs");
-        write_file(&blocking_path, &rust.blocking_generated_rs)?;
+        write_contents(&blocking_path, &rust.blocking_generated_rs)?;
         rustfmt_files(&[rs_client_path.to_path_buf(), blocking_path])?;
     }
 
-    if let Some(rs_parity_path) = outputs.rs_parity_out {
-        let rust = emit_parity_suite_rs(&ir)?;
-        create_parent(rs_parity_path)?;
-        write_file(rs_parity_path, &rust)?;
-        rustfmt_files(&[rs_parity_path.to_path_buf()])?;
-    }
+    Ok(())
+}
 
-    if let Some(go_client_path) = outputs.go_client_out {
-        let go = emit_client_go(&ir)?;
-        create_parent(go_client_path)?;
-        write_file(go_client_path, &go)?;
-    }
+fn dump_bindings_text(ir: &Ir) -> GenResult<String> {
+    Ok(dump_binding_symbols(ir))
+}
 
-    if let Some(go_parity_path) = outputs.go_parity_out {
-        let go = emit_parity_suite_go(&ir)?;
-        create_parent(go_parity_path)?;
-        write_file(go_parity_path, &go)?;
-    }
+fn emit_dispatch_ts(ir: &Ir) -> GenResult<String> {
+    emit_core_wrappers_ts(ir, CoreWrapperKind::Dispatch)
+}
 
+fn emit_native_core_ts(ir: &Ir) -> GenResult<String> {
+    emit_core_wrappers_ts(ir, CoreWrapperKind::NativeCore)
+}
+
+fn emit_native_helpers_ts(ir: &Ir) -> GenResult<String> {
+    emit_core_wrappers_ts(ir, CoreWrapperKind::NativeHelpers)
+}
+
+fn emit_native_decisions_ts(ir: &Ir) -> GenResult<String> {
+    emit_core_wrappers_ts(ir, CoreWrapperKind::NativeDecisions)
+}
+
+fn emit_native_ts_node(ir: &Ir) -> GenResult<String> {
+    emit_native_ts(ir, Toolchain::Node)
+}
+
+fn emit_native_ts_wasm(ir: &Ir) -> GenResult<String> {
+    emit_native_ts(ir, Toolchain::Wasm)
+}
+
+fn write_file_outputs(
+    ir: &Ir,
+    items: &[(&str, Option<&Path>, fn(&Ir) -> GenResult<String>, bool)],
+) -> GenResult<()> {
+    for (flag, path, emit, rustfmt) in items {
+        let Some(path) = path else {
+            continue;
+        };
+        write_contents(path, &emit(ir).map_err(|e| {
+            GenError::Parse(format!("{flag}: {e}"))
+        })?)?;
+        if *rustfmt {
+            rustfmt_files(&[path.to_path_buf()])?;
+        }
+    }
     Ok(())
 }
 
@@ -529,124 +432,78 @@ fn create_parent(path: &Path) -> GenResult<()> {
     Ok(())
 }
 
-/// Writes + rustfmts all generated Step 44 Ruby binding shims.
-///
-/// # Errors
-///
-/// Returns [`GenError::Io`] on write failures or [`GenError::Parse`] if rustfmt
-/// is unavailable.
+fn write_contents(path: &Path, contents: &str) -> GenResult<()> {
+    create_parent(path)?;
+    write_file(path, contents)
+}
+
+fn write_formatted_files(dir: &Path, files: &[(&str, &str)]) -> GenResult<()> {
+    fs::create_dir_all(dir).map_err(|source| GenError::Io {
+        path: dir.to_path_buf(),
+        source,
+    })?;
+    let mut paths = Vec::with_capacity(files.len());
+    for (name, contents) in files {
+        let path = dir.join(name);
+        write_file(&path, contents)?;
+        paths.push(path);
+    }
+    rustfmt_files(&paths)
+}
+
 fn write_ruby_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
-    fs::create_dir_all(dir).map_err(|source| GenError::Io {
-        path: dir.to_path_buf(),
-        source,
-    })?;
-    let paths = [
-        dir.join("args.rs"),
-        dir.join("decisions.rs"),
-        dir.join("payload_builders.rs"),
-        dir.join("client.rs"),
-        dir.join("register.rs"),
-    ];
-    write_file(&paths[0], &emitted.args_rs)?;
-    write_file(&paths[1], &emitted.decisions_rs)?;
-    write_file(&paths[2], &emitted.payload_builders_rs)?;
-    write_file(&paths[3], &emitted.client_rs)?;
-    write_file(&paths[4], &emitted.register_rs)?;
-    rustfmt_files(&paths)?;
-    Ok(())
+    write_formatted_files(
+        dir,
+        &[
+            ("args.rs", &emitted.args_rs),
+            ("decisions.rs", &emitted.decisions_rs),
+            ("payload_builders.rs", &emitted.payload_builders_rs),
+            ("client.rs", &emitted.client_rs),
+            ("register.rs", &emitted.register_rs),
+        ],
+    )
 }
 
-/// Writes + rustfmts the Step 49 Go (wazero WASI guest) binding shims
-/// (`args.rs` / `client.rs` / `webhook.rs`).
-///
-/// # Errors
-///
-/// Returns [`GenError::Io`] on write failures or [`GenError::Parse`] if rustfmt
-/// is unavailable.
 fn write_go_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
-    fs::create_dir_all(dir).map_err(|source| GenError::Io {
-        path: dir.to_path_buf(),
-        source,
-    })?;
-    let paths = [
-        dir.join("args.rs"),
-        dir.join("decisions.rs"),
-        dir.join("payload_builders.rs"),
-        dir.join("client.rs"),
-        dir.join("webhook.rs"),
-    ];
-    write_file(&paths[0], &emitted.args_rs)?;
-    write_file(&paths[1], &emitted.decisions_rs)?;
-    write_file(&paths[2], &emitted.payload_builders_rs)?;
-    write_file(&paths[3], &emitted.client_rs)?;
-    write_file(&paths[4], &emitted.webhook_rs)?;
-    rustfmt_files(&paths)?;
-    Ok(())
+    write_formatted_files(
+        dir,
+        &[
+            ("args.rs", &emitted.args_rs),
+            ("decisions.rs", &emitted.decisions_rs),
+            ("payload_builders.rs", &emitted.payload_builders_rs),
+            ("client.rs", &emitted.client_rs),
+            ("webhook.rs", &emitted.webhook_rs),
+        ],
+    )
 }
 
-/// Writes + rustfmts the C ABI `dispatch.rs` match table.
 fn write_c_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
-    fs::create_dir_all(dir).map_err(|source| GenError::Io {
-        path: dir.to_path_buf(),
-        source,
-    })?;
-    let path = dir.join("dispatch.rs");
-    write_file(&path, &emitted.client_rs)?;
-    rustfmt_files(&[path])?;
-    Ok(())
+    write_formatted_files(dir, &[("dispatch.rs", &emitted.client_rs)])
 }
 
-/// Writes + rustfmts the Step 41 Python binding shims (`args` / `decisions` /
-/// `payload_builders` / `client` / `register`).
-///
-/// # Errors
-///
-/// Returns [`GenError::Io`] on write failures or [`GenError::Parse`] if rustfmt
-/// is unavailable.
 fn write_python_shim(dir: &Path, emitted: &EmittedBindings) -> GenResult<()> {
-    fs::create_dir_all(dir).map_err(|source| GenError::Io {
-        path: dir.to_path_buf(),
-        source,
-    })?;
-    let paths = [
-        dir.join("args.rs"),
-        dir.join("decisions.rs"),
-        dir.join("payload_builders.rs"),
-        dir.join("client.rs"),
-        dir.join("register.rs"),
-    ];
-    write_file(&paths[0], &emitted.args_rs)?;
-    write_file(&paths[1], &emitted.decisions_rs)?;
-    write_file(&paths[2], &emitted.payload_builders_rs)?;
-    write_file(&paths[3], &emitted.client_rs)?;
-    write_file(&paths[4], &emitted.register_rs)?;
-    rustfmt_files(&paths)?;
-    Ok(())
+    write_formatted_files(
+        dir,
+        &[
+            ("args.rs", &emitted.args_rs),
+            ("decisions.rs", &emitted.decisions_rs),
+            ("payload_builders.rs", &emitted.payload_builders_rs),
+            ("client.rs", &emitted.client_rs),
+            ("register.rs", &emitted.register_rs),
+        ],
+    )
 }
 
-/// Writes + rustfmts the four generated shim files for one toolchain.
-///
-/// # Errors
-///
-/// Returns [`GenError::Io`] on write failures or [`GenError::Parse`] if rustfmt
-/// is unavailable.
 fn write_binding_shims(dir: &Path, emitted: &EmittedBindings, client_file: &str) -> GenResult<()> {
-    fs::create_dir_all(dir).map_err(|source| GenError::Io {
-        path: dir.to_path_buf(),
-        source,
-    })?;
-    let paths = [
-        dir.join("args.rs"),
-        dir.join("decisions.rs"),
-        dir.join("payload_builders.rs"),
-        dir.join(client_file),
-    ];
-    write_file(&paths[0], &emitted.args_rs)?;
-    write_file(&paths[1], &emitted.decisions_rs)?;
-    write_file(&paths[2], &emitted.payload_builders_rs)?;
-    write_file(&paths[3], &emitted.client_rs)?;
-    rustfmt_files(&paths)?;
-    Ok(())
+    write_formatted_files(
+        dir,
+        &[
+            ("args.rs", &emitted.args_rs),
+            ("decisions.rs", &emitted.decisions_rs),
+            ("payload_builders.rs", &emitted.payload_builders_rs),
+            (client_file, &emitted.client_rs),
+        ],
+    )
 }
 
 /// Writes an [`EmittedCrate`] into `out_dir`.
@@ -699,4 +556,70 @@ fn rustfmt_files(paths: &[PathBuf]) -> GenResult<()> {
         )));
     }
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod output_dispatch_tests {
+    use super::*;
+
+    fn dummy_emit(_ir: &Ir) -> GenResult<String> {
+        Ok("// @generated\nok\n".into())
+    }
+
+    #[test]
+    fn write_file_outputs_creates_missing_parent_dirs_for_each_flag() {
+        let dir = std::env::temp_dir().join(format!(
+            "dto-gen-file-outs-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let flags = [
+            "--ts-out",
+            "--ts-client-out",
+            "--ts-parity-out",
+            "--dump-bindings",
+            "--dump-boundary-types",
+            "--core-types-ts-out",
+            "--core-dispatch-ts-out",
+            "--core-native-ts-out",
+            "--core-helpers-ts-out",
+            "--server-decisions-ts-out",
+            "--c-parity-out",
+            "--native-ts-out",
+            "--wasm-ts-out",
+            "--native-py-out",
+            "--py-stub-out",
+            "--py-parity-out",
+            "--native-rb-out",
+            "--rb-rbs-out",
+            "--rb-parity-out",
+            "--go-client-out",
+            "--go-parity-out",
+        ];
+        let paths: Vec<PathBuf> = flags
+            .iter()
+            .map(|flag| dir.join("nested").join(flag.trim_start_matches('-')))
+            .collect();
+        let items: Vec<(&str, Option<&Path>, fn(&Ir) -> GenResult<String>, bool)> = flags
+            .iter()
+            .zip(paths.iter())
+            .map(|(flag, path)| {
+                (
+                    *flag,
+                    Some(path.as_path()),
+                    dummy_emit as fn(&Ir) -> GenResult<String>,
+                    false,
+                )
+            })
+            .collect();
+        write_file_outputs(&Ir::default(), &items).unwrap();
+        for path in &paths {
+            assert_eq!(fs::read_to_string(path).unwrap(), "// @generated\nok\n");
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

@@ -8,7 +8,7 @@ import {
   type OpenApiSpec,
 } from './lib/openapi-pipeline.js'
 import { lookupPath } from '../shared/repo-paths.js'
-import { runCli } from './snapshot-openapi.js'
+import { pathDiffReport, runCli } from './snapshot-openapi.js'
 
 const FIXTURE = lookupPath('syntheticOpenapi')
 const TEMP_ROOT = lookupPath('scriptsTmp')
@@ -112,7 +112,22 @@ describe('snapshot-openapi CLI', () => {
     expect(`${result.stdout}${result.stderr}`).toMatch(/mismatch|differ/i)
   })
 
-  it('should error naming the port when one stack service is unreachable', async () => {
+  it('pathDiffReport reads --snapshot rather than the default path', () => {
+    const dir = makeTempDir()
+    const snapshotPath = path.join(dir, 'custom.snapshot.json')
+    writeFileSync(
+      snapshotPath,
+      JSON.stringify({ openapi: '3.0.0', info: { title: 't', version: '1' }, paths: { '/only-custom': {} } }),
+    )
+    const report = pathDiffReport(
+      { openapi: '3.0.0', info: { title: 't', version: '1' }, paths: { '/from-spec': {} } },
+      snapshotPath,
+    )
+    expect(report).toContain('/from-spec')
+    expect(report).toContain('/only-custom')
+  })
+
+  it('fails --from-stack when a service is unreachable', async () => {
     const outDir = makeTempDir()
     const source = JSON.parse(readFileSync(lookupPath('openapiSource'), 'utf8')) as OpenApiSpec
     const result = await runCli(['--from-stack', '--out', outDir], {

@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { ProductBadge, usePurchase } from '@solvapay/react'
 import { Button } from './ui/Button'
-import { signOut, getAccessToken } from '../lib/supabase'
+import { demoAuthMode } from '../lib/auth-mode'
+import { identityHeaders } from '../lib/identity'
+import { signOut } from '../lib/supabase'
 import {
   acquireCheckoutLock,
   releaseCheckoutLock,
@@ -36,14 +38,9 @@ export function Navigation() {
     }
 
     try {
-      const accessToken = await getAccessToken()
-
-      const headers: HeadersInit = {
+      const headers = {
         'Content-Type': 'application/json',
-      }
-
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`
+        ...(await identityHeaders()),
       }
 
       const response = await fetch('/api/create-checkout-session', {
@@ -124,13 +121,16 @@ export function Navigation() {
               </Button>
             )}
 
-            <button
-              onClick={handleSignOut}
-              disabled={isSigningOut}
-              className="text-xs text-slate-500 hover:text-slate-900 transition-colors disabled:opacity-50"
-            >
-              {isSigningOut ? 'Signing out...' : 'Sign Out'}
-            </button>
+            {/* Anonymous mode has no session, so there is nothing to sign out of. */}
+            {demoAuthMode === 'supabase' && (
+              <button
+                onClick={handleSignOut}
+                disabled={isSigningOut}
+                className="text-xs text-slate-500 hover:text-slate-900 transition-colors disabled:opacity-50"
+              >
+                {isSigningOut ? 'Signing out...' : 'Sign Out'}
+              </button>
+            )}
           </div>
         </div>
       </div>

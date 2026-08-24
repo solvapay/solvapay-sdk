@@ -3,53 +3,18 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+mod support;
+
 use std::fs;
 
 use dto_gen::emit_conformance_go::emit_conformance_go;
 use dto_gen::ir::Ir;
-use dto_gen::lower_catalog::lower_catalog;
-use dto_gen::manifest::Manifest;
 
-fn paths() -> repo_paths::RepoPaths {
-    repo_paths::load().expect("repo-paths")
-}
 
-fn lower_ir() -> Ir {
-    let manifest_path = paths().contract_input("sdkManifest").expect("sdkManifest");
-    let raw = fs::read_to_string(&manifest_path).expect("read manifest");
-    let manifest: Manifest = serde_norway::from_str(&raw).expect("parse manifest");
-    let mut ir = Ir::default();
-    lower_catalog(&mut ir, &manifest).expect("lower catalog");
-    let residue = dto_gen::load_binding_residue(
-        &paths()
-            .contract_input("bindingResidue")
-            .expect("bindingResidue"),
-    )
-    .expect("residue");
-    dto_gen::lower_all_bindings(
-        &mut ir,
-        &manifest,
-        &paths().contract_input("coreSrc").expect("coreSrc"),
-        &residue,
-        Some(
-            &paths()
-                .contract_input("transportSrc")
-                .expect("transportSrc"),
-        ),
-    )
-    .expect("lower bindings");
-    ir
-}
 
-fn strip_generated_header(src: &str) -> String {
-    let trimmed = src.trim_start();
-    if let Some(rest) = trimmed.strip_prefix("// @generated") {
-        let after_first_line = rest.split_once('\n').map(|(_, tail)| tail).unwrap_or("");
-        after_first_line.trim_start().to_string()
-    } else {
-        src.to_string()
-    }
-}
+
+
+
 
 fn emitted_map(ir: &Ir) -> std::collections::BTreeMap<String, String> {
     emit_conformance_go(ir)
@@ -60,9 +25,9 @@ fn emitted_map(ir: &Ir) -> std::collections::BTreeMap<String, String> {
 
 #[test]
 fn go_conformance_matches_committed() {
-    let ir = lower_ir();
+    let ir = support::lower_bindings_ir();
     let emitted = emitted_map(&ir);
-    let dir = paths()
+    let dir = support::paths()
         .generated_path("goConformance")
         .expect("goConformance");
     assert!(!emitted.is_empty(), "emitter returned no files");
@@ -74,8 +39,8 @@ fn go_conformance_matches_committed() {
         let committed = fs::read_to_string(dir.join(name))
             .unwrap_or_else(|e| panic!("read committed {name}: {e}"));
         assert_eq!(
-            strip_generated_header(contents),
-            strip_generated_header(&committed),
+            support::strip_generated_header(contents),
+            support::strip_generated_header(&committed),
             "go conformance {name} drifted — regenerate with --go-conformance-out"
         );
     }
@@ -97,7 +62,7 @@ fn go_conformance_matches_committed() {
 
 #[test]
 fn go_conformance_emit_is_byte_idempotent() {
-    let ir = lower_ir();
+    let ir = support::lower_bindings_ir();
     let first = emit_conformance_go(&ir).expect("first");
     let second = emit_conformance_go(&ir).expect("second");
     assert_eq!(first, second);

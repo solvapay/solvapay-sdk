@@ -8,7 +8,6 @@
 
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 import {
   SdkContractManifestSchema,
@@ -20,6 +19,7 @@ import {
 } from '../shared/manifest-schema.js'
 import { REPO_ROOT } from '../shared/paths.js'
 import { contractInputPath, generatedEntry } from '../shared/repo-paths.js'
+import { isDirectRun, formatZodIssues, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 
 const DEFAULT_MANIFEST = contractInputPath('sdkManifest')
 const DEFAULT_SNAPSHOT = contractInputPath('openapiSnapshot')
@@ -28,12 +28,6 @@ export interface CliOptions {
   mode: 'validate' | 'check'
   manifestPath: string
   snapshotPath: string
-}
-
-export interface CliResult {
-  exitCode: number
-  stdout: string
-  stderr: string
 }
 
 function printUsage(): string {
@@ -83,17 +77,6 @@ export function parseArgs(argv: string[]): CliOptions {
     manifestPath,
     snapshotPath,
   }
-}
-
-function formatZodIssues(error: {
-  issues: Array<{ path: PropertyKey[]; message: string }>
-}): string {
-  return error.issues
-    .map(issue => {
-      const pathLabel = issue.path.length > 0 ? issue.path.join('.') : '(root)'
-      return `  - ${pathLabel}: ${issue.message}`
-    })
-    .join('\n')
 }
 
 function loadManifest(
@@ -214,12 +197,7 @@ export async function runCli(argv: string[]): Promise<CliResult> {
   try {
     options = parseArgs(argv)
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return {
-      exitCode: 1,
-      stdout: '',
-      stderr: `${message}\n${printUsage()}`,
-    }
+    return parseErrorResult(error, printUsage())
   }
 
   try {
@@ -233,20 +211,6 @@ export async function runCli(argv: string[]): Promise<CliResult> {
   }
 }
 
-async function main(): Promise<void> {
-  const result = await runCli(process.argv.slice(2))
-  if (result.stdout) {
-    process.stdout.write(result.stdout)
-  }
-  if (result.stderr) {
-    process.stderr.write(result.stderr)
-  }
-  process.exit(result.exitCode)
-}
-
-const isDirectRun =
-  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-
-if (isDirectRun) {
-  void main()
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runScriptMain(runCli)
 }

@@ -5,6 +5,8 @@ use serde_json::Value;
 use crate::error::{GenError, GenResult};
 use crate::ir::{Ir, IrBindingArg, IrBindingSymbol};
 
+pub(crate) use crate::chrome::{chrome_str, load_snapshot};
+
 /// Fixture-runner extras dispatched via each language’s host-adapter table.
 ///
 /// `constructSdkError` is handled in dispatch instead.
@@ -15,31 +17,6 @@ pub const HOST_FNS: &[&str] = &[
     "BALANCE_RECONCILE_DELAYS_MS",
     "resolveAuthenticatedUser",
 ];
-
-/// Parse an embedded chrome snapshot and fail loudly on invalid JSON.
-///
-/// # Errors
-///
-/// Returns [`GenError::Parse`] when `raw` is not JSON.
-pub fn load_snapshot(raw: &str, label: &str) -> GenResult<Value> {
-    serde_json::from_str(raw).map_err(|e| GenError::Parse(format!("invalid {label}: {e}")))
-}
-
-/// Walk `path` on a JSON object and require a string leaf.
-///
-/// # Errors
-///
-/// Returns [`GenError::Parse`] when a key is missing or the leaf is not a string.
-pub fn chrome_str<'a>(art: &'a Value, path: &[&str], label: &str) -> GenResult<&'a str> {
-    let mut cur = art;
-    for key in path {
-        cur = cur
-            .get(*key)
-            .ok_or_else(|| GenError::Parse(format!("{label} missing {}", path.join("."))))?;
-    }
-    cur.as_str()
-        .ok_or_else(|| GenError::Parse(format!("{label} {} is not a string", path.join("."))))
-}
 
 /// Require `snapshot.hostFns` to equal [`HOST_FNS`] (order-sensitive).
 ///
@@ -87,11 +64,16 @@ pub fn now_ms_blocks(ir: &Ir, format_block: impl Fn(&IrBindingSymbol) -> String)
 pub fn emit_chrome_files(
     snapshot_raw: &str,
     snapshot_label: &str,
+    header: &str,
     file_order: &[&str],
     replacements: &[(&str, &str, &str)],
 ) -> GenResult<Vec<(String, String)>> {
     let chrome = load_snapshot(snapshot_raw, snapshot_label)?;
-    let header = chrome_str(&chrome, &["header"], snapshot_label)?;
+    if chrome.get("header").is_some() {
+        return Err(GenError::Parse(format!(
+            "{snapshot_label} must not embed a header — banners come from generated_header"
+        )));
+    }
     let files = chrome
         .get("files")
         .and_then(Value::as_object)
@@ -119,4 +101,21 @@ pub fn emit_chrome_files(
 
 fn is_now_ms_host_arg(arg: &IrBindingArg) -> bool {
     arg.host_injected && arg.name == "nowMs"
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn emit_chrome_files_rejects_embedded_header() {
+        let raw = r#"{"header":"x","files":{"a.py":{"body":"print(1)\n"}}}"#;
+        let err = emit_chrome_files(raw, "test-snapshot", "# hdr\n", &["a.py"], &[])
+            .expect_err("header must fail");
+        assert!(
+            err.to_string().contains("must not embed a header"),
+            "{err}"
+        );
+    }
 }

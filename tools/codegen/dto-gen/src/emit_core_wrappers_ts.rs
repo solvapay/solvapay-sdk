@@ -8,14 +8,12 @@
 use serde_json::Value;
 
 use crate::error::{GenError, GenResult};
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{
     Ir, IrBindingArg, IrBindingArtifact, IrBindingSymbol, IrCoreFieldTy, IrCoreFn, IrCoreParam,
     IrCoreParamTy, IrTsWrapper,
 };
 use crate::lower_core_types::core_fn_for;
-
-const GENERATED_HEADER: &str =
-    "/**\n * @generated — do not edit. Regenerate with: pnpm gen\n */\n\n";
 
 /// Match repo Prettier `printWidth` so `pnpm format:check` stays green.
 const PRINT_WIDTH: usize = 100;
@@ -52,15 +50,21 @@ pub fn emit_core_wrappers_ts(ir: &Ir, kind: CoreWrapperKind) -> GenResult<String
     let chrome: Value = serde_json::from_str(SNAPSHOT)
         .map_err(|e| GenError::Parse(format!("invalid core-wrappers-ts-emit snapshot: {e}")))?;
     match kind {
-        CoreWrapperKind::Dispatch => emit_dispatch(ir, &chrome),
+        CoreWrapperKind::Dispatch => emit_dispatch(ir, &chrome, "core-dispatch-ts-out"),
         CoreWrapperKind::NativeCore => {
-            emit_functions_file(ir, &chrome, "nativeCore", WrapperSet::Core)
+            emit_functions_file(ir, &chrome, "nativeCore", WrapperSet::Core, "core-native-ts-out")
         }
         CoreWrapperKind::NativeHelpers => {
-            emit_functions_file(ir, &chrome, "nativeHelpers", WrapperSet::Helpers)
+            emit_functions_file(ir, &chrome, "nativeHelpers", WrapperSet::Helpers, "core-helpers-ts-out")
         }
         CoreWrapperKind::NativeDecisions => {
-            emit_functions_file(ir, &chrome, "nativeDecisions", WrapperSet::Decisions)
+            emit_functions_file(
+                ir,
+                &chrome,
+                "nativeDecisions",
+                WrapperSet::Decisions,
+                "server-decisions-ts-out",
+            )
         }
     }
 }
@@ -72,7 +76,7 @@ enum WrapperSet {
     Decisions,
 }
 
-fn emit_dispatch(ir: &Ir, chrome: &Value) -> GenResult<String> {
+fn emit_dispatch(ir: &Ir, chrome: &Value, flag: &str) -> GenResult<String> {
     let file = chrome
         .get("files")
         .and_then(|f| f.get("dispatch"))
@@ -92,7 +96,7 @@ fn emit_dispatch(ir: &Ir, chrome: &Value) -> GenResult<String> {
 
     Ok(format!(
         "{}{}{}\n\n{}",
-        GENERATED_HEADER,
+        format!("{}\n", generated_header(CommentStyle::Block, flag)),
         preamble,
         lines.join("\n"),
         postamble
@@ -125,7 +129,13 @@ fn emit_union_members(
     Ok(())
 }
 
-fn emit_functions_file(ir: &Ir, chrome: &Value, key: &str, set: WrapperSet) -> GenResult<String> {
+fn emit_functions_file(
+    ir: &Ir,
+    chrome: &Value,
+    key: &str,
+    set: WrapperSet,
+    flag: &str,
+) -> GenResult<String> {
     let file = chrome
         .get("files")
         .and_then(|f| f.get(key))
@@ -182,7 +192,8 @@ fn emit_functions_file(ir: &Ir, chrome: &Value, key: &str, set: WrapperSet) -> G
     }
 
     let mut out = String::new();
-    out.push_str(GENERATED_HEADER);
+    out.push_str(&generated_header(CommentStyle::Block, flag));
+    out.push('\n');
     out.push_str(preamble);
     if !preamble.ends_with('\n') {
         out.push('\n');

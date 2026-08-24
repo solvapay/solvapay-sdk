@@ -4,13 +4,16 @@ use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
 use crate::error::{GenError, GenResult};
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{
     Ir, IrField, IrOneOf, IrOverlay, IrOverlayStruct, IrStringEnum, IrStruct, IrType, IrTypeRef,
     OneOfStrategy,
 };
 use crate::name::to_snake_case;
 
-const GENERATED_HEADER: &str = "// @generated — do not edit. Regenerate with: pnpm gen\n";
+fn banner() -> String {
+    generated_header(CommentStyle::LineSlash, "out")
+}
 
 /// Emitted crate sources written under `--out`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,7 +47,7 @@ pub fn emit_crate(ir: &Ir) -> GenResult<EmittedCrate> {
 
 fn emit_lib(ir: &Ir) -> String {
     let mut out = String::new();
-    out.push_str(GENERATED_HEADER);
+    out.push_str(&banner());
     out.push('\n');
     out.push_str(
         "//! Generated SolvaPay wire DTOs from `contract/openapi/sdk-v1.snapshot.json`.\n",
@@ -115,7 +118,7 @@ fn rust_str_literal(value: &str) -> String {
 /// Emits `error_templates.rs` from `ir.error_templates`.
 fn emit_error_templates(ir: &Ir) -> String {
     let mut out = String::new();
-    out.push_str(GENERATED_HEADER);
+    out.push_str(&banner());
     out.push('\n');
     out.push_str(
         "//! Frozen error message templates from `contract/manifest/sdk-contract.yaml`.\n\n",
@@ -201,7 +204,7 @@ fn emit_error_templates(ir: &Ir) -> String {
 
 fn emit_overlays(ir: &Ir) -> GenResult<String> {
     let mut out = String::new();
-    out.push_str(GENERATED_HEADER);
+    out.push_str(&banner());
     out.push('\n');
     out.push_str("//! SDK-only overlay types from `contract/manifest/sdk-contract.yaml`.\n\n");
     out.push_str("use std::collections::BTreeMap;\n\n");
@@ -439,7 +442,7 @@ fn render_overlay_type_ref(ir: &Ir, ty: &IrTypeRef) -> String {
 
 fn emit_schemas(ir: &Ir) -> GenResult<String> {
     let mut out = String::new();
-    out.push_str(GENERATED_HEADER);
+    out.push_str(&banner());
     out.push('\n');
     out.push_str("//! Generated wire schemas.\n\n");
     out.push_str("use std::collections::BTreeMap;\n\n");
@@ -545,7 +548,7 @@ fn emit_oneof(out: &mut String, one: &IrOneOf) -> GenResult<()> {
 
 fn emit_routes(ir: &Ir) -> GenResult<String> {
     let mut out = String::new();
-    out.push_str(GENERATED_HEADER);
+    out.push_str(&banner());
     out.push('\n');
     out.push_str("//! Route table and JSON round-trip helpers for generated DTOs.\n\n");
     out.push_str("use serde_json::Value;\n\n");

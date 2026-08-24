@@ -3,13 +3,9 @@
 use std::fmt::Write as _;
 
 use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{Ir, IrField, IrOverlay, IrOverlayStruct, IrType, IrTypeRef};
 use crate::name::rust_type_name;
-
-const GENERATED_HEADER: &str = "\
-/**\n\
- * @generated — do not edit. Regenerate with: pnpm gen\n\
- */\n\n";
 
 /// Emits `overlays.generated.d.ts` contents.
 ///
@@ -18,13 +14,14 @@ const GENERATED_HEADER: &str = "\
 /// Returns formatting errors as [`GenError`] (none expected for string writes).
 pub fn emit_overlays_ts(ir: &Ir) -> GenResult<String> {
     let mut out = String::new();
-    out.push_str(GENERATED_HEADER);
+    out.push_str(&generated_header(CommentStyle::Block, "ts-out"));
+    out.push('\n');
     out.push_str("import type { components, operations } from './generated'\n\n");
 
     for ty in ir.overlay_helpers.values() {
         match ty {
             IrType::Struct(st) => {
-                write_ts_doc(&mut out, &st.doc);
+                write_ts_doc(&mut out, &st.doc, "");
                 let _ = writeln!(out, "export type {} = {{", st.name);
                 for field in &st.fields {
                     emit_ts_field(&mut out, ir, field);
@@ -32,7 +29,7 @@ pub fn emit_overlays_ts(ir: &Ir) -> GenResult<String> {
                 out.push_str("}\n\n");
             }
             IrType::StringEnum(en) => {
-                write_ts_doc(&mut out, &en.doc);
+                write_ts_doc(&mut out, &en.doc, "");
                 let variants = en
                     .variants
                     .iter()
@@ -49,7 +46,7 @@ pub fn emit_overlays_ts(ir: &Ir) -> GenResult<String> {
         match overlay {
             IrOverlay::Marker { .. } => {}
             IrOverlay::Unit { name, doc } => {
-                write_ts_doc(&mut out, doc);
+                write_ts_doc(&mut out, doc, "");
                 let ts_name = rust_type_name(name);
                 let _ = writeln!(out, "export type {ts_name} = void\n");
             }
@@ -57,16 +54,16 @@ pub fn emit_overlays_ts(ir: &Ir) -> GenResult<String> {
                 if name == target {
                     continue;
                 }
-                write_ts_doc(&mut out, doc);
+                write_ts_doc(&mut out, doc, "");
                 let _ = writeln!(out, "export type {name} = {}\n", ts_alias_target(target));
             }
             IrOverlay::VecAlias { name, item, doc } => {
-                write_ts_doc(&mut out, doc);
+                write_ts_doc(&mut out, doc, "");
                 let item_ts = ts_named(ir, item);
                 let _ = writeln!(out, "export type {name} = Array<{item_ts}>\n");
             }
             IrOverlay::StringEnum(en) => {
-                write_ts_doc(&mut out, &en.doc);
+                write_ts_doc(&mut out, &en.doc, "");
                 let variants = en
                     .variants
                     .iter()
@@ -76,7 +73,7 @@ pub fn emit_overlays_ts(ir: &Ir) -> GenResult<String> {
                 let _ = writeln!(out, "export type {} = {variants}\n", en.name);
             }
             IrOverlay::OneOf(one) => {
-                write_ts_doc(&mut out, &one.doc);
+                write_ts_doc(&mut out, &one.doc, "");
                 let mut arms = Vec::new();
                 for variant in &one.variants {
                     arms.push(format!("| {}", ts_type_ref(ir, &variant.ty)));
@@ -104,7 +101,7 @@ pub(crate) fn ts_alias_target(target: &str) -> String {
 }
 
 fn emit_ts_struct(out: &mut String, ir: &Ir, st: &IrOverlayStruct) {
-    write_ts_doc(out, &st.doc);
+    write_ts_doc(out, &st.doc, "");
     if let Some(base) = &st.flatten_base {
         let base_ts = ts_named(ir, base);
         let base_ts = if st.partial_base {
@@ -123,7 +120,7 @@ fn emit_ts_struct(out: &mut String, ir: &Ir, st: &IrOverlayStruct) {
 }
 
 fn emit_ts_field(out: &mut String, ir: &Ir, field: &IrField) {
-    write_ts_doc(out, &field.doc);
+    write_ts_doc(out, &field.doc, "");
     let optional = if field.required { "" } else { "?" };
     let mut ty = ts_type_ref(ir, &field.ty);
     if field.nullable {
@@ -158,18 +155,39 @@ pub(crate) fn ts_type_ref(ir: &Ir, ty: &IrTypeRef) -> String {
 }
 
 /// Writes a TSDoc block when `doc` is non-empty.
-pub(crate) fn write_ts_doc(out: &mut String, doc: &str) {
+pub(crate) fn write_ts_doc(out: &mut String, doc: &str, indent: &str) {
     let trimmed = doc.trim();
     if trimmed.is_empty() {
         return;
     }
-    out.push_str("/**\n");
+    let _ = writeln!(out, "{indent}/**");
     for line in trimmed.lines() {
-        let _ = writeln!(out, " * {line}");
+        let _ = writeln!(out, "{indent} * {line}");
     }
-    out.push_str(" */\n");
+    let _ = writeln!(out, "{indent} */");
 }
 
-fn escape_ts(s: &str) -> String {
+pub(crate) fn escape_ts(s: &str) -> String {
     s.replace('\\', "\\\\").replace('\'', "\\'")
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn write_ts_doc_is_indent_aware() {
+        let mut out = String::new();
+        write_ts_doc(&mut out, "hello\nworld", "  ");
+        assert_eq!(out, "  /**\n   * hello\n   * world\n   */\n");
+        let mut empty = String::new();
+        write_ts_doc(&mut empty, "  \n", "");
+        assert!(empty.is_empty());
+    }
+
+    #[test]
+    fn escape_ts_escapes_backslash_and_quote() {
+        assert_eq!(escape_ts(r"a\b'c"), r"a\\b\'c");
+    }
 }

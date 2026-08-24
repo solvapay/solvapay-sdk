@@ -3,70 +3,24 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+mod support;
+
 use std::fs;
 use std::path::Path;
 
 use dto_gen::emit_native_py;
-use dto_gen::ir::{Ir, IrErrorTemplates};
-use dto_gen::manifest::Manifest;
 
-fn paths() -> repo_paths::RepoPaths {
-    repo_paths::load().expect("repo-paths")
-}
 
-fn lower_ir() -> Ir {
-    let manifest_path = paths().contract_input("sdkManifest").expect("sdkManifest");
-    let raw = fs::read_to_string(&manifest_path).expect("read manifest");
-    let manifest: Manifest = serde_norway::from_str(&raw).expect("parse manifest");
-    let mut ir = Ir {
-        types: Default::default(),
-        overlay_helpers: Default::default(),
-        overlays: Default::default(),
-        routes: vec![],
-        error_templates: IrErrorTemplates::default(),
-        entry_points: Default::default(),
-        binding_symbols: Default::default(),
-        core_types: Default::default(),
-        core_types_ts: Default::default(),
-        core_fns: Default::default(),
-        transport_fns: Default::default(),
-    };
-    let residue = dto_gen::load_binding_residue(
-        &paths()
-            .contract_input("bindingResidue")
-            .expect("bindingResidue"),
-    )
-    .expect("residue");
-    dto_gen::lower_all_bindings(
-        &mut ir,
-        &manifest,
-        &paths().contract_input("coreSrc").expect("coreSrc"),
-        &residue,
-        Some(
-            &paths()
-                .contract_input("transportSrc")
-                .expect("transportSrc"),
-        ),
-    )
-    .expect("lower bindings");
-    ir
-}
 
-fn strip_generated_header(src: &str) -> String {
-    let trimmed = src.trim_start();
-    if let Some(rest) = trimmed.strip_prefix("# @generated") {
-        let after_first_line = rest.split_once('\n').map(|(_, tail)| tail).unwrap_or("");
-        after_first_line.trim_start().to_string()
-    } else {
-        trimmed.to_string()
-    }
-}
+
+
+
 
 fn assert_matches(emitted: &str, committed_path: &Path, tag: &str) {
     let committed = fs::read_to_string(committed_path)
         .unwrap_or_else(|e| panic!("read committed {}: {e}", committed_path.display()));
-    let got = strip_generated_header(emitted);
-    let want = strip_generated_header(&committed);
+    let got = support::strip_generated_header(emitted);
+    let want = support::strip_generated_header(&committed);
     if got != want {
         let g: Vec<&str> = got.lines().collect();
         let w: Vec<&str> = want.lines().collect();
@@ -89,11 +43,11 @@ fn assert_matches(emitted: &str, committed_path: &Path, tag: &str) {
 
 #[test]
 fn native_py_matches_committed() {
-    let ir = lower_ir();
+    let ir = support::lower_bindings_ir();
     let emitted = emit_native_py(&ir).expect("emit _native.py");
     assert_matches(
         &emitted,
-        &paths().generated_path("nativePy").expect("nativePy"),
+        &support::paths().generated_path("nativePy").expect("nativePy"),
         "_native.py",
     );
 }

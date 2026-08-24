@@ -17,7 +17,6 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 import {
   deriveSnapshot,
@@ -27,6 +26,7 @@ import {
   type OpenApiSpec,
 } from './lib/openapi-pipeline.js'
 import { lookupPath } from '../shared/repo-paths.js'
+import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 
 const DEFAULT_URL = 'http://localhost:3001/v1/openapi.json'
 const DEFAULT_STACK_ORIGIN = 'http://localhost'
@@ -68,12 +68,6 @@ export interface CliOptions {
   outDir: string
   sourcePath: string
   snapshotPath: string
-}
-
-export interface CliResult {
-  exitCode: number
-  stdout: string
-  stderr: string
 }
 
 function printUsage(): string {
@@ -263,9 +257,9 @@ async function loadSpec(
   return specFromUnknown(raw, options.fromUrl)
 }
 
-function pathDiffReport(spec: OpenApiSpec): string {
+export function pathDiffReport(spec: OpenApiSpec, snapshotPath: string): string {
   const derivedPaths = Object.keys(spec.paths ?? {}).sort()
-  const committedRaw = JSON.parse(readFileSync(DEFAULT_SNAPSHOT, 'utf8')) as OpenApiSpec
+  const committedRaw = JSON.parse(readFileSync(snapshotPath, 'utf8')) as OpenApiSpec
   const committedPaths = Object.keys(committedRaw.paths ?? {}).sort()
   const derivedSet = new Set(derivedPaths)
   const committedSet = new Set(committedPaths)
@@ -296,7 +290,7 @@ function writeArtifacts(spec: OpenApiSpec, options: CliOptions, fromStack: boole
   if (!fromStack) {
     return wrote
   }
-  return `${pathDiffReport(deriveSource(spec))}${wrote}`
+  return `${pathDiffReport(deriveSource(spec), options.snapshotPath)}${wrote}`
 }
 
 export function unifiedDiff(expected: string, actual: string): string {
@@ -388,12 +382,7 @@ export async function runCli(argv: string[], deps: SnapshotDeps = {}): Promise<C
   try {
     options = parseArgs(argv)
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return {
-      exitCode: 1,
-      stdout: '',
-      stderr: `${message}\n${printUsage()}`,
-    }
+    return parseErrorResult(error, printUsage())
   }
 
   try {
@@ -419,20 +408,6 @@ export async function runCli(argv: string[], deps: SnapshotDeps = {}): Promise<C
   }
 }
 
-async function main(): Promise<void> {
-  const result = await runCli(process.argv.slice(2))
-  if (result.stdout) {
-    process.stdout.write(result.stdout)
-  }
-  if (result.stderr) {
-    process.stderr.write(result.stderr)
-  }
-  process.exit(result.exitCode)
-}
-
-const isDirectRun =
-  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-
-if (isDirectRun) {
-  void main()
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runScriptMain(argv => runCli(argv))
 }

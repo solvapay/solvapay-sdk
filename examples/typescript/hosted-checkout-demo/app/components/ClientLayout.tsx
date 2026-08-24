@@ -2,17 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { getOrCreateCustomerId } from '../lib/customer'
+import { demoAuthMode } from '../lib/auth-mode'
 import { onAuthStateChange } from '../lib/supabase'
 import { Auth } from './Auth'
 import { Navigation } from './Navigation'
 import { Providers } from './Providers'
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  // Anonymous mode has no session to wait for: the customer ref is minted in
+  // the browser on first use, so the app is immediately usable.
+  const [isAuthenticated, setIsAuthenticated] = useState(demoAuthMode === 'anonymous')
+  const [isLoading, setIsLoading] = useState(demoAuthMode === 'supabase')
 
   // Initialize auth state
   useEffect(() => {
+    if (demoAuthMode === 'anonymous') return
+
     let cancelled = false
 
     const initializeAuth = async () => {
@@ -38,7 +43,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     // Subscribe to auth state changes
     const {
       data: { subscription },
-    } = onAuthStateChange((event, session) => {
+    } = onAuthStateChange((_event, session) => {
       if (!cancelled) {
         setIsAuthenticated(!!session?.user?.id)
       }

@@ -13,8 +13,11 @@ vi.mock('@solvapay/react', () => ({
   ProductBadge: () => React.createElement('span', { 'data-testid': 'product-badge' }),
 }))
 
+vi.mock('../../lib/identity', () => ({
+  identityHeaders: vi.fn(() => Promise.resolve({ Authorization: 'Bearer test-token' })),
+}))
+
 vi.mock('../../lib/supabase', () => ({
-  getAccessToken: vi.fn(() => Promise.resolve('test-token')),
   signOut: vi.fn(() => Promise.resolve({ error: null })),
 }))
 

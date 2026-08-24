@@ -14,9 +14,10 @@
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
-import { insertSectionEntry, renderYamlFragment, sectionBounds } from './lib/manifest-edit.js'
+import { insertSectionEntry, renderYamlFragment, sectionHasEntry } from './lib/manifest-edit.js'
+import { clientBindingsFromYaml, nextClientEmitOrder, bindingStubFields } from './lib/binding-stub.js'
+import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 import { deriveNames, toSnakeCase } from '../shared/manifest-schema.js'
 import type { OpenApiSpec } from './lib/openapi-pipeline.js'
 import { contractInputPath } from '../shared/repo-paths.js'
@@ -198,60 +199,23 @@ function bindingBodyYaml(opts: {
   request?: string
   emitOrder: number
 }): string {
-  const names = deriveNames(opts.id)
-  const snake = toSnakeCase(opts.id)
   const pathRefs = opts.params.filter(p => p.type === 'string').map(p => String(p.name))
   const bodyParam = opts.params.find(p => typeof p.ref === 'string')
   const dtoType = opts.request ?? (typeof bodyParam?.ref === 'string' ? bodyParam.ref : undefined)
-  const isSplit = pathRefs.length > 0
-  const clientCallArgs = [
-    ...pathRefs.map((_, i) => `&refs[${i}]`),
-    ...(bodyParam !== undefined
-      ? [bodyParam.name === 'overrides' ? 'Some(overrides)' : String(bodyParam.name)]
-      : []),
-  ]
-
-  const doc: Record<string, unknown> = {
-    core: `solvapay_transport::SolvaPayClient::${snake}`,
-    names,
-    catalog: { kind: 'operation', id: opts.id },
-    args: [],
-    splitPathRefs: pathRefs,
-    return: 'value',
-    sync: 'async',
-    envelope: 'async',
-    artifact: 'client',
+  const doc: Record<string, unknown> = bindingStubFields({
+    id: opts.id,
+    method: opts.method,
+    routePath: opts.routePath,
+    pathRefs,
+    bodyParamName: typeof bodyParam?.name === 'string' ? bodyParam.name : undefined,
+    dtoType,
     emitOrder: opts.emitOrder,
-    section: 'Group B',
-    doc: `\`${opts.method} ${opts.routePath}\``,
-    rustFnName: snake,
-    call: {
-      kind: 'wrap',
-      serialize: isSplit ? 'clientSplit' : 'clientAwait',
-    },
-    coreCall: snake,
-    ...(dtoType !== undefined ? { dtoType } : {}),
-    ...(isSplit ? { clientCallArgs } : {}),
-  }
+  })
   return renderYamlFragment(doc, 4)
 }
 
-function nextClientEmitOrder(manifestRaw: string): number {
-  const parsed = parseYaml(manifestRaw) as {
-    bindings?: Record<string, { emitOrder?: number; artifact?: string }>
-  }
-  let max = -1
-  for (const symbol of Object.values(parsed.bindings ?? {})) {
-    if (symbol.artifact === 'client' && typeof symbol.emitOrder === 'number') {
-      max = Math.max(max, symbol.emitOrder)
-    }
-  }
-  return max + 1
-}
-
-function sectionHasEntry(text: string, sectionName: string, entryId: string): boolean {
-  const { bodyStart, bodyEnd } = sectionBounds(text, sectionName)
-  return new RegExp(`^  ${entryId}:\\n`, 'm').test(text.slice(bodyStart, bodyEnd))
+function nextClientEmitOrderFromRaw(manifestRaw: string): number {
+  return nextClientEmitOrder(clientBindingsFromYaml(parseYaml(manifestRaw)))
 }
 
 export function parseArgs(argv: string[]): ScaffoldOptions {
@@ -371,7 +335,7 @@ export function scaffoldOperation(options: ScaffoldOptions): {
     if (sectionHasEntry(raw, 'bindings', options.id)) {
       lines.push(`bindings.${options.id} already present — skipped`)
     } else {
-      const emitOrder = nextClientEmitOrder(raw)
+      const emitOrder = nextClientEmitOrderFromRaw(raw)
       const bindBody = bindingBodyYaml({
         id: options.id,
         method: options.method,
@@ -389,28 +353,26 @@ export function scaffoldOperation(options: ScaffoldOptions): {
   return { stdout: lines.join('\n') + '\n', manifestRaw: raw }
 }
 
-async function main(): Promise<void> {
+export async function runCli(argv: string[]): Promise<CliResult> {
   let options: ScaffoldOptions
   try {
-    options = parseArgs(process.argv.slice(2))
+    options = parseArgs(argv)
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
-    process.exit(1)
+    return parseErrorResult(error, printUsage())
   }
-
   try {
     const result = scaffoldOperation(options)
     writeFileSync(options.manifestPath, result.manifestRaw)
-    process.stdout.write(result.stdout)
+    return { exitCode: 0, stdout: result.stdout, stderr: '' }
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
-    process.exit(1)
+    return {
+      exitCode: 1,
+      stdout: '',
+      stderr: `${error instanceof Error ? error.message : String(error)}\n`,
+    }
   }
 }
 
-const isDirectRun =
-  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-
-if (isDirectRun) {
-  void main()
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runScriptMain(runCli)
 }
