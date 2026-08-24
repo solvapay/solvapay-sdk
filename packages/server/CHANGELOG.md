@@ -1,5 +1,109 @@
 # @solvapay/server changelog
 
+## 2.1.0
+
+### Minor Changes
+
+- 800f081: Plan responses now describe pricing as a composable `options[]` array plus a derived `type` label (`recurring` | `one-time` | `usage-based` | `hybrid`). Option kinds are `charge`, `billingCycle`, `limit`, `tier`, `trial`, `prepaid`, `entitlement`, `rollover`, `discount`, and the `autoAssigned` / `hidden` markers — see the option catalog at https://docs.solvapay.com/plans/overview.
+
+  `SdkPlanResponse` drops the flat pricing fields `setupFee`, `trialDays`, `billingCycle`, `billingModel`, `creditsPerUnit`, `measures`, `meterRef`, `limit`, `rolloverUnusedUnits`, `freeUnits`, `limits`, and `hidden`; `price` is now optional and carries the derived headline amount. `SdkPlanSnapshotDto` likewise drops `planType`, `billingCycle`, `limits`, `meterRef`, `limit`, `freeUnits`, and `creditsPerUnit` in favour of a frozen `options[]`.
+
+  Read the equivalent option off `plan.options` instead. If you annotate with `components['schemas']['SdkPlanResponse']` you will get type errors on the removed fields; if you read them off a plain `listPlans()` result they are now `undefined` rather than a compile error, so check any code that branches on `plan.billingCycle` or `plan.trialDays`.
+
+  `checkLimits`, paywall decisions, and purchase payloads are unaffected — `LimitPlanItemDto`, `LimitResponse`, `LimitBalanceDto`, `SdkPurchaseResponse`, `UserInfoPlanDto`, and `ActivatePlanResponseDto` keep the flat fields they already returned.
+
+- 848e235: Prefer `meterName` over the deprecated `usageType` on `payable()` options, paywall metadata, and `checkLimits`. `usageType` stays accepted as an alias and is now typed as `string` rather than `'requests' | 'tokens'`, so a custom meter name type-checks on either field.
+
+  React copy uses the meter noun (`{unit}`) instead of generic "calls" / "messages", and `useUsage` falls back from `meterRef` to `meterId` when resolving the meter off a plan snapshot.
+
+- 800f081: `LimitResponse` now carries the resolved `onExceed` outcome as typed flags: `throttled`, `overage`, `needsTopUp`, `needsUpgrade`, and `upgraded`. They surface on `checkLimits` results and on `decision.limits` inside a `payable()` handler, so you no longer have to infer the outcome from the surrounding fields.
+
+  `throttled` and `overage` ride the **allow** path (`withinLimits: true`): the call is served, and your handler can degrade service or record that the usage accrued an overage charge. `needsTopUp`, `needsUpgrade`, and `upgraded` accompany a gate outcome — the first two block pending an auto-recharge top-up or a plan switch, and `upgraded` means the customer was auto-upgraded to the limit's target pricing to restore access.
+
+- f9543de: Add `isManagedMcp` as the canonical Managed MCP product flag on SDK product responses and create/list inputs. Deprecated `isMcpPay` remains accepted and emitted for wire compatibility.
+- fd41b64: Read `SOLVAPAY_PRODUCT_REF` in `payable()` / paywall and throw when no product ref is resolved, instead of falling back to `'default-product'`.
+- 3a310eb: Add tiered product config validation: sync `productRef` shape checks + one-line MCP config logging, enriched OAuth DCR failure diagnostics, opt-in `verifyProductConfiguration()` on `@solvapay/server`, and `solvapay doctor` for explicit network checks (secret key, product existence, readiness).
+- 12f446b: Virtual MCP tool registration now wraps generated input schemas in `z.object()` so they convert correctly under the MCP SDK v2 schema pipeline. The `zod` peer moves to `^4.2.0` and `engines.node` to `>=20` to match the rest of the MCP surface; nothing in the paywall, nudge, or checkout APIs changes.
+
+### Patch Changes
+
+- c6d3ddc: Fix `customer_ref` never resolving on the official MCP SDK v2, which left every authenticated tool call unauthenticated.
+
+  SDK v2 moved the auth envelope on the tool-handler context from the flat `extra.authInfo` to `extra.http.authInfo`. The customer-ref extractors still read the v1 location, so `getCustomerRef` resolved to `null` even when the OAuth bridge had authenticated the request correctly.
+
+  The failure was silent in most paths: intent tools returned a bootstrap payload with `customer: null`, rendering an empty "no active plan" account panel for paying customers, and `registerPayable` tools billed against `'anonymous'`. Only `create_checkout_session` failed loudly, with `customer_ref missing from MCP auth context`.
+
+  `defaultGetCustomerRef`, the MCP paywall adapter, and the virtual-tools extractor now read `extra.http.authInfo` first and fall back to the flat `extra.authInfo` that some third-party adapters still emit. `McpToolExtra` gained a typed `http.authInfo` member.
+
+- Updated dependencies [800f081]
+- Updated dependencies [3a310eb]
+  - @solvapay/core@1.3.0
+
+## 2.0.0
+
+### Major Changes
+
+- dc46d8e: Replace the auto-recharge lifetime count cap (`maxRecharges` / `rechargeCount`) with an optional monthly spend cap (`maxMonthlySpendMajor` on input; `maxMonthlySpendMinor`, `monthlySpendMinor`, and `monthlySpendPeriod` on the stored config).
+
+  **Migration for integrators**
+  - Rename `AutoRechargeInput.maxRecharges` → `maxMonthlySpendMajor` (display-currency major units, same convention as `thresholdAmountMajor` / `topupAmountMajor`).
+  - Read `config.maxMonthlySpendMinor`, `config.monthlySpendMinor`, and `config.monthlySpendPeriod` instead of `maxRecharges` / `rechargeCount`.
+  - The cap resets each UTC calendar month; configs no longer flip to `completed` when the cap is hit — status stays `active` and charges resume next month.
+  - Legacy `maxRecharges` / `rechargeCount` fields are stripped on read; no backfill is required.
+
+### Minor Changes
+
+- ede9365: Add business purchase support for credit top-ups: shared BusinessDetails validation in core, TopupForm.BusinessDetails/Summary primitives, attachTopupBusinessDetails server SDK method, and checkout-demo example wiring.
+- 6de3d97: Surface seller VAT / tax identity in the SDK. The merchant contract now exposes optional `companyNumber`, `taxId`, and `vatNumber`, and `McpSellerDetailsCard` renders a country-smart tax-identifier row (VAT number for EU/GB, EIN/Tax ID otherwise) plus a company-number line with org-vs-tax de-duplication.
+
+### Patch Changes
+
+- ee15454: Restore topup-first activation for usage-based (PAYG) plans. This reverses the eager plan-step activation shipped earlier (changelog `d4183ba`): a zero-balance PAYG customer now receives `topup_required` from `activatePlan` and the active purchase only materializes after a successful top-up.
+  - **`@solvapay/react`**: `useCheckoutFlow` no longer treats a PAYG plan as active at the plan step. The plan-step `activatePlan` call is expected to return `topup_required` (it creates no purchase); the flow re-activates after the top-up lands so the active purchase is created only once credits cover a unit — mirroring the `ActivationFlow` primitive's self-healing behavior.
+  - **`@solvapay/server`**: the `/v1/sdk/activate` OpenAPI description in the generated types now documents the topup-first policy (usage-based plans return `topup_required` at zero balance) instead of eager activation.
+
+- Updated dependencies [ede9365]
+- Updated dependencies [985acd1]
+  - @solvapay/core@1.2.0
+
+## 1.4.0
+
+### Minor Changes
+
+- 853e13f: Gate payment success on real confirmation while keeping legacy Card Element APIs as deprecated compatibility shims.
+
+  **Deprecated (`@solvapay/react`):**
+  - `StripePaymentFormWrapper`, `PaymentForm.CardElement` / `PaymentFormCardElement`, and `ConfirmPaymentMode: 'card-element'` remain available but are deprecated — migrate to `PaymentForm.PaymentElement` with the Payment Element. These APIs will be removed in the next major release.
+  - `errors.cardElementMissing` is restored alongside `errors.paymentElementMissing` for Card Element callers.
+
+  **Added:**
+  - `paymentIntentReturn` helpers and return-path resume in `PaymentForm` / `TopupForm`.
+  - `processing` is treated as pending (not error) in `confirmPayment`, `reconcilePayment`, and backend `/process`.
+  - `ConfirmPaymentResult` adds a `pending` status for async payment methods.
+  - `confirmPayment` accepts optional `mode` (defaults to `'payment-element'`).
+
+  **`@solvapay/server`:**
+  - `ProcessPaymentResult` and `TopupProcessResult` include a `processing` status.
+
+## 1.3.0
+
+### Minor Changes
+
+- 349777e: Auto-recharge can now be configured in the same top-up payment as the initial card charge, so integrators do not need a separate SetupIntent step before checkout.
+  - **`@solvapay/react`**: `AutoRecharge` adds `deferCardSetup` and `onPendingConfig` to stage settings until payment; `useTopup`, `TopupForm`, and `createTopupPayment` accept optional `autoRecharge`; `balance.reconcileAfterUsageDebit()` starts post-debit polling without false bumps from optimistic debits alone.
+  - **`@solvapay/server`**: `createTopupPaymentIntentCore` forwards optional `autoRecharge` to the SDK payment-intent API.
+  - **`@solvapay/next`**: `createTopupPaymentIntent` route helper accepts the same `autoRecharge` body field.
+
+### Patch Changes
+
+- 349777e: Financial boundary hardening: backend `display.*` blocks are the source of truth for credit and currency rendering.
+  - **`@solvapay/core`**: conversion-contract e2e extended to pin backend display formulas against the core reference.
+  - **`@solvapay/react`**: `TransportBalanceResult` and `BalanceStatus` accept optional `display` from the balance API; negative `adjustBalance` schedules a grace refetch; usage demo refetches after debit.
+  - **`@solvapay/server`**: `AutoRechargeConfig`, balance, and credit-debit types document backend-computed `display` blocks and `autoRecharge.triggered` as charge-initiated (not credits booked inline).
+
+- Updated dependencies [349777e]
+  - @solvapay/core@1.1.1
+
 ## 1.2.1
 
 ### Patch Changes

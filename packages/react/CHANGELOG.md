@@ -1,5 +1,86 @@
 # @solvapay/react changelog
 
+## 1.7.0
+
+### Minor Changes
+
+- 848e235: Prefer `meterName` over the deprecated `usageType` on `payable()` options, paywall metadata, and `checkLimits`. `usageType` stays accepted as an alias and is now typed as `string` rather than `'requests' | 'tokens'`, so a custom meter name type-checks on either field.
+
+  React copy uses the meter noun (`{unit}`) instead of generic "calls" / "messages", and `useUsage` falls back from `meterRef` to `meterId` when resolving the meter off a plan snapshot.
+
+### Patch Changes
+
+- 12f446b: Widen the `@solvapay/mcp-core` peer range to `^0.2.8 || ^0.3.0`, so this package stays installable against both lines. It consumes only stable type and constant exports and does not touch the `hideToolsByAudience` surface or zod schema construction that changed in `0.3.0`.
+- Updated dependencies [800f081]
+- Updated dependencies [3a310eb]
+  - @solvapay/core@1.3.0
+
+## 1.6.0
+
+### Minor Changes
+
+- ede9365: Add business purchase support for credit top-ups: shared BusinessDetails validation in core, TopupForm.BusinessDetails/Summary primitives, attachTopupBusinessDetails server SDK method, and checkout-demo example wiring.
+- 215d045: Add business purchase / VAT support to plan checkout (`PaymentForm.BusinessDetails`, tax-aware summary, attach-before-confirm) and MCP embedded surfaces via the new `attach_business_details` transport tool.
+- 6de3d97: Surface seller VAT / tax identity in the SDK. The merchant contract now exposes optional `companyNumber`, `taxId`, and `vatNumber`, and `McpSellerDetailsCard` renders a country-smart tax-identifier row (VAT number for EU/GB, EIN/Tax ID otherwise) plus a company-number line with org-vs-tax de-duplication.
+
+### Patch Changes
+
+- b5515d3: Fix PAYG plan display in `CurrentPlanCard` and `UsageMeter`: show the plan name and credit-based usage instead of misleading unlimited usage for usage-based purchases.
+- ee15454: Restore topup-first activation for usage-based (PAYG) plans. This reverses the eager plan-step activation shipped earlier (changelog `d4183ba`): a zero-balance PAYG customer now receives `topup_required` from `activatePlan` and the active purchase only materializes after a successful top-up.
+  - **`@solvapay/react`**: `useCheckoutFlow` no longer treats a PAYG plan as active at the plan step. The plan-step `activatePlan` call is expected to return `topup_required` (it creates no purchase); the flow re-activates after the top-up lands so the active purchase is created only once credits cover a unit — mirroring the `ActivationFlow` primitive's self-healing behavior.
+  - **`@solvapay/server`**: the `/v1/sdk/activate` OpenAPI description in the generated types now documents the topup-first policy (usage-based plans return `topup_required` at zero balance) instead of eager activation.
+
+- 985acd1: Add `resolveSellerIdentityDisplay` to `@solvapay/core` for country-aware seller tax and company-number rows. `McpSellerDetailsCard` now uses the core resolver with unified display labels (`VAT number`, `EIN`, `Company number`).
+- Updated dependencies [ede9365]
+- Updated dependencies [985acd1]
+  - @solvapay/core@1.2.0
+
+## 1.5.0
+
+### Minor Changes
+
+- 853e13f: Gate payment success on real confirmation while keeping legacy Card Element APIs as deprecated compatibility shims.
+
+  **Deprecated (`@solvapay/react`):**
+  - `StripePaymentFormWrapper`, `PaymentForm.CardElement` / `PaymentFormCardElement`, and `ConfirmPaymentMode: 'card-element'` remain available but are deprecated — migrate to `PaymentForm.PaymentElement` with the Payment Element. These APIs will be removed in the next major release.
+  - `errors.cardElementMissing` is restored alongside `errors.paymentElementMissing` for Card Element callers.
+
+  **Added:**
+  - `paymentIntentReturn` helpers and return-path resume in `PaymentForm` / `TopupForm`.
+  - `processing` is treated as pending (not error) in `confirmPayment`, `reconcilePayment`, and backend `/process`.
+  - `ConfirmPaymentResult` adds a `pending` status for async payment methods.
+  - `confirmPayment` accepts optional `mode` (defaults to `'payment-element'`).
+
+  **`@solvapay/server`:**
+  - `ProcessPaymentResult` and `TopupProcessResult` include a `processing` status.
+
+## 1.4.0
+
+### Minor Changes
+
+- 6e4f5cf: Collapse auto-recharge transport route overrides to a single `api.autoRecharge` key (replaces `getAutoRecharge`, `saveAutoRecharge`, and `disableAutoRecharge` route keys).
+- 349777e: Auto-recharge can now be configured in the same top-up payment as the initial card charge, so integrators do not need a separate SetupIntent step before checkout.
+  - **`@solvapay/react`**: `AutoRecharge` adds `deferCardSetup` and `onPendingConfig` to stage settings until payment; `useTopup`, `TopupForm`, and `createTopupPayment` accept optional `autoRecharge`; `balance.reconcileAfterUsageDebit()` starts post-debit polling without false bumps from optimistic debits alone.
+  - **`@solvapay/server`**: `createTopupPaymentIntentCore` forwards optional `autoRecharge` to the SDK payment-intent API.
+  - **`@solvapay/next`**: `createTopupPaymentIntent` route helper accepts the same `autoRecharge` body field.
+
+### Patch Changes
+
+- 2644836: Fix balance reconciliation stopping after the first auto-recharge when multiple usage debits trigger back-to-back.
+  - **`balance.reconcileAfterUsageDebit`**: tracks a pending recharge count so each expected top-up is polled and applied before reconciliation finishes, instead of clearing after the first observed increase.
+
+- 5aa4aee: Fix lossy credit↔currency rounding when toggling auto-recharge amount units.
+  - **`estimateCredits`** now uses `Math.round` (matching credits→currency) instead of `Math.floor`.
+  - **Unit toggle** snaps back to the last user-entered value instead of re-deriving from the rounded display, so repeated flips no longer drift by a minor unit.
+
+- 349777e: Financial boundary hardening: backend `display.*` blocks are the source of truth for credit and currency rendering.
+  - **`@solvapay/core`**: conversion-contract e2e extended to pin backend display formulas against the core reference.
+  - **`@solvapay/react`**: `TransportBalanceResult` and `BalanceStatus` accept optional `display` from the balance API; negative `adjustBalance` schedules a grace refetch; usage demo refetches after debit.
+  - **`@solvapay/server`**: `AutoRechargeConfig`, balance, and credit-debit types document backend-computed `display` blocks and `autoRecharge.triggered` as charge-initiated (not credits booked inline).
+
+- Updated dependencies [349777e]
+  - @solvapay/core@1.1.1
+
 ## 1.3.0
 
 ### Minor Changes
@@ -366,8 +447,8 @@ pickPlanButton}` and `currentPlan.startedOn` copy keys.
 
 - 92401d3: Add a `<LegalFooter>` primitive that renders a
   `Terms · Privacy / Provided by SolvaPay` strip pointing at SolvaPay's own
-  legal pages. Mirrors the hosted-checkout footer without bringing Chakra
-  into the SDK.
+  legal pages. Mirrors the hosted-checkout footer with self-contained styles
+  in the SDK.
   - New `legalFooter.{terms, privacy, providedBy, poweredBy}` keys on the
     i18n bundle, overridable via `<SolvaPayProvider config={{ copy }}>`.
   - `<PaymentForm>` and `<TopupForm>` expose a `LegalFooter` namespace

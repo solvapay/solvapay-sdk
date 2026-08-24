@@ -1,4 +1,5 @@
 'use client'
+
 import React, { useState } from 'react'
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js'
 import { useCustomer } from '../hooks/useCustomer'
@@ -16,9 +17,9 @@ interface StripePaymentFormWrapperProps {
 }
 
 /**
- * Stripe Payment Form Wrapper Component
- * Renders inside Stripe Elements context and handles the payment flow
- * All hooks are called unconditionally to comply with React Rules of Hooks
+ * @deprecated Use `PaymentForm.PaymentElement` with the Payment Element instead.
+ * This Card Element wrapper is kept for compatibility and will be removed in
+ * the next major release.
  */
 export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> = ({
   onSuccess,
@@ -28,40 +29,34 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
   buttonClassName,
   clientSecret,
 }) => {
-  // Always call hooks unconditionally
   const stripe = useStripe()
   const elements = useElements()
   const customer = useCustomer()
   const copy = useCopy()
   const effectiveSubmitText = submitButtonText ?? copy.cta.payNow
   const [isProcessing, setIsProcessing] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | undefined>(undefined)
   const [cardComplete, setCardComplete] = useState(false)
 
   const handleSubmit = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
 
-    // Double-check Stripe availability (defensive programming)
     if (!stripe || !elements) {
       const errorMessage = copy.errors.stripeUnavailable
       setMessage(errorMessage)
-      if (onError) {
-        onError(new Error(errorMessage))
-      }
+      onError?.(new Error(errorMessage))
       return
     }
 
     if (!clientSecret) {
       const errorMessage = copy.errors.paymentIntentUnavailable
       setMessage(errorMessage)
-      if (onError) {
-        onError(new Error(errorMessage))
-      }
+      onError?.(new Error(errorMessage))
       return
     }
 
     setIsProcessing(true)
-    setMessage(null)
+    setMessage(undefined)
 
     try {
       const cardElement = elements.getElement(CardElement)
@@ -69,13 +64,10 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
         const errorMessage = copy.errors.cardElementMissing
         setMessage(errorMessage)
         setIsProcessing(false)
-        if (onError) {
-          onError(new Error(errorMessage))
-        }
+        onError?.(new Error(errorMessage))
         return
       }
 
-      // Confirm the payment using the clientSecret from the payment intent
       const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: cardElement,
@@ -87,45 +79,40 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
       })
 
       if (error) {
-        // Show error to customer (e.g., payment details are invalid)
         const errorMessage = error.message || copy.errors.paymentUnexpected
         setMessage(errorMessage)
         setIsProcessing(false)
+        onError?.(new Error(errorMessage))
+        return
+      }
 
-        if (onError) {
-          onError(new Error(errorMessage))
-        }
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment succeeded on Stripe side - now wait for backend processing
-        // Don't show any message during processing - wait for backend to confirm
-        setMessage(null)
+      if (paymentIntent?.status === 'succeeded') {
+        setMessage(undefined)
 
         if (onSuccess) {
           try {
-            // Wait for backend processing to complete
             await onSuccess(paymentIntent)
-            // Backend processing completed - now show success
             setMessage('Payment successful!')
           } catch (err) {
-            // Backend processing failed
-            const error = err instanceof Error ? err : new Error(copy.errors.paymentProcessingFailed)
+            const caught = err instanceof Error ? err : new Error(copy.errors.paymentProcessingFailed)
             setMessage(copy.errors.paymentProcessingFailed)
             setIsProcessing(false)
-
-            if (onError) {
-              onError(error)
-            }
+            onError?.(caught)
             return
           }
         } else {
-          // No onSuccess callback - show success immediately
           setMessage('Payment successful!')
         }
-      } else if (paymentIntent && paymentIntent.status === 'requires_action') {
-        // Payment requires additional action (3D Secure, etc.)
+        return
+      }
+
+      if (paymentIntent?.status === 'requires_action') {
         setMessage(copy.errors.paymentRequires3ds)
         setIsProcessing(false)
-      } else if (paymentIntent) {
+        return
+      }
+
+      if (paymentIntent) {
         setMessage(
           interpolate(copy.errors.paymentStatusPrefix, {
             status: paymentIntent.status || 'processing',
@@ -134,19 +121,15 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
         setIsProcessing(false)
       }
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(copy.errors.unknownError)
-      setMessage(error.message)
-
-      if (onError) {
-        onError(error)
-      }
+      const caught = err instanceof Error ? err : new Error(copy.errors.unknownError)
+      setMessage(caught.message)
+      onError?.(caught)
     } finally {
       setIsProcessing(false)
     }
   }
 
   const isSuccess = message?.includes('successful') ?? false
-
   const isReady = !!(stripe && elements)
 
   const cardElementOptions = {
@@ -178,21 +161,24 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
               setMessage(e.error.message)
               setCardComplete(false)
             } else {
-              setMessage(null)
+              setMessage(undefined)
               setCardComplete(e.complete)
             }
           }}
         />
       ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '52px' }}>
+        <output
+          data-solvapay-payment-form-loading=""
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '52px' }}
+        >
           <Spinner size="sm" />
-        </div>
+        </output>
       )}
 
       {message && !isSuccess && (
-        <div role="alert" aria-live="assertive" aria-atomic="true">
+        <output role="alert" aria-live="assertive" aria-atomic="true">
           {message}
-        </div>
+        </output>
       )}
 
       <button
@@ -215,3 +201,5 @@ export const StripePaymentFormWrapper: React.FC<StripePaymentFormWrapperProps> =
     </>
   )
 }
+
+export type { StripePaymentFormWrapperProps }

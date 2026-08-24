@@ -6,6 +6,7 @@ import { SolvaPayContext } from '../SolvaPayProvider'
 import { paymentMethodCache } from '../hooks/usePaymentMethod'
 import type { PurchaseInfo, SolvaPayContextValue, SolvaPayConfig } from '../types'
 import type { PaymentMethodInfo } from '@solvapay/server'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 function buildCtx(
   activePurchase: PurchaseInfo | null,
@@ -31,15 +32,7 @@ function buildCtx(
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     _config: config,
     ...rest,
   }
@@ -86,16 +79,18 @@ function Renderer({
 
 const recurringPurchase: PurchaseInfo = {
   reference: 'purchase_abc',
+  customerRef: 'cus_recurring',
   productName: 'Widget API',
   status: 'active',
   startDate: '2026-01-01T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
   nextBillingDate: '2026-05-01T00:00:00Z',
   amount: 1999,
   currency: 'USD',
   planRef: 'plan_monthly',
-  billingCycle: 'month',
+  billingCycle: 'monthly',
   isRecurring: true,
-  planSnapshot: { planType: 'recurring', reference: 'plan_monthly' },
+  planSnapshot: { reference: 'plan_monthly', price: 1999, currency: 'USD', isMetered: false },
 }
 
 const oneTimePurchase: PurchaseInfo = {
@@ -107,7 +102,10 @@ const oneTimePurchase: PurchaseInfo = {
   amount: 9900,
   currency: 'USD',
   planRef: 'plan_lifetime',
-  planSnapshot: { planType: 'one-time', reference: 'plan_lifetime' },
+  isRecurring: false,
+  createdAt: '2026-01-01T00:00:00Z',
+  customerRef: 'cus_ot',
+  planSnapshot: { reference: 'plan_lifetime', price: 9900, currency: 'USD', isMetered: false },
 }
 
 const usageBasedPurchase: PurchaseInfo = {
@@ -118,7 +116,10 @@ const usageBasedPurchase: PurchaseInfo = {
   amount: 0,
   currency: 'USD',
   planRef: 'plan_usage',
-  planSnapshot: { planType: 'usage-based', reference: 'plan_usage' },
+  isRecurring: false,
+  createdAt: '2026-01-01T00:00:00Z',
+  customerRef: 'cus_ub',
+  planSnapshot: { reference: 'plan_usage', price: 0, currency: 'USD', isMetered: true },
 }
 
 beforeEach(() => {
@@ -155,15 +156,12 @@ describe('CurrentPlanCard', () => {
   it('renders usage-based plan without a date line', async () => {
     const ctx = buildCtx(usageBasedPurchase, {
       config: { transport: makeTransport() },
-      balance: {
-        loading: false,
+      balance: mockBalanceStatus({
         credits: 500,
         displayCurrency: 'USD',
         creditsPerMinorUnit: 1,
         displayExchangeRate: 1,
-        refetch: vi.fn(),
-        adjustBalance: vi.fn(),
-      },
+      }),
     })
     render(<Renderer ctx={ctx} />)
 
@@ -232,17 +230,19 @@ describe('CurrentPlanCard', () => {
     // would render "SEK 54.26" (USD cents labelled SEK).
     const sekPurchase: PurchaseInfo = {
       reference: 'purchase_sek',
+      customerRef: 'cus_sek',
       productName: 'MCP pro',
       status: 'active',
       startDate: '2026-04-20T00:00:00Z',
+      createdAt: '2026-04-20T00:00:00Z',
       amount: 5426,
       originalAmount: 50000,
       currency: 'SEK',
       exchangeRate: 0.1085,
       planRef: 'plan_sek_monthly',
-      billingCycle: 'month',
+      billingCycle: 'monthly',
       isRecurring: true,
-      planSnapshot: { planType: 'recurring', reference: 'plan_sek_monthly' },
+      planSnapshot: { reference: 'plan_sek_monthly', currency: 'SEK', price: 50000, isMetered: false },
     }
     const ctx = buildCtx(sekPurchase, { config: { transport: makeTransport() } })
     render(<Renderer ctx={ctx} />)
@@ -258,9 +258,11 @@ describe('CurrentPlanCard', () => {
   it('renders the SEK billing cycle as "/ month" rather than "/ monthly"', async () => {
     const sekPurchase: PurchaseInfo = {
       reference: 'purchase_sek_cycle',
+      customerRef: 'cus_sek',
       productName: 'MCP pro',
       status: 'active',
       startDate: '2026-04-20T00:00:00Z',
+      createdAt: '2026-04-20T00:00:00Z',
       amount: 5426,
       originalAmount: 50000,
       currency: 'SEK',
@@ -268,9 +270,11 @@ describe('CurrentPlanCard', () => {
       billingCycle: 'monthly',
       isRecurring: true,
       planSnapshot: {
-        planType: 'recurring',
         reference: 'pln_sek_m',
         name: 'Pro Monthly',
+        currency: 'SEK',
+        price: 50000,
+        isMetered: false,
       },
     }
     const ctx = buildCtx(sekPurchase, { config: { transport: makeTransport() } })
@@ -282,25 +286,26 @@ describe('CurrentPlanCard', () => {
     expect(price?.textContent).not.toContain('/ monthly')
   })
 
-  it('falls back to planSnapshot.billingCycle when the top-level cycle is missing', async () => {
-    // Bootstrap stamps the cycle on `planSnapshot.billingCycle` only — the
-    // top-level field can be absent. Without the snapshot fallback the
-    // price line would render "SEK 500" instead of "SEK 500 / month".
+  it('reads the billing cycle from the purchase, not the snapshot', async () => {
     const snapshotOnlyCycle: PurchaseInfo = {
       reference: 'purchase_snapshot_cycle',
+      customerRef: 'cus_sek',
       productName: 'MCP pro',
       status: 'active',
       startDate: '2026-04-20T00:00:00Z',
+      createdAt: '2026-04-20T00:00:00Z',
       amount: 5426,
       originalAmount: 50000,
       currency: 'SEK',
       planRef: 'pln_sek_m',
+      billingCycle: 'monthly',
       isRecurring: true,
       planSnapshot: {
-        planType: 'recurring',
         reference: 'pln_sek_m',
         name: 'Pro Monthly',
-        billingCycle: 'month',
+        price: 50000,
+        currency: 'SEK',
+        isMetered: false,
       },
     }
     const ctx = buildCtx(snapshotOnlyCycle, { config: { transport: makeTransport() } })
@@ -316,9 +321,11 @@ describe('CurrentPlanCard', () => {
       ...recurringPurchase,
       productName: 'Widget API',
       planSnapshot: {
-        planType: 'recurring',
         reference: 'plan_monthly',
         name: 'Pro Monthly',
+        currency: 'USD',
+        price: 1999,
+        isMetered: false,
       },
     }
     const ctx = buildCtx(named, { config: { transport: makeTransport() } })
@@ -354,11 +361,14 @@ describe('CurrentPlanCard', () => {
   it('does not render when the only purchase is a credit top-up', () => {
     const topup: PurchaseInfo = {
       reference: 'pur_topup',
+      customerRef: 'cus_topup',
       productName: 'Credits',
       status: 'active',
       startDate: '2026-01-01T00:00:00Z',
+      createdAt: '2026-01-01T00:00:00Z',
       amount: 10000,
       currency: 'SEK',
+      isRecurring: false,
       metadata: { purpose: 'credit_topup' },
     }
     // Simulate provider-level filtering: balance transactions never become
@@ -435,5 +445,43 @@ describe('CurrentPlanCard', () => {
 
     await screen.findByText('Your plan')
     expect(document.querySelector('[data-solvapay-cancelled-notice]')).toBeNull()
+  })
+
+  it('renders credit-based PAYG plan name and does not show unlimited usage label', async () => {
+    const paygPurchase: PurchaseInfo = {
+      reference: 'purchase_payg',
+      customerRef: 'cus_payg',
+      productName: 'Widget API',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00Z',
+      createdAt: '2026-01-01T00:00:00Z',
+      amount: 0,
+      currency: 'USD',
+      isRecurring: false,
+      planRef: 'plan_payg',
+      planSnapshot: {
+        reference: 'plan_payg',
+        name: 'Pay as you go',
+        price: 0,
+        currency: 'USD',
+        isMetered: true,
+      },
+      usage: { used: 0, overageUnits: 0, overageCost: 0 },
+    }
+    const ctx = buildCtx(paygPurchase, {
+      config: { transport: makeTransport() },
+      balance: mockBalanceStatus({
+        loading: false,
+        credits: 100,
+        displayCurrency: 'USD',
+        creditsPerMinorUnit: 1,
+        displayExchangeRate: 1,
+      }),
+    })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByText('Unlimited')).toBeNull()
+    expect(document.querySelector('[data-solvapay-current-plan-balance-line]')).toBeTruthy()
   })
 })

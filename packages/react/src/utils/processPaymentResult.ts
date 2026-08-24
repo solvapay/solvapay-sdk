@@ -36,6 +36,7 @@ export type ReconcilePaymentInput = {
 
 export type ReconcilePaymentResult =
   | { status: 'success'; result?: ProcessPaymentResult }
+  | { status: 'pending'; error: Error }
   | { status: 'timeout'; error: Error }
   | { status: 'error'; error: Error }
 
@@ -62,7 +63,7 @@ export async function reconcilePayment(
 
   try {
     const result = await processPayment({ paymentIntentId, productRef, planRef })
-    const status = (result as { status?: string })?.status
+    const { status } = result
 
     if (status === 'timeout') {
       for (let attempt = 1; attempt <= 5; attempt++) {
@@ -72,6 +73,13 @@ export async function reconcilePayment(
       return {
         status: 'timeout',
         error: new Error(copy.errors.paymentProcessingTimeout),
+      }
+    }
+
+    if (status === 'processing') {
+      return {
+        status: 'pending',
+        error: new Error(copy.errors.paymentPending),
       }
     }
 

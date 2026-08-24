@@ -30,7 +30,7 @@ import {
   PaymentElement as StripePaymentElement,
   CardElement as StripeCardElement,
 } from '@stripe/react-stripe-js'
-import type { Stripe, StripeElements, StripeElementLocale } from '@stripe/stripe-js'
+import { toStripeElementLocale } from '../utils/stripeLocale'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { LegalFooter } from './LegalFooter'
@@ -57,10 +57,22 @@ import { MandateText as MandateTextShim } from '../components/MandateText'
 import { Spinner } from '../components/Spinner'
 import { confirmPayment } from '../utils/confirmPayment'
 import { reconcilePayment } from '../utils/processPaymentResult'
+import {
+  readPaymentIntentClientSecret,
+  stripPaymentIntentParams,
+} from './paymentIntentReturn'
 import { normalizeOneTimePurchase } from '../utils/normalizePurchase'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { resolveCta } from '../utils/checkoutCta'
 import { formatPrice } from '../utils/format'
+import {
+  useBusinessDetailsAttach,
+  defaultBusinessDetails,
+} from '../hooks/useBusinessDetailsAttach'
+import {
+  createBusinessDetailsParts,
+  createTaxSummaryParts,
+} from '../components/businessCheckoutParts'
 import type {
   ActivationResult,
   PaymentFormProps,
@@ -68,6 +80,7 @@ import type {
   PrefillCustomer,
   Plan,
 } from '../types'
+import type { ActivatePlanResult } from '@solvapay/server'
 
 // ---------- helpers ----------
 
@@ -94,7 +107,7 @@ type PaymentFormRootProps = PaymentFormProps & {
   children?: React.ReactNode
 }
 
-const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
+const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
   function PaymentFormRoot(props, forwardedRef) {
     const {
       planRef,
@@ -115,6 +128,8 @@ const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
     const solva = useContext(SolvaPayContext)
     if (!solva) throw new MissingProviderError('PaymentForm')
 
+    const { attachBusinessDetails, customerRef } = solva
+
     const copy = useCopy()
     const locale = useLocale()
     const planSelection = usePlanSelection()
@@ -131,6 +146,7 @@ const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
       loading: checkoutLoading,
       error: checkoutError,
       clientSecret,
+      processorPaymentId,
       startCheckout,
       stripePromise,
       resolvedPlanRef,
@@ -153,7 +169,8 @@ const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
         !clientSecret
       ) {
         hasInitializedRef.current = true
-        startCheckout().catch(() => {
+        startCheckout().catch(error => {
+          console.error('[PaymentForm] startCheckout failed', error)
           hasInitializedRef.current = false
         })
       }
@@ -166,42 +183,44 @@ const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
 
     const elementsOptions = useMemo(() => {
       if (!clientSecret) return undefined
-      return { clientSecret, locale: locale as StripeElementLocale | undefined }
+      return { clientSecret, locale: toStripeElementLocale(locale) }
     }, [clientSecret, locale])
 
     const shouldRenderElements = !!(stripePromise && clientSecret)
 
     if (!hasPlanOrProduct) {
       return (
-        <div
+        <section
           ref={forwardedRef}
           className={className}
           data-solvapay-payment-form=""
           data-state="error"
         >
-          <div data-solvapay-payment-form-error="">{copy.errors.configMissingPlanOrProduct}</div>
-        </div>
+          <p role="alert" data-solvapay-payment-form-error="">
+            {copy.errors.configMissingPlanOrProduct}
+          </p>
+        </section>
       )
     }
 
     if (checkoutError) {
       return (
-        <div
+        <section
           ref={forwardedRef}
           className={className}
           data-solvapay-payment-form=""
           data-state="error"
         >
-          <div data-solvapay-payment-form-error="">
+          <p role="alert" data-solvapay-payment-form-error="">
             {copy.errors.paymentInitFailed} {checkoutError.message || copy.errors.unknownError}
-          </div>
-        </div>
+          </p>
+        </section>
       )
     }
 
     if (isFreePlan && resolvedPlan) {
       return (
-        <div
+        <section
           ref={forwardedRef}
           className={className}
           data-solvapay-payment-form=""
@@ -222,27 +241,29 @@ const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
           >
             {children}
           </FreeInner>
-        </div>
+        </section>
       )
     }
 
-    if (shouldRenderElements && elementsOptions) {
+    if (shouldRenderElements && elementsOptions && clientSecret) {
+      const resolvedClientSecret = clientSecret
       return (
-        <div
+        <section
           ref={forwardedRef}
           className={className}
           data-solvapay-payment-form=""
           data-state="ready"
           data-variant="paid"
         >
-          <Elements key={clientSecret!} stripe={stripePromise} options={elementsOptions}>
+          <Elements key={resolvedClientSecret} stripe={stripePromise} options={elementsOptions}>
             <PaidInner
               planRef={effectivePlanRef}
               productRef={effectiveProductRef}
               prefillCustomer={prefillCustomer}
               resolvedPlanRef={resolvedPlanRef}
               plan={resolvedPlan ?? null}
-              clientSecret={clientSecret!}
+              clientSecret={resolvedClientSecret}
+              processorPaymentId={processorPaymentId}
               returnUrl={finalReturnUrl}
               submitButtonText={submitButtonText}
               buttonClassName={buttonClassName}
@@ -250,25 +271,28 @@ const Root = forwardRef<HTMLDivElement, PaymentFormRootProps>(
               onSuccess={onSuccess}
               onResult={onResult}
               onError={onError}
+              onTaxChange={props.onTaxChange}
+              attachBusinessDetails={attachBusinessDetails}
+              customerRef={customerRef}
             >
               {children}
             </PaidInner>
           </Elements>
-        </div>
+        </section>
       )
     }
 
     return (
-      <div
+      <section
         ref={forwardedRef}
         className={className}
         data-solvapay-payment-form=""
         data-state="loading"
       >
-        <div data-solvapay-payment-form-loading="">
+        <output data-solvapay-payment-form-loading="">
           <Spinner size="md" />
-        </div>
-      </div>
+        </output>
+      </section>
     )
   },
 )
@@ -282,6 +306,7 @@ const PaidInner: React.FC<{
   resolvedPlanRef: string | null
   plan: Plan | null
   clientSecret: string
+  processorPaymentId: string | null
   returnUrl: string
   submitButtonText?: string
   buttonClassName?: string
@@ -289,6 +314,17 @@ const PaidInner: React.FC<{
   onSuccess?: PaymentFormProps['onSuccess']
   onResult?: PaymentFormProps['onResult']
   onError?: PaymentFormProps['onError']
+  onTaxChange?: PaymentFormProps['onTaxChange']
+  attachBusinessDetails?: (params: {
+    paymentIntentId: string
+    customerRef?: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: import('@solvapay/core').TaxIdType
+  }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
+  customerRef?: string
   children?: React.ReactNode
 }> = ({
   planRef,
@@ -297,6 +333,7 @@ const PaidInner: React.FC<{
   resolvedPlanRef,
   plan,
   clientSecret,
+  processorPaymentId,
   returnUrl,
   submitButtonText,
   buttonClassName,
@@ -304,6 +341,9 @@ const PaidInner: React.FC<{
   onSuccess,
   onResult,
   onError,
+  onTaxChange,
+  attachBusinessDetails,
+  customerRef,
   children,
 }) => {
   const stripe = useStripe()
@@ -313,13 +353,140 @@ const PaidInner: React.FC<{
   const { processPayment, upsertPurchase } = useSolvaPay()
   const { refetch } = usePurchase()
 
+  const refreshElements = useCallback(async () => {
+    if (elements) {
+      await elements.fetchUpdates()
+    }
+  }, [elements])
+
+  const {
+    businessDetails,
+    setBusinessDetails,
+    fieldErrors,
+    taxBreakdown,
+    businessDetailsAttached,
+    businessDetailsAttaching,
+    businessDetailsError,
+    requiresBusinessAttach,
+    runAttach,
+  } = useBusinessDetailsAttach({
+    processorPaymentId,
+    attachBusinessDetails,
+    customerRef,
+    onTaxChange,
+    refreshElements,
+  })
+
   const [elementKind, setElementKind] = useState<PaymentElementKind>(
     children ? null : 'payment-element',
   )
+  const [customerName, setCustomerName] = useState('')
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const returnResumeStarted = useRef(false)
+
+  useEffect(() => {
+    if (!stripe || returnResumeStarted.current || typeof window === 'undefined') return
+    const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
+    if (!returnClientSecret) return
+    returnResumeStarted.current = true
+
+    let cancelled = false
+    void (async () => {
+      setIsProcessing(true)
+      setError(null)
+
+      const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
+      if (cancelled) return
+      stripPaymentIntentParams()
+
+      if (retrieved.error || !retrieved.paymentIntent) {
+        setError(copy.errors.paymentUnexpected)
+        setIsProcessing(false)
+        return
+      }
+
+      let paymentIntent = retrieved.paymentIntent
+      if (paymentIntent.status === 'requires_action') {
+        const actionResult = await stripe.handleNextAction({ clientSecret: returnClientSecret })
+        if (cancelled) return
+        if (actionResult.error || !actionResult.paymentIntent) {
+          setError(copy.errors.paymentRequires3ds)
+          setIsProcessing(false)
+          return
+        }
+        paymentIntent = actionResult.paymentIntent
+      }
+
+      if (paymentIntent.status === 'processing') {
+        setError(copy.errors.paymentPending)
+        setIsProcessing(false)
+        return
+      }
+
+      if (paymentIntent.status !== 'succeeded') {
+        setError(copy.errors.paymentProcessingFailed)
+        setIsProcessing(false)
+        return
+      }
+
+      const reconcileResult = await reconcilePayment({
+        paymentIntentId: paymentIntent.id,
+        productRef,
+        planRef: planRef || resolvedPlanRef || undefined,
+        processPayment,
+        refetchPurchase: refetch,
+        copy,
+      })
+
+      if (cancelled) return
+
+      if (reconcileResult.status === 'success') {
+        const r = reconcileResult.result
+        if (r && 'type' in r && r.type === 'recurring') {
+          upsertPurchase(r.purchase)
+        } else if (r && 'type' in r && r.type === 'one-time') {
+          upsertPurchase(normalizeOneTimePurchase(r.oneTimePurchase))
+        } else {
+          try {
+            await refetch()
+          } catch (error) {
+            console.error('[PaymentForm] secondary purchase refetch failed after return-path success', error)
+          }
+        }
+        onSuccess?.(paymentIntent)
+        onResult?.({ kind: 'paid', paymentIntent })
+        setIsProcessing(false)
+        return
+      }
+
+      const msg =
+        reconcileResult.status === 'timeout' || reconcileResult.status === 'pending'
+          ? reconcileResult.error.message
+          : copy.errors.paymentProcessingFailed
+      setError(msg)
+      onError?.(reconcileResult.error)
+      setIsProcessing(false)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    stripe,
+    copy,
+    productRef,
+    planRef,
+    resolvedPlanRef,
+    processPayment,
+    refetch,
+    upsertPurchase,
+    onSuccess,
+    onResult,
+    onError,
+  ])
 
   const isReady = !!(stripe && elements)
 
@@ -329,6 +496,8 @@ const PaidInner: React.FC<{
     !!elementKind &&
     paymentInputComplete &&
     (!requireTermsAcceptance || termsAccepted) &&
+    (!requiresBusinessAttach || businessDetailsAttached) &&
+    !businessDetailsAttaching &&
     !isProcessing
 
   const submit = useCallback(async () => {
@@ -339,8 +508,21 @@ const PaidInner: React.FC<{
       onError?.(new Error(msg))
       return
     }
+    if (requiresBusinessAttach && !businessDetailsAttached) {
+      const attached = await runAttach(businessDetails)
+      if (!attached) {
+        const msg = businessDetailsError ?? 'Complete business details before paying'
+        setError(msg)
+        onError?.(new Error(msg))
+        return
+      }
+    }
+
     setError(null)
     setIsProcessing(true)
+
+    const confirmedStripe = stripe
+    const confirmedElements = elements
 
     // Wrap the entire post-`setIsProcessing(true)` block in try/finally so
     // any thrown error in confirmPayment, reconcilePayment, upsertPurchase,
@@ -353,13 +535,13 @@ const PaidInner: React.FC<{
     // current crash, but future contract drift can't wedge the form.
     try {
       const result = await confirmPayment({
-        stripe: stripe as Stripe,
-        elements: elements as StripeElements,
+        stripe: confirmedStripe,
+        elements: confirmedElements,
         clientSecret,
-        mode: elementKind,
+        mode: elementKind === 'card-element' ? 'card-element' : 'payment-element',
         returnUrl,
         billingDetails: {
-          name: customer.name ?? prefillCustomer?.name,
+          ...(customerName.trim() && { name: customerName.trim() }),
           email: customer.email ?? prefillCustomer?.email,
         },
         copy,
@@ -376,9 +558,13 @@ const PaidInner: React.FC<{
         return
       }
 
-      const paymentIntent = result.paymentIntent
+      if (result.status === 'pending') {
+        setError(result.message)
+        return
+      }
+
       const reconcileResult = await reconcilePayment({
-        paymentIntentId: paymentIntent.id as string,
+        paymentIntentId: result.paymentIntent.id,
         productRef,
         planRef: planRef || resolvedPlanRef || undefined,
         processPayment,
@@ -405,21 +591,19 @@ const PaidInner: React.FC<{
         } else {
           try {
             await refetch()
-          } catch {
-            // Compat shim already refetched; swallow secondary failure.
+          } catch (error) {
+            console.error('[PaymentForm] secondary purchase refetch failed after submit success', error)
           }
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pi = paymentIntent as any
-        onSuccess?.(pi)
-        const paid: PaymentResult = { kind: 'paid', paymentIntent: pi }
+        onSuccess?.(result.paymentIntent)
+        const paid: PaymentResult = { kind: 'paid', paymentIntent: result.paymentIntent }
         onResult?.(paid)
         return
       }
 
       const msg =
-        reconcileResult.status === 'timeout'
+        reconcileResult.status === 'timeout' || reconcileResult.status === 'pending'
           ? reconcileResult.error.message
           : copy.errors.paymentProcessingFailed
       setError(msg)
@@ -434,6 +618,7 @@ const PaidInner: React.FC<{
     elementKind,
     returnUrl,
     customer,
+    customerName,
     prefillCustomer,
     copy,
     processPayment,
@@ -445,7 +630,14 @@ const PaidInner: React.FC<{
     onSuccess,
     onResult,
     onError,
+    requiresBusinessAttach,
+    businessDetailsAttached,
+    runAttach,
+    businessDetails,
+    businessDetailsError,
   ])
+
+  const effectiveError = error ?? businessDetailsError
 
   const contextValue: PaymentFormContextValue = useMemo(
     () => ({
@@ -455,19 +647,29 @@ const PaidInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret,
-      stripe: (stripe as Stripe | null) ?? null,
-      elements: (elements as StripeElements | null) ?? null,
+      processorPaymentId,
+      stripe,
+      elements,
       isProcessing,
       isReady,
       paymentInputComplete,
       termsAccepted,
       requireTermsAcceptance,
       canSubmit,
-      error,
+      error: effectiveError ?? null,
       elementKind,
       returnUrl,
       submitButtonText,
       buttonClassName,
+      customerName,
+      setCustomerName,
+      businessDetails,
+      taxBreakdown,
+      businessDetailsAttached,
+      businessDetailsAttaching,
+      businessDetailsError,
+      fieldErrors,
+      setBusinessDetails,
       setElementKind,
       setPaymentInputComplete,
       setTermsAccepted,
@@ -480,6 +682,7 @@ const PaidInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret,
+      processorPaymentId,
       stripe,
       elements,
       isProcessing,
@@ -488,11 +691,20 @@ const PaidInner: React.FC<{
       termsAccepted,
       requireTermsAcceptance,
       canSubmit,
-      error,
+      effectiveError,
       elementKind,
       returnUrl,
       submitButtonText,
       buttonClassName,
+      customerName,
+      setCustomerName,
+      businessDetails,
+      taxBreakdown,
+      businessDetailsAttached,
+      businessDetailsAttaching,
+      businessDetailsError,
+      fieldErrors,
+      setBusinessDetails,
       submit,
     ],
   )
@@ -531,7 +743,7 @@ const FreeInner: React.FC<{
   const { refetch } = usePurchase()
   const { activate, state, error: activationError, result: activationResult } = useActivation()
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [localError, setLocalError] = useState<string | null>(null)
+  const [localError, setLocalError] = useState<string | undefined>(undefined)
   const resultFiredRef = useRef(false)
 
   useEffect(() => {
@@ -539,8 +751,8 @@ const FreeInner: React.FC<{
       resultFiredRef.current = true
       const res: ActivationResult = { kind: 'activated', result: activationResult }
       onResult?.(res)
-      refetch().catch(() => {
-        // refetch errors are non-fatal for activation success
+      refetch().catch(error => {
+        console.error('[PaymentForm] purchase refetch failed after activation', error)
       })
     }
   }, [state, activationResult, onResult, refetch])
@@ -555,19 +767,13 @@ const FreeInner: React.FC<{
       onError?.(new Error(msg))
       return
     }
-    setLocalError(null)
+    setLocalError(undefined)
     try {
       if (onFreePlan) {
         await onFreePlan(plan)
-        onResult?.({
-          kind: 'activated',
-          result: {
-            status: 'activated',
-            productRef,
-            planRef: plan.reference,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any,
-        })
+        const activationResult: ActivatePlanResult = { status: 'activated' }
+        const activated: ActivationResult = { kind: 'activated', result: activationResult }
+        onResult?.(activated)
         return
       }
       await activate({ productRef, planRef: plan.reference })
@@ -588,6 +794,7 @@ const FreeInner: React.FC<{
       resolvedPlanRef,
       plan,
       clientSecret: null,
+      processorPaymentId: null,
       stripe: null,
       elements: null,
       isProcessing,
@@ -601,6 +808,15 @@ const FreeInner: React.FC<{
       returnUrl: '',
       submitButtonText,
       buttonClassName,
+      customerName: '',
+      setCustomerName: () => {},
+      businessDetails: defaultBusinessDetails,
+      taxBreakdown: null,
+      businessDetailsAttached: false,
+      businessDetailsAttaching: false,
+      businessDetailsError: null,
+      fieldErrors: {},
+      setBusinessDetails: () => {},
       setElementKind: () => {},
       setPaymentInputComplete: () => {},
       setTermsAccepted,
@@ -636,6 +852,8 @@ const Summary: React.FC<SummaryProps> = props => {
       {...props}
       planRef={ctx.planRef || ctx.resolvedPlanRef || undefined}
       productRef={ctx.productRef}
+      taxBreakdown={ctx.businessDetails.isBusiness ? ctx.taxBreakdown : null}
+      baseAmountMinor={ctx.plan?.price ?? 0}
     />
   )
 }
@@ -656,42 +874,53 @@ const MandateTextPrimitive: React.FC<MandateTextPrimitiveProps> = props => {
   )
 }
 
-type CustomerFieldsProps = React.HTMLAttributes<HTMLDivElement> & {
+type CustomerFieldsProps = React.HTMLAttributes<HTMLElement> & {
   asChild?: boolean
   readOnly?: boolean
 }
 
-const CustomerFields = forwardRef<HTMLDivElement, CustomerFieldsProps>(
+const CustomerFields = forwardRef<HTMLElement, CustomerFieldsProps>(
   function PaymentFormCustomerFields(
     { asChild, readOnly: _readOnly = true, children, ...rest },
     ref,
   ) {
     const copy = useCopy()
     const customer = useCustomer()
-    const { prefillCustomer } = usePaymentForm()
+    const { prefillCustomer, customerName, setCustomerName, setBusinessDetails } = usePaymentForm()
 
     const email = customer.email ?? prefillCustomer?.email
-    const name = customer.name ?? prefillCustomer?.name
 
-    if (!email && !name) return null
+    if (!email) return null
 
-    const Comp = asChild ? Slot : 'div'
+    const Comp = asChild ? Slot : 'section'
     return (
       <Comp ref={ref} data-solvapay-payment-form-customer-fields="" {...rest}>
         {children ?? (
           <>
             {email && (
-              <div data-solvapay-payment-form-customer-email="">
-                <span>{copy.customer.emailLabel}: </span>
-                <span>{email}</span>
-              </div>
+              <dl data-solvapay-payment-form-customer-email="">
+                <dt>{copy.customer.emailLabel}</dt>
+                <dd>{email}</dd>
+              </dl>
             )}
-            {name && (
-              <div data-solvapay-payment-form-customer-name="">
-                <span>{copy.customer.nameLabel}: </span>
-                <span>{name}</span>
-              </div>
-            )}
+            <dl data-solvapay-payment-form-customer-name="">
+              <dt>{copy.customer.nameLabel}</dt>
+              <dd>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={event => {
+                    const nextName = event.target.value
+                    setCustomerName(nextName)
+                    setBusinessDetails({
+                      customerName: nextName.trim() || undefined,
+                    })
+                  }}
+                  placeholder="Optional"
+                  aria-label={copy.customer.nameLabel}
+                />
+              </dd>
+            </dl>
           </>
         )}
       </Comp>
@@ -715,20 +944,20 @@ const PaymentElementSlot: React.FC<PaymentElementProps> = ({ options }) => {
 
   if (!isReady) {
     return (
-      <div data-solvapay-payment-form-loading="">
+      <output data-solvapay-payment-form-loading="">
         <Spinner size="sm" />
-      </div>
+      </output>
     )
   }
 
   return (
-    <div data-solvapay-payment-form-payment-element="">
+    <section data-solvapay-payment-form-payment-element="">
       <StripePaymentElement
         options={withPaymentElementDefaults(options)}
         onChange={e => setPaymentInputComplete(e.complete)}
         key={locale || 'default'}
       />
-    </div>
+    </section>
   )
 }
 
@@ -736,6 +965,10 @@ type CardElementProps = {
   options?: React.ComponentProps<typeof StripeCardElement>['options']
 }
 
+/**
+ * @deprecated Use `PaymentForm.PaymentElement` instead. Slated for removal in
+ * the next major release.
+ */
 const CardElementSlot: React.FC<CardElementProps> = ({ options }) => {
   const { setElementKind, setPaymentInputComplete, isReady, stripe, elements } = usePaymentForm()
 
@@ -747,16 +980,16 @@ const CardElementSlot: React.FC<CardElementProps> = ({ options }) => {
 
   if (!isReady) {
     return (
-      <div data-solvapay-payment-form-loading="">
+      <output data-solvapay-payment-form-loading="">
         <Spinner size="sm" />
-      </div>
+      </output>
     )
   }
 
   return (
-    <div data-solvapay-payment-form-card-element="">
+    <section data-solvapay-payment-form-card-element="">
       <StripeCardElement options={options} onChange={e => setPaymentInputComplete(e.complete)} />
-    </div>
+    </section>
   )
 }
 
@@ -815,11 +1048,14 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
         ? 'disabled'
         : 'idle'
 
-    const amountFormatted = formatPrice(
-      plan?.price ?? ctx.plan?.price ?? 0,
-      plan?.currency ?? ctx.plan?.currency ?? 'usd',
-      { locale, free: copy.interval.free },
-    )
+    const planCurrency = plan?.currency ?? ctx.plan?.currency ?? 'usd'
+    const baseMinor = ctx.taxBreakdown?.total ?? plan?.price ?? ctx.plan?.price ?? 0
+    const amountFormatted = formatPrice(baseMinor, ctx.taxBreakdown?.currency ?? planCurrency, {
+      locale,
+      interval: variant === 'recurring' ? plan?.interval ?? ctx.plan?.interval : undefined,
+      intervalCount: variant === 'recurring' ? 1 : undefined,
+      free: copy.interval.free,
+    })
 
     const label = resolveCta({
       variant,
@@ -867,8 +1103,7 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
             )
           : children
       return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        <Slot ref={ref as any} {...(buttonProps as Record<string, unknown>)}>
+        <Slot ref={ref as React.Ref<HTMLElement>} {...(buttonProps as Record<string, unknown>)}>
           {slotChild}
         </Slot>
       )
@@ -888,33 +1123,52 @@ const SubmitButton = forwardRef<HTMLButtonElement, SubmitButtonProps>(
   },
 )
 
-type LoadingProps = React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
+type LoadingProps = React.HTMLAttributes<HTMLOutputElement> & { asChild?: boolean }
 
-const Loading = forwardRef<HTMLDivElement, LoadingProps>(function PaymentFormLoading(
+const Loading = forwardRef<HTMLOutputElement, LoadingProps>(function PaymentFormLoading(
   { asChild, children, ...rest },
   ref,
 ) {
   const ctx = usePaymentForm()
   if (ctx.isReady && ctx.clientSecret) return null
-  const Comp = asChild ? Slot : 'div'
+  if (asChild) {
+    return (
+      <Slot ref={ref as React.Ref<HTMLElement>} data-solvapay-payment-form-loading="" {...rest}>
+        {children ?? <Spinner size="sm" />}
+      </Slot>
+    )
+  }
   return (
-    <Comp ref={ref} data-solvapay-payment-form-loading="" {...rest}>
+    <output ref={ref} data-solvapay-payment-form-loading="" {...rest}>
       {children ?? <Spinner size="sm" />}
-    </Comp>
+    </output>
   )
 })
 
-type ErrorProps = React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
+type ErrorProps = React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
 
-const ErrorSlot = forwardRef<HTMLDivElement, ErrorProps>(function PaymentFormError(
+const ErrorSlot = forwardRef<HTMLParagraphElement, ErrorProps>(function PaymentFormError(
   { asChild, children, ...rest },
   ref,
 ) {
   const ctx = usePaymentForm()
   if (!ctx.error) return null
-  const Comp = asChild ? Slot : 'div'
+  if (asChild) {
+    return (
+      <Slot
+        ref={ref as React.Ref<HTMLElement>}
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        data-solvapay-payment-form-error=""
+        {...rest}
+      >
+        {children ?? ctx.error}
+      </Slot>
+    )
+  }
   return (
-    <Comp
+    <p
       ref={ref}
       role="alert"
       aria-live="assertive"
@@ -923,9 +1177,32 @@ const ErrorSlot = forwardRef<HTMLDivElement, ErrorProps>(function PaymentFormErr
       {...rest}
     >
       {children ?? ctx.error}
-    </Comp>
+    </p>
   )
 })
+
+function usePaymentBusinessCtx(_part: string) {
+  const ctx = usePaymentForm()
+  return {
+    businessDetails: ctx.businessDetails,
+    setBusinessDetails: ctx.setBusinessDetails,
+    fieldErrors: ctx.fieldErrors,
+  }
+}
+
+function usePaymentSummaryCtx(_part: string) {
+  const ctx = usePaymentForm()
+  return {
+    taxBreakdown: ctx.taxBreakdown,
+    businessDetailsAttaching: ctx.businessDetailsAttaching,
+    baseAmountMinor: ctx.plan?.price ?? 0,
+    currency: ctx.taxBreakdown?.currency ?? ctx.plan?.currency ?? 'usd',
+    isBusiness: ctx.businessDetails.isBusiness,
+  }
+}
+
+const BusinessDetails = createBusinessDetailsParts(usePaymentBusinessCtx, 'payment-form')
+const TaxSummary = createTaxSummaryParts(usePaymentSummaryCtx, 'payment-form')
 
 // ---------- Exports ----------
 
@@ -940,6 +1217,8 @@ export const PaymentFormSubmitButton = SubmitButton
 export const PaymentFormLoading = Loading
 export const PaymentFormError = ErrorSlot
 export const PaymentFormLegalFooter = LegalFooter
+export const PaymentFormBusinessDetails = BusinessDetails
+export const PaymentFormTaxSummary = TaxSummary
 
 export const PaymentForm = {
   Root,
@@ -947,6 +1226,8 @@ export const PaymentForm = {
   CustomerFields,
   PaymentElement: PaymentElementSlot,
   CardElement: CardElementSlot,
+  BusinessDetails,
+  TaxSummary,
   MandateText: MandateTextPrimitive,
   TermsCheckbox,
   SubmitButton,

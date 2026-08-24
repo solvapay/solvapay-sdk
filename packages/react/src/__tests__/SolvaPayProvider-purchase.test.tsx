@@ -342,6 +342,54 @@ describe('SolvaPayProvider - purchase state management', () => {
     })
   })
 
+  describe('zero-amount PAYG activation parity', () => {
+    it('surfaces zero-amount usage-based purchase as activePurchase with hasPaidPurchase false', async () => {
+      const PAYG_ACTIVATION = {
+        customerRef: 'cus_test',
+        purchases: [
+          {
+            reference: 'pur_payg',
+            productName: 'Widget API',
+            productRef: 'prd_api',
+            status: 'active',
+            startDate: '2026-01-01',
+            amount: 0,
+            currency: 'USD',
+            planRef: 'plan_payg',
+            planSnapshot: {
+              planType: 'usage-based',
+              reference: 'plan_payg',
+              name: 'Pay as you go',
+              creditsPerUnit: 4,
+              meterRef: 'requests',
+            },
+            usage: { used: 0 },
+          },
+        ],
+      }
+      fetchSpy.mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(PAYG_ACTIVATION),
+        }),
+      )
+
+      const { result } = renderHook(() => useSolvaPay(), { wrapper: createWrapper() })
+
+      await waitFor(() => {
+        expect(result.current.purchase.activePurchase?.reference).toBe('pur_payg')
+      })
+
+      expect(result.current.purchase.activePurchase?.amount).toBe(0)
+      expect(result.current.purchase.hasPaidPurchase).toBe(false)
+      expect(result.current.purchase.activePaidPurchase).toBeNull()
+      expect(result.current.purchase.activePurchase?.planSnapshot).toMatchObject({
+        planType: 'usage-based',
+        creditsPerUnit: 4,
+      })
+    })
+  })
+
   describe('plan vs balance transaction filtering', () => {
     it('keeps the recurring plan on activePurchase while exposing top-ups on balanceTransactions', async () => {
       const MIXED_PURCHASES = {

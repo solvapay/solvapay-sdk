@@ -41,10 +41,47 @@ do not cascade.
 ### Note on pre-1.0 peers
 
 For a `0.x` peer, `workspace:^` publishes as `^0.2.4`, which only satisfies `0.2.x`.
-A future `0.3.0` (minor) of that peer will still cascade a major onto dependents.
-This is correct semver. If you need `0.x` minor bumps to stay in range, raise it with
-the team before choosing a looser range (e.g. `>=0.2.4 <1`) — do not pick one
-unilaterally.
+A future `0.3.0` (minor) of that peer will cascade a major onto every dependent — this
+is correct semver, and pnpm's `workspace:` protocol cannot express a wider range.
+
+While a peer is intentionally pre-1.0 (e.g. `@solvapay/mcp-core`, consumed by
+`@solvapay/react` and `@solvapay/mcp`), keep `workspace:^` and ship that peer's changes
+as **patch** so they stay inside the dependents' `^0.2.x` caret range and do not cascade.
+Pre-1.0 has no minor/patch compatibility contract, so an additive change is fine as a
+patch here.
+
+Only take a `minor`/`major` on such a peer as a **deliberate** act — most notably a 1.0
+stabilization, after which `workspace:^` publishes `^1.0.0` and future minors stay in
+range. Expect (and document) a one-time major on the dependents when you cross `0.x → 1.0`.
+Do not reach for an explicit published range **to dodge a cascade that reflects a real
+break** (e.g. narrowing `>=0.2.7 <1` just to skip a bump a dependent genuinely needs):
+that hides a breaking change and drops the `workspace:` protocol.
+
+### Narrow exception: a dependent provably unaffected by a dependency's major
+
+`workspace:^` cannot express "compatible with both `1.x` and `2.x`", so when a
+dependency takes a **genuine major** but a peer dependent does **not** consume the
+changed surface, `onlyUpdatePeerDependentsWhenOutOfRange` will still force a
+*false-major* cascade onto that dependent (and everything downstream of it). This is the
+one case where an explicit multi-major range is correct — it is the honest statement of
+compatibility, not a dodge.
+
+Requirements before widening a peer to an explicit range like `^1.4.0 || ^2.0.0`:
+
+- **Prove non-consumption.** `git grep` the changed symbols across the dependent's `src/`
+  and confirm it imports only stable exports of the dependency. If it touches the broken
+  surface, it is genuinely breaking — take the major instead.
+- **Span, don't narrow.** Include the current *and* new major (`^1.4.0 || ^2.0.0`), never
+  a ceiling below what ships (`<1`). Widening is a **patch**; add a patch changeset.
+- **Local linking is preserved.** With `link-workspace-packages=true`, pnpm still links
+  the in-repo package because its version satisfies the range — so this keeps the
+  `workspace:` linking behaviour in dev, unlike a narrowing range.
+- **Bump the ceiling deliberately.** At the dependency's *next* major, revisit: either the
+  dependent still doesn't consume the break (widen again) or it does (take the major).
+
+Precedent: `@solvapay/mcp` and `@solvapay/mcp-core` peer `@solvapay/server` as
+`^1.4.0 || ^2.0.0` — they use only paywall/nudge/`SolvaPay`-type exports, so
+`@solvapay/server@2.0.0` (auto-recharge break) must not cascade a major onto them.
 
 ### When you change an internal peer range
 

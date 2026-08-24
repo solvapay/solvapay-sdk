@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { PaywallError, isPaywallStructuredContent } from '@solvapay/server'
 import {
   buildSolvaPayRequest,
+  defaultGetCustomerRef,
   enrichPurchase,
   paywallToolResult,
   toolErrorResult,
@@ -136,6 +137,48 @@ describe('toolResult / toolErrorResult', () => {
   })
 })
 
+describe('defaultGetCustomerRef', () => {
+  // The official SDK v2 nests the auth envelope under `http`. Reading
+  // only the flat v1 location silently de-authenticated every tool call.
+  it('reads the customer_ref from the SDK v2 http.authInfo location', () => {
+    expect(
+      defaultGetCustomerRef({
+        http: { authInfo: { extra: { customer_ref: 'cus_v2' } } },
+      }),
+    ).toBe('cus_v2')
+  })
+
+  it('reads the customer_ref from the flat SDK v1 authInfo location', () => {
+    expect(defaultGetCustomerRef({ authInfo: { extra: { customer_ref: 'cus_v1' } } })).toBe(
+      'cus_v1',
+    )
+  })
+
+  it('prefers http.authInfo when both locations are present', () => {
+    expect(
+      defaultGetCustomerRef({
+        http: { authInfo: { extra: { customer_ref: 'cus_v2' } } },
+        authInfo: { extra: { customer_ref: 'cus_v1' } },
+      }),
+    ).toBe('cus_v2')
+  })
+
+  it('trims whitespace and treats a blank ref as absent', () => {
+    expect(
+      defaultGetCustomerRef({ http: { authInfo: { extra: { customer_ref: '  cus_pad  ' } } } }),
+    ).toBe('cus_pad')
+    expect(
+      defaultGetCustomerRef({ http: { authInfo: { extra: { customer_ref: '   ' } } } }),
+    ).toBeNull()
+  })
+
+  it('returns null when there is no auth context at all', () => {
+    expect(defaultGetCustomerRef(undefined)).toBeNull()
+    expect(defaultGetCustomerRef({})).toBeNull()
+    expect(defaultGetCustomerRef({ http: {} })).toBeNull()
+  })
+})
+
 describe('buildSolvaPayRequest', () => {
   it('forwards the customer_ref from MCP auth context as x-user-id', () => {
     const req = buildSolvaPayRequest(
@@ -145,6 +188,15 @@ describe('buildSolvaPayRequest', () => {
     expect(req.method).toBe('POST')
     expect(req.headers.get('x-user-id')).toBe('cus_123')
     expect(req.headers.get('content-type')).toBe('application/json')
+  })
+
+  it('forwards the customer_ref from the SDK v2 http.authInfo location', () => {
+    const req = buildSolvaPayRequest({
+      http: {
+        authInfo: { token: 't', clientId: 'c', scopes: [], extra: { customer_ref: 'cus_v2' } },
+      },
+    })
+    expect(req.headers.get('x-user-id')).toBe('cus_v2')
   })
 
   it('encodes query parameters', () => {

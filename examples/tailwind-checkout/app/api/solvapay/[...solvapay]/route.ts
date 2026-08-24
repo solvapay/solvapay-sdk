@@ -9,4 +9,14 @@
 import { createSolvaPayRouteHandlers } from '@solvapay/examples-shared/next-route-dispatcher'
 import { getSolvaPay } from '@/lib/solvapay'
 
-export const { GET, POST } = createSolvaPayRouteHandlers(getSolvaPay())
+const { GET: getHandler, POST: postHandler } = createSolvaPayRouteHandlers(getSolvaPay())
+
+type RouteContext = { params: Promise<{ solvapay: string[] }> }
+
+export async function GET(request: Request, ctx: RouteContext) {
+  return getHandler(request, ctx)
+}
+
+export async function POST(request: Request, ctx: RouteContext) {
+  return postHandler(request, ctx)
+}

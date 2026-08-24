@@ -1,5 +1,28 @@
 # @solvapay/core
 
+## 1.3.0
+
+### Minor Changes
+
+- 800f081: Business-details and seller-identity validation now share a single Stripe Tax buyer jurisdiction list (`tax-jurisdictions`), so tax-ID formats, labels, and supported countries match what the platform accepts at checkout. Country-aware tax-ID validation covers every jurisdiction Stripe Tax registers in rather than the previous hand-maintained subset.
+- 3a310eb: Add tiered product config validation: sync `productRef` shape checks + one-line MCP config logging, enriched OAuth DCR failure diagnostics, opt-in `verifyProductConfiguration()` on `@solvapay/server`, and `solvapay doctor` for explicit network checks (secret key, product existence, readiness).
+
+## 1.2.0
+
+### Minor Changes
+
+- ede9365: Add business purchase support for credit top-ups: shared BusinessDetails validation in core, TopupForm.BusinessDetails/Summary primitives, attachTopupBusinessDetails server SDK method, and checkout-demo example wiring.
+- 985acd1: Add `resolveSellerIdentityDisplay` to `@solvapay/core` for country-aware seller tax and company-number rows. `McpSellerDetailsCard` now uses the core resolver with unified display labels (`VAT number`, `EIN`, `Company number`).
+
+## 1.1.1
+
+### Patch Changes
+
+- 349777e: Financial boundary hardening: backend `display.*` blocks are the source of truth for credit and currency rendering.
+  - **`@solvapay/core`**: conversion-contract e2e extended to pin backend display formulas against the core reference.
+  - **`@solvapay/react`**: `TransportBalanceResult` and `BalanceStatus` accept optional `display` from the balance API; negative `adjustBalance` schedules a grace refetch; usage demo refetches after debit.
+  - **`@solvapay/server`**: `AutoRechargeConfig`, balance, and credit-debit types document backend-computed `display` blocks and `autoRecharge.triggered` as charge-initiated (not credits booked inline).
+
 ## 1.1.0
 
 ### Minor Changes

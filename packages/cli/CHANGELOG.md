@@ -1,5 +1,16 @@
 # solvapay
 
+## 1.3.0
+
+### Minor Changes
+
+- 3a310eb: Add tiered product config validation: sync `productRef` shape checks + one-line MCP config logging, enriched OAuth DCR failure diagnostics, opt-in `verifyProductConfiguration()` on `@solvapay/server`, and `solvapay doctor` for explicit network checks (secret key, product existence, readiness).
+
+### Patch Changes
+
+- Updated dependencies [3a310eb]
+  - @solvapay/init@0.4.0
+
 ## 1.2.0
 
 ### Minor Changes

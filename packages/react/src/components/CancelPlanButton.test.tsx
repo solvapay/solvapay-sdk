@@ -5,6 +5,7 @@ import { CancelPlanButton } from './CancelPlanButton'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { PurchaseInfo, SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 beforeEach(() => {
   vi.stubGlobal('confirm', vi.fn(() => true))
@@ -34,31 +35,30 @@ function buildCtx(
     cancelRenewal: vi.fn(async () => ({ success: true } as never)),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     ...overrides,
   }
 }
 
 const recurringActivePurchase: PurchaseInfo = {
   reference: 'pur_123',
+  customerRef: 'cus_123',
   productName: 'Widget API',
   status: 'active',
   startDate: new Date().toISOString(),
-  planSnapshot: { reference: 'pln_monthly', planType: 'recurring' },
+  createdAt: new Date().toISOString(),
+  currency: 'USD',
+  isRecurring: true,
+  planSnapshot: { reference: 'pln_monthly', currency: 'USD', price: 1999, isMetered: false },
   amount: 1999,
 }
 
+// Metered and non-recurring — the pay-as-you-go shape, which gets the
+// "deactivate" confirm copy rather than the subscription wording.
 const usagePurchase: PurchaseInfo = {
   ...recurringActivePurchase,
-  planSnapshot: { reference: 'pln_usage', planType: 'usage-based' },
+  isRecurring: false,
+  planSnapshot: { reference: 'pln_usage', currency: 'USD', price: 0, isMetered: true },
 }
 
 function Wrap({ ctx, children }: { ctx: SolvaPayContextValue; children: React.ReactNode }) {

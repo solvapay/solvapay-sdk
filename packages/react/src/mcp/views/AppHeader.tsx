@@ -184,7 +184,7 @@ export function AppHeader({
     // cheaper than the flicker we'd see otherwise.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setImgFailed(false)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setImgLoaded(cached)
   }, [iconUrl])
 

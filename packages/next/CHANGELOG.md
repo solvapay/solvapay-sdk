@@ -1,5 +1,58 @@
 # @solvapay/next
 
+## 1.3.1
+
+### Patch Changes
+
+- Updated dependencies [800f081]
+- Updated dependencies [800f081]
+- Updated dependencies [848e235]
+- Updated dependencies [800f081]
+- Updated dependencies [f9543de]
+- Updated dependencies [c6d3ddc]
+- Updated dependencies [fd41b64]
+- Updated dependencies [3a310eb]
+- Updated dependencies [12f446b]
+  - @solvapay/server@2.1.0
+  - @solvapay/core@1.3.0
+
+## 1.3.0
+
+### Minor Changes
+
+- ede9365: Add business purchase support for credit top-ups: shared BusinessDetails validation in core, TopupForm.BusinessDetails/Summary primitives, attachTopupBusinessDetails server SDK method, and checkout-demo example wiring.
+
+### Patch Changes
+
+- Updated dependencies [ede9365]
+- Updated dependencies [dc46d8e]
+- Updated dependencies [ee15454]
+- Updated dependencies [6de3d97]
+- Updated dependencies [985acd1]
+  - @solvapay/core@1.2.0
+  - @solvapay/server@2.0.0
+
+## 1.2.2
+
+### Patch Changes
+
+- Updated dependencies [853e13f]
+  - @solvapay/server@1.4.0
+
+## 1.2.1
+
+### Patch Changes
+
+- 349777e: Auto-recharge can now be configured in the same top-up payment as the initial card charge, so integrators do not need a separate SetupIntent step before checkout.
+  - **`@solvapay/react`**: `AutoRecharge` adds `deferCardSetup` and `onPendingConfig` to stage settings until payment; `useTopup`, `TopupForm`, and `createTopupPayment` accept optional `autoRecharge`; `balance.reconcileAfterUsageDebit()` starts post-debit polling without false bumps from optimistic debits alone.
+  - **`@solvapay/server`**: `createTopupPaymentIntentCore` forwards optional `autoRecharge` to the SDK payment-intent API.
+  - **`@solvapay/next`**: `createTopupPaymentIntent` route helper accepts the same `autoRecharge` body field.
+
+- Updated dependencies [349777e]
+- Updated dependencies [349777e]
+  - @solvapay/server@1.3.0
+  - @solvapay/core@1.1.1
+
 ## 1.2.0
 
 ### Minor Changes

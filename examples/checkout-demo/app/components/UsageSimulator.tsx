@@ -13,19 +13,17 @@ const EXAMPLE_QUERIES = [
 ]
 
 export function UsageSimulator() {
-  const { credits, adjustBalance } = useBalance()
+  const { credits, adjustBalance, reconcileAfterUsageDebit, refetch } = useBalance()
   const { activePurchase } = usePurchase()
 
   const productRef =
     activePurchase?.productRef ?? process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
   const { plans } = usePlans({ productRef: productRef ?? undefined })
 
-  const snapshotCredits = activePurchase?.planSnapshot?.creditsPerUnit
+  // The plan is the only source for the credit rate — the purchase's plan
+  // snapshot doesn't freeze `creditsPerUnit` on the wire.
   const paygCreditsPerUnit = plans.find(plan => plan.type === 'usage-based')?.creditsPerUnit
-  const creditsPerUnit =
-    snapshotCredits != null && snapshotCredits > 0
-      ? snapshotCredits
-      : (paygCreditsPerUnit ?? 1000)
+  const creditsPerUnit = paygCreditsPerUnit ?? 1000
 
   const [query, setQuery] = useState(EXAMPLE_QUERIES[0])
   const [sessionQueries, setSessionQueries] = useState(0)
@@ -40,8 +38,6 @@ export function UsageSimulator() {
     setIsRunning(true)
     setError(null)
 
-    adjustBalance(-creditsPerUnit)
-
     try {
       const token = await getAccessToken()
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -54,6 +50,7 @@ export function UsageSimulator() {
           actionType: 'api_call',
           units: 1,
           productRef,
+          outcome: 'success',
           description: query,
           metadata: { toolName: 'knowledge_search', query },
         }),
@@ -64,9 +61,24 @@ export function UsageSimulator() {
         throw new Error(data.error || 'Request failed')
       }
 
+      const data = (await res.json()) as {
+        creditDebit?:
+          | { debited: true; amount: number; autoRecharge?: { triggered: boolean } }
+          | { debited: false }
+      }
+
+      if (data.creditDebit?.debited === true) {
+        adjustBalance(-data.creditDebit.amount)
+        reconcileAfterUsageDebit?.({
+          expectIncrease: data.creditDebit.autoRecharge?.triggered === true,
+        })
+        await refetch()
+      } else {
+        await refetch()
+      }
+
       setSessionQueries(prev => prev + 1)
     } catch (err) {
-      adjustBalance(creditsPerUnit)
       setError(err instanceof Error ? err.message : 'Request failed')
     } finally {
       setIsRunning(false)

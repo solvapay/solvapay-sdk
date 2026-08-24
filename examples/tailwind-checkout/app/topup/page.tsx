@@ -63,6 +63,26 @@ export default function TopupPage() {
           className="mt-8 flex flex-col gap-4"
         >
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Root className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4">
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <TopupForm.BusinessDetails.Toggle />
+              I&apos;m purchasing as a business
+            </label>
+            <TopupForm.BusinessDetails.BusinessName className="rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+            <TopupForm.BusinessDetails.Country className="rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+            <TopupForm.BusinessDetails.TaxId className="rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+          </TopupForm.BusinessDetails.Root>
+          <TopupForm.Summary.Root className="space-y-2 rounded-lg border border-slate-200 p-4 text-sm">
+            <div className="flex justify-between">
+              <span className="text-slate-600">Subtotal</span>
+              <TopupForm.Summary.Subtotal />
+            </div>
+            <TopupForm.Summary.Tax className="flex justify-between text-slate-600" />
+            <div className="flex justify-between border-t border-slate-200 pt-2 font-semibold">
+              <span>Total</span>
+              <TopupForm.Summary.Total />
+            </div>
+          </TopupForm.Summary.Root>
           <TopupForm.Loading className="text-sm text-slate-500">
             Preparing payment form…
           </TopupForm.Loading>

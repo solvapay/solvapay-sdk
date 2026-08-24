@@ -41,6 +41,40 @@ describe('listProducts', () => {
     })
   })
 
+  it('returns parsed products when status is omitted', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          products: [
+            {
+              reference: 'prd_abc',
+              name: 'API Gateway',
+              createdAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          total: 1,
+        }),
+      }),
+    )
+
+    const result = await listProducts('https://api.solvapay.com', 'sk_test')
+
+    expect(result).toEqual({
+      ok: true,
+      products: [
+        {
+          reference: 'prd_abc',
+          name: 'API Gateway',
+          status: '',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      total: 1,
+    })
+  })
+
   it('returns a warning on HTTP failure', async () => {
     vi.stubGlobal(
       'fetch',

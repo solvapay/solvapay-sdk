@@ -38,6 +38,14 @@ jobs:
         with:
           version: 9.6.0
 
+      - name: Setup Deno
+        run: |
+          DENO_VERSION=2.7.4
+          curl -fsSL "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip" -o /tmp/deno.zip
+          unzip -o /tmp/deno.zip -d /tmp/deno
+          sudo install -m 755 /tmp/deno/deno /usr/local/bin/deno
+          deno --version
+
       - name: Get pnpm store directory
         id: pnpm-cache
         shell: bash
@@ -66,6 +74,15 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      # Deno gate — type-checks examples/supabase-edge-mcp against the
+      # workspace source of the `@solvapay/*` packages it imports (see
+      # examples/supabase-edge-mcp/deno.workspace.json). Running it on
+      # PRs is what lets a feature branch prove its own SDK change still
+      # type-checks under Deno *before* it merges, rather than finding
+      # out from a post-publish gate one commit later.
+      - name: Deno gate (supabase-edge-mcp type-check against workspace source)
+        run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
   documentation:
     name: Documentation Validation

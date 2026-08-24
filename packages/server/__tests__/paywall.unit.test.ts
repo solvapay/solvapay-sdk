@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest'
 import { createSolvaPay, PaywallError } from '../src'
 import { SolvaPayPaywall } from '../src/paywall'
 import type { SolvaPayClient } from '../src/types'
@@ -672,7 +672,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
 
     it('should derive action from usageType default', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({})
+      const payable = solvaPay.payable({ product: 'prd_action' })
       const protectedHandler = await payable.function(handler)
 
       await protectedHandler({ auth: { customer_ref: 'test_user' } })
@@ -698,7 +698,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
 
     it('should include outcome and requestId in usage tracking', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
-      const payable = solvaPay.payable({})
+      const payable = solvaPay.payable({ product: 'prd_tracking' })
       const protectedHandler = await payable.function(handler)
 
       await protectedHandler({ auth: { customer_ref: 'test_user' } })
@@ -706,6 +706,65 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls[0].outcome).toBe('success')
       expect(mockApiClient.trackUsageCalls[0].metadata).toBeDefined()
       expect(mockApiClient.trackUsageCalls[0].metadata?.requestId).toBeDefined()
+    })
+  })
+
+  describe('Product ref resolution', () => {
+    afterEach(() => {
+      delete process.env.SOLVAPAY_PRODUCT_REF
+    })
+
+    it('resolves the product from SOLVAPAY_PRODUCT_REF', async () => {
+      process.env.SOLVAPAY_PRODUCT_REF = 'prd_from_env'
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({})
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'test_user' } })
+
+      expect(checkLimitsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ productRef: 'prd_from_env' }),
+      )
+    })
+
+    it('prefers an explicit productRef over SOLVAPAY_PRODUCT_REF', async () => {
+      process.env.SOLVAPAY_PRODUCT_REF = 'prd_from_env'
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({ productRef: 'prd_explicit' })
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'test_user' } })
+
+      expect(checkLimitsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ productRef: 'prd_explicit' }),
+      )
+    })
+
+    it('throws when nothing resolves, naming SOLVAPAY_PRODUCT_REF', async () => {
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({})
+      const protectedHandler = await payable.function(handler)
+
+      await expect(protectedHandler({ auth: { customer_ref: 'test_user' } })).rejects.toThrow(
+        /SOLVAPAY_PRODUCT_REF/,
+      )
+    })
+
+    it('accepts a per-request product via gate({ metadata })', async () => {
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
+      const payable = solvaPay.payable({})
+      const req = new Request('http://localhost/api/test', {
+        headers: { 'x-customer-ref': 'gate_user' },
+      })
+
+      const result = await payable.gate(req, { metadata: { product: 'prd_override' } })
+
+      expect(result.kind).toBe('allow')
+      expect(checkLimitsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ productRef: 'prd_override' }),
+      )
     })
   })
 

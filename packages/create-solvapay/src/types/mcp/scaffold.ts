@@ -405,7 +405,7 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
  */
 export const SOLVAPAY_RUNTIME_DEPS: ReadonlyArray<{ name: string; fallback: string }> =
   Object.freeze([
-    { name: '@solvapay/mcp', fallback: '0.2.5' },
+    { name: '@solvapay/mcp', fallback: '0.3.0' },
     { name: '@solvapay/server', fallback: '1.1.0' },
     { name: '@solvapay/react', fallback: '1.2.0' },
   ])

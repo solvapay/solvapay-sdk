@@ -2,7 +2,10 @@ import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare'
 
 /** @type {import('next').NextConfig} */
 /* global process */
+const checkoutDemoNgrokHost = process.env.CHECKOUT_DEMO_NGROK_HOST
+
 const nextConfig = {
+  ...(checkoutDemoNgrokHost ? { allowedDevOrigins: [checkoutDemoNgrokHost] } : {}),
   transpilePackages: [
     '@solvapay/auth',
     '@solvapay/react',

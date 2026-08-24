@@ -2,6 +2,16 @@
 
 This directory contains example applications demonstrating how to use the SolvaPay SDK in different environments.
 
+## Local platform stack
+
+When pointing an example at a sibling [`platform`](../../platform) monorepo stack,
+start from [`.env.platform-local.example`](./.env.platform-local.example). Copy
+the vars you need into the target example's own `.env` — each package loads
+dotenv from its directory. Use `SOLVAPAY_API_BASE_URL=http://localhost:3010`
+(provider-app proxy) and remap MCP/example ports to `3030+` so they don't
+collide with platform services. Convenience scripts from the repo root:
+`pnpm mcp:checkout` / `pnpm mcp:checkout:tunnel`.
+
 ## Shared Utilities
 
 The `shared/` folder contains reusable utilities used across multiple examples:
@@ -131,7 +141,7 @@ A non-hosted MCP server example demonstrating:
 ```bash
 cd examples/mcp-oauth-bridge
 pnpm install
-cp .env.example .env
+cp ../.env.platform-local.example .env   # or cp .env.example .env
 pnpm dev
 ```
 
@@ -149,7 +159,7 @@ A Model Context Protocol (MCP) app example demonstrating:
 ```bash
 cd examples/mcp-time-app
 pnpm install
-cp .env.example .env
+cp ../.env.platform-local.example .env   # or cp .env.example .env
 pnpm dev
 ```
 

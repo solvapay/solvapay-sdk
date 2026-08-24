@@ -78,6 +78,7 @@ describe('buildSolvaPayDescriptors', () => {
     expect(names).toEqual(
       [
         MCP_TOOL_NAMES.activatePlan,
+        MCP_TOOL_NAMES.attachBusinessDetails,
         MCP_TOOL_NAMES.cancelRenewal,
         MCP_TOOL_NAMES.createCheckoutSession,
         MCP_TOOL_NAMES.createCustomerSession,
@@ -117,6 +118,7 @@ describe('buildSolvaPayDescriptors', () => {
 
     // UI-transport tools (state-change, no LLM use) all tag themselves.
     const uiOnlyTools = [
+      MCP_TOOL_NAMES.attachBusinessDetails,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
       MCP_TOOL_NAMES.createTopupPayment,
@@ -223,6 +225,42 @@ describe('buildSolvaPayDescriptors', () => {
         publicBaseUrl: 'ui://nope',
       }),
     ).toThrow(/http\(s\)/)
+  })
+
+  it('rejects empty productRef', () => {
+    expect(() =>
+      buildSolvaPayDescriptors({
+        solvaPay: makeSolvaPay(),
+        productRef: '',
+        resourceUri: 'ui://test/view.html',
+        readHtml: async () => '<html></html>',
+        publicBaseUrl: 'https://example.com',
+      }),
+    ).toThrow(/productRef is required/)
+  })
+
+  it('rejects scaffolder placeholder productRef', () => {
+    expect(() =>
+      buildSolvaPayDescriptors({
+        solvaPay: makeSolvaPay(),
+        productRef: '__SOLVAPAY_PRODUCT_REF__',
+        resourceUri: 'ui://test/view.html',
+        readHtml: async () => '<html></html>',
+        publicBaseUrl: 'https://example.com',
+      }),
+    ).toThrow(/scaffolder placeholder/)
+  })
+
+  it('rejects non-prd_ productRef shape', () => {
+    expect(() =>
+      buildSolvaPayDescriptors({
+        solvaPay: makeSolvaPay(),
+        productRef: 'product-1',
+        resourceUri: 'ui://test/view.html',
+        readHtml: async () => '<html></html>',
+        publicBaseUrl: 'https://example.com',
+      }),
+    ).toThrow(/prd_/)
   })
 
   it('auto-includes apiBaseUrl origin in resourceDomains + connectDomains', () => {

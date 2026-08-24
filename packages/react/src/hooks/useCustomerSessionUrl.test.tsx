@@ -7,6 +7,7 @@ import {
 } from './useCustomerSessionUrl'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue, SolvaPayConfig } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 function buildTransport(
   overrides: Partial<NonNullable<SolvaPayConfig['transport']>> = {},
@@ -53,15 +54,7 @@ function buildCtx(transport: NonNullable<SolvaPayConfig['transport']>): SolvaPay
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     _config: { transport },
   }
 }

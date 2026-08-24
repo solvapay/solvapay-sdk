@@ -13,10 +13,9 @@ from the agent.
 | `upgrade` | Start or change a paid plan for the current customer | User says "upgrade", "change plan", "buy", "subscribe" |
 | `manage_account` | Show current plan, balance, payment method, cancel/reactivate | User says "my account", "current plan", "cancel", "billing" |
 | `topup` | Add SolvaPay credits (pay-as-you-go) | User says "top up", "add credits", "buy credits" |
-| `check_usage` | Show used/remaining credits, reset date | User says "how many credits", "usage", "remaining" |
 | `activate_plan` | Pick a plan from the picker, or activate a specific `planRef` | User says "activate", or the agent needs to enumerate plans |
 
-All five intent tools accept an optional `mode: 'ui' | 'text' | 'auto'`
+All four intent tools accept an optional `mode: 'ui' | 'text' | 'auto'`
 argument:
 
 - `'ui'` (default) — emit the UI-resource ref on `_meta.ui` plus a
@@ -140,6 +139,7 @@ implementations land in V1.1 weeks after V1.
 | `create_payment_intent` | Creates the Stripe PaymentIntent consumed by the embedded `<PaymentForm>` |
 | `process_payment` | Records the Stripe confirmation and creates the SolvaPay purchase |
 | `create_topup_payment_intent` | Creates the Stripe PaymentIntent for a top-up |
+| `attach_business_details` | Attaches business/consumer details to the PaymentIntent and returns the computed tax breakdown (auto-called on every Payment step) |
 | `cancel_renewal` | Cancels auto-renewal on an active purchase |
 | `reactivate_renewal` | Undoes a pending cancellation |
 
@@ -156,7 +156,6 @@ their descriptions.
 | `/upgrade` | `{ planRef? }` | "Show me the upgrade options" / "Activate plan `planRef`" |
 | `/manage_account` | — | "Show me my SolvaPay account" |
 | `/topup` | `{ amount? }` | "I want to top up my SolvaPay credits" |
-| `/check_usage` | — | "How much SolvaPay credit have I used?" |
 | `/activate_plan` | `{ planRef? }` | "What plans can I activate?" / "Activate `planRef`" |
 | `/search_knowledge` (demo) | `{ query? }` | "Search the knowledge base for `query`" |
 | `/get_market_quote` (demo) | `{ symbol? }` | "Get the current market quote for `symbol`" |
@@ -166,6 +165,6 @@ their descriptions.
 
 `docs://solvapay/overview.md` — the narrated "start here" doc. Agents
 that call `resources/read` on this URI get a 200-word explanation of
-the five intent tools, the dual-audience fallback, and the auth model
+the four intent tools, the dual-audience fallback, and the auth model
 before they try any tool. Disable with `registerDocsResources: false`
 on `createSolvaPayMcpServer`.

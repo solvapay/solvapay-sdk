@@ -26,8 +26,8 @@ import type { SolvaPayTransport } from '../transport/types'
 import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
 
 /**
- * Minimal shape of `@modelcontextprotocol/sdk` `CallToolResult` — kept here
- * so consumers don't need `@modelcontextprotocol/sdk` installed just to
+ * Minimal shape of the official SDK's `CallToolResult` — kept here
+ * so consumers don't need `@modelcontextprotocol/core` installed just to
  * satisfy TypeScript when they use the adapter.
  */
 interface CallToolResultLike {
@@ -98,6 +98,9 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
 
     createTopupPayment: params =>
       callTool(MCP_TOOL_NAMES.createTopupPayment, pickDefined({ ...params })),
+
+    attachBusinessDetails: params =>
+      callTool(MCP_TOOL_NAMES.attachBusinessDetails, pickDefined({ ...params })),
 
     cancelRenewal: params => callTool(MCP_TOOL_NAMES.cancelRenewal, pickDefined({ ...params })),
 

@@ -11,60 +11,14 @@ import type {
   CustomerBalanceResult,
   GetUsageResult,
   PurchaseCheckResult,
+  PurchaseInfo,
 } from '@solvapay/server'
-import type { AuthAdapter } from '../adapters/auth'
-import type { PartialSolvaPayCopy } from '../i18n/types'
-import type { SolvaPayTransport } from '../transport/types'
 
-export interface PurchaseInfo {
-  reference: string
-  productName: string
-  productRef?: string
-  status: string
-  startDate: string
-  endDate?: string
-  cancelledAt?: string
-  cancellationReason?: string
-  /** Normalised amount in USD cents (for cross-currency aggregation). */
-  amount?: number
-  /** Amount in minor units of `currency` — what the customer was actually charged. */
-  originalAmount?: number
-  currency?: string
-  /** Exchange rate used to convert `originalAmount` → `amount` (USD). */
-  exchangeRate?: number
-  planType?: string
-  isRecurring?: boolean
-  nextBillingDate?: string
-  billingCycle?: string
-  planRef?: string
-  /** How the purchase was created — `free_default` for auto-enrolled free tiers. */
-  origin?: 'paid' | 'free_default' | 'manual' | 'one_time' | 'credit_topup'
-  planSnapshot?: {
-    reference?: string
-    name?: string | null
-    price?: number
-    meterRef?: string
-    limit?: number
-    freeUnits?: number
-    creditsPerUnit?: number
-    planType?: string
-    billingCycle?: string | null
-    features?: Record<string, unknown> | null
-  }
-  usage?: {
-    used: number
-    overageUnits?: number
-    overageCost?: number
-    periodStart?: string
-    periodEnd?: string
-  }
-  /**
-   * Arbitrary metadata attached to the purchase. `metadata.purpose ===
-   * 'credit_topup'` signals a balance top-up rather than a plan purchase;
-   * see `isPlanPurchase` / `isTopupPurchase` for classification helpers.
-   */
-  metadata?: Record<string, unknown>
-}
+export type { PurchaseInfo }
+import type { AuthAdapter } from '../adapters/auth'
+import type { PricingOptionLike, TaxBehavior } from '@solvapay/core'
+import type { PartialSolvaPayCopy } from '../i18n/types'
+import type { SolvaPayTransport, CreditDisplayBlock } from '../transport/types'
 
 export interface CustomerPurchaseData {
   customerRef?: string
@@ -78,6 +32,7 @@ export interface PaymentIntentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string // Backend customer reference
+  processorPaymentId?: string
 }
 
 /**
@@ -92,6 +47,12 @@ export interface Merchant {
   termsUrl?: string
   privacyUrl?: string
   country?: string
+  /** Company registration number (EIN, Companies House No, Org No). */
+  companyNumber?: string
+  /** Tax identification number (US: EIN). */
+  taxId?: string
+  /** VAT identification number (UK/EU). */
+  vatNumber?: string
   defaultCurrency?: string
   /**
    * Full set of currencies (including `defaultCurrency`) the customer may
@@ -169,11 +130,13 @@ export interface TopupPaymentResult {
   publishableKey: string
   accountId?: string
   customerRef?: string
+  processorPaymentId?: string
 }
 
 export interface UseTopupOptions {
   amount: number
   currency?: string
+  autoRecharge?: import('@solvapay/server').AutoRechargeInput
 }
 
 export interface UseTopupReturn {
@@ -181,6 +144,7 @@ export interface UseTopupReturn {
   error: Error | null
   stripePromise: Promise<import('@stripe/stripe-js').Stripe | null> | null
   clientSecret: string | null
+  processorPaymentId: string | null
   startTopup: () => Promise<void>
   reset: () => void
 }
@@ -200,6 +164,7 @@ export interface TopupFormSuccessExtras {
 export interface TopupFormProps {
   amount: number
   currency?: string
+  autoRecharge?: import('@solvapay/server').AutoRechargeInput
   /**
    * Fires once the customer is fully credited. `extras.creditsAdded`
    * carries the wallet delta observed by the backend helper's
@@ -211,6 +176,8 @@ export interface TopupFormProps {
     extras?: TopupFormSuccessExtras,
   ) => void | Promise<void>
   onError?: (error: Error) => void
+  /** Called when the tax breakdown updates after attaching business details. */
+  onTaxChange?: (breakdown: import('@solvapay/core').TaxBreakdown) => void
   returnUrl?: string
   submitButtonText?: string
   className?: string
@@ -265,8 +232,22 @@ export interface BalanceStatus {
   displayCurrency: string | null
   creditsPerMinorUnit: number | null
   displayExchangeRate: number | null
+  /** Backend-computed display block — render verbatim when present. */
+  display: CreditDisplayBlock | null
   refetch: () => Promise<void>
+  /**
+   * Optimistically adjusts the in-memory balance. Does not start auto-recharge
+   * reconcile polling — call {@link reconcileAfterUsageDebit} with the server
+   * signal after a confirmed usage debit when auto-recharge may apply.
+   */
   adjustBalance: (credits: number) => void
+  /**
+   * Poll for balance increase after a confirmed server-side usage debit when
+   * the server reported `autoRecharge.triggered: true`. The backend is the sole
+   * authority on threshold evaluation; pass `{ expectIncrease: true }` only when
+   * the track-usage response includes that signal.
+   */
+  reconcileAfterUsageDebit: (opts?: { expectIncrease?: boolean }) => void
 }
 
 /**
@@ -298,6 +279,7 @@ export interface SolvaPayConfig {
     processPayment?: string // Default: '/api/process-payment'
     createTopupPayment?: string // Default: '/api/create-topup-payment-intent'
     processTopupPayment?: string // Default: '/api/process-topup-payment'
+    attachBusinessDetails?: string // Default: '/api/attach-business-details'
     customerBalance?: string // Default: '/api/customer-balance'
     cancelRenewal?: string // Default: '/api/cancel-renewal'
     reactivateRenewal?: string // Default: '/api/reactivate-renewal'
@@ -308,6 +290,7 @@ export interface SolvaPayConfig {
     createCheckoutSession?: string // Default: '/api/create-checkout-session'
     createCustomerSession?: string // Default: '/api/create-customer-session'
     getPaymentMethod?: string // Default: '/api/payment-method'
+    autoRecharge?: string // Default: '/api/auto-recharge'
     getUsage?: string // Default: '/api/usage'
     getLimits?: string // Default: '/api/limits'
   }
@@ -451,6 +434,7 @@ export interface SolvaPayContextValue {
   createTopupPayment: (params: {
     amount: number
     currency?: string
+    autoRecharge?: import('@solvapay/server').AutoRechargeInput
   }) => Promise<TopupPaymentResult>
   /**
    * Process a credit-topup payment intent after Stripe's `confirmPayment`
@@ -465,15 +449,19 @@ export interface SolvaPayContextValue {
    * confirm (legacy behaviour). The default HTTP transport always
    * implements it.
    */
-  processTopupPayment?: (params: {
+  processTopupPayment?: (params: { paymentIntentId: string }) => Promise<TopupProcessResult>
+  attachBusinessDetails?: (params: {
     paymentIntentId: string
-  }) => Promise<TopupProcessResult>
+    customerRef?: string
+    isBusiness: boolean
+    businessName?: string
+    country?: string
+    taxId?: string
+    taxIdType?: import('@solvapay/core').TaxIdType
+  }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
   cancelRenewal: (params: { purchaseRef: string; reason?: string }) => Promise<CancelResult>
   reactivateRenewal: (params: { purchaseRef: string }) => Promise<ReactivateResult>
-  activatePlan: (params: {
-    productRef: string
-    planRef: string
-  }) => Promise<ActivatePlanResult>
+  activatePlan: (params: { productRef: string; planRef: string }) => Promise<ActivatePlanResult>
   customerRef?: string
   updateCustomerRef?: (newCustomerRef: string) => void
   balance: BalanceStatus
@@ -527,22 +515,47 @@ export interface PlanPricingOption {
 }
 
 export interface Plan {
-  type?: 'recurring' | 'one-time' | 'usage-based'
+  type?: 'recurring' | 'one-time' | 'usage-based' | 'hybrid'
   reference: string
   name?: string
   description?: string
   price?: number
   currency?: string
+  /**
+   * Composable pricing — the plan's real price structure (charges,
+   * billing cycle, tiers, limits, trials). Every other pricing field on
+   * this type is either derived from these by the backend or a legacy
+   * scalar the API no longer sends. Read it with the `@solvapay/core`
+   * option helpers rather than by hand.
+   */
+  options?: PricingOptionLike[]
+  /**
+   * @deprecated Not sent by the API. Multi-currency plans carry one flat
+   * charge per currency in `options`; use `getPlanPricingOptions`, which
+   * still honours this field when an integrator's custom fetcher sets it.
+   */
   pricingOptions?: PlanPricingOption[]
   currencySymbol?: string
+  /** @deprecated Not sent by the API. Included allowance is the `limit` option's `cap`. */
   freeUnits?: number
+  /** @deprecated Not sent by the API. A setup fee is a `oneTime` flat charge in `options`. */
   setupFee?: number
+  /** @deprecated Not sent by the API. Use the `trial` option's `days`. */
   trialDays?: number
+  /** @deprecated Not sent by the API on a plan. Use the `billingCycle` option's `interval`. */
   billingCycle?: string
   billingModel?: 'pre-paid' | 'post-paid'
+  /**
+   * @deprecated Not sent by the API, and never denominated in credits.
+   * The metered rate is the `per: 'unit'` charge's `amountMinor`, in the
+   * charge currency; converting it to credits needs the FX peg, so use
+   * `creditsPerUnitFromBalance`.
+   */
   creditsPerUnit?: number
   measures?: string
+  /** @deprecated Not sent by the API. Use the `limit` option's `cap`. */
   limit?: number
+  /** @deprecated Not sent by the API. Use the presence of a `rollover` option. */
   rolloverUnusedUnits?: boolean
   limits?: Record<string, unknown>
   features?: Record<string, unknown> | string[]
@@ -556,6 +569,7 @@ export interface Plan {
   updatedAt?: string
   interval?: string
   metadata?: Record<string, unknown>
+  taxBehavior?: TaxBehavior
 }
 
 /**
@@ -725,6 +739,8 @@ export interface PaymentFormProps {
    * passed — compose `<PaymentForm.TermsCheckbox />` yourself.
    */
   requireTermsAcceptance?: boolean
+  /** Fired when business-details attach returns an updated tax breakdown. */
+  onTaxChange?: (breakdown: import('@solvapay/core').TaxBreakdown) => void
 }
 
 export interface UseTopupAmountSelectorOptions {

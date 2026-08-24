@@ -42,8 +42,23 @@ vi.mock('../../primitives/TopupForm', () => {
   const SubmitButton: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
     <span data-testid="topup-submit">{children}</span>
   )
+  const BusinessDetails = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Toggle: () => null,
+    BusinessName: () => null,
+    Country: () => null,
+    TaxId: () => null,
+    Fields: () => null,
+  }
+  const Summary = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Subtotal: () => null,
+    Tax: () => null,
+    Total: () => null,
+    Rows: () => null,
+  }
   return {
-    TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton },
+    TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary },
   }
 })
 
@@ -70,8 +85,33 @@ vi.mock('../../primitives/PaymentForm', () => {
     <span>{children}</span>
   )
   const MandateText: React.FC = () => null
+  const BusinessDetails = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Toggle: () => null,
+    BusinessName: () => null,
+    Country: () => null,
+    TaxId: () => null,
+    Fields: () => null,
+  }
+  const TaxSummary = {
+    Root: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Subtotal: () => null,
+    Tax: () => null,
+    Total: () => null,
+    TaxNote: () => null,
+    Rows: () => null,
+  }
   return {
-    PaymentForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, MandateText },
+    PaymentForm: {
+      Root,
+      Loading,
+      PaymentElement,
+      Error: ErrorSlot,
+      SubmitButton,
+      MandateText,
+      BusinessDetails,
+      TaxSummary,
+    },
   }
 })
 

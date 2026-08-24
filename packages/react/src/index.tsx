@@ -31,6 +31,7 @@ export { CreditGate } from './components/CreditGate'
 
 // Account-management (phase 2 — MCP slice)
 export { CurrentPlanCard } from './components/CurrentPlanCard'
+export { AutoRecharge } from './components/AutoRecharge'
 export { LaunchCustomerPortalButton } from './components/LaunchCustomerPortalButton'
 export { UpdatePaymentMethodButton } from './components/UpdatePaymentMethodButton'
 export {
@@ -57,10 +58,12 @@ export { useTopup } from './hooks/useTopup'
 export { useBalance } from './hooks/useBalance'
 export { useTopupAmountSelector } from './hooks/useTopupAmountSelector'
 export { usePaymentMethod } from './hooks/usePaymentMethod'
+export { useAutoRecharge } from './hooks/useAutoRecharge'
+export { configToAutoRechargeInput } from './helpers/auto-recharge-form'
 export { useTransport } from './hooks/useTransport'
 export { useUsage } from './hooks/useUsage'
 export type { UsageSnapshot, UseUsageReturn } from './hooks/useUsage'
-export { useLimits } from './hooks/useLimits'
+export { useLimits, isUnlimited } from './hooks/useLimits'
 export type { UseLimitsOptions, UseLimitsReturn } from './hooks/useLimits'
 export { useAutoActivateFreePlan } from './hooks/useAutoActivateFreePlan'
 export type {
@@ -154,7 +157,9 @@ export type { CancelledPlanNoticeProps } from './components/CancelledPlanNotice'
 export type { CreditGateProps } from './components/CreditGate'
 export type { CheckoutVariant } from './utils/checkoutVariant'
 export type { CurrentPlanCardProps, CurrentPlanCardClassNames } from './components/CurrentPlanCard'
+export type { AutoRechargeProps } from './components/AutoRecharge'
 export type { LaunchCustomerPortalButtonProps } from './components/LaunchCustomerPortalButton'
+export type { StripePaymentFormWrapperProps } from './components/StripePaymentFormWrapper'
 export type {
   UpdatePaymentMethodButtonProps,
   UpdatePaymentMethodButtonMode,
@@ -188,10 +193,14 @@ export { deriveVariant } from './utils/checkoutVariant'
 export { resolveCta } from './utils/checkoutCta'
 export { confirmPayment } from './utils/confirmPayment'
 export type {
-  ConfirmPaymentMode,
   ConfirmPaymentInput,
   ConfirmPaymentResult,
+  ConfirmPaymentMode,
 } from './utils/confirmPayment'
+export {
+  readPaymentIntentClientSecret,
+  stripPaymentIntentParams,
+} from './primitives/paymentIntentReturn'
 
 // Transport — unified data-access surface. Use with SolvaPayProvider via
 // `config.transport`. See `@solvapay/react/mcp` for an MCP implementation.

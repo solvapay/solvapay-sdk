@@ -14,6 +14,7 @@ export const MCP_TOOL_NAMES = {
   activatePlan: 'activate_plan',
   createCheckoutSession: 'create_checkout_session',
   createCustomerSession: 'create_customer_session',
+  attachBusinessDetails: 'attach_business_details',
   upgrade: 'upgrade',
   manageAccount: 'manage_account',
   topup: 'topup',

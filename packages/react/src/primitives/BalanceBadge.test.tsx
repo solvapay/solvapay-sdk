@@ -5,6 +5,7 @@ import { BalanceBadge } from './BalanceBadge'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { BalanceStatus, SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 function ctxWith(overrides: Partial<BalanceStatus> = {}): SolvaPayContextValue {
   return {
@@ -26,16 +27,13 @@ function ctxWith(overrides: Partial<BalanceStatus> = {}): SolvaPayContextValue {
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
+    balance: mockBalanceStatus({
       credits: 500,
       displayCurrency: 'USD',
       creditsPerMinorUnit: 100,
       displayExchangeRate: 1,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
       ...overrides,
-    },
+    }),
   }
 }
 

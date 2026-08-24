@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
 import { McpApp, type McpAppFull } from '../McpApp'
+import type { CallToolResultLike } from '../bootstrap'
 
 beforeEach(() => {
   vi.useRealTimers()
@@ -114,16 +115,16 @@ describe('<McpApp>', () => {
   it('shows a loading card after `connect()` resolves, while bootstrap is in-flight', async () => {
     // `other` entries (no tool info) fetch bootstrap client-side — the
     // loading card appears while that call is in flight.
-    let resolveCall: (value: unknown) => void = () => {}
+    let resolveCall: (value: CallToolResultLike) => void = () => {}
     const app = makeApp({
       emitInitialToolResult: false,
       structuredContent: undefined,
       readServerResourceFails: true,
     })
     app.callServerTool = vi.fn(
-      () =>
-        new Promise((r) => {
-          resolveCall = r
+      (): Promise<CallToolResultLike> =>
+        new Promise(resolve => {
+          resolveCall = resolve
         }),
     )
     try {

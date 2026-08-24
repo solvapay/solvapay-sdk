@@ -4,9 +4,10 @@ import React from 'react'
 import { useTopup } from '../hooks/useTopup'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 vi.mock('@stripe/stripe-js', () => ({
-  loadStripe: vi.fn(() => Promise.resolve({ confirmCardPayment: vi.fn() })),
+  loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
 }))
 
 function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayContextValue {
@@ -34,15 +35,7 @@ function createMockContext(overrides?: Partial<SolvaPayContextValue>): SolvaPayC
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
     ...overrides,
   }
 }
@@ -100,6 +93,32 @@ describe('useTopup', () => {
     })
 
     expect(createTopupPayment).toHaveBeenCalledWith({ amount: 5000, currency: 'eur' })
+  })
+
+  it('forwards autoRecharge to createTopupPayment', async () => {
+    const createTopupPayment = vi.fn().mockResolvedValue({
+      clientSecret: 'cs_1',
+      publishableKey: 'pk_1',
+    })
+    const autoRecharge = {
+      enabled: true,
+      triggerType: 'balance' as const,
+      thresholdAmountMajor: 5,
+      topupAmountMajor: 10,
+      currency: 'USD',
+    }
+    const ctx = createMockContext({ createTopupPayment })
+
+    const { result } = renderHook(
+      () => useTopup({ amount: 5000, currency: 'usd', autoRecharge }),
+      { wrapper: createWrapper(ctx) },
+    )
+
+    await act(async () => {
+      await result.current.startTopup()
+    })
+
+    expect(createTopupPayment).toHaveBeenCalledWith({ amount: 5000, currency: 'usd', autoRecharge })
   })
 
   it('sets clientSecret from response', async () => {

@@ -13,6 +13,12 @@
  * the user's current plan selection from `usePlanSelector()` so the
  * plan grid and the flow share state.
  *
+ * Stripe 3DS / redirect returns: when `payment_intent_client_secret` is
+ * present in the URL on mount, the hook starts on the `payment` step so
+ * `<CheckoutSteps.Payment>` (or a mounted `PaymentForm` / `TopupForm`) can
+ * resume verification. Return-path resume itself lives in those form
+ * primitives — see `readPaymentIntentClientSecret` / `stripPaymentIntentParams`.
+ *
  * Lifecycle hooks fire at well-defined points:
  *  - `onPlanSelect(planRef, plan)` — every selectPlan() call
  *  - `onAmountSelect(amountMinor, currency)` — every selectAmount() call
@@ -36,13 +42,20 @@ import { useLocale } from './useCopy'
 import type { Plan } from '../types'
 import {
   formatPaygRate,
-  inferIncludedCredits,
+  inferIncludedUnits,
   isPayg,
-  type BootstrapPlanLike,
+  planMeterName,
+  toBootstrapPlanLike,
   type CheckoutStep,
   type SuccessMeta,
 } from '../primitives/checkout/shared'
 import { resolvePlanPricingOption } from '../utils/planPricing'
+import { readPaymentIntentClientSecret } from '../primitives/paymentIntentReturn'
+
+function resolveInitialCheckoutStep(initialStep: CheckoutStep): CheckoutStep {
+  if (typeof window === 'undefined') return initialStep
+  return readPaymentIntentClientSecret(window.location.search) ? 'payment' : initialStep
+}
 
 export type CheckoutStatus = 'idle' | 'activating' | 'paying' | 'error'
 
@@ -151,18 +164,11 @@ export interface UseCheckoutFlowReturn {
    * locally-computed estimate and bumps `balance.adjustBalance` for
    * an instant UI update.
    */
-  notifyPaymentSuccess: (
-    intent?: PaymentIntent,
-    extras?: { creditsAdded?: number },
-  ) => void
+  notifyPaymentSuccess: (intent?: PaymentIntent, extras?: { creditsAdded?: number }) => void
 }
 
 export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowReturn {
-  const {
-    productRef,
-    initialStep = 'plan',
-    initialAmountMinor = null,
-  } = opts
+  const { productRef, initialStep = 'plan', initialAmountMinor = null } = opts
   const onPlanSelectRef = useRef(opts.onPlanSelect)
   const onAmountSelectRef = useRef(opts.onAmountSelect)
   const onPurchaseSuccessRef = useRef(opts.onPurchaseSuccess)
@@ -216,15 +222,12 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     resolvedDefaultTopupCurrency
   const topupCurrencyReady = topupCurrency != null
 
-  const setTopupCurrency = useCallback(
-    (code: string) => {
-      const normalized = code.toUpperCase()
-      setTopupCurrencyOverride(normalized)
-    },
-    [],
-  )
+  const setTopupCurrency = useCallback((code: string) => {
+    const normalized = code.toUpperCase()
+    setTopupCurrencyOverride(normalized)
+  }, [])
 
-  const [step, setStep] = useState<CheckoutStep>(initialStep)
+  const [step, setStep] = useState<CheckoutStep>(() => resolveInitialCheckoutStep(initialStep))
   const [status, setStatus] = useState<CheckoutStatus>('idle')
   const [selectedAmountMinor, setSelectedAmountMinor] = useState<number | null>(initialAmountMinor)
   const [successMeta, setSuccessMeta] = useState<SuccessMeta | null>(null)
@@ -237,7 +240,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
 
   const selectedPlan = planCtx.selectedPlan
   const selectedPlanRef = planCtx.selectedPlanRef
-  const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
+  const selectedPlanShape = toBootstrapPlanLike(selectedPlan)
 
   const branch: 'payg' | 'recurring' | null = selectedPlanShape
     ? isPayg(selectedPlanShape)
@@ -286,6 +289,12 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     setError(null)
     setStatus('activating')
     try {
+      // Topup-first: for a zero-balance PAYG plan the backend returns
+      // `topup_required` here and creates NO purchase — that's the
+      // expected result, not an error. We treat it as "proceed to the
+      // top-up amount step" and DO NOT consider the plan active. The
+      // active purchase only materializes after a successful top-up
+      // (see `recordPaygSuccess`, which re-activates once credits land).
       await transport.activatePlan({ productRef, planRef: selectedPlanRef })
       setStatus('idle')
       setStep('amount')
@@ -352,6 +361,20 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       if (creditsAddedFromBackend !== undefined && creditsAddedFromBackend > 0) {
         adjustBalance(creditsAddedFromBackend)
       }
+      // Topup-first: the plan purchase does NOT exist yet — the plan-step
+      // `activatePlan` returned `topup_required` (zero balance) and
+      // created nothing. Now that the top-up has landed (TopupForm awaits
+      // backend confirmation before firing success), re-activate to
+      // materialize the active PAYG purchase, mirroring the
+      // `ActivationFlow` primitive's self-healing re-activation. Idempotent
+      // — the backend short-circuits to `already_active` if it somehow
+      // exists. Fire-and-forget like the refetch below; `useLimits`
+      // re-reads on the resulting `purchases` change.
+      if (selectedPlanRef) {
+        Promise.resolve(transport.activatePlan({ productRef, planRef: selectedPlanRef })).catch(
+          () => {},
+        )
+      }
       // Drive `useLimits` (it auto-refetches on `purchases` ref change)
       // and the balance side-effect (it picks up the credit via the
       // `purchases-change` effect inside `useBalance`'s caller). One
@@ -366,7 +389,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
         currency,
         creditsAdded,
         plan: selectedPlanShape,
-        rateLabel: formatPaygRate(selectedPlanShape, locale),
+        rateLabel: formatPaygRate(selectedPlanShape, locale, balance),
       }
       setSuccessMeta(meta)
       setStep('success')
@@ -374,13 +397,17 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     },
     [
       adjustBalance,
+      balance,
       creditsPerMinorUnit,
       displayExchangeRate,
       locale,
+      productRef,
       refetchPurchase,
       selectedAmountMinor,
+      selectedPlanRef,
       selectedPlanShape,
       topupCurrency,
+      transport,
     ],
   )
 
@@ -396,7 +423,8 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     const meta: SuccessMeta = {
       branch: 'recurring',
       plan: selectedPlanShape,
-      creditsIncluded: inferIncludedCredits(selectedPlanShape),
+      includedUnits: inferIncludedUnits(selectedPlanShape),
+      meterName: planMeterName(selectedPlanShape),
       chargedTodayMinor: pricingOption.price ?? 0,
       currency,
       nextRenewalLabel: null,

@@ -20,12 +20,13 @@ function getStripeCacheKey(publishableKey: string, accountId?: string): string {
  * @param options.currency - ISO 4217 currency code (default: 'usd')
  */
 export function useTopup(options: UseTopupOptions): UseTopupReturn {
-  const { amount, currency } = options
+  const { amount, currency, autoRecharge } = options
   const { createTopupPayment, customerRef, updateCustomerRef } = useSolvaPay()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [processorPaymentId, setProcessorPaymentId] = useState<string | null>(null)
   const isStartingRef = useRef(false)
 
   const startTopup = useCallback(async () => {
@@ -43,7 +44,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     setError(null)
 
     try {
-      const result = await createTopupPayment({ amount, currency })
+      const result = await createTopupPayment({ amount, currency, autoRecharge })
 
       if (!result || typeof result !== 'object') {
         throw new Error('Invalid topup payment intent response from server')
@@ -76,6 +77,9 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
 
       setStripePromise(stripe)
       setClientSecret(result.clientSecret)
+      if (result.processorPaymentId) {
+        setProcessorPaymentId(result.processorPaymentId)
+      }
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start topup')
       setError(error)
@@ -83,7 +87,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
       setLoading(false)
       isStartingRef.current = false
     }
-  }, [amount, currency, createTopupPayment, customerRef, updateCustomerRef, loading])
+  }, [amount, currency, autoRecharge, createTopupPayment, customerRef, updateCustomerRef, loading])
 
   const reset = useCallback(() => {
     isStartingRef.current = false
@@ -91,6 +95,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     setError(null)
     setStripePromise(null)
     setClientSecret(null)
+    setProcessorPaymentId(null)
   }, [])
 
   return {
@@ -98,6 +103,7 @@ export function useTopup(options: UseTopupOptions): UseTopupReturn {
     error,
     stripePromise,
     clientSecret,
+    processorPaymentId,
     startTopup,
     reset,
   }

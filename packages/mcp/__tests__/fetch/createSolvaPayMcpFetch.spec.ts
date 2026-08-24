@@ -62,7 +62,7 @@ function buildHandler(
     publicBaseUrl,
     apiBaseUrl,
     requireAuth: false,
-    mode: 'json-stateless',
+    responseMode: 'json',
     ...overrides,
   })
 }
@@ -132,6 +132,7 @@ const UI_TOOLS = [
   MCP_TOOL_NAMES.processPayment,
   MCP_TOOL_NAMES.createCustomerSession,
   MCP_TOOL_NAMES.createTopupPayment,
+  MCP_TOOL_NAMES.attachBusinessDetails,
   MCP_TOOL_NAMES.cancelRenewal,
   MCP_TOOL_NAMES.reactivateRenewal,
 ]
@@ -176,7 +177,7 @@ describe('createSolvaPayMcpFetch', () => {
     expect(res.json.result?.serverInfo?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
   })
 
-  it('tools/list returns all 11 SolvaPay tools by default', async () => {
+  it('tools/list returns all 12 SolvaPay tools by default', async () => {
     const handler = buildHandler()
     const init = await initialize(handler)
     expect(init.status).toBe(200)
@@ -312,7 +313,8 @@ describe('createSolvaPayMcpFetch', () => {
 
   it('invokes the additionalTools hook with { server, solvaPay, resourceUri, productRef }', async () => {
     const additional = vi.fn()
-    buildHandler({ additionalTools: additional })
+    const handler = buildHandler({ additionalTools: additional })
+    await initialize(handler)
     expect(additional).toHaveBeenCalledOnce()
     const ctx = additional.mock.calls[0][0]
     expect(ctx.productRef).toBe(productRef)
@@ -367,8 +369,8 @@ describe('createSolvaPayMcpFetch', () => {
     expect(source).not.toMatch(/from\s+['"]@solvapay\/mcp['"]/)
   })
 
-  it('passes mode: json-stateless through to the underlying handler (no sessionId header on initialize)', async () => {
-    const handler = buildHandler({ mode: 'json-stateless' })
+  it('defaults responseMode to json (no sessionId header on initialize)', async () => {
+    const handler = buildHandler({ responseMode: 'json' })
     const res = await handler(
       new Request(`${publicBaseUrl}/mcp`, {
         method: 'POST',

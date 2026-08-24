@@ -5,14 +5,11 @@ import { McpCustomerDetailsCard, McpSellerDetailsCard } from '../detail-cards'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import { merchantCache } from '../../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../../transport/cache-key'
-import type {
-  SolvaPayContextValue,
-  SolvaPayConfig,
-  PurchaseInfo,
-  Merchant,
-} from '../../../types'
+import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo, Merchant } from '../../../types'
+import type { SolvaPayTransport } from '../../../transport/types'
+import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 
-function makeTransport(): NonNullable<SolvaPayConfig['transport']> {
+function makeTransport(): SolvaPayTransport {
   return {
     checkPurchase: vi.fn(),
     createPayment: vi.fn(),
@@ -28,8 +25,7 @@ function makeTransport(): NonNullable<SolvaPayConfig['transport']> {
     getProduct: vi.fn(),
     listPlans: vi.fn(),
     getPaymentMethod: vi.fn(),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any
+  }
 }
 
 function seedMerchant(merchant: Merchant | null): SolvaPayConfig {
@@ -74,19 +70,15 @@ function buildCtx(
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
+    balance: mockBalanceStatus({
       credits,
       displayCurrency: 'USD',
       creditsPerMinorUnit: 100,
       displayExchangeRate: 1,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    }),
     _config: config ?? { transport: makeTransport() },
     ...overrides,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any
+  }
 }
 
 function renderWith(ctx: SolvaPayContextValue, node: React.ReactNode) {
@@ -123,15 +115,12 @@ describe('<McpCustomerDetailsCard>', () => {
   it('shows ~SEK 150.92 for 159,600 credits (not 100x inflated)', () => {
     const ctx = buildCtx(
       {
-        balance: {
-          loading: false,
+        balance: mockBalanceStatus({
           credits: 159_600,
           displayCurrency: 'SEK',
           creditsPerMinorUnit: 100,
           displayExchangeRate: 9.46,
-          refetch: vi.fn(),
-          adjustBalance: vi.fn(),
-        },
+        }),
       },
       [],
       159_600,
@@ -195,5 +184,49 @@ describe('<McpSellerDetailsCard>', () => {
     renderWith(ctx, <McpSellerDetailsCard />)
     // Only one occurrence of 'Acme Inc.' (the primary displayName row).
     expect(screen.getAllByText('Acme Inc.')).toHaveLength(1)
+  })
+
+  it('renders a VAT number row and a company number line for a VAT-required merchant', () => {
+    const merchant: Merchant = {
+      displayName: 'Acme GmbH',
+      legalName: 'Acme GmbH',
+      country: 'DE',
+      vatNumber: 'DE123456789',
+      companyNumber: 'HRB12345',
+    }
+    const config = seedMerchant(merchant)
+    const ctx = buildCtx({}, [], 0, config)
+    renderWith(ctx, <McpSellerDetailsCard />)
+    expect(screen.getByText('VAT number')).toBeTruthy()
+    expect(screen.getByText('DE123456789')).toBeTruthy()
+    expect(screen.getByText('Company number')).toBeTruthy()
+    expect(screen.getByText('HRB12345')).toBeTruthy()
+  })
+
+  it('renders the core EIN label and no duplicate company line for a US merchant', () => {
+    const merchant: Merchant = {
+      displayName: 'Acme Inc.',
+      legalName: 'Acme Inc.',
+      country: 'US',
+      taxId: '12-3456789',
+    }
+    const config = seedMerchant(merchant)
+    const ctx = buildCtx({}, [], 0, config)
+    renderWith(ctx, <McpSellerDetailsCard />)
+    expect(screen.getByText('EIN')).toBeTruthy()
+    // The tax id doubles as the org number, so it appears exactly once and the
+    // company-number line is suppressed.
+    expect(screen.getAllByText('12-3456789')).toHaveLength(1)
+    expect(screen.queryByText('Company number')).toBeNull()
+  })
+
+  it('renders neither the tax nor company row when no identifiers are present', () => {
+    const merchant: Merchant = { displayName: 'Acme', legalName: 'Acme Inc.', country: 'US' }
+    const config = seedMerchant(merchant)
+    const ctx = buildCtx({}, [], 0, config)
+    renderWith(ctx, <McpSellerDetailsCard />)
+    expect(screen.queryByText('Company number')).toBeNull()
+    expect(screen.queryByText('VAT number')).toBeNull()
+    expect(screen.queryByText('EIN')).toBeNull()
   })
 })

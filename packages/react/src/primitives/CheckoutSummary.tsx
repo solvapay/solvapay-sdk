@@ -25,6 +25,7 @@ import { usePlanSelection } from '../components/PlanSelectionContext'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { Plan, Product } from '../types'
+import type { TaxBreakdown } from '@solvapay/core'
 
 type CheckoutSummaryContextValue = {
   plan: Plan | null
@@ -32,6 +33,11 @@ type CheckoutSummaryContextValue = {
   priceFormatted: string
   trialBanner: string | null
   loading: boolean
+  taxBreakdown: TaxBreakdown | null
+  baseAmountMinor: number
+  subtotalFormatted: string
+  taxFormatted: string
+  totalFormatted: string
 }
 
 const CheckoutSummaryContext = createContext<CheckoutSummaryContextValue | null>(null)
@@ -49,12 +55,14 @@ function useCheckoutSummaryContext(part: string): CheckoutSummaryContextValue {
 type RootProps = {
   planRef?: string
   productRef?: string
+  taxBreakdown?: TaxBreakdown | null
+  baseAmountMinor?: number
   asChild?: boolean
   children?: React.ReactNode
-} & Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>
+} & Omit<React.HTMLAttributes<HTMLElement>, 'children'>
 
-const Root = forwardRef<HTMLDivElement, RootProps>(function CheckoutSummaryRoot(
-  { planRef, productRef, asChild, children, ...rest },
+const Root = forwardRef<HTMLElement, RootProps>(function CheckoutSummaryRoot(
+  { planRef, productRef, taxBreakdown = null, baseAmountMinor = 0, asChild, children, ...rest },
   forwardedRef,
 ) {
   const solva = useContext(SolvaPayContext)
@@ -92,12 +100,43 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function CheckoutSummaryRoot(
     return interpolate(copy.interval.trial, { trialDays })
   }, [plan?.trialDays, copy.interval.trial])
 
+  const taxCurrency = (taxBreakdown?.currency ?? plan?.currency ?? 'usd').toLowerCase()
+  const subtotalMinor = taxBreakdown?.subtotal ?? baseAmountMinor
+  const taxMinor = taxBreakdown?.taxAmount ?? 0
+  const totalMinor = taxBreakdown?.total ?? baseAmountMinor
+
+  const subtotalFormatted = formatPrice(subtotalMinor, taxCurrency, { locale })
+  const taxFormatted = formatPrice(taxMinor, taxCurrency, { locale })
+  const totalFormatted = formatPrice(totalMinor, taxCurrency, { locale })
+
   const ctx = useMemo<CheckoutSummaryContextValue>(
-    () => ({ plan, product, priceFormatted, trialBanner, loading }),
-    [plan, product, priceFormatted, trialBanner, loading],
+    () => ({
+      plan,
+      product,
+      priceFormatted,
+      trialBanner,
+      loading,
+      taxBreakdown,
+      baseAmountMinor,
+      subtotalFormatted,
+      taxFormatted,
+      totalFormatted,
+    }),
+    [
+      plan,
+      product,
+      priceFormatted,
+      trialBanner,
+      loading,
+      taxBreakdown,
+      baseAmountMinor,
+      subtotalFormatted,
+      taxFormatted,
+      totalFormatted,
+    ],
   )
 
-  const Comp = asChild ? Slot : 'div'
+  const Comp = asChild ? Slot : 'section'
   return (
     <Comp ref={forwardedRef} data-solvapay-checkout-summary="" {...rest}>
       <CheckoutSummaryContext.Provider value={ctx}>
@@ -139,11 +178,101 @@ const PlanSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummary
   )
 })
 
+const TaxNoteSlot = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }>(
+  function CheckoutSummaryTaxNote({ asChild, children, ...rest }, forwardedRef) {
+  const ctx = useCheckoutSummaryContext('TaxNote')
+  if (ctx.taxBreakdown) return null
+  const Comp = asChild ? Slot : 'p'
+  return (
+    <Comp ref={forwardedRef} data-solvapay-checkout-summary-tax-note="" {...rest}>
+      {children ?? 'Taxes calculated at checkout'}
+    </Comp>
+  )
+})
+
+const SubtotalSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummarySubtotal(
+  { asChild, children, ...rest },
+  forwardedRef,
+) {
+  const ctx = useCheckoutSummaryContext('Subtotal')
+  if (!ctx.taxBreakdown) return null
+  const Comp = asChild ? Slot : 'span'
+  return (
+    <Comp ref={forwardedRef} data-solvapay-checkout-summary-subtotal="" {...rest}>
+      {children ?? ctx.subtotalFormatted}
+    </Comp>
+  )
+})
+
+const TaxSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummaryTax(
+  { asChild, children, ...rest },
+  forwardedRef,
+) {
+  const ctx = useCheckoutSummaryContext('Tax')
+  if (!ctx.taxBreakdown) return null
+  const Comp = asChild ? Slot : 'span'
+  const { taxRate, treatment } = ctx.taxBreakdown
+  const defaultLabel =
+    treatment === 'reverse_charge'
+      ? `VAT reverse charge (${ctx.taxFormatted})`
+      : taxRate != null
+        ? `Tax (${Math.round(taxRate * 100)}%)`
+        : 'Tax'
+  return (
+    <Comp ref={forwardedRef} data-solvapay-checkout-summary-tax="" {...rest}>
+      {children ?? (
+        <>
+          <span>{defaultLabel}</span>{' '}
+          <span data-solvapay-checkout-summary-tax-amount="">{ctx.taxFormatted}</span>
+        </>
+      )}
+    </Comp>
+  )
+})
+
+const TotalSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummaryTotal(
+  { asChild, children, ...rest },
+  forwardedRef,
+) {
+  const ctx = useCheckoutSummaryContext('Total')
+  if (!ctx.taxBreakdown) return null
+  const Comp = asChild ? Slot : 'span'
+  return (
+    <Comp ref={forwardedRef} data-solvapay-checkout-summary-total="" {...rest}>
+      {children ?? ctx.totalFormatted}
+    </Comp>
+  )
+})
+
+const TaxTreatmentNoteSlot = forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }
+>(function CheckoutSummaryTaxTreatmentNote({ asChild, children, ...rest }, forwardedRef) {
+    const ctx = useCheckoutSummaryContext('TaxTreatmentNote')
+    const treatment = ctx.taxBreakdown?.treatment
+    if (!treatment || treatment === 'standard') return null
+    const Comp = asChild ? Slot : 'p'
+    const defaultNote =
+      treatment === 'reverse_charge'
+        ? 'VAT reverse charge applies — you are responsible for reporting VAT in your jurisdiction.'
+        : treatment === 'not_collecting'
+          ? 'Tax is not collected on this purchase.'
+          : null
+    if (!defaultNote && !children) return null
+    return (
+      <Comp ref={forwardedRef} data-solvapay-checkout-summary-tax-treatment-note="" {...rest}>
+        {children ?? defaultNote}
+      </Comp>
+    )
+  },
+)
+
 const PriceSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummaryPrice(
   { asChild, children, ...rest },
   forwardedRef,
 ) {
   const ctx = useCheckoutSummaryContext('Price')
+  if (ctx.taxBreakdown) return null
   const Comp = asChild ? Slot : 'span'
   return (
     <Comp ref={forwardedRef} data-solvapay-checkout-summary-price="" {...rest}>
@@ -152,29 +281,14 @@ const PriceSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummar
   )
 })
 
-const TrialSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummaryTrial(
-  { asChild, children, ...rest },
-  forwardedRef,
-) {
+const TrialSlot = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement> & { asChild?: boolean }>(
+  function CheckoutSummaryTrial({ asChild, children, ...rest }, forwardedRef) {
   const ctx = useCheckoutSummaryContext('Trial')
-  if (!ctx.trialBanner) return null
-  const Comp = asChild ? Slot : 'span'
+  if (!ctx.trialBanner || ctx.taxBreakdown) return null
+  const Comp = asChild ? Slot : 'p'
   return (
     <Comp ref={forwardedRef} data-solvapay-checkout-summary-trial="" {...rest}>
       {children ?? ctx.trialBanner}
-    </Comp>
-  )
-})
-
-const TaxNoteSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummaryTaxNote(
-  { asChild, children, ...rest },
-  forwardedRef,
-) {
-  useCheckoutSummaryContext('TaxNote')
-  const Comp = asChild ? Slot : 'span'
-  return (
-    <Comp ref={forwardedRef} data-solvapay-checkout-summary-tax-note="" {...rest}>
-      {children ?? 'Taxes calculated at checkout'}
     </Comp>
   )
 })
@@ -185,6 +299,10 @@ export const CheckoutSummaryPlan = PlanSlot
 export const CheckoutSummaryPrice = PriceSlot
 export const CheckoutSummaryTrial = TrialSlot
 export const CheckoutSummaryTaxNote = TaxNoteSlot
+export const CheckoutSummarySubtotal = SubtotalSlot
+export const CheckoutSummaryTax = TaxSlot
+export const CheckoutSummaryTotal = TotalSlot
+export const CheckoutSummaryTaxTreatmentNote = TaxTreatmentNoteSlot
 
 export const CheckoutSummary = {
   Root,
@@ -193,6 +311,10 @@ export const CheckoutSummary = {
   Price: PriceSlot,
   Trial: TrialSlot,
   TaxNote: TaxNoteSlot,
+  Subtotal: SubtotalSlot,
+  Tax: TaxSlot,
+  Total: TotalSlot,
+  TaxTreatmentNote: TaxTreatmentNoteSlot,
 } as const
 
 /**

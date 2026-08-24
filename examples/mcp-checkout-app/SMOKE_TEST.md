@@ -28,7 +28,7 @@ out of the plan-selection surface — it shows paid options only.
 
 ## Prerequisites
 
-- Backend running at `http://localhost:3001` with your product and
+- Platform stack running with API fan-out at `http://localhost:3010` with your product and
   plans created.
 - `.env` set: `SOLVAPAY_SECRET_KEY`, `SOLVAPAY_PRODUCT_REF`,
   `DEMO_TOOLS=true`.
@@ -123,20 +123,23 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
 
 **Expect** *(step transitions: plan → amount → payment → success)*:
 
-- Click fires `activate_plan({ planRef: <payg> })` immediately. The
-  active PAYG purchase is created server-side (eager activation — no
-  credit-balance gate), and the widget advances to `step: 'amount'`.
+- Click fires `activate_plan({ planRef: <payg> })` immediately. Topup-first:
+  a zero-balance customer gets `topup_required` and NO purchase is created
+  yet; the widget advances to `step: 'amount'`. The active PAYG purchase is
+  created after the top-up lands (the SDK re-activates on success).
   BackLink reads `← Back`. Three preset credit tiers render (500 /
   2 000 / 10 000), with `popular` on the 2 000 tier. Custom input is
   available.
 - Tap a preset → CTA label updates to `Continue — $18.00`.
 - Click Continue. Purely a local transition to `step: 'payment'` —
-  activation already happened at the plan step, so the SDK does NOT
-  fire `activate_plan` again here. BackLink reads `← Change amount`.
+  the plan is not active yet, but no network call fires on this
+  transition. BackLink reads `← Change amount`.
   The order summary + Stripe Elements render inline; a
   `Save card for future top-ups` checkbox sits below.
 - Complete the card. SDK fires `create_topup_payment_intent`
-  (purpose: `credit_topup`) then `process_payment`. `step: 'success'`.
+  (purpose: `credit_topup`) then `process_payment`, then re-fires
+  `activate_plan` to create the active PAYG purchase now that credits
+  have landed. `step: 'success'`.
 - Success surface: green check, `Credits added` heading, receipt
   grid (Amount / Credits / Plan / Rate). No CTA — the receipt is
   the terminal state.
@@ -217,17 +220,16 @@ Run any intent tool from Claude Code or the basic-host stdout mode
 - Step 4: `/upgrade` bootstraps the checkout surface on demand; the
   round-trip from gate narration → LLM tool choice → widget mount
   exercises the full cross-package contract.
-- Step 5a: `activate_plan` fires on the plan-step `Continue` click —
-  one user-visible activation action, and it completes before any
-  topup intent is created. For usage-based plans the backend
-  activates eagerly (no credit-balance gate), so clicking Continue
-  lands an active PAYG purchase even when the balance is zero. The
-  subsequent amount-step Continue is purely a local transition. If
-  payment later fails, the plan purchase stays live with zero
-  balance and the next paywalled tool call classifies as
-  `topup_required` (via `paywall-state.ts`), not
-  `activation_required` — so the LLM recovers with `topup`, not
-  another round of plan picking.
+- Step 5a: `activate_plan` fires on the plan-step `Continue` click.
+  For usage-based plans the backend is topup-first (credit-balance
+  gate), so a zero-balance customer gets `topup_required` and NO
+  purchase is created yet — the widget just routes into the amount
+  step. The active PAYG purchase materializes only after the top-up
+  succeeds (the SDK re-activates on success). The amount-step Continue
+  is purely a local transition. If payment never completes, no plan
+  purchase exists and the next paywalled tool call classifies as
+  `topup_required` (via `paywall-state.ts`), so the LLM recovers with
+  `topup`, not another round of plan picking.
 - Step 5a/5b: the success surface has no CTA. The auto-sent
   `notifySuccess` chat message (`Topped up …` / `Activated …`) is
   what continues the conversation, so the flow works on every

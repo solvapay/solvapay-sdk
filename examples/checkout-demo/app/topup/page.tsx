@@ -1,24 +1,37 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useBalance } from '@solvapay/react'
+import type { AutoRechargeInput } from '@solvapay/server'
+import {
+  AutoRecharge,
+  configToAutoRechargeInput,
+  useAutoRecharge,
+  useBalance,
+} from '@solvapay/react'
 import { AmountPicker } from '@solvapay/react/primitives'
 import { StyledTopupForm } from './components/StyledTopupForm'
 
 export default function TopupPage() {
-  const { adjustBalance, creditsPerMinorUnit, displayCurrency, displayExchangeRate } = useBalance()
+  const { refetch, creditsPerMinorUnit, displayCurrency, displayExchangeRate } = useBalance()
+  const { config: savedAutoRechargeConfig, refresh: refreshAutoRecharge } = useAutoRecharge()
   const currency = displayCurrency || 'USD'
   const [amount, setAmount] = useState<number | null>(null)
   const [amountCents, setAmountCents] = useState<number | null>(null)
+  const [pendingAutoRecharge, setPendingAutoRecharge] = useState<AutoRechargeInput | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [paymentFailed, setPaymentFailed] = useState(false)
 
+  const paymentAutoRecharge = useMemo((): AutoRechargeInput | undefined => {
+    if (pendingAutoRecharge) return pendingAutoRecharge
+    if (!savedAutoRechargeConfig?.enabled) return undefined
+    return configToAutoRechargeInput(savedAutoRechargeConfig, { currency }) ?? undefined
+  }, [pendingAutoRecharge, savedAutoRechargeConfig, currency])
+
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true)
-    if (amountCents) {
-      adjustBalance(amountCents * (creditsPerMinorUnit ?? 100))
-    }
+    void refetch()
+    void refreshAutoRecharge(true)
   }
 
   const handlePaymentError = (err: Error) => {
@@ -27,23 +40,23 @@ export default function TopupPage() {
   }
 
   const handleBack = () => {
-    // Reset both states: AmountPicker's selection resets on remount, so the
-    // parent `amount` must clear too or the "Continue" button stays enabled
-    // with a stale, visually-unselected amount.
     setAmount(null)
     setAmountCents(null)
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-2xl mx-auto px-6 py-12">
+    <main className="min-h-screen bg-white">
+      <section className="max-w-2xl mx-auto px-6 py-12">
         <Link href="/" className="text-slate-600 hover:text-slate-900 mb-8 inline-block">
           ← Back
         </Link>
 
         {paymentFailed ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+            <p
+              className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center"
+              aria-hidden="true"
+            >
               <svg
                 className="w-6 h-6 text-red-600"
                 fill="none"
@@ -57,12 +70,13 @@ export default function TopupPage() {
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-            </div>
+            </p>
             <h2 className="text-xl font-semibold text-slate-900 mb-2">Top-up failed</h2>
             <p className="text-slate-600 mb-6">
               Something went wrong processing your payment. Please try again.
             </p>
             <button
+              type="button"
               onClick={() => {
                 setPaymentFailed(false)
                 setAmount(null)
@@ -72,10 +86,13 @@ export default function TopupPage() {
             >
               Try Again
             </button>
-          </div>
+          </section>
         ) : paymentSuccess ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center">
+          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+            <p
+              className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center"
+              aria-hidden="true"
+            >
               <svg
                 className="w-6 h-6 text-emerald-600"
                 fill="none"
@@ -89,7 +106,7 @@ export default function TopupPage() {
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-            </div>
+            </p>
             <h2 className="text-xl font-semibold text-slate-900 mb-2">Top-up successful!</h2>
             <p className="text-slate-600 mb-6">Your credits have been added to your account.</p>
             <Link
@@ -98,20 +115,30 @@ export default function TopupPage() {
             >
               Back to Dashboard
             </Link>
-          </div>
+          </section>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <h2 className="text-xl font-semibold text-slate-900 mb-8">Top up credits</h2>
+          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+            <header className="mb-8">
+              <h2 className="text-xl font-semibold text-slate-900">Top up credits</h2>
+            </header>
 
             {amountCents === null ? (
-              <div className="space-y-6">
+              <section className="space-y-6">
                 <AmountPicker.Root currency={currency} onChange={setAmount}>
-                  <div className="grid grid-cols-4 gap-2">
-                    <AmountPicker.Option amount={10} />
-                    <AmountPicker.Option amount={50} />
-                    <AmountPicker.Option amount={100} />
-                    <AmountPicker.Option amount={500} />
-                  </div>
+                  <menu className="grid grid-cols-4 gap-2 list-none p-0 m-0">
+                    <li>
+                      <AmountPicker.Option amount={10} />
+                    </li>
+                    <li>
+                      <AmountPicker.Option amount={50} />
+                    </li>
+                    <li>
+                      <AmountPicker.Option amount={100} />
+                    </li>
+                    <li>
+                      <AmountPicker.Option amount={500} />
+                    </li>
+                  </menu>
                   <AmountPicker.Custom className="w-full rounded-lg border border-slate-300 px-4 py-3 text-base" />
                 </AmountPicker.Root>
                 <button
@@ -124,11 +151,17 @@ export default function TopupPage() {
                 >
                   Continue to payment
                 </button>
-              </div>
+                <AutoRecharge
+                  currency={currency}
+                  deferCardSetup
+                  onPendingConfig={setPendingAutoRecharge}
+                />
+              </section>
             ) : (
               <StyledTopupForm
                 amountCents={amountCents}
                 currency={currency}
+                autoRecharge={paymentAutoRecharge}
                 creditsPerMinorUnit={creditsPerMinorUnit}
                 displayExchangeRate={displayExchangeRate}
                 onSuccess={handlePaymentSuccess}
@@ -136,9 +169,9 @@ export default function TopupPage() {
                 onBack={handleBack}
               />
             )}
-          </div>
+          </section>
         )}
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }

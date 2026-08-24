@@ -294,9 +294,12 @@ describe('scaffold.mjs against cached fixtures', () => {
         PETSTORE_V2_SELECTIONS,
       ])
 
+      // `--loglevel=error`, not `--silent`: silent suppresses npm's own
+      // error output too, so a failing install reports an exit code with
+      // empty stdout/stderr and the assertion message below says nothing.
       const install = await runCommand(
         'npm',
-        ['install', '--no-audit', '--no-fund', '--prefer-offline', '--silent'],
+        ['install', '--no-audit', '--no-fund', '--prefer-offline', '--loglevel=error'],
         target,
       )
       expect(

@@ -1,6 +1,6 @@
 {
   "name": "chat-checkout-demo",
-  "version": "0.0.4",
+  "version": "0.0.8",
   "private": true,
   "type": "module",
   "scripts": {
@@ -18,7 +18,7 @@
     "@solvapay/auth": "workspace:^",
     "@solvapay/core": "workspace:*",
     "@solvapay/react": "workspace:*",
-    "@solvapay/server": "*",
+    "@solvapay/server": "workspace:*",
     "@stripe/react-stripe-js": "^6.0.0",
     "@stripe/stripe-js": "^9.0.0",
     "react": "^19.2.5",

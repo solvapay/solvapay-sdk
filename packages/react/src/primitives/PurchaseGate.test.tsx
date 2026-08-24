@@ -5,6 +5,7 @@ import { PurchaseGate, usePurchaseGate } from './PurchaseGate'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { PurchaseInfo, SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 function ctxWith(
   purchases: PurchaseInfo[],
@@ -30,15 +31,7 @@ function ctxWith(
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
-      credits: null,
-      displayCurrency: null,
-      creditsPerMinorUnit: null,
-      displayExchangeRate: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-    },
+    balance: mockBalanceStatus(),
   }
 }
 
@@ -48,9 +41,14 @@ function Wrap({ ctx, children }: { ctx: SolvaPayContextValue; children: React.Re
 
 const active: PurchaseInfo = {
   reference: 'pur_1',
+  customerRef: 'cus_1',
   productName: 'Widget API',
   status: 'active',
   startDate: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
+  currency: 'USD',
+  isRecurring: false,
+  amount: 0,
 }
 
 describe('PurchaseGate primitive', () => {

@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { usePurchase, usePlans, usePurchaseStatus, useBalance } from '@solvapay/react'
 import Link from 'next/link'
+import { formatCreditCurrencyEquivalent } from './lib/credit-display'
 import { UsageSimulator } from './components/UsageSimulator'
 
 export default function HomePage() {
@@ -28,7 +29,23 @@ export default function HomePage() {
   const { cancelledPurchase, shouldShowCancelledNotice, formatDate, getDaysUntilExpiration } =
     usePurchaseStatus()
 
-  const { credits, displayCurrency, creditsPerMinorUnit, loading: balanceLoading } = useBalance()
+  const {
+    credits,
+    displayCurrency,
+    creditsPerMinorUnit,
+    displayExchangeRate,
+    loading: balanceLoading,
+  } = useBalance()
+
+  const currencyEquivalent =
+    credits != null && credits > 0 && displayCurrency && creditsPerMinorUnit
+      ? formatCreditCurrencyEquivalent({
+          credits,
+          displayCurrency,
+          creditsPerMinorUnit,
+          displayExchangeRate,
+        })
+      : null
 
   const hasCredits = credits != null && credits > 0
   const hasPremiumAccess = Boolean(activePurchase) || hasCredits
@@ -96,11 +113,11 @@ export default function HomePage() {
             </div>
           ) : activePurchase ? (
             <p className="text-slate-600">
-              You're on the{' '}
+              You&apos;re on the{' '}
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                {activePurchase.productName}
+                {activePurchase.planSnapshot?.name ?? activePurchase.productName}
               </span>{' '}
-              product
+              plan
             </p>
           ) : shouldShowCancelledNotice && cancelledPurchase ? (
             <div className="space-y-2">
@@ -247,15 +264,8 @@ export default function HomePage() {
                   <p className="text-2xl font-semibold text-emerald-600">
                     {new Intl.NumberFormat().format(credits)} credits
                   </p>
-                  {displayCurrency && creditsPerMinorUnit ? (
-                    <p className="text-sm text-slate-500 mt-1">
-                      ~
-                      {new Intl.NumberFormat(undefined, {
-                        style: 'currency',
-                        currency: displayCurrency,
-                        minimumFractionDigits: 2,
-                      }).format(credits / creditsPerMinorUnit / 100)}
-                    </p>
+                  {currencyEquivalent ? (
+                    <p className="text-sm text-slate-500 mt-1">~{currencyEquivalent}</p>
                   ) : null}
                 </div>
               ) : (
