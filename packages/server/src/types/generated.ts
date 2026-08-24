@@ -15,7 +15,7 @@ export interface paths {
     put?: never
     /**
      * Activate a plan for a customer
-     * @description Activates a specific plan on a product for a customer. Usage-based (PAYG) plans are topup-first: a zero-balance customer receives `topup_required` and only activates after a successful top-up, while free plans activate immediately and paid recurring / hybrid plans return `payment_required`.
+     * @description Activates a specific plan on a product for a customer. Usage-based plans (metered, no billing cycle) and free plans activate immediately. A zero credit balance is not an activation gate — empty-wallet access is enforced later as `topup_required` at usage time. Paid recurring, hybrid, or one-time plans return `payment_required`.
      */
     post: operations['ActivateSdkController_activate']
     delete?: never
@@ -806,7 +806,13 @@ export interface components {
       message?: string
       purchaseRef?: string
       /** @enum {string} */
-      status: 'activated' | 'already_active' | 'topup_required' | 'payment_required' | 'invalid'
+      status:
+        | 'activated'
+        | 'already_active'
+        | 'already_purchased'
+        | 'topup_required'
+        | 'payment_required'
+        | 'invalid'
     }
     AttachBusinessDetailsResponse: {
       /** @description Calculated tax breakdown */
@@ -1038,7 +1044,84 @@ export interface components {
        * Tax ID type
        * @enum {string}
        */
-      taxIdType?: 'eu_vat' | 'gb_vat' | 'us_ein'
+      taxIdType?:
+        | 'ae_trn'
+        | 'al_tin'
+        | 'am_tin'
+        | 'ao_tin'
+        | 'au_abn'
+        | 'aw_tin'
+        | 'az_tin'
+        | 'ba_tin'
+        | 'bb_tin'
+        | 'bd_bin'
+        | 'bf_ifu'
+        | 'bh_vat'
+        | 'bj_ifu'
+        | 'bs_tin'
+        | 'by_tin'
+        | 'ca_gst_hst'
+        | 'cd_nif'
+        | 'ch_vat'
+        | 'cl_tin'
+        | 'cm_niu'
+        | 'co_nit'
+        | 'cr_tin'
+        | 'cv_nif'
+        | 'ec_ruc'
+        | 'eg_tin'
+        | 'et_tin'
+        | 'eu_vat'
+        | 'gb_vat'
+        | 'ge_vat'
+        | 'gn_nif'
+        | 'hk_br'
+        | 'id_npwp'
+        | 'in_gst'
+        | 'is_vat'
+        | 'jp_trn'
+        | 'ke_pin'
+        | 'kg_tin'
+        | 'kh_tin'
+        | 'kr_brn'
+        | 'kz_bin'
+        | 'la_tin'
+        | 'li_vat'
+        | 'lk_vat'
+        | 'ma_vat'
+        | 'md_vat'
+        | 'me_pib'
+        | 'mk_vat'
+        | 'mr_nif'
+        | 'mx_rfc'
+        | 'my_sst'
+        | 'ng_tin'
+        | 'no_vat'
+        | 'np_pan'
+        | 'nz_gst'
+        | 'om_vat'
+        | 'pe_ruc'
+        | 'ph_tin'
+        | 'rs_pib'
+        | 'ru_inn'
+        | 'sa_vat'
+        | 'sg_gst'
+        | 'sn_ninea'
+        | 'sr_fin'
+        | 'th_vat'
+        | 'tj_tin'
+        | 'tr_tin'
+        | 'tw_vat'
+        | 'tz_vat'
+        | 'ua_vat'
+        | 'ug_tin'
+        | 'us_ein'
+        | 'uy_ruc'
+        | 'uz_vat'
+        | 'vn_tin'
+        | 'za_vat'
+        | 'zm_tin'
+        | 'zw_tin'
     }
     CancelPurchaseRequest: {
       reason?: string
@@ -1465,7 +1548,13 @@ export interface components {
       /** @enum {number} */
       debited: true
       /**
-       * Estimated remaining units after debit
+       * How many metered items the remaining credit balance still covers
+       * @example 99
+       */
+      remainingUnits: number
+      /**
+       * @deprecated
+       * @description Deprecated alias of remainingUnits. Prefer remainingUnits.
        * @example 99
        */
       unitsRemaining: number
@@ -1544,7 +1633,7 @@ export interface components {
        */
       name: string
       /** @description Active purchases */
-      purchases?: components['schemas']['PurchaseInfo'][]
+      purchases?: components['schemas']['SdkPurchaseResponse'][]
       /**
        * Customer reference identifier
        * @example cus_3c4d5e6f7g8h
@@ -1613,25 +1702,30 @@ export interface components {
     LimitBalanceDto: {
       /** @description Credit balance in credits (100 credits = 1 minor currency unit) */
       creditBalance: number
-      /** @description Credits per usage unit */
+      /** @description Credits deducted per metered item (wallet coverage: remainingUnits = balance / creditsPerUnit) */
       creditsPerUnit: number
       currency: string
-      /** @description Estimated whole units remaining from prepaid credit balance */
+      /** @description How many metered items the credit balance still covers (`balance / creditsPerUnit`) */
       remainingUnits?: number
     }
     LimitPlanItemDto: {
       /** @description Derived billing cycle */
       billingCycle?: string
-      /** @description Per-unit charge in minor units (usage-based plans) */
+      /**
+       * @deprecated
+       * @description Deprecated alias of perUnitChargeMinor. Same minor-units value — not credits. Prefer perUnitChargeMinor.
+       */
       creditsPerUnit?: number
       currency: string
-      /** @description Derived included units for the metered allowance */
+      /** @description Derived included allowance for the metered meter. `0` is the unlimited sentinel (`LimitOption.cap === 0`). */
       freeUnits?: number
       name?: string
       /** @description Composable pricing options for this plan */
       options?: {
         [key: string]: unknown
       }[]
+      /** @description Per-request charge in minor currency units (usage-based plans) */
+      perUnitChargeMinor?: number
       /** @description Headline price in smallest currency unit (e.g. cents) */
       price: number
       reference: string
@@ -1662,7 +1756,7 @@ export interface components {
       confirmationUrl?: string
       /** @description Credit balance in credits (100 credits = 1 minor currency unit), for pre-paid usage-based plans */
       creditBalance?: number
-      /** @description Credits per usage unit (for pre-paid usage-based plans) */
+      /** @description Credits deducted per metered item (for prepaid usage-based plans) */
       creditsPerUnit?: number
       /** @description ISO 4217 currency code for credit fields */
       currency?: string
@@ -1889,11 +1983,18 @@ export interface components {
        * @example 2025-10-27T10:00:00Z
        */
       completedAt: string
+      /** @description Created at */
+      createdAt: string
       /**
        * ISO 4217 currency code of the customer-facing charge
        * @example USD
        */
       currency: string
+      /**
+       * Customer reference
+       * @example cus_3C4D5E6F
+       */
+      customerRef: string
       /**
        * Product reference
        * @example prd_abc123
@@ -2021,7 +2122,7 @@ export interface components {
       type: 'one-time'
     }
     ProcessPaymentSucceededRecurring: {
-      purchase: components['schemas']['PurchaseInfo']
+      purchase: components['schemas']['SdkPurchaseResponse']
       /**
        * discriminator enum property added by openapi-typescript
        * @enum {string}
@@ -2058,75 +2159,6 @@ export interface components {
        * @example 30
        */
       validityPeriod?: number
-    }
-    PurchaseInfo: {
-      /**
-       * Amount in USD cents (normalised for aggregation)
-       * @example 9900
-       */
-      amount: number
-      /**
-       * Reason for cancellation
-       * @example Customer request
-       */
-      cancellationReason?: string
-      /**
-       * When purchase was cancelled
-       * @example 2025-10-28T10:00:00Z
-       */
-      cancelledAt?: string
-      /**
-       * ISO 4217 currency code of the customer-facing charge
-       * @example GBP
-       */
-      currency: string
-      /**
-       * End date of purchase
-       * @example 2025-11-27T10:00:00Z
-       */
-      endDate?: string
-      /**
-       * Exchange rate from original currency to USD
-       * @example 1.32
-       */
-      exchangeRate?: number
-      /**
-       * Original amount in the payment currency (minor units)
-       * @example 7500
-       */
-      originalAmount?: number
-      /**
-       * Plan reference from the plan snapshot, for reliable plan matching
-       * @example pln_abc123
-       */
-      planRef?: string
-      /** @description Snapshot of the plan at time of purchase */
-      planSnapshot?: Record<string, never>
-      /**
-       * Product name
-       * @example API Gateway Manager
-       */
-      productName: string
-      /**
-       * Product reference
-       * @example prd_abc123
-       */
-      productRef?: string
-      /**
-       * Purchase reference
-       * @example pur_1A2B3C4D
-       */
-      reference: string
-      /**
-       * Start date
-       * @example 2025-10-27T10:00:00Z
-       */
-      startDate: string
-      /**
-       * Purchase status
-       * @example active
-       */
-      status: string
     }
     PutAutoRechargeSdkDto: {
       currency: string
@@ -2454,6 +2486,11 @@ export interface components {
         [key: string]: unknown
       } | null
       /**
+       * Whether the frozen plan meters usage
+       * @example true
+       */
+      isMetered?: boolean
+      /**
        * Plan name captured at purchase time
        * @example Pro Monthly
        */
@@ -2562,14 +2599,20 @@ export interface components {
        * @enum {string}
        */
       billingCycle?: 'weekly' | 'monthly' | 'quarterly' | 'yearly'
-      /** @description Cancellation reason */
+      /**
+       * Reason for cancellation
+       * @example Customer request
+       */
       cancellationReason?: string
-      /** @description Cancelled at */
+      /**
+       * When purchase was cancelled
+       * @example 2025-10-28T10:00:00Z
+       */
       cancelledAt?: string
       /** @description Created at */
       createdAt: string
       /**
-       * Original payment currency code
+       * ISO 4217 currency code of the customer-facing charge
        * @example GBP
        */
       currency: string
@@ -2583,15 +2626,18 @@ export interface components {
        * @example cus_3C4D5E6F
        */
       customerRef: string
-      /** @description End date */
+      /**
+       * End date of purchase
+       * @example 2025-11-27T10:00:00Z
+       */
       endDate?: string
       /**
        * Exchange rate from original currency to USD
-       * @example 1.3082
+       * @example 1.32
        */
       exchangeRate?: number
       /**
-       * Is recurring
+       * Whether the purchase is recurring
        * @example true
        */
       isRecurring: boolean
@@ -2608,13 +2654,18 @@ export interface components {
        */
       origin?: 'paid' | 'free_default' | 'manual' | 'one_time' | 'credit_topup' | 'admin_assignment'
       /**
-       * Original amount in the payment currency (cents/pence)
-       * @example 10000
+       * Original amount in the payment currency (minor units)
+       * @example 7500
        */
       originalAmount?: number
       /** @description Paid at timestamp */
       paidAt?: string
-      /** @description Plan snapshot at time of purchase (null for credit topups) */
+      /**
+       * Plan reference from the plan snapshot, for reliable plan matching
+       * @example pln_abc123
+       */
+      planRef?: string
+      /** @description Snapshot of the plan at time of purchase */
       planSnapshot?: components['schemas']['SdkPlanSnapshotDto']
       /**
        * Product name
@@ -2623,7 +2674,7 @@ export interface components {
       productName?: string
       /**
        * Product reference
-       * @example prd_1A2B3C4D
+       * @example prd_abc123
        */
       productRef?: string
       /**
@@ -2636,7 +2687,10 @@ export interface components {
        * @example false
        */
       requiresPayment?: boolean
-      /** @description Start date */
+      /**
+       * Start date
+       * @example 2025-10-27T10:00:00Z
+       */
       startDate: string
       /**
        * Purchase status
@@ -2651,6 +2705,8 @@ export interface components {
       currency: string
       /** @description Whether tax is included in the listed price */
       inclusive: boolean
+      /** @description True when Stripe reports taxability_reason not_collecting (no registration) */
+      notRegistered?: boolean
       /** @description Pre-tax amount in minor units */
       subtotal: number
       /** @description Tax amount in minor units */
@@ -2679,7 +2735,7 @@ export interface components {
       /** @description Total amount in minor units */
       total: number
       /** @enum {string} */
-      treatment: 'reverse_charge' | 'standard' | 'none' | 'not_collecting'
+      treatment: 'reverse_charge' | 'standard' | 'none' | 'not_collecting' | 'not_supported'
     }
     UpdateCustomerRequest: {
       description?: string
@@ -2845,7 +2901,7 @@ export interface components {
        */
       overageCost: number
       /**
-       * Units exceeding the plan limit
+       * Units exceeding the plan included amount
        * @example 0
        */
       overageUnits: number

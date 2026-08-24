@@ -5,13 +5,13 @@
  * for the active purchase.
  *
  * Reads directly off `usePurchase()` so no additional network call is made
- * when `checkPurchase` is already loaded. Usage-based plans expose a
- * `planSnapshot.limit` (included cap), `planSnapshot.meterRef` (or `meterId`),
- * and a `usage` field on the purchase — `useUsage()` normalises those into
- * a single `{ used / total / remaining / percentUsed }` shape matching
- * `UserInfoUsageDto` on the backend.
+ * when `checkPurchase` is already loaded. Metered plans expose
+ * `planSnapshot.isMetered` and a `usage` field (`used` + period). Cap /
+ * remaining live on `useLimits` — this hook does not invent `limit`,
+ * `meterRef`, or `creditsPerUnit` from the snapshot (those fields are
+ * no longer on the wire).
  *
- * Returns `null` values when the active plan isn't usage-based.
+ * Returns `null` values when the active plan isn't metered.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -50,33 +50,19 @@ export interface UsageSnapshot {
 
 function deriveUsage(purchase: PurchaseInfo | null): UsageSnapshot | null {
   if (!purchase) return null
-  const snap = purchase.planSnapshot
   const usage = purchase.usage
-  const meterRef = snap?.meterRef ?? snap?.meterId ?? null
-  const creditsPerUnit = snap?.creditsPerUnit
-  const isCreditBased = typeof creditsPerUnit === 'number' && creditsPerUnit > 0
-  const total = typeof snap?.limit === 'number' ? snap.limit : null
-  // Only treat this as usage-based when we have a meter, usage payload, or credit gating.
-  if (meterRef === null && !usage && !isCreditBased) return null
+  if (purchase.planSnapshot?.isMetered !== true && !usage) return null
   const used = typeof usage?.used === 'number' ? usage.used : 0
-  const remaining = total !== null ? Math.max(0, total - used) : null
-  const percentUsed =
-    total !== null && total > 0 ? Math.min(100, Math.round((used / total) * 10000) / 100) : null
   return {
-    meterRef,
-    total,
+    meterRef: null,
+    total: null,
     used,
-    remaining,
-    percentUsed,
+    remaining: null,
+    percentUsed: null,
     ...(usage?.periodStart ? { periodStart: usage.periodStart } : {}),
     ...(usage?.periodEnd ? { periodEnd: usage.periodEnd } : {}),
-    ...(purchase.reference ? { purchaseRef: purchase.reference } : {}),
+    purchaseRef: purchase.reference,
   }
-}
-
-function isCreditBasedPurchase(purchase: PurchaseInfo | null): boolean {
-  const creditsPerUnit = purchase?.planSnapshot?.creditsPerUnit
-  return typeof creditsPerUnit === 'number' && creditsPerUnit > 0
 }
 
 export function useUsage(): UseUsageReturn {
@@ -126,8 +112,7 @@ export function useUsage(): UseUsageReturn {
   const percentUsed = usage?.percentUsed ?? null
   const isApproachingLimit = percentUsed !== null && percentUsed >= 80 && percentUsed < 100
   const isAtLimit = percentUsed !== null && percentUsed >= 100
-  const isUnlimited =
-    usage !== null && usage.total === null && !isCreditBasedPurchase(activePurchase ?? null)
+  const isUnlimited = usage !== null && usage.total === null
 
   return {
     usage,

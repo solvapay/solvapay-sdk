@@ -11,62 +11,15 @@ import type {
   CustomerBalanceResult,
   GetUsageResult,
   PurchaseCheckResult,
+  PurchaseInfo,
 } from '@solvapay/server'
+
+export type { PurchaseInfo }
 import type { AuthAdapter } from '../adapters/auth'
 import type { TaxBehavior } from '@solvapay/core'
 import type { PartialSolvaPayCopy } from '../i18n/types'
 import type { SolvaPayTransport, CreditDisplayBlock } from '../transport/types'
 
-export interface PurchaseInfo {
-  reference: string
-  productName: string
-  productRef?: string
-  status: string
-  startDate: string
-  endDate?: string
-  cancelledAt?: string
-  cancellationReason?: string
-  /** Normalised amount in USD cents (for cross-currency aggregation). */
-  amount?: number
-  /** Amount in minor units of `currency` — what the customer was actually charged. */
-  originalAmount?: number
-  currency?: string
-  /** Exchange rate used to convert `originalAmount` → `amount` (USD). */
-  exchangeRate?: number
-  planType?: string
-  isRecurring?: boolean
-  nextBillingDate?: string
-  billingCycle?: string
-  planRef?: string
-  /** How the purchase was created — `free_default` for auto-enrolled free tiers. */
-  origin?: 'paid' | 'free_default' | 'manual' | 'one_time' | 'credit_topup'
-  planSnapshot?: {
-    reference?: string
-    name?: string | null
-    price?: number
-    meterRef?: string
-    meterId?: string
-    limit?: number
-    freeUnits?: number
-    creditsPerUnit?: number
-    planType?: string
-    billingCycle?: string | null
-    features?: Record<string, unknown> | null
-  }
-  usage?: {
-    used: number
-    overageUnits?: number
-    overageCost?: number
-    periodStart?: string
-    periodEnd?: string
-  }
-  /**
-   * Arbitrary metadata attached to the purchase. `metadata.purpose ===
-   * 'credit_topup'` signals a balance top-up rather than a plan purchase;
-   * see `isPlanPurchase` / `isTopupPurchase` for classification helpers.
-   */
-  metadata?: Record<string, unknown>
-}
 
 export interface CustomerPurchaseData {
   customerRef?: string
