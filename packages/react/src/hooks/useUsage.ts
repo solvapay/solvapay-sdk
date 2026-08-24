@@ -4,12 +4,22 @@
  * `useUsage()` — projection of the authenticated customer's usage snapshot
  * for the active purchase.
  *
- * Reads directly off `usePurchase()` so no additional network call is made
- * when `checkPurchase` is already loaded. Metered plans expose
- * `planSnapshot.isMetered` and a `usage` field (`used` + period). Cap /
- * remaining live on `useLimits` — this hook does not invent `limit`,
- * `meterRef`, or `creditsPerUnit` from the snapshot (those fields are
- * no longer on the wire).
+ * Two sources feed the snapshot, because no single one carries the whole
+ * picture:
+ *
+ *  - **Consumption** (`used`, period window) comes off `usePurchase()`.
+ *    Metered plans expose `planSnapshot.isMetered` and a `usage` field.
+ *  - **Cap** (`total`, `remaining`, `meterRef`, unlimited) comes from
+ *    `useLimits()`, the backend-authoritative allowance the paywall gate
+ *    consults on every request. The plan snapshot dropped `limit`,
+ *    `meterRef`, and `creditsPerUnit` from the wire, so there is nothing
+ *    left to derive them from client-side — and guessing would report
+ *    every metered plan, including credit-gated pay-as-you-go, as
+ *    uncapped.
+ *
+ * `useLimits` shares a module-level cache keyed by
+ * `customerRef:productRef:meterName`, so mounting several usage surfaces
+ * costs one request. It is skipped entirely for non-metered plans.
  *
  * Returns `null` values when the active plan isn't metered.
  */
@@ -17,6 +27,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePurchase } from './usePurchase'
 import { useTransport } from './useTransport'
+import { useLimits } from './useLimits'
 import type { PurchaseInfo } from '../types'
 
 export interface UseUsageReturn {
@@ -31,7 +42,11 @@ export interface UseUsageReturn {
   isApproachingLimit: boolean
   /** Plan is usage-based, `percentUsed >= 100`. */
   isAtLimit: boolean
-  /** True when `usage.total === null` (no included cap on this plan). */
+  /**
+   * True when the backend reports no finite cap on this meter. Sourced
+   * from `useLimits().unlimited`, never inferred from a missing `total`
+   * — an unknown cap is not an absent one.
+   */
   isUnlimited: boolean
   /** The meter reference (e.g. `'tokens'`). `null` when not usage-based. */
   meterRef: string | null
@@ -48,17 +63,36 @@ export interface UsageSnapshot {
   purchaseRef?: string
 }
 
-function deriveUsage(purchase: PurchaseInfo | null): UsageSnapshot | null {
+/** Cap side of the snapshot, projected from `useLimits`. */
+interface LimitsProjection {
+  remaining: number | null
+  unlimited: boolean | null
+  meterName: string | null
+}
+
+function deriveUsage(
+  purchase: PurchaseInfo | null,
+  limits: LimitsProjection,
+): UsageSnapshot | null {
   if (!purchase) return null
   const usage = purchase.usage
   if (purchase.planSnapshot?.isMetered !== true && !usage) return null
   const used = typeof usage?.used === 'number' ? usage.used : 0
+  // `remaining` carries the backend's `-1` unlimited sentinel, which
+  // `unlimited` already decodes — only a confirmed finite cap produces a
+  // total. While limits are loading (or the transport has no `getLimits`)
+  // both stay `null`: cap unknown, not cap absent.
+  const hasFiniteCap = limits.unlimited === false && limits.remaining !== null
+  const remaining = hasFiniteCap ? limits.remaining : null
+  const total = remaining === null ? null : used + remaining
+  const percentUsed =
+    total !== null && total > 0 ? Math.min(100, Math.round((used / total) * 10000) / 100) : null
   return {
-    meterRef: null,
-    total: null,
+    meterRef: limits.meterName,
+    total,
     used,
-    remaining: null,
-    percentUsed: null,
+    remaining,
+    percentUsed,
     ...(usage?.periodStart ? { periodStart: usage.periodStart } : {}),
     ...(usage?.periodEnd ? { periodEnd: usage.periodEnd } : {}),
     purchaseRef: purchase.reference,
@@ -73,7 +107,22 @@ export function useUsage(): UseUsageReturn {
   const [error, setError] = useState<Error | null>(null)
   const [transportLoading, setTransportLoading] = useState(false)
 
-  const derived = useMemo(() => deriveUsage(activePurchase ?? null), [activePurchase])
+  // Only metered plans have an allowance to look up; everything else
+  // would spend a request to learn nothing.
+  const isMetered = activePurchase?.planSnapshot?.isMetered === true
+  const {
+    remaining: limitRemaining,
+    unlimited,
+    meterName,
+  } = useLimits({
+    productRef: activePurchase?.productRef,
+    enabled: isMetered,
+  })
+
+  const derived = useMemo(
+    () => deriveUsage(activePurchase ?? null, { remaining: limitRemaining, unlimited, meterName }),
+    [activePurchase, limitRemaining, unlimited, meterName],
+  )
 
   // Clear transport-fetched override when the active purchase changes
   // — otherwise a stale override from a previous plan keeps shadowing
@@ -112,7 +161,7 @@ export function useUsage(): UseUsageReturn {
   const percentUsed = usage?.percentUsed ?? null
   const isApproachingLimit = percentUsed !== null && percentUsed >= 80 && percentUsed < 100
   const isAtLimit = percentUsed !== null && percentUsed >= 100
-  const isUnlimited = usage !== null && usage.total === null
+  const isUnlimited = usage !== null && unlimited === true
 
   return {
     usage,

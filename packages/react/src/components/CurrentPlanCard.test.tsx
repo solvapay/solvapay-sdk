@@ -230,17 +230,19 @@ describe('CurrentPlanCard', () => {
     // would render "SEK 54.26" (USD cents labelled SEK).
     const sekPurchase: PurchaseInfo = {
       reference: 'purchase_sek',
+      customerRef: 'cus_sek',
       productName: 'MCP pro',
       status: 'active',
       startDate: '2026-04-20T00:00:00Z',
+      createdAt: '2026-04-20T00:00:00Z',
       amount: 5426,
       originalAmount: 50000,
       currency: 'SEK',
       exchangeRate: 0.1085,
       planRef: 'plan_sek_monthly',
-      billingCycle: 'month',
+      billingCycle: 'monthly',
       isRecurring: true,
-      planSnapshot: { planType: 'recurring', reference: 'plan_sek_monthly' },
+      planSnapshot: { reference: 'plan_sek_monthly', currency: 'SEK', price: 50000, isMetered: false },
     }
     const ctx = buildCtx(sekPurchase, { config: { transport: makeTransport() } })
     render(<Renderer ctx={ctx} />)
@@ -256,9 +258,11 @@ describe('CurrentPlanCard', () => {
   it('renders the SEK billing cycle as "/ month" rather than "/ monthly"', async () => {
     const sekPurchase: PurchaseInfo = {
       reference: 'purchase_sek_cycle',
+      customerRef: 'cus_sek',
       productName: 'MCP pro',
       status: 'active',
       startDate: '2026-04-20T00:00:00Z',
+      createdAt: '2026-04-20T00:00:00Z',
       amount: 5426,
       originalAmount: 50000,
       currency: 'SEK',
@@ -266,9 +270,11 @@ describe('CurrentPlanCard', () => {
       billingCycle: 'monthly',
       isRecurring: true,
       planSnapshot: {
-        planType: 'recurring',
         reference: 'pln_sek_m',
         name: 'Pro Monthly',
+        currency: 'SEK',
+        price: 50000,
+        isMetered: false,
       },
     }
     const ctx = buildCtx(sekPurchase, { config: { transport: makeTransport() } })
@@ -315,9 +321,11 @@ describe('CurrentPlanCard', () => {
       ...recurringPurchase,
       productName: 'Widget API',
       planSnapshot: {
-        planType: 'recurring',
         reference: 'plan_monthly',
         name: 'Pro Monthly',
+        currency: 'USD',
+        price: 1999,
+        isMetered: false,
       },
     }
     const ctx = buildCtx(named, { config: { transport: makeTransport() } })
@@ -353,11 +361,14 @@ describe('CurrentPlanCard', () => {
   it('does not render when the only purchase is a credit top-up', () => {
     const topup: PurchaseInfo = {
       reference: 'pur_topup',
+      customerRef: 'cus_topup',
       productName: 'Credits',
       status: 'active',
       startDate: '2026-01-01T00:00:00Z',
+      createdAt: '2026-01-01T00:00:00Z',
       amount: 10000,
       currency: 'SEK',
+      isRecurring: false,
       metadata: { purpose: 'credit_topup' },
     }
     // Simulate provider-level filtering: balance transactions never become

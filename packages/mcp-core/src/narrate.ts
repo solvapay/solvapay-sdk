@@ -42,12 +42,27 @@ interface PlanShape {
   reference?: string
 }
 
+/**
+ * Frozen plan captured on a purchase. Deliberately separate from
+ * `PlanShape`: the snapshot carries `isMetered` and no `planType`,
+ * `creditsPerUnit`, or `limit` — those never travel on this route.
+ */
+interface PlanSnapshotShape {
+  name?: string
+  price?: number
+  currency?: string
+  billingCycle?: string | null
+  isMetered?: boolean
+  reference?: string
+}
+
 interface PurchaseShape {
   planRef?: string
-  planSnapshot?: PlanShape | null
+  planSnapshot?: PlanSnapshotShape | null
   amount?: number
   currency?: string
   endDate?: string
+  isRecurring?: boolean
   metadata?: { purpose?: string }
 }
 
@@ -134,12 +149,13 @@ function balanceRow(customer: CustomerShape | null | undefined): string | null {
   return money ? `Balance: ${fmt} credits (~${money})` : `Balance: ${fmt} credits`
 }
 
+/**
+ * The purchase's frozen snapshot records *that* the plan meters usage, not
+ * the rate — `creditsPerUnit` isn't on the snapshot wire — so the live plan
+ * is the only source for the number.
+ */
 function resolveCreditsPerCall(active: PurchaseShape, plans: PlanShape[]): number | null {
-  const snapshot = active.planSnapshot
-  if (snapshot?.planType === 'usage-based') {
-    const fromSnapshot = snapshot.creditsPerUnit
-    if (typeof fromSnapshot === 'number' && fromSnapshot > 0) return fromSnapshot
-  }
+  if (active.planSnapshot?.isMetered !== true) return null
 
   const planRef = active.planRef
   if (planRef) {
@@ -238,7 +254,7 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
       const cycle = plan.billingCycle ? `/${plan.billingCycle}` : ''
       const end = formatDate(active.endDate)
       const parts = [planName]
-      if (price && plan.planType !== 'free') parts.push(`${price}${cycle}`)
+      if (price) parts.push(`${price}${cycle}`)
       if (end) parts.push(`renews ${end}`)
       lines.push(`Plan: ${parts.join(' · ')}`)
     }
