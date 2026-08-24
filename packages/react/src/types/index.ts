@@ -16,10 +16,9 @@ import type {
 
 export type { PurchaseInfo }
 import type { AuthAdapter } from '../adapters/auth'
-import type { TaxBehavior } from '@solvapay/core'
+import type { PricingOptionLike, TaxBehavior } from '@solvapay/core'
 import type { PartialSolvaPayCopy } from '../i18n/types'
 import type { SolvaPayTransport, CreditDisplayBlock } from '../transport/types'
-
 
 export interface CustomerPurchaseData {
   customerRef?: string
@@ -516,22 +515,47 @@ export interface PlanPricingOption {
 }
 
 export interface Plan {
-  type?: 'recurring' | 'one-time' | 'usage-based'
+  type?: 'recurring' | 'one-time' | 'usage-based' | 'hybrid'
   reference: string
   name?: string
   description?: string
   price?: number
   currency?: string
+  /**
+   * Composable pricing — the plan's real price structure (charges,
+   * billing cycle, tiers, limits, trials). Every other pricing field on
+   * this type is either derived from these by the backend or a legacy
+   * scalar the API no longer sends. Read it with the `@solvapay/core`
+   * option helpers rather than by hand.
+   */
+  options?: PricingOptionLike[]
+  /**
+   * @deprecated Not sent by the API. Multi-currency plans carry one flat
+   * charge per currency in `options`; use `getPlanPricingOptions`, which
+   * still honours this field when an integrator's custom fetcher sets it.
+   */
   pricingOptions?: PlanPricingOption[]
   currencySymbol?: string
+  /** @deprecated Not sent by the API. Included allowance is the `limit` option's `cap`. */
   freeUnits?: number
+  /** @deprecated Not sent by the API. A setup fee is a `oneTime` flat charge in `options`. */
   setupFee?: number
+  /** @deprecated Not sent by the API. Use the `trial` option's `days`. */
   trialDays?: number
+  /** @deprecated Not sent by the API on a plan. Use the `billingCycle` option's `interval`. */
   billingCycle?: string
   billingModel?: 'pre-paid' | 'post-paid'
+  /**
+   * @deprecated Not sent by the API, and never denominated in credits.
+   * The metered rate is the `per: 'unit'` charge's `amountMinor`, in the
+   * charge currency; converting it to credits needs the FX peg, so use
+   * `creditsPerUnitFromBalance`.
+   */
   creditsPerUnit?: number
   measures?: string
+  /** @deprecated Not sent by the API. Use the `limit` option's `cap`. */
   limit?: number
+  /** @deprecated Not sent by the API. Use the presence of a `rollover` option. */
   rolloverUnusedUnits?: boolean
   limits?: Record<string, unknown>
   features?: Record<string, unknown> | string[]

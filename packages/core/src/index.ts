@@ -116,6 +116,22 @@ export {
 } from './credit-display'
 
 export {
+  billingCycle,
+  charges,
+  creditsPerUnitFromBalance,
+  headlineCharges,
+  includedUnits,
+  peggedCreditsPerUnit,
+  perUnitCharge,
+  trialDays,
+  type BalancePegLike,
+  type BillingCycleLike,
+  type ChargeLike,
+  type PricedLike,
+  type PricingOptionLike,
+} from './pricing-options'
+
+export {
   BusinessDetailsSchema,
   BUSINESS_COUNTRY_DISPLAY_NAMES,
   BUSINESS_COUNTRY_OPTIONS,
