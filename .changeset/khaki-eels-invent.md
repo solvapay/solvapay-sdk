@@ -40,8 +40,21 @@ count.
 counted in metered items, and it is labelled with the plan's meter. `0` is the backend's
 unlimited sentinel and is no longer shown as an allowance of zero.
 
+**Fixed — pay-as-you-go resolved as a free plan.** `resolvePlanShape` keyed off
+`planType`, `meterRef`, `meterId`, and `limit`, so every plan fell through to its unknown
+branch. A PAYG plan has no headline `price` and so came back `'free'`: no Top up action,
+a Cancel action for a plan with no renewal to cancel, and the free-usage activity strip
+instead of the balance. Metered subscriptions were also indistinguishable from unlimited
+ones. The shape now derives from `options[]` — a billing cycle separates a subscription
+from a one-off, a per-unit charge or included allowance marks it metered — and works for
+both a plan and the frozen snapshot on a purchase, which carry different fields.
+
 **Breaking — `SuccessMeta`.** `creditsIncluded` is replaced by `includedUnits` plus
 `meterName`. The old field claimed credits while carrying a per-cycle item allowance.
+
+**Breaking — `PlanLike`** (`@solvapay/react/mcp`) drops `planType`, `meterRef`,
+`meterId`, and `limit` for `options`, `requiresPayment`, and `isMetered`, matching what
+the backend sends.
 
 **Deprecated on `Plan`.** `pricingOptions`, `creditsPerUnit`, `billingCycle`, `freeUnits`,
 `setupFee`, `trialDays`, `limit`, and `rolloverUnusedUnits` are kept for consumers who
