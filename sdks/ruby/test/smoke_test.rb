@@ -100,6 +100,26 @@ class SmokeTest < Minitest::Test
     end
   end
 
+  def test_public_client_update_customer_sends_flat_body
+    recorded = []
+    customer_json = '{"customerRef":"cus_smoke","name":"Shadow Customer"}'
+    base = start_recording_stub(recorded, customer_json)
+    begin
+      client = SolvaPay::Client.new(api_key: "sk_test_smoke", api_base_url: base)
+      value = client.update_customer(
+        customer_ref: "cus_smoke",
+        params: { "name" => "Shadow Customer" },
+      )
+      assert_equal "cus_smoke", value["customerRef"]
+      refute_empty recorded
+      body = JSON.parse(recorded.last)
+      refute body.key?("params"), "update_customer must send a flat body, got #{body.inspect}"
+      assert_equal "Shadow Customer", body["name"]
+    ensure
+      stop_merchant_stub
+    end
+  end
+
   private
 
   def sign(body, secret, now)

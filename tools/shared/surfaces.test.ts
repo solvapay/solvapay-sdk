@@ -35,7 +35,8 @@ describe('surfaces registry', () => {
   it('should prefer prepare over build so Python is importable in place', () => {
     const python = nativePrepareTasks().find(task => task.id.startsWith('python.'))
     expect(python?.id).toBe('python.prepare')
-    expect(python?.args).toEqual(['develop', '--release'])
+    expect(python?.command).toBe('uv')
+    expect(python?.args).toEqual(['run', '--extra', 'dev', 'maturin', 'develop', '--release'])
   })
 
   it('should fall back to build when a native surface has no prepare', () => {

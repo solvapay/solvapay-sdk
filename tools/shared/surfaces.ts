@@ -55,7 +55,8 @@ const wasmRequires = [
   req('wasm-bindgen', 'cargo install wasm-bindgen-cli'),
   req('wasm-opt', 'npm install -g binaryen'),
 ]
-const pythonRequires = [req('maturin', 'pip install maturin')]
+const pythonRequires = [req('uv', 'https://docs.astral.sh/uv/getting-started/installation/')]
+const pythonMaturinArgs = ['run', '--extra', 'dev', 'maturin'] as const
 const rubyRequires = [req('bundle', 'gem install bundler')]
 const goGuestRequires = [req('cargo', 'rustup target add wasm32-wasip1')]
 
@@ -222,8 +223,8 @@ export const SURFACES: readonly Surface[] = [
       task(
         'python.build',
         'Python',
-        'maturin',
-        ['build', '--release', '--out', 'dist'],
+        'uv',
+        [...pythonMaturinArgs, 'build', '--release', '--out', 'dist'],
         pythonCwd,
         pythonRequires,
       ),
@@ -232,13 +233,22 @@ export const SURFACES: readonly Surface[] = [
       task(
         'python.prepare',
         'Python prepare',
-        'maturin',
-        ['develop', '--release'],
+        'uv',
+        [...pythonMaturinArgs, 'develop', '--release'],
         pythonCwd,
         pythonRequires,
       ),
     ],
-    test: [task('python.test', 'Python', 'pytest', ['-q'], pythonCwd, pythonRequires)],
+    test: [
+      task(
+        'python.test',
+        'Python',
+        'uv',
+        ['run', '--extra', 'dev', 'pytest', '-q'],
+        pythonCwd,
+        pythonRequires,
+      ),
+    ],
   },
   {
     id: 'ruby',

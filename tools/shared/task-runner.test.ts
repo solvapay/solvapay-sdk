@@ -1,8 +1,12 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { delimiter, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   formatSummary,
   runTasks,
   serializeSummary,
+  taskEnv,
   type RunSummary,
   type Task,
 } from './task-runner.js'
@@ -75,6 +79,53 @@ describe('runTasks', () => {
     )
 
     expect(summary.exitCode).toBe(2)
+  })
+
+  it('should treat a cwd node_modules/.bin shim as satisfying requires', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'task-runner-'))
+    mkdirSync(join(cwd, 'node_modules', '.bin'), { recursive: true })
+    writeFileSync(join(cwd, 'node_modules', '.bin', 'napi'), '')
+    try {
+      let spawnCount = 0
+      const summary = await runTasks(
+        [
+          task({
+            id: 'node-native.prepare',
+            command: 'napi',
+            args: ['build'],
+            cwd,
+            requires: [{ bin: 'napi', install: 'pnpm add -Dw @napi-rs/cli' }],
+          }),
+        ],
+        { command: 'test:live' },
+        {
+          spawn: async () => {
+            spawnCount += 1
+            return { exitCode: 0, stdout: '', stderr: '' }
+          },
+          now: sequentialNow(),
+          which: () => false,
+          write: () => undefined,
+        },
+      )
+      expect(spawnCount).toBe(1)
+      expect(summary.exitCode).toBe(0)
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('should prepend cwd node_modules/.bin onto PATH for spawned tasks', () => {
+    const cwd = '/tmp/solvapay-sdk-native'
+    const env = taskEnv({
+      id: 'wasm.prepare',
+      label: 'WASM',
+      command: 'wasm-opt',
+      args: ['-Oz'],
+      cwd,
+      env: { PATH: '/usr/bin' },
+    })
+    expect(env.PATH).toBe(`${join(cwd, 'node_modules', '.bin')}${delimiter}/usr/bin`)
   })
 
   it('should fail preflight for a missing requires.bin before any spawn', async () => {

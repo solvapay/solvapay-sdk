@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.24"]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "maturin>=1.8,<2"]
 typecheck = [
   "mypy==1.17.1",
   "pyright==1.1.411",

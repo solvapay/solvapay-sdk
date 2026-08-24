@@ -6,6 +6,8 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 
 export interface BinRequirement {
   bin: string
@@ -70,12 +72,43 @@ function defaultWhich(bin: string): boolean {
   return result.status === 0
 }
 
+function localNodeBin(cwd: string, bin: string): string {
+  const fileName = process.platform === 'win32' ? `${bin}.cmd` : bin
+  return path.join(cwd, 'node_modules', '.bin', fileName)
+}
+
+function isBinAvailable(
+  bin: string,
+  cwd: string | undefined,
+  which: (name: string) => boolean,
+): boolean {
+  if (which(bin)) {
+    return true
+  }
+  if (cwd === undefined) {
+    return false
+  }
+  return existsSync(localNodeBin(cwd, bin))
+}
+
+export function taskEnv(task: Task): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv =
+    task.env === undefined ? { ...process.env } : { ...process.env, ...task.env }
+  if (task.cwd === undefined) {
+    return env
+  }
+  const binDir = path.join(task.cwd, 'node_modules', '.bin')
+  const existing = env.PATH ?? ''
+  env.PATH = existing === '' ? binDir : `${binDir}${path.delimiter}${existing}`
+  return env
+}
+
 function defaultSpawn(opts: RunOptions, write?: (chunk: string) => void): RunnerDeps['spawn'] {
   return task =>
     new Promise((resolve, reject) => {
       const child = spawn(task.command, [...task.args], {
         cwd: task.cwd,
-        env: task.env === undefined ? process.env : { ...process.env, ...task.env },
+        env: taskEnv(task),
         stdio: ['ignore', 'pipe', 'pipe'],
       })
       let stdout = ''
@@ -123,7 +156,7 @@ export async function runTasks(
         continue
       }
       seen.add(req.bin)
-      if (!which(req.bin)) {
+      if (!isBinAvailable(req.bin, task.cwd, which)) {
         missing.push(req)
       }
     }

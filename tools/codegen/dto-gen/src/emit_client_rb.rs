@@ -127,6 +127,24 @@ fn emit_args_hash(output: &mut String, entry: &IrEntryPoint, indent: &str) {
     output.push_str(indent);
     output.push_str("args = {} #: Hash[String, untyped]\n");
     for param in &entry.params {
+        if param.name == "params" {
+            // Native JSON is `{ pathKey, ...body }`. Nesting under "params" is dropped
+            // by split_path_refs body parse (updateCustomer 400: no updatable fields).
+            let each = format!(
+                "{indent}{}.each do |key, value|\n{indent}  args[key.to_s] = value\n{indent}end",
+                param.names.rb
+            );
+            if param.required {
+                let _ = writeln!(output, "{each}");
+            } else {
+                let _ = writeln!(
+                    output,
+                    "{indent}unless {}.nil?\n{each}\n{indent}end",
+                    param.names.rb
+                );
+            }
+            continue;
+        }
         if param.required {
             let _ = writeln!(
                 output,
@@ -385,6 +403,43 @@ mod tests {
         assert!(
             !output.contains("args[\"params\"]"),
             "whole-body params must not nest under a params key: {output}"
+        );
+    }
+
+    #[test]
+    fn emits_path_plus_params_as_flat_native_json() {
+        let entry = IrEntryPoint {
+            id: "updateCustomer".into(),
+            section: IrEntrySection::Operation,
+            names: names("update_customer"),
+            optional_on_client: false,
+            params: vec![
+                param("customerRef", "customer_ref", true, "Customer reference."),
+                param("params", "params", true, "Fields to patch on the customer."),
+            ],
+            type_params: vec![],
+            request: None,
+            response: None,
+            availability: availability(),
+            sync_ts: IrSyncKind::Async,
+            ruby_target: IrRubyTarget {
+                owner: "SolvaPay::Client".into(),
+                name: "update_customer".into(),
+                receiver: IrRubyReceiver::ClientInstance,
+                takes_block: false,
+            },
+            defaults: IrDefaults::default(),
+            errors: vec![IrErrorKind::Api],
+            docs: IrDocModel::default(),
+        };
+        let mut output = String::new();
+        emit_method(&mut output, &entry, "update_customer", true);
+        assert!(output.contains("args[\"customerRef\"] = customer_ref"));
+        assert!(output.contains("params.each do |key, value|"));
+        assert!(output.contains("args[key.to_s] = value"));
+        assert!(
+            !output.contains("args[\"params\"]"),
+            "path+body params must flatten onto the native JSON object: {output}"
         );
     }
 

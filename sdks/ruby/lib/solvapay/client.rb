@@ -76,7 +76,9 @@ module SolvaPay
     def configure_mcp_plans(product_ref:, params:)
       args = {} #: Hash[String, untyped]
       args["productRef"] = product_ref
-      args["params"] = params
+      params.each do |key, value|
+        args[key.to_s] = value
+      end
       NativeDispatch.call_client(@native_client, "configure_mcp_plans", args)
     end
 
@@ -282,7 +284,9 @@ module SolvaPay
     def update_customer(customer_ref:, params:)
       args = {} #: Hash[String, untyped]
       args["customerRef"] = customer_ref
-      args["params"] = params
+      params.each do |key, value|
+        args[key.to_s] = value
+      end
       NativeDispatch.call_client(@native_client, "update_customer", args)
     end
 
@@ -293,7 +297,9 @@ module SolvaPay
       args = {} #: Hash[String, untyped]
       args["productRef"] = product_ref
       args["planRef"] = plan_ref
-      args["params"] = params
+      params.each do |key, value|
+        args[key.to_s] = value
+      end
       NativeDispatch.call_client(@native_client, "update_plan", args)
     end
 
@@ -303,7 +309,9 @@ module SolvaPay
     def update_product(product_ref:, params:)
       args = {} #: Hash[String, untyped]
       args["productRef"] = product_ref
-      args["params"] = params
+      params.each do |key, value|
+        args[key.to_s] = value
+      end
       NativeDispatch.call_client(@native_client, "update_product", args)
     end
   end

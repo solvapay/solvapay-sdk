@@ -113,7 +113,8 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
 
       // Step 2: Create deterministic product/plan fixtures for this test run
       console.log('Step 2: Creating isolated product and plan fixtures...')
-      const apiBaseUrl = SOLVAPAY_API_BASE_URL      const fixtureName = `SDK Integration Fixture ${Date.now()}`
+      const apiBaseUrl = SOLVAPAY_API_BASE_URL
+      const fixtureName = `SDK Integration Fixture ${Date.now()}`
 
       // Provider `defaultCurrency` is a fallback in plan authoring (rule R10
       // requires the plan's top-level currency to be one of its priced
@@ -214,7 +215,8 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     if (!SOLVAPAY_SECRET_KEY) return
 
     console.log()
-    const apiBaseUrl = SOLVAPAY_API_BASE_URL    if (creditProduct?.reference) {
+    const apiBaseUrl = SOLVAPAY_API_BASE_URL
+    if (creditProduct?.reference) {
       await deleteTestProduct(apiBaseUrl, SOLVAPAY_SECRET_KEY, creditProduct.reference)
     }
     if (defaultProduct?.reference) {
