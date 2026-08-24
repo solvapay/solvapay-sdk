@@ -12,10 +12,14 @@ import type { PurchaseInfo } from '../../types'
 
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
+  customerRef: 'cus_123',
   productName: 'Test Product',
   productRef: 'prd_123',
   status: 'active',
   startDate: '2024-01-01T00:00:00Z',
+  createdAt: '2024-01-01T00:00:00Z',
+  currency: 'USD',
+  isRecurring: false,
   amount: 1000,
   ...overrides,
 })
@@ -120,7 +124,8 @@ describe('isPaidPurchase', () => {
 describe('isPlanPurchase', () => {
   it('classifies a recurring purchase with a planSnapshot as a plan', () => {
     const purchase = createPurchase({
-      planSnapshot: { reference: 'pln_pro', planType: 'recurring' },
+      isRecurring: true,
+      planSnapshot: { reference: 'pln_pro', currency: 'USD', price: 2999, isMetered: false },
     })
     expect(isPlanPurchase(purchase)).toBe(true)
     expect(isTopupPurchase(purchase)).toBe(false)
@@ -128,14 +133,14 @@ describe('isPlanPurchase', () => {
 
   it('classifies a one-time purchase with a planSnapshot as a plan', () => {
     const purchase = createPurchase({
-      planSnapshot: { reference: 'pln_lifetime', planType: 'one-time' },
+      planSnapshot: { reference: 'pln_lifetime', currency: 'USD', price: 9900, isMetered: false },
     })
     expect(isPlanPurchase(purchase)).toBe(true)
   })
 
-  it('classifies a usage-based purchase with a planSnapshot as a plan', () => {
+  it('classifies a metered purchase with a planSnapshot as a plan', () => {
     const purchase = createPurchase({
-      planSnapshot: { reference: 'pln_usage', planType: 'usage-based' },
+      planSnapshot: { reference: 'pln_usage', currency: 'USD', price: 0, isMetered: true },
     })
     expect(isPlanPurchase(purchase)).toBe(true)
   })
@@ -148,7 +153,7 @@ describe('isPlanPurchase', () => {
 
   it('classifies a credit top-up as not a plan even if a snapshot slips through (regression guard)', () => {
     const purchase = createPurchase({
-      planSnapshot: { reference: 'pln_accident', planType: 'one-time' },
+      planSnapshot: { reference: 'pln_accident', currency: 'USD', price: 500, isMetered: false },
       metadata: { purpose: 'credit_topup' },
     })
     expect(isPlanPurchase(purchase)).toBe(false)
@@ -171,16 +176,17 @@ describe('getPrimaryPurchase', () => {
       amount: 0,
       planSnapshot: {
         reference: 'pln_payg',
-        planType: 'usage-based',
         name: 'Pay as you go',
-        creditsPerUnit: 4,
+        currency: 'USD',
+        price: 0,
+        isMetered: true,
       },
     })
 
     expect(getPrimaryPurchase([paygActivation])).toMatchObject({
       reference: 'pur_payg',
       amount: 0,
-      planSnapshot: expect.objectContaining({ planType: 'usage-based' }),
+      planSnapshot: expect.objectContaining({ isMetered: true }),
     })
     expect(isPaidPurchase(paygActivation)).toBe(false)
   })

@@ -103,7 +103,7 @@ describe('narrateManageAccount', () => {
             {
               planSnapshot: {
                 name: 'Unlimited',
-                planType: 'recurring',
+                isMetered: false,
                 price: 50000,
                 currency: 'USD',
                 billingCycle: 'monthly',
@@ -130,7 +130,9 @@ describe('narrateManageAccount', () => {
     expect(text).toContain('Balance: 100 credits')
   })
 
-  it('shows cost per call for usage-based plans from planSnapshot.creditsPerUnit', () => {
+  it('omits cost per call when the metered purchase has no matching plan to price it', () => {
+    // The snapshot records that the plan meters usage but not the rate, so
+    // with no plan to look up there is nothing honest to print.
     const { text } = narrateManageAccount(
       basePayload({
         customer: {
@@ -141,8 +143,7 @@ describe('narrateManageAccount', () => {
               {
                 planSnapshot: {
                   name: 'Pay as you go',
-                  planType: 'usage-based',
-                  creditsPerUnit: 1000,
+                  isMetered: true,
                 },
               },
             ],
@@ -158,11 +159,11 @@ describe('narrateManageAccount', () => {
         } as never,
       }),
     )
-    expect(text).toContain('Cost per call: 1,000 credits')
+    expect(text).not.toContain('Cost per call')
     expect(text).toContain('Balance: 5,000 credits')
   })
 
-  it('falls back to data.plans when planSnapshot omits creditsPerUnit', () => {
+  it('resolves cost per call from the plan the metered purchase points at', () => {
     const { text } = narrateManageAccount(
       basePayload({
         plans: [
@@ -182,7 +183,7 @@ describe('narrateManageAccount', () => {
                 planRef: 'pln_payg',
                 planSnapshot: {
                   name: 'Pay as you go',
-                  planType: 'usage-based',
+                  isMetered: true,
                 },
               },
             ],
@@ -311,7 +312,7 @@ describe('narratedToolResult', () => {
       ref: 'cus_1',
       purchase: {
         customerRef: 'cus_1',
-        purchases: [{ planSnapshot: { name: 'Pro', planType: 'recurring' } }],
+        purchases: [{ planSnapshot: { name: 'Pro', isMetered: false } }],
       } as never,
       paymentMethod: null,
       balance: null,

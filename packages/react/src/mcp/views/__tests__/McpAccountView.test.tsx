@@ -73,13 +73,15 @@ function renderAccount(
 
 const paidPurchase: PurchaseInfo = {
   reference: 'pur_abc',
+  customerRef: 'cus_abc',
   productName: 'Widget API',
   status: 'active',
   startDate: '2026-01-01T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
   amount: 1999,
   currency: 'USD',
   isRecurring: true,
-  planSnapshot: { planType: 'recurring', reference: 'pln_monthly' },
+  planSnapshot: { reference: 'pln_monthly', currency: 'USD', price: 1999, isMetered: false },
 }
 
 describe('McpAccountView', () => {

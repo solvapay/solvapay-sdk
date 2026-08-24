@@ -18,7 +18,7 @@
     "directory": "packages/react-supabase"
   },
   "peerDependencies": {
-    "@solvapay/react": "workspace:^",
+    "@solvapay/react": "^1.7.0 || ^2.0.0",
     "@supabase/supabase-js": "^2.0.0"
   },
   "scripts": {

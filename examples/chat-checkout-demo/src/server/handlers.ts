@@ -1,20 +1,30 @@
 import type { ExecutionContext } from '@cloudflare/workers-types'
+import type { BusinessDetailsInput } from '@solvapay/core'
 import {
   activatePlanCore,
+  attachBusinessDetailsCore,
   cancelPurchaseCore,
   checkLimitsCore,
   checkPurchaseCore,
+  createCheckoutSessionCore,
+  createCustomerSessionCore,
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
+  disableAutoRechargeCore,
+  getAutoRechargeCore,
   getCustomerBalanceCore,
   getMerchantCore,
   getPaymentMethodCore,
   getProductCore,
+  getUsageCore,
   isErrorResult,
   listPlansCore,
   processPaymentIntentCore,
   processTopupPaymentIntentCore,
   reactivatePurchaseCore,
+  saveAutoRechargeCore,
+  syncCustomerCore,
+  type AutoRechargeInput,
   type SolvaPay,
 } from '@solvapay/server'
 import { handleChat } from './chat'
@@ -24,6 +34,11 @@ import { handleChat } from './chat'
  * Vite dev plugin (Node runtime) and the Cloudflare Worker (V8 isolate)
  * call into this. Every dependency is passed explicitly so the helpers
  * never have to read `process.env` — that's what keeps this Workers-safe.
+ *
+ * The route table covers every endpoint in the React transport's
+ * `DEFAULT_ROUTES`, so any SolvaPay primitive the demo grows into is
+ * already served. Keep it that way — a missing entry surfaces to the
+ * customer as an opaque "Unknown SolvaPay route" inside the checkout.
  */
 export interface ApiDeps {
   solvaPay: SolvaPay
@@ -32,45 +47,61 @@ export interface ApiDeps {
 
 type Handler = (request: Request, deps: ApiDeps) => Promise<unknown>
 
-const HANDLERS: Record<string, { method: 'GET' | 'POST'; handler: Handler }> = {
+const METHODS = ['GET', 'POST', 'PUT', 'DELETE'] as const
+type Method = (typeof METHODS)[number]
+
+const isMethod = (value: string): value is Method => METHODS.some(method => method === value)
+
+const HANDLERS: Record<string, Partial<Record<Method, Handler>>> = {
   '/api/list-plans': {
-    method: 'GET',
-    handler: (req, deps) => listPlansCore(req, { solvaPay: deps.solvaPay }),
+    GET: (req, deps) => listPlansCore(req, { solvaPay: deps.solvaPay }),
   },
   '/api/limits': {
-    method: 'GET',
-    handler: (req, deps) => checkLimitsCore(req, { solvaPay: deps.solvaPay }),
+    GET: (req, deps) => checkLimitsCore(req, { solvaPay: deps.solvaPay }),
+  },
+  '/api/usage': {
+    GET: (req, deps) => getUsageCore(req, { solvaPay: deps.solvaPay }),
   },
   '/api/check-purchase': {
-    method: 'GET',
-    handler: (req, deps) => checkPurchaseCore(req, { solvaPay: deps.solvaPay }),
+    GET: (req, deps) => checkPurchaseCore(req, { solvaPay: deps.solvaPay }),
   },
   '/api/customer-balance': {
-    method: 'GET',
-    handler: (req, deps) => getCustomerBalanceCore(req, { solvaPay: deps.solvaPay }),
+    GET: (req, deps) => getCustomerBalanceCore(req, { solvaPay: deps.solvaPay }),
   },
   '/api/merchant': {
-    method: 'GET',
-    handler: (req, deps) => getMerchantCore(req, { solvaPay: deps.solvaPay }),
+    GET: (req, deps) => getMerchantCore(req, { solvaPay: deps.solvaPay }),
   },
   '/api/get-product': {
-    method: 'GET',
-    handler: (req, deps) => getProductCore(req, { solvaPay: deps.solvaPay }),
+    GET: (req, deps) => getProductCore(req, { solvaPay: deps.solvaPay }),
   },
   '/api/payment-method': {
-    method: 'GET',
-    handler: (req, deps) => getPaymentMethodCore(req, { solvaPay: deps.solvaPay }),
+    GET: (req, deps) => getPaymentMethodCore(req, { solvaPay: deps.solvaPay }),
+  },
+  '/api/auto-recharge': {
+    GET: (req, deps) => getAutoRechargeCore(req, { solvaPay: deps.solvaPay }),
+    PUT: async (req, deps) => {
+      const body = (await req.json()) as AutoRechargeInput
+      return saveAutoRechargeCore(req, body, { solvaPay: deps.solvaPay })
+    },
+    DELETE: (req, deps) => disableAutoRechargeCore(req, { solvaPay: deps.solvaPay }),
+  },
+  '/api/sync-customer': {
+    POST: async (req, deps) => {
+      // Unlike every other helper this one resolves to a bare customerRef
+      // string, so wrap it into the object shape the transport expects.
+      const result = await syncCustomerCore(req, { solvaPay: deps.solvaPay })
+      if (isErrorResult(result)) return result
+      return { customerRef: result, success: true }
+    },
   },
   '/api/create-payment-intent': {
-    method: 'POST',
-    handler: async (req, deps) => {
+    POST: async (req, deps) => {
       const body = (await req.json()) as { planRef: string; productRef: string }
       return createPaymentIntentCore(req, body, { solvaPay: deps.solvaPay })
     },
   },
   '/api/process-payment': {
-    method: 'POST',
-    handler: async (req, deps) => {
+    POST: async (req, deps) => {
       const body = (await req.json()) as {
         paymentIntentId: string
         productRef: string
@@ -80,8 +111,7 @@ const HANDLERS: Record<string, { method: 'GET' | 'POST'; handler: Handler }> = {
     },
   },
   '/api/create-topup-payment-intent': {
-    method: 'POST',
-    handler: async (req, deps) => {
+    POST: async (req, deps) => {
       const body = (await req.json()) as {
         amount: number
         currency: string
@@ -91,29 +121,47 @@ const HANDLERS: Record<string, { method: 'GET' | 'POST'; handler: Handler }> = {
     },
   },
   '/api/process-topup-payment': {
-    method: 'POST',
-    handler: async (req, deps) => {
+    POST: async (req, deps) => {
       const body = (await req.json()) as { paymentIntentId: string }
       return processTopupPaymentIntentCore(req, body, { solvaPay: deps.solvaPay })
     },
   },
+  '/api/attach-business-details': {
+    POST: async (req, deps) => {
+      const body = (await req.json()) as {
+        paymentIntentId: string
+        customerRef?: string
+      } & BusinessDetailsInput
+      return attachBusinessDetailsCore(req, body, { solvaPay: deps.solvaPay })
+    },
+  },
+  '/api/create-checkout-session': {
+    POST: async (req, deps) => {
+      const body = (await req.json()) as {
+        productRef: string
+        planRef?: string
+        returnUrl?: string
+      }
+      return createCheckoutSessionCore(req, body, { solvaPay: deps.solvaPay })
+    },
+  },
+  '/api/create-customer-session': {
+    POST: (req, deps) => createCustomerSessionCore(req, { solvaPay: deps.solvaPay }),
+  },
   '/api/activate-plan': {
-    method: 'POST',
-    handler: async (req, deps) => {
+    POST: async (req, deps) => {
       const body = (await req.json()) as { productRef: string; planRef: string }
       return activatePlanCore(req, body, { solvaPay: deps.solvaPay })
     },
   },
   '/api/cancel-renewal': {
-    method: 'POST',
-    handler: async (req, deps) => {
+    POST: async (req, deps) => {
       const body = (await req.json()) as { purchaseRef: string; reason?: string }
       return cancelPurchaseCore(req, body, { solvaPay: deps.solvaPay })
     },
   },
   '/api/reactivate-renewal': {
-    method: 'POST',
-    handler: async (req, deps) => {
+    POST: async (req, deps) => {
       const body = (await req.json()) as { purchaseRef: string }
       return reactivatePurchaseCore(req, body, { solvaPay: deps.solvaPay })
     },
@@ -147,12 +195,13 @@ export async function handleApiRequest(
   if (!route) {
     return jsonResponse(404, { error: `Unknown SolvaPay route: ${url.pathname}` })
   }
-  if (req.method !== route.method) {
-    return jsonResponse(405, { error: `Method not allowed: ${req.method}` })
+  const handler = isMethod(req.method) ? route[req.method] : undefined
+  if (!handler) {
+    return jsonResponse(405, { error: `Method not allowed: ${req.method} ${url.pathname}` })
   }
 
   try {
-    const result = await route.handler(normalised, deps)
+    const result = await handler(normalised, deps)
     if (isErrorResult(result)) {
       return jsonResponse(result.status, result)
     }
