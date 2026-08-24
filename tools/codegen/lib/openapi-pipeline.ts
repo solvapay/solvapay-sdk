@@ -187,4 +187,63 @@ export function deriveSource(spec: OpenApiSpec): OpenApiSpec {
   return canonicalize(filterSdkPaths(spec)) as OpenApiSpec
 }
 
+export interface NamedSpec {
+  name: string
+  spec: OpenApiSpec
+}
+
+function sameValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(canonicalize(left)) === JSON.stringify(canonicalize(right))
+}
+
+/**
+ * Union `paths` and `components.schemas` across per-service specs.
+ * Identical duplicates merge silently; any other collision throws.
+ */
+export function mergeSpecs(specs: readonly NamedSpec[]): OpenApiSpec {
+  if (specs.length === 0) {
+    throw new Error('mergeSpecs requires at least one spec')
+  }
+  const first = specs[0]
+  if (first === undefined) {
+    throw new Error('mergeSpecs requires at least one spec')
+  }
+  const version = first.spec.openapi
+  const paths: Record<string, unknown> = {}
+  const pathOwner = new Map<string, string>()
+  const schemas: Record<string, unknown> = {}
+  const schemaOwner = new Map<string, string>()
+
+  for (const item of specs) {
+    if (item.spec.openapi !== version) {
+      throw new Error(
+        `mismatched openapi versions: ${first.name}=${version ?? 'missing'} ${item.name}=${item.spec.openapi ?? 'missing'}`,
+      )
+    }
+    for (const [key, value] of Object.entries(item.spec.paths ?? {})) {
+      const existing = paths[key]
+      if (existing !== undefined && !sameValue(existing, value)) {
+        throw new Error(`path collision on ${key} between ${pathOwner.get(key)} and ${item.name}`)
+      }
+      paths[key] = value
+      pathOwner.set(key, item.name)
+    }
+    for (const [key, value] of Object.entries(item.spec.components?.schemas ?? {})) {
+      const existing = schemas[key]
+      if (existing !== undefined && !sameValue(existing, value)) {
+        throw new Error(
+          `schema collision on ${key} between ${schemaOwner.get(key)} and ${item.name}`,
+        )
+      }
+      schemas[key] = value
+      schemaOwner.set(key, item.name)
+    }
+  }
+
+  const merged = deepClone(first.spec)
+  merged.paths = paths
+  merged.components = { ...merged.components, schemas }
+  return merged
+}
+
 export { PATH_PREFIX, EXCLUDED_PATH_PREFIXES }

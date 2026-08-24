@@ -77,4 +77,30 @@ describe('snapshot-openapi CLI', () => {
     expect(checkFail.exitCode).not.toBe(0)
     expect(`${checkFail.stdout}${checkFail.stderr}`).toMatch(/diff|mismatch|differ/i)
   })
+
+  it('should derive a snapshot equal to the committed file from five identical stack specs', async () => {
+    const outDir = makeTempDir()
+    const source = JSON.parse(readFileSync(lookupPath('openapiSource'), 'utf8')) as OpenApiSpec
+    const committed = readFileSync(lookupPath('openapiSnapshot'), 'utf8')
+    const result = await runCli(['--from-stack', '--out', outDir], {
+      fetchJson: async () => source,
+    })
+    expect(result.exitCode).toBe(0)
+    expect(readFileSync(path.join(outDir, 'sdk-v1.snapshot.json'), 'utf8')).toBe(committed)
+  })
+
+  it('should error naming the port when one stack service is unreachable', async () => {
+    const outDir = makeTempDir()
+    const source = JSON.parse(readFileSync(lookupPath('openapiSource'), 'utf8')) as OpenApiSpec
+    const result = await runCli(['--from-stack', '--out', outDir], {
+      fetchJson: async url => {
+        if (url.includes(':3005')) {
+          throw new Error('connect ECONNREFUSED')
+        }
+        return source
+      },
+    })
+    expect(result.exitCode).not.toBe(0)
+    expect(result.stderr).toMatch(/3005/)
+  })
 })

@@ -4,6 +4,7 @@ import {
   canonicalize,
   deriveSnapshot,
   filterSdkPaths,
+  mergeSpecs,
   pruneUnreferencedSchemas,
   serializeSnapshot,
   type OpenApiSpec,
@@ -345,5 +346,112 @@ describe('canonicalize + deriveSnapshot + serializeSnapshot', () => {
     expect(twice).toEqual(once)
     expect(Object.keys(once.paths ?? {})).toEqual(['/v1/sdk/customers'])
     expect(once.components?.schemas?.Orphan).toBeUndefined()
+  })
+})
+
+describe('mergeSpecs', () => {
+  it('should union disjoint paths', () => {
+    const merged = mergeSpecs([
+      {
+        name: 'provider',
+        spec: baseSpec({
+          paths: { '/v1/sdk/products': { get: { summary: 'products' } } },
+        }),
+      },
+      {
+        name: 'payment',
+        spec: baseSpec({
+          paths: { '/v1/sdk/intents': { get: { summary: 'intents' } } },
+        }),
+      },
+    ])
+    expect(Object.keys(merged.paths ?? {}).sort()).toEqual(['/v1/sdk/intents', '/v1/sdk/products'])
+  })
+
+  it('should merge an identical duplicate schema silently', () => {
+    const schema = { type: 'object', properties: { id: { type: 'string' } } }
+    const merged = mergeSpecs([
+      {
+        name: 'provider',
+        spec: baseSpec({
+          paths: { '/v1/sdk/a': { get: {} } },
+          components: { schemas: { Shared: schema } },
+        }),
+      },
+      {
+        name: 'payment',
+        spec: baseSpec({
+          paths: { '/v1/sdk/b': { get: {} } },
+          components: { schemas: { Shared: schema } },
+        }),
+      },
+    ])
+    expect(merged.components?.schemas?.Shared).toEqual(schema)
+  })
+
+  it('should throw naming the key and both services on a colliding schema', () => {
+    expect(() =>
+      mergeSpecs([
+        {
+          name: 'provider',
+          spec: baseSpec({
+            paths: { '/v1/sdk/a': { get: {} } },
+            components: { schemas: { Shared: { type: 'string' } } },
+          }),
+        },
+        {
+          name: 'payment',
+          spec: baseSpec({
+            paths: { '/v1/sdk/b': { get: {} } },
+            components: { schemas: { Shared: { type: 'number' } } },
+          }),
+        },
+      ]),
+    ).toThrow(/Shared/)
+    expect(() =>
+      mergeSpecs([
+        {
+          name: 'provider',
+          spec: baseSpec({
+            paths: { '/v1/sdk/a': { get: {} } },
+            components: { schemas: { Shared: { type: 'string' } } },
+          }),
+        },
+        {
+          name: 'payment',
+          spec: baseSpec({
+            paths: { '/v1/sdk/b': { get: {} } },
+            components: { schemas: { Shared: { type: 'number' } } },
+          }),
+        },
+      ]),
+    ).toThrow(/provider/)
+    expect(() =>
+      mergeSpecs([
+        {
+          name: 'provider',
+          spec: baseSpec({
+            paths: { '/v1/sdk/a': { get: {} } },
+            components: { schemas: { Shared: { type: 'string' } } },
+          }),
+        },
+        {
+          name: 'payment',
+          spec: baseSpec({
+            paths: { '/v1/sdk/b': { get: {} } },
+            components: { schemas: { Shared: { type: 'number' } } },
+          }),
+        },
+      ]),
+    ).toThrow(/payment/)
+  })
+
+  it('should throw when openapi versions differ', () => {
+    expect(() =>
+      mergeSpecs([
+        { name: 'provider', spec: baseSpec({ openapi: '3.0.0' }) },
+        { name: 'payment', spec: baseSpec({ openapi: '3.1.0' }) },
+      ]),
+    ).toThrow(/mismatched openapi versions/)
   })
 })

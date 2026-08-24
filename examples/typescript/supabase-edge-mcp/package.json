@@ -6,9 +6,9 @@
   "scripts": {
     "build": "cross-env INPUT=mcp-app.html vite build && cp dist/mcp-app.html supabase/functions/mcp/mcp-app.html",
     "dev": "cross-env INPUT=mcp-app.html vite build --watch",
-    "validate": "pnpm -w build:packages && pnpm build && rm -f supabase/functions/mcp/deno.lock ../../../deno.lock && deno check --config=supabase/functions/mcp/deno.local.json supabase/functions/mcp/index.ts",
-    "validate:workspace": "pnpm -w build:packages && pnpm build && rm -f deno.lock supabase/functions/mcp/deno.lock ../../../deno.lock && deno check --config=deno.workspace.json supabase/functions/mcp/index.ts",
-    "predeploy": "rm -f supabase/functions/mcp/deno.lock && deno cache --config=supabase/functions/mcp/deno.json supabase/functions/mcp/index.ts",
+    "validate": "pnpm -w build:packages && pnpm build && rm -rf supabase/functions/mcp/node_modules && rm -f supabase/functions/mcp/deno.lock ../../../deno.lock && deno check --reload --config=supabase/functions/mcp/deno.local.json supabase/functions/mcp/index.ts",
+    "validate:workspace": "pnpm -w build:packages && pnpm build && rm -rf supabase/functions/mcp/node_modules && rm -f deno.lock supabase/functions/mcp/deno.lock ../../../deno.lock && deno check --config=deno.workspace.json supabase/functions/mcp/index.ts",
+    "predeploy": "rm -rf supabase/functions/mcp/node_modules && rm -f supabase/functions/mcp/deno.lock && deno cache --reload --config=supabase/functions/mcp/deno.json supabase/functions/mcp/index.ts",
     "deploy": "supabase functions deploy mcp",
     "serve:local": "supabase functions serve mcp --import-map=supabase/functions/mcp/deno.local.json"
   },

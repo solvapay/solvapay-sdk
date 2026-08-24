@@ -1,6 +1,6 @@
 /**
  * Full local codegen pipeline:
- *   1. Refresh OpenAPI snapshot when a live backend is reachable
+ *   1. Refresh OpenAPI snapshot when the local five-service stack is reachable
  *   2. Regenerate all surfaces (`pnpm gen`)
  *   3. Run `manifest:check` + `parity:check`
  *
@@ -9,7 +9,9 @@
 
 import { spawnSync } from 'node:child_process'
 import { REPO_ROOT } from '../shared/paths.js'
-const DEFAULT_URL = 'http://localhost:3001/v1/openapi.json'
+import { loadLocalStack } from './snapshot-openapi.js'
+
+const STACK_ORIGIN = 'http://localhost'
 
 function run(command: string, args: string[], opts?: { allowFail?: boolean }): number {
   const result = spawnSync(command, args, {
@@ -24,23 +26,27 @@ function run(command: string, args: string[], opts?: { allowFail?: boolean }): n
   return code
 }
 
-async function liveBackendAvailable(): Promise<boolean> {
-  try {
-    const response = await fetch(DEFAULT_URL, {
-      signal: AbortSignal.timeout(2000),
-    })
-    return response.ok
-  } catch {
-    return false
+async function liveStackAvailable(): Promise<boolean> {
+  for (const service of loadLocalStack()) {
+    const url = `${STACK_ORIGIN}:${service.port}/v1/openapi.json`
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(2000) })
+      if (!response.ok) {
+        return false
+      }
+    } catch {
+      return false
+    }
   }
+  return true
 }
 
 async function main(): Promise<void> {
-  if (await liveBackendAvailable()) {
-    console.log(`Live OpenAPI at ${DEFAULT_URL} — refreshing snapshot…`)
-    run('pnpm', ['snapshot:openapi', '--from-url', DEFAULT_URL])
+  if (await liveStackAvailable()) {
+    console.log(`Live OpenAPI stack at ${STACK_ORIGIN} — refreshing snapshot via --from-stack…`)
+    run('pnpm', ['snapshot:openapi', '--from-stack', STACK_ORIGIN])
   } else {
-    console.log(`No live backend at ${DEFAULT_URL} — using committed OpenAPI snapshot`)
+    console.log(`No live OpenAPI stack at ${STACK_ORIGIN} — using committed OpenAPI snapshot`)
   }
 
   run('pnpm', ['gen'])

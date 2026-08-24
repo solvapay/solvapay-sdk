@@ -6,10 +6,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { REPO_ROOT } from './paths.js'
-import {
-  parseRepoPathsManifest,
-  type RepoPathsManifest,
-} from './repo-paths-schema.js'
+import { parseRepoPathsManifest, type RepoPathsManifest } from './repo-paths-schema.js'
 
 /** Bootstrap path of the layout manifest (the one relative path loaders may hardcode). */
 export const REPO_PATHS_MANIFEST_REL = 'contract/manifest/repo-paths.yaml'
@@ -113,4 +110,28 @@ export function contractInputPath(
   manifest: RepoPathsManifest = loadRepoPathsManifest(),
 ): string {
   return abs(manifest.contractInputs[key].path)
+}
+
+export function sdkPath(
+  key: string,
+  manifest: RepoPathsManifest = loadRepoPathsManifest(),
+  root: string = REPO_ROOT,
+): string {
+  const rel = manifest.sdks[key as keyof RepoPathsManifest['sdks']]
+  if (rel === undefined) {
+    throw new Error(`unknown sdk surface: ${key}`)
+  }
+  return abs(rel, root)
+}
+
+export function dirPath(
+  key: string,
+  manifest: RepoPathsManifest = loadRepoPathsManifest(),
+  root: string = REPO_ROOT,
+): string {
+  const rel = manifest.dirs[key as keyof RepoPathsManifest['dirs']]
+  if (rel === undefined) {
+    throw new Error(`unknown repo dir: ${key}`)
+  }
+  return abs(rel, root)
 }

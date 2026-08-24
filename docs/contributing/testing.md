@@ -109,8 +109,35 @@ storage, or artificial delay.
 
 ## Local commands
 
+One command per job:
+
 ```bash
-pnpm test                       # full monorepo TS suite
+pnpm test                       # TypeScript package suite (turbo)
+pnpm test:contract              # tools/ contract tests (vitest)
+pnpm test:fixtures              # Rust fixture-runner
+pnpm test:all                   # core language surfaces (add --native for bindings)
+pnpm test:live                  # live-contract drivers against a running stack
+pnpm gates                      # local contract gates (also the pre-push hook)
+pnpm build:all                  # core builds (add --native for bindings)
+```
+
+### `test:live` against the local platform
+
+The SDK routes are served by five backend services. The provider-app proxy at
+`http://localhost:3010` fans `/v1/*` out to the owner. Identity on `:3001` is
+the wrong target.
+
+```bash
+export SOLVAPAY_SHADOW_BASE_URL=http://localhost:3010
+export SOLVAPAY_SHADOW_API_KEY=sk_sandbox_...   # Developers → Secret keys
+pnpm test:live
+```
+
+`test:live` also sets `USE_REAL_BACKEND=true` and `SOLVAPAY_SECRET_KEY` for the
+`@solvapay/server` integration suite. JSON reports land under
+`contract/shadow/output/`.
+
+```bash
 pnpm -F @solvapay/server test
 pnpm -F @solvapay/react test
 ```

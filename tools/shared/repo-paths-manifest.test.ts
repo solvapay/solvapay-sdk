@@ -3,9 +3,11 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from './paths.js'
 import {
+  dirPath,
   dtoGenArgs,
   generatedDriftPaths,
   loadRepoPathsManifest,
+  sdkPath,
 } from './repo-paths.js'
 
 /** Frozen copy of `GENERATED_PATHS` in tools/codegen/gen.ts before this tier. */
@@ -183,12 +185,28 @@ describe('repo-paths manifest', () => {
     expect(Object.keys(manifest.sdks)).toHaveLength(8)
   })
 
-  it('derives a generated-path set equal to today\'s GENERATED_PATHS', () => {
+  it("derives a generated-path set equal to today's GENERATED_PATHS", () => {
     expect(generatedDriftPaths()).toEqual([...LEGACY_GENERATED_PATHS])
   })
 
-  it('derives dto-gen argv equal to today\'s DTO_GEN_ARGS', () => {
+  it("derives dto-gen argv equal to today's DTO_GEN_ARGS", () => {
     expect(dtoGenArgs()).toEqual([...LEGACY_DTO_GEN_ARGS])
+  })
+
+  it('resolves sdkPath under the repo root', () => {
+    const resolved = sdkPath('python')
+    expect(resolved.startsWith(REPO_ROOT)).toBe(true)
+    expect(existsSync(resolved)).toBe(true)
+  })
+
+  it('throws for an unknown sdkPath key', () => {
+    expect(() => sdkPath('not-a-surface')).toThrow(/unknown sdk surface/)
+  })
+
+  it('resolves dirPath under the repo root', () => {
+    const resolved = dirPath('contract')
+    expect(resolved.startsWith(REPO_ROOT)).toBe(true)
+    expect(existsSync(resolved)).toBe(true)
   })
 
   it('every generated path and contract input exists on disk', () => {

@@ -846,6 +846,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "solvapay-dto",
+ "solvapay-export",
  "subtle",
 ]
 
@@ -865,6 +866,10 @@ dependencies = [
  "solvapay-rust-examples-env",
  "tokio",
 ]
+
+[[package]]
+name = "solvapay-export"
+version = "0.1.0"
 
 [[package]]
 name = "solvapay-rust-examples-env"

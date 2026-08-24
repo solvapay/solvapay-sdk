@@ -15,12 +15,12 @@ Backend OpenAPI ──► snapshot (committed) ──┐
 SDK contract manifest (reviewed) ──────────┘
 ```
 
-| Artifact                                | Role                                                    | Who edits                               |
-| --------------------------------------- | ------------------------------------------------------- | --------------------------------------- |
-| `contract/openapi/sdk-v1.snapshot.json` | Filtered `/v1/sdk/*` wire contract                      | Regenerated from live backend or source |
-| `contract/manifest/sdk-contract.yaml`   | Public API catalog, overlays, bindings, docs, defaults  | Humans (reviewed diff)                  |
-| Generated outputs                       | DTOs, facades, shims, parity suites, native marshalling | **Only** `pnpm gen`                     |
-| `contract/manifest/repo-paths.yaml`     | On-disk layout (dirs, SDK surfaces, dto-gen flags, drift set) | Humans, when a directory moves     |
+| Artifact                                | Role                                                          | Who edits                               |
+| --------------------------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| `contract/openapi/sdk-v1.snapshot.json` | Filtered `/v1/sdk/*` wire contract                            | Regenerated from live backend or source |
+| `contract/manifest/sdk-contract.yaml`   | Public API catalog, overlays, bindings, docs, defaults        | Humans (reviewed diff)                  |
+| Generated outputs                       | DTOs, facades, shims, parity suites, native marshalling       | **Only** `pnpm gen`                     |
+| `contract/manifest/repo-paths.yaml`     | On-disk layout (dirs, SDK surfaces, dto-gen flags, drift set) | Humans, when a directory moves          |
 
 **Principle:** automate mechanical toil; keep curated decisions (names, prose docs,
 behavioral fixtures, sync/async intent) human-owned in the manifest.
@@ -30,10 +30,10 @@ behavioral fixtures, sync/async intent) human-owned in the manifest.
 Cross-directory paths are not hop-counted from `import.meta.url` or
 `CARGO_MANIFEST_DIR`. They live in [`contract/manifest/repo-paths.yaml`](../../contract/manifest/repo-paths.yaml).
 
-| Consumer | Loader |
-| --- | --- |
-| `tools/` (including `pnpm gen`) | `tools/shared/paths.ts` + `tools/shared/repo-paths.ts` |
-| Rust tests and unpublished tools | `tools/shared/repo-paths` (`publish = false`) |
+| Consumer                         | Loader                                                 |
+| -------------------------------- | ------------------------------------------------------ |
+| `tools/` (including `pnpm gen`)  | `tools/shared/paths.ts` + `tools/shared/repo-paths.ts` |
+| Rust tests and unpublished tools | `tools/shared/repo-paths` (`publish = false`)          |
 
 Two guard tests fail the build if a new hardcoded layout path appears:
 `tools/repo/no-hardcoded-paths.test.ts` and
@@ -44,17 +44,26 @@ binding crate is a one-file YAML edit plus regenerating via `pnpm gen`.
 
 Run from the repo root (`solvapay-sdk/`).
 
-| Command                                                    | What it does                                                                |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `pnpm snapshot:openapi --from-url`                         | Fetch live OpenAPI → rewrite source + snapshot (needs `localhost:3001`)     |
-| `pnpm snapshot:openapi:check`                              | Offline: re-derive snapshot from source, fail on drift                      |
-| `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert `operations:` (+ optional `bindings:`) stub from OpenAPI DTOs        |
-| `pnpm gen:bindings` / `pnpm gen:bindings --fix`            | Suggest or insert missing `bindings:` for orphan operations                 |
-| `pnpm gen`                                                 | Regenerate **all** dto-gen outputs (canonical flag set in `tools/codegen/gen.ts`) |
-| `pnpm gen:check`                                           | Same as `gen`, then `git diff` against HEAD — CI drift gate                 |
-| `pnpm gen:all`                                             | Live snapshot (if backend up) → `gen` → `manifest:check` → `parity:check`   |
-| `pnpm manifest:check`                                      | Schema + semantics + OpenAPI cross-check + binding reconciliation           |
-| `pnpm parity:check`                                        | Cross-language signature parity                                             |
+| Command                                                    | What it does                                                                                                                            |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm snapshot:openapi --from-stack`                       | Fetch `/v1/openapi.json` from every SDK-route-owning local service, merge, rewrite source + snapshot                                    |
+| `pnpm snapshot:openapi --from-url`                         | Fetch a single OpenAPI URL → rewrite source + snapshot                                                                                  |
+| `pnpm snapshot:openapi:check`                              | Offline: re-derive snapshot from source, fail on drift                                                                                  |
+| `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert `operations:` (+ optional `bindings:`) stub from OpenAPI DTOs                                                                    |
+| `pnpm gen:bindings` / `pnpm gen:bindings --fix`            | Suggest or insert missing `bindings:` for orphan operations                                                                             |
+| `pnpm gen`                                                 | Regenerate **all** dto-gen outputs (canonical flag set in `tools/codegen/gen.ts`)                                                       |
+| `pnpm gen:check`                                           | Same as `gen`, then `git diff` against HEAD — CI drift gate                                                                             |
+| `pnpm gen:clean`                                           | Delete generated artifacts (refuses files without a generated marker)                                                                   |
+| `pnpm gen:verify`                                          | `gen:clean` → `gen` → fail if any cleaned path was not regenerated                                                                      |
+| `pnpm gen:all`                                             | Live snapshot (if local stack up) → `gen` → `manifest:check` → `parity:check`                                                           |
+| `pnpm manifest:check`                                      | Schema + semantics + OpenAPI cross-check + binding reconciliation                                                                       |
+| `pnpm parity:check`                                        | Cross-language signature parity                                                                                                         |
+| `pnpm gates`                                               | Local contract gate set (`gen:check`, `manifest:check`, `parity:check`, `test:fixtures`, plus snapshot/docs/delegation/required-checks) |
+| `pnpm build:all` / `pnpm build:native`                     | Build core surfaces, or native bindings only (`--native` on `build:all` for both)                                                       |
+| `pnpm test:all` / `pnpm test:native`                       | Test core surfaces, or native bindings only                                                                                             |
+| `pnpm test:live`                                           | Live-contract drivers + `@solvapay/server` integration against a running stack                                                          |
+| `pnpm test:fixtures`                                       | Rust fixture-runner over `contract/fixtures`                                                                                            |
+| `pnpm docs:coverage`                                       | dto-gen `doc_coverage` lib test                                                                                                         |
 
 There is **no** need to copy a 30-flag `cargo run -p dto-gen -- …` line. CI and
 humans both call `pnpm gen` / `pnpm gen:check`.
@@ -63,15 +72,19 @@ humans both call `pnpm gen` / `pnpm gen:check`.
 
 - **Node / pnpm** — for the TS scripts above
 - **Rust toolchain** — `pnpm gen` runs `cargo run -p dto-gen` from the repo root
-- **Live backend** (optional) — only for refreshing the OpenAPI snapshot:
-  `http://localhost:3001/v1/openapi.json`
+- **Live backend** (optional) — only for refreshing the OpenAPI snapshot. Each
+  platform service serves its own spec; `pnpm snapshot:openapi --from-stack`
+  fetches provider `:3002`, payment `:3003`, billing `:3004`, commerce `:3005`,
+  and webhook `:3008`, then merges `/v1/sdk/*` paths. The provider-app proxy for
+  runtime traffic is `http://localhost:3010` (identity on `:3001` owns none of
+  the SDK routes).
 
 Activate git hooks after clone/install (`pnpm install` runs `prepare` → husky):
 
 | Hook         | Behavior                                                                                           |
 | ------------ | -------------------------------------------------------------------------------------------------- |
 | `pre-commit` | If `sdk-contract.yaml` or the OpenAPI snapshot is staged → `pnpm gen` and re-stage generated paths |
-| `pre-push`   | `pnpm gen:check` + `manifest:check` + `parity:check`                                               |
+| `pre-push`   | `pnpm gates`                                                                                       |
 
 CI’s `pnpm gen:check` remains the authoritative drift gate; hooks are local DX.
 
@@ -203,20 +216,20 @@ pnpm gen
 Canonical paths are listed in `tools/codegen/gen.ts` (`DTO_GEN_ARGS` + `GENERATED_PATHS`).
 High-level groups:
 
-| Group                | Examples                                                                        |
-| -------------------- | ------------------------------------------------------------------------------- |
-| Rust DTOs            | `core/solvapay-dto/src/{schemas,routes,overlays,error_templates,lib}.rs` |
-| TS overlays + client | `sdks/typescript/server/src/types/{overlays,client}.generated.d.ts`                    |
+| Group                | Examples                                                                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rust DTOs            | `core/solvapay-dto/src/{schemas,routes,overlays,error_templates,lib}.rs`                                                                                      |
+| TS overlays + client | `sdks/typescript/server/src/types/{overlays,client}.generated.d.ts`                                                                                           |
 | TS marshalling       | `sdks/typescript/server/src/{native,wasm}.ts`, `sdks/typescript/core/src/native-{dispatch,core,helpers}.ts`, `sdks/typescript/server/src/native-decisions.ts` |
-| TS parity            | `sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts`          |
-| Binding dump         | `contract/manifest/binding-symbols.snapshot.json`                               |
-| Boundary-type dump   | `contract/manifest/boundary-types.snapshot.json`                                |
-| Node / Wasm shims    | `sdks/{node-native,wasm}/src/{args,decisions,payload_builders,*_client}.rs`   |
-| Python               | PyO3 shims, `_native.py`, `__init__.pyi`, parity test, fixture-conformance harness (`--py-conformance-out`) |
-| Ruby                 | Magnus shims, `_native.rb`, `client.rb`, RBS, parity test, fixture-conformance harness (`--rb-conformance-out`) |
-| Rust facade          | `client_generated.rs`, `blocking_generated.rs`, parity test                     |
-| Go                   | WASI guest shims (client + decisions + payload builders), `client_generated.go`, parity test, fixture-conformance harness (`--go-conformance-out`) |
-| C ABI                | Generated 36-op dispatch (`--c-bindings-out`), fixture-conformance harness (`--c-conformance-out`), signature parity (`--c-parity-out`) |
+| TS parity            | `sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts`                                                                                 |
+| Binding dump         | `contract/manifest/binding-symbols.snapshot.json`                                                                                                             |
+| Boundary-type dump   | `contract/manifest/boundary-types.snapshot.json`                                                                                                              |
+| Node / Wasm shims    | `sdks/{node-native,wasm}/src/{args,decisions,payload_builders,*_client}.rs`                                                                                   |
+| Python               | PyO3 shims, `_native.py`, `__init__.pyi`, parity test, fixture-conformance harness (`--py-conformance-out`)                                                   |
+| Ruby                 | Magnus shims, `_native.rb`, `client.rb`, RBS, parity test, fixture-conformance harness (`--rb-conformance-out`)                                               |
+| Rust facade          | `client_generated.rs`, `blocking_generated.rs`, parity test                                                                                                   |
+| Go                   | WASI guest shims (client + decisions + payload builders), `client_generated.go`, parity test, fixture-conformance harness (`--go-conformance-out`)            |
+| C ABI                | Generated 36-op dispatch (`--c-bindings-out`), fixture-conformance harness (`--c-conformance-out`), signature parity (`--c-parity-out`)                       |
 
 Hand-editing any of these fails CI (`@generated` header gate + `pnpm gen:check`).
 
@@ -258,23 +271,23 @@ godoc / rustdoc.
 
 ## Script map
 
-| Path                              | Responsibility                                        |
-| --------------------------------- | ----------------------------------------------------- |
-| `tools/codegen/gen.ts`                  | **Only** place that lists dto-gen flags + drift paths |
-| `tools/codegen/gen-all.ts`              | Full local pipeline                                   |
-| `tools/codegen/gen-scaffold.ts`         | Manifest operation (+ bindings) scaffolder            |
-| `tools/codegen/gen-bindings.ts`         | Orphan binding suggest/fix                            |
-| `tools/codegen/lib/manifest-edit.ts`    | Surgical YAML block edits                             |
-| `tools/shared/manifest-schema.ts`       | Zod schema, `deriveNames`, reconciliation             |
-| `tools/codegen/lib/openapi-pipeline.ts` | Filter/prune/canonicalize OpenAPI                     |
-| `tools/codegen/snapshot-openapi.ts`     | Snapshot write / check                                |
-| `tools/codegen/manifest.ts`             | `manifest:validate` / `manifest:check` CLI            |
-| `tools/codegen/dto-gen/`             | IR lower + emitters (`Toolchain::C`, fixture-runner registry) |
-| `tools/codegen/dto-gen/assets/c-emit.snapshot.json` | C `dispatch.rs` chrome (`extract-c-emit.mjs`) |
-| `tools/codegen/dto-gen/assets/fixture-runner-emit.snapshot.json` | Registry routing / extras / skip (`extract-fixture-runner-emit.mjs`) |
+| Path                                                             | Responsibility                                                          |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `tools/codegen/gen.ts`                                           | **Only** place that lists dto-gen flags + drift paths                   |
+| `tools/codegen/gen-all.ts`                                       | Full local pipeline                                                     |
+| `tools/codegen/gen-scaffold.ts`                                  | Manifest operation (+ bindings) scaffolder                              |
+| `tools/codegen/gen-bindings.ts`                                  | Orphan binding suggest/fix                                              |
+| `tools/codegen/lib/manifest-edit.ts`                             | Surgical YAML block edits                                               |
+| `tools/shared/manifest-schema.ts`                                | Zod schema, `deriveNames`, reconciliation                               |
+| `tools/codegen/lib/openapi-pipeline.ts`                          | Filter/prune/canonicalize OpenAPI                                       |
+| `tools/codegen/snapshot-openapi.ts`                              | Snapshot write / check                                                  |
+| `tools/codegen/manifest.ts`                                      | `manifest:validate` / `manifest:check` CLI                              |
+| `tools/codegen/dto-gen/`                                         | IR lower + emitters (`Toolchain::C`, fixture-runner registry)           |
+| `tools/codegen/dto-gen/assets/c-emit.snapshot.json`              | C `dispatch.rs` chrome (`extract-c-emit.mjs`)                           |
+| `tools/codegen/dto-gen/assets/fixture-runner-emit.snapshot.json` | Registry routing / extras / skip (`extract-fixture-runner-emit.mjs`)    |
 | `tools/codegen/dto-gen/assets/conformance-py-emit.snapshot.json` | Python `tests/contract/*.py` chrome (`extract-conformance-py-emit.mjs`) |
-| `tools/codegen/dto-gen/assets/conformance-rb-emit.snapshot.json` | Ruby `test/contract/*.rb` chrome (`extract-conformance-rb-emit.mjs`) |
-| `tools/codegen/dto-gen/assets/conformance-go-emit.snapshot.json` | Go `internal/contract/*.go` chrome (`extract-conformance-go-emit.mjs`) |
+| `tools/codegen/dto-gen/assets/conformance-rb-emit.snapshot.json` | Ruby `test/contract/*.rb` chrome (`extract-conformance-rb-emit.mjs`)    |
+| `tools/codegen/dto-gen/assets/conformance-go-emit.snapshot.json` | Go `internal/contract/*.go` chrome (`extract-conformance-go-emit.mjs`)  |
 
 ---
 

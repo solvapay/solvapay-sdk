@@ -291,8 +291,18 @@ lookups:
   requiredChecks: contract/required-checks.yaml
   delegationAllowlist: contract/delegation-allowlist.json
   openapiDir: contract/openapi
+  openapiLocalStack: contract/openapi/local-stack.yaml
+  openapiSnapshot: contract/openapi/sdk-v1.snapshot.json
+  openapiSource: contract/openapi/sdk-v1.source.json
   shadowOutput: contract/shadow/output
   webhookFixtures: contract/fixtures/webhook-verification
   manifestSchemaTs: tools/shared/manifest-schema.ts
   syntheticOpenapi: tools/codegen/fixtures/synthetic-openapi.json
   scriptsTmp: tools/.tmp
+  pythonLiveContract: sdks/python/scripts/live_contract.py
+  rubyLiveContract: sdks/ruby/scripts/live_contract.rb
+  goLiveContract: sdks/go/cmd/live-contract
+  goWasmBuild: sdks/go/scripts/build-wasm.sh
+  capiCtestRun: sdks/capi/ctest/run.sh
+  capiCtestContract: sdks/capi/ctest/contract.sh
+  packageJson: package.json

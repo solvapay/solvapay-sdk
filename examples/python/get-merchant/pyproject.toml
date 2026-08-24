@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "solvapay-example-get-merchant"
 version = "0.0.0"
@@ -9,6 +13,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+
+[tool.setuptools]
+# Only the reusable logic ships. `main.py` is a run-from-this-directory
+# entrypoint and `test_get_merchant.py` is the test; installing either as a
+# top-level `main` / `test_get_merchant` module would pollute site-packages.
+py-modules = ["get_merchant"]
 
 [tool.pytest.ini_options]
 testpaths = ["."]

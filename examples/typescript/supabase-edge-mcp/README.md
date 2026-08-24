@@ -157,8 +157,12 @@ pnpm build && pnpm deploy
 ## Local development loop
 
 ```bash
-# Type-check the function against the LOCAL workspace via the
-# dev-only import map. This is exactly what CI runs.
+# Type-check the function against the LOCAL workspace source. This is
+# the blocking gate CI runs on every PR.
+pnpm validate:workspace
+
+# Type-check against the published @preview tarballs instead. Runs in CI
+# only after publish-preview.yml has published and verified the tag.
 pnpm validate
 
 # Optional — boot the function under the real Supabase CLI runtime
@@ -174,17 +178,20 @@ curl -s http://localhost:54321/functions/v1/mcp/.well-known/oauth-authorization-
 
 The function source uses bare specifiers only (`import … from '@solvapay/mcp'`, never `'npm:@solvapay/mcp'`), so the import map alone decides where `@solvapay/*` resolves. Three configs cover three genuinely different jobs:
 
-| File                                     | Job                                            | `@solvapay/*` resolves to                                                        |
-| ---------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| File                                     | Job                                            | `@solvapay/*` resolves to                                                           |
+| ---------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `supabase/functions/mcp/deno.json`       | production `supabase functions deploy`         | `npm:@solvapay/mcp@preview` — the deployed function must consume published packages |
-| `supabase/functions/mcp/deno.local.json` | `pnpm serve:local` + the post-publish CI check  | same `@preview` pins                                                             |
-| `deno.workspace.json`                    | `pnpm validate:workspace` — the blocking gate  | workspace source under `sdks/typescript/*`                                              |
+| `supabase/functions/mcp/deno.local.json` | `pnpm serve:local` + the post-publish CI check | same `@preview` pins                                                                |
+| `deno.workspace.json`                    | `pnpm validate:workspace` — the blocking gate  | workspace source under `sdks/typescript/*`                                          |
 
 `deno.local.json` stays on `@preview` for `serve:local` because the Supabase CLI runs the function inside a Docker edge runtime that mounts only `supabase/functions` — symlinks escaping to `../../../../sdks/typescript/*` are unreachable from inside the container.
+
+The two scripts that read `@preview` (`validate` and `predeploy`) pass `--reload`. `@preview` is a mutable dist-tag, but Deno caches npm registry metadata globally and will keep resolving the tag to whichever snapshot it saw first — deleting the local `node_modules` and lockfile is not enough to shake it loose. Without `--reload` the check and the deploy lockfile both silently pin to a stale preview.
 
 `deno.workspace.json` gets workspace source by dropping the `@preview` suffix while keeping the `npm:` prefix, under `"nodeModulesDir": "manual"`. Deno then resolves those specifiers through the pnpm symlinks in `node_modules/@solvapay/*` and, because it goes through node-module resolution, honours each package's `exports` map — pairing `dist/*.js` with its sibling `dist/*.d.ts`. Three things about it are load-bearing:
 
 - **It lives at the example root, not beside the other two.** `nodeModulesDir: "manual"` makes Deno look for `node_modules` next to the config file; only at the example root does it find the pnpm-populated tree.
+- **`supabase/functions/mcp/node_modules` must not exist when it runs.** Node-module resolution walks up from the _importing file_, so a `node_modules` beside `index.ts` wins over the one at the example root. The two `@preview` configs run under `nodeModulesDir: "auto"` and create exactly that directory, which is why all three scripts `rm -rf` it before invoking Deno. Left in place it silently type-checks the function against whatever the other config last installed: as workspace source it yields dual-copy `TS2345`s naming both trees, and as a months-old `@preview` snapshot it rejects SDK options that the branch legitimately added.
 - **`"unstable": ["sloppy-imports"]`.** Resolving through the symlink lands on the real `sdks/typescript/*/dist` path, which Deno no longer treats as being inside `node_modules` — so it stops mapping the `./chunk-XYZ.js` specifiers that tsup writes into its `.d.ts` files onto their `.d.ts` siblings. Extension probing restores that. Without it the gate reports a cascade of spurious `TS2307`/`TS7031` errors instead of real ones.
 - **Do not map to `dist/index.js` file paths instead.** That bypasses `exports` and orphans the `.d.ts`, which is the variant that produced the implicit-any cascade the first time this was attempted.
 
@@ -224,13 +231,13 @@ supabase secrets set DEMO_TOOLS=false
 
 This example is type-checked under a real Deno binary in three places — not a test, an actual `deno check`. **Any change that breaks the canonical Supabase Edge consumer blocks the merge.**
 
-| Workflow                                                                     | Step                    | Reads                     |
-| ---------------------------------------------------------------------------- | ----------------------- | ------------------------- |
-| [`ci.yml`](../../.github/workflows/ci.yml) (every PR)                        | `validate:workspace`    | workspace source          |
-| [`publish-preview.yml`](../../.github/workflows/publish-preview.yml) (`dev`)  | `validate:workspace` pre-publish, then `validate` after the npm verification | source, then the published `@preview` tarballs |
-| [`publish.yml`](../../.github/workflows/publish.yml) (`main`)                 | `validate:workspace`    | workspace source          |
+| Workflow                                                                     | Step                                                                         | Reads                                          |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------- |
+| [`ci.yml`](../../.github/workflows/ci.yml) (every PR)                        | `validate:workspace`                                                         | workspace source                               |
+| [`publish-preview.yml`](../../.github/workflows/publish-preview.yml) (`dev`) | `validate:workspace` pre-publish, then `validate` after the npm verification | source, then the published `@preview` tarballs |
+| [`publish.yml`](../../.github/workflows/publish.yml) (`main`)                | `validate:workspace`                                                         | workspace source                               |
 
-The workspace gate is the blocking one everywhere, because it checks the code the run is actually shipping. The `@preview` gate runs only *after* `publish-preview.yml` has published and verified the tag: it is the only check that exercises the assembled npm tarballs — their published `exports` maps and peer ranges — rather than workspace `dist/`, but it must not gate the publish. When it did, a broken publish froze the very tag the gate read, so the run that would have fixed it could never get past its own gate.
+The workspace gate is the blocking one everywhere, because it checks the code the run is actually shipping. The `@preview` gate runs only _after_ `publish-preview.yml` has published and verified the tag: it is the only check that exercises the assembled npm tarballs — their published `exports` maps and peer ranges — rather than workspace `dist/`, but it must not gate the publish. When it did, a broken publish froze the very tag the gate read, so the run that would have fixed it could never get past its own gate.
 
 `publish.yml` has no dist-tag-pinned gate at all: it ships `@latest`, so `@preview` would validate an artifact the run did not produce and `@latest` would validate the previous release.
 
