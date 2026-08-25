@@ -123,6 +123,7 @@ fn generated_ids_match_enumerated_expectation() {
         "rustDto",
         "tsOverlays",
         "tsClient",
+        "tsGenerated",
         "tsParity",
         "bindingSymbols",
         "boundaryTypes",
