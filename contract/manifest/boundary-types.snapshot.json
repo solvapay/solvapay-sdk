@@ -2048,7 +2048,7 @@
       "return": {
         "optional": true,
         "ty": {
-          "kind": "f64"
+          "kind": "i64"
         }
       },
       "rustdoc": "Credits per metered call for `priced`, priced against a customer's balance peg."
@@ -2104,7 +2104,7 @@
       "return": {
         "optional": true,
         "ty": {
-          "kind": "f64"
+          "kind": "i64"
         }
       },
       "rustdoc": "Included units for a meter, from its limit option.\n\nThe backend uses `cap: 0` to mean unlimited; this preserves `0`."
@@ -2142,7 +2142,7 @@
       "return": {
         "optional": false,
         "ty": {
-          "kind": "f64"
+          "kind": "i64"
         }
       },
       "rustdoc": "Credits consumed per metered unit for `charge_minor` in the charge currency."
@@ -2195,7 +2195,7 @@
       "return": {
         "optional": true,
         "ty": {
-          "kind": "f64"
+          "kind": "i64"
         }
       },
       "rustdoc": "Free trial length in days, or `None` when the plan has no trial."

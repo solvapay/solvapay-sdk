@@ -276,7 +276,7 @@ fn invoke_pegged_credits_per_unit(input: &FixtureInput) -> Result<Value, Binding
     to_value(&pegged_credits_per_unit(
         charge_minor,
         credits_per_minor_unit,
-        usd_to_charge_rate.as_ref(),
+        usd_to_charge_rate,
     ))
 }
 

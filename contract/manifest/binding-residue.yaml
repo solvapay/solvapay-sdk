@@ -858,6 +858,10 @@ peggedCreditsPerUnit:
   tsWrapper:
     paramStyle:
       usdToChargeRate: optionalNull
+  callArgs:
+    - charge_minor
+    - credits_per_minor_unit
+    - usd_to_charge_rate
 creditsPerUnitFromBalance:
   tsWrapper:
     paramTypes:

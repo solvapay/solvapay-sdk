@@ -245,7 +245,9 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
       className={rootClass}
       data-solvapay-current-plan-card=""
       data-plan-type={planType}
-      data-solvapay-current-plan-ref={activePurchase.planRef ?? undefined}
+      data-solvapay-current-plan-ref={
+        activePurchase.planRef ?? activePurchase.planSnapshot?.reference ?? undefined
+      }
     >
       {!hideHeading && (
         <h2

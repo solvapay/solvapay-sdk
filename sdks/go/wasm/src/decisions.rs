@@ -1128,7 +1128,7 @@ pub unsafe extern "C" fn sv_pegged_credits_per_unit_binding(
         to_value(&pegged_credits_per_unit(
             charge_minor,
             credits_per_minor_unit,
-            usd_to_charge_rate.as_ref(),
+            usd_to_charge_rate,
         ))
     }))
 }

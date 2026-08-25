@@ -172,7 +172,8 @@ pub fn billing_cycle(priced: Option<&Value>) -> Option<BillingCycle> {
     section = "plans",
     emit_order = 47
 )]
-pub fn trial_days(priced: Option<&Value>) -> Option<f64> {
+#[allow(clippy::cast_possible_truncation)]
+pub fn trial_days(priced: Option<&Value>) -> Option<i64> {
     for option in options_of(priced) {
         if option.get("kind").and_then(Value::as_str) != Some("trial") {
             continue;
@@ -182,7 +183,7 @@ pub fn trial_days(priced: Option<&Value>) -> Option<f64> {
             .and_then(Value::as_f64)
             .filter(|n| *n > 0.0)
         {
-            return Some(days);
+            return Some(days as i64);
         }
     }
     None
@@ -197,7 +198,8 @@ pub fn trial_days(priced: Option<&Value>) -> Option<f64> {
     section = "plans",
     emit_order = 48
 )]
-pub fn included_units(priced: Option<&Value>, meter: Option<&str>) -> Option<f64> {
+#[allow(clippy::cast_possible_truncation)]
+pub fn included_units(priced: Option<&Value>, meter: Option<&str>) -> Option<i64> {
     for option in options_of(priced) {
         if option.get("kind").and_then(Value::as_str) != Some("limit") {
             continue;
@@ -208,7 +210,7 @@ pub fn included_units(priced: Option<&Value>, meter: Option<&str>) -> Option<f64
             }
         }
         if let Some(cap) = option.get("cap").and_then(Value::as_f64) {
-            return Some(cap);
+            return Some(cap as i64);
         }
     }
     None
@@ -225,12 +227,14 @@ pub fn pegged_credits_per_unit(
     charge_minor: f64,
     credits_per_minor_unit: f64,
     usd_to_charge_rate: Option<f64>,
-) -> f64 {
+) -> i64 {
     if !(charge_minor > 0.0) || !(credits_per_minor_unit > 0.0) {
-        return 0.0;
+        return 0;
     }
     let rate = usd_to_charge_rate.filter(|n| *n > 0.0).unwrap_or(1.0);
-    ((charge_minor / rate) * credits_per_minor_unit).round()
+    #[allow(clippy::cast_possible_truncation)]
+    let credits = ((charge_minor / rate) * credits_per_minor_unit).round() as i64;
+    credits
 }
 
 /// Credits per metered call for `priced`, priced against a customer's balance peg.
@@ -244,7 +248,7 @@ pub fn credits_per_unit_from_balance(
     priced: Option<&Value>,
     balance: Option<&Value>,
     meter: Option<&str>,
-) -> Option<f64> {
+) -> Option<i64> {
     let charge = per_unit_charge(priced, meter)?;
     if !(charge.amount_minor > 0.0) {
         return None;
@@ -262,7 +266,7 @@ pub fn credits_per_unit_from_balance(
         .and_then(|b| b.get("displayExchangeRate"))
         .and_then(Value::as_f64);
     let credits = pegged_credits_per_unit(charge.amount_minor, credits_per_minor_unit, rate);
-    (credits > 0.0).then_some(credits)
+    (credits > 0).then_some(credits)
 }
 
 #[cfg(test)]
@@ -425,7 +429,7 @@ mod tests {
 
     #[test]
     fn included_units_reads_cap() {
-        assert_eq!(included_units(Some(&free_plan()), None), Some(3.0));
+        assert_eq!(included_units(Some(&free_plan()), None), Some(3));
     }
 
     #[test]
@@ -433,7 +437,7 @@ mod tests {
         let priced = json!({
             "options": [{ "kind": "limit", "cap": 0, "scope": "billing_period", "meter": "requests" }]
         });
-        assert_eq!(included_units(Some(&priced), None), Some(0.0));
+        assert_eq!(included_units(Some(&priced), None), Some(0));
     }
 
     #[test]
@@ -444,7 +448,7 @@ mod tests {
     #[test]
     fn trial_days_reads_option() {
         let priced = json!({ "options": [{ "kind": "trial", "days": 14, "onEnd": "convert" }] });
-        assert_eq!(trial_days(Some(&priced)), Some(14.0));
+        assert_eq!(trial_days(Some(&priced)), Some(14));
     }
 
     #[test]
@@ -454,16 +458,16 @@ mod tests {
 
     #[test]
     fn pegged_parity_and_fx() {
-        assert_eq!(pegged_credits_per_unit(2.0, 100.0, Some(1.0)), 200.0);
-        assert_eq!(pegged_credits_per_unit(100.0, 100.0, Some(9.46)), 1057.0);
-        assert_eq!(pegged_credits_per_unit(0.0, 100.0, Some(1.0)), 0.0);
+        assert_eq!(pegged_credits_per_unit(2.0, 100.0, Some(1.0)), 200);
+        assert_eq!(pegged_credits_per_unit(100.0, 100.0, Some(9.46)), 1057);
+        assert_eq!(pegged_credits_per_unit(0.0, 100.0, Some(1.0)), 0);
     }
 
     #[test]
     fn credits_from_matching_balance() {
         assert_eq!(
             credits_per_unit_from_balance(Some(&payg_plan()), Some(&usd_balance()), None),
-            Some(200.0)
+            Some(200)
         );
     }
 
@@ -479,7 +483,7 @@ mod tests {
         });
         assert_eq!(
             credits_per_unit_from_balance(Some(&plan), Some(&balance), None),
-            Some(1057.0)
+            Some(1057)
         );
     }
 

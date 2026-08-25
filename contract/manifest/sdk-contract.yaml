@@ -160,10 +160,10 @@ boundaryTypesTs:
     UsageSnapshotPurchase: |-
       {
         reference?: string
+        productRef?: string
         planSnapshot?: {
-          meterRef?: string
-          meterId?: string
-          limit?: number
+          isMetered?: boolean
+          options?: Record<string, unknown>[]
         } | null
         usage?: {
           used?: number
@@ -2094,6 +2094,9 @@ overlays:
       reference:
         type: string
         required: true
+      customerRef:
+        type: string
+        required: true
       productRef:
         type: string
         required: false
@@ -2107,6 +2110,9 @@ overlays:
         type: number
         required: false
       completedAt:
+        type: string
+        required: true
+      createdAt:
         type: string
         required: true
   PaymentMethodInfo:
@@ -2983,7 +2989,7 @@ coreHelpers:
       ts: billingCycle
       py: billing_cycle
       rb: billing_cycle
-      go: ReadBillingCycle
+      go: BillingCycle
       rust: billing_cycle
     params: []
     docs:

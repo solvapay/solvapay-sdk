@@ -586,12 +586,18 @@ pub struct OneTimePurchaseInfo {
     #[serde(rename = "completedAt")]
     pub completed_at: String,
     /// Overlay field.
+    #[serde(rename = "createdAt")]
+    pub created_at: String,
+    /// Overlay field.
     #[serde(rename = "creditsAdded")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credits_added: Option<f64>,
     /// Overlay field.
     #[serde(rename = "currency")]
     pub currency: String,
+    /// Overlay field.
+    #[serde(rename = "customerRef")]
+    pub customer_ref: String,
     /// Overlay field.
     #[serde(rename = "productRef")]
     #[serde(default, skip_serializing_if = "Option::is_none")]

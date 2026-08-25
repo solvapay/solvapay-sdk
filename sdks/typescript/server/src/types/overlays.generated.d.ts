@@ -436,8 +436,10 @@ export type McpServerInfo = {
 export type OneTimePurchaseInfo = {
   amount: number
   completedAt: string
+  createdAt: string
   creditsAdded?: number
   currency: string
+  customerRef: string
   productRef?: string
   reference: string
 }

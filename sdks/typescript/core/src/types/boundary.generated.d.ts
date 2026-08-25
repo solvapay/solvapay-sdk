@@ -466,10 +466,10 @@ export type RouteErrorResult = {
 
 export type UsageSnapshotPurchase = {
   reference?: string
+  productRef?: string
   planSnapshot?: {
-    meterRef?: string
-    meterId?: string
-    limit?: number
+    isMetered?: boolean
+    options?: Record<string, unknown>[]
   } | null
   usage?: {
     used?: number
