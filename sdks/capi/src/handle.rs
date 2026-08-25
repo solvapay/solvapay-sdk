@@ -52,6 +52,8 @@ pub fn unpack_handle(handle: *mut OpaqueClient) -> Option<(u32, u32)> {
 ///
 /// Returns [`SolvapayStatus::Panic`] when the registry mutex is poisoned.
 pub fn register(client: SolvaPayClient) -> Result<*mut OpaqueClient, SolvapayStatus> {
+    #[cfg(test)]
+    let _test = test_sync::lock();
     let Ok(mut table) = REGISTRY.lock() else {
         return Err(SolvapayStatus::Panic);
     };
@@ -83,6 +85,8 @@ pub fn register(client: SolvaPayClient) -> Result<*mut OpaqueClient, SolvapaySta
 
 /// Frees a handle. Null and stale handles are no-ops (idempotent).
 pub fn free(handle: *mut OpaqueClient) {
+    #[cfg(test)]
+    let _test = test_sync::lock();
     let Some((index, generation)) = unpack_handle(handle) else {
         return;
     };
@@ -131,6 +135,49 @@ where
     Ok(f(client))
 }
 
+/// Serializes registry mutation across the crate's unit tests.
+///
+/// `cargo test --workspace` runs `solvapay-c` with multiple threads. Tests that
+/// assert slot reuse must hold this lock across free+register so another test
+/// cannot occupy the hole. `register`/`free` take the same lock (reentrant on
+/// the holding thread) so every other unit test waits at the boundary.
+#[cfg(test)]
+mod test_sync {
+    use std::cell::Cell;
+    use std::sync::{Mutex, MutexGuard, PoisonError};
+
+    static LOCK: Mutex<()> = Mutex::new(());
+
+    thread_local! {
+        static DEPTH: Cell<u32> = const { Cell::new(0) };
+    }
+
+    pub(super) struct Guard {
+        _inner: Option<MutexGuard<'static, ()>>,
+    }
+
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            DEPTH.with(|depth| depth.set(depth.get().saturating_sub(1)));
+        }
+    }
+
+    pub(super) fn lock() -> Guard {
+        DEPTH.with(|depth| {
+            let current = depth.get();
+            if current > 0 {
+                depth.set(current + 1);
+                return Guard { _inner: None };
+            }
+            let inner = LOCK.lock().unwrap_or_else(PoisonError::into_inner);
+            depth.set(1);
+            Guard {
+                _inner: Some(inner),
+            }
+        })
+    }
+}
+
 #[cfg(test)]
 #[allow(
     clippy::unwrap_used,
@@ -165,6 +212,7 @@ mod tests {
 
     #[test]
     fn register_free_stale_is_invalid_handle() {
+        let _guard = test_sync::lock();
         let handle = register(dummy_client()).expect("register");
         assert!(!handle.is_null());
         with_client(handle, |_| ()).expect("live handle works");
@@ -181,6 +229,7 @@ mod tests {
 
     #[test]
     fn index_reuse_gets_new_generation() {
+        let _guard = test_sync::lock();
         let first = register(dummy_client()).expect("register first");
         let (index_a, gen_a) = unpack_handle(first).expect("unpack first");
         free(first);
