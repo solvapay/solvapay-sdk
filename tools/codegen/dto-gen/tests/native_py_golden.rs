@@ -10,12 +10,6 @@ use std::path::Path;
 
 use dto_gen::emit_native_py;
 
-
-
-
-
-
-
 fn assert_matches(emitted: &str, committed_path: &Path, tag: &str) {
     let committed = fs::read_to_string(committed_path)
         .unwrap_or_else(|e| panic!("read committed {}: {e}", committed_path.display()));
@@ -47,7 +41,9 @@ fn native_py_matches_committed() {
     let emitted = emit_native_py(&ir).expect("emit _native.py");
     assert_matches(
         &emitted,
-        &support::paths().generated_path("nativePy").expect("nativePy"),
+        &support::paths()
+            .generated_path("nativePy")
+            .expect("nativePy"),
         "_native.py",
     );
 }

@@ -10,10 +10,6 @@ use std::fs;
 use dto_gen::emit_fixture_runner_rs::emit_fixture_runner;
 use dto_gen::ir::{IrBindingArtifact, IrBindingCall};
 
-
-
-
-
 fn committed_register_ids() -> Vec<String> {
     let src = fs::read_to_string(
         support::paths()

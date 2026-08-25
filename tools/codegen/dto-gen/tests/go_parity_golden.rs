@@ -8,16 +8,16 @@ use std::fs;
 
 use dto_gen::emit_parity_suite_go;
 
-
-
-
-
 #[test]
 fn go_parity_matches_committed_and_has_real_defaults() {
     let ir = support::lower_bindings_ir();
     let emitted = emit_parity_suite_go(&ir).expect("emit parity");
-    let committed = fs::read_to_string(support::paths().generated_path("goParity").expect("goParity"))
-        .expect("committed parity");
+    let committed = fs::read_to_string(
+        support::paths()
+            .generated_path("goParity")
+            .expect("goParity"),
+    )
+    .expect("committed parity");
     assert_eq!(emitted, committed);
     assert!(emitted.contains("len(operationSignatures); got != 36"));
     assert!(emitted.contains("expectedLimitsCacheTTLMs = 10000"));

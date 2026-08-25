@@ -15,12 +15,7 @@ use std::path::Path;
 
 use dto_gen::emit_bindings_rs::{emit_bindings, Toolchain};
 
-
-
-
-
 /// Formats a Rust source string with rustfmt (same edition dto-gen uses).
-
 
 /// Drops the leading contiguous `//!` module-doc block (and any blank lines
 /// immediately trailing it is preserved as a boundary marker).

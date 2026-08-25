@@ -15,13 +15,8 @@ use std::path::Path;
 use dto_gen::emit_bindings_rs::Toolchain;
 use dto_gen::emit_bindings_ts::emit_native_ts;
 
-
-
-
-
 /// Drops every leading `/** … */` JSDoc block (and blank lines immediately
 /// following each). Used so the `@generated` header is ignored on both sides.
-
 
 fn assert_matches(emitted: &str, committed_path: &Path, tag: &str) {
     let committed = fs::read_to_string(committed_path)
@@ -54,7 +49,9 @@ fn native_ts_matches_committed() {
     let emitted = emit_native_ts(&ir, Toolchain::Node).expect("emit native.ts");
     assert_matches(
         &emitted,
-        &support::paths().generated_path("nativeTs").expect("nativeTs"),
+        &support::paths()
+            .generated_path("nativeTs")
+            .expect("nativeTs"),
         "native.ts",
     );
 }

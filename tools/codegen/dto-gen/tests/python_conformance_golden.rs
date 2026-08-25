@@ -10,12 +10,6 @@ use std::fs;
 use dto_gen::emit_conformance_py::emit_conformance_py;
 use dto_gen::ir::Ir;
 
-
-
-
-
-
-
 fn emitted_map(ir: &Ir) -> std::collections::BTreeMap<String, String> {
     emit_conformance_py(ir)
         .expect("emit py conformance")

@@ -2,11 +2,9 @@
 
 use std::fmt::Write as _;
 
-use crate::header::{generated_header, CommentStyle};
 use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{Ir, IrBindingCatalogLink, IrRubyReceiver};
-
-
 
 /// Emits `test/signature_parity_generated_test.rb`.
 ///
@@ -14,7 +12,10 @@ use crate::ir::{Ir, IrBindingCatalogLink, IrRubyReceiver};
 ///
 /// Returns formatting failures as [`crate::error::GenError`].
 pub fn emit_parity_suite_rb(ir: &Ir) -> GenResult<String> {
-    let mut output = format!("{}\n", generated_header(CommentStyle::Hash, "rb-parity-out"));
+    let mut output = format!(
+        "{}\n",
+        generated_header(CommentStyle::Hash, "rb-parity-out")
+    );
     output.push_str(
         "# frozen_string_literal: true\n\n\
          require \"json\"\n\

@@ -3,12 +3,10 @@
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
-use crate::header::{generated_header, CommentStyle};
 use crate::emit_client_rs::{client_operations, rust_ok_type, rust_params};
 use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::Ir;
-
-
 
 /// Emits `tests/signature_parity_generated.rs`.
 ///
@@ -35,7 +33,10 @@ pub fn emit_parity_suite_rs(ir: &Ir) -> GenResult<String> {
         rows.push((entry.names.rust.clone(), params, ok_type));
     }
 
-    let mut output = format!("{}\n", generated_header(CommentStyle::LineSlash, "rs-parity-out"));
+    let mut output = format!(
+        "{}\n",
+        generated_header(CommentStyle::LineSlash, "rs-parity-out")
+    );
     output.push_str(
         "//! Generated signature-parity suite (§2.8) — typed surface, arity, sync matrix, defaults.\n\n\
          #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]\n\n\

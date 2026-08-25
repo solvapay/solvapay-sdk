@@ -10,8 +10,13 @@ use dto_gen::emit_crate;
 use dto_gen::ir::IrOverlay;
 
 fn dto_file(name: &str) -> String {
-    fs::read_to_string(support::paths().generated_path("rustDto").expect("rustDto").join(name))
-        .unwrap_or_else(|_| panic!("read {name}"))
+    fs::read_to_string(
+        support::paths()
+            .generated_path("rustDto")
+            .expect("rustDto")
+            .join(name),
+    )
+    .unwrap_or_else(|_| panic!("read {name}"))
 }
 
 #[test]

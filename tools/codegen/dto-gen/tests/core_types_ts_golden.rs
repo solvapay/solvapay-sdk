@@ -50,10 +50,6 @@ enum TsShape {
     Union,
 }
 
-
-
-
-
 fn extract_types(src: &str, out: &mut BTreeMap<String, TsShape>) {
     let mut rest = src;
     while let Some(idx) = find_export(rest) {

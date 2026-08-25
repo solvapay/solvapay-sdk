@@ -41,7 +41,10 @@ pub fn emit_conformance_rb(ir: &Ir) -> GenResult<Vec<(String, String)>> {
     emit_chrome_files(
         SNAPSHOT,
         "conformance-rb-emit snapshot",
-        &format!("{}\n", generated_header(CommentStyle::Hash, "rb-conformance-out")),
+        &format!(
+            "{}\n",
+            generated_header(CommentStyle::Hash, "rb-conformance-out")
+        ),
         FILE_ORDER,
         &[
             ("host_adapters.rb", "{{HOST_FNS}}", &host_fns_inner),
@@ -59,7 +62,10 @@ mod tests {
     #[test]
     fn snapshot_declares_every_emitted_file() {
         let chrome: Value = serde_json::from_str(SNAPSHOT).unwrap();
-        assert!(chrome.get("header").is_none(), "banners must not live in the snapshot");
+        assert!(
+            chrome.get("header").is_none(),
+            "banners must not live in the snapshot"
+        );
         let files = chrome.get("files").and_then(Value::as_object).unwrap();
         for name in FILE_ORDER {
             assert!(files.contains_key(*name), "missing {name}");

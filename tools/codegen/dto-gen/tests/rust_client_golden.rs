@@ -8,25 +8,27 @@ use std::fs;
 
 use dto_gen::emit_client_rs;
 
-
-
-
-
-
-
 #[test]
 fn rust_client_and_blocking_match_committed() {
     let ir = support::lower_bindings_ir();
     let emitted = emit_client_rs(&ir).expect("emit Rust client");
     assert_eq!(
         support::rustfmt_source(&emitted.client_generated_rs, "client"),
-        fs::read_to_string(support::paths().generated_path("rsClient").expect("rsClient"))
-            .expect("client_generated")
+        fs::read_to_string(
+            support::paths()
+                .generated_path("rsClient")
+                .expect("rsClient")
+        )
+        .expect("client_generated")
     );
     assert_eq!(
         support::rustfmt_source(&emitted.blocking_generated_rs, "blocking"),
-        fs::read_to_string(support::paths().generated_path("rsBlocking").expect("rsBlocking"))
-            .expect("blocking_generated")
+        fs::read_to_string(
+            support::paths()
+                .generated_path("rsBlocking")
+                .expect("rsBlocking")
+        )
+        .expect("blocking_generated")
     );
     assert_eq!(
         emitted.client_generated_rs.matches("pub async fn ").count(),

@@ -88,7 +88,10 @@ fn method_rows(ir: &Ir) -> GenResult<Vec<MethodRow<'_>>> {
 }
 
 fn emit_async_client(rows: &[MethodRow<'_>]) -> String {
-    let mut output = format!("{}\n", generated_header(CommentStyle::LineSlash, "rs-client-out"));
+    let mut output = format!(
+        "{}\n",
+        generated_header(CommentStyle::LineSlash, "rs-client-out")
+    );
     write_imports(&mut output, rows, false);
     output.push_str("#[allow(clippy::missing_docs_in_private_items)]\nimpl Client {\n");
     for row in rows {
@@ -114,7 +117,10 @@ fn emit_async_client(rows: &[MethodRow<'_>]) -> String {
 }
 
 fn emit_blocking_client(rows: &[MethodRow<'_>]) -> String {
-    let mut output = format!("{}\n", generated_header(CommentStyle::LineSlash, "rs-client-out"));
+    let mut output = format!(
+        "{}\n",
+        generated_header(CommentStyle::LineSlash, "rs-client-out")
+    );
     write_imports(&mut output, rows, true);
     output.push_str("#[allow(clippy::missing_docs_in_private_items)]\nimpl BlockingClient {\n");
     for row in rows {

@@ -38,8 +38,15 @@ pub fn emit_native_py(ir: &Ir) -> GenResult<String> {
 
     Ok(format!(
         "{}{}{}{}{}{}",
-        format!("{}\n", generated_header(CommentStyle::Hash, "native-py-out")),
-        preamble, client_literal, bridge, sync_literal, postamble
+        format!(
+            "{}\n",
+            generated_header(CommentStyle::Hash, "native-py-out")
+        ),
+        preamble,
+        client_literal,
+        bridge,
+        sync_literal,
+        postamble
     ))
 }
 

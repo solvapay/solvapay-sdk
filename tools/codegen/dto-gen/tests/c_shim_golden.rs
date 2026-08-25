@@ -16,12 +16,6 @@ use std::fs;
 use dto_gen::emit_bindings_rs::{emit_bindings, Toolchain};
 use dto_gen::ir::{Ir, IrBindingArtifact, IrErrorTemplates, IrSerializeKind};
 
-
-
-
-
-
-
 fn client_symbols(ir: &Ir) -> Vec<&dto_gen::ir::IrBindingSymbol> {
     let mut symbols: Vec<_> = ir
         .binding_symbols

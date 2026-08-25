@@ -62,7 +62,12 @@ mod tests {
         IrSyncKind,
     };
 
-    fn sym(id: &str, artifact: IrBindingArtifact, order: u32, section: Option<&str>) -> IrBindingSymbol {
+    fn sym(
+        id: &str,
+        artifact: IrBindingArtifact,
+        order: u32,
+        section: Option<&str>,
+    ) -> IrBindingSymbol {
         IrBindingSymbol {
             id: id.into(),
             core: String::new(),
@@ -101,7 +106,10 @@ mod tests {
     #[test]
     fn load_snapshot_and_chrome_str() {
         let v = load_snapshot(r#"{"files":{"native":{"preamble":"hi"}}}"#, "t").unwrap();
-        assert_eq!(chrome_str(&v, &["files", "native", "preamble"], "t").unwrap(), "hi");
+        assert_eq!(
+            chrome_str(&v, &["files", "native", "preamble"], "t").unwrap(),
+            "hi"
+        );
         assert!(chrome_str(&v, &["missing"], "t").is_err());
     }
 
@@ -110,16 +118,19 @@ mod tests {
         let mut ir = Ir::default();
         ir.binding_symbols.insert(
             "b".into(),
-            sym("b", IrBindingArtifact::PayloadBuilders, 2, Some(MCP_SECTION)),
+            sym(
+                "b",
+                IrBindingArtifact::PayloadBuilders,
+                2,
+                Some(MCP_SECTION),
+            ),
         );
         ir.binding_symbols.insert(
             "a".into(),
             sym("a", IrBindingArtifact::PayloadBuilders, 1, None),
         );
-        ir.binding_symbols.insert(
-            "c".into(),
-            sym("c", IrBindingArtifact::Client, 0, None),
-        );
+        ir.binding_symbols
+            .insert("c".into(), sym("c", IrBindingArtifact::Client, 0, None));
         let payload = symbols_for(&ir, IrBindingArtifact::PayloadBuilders);
         assert_eq!(
             payload.iter().map(|s| s.id.as_str()).collect::<Vec<_>>(),

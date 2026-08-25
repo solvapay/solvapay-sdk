@@ -2,11 +2,9 @@
 
 use std::fmt::Write as _;
 
-use crate::header::{generated_header, CommentStyle};
 use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{Ir, IrBindingArtifact};
-
-
 
 /// Emits `sdks/capi/ctest/signature_parity_generated.c`.
 ///
@@ -27,7 +25,10 @@ pub fn emit_parity_suite_c(ir: &Ir) -> GenResult<String> {
         .max()
         .unwrap_or(1);
 
-    let mut output = format!("{}\n", generated_header(CommentStyle::CBlock, "c-parity-out"));
+    let mut output = format!(
+        "{}\n",
+        generated_header(CommentStyle::CBlock, "c-parity-out")
+    );
     output.push_str("#include \"../include/solvapay.h\"\n\n");
     output.push_str("#include <stdio.h>\n");
     output.push_str("#include <string.h>\n\n");

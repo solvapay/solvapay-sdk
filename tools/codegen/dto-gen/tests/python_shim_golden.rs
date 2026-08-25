@@ -16,12 +16,6 @@ use std::path::Path;
 use dto_gen::emit_bindings_rs::{emit_bindings, Toolchain};
 use dto_gen::ir::{Ir, IrBindingArtifact, IrErrorTemplates};
 
-
-
-
-
-
-
 fn strip_module_doc(src: &str) -> String {
     let mut rest: Vec<&str> = Vec::new();
     let mut in_header = true;

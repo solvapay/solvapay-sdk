@@ -12,8 +12,12 @@ use dto_gen::emit_client_ts;
 fn emit_client_ts_matches_committed_below_header() {
     let ir = support::lower_test_ir();
     let emitted = emit_client_ts(&ir).expect("emit client ts");
-    let committed = fs::read_to_string(support::paths().generated_path("tsClient").expect("tsClient"))
-        .expect("committed client");
+    let committed = fs::read_to_string(
+        support::paths()
+            .generated_path("tsClient")
+            .expect("tsClient"),
+    )
+    .expect("committed client");
     assert!(emitted.contains("@generated"));
     assert_eq!(
         support::strip_generated_header(&emitted),

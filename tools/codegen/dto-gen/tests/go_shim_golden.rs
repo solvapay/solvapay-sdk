@@ -18,12 +18,6 @@ use std::path::Path;
 use dto_gen::emit_bindings_rs::{emit_bindings, Toolchain};
 use dto_gen::ir::{Ir, IrBindingArtifact, IrSerializeKind};
 
-
-
-
-
-
-
 fn strip_module_doc(src: &str) -> String {
     let mut rest: Vec<&str> = Vec::new();
     let mut in_header = true;
@@ -158,7 +152,9 @@ fn go_client_exports_full_36_op_surface() {
 fn go_shims_match_committed_files() {
     let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::Go).expect("emit go");
-    let src = support::paths().generated_path("goBindings").expect("goBindings");
+    let src = support::paths()
+        .generated_path("goBindings")
+        .expect("goBindings");
 
     assert_matches(&emitted.args_rs, &src.join("args.rs"), "go_args");
     assert_matches(

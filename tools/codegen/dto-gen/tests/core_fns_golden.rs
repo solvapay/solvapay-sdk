@@ -9,10 +9,6 @@ use std::fs;
 use dto_gen::ir::{Ir, IrCoreFieldTy};
 use dto_gen::lower_core_types::dump_core_types;
 
-
-
-
-
 fn fn_at<'a>(ir: &'a Ir, path: &str) -> &'a dto_gen::ir::IrCoreFn {
     ir.core_fns
         .get(path)

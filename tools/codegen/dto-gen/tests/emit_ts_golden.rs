@@ -13,8 +13,12 @@ use dto_gen::ir::IrOverlay;
 fn emit_overlays_ts_matches_committed_below_header() {
     let ir = support::lower_test_ir();
     let emitted = emit_overlays_ts(&ir).expect("emit ts");
-    let committed = fs::read_to_string(support::paths().generated_path("tsOverlays").expect("tsOverlays"))
-        .expect("committed overlays");
+    let committed = fs::read_to_string(
+        support::paths()
+            .generated_path("tsOverlays")
+            .expect("tsOverlays"),
+    )
+    .expect("committed overlays");
     assert!(emitted.contains("@generated"));
     assert_eq!(
         support::strip_generated_header(&emitted),

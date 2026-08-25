@@ -70,7 +70,7 @@ fn emit_client(ir: &Ir) -> String {
 fn emit_helpers(ir: &Ir) -> String {
     let mut output = ruby_file_header(
         "rb-client-out",
-        "# frozen_string_literal: true\n# Generated portable helper forwarding.",
+        "# frozen_string_literal: true\n\n# Generated portable helper forwarding.",
     );
     output.push_str("module SolvaPay\n");
     let mut bindings: Vec<_> = ir

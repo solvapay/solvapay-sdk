@@ -8,16 +8,16 @@ use std::fs;
 
 use dto_gen::emit_client_go;
 
-
-
-
-
 #[test]
 fn go_client_matches_committed_and_has_36_ctx_first_methods() {
     let ir = support::lower_bindings_ir();
     let emitted = emit_client_go(&ir).expect("emit Go client");
-    let committed = fs::read_to_string(support::paths().generated_path("goClient").expect("goClient"))
-        .expect("client_generated.go");
+    let committed = fs::read_to_string(
+        support::paths()
+            .generated_path("goClient")
+            .expect("goClient"),
+    )
+    .expect("client_generated.go");
     assert_eq!(emitted, committed);
 
     assert_eq!(emitted.matches("func (c *Client) ").count(), 36);

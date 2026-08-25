@@ -13,7 +13,9 @@ use dto_gen::emit_parity_suite_py::emit_parity_suite_py;
 fn python_parity_suite_matches_committed() {
     let ir = support::lower_catalog_ir();
     let emitted = emit_parity_suite_py(&ir).expect("emit py parity");
-    let path = support::paths().generated_path("pyParity").expect("pyParity");
+    let path = support::paths()
+        .generated_path("pyParity")
+        .expect("pyParity");
     let committed = fs::read_to_string(&path).expect("read committed parity suite");
     assert_eq!(
         support::strip_generated_header(&emitted),

@@ -10,12 +10,6 @@ use std::path::Path;
 
 use dto_gen::emit_pyi_py;
 
-
-
-
-
-
-
 fn assert_matches(emitted: &str, committed_path: &Path, tag: &str) {
     let committed = fs::read_to_string(committed_path)
         .unwrap_or_else(|e| panic!("read committed {}: {e}", committed_path.display()));

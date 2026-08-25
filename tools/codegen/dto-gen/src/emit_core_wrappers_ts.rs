@@ -51,21 +51,27 @@ pub fn emit_core_wrappers_ts(ir: &Ir, kind: CoreWrapperKind) -> GenResult<String
         .map_err(|e| GenError::Parse(format!("invalid core-wrappers-ts-emit snapshot: {e}")))?;
     match kind {
         CoreWrapperKind::Dispatch => emit_dispatch(ir, &chrome, "core-dispatch-ts-out"),
-        CoreWrapperKind::NativeCore => {
-            emit_functions_file(ir, &chrome, "nativeCore", WrapperSet::Core, "core-native-ts-out")
-        }
-        CoreWrapperKind::NativeHelpers => {
-            emit_functions_file(ir, &chrome, "nativeHelpers", WrapperSet::Helpers, "core-helpers-ts-out")
-        }
-        CoreWrapperKind::NativeDecisions => {
-            emit_functions_file(
-                ir,
-                &chrome,
-                "nativeDecisions",
-                WrapperSet::Decisions,
-                "server-decisions-ts-out",
-            )
-        }
+        CoreWrapperKind::NativeCore => emit_functions_file(
+            ir,
+            &chrome,
+            "nativeCore",
+            WrapperSet::Core,
+            "core-native-ts-out",
+        ),
+        CoreWrapperKind::NativeHelpers => emit_functions_file(
+            ir,
+            &chrome,
+            "nativeHelpers",
+            WrapperSet::Helpers,
+            "core-helpers-ts-out",
+        ),
+        CoreWrapperKind::NativeDecisions => emit_functions_file(
+            ir,
+            &chrome,
+            "nativeDecisions",
+            WrapperSet::Decisions,
+            "server-decisions-ts-out",
+        ),
     }
 }
 

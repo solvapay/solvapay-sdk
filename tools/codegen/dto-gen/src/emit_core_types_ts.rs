@@ -2,10 +2,10 @@
 
 use std::fmt::Write as _;
 
+use crate::emit_ts::{escape_ts, write_ts_doc};
 use crate::error::GenResult;
 use crate::header::{generated_header, CommentStyle};
 use crate::ir::{Ir, IrCoreField, IrCoreFieldTy, IrCoreShape, IrCoreTsAlias, IrCoreType};
-use crate::emit_ts::{escape_ts, write_ts_doc};
 
 /// Emits the consolidated TypeScript boundary-type declarations.
 ///

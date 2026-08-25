@@ -2,14 +2,12 @@
 
 use std::fmt::Write as _;
 
-use crate::header::{generated_header, CommentStyle};
 use crate::error::GenResult;
+use crate::header::{generated_header, CommentStyle};
 use crate::ir::{
     Ir, IrBindingArg, IrBindingCatalogLink, IrBindingSymbol, IrBoundaryType, IrEntryPoint,
     IrRubyReceiver, IrTypeRef,
 };
-
-
 
 /// Emits `sig/solvapay.rbs`.
 ///

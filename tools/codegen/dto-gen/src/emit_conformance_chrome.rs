@@ -113,9 +113,6 @@ mod tests {
         let raw = r#"{"header":"x","files":{"a.py":{"body":"print(1)\n"}}}"#;
         let err = emit_chrome_files(raw, "test-snapshot", "# hdr\n", &["a.py"], &[])
             .expect_err("header must fail");
-        assert!(
-            err.to_string().contains("must not embed a header"),
-            "{err}"
-        );
+        assert!(err.to_string().contains("must not embed a header"), "{err}");
     }
 }

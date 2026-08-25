@@ -12,9 +12,12 @@ use dto_gen::emit_parity_suite_ts;
 fn emit_parity_suite_ts_matches_committed_below_header() {
     let ir = support::lower_test_ir();
     let emitted = emit_parity_suite_ts(&ir).expect("emit ts parity");
-    let committed =
-        fs::read_to_string(support::paths().generated_path("tsParity").expect("tsParity"))
-            .expect("committed parity");
+    let committed = fs::read_to_string(
+        support::paths()
+            .generated_path("tsParity")
+            .expect("tsParity"),
+    )
+    .expect("committed parity");
     assert!(emitted.contains("@generated"));
     assert_eq!(
         support::strip_generated_header(&emitted),

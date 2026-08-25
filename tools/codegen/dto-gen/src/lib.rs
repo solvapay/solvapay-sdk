@@ -1,5 +1,6 @@
 //! OpenAPI snapshot + SDK contract manifest → `solvapay-dto` generator.
 
+pub mod chrome;
 pub mod derive_bindings;
 pub mod doc_coverage;
 pub mod doc_render;
@@ -31,7 +32,6 @@ pub mod emit_rbs_rb;
 pub mod emit_ts;
 pub mod error;
 pub mod header;
-pub mod chrome;
 pub mod ir;
 pub mod lower_bindings;
 pub mod lower_catalog;
@@ -252,33 +252,128 @@ pub fn generate_from_snapshot(
         &ir,
         &[
             ("--ts-out", outputs.ts_out, emit_overlays_ts, false),
-            ("--ts-client-out", outputs.ts_client_out, emit_client_ts, false),
-            ("--ts-parity-out", outputs.ts_parity_out, emit_parity_suite_ts, false),
-            ("--dump-bindings", outputs.dump_bindings, dump_bindings_text, false),
-            ("--dump-boundary-types", outputs.dump_boundary_types, dump_core_types, false),
-            ("--core-types-ts-out", outputs.core_types_ts_out, emit_core_types_ts, false),
-            ("--core-dispatch-ts-out", outputs.core_dispatch_ts_out, emit_dispatch_ts, false),
-            ("--core-native-ts-out", outputs.core_native_ts_out, emit_native_core_ts, false),
-            ("--core-helpers-ts-out", outputs.core_helpers_ts_out, emit_native_helpers_ts, false),
+            (
+                "--ts-client-out",
+                outputs.ts_client_out,
+                emit_client_ts,
+                false,
+            ),
+            (
+                "--ts-parity-out",
+                outputs.ts_parity_out,
+                emit_parity_suite_ts,
+                false,
+            ),
+            (
+                "--dump-bindings",
+                outputs.dump_bindings,
+                dump_bindings_text,
+                false,
+            ),
+            (
+                "--dump-boundary-types",
+                outputs.dump_boundary_types,
+                dump_core_types,
+                false,
+            ),
+            (
+                "--core-types-ts-out",
+                outputs.core_types_ts_out,
+                emit_core_types_ts,
+                false,
+            ),
+            (
+                "--core-dispatch-ts-out",
+                outputs.core_dispatch_ts_out,
+                emit_dispatch_ts,
+                false,
+            ),
+            (
+                "--core-native-ts-out",
+                outputs.core_native_ts_out,
+                emit_native_core_ts,
+                false,
+            ),
+            (
+                "--core-helpers-ts-out",
+                outputs.core_helpers_ts_out,
+                emit_native_helpers_ts,
+                false,
+            ),
             (
                 "--server-decisions-ts-out",
                 outputs.server_decisions_ts_out,
                 emit_native_decisions_ts,
                 false,
             ),
-            ("--c-parity-out", outputs.c_parity_out, emit_parity_suite_c, false),
-            ("--fixture-runner-out", outputs.fixture_runner_out, emit_fixture_runner, true),
-            ("--native-ts-out", outputs.native_ts_out, emit_native_ts_node, false),
-            ("--wasm-ts-out", outputs.wasm_ts_out, emit_native_ts_wasm, false),
-            ("--native-py-out", outputs.native_py_out, emit_native_py, false),
+            (
+                "--c-parity-out",
+                outputs.c_parity_out,
+                emit_parity_suite_c,
+                false,
+            ),
+            (
+                "--fixture-runner-out",
+                outputs.fixture_runner_out,
+                emit_fixture_runner,
+                true,
+            ),
+            (
+                "--native-ts-out",
+                outputs.native_ts_out,
+                emit_native_ts_node,
+                false,
+            ),
+            (
+                "--wasm-ts-out",
+                outputs.wasm_ts_out,
+                emit_native_ts_wasm,
+                false,
+            ),
+            (
+                "--native-py-out",
+                outputs.native_py_out,
+                emit_native_py,
+                false,
+            ),
             ("--py-stub-out", outputs.py_stub_out, emit_pyi_py, false),
-            ("--py-parity-out", outputs.py_parity_out, emit_parity_suite_py, false),
-            ("--native-rb-out", outputs.native_rb_out, emit_native_rb, false),
+            (
+                "--py-parity-out",
+                outputs.py_parity_out,
+                emit_parity_suite_py,
+                false,
+            ),
+            (
+                "--native-rb-out",
+                outputs.native_rb_out,
+                emit_native_rb,
+                false,
+            ),
             ("--rb-rbs-out", outputs.rb_rbs_out, emit_rbs_rb, false),
-            ("--rb-parity-out", outputs.rb_parity_out, emit_parity_suite_rb, false),
-            ("--rs-parity-out", outputs.rs_parity_out, emit_parity_suite_rs, true),
-            ("--go-client-out", outputs.go_client_out, emit_client_go, false),
-            ("--go-parity-out", outputs.go_parity_out, emit_parity_suite_go, false),
+            (
+                "--rb-parity-out",
+                outputs.rb_parity_out,
+                emit_parity_suite_rb,
+                false,
+            ),
+            (
+                "--rs-parity-out",
+                outputs.rs_parity_out,
+                emit_parity_suite_rs,
+                true,
+            ),
+            (
+                "--go-client-out",
+                outputs.go_client_out,
+                emit_client_go,
+                false,
+            ),
+            (
+                "--go-parity-out",
+                outputs.go_parity_out,
+                emit_parity_suite_go,
+                false,
+            ),
         ],
     )?;
 
@@ -391,9 +486,10 @@ fn write_file_outputs(
         let Some(path) = path else {
             continue;
         };
-        write_contents(path, &emit(ir).map_err(|e| {
-            GenError::Parse(format!("{flag}: {e}"))
-        })?)?;
+        write_contents(
+            path,
+            &emit(ir).map_err(|e| GenError::Parse(format!("{flag}: {e}")))?,
+        )?;
         if *rustfmt {
             rustfmt_files(&[path.to_path_buf()])?;
         }
