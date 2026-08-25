@@ -6,13 +6,13 @@
     "args": {
       "activePurchase": {
         "reference": "pur_1",
-        "planSnapshot": {
-          "meterRef": "mtr_requests",
-          "limit": 0
-        },
         "usage": {
           "used": 0
         }
+      },
+      "limits": {
+        "meterName": "mtr_requests",
+        "remaining": 0
       }
     }
   },

@@ -5,6 +5,20 @@
 import type { SupportedBusinessCountry, TaxIdType } from '../business-details'
 
 /**
+ * A billing-cycle option — present only on recurring plans.
+ */
+export type BillingCycle = {
+  /**
+   * `week`, `month`, or `year`.
+   */
+  interval: string
+  /**
+   * Interval count when greater than 1; omitted for the default of 1.
+   */
+  count?: number
+}
+
+/**
  * Input shape for [`validate_business_details`] (parity with `BusinessDetailsInput` in TS).
  */
 export type BusinessDetailsInput = {
@@ -64,6 +78,32 @@ export type CachedLimitsEvaluation = {
    * When true, host must delete the cache entry.
    */
   evict: boolean
+}
+
+/**
+ * A charge option. `amount_minor` is in `currency`'s minor units.
+ */
+export type Charge = {
+  /**
+   * `flat`, `unit`, or `seat`.
+   */
+  per: string
+  /**
+   * Amount in the charge currency's minor units.
+   */
+  amountMinor: number
+  /**
+   * ISO currency code as shipped on the wire (not normalised).
+   */
+  currency: string
+  /**
+   * Meter name when `per` is `unit`.
+   */
+  meter?: string
+  /**
+   * Setup-fee flag; omitted unless `true`.
+   */
+  oneTime?: boolean
 }
 
 /**
@@ -230,11 +270,11 @@ export type SellerIdentityRow = {
  */
 export type UsageSnapshot = {
   /**
-   * Meter reference (`meterRef` / `meterId` fallback); explicit `null` when absent.
+   * Meter name from `checkLimits`; explicit `null` when absent or uncapped.
    */
   meterRef: string | null
   /**
-   * Plan limit; explicit `null` when absent.
+   * `used + remaining` when the meter has a finite cap; else `null`.
    */
   total: number | null
   /**

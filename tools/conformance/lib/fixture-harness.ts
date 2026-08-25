@@ -30,6 +30,14 @@ import {
   type BusinessDetailsInput,
   type SupportedBusinessCountry,
   type TaxBehavior,
+  charges,
+  headlineCharges,
+  perUnitCharge,
+  billingCycle,
+  trialDays,
+  includedUnits,
+  peggedCreditsPerUnit,
+  creditsPerUnitFromBalance,
 } from '@solvapay/core'
 import {
   assertResponseResult,
@@ -1861,7 +1869,10 @@ export function createDefaultRegistry(): FixtureRegistry {
           'projectUsageSnapshot args.activePurchase must be an object, null, or omitted',
         )
       }
-      return projectUsageSnapshot(purchase as UsageSnapshotPurchase | null | undefined)
+      return projectUsageSnapshot(
+        purchase as UsageSnapshotPurchase | null | undefined,
+        args.limits as Record<string, unknown> | null | undefined,
+      )
     },
   })
 
@@ -1889,6 +1900,62 @@ export function createDefaultRegistry(): FixtureRegistry {
       }
       return validateListPlansParams(args.productRef)
     },
+  })
+
+  registry.register('charges', {
+    id: 'core',
+    invoke: args => charges((args.priced ?? null) as Record<string, unknown> | null),
+  })
+  registry.register('headlineCharges', {
+    id: 'core',
+    invoke: args => headlineCharges((args.priced ?? null) as Record<string, unknown> | null),
+  })
+  registry.register('perUnitCharge', {
+    id: 'core',
+    invoke: args =>
+      perUnitCharge(
+        (args.priced ?? null) as Record<string, unknown> | null,
+        typeof args.meter === 'string' ? args.meter : undefined,
+      ),
+  })
+  registry.register('billingCycle', {
+    id: 'core',
+    invoke: args => billingCycle((args.priced ?? null) as Record<string, unknown> | null),
+  })
+  registry.register('trialDays', {
+    id: 'core',
+    invoke: args => trialDays((args.priced ?? null) as Record<string, unknown> | null),
+  })
+  registry.register('includedUnits', {
+    id: 'core',
+    invoke: args =>
+      includedUnits(
+        (args.priced ?? null) as Record<string, unknown> | null,
+        typeof args.meter === 'string' ? args.meter : undefined,
+      ),
+  })
+  registry.register('peggedCreditsPerUnit', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.chargeMinor !== 'number' || typeof args.creditsPerMinorUnit !== 'number') {
+        throw new Error('peggedCreditsPerUnit requires numeric chargeMinor and creditsPerMinorUnit')
+      }
+      const rate = args.usdToChargeRate
+      return peggedCreditsPerUnit(
+        args.chargeMinor,
+        args.creditsPerMinorUnit,
+        typeof rate === 'number' ? rate : undefined,
+      )
+    },
+  })
+  registry.register('creditsPerUnitFromBalance', {
+    id: 'core',
+    invoke: args =>
+      creditsPerUnitFromBalance(
+        (args.priced ?? null) as Record<string, unknown> | null,
+        (args.balance ?? null) as Record<string, unknown> | null,
+        typeof args.meter === 'string' ? args.meter : undefined,
+      ),
   })
 
   registry.register('mapRouteError', {

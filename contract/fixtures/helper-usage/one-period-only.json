@@ -6,14 +6,14 @@
     "args": {
       "activePurchase": {
         "reference": "pur_1",
-        "planSnapshot": {
-          "meterRef": "mtr_requests",
-          "limit": 100
-        },
         "usage": {
           "used": 10,
           "periodStart": "2026-07-01T00:00:00Z"
         }
+      },
+      "limits": {
+        "meterName": "mtr_requests",
+        "remaining": 90
       }
     }
   },

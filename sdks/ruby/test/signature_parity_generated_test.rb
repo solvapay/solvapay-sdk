@@ -48,10 +48,13 @@ class SignatureParityGeneratedTest < Minitest::Test
 
   GENERATED_HELPERS = %w[
     assert_valid_product_ref
+    billing_cycle
     build_gate_message
     build_nudge_message
     build_paywall_gate
+    charges
     classify_paywall_state
+    credits_per_unit_from_balance
     credits_to_display_minor_units
     derive_tax_id_type
     evaluate_product_readiness
@@ -59,12 +62,17 @@ class SignatureParityGeneratedTest < Minitest::Test
     get_tax_id_example
     get_tax_id_field_label
     get_tax_id_helper_text
+    headline_charges
+    included_units
     is_zero_decimal_currency
     minor_units_per_major
     paywall_error_to_client_payload
+    pegged_credits_per_unit
+    per_unit_charge
     require_product_ref
     resolve_seller_identity_display
     resolve_tax_behavior
+    trial_days
     validate_business_details
   ].freeze
 

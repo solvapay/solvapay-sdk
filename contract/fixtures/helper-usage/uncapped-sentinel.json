@@ -1,0 +1,29 @@
+{
+  "suite": "helper-usage",
+  "case": "uncapped-sentinel",
+  "input": {
+    "fn": "projectUsageSnapshot",
+    "args": {
+      "activePurchase": {
+        "reference": "pur_1",
+        "usage": {
+          "used": 5
+        }
+      },
+      "limits": {
+        "meterName": "mtr_requests",
+        "remaining": -1
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "meterRef": "mtr_requests",
+      "total": null,
+      "used": 5,
+      "remaining": null,
+      "percentUsed": null,
+      "purchaseRef": "pur_1"
+    }
+  }
+}

@@ -579,7 +579,11 @@ pub unsafe extern "C" fn sv_project_usage_snapshot_binding(
             None | Some(Value::Null) => None,
             Some(v) => Some(v),
         };
-        to_value(&project_usage_snapshot(purchase))
+        let limits = match args.get("limits") {
+            None | Some(Value::Null) => None,
+            Some(v) => Some(v),
+        };
+        to_value(&project_usage_snapshot(purchase, limits))
     }))
 }
 
@@ -1008,5 +1012,147 @@ pub unsafe extern "C" fn sv_assert_valid_product_ref_binding(
         let context = require_string(&args, "context")?;
         assert_valid_product_ref(&product_ref, &context)?;
         Ok(Value::Null)
+    }))
+}
+
+// --- plans ---
+
+/// Binding for `charges`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_charges_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&charges(priced.as_ref()))
+    }))
+}
+
+/// Binding for `headlineCharges`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_headline_charges_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&headline_charges(priced.as_ref()))
+    }))
+}
+
+/// Binding for `perUnitCharge`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_per_unit_charge_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        let meter = optional_string(&args, "meter")?;
+        to_value(&per_unit_charge(priced.as_ref(), meter.as_deref()))
+    }))
+}
+
+/// Binding for `billingCycle`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_billing_cycle_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&billing_cycle(priced.as_ref()))
+    }))
+}
+
+/// Binding for `trialDays`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_trial_days_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&trial_days(priced.as_ref()))
+    }))
+}
+
+/// Binding for `includedUnits`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_included_units_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        let meter = optional_string(&args, "meter")?;
+        to_value(&included_units(priced.as_ref(), meter.as_deref()))
+    }))
+}
+
+/// Binding for `peggedCreditsPerUnit`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_pegged_credits_per_unit_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let charge_minor = require_f64(&args, "chargeMinor")?;
+        let credits_per_minor_unit = require_f64(&args, "creditsPerMinorUnit")?;
+        let usd_to_charge_rate = optional_f64(&args, "usdToChargeRate")?;
+        to_value(&pegged_credits_per_unit(
+            charge_minor,
+            credits_per_minor_unit,
+            usd_to_charge_rate.as_ref(),
+        ))
+    }))
+}
+
+/// Binding for `creditsPerUnitFromBalance`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_credits_per_unit_from_balance_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        let balance = optional_value(&args, "balance");
+        let meter = optional_string(&args, "meter")?;
+        to_value(&credits_per_unit_from_balance(
+            priced.as_ref(),
+            balance.as_ref(),
+            meter.as_deref(),
+        ))
     }))
 }

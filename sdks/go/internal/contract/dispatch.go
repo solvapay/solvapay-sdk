@@ -88,6 +88,14 @@ var SyncExports = map[string]string{
 	"evaluateProductReadiness":                    "sv_evaluate_product_readiness_binding",
 	"retryNextDelayMs":                            "sv_retry_next_delay_ms",
 	"assertValidProductRef":                       "sv_assert_valid_product_ref_binding",
+	"charges":                                     "sv_charges_binding",
+	"headlineCharges":                             "sv_headline_charges_binding",
+	"perUnitCharge":                               "sv_per_unit_charge_binding",
+	"billingCycle":                                "sv_billing_cycle_binding",
+	"trialDays":                                   "sv_trial_days_binding",
+	"includedUnits":                               "sv_included_units_binding",
+	"peggedCreditsPerUnit":                        "sv_pegged_credits_per_unit_binding",
+	"creditsPerUnitFromBalance":                   "sv_credits_per_unit_from_balance_binding",
 }
 
 // Replay runs one fixture and returns a normalized outcome (does not assert expect).

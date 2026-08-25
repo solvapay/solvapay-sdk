@@ -5,17 +5,18 @@
 #[allow(unused_imports)]
 use serde_json::{Map, Value};
 use solvapay_core::{
-    attach_business_details_validation_error, build_create_customer_params, build_gate_message,
-    build_nudge_message, build_paywall_gate, classify_cancel_error, classify_create_error,
-    classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, decide_paywall_outcome,
-    evaluate_cached_limits, evaluate_fresh_limits, extract_backend_customer_ref,
-    get_business_country_options, get_seller_tax_identifier_display_label,
+    attach_business_details_validation_error, billing_cycle, build_create_customer_params,
+    build_gate_message, build_nudge_message, build_paywall_gate, charges, classify_cancel_error,
+    classify_create_error, classify_customer_ref, classify_lookup_error, classify_paywall_state,
+    classify_reactivate_error, coerce_customer_options, credits_per_unit_from_balance,
+    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits,
+    extract_backend_customer_ref, get_business_country_options,
+    get_seller_tax_identifier_display_label, headline_charges, included_units,
     is_cached_customer_ref_valid, is_email_conflict, is_error_result, is_zero_decimal_currency,
     mcp_view_maps, normalize_cancel_response, normalize_reactivate_response,
-    paywall_client_payload, paywall_tool_result, project_topup_process_outcome,
-    resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
-    resolve_purchase_customer_ref, validate_activate_plan_params,
+    paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
+    project_topup_process_outcome, resolve_check_limits_params, resolve_fallback_gate_limits,
+    resolve_product_ref, resolve_purchase_customer_ref, trial_days, validate_activate_plan_params,
     validate_attach_business_details_params, validate_checkout_session_params,
     validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
@@ -36,6 +37,12 @@ fn invoke_attach_business_details_validation_error(
     to_value(&attach_business_details_validation_error(
         first_issue_message.as_deref(),
     ))
+}
+
+fn invoke_billing_cycle(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&billing_cycle(priced.as_ref()))
 }
 
 fn invoke_build_create_customer_params(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -73,6 +80,12 @@ fn invoke_build_paywall_gate(input: &FixtureInput) -> Result<Value, BindingError
     let product_ref = require_string(&args, "productRef")?;
     let limits = require_typed::<PaywallGateLimits>(&args, "limits")?;
     to_value(&build_paywall_gate(&product_ref, &limits))
+}
+
+fn invoke_charges(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&charges(priced.as_ref()))
 }
 
 fn invoke_classify_cancel_error(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -116,6 +129,18 @@ fn invoke_coerce_customer_options(input: &FixtureInput) -> Result<Value, Binding
     let email = optional_string(&args, "email")?;
     let name = optional_string(&args, "name")?;
     to_value(&coerce_customer_options(email.as_deref(), name.as_deref()))
+}
+
+fn invoke_credits_per_unit_from_balance(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    let balance = optional_value(&args, "balance");
+    let meter = optional_string(&args, "meter")?;
+    to_value(&credits_per_unit_from_balance(
+        priced.as_ref(),
+        balance.as_ref(),
+        meter.as_deref(),
+    ))
 }
 
 fn invoke_decide_paywall_outcome(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -167,6 +192,19 @@ fn invoke_get_seller_tax_identifier_display_label(
     Ok(Value::String(get_seller_tax_identifier_display_label(
         country.as_deref(),
     )))
+}
+
+fn invoke_headline_charges(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&headline_charges(priced.as_ref()))
+}
+
+fn invoke_included_units(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    let meter = optional_string(&args, "meter")?;
+    to_value(&included_units(priced.as_ref(), meter.as_deref()))
 }
 
 fn invoke_is_cached_customer_ref_valid(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -230,6 +268,25 @@ fn invoke_paywall_tool_result(input: &FixtureInput) -> Result<Value, BindingErro
     to_value(&paywall_tool_result(&message, &gate))
 }
 
+fn invoke_pegged_credits_per_unit(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let charge_minor = require_f64(&args, "chargeMinor")?;
+    let credits_per_minor_unit = require_f64(&args, "creditsPerMinorUnit")?;
+    let usd_to_charge_rate = optional_f64(&args, "usdToChargeRate")?;
+    to_value(&pegged_credits_per_unit(
+        charge_minor,
+        credits_per_minor_unit,
+        usd_to_charge_rate.as_ref(),
+    ))
+}
+
+fn invoke_per_unit_charge(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    let meter = optional_string(&args, "meter")?;
+    to_value(&per_unit_charge(priced.as_ref(), meter.as_deref()))
+}
+
 fn invoke_project_topup_process_outcome(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let status = optional_string(&args, "status")?;
@@ -276,6 +333,12 @@ fn invoke_resolve_purchase_customer_ref(input: &FixtureInput) -> Result<Value, B
         customer_ref.as_deref(),
         &user_id,
     )))
+}
+
+fn invoke_trial_days(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&trial_days(priced.as_ref()))
 }
 
 fn invoke_validate_activate_plan_params(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -805,6 +868,62 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_validate_list_plans_params),
+        },
+    );
+    registry.register(
+        "charges",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_charges),
+        },
+    );
+    registry.register(
+        "headlineCharges",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_headline_charges),
+        },
+    );
+    registry.register(
+        "perUnitCharge",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_per_unit_charge),
+        },
+    );
+    registry.register(
+        "billingCycle",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_billing_cycle),
+        },
+    );
+    registry.register(
+        "trialDays",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_trial_days),
+        },
+    );
+    registry.register(
+        "includedUnits",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_included_units),
+        },
+    );
+    registry.register(
+        "peggedCreditsPerUnit",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_pegged_credits_per_unit),
+        },
+    );
+    registry.register(
+        "creditsPerUnitFromBalance",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_credits_per_unit_from_balance),
         },
     );
     registry.register(

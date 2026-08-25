@@ -1,0 +1,15 @@
+{
+  "suite": "plan-pricing",
+  "case": "pegged-usd-parity",
+  "input": {
+    "fn": "peggedCreditsPerUnit",
+    "args": {
+      "chargeMinor": 2,
+      "creditsPerMinorUnit": 100,
+      "usdToChargeRate": 1
+    }
+  },
+  "expect": {
+    "result": 200
+  }
+}

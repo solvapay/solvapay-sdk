@@ -13,6 +13,14 @@ module SolvaPay
     NativeDispatch.call_sync("assert_valid_product_ref", args)
   end
 
+  # Read the billing-cycle option from a plan.
+  # @return Interval (and count when greater than 1), or null.
+  def self.billing_cycle(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("billing_cycle", args)
+  end
+
   # Build the human-readable paywall gate message from state and gate content.
   # @return Gate message string.
   def self.build_gate_message(input:)
@@ -37,12 +45,30 @@ module SolvaPay
     NativeDispatch.call_sync("build_paywall_gate", args)
   end
 
+  # Return every charge option on a plan, in wire order.
+  # @return Charge objects (flat, unit, or seat).
+  def self.charges(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("charges", args)
+  end
+
   # Classify paywall state from limits and product context.
   # @return Canonical paywall state label.
   def self.classify_paywall_state(input:)
     args = {} #: Hash[String, untyped]
     args["input"] = input
     NativeDispatch.call_sync("classify_paywall_state", args)
+  end
+
+  # Credits per metered call when the charge currency matches the balance peg.
+  # @return Credits per unit, or null when the rate cannot be established honestly.
+  def self.credits_per_unit_from_balance(priced: nil, balance: nil, meter: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    args["balance"] = balance unless balance.nil?
+    args["meter"] = meter unless meter.nil?
+    NativeDispatch.call_sync("credits_per_unit_from_balance", args)
   end
 
   # Convert credit units into display minor units for a currency.
@@ -103,6 +129,23 @@ module SolvaPay
     NativeDispatch.call_sync("get_tax_id_helper_text", args)
   end
 
+  # Return the headline flat charge in each currency, excluding setup fees.
+  # @return One flat charge per currency, in first-seen order.
+  def self.headline_charges(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("headline_charges", args)
+  end
+
+  # Read the included-unit cap for a meter from the limit option.
+  # @return Cap (0 means unlimited), or null when no limit is configured.
+  def self.included_units(priced: nil, meter: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    args["meter"] = meter unless meter.nil?
+    NativeDispatch.call_sync("included_units", args)
+  end
+
   # Return whether a currency uses zero decimal places.
   # @return True when the currency has zero decimal places.
   def self.is_zero_decimal_currency(currency:)
@@ -125,6 +168,25 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["error"] = error
     NativeDispatch.call_sync("paywall_error_to_client_payload", args)
+  end
+
+  # Convert a per-unit charge in minor units to credits via the USD peg.
+  # @return Credits per metered unit (0 for a free meter).
+  def self.pegged_credits_per_unit(charge_minor:, credits_per_minor_unit:, usd_to_charge_rate: nil)
+    args = {} #: Hash[String, untyped]
+    args["chargeMinor"] = charge_minor
+    args["creditsPerMinorUnit"] = credits_per_minor_unit
+    args["usdToChargeRate"] = usd_to_charge_rate unless usd_to_charge_rate.nil?
+    NativeDispatch.call_sync("pegged_credits_per_unit", args)
+  end
+
+  # Return the first per-unit charge, optionally scoped to one meter.
+  # @return The metered charge, or null when the plan does not meter usage.
+  def self.per_unit_charge(priced: nil, meter: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    args["meter"] = meter unless meter.nil?
+    NativeDispatch.call_sync("per_unit_charge", args)
   end
 
   # Resolve a product ref from metadata or env, or throw a named missing-ref error.
@@ -154,6 +216,14 @@ module SolvaPay
     args["behavior"] = behavior
     args["currency"] = currency
     NativeDispatch.call_sync("resolve_tax_behavior", args)
+  end
+
+  # Read the free-trial length in days from a plan.
+  # @return Trial length in days, or null when the plan has no trial.
+  def self.trial_days(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("trial_days", args)
   end
 
   # Validate seller business-details fields before submission.

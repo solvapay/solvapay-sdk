@@ -315,6 +315,54 @@
       "verbatimBody": null,
       "verbatimBodyWasm": null
     },
+    "billingCycle": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "priced",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "priced.as_ref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "billingCycle",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::pricing_options::billing_cycle",
+      "coreCall": "billing_cycle",
+      "doc": "Binding for `billingCycle`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 46,
+      "envelope": "sync",
+      "names": {
+        "go": "BillingCycle",
+        "py": "billing_cycle",
+        "rb": "billing_cycle",
+        "rust": "billing_cycle",
+        "ts": "billingCycle"
+      },
+      "return": "value",
+      "rustFnName": "billing_cycle_binding",
+      "section": "plans",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
     "bootstrapMcpProduct": {
       "args": [],
       "artifact": "client",
@@ -809,6 +857,54 @@
       "section": "Group C",
       "splitPathRefs": [],
       "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "charges": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "priced",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "priced.as_ref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "charges",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::pricing_options::charges",
+      "coreCall": "charges",
+      "doc": "Binding for `charges`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 43,
+      "envelope": "sync",
+      "names": {
+        "go": "Charges",
+        "py": "charges",
+        "rb": "charges",
+        "rust": "charges",
+        "ts": "charges"
+      },
+      "return": "value",
+      "rustFnName": "charges_binding",
+      "section": "plans",
+      "splitPathRefs": [],
+      "sync": "sync",
       "verbatimBody": null,
       "verbatimBodyWasm": null
     },
@@ -1510,6 +1606,76 @@
       "section": "Group B",
       "splitPathRefs": [],
       "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "creditsPerUnitFromBalance": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "priced",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "balance",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "meter",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "priced.as_ref()",
+          "balance.as_ref()",
+          "meter.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "creditsPerUnitFromBalance",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::pricing_options::credits_per_unit_from_balance",
+      "coreCall": "credits_per_unit_from_balance",
+      "doc": "Binding for `creditsPerUnitFromBalance`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 50,
+      "envelope": "sync",
+      "names": {
+        "go": "CreditsPerUnitFromBalance",
+        "py": "credits_per_unit_from_balance",
+        "rb": "credits_per_unit_from_balance",
+        "rust": "credits_per_unit_from_balance",
+        "ts": "creditsPerUnitFromBalance"
+      },
+      "return": "value",
+      "rustFnName": "credits_per_unit_from_balance_binding",
+      "section": "plans",
+      "splitPathRefs": [],
+      "sync": "sync",
       "verbatimBody": null,
       "verbatimBodyWasm": null
     },
@@ -2563,6 +2729,113 @@
       "verbatimBody": null,
       "verbatimBodyWasm": null
     },
+    "headlineCharges": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "priced",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "priced.as_ref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "headlineCharges",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::pricing_options::headline_charges",
+      "coreCall": "headline_charges",
+      "doc": "Binding for `headlineCharges`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 44,
+      "envelope": "sync",
+      "names": {
+        "go": "HeadlineCharges",
+        "py": "headline_charges",
+        "rb": "headline_charges",
+        "rust": "headline_charges",
+        "ts": "headlineCharges"
+      },
+      "return": "value",
+      "rustFnName": "headline_charges_binding",
+      "section": "plans",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "includedUnits": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "priced",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "meter",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "priced.as_ref()",
+          "meter.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "includedUnits",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::pricing_options::included_units",
+      "coreCall": "included_units",
+      "doc": "Binding for `includedUnits`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 48,
+      "envelope": "sync",
+      "names": {
+        "go": "IncludedUnits",
+        "py": "included_units",
+        "rb": "included_units",
+        "rust": "included_units",
+        "ts": "includedUnits"
+      },
+      "return": "value",
+      "rustFnName": "included_units_binding",
+      "section": "plans",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
     "isCachedCustomerRefValid": {
       "args": [
         {
@@ -3282,6 +3555,135 @@
       "verbatimBody": null,
       "verbatimBodyWasm": null
     },
+    "peggedCreditsPerUnit": {
+      "args": [
+        {
+          "extract": "requireF64",
+          "hostInjected": false,
+          "local": "charge_minor",
+          "name": "chargeMinor",
+          "required": true,
+          "type": "f64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "requireF64",
+          "hostInjected": false,
+          "local": "credits_per_minor_unit",
+          "name": "creditsPerMinorUnit",
+          "required": true,
+          "type": "f64",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalF64",
+          "hostInjected": false,
+          "local": "usd_to_charge_rate",
+          "name": "usdToChargeRate",
+          "required": false,
+          "type": "f64?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "charge_minor",
+          "credits_per_minor_unit",
+          "usd_to_charge_rate.as_ref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "peggedCreditsPerUnit",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::pricing_options::pegged_credits_per_unit",
+      "coreCall": "pegged_credits_per_unit",
+      "doc": "Binding for `peggedCreditsPerUnit`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 49,
+      "envelope": "sync",
+      "names": {
+        "go": "PeggedCreditsPerUnit",
+        "py": "pegged_credits_per_unit",
+        "rb": "pegged_credits_per_unit",
+        "rust": "pegged_credits_per_unit",
+        "ts": "peggedCreditsPerUnit"
+      },
+      "return": "value",
+      "rustFnName": "pegged_credits_per_unit_binding",
+      "section": "plans",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "perUnitCharge": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "priced",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalString",
+          "hostInjected": false,
+          "local": null,
+          "name": "meter",
+          "required": false,
+          "type": "string?",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "priced.as_ref()",
+          "meter.as_deref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "perUnitCharge",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::pricing_options::per_unit_charge",
+      "coreCall": "per_unit_charge",
+      "doc": "Binding for `perUnitCharge`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 45,
+      "envelope": "sync",
+      "names": {
+        "go": "PerUnitCharge",
+        "py": "per_unit_charge",
+        "rb": "per_unit_charge",
+        "rust": "per_unit_charge",
+        "ts": "perUnitCharge"
+      },
+      "return": "value",
+      "rustFnName": "per_unit_charge_binding",
+      "section": "plans",
+      "splitPathRefs": [],
+      "sync": "sync",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
     "processPaymentIntent": {
       "args": [],
       "artifact": "client",
@@ -3469,6 +3871,16 @@
           "type": "value",
           "typedAs": null,
           "typedStyle": "turbofish"
+        },
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "limits",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
         }
       ],
       "artifact": "decisions",
@@ -3498,7 +3910,7 @@
       "section": "usage",
       "splitPathRefs": [],
       "sync": "sync",
-      "verbatimBody": "let args = args_map(&args_json)?;\n        let purchase = match args.get(\"activePurchase\") {\n            None | Some(Value::Null) => None,\n            Some(v) => Some(v),\n        };\n        to_value(&project_usage_snapshot(purchase))",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let purchase = match args.get(\"activePurchase\") {\n            None | Some(Value::Null) => None,\n            Some(v) => Some(v),\n        };\n        let limits = match args.get(\"limits\") {\n            None | Some(Value::Null) => None,\n            Some(v) => Some(v),\n        };\n        to_value(&project_usage_snapshot(purchase, limits))",
       "verbatimBodyWasm": null
     },
     "reactivatePurchase": {
@@ -4231,6 +4643,54 @@
       "section": "Group C",
       "splitPathRefs": [],
       "sync": "async",
+      "verbatimBody": null,
+      "verbatimBodyWasm": null
+    },
+    "trialDays": {
+      "args": [
+        {
+          "extract": "optionalValue",
+          "hostInjected": false,
+          "local": null,
+          "name": "priced",
+          "required": false,
+          "type": "value",
+          "typedAs": null,
+          "typedStyle": "turbofish"
+        }
+      ],
+      "artifact": "decisions",
+      "call": {
+        "args": [
+          "priced.as_ref()"
+        ],
+        "kind": "wrap",
+        "serialize": "toValue"
+      },
+      "catalog": {
+        "id": "trialDays",
+        "kind": "coreHelper"
+      },
+      "clientCallArgs": [],
+      "core": "solvapay_core::pricing_options::trial_days",
+      "coreCall": "trial_days",
+      "doc": "Binding for `trialDays`.",
+      "docWasm": null,
+      "dtoType": null,
+      "emitOrder": 47,
+      "envelope": "sync",
+      "names": {
+        "go": "TrialDays",
+        "py": "trial_days",
+        "rb": "trial_days",
+        "rust": "trial_days",
+        "ts": "trialDays"
+      },
+      "return": "value",
+      "rustFnName": "trial_days_binding",
+      "section": "plans",
+      "splitPathRefs": [],
+      "sync": "sync",
       "verbatimBody": null,
       "verbatimBodyWasm": null
     },

@@ -29,8 +29,12 @@ export interface GetUsageResult {
 /**
  * Fetch the authenticated customer's usage snapshot for the active purchase.
  *
- * Derives the values from `checkPurchaseCore` — no extra backend call.
- * Returns `null` values when no usage-based plan is active.
+ * Consumption (`used`, period window) comes from `checkPurchaseCore`. The cap
+ * (`total`, `remaining`, `meterRef`) comes from `checkLimits` — the plan
+ * snapshot no longer carries `limit` or `meterRef` on the wire, so a metered
+ * plan costs one extra backend call. Non-metered plans skip it.
+ *
+ * Returns `null` values when no metered plan is active.
  */
 export async function getUsageCore(
   request: Request,
@@ -42,7 +46,27 @@ export async function getUsageCore(
   if (isErrorResult(purchaseResult)) return purchaseResult
 
   const activePurchase = (purchaseResult.purchases ?? []).find(p => p.status === 'active')
-  return projectUsageSnapshot(activePurchase ?? null)
+  if (!activePurchase) {
+    return projectUsageSnapshot(null, null)
+  }
+
+  const snapshot = activePurchase.planSnapshot
+  const isMetered =
+    typeof snapshot === 'object' &&
+    snapshot !== null &&
+    'isMetered' in snapshot &&
+    snapshot.isMetered === true
+  const productRef = activePurchase.productRef
+  if (!isMetered || typeof productRef !== 'string' || productRef.length === 0) {
+    return projectUsageSnapshot(activePurchase, null)
+  }
+
+  const solvaPay = options.solvaPay || createSolvaPay()
+  const limits = await solvaPay.apiClient.checkLimits({
+    customerRef: purchaseResult.customerRef,
+    productRef,
+  })
+  return projectUsageSnapshot(activePurchase, limits)
 }
 
 export async function trackUsageCore(

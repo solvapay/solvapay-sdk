@@ -6,20 +6,20 @@
     "args": {
       "activePurchase": {
         "reference": "pur_1",
-        "planSnapshot": {
-          "meterRef": "mtr_requests",
-          "limit": 10
-        },
         "usage": {
           "used": 50
         }
+      },
+      "limits": {
+        "meterName": "mtr_requests",
+        "remaining": 0
       }
     }
   },
   "expect": {
     "result": {
       "meterRef": "mtr_requests",
-      "total": 10,
+      "total": 50,
       "used": 50,
       "remaining": 0,
       "percentUsed": 100,

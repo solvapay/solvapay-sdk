@@ -804,18 +804,67 @@ projectUsageSnapshot:
   tsWrapper:
     paramTypes:
       activePurchase: UsageSnapshotPurchase | null | undefined
+      limits: Record<string, unknown> | null | undefined
+    paramStyle:
+      limits: optionalNull
   verbatimBody: |-
     let args = args_map(&args_json)?;
             let purchase = match args.get("activePurchase") {
                 None | Some(Value::Null) => None,
                 Some(v) => Some(v),
             };
-            to_value(&project_usage_snapshot(purchase))
+            let limits = match args.get("limits") {
+                None | Some(Value::Null) => None,
+                Some(v) => Some(v),
+            };
+            to_value(&project_usage_snapshot(purchase, limits))
   args:
     - name: activePurchase
       type: value
       required: false
+    - name: limits
+      type: value
+      required: false
   omitCoreCall: true
+charges:
+  tsWrapper:
+    paramTypes:
+      priced: Record<string, unknown> | null | undefined
+headlineCharges:
+  tsWrapper:
+    paramTypes:
+      priced: Record<string, unknown> | null | undefined
+perUnitCharge:
+  tsWrapper:
+    paramTypes:
+      priced: Record<string, unknown> | null | undefined
+    paramStyle:
+      meter: optionalNull
+billingCycle:
+  tsWrapper:
+    paramTypes:
+      priced: Record<string, unknown> | null | undefined
+trialDays:
+  tsWrapper:
+    paramTypes:
+      priced: Record<string, unknown> | null | undefined
+includedUnits:
+  tsWrapper:
+    paramTypes:
+      priced: Record<string, unknown> | null | undefined
+    paramStyle:
+      meter: optionalNull
+peggedCreditsPerUnit:
+  tsWrapper:
+    paramStyle:
+      usdToChargeRate: optionalNull
+creditsPerUnitFromBalance:
+  tsWrapper:
+    paramTypes:
+      priced: Record<string, unknown> | null | undefined
+      balance: Record<string, unknown> | null | undefined
+    paramStyle:
+      meter: optionalNull
 resolveCheckLimitsParams:
   tsWrapper:
     paramStyle:

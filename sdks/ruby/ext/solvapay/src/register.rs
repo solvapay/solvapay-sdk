@@ -7,10 +7,12 @@ use magnus::{function, method, Error, RClass, RModule};
 use crate::client::SolvaPayClient;
 use crate::decisions::assert_valid_product_ref_binding;
 use crate::decisions::attach_business_details_validation_error_binding;
+use crate::decisions::billing_cycle_binding;
 use crate::decisions::build_create_customer_params_binding;
 use crate::decisions::build_gate_message_binding;
 use crate::decisions::build_nudge_message_binding;
 use crate::decisions::build_paywall_gate_binding;
+use crate::decisions::charges_binding;
 use crate::decisions::classify_cancel_error_binding;
 use crate::decisions::classify_create_error_binding;
 use crate::decisions::classify_customer_ref_binding;
@@ -18,11 +20,14 @@ use crate::decisions::classify_lookup_error_binding;
 use crate::decisions::classify_paywall_state_binding;
 use crate::decisions::classify_reactivate_error_binding;
 use crate::decisions::coerce_customer_options_binding;
+use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::decide_paywall_outcome_binding;
 use crate::decisions::evaluate_cached_limits_binding;
 use crate::decisions::evaluate_fresh_limits_binding;
 use crate::decisions::evaluate_product_readiness_binding;
 use crate::decisions::extract_backend_customer_ref_binding;
+use crate::decisions::headline_charges_binding;
+use crate::decisions::included_units_binding;
 use crate::decisions::is_cached_customer_ref_valid_binding;
 use crate::decisions::is_email_conflict_binding;
 use crate::decisions::is_error_result_binding;
@@ -30,6 +35,8 @@ use crate::decisions::map_route_error_binding;
 use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
+use crate::decisions::pegged_credits_per_unit_binding;
+use crate::decisions::per_unit_charge_binding;
 use crate::decisions::project_payment_intent_result_binding;
 use crate::decisions::project_topup_process_outcome_binding;
 use crate::decisions::project_usage_snapshot_binding;
@@ -41,6 +48,7 @@ use crate::decisions::resolve_purchase_customer_ref_binding;
 use crate::decisions::resolve_return_url_binding;
 use crate::decisions::retry_next_delay_ms;
 use crate::decisions::select_active_purchases_binding;
+use crate::decisions::trial_days_binding;
 use crate::decisions::validate_activate_plan_params_binding;
 use crate::decisions::validate_attach_business_details_params_binding;
 use crate::decisions::validate_checkout_session_params_binding;
@@ -243,6 +251,20 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "assert_valid_product_ref",
         function!(assert_valid_product_ref_binding, 1),
+    )?;
+    native.define_singleton_method("charges", function!(charges_binding, 1))?;
+    native.define_singleton_method("headline_charges", function!(headline_charges_binding, 1))?;
+    native.define_singleton_method("per_unit_charge", function!(per_unit_charge_binding, 1))?;
+    native.define_singleton_method("billing_cycle", function!(billing_cycle_binding, 1))?;
+    native.define_singleton_method("trial_days", function!(trial_days_binding, 1))?;
+    native.define_singleton_method("included_units", function!(included_units_binding, 1))?;
+    native.define_singleton_method(
+        "pegged_credits_per_unit",
+        function!(pegged_credits_per_unit_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "credits_per_unit_from_balance",
+        function!(credits_per_unit_from_balance_binding, 1),
     )?;
     native.define_singleton_method(
         "validate_business_details",

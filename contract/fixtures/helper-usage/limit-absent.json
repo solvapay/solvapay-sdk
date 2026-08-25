@@ -7,7 +7,7 @@
       "activePurchase": {
         "reference": "pur_1",
         "planSnapshot": {
-          "meterRef": "mtr_requests"
+          "isMetered": false
         },
         "usage": {
           "used": 5
@@ -17,7 +17,7 @@
   },
   "expect": {
     "result": {
-      "meterRef": "mtr_requests",
+      "meterRef": null,
       "total": null,
       "used": 5,
       "remaining": null,

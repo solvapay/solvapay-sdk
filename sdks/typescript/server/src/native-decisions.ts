@@ -40,6 +40,8 @@ import type {
   RouteErrorInput,
   RouteErrorResult,
   TopupProcessOutcome,
+  BillingCycle,
+  Charge,
   UsageSnapshot,
   UsageSnapshotPurchase,
 } from '@solvapay/core'
@@ -290,8 +292,12 @@ export function validatePurchaseRef(
 
 export function projectUsageSnapshot(
   activePurchase: UsageSnapshotPurchase | null | undefined,
+  limits: Record<string, unknown> | null | undefined,
 ): UsageSnapshot {
-  return dispatchSync('projectUsageSnapshot', { activePurchase: activePurchase ?? null })
+  return dispatchSync('projectUsageSnapshot', {
+    activePurchase: activePurchase ?? null,
+    limits: limits ?? null,
+  })
 }
 
 // --- limits ---
@@ -314,6 +320,63 @@ export function validateListPlansParams(
   productRef: string | null | undefined,
 ): PlansHelperError | null {
   return dispatchSync('validateListPlansParams', { productRef: productRef ?? null })
+}
+
+export function charges(priced: Record<string, unknown> | null | undefined): Charge[] {
+  return dispatchSync('charges', { priced: priced ?? null })
+}
+
+export function headlineCharges(priced: Record<string, unknown> | null | undefined): Charge[] {
+  return dispatchSync('headlineCharges', { priced: priced ?? null })
+}
+
+export function perUnitCharge(
+  priced: Record<string, unknown> | null | undefined,
+  meter?: string | null,
+): Charge | null {
+  return dispatchSync('perUnitCharge', { priced: priced ?? null, meter: meter ?? null })
+}
+
+export function billingCycle(
+  priced: Record<string,
+  unknown> | null | undefined,
+): BillingCycle | null {
+  return dispatchSync('billingCycle', { priced: priced ?? null })
+}
+
+export function trialDays(priced: Record<string, unknown> | null | undefined): number | null {
+  return dispatchSync('trialDays', { priced: priced ?? null })
+}
+
+export function includedUnits(
+  priced: Record<string, unknown> | null | undefined,
+  meter?: string | null,
+): number | null {
+  return dispatchSync('includedUnits', { priced: priced ?? null, meter: meter ?? null })
+}
+
+export function peggedCreditsPerUnit(
+  chargeMinor: number,
+  creditsPerMinorUnit: number,
+  usdToChargeRate?: number | null,
+): number {
+  return dispatchSync('peggedCreditsPerUnit', {
+    chargeMinor,
+    creditsPerMinorUnit,
+    usdToChargeRate: usdToChargeRate ?? null,
+  })
+}
+
+export function creditsPerUnitFromBalance(
+  priced: Record<string, unknown> | null | undefined,
+  balance: Record<string, unknown> | null | undefined,
+  meter?: string | null,
+): number | null {
+  return dispatchSync('creditsPerUnitFromBalance', {
+    priced: priced ?? null,
+    balance: balance ?? null,
+    meter: meter ?? null,
+  })
 }
 
 // --- error ---

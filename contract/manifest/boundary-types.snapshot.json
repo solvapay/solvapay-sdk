@@ -1966,6 +1966,240 @@
       },
       "rustdoc": "Validate list-plans query productRef (JS truthiness: empty string fails).\n\n# Arguments\n\n* `product_ref` - Product reference; empty/`None` fails.\n\n# Returns\n\n[`None`] when productRef is present and non-empty; otherwise the frozen 400."
     },
+    "solvapay_core::pricing_options::billing_cycle": {
+      "implTy": null,
+      "module": "pricing_options",
+      "name": "billing_cycle",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "priced",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "BillingCycle"
+        }
+      },
+      "rustdoc": "The plan's billing cycle, or `None` for a one-time or pure usage-based plan."
+    },
+    "solvapay_core::pricing_options::charges": {
+      "implTy": null,
+      "module": "pricing_options",
+      "name": "charges",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "priced",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "kind": "named",
+            "name": "Charge"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "Every charge option on the plan, in wire order."
+    },
+    "solvapay_core::pricing_options::credits_per_unit_from_balance": {
+      "implTy": null,
+      "module": "pricing_options",
+      "name": "credits_per_unit_from_balance",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "priced",
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "balance",
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "meter",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "f64"
+        }
+      },
+      "rustdoc": "Credits per metered call for `priced`, priced against a customer's balance peg."
+    },
+    "solvapay_core::pricing_options::headline_charges": {
+      "implTy": null,
+      "module": "pricing_options",
+      "name": "headline_charges",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "priced",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "item": {
+            "kind": "named",
+            "name": "Charge"
+          },
+          "kind": "vec"
+        }
+      },
+      "rustdoc": "The recurring or one-time flat charge in each currency, first-seen order.\n\nSetup fees (`oneTime` alongside a base charge) are excluded."
+    },
+    "solvapay_core::pricing_options::included_units": {
+      "implTy": null,
+      "module": "pricing_options",
+      "name": "included_units",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "priced",
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "meter",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "f64"
+        }
+      },
+      "rustdoc": "Included units for a meter, from its limit option.\n\nThe backend uses `cap: 0` to mean unlimited; this preserves `0`."
+    },
+    "solvapay_core::pricing_options::pegged_credits_per_unit": {
+      "implTy": null,
+      "module": "pricing_options",
+      "name": "pegged_credits_per_unit",
+      "params": [
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "charge_minor",
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "byRef": false,
+          "optional": false,
+          "rustName": "credits_per_minor_unit",
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "byRef": false,
+          "optional": true,
+          "rustName": "usd_to_charge_rate",
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "f64"
+        }
+      },
+      "rustdoc": "Credits consumed per metered unit for `charge_minor` in the charge currency."
+    },
+    "solvapay_core::pricing_options::per_unit_charge": {
+      "implTy": null,
+      "module": "pricing_options",
+      "name": "per_unit_charge",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "priced",
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "meter",
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "Charge"
+        }
+      },
+      "rustdoc": "The plan's metered charge — the first `per: unit` charge, optionally scoped."
+    },
+    "solvapay_core::pricing_options::trial_days": {
+      "implTy": null,
+      "module": "pricing_options",
+      "name": "trial_days",
+      "params": [
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "priced",
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "f64"
+        }
+      },
+      "rustdoc": "Free trial length in days, or `None` when the plan has no trial."
+    },
     "solvapay_core::product::validate_get_product_params": {
       "implTy": null,
       "module": "product",
@@ -2424,6 +2658,14 @@
           "ty": {
             "kind": "value"
           }
+        },
+        {
+          "byRef": true,
+          "optional": true,
+          "rustName": "limits",
+          "ty": {
+            "kind": "value"
+          }
         }
       ],
       "return": {
@@ -2433,7 +2675,7 @@
           "name": "UsageSnapshot"
         }
       },
-      "rustdoc": "Project an active purchase JSON object (or `null`) into [`UsageSnapshot`].\n\n# Arguments\n\n* `active_purchase` - Purchase object or `None`/`Null`.\n\n# Returns\n\nNormalized usage snapshot (empty when no active purchase)."
+      "rustdoc": "Project an active purchase (and optional limits) into [`UsageSnapshot`].\n\nConsumption (`used`, period window, `purchaseRef`) comes from the purchase.\nThe cap (`total`, `remaining`, `meterRef`) comes from `limits` when present —\n`planSnapshot` no longer carries `limit` / `meterRef` on the wire.\n\n`limits.remaining < 0` is the backend's uncapped sentinel.\n\n# Arguments\n\n* `active_purchase` - Purchase object or `None`/`Null`.\n* `limits` - `checkLimits` payload (`remaining`, `meterName`) or `None`.\n\n# Returns\n\nNormalized usage snapshot (empty when no active purchase)."
     },
     "solvapay_core::webhook::WebhookError::message": {
       "implTy": "WebhookError",
@@ -2540,6 +2782,44 @@
     }
   },
   "types": {
+    "BillingCycle": {
+      "cfgFeature": null,
+      "module": "pricing_options",
+      "rustdoc": "A billing-cycle option — present only on recurring plans.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "interval",
+            "rustdoc": "`week`, `month`, or `year`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "interval"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "count",
+            "rustdoc": "Interval count when greater than 1; omitted for the default of 1.",
+            "serdeDefault": false,
+            "serializeWith": "serialize_opt_whole_f64",
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "count"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
     "BuildPromptDescriptorMetadataOptions": {
       "cfgFeature": null,
       "module": "mcp::descriptors",
@@ -2984,6 +3264,83 @@
               "kind": "bool"
             },
             "wireName": "evict"
+          }
+        ],
+        "kind": "struct",
+        "renameAll": "camelCase"
+      }
+    },
+    "Charge": {
+      "cfgFeature": null,
+      "module": "pricing_options",
+      "rustdoc": "A charge option. `amount_minor` is in `currency`'s minor units.",
+      "serde": "both",
+      "shape": {
+        "fields": [
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "per",
+            "rustdoc": "`flat`, `unit`, or `seat`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "per"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "amount_minor",
+            "rustdoc": "Amount in the charge currency's minor units.",
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "f64"
+            },
+            "wireName": "amountMinor"
+          },
+          {
+            "cfgFeature": null,
+            "optional": false,
+            "rustName": "currency",
+            "rustdoc": "ISO currency code as shipped on the wire (not normalised).",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": null,
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "currency"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "meter",
+            "rustdoc": "Meter name when `per` is `unit`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "string"
+            },
+            "wireName": "meter"
+          },
+          {
+            "cfgFeature": null,
+            "optional": true,
+            "rustName": "one_time",
+            "rustdoc": "Setup-fee flag; omitted unless `true`.",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "skipSerializingIf": "Option::is_none",
+            "ty": {
+              "kind": "bool"
+            },
+            "wireName": "oneTime"
           }
         ],
         "kind": "struct",
@@ -5488,7 +5845,7 @@
             "cfgFeature": null,
             "optional": true,
             "rustName": "meter_ref",
-            "rustdoc": "Meter reference (`meterRef` / `meterId` fallback); explicit `null` when absent.",
+            "rustdoc": "Meter name from `checkLimits`; explicit `null` when absent or uncapped.",
             "serdeDefault": false,
             "serializeWith": null,
             "skipSerializingIf": null,
@@ -5501,7 +5858,7 @@
             "cfgFeature": null,
             "optional": true,
             "rustName": "total",
-            "rustdoc": "Plan limit; explicit `null` when absent.",
+            "rustdoc": "`used + remaining` when the meter has a finite cap; else `null`.",
             "serdeDefault": false,
             "serializeWith": "serialize_opt_whole_f64",
             "skipSerializingIf": null,

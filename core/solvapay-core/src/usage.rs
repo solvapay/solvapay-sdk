@@ -9,9 +9,9 @@ use crate::serde_util::{serialize_opt_whole_f64, serialize_whole_f64};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageSnapshot {
-    /// Meter reference (`meterRef` / `meterId` fallback); explicit `null` when absent.
+    /// Meter name from `checkLimits`; explicit `null` when absent or uncapped.
     pub meter_ref: Option<String>,
-    /// Plan limit; explicit `null` when absent.
+    /// `used + remaining` when the meter has a finite cap; else `null`.
     #[serde(serialize_with = "serialize_opt_whole_f64")]
     pub total: Option<f64>,
     /// Units used (defaults to `0`).
@@ -34,11 +34,18 @@ pub struct UsageSnapshot {
     pub purchase_ref: Option<String>,
 }
 
-/// Project an active purchase JSON object (or `null`) into [`UsageSnapshot`].
+/// Project an active purchase (and optional limits) into [`UsageSnapshot`].
+///
+/// Consumption (`used`, period window, `purchaseRef`) comes from the purchase.
+/// The cap (`total`, `remaining`, `meterRef`) comes from `limits` when present —
+/// `planSnapshot` no longer carries `limit` / `meterRef` on the wire.
+///
+/// `limits.remaining < 0` is the backend's uncapped sentinel.
 ///
 /// # Arguments
 ///
 /// * `active_purchase` - Purchase object or `None`/`Null`.
+/// * `limits` - `checkLimits` payload (`remaining`, `meterName`) or `None`.
 ///
 /// # Returns
 ///
@@ -49,7 +56,10 @@ pub struct UsageSnapshot {
     section = "usage",
     emit_order = 25
 )]
-pub fn project_usage_snapshot(active_purchase: Option<&Value>) -> UsageSnapshot {
+pub fn project_usage_snapshot(
+    active_purchase: Option<&Value>,
+    limits: Option<&Value>,
+) -> UsageSnapshot {
     let Some(purchase) = active_purchase.filter(|v| !v.is_null()) else {
         return UsageSnapshot {
             meter_ref: None,
@@ -63,25 +73,20 @@ pub fn project_usage_snapshot(active_purchase: Option<&Value>) -> UsageSnapshot 
         };
     };
 
-    let snap = purchase.get("planSnapshot");
     let usage = purchase.get("usage");
-
-    let meter_ref = snap
-        .and_then(|s| {
-            s.get("meterRef")
-                .and_then(Value::as_str)
-                .or_else(|| s.get("meterId").and_then(Value::as_str))
-        })
-        .map(str::to_owned);
-
-    let total = snap.and_then(|s| s.get("limit")).and_then(Value::as_f64);
 
     let used = usage
         .and_then(|u| u.get("used"))
         .and_then(Value::as_f64)
         .unwrap_or(0.0);
 
-    let remaining = total.map(|t| (t - used).max(0.0));
+    let limits = limits.filter(|v| !v.is_null());
+    let remaining_raw = limits
+        .and_then(|l| l.get("remaining"))
+        .and_then(Value::as_f64);
+    let has_finite_cap = remaining_raw.is_some_and(|r| r >= 0.0);
+    let remaining = if has_finite_cap { remaining_raw } else { None };
+    let total = remaining.map(|r| used + r);
     let percent_used = total.and_then(|t| {
         if t > 0.0 {
             let pct = ((used / t) * 10_000.0).round() / 100.0;
@@ -90,6 +95,10 @@ pub fn project_usage_snapshot(active_purchase: Option<&Value>) -> UsageSnapshot 
             None
         }
     });
+    let meter_ref = limits
+        .and_then(|l| l.get("meterName").or_else(|| l.get("meterRef")))
+        .and_then(Value::as_str)
+        .map(str::to_owned);
 
     let period_start = usage
         .and_then(|u| u.get("periodStart"))
@@ -133,7 +142,7 @@ mod tests {
 
     #[test]
     fn no_active_purchase() {
-        let snap = project_usage_snapshot(None);
+        let snap = project_usage_snapshot(None, None);
         assert_eq!(snap.meter_ref, None);
         assert_eq!(snap.total, None);
         assert_eq!(snap.used, 0.0);
@@ -143,13 +152,14 @@ mod tests {
     }
 
     #[test]
-    fn meter_id_fallback() {
+    fn cap_from_limits_not_plan_snapshot() {
         let purchase = json!({
             "reference": "pur_1",
-            "planSnapshot": { "meterId": "mtr_legacy", "limit": 10 },
+            "planSnapshot": { "isMetered": true },
             "usage": { "used": 2 }
         });
-        let snap = project_usage_snapshot(Some(&purchase));
+        let limits = json!({ "meterName": "mtr_legacy", "remaining": 8 });
+        let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
         assert_eq!(snap.meter_ref.as_deref(), Some("mtr_legacy"));
         assert_eq!(snap.total, Some(10.0));
         assert_eq!(snap.used, 2.0);
@@ -159,25 +169,41 @@ mod tests {
     }
 
     #[test]
+    fn uncapped_sentinel_nulls_total() {
+        let purchase = json!({
+            "reference": "pur_1",
+            "usage": { "used": 5 }
+        });
+        let limits = json!({ "meterName": "mtr", "remaining": -1 });
+        let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
+        assert_eq!(snap.meter_ref.as_deref(), Some("mtr"));
+        assert_eq!(snap.total, None);
+        assert_eq!(snap.remaining, None);
+        assert_eq!(snap.percent_used, None);
+        assert_eq!(snap.used, 5.0);
+    }
+
+    #[test]
     fn remaining_and_percent_clamp() {
         let purchase = json!({
             "reference": "pur_1",
-            "planSnapshot": { "meterRef": "mtr", "limit": 10 },
             "usage": { "used": 50 }
         });
-        let snap = project_usage_snapshot(Some(&purchase));
+        let limits = json!({ "meterName": "mtr", "remaining": 0 });
+        let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
         assert_eq!(snap.remaining, Some(0.0));
         assert_eq!(snap.percent_used, Some(100.0));
+        assert_eq!(snap.total, Some(50.0));
     }
 
     #[test]
     fn fractional_percent_round() {
         let purchase = json!({
             "reference": "pur_1",
-            "planSnapshot": { "meterRef": "mtr", "limit": 3 },
             "usage": { "used": 1 }
         });
-        let snap = project_usage_snapshot(Some(&purchase));
+        let limits = json!({ "meterName": "mtr", "remaining": 2 });
+        let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
         assert_eq!(snap.percent_used, Some(33.33));
     }
 
@@ -186,10 +212,10 @@ mod tests {
         // (1/20000)*10000 = 0.5 → Math.round half-up → 1 → percentUsed 0.01
         let purchase = json!({
             "reference": "pur_1",
-            "planSnapshot": { "meterRef": "mtr", "limit": 20000 },
             "usage": { "used": 1 }
         });
-        let snap = project_usage_snapshot(Some(&purchase));
+        let limits = json!({ "meterName": "mtr", "remaining": 19999 });
+        let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
         assert_eq!(snap.percent_used, Some(0.01));
     }
 
@@ -197,10 +223,10 @@ mod tests {
     fn total_zero_null_percent() {
         let purchase = json!({
             "reference": "pur_1",
-            "planSnapshot": { "meterRef": "mtr", "limit": 0 },
             "usage": { "used": 0 }
         });
-        let snap = project_usage_snapshot(Some(&purchase));
+        let limits = json!({ "meterName": "mtr", "remaining": 0 });
+        let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
         assert_eq!(snap.total, Some(0.0));
         assert_eq!(snap.remaining, Some(0.0));
         assert_eq!(snap.percent_used, None);
@@ -210,10 +236,10 @@ mod tests {
     fn skip_absent_periods() {
         let purchase = json!({
             "reference": "pur_1",
-            "planSnapshot": { "meterRef": "mtr", "limit": 100 },
             "usage": { "used": 10, "periodStart": "2026-07-01T00:00:00Z" }
         });
-        let snap = project_usage_snapshot(Some(&purchase));
+        let limits = json!({ "meterName": "mtr", "remaining": 90 });
+        let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
         let value = serde_json::to_value(&snap).unwrap();
         assert_eq!(value["periodStart"], "2026-07-01T00:00:00Z");
         assert!(value.get("periodEnd").is_none());
@@ -223,12 +249,26 @@ mod tests {
     fn whole_percent_emits_integer() {
         let purchase = json!({
             "reference": "pur_1",
-            "planSnapshot": { "meterRef": "mtr", "limit": 2 },
             "usage": { "used": 1 }
         });
-        let snap = project_usage_snapshot(Some(&purchase));
+        let limits = json!({ "meterName": "mtr", "remaining": 1 });
+        let snap = project_usage_snapshot(Some(&purchase), Some(&limits));
         let value = serde_json::to_value(&snap).unwrap();
         assert_eq!(value["percentUsed"], json!(50));
         assert!(value["percentUsed"].as_i64().is_some());
+    }
+
+    #[test]
+    fn purchase_without_limits_has_no_cap() {
+        let purchase = json!({
+            "reference": "pur_1",
+            "planSnapshot": { "isMetered": false },
+            "usage": { "used": 5 }
+        });
+        let snap = project_usage_snapshot(Some(&purchase), None);
+        assert_eq!(snap.meter_ref, None);
+        assert_eq!(snap.total, None);
+        assert_eq!(snap.used, 5.0);
+        assert_eq!(snap.purchase_ref.as_deref(), Some("pur_1"));
     }
 }

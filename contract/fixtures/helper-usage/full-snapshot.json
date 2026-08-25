@@ -7,14 +7,17 @@
       "activePurchase": {
         "reference": "pur_1",
         "planSnapshot": {
-          "meterRef": "mtr_requests",
-          "limit": 100
+          "isMetered": true
         },
         "usage": {
           "used": 25,
           "periodStart": "2026-07-01T00:00:00Z",
           "periodEnd": "2026-08-01T00:00:00Z"
         }
+      },
+      "limits": {
+        "meterName": "mtr_requests",
+        "remaining": 75
       }
     }
   },

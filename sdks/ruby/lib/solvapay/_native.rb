@@ -113,6 +113,14 @@ module SolvaPay
       evaluate_product_readiness
       retry_next_delay_ms
       assert_valid_product_ref
+      charges
+      headline_charges
+      per_unit_charge
+      billing_cycle
+      trial_days
+      included_units
+      pegged_credits_per_unit
+      credits_per_unit_from_balance
     ].freeze
 
     RAW_VERIFY_WEBHOOK = SolvaPay.method(:verify_webhook)

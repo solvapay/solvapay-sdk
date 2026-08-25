@@ -355,7 +355,11 @@ pub fn project_usage_snapshot_binding(args_json: String) -> String {
             None | Some(Value::Null) => None,
             Some(v) => Some(v),
         };
-        to_value(&project_usage_snapshot(purchase))
+        let limits = match args.get("limits") {
+            None | Some(Value::Null) => None,
+            Some(v) => Some(v),
+        };
+        to_value(&project_usage_snapshot(purchase, limits))
     })
 }
 
@@ -637,6 +641,94 @@ pub fn assert_valid_product_ref_binding(args_json: String) -> String {
         let context = require_string(&args, "context")?;
         assert_valid_product_ref(&product_ref, &context)?;
         Ok(Value::Null)
+    })
+}
+
+// --- plans ---
+
+/// Binding for `charges`.
+pub fn charges_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&charges(priced.as_ref()))
+    })
+}
+
+/// Binding for `headlineCharges`.
+pub fn headline_charges_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&headline_charges(priced.as_ref()))
+    })
+}
+
+/// Binding for `perUnitCharge`.
+pub fn per_unit_charge_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        let meter = optional_string(&args, "meter")?;
+        to_value(&per_unit_charge(priced.as_ref(), meter.as_deref()))
+    })
+}
+
+/// Binding for `billingCycle`.
+pub fn billing_cycle_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&billing_cycle(priced.as_ref()))
+    })
+}
+
+/// Binding for `trialDays`.
+pub fn trial_days_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&trial_days(priced.as_ref()))
+    })
+}
+
+/// Binding for `includedUnits`.
+pub fn included_units_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        let meter = optional_string(&args, "meter")?;
+        to_value(&included_units(priced.as_ref(), meter.as_deref()))
+    })
+}
+
+/// Binding for `peggedCreditsPerUnit`.
+pub fn pegged_credits_per_unit_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let charge_minor = require_f64(&args, "chargeMinor")?;
+        let credits_per_minor_unit = require_f64(&args, "creditsPerMinorUnit")?;
+        let usd_to_charge_rate = optional_f64(&args, "usdToChargeRate")?;
+        to_value(&pegged_credits_per_unit(
+            charge_minor,
+            credits_per_minor_unit,
+            usd_to_charge_rate.as_ref(),
+        ))
+    })
+}
+
+/// Binding for `creditsPerUnitFromBalance`.
+pub fn credits_per_unit_from_balance_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        let balance = optional_value(&args, "balance");
+        let meter = optional_string(&args, "meter")?;
+        to_value(&credits_per_unit_from_balance(
+            priced.as_ref(),
+            balance.as_ref(),
+            meter.as_deref(),
+        ))
     })
 }
 

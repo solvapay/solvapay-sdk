@@ -6,13 +6,13 @@
     "args": {
       "activePurchase": {
         "reference": "pur_1",
-        "planSnapshot": {
-          "meterId": "mtr_legacy",
-          "limit": 10
-        },
         "usage": {
           "used": 2
         }
+      },
+      "limits": {
+        "meterName": "mtr_legacy",
+        "remaining": 8
       }
     }
   },

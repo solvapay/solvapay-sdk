@@ -114,7 +114,11 @@ pub fn invoke_project_usage_snapshot(input: &FixtureInput) -> Result<Value, Bind
         None | Some(Value::Null) => None,
         Some(v) => Some(v),
     };
-    serde_json::to_value(project_usage_snapshot(purchase))
+    let limits = match args.get("limits") {
+        None | Some(Value::Null) => None,
+        Some(v) => Some(v),
+    };
+    serde_json::to_value(project_usage_snapshot(purchase, limits))
         .map_err(|e| BindingError::Harness(e.to_string()))
 }
 

@@ -2921,6 +2921,158 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+  charges:
+    names:
+      ts: charges
+      py: charges
+      rb: charges
+      go: Charges
+      rust: charges
+    params: []
+    docs:
+      summary: 'Return every charge option on a plan, in wire order.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Charge objects (flat, unit, or seat).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  headlineCharges:
+    names:
+      ts: headlineCharges
+      py: headline_charges
+      rb: headline_charges
+      go: HeadlineCharges
+      rust: headline_charges
+    params: []
+    docs:
+      summary: 'Return the headline flat charge in each currency, excluding setup fees.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'One flat charge per currency, in first-seen order.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  perUnitCharge:
+    names:
+      ts: perUnitCharge
+      py: per_unit_charge
+      rb: per_unit_charge
+      go: PerUnitCharge
+      rust: per_unit_charge
+    params: []
+    docs:
+      summary: 'Return the first per-unit charge, optionally scoped to one meter.'
+      params:
+        options: 'A priced plan and optional meter name.'
+      returns: 'The metered charge, or null when the plan does not meter usage.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  billingCycle:
+    names:
+      ts: billingCycle
+      py: billing_cycle
+      rb: billing_cycle
+      go: ReadBillingCycle
+      rust: billing_cycle
+    params: []
+    docs:
+      summary: 'Read the billing-cycle option from a plan.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Interval (and count when greater than 1), or null.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  trialDays:
+    names:
+      ts: trialDays
+      py: trial_days
+      rb: trial_days
+      go: TrialDays
+      rust: trial_days
+    params: []
+    docs:
+      summary: 'Read the free-trial length in days from a plan.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Trial length in days, or null when the plan has no trial.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  includedUnits:
+    names:
+      ts: includedUnits
+      py: included_units
+      rb: included_units
+      go: IncludedUnits
+      rust: included_units
+    params: []
+    docs:
+      summary: 'Read the included-unit cap for a meter from the limit option.'
+      params:
+        options: 'A priced plan and optional meter name.'
+      returns: 'Cap (0 means unlimited), or null when no limit is configured.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  peggedCreditsPerUnit:
+    names:
+      ts: peggedCreditsPerUnit
+      py: pegged_credits_per_unit
+      rb: pegged_credits_per_unit
+      go: PeggedCreditsPerUnit
+      rust: pegged_credits_per_unit
+    params: []
+    docs:
+      summary: 'Convert a per-unit charge in minor units to credits via the USD peg.'
+      params:
+        options: 'Charge amount, credits per minor unit, and optional USD-to-charge rate.'
+      returns: 'Credits per metered unit (0 for a free meter).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  creditsPerUnitFromBalance:
+    names:
+      ts: creditsPerUnitFromBalance
+      py: credits_per_unit_from_balance
+      rb: credits_per_unit_from_balance
+      go: CreditsPerUnitFromBalance
+      rust: credits_per_unit_from_balance
+    params: []
+    docs:
+      summary: 'Credits per metered call when the charge currency matches the balance peg.'
+      params:
+        options: 'A priced plan, a balance peg, and an optional meter name.'
+      returns: 'Credits per unit, or null when the rate cannot be established honestly.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
 
 facade:
   createSolvaPay:
