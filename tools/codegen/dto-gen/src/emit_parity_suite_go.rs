@@ -80,8 +80,14 @@ pub fn emit_parity_suite_go(ir: &Ir) -> GenResult<String> {
         "// extraClientMethods are exported Client methods that are not catalog operations.\n",
     );
     output.push_str("var extraClientMethods = map[string]struct{}{\n");
+    let extra_name_width = EXTRA_CLIENT_METHODS
+        .iter()
+        .map(|name| name.len())
+        .max()
+        .unwrap_or(0);
     for name in EXTRA_CLIENT_METHODS {
-        let _ = writeln!(output, "\t\"{name}\": {{}},");
+        let pad = " ".repeat(extra_name_width - name.len());
+        let _ = writeln!(output, "\t\"{name}\":{pad} {{}},");
     }
     output.push_str("}\n\n");
 
@@ -349,8 +355,8 @@ mod tests {
         assert!(output.contains("len(operationSignatures); got != 36"));
         assert!(output.contains("paramTypes"));
         assert!(output.contains("TestExportedClientMethodsMatchCensus"));
-        assert!(output.contains("\"Close\": {}"));
-        assert!(output.contains("\"Gate\": {}"));
+        assert!(output.contains("\"Close\":   {}"));
+        assert!(output.contains("\"Gate\":    {}"));
         assert!(output.contains("\"Payable\": {}"));
         assert!(output.contains("m.Type.In(i + 2).String()"));
         assert!(output.contains("expectedLimitsCacheTTLMs"));
