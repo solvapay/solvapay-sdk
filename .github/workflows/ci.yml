@@ -611,9 +611,13 @@ jobs:
           path: /tmp/solvapay-gem
 
       - name: Install solvapay platform gem
+        working-directory: sdks/ruby-mcp
         run: |
           gemfile="$(ls /tmp/solvapay-gem/*.gem | head -n1)"
-          gem install "${gemfile}"
+          # bundle exec isolates GEM_PATH; install the platform gem into the
+          # bundle home so `require "solvapay"` resolves without Rubygems.
+          bundle_gem_home="$(bundle exec ruby -e 'print Gem.dir')"
+          gem install --install-dir "${bundle_gem_home}" --no-document "${gemfile}"
 
       - name: MCP-authoring fixtures + typecheck
         working-directory: sdks/ruby-mcp
