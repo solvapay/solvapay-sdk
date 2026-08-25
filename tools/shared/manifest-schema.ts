@@ -539,7 +539,7 @@ export const SHIM_JS_NAMES = [
   'validateProcessPaymentIntentParams',
   'validatePurchaseRef',
   'validateTopupPaymentIntentParams',
-  // Payload builders (23)
+  // Payload builders (24)
   'assertResponseResult',
   'buildPromptDescriptorMetadata',
   'buildPromptUserMessage',

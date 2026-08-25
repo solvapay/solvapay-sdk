@@ -611,13 +611,17 @@ jobs:
           path: /tmp/solvapay-gem
 
       - name: Install solvapay platform gem
-        working-directory: sdks/ruby-mcp
         run: |
+          set -euo pipefail
           gemfile="$(ls /tmp/solvapay-gem/*.gem | head -n1)"
-          # bundle exec isolates GEM_PATH; install the platform gem into the
-          # bundle home so `require "solvapay"` resolves without Rubygems.
-          bundle_gem_home="$(bundle exec ruby -e 'print Gem.dir')"
-          gem install --install-dir "${bundle_gem_home}" --no-document "${gemfile}"
+          dest="${RUNNER_TEMP}/solvapay-gem-home"
+          mkdir -p "${dest}"
+          gem install --install-dir "${dest}" --no-document "${gemfile}"
+          # Bundler only activates Gemfile gems. Point RUBYLIB at the
+          # platform gem so `require "solvapay"` works under bundle exec.
+          lib="$(echo "${dest}"/gems/solvapay-*/lib)"
+          test -f "${lib}/solvapay.rb"
+          echo "RUBYLIB=${lib}${RUBYLIB:+:${RUBYLIB}}" >> "${GITHUB_ENV}"
 
       - name: MCP-authoring fixtures + typecheck
         working-directory: sdks/ruby-mcp
