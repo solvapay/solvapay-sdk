@@ -453,6 +453,8 @@ jobs:
           python -m pyright --project "${GITHUB_WORKSPACE}/sdks/python-mcp"
           python -m ruff check "${GITHUB_WORKSPACE}/sdks/python-mcp/python/solvapay_mcp"
           python -m pytest -q "${GITHUB_WORKSPACE}/examples/python/paid-mcp"
+          python -m pip install httpx
+          python -m pytest -q "${GITHUB_WORKSPACE}/examples/python/stock-research-mcp"
 
   python-binding-artifacts:
     name: python-binding artifact gate

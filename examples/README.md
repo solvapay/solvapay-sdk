@@ -53,9 +53,11 @@ collide with platform services. Convenience scripts from the repo root:
 
 ## Python
 
-| Example                               | Description                                                         |
-| ------------------------------------- | ------------------------------------------------------------------- |
-| [get-merchant](./python/get-merchant) | `SolvaPayClient.get_merchant_blocking` + offline `http.server` test |
+| Example                                           | Description                                                              |
+| ------------------------------------------------- | ------------------------------------------------------------------------ |
+| [get-merchant](./python/get-merchant)             | `SolvaPayClient.get_merchant_blocking` + offline `http.server` test      |
+| [paid-mcp](./python/paid-mcp)                     | Paywalled MCP echo (`solvapay-mcp`) against a mock backend               |
+| [stock-research-mcp](./python/stock-research-mcp) | Paywalled MCP tools joining a ranked watchlist with SEC company data     |
 
 ```bash
 cd examples/python/get-merchant
