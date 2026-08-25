@@ -1,5 +1,17 @@
 # nextjs-auth0
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [e936ac0]
+- Updated dependencies [ec9c24c]
+- Updated dependencies [a450b48]
+  - @solvapay/core@1.4.0
+  - @solvapay/react@2.0.0
+  - @solvapay/server@2.2.0
+  - @solvapay/next@1.3.2
+
 ## 0.0.1
 
 ### Patch Changes
