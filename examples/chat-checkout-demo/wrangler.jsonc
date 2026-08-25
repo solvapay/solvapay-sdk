@@ -57,13 +57,20 @@
   // hostname (or remove the `routes` block entirely to serve on the
   // default `*.workers.dev` URL).
   //
+  // Do not set `account_id` here. Wrangler does not expand
+  // `${CLOUDFLARE_ACCOUNT_ID}` in this file — a placeholder becomes the
+  // literal account path and every API call 404s. Set
+  // `CLOUDFLARE_ACCOUNT_ID` in `.env.prod` (see `.env.prod.example`);
+  // `scripts/deploy.mjs` forwards it to the wrangler process. One-off
+  // wrangler commands (`secret put`, `tail`) need the same env var
+  // exported in the shell.
+  //
   // Secrets are scoped per worker name:
   //   wrangler secret put SOLVAPAY_SECRET_KEY --env production
   //   wrangler secret put GEMINI_API_KEY --env production
   "env": {
     "production": {
       "name": "solvapay-chat-checkout-demo-prod",
-      "account_id": "${CLOUDFLARE_ACCOUNT_ID}",
       "routes": [
         {
           "pattern": "chat-demo.solvapay.app",
