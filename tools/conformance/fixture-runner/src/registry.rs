@@ -6,22 +6,23 @@
 use serde_json::{Map, Value};
 use solvapay_core::{
     attach_business_details_validation_error, billing_cycle, build_create_customer_params,
-    build_gate_message, build_nudge_message, build_paywall_gate, charges, classify_cancel_error,
-    classify_create_error, classify_customer_ref, classify_lookup_error, classify_paywall_state,
-    classify_reactivate_error, coerce_customer_options, credits_per_unit_from_balance,
-    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits,
-    extract_backend_customer_ref, get_business_country_options,
-    get_seller_tax_identifier_display_label, headline_charges, included_units,
-    is_cached_customer_ref_valid, is_email_conflict, is_error_result, is_zero_decimal_currency,
-    mcp_view_maps, normalize_cancel_response, normalize_reactivate_response,
-    paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
-    project_topup_process_outcome, resolve_check_limits_params, resolve_fallback_gate_limits,
-    resolve_product_ref, resolve_purchase_customer_ref, trial_days, validate_activate_plan_params,
+    build_gate_message, build_nudge_message, build_payable_tool_result, build_paywall_gate,
+    charges, classify_cancel_error, classify_create_error, classify_customer_ref,
+    classify_lookup_error, classify_paywall_state, classify_reactivate_error,
+    coerce_customer_options, credits_per_unit_from_balance, decide_paywall_outcome,
+    evaluate_cached_limits, evaluate_fresh_limits, extract_backend_customer_ref,
+    get_business_country_options, get_seller_tax_identifier_display_label, headline_charges,
+    included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
+    is_zero_decimal_currency, mcp_view_maps, normalize_cancel_response,
+    normalize_reactivate_response, paywall_client_payload, paywall_tool_result,
+    pegged_credits_per_unit, per_unit_charge, project_topup_process_outcome,
+    resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
+    resolve_purchase_customer_ref, trial_days, validate_activate_plan_params,
     validate_attach_business_details_params, validate_checkout_session_params,
     validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, GateContent, PaywallGate, PaywallGateLimits,
-    PaywallLimits, PaywallState,
+    PaywallLimits, PaywallState, ResponseEnvelope,
 };
 
 #[allow(unused_imports)]
@@ -73,6 +74,12 @@ fn invoke_build_nudge_message(input: &FixtureInput) -> Result<Value, BindingErro
     let state = require_typed::<PaywallState>(&args, "state")?;
     let limits = optional_typed::<PaywallLimits>(&args, "limits")?;
     Ok(Value::String(build_nudge_message(&state, limits.as_ref())))
+}
+
+fn invoke_build_payable_tool_result(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let envelope: ResponseEnvelope = require_typed(&args, "envelope")?;
+    to_value(&build_payable_tool_result(&envelope))
 }
 
 fn invoke_build_paywall_gate(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -994,6 +1001,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_decide_paywall_outcome),
+        },
+    );
+    registry.register(
+        "buildPayableToolResult",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_build_payable_tool_result),
         },
     );
     registry.register(

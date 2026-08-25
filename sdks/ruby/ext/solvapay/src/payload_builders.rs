@@ -7,16 +7,16 @@
 
 use serde_json::{Map, Value};
 use solvapay_core::{
-    assert_response_result, build_prompt_descriptor_metadata, build_prompt_user_message,
-    build_tool_descriptor_metadata, credits_to_display_minor_units, derive_icons,
-    derive_tax_id_type, get_business_country_options, get_seller_tax_identifier_display_label,
-    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, is_zero_decimal_currency,
-    make_response_result, mcp_tool_names_json, mcp_view_maps, minor_units_per_major,
-    paywall_tool_result, resolve_seller_identity_display, resolve_tax_behavior,
-    seller_tax_identifier_display_label_by_type, validate_business_details,
+    assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
+    build_prompt_user_message, build_tool_descriptor_metadata, credits_to_display_minor_units,
+    derive_icons, derive_tax_id_type, get_business_country_options,
+    get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
+    get_tax_id_helper_text, is_zero_decimal_currency, make_response_result, mcp_tool_names_json,
+    mcp_view_maps, minor_units_per_major, paywall_tool_result, resolve_seller_identity_display,
+    resolve_tax_behavior, seller_tax_identifier_display_label_by_type, validate_business_details,
     validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, BusinessDetailsInput, CreditsToDisplayInput,
-    MerchantBranding, PaywallGate, SdkError, SellerIdentityInput,
+    MerchantBranding, PaywallGate, ResponseEnvelope, SdkError, SellerIdentityInput,
 };
 
 use crate::args::{
@@ -352,6 +352,15 @@ pub fn validate_public_base_url_binding(args_json: String) -> String {
             None => Ok(Value::Null),
             Some(message) => Ok(Value::String(message.to_owned())),
         }
+    })
+}
+
+/// Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).
+pub fn build_payable_tool_result_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let envelope: ResponseEnvelope = require_typed(&args, "envelope")?;
+        to_value(&build_payable_tool_result(&envelope))
     })
 }
 

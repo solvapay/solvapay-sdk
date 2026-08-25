@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "solvapay-mcp"
+version = "0.1.0"
+description = "SolvaPay payable-MCP adapter for the Python MCP SDK"
+requires-python = ">=3.10"
+dependencies = [
+  "solvapay",
+  "mcp>=2.0.0,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "pyyaml>=6"]
+typecheck = [
+  "mypy==1.17.1",
+  "pyright==1.1.411",
+  "ruff==0.12.4",
+]
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[tool.setuptools.package-data]
+solvapay_mcp = ["py.typed"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["python"]
+
+[tool.mypy]
+strict = true
+disallow_any_explicit = true
+python_version = "3.12"
+files = [
+  "python/solvapay_mcp/__init__.py",
+  "python/solvapay_mcp/register.py",
+  "python/solvapay_mcp/response_context.py",
+  "python/solvapay_mcp/_layer2.py",
+]
+warn_unused_ignores = true
+mypy_path = "python"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["python"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

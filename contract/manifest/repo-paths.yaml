@@ -24,6 +24,7 @@ sdks:
   capi: sdks/capi
   rust: sdks/rust
   typescript: sdks/typescript
+  pythonMcp: sdks/python-mcp
 
 tsPackages:
   auth: sdks/typescript/auth
@@ -288,6 +289,7 @@ drift:
   - fixtureRunner
 
 lookups:
+  mcpFixtures: contract/mcp-fixtures
   rustLiveReport: contract/shadow/output/rust-live-report.json
   fuzzCorpus: internal/fuzz/corpus
   fuzzRoot: internal/fuzz

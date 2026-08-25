@@ -32,9 +32,15 @@ importers:
       '@fastify/swagger-ui':
         specifier: ^5.2.5
         version: 5.2.5
+      '@modelcontextprotocol/server':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@solvapay/core':
         specifier: workspace:*
         version: link:sdks/typescript/core
+      '@solvapay/mcp':
+        specifier: workspace:*
+        version: link:sdks/typescript/mcp
       '@solvapay/mcp-core':
         specifier: workspace:*
         version: link:sdks/typescript/mcp-core

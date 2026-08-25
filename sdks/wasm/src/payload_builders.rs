@@ -216,11 +216,12 @@ pub fn seller_tax_identifier_display_label_by_type_binding(args_json: String) ->
 mod mcp_payload {
     use serde_json::{Map, Value};
     use solvapay_core::{
-        assert_response_result, build_prompt_descriptor_metadata, build_prompt_user_message,
-        build_tool_descriptor_metadata, derive_icons, make_response_result, mcp_tool_names_json,
-        mcp_view_maps, paywall_tool_result, validate_public_base_url,
-        BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, MerchantBranding,
-        PaywallGate, SdkError,
+        assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
+        build_prompt_user_message, build_tool_descriptor_metadata, derive_icons,
+        make_response_result, mcp_tool_names_json, mcp_view_maps, paywall_tool_result,
+        validate_public_base_url, BuildPromptDescriptorMetadataOptions,
+        BuildToolDescriptorMetadataOptions, MerchantBranding, PaywallGate, ResponseEnvelope,
+        SdkError,
     };
     use wasm_bindgen::prelude::*;
 
@@ -391,6 +392,16 @@ mod mcp_payload {
                 None => Ok(Value::Null),
                 Some(message) => Ok(Value::String(message.to_owned())),
             }
+        })
+    }
+
+    /// Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).
+    #[wasm_bindgen(js_name = "buildPayableToolResult")]
+    pub fn build_payable_tool_result_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let envelope: ResponseEnvelope = require_typed(&args, "envelope")?;
+            to_value(&build_payable_tool_result(&envelope))
         })
     }
 

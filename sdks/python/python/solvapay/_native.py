@@ -129,7 +129,8 @@ SyncMethod = Literal[
     "build_tool_descriptor_metadata",
     "build_prompt_descriptor_metadata",
     "build_prompt_user_message",
-    "validate_public_base_url",]
+    "validate_public_base_url",
+    "build_payable_tool_result",]
 
 from typing import get_args
 

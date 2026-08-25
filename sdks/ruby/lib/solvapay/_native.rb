@@ -91,6 +91,7 @@ module SolvaPay
       classify_reactivate_error
       normalize_cancel_response
       validate_public_base_url
+      build_payable_tool_result
       normalize_reactivate_response
       validate_purchase_ref
       project_usage_snapshot

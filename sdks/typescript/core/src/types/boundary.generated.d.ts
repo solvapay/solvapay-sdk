@@ -190,6 +190,26 @@ export type FreshLimitsEvaluation = {
 export type LookupErrorKind = 'expectedMissing' | 'unexpected'
 
 /**
+ * MCP tool result for an allowed payable handler (`SolvaPayCallToolResult` allow path).
+ * 
+ * `is_error` is omitted (`skip_serializing_if`) — allow is not a tool error.
+ */
+export type McpPayableToolResult = {
+  /**
+   * Omitted on the allow path.
+   */
+  isError?: boolean
+  /**
+   * Emitted blocks, then one `{ type: "text", text }` primary block.
+   */
+  content: unknown[]
+  /**
+   * Raw merchant `data` (not the branded envelope).
+   */
+  structuredContent: unknown
+}
+
+/**
  * Projected create-PI / create-topup helper return shape.
  */
 export type PaymentIntentProjection = {

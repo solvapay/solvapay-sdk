@@ -116,6 +116,7 @@ module.exports.billingCycle = __napiModule.exports.billingCycle
 module.exports.buildCreateCustomerParams = __napiModule.exports.buildCreateCustomerParams
 module.exports.buildGateMessage = __napiModule.exports.buildGateMessage
 module.exports.buildNudgeMessage = __napiModule.exports.buildNudgeMessage
+module.exports.buildPayableToolResult = __napiModule.exports.buildPayableToolResult
 module.exports.buildPaywallGate = __napiModule.exports.buildPaywallGate
 module.exports.buildPromptDescriptorMetadata = __napiModule.exports.buildPromptDescriptorMetadata
 module.exports.buildPromptUserMessage = __napiModule.exports.buildPromptUserMessage

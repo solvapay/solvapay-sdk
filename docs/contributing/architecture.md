@@ -165,7 +165,7 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 - **Core value helpers** → `business_details.rs`, `credit_display.rs`,
   `seller_identity.rs`
 - **MCP payload contracts** → `src/mcp/` (`tool_names.rs`, `descriptors.rs`,
-  `envelope.rs`, `paywall_tool_result.rs`)
+  `envelope.rs`, `paywall_tool_result.rs`, `payable_tool_result.rs`)
 - **Error model** → `error.rs` (`SdkError`) — see [error-handling.md](./error-handling.md)
 
 **HTTP client — `solvapay-transport`:** the `Transport` trait plus the reqwest
@@ -190,7 +190,7 @@ capabilities; only syntax differs (cross-surface parity is enforced in CI).
 | Surface        | Binding toolchain                                          | Status                                                                        |
 | -------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | TypeScript     | napi-rs (Node native), wasm-bindgen (edge + browser)      | GA — the published `@solvapay/*` packages                                     |
-| Python         | PyO3 + maturin (`abi3` wheels)                            | Built + tested in CI; publish is TestPyPI-gated (not GA)                      |
+| Python         | PyO3 + maturin (`abi3` wheels) + `solvapay-mcp` adapter   | Built + tested in CI; publish is TestPyPI-gated (not GA)                      |
 | Ruby           | Magnus + rb-sys (platform gems)                           | Built + tested in CI; publish gated (not GA)                                  |
 | Go             | wazero + embedded `wasm32-wasip1` core (`//go:embed`)     | Built + tested in CI; subtree module release (not GA)                         |
 | Rust           | `solvapay` crate (thin facade, no FFI) + `blocking` feature | Built + tested in CI; crates.io publish gated (not GA)                        |
@@ -256,8 +256,11 @@ Some surfaces are deliberately hand-written and never move to Rust (redesign-v2
 - `createSolvaPay` factory ergonomics
 - `createRequestDeduplicator` + limits-cache plumbing (host timers/maps)
 - `@solvapay/auth`, `@solvapay/next`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init`
-- MCP SDK registration glue and the `@solvapay/mcp-core` transport parts (OAuth
-  bridge, bearer, CSP, narration) — only the MCP _payload builders_ moved
+- MCP SDK registration glue and the `@solvapay/mcp-core` / `solvapay-mcp`
+  transport parts (OAuth bridge, bearer, CSP, narration) — only the MCP
+  _payload builders_ moved (including allow-path `build_payable_tool_result`).
+  The hand-written `registerPayable` / `ctx` surface is pinned by
+  [`mcp-authoring-adapter-contract.md`](./mcp-authoring-adapter-contract.md).
 - Per-language examples under `examples/<language>/`
 
 ## Design principles
@@ -279,6 +282,7 @@ Some surfaces are deliberately hand-written and never move to Rust (redesign-v2
 
 ## Where to read next
 
+- [`mcp-authoring-adapter-contract.md`](./mcp-authoring-adapter-contract.md) — layer-3 `registerPayable` / `ctx` contract and `contract/mcp-fixtures/` corpus
 - [`sdk-codegen.md`](./sdk-codegen.md) — regenerating DTOs, facades, binding glue (`pnpm gen`)
 - [`codegen-ast-derivation.md`](./codegen-ast-derivation.md) — derive binding descriptors and conformance harnesses from Rust (after step 55)
 - [`rust-core-sdk-redesign-v2.md`](./rust-core-sdk-redesign-v2.md) — deep spec, decisions, and rationale

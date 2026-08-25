@@ -32,6 +32,7 @@ import type {
   PaywallToolResult,
   ResponseOptions,
   ResponseResult,
+  SolvaPayCallToolResult,
   SolvaPayMerchantBranding,
   SolvaPayPromptResult,
   SolvaPayToolIcon,
@@ -44,6 +45,7 @@ export type NativeMcpSyncMethod =
   | 'paywallToolResult'
   | 'makeResponseResult'
   | 'assertResponseResult'
+  | 'buildPayableToolResult'
   | 'MCP_TOOL_NAMES'
   | 'mcpViewMaps'
   | 'deriveIcons'
@@ -215,4 +217,22 @@ export function validatePublicBaseUrl(publicBaseUrl: string): string | null {
   return dispatchSync('validatePublicBaseUrl', { publicBaseUrl }, () =>
     validatePublicBaseUrlTs(publicBaseUrl),
   )
+}
+
+/**
+ * Allow-path unwrap. Native-only — an uninstalled binding throws (no TS rollback).
+ */
+export function buildPayableToolResult(
+  envelope: ResponseResult<unknown>,
+): SolvaPayCallToolResult {
+  const api = getApi()
+  if (api === null) {
+    throw new Error(
+      'SolvaPay native MCP API is not installed; buildPayableToolResult requires native dispatch',
+    )
+  }
+  return api.callNativeSync(
+    'buildPayableToolResult',
+    JSON.stringify({ envelope }),
+  ) as SolvaPayCallToolResult
 }

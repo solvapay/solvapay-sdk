@@ -48,6 +48,9 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
             "product": args.get("productRef"),
             "message": "Payment required",
         }
+    if name == "resolve_check_limits_params":
+        usage = args.get("usageType") or args.get("meterName") or "requests"
+        return {"productRef": args.get("productRef"), "meterName": usage}
     if name == "build_create_customer_params":
         ref = str(args.get("customerRef") or "user")
         now = args.get("nowMs") or 0

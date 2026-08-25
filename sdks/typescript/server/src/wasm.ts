@@ -140,6 +140,7 @@ export type WasmSyncMethod =
   | 'buildPromptDescriptorMetadata'
   | 'buildPromptUserMessage'
   | 'validatePublicBaseUrl'
+  | 'buildPayableToolResult'
 
 export type WasmClientConfig = {
   apiKey: string

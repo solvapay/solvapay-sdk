@@ -30,6 +30,9 @@ checks:
   - name: python-binding artifact gate
     jobId: python-binding-artifacts
     gate: Pre-publish artifact gate
+  - name: python-mcp
+    jobId: python-mcp
+    gate: MCP-authoring conformance; Dynamic-language type-strictness
   - name: ruby-binding (x86_64-linux)
     jobId: ruby-binding
     gate: Platform build matrices; Ruby contract suite; Dynamic-language type-strictness; Per-language examples

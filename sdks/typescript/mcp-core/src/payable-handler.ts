@@ -29,7 +29,8 @@
  */
 
 import type { LimitResponseWithPlan, ProtectHandlerContext, SolvaPay } from '@solvapay/server'
-import { buildNudgeMessage, isPaywallStructuredContent } from '@solvapay/server'
+import { isPaywallStructuredContent } from '@solvapay/server'
+import { buildPayableToolResult } from './native-mcp'
 import type { BuildBootstrapPayloadFn } from './bootstrap-payload'
 import { buildResponseContext } from './response-context'
 import { assertResponseResult } from './response-envelope'
@@ -178,77 +179,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
     // TypeScript contract and returned a raw value, the assertion
     // throws a merchant-actionable error pointing at the fix.
     const envelope = assertResponseResult(result.structuredContent)
-    return unwrapResponseEnvelope(result as SolvaPayCallToolResult, envelope, extra)
-  }
-}
-
-/**
- * Apply `options.text` / `options.nudge` overlays and flush queued
- * `ctx.emit(...)` blocks into the terminal response. Called only when
- * the merchant returned a `ResponseResult` envelope.
- *
- * Text-only nudge: when `options.nudge` is present, the nudge message
- * is appended to `content[0].text` as a plain-text suffix. No
- * `structuredContent` switch, no widget route — merchant data stays
- * on `structuredContent` unchanged. The fallback nudge copy from
- * `buildNudgeMessage` is used when `options.nudge.message` is absent.
- */
-async function unwrapResponseEnvelope(
-  adapterResult: SolvaPayCallToolResult,
-  envelope: ResponseResult<unknown>,
-  _extra: McpToolExtra | undefined,
-): Promise<SolvaPayCallToolResult> {
-  const { data, options, emittedBlocks } = envelope
-  const textOverride = options?.text
-  const nudge = options?.nudge
-
-  // `content[0].text` — narrator override via `options.text`, otherwise
-  // the existing JSON-serialised merchant data. V1.1 may introduce a
-  // merchant-data narrator; V1 keeps the current behaviour.
-  const baseText = typeof textOverride === 'string' ? textOverride : JSON.stringify(data)
-
-  // Append the nudge copy as a text suffix. Prefer the merchant-
-  // supplied `nudge.message`; fall back to `buildNudgeMessage` for an
-  // opinionated default that names a recovery tool. Separator is a
-  // double newline so terminal hosts render cleanly against the
-  // merchant data above.
-  let primaryText = baseText
-  if (nudge) {
-    const nudgeText =
-      nudge.message && nudge.message.length > 0
-        ? nudge.message
-        : buildNudgeMessage(
-            // `buildNudgeMessage` only reads the state kind to pick
-            // copy; for merchant-supplied nudges we don't have a
-            // `LimitResponseWithPlan` in hand here, so we defer to
-            // the nudge's own kind → state mapping. `low-balance` →
-            // topup, everything else → upgrade.
-            nudge.kind === 'low-balance'
-              ? { kind: 'topup_required' }
-              : { kind: 'upgrade_required' },
-            null,
-          )
-    primaryText = baseText.length > 0 ? `${baseText}\n\n${nudgeText}` : nudgeText
-  }
-
-  const content: SolvaPayCallToolResult['content'] = [
-    ...((emittedBlocks ?? []) as SolvaPayCallToolResult['content']),
-    { type: 'text', text: primaryText },
-  ]
-
-  // `options.units` is intentionally ignored — V1 billing stays at one
-  // usage unit per call; credit debit = units × plan.creditsPerUnit.
-
-  const existingMeta =
-    typeof adapterResult._meta === 'object' && adapterResult._meta !== null
-      ? (adapterResult._meta as Record<string, unknown>)
-      : {}
-
-  return {
-    ...adapterResult,
-    content,
-    structuredContent: data as Record<string, unknown>,
-    ...(Object.keys(existingMeta).length > 0 ? { _meta: existingMeta } : {}),
+    return buildPayableToolResult(envelope)
   }
 }
 

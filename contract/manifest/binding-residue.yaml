@@ -723,6 +723,18 @@ paywallErrorToClientPayload:
       local: gate
   callArgs:
     - "&gate"
+buildPayableToolResult:
+  doc: Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).
+  args:
+    - name: envelope
+      type: value
+      required: true
+      extract: requireTyped
+      typedAs: ResponseEnvelope
+      local: envelope
+      typedStyle: annotation
+  callArgs:
+    - "&envelope"
 paywallToolResult:
   doc: Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
   args:

@@ -553,6 +553,7 @@ export const SHIM_JS_NAMES = [
   'getTaxIdFieldLabel',
   'getTaxIdHelperText',
   'isZeroDecimalCurrency',
+  'buildPayableToolResult',
   'makeResponseResult',
   'MCP_TOOL_NAMES',
   'mcpViewMaps',

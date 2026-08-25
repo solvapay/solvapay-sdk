@@ -154,6 +154,9 @@ export declare function buildGateMessage(argsJson: string): string
 /** Binding for `buildNudgeMessage`. */
 export declare function buildNudgeMessage(argsJson: string): string
 
+/** Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope). */
+export declare function buildPayableToolResult(argsJson: string): string
+
 /** Binding for `buildPaywallGate`. */
 export declare function buildPaywallGate(argsJson: string): string
 

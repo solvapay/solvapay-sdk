@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import time
 from collections.abc import Awaitable, Callable, Mapping
+from datetime import datetime, timezone
 from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar
 
@@ -39,6 +41,29 @@ class ApiClient(Protocol):
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
+
+
+_BASE36 = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+
+def _generate_request_id() -> str:
+    """Match the TypeScript ``solvapay_{epoch_ms}_{9-char base36}`` format."""
+    suffix = "".join(random.choice(_BASE36) for _ in range(9))
+    return f"solvapay_{_now_ms()}_{suffix}"
+
+
+def _iso8601_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _resolved_meter_name(product: str, usage_type: str) -> str:
+    resolved = _call_sync_decision(
+        "resolve_check_limits_params",
+        {"productRef": product, "usageType": usage_type},
+    )
+    if isinstance(resolved, dict) and isinstance(resolved.get("meterName"), str):
+        return resolved["meterName"]
+    raise SolvaPayError("resolve_check_limits_params returned unexpected value")
 
 
 def _raise_solvapay_error(
@@ -95,6 +120,29 @@ def _call_sync_decision(name: str, args: dict[str, Any]) -> Any:
     if fn is None:
         raise SolvaPayError(f"SolvaPay native binding missing sync method: {name}")
     return _unwrap_envelope(fn(json.dumps(args)))
+
+
+def _track_usage(
+    client: ApiClient,
+    *,
+    customer_ref: str,
+    product_ref: str,
+    action: str,
+    outcome: str,
+    request_id: str,
+    duration_ms: float,
+) -> None:
+    payload: dict[str, Any] = {
+        "customerRef": customer_ref,
+        "actionType": "api_call",
+        "units": 1,
+        "outcome": outcome,
+        "productRef": product_ref,
+        "duration": duration_ms,
+        "metadata": {"action": action, "requestId": request_id},
+        "timestamp": _iso8601_timestamp(),
+    }
+    _unwrap_envelope(client.track_usage_blocking(json.dumps(payload)))
 
 
 class _CustomerDeduplicator:
@@ -297,6 +345,8 @@ class SolvaPay:
         if not isinstance(decision, dict):
             raise SolvaPayError("decide_paywall_outcome returned unexpected value")
 
+        meter_name = _resolved_meter_name(product, usage_type)
+
         if decision.get("outcome") == "gate":
             gate = decision.get("gate") or {}
             if not isinstance(gate, dict):
@@ -304,6 +354,15 @@ class SolvaPay:
                     "build_paywall_gate",
                     {"productRef": product, "limits": last_limits or {"remaining": 0}},
                 )
+            _track_usage(
+                self._client,
+                customer_ref=backend_ref,
+                product_ref=product,
+                action=meter_name,
+                outcome="paywall",
+                request_id=_generate_request_id(),
+                duration_ms=max(0, _now_ms() - now),
+            )
             return PayablePaywallResult(kind="paywall", content=gate)
 
         def track_success(
@@ -311,21 +370,16 @@ class SolvaPay:
             duration: float | None = None,
             metadata: dict[str, Any] | None = None,
         ) -> None:
-            payload: dict[str, Any] = {
-                "customerRef": backend_ref,
-                "action": usage_type,
-                "productRef": product,
-            }
-            if duration is not None:
-                payload["duration"] = duration
-            if metadata is not None:
-                payload["metadata"] = metadata
-            args_json = json.dumps(payload)
-            if blocking:
-                _unwrap_envelope(self._client.track_usage_blocking(args_json))
-            else:
-                # Fire-and-forget via blocking twin so callers need not await.
-                _unwrap_envelope(self._client.track_usage_blocking(args_json))
+            _ = metadata
+            _track_usage(
+                self._client,
+                customer_ref=backend_ref,
+                product_ref=product,
+                action=meter_name,
+                outcome="success",
+                request_id=_generate_request_id(),
+                duration_ms=0 if duration is None else duration,
+            )
 
         def track_fail(
             err: object,
@@ -333,9 +387,17 @@ class SolvaPay:
             duration: float | None = None,
             metadata: dict[str, Any] | None = None,
         ) -> None:
-            meta = dict(metadata or {})
-            meta["error"] = str(err)
-            track_success(duration=duration, metadata=meta)
+            _ = err
+            _ = metadata
+            _track_usage(
+                self._client,
+                customer_ref=backend_ref,
+                product_ref=product,
+                action=meter_name,
+                outcome="fail",
+                request_id=_generate_request_id(),
+                duration_ms=0 if duration is None else duration,
+            )
 
         return PayableAllowResult(
             kind="allow",

@@ -1,0 +1,9 @@
+{
+  "include": ["python/solvapay_mcp"],
+  "exclude": ["**/__pycache__"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "reportMissingModuleSource": "none",
+  "reportMissingImports": "none",
+  "extraPaths": ["python"]
+}

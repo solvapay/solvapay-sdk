@@ -1,0 +1,47 @@
+{
+  "suite": "customer-ref",
+  "case": "from-tool-args",
+  "input": {
+    "fn": "registerPayable",
+    "args": {
+      "tool": {
+        "name": "echo_paid",
+        "title": "Echo paid",
+        "description": "Paid echo",
+        "inputSchema": { "customer_ref": { "type": "string" } },
+        "args": { "customer_ref": "cus_from_args" }
+      },
+      "product": "prd_demo",
+      "customerRef": "cus_from_args",
+      "customerRefSource": "toolArgs",
+      "limits": {
+        "withinLimits": true,
+        "remaining": 42,
+        "plan": "pl_pro",
+        "creditBalance": 5000
+      },
+      "handler": {
+        "kind": "respond",
+        "data": { "ok": true }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "toolResult": {
+        "content": [{ "type": "text", "text": "{\"ok\":true}" }],
+        "structuredContent": { "ok": true }
+      },
+      "usage": [
+        {
+          "outcome": "success",
+          "actionType": "api_call",
+          "units": 1,
+          "productRef": "prd_demo",
+          "customerRef": "cus_from_args",
+          "metadata": { "action": "requests" }
+        }
+      ]
+    }
+  }
+}

@@ -65,6 +65,7 @@ export const billingCycle = __napiModule.exports.billingCycle
 export const buildCreateCustomerParams = __napiModule.exports.buildCreateCustomerParams
 export const buildGateMessage = __napiModule.exports.buildGateMessage
 export const buildNudgeMessage = __napiModule.exports.buildNudgeMessage
+export const buildPayableToolResult = __napiModule.exports.buildPayableToolResult
 export const buildPaywallGate = __napiModule.exports.buildPaywallGate
 export const buildPromptDescriptorMetadata = __napiModule.exports.buildPromptDescriptorMetadata
 export const buildPromptUserMessage = __napiModule.exports.buildPromptUserMessage

@@ -937,12 +937,13 @@ use solvapay_core::{
     build_tool_descriptor_metadata, credits_to_display_minor_units, derive_icons,
     derive_tax_id_type, get_business_country_options, get_seller_tax_identifier_display_label,
     get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, is_zero_decimal_currency,
-    make_response_result, mcp_tool_names_json, mcp_view_maps, minor_units_per_major,
-    paywall_tool_result, resolve_seller_identity_display, resolve_tax_behavior,
+    build_payable_tool_result, make_response_result, mcp_tool_names_json, mcp_view_maps,
+    minor_units_per_major, paywall_tool_result, resolve_seller_identity_display,
+    resolve_tax_behavior,
     seller_tax_identifier_display_label_by_type, validate_business_details,
     validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, BusinessDetailsInput, CreditsToDisplayInput,
-    MerchantBranding, PaywallGate, SdkError, SellerIdentityInput,
+    MerchantBranding, PaywallGate, ResponseEnvelope, SdkError, SellerIdentityInput,
 };
 
 use crate::abi::{pack, read_string};

@@ -146,6 +146,7 @@ export type NativeSyncMethod =
   | 'buildPromptDescriptorMetadata'
   | 'buildPromptUserMessage'
   | 'validatePublicBaseUrl'
+  | 'buildPayableToolResult'
 
 export type NativeBinding = {
   verifyWebhook(body: string, signature: string, secret: string, nowUnixSecs?: number): string

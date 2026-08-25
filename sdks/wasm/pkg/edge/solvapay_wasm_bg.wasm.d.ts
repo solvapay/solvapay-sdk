@@ -11,6 +11,7 @@ export const billingCycle: (a: number, b: number) => [number, number];
 export const buildCreateCustomerParams: (a: number, b: number) => [number, number];
 export const buildGateMessage: (a: number, b: number) => [number, number];
 export const buildNudgeMessage: (a: number, b: number) => [number, number];
+export const buildPayableToolResult: (a: number, b: number) => [number, number];
 export const buildPaywallGate: (a: number, b: number) => [number, number];
 export const buildPromptDescriptorMetadata: (a: number, b: number) => [number, number];
 export const buildPromptUserMessage: (a: number, b: number) => [number, number];

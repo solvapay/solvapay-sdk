@@ -230,6 +230,11 @@ export function buildGateMessage(args_json: string): string;
 export function buildNudgeMessage(args_json: string): string;
 
 /**
+ * Binding for `buildPayableToolResult` (allow-path unwrap of a branded response envelope).
+ */
+export function buildPayableToolResult(args_json: string): string;
+
+/**
  * Binding for `buildPaywallGate`.
  */
 export function buildPaywallGate(args_json: string): string;
@@ -602,6 +607,7 @@ export interface InitOutput {
     readonly buildCreateCustomerParams: (a: number, b: number) => [number, number];
     readonly buildGateMessage: (a: number, b: number) => [number, number];
     readonly buildNudgeMessage: (a: number, b: number) => [number, number];
+    readonly buildPayableToolResult: (a: number, b: number) => [number, number];
     readonly buildPaywallGate: (a: number, b: number) => [number, number];
     readonly buildPromptDescriptorMetadata: (a: number, b: number) => [number, number];
     readonly buildPromptUserMessage: (a: number, b: number) => [number, number];

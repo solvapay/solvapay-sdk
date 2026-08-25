@@ -66,6 +66,7 @@ var SyncExports = map[string]string{
 	"classifyReactivateError":                     "sv_classify_reactivate_error_binding",
 	"normalizeCancelResponse":                     "sv_normalize_cancel_response_binding",
 	"validatePublicBaseUrl":                       "sv_validate_public_base_url_binding",
+	"buildPayableToolResult":                      "sv_build_payable_tool_result_binding",
 	"normalizeReactivateResponse":                 "sv_normalize_reactivate_response_binding",
 	"validatePurchaseRef":                         "sv_validate_purchase_ref_binding",
 	"projectUsageSnapshot":                        "sv_project_usage_snapshot_binding",

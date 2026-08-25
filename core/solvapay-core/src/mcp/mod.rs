@@ -5,6 +5,7 @@
 
 mod descriptors;
 mod envelope;
+mod payable_tool_result;
 mod paywall_tool_result;
 mod tool_names;
 
@@ -15,6 +16,7 @@ pub use descriptors::{
     PromptUserMessage, ToolAnnotations, ToolDescriptorMetadata, ToolIcon, PUBLIC_BASE_URL_ERROR,
 };
 pub use envelope::{assert_response_result, make_response_result, ResponseEnvelope};
+pub use payable_tool_result::{build_payable_tool_result, McpPayableToolResult};
 pub use paywall_tool_result::{paywall_tool_result, McpContentBlock, McpPaywallToolResult};
 pub use tool_names::{
     mcp_tool_names_json, mcp_view_maps, McpViewMaps, MCP_TOOL_NAMES, TOOL_FOR_VIEW, VIEW_FOR_TOOL,

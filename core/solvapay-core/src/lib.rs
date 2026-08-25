@@ -77,13 +77,14 @@ pub use error::{render_template, SdkError};
 pub use helper_error::HelperErrorResult;
 pub use limits::{resolve_check_limits_params, CheckLimitsParams};
 pub use mcp::{
-    assert_response_result, build_prompt_descriptor_metadata, build_prompt_user_message,
-    build_tool_descriptor_metadata, derive_icons, make_response_result, mcp_tool_names_json,
-    mcp_view_maps, paywall_tool_result, validate_public_base_url,
+    assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
+    build_prompt_user_message, build_tool_descriptor_metadata, derive_icons, make_response_result,
+    mcp_tool_names_json, mcp_view_maps, paywall_tool_result, validate_public_base_url,
     BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, McpContentBlock,
-    McpPaywallToolResult, McpViewMaps, MerchantBranding, PromptDescriptorMetadata,
-    PromptUserMessage, ResponseEnvelope, ToolAnnotations, ToolDescriptorMetadata, ToolIcon,
-    MCP_TOOL_NAMES, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW, VIEW_FOR_TOOL,
+    McpPayableToolResult, McpPaywallToolResult, McpViewMaps, MerchantBranding,
+    PromptDescriptorMetadata, PromptUserMessage, ResponseEnvelope, ToolAnnotations,
+    ToolDescriptorMetadata, ToolIcon, MCP_TOOL_NAMES, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW,
+    VIEW_FOR_TOOL,
 };
 pub use payment::{
     attach_business_details_validation_error, project_payment_intent_result,

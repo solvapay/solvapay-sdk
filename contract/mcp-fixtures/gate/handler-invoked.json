@@ -1,0 +1,43 @@
+{
+  "suite": "gate",
+  "case": "handler-invoked",
+  "input": {
+    "fn": "registerPayable",
+    "args": {
+      "tool": {
+        "name": "echo_paid",
+        "title": "Echo paid",
+        "description": "Paid echo",
+        "args": {}
+      },
+      "product": "prd_gated",
+      "customerRef": "cus_from_hook",
+      "customerRefSource": "hook",
+      "limits": {
+        "withinLimits": true,
+        "remaining": 42,
+        "plan": "pl_pro",
+        "creditBalance": 5000
+      },
+      "handler": {
+        "kind": "gate",
+        "reason": "custom reason"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "toolResult": {
+        "content": [{ "type": "text", "text": "custom reason" }],
+        "isError": false,
+        "structuredContent": {
+          "kind": "payment_required",
+          "product": "prd_gated",
+          "checkoutUrl": "",
+          "message": "custom reason"
+        }
+      },
+      "usage": []
+    }
+  }
+}

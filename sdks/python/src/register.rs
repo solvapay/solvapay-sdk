@@ -58,6 +58,7 @@ use crate::decisions::validate_process_payment_intent_params_binding;
 use crate::decisions::validate_purchase_ref_binding;
 use crate::decisions::validate_topup_payment_intent_params_binding;
 use crate::payload_builders::assert_response_result_binding;
+use crate::payload_builders::build_payable_tool_result_binding;
 use crate::payload_builders::build_prompt_descriptor_metadata_binding;
 use crate::payload_builders::build_prompt_user_message_binding;
 use crate::payload_builders::build_tool_descriptor_metadata_binding;
@@ -196,5 +197,6 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     m.add_function(wrap_pyfunction!(build_prompt_user_message_binding, m)?)?;
     m.add_function(wrap_pyfunction!(validate_public_base_url_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(build_payable_tool_result_binding, m)?)?;
     Ok(())
 }

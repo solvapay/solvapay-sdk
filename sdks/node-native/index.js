@@ -595,6 +595,7 @@ module.exports.billingCycle = nativeBinding.billingCycle
 module.exports.buildCreateCustomerParams = nativeBinding.buildCreateCustomerParams
 module.exports.buildGateMessage = nativeBinding.buildGateMessage
 module.exports.buildNudgeMessage = nativeBinding.buildNudgeMessage
+module.exports.buildPayableToolResult = nativeBinding.buildPayableToolResult
 module.exports.buildPaywallGate = nativeBinding.buildPaywallGate
 module.exports.buildPromptDescriptorMetadata = nativeBinding.buildPromptDescriptorMetadata
 module.exports.buildPromptUserMessage = nativeBinding.buildPromptUserMessage
