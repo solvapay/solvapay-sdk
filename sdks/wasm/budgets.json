@@ -22,8 +22,8 @@
   },
   "baselines": {
     "browser": {
-      "rawBytes": 143697,
-      "gzipBytes": 63460,
+      "rawBytes": 162961,
+      "gzipBytes": 71040,
       "coldStartMs": 23.341638
     },
     "edge": {
@@ -35,7 +35,7 @@
   },
   "maxAllowed": {
     "browser": {
-      "gzipBytes": 69806,
+      "gzipBytes": 78144,
       "coldStartMs": 35.012457
     },
     "edge": {

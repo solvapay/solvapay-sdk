@@ -2,13 +2,13 @@
  * Browser profile wrapper — public-safe pure logic only.
  *
  * Exposes `wasmVersion` plus the business-details / credit-display /
- * seller-identity sync envelope functions (§7.8 public-safe subset). Never
- * exports webhook verification, the transport `WasmClient`, or any MCP /
- * secret-adjacent server symbol — those are compiled out of the browser Rust
- * profile. Exports are enumerated explicitly (not `export *`) so the browser
- * symbol audit can verify the exact surface. `ready()` warms the module
- * asynchronously; `ensureReadySync()` instantiates from a precompiled
- * `WebAssembly.Module` when the caller already has one.
+ * seller-identity / plan-pricing sync envelope functions (§7.8 public-safe
+ * subset). Never exports webhook verification, the transport `WasmClient`,
+ * or any MCP / secret-adjacent server symbol — those are compiled out of
+ * the browser Rust profile. Exports are enumerated explicitly (not
+ * `export *`) so the browser symbol audit can verify the exact surface.
+ * `ready()` warms the module asynchronously; `ensureReadySync()` instantiates
+ * from a precompiled `WebAssembly.Module` when the caller already has one.
  */
 import init, {
   initSync,
@@ -29,6 +29,15 @@ import init, {
   resolveSellerIdentityDisplay,
   getSellerTaxIdentifierDisplayLabel,
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+  // plan-pricing (public-safe)
+  charges,
+  headlineCharges,
+  perUnitCharge,
+  billingCycle,
+  trialDays,
+  includedUnits,
+  peggedCreditsPerUnit,
+  creditsPerUnitFromBalance,
 } from '../pkg/browser/solvapay_wasm.js'
 
 export {
@@ -47,6 +56,14 @@ export {
   resolveSellerIdentityDisplay,
   getSellerTaxIdentifierDisplayLabel,
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+  charges,
+  headlineCharges,
+  perUnitCharge,
+  billingCycle,
+  trialDays,
+  includedUnits,
+  peggedCreditsPerUnit,
+  creditsPerUnitFromBalance,
 }
 
 let initPromise

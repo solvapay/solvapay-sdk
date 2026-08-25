@@ -40,7 +40,6 @@
     "clean": "turbo clean",
     "dev": "turbo dev --no-cache --concurrency 16 --continue",
     "test": "turbo run test --filter=!@example/*",
-    "test:e2e:examples": "pnpm --filter @example/e2e test",
     "lint": "turbo run lint",
     "typecheck": "tsx tools/repo/typecheck-packages.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\" --ignore-path .prettierignore",

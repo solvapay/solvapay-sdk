@@ -12,7 +12,9 @@ const nextConfig = withSolvaPayNextConfig(
     ],
     env: {
       NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF:
-        process.env.NEXT_PUBLIC_PRODUCT_REF ?? process.env.SOLVAPAY_PRODUCT_REF ?? 'prd_demo',
+        process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF ??
+        process.env.NEXT_PUBLIC_PRODUCT_REF ??
+        process.env.SOLVAPAY_PRODUCT_REF,
     },
   },
   { importMetaUrl: import.meta.url },

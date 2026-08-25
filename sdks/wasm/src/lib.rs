@@ -6,9 +6,10 @@
 //!   decision / paywall / retry JSON envelopes ([`decisions`]), sync core + MCP
 //!   payload builders ([`payload_builders`]), and the async
 //!   [`wasm_client::WasmClient`] Groups A–C methods over `FetchTransport`.
-//! - `browser`: public-safe pure surface only — [`wasm_version`] + the
+//! - `browser`: public-safe pure surface — `wasm_version` + the
 //!   business-details / credit-display / seller-identity subset of
-//!   [`payload_builders`]. No webhook, no secret-key client, no MCP symbols.
+//!   `payload_builders` plus the plan-pricing readers React's checkout
+//!   primitives call. No webhook, no secret-key client, no MCP symbols.
 //!
 //! # Panic safety
 //!
@@ -33,6 +34,11 @@ compile_error!("solvapay-wasm: enable exactly one of features `edge` or `browser
 mod args;
 mod error;
 pub mod payload_builders;
+
+/// Public-safe plan-pricing readers for the browser profile. Edge gets the
+/// same envelopes from the `decisions` module.
+#[cfg(feature = "browser")]
+mod plan_pricing;
 
 #[cfg(feature = "edge")]
 pub mod decisions;

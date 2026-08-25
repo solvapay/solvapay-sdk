@@ -18,6 +18,9 @@ const NATIVE_PACKAGES = [
   '@solvapay/server-wasm',
 ]
 
+/** Origins `next dev` accepts for HMR when the app is opened via 127.0.0.1 or localhost. */
+const DEV_ORIGINS = ['127.0.0.1', 'localhost']
+
 /**
  * @param {string} fromUrl `import.meta.url` of the consuming `next.config.mjs`
  * @returns {string} Absolute path to the pnpm workspace root
@@ -54,12 +57,34 @@ export function withSolvaPayNextConfig(config = {}, options) {
   return {
     ...config,
     outputFileTracingRoot: monorepoRoot,
+    allowedDevOrigins: [
+      ...new Set([...(config.allowedDevOrigins ?? []), ...DEV_ORIGINS]),
+    ],
     serverExternalPackages: [
       ...new Set([...(config.serverExternalPackages ?? []), ...NATIVE_PACKAGES]),
     ],
     transpilePackages,
     webpack: (webpackConfig, ctx) => {
       const nextConfig = prevWebpack ? prevWebpack(webpackConfig, ctx) : webpackConfig
+      if (ctx.isServer && ctx.nextRuntime !== 'edge') {
+        // `serverExternalPackages` only matches resolved realpaths under
+        // node_modules. Workspace packages with a `development` condition
+        // resolve to `src/*.ts` outside that gate, so webpack still bundles
+        // the napi `.node` addon. A request-name external is consulted
+        // before resolution and is immune to that hole. Skip the Edge
+        // compiler — it has no napi, and `commonjs` externals cannot load
+        // `@solvapay/server-wasm` there.
+        const existing = Array.isArray(nextConfig.externals)
+          ? nextConfig.externals
+          : [nextConfig.externals].filter(Boolean)
+        nextConfig.externals = [
+          ({ request }, callback) =>
+            NATIVE_PACKAGES.includes(request)
+              ? callback(null, `commonjs ${request}`)
+              : callback(),
+          ...existing,
+        ]
+      }
       if (!ctx.isServer) {
         // @solvapay/react can pull server types into the client graph; stub Node-only deps.
         nextConfig.resolve.alias = {

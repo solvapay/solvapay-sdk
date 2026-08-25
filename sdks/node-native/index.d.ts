@@ -142,6 +142,9 @@ export declare function assertValidProductRef(argsJson: string): string
 /** Binding for `attachBusinessDetailsValidationError`. */
 export declare function attachBusinessDetailsValidationError(argsJson: string): string
 
+/** Binding for `billingCycle`. */
+export declare function billingCycle(argsJson: string): string
+
 /** Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock string). */
 export declare function buildCreateCustomerParams(argsJson: string): string
 
@@ -163,6 +166,9 @@ export declare function buildPromptUserMessage(argsJson: string): string
 /** Binding for `buildToolDescriptorMetadata`. */
 export declare function buildToolDescriptorMetadata(argsJson: string): string
 
+/** Binding for `charges`. */
+export declare function charges(argsJson: string): string
+
 /** Binding for `classifyCancelError`. */
 export declare function classifyCancelError(argsJson: string): string
 
@@ -183,6 +189,9 @@ export declare function classifyReactivateError(argsJson: string): string
 
 /** Binding for `coerceCustomerOptions`. */
 export declare function coerceCustomerOptions(argsJson: string): string
+
+/** Binding for `creditsPerUnitFromBalance`. */
+export declare function creditsPerUnitFromBalance(argsJson: string): string
 
 /** Binding for `creditsToDisplayMinorUnits` (`null` when undefined). */
 export declare function creditsToDisplayMinorUnits(argsJson: string): string
@@ -222,6 +231,12 @@ export declare function getTaxIdFieldLabel(argsJson: string): string
 
 /** Binding for `getTaxIdHelperText`. */
 export declare function getTaxIdHelperText(argsJson: string): string
+
+/** Binding for `headlineCharges`. */
+export declare function headlineCharges(argsJson: string): string
+
+/** Binding for `includedUnits`. */
+export declare function includedUnits(argsJson: string): string
 
 /** Binding for `isCachedCustomerRefValid`. */
 export declare function isCachedCustomerRefValid(argsJson: string): string
@@ -282,6 +297,12 @@ export declare function paywallErrorToClientPayload(argsJson: string): string
 /** Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`). */
 export declare function paywallToolResult(argsJson: string): string
 
+/** Binding for `peggedCreditsPerUnit`. */
+export declare function peggedCreditsPerUnit(argsJson: string): string
+
+/** Binding for `perUnitCharge`. */
+export declare function perUnitCharge(argsJson: string): string
+
 /** Binding for `projectPaymentIntentResult`. */
 export declare function projectPaymentIntentResult(argsJson: string): string
 
@@ -332,6 +353,9 @@ export declare function selectActivePurchases(argsJson: string): string
 
 /** Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`. */
 export declare function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(argsJson: string): string
+
+/** Binding for `trialDays`. */
+export declare function trialDays(argsJson: string): string
 
 /** Binding for `validateActivatePlanParams`. */
 export declare function validateActivatePlanParams(argsJson: string): string

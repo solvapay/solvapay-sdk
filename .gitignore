@@ -26,7 +26,7 @@ dist
 # here would defeat the regression-detection window.
 deno.lock
 
-# Playwright run artifacts (examples/typescript/e2e)
+# Playwright / browser-test run artifacts
 test-results/
 playwright-report/
 blob-report/

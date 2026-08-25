@@ -22,6 +22,14 @@ export {
   resolveSellerIdentityDisplay,
   getSellerTaxIdentifierDisplayLabel,
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+  charges,
+  headlineCharges,
+  perUnitCharge,
+  billingCycle,
+  trialDays,
+  includedUnits,
+  peggedCreditsPerUnit,
+  creditsPerUnitFromBalance,
 } from '../pkg/browser/solvapay_wasm'
 
 /** Resolves when the browser WASM module has been instantiated (async). */

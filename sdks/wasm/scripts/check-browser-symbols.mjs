@@ -30,6 +30,15 @@ const BROWSER_SEMANTIC_ALLOWLIST = new Set([
   'resolveSellerIdentityDisplay',
   'getSellerTaxIdentifierDisplayLabel',
   'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE',
+  // plan-pricing readers React checkout primitives call
+  'charges',
+  'headlineCharges',
+  'perUnitCharge',
+  'billingCycle',
+  'trialDays',
+  'includedUnits',
+  'peggedCreditsPerUnit',
+  'creditsPerUnitFromBalance',
 ])
 const FORBIDDEN_SEMANTIC = [
   'verifyWebhook',

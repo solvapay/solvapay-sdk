@@ -8,8 +8,12 @@ This folder contains shared utilities used across multiple examples in the Solva
 
 Shared Next.js config helper for examples that load `@solvapay/server` / the
 napi `@solvapay/server-native` addon. Sets `outputFileTracingRoot`,
-`serverExternalPackages`, and client webpack stubs. Pair with
-`next build --webpack` / `next dev --webpack`.
+`serverExternalPackages`, a server-side webpack `externals` shim (so `next
+dev` does not bundle the napi `.node` addon through the `development`
+export condition), and client webpack stubs. Pair with `next build
+--webpack` / `next dev --webpack`. The shim resolves `@solvapay/server` to
+`dist/index.cjs` at runtime, so the packages must already be built (`pnpm
+build` at the repo root).
 
 ```js
 import { withSolvaPayNextConfig } from '@solvapay/examples-shared/solvapay-next-config'

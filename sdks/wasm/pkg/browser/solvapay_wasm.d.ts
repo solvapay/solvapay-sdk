@@ -7,6 +7,21 @@
 export function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(args_json: string): string;
 
 /**
+ * Binding for `billingCycle`.
+ */
+export function billingCycle(args_json: string): string;
+
+/**
+ * Binding for `charges`.
+ */
+export function charges(args_json: string): string;
+
+/**
+ * Binding for `creditsPerUnitFromBalance`.
+ */
+export function creditsPerUnitFromBalance(args_json: string): string;
+
+/**
  * Binding for `creditsToDisplayMinorUnits` (`null` when undefined).
  */
 export function creditsToDisplayMinorUnits(args_json: string): string;
@@ -42,6 +57,16 @@ export function getTaxIdFieldLabel(args_json: string): string;
 export function getTaxIdHelperText(args_json: string): string;
 
 /**
+ * Binding for `headlineCharges`.
+ */
+export function headlineCharges(args_json: string): string;
+
+/**
+ * Binding for `includedUnits`.
+ */
+export function includedUnits(args_json: string): string;
+
+/**
  * Binding for `isZeroDecimalCurrency`.
  */
 export function isZeroDecimalCurrency(args_json: string): string;
@@ -52,6 +77,16 @@ export function isZeroDecimalCurrency(args_json: string): string;
 export function minorUnitsPerMajor(args_json: string): string;
 
 /**
+ * Binding for `peggedCreditsPerUnit`.
+ */
+export function peggedCreditsPerUnit(args_json: string): string;
+
+/**
+ * Binding for `perUnitCharge`.
+ */
+export function perUnitCharge(args_json: string): string;
+
+/**
  * Binding for `resolveSellerIdentityDisplay`.
  */
 export function resolveSellerIdentityDisplay(args_json: string): string;
@@ -60,6 +95,11 @@ export function resolveSellerIdentityDisplay(args_json: string): string;
  * Binding for `resolveTaxBehavior`.
  */
 export function resolveTaxBehavior(args_json: string): string;
+
+/**
+ * Binding for `trialDays`.
+ */
+export function trialDays(args_json: string): string;
 
 /**
  * Binding for `validateBusinessDetails`.
@@ -79,6 +119,9 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
+    readonly billingCycle: (a: number, b: number) => [number, number];
+    readonly charges: (a: number, b: number) => [number, number];
+    readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
     readonly deriveTaxIdType: (a: number, b: number) => [number, number];
     readonly getBusinessCountryOptions: (a: number, b: number) => [number, number];
@@ -86,10 +129,15 @@ export interface InitOutput {
     readonly getTaxIdExample: (a: number, b: number) => [number, number];
     readonly getTaxIdFieldLabel: (a: number, b: number) => [number, number];
     readonly getTaxIdHelperText: (a: number, b: number) => [number, number];
+    readonly headlineCharges: (a: number, b: number) => [number, number];
+    readonly includedUnits: (a: number, b: number) => [number, number];
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
     readonly minorUnitsPerMajor: (a: number, b: number) => [number, number];
+    readonly peggedCreditsPerUnit: (a: number, b: number) => [number, number];
+    readonly perUnitCharge: (a: number, b: number) => [number, number];
     readonly resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
+    readonly trialDays: (a: number, b: number) => [number, number];
     readonly validateBusinessDetails: (a: number, b: number) => [number, number];
     readonly wasmVersion: () => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;

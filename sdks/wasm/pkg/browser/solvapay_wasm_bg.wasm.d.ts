@@ -2,6 +2,9 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
+export const billingCycle: (a: number, b: number) => [number, number];
+export const charges: (a: number, b: number) => [number, number];
+export const creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
 export const creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
 export const deriveTaxIdType: (a: number, b: number) => [number, number];
 export const getBusinessCountryOptions: (a: number, b: number) => [number, number];
@@ -9,10 +12,15 @@ export const getSellerTaxIdentifierDisplayLabel: (a: number, b: number) => [numb
 export const getTaxIdExample: (a: number, b: number) => [number, number];
 export const getTaxIdFieldLabel: (a: number, b: number) => [number, number];
 export const getTaxIdHelperText: (a: number, b: number) => [number, number];
+export const headlineCharges: (a: number, b: number) => [number, number];
+export const includedUnits: (a: number, b: number) => [number, number];
 export const isZeroDecimalCurrency: (a: number, b: number) => [number, number];
 export const minorUnitsPerMajor: (a: number, b: number) => [number, number];
+export const peggedCreditsPerUnit: (a: number, b: number) => [number, number];
+export const perUnitCharge: (a: number, b: number) => [number, number];
 export const resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
 export const resolveTaxBehavior: (a: number, b: number) => [number, number];
+export const trialDays: (a: number, b: number) => [number, number];
 export const validateBusinessDetails: (a: number, b: number) => [number, number];
 export const wasmVersion: () => [number, number];
 export const __wbindgen_externrefs: WebAssembly.Table;

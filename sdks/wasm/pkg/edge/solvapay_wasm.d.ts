@@ -210,6 +210,11 @@ export function assertValidProductRef(args_json: string): string;
 export function attachBusinessDetailsValidationError(args_json: string): string;
 
 /**
+ * Binding for `billingCycle`.
+ */
+export function billingCycle(args_json: string): string;
+
+/**
  * Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock string).
  */
 export function buildCreateCustomerParams(args_json: string): string;
@@ -245,6 +250,11 @@ export function buildPromptUserMessage(args_json: string): string;
 export function buildToolDescriptorMetadata(args_json: string): string;
 
 /**
+ * Binding for `charges`.
+ */
+export function charges(args_json: string): string;
+
+/**
  * Binding for `classifyCancelError`.
  */
 export function classifyCancelError(args_json: string): string;
@@ -278,6 +288,11 @@ export function classifyReactivateError(args_json: string): string;
  * Binding for `coerceCustomerOptions`.
  */
 export function coerceCustomerOptions(args_json: string): string;
+
+/**
+ * Binding for `creditsPerUnitFromBalance`.
+ */
+export function creditsPerUnitFromBalance(args_json: string): string;
 
 /**
  * Binding for `creditsToDisplayMinorUnits` (`null` when undefined).
@@ -345,6 +360,16 @@ export function getTaxIdFieldLabel(args_json: string): string;
 export function getTaxIdHelperText(args_json: string): string;
 
 /**
+ * Binding for `headlineCharges`.
+ */
+export function headlineCharges(args_json: string): string;
+
+/**
+ * Binding for `includedUnits`.
+ */
+export function includedUnits(args_json: string): string;
+
+/**
  * Binding for `isCachedCustomerRefValid`.
  */
 export function isCachedCustomerRefValid(args_json: string): string;
@@ -403,6 +428,16 @@ export function paywallErrorToClientPayload(args_json: string): string;
  * Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
  */
 export function paywallToolResult(args_json: string): string;
+
+/**
+ * Binding for `peggedCreditsPerUnit`.
+ */
+export function peggedCreditsPerUnit(args_json: string): string;
+
+/**
+ * Binding for `perUnitCharge`.
+ */
+export function perUnitCharge(args_json: string): string;
 
 /**
  * Binding for `projectPaymentIntentResult`.
@@ -468,6 +503,11 @@ export function retryNextDelayMs(args_json: string): string;
  * Binding for `selectActivePurchases`.
  */
 export function selectActivePurchases(args_json: string): string;
+
+/**
+ * Binding for `trialDays`.
+ */
+export function trialDays(args_json: string): string;
 
 /**
  * Binding for `validateActivatePlanParams`.
@@ -558,6 +598,7 @@ export interface InitOutput {
     readonly assertResponseResult: (a: number, b: number) => [number, number];
     readonly assertValidProductRef: (a: number, b: number) => [number, number];
     readonly attachBusinessDetailsValidationError: (a: number, b: number) => [number, number];
+    readonly billingCycle: (a: number, b: number) => [number, number];
     readonly buildCreateCustomerParams: (a: number, b: number) => [number, number];
     readonly buildGateMessage: (a: number, b: number) => [number, number];
     readonly buildNudgeMessage: (a: number, b: number) => [number, number];
@@ -565,6 +606,7 @@ export interface InitOutput {
     readonly buildPromptDescriptorMetadata: (a: number, b: number) => [number, number];
     readonly buildPromptUserMessage: (a: number, b: number) => [number, number];
     readonly buildToolDescriptorMetadata: (a: number, b: number) => [number, number];
+    readonly charges: (a: number, b: number) => [number, number];
     readonly classifyCancelError: (a: number, b: number) => [number, number];
     readonly classifyCreateError: (a: number, b: number) => [number, number];
     readonly classifyCustomerRef: (a: number, b: number) => [number, number];
@@ -572,6 +614,7 @@ export interface InitOutput {
     readonly classifyPaywallState: (a: number, b: number) => [number, number];
     readonly classifyReactivateError: (a: number, b: number) => [number, number];
     readonly coerceCustomerOptions: (a: number, b: number) => [number, number];
+    readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
     readonly decidePaywallOutcome: (a: number, b: number) => [number, number];
     readonly deriveIcons: (a: number, b: number) => [number, number];
@@ -585,6 +628,8 @@ export interface InitOutput {
     readonly getTaxIdExample: (a: number, b: number) => [number, number];
     readonly getTaxIdFieldLabel: (a: number, b: number) => [number, number];
     readonly getTaxIdHelperText: (a: number, b: number) => [number, number];
+    readonly headlineCharges: (a: number, b: number) => [number, number];
+    readonly includedUnits: (a: number, b: number) => [number, number];
     readonly isCachedCustomerRefValid: (a: number, b: number) => [number, number];
     readonly isEmailConflict: (a: number, b: number) => [number, number];
     readonly isErrorResult: (a: number, b: number) => [number, number];
@@ -597,6 +642,8 @@ export interface InitOutput {
     readonly normalizeReactivateResponse: (a: number, b: number) => [number, number];
     readonly paywallErrorToClientPayload: (a: number, b: number) => [number, number];
     readonly paywallToolResult: (a: number, b: number) => [number, number];
+    readonly peggedCreditsPerUnit: (a: number, b: number) => [number, number];
+    readonly perUnitCharge: (a: number, b: number) => [number, number];
     readonly projectPaymentIntentResult: (a: number, b: number) => [number, number];
     readonly projectTopupProcessOutcome: (a: number, b: number) => [number, number];
     readonly projectUsageSnapshot: (a: number, b: number) => [number, number];
@@ -610,6 +657,7 @@ export interface InitOutput {
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
     readonly retryNextDelayMs: (a: number, b: number) => [number, number];
     readonly selectActivePurchases: (a: number, b: number) => [number, number];
+    readonly trialDays: (a: number, b: number) => [number, number];
     readonly validateActivatePlanParams: (a: number, b: number) => [number, number];
     readonly validateAttachBusinessDetailsParams: (a: number, b: number) => [number, number];
     readonly validateBusinessDetails: (a: number, b: number) => [number, number];

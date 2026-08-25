@@ -5,11 +5,11 @@
  * verified in `proxy.ts`, and the Supabase user id used as the SolvaPay
  * customer ref.
  *
- * `anonymous` exists so the demo (and the Playwright suite in
- * `examples/typescript/e2e`) can run against a local platform with no Supabase
- * project. The browser mints a customer ref, sends it as `x-customer-ref`, and
- * `proxy.ts` promotes it to the `x-user-id` header every SolvaPay route helper
- * reads. Nothing about SolvaPay's own configuration is optional in either mode.
+ * `anonymous` exists so the demo can run against a local platform with no
+ * Supabase project. The browser mints a customer ref, sends it as
+ * `x-customer-ref`, and `proxy.ts` promotes it to the `x-user-id` header
+ * every SolvaPay route helper reads. Nothing about SolvaPay's own
+ * configuration is optional in either mode.
  *
  * Set `NEXT_PUBLIC_SOLVAPAY_DEMO_AUTH` to choose explicitly; with it unset the
  * mode follows whether Supabase credentials are present.
