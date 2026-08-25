@@ -240,13 +240,24 @@ pnpm deploy   # runs `pnpm -w build:packages && pnpm build`, then `node scripts/
 
 ### Deploy the live demo
 
-The same example also ships a prod target for the canonical `chat-demo.solvapay.app` deploy, gated behind a separate Worker name (`solvapay-chat-checkout-demo-prod`) and Cloudflare account ID so its secrets and observability are isolated from the public-safe `*.workers.dev` example deploy above. The prod config lives in the `[env.production]` block of `wrangler.jsonc`. To target a different hostname in your fork, edit the `routes` entry (or drop it entirely to serve on the default `*.workers.dev` URL), and replace the SolvaPay `account_id` with your own.
+The same example also ships a prod target for the canonical `chat-demo.solvapay.app` deploy, gated behind a separate Worker name (`solvapay-chat-checkout-demo-prod`) so its secrets and observability are isolated from the public-safe `*.workers.dev` example deploy above. The prod config lives in the `[env.production]` block of `wrangler.jsonc`. To target a different hostname in your fork, edit the `routes` entry (or drop it entirely to serve on the default `*.workers.dev` URL).
 
-> **Production secrets are scoped to the production Worker.** They live in a different secret store from the `*.workers.dev` Worker — uploading once for non-prod does NOT cover prod. You always need `--env production` for the prod path.
+> **Do not put `account_id` in `wrangler.jsonc`.** Wrangler does not expand `${CLOUDFLARE_ACCOUNT_ID}` in that file — a placeholder is sent as the literal account path and every API call 404s. Set `CLOUDFLARE_ACCOUNT_ID` in gitignored `.env.prod` instead. `scripts/deploy.mjs` forwards it to the wrangler process. Find the id with `pnpm exec wrangler whoami`.
 
-**1. Upload the prod secrets** (one-time):
+> **Production secrets are scoped to the production Worker.** They live in a different secret store from the `*.workers.dev` Worker — uploading once for non-prod does NOT cover prod. You always need `--env production` for the prod path. One-off wrangler commands (`secret put`, `secret list`, `tail`) also need `CLOUDFLARE_ACCOUNT_ID` in the shell.
+
+**1. Configure prod overrides:**
 
 ```bash
+cp .env.prod.example .env.prod
+$EDITOR .env.prod   # CLOUDFLARE_ACCOUNT_ID, SOLVAPAY_SECRET_KEY, GEMINI_API_KEY
+```
+
+**2. Upload the prod secrets** (one-time):
+
+```bash
+export CLOUDFLARE_ACCOUNT_ID="$(grep '^CLOUDFLARE_ACCOUNT_ID=' .env.prod | cut -d= -f2-)"
+
 pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
 pnpm exec wrangler secret put GEMINI_API_KEY --env production
 
@@ -256,13 +267,6 @@ grep '^GEMINI_API_KEY=' .env.prod      | cut -d= -f2- | pnpm exec wrangler secre
 ```
 
 Verify with `pnpm exec wrangler secret list --env production`.
-
-**2. Configure prod overrides:**
-
-```bash
-cp .env.prod.example .env.prod
-$EDITOR .env.prod   # fill in SOLVAPAY_SECRET_KEY (matches what you just uploaded) and GEMINI_API_KEY
-```
 
 **3. Deploy:**
 
@@ -278,6 +282,7 @@ If you uploaded the wrong value, just `wrangler secret put` it again — the mos
 
 ```bash
 # Swap a sandbox key for a live key, prod target:
+export CLOUDFLARE_ACCOUNT_ID="$(grep '^CLOUDFLARE_ACCOUNT_ID=' .env.prod | cut -d= -f2-)"
 echo -n "sk_live_..." | pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
 ```
 
@@ -286,6 +291,7 @@ echo -n "sk_live_..." | pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env 
 When the deployed app misbehaves, `wrangler tail` is the fastest way to see the actual error:
 
 ```bash
+export CLOUDFLARE_ACCOUNT_ID="$(grep '^CLOUDFLARE_ACCOUNT_ID=' .env.prod | cut -d= -f2-)"
 pnpm exec wrangler tail --env production --format=pretty
 ```
 
@@ -293,7 +299,7 @@ pnpm exec wrangler tail --env production --format=pretty
 
 ### How the deploy overrides work
 
-`wrangler.jsonc` ships safe public-starter placeholders so anyone who clones this repo can run `pnpm deploy` without accidentally connecting to someone else's merchant. `scripts/deploy.mjs` sources `.env` (gitignored) and passes real values through to `wrangler deploy --var KEY:VALUE` for `SOLVAPAY_API_BASE_URL`. Worker secrets (`SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY`) are uploaded once with `wrangler secret put` and persist across deploys; the script intentionally does NOT re-upload them.
+`wrangler.jsonc` ships safe public-starter placeholders so anyone who clones this repo can run `pnpm deploy` without accidentally connecting to someone else's merchant. `scripts/deploy.mjs` sources `.env` (gitignored) and passes real values through to `wrangler deploy --var KEY:VALUE` for `SOLVAPAY_API_BASE_URL`. `CLOUDFLARE_ACCOUNT_ID` is forwarded as a process env var (not a Worker `--var`) because wrangler reads the account from the environment, not from config interpolation. Worker secrets (`SOLVAPAY_SECRET_KEY`, `GEMINI_API_KEY`) are uploaded once with `wrangler secret put` and persist across deploys; the script intentionally does NOT re-upload them.
 
 ### Vite build assets
 

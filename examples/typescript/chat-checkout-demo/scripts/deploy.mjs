@@ -31,6 +31,11 @@
  * this script does NOT re-upload them on every deploy; secrets belong
  * out of deploy-time plaintext.
  *
+ * `CLOUDFLARE_ACCOUNT_ID` is not a Worker var. Wrangler does not
+ * expand `${CLOUDFLARE_ACCOUNT_ID}` in wrangler.jsonc, so this script
+ * reads it from the process env or the dotenv file and forwards it as
+ * a real environment variable. Prod deploys fail if it is missing.
+ *
  * Pass-through: any extra CLI args (e.g. `--dry-run`) are forwarded
  * to `wrangler deploy`. The `--prod` token is stripped before
  * forwarding so it doesn't leak through to wrangler.
@@ -103,6 +108,24 @@ if (!existsSync(dotEnvPath)) {
   )
 }
 
+const accountId = (process.env.CLOUDFLARE_ACCOUNT_ID ?? localEnv.CLOUDFLARE_ACCOUNT_ID ?? '').trim()
+
+if (isProd && !accountId) {
+  console.error(
+    [
+      '',
+      'CLOUDFLARE_ACCOUNT_ID is not set. Wrangler does not expand',
+      '`${CLOUDFLARE_ACCOUNT_ID}` in wrangler.jsonc, so the account must',
+      'come from the environment.',
+      `Add it to ${dotEnvFile} (see ${isProd ? '.env.prod.example' : '.env.example'})`,
+      'or export it in your shell. Find it with:',
+      '  pnpm exec wrangler whoami',
+      '',
+    ].join('\n'),
+  )
+  process.exit(1)
+}
+
 const wranglerArgs = ['exec', 'wrangler', 'deploy']
 if (isProd) wranglerArgs.push('--env', 'production')
 for (const name of OVERRIDABLE_VARS) {
@@ -111,9 +134,12 @@ for (const name of OVERRIDABLE_VARS) {
 }
 wranglerArgs.push(...passthrough)
 
+const childEnv = accountId ? { ...process.env, CLOUDFLARE_ACCOUNT_ID: accountId } : process.env
+
 const result = spawnSync('pnpm', wranglerArgs, {
   cwd: exampleRoot,
   stdio: 'inherit',
+  env: childEnv,
 })
 
 if (result.status === 0) {
