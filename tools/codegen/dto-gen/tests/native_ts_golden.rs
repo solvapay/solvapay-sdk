@@ -15,9 +15,6 @@ use std::path::Path;
 use dto_gen::emit_bindings_rs::Toolchain;
 use dto_gen::emit_bindings_ts::emit_native_ts;
 
-/// Drops every leading `/** … */` JSDoc block (and blank lines immediately
-/// following each). Used so the `@generated` header is ignored on both sides.
-
 fn assert_matches(emitted: &str, committed_path: &Path, tag: &str) {
     let committed = fs::read_to_string(committed_path)
         .unwrap_or_else(|e| panic!("read committed {}: {e}", committed_path.display()));

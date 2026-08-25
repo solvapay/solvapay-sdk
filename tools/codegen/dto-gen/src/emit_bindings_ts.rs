@@ -66,14 +66,9 @@ pub fn emit_native_ts(ir: &Ir, toolchain: Toolchain) -> GenResult<String> {
     let sync_union = render_sync_union(ir, core_comment, mcp_comment);
 
     // Blank line after each union (prettier / committed style).
+    let header = format!("{}\n", generated_header(CommentStyle::Block, flag));
     Ok(format!(
-        "{}{}{}\n\n{}{}\n\n{}",
-        format!("{}\n", generated_header(CommentStyle::Block, flag)),
-        preamble,
-        client_union,
-        bridge,
-        sync_union,
-        postamble
+        "{header}{preamble}{client_union}\n\n{bridge}{sync_union}\n\n{postamble}"
     ))
 }
 

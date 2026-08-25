@@ -4,8 +4,6 @@
 
 mod support;
 
-use std::fs;
-
 use dto_gen::ir::{Ir, IrCoreFieldTy};
 use dto_gen::lower_core_types::dump_core_types;
 

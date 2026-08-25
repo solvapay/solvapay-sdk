@@ -16,7 +16,7 @@ use std::fs;
 use std::path::Path;
 
 use dto_gen::emit_bindings_rs::{emit_bindings, Toolchain};
-use dto_gen::ir::{Ir, IrBindingArtifact, IrErrorTemplates};
+use dto_gen::ir::{Ir, IrBindingArtifact};
 
 fn strip_module_doc(src: &str) -> String {
     let mut rest: Vec<&str> = Vec::new();

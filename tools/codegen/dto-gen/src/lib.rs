@@ -478,10 +478,15 @@ fn emit_native_ts_wasm(ir: &Ir) -> GenResult<String> {
     emit_native_ts(ir, Toolchain::Wasm)
 }
 
-fn write_file_outputs(
-    ir: &Ir,
-    items: &[(&str, Option<&Path>, fn(&Ir) -> GenResult<String>, bool)],
-) -> GenResult<()> {
+/// One dto-gen `--flag` write: path, emitter, and whether to rustfmt the result.
+type FileOutput<'a> = (
+    &'static str,
+    Option<&'a Path>,
+    fn(&Ir) -> GenResult<String>,
+    bool,
+);
+
+fn write_file_outputs(ir: &Ir, items: &[FileOutput<'_>]) -> GenResult<()> {
     for (flag, path, emit, rustfmt) in items {
         let Some(path) = path else {
             continue;
@@ -700,7 +705,7 @@ mod output_dispatch_tests {
             .iter()
             .map(|flag| dir.join("nested").join(flag.trim_start_matches('-')))
             .collect();
-        let items: Vec<(&str, Option<&Path>, fn(&Ir) -> GenResult<String>, bool)> = flags
+        let items: Vec<FileOutput<'_>> = flags
             .iter()
             .zip(paths.iter())
             .map(|(flag, path)| {

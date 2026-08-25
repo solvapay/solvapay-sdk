@@ -40,6 +40,7 @@ const HAND_TYPE_ALIASES: &[&str] = &[
     "ConfigureMcpPlansRequest",
     "ConfigureMcpPlansResponse",
     "OneTimePurchaseInfo",
+    "PurchaseInfo",
 ];
 
 /// Map catalog response DTO names → hand-written aliases when they differ.

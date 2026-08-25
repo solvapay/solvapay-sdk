@@ -100,13 +100,9 @@ fn emit_dispatch(ir: &Ir, chrome: &Value, flag: &str) -> GenResult<String> {
     let helper_ids = chrome_string_array(file, "helpersMembers")?;
     emit_union_members(ir, &helper_ids, &mut lines, is_core_union_decision)?;
 
-    Ok(format!(
-        "{}{}{}\n\n{}",
-        format!("{}\n", generated_header(CommentStyle::Block, flag)),
-        preamble,
-        lines.join("\n"),
-        postamble
-    ))
+    let header = format!("{}\n", generated_header(CommentStyle::Block, flag));
+    let body = lines.join("\n");
+    Ok(format!("{header}{preamble}{body}\n\n{postamble}"))
 }
 
 fn emit_union_members(

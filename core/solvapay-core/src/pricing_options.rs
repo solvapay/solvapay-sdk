@@ -40,6 +40,7 @@ pub struct BillingCycle {
     pub count: Option<f64>,
 }
 
+/// Object entries of `priced.options`, skipping non-objects.
 fn options_of(priced: Option<&Value>) -> Vec<&Value> {
     priced
         .and_then(|v| v.get("options"))
@@ -48,6 +49,12 @@ fn options_of(priced: Option<&Value>) -> Vec<&Value> {
         .unwrap_or_default()
 }
 
+/// True when `n` is a finite value strictly greater than zero (false for NaN).
+fn is_strictly_positive(n: f64) -> bool {
+    n.partial_cmp(&0.0) == Some(std::cmp::Ordering::Greater)
+}
+
+/// Parse a `kind: charge` option; unknown `per` values are skipped.
 fn as_charge(option: &Value) -> Option<Charge> {
     if option.get("kind").and_then(Value::as_str) != Some("charge") {
         return None;
@@ -228,7 +235,7 @@ pub fn pegged_credits_per_unit(
     credits_per_minor_unit: f64,
     usd_to_charge_rate: Option<f64>,
 ) -> i64 {
-    if !(charge_minor > 0.0) || !(credits_per_minor_unit > 0.0) {
+    if !is_strictly_positive(charge_minor) || !is_strictly_positive(credits_per_minor_unit) {
         return 0;
     }
     let rate = usd_to_charge_rate.filter(|n| *n > 0.0).unwrap_or(1.0);
@@ -250,7 +257,7 @@ pub fn credits_per_unit_from_balance(
     meter: Option<&str>,
 ) -> Option<i64> {
     let charge = per_unit_charge(priced, meter)?;
-    if !(charge.amount_minor > 0.0) {
+    if !is_strictly_positive(charge.amount_minor) {
         return None;
     }
     let display_currency = balance

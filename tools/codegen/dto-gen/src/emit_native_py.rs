@@ -36,17 +36,12 @@ pub fn emit_native_py(ir: &Ir) -> GenResult<String> {
     let client_literal = render_literal_members(symbols_for(ir, IrBindingArtifact::Client));
     let sync_literal = render_sync_literal(ir, core_comment, mcp_comment);
 
+    let header = format!(
+        "{}\n",
+        generated_header(CommentStyle::Hash, "native-py-out")
+    );
     Ok(format!(
-        "{}{}{}{}{}{}",
-        format!(
-            "{}\n",
-            generated_header(CommentStyle::Hash, "native-py-out")
-        ),
-        preamble,
-        client_literal,
-        bridge,
-        sync_literal,
-        postamble
+        "{header}{preamble}{client_literal}{bridge}{sync_literal}{postamble}"
     ))
 }
 
