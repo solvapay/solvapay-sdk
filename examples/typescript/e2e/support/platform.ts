@@ -135,11 +135,10 @@ export async function assertStripeTestMode(env: MerchantEnv): Promise<void> {
   }
   if (!stripePublishableKey.startsWith('pk_test_')) {
     throw new Error(
-      '[examples-e2e] SOLVAPAY_SECRET_KEY belongs to an environment wired to a live-mode ' +
-        'Stripe key, so the Stripe test cards this suite pays with would be declined — and a ' +
-        'real card would be a real charge.\n\n' +
-        '  Use a key for an environment on Stripe test mode (the sandbox environment in the\n' +
-        '  provider console), and a product with a paid plan in that same environment.\n',
+      '[examples-e2e] The sandbox key is accepted, but the platform returned a live-mode ' +
+        'Stripe publishable key. This suite only pays in sandbox / Stripe test mode.\n\n' +
+        '  Switch the provider console to SANDBOX, finish Stripe onboarding there, and use a\n' +
+        '  sandbox secret key plus a product that lives in that same environment.\n',
     )
   }
 }

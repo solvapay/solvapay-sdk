@@ -1,17 +1,9 @@
 /**
  * Merchant + platform environment for the example e2e suite.
  *
- * The suite drives real checkout flows against a locally running platform
- * stack, so every input is validated up front and a bad one fails in global
- * setup with an actionable message rather than surfacing later as an empty plan
- * grid or a declined test card.
- *
- * Note what is deliberately NOT validated here: the secret key's environment
- * prefix. A local stack's `live` environment is itself wired to a Stripe test
- * account, so `sk_live_…` there is perfectly payable while the same prefix
- * against production is not. The invariant that actually matters is "Stripe is
- * in test mode", and `assertStripeTestMode` checks exactly that against the
- * platform rather than guessing from the prefix.
+ * The suite only runs against the provider's **sandbox** environment. A live
+ * key is rejected here — before any demo boots — because the specs pay with
+ * Stripe test cards and must never charge a real customer.
  */
 
 import { existsSync } from 'node:fs'
@@ -33,10 +25,14 @@ if (existsSync(ENV_FILE)) {
  */
 export const DEFAULT_API_BASE_URL = 'http://127.0.0.1:3010'
 
+/** SolvaPay secret keys are environment-prefixed. Only sandbox is allowed. */
+export const SANDBOX_KEY_PREFIX = 'sk_sandbox_'
+const LIVE_KEY_PREFIX = 'sk_live_'
+
 export interface MerchantEnv {
   /** Base URL of the local platform proxy, e.g. `http://127.0.0.1:3010`. */
   apiBaseUrl: string
-  /** Secret key used by every demo's server side. */
+  /** Sandbox secret key used by every demo's server side. */
   secretKey: string
   /** Product the specs check out, e.g. `prd_ABC12345`. */
   productRef: string
@@ -44,8 +40,8 @@ export interface MerchantEnv {
 
 const SETUP_STEPS = [
   'Start the platform stack from the platform repo: `npm run local`.',
-  'In the local provider console (http://localhost:3010) create a product with at',
-  'least one paid plan, and a secret key for the same environment.',
+  'Open the local provider console at http://localhost:3010, switch to SANDBOX,',
+  'create a product with at least one paid plan, then create a sandbox secret key.',
   `Export them, or copy ${path.join('examples', 'typescript', 'e2e', '.env.example')} to`,
   `${path.join('examples', 'typescript', 'e2e', '.env')} and fill it in.`,
 ].join('\n  ')
@@ -64,8 +60,15 @@ function requireVar(name: string): string {
 
 export function resolveMerchantEnv(): MerchantEnv {
   const secretKey = requireVar('SOLVAPAY_SECRET_KEY')
-  if (!secretKey.startsWith('sk_')) {
-    fail('SOLVAPAY_SECRET_KEY must be a SolvaPay secret key (sk_…).')
+
+  if (secretKey.startsWith(LIVE_KEY_PREFIX)) {
+    fail(
+      'SOLVAPAY_SECRET_KEY is a live-mode key. This suite only runs in sandbox — ' +
+        `provide a ${SANDBOX_KEY_PREFIX}… key. Live keys charge real cards.`,
+    )
+  }
+  if (!secretKey.startsWith(SANDBOX_KEY_PREFIX)) {
+    fail(`SOLVAPAY_SECRET_KEY must be a sandbox key (${SANDBOX_KEY_PREFIX}…).`)
   }
 
   const productRef = requireVar('SOLVAPAY_PRODUCT_REF')

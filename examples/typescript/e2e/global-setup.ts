@@ -2,8 +2,8 @@
  * Global setup for the example e2e suite.
  *
  * Playwright starts the demos; it does NOT start the platform. This step is
- * what turns "the stack isn't running" or "the key is for the wrong
- * environment" into a single, actionable failure before any demo boots.
+ * what turns "the stack isn't running" or "the key is live, not sandbox"
+ * into a single, actionable failure before any demo boots.
  *
  * There is no stub client, no request mocking and no conditional skip: if the
  * preconditions are absent the run fails.

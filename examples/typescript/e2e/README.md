@@ -42,17 +42,14 @@ That also starts the Stripe webhook forwarder. The demos need it: every spec
 asserts on an _activated purchase_, which only lands once the platform has
 processed the payment webhook.
 
-2. **A payable merchant on Stripe test mode.** In the local provider console
-   (http://localhost:3010), pick the environment whose Stripe account is in test
-   mode — normally **sandbox** — and in it:
+2. **A sandbox merchant.** In the local provider console
+   (http://localhost:3010), switch to **sandbox**, then:
    - create a product with at least one **paid, non-usage-based** plan;
-   - create a secret key.
+   - create a **sandbox** secret key (`sk_sandbox_…`).
 
-Global setup asks the platform for its Stripe publishable key and fails the run
-if it is live mode, because the `4242…` test card would be declined there (and a
-real card would be a real charge). It checks the platform rather than the key
-prefix on purpose: on some local stacks the `live` environment is itself wired to
-a Stripe test account, so the prefix proves nothing.
+The suite refuses live keys (`sk_live_…`) at config load, and global setup also
+checks that `/v1/sdk/platform-config` returns a `pk_test_…` Stripe key. Either
+check failing means the run never reaches a card form.
 
 3. **Browsers**: `pnpm exec playwright install chromium`.
 
