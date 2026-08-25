@@ -17,9 +17,17 @@ function fakeRequest() {
 }
 
 describe('getUsageCore', () => {
+  const mockCheckLimits = vi.fn()
+
   beforeEach(() => {
     mockCheckPurchase.mockReset()
+    mockCheckLimits.mockReset()
+    mockCreateSolvaPay.mockReset()
     vi.spyOn(purchase, 'checkPurchaseCore').mockImplementation(mockCheckPurchase)
+    vi.spyOn(factory, 'createSolvaPay').mockImplementation(mockCreateSolvaPay)
+    mockCreateSolvaPay.mockReturnValue({
+      apiClient: { checkLimits: mockCheckLimits },
+    } as never)
   })
 
   it('propagates checkPurchaseCore errors verbatim', async () => {
@@ -55,14 +63,15 @@ describe('getUsageCore', () => {
     })
   })
 
-  it('projects usage from the active purchase planSnapshot', async () => {
+  it('projects usage from checkLimits when the active plan is metered', async () => {
     mockCheckPurchase.mockResolvedValue({
       customerRef: 'cus_ABC',
       purchases: [
         {
           reference: 'pur_1',
           status: 'active',
-          planSnapshot: { meterRef: 'mtr_requests', limit: 100 },
+          productRef: 'prd_1',
+          planSnapshot: { isMetered: true },
           usage: {
             used: 25,
             periodStart: '2026-07-01T00:00:00Z',
@@ -71,9 +80,14 @@ describe('getUsageCore', () => {
         },
       ],
     })
+    mockCheckLimits.mockResolvedValue({ meterName: 'mtr_requests', remaining: 75 })
 
     const result = await getUsageCore(fakeRequest())
 
+    expect(mockCheckLimits).toHaveBeenCalledWith({
+      customerRef: 'cus_ABC',
+      productRef: 'prd_1',
+    })
     expect(result).toEqual({
       meterRef: 'mtr_requests',
       total: 100,
@@ -86,14 +100,15 @@ describe('getUsageCore', () => {
     })
   })
 
-  it('falls back to meterId when meterRef is absent', async () => {
+  it('skips checkLimits when the active plan is not metered', async () => {
     mockCheckPurchase.mockResolvedValue({
       customerRef: 'cus_ABC',
       purchases: [
         {
           reference: 'pur_1',
           status: 'active',
-          planSnapshot: { meterId: 'mtr_legacy', limit: 10 },
+          productRef: 'prd_1',
+          planSnapshot: { isMetered: false },
           usage: { used: 2 },
         },
       ],
@@ -101,28 +116,31 @@ describe('getUsageCore', () => {
 
     const result = await getUsageCore(fakeRequest())
 
+    expect(mockCheckLimits).not.toHaveBeenCalled()
     expect(result).toMatchObject({
-      meterRef: 'mtr_legacy',
-      total: 10,
+      meterRef: null,
+      total: null,
       used: 2,
-      remaining: 8,
-      percentUsed: 20,
+      remaining: null,
+      percentUsed: null,
       purchaseRef: 'pur_1',
     })
   })
 
-  it('clamps remaining and percentUsed when usage exceeds the limit', async () => {
+  it('clamps remaining and percentUsed when checkLimits remaining is zero', async () => {
     mockCheckPurchase.mockResolvedValue({
       customerRef: 'cus_ABC',
       purchases: [
         {
           reference: 'pur_1',
           status: 'active',
-          planSnapshot: { meterRef: 'mtr_requests', limit: 10 },
+          productRef: 'prd_1',
+          planSnapshot: { isMetered: true },
           usage: { used: 50 },
         },
       ],
     })
+    mockCheckLimits.mockResolvedValue({ meterName: 'mtr_requests', remaining: 0 })
 
     const result = await getUsageCore(fakeRequest())
 
