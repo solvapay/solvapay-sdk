@@ -1,6 +1,6 @@
 module github.com/solvapay/solvapay-sdk/examples/go/get-merchant
 
-go 1.23
+go 1.23.0
 
 require github.com/solvapay/solvapay-go v0.0.0
 

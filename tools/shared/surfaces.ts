@@ -2,6 +2,7 @@
  * Registry of build/test surfaces. Paths resolve through repo-paths.yaml.
  */
 
+import path from 'node:path'
 import { contractInputPath, lookupPath, sdkPath } from './repo-paths.js'
 import { REPO_ROOT } from './paths.js'
 import type { BinRequirement, Task } from './task-runner.js'
@@ -15,6 +16,8 @@ export interface Surface {
   cwd: string
   requires?: readonly BinRequirement[]
   testsRequireBuild?: boolean
+  /** When false, omit from live-contract native prepare (adapter packages). */
+  livePrepare?: boolean
   build: Task[]
   test: Task[]
   prepare?: Task[]
@@ -31,8 +34,9 @@ function task(
   args: readonly string[],
   cwd: string,
   requires?: readonly BinRequirement[],
+  env?: Record<string, string>,
 ): Task {
-  return { id, label, command, args, cwd, requires }
+  return { id, label, command, args, cwd, requires, env }
 }
 
 const rustCwd = REPO_ROOT
@@ -42,7 +46,11 @@ const capiCwd = sdkPath('capi')
 const nodeNativeCwd = sdkPath('node-native')
 const wasmCwd = sdkPath('wasm')
 const pythonCwd = sdkPath('python')
+const pythonMcpCwd = sdkPath('pythonMcp')
+const pythonPaidMcpExampleCwd = lookupPath('pythonPaidMcpExample')
 const rubyCwd = sdkPath('ruby')
+const rubyMcpCwd = sdkPath('rubyMcp')
+const rubyLib = path.join(sdkPath('ruby'), 'lib')
 const fixturesDir = contractInputPath('fixtures')
 const goWasmBuild = lookupPath('goWasmBuild')
 const capiRun = lookupPath('capiCtestRun')
@@ -251,6 +259,44 @@ export const SURFACES: readonly Surface[] = [
     ],
   },
   {
+    id: 'python-mcp',
+    label: 'Python MCP',
+    tier: 'native',
+    cwd: pythonMcpCwd,
+    requires: pythonRequires,
+    testsRequireBuild: true,
+    livePrepare: false,
+    build: [],
+    prepare: [
+      task(
+        'python-mcp.prepare',
+        'Python MCP prepare',
+        'uv',
+        ['sync', '--extra', 'dev'],
+        pythonMcpCwd,
+        pythonRequires,
+      ),
+    ],
+    test: [
+      task(
+        'python-mcp.test',
+        'Python MCP',
+        'uv',
+        ['run', '--extra', 'dev', 'pytest', '-q'],
+        pythonMcpCwd,
+        pythonRequires,
+      ),
+      task(
+        'python-mcp.example',
+        'Python paid-MCP example',
+        'uv',
+        ['run', '--project', pythonMcpCwd, '--extra', 'dev', 'pytest', '-q'],
+        pythonPaidMcpExampleCwd,
+        pythonRequires,
+      ),
+    ],
+  },
+  {
     id: 'ruby',
     label: 'Ruby',
     tier: 'native',
@@ -273,6 +319,54 @@ export const SURFACES: readonly Surface[] = [
     test: [task('ruby.test', 'Ruby', 'bundle', ['exec', 'rake', 'test'], rubyCwd, rubyRequires)],
   },
   {
+    id: 'ruby-mcp',
+    label: 'Ruby MCP',
+    tier: 'native',
+    cwd: rubyMcpCwd,
+    requires: rubyRequires,
+    testsRequireBuild: true,
+    livePrepare: false,
+    build: [],
+    prepare: [
+      task(
+        'ruby-mcp.compile',
+        'Ruby MCP compile binding',
+        'bundle',
+        ['exec', 'rake', 'compile'],
+        rubyCwd,
+        rubyRequires,
+      ),
+      task(
+        'ruby-mcp.bundle',
+        'Ruby MCP bundle',
+        'bundle',
+        ['install'],
+        rubyMcpCwd,
+        rubyRequires,
+      ),
+    ],
+    test: [
+      task(
+        'ruby-mcp.test',
+        'Ruby MCP',
+        'bundle',
+        ['exec', 'rake', 'test'],
+        rubyMcpCwd,
+        rubyRequires,
+        { RUBYLIB: rubyLib },
+      ),
+      task(
+        'ruby-mcp.example',
+        'Ruby paid-MCP example',
+        'bundle',
+        ['exec', 'ruby', '-Ilib', '../../examples/ruby/paid_mcp/test/paid_mcp_test.rb'],
+        rubyMcpCwd,
+        rubyRequires,
+        { RUBYLIB: rubyLib },
+      ),
+    ],
+  },
+  {
     id: 'go-guest',
     label: 'Go WASI guest',
     tier: 'native',
@@ -293,9 +387,11 @@ export function nativeSurfaces(): Surface[] {
 
 /** Native-tier tasks that make each binding importable/runnable in place. */
 export function nativePrepareTasks(): Task[] {
-  return nativeSurfaces().flatMap(surface =>
-    surface.prepare !== undefined ? [...surface.prepare] : [...surface.build],
-  )
+  return nativeSurfaces()
+    .filter(surface => surface.livePrepare !== false)
+    .flatMap(surface =>
+      surface.prepare !== undefined ? [...surface.prepare] : [...surface.build],
+    )
 }
 
 export interface SelectFlags {

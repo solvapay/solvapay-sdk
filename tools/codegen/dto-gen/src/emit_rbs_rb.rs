@@ -103,6 +103,7 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
     output.push_str(
         "  end\n\n\
          \x20 class Facade\n\
+         \x20   BASE36: String\n\
          \x20   @client: Client\n\
          \x20   @limits_cache_ttl: Integer\n\
          \x20   @clock: ^() -> Integer\n\
@@ -119,7 +120,11 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def await_customer_lookup: (Hash[Symbol, untyped] state) -> String\n\
          \x20   def publish_customer_lookup: (String customer_ref, Hash[Symbol, untyped] state, ?result: String?, ?error: Exception?) -> void\n\
          \x20   def find_or_create_customer: (String customer_ref) -> String\n\
-         \x20   def build_allow_result: (backend_ref: String, product: String, usage_type: String, decision: Hash[String, untyped]) -> PayableAllowResult\n\
+         \x20   def build_allow_result: (backend_ref: String, product: String, usage_type: String, decision: Hash[String, untyped], meter_name: String) -> PayableAllowResult\n\
+         \x20   def resolved_meter_name: (String product, String usage_type) -> String\n\
+         \x20   def generate_request_id: () -> String\n\
+         \x20   def iso8601_timestamp: () -> String\n\
+         \x20   def track_usage_call: (customer_ref: String, product_ref: String, action: String, outcome: String, duration_ms: Numeric) -> untyped\n\
          \x20 end\n\n\
          \x20 class Payable\n\
          \x20   @facade: Facade\n\

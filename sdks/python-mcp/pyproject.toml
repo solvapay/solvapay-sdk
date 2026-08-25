@@ -20,6 +20,9 @@ typecheck = [
   "ruff==0.12.4",
 ]
 
+[tool.uv.sources]
+solvapay = { path = "../python", editable = true }
+
 [tool.setuptools.packages.find]
 where = ["python"]
 

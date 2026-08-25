@@ -182,6 +182,16 @@ impl ClientShell {
         self
     }
 
+    /// Epoch-ms from the injected clock hook.
+    pub fn now_ms(&self) -> u64 {
+        (self.clock)()
+    }
+
+    /// Unit-interval float from the injected RNG hook.
+    pub fn random_unit(&self) -> f64 {
+        (self.rng)()
+    }
+
     /// Injects the host sleeper used between retries.
     ///
     /// # Arguments

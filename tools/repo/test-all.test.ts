@@ -53,4 +53,31 @@ describe('selectTestTasks', () => {
     }
     expect(selected.map(task => task.id)).toEqual(['python.prepare', 'python.test'])
   })
+
+  it('should prepare then test python-mcp including the paid-MCP example', () => {
+    const selected = selectTestTasks(['--native-only', '--only', 'python-mcp'])
+    if ('error' in selected) {
+      throw new Error(selected.error)
+    }
+    expect(selected.map(task => task.id)).toEqual([
+      'python-mcp.prepare',
+      'python-mcp.test',
+      'python-mcp.example',
+    ])
+  })
+
+  it('should set RUBYLIB when testing ruby-mcp', () => {
+    const selected = selectTestTasks(['--native-only', '--only', 'ruby-mcp'])
+    if ('error' in selected) {
+      throw new Error(selected.error)
+    }
+    expect(selected.map(task => task.id)).toEqual([
+      'ruby-mcp.compile',
+      'ruby-mcp.bundle',
+      'ruby-mcp.test',
+      'ruby-mcp.example',
+    ])
+    const suite = selected.find(task => task.id === 'ruby-mcp.test')
+    expect(suite?.env?.RUBYLIB).toMatch(/sdks\/ruby\/lib$/)
+  })
 })

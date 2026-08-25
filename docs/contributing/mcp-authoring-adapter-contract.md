@@ -84,7 +84,10 @@ false`). Do **not** emit `fail` usage. Do **not** emit `success`.
 - `structuredContent` is the **raw merchant `data`**, not the envelope.
 - `isError` is unset / omitted. Host result models that force a boolean may
   emit `false` instead; treat absent-or-`false` as the allow path. Do not
-  strip the field in a runner.
+  strip the field in a runner. The Go MCP SDK's `CallToolResult.IsError` uses
+  `json:"isError,omitempty"`, so `false` never reaches the wire — runners must
+  treat absent-or-false as equivalent on both sides, while still requiring
+  `isError: true` on the error fixture.
 - `_meta` is unset on the payable-tool path (no UI resource stamping).
 
 ### Gate (pre-check or `ctx.gate`)
@@ -169,6 +172,33 @@ They match the never-moves list in [`architecture.md`](./architecture.md).
 5. Install the language's native layer-2 dispatch so gate copy comes from
    Rust (`paywallToolResult`), not a hand-written fallback.
 6. Mirror `pnpm test:mcp-contract` as the focused command.
+
+## Go host-model notes (MA-Go)
+
+- Register with the low-level `Server.AddTool(tool, ToolHandler)`, not generic
+  `mcp.AddTool`. The generic form auto-populates `IsError`/`Content` and
+  validates schemas, which would destroy byte-exact result control. Tool-level
+  failures must be returned as a `*CallToolResult`, never as a Go `error`.
+- `ctx.gate()` cannot throw. `ResponseContext.Gate` returns a `*GateSignal`
+  error; the adapter detects it with `errors.As`.
+- Go maps marshal with sorted keys. `Respond` accepts `json.RawMessage` so the
+  fixture's `data` (and Rust compact JSON) keep insertion order. Struct-field
+  order is correct; `map[string]any` is a documented Go limitation.
+- `structuredContent` must be assigned as `json.RawMessage` so the Rust payload
+  is emitted byte-verbatim rather than re-sorted.
+
+## Rust host-model notes (MA-Rs)
+
+- Register with `ToolRouter::add_route` + `ToolRoute::new_dyn`. Return
+  `CallToolResult` (converted to `CallToolResponse`) for tool-level allow, gate,
+  and handler failures. Only transport/SDK failures become `ErrorData`.
+- `ctx.gate()` cannot throw. `ResponseContext::gate` returns `PayableError::Gate`;
+  `invoke_payable` formats it through layer-2 `paywall_tool_result`.
+- `CallToolResult::success` sets `isError: Some(false)`. The allow path overwrites
+  `is_error` from layer 2 (`None`). Fixture drivers project `isError` away except
+  when it is `true` or the gate `kind` is `payment_required` / `activation_required`.
+- Host SDK is `rmcp` 3.x (workspace pin 3.1.4). Replay uses an in-process
+  `tokio::io::duplex` pair, not a TCP listener.
 
 Do **not** drop these files into `contract/fixtures/`. Layer-2 harnesses
 (Python/Go/C/Rust) hard-fail on unknown `input.fn`.

@@ -62,7 +62,8 @@ for toml in \
   tools/conformance/fixture-runner/Cargo.toml \
   tools/conformance/shadow-invoker/Cargo.toml \
   tools/conformance/live-contract/Cargo.toml \
-  tools/shared/repo-paths/Cargo.toml
+  tools/shared/repo-paths/Cargo.toml \
+  sdks/rust-mcp/Cargo.toml
 do
   grep -Eq '^publish = false' "$toml" || fail "$toml: expected publish = false"
 done

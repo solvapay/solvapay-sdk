@@ -83,6 +83,8 @@ export const RepoPathsManifestSchema = z
       rust: RelPath,
       typescript: RelPath,
       pythonMcp: RelPath,
+      rubyMcp: RelPath,
+      rustMcp: RelPath,
     }),
     tsPackages: z.object({
       auth: RelPath,

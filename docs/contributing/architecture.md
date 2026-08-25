@@ -108,6 +108,7 @@ solvapay-sdk/
 │  ├─ python/           # PyO3 + maturin
 │  ├─ ruby/             # Magnus + rb-sys
 │  ├─ go/               # wazero + embedded wasm32-wasip1 core
+│  │  └─ mcp/           # payable-MCP adapter over the Go MCP SDK
 │  └─ capi/             # optional cbindgen C ABI
 ├─ core/                # Semantic crates (published to crates.io except as noted)
 │  ├─ solvapay-core/       # pure logic; serde/hmac only; no HTTP, no tokio
@@ -191,9 +192,9 @@ capabilities; only syntax differs (cross-surface parity is enforced in CI).
 | -------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | TypeScript     | napi-rs (Node native), wasm-bindgen (edge + browser)      | GA — the published `@solvapay/*` packages                                     |
 | Python         | PyO3 + maturin (`abi3` wheels) + `solvapay-mcp` adapter   | Built + tested in CI; publish is TestPyPI-gated (not GA)                      |
-| Ruby           | Magnus + rb-sys (platform gems)                           | Built + tested in CI; publish gated (not GA)                                  |
-| Go             | wazero + embedded `wasm32-wasip1` core (`//go:embed`)     | Built + tested in CI; subtree module release (not GA)                         |
-| Rust           | `solvapay` crate (thin facade, no FFI) + `blocking` feature | Built + tested in CI; crates.io publish gated (not GA)                        |
+| Ruby           | Magnus + rb-sys (platform gems) + `solvapay-mcp` adapter  | Built + tested in CI; publish gated (not GA)                                  |
+| Go             | wazero + embedded `wasm32-wasip1` core (`//go:embed`) + `solvapay-go/mcp` adapter | Built + tested in CI; subtree module release (not GA)                         |
+| Rust           | `solvapay` crate (thin facade, no FFI) + `blocking` feature + `solvapay-mcp` adapter | Built + tested in CI; crates.io publish gated (not GA)                        |
 | C ABI (opt.)   | cbindgen + opaque handles (`sdks/capi`)            | Scaffold only — hand-maintained `dispatch.rs` allowlist; no codegen emitter yet |
 
 The TypeScript surface further splits by runtime:
@@ -257,8 +258,9 @@ Some surfaces are deliberately hand-written and never move to Rust (redesign-v2
 - `createRequestDeduplicator` + limits-cache plumbing (host timers/maps)
 - `@solvapay/auth`, `@solvapay/next`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init`
 - MCP SDK registration glue and the `@solvapay/mcp-core` / `solvapay-mcp`
-  transport parts (OAuth bridge, bearer, CSP, narration) — only the MCP
-  _payload builders_ moved (including allow-path `build_payable_tool_result`).
+  (Python, Ruby, Go `sdks/go/mcp`, and Rust `sdks/rust-mcp`) transport parts (OAuth bridge, bearer,
+  CSP, narration) — only the MCP _payload builders_ moved (including allow-path
+  `build_payable_tool_result`).
   The hand-written `registerPayable` / `ctx` surface is pinned by
   [`mcp-authoring-adapter-contract.md`](./mcp-authoring-adapter-contract.md).
 - Per-language examples under `examples/<language>/`

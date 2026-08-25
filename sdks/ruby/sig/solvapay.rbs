@@ -117,6 +117,7 @@ module SolvaPay
   end
 
   class Facade
+    BASE36: String
     @client: Client
     @limits_cache_ttl: Integer
     @clock: ^() -> Integer
@@ -133,7 +134,11 @@ module SolvaPay
     def await_customer_lookup: (Hash[Symbol, untyped] state) -> String
     def publish_customer_lookup: (String customer_ref, Hash[Symbol, untyped] state, ?result: String?, ?error: Exception?) -> void
     def find_or_create_customer: (String customer_ref) -> String
-    def build_allow_result: (backend_ref: String, product: String, usage_type: String, decision: Hash[String, untyped]) -> PayableAllowResult
+    def build_allow_result: (backend_ref: String, product: String, usage_type: String, decision: Hash[String, untyped], meter_name: String) -> PayableAllowResult
+    def resolved_meter_name: (String product, String usage_type) -> String
+    def generate_request_id: () -> String
+    def iso8601_timestamp: () -> String
+    def track_usage_call: (customer_ref: String, product_ref: String, action: String, outcome: String, duration_ms: Numeric) -> untyped
   end
 
   class Payable

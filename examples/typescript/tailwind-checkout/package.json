@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --webpack --port 3011",
-    "build": "next build --webpack",
+    "build": "[ -e '.env' ] || cp .env.example .env && next build --webpack",
     "start": "next start --port 3011",
     "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs"
   },

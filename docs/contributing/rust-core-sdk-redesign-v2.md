@@ -1452,7 +1452,7 @@ The surface decomposes into three layers:
 ```mermaid
 flowchart TB
   subgraph L1 [Layer 1 - MCP protocol + transport]
-    L1desc["each language's own MCP SDK<br/>TS @modelcontextprotocol/sdk / Python mcp+FastMCP / Go MCP SDK / rmcp / Ruby MCP SDK<br/>NEVER reimplemented in Rust"]
+    L1desc["each language's own MCP SDK<br/>TS @modelcontextprotocol/sdk / Python mcp+FastMCP / official Ruby mcp gem / Go MCP SDK / rmcp<br/>NEVER reimplemented in Rust"]
   end
   subgraph L2 [Layer 2 - SolvaPay decisions - SHARED, already built]
     L2desc["Rust core: classify to gate to decide,<br/>paywallToolResult / envelope, tool-names, descriptors,<br/>checkLimits / trackUsage - steps 32/34/35 + phases 3-4"]
@@ -1474,12 +1474,16 @@ Lettered step ids keep steps 1–55 intact (same convention as `37R` / `6G`). Th
   **Done when:** a language-neutral fixture set (a paywalled tool → allow round-trip + gate round-trip, with byte-identical gate copy sourced from layer 2) exists, and the TS `@solvapay/mcp` adapter replays it green as the reference implementation.
 - **MA-Py — `solvapay-mcp` (Python) over `mcp`/FastMCP.**
   **Done when:** the shared MCP fixtures (MA-0) pass through the Python adapter; a paywalled tool round-trips allow + gate on Python's native MCP SDK (`mcp`/FastMCP, layer 1); the `registerPayable` ergonomic reaches parity with the TS reference.
-- **MA-Rb — `solvapay-mcp` (Ruby) over the Ruby MCP SDK.**
-  **Done when:** the shared MA-0 fixtures pass through the Ruby adapter; a paywalled tool round-trips allow + gate on Ruby's native MCP SDK (layer 1); parity with the TS `registerPayable` ergonomic.
+- **MA-Rb — `solvapay-mcp` (Ruby) over the official `mcp` gem.**
+  **Done.** Shared MA-0 fixtures replay through `sdks/ruby-mcp` on `MCP::Server`; allow + gate round-trip; `register_payable_tool` / `ResponseContext` parity with TS `registerPayable`.
 - **MA-Go — `solvapay-mcp` (Go) over the Go MCP SDK.**
-  **Done when:** the shared MA-0 fixtures pass through the Go adapter; a paywalled tool round-trips allow + gate on the Go MCP SDK (layer 1); parity with the TS `registerPayable` ergonomic.
+  **Done.** Shared MA-0 fixtures replay through `sdks/go/mcp` on a real
+  `mcp.Server`; allow + gate round-trip; `RegisterPayableTool` /
+  `ResponseContext` parity with TS `registerPayable`. See §15 note 63.
 - **MA-Rs — `solvapay-mcp` (Rust) over `rmcp`.**
-  **Done when:** the shared MA-0 fixtures pass through the Rust adapter; a paywalled tool round-trips allow + gate on `rmcp` (layer 1); parity with the TS `registerPayable` ergonomic.
+  **Done.** Shared MA-0 fixtures replay through `sdks/rust-mcp` on a real
+  `rmcp` server; allow + gate round-trip; `register_payable_tool` /
+  `ResponseContext` parity with TS `registerPayable`.
 
 ---
 
@@ -1743,6 +1747,8 @@ Intentionally open until the phase that needs them; resolve with research + a PR
 Re-check the linked sources at the start of any step touching the corresponding layer; pin versions in Cargo/npm/pyproject/gemspec/go.mod when adopting.
 
 ### Dated findings
+
+**Note 63 — MA-Go payable MCP adapter (checked 2026-08-25):** Layer-3 adapter at `sdks/go/mcp` (`github.com/solvapay/solvapay-go/mcp`) over official `github.com/modelcontextprotocol/go-sdk` **v1.3.1** (v1.7.0+ requires Go 1.25; the binding stays on Go 1.23). Facade `Gate`/`Payable`/`Allow.Track*` lands on the base module first (Python-shaped `trackUsage`, 60s customer dedup with inflight coalescing, 10s limits cache). Low-level `Server.AddTool` + `json.RawMessage` `structuredContent` for byte-verbatim Rust payloads. `isError` omitempty normalized in the fixture runner. GREEN: `go test ./mcp/...` 11/11 + negative gate-copy + `examples/go/paid-mcp`. **Handoff for MA-Rs:** completed — Rust `track_usage_event` matches the Python/fixture corpus including paywall.
 
 **Note 62 — Step 55-c release dry-run (checked 2026-08-21):** End-to-end dry-run without `NPM_TOKEN`. **Gate:** `scripts/lib/release-dryrun.ts` (`pnpm checks:release-dryrun`) — publishable packages must have a stable (non-prerelease) version; every production `workspace:*` / `workspace:^` / `workspace:~` dep must resolve inside that publish batch; all six publish workflows must expose a dry-run default (`dry_run: true`, or `publish_to_*` default `false`). Folds `assert-stable-workspace-versions.mjs` (wrapper still works). **Workflows:** `publish.yml` / `publish-preview.yml` add `workflow_dispatch` `dry_run` (default true). Dry-run runs the existing pre-publish chain then `changeset status` + `pnpm -r publish --dry-run --no-git-checks` and skips `changesets/action` / snapshot publish / GitHub App token. Push-to-`main`/`dev` stays the real publish path. **Local:** `pnpm release:dryrun`. **Verification limit:** `workflow_dispatch` only lists workflows present on the default branch. None of the six publish workflows (language pubs included) are on `main` yet, so the dispatch sweep is a post-merge action; local `pnpm release:dryrun` is the check available now. Python's default path is still a real TestPyPI publish (OIDC). Step 55 "required on main" stays open pending maintainer `--apply`.
 

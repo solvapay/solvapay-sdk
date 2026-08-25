@@ -263,6 +263,35 @@ jobs:
       - name: fixture suite (bound pure-core suites; unbound skipped)
         run: cargo run -q -p fixture-runner -- contract/fixtures
 
+  rust-mcp:
+    name: rust-mcp
+    runs-on: ubuntu-latest
+    needs:
+      - rust
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup show
+
+      - name: MCP-authoring fixtures
+        run: cargo test -p solvapay-mcp
+
+      - name: Gate-copy negative suite
+        run: cargo test -p solvapay-mcp --features test-seams
+
+      - name: clippy
+        run: cargo clippy -p solvapay-mcp --all-targets -- -D warnings
+
+      - name: paid-mcp example
+        run: |
+          cargo build --manifest-path examples/rust/paid-mcp/Cargo.toml
+          cargo test --manifest-path examples/rust/paid-mcp/Cargo.toml
+
   # Step 40 — PyO3/maturin Python binding abi3 wheel matrix (§7.7) + artifact gate.
   python-binding:
     name: python-binding (${{ matrix.platform }})
@@ -555,6 +584,45 @@ jobs:
           name: ruby-gem-${{ matrix.platform }}
           path: sdks/ruby/pkg/*.gem
           if-no-files-found: error
+
+  ruby-mcp:
+    name: ruby-mcp
+    runs-on: ubuntu-latest
+    needs:
+      - ruby-binding
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: sdks/ruby-mcp
+
+      - name: Download linux ruby gem
+        uses: actions/download-artifact@v4
+        with:
+          name: ruby-gem-x86_64-linux
+          path: /tmp/solvapay-gem
+
+      - name: Install solvapay platform gem
+        run: |
+          gemfile="$(ls /tmp/solvapay-gem/*.gem | head -n1)"
+          gem install "${gemfile}"
+
+      - name: MCP-authoring fixtures + typecheck
+        working-directory: sdks/ruby-mcp
+        run: |
+          bundle exec rake test
+          bundle exec rubocop lib --no-parallel
+          bundle exec steep check
+          bundle exec rbs validate
+          bundle exec ruby -Ilib ../../examples/ruby/paid_mcp/test/paid_mcp_test.rb
 
   ruby-binding-artifacts:
     name: ruby-binding artifact gate
@@ -1230,8 +1298,16 @@ jobs:
         working-directory: sdks/go
         run: go test -race ./...
 
+      - name: MCP-authoring conformance
+        working-directory: sdks/go
+        run: go test -race ./mcp/...
+
       - name: Go example build+test (Step 51)
         working-directory: examples/go/get-merchant
+        run: go test ./...
+
+      - name: Go paid-mcp example
+        working-directory: examples/go/paid-mcp
         run: go test ./...
 
       - name: Fresh-module go get smoke (local replace)

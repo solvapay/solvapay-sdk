@@ -39,6 +39,15 @@ describe('surfaces registry', () => {
     expect(python?.args).toEqual(['run', '--extra', 'dev', 'maturin', 'develop', '--release'])
   })
 
+  it('should keep MCP adapters off live-contract native prepare', () => {
+    const ids = nativePrepareTasks().map(task => task.id)
+    expect(ids).not.toContain('python-mcp.prepare')
+    expect(ids).not.toContain('ruby-mcp.compile')
+    const pythonMcp = SURFACES.find(surface => surface.id === 'python-mcp')
+    expect(pythonMcp?.livePrepare).toBe(false)
+    expect(pythonMcp?.prepare?.[0]?.args).toEqual(['sync', '--extra', 'dev'])
+  })
+
   it('should fall back to build when a native surface has no prepare', () => {
     const ids = nativePrepareTasks().map(task => task.id)
     expect(ids).toContain('go-guest.build')

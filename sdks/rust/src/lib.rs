@@ -21,7 +21,7 @@ pub mod blocking;
 
 pub use client::Client;
 pub use config::{Config, DEFAULT_LIMITS_CACHE_TTL_MS};
-pub use gate::{Allow, GateOpts, GateOutcome, Payable, TrackOpts};
+pub use gate::{Allow, CustomerSnapshot, GateOpts, GateOutcome, Payable, TrackOpts};
 
 // --- Transport re-exports (public surface for integrators) ---
 pub use solvapay_transport::{

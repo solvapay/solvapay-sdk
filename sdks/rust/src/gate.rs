@@ -2,7 +2,9 @@
 
 #![allow(clippy::missing_docs_in_private_items)]
 
+use serde_json::Value;
 use solvapay_core::PaywallGate;
+use solvapay_dto::CreateUsageRequestOutcome;
 
 use crate::client::Client;
 
@@ -41,12 +43,28 @@ pub enum GateOutcome {
     Allow(Allow),
 }
 
+/// Merchant-facing customer projection from the last limits check.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CustomerSnapshot {
+    /// Backend customer reference used for usage tracking.
+    pub customer_ref: String,
+    /// `creditBalance` from limits, or `0` when absent.
+    pub balance: Value,
+    /// Remaining allowance from limits (may be JSON `null`).
+    pub remaining: Value,
+    /// `withinLimits` from limits, or `true` when absent.
+    pub within_limits: Value,
+    /// Plan field from limits (may be JSON `null`).
+    pub plan: Value,
+}
+
 /// Allow arm returned from [`Client::gate`]; usage tracking delegates to the typed client.
 pub struct Allow {
     pub(crate) client: Client,
     pub(crate) backend_ref: String,
     pub(crate) product: String,
-    pub(crate) usage_type: String,
+    pub(crate) meter_name: String,
+    pub(crate) limits: Value,
 }
 
 /// Options for usage tracking after an allowed request.
@@ -59,10 +77,50 @@ pub struct TrackOpts {
 }
 
 impl Allow {
+    /// Customer snapshot used by payable MCP `ResponseContext`.
+    pub fn customer(&self) -> CustomerSnapshot {
+        let limits = if self.limits.is_null() {
+            Value::Object(serde_json::Map::new())
+        } else {
+            self.limits.clone()
+        };
+        let obj = limits.as_object();
+        let balance = obj
+            .and_then(|o| o.get("creditBalance"))
+            .cloned()
+            .unwrap_or(Value::from(0));
+        let remaining = obj
+            .and_then(|o| o.get("remaining"))
+            .cloned()
+            .unwrap_or(Value::Null);
+        let within_limits = obj
+            .and_then(|o| o.get("withinLimits"))
+            .cloned()
+            .unwrap_or(Value::Bool(true));
+        let plan = obj
+            .and_then(|o| o.get("plan"))
+            .cloned()
+            .unwrap_or(Value::Null);
+        CustomerSnapshot {
+            customer_ref: self.backend_ref.clone(),
+            balance,
+            remaining,
+            within_limits,
+            plan,
+        }
+    }
+
     /// Records a successful usage event (`trackUsage`).
     pub async fn track_success(&self, opts: TrackOpts) -> Result<(), solvapay_core::SdkError> {
         self.client
-            .track_usage_after_allow(&self.backend_ref, &self.product, &self.usage_type, opts)
+            .track_usage_event(
+                &self.backend_ref,
+                &self.product,
+                &self.meter_name,
+                CreateUsageRequestOutcome::Success,
+                opts.duration.unwrap_or(0.0),
+                opts.metadata,
+            )
             .await
     }
 
@@ -77,11 +135,16 @@ impl Allow {
             "error".to_owned(),
             serde_json::Value::String(error.to_string()),
         );
-        self.track_success(TrackOpts {
-            duration: opts.duration,
-            metadata: Some(merged),
-        })
-        .await
+        self.client
+            .track_usage_event(
+                &self.backend_ref,
+                &self.product,
+                &self.meter_name,
+                CreateUsageRequestOutcome::Fail,
+                opts.duration.unwrap_or(0.0),
+                Some(merged),
+            )
+            .await
     }
 }
 

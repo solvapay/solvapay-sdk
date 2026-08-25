@@ -1,0 +1,35 @@
+[workspace]
+
+[package]
+name = "solvapay-example-paid-mcp"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.96"
+description = "SolvaPay Rust payable MCP example"
+publish = false
+
+[[bin]]
+name = "paid-mcp"
+path = "src/main.rs"
+
+[lib]
+name = "solvapay_example_paid_mcp"
+path = "src/lib.rs"
+
+[dependencies]
+solvapay = { path = "../../../sdks/rust" }
+solvapay-mcp = { path = "../../../sdks/rust-mcp" }
+rmcp = { version = "3.1.4", default-features = false, features = ["server", "client", "transport-async-rw"] }
+serde_json = { version = "1.0.150", features = ["preserve_order"] }
+tokio = { version = "1.52.4", features = ["rt-multi-thread", "io-util", "macros"] }
+futures = "0.3.31"
+
+[lints.rust]
+missing_docs = "deny"
+
+[lints.clippy]
+missing_docs_in_private_items = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

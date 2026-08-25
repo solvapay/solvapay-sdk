@@ -83,7 +83,10 @@ Gate `content[0].text` and `structuredContent` are layer-2 output
 ```bash
 pnpm build:packages
 pnpm test:mcp-contract
-pytest sdks/python-mcp/tests/mcp_authoring
+cd sdks/python-mcp && uv sync --extra dev && uv run --extra dev pytest -q
+cd sdks/ruby-mcp && RUBYLIB=$(pwd)/../ruby/lib bundle exec rake test
+cd sdks/go && go test ./mcp/...
+cargo test -p solvapay-mcp
 ```
 
 The suite is included in `pnpm test:contract`.

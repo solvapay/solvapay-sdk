@@ -1,0 +1,29 @@
+[package]
+name = "solvapay-mcp"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+description = "Payable MCP tools for SolvaPay over the rmcp Rust MCP SDK"
+readme = "README.md"
+
+[dependencies]
+solvapay = { path = "../rust" }
+solvapay-core = { path = "../../core/solvapay-core" }
+rmcp = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+futures = "0.3.31"
+
+[features]
+# Test-only seam for the negative "gate copy must come from layer 2" suite.
+test-seams = []
+
+[dev-dependencies]
+rmcp = { workspace = true, features = ["client", "transport-async-rw"] }
+repo-paths = { path = "../../tools/shared/repo-paths" }
+serde = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "io-util", "macros"] }
+
+[lints]
+workspace = true

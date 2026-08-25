@@ -1,4 +1,8 @@
-// Package nativecall is the test-only guest export caller for fixture replay.
+// Package nativecall invokes guest exports on the shared clientless runtime.
+//
+// It is used by fixture replay and by production facade plumbing (Gate,
+// payable-MCP layer-2 payload builders) that must call sync decision helpers
+// without a configured API client.
 package nativecall
 
 import (
@@ -69,8 +73,8 @@ type envelopeError struct {
 	Retryable bool            `json:"retryable"`
 }
 
-// CallSync invokes a guest export and unwraps the envelope into a value or *GuestError.
-func CallSync(ctx context.Context, fn, argsJSON string) (any, error) {
+// CallValueJSON invokes a guest export and returns the success value as raw JSON.
+func CallValueJSON(ctx context.Context, fn, argsJSON string) (json.RawMessage, error) {
 	raw, err := CallEnvelope(ctx, fn, argsJSON)
 	if err != nil {
 		return nil, err
@@ -85,11 +89,23 @@ func CallSync(ctx context.Context, fn, argsJSON string) (any, error) {
 	if !env.OK {
 		return nil, envelopeToError(env.Error)
 	}
-	if len(env.Value) == 0 || string(env.Value) == "null" {
+	if len(env.Value) == 0 {
+		return nil, nil
+	}
+	return env.Value, nil
+}
+
+// CallSync invokes a guest export and unwraps the envelope into a value or *GuestError.
+func CallSync(ctx context.Context, fn, argsJSON string) (any, error) {
+	valueJSON, err := CallValueJSON(ctx, fn, argsJSON)
+	if err != nil {
+		return nil, err
+	}
+	if len(valueJSON) == 0 || string(valueJSON) == "null" {
 		return nil, nil
 	}
 	var value any
-	if err := json.Unmarshal(env.Value, &value); err != nil {
+	if err := json.Unmarshal(valueJSON, &value); err != nil {
 		return nil, fmt.Errorf("nativecall: decode value: %w", err)
 	}
 	return value, nil

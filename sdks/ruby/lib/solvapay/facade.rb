@@ -1,10 +1,14 @@
 # frozen_string_literal: true
 
+require "time"
+
 module SolvaPay
   CUSTOMER_CACHE_TTL_MS = 60_000
   DEFAULT_LIMITS_CACHE_TTL_MS = 10_000
 
   class Facade
+    BASE36 = "0123456789abcdefghijklmnopqrstuvwxyz"
+
     def initialize(
       api_key: nil,
       api_base_url: nil,
@@ -27,6 +31,7 @@ module SolvaPay
     # @param usage_type [String] Usage meter name (default: "requests").
     # @return [PayableAllowResult, PayablePaywallResult] Paywall or allow result with usage trackers.
     def gate(customer_ref, product:, usage_type: "requests")
+      started_ms = @clock.call
       backend_ref = ensure_customer(customer_ref)
       limits_key = [backend_ref, product, usage_type].join(":")
       within_limits, remaining, limits = evaluate_limits(
@@ -44,11 +49,20 @@ module SolvaPay
           "checkoutUrl" => limits&.fetch("checkoutUrl", nil),
         },
       )
+      meter_name = resolved_meter_name(product, usage_type)
       if decision["outcome"] == "gate"
         gate = decision["gate"]
         gate ||= NativeDispatch.call_sync(
           "build_paywall_gate",
           { "productRef" => product, "limits" => limits || { "remaining" => remaining } },
+        )
+        elapsed = @clock.call - started_ms
+        track_usage_call(
+          customer_ref: backend_ref,
+          product_ref: product,
+          action: meter_name,
+          outcome: "paywall",
+          duration_ms: elapsed.negative? ? 0 : elapsed,
         )
         return PayablePaywallResult.new(content: gate)
       end
@@ -58,6 +72,7 @@ module SolvaPay
         product: product,
         usage_type: usage_type,
         decision: decision,
+        meter_name: meter_name,
       )
     end
 
@@ -219,24 +234,70 @@ module SolvaPay
       ref
     end
 
-    def build_allow_result(backend_ref:, product:, usage_type:, decision:)
+    def resolved_meter_name(product, usage_type)
+      resolved = NativeDispatch.call_sync(
+        "resolve_check_limits_params",
+        { "productRef" => product, "usageType" => usage_type },
+      )
+      meter = resolved.is_a?(Hash) ? resolved["meterName"] : nil
+      return meter if meter.is_a?(String)
+
+      raise SolvaPayError, "resolve_check_limits_params returned unexpected value"
+    end
+
+    def generate_request_id
+      suffix = +""
+      9.times do
+        char = BASE36[Random.rand(36)]
+        raise SolvaPayError, "request id generation failed" if char.nil?
+
+        suffix << char
+      end
+      "solvapay_#{@clock.call}_#{suffix}"
+    end
+
+    def iso8601_timestamp
+      Time.now.utc.iso8601(3).sub("+00:00", "Z")
+    end
+
+    def track_usage_call(customer_ref:, product_ref:, action:, outcome:, duration_ms:)
+      @client.track_usage(
+        params: {
+          "customerRef" => customer_ref,
+          "actionType" => "api_call",
+          "units" => 1,
+          "outcome" => outcome,
+          "productRef" => product_ref,
+          "duration" => duration_ms,
+          "metadata" => { "action" => action, "requestId" => generate_request_id },
+          "timestamp" => iso8601_timestamp,
+        },
+      )
+    end
+
+    def build_allow_result(backend_ref:, product:, usage_type:, decision:, meter_name:)
+      _ = usage_type
       track_success = lambda do |duration: nil, metadata: nil|
-        payload = {
-          "customerRef" => backend_ref,
-          "action" => usage_type,
-          "productRef" => product,
-        }
-        payload["duration"] = duration unless duration.nil?
-        payload["metadata"] = metadata unless metadata.nil?
-        @client.track_usage(params: payload)
+        _ = metadata
+        track_usage_call(
+          customer_ref: backend_ref,
+          product_ref: product,
+          action: meter_name,
+          outcome: "success",
+          duration_ms: duration.nil? ? 0 : duration,
+        )
         nil
       end
       track_fail = lambda do |error, duration: nil, metadata: nil|
-        failure_metadata = {} #: Hash[String, untyped]
-        failure_metadata.merge!(metadata) if metadata.is_a?(Hash)
-        failure_metadata["error"] = error.to_s
-        tracker = track_success #: untyped
-        tracker.call(duration: duration, metadata: failure_metadata)
+        _ = error
+        _ = metadata
+        track_usage_call(
+          customer_ref: backend_ref,
+          product_ref: product,
+          action: meter_name,
+          outcome: "fail",
+          duration_ms: duration.nil? ? 0 : duration,
+        )
       end
       PayableAllowResult.new(
         customer_ref: backend_ref,

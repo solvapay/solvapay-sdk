@@ -21,6 +21,7 @@ use crate::paywall_gate::PaywallGate;
 use crate::webhook::{WebhookError, WebhookErrorCode};
 
 /// Single structured error surface for all SolvaPay bindings (§4.4).
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 pub enum SdkError {

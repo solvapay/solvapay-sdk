@@ -2,25 +2,26 @@
 
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Map, Value};
 use solvapay_core::{
     build_create_customer_params, classify_customer_ref, decide_paywall_outcome,
-    evaluate_cached_limits, evaluate_fresh_limits, extract_backend_customer_ref, CustomerRefKind,
-    PaywallOutcome, SdkError,
+    evaluate_cached_limits, evaluate_fresh_limits, extract_backend_customer_ref,
+    resolve_check_limits_params, CustomerRefKind, HelperErrorResult, PaywallOutcome, SdkError,
 };
 use solvapay_dto::{
     CheckLimitRequest, CheckLimitsRequest, CreateCustomerRequest, CreateUsageRequest,
-    GetCustomerParams, TrackUsageRequest,
+    CreateUsageRequestActionType, CreateUsageRequestOutcome, GetCustomerParams, TrackUsageRequest,
 };
+use solvapay_transport::random9_from_f64;
 use solvapay_transport::{ClientShell, SharedTransport, SolvaPayClient};
 use tokio::sync::{Mutex, Notify};
 
 use crate::config::Config;
-use crate::gate::{Allow, GateOpts, GateOutcome, Payable, TrackOpts};
+use crate::gate::{Allow, GateOpts, GateOutcome, Payable};
 
 const CUSTOMER_CACHE_TTL_MS: u64 = 60_000;
 
@@ -95,10 +96,15 @@ impl Client {
 
     /// Paywall gate for a customer and product (§2.4). Limit decisions delegate to core.
     pub async fn gate(&self, customer_ref: &str, opts: GateOpts) -> Result<GateOutcome, SdkError> {
+        let started = Instant::now();
+        let meter_name =
+            resolve_check_limits_params(Some(&opts.product), None, Some(&opts.usage_type))
+                .map_err(helper_to_sdk)?
+                .meter_name;
         let backend_ref = self.ensure_customer(customer_ref).await?;
-        let limits_key = format!("{}:{}:{}", backend_ref, opts.product, opts.usage_type);
+        let limits_key = format!("{}:{}:{}", backend_ref, opts.product, meter_name);
         let (within_limits, _remaining, limits) = self
-            .evaluate_limits(&limits_key, &backend_ref, &opts.product, &opts.usage_type)
+            .evaluate_limits(&limits_key, &backend_ref, &opts.product, &meter_name)
             .await?;
 
         let checkout_url = limits
@@ -121,9 +127,22 @@ impl Client {
                 client: self.clone(),
                 backend_ref,
                 product: opts.product,
-                usage_type: opts.usage_type,
+                meter_name,
+                limits,
             })),
-            PaywallOutcome::Gate { gate } => Ok(GateOutcome::Paywall(gate)),
+            PaywallOutcome::Gate { gate } => {
+                let duration_ms = started.elapsed().as_secs_f64() * 1000.0;
+                self.track_usage_event(
+                    &backend_ref,
+                    &opts.product,
+                    &meter_name,
+                    CreateUsageRequestOutcome::Paywall,
+                    duration_ms.max(0.0),
+                    None,
+                )
+                .await?;
+                Ok(GateOutcome::Paywall(gate))
+            }
         }
     }
 
@@ -136,35 +155,46 @@ impl Client {
         }
     }
 
-    pub(crate) async fn track_usage_after_allow(
+    pub(crate) async fn track_usage_event(
         &self,
         backend_ref: &str,
         product: &str,
-        usage_type: &str,
-        opts: TrackOpts,
+        action: &str,
+        outcome: CreateUsageRequestOutcome,
+        duration_ms: f64,
+        extra_metadata: Option<Map<String, Value>>,
     ) -> Result<(), SdkError> {
-        let metadata = opts
-            .metadata
-            .map(|m| m.into_iter().collect::<std::collections::BTreeMap<_, _>>());
+        let shell = self.inner.api.shell();
+        let now_ms = shell.now_ms();
+        let request_id = format!(
+            "solvapay_{}_{}",
+            now_ms,
+            random9_from_f64(shell.random_unit())
+        );
+        let mut metadata = extra_metadata.unwrap_or_default();
+        metadata.insert("action".to_owned(), Value::String(action.to_owned()));
+        metadata.insert("requestId".to_owned(), Value::String(request_id));
+        let overlay: BTreeMap<String, Value> = metadata.into_iter().collect();
+
         let base = CreateUsageRequest {
             customer_ref: Some(backend_ref.to_owned()),
             product_ref: Some(product.to_owned()),
-            duration: opts.duration,
-            metadata: metadata.clone(),
-            action_type: None,
-            description: Some(usage_type.to_owned()),
+            duration: Some(duration_ms),
+            metadata: None,
+            action_type: Some(CreateUsageRequestActionType::ApiCall),
+            description: None,
             error_message: None,
             idempotency_key: None,
-            outcome: None,
+            outcome: Some(outcome),
             purchase_ref: None,
-            timestamp: None,
-            units: None,
+            timestamp: Some(iso8601_millis(now_ms)),
+            units: Some(1),
         };
 
         let params = TrackUsageRequest {
             customer_ref: backend_ref.to_owned(),
             base,
-            metadata,
+            metadata: Some(overlay),
         };
         self.inner.api.track_usage(params).await?;
         Ok(())
@@ -386,6 +416,42 @@ fn now_ms() -> u64 {
         .map_or(0, |d| d.as_millis() as u64)
 }
 
+fn helper_to_sdk(err: HelperErrorResult) -> SdkError {
+    SdkError::Api {
+        message: err.details.unwrap_or(err.error),
+        status: Some(err.status),
+        code: None,
+    }
+}
+
+/// RFC 3339 UTC with millisecond precision (`2026-08-25T15:04:05.123Z`).
+fn iso8601_millis(epoch_ms: u64) -> String {
+    let total_secs = (epoch_ms / 1000) as i64;
+    let millis = epoch_ms % 1000;
+    let days = total_secs.div_euclid(86_400);
+    let secs_of_day = total_secs.rem_euclid(86_400) as u32;
+    let (year, month, day) = civil_from_days(days);
+    let hour = secs_of_day / 3600;
+    let min = (secs_of_day % 3600) / 60;
+    let sec = secs_of_day % 60;
+    format!("{year:04}-{month:02}-{day:02}T{hour:02}:{min:02}:{sec:02}.{millis:03}Z")
+}
+
+/// Howard Hinnant civil_from_days (proleptic Gregorian).
+fn civil_from_days(z: i64) -> (i32, u32, u32) {
+    let z = z + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u32;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    (y as i32, m, d)
+}
+
 #[path = "client_generated.rs"]
 mod client_generated;
 
@@ -394,6 +460,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
     use super::*;
+    use crate::gate::TrackOpts;
     use solvapay_transport::http::{HttpRequest, HttpResponse, Method};
     use solvapay_transport::transport::{BoxFuture, Transport};
     use std::sync::Mutex as StdMutex;
@@ -430,6 +497,15 @@ mod tests {
                 }
             })
         }
+    }
+
+    #[test]
+    fn iso8601_millis_unix_epoch() {
+        assert_eq!(iso8601_millis(0), "1970-01-01T00:00:00.000Z");
+        assert_eq!(
+            iso8601_millis(1_704_067_200_123),
+            "2024-01-01T00:00:00.123Z"
+        );
     }
 
     #[test]
@@ -496,12 +572,19 @@ mod tests {
     #[tokio::test]
     async fn gate_paywall_returns_gate_when_over_limit() {
         let limits_body = br#"{"withinLimits":false,"remaining":0,"plan":"pro"}"#;
-        let mock = MockTransport::new(vec![Ok(HttpResponse {
-            status: 200,
-            body: limits_body.to_vec(),
-        })]);
+        let usage_ok = br#"{}"#;
+        let mock = MockTransport::new(vec![
+            Ok(HttpResponse {
+                status: 200,
+                body: limits_body.to_vec(),
+            }),
+            Ok(HttpResponse {
+                status: 200,
+                body: usage_ok.to_vec(),
+            }),
+        ]);
         let client = Client::with_transport(
-            mock,
+            mock.clone(),
             Config {
                 api_key: "sk_test".to_owned(),
                 ..Config::default()
@@ -518,6 +601,31 @@ mod tests {
             .await
             .expect("gate");
         assert!(matches!(outcome, GateOutcome::Paywall(_)));
+        let recorded = mock.recorded();
+        assert_eq!(recorded.len(), 2);
+        assert!(recorded[1].url.contains("/v1/sdk/usages"));
+        let body: Value =
+            serde_json::from_slice(recorded[1].body.as_ref().expect("body")).expect("usage json");
+        assert_eq!(body.get("outcome").and_then(Value::as_str), Some("paywall"));
+        assert_eq!(
+            body.get("actionType").and_then(Value::as_str),
+            Some("api_call")
+        );
+        assert_eq!(body.get("units").and_then(Value::as_i64), Some(1));
+        assert_eq!(
+            body.get("metadata")
+                .and_then(Value::as_object)
+                .and_then(|m| m.get("action"))
+                .and_then(Value::as_str),
+            Some("requests")
+        );
+        assert!(body.get("timestamp").and_then(Value::as_str).is_some());
+        assert!(body
+            .get("metadata")
+            .and_then(Value::as_object)
+            .and_then(|m| m.get("requestId"))
+            .and_then(Value::as_str)
+            .is_some());
     }
 
     #[tokio::test]
@@ -562,5 +670,22 @@ mod tests {
         assert_eq!(recorded.len(), 2);
         assert_eq!(recorded[1].method, Method::Post);
         assert!(recorded[1].url.contains("/v1/sdk/usages"));
+        let body: Value =
+            serde_json::from_slice(recorded[1].body.as_ref().expect("body")).expect("usage json");
+        assert_eq!(body.get("outcome").and_then(Value::as_str), Some("success"));
+        assert_eq!(
+            body.get("actionType").and_then(Value::as_str),
+            Some("api_call")
+        );
+        assert_eq!(body.get("units").and_then(Value::as_i64), Some(1));
+        assert_eq!(
+            body.get("metadata")
+                .and_then(Value::as_object)
+                .and_then(|m| m.get("action"))
+                .and_then(Value::as_str),
+            Some("requests")
+        );
+        assert!(body.get("duration").is_some());
+        assert!(body.get("timestamp").and_then(Value::as_str).is_some());
     }
 }

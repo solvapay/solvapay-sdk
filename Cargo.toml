@@ -6,6 +6,7 @@ members = [
   "core/solvapay-export",
   "core/solvapay-transport",
   "sdks/rust",
+  "sdks/rust-mcp",
   "sdks/node-native",
   "sdks/wasm",
   "sdks/python",
@@ -21,6 +22,7 @@ members = [
 exclude = [
   "examples/rust/env",
   "examples/rust/get-merchant",
+  "examples/rust/paid-mcp",
   "internal/fuzz",
 ]
 
@@ -55,6 +57,8 @@ js-sys = "0.3.103"
 wasm-bindgen-futures = "0.4.76"
 web-sys = "0.3.103"
 wasm-bindgen-test = "0.3.76"
+# Layer 1 MCP protocol for the hand-written MA-Rs adapter (never reimplemented in core).
+rmcp = { version = "3.1.4", default-features = false, features = ["server"] }
 
 [workspace.lints.rust]
 missing_docs = "deny"

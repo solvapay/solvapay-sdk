@@ -1,0 +1,56 @@
+module SolvaPay
+  module Mcp
+    VERSION: String
+
+    def self.set_format_gate_override: ((^(String, Hash[String, untyped]) -> Hash[String, untyped])?) -> void
+    def self.format_gate_override: () -> (^(String, Hash[String, untyped]) -> Hash[String, untyped])?
+    def self.format_gate_override=: ((^(String, Hash[String, untyped]) -> Hash[String, untyped])?) -> void
+
+    def self.register_payable_tool: (
+      untyped server,
+      String name,
+      solvapay: untyped,
+      product: String,
+      handler: ^(untyped, ResponseContext) -> untyped,
+      ?title: String?,
+      ?description: String?,
+      ?input_schema: untyped,
+      ?get_customer_ref: (^(untyped) -> String)?
+    ) -> void
+
+    def self.invoke_payable: (
+      solvapay: untyped,
+      product: String,
+      handler: ^(untyped, ResponseContext) -> untyped,
+      get_customer_ref: (^(untyped) -> String)?,
+      args: untyped
+    ) -> Hash[String, untyped]
+
+    def self.resolve_customer_ref: (untyped args, (^(untyped) -> String)? get_customer_ref) -> String
+    def self.format_gate: (String message, Hash[String, untyped] gate) -> Hash[String, untyped]
+    def self.limits_from_decision: (untyped decision) -> Hash[String, untyped]
+    def self.stringify_keys: (untyped value) -> untyped
+    def self.to_mcp_response: (untyped payload) -> untyped
+
+    module Layer2
+      def self.paywall_tool_result: (String message, untyped gate) -> Hash[String, untyped]
+      def self.make_response_result: (untyped data, untyped options, Array[untyped] emitted_blocks) -> Hash[String, untyped]
+      def self.assert_response_result: (untyped value) -> Hash[String, untyped]
+      def self.build_payable_tool_result: (untyped envelope) -> Hash[String, untyped]
+      def self.as_object_map: (untyped value) -> Hash[String, untyped]
+    end
+
+    class ResponseContext
+      @customer: Hash[String, untyped]
+      @product: Hash[String, untyped]
+      @product_ref: String
+      @emitted: Array[untyped]
+      attr_reader customer: Hash[String, untyped]
+      attr_reader product: Hash[String, untyped]
+      def initialize: (customer: Hash[String, untyped], product: Hash[String, untyped], product_ref: String) -> void
+      def emit: (untyped block) -> void
+      def respond: (untyped data, ?untyped options) -> Hash[String, untyped]
+      def gate: (?String? reason) -> void
+    end
+  end
+end

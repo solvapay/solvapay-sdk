@@ -59,7 +59,9 @@ var operationSignatures = []operationSignature{
 
 // extraClientMethods are exported Client methods that are not catalog operations.
 var extraClientMethods = map[string]struct{}{
-	"Close": {},
+	"Close":   {},
+	"Gate":    {},
+	"Payable": {},
 }
 
 // Frozen limits-cache TTL from the contract manifest `defaults:`.

@@ -38,6 +38,7 @@ pub struct FreshLimitsEvaluation {
 }
 
 /// Decision-point outcome (`allow` or `gate` with assembled gate).
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "outcome", rename_all = "camelCase")]
 pub enum PaywallOutcome {

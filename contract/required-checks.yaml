@@ -12,6 +12,9 @@ checks:
   - name: Rust
     jobId: rust
     gate: No-unwrap / no-expect deny; wasm32 no-tokio compile check; Shared fixture conformance; Generated-diff checks; Signature-generation reliability; Doc-comment coverage; Fuzzing (stable corpus replay); Shadow mode (offline selftest)
+  - name: rust-mcp
+    jobId: rust-mcp
+    gate: MCP-authoring conformance; Per-language examples
   - name: python-binding (manylinux-x86_64)
     jobId: python-binding
     gate: Platform build matrices; Python contract suite; Dynamic-language type-strictness; Per-language examples
@@ -33,6 +36,9 @@ checks:
   - name: python-mcp
     jobId: python-mcp
     gate: MCP-authoring conformance; Dynamic-language type-strictness
+  - name: ruby-mcp
+    jobId: ruby-mcp
+    gate: MCP-authoring conformance; Dynamic-language type-strictness; Per-language examples
   - name: ruby-binding (x86_64-linux)
     jobId: ruby-binding
     gate: Platform build matrices; Ruby contract suite; Dynamic-language type-strictness; Per-language examples
@@ -170,7 +176,7 @@ checks:
     gate: Browser-WASM symbol audit; Performance regression; Shared fixture conformance
   - name: go-binding (wazero WASI guest)
     jobId: go-binding
-    gate: Shared fixture conformance; Per-language examples
+    gate: Shared fixture conformance; Per-language examples; MCP-authoring conformance
   - name: c-binding (native C ABI)
     jobId: c-binding
     gate: Shared fixture conformance; Fuzzing (C ABI corpus replay); No-unwrap / no-expect deny

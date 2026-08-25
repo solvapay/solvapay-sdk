@@ -1,0 +1,8 @@
+# frozen_string_literal: true
+
+target :lib do
+  signature "sig"
+  signature "../ruby/sig"
+  check "lib"
+  library "json"
+end

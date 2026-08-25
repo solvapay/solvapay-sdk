@@ -9,7 +9,7 @@ use crate::header::{generated_header, CommentStyle};
 use crate::ir::Ir;
 
 /// Hand-written `Client` methods that are not catalog operations.
-const EXTRA_CLIENT_METHODS: &[&str] = &["Close"];
+const EXTRA_CLIENT_METHODS: &[&str] = &["Close", "Gate", "Payable"];
 
 /// Emits `signature_parity_generated_test.go`.
 ///
@@ -350,6 +350,8 @@ mod tests {
         assert!(output.contains("paramTypes"));
         assert!(output.contains("TestExportedClientMethodsMatchCensus"));
         assert!(output.contains("\"Close\": {}"));
+        assert!(output.contains("\"Gate\": {}"));
+        assert!(output.contains("\"Payable\": {}"));
         assert!(output.contains("m.Type.In(i + 2).String()"));
         assert!(output.contains("expectedLimitsCacheTTLMs"));
         assert!(output.contains("expectedMaxRetries"));

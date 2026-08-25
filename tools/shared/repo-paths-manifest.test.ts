@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from './paths.js'
+import { RepoPathsManifestSchema } from './repo-paths-schema.js'
 import {
   dirPath,
   dtoGenArgs,
@@ -183,7 +184,9 @@ describe('repo-paths manifest', () => {
   it('parses against the zod schema', () => {
     const manifest = loadRepoPathsManifest()
     expect(manifest.version).toBe(1)
-    expect(Object.keys(manifest.sdks)).toHaveLength(8)
+    expect(Object.keys(manifest.sdks).sort()).toEqual(
+      Object.keys(RepoPathsManifestSchema.shape.sdks.shape).sort(),
+    )
   })
 
   it("derives a generated-path set equal to today's GENERATED_PATHS", () => {

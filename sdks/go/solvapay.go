@@ -98,7 +98,8 @@ func WithMaxInstances(n int) Option {
 
 // Client is a configured SolvaPay client backed by its own guest instance pool.
 type Client struct {
-	rt *runtime.Runtime
+	rt   *runtime.Runtime
+	gate *gateState
 }
 
 // NewClient builds a client authenticated with apiKey.
@@ -116,7 +117,7 @@ func NewClient(ctx context.Context, apiKey string, opts ...Option) (*Client, err
 	if err != nil {
 		return nil, err
 	}
-	return &Client{rt: rt}, nil
+	return &Client{rt: rt, gate: newGateState()}, nil
 }
 
 // Close releases the client's runtime and all pooled instances.

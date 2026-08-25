@@ -73,6 +73,8 @@ class FacadeTest < Minitest::Test
         { "externalRef" => args["externalRef"], "email" => "#{args["customerRef"]}@example.test" }
       when "extract_backend_customer_ref"
         args["response"]["customerRef"] || args["fallback"]
+      when "resolve_check_limits_params"
+        { "productRef" => args["productRef"], "meterName" => args["usageType"] }
       else
         raise "unexpected decision #{name}"
       end
@@ -101,7 +103,9 @@ class FacadeTest < Minitest::Test
     result.track_success(duration: 12, metadata: { "source" => "test" })
     result.track_fail(RuntimeError.new("boom"), duration: 7)
     assert_equal 2, client.tracked.length
-    assert_equal "boom", client.tracked.last["metadata"]["error"]
+    assert_equal "success", client.tracked.first["outcome"]
+    assert_equal "fail", client.tracked.last["outcome"]
+    refute client.tracked.last.fetch("metadata").key?("error")
   end
 
   def test_gate_returns_exact_paywall_content
