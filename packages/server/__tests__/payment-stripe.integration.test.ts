@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
 import { createSolvaPay, createSolvaPayClient } from '../src/index'
 import { createTask, clearAllTasks } from '@solvapay/demo-services'
 import {
+  buildTestPlanOptions,
   createTestPaymentIntent,
   confirmPaymentWithTestCard,
   waitForWebhookProcessing,
@@ -72,6 +73,26 @@ const ENABLE_WEBHOOK_TESTS = process.env.ENABLE_WEBHOOK_TESTS === 'true'
 // Skip all tests if not configured for payment integration
 const describePaymentIntegration =
   USE_REAL_BACKEND && SOLVAPAY_SECRET_KEY && STRIPE_TEST_SECRET_KEY ? describe : describe.skip
+
+/**
+ * Plans are composable: the API returns an ordered `options[]` and no longer
+ * emits the `creditsPerUnit` / `freeUnits` scalars. Read the per-unit rate and
+ * the included allowance back off the options so the assertions below can keep
+ * talking in those terms.
+ */
+function readMeteredPricing(plan: Record<string, unknown>): {
+  creditsPerUnit: number
+  freeUnits: number
+} {
+  const options = Array.isArray(plan.options) ? (plan.options as Record<string, unknown>[]) : []
+  const perUnitCharge = options.find(o => o.kind === 'charge' && o.per === 'unit')
+  const includedLimit = options.find(o => o.kind === 'limit')
+
+  return {
+    creditsPerUnit: Number(perUnitCharge?.amountMinor ?? 0),
+    freeUnits: Number(includedLimit?.cap ?? 0),
+  }
+}
 
 describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flow', () => {
   let apiClient: any
@@ -154,34 +175,35 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       let plans: any[] = await apiClient.listPlans(defaultProduct.reference)
 
       usageBasedPlan =
-        plans.find(
-          (p: any) => p.type === 'usage-based' && Number(p.creditsPerUnit || 0) > 0 && Number(p.freeUnits || 0) > 0,
-        ) || null
+        plans
+          .map((p: Record<string, unknown>) => ({ ...p, ...readMeteredPricing(p) }))
+          .find(
+            (p: any) => p.type === 'usage-based' && p.creditsPerUnit > 0 && p.freeUnits > 0,
+          ) || null
 
       if (!usageBasedPlan) {
-        usageBasedPlan = await apiClient.createPlan({
+        const createdPlan = await apiClient.createPlan({
           productRef: defaultProduct.reference,
           name: `SDK Payment Integration Usage Plan ${Date.now()}`,
           description: 'Auto-created usage-based fixture plan',
-          type: 'usage-based',
-          billingModel: 'pre-paid',
-          billingCycle: 'monthly',
-          creditsPerUnit: 100,
           currency: providerCurrency,
-          freeUnits: 5,
-          limit: 5,
-          limits: {},
+          options: buildTestPlanOptions({
+            type: 'usage-based',
+            currency: providerCurrency,
+            creditsPerUnit: 100,
+            freeUnits: 5,
+            limit: 5,
+          }),
           metadata: {
             source: 'sdk-payment-integration-test',
           },
-          features: {},
-          status: 'active',
         })
+        usageBasedPlan = { ...createdPlan, ...readMeteredPricing(createdPlan) }
         createdFixturePlan = true
         plans = await apiClient.listPlans(defaultProduct.reference)
       }
 
-      defaultPlan = usageBasedPlan || plans[0]
+      defaultPlan = usageBasedPlan || { ...plans[0], ...readMeteredPricing(plans[0]) }
 
       console.log('✅ Fixture product ready:', {
         reference: defaultProduct.reference,
