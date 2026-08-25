@@ -9,7 +9,7 @@ import pytest
 
 from solvapay.facade import create_solvapay
 from solvapay.results import PayableAllowResult, PayablePaywallResult
-from tests.test_facade import StubClient, _fake_decision
+from test_facade import StubClient, _fake_decision
 
 
 def _assert_volatile_fields(payload: dict[str, Any]) -> None:

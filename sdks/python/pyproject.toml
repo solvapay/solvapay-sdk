@@ -40,6 +40,9 @@ include = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# testdir on sys.path so `from contract` and sibling `from test_facade` resolve
+# the same way they do in CI (pytest importmode=prepend).
+pythonpath = ["tests"]
 
 [tool.mypy]
 strict = true
