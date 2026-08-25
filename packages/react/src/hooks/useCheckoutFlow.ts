@@ -42,8 +42,9 @@ import { useLocale } from './useCopy'
 import type { Plan } from '../types'
 import {
   formatPaygRate,
-  inferIncludedCredits,
+  inferIncludedUnits,
   isPayg,
+  planMeterName,
   toBootstrapPlanLike,
   type CheckoutStep,
   type SuccessMeta,
@@ -163,18 +164,11 @@ export interface UseCheckoutFlowReturn {
    * locally-computed estimate and bumps `balance.adjustBalance` for
    * an instant UI update.
    */
-  notifyPaymentSuccess: (
-    intent?: PaymentIntent,
-    extras?: { creditsAdded?: number },
-  ) => void
+  notifyPaymentSuccess: (intent?: PaymentIntent, extras?: { creditsAdded?: number }) => void
 }
 
 export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowReturn {
-  const {
-    productRef,
-    initialStep = 'plan',
-    initialAmountMinor = null,
-  } = opts
+  const { productRef, initialStep = 'plan', initialAmountMinor = null } = opts
   const onPlanSelectRef = useRef(opts.onPlanSelect)
   const onAmountSelectRef = useRef(opts.onAmountSelect)
   const onPurchaseSuccessRef = useRef(opts.onPurchaseSuccess)
@@ -228,13 +222,10 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     resolvedDefaultTopupCurrency
   const topupCurrencyReady = topupCurrency != null
 
-  const setTopupCurrency = useCallback(
-    (code: string) => {
-      const normalized = code.toUpperCase()
-      setTopupCurrencyOverride(normalized)
-    },
-    [],
-  )
+  const setTopupCurrency = useCallback((code: string) => {
+    const normalized = code.toUpperCase()
+    setTopupCurrencyOverride(normalized)
+  }, [])
 
   const [step, setStep] = useState<CheckoutStep>(() => resolveInitialCheckoutStep(initialStep))
   const [status, setStatus] = useState<CheckoutStatus>('idle')
@@ -398,7 +389,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
         currency,
         creditsAdded,
         plan: selectedPlanShape,
-        rateLabel: formatPaygRate(selectedPlanShape, locale),
+        rateLabel: formatPaygRate(selectedPlanShape, locale, balance),
       }
       setSuccessMeta(meta)
       setStep('success')
@@ -406,6 +397,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     },
     [
       adjustBalance,
+      balance,
       creditsPerMinorUnit,
       displayExchangeRate,
       locale,
@@ -431,7 +423,8 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     const meta: SuccessMeta = {
       branch: 'recurring',
       plan: selectedPlanShape,
-      creditsIncluded: inferIncludedCredits(selectedPlanShape),
+      includedUnits: inferIncludedUnits(selectedPlanShape),
+      meterName: planMeterName(selectedPlanShape),
       chargedTodayMinor: pricingOption.price ?? 0,
       currency,
       nextRenewalLabel: null,

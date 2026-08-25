@@ -721,7 +721,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       purchases: purchaseData.purchases,
       hasProduct: (productName: string) => {
         return planPurchases.some(
-          p => p.productName.toLowerCase() === productName.toLowerCase() && p.status === 'active',
+          p =>
+            p.productName?.toLowerCase() === productName.toLowerCase() && p.status === 'active',
         )
       },
       activePurchase,

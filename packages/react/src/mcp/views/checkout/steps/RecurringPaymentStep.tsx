@@ -16,7 +16,7 @@ import type { Plan } from '../../../../types'
 import { useHostLocale } from '../../../useHostLocale'
 import { BackLink } from '../../BackLink'
 import type { BootstrapPlanLike, Cx } from '../shared'
-import { inferIncludedCredits, shortCycle } from '../shared'
+import { inferIncludedUnits, planBillingInterval, planMeterName, shortCycle } from '../shared'
 
 interface RecurringPaymentStepProps {
   plan: BootstrapPlanLike
@@ -45,8 +45,9 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
   const currency = pricingOption.currency.toUpperCase()
   const locale = useHostLocale()
   const amountMinor = pricingOption.price ?? 0
-  const cycle = plan.billingCycle ?? 'monthly'
-  const credits = inferIncludedCredits(plan)
+  const cycle = planBillingInterval(plan) ?? 'month'
+  const included = inferIncludedUnits(plan)
+  const meterName = planMeterName(plan) ?? 'units'
   const planName = plan.name ?? 'Plan'
 
   return (
@@ -62,9 +63,11 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
             {formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}
           </span>
         </div>
-        {credits > 0 ? (
+        {included != null ? (
           <div className="solvapay-mcp-checkout-order-summary-row">
-            <span className={cx.muted}>{credits.toLocaleString(locale)} credits included</span>
+            <span className={cx.muted}>
+              {included.toLocaleString(locale)} {meterName} included
+            </span>
           </div>
         ) : null}
       </div>

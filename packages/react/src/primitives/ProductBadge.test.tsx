@@ -9,9 +9,13 @@ import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 
 const activePurchase: PurchaseInfo = {
   reference: 'pur_1',
+  customerRef: 'cus_1',
   productName: 'Widget API',
   status: 'active',
   startDate: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
+  currency: 'USD',
+  isRecurring: false,
   amount: 1999,
 }
 

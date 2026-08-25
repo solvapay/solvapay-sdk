@@ -42,8 +42,8 @@ function resolveConfirmText(
 ): string | null {
   if (confirm === false) return null
   if (typeof confirm === 'string') return confirm
-  const planType = purchase?.planSnapshot?.planType
-  if (planType === 'usage-based') return defaults.usageBased
+  const isUsageBased = purchase?.planSnapshot?.isMetered === true && purchase.isRecurring !== true
+  if (isUsageBased) return defaults.usageBased
   return defaults.recurring
 }
 

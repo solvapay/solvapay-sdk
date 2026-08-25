@@ -15,14 +15,18 @@ const inFiveDays = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
 
 const cancelledActivePurchase: PurchaseInfo = {
   reference: 'pur_456',
+  customerRef: 'cus_456',
   productName: 'Widget API',
   status: 'active',
   startDate: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
+  currency: 'USD',
+  isRecurring: true,
   endDate: inFiveDays,
   cancelledAt: new Date().toISOString(),
   cancellationReason: 'Too expensive',
   amount: 1999,
-  planSnapshot: { reference: 'pln_widget', planType: 'recurring' },
+  planSnapshot: { reference: 'pln_widget', currency: 'USD', price: 1999, isMetered: false },
 }
 
 function buildCtx(purchases: PurchaseInfo[]): SolvaPayContextValue {

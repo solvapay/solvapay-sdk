@@ -25,6 +25,8 @@ export {
   planSortByPaygFirstThenAsc,
   formatContinueLabel,
   formatPaygRate,
-  inferIncludedCredits,
+  inferIncludedUnits,
+  planBillingInterval,
+  planMeterName,
   shortCycle,
 } from '../../../primitives/checkout/shared'

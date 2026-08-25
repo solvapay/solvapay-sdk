@@ -46,10 +46,12 @@ export const SuccessStep = memo(function SuccessStep({ meta, cx }: SuccessStepPr
             <dt>Plan</dt>
             <dd>{meta.plan.name ?? 'Pay as you go'}</dd>
           </div>
-          <div className="solvapay-mcp-checkout-receipt-row">
-            <dt>Rate</dt>
-            <dd>{meta.rateLabel}</dd>
-          </div>
+          {meta.rateLabel ? (
+            <div className="solvapay-mcp-checkout-receipt-row">
+              <dt>Rate</dt>
+              <dd>{meta.rateLabel}</dd>
+            </div>
+          ) : null}
         </dl>
       </>
     )
@@ -68,10 +70,12 @@ export const SuccessStep = memo(function SuccessStep({ meta, cx }: SuccessStepPr
           <dt>Plan</dt>
           <dd>{meta.plan.name ?? 'Plan'}</dd>
         </div>
-        {meta.creditsIncluded > 0 ? (
+        {meta.includedUnits != null ? (
           <div className="solvapay-mcp-checkout-receipt-row">
-            <dt>Credits</dt>
-            <dd>+{meta.creditsIncluded.toLocaleString(locale)}</dd>
+            <dt>Included</dt>
+            <dd>
+              {meta.includedUnits.toLocaleString(locale)} {meta.meterName ?? 'units'}
+            </dd>
           </div>
         ) : null}
         <div className="solvapay-mcp-checkout-receipt-row">
