@@ -1,5 +1,118 @@
 # @solvapay/react changelog
 
+## 2.0.0
+
+### Major Changes
+
+- e936ac0: Plan pricing is read from the wire's `options[]` instead of scalar fields the backend stopped sending.
+
+  `GET /v1/sdk/products/:ref/plans` returns pricing as a composable `options[]` array
+  (`charge`, `billingCycle`, `limit`, `trial`) with a derived headline `price`. The SDK
+  was still reading `planType`, `creditsPerUnit`, `billingCycle`, `meterRef`, `limit`, and
+  `pricingOptions` off the plan — none of which appear in the schema. Because every test
+  fixture hand-wrote those fields, the suites passed while real payloads silently took the
+  wrong branch.
+
+  **New — `@solvapay/core` pricing-option readers.** `charges`, `headlineCharges`,
+  `perUnitCharge`, `billingCycle`, `trialDays`, `includedUnits`, `peggedCreditsPerUnit`,
+  and `creditsPerUnitFromBalance` read a plan or a frozen plan snapshot. One reader for
+  both the MCP text narration and the MCP UI panel, so the two agree.
+
+  **Fixed — every paid plan rendered as a one-time payment.** The billing cycle now comes
+  from the `billingCycle` option, so subscriptions show the `/month` suffix and the
+  "start your _plan_ plan" payment copy again instead of "complete the purchase".
+
+  **Fixed — plan labels.** `narrate` derives the label from `type` plus `requiresPayment`,
+  so one-time, hybrid ("subscription + usage"), pay-as-you-go, and free plans are no longer
+  all labelled "recurring". `'free'` and `'trial'` were never backend plan types: a free
+  plan is `requiresPayment: false` and a trial is a `trial` option. The upgrade surface
+  filters on `requiresPayment`, which stops it offering a $0 plan.
+
+  **Fixed — "Cost per call" was absent, and the credit figure was wrong.** The rate is a
+  per-unit charge in **minor units**, not credits, so converting needs the wallet's peg
+  (`creditsPerMinorUnit` and `displayExchangeRate`). The row is emitted only when the
+  charge currency matches `balance.displayCurrency` — the peg carries no cross-currency
+  rate, so anything else would be wrong by the FX ratio. With no balance to peg against,
+  PAYG surfaces show the charge itself (`$0.02 / call`) rather than inventing a credit
+  count.
+
+  **Fixed — included allowance counted the wrong thing.** It is the `limit` option's `cap`,
+  counted in metered items, and it is labelled with the plan's meter. `0` is the backend's
+  unlimited sentinel and is no longer shown as an allowance of zero.
+
+  **Fixed — pay-as-you-go resolved as a free plan.** `resolvePlanShape` keyed off
+  `planType`, `meterRef`, `meterId`, and `limit`, so every plan fell through to its unknown
+  branch. A PAYG plan has no headline `price` and so came back `'free'`: no Top up action,
+  a Cancel action for a plan with no renewal to cancel, and the free-usage activity strip
+  instead of the balance. Metered subscriptions were also indistinguishable from unlimited
+  ones. The shape now derives from `options[]` — a billing cycle separates a subscription
+  from a one-off, a per-unit charge or included allowance marks it metered — and works for
+  both a plan and the frozen snapshot on a purchase, which carry different fields.
+
+  **Breaking — `SuccessMeta`.** `creditsIncluded` is replaced by `includedUnits` plus
+  `meterName`. The old field claimed credits while carrying a per-cycle item allowance.
+
+  **Breaking — `PlanLike`** (`@solvapay/react/mcp`) drops `planType`, `meterRef`,
+  `meterId`, and `limit` for `options`, `requiresPayment`, and `isMetered`, matching what
+  the backend sends.
+
+  **Deprecated on `Plan`.** `pricingOptions`, `creditsPerUnit`, `billingCycle`, `freeUnits`,
+  `setupFee`, `trialDays`, `limit`, and `rolloverUnusedUnits` are kept for consumers who
+  build plans through a custom fetcher, but the backend does not send them — read `options[]`
+  instead. `Plan.type` adds `'hybrid'`.
+
+- ec9c24c: `PurchaseInfo` is now the generated `SdkPurchaseResponse`, and usage caps come from the limits endpoint.
+
+  The purchase row the backend actually sends had drifted from the hand-written
+  `PurchaseInfo` interface. Both packages now derive it from the OpenAPI schema, so
+  the type matches the wire.
+
+  The type changes below are source-breaking for anyone constructing a `PurchaseInfo`.
+  `@solvapay/server` still ships them as a minor: it stays inside the 2.x line that the
+  in-flight SDK alignment targets, and no integrator is pinned to the old shape yet.
+
+  **Breaking — fields removed from the purchase row.** `planType` is gone from both
+  the purchase and its `planSnapshot`; derive it from `isRecurring` and
+  `planSnapshot.isMetered` instead. `planSnapshot` also drops `limit`, `meterRef`,
+  `meterId`, `freeUnits`, and `creditsPerUnit` — the backend never populated them on
+  this route. Read the per-unit credit rate off the plan (`usePlans`), and the cap
+  off `useLimits`.
+
+  **Breaking — fields now required.** `createdAt`, `customerRef`, `currency`,
+  `amount`, and `isRecurring` are required on a purchase; `currency` and `price` are
+  required on `planSnapshot`. Code that constructs a `PurchaseInfo` (test fixtures,
+  stub clients, custom transports) must supply them.
+
+  **Fixed — credit-gated plans no longer report as unlimited.** `useUsage().isUnlimited`
+  was `usage.total === null`, and once the cap left the plan snapshot that was true for
+  every metered plan — including pay-as-you-go, which is capped by the credit balance.
+  It now reflects the backend's unlimited signal from `useLimits`, so an unknown cap is
+  no longer mistaken for an absent one. `useUsage` sources `total`, `remaining`,
+  `percentUsed`, and `meterRef` from the same place, which costs one cached limits
+  request for metered plans. `getUsageCore` does the same server-side.
+
+### Minor Changes
+
+- a450b48: `useLimits` now reports an unlimited allowance explicitly.
+
+  The backend signals "no finite cap on this meter" with `remaining: -1`. Consumers
+  treating that as a plain count rendered "0 left" (and an upgrade CTA) for
+  customers who actually had unlimited access, and `adjustRemaining` compounded it
+  by clamping the sentinel to a real `0` on the first gated action.
+  - `useLimits()` returns a new `unlimited: boolean | null` field. Branch on it
+    instead of comparing `remaining` directly.
+  - `adjustRemaining` is now a no-op on an unlimited allowance, so the sentinel
+    survives optimistic updates.
+  - New exported `isUnlimited(remaining)` helper for code that handles a raw
+    `LimitResponse.remaining` outside the hook.
+
+  `remaining` still carries the raw `-1`, so the wire contract is unchanged.
+
+### Patch Changes
+
+- Updated dependencies [e936ac0]
+  - @solvapay/core@1.4.0
+
 ## 1.7.0
 
 ### Minor Changes
