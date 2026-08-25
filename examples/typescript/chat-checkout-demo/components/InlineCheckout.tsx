@@ -1,4 +1,5 @@
 import React from 'react'
+import { usePurchase } from '@solvapay/react'
 import { CheckoutSteps, PlanSelector } from '@solvapay/react/primitives'
 import { PaywallNotice } from '@solvapay/react/primitives'
 import type { PaywallStructuredContent } from '@solvapay/server'
@@ -24,11 +25,10 @@ interface InlineCheckoutProps {
    */
   state: InlineCheckoutMode
   /**
-   * Fired once the customer's entitlement matches what was needed —
-   * either via `usePaywallResolver.resolved` (paywall path) or via
-   * `useCheckoutFlow#onPurchaseSuccess` (proactive upgrade path).
-   * The parent uses this to dismiss the drawer and replay the
-   * pending message.
+   * Dismiss the drawer (and replay a pending message on the paywall
+   * path). Fired immediately when a 402 paywall resolves. On the
+   * proactive upgrade path it waits for the success-step Continue
+   * button so `<CheckoutSteps.Success>` can render first.
    */
   onSuccess: () => void
   /**
@@ -59,7 +59,9 @@ interface InlineCheckoutProps {
  *  - `upgrade` → bare `<CheckoutSteps.*>` composition. No paywall
  *    chrome because the user proactively chose to upgrade — they
  *    don't need to be told why a gate appeared, and they shouldn't
- *    sit through a notice they triggered themselves.
+ *    sit through a notice they triggered themselves. Payment success
+ *    refetches purchases and leaves the receipt on screen; Continue
+ *    dismisses the drawer.
  */
 export const InlineCheckout: React.FC<InlineCheckoutProps> = ({
   state,
@@ -67,6 +69,7 @@ export const InlineCheckout: React.FC<InlineCheckoutProps> = ({
   onUnlock,
   returnUrl,
 }) => {
+  const { refetch: refetchPurchase } = usePurchase()
   const url = returnUrl ?? (typeof window !== 'undefined' ? window.location.href : '/')
 
   if (state.mode === 'paywall' && state.stage === 'notice') {
@@ -96,7 +99,9 @@ export const InlineCheckout: React.FC<InlineCheckoutProps> = ({
             <CheckoutSteps.Root
               productRef={state.productRef}
               returnUrl={url}
-              onPurchaseSuccess={onSuccess}
+              onPurchaseSuccess={() => {
+                void refetchPurchase()
+              }}
             >
               <CheckoutSteps.StepHeading className="text-lg font-semibold text-slate-900 mb-1" />
               <CheckoutSteps.StepMessage className="text-sm text-slate-600 mb-4" />
@@ -117,6 +122,13 @@ export const InlineCheckout: React.FC<InlineCheckoutProps> = ({
               </CheckoutSteps.IfStep>
               <CheckoutSteps.IfStep step="success">
                 <CheckoutSteps.Success />
+                <button
+                  type="button"
+                  onClick={onSuccess}
+                  className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+                >
+                  Continue
+                </button>
               </CheckoutSteps.IfStep>
             </CheckoutSteps.Root>
           )}

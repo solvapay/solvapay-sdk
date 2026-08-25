@@ -18,13 +18,13 @@
     "@solvapay/auth": "workspace:^",
     "@solvapay/core": "workspace:*",
     "@solvapay/react": "workspace:*",
-    "@solvapay/server": "*",
+    "@solvapay/server": "workspace:*",
     "@stripe/react-stripe-js": "^6.0.0",
     "@stripe/stripe-js": "^9.0.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-markdown": "9.0.1",
-    "remark-gfm": "4.0.0"
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251124.0",

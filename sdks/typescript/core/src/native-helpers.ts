@@ -38,6 +38,7 @@ import type { ProductHelperError } from './product'
 import type { RenewalHelperError } from './renewal'
 import type { UsageSnapshot, UsageSnapshotPurchase } from './usage'
 import type { BillingCycle, Charge } from './types/boundary.generated'
+import type { BalancePegLike, PricedLike } from './pricing-options-types'
 
 // --- customer-sync ---
 
@@ -275,34 +276,31 @@ export function validateListPlansParams(
   return dispatchSync('validateListPlansParams', { productRef: productRef ?? null })
 }
 
-export function charges(priced: Record<string, unknown> | null | undefined): Charge[] {
+export function charges(priced: PricedLike | null | undefined): Charge[] {
   return dispatchSync('charges', { priced: priced ?? null })
 }
 
-export function headlineCharges(priced: Record<string, unknown> | null | undefined): Charge[] {
+export function headlineCharges(priced: PricedLike | null | undefined): Charge[] {
   return dispatchSync('headlineCharges', { priced: priced ?? null })
 }
 
 export function perUnitCharge(
-  priced: Record<string, unknown> | null | undefined,
+  priced: PricedLike | null | undefined,
   meter?: string | null,
 ): Charge | null {
   return dispatchSync('perUnitCharge', { priced: priced ?? null, meter: meter ?? null })
 }
 
-export function billingCycle(
-  priced: Record<string,
-  unknown> | null | undefined,
-): BillingCycle | null {
+export function billingCycle(priced: PricedLike | null | undefined): BillingCycle | null {
   return dispatchSync('billingCycle', { priced: priced ?? null })
 }
 
-export function trialDays(priced: Record<string, unknown> | null | undefined): number | null {
+export function trialDays(priced: PricedLike | null | undefined): number | null {
   return dispatchSync('trialDays', { priced: priced ?? null })
 }
 
 export function includedUnits(
-  priced: Record<string, unknown> | null | undefined,
+  priced: PricedLike | null | undefined,
   meter?: string | null,
 ): number | null {
   return dispatchSync('includedUnits', { priced: priced ?? null, meter: meter ?? null })
@@ -321,8 +319,8 @@ export function peggedCreditsPerUnit(
 }
 
 export function creditsPerUnitFromBalance(
-  priced: Record<string, unknown> | null | undefined,
-  balance: Record<string, unknown> | null | undefined,
+  priced: PricedLike | null | undefined,
+  balance: BalancePegLike | null | undefined,
   meter?: string | null,
 ): number | null {
   return dispatchSync('creditsPerUnitFromBalance', {

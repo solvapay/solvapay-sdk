@@ -489,6 +489,87 @@ describe('useLimits', () => {
     })
   })
 
+  describe('unlimited allowance', () => {
+    // The backend mints `remaining: -1` for a plan with no finite cap
+    // (`LimitResponse.remaining`: "`-1` means unlimited"). Consumers that
+    // treat the wire number as a plain count render "0 left" on a
+    // customer who in fact has unlimited access — `unlimited` exists so
+    // they never have to know the sentinel.
+
+    it('flags an unlimited allowance when the backend returns the -1 sentinel', async () => {
+      const getLimits = vi.fn().mockResolvedValue({
+        withinLimits: true,
+        remaining: -1,
+        meterName: 'requests',
+        activationRequired: false,
+      })
+      setTransport({ getLimits })
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.unlimited).toBe(true)
+      // The raw sentinel stays on `remaining` — the wire contract is unchanged.
+      expect(result.current.remaining).toBe(-1)
+      expect(result.current.withinLimits).toBe(true)
+    })
+
+    it('reports unlimited: false for a finite allowance', async () => {
+      const getLimits = vi.fn().mockResolvedValue({
+        withinLimits: true,
+        remaining: 0,
+        meterName: 'requests',
+        activationRequired: false,
+      })
+      setTransport({ getLimits })
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.unlimited).toBe(false)
+    })
+
+    it('reports unlimited: null before the first value lands', () => {
+      const getLimits = vi.fn().mockReturnValue(new Promise(() => {}))
+      setTransport({ getLimits })
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+
+      expect(result.current.unlimited).toBeNull()
+    })
+
+    it('ignores adjustRemaining on an unlimited allowance', async () => {
+      // Regression: the optimistic clamp `Math.max(0, -1 + -1)` turned
+      // the sentinel into a hard `0`, so the first gated action flipped
+      // an unlimited customer to "exhausted" until the next refetch.
+      const getLimits = vi.fn().mockResolvedValue({
+        withinLimits: true,
+        remaining: -1,
+        meterName: 'requests',
+        activationRequired: false,
+      })
+      setTransport({ getLimits })
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+      await vi.waitFor(() => expect(result.current.remaining).toBe(-1))
+
+      act(() => {
+        result.current.adjustRemaining(-1)
+      })
+
+      expect(result.current.remaining).toBe(-1)
+      expect(result.current.unlimited).toBe(true)
+
+      // There is no counter to converge on, so no trailing refetch either.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(OPTIMISTIC_GRACE_MS + 50)
+      })
+      expect(getLimits).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('loading initial state', () => {
     it('starts with loading: true on first render with no cache', () => {
       const getLimits = vi.fn().mockReturnValue(new Promise(() => {}))

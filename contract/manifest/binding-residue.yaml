@@ -829,29 +829,29 @@ projectUsageSnapshot:
 charges:
   tsWrapper:
     paramTypes:
-      priced: Record<string, unknown> | null | undefined
+      priced: PricedLike | null | undefined
 headlineCharges:
   tsWrapper:
     paramTypes:
-      priced: Record<string, unknown> | null | undefined
+      priced: PricedLike | null | undefined
 perUnitCharge:
   tsWrapper:
     paramTypes:
-      priced: Record<string, unknown> | null | undefined
+      priced: PricedLike | null | undefined
     paramStyle:
       meter: optionalNull
 billingCycle:
   tsWrapper:
     paramTypes:
-      priced: Record<string, unknown> | null | undefined
+      priced: PricedLike | null | undefined
 trialDays:
   tsWrapper:
     paramTypes:
-      priced: Record<string, unknown> | null | undefined
+      priced: PricedLike | null | undefined
 includedUnits:
   tsWrapper:
     paramTypes:
-      priced: Record<string, unknown> | null | undefined
+      priced: PricedLike | null | undefined
     paramStyle:
       meter: optionalNull
 peggedCreditsPerUnit:
@@ -861,8 +861,8 @@ peggedCreditsPerUnit:
 creditsPerUnitFromBalance:
   tsWrapper:
     paramTypes:
-      priced: Record<string, unknown> | null | undefined
-      balance: Record<string, unknown> | null | undefined
+      priced: PricedLike | null | undefined
+      balance: BalancePegLike | null | undefined
     paramStyle:
       meter: optionalNull
 resolveCheckLimitsParams:

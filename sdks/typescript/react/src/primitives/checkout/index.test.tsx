@@ -146,14 +146,26 @@ import type {
 
 const productRef = 'prd_test'
 
+/**
+ * Fixtures follow the real plans wire: the billing cycle and the
+ * per-unit rate live in `options[]`, not in scalar `billingCycle` /
+ * `creditsPerUnit` fields (which the backend stopped sending).
+ */
+const monthly = { kind: 'billingCycle' as const, interval: 'month' }
+const flatCharge = (amountMinor: number, currency = 'usd') => ({
+  kind: 'charge' as const,
+  per: 'flat' as const,
+  amountMinor,
+  currency,
+})
+
 const paygPlan: Plan = {
   reference: 'pln_payg',
   name: 'Pay as you go',
-  price: 1,
   currency: 'usd',
   requiresPayment: true,
   type: 'usage-based',
-  creditsPerUnit: 1,
+  options: [{ kind: 'charge', per: 'unit', amountMinor: 1, currency: 'usd', meter: 'requests' }],
 }
 
 const proPlan: Plan = {
@@ -163,8 +175,7 @@ const proPlan: Plan = {
   currency: 'usd',
   requiresPayment: true,
   type: 'recurring',
-  billingCycle: 'monthly',
-  creditsPerUnit: 0,
+  options: [monthly, flatCharge(1800)],
 }
 
 function makeTransport(
@@ -437,7 +448,7 @@ describe('default plan filter', () => {
     currency: 'usd',
     requiresPayment: true,
     type: 'one-time',
-    creditsPerUnit: 0,
+    options: [flatCharge(500)],
   }
   const pack250: Plan = {
     reference: 'pln_pack_250',
@@ -446,7 +457,7 @@ describe('default plan filter', () => {
     currency: 'usd',
     requiresPayment: true,
     type: 'one-time',
-    creditsPerUnit: 0,
+    options: [flatCharge(1000)],
   }
   const freePlan: Plan = {
     reference: 'pln_free',
@@ -455,7 +466,7 @@ describe('default plan filter', () => {
     currency: 'usd',
     requiresPayment: false,
     type: 'recurring',
-    creditsPerUnit: 0,
+    options: [monthly],
   }
 
   function renderWithPlans(plans: Plan[]) {
@@ -629,7 +640,7 @@ describe('<CheckoutSteps.Payment> recurring vs one-time copy', () => {
     expect(label.textContent).toMatch(/\/mo$/)
   })
 
-  it('renders "Pay $X" (no /cycle suffix) for a one-time plan with no billingCycle', async () => {
+  it('renders "Pay $X" (no /cycle suffix) for a one-time plan with no billing cycle', async () => {
     const lifetimePlan: Plan = {
       reference: 'pln_lifetime',
       name: 'Lifetime',
@@ -637,7 +648,7 @@ describe('<CheckoutSteps.Payment> recurring vs one-time copy', () => {
       currency: 'usd',
       requiresPayment: true,
       type: 'one-time',
-      creditsPerUnit: 0,
+      options: [flatCharge(9900)],
     }
     const transport = makeTransport({ listPlans: vi.fn().mockResolvedValue([lifetimePlan]) })
     const config: SolvaPayConfig = { transport }
@@ -766,7 +777,7 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
     )
   })
 
-  it('renders one-time payment message when the recurring plan has no billingCycle', async () => {
+  it('renders one-time payment message when the plan has no billing cycle', async () => {
     const lifetimePlan: Plan = {
       reference: 'pln_lifetime',
       name: 'Lifetime',
@@ -774,7 +785,7 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
       currency: 'usd',
       requiresPayment: true,
       type: 'one-time',
-      creditsPerUnit: 0,
+      options: [flatCharge(9900)],
     }
     const transport = makeTransport({ listPlans: vi.fn().mockResolvedValue([lifetimePlan]) })
     const config: SolvaPayConfig = { transport }

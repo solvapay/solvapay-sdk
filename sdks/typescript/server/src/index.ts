@@ -174,6 +174,7 @@ export type {
 
 // Export payment processing types
 export type {
+  PurchaseInfo,
   OneTimePurchaseInfo,
   ProcessPaymentResult,
   TopupProcessResult,

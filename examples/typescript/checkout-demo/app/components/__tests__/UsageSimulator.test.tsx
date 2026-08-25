@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import type { BalanceStatus, PurchaseInfo, PurchaseStatus, UsePlansReturn } from '@solvapay/react'
 import { UsageSimulator } from '../UsageSimulator'
 
 const mockAdjustBalance = vi.fn()
@@ -22,71 +21,27 @@ import { useBalance, usePurchase, usePlans } from '@solvapay/react'
 const fetchMock = vi.fn()
 global.fetch = fetchMock
 
-type PurchaseHookValue = PurchaseStatus & { refetch: () => Promise<void> }
-
-function mockBalance(overrides: Partial<BalanceStatus> = {}): BalanceStatus {
-  return {
+function mockDefaults() {
+  vi.mocked(useBalance).mockReturnValue({
     credits: 5000,
     loading: false,
     displayCurrency: 'USD',
     creditsPerMinorUnit: 100,
-    displayExchangeRate: 1,
-    display: null,
     refetch: mockBalanceRefetch,
     adjustBalance: mockAdjustBalance,
     reconcileAfterUsageDebit: mockReconcileAfterUsageDebit,
-    ...overrides,
-  }
-}
-
-function mockPurchase(
-  overrides: Omit<Partial<PurchaseHookValue>, 'activePurchase'> & {
-    activePurchase?: Partial<PurchaseInfo> | null
-  } = {},
-): PurchaseHookValue {
-  const { activePurchase: activePurchaseOverride, ...rest } = overrides
-  const activePurchase =
-    activePurchaseOverride === null
-      ? null
-      : ({
-          reference: 'pur_TEST',
-          productName: 'Test Product',
-          productRef: 'prd_TEST',
-          status: 'active',
-          startDate: '2026-01-01T00:00:00.000Z',
-          planSnapshot: { creditsPerUnit: 1000 },
-          ...activePurchaseOverride,
-        } satisfies PurchaseInfo)
-
-  return {
+  })
+  vi.mocked(usePurchase).mockReturnValue({
+    activePurchase: {
+      productRef: 'prd_TEST',
+      productName: 'Test Product',
+    },
     loading: false,
-    isRefetching: false,
-    error: null,
-    purchases: activePurchase ? [activePurchase] : [],
-    hasProduct: () => Boolean(activePurchase),
-    activePurchase,
-    hasPaidPurchase: Boolean(activePurchase),
-    activePaidPurchase: activePurchase,
-    balanceTransactions: [],
-    refetch: vi.fn().mockResolvedValue(undefined),
-    ...rest,
-  }
-}
-
-function mockDefaults() {
-  vi.mocked(useBalance).mockReturnValue(mockBalance())
-  vi.mocked(usePurchase).mockReturnValue(mockPurchase())
+  } as ReturnType<typeof usePurchase>)
   vi.mocked(usePlans).mockReturnValue({
     plans: [{ reference: 'pln_payg', type: 'usage-based', creditsPerUnit: 1000 }],
     loading: false,
-    error: null,
-    selectedPlanIndex: 0,
-    selectedPlan: { reference: 'pln_payg', type: 'usage-based', creditsPerUnit: 1000 },
-    setSelectedPlanIndex: vi.fn(),
-    selectPlan: vi.fn(),
-    refetch: vi.fn().mockResolvedValue(undefined),
-    isSelectionReady: true,
-  } satisfies UsePlansReturn)
+  } as ReturnType<typeof usePlans>)
 }
 
 describe('UsageSimulator', () => {
@@ -215,7 +170,14 @@ describe('UsageSimulator', () => {
   })
 
   it('shows paywall state when credits are zero', () => {
-    vi.mocked(useBalance).mockReturnValue(mockBalance({ credits: 0 }))
+    vi.mocked(useBalance).mockReturnValue({
+      credits: 0,
+      loading: false,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: 100,
+      refetch: mockBalanceRefetch,
+      adjustBalance: mockAdjustBalance,
+    })
 
     render(<UsageSimulator />)
 
@@ -224,7 +186,14 @@ describe('UsageSimulator', () => {
   })
 
   it('disables run query button when credits are zero', () => {
-    vi.mocked(useBalance).mockReturnValue(mockBalance({ credits: 0 }))
+    vi.mocked(useBalance).mockReturnValue({
+      credits: 0,
+      loading: false,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: 100,
+      refetch: mockBalanceRefetch,
+      adjustBalance: mockAdjustBalance,
+    })
 
     render(<UsageSimulator />)
 
@@ -248,19 +217,22 @@ describe('UsageSimulator', () => {
     })
   })
 
-  it('falls back to PAYG meter when subscription snapshot has creditsPerUnit 0', () => {
-    vi.mocked(usePurchase).mockReturnValue(
-      mockPurchase({
-        activePurchase: {
-          productName: 'Subscription',
-          planSnapshot: { creditsPerUnit: 0, planType: 'recurring' },
-        },
-      }),
-    )
+  it('reads the credit rate from the PAYG plan, not the active purchase', () => {
+    vi.mocked(usePurchase).mockReturnValue({
+      activePurchase: {
+        productRef: 'prd_TEST',
+        productName: 'Subscription',
+      },
+      loading: false,
+    } as ReturnType<typeof usePurchase>)
+    vi.mocked(usePlans).mockReturnValue({
+      plans: [{ reference: 'pln_payg', type: 'usage-based', creditsPerUnit: 250 }],
+      loading: false,
+    } as ReturnType<typeof usePlans>)
 
     render(<UsageSimulator />)
 
-    expect(screen.getByText('1,000')).toBeInTheDocument()
+    expect(screen.getByText('250')).toBeInTheDocument()
   })
 
   it('shows error state when API call fails', async () => {

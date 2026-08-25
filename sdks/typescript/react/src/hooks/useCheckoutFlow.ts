@@ -42,8 +42,9 @@ import { useLocale } from './useCopy'
 import type { Plan } from '../types'
 import {
   formatPaygRate,
-  inferIncludedCredits,
+  inferIncludedUnits,
   isPayg,
+  planMeterName,
   toBootstrapPlanLike,
   type CheckoutStep,
   type SuccessMeta,
@@ -388,7 +389,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
         currency,
         creditsAdded,
         plan: selectedPlanShape,
-        rateLabel: formatPaygRate(selectedPlanShape, locale),
+        rateLabel: formatPaygRate(selectedPlanShape, locale, balance),
       }
       setSuccessMeta(meta)
       setStep('success')
@@ -396,6 +397,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     },
     [
       adjustBalance,
+      balance,
       creditsPerMinorUnit,
       displayExchangeRate,
       locale,
@@ -421,7 +423,8 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     const meta: SuccessMeta = {
       branch: 'recurring',
       plan: selectedPlanShape,
-      creditsIncluded: inferIncludedCredits(selectedPlanShape),
+      includedUnits: inferIncludedUnits(selectedPlanShape),
+      meterName: planMeterName(selectedPlanShape),
       chargedTodayMinor: pricingOption.price ?? 0,
       currency,
       nextRenewalLabel: null,

@@ -616,12 +616,15 @@ export class StubSolvaPayClient implements SolvaPayClient {
     type RecurringResult = Extract<ProcessPaymentResult, { type: 'recurring' }>
     const purchase: RecurringResult['purchase'] = {
       reference: `pur_stub_${Math.random().toString(36).slice(2, 10)}`,
+      customerRef: params.customerRef,
       productName: 'Demo Product',
       productRef: params.productRef,
       status: 'active',
       startDate: now.toISOString(),
+      createdAt: now.toISOString(),
       amount: isProPlan ? 2900 : 0,
       currency: 'USD',
+      isRecurring: true,
       planRef: params.planRef,
     }
 

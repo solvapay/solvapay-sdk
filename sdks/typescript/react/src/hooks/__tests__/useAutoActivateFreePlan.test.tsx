@@ -51,6 +51,7 @@ function setLimits(opts: SetLimitsOpts = {}) {
   mockedUseLimits.mockReturnValue({
     remaining: 0,
     withinLimits: false,
+    unlimited: false,
     meterName: 'requests',
     activationRequired: opts.activationRequired ?? null,
     loading: false,
@@ -238,6 +239,7 @@ describe('useAutoActivateFreePlan', () => {
     mockedUseLimits.mockImplementation(() => ({
       remaining: 0,
       withinLimits: false,
+      unlimited: false,
       meterName: 'requests',
       activationRequired,
       loading: false,
@@ -273,6 +275,7 @@ describe('useAutoActivateFreePlan', () => {
     mockedUseLimits.mockImplementation(() => ({
       remaining: 0,
       withinLimits: false,
+      unlimited: false,
       meterName: 'requests',
       activationRequired,
       loading: false,

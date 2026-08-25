@@ -8,10 +8,14 @@ import { mockBalanceStatus } from '../../test-helpers/mockBalanceStatus'
 // Helper function to create a test purchase
 const createPurchase = (overrides: Partial<PurchaseInfo> = {}): PurchaseInfo => ({
   reference: 'pur_123',
+  customerRef: 'cus_123',
   productName: 'Test Product',
   productRef: 'prd_123',
   status: 'active',
   startDate: '2024-01-01T00:00:00Z',
+  createdAt: '2024-01-01T00:00:00Z',
+  currency: 'USD',
+  isRecurring: false,
   amount: 1000,
   ...overrides,
 })

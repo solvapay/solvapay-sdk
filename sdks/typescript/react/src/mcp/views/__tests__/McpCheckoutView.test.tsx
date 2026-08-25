@@ -156,6 +156,21 @@ import type {
 // Fixtures
 // ------------------------------------------------------------------
 
+/**
+ * Fixtures mirror the real plans wire. These previously spread a
+ * `planType` field in through `as any` casts and set scalar
+ * `billingCycle` / `creditsPerUnit`; the backend sends none of those —
+ * the cycle and the per-unit rate live in `options[]`, and "free" is
+ * `requiresPayment: false`.
+ */
+const monthly = { kind: 'billingCycle' as const, interval: 'month' }
+const flatCharge = (amountMinor: number, currency = 'usd') => ({
+  kind: 'charge' as const,
+  per: 'flat' as const,
+  amountMinor,
+  currency,
+})
+
 const freePlan: Plan = {
   reference: 'pln_free',
   name: 'Free',
@@ -163,20 +178,16 @@ const freePlan: Plan = {
   currency: 'usd',
   requiresPayment: false,
   type: 'one-time',
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ...({ planType: 'free' } as any),
+  options: [],
 }
 
 const paygPlan: Plan = {
   reference: 'pln_payg',
   name: 'Pay as you go',
-  price: 1,
   currency: 'usd',
   requiresPayment: true,
   type: 'usage-based',
-  creditsPerUnit: 1,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ...({ planType: 'usage-based' } as any),
+  options: [{ kind: 'charge', per: 'unit', amountMinor: 1, currency: 'usd', meter: 'requests' }],
 }
 
 const proPlan: Plan = {
@@ -186,28 +197,13 @@ const proPlan: Plan = {
   currency: 'usd',
   requiresPayment: true,
   type: 'recurring',
-  billingCycle: 'monthly',
-  creditsPerUnit: 0,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ...({ planType: 'recurring' } as any),
+  options: [monthly, flatCharge(1800)],
 }
 
 // Bootstrap-shaped plans for the `plans` prop threaded into
-// `McpCheckoutView` by the shell.
-const bootstrapPlans = [
-  // Intentionally includes the Free plan to exercise the filter.
-  { ...freePlan, planType: 'free' } as unknown as {
-    reference: string
-    name: string
-    type: string
-    planType: string
-    price: number
-    currency: string
-    requiresPayment: boolean
-  },
-  { ...paygPlan, planType: 'usage-based' } as never,
-  { ...proPlan, planType: 'recurring' } as never,
-]
+// `McpCheckoutView` by the shell. Intentionally includes the Free plan
+// to exercise the filter.
+const bootstrapPlans = [freePlan, paygPlan, proPlan] as never[]
 
 const productRef = 'prd_test'
 
@@ -366,7 +362,7 @@ describe('<McpCheckoutView> — plan step', () => {
       status: 'active',
       startDate: new Date().toISOString(),
       amount: 0,
-      planSnapshot: { reference: 'pln_free', name: 'Free', planType: 'free' },
+      planSnapshot: { reference: 'pln_free', name: 'Free', options: [] },
     } as unknown as PurchaseInfo
     const ctx = buildCtx(config, [activeFreePurchase])
     plansCache.set(productRef, {
@@ -626,7 +622,11 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     expect(screen.getByText('Credits')).toBeTruthy()
     expect(screen.getByText('Plan')).toBeTruthy()
     expect(screen.getByText('Rate')).toBeTruthy()
-    expect(screen.getByText('1 credit / call')).toBeTruthy()
+    // 1 minor unit per call against the balance peg of 100 credits per
+    // minor unit. The old fixture asserted "1 credit / call" off a
+    // fabricated `creditsPerUnit`, contradicting the peg this same file
+    // pins for the order summary below.
+    expect(screen.getByText('100 credits / call')).toBeTruthy()
 
     // Regression guard: the success step previously rendered a
     // `Back to chat` button that called `app.requestTeardown()`,
@@ -757,12 +757,12 @@ describe('<McpCheckoutView> — Recurring branch', () => {
 // ------------------------------------------------------------------
 
 describe('<McpCheckoutView> — multi-currency plans', () => {
+  // A multi-currency plan carries one flat charge per currency in
+  // `options[]`; the first is the default. There is no `pricingOptions`
+  // field on the wire.
   const multiProPlan: Plan = {
     ...proPlan,
-    pricingOptions: [
-      { currency: 'USD', price: 1800, default: true },
-      { currency: 'EUR', price: 1600 },
-    ],
+    options: [monthly, flatCharge(1800, 'usd'), flatCharge(1600, 'eur')],
   }
 
   function renderMultiCurrencyView(
@@ -786,11 +786,7 @@ describe('<McpCheckoutView> — multi-currency plans', () => {
               productRef={productRef}
               publishableKey="pk_test"
               returnUrl="https://example.test/r"
-              plans={[
-                { ...freePlan, planType: 'free' } as never,
-                { ...paygPlan, planType: 'usage-based' } as never,
-                { ...multiProPlan, planType: 'recurring' } as never,
-              ]}
+              plans={[freePlan, paygPlan, multiProPlan] as never[]}
               fromPaywall
               {...props}
             />

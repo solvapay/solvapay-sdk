@@ -314,11 +314,16 @@ describe('useCheckoutFlow — PAYG branch', () => {
     const purchases: PurchaseInfo[] = [
       {
         reference: 'prc_payg_active',
+        customerRef: 'cus_payg',
         productName: 'Widget API',
         productRef,
         status: 'active',
         startDate: new Date().toISOString(),
-        planSnapshot: { reference: 'pln_payg' },
+        createdAt: new Date().toISOString(),
+        currency: 'USD',
+        amount: 0,
+        isRecurring: false,
+        planSnapshot: { reference: 'pln_payg', currency: 'USD', price: 0, isMetered: true },
       },
     ]
     const { Wrapper, transport } = makeWrapper({

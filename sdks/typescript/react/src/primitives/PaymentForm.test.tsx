@@ -238,15 +238,16 @@ const paidPlan: Plan = {
 
 const seededRecurringPurchase: PurchaseInfo = {
   reference: 'pur_seed_recurring',
+  customerRef: 'cus_seed',
   productName: 'Widget API',
   productRef: 'prd_recurring',
   status: 'active',
   startDate: '2026-01-01T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
   amount: 1999,
   currency: 'usd',
-  planType: 'recurring',
   isRecurring: true,
-  planSnapshot: { planType: 'recurring' },
+  planSnapshot: { currency: 'usd', price: 1999, isMetered: false },
 }
 
 type PaidHarnessHandle = {
@@ -380,15 +381,16 @@ describe('PaymentForm post-success purchase merge', () => {
       .reconcilePayment as ReturnType<typeof vi.fn>
     const freshPurchase = {
       reference: 'pur_fresh_recurring',
+      customerRef: 'cus_seed',
       productName: 'Widget API',
       productRef: 'prd_paid',
       status: 'active',
       startDate: '2026-05-12T00:00:00Z',
+      createdAt: '2026-05-12T00:00:00Z',
       amount: 1999,
       currency: 'usd',
-      planType: 'recurring',
       isRecurring: true,
-      planSnapshot: { planType: 'recurring' },
+      planSnapshot: { currency: 'usd', price: 1999, isMetered: false },
     } satisfies PurchaseInfo
     reconcilePaymentMock.mockResolvedValueOnce({
       status: 'success',
@@ -460,12 +462,15 @@ describe('PaymentForm post-success purchase merge', () => {
           type: 'recurring',
           purchase: {
             reference: 'pur_throw',
+            customerRef: 'cus_seed',
             productName: 'Widget API',
             productRef: 'prd_paid',
             status: 'active',
             startDate: '2026-05-12T00:00:00Z',
+            createdAt: '2026-05-12T00:00:00Z',
             amount: 1999,
             currency: 'usd',
+            isRecurring: true,
           } satisfies PurchaseInfo,
         },
       })
@@ -501,10 +506,12 @@ describe('PaymentForm post-success purchase merge', () => {
         type: 'one-time',
         oneTimePurchase: {
           reference: 'pur_fresh_lifetime',
+          customerRef: 'cus_seed',
           productRef: 'prd_paid',
           amount: 9900,
           currency: 'usd',
           completedAt: '2026-05-12T12:00:00Z',
+          createdAt: '2026-05-12T12:00:00Z',
         },
       },
     })
@@ -522,7 +529,9 @@ describe('PaymentForm post-success purchase merge', () => {
       status: 'active',
       amount: 9900,
       currency: 'usd',
-      planSnapshot: { planType: 'one-time' },
+      isRecurring: false,
+      origin: 'one_time',
+      planSnapshot: { currency: 'usd', price: 9900, isMetered: false },
     })
     expect(paidHarnessRef.current?.refetchPurchase).not.toHaveBeenCalled()
     expect(onSuccess).toHaveBeenCalledTimes(1)

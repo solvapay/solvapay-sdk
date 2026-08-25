@@ -72,6 +72,16 @@ export {
   installNativeCoreApi,
 } from './native-core'
 
+export type { BillingCycle, Charge } from './types/boundary.generated'
+
+export type {
+  BalancePegLike,
+  BillingCycleLike,
+  ChargeLike,
+  PricedLike,
+  PricingOptionLike,
+} from './pricing-options-types'
+
 export {
   BusinessDetailsSchema,
   BUSINESS_COUNTRY_DISPLAY_NAMES,
@@ -179,8 +189,6 @@ export { type CheckoutHelperError } from './checkout'
 export { isRenewalError, type RenewalHelperError } from './renewal'
 
 export { type UsageSnapshot, type UsageSnapshotPurchase } from './usage'
-
-export type { BillingCycle, Charge } from './types/boundary.generated'
 
 export { type CheckLimitsParams, type LimitsHelperError } from './limits'
 

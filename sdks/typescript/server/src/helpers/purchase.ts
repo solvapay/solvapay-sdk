@@ -4,6 +4,7 @@ import {
   selectActivePurchases,
 } from '../native-decisions'
 import type { SolvaPay } from '../factory'
+import type { PurchaseInfo } from '../types/client'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
@@ -13,26 +14,7 @@ export interface PurchaseCheckResult {
   customerRef: string
   email?: string
   name?: string
-  purchases: Array<{
-    reference: string
-    productName?: string
-    productRef?: string
-    status?: string
-    startDate?: string
-    planSnapshot?: {
-      meterId?: string
-      limit?: number
-      freeUnits?: number
-    }
-    usage?: {
-      used?: number
-      overageUnits?: number
-      overageCost?: number
-      periodStart?: string
-      periodEnd?: string
-    }
-    [key: string]: unknown
-  }>
+  purchases: PurchaseInfo[]
 }
 
 export async function checkPurchaseCore(

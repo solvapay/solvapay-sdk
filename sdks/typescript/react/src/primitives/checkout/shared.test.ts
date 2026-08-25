@@ -9,6 +9,29 @@ import { describe, expect, it } from 'vitest'
 import { buildDefaultCheckoutPlanFilter, formatPaygRate } from './shared'
 import type { Plan } from '../../types'
 
+/**
+ * Fixtures mirror `GET /v1/sdk/products/:ref/plans`: pricing lives in
+ * `options[]`, and there is no `creditsPerUnit` scalar. The previous
+ * fixtures set one, which let `formatPaygRate` pass while reading a
+ * field the backend never sends.
+ */
+const cycle = (interval = 'month') => ({ kind: 'billingCycle' as const, interval })
+const flat = (amountMinor: number, currency = 'usd') => ({
+  kind: 'charge' as const,
+  per: 'flat' as const,
+  amountMinor,
+  currency,
+})
+const perUnit = (amountMinor: number, currency = 'usd', meter = 'requests') => ({
+  kind: 'charge' as const,
+  per: 'unit' as const,
+  amountMinor,
+  currency,
+  meter,
+})
+
+const usdBalance = { displayCurrency: 'USD', displayExchangeRate: 1, creditsPerMinorUnit: 100 }
+
 const free: Plan = {
   reference: 'pln_free',
   name: 'Free',
@@ -16,17 +39,16 @@ const free: Plan = {
   currency: 'usd',
   requiresPayment: false,
   type: 'recurring',
-  creditsPerUnit: 0,
+  options: [cycle()],
 }
 
 const payg: Plan = {
   reference: 'pln_payg',
   name: 'Pay as you go',
-  price: 1,
   currency: 'usd',
   requiresPayment: true,
   type: 'usage-based',
-  creditsPerUnit: 1,
+  options: [perUnit(2)],
 }
 
 const recurring: Plan = {
@@ -36,8 +58,7 @@ const recurring: Plan = {
   currency: 'usd',
   requiresPayment: true,
   type: 'recurring',
-  billingCycle: 'monthly',
-  creditsPerUnit: 0,
+  options: [cycle(), flat(1800)],
 }
 
 const pack: Plan = {
@@ -47,7 +68,7 @@ const pack: Plan = {
   currency: 'usd',
   requiresPayment: true,
   type: 'one-time',
-  creditsPerUnit: 0,
+  options: [flat(500)],
 }
 
 function visible(plans: Plan[]): string[] {
@@ -88,11 +109,34 @@ describe('buildDefaultCheckoutPlanFilter', () => {
 })
 
 describe('formatPaygRate', () => {
-  it('renders singular credits per call', () => {
-    expect(formatPaygRate({ ...payg, creditsPerUnit: 1 })).toBe('1 credit / call')
+  it('renders credits per call once the balance supplies the peg', () => {
+    expect(formatPaygRate({ ...payg, options: [perUnit(10)] }, 'en-US', usdBalance)).toBe(
+      '1,000 credits / call',
+    )
   })
 
-  it('renders formatted credits per call', () => {
-    expect(formatPaygRate({ ...payg, creditsPerUnit: 1000 }, 'en-US')).toBe('1,000 credits / call')
+  it('renders singular credits per call', () => {
+    expect(
+      formatPaygRate({ ...payg, options: [perUnit(1)] }, 'en-US', {
+        ...usdBalance,
+        creditsPerMinorUnit: 1,
+      }),
+    ).toBe('1 credit / call')
+  })
+
+  it('falls back to the charge itself when there is no balance to peg against', () => {
+    // Without the peg there is no honest credit figure, but the price
+    // per call is still known — show that rather than nothing.
+    expect(formatPaygRate(payg, 'en-US')).toBe('$0.02 / call')
+  })
+
+  it('falls back to the charge when it is priced outside the balance currency', () => {
+    expect(formatPaygRate({ ...payg, options: [perUnit(200, 'eur')] }, 'en-US', usdBalance)).toBe(
+      '€2 / call',
+    )
+  })
+
+  it('returns null for a plan with no per-unit charge', () => {
+    expect(formatPaygRate(recurring, 'en-US', usdBalance)).toBeNull()
   })
 })

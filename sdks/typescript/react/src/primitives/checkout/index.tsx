@@ -42,6 +42,7 @@ import { usePlans } from '../../hooks/usePlans'
 import {
   buildDefaultCheckoutPlanFilter,
   formatContinueLabel,
+  planBillingInterval,
   planSortByPaygFirstThenAsc,
   shortCycle,
   type BootstrapPlanLike,
@@ -350,9 +351,9 @@ const StepHeading = forwardRef<HTMLHeadingElement, StepLeafProps>(function Check
  *  - `amount` — `checkout.stepMessage.amount`.
  *  - `payment` — branch- and plan-shape-aware:
  *    - `payg` -> `paymentPayg`,
- *    - `recurring` with `billingCycle` -> `paymentRecurring`
+ *    - `recurring` with a billing interval -> `paymentRecurring`
  *      (interpolates `{planName}`),
- *    - `recurring` without `billingCycle` (one-time / lifetime) ->
+ *    - `recurring` without one (one-time / lifetime) ->
  *      `paymentOneTime`.
  *  - `success` — renders nothing.
  */
@@ -415,7 +416,7 @@ function resolveStepMessage(
     const plan = flow.selectedPlan
     if (flow.branch === 'recurring' && plan) {
       const planName = plan.name ?? 'your'
-      if (plan.billingCycle) {
+      if (planBillingInterval(plan)) {
         return interpolate(copy.checkout.stepMessage.paymentRecurring, { planName })
       }
       return copy.checkout.stepMessage.paymentOneTime
@@ -698,9 +699,9 @@ function RecurringPayment({ className }: { className?: string }) {
   // into the merchant-wide wallet via `flow.topupCurrency`.
   const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
   const amountMinor = selectedPlanShape.price ?? 0
-  const cycle = selectedPlanShape.billingCycle
+  const cycle = planBillingInterval(selectedPlanShape)
   const planName = selectedPlanShape.name ?? 'Plan'
-  // A plan is recurring iff it carries a `billingCycle`. One-time /
+  // A plan is recurring iff it carries a billing-cycle option. One-time /
   // lifetime plans (no cycle) get `Pay $X` copy + a single-line order
   // summary so they don't read as a subscription.
   const isRecurring = !!cycle
@@ -837,10 +838,12 @@ function Success({ className, children }: SuccessProps) {
             <dt>Plan</dt>
             <dd>{meta.plan.name ?? 'Pay as you go'}</dd>
           </div>
-          <div className="solvapay-checkout-receipt-row">
-            <dt>Rate</dt>
-            <dd>{meta.rateLabel}</dd>
-          </div>
+          {meta.rateLabel ? (
+            <div className="solvapay-checkout-receipt-row">
+              <dt>Rate</dt>
+              <dd>{meta.rateLabel}</dd>
+            </div>
+          ) : null}
         </dl>
       </div>
     )
@@ -859,10 +862,12 @@ function Success({ className, children }: SuccessProps) {
           <dt>Plan</dt>
           <dd>{meta.plan.name ?? 'Plan'}</dd>
         </div>
-        {meta.creditsIncluded > 0 ? (
+        {meta.includedUnits != null ? (
           <div className="solvapay-checkout-receipt-row">
-            <dt>Credits</dt>
-            <dd>+{meta.creditsIncluded.toLocaleString(locale)}</dd>
+            <dt>Included</dt>
+            <dd>
+              {meta.includedUnits.toLocaleString(locale)} {meta.meterName ?? 'units'}
+            </dd>
           </div>
         ) : null}
         <div className="solvapay-checkout-receipt-row">

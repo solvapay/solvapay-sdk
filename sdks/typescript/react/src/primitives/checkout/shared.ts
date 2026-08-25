@@ -7,10 +7,18 @@
  * build its own layout on top of `useCheckoutFlow`.
  */
 
+import {
+  billingCycle as readBillingCycle,
+  creditsPerUnitFromBalance,
+  includedUnits,
+  perUnitCharge,
+  type BalancePegLike,
+  type PricingOptionLike,
+} from '@solvapay/core'
 import type { Plan } from '../../types'
 import { formatPrice } from '../../utils/format'
 import { isPaygPlan } from '../../utils/isPayg'
-import { type PlanPricingOption } from '../../utils/planPricing'
+import { getPlanPricingOptions, type PlanPricingOption } from '../../utils/planPricing'
 
 export type CheckoutStep = 'plan' | 'amount' | 'payment' | 'success'
 
@@ -20,18 +28,19 @@ export const CHECKOUT_STEPS = ['plan', 'amount', 'payment', 'success'] as const
  * Structural subset of a bootstrap plan. Kept here so step components
  * can type against it without pulling in the full `@solvapay/mcp`
  * bootstrap types (which would create a dep cycle).
+ *
+ * Mirrors what the API actually sends: pricing lives in `options[]`, and
+ * the only derived scalars on the wire are `type`, `price`, `currency`
+ * and `requiresPayment`.
  */
 export interface BootstrapPlanLike {
   reference?: string
   name?: string
   type?: string
-  planType?: string
   price?: number
   currency?: string
-  billingCycle?: string | null
-  meterRef?: string | null
-  creditsPerUnit?: number | null
   requiresPayment?: boolean
+  options?: PricingOptionLike[]
   pricingOptions?: Array<{
     currency: string
     price: number
@@ -48,12 +57,16 @@ export type SuccessMeta =
       currency: string
       creditsAdded: number
       plan: BootstrapPlanLike
-      rateLabel: string
+      /** `null` when neither a credit nor a charge rate can be established. */
+      rateLabel: string | null
     }
   | {
       branch: 'recurring'
       plan: BootstrapPlanLike
-      creditsIncluded: number
+      /** Per-cycle allowance in metered items. `null` when unlimited or unmetered. */
+      includedUnits: number | null
+      /** The meter `includedUnits` counts, e.g. `'requests'`. */
+      meterName: string | null
       chargedTodayMinor: number
       currency: string
       nextRenewalLabel: string | null
@@ -78,10 +91,7 @@ export function planSortByPaygFirstThenAsc(a: Plan, b: Plan): number {
 }
 
 function resolveBootstrapPlanPricing(plan: BootstrapPlanLike): PlanPricingOption {
-  const options =
-    plan.pricingOptions && plan.pricingOptions.length > 0
-      ? plan.pricingOptions
-      : [{ currency: plan.currency ?? 'USD', price: plan.price ?? 0, default: true }]
+  const options = getPlanPricingOptions(plan)
   return options.find(option => option.default) ?? options[0]
 }
 
@@ -132,23 +142,60 @@ export function formatContinueLabel(
   const option = pricingOption ?? resolveBootstrapPlanPricing(plan)
   const currency = option.currency.toUpperCase()
   const priceLabel = formatPrice(option.price ?? 0, currency, { locale })
-  const cycle = plan.billingCycle ? `/${shortCycle(plan.billingCycle)}` : ''
+  const interval = planBillingInterval(plan)
+  const cycle = interval ? `/${shortCycle(interval)}` : ''
   return `Continue with ${plan.name ?? 'Plan'} — ${priceLabel}${cycle}`
 }
 
-export function formatPaygRate(plan: BootstrapPlanLike, locale?: string): string {
-  const creditsPerUnit = plan.creditsPerUnit ?? 1
-  const creditLabel = creditsPerUnit === 1 ? 'credit' : 'credits'
-  return `${creditsPerUnit.toLocaleString(locale)} ${creditLabel} / call`
+/**
+ * The plan's billing interval, or `null` for one-time and pure
+ * usage-based plans. Sourced from the `billingCycle` option — a plan on
+ * the wire has no scalar `billingCycle`.
+ */
+export function planBillingInterval(plan: BootstrapPlanLike): string | null {
+  return readBillingCycle(plan)?.interval ?? null
 }
 
-export function inferIncludedCredits(plan: BootstrapPlanLike): number {
-  const price = plan.price ?? 0
-  const creditsPerUnit = plan.creditsPerUnit ?? 0
-  if (price > 0 && creditsPerUnit > 0) {
-    return Math.round(price * creditsPerUnit)
+/**
+ * What one metered call costs, as a label.
+ *
+ * Credits need the USD→charge-currency peg, which only `balance` carries,
+ * so without one — or when the plan is priced in a different currency
+ * than the balance — this falls back to the charge itself (`$0.02 / call`)
+ * rather than inventing a credit figure.
+ */
+export function formatPaygRate(
+  plan: BootstrapPlanLike,
+  locale?: string,
+  balance?: BalancePegLike | null,
+): string | null {
+  const credits = creditsPerUnitFromBalance(plan, balance)
+  if (credits != null) {
+    return `${credits.toLocaleString(locale)} ${credits === 1 ? 'credit' : 'credits'} / call`
   }
-  return 0
+
+  const charge = perUnitCharge(plan)
+  if (charge && charge.amountMinor > 0) {
+    return `${formatPrice(charge.amountMinor, charge.currency.toUpperCase(), { locale })} / call`
+  }
+
+  return null
+}
+
+/**
+ * The plan's per-cycle included allowance, counted in metered items — the
+ * `limit` option's `cap`. `0` is the backend's "unlimited" sentinel, so
+ * both it and an absent limit return `null`: neither is a number to show
+ * as an allowance.
+ */
+export function inferIncludedUnits(plan: BootstrapPlanLike): number | null {
+  const cap = includedUnits(plan)
+  return cap != null && cap > 0 ? cap : null
+}
+
+/** The meter a plan counts against, for labelling an allowance. */
+export function planMeterName(plan: BootstrapPlanLike): string | null {
+  return perUnitCharge(plan)?.meter ?? null
 }
 
 export function shortCycle(cycle: string | null | undefined): string {
