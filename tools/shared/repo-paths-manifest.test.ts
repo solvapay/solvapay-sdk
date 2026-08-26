@@ -8,6 +8,8 @@ import {
   dtoGenArgs,
   generatedDriftPaths,
   loadRepoPathsManifest,
+  lookupPath,
+  mcpAppWidgetLayout,
   sdkPath,
 } from './repo-paths.js'
 
@@ -211,6 +213,25 @@ describe('repo-paths manifest', () => {
     const resolved = dirPath('contract')
     expect(resolved.startsWith(REPO_ROOT)).toBe(true)
     expect(existsSync(resolved)).toBe(true)
+  })
+
+  it('catalogues the MCP App widget artifact and every SDK copy', () => {
+    const layout = mcpAppWidgetLayout()
+    expect(existsSync(lookupPath('mcpAppWidgetCanonical'))).toBe(true)
+    expect(layout.copiesRel).toHaveLength(5)
+    for (const rel of [layout.canonicalRel, layout.distRel, ...layout.copiesRel]) {
+      expect(rel.includes('\\')).toBe(false)
+      expect(rel.startsWith('/')).toBe(false)
+    }
+    for (const rel of [layout.canonicalRel, ...layout.copiesRel]) {
+      expect(existsSync(path.join(REPO_ROOT, rel)), rel).toBe(true)
+    }
+  })
+
+  it('throws when a required widget lookup is missing', () => {
+    const manifest = loadRepoPathsManifest()
+    const { mcpAppWidgetCanonical: _removed, ...lookups } = manifest.lookups
+    expect(() => mcpAppWidgetLayout({ ...manifest, lookups })).toThrow(/mcpAppWidgetCanonical/)
   })
 
   it('every generated path and contract input exists on disk', () => {

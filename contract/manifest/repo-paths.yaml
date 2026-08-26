@@ -318,3 +318,10 @@ lookups:
   capiCtestRun: sdks/capi/ctest/run.sh
   capiCtestContract: sdks/capi/ctest/contract.sh
   packageJson: package.json
+  mcpAppWidgetCanonical: tools/mcp-app-widget/mcp-app.html
+  mcpAppWidgetDist: tools/mcp-app-widget/dist/mcp-app.html
+  mcpAppWidgetPython: sdks/python-mcp/python/solvapay_mcp/data/mcp-app.html
+  mcpAppWidgetRuby: sdks/ruby-mcp/lib/solvapay/mcp/data/mcp-app.html
+  mcpAppWidgetGo: sdks/go/mcp/mcp-app.html
+  mcpAppWidgetRust: sdks/rust-mcp/mcp-app.html
+  mcpAppWidgetTypescript: sdks/typescript/mcp/mcp-app.html

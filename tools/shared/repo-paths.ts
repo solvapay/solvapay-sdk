@@ -97,12 +97,47 @@ export function generatedEntry(
 export function lookupPath(
   key: string,
   manifest: RepoPathsManifest = loadRepoPathsManifest(),
+  root: string = REPO_ROOT,
 ): string {
   const rel = manifest.lookups[key]
   if (rel === undefined) {
     throw new Error(`unknown repo-paths lookup: ${key}`)
   }
-  return abs(rel)
+  return abs(rel, root)
+}
+
+/** Lookup keys for language-SDK copies of the MCP App widget. */
+export const MCP_APP_WIDGET_COPY_KEYS = [
+  'mcpAppWidgetPython',
+  'mcpAppWidgetRuby',
+  'mcpAppWidgetGo',
+  'mcpAppWidgetRust',
+  'mcpAppWidgetTypescript',
+] as const
+
+export interface McpAppWidgetLayout {
+  canonicalRel: string
+  distRel: string
+  copiesRel: string[]
+}
+
+function requireLookup(manifest: RepoPathsManifest, key: string): string {
+  const rel = manifest.lookups[key]
+  if (rel === undefined) {
+    throw new Error(`unknown repo-paths lookup: ${key}`)
+  }
+  return rel
+}
+
+/** Canonical widget artifact + the vendored SDK copies from `lookups`. */
+export function mcpAppWidgetLayout(
+  manifest: RepoPathsManifest = loadRepoPathsManifest(),
+): McpAppWidgetLayout {
+  return {
+    canonicalRel: requireLookup(manifest, 'mcpAppWidgetCanonical'),
+    distRel: requireLookup(manifest, 'mcpAppWidgetDist'),
+    copiesRel: MCP_APP_WIDGET_COPY_KEYS.map(key => requireLookup(manifest, key)),
+  }
 }
 
 export function contractInputPath(

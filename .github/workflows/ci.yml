@@ -73,7 +73,7 @@ jobs:
         run: pnpm build:packages
 
       - name: Check vendored MCP App widget
-        run: node tools/mcp-app-widget/check.mjs
+        run: pnpm exec tsx tools/mcp-app-widget/check.ts
 
       - name: Run tests
         run: pnpm test

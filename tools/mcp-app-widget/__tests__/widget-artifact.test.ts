@@ -2,20 +2,15 @@ import { createHash } from 'node:crypto'
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { checkVendoredWidget } from '../check.mjs'
-import { vendorWidget } from '../vendor.mjs'
+import { REPO_ROOT, joinRel } from '../../shared/paths.js'
+import { lookupPath, mcpAppWidgetLayout } from '../../shared/repo-paths.js'
+import { checkVendoredWidget } from '../check.js'
+import { vendorWidget } from '../vendor.js'
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '../../..')
-const canonicalPath = join(root, 'tools/mcp-app-widget/mcp-app.html')
-const sdkCopies = [
-  'sdks/python-mcp/python/solvapay_mcp/data/mcp-app.html',
-  'sdks/ruby-mcp/lib/solvapay/mcp/data/mcp-app.html',
-  'sdks/go/mcp/mcp-app.html',
-  'sdks/rust-mcp/mcp-app.html',
-  'sdks/typescript/mcp/mcp-app.html',
-] as const
+const layout = mcpAppWidgetLayout()
+const canonicalPath = lookupPath('mcpAppWidgetCanonical')
+const sdkCopies = layout.copiesRel
 
 function sha256(bytes: Buffer): string {
   return createHash('sha256').update(bytes).digest('hex')
@@ -35,7 +30,7 @@ describe('canonical MCP App widget artifact', () => {
   it('vendors a byte-identical copy into every SDK', () => {
     const expected = sha256(readFileSync(canonicalPath))
     for (const rel of sdkCopies) {
-      expect(sha256(readFileSync(join(root, rel))), rel).toBe(expected)
+      expect(sha256(readFileSync(joinRel(REPO_ROOT, rel))), rel).toBe(expected)
     }
   })
 })
@@ -47,13 +42,16 @@ const stubHtml = `<!doctype html>
 </html>
 `
 
-function writeWidgetTree(fixtureRoot: string, canonical: string, copies: Record<string, string>): void {
-  const canonicalRel = 'tools/mcp-app-widget/mcp-app.html'
-  mkdirSync(dirname(join(fixtureRoot, canonicalRel)), { recursive: true })
-  writeFileSync(join(fixtureRoot, canonicalRel), canonical)
+function writeWidgetTree(
+  fixtureRoot: string,
+  canonical: string,
+  copies: Record<string, string>,
+): void {
+  mkdirSync(dirname(joinRel(fixtureRoot, layout.canonicalRel)), { recursive: true })
+  writeFileSync(joinRel(fixtureRoot, layout.canonicalRel), canonical)
   for (const [rel, html] of Object.entries(copies)) {
-    mkdirSync(dirname(join(fixtureRoot, rel)), { recursive: true })
-    writeFileSync(join(fixtureRoot, rel), html)
+    mkdirSync(dirname(joinRel(fixtureRoot, rel)), { recursive: true })
+    writeFileSync(joinRel(fixtureRoot, rel), html)
   }
 }
 
@@ -70,11 +68,12 @@ describe('vendored widget guards', () => {
   it('reports a copy that drifted from the canonical artifact', () => {
     const fixtureRoot = mkdtempSync(join(tmpdir(), 'mcp-app-widget-'))
     const copies = Object.fromEntries(sdkCopies.map(rel => [rel, stubHtml]))
-    copies[sdkCopies[0]] = `${stubHtml}<!-- drifted -->\n`
+    const drifted = sdkCopies[0]
+    copies[drifted] = `${stubHtml}<!-- drifted -->\n`
     writeWidgetTree(fixtureRoot, stubHtml, copies)
 
     const problems = checkVendoredWidget({ root: fixtureRoot })
-    expect(problems.some(problem => problem.includes(sdkCopies[0]))).toBe(true)
+    expect(problems.some(problem => problem.includes(drifted))).toBe(true)
   })
 
   it('throws naming the build script when dist is missing', () => {

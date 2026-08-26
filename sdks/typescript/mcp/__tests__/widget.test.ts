@@ -1,15 +1,14 @@
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { defaultMcpAppHtml, RESOURCE_MIME_TYPE } from '../src'
-
-const canonical = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), '../../../../tools/mcp-app-widget/mcp-app.html'),
-  'utf8',
-)
+import { lookupPath } from '../../../../tools/shared/repo-paths.js'
+import { RESOURCE_MIME_TYPE } from '../src'
+import { defaultMcpAppHtml, defaultMcpAppHtmlPath } from '../src/defaultMcpAppHtml'
 
 describe('default MCP App widget', () => {
+  it('resolves HTML from the @solvapay/mcp package root', () => {
+    expect(defaultMcpAppHtmlPath()).toBe(lookupPath('mcpAppWidgetTypescript'))
+  })
+
   it('returns HTML with a root mount', async () => {
     const html = await defaultMcpAppHtml()
     expect(html).toContain('id="root"')
@@ -26,6 +25,7 @@ describe('default MCP App widget', () => {
   })
 
   it('matches the canonical vendored artifact', async () => {
+    const canonical = readFileSync(lookupPath('mcpAppWidgetCanonical'), 'utf8')
     expect(await defaultMcpAppHtml()).toBe(canonical)
   })
 })

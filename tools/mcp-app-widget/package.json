@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "check": "tsx check.ts",
+    "vendor": "tsx vendor.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src __tests__"

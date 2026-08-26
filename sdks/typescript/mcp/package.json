@@ -13,6 +13,7 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./package.json": "./package.json",
     "./fetch": {
       "types": "./dist/fetch/index.d.ts",
       "development": "./src/fetch/index.ts",
@@ -39,6 +40,7 @@
         "import": "./dist/index.js",
         "require": "./dist/index.cjs"
       },
+      "./package.json": "./package.json",
       "./fetch": {
         "types": "./dist/fetch/index.d.ts",
         "import": "./dist/fetch/index.js",

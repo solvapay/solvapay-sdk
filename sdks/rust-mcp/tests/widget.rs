@@ -10,9 +10,10 @@ fn default_widget_has_root_mount() {
 
 #[test]
 fn vendored_widget_matches_canonical() {
-    let canonical = repo_paths::try_repo_root()
-        .expect("repo root")
-        .join("tools/mcp-app-widget/mcp-app.html");
+    let canonical = repo_paths::load()
+        .expect("repo paths")
+        .lookup("mcpAppWidgetCanonical")
+        .expect("mcpAppWidgetCanonical lookup");
     let expected = fs::read_to_string(canonical).expect("canonical widget");
     assert_eq!(solvapay_mcp::default_mcp_app_html(), expected);
 }

@@ -1,24 +1,26 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { dirname, join, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { CANONICAL_REL, SDK_COPIES } from './targets.mjs'
+import { joinRel, REPO_ROOT } from '../shared/paths.js'
+import { mcpAppWidgetLayout } from '../shared/repo-paths.js'
 
 const MIN_BUNDLE_BYTES = 100 * 1024
 
-export function checkVendoredWidget({ root }) {
-  const canonicalPath = join(root, CANONICAL_REL)
+export function checkVendoredWidget({ root }: { root: string }): string[] {
+  const layout = mcpAppWidgetLayout()
+  const canonicalPath = joinRel(root, layout.canonicalRel)
   const canonical = readFileSync(canonicalPath)
   const expected = createHash('sha256').update(canonical).digest('hex')
   const html = canonical.toString('utf8')
-  const problems = []
+  const problems: string[] = []
 
-  for (const rel of SDK_COPIES) {
-    const bytes = readFileSync(join(root, rel))
+  for (const rel of layout.copiesRel) {
+    const bytes = readFileSync(joinRel(root, rel))
     const actual = createHash('sha256').update(bytes).digest('hex')
     if (actual !== expected) {
-      problems.push(`${rel} drifted from ${CANONICAL_REL}`)
+      problems.push(`${rel} drifted from ${layout.canonicalRel}`)
     }
   }
 
@@ -40,23 +42,18 @@ export function checkVendoredWidget({ root }) {
   return problems
 }
 
-function isCli(url) {
-  const entry = process.argv[1]
-  return Boolean(entry) && fileURLToPath(url) === resolve(entry)
-}
-
-function main() {
-  const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
-  const problems = checkVendoredWidget({ root })
+function main(): void {
+  const problems = checkVendoredWidget({ root: REPO_ROOT })
   if (problems.length > 0) {
     console.error('Vendored MCP App widget check failed:')
     for (const problem of problems) console.error(`  ${problem}`)
-    console.error('Run: pnpm --filter @solvapay/mcp-app-widget build && node tools/mcp-app-widget/vendor.mjs')
+    console.error('Rebuild the MCP App widget package, then run its vendor script')
     process.exit(1)
   }
   console.log('mcp-app.html vendored copies match')
 }
 
-if (isCli(import.meta.url)) {
+const entry = process.argv[1]
+if (entry !== undefined && fileURLToPath(import.meta.url) === resolve(entry)) {
   main()
 }
