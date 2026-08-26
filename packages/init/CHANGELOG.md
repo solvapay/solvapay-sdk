@@ -1,5 +1,12 @@
 # @solvapay/init
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [e936ac0]
+  - @solvapay/core@1.4.0
+
 ## 0.4.0
 
 ### Minor Changes
