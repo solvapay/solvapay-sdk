@@ -47,20 +47,17 @@ const trialPlan: PlanLike = {
 }
 const oneTimePlan: PlanLike = { requiresPayment: true, options: [flat(9900)] }
 
-// The frozen snapshot on a purchase: `isMetered` instead of
-// `requiresPayment`, and no `type`.
-const paygSnapshot: PlanLike = { isMetered: true, price: 0, options: [perUnit(2)] }
+// The frozen snapshot on a purchase: no `requiresPayment`, no `type`.
+const paygSnapshot: PlanLike = { price: 0, options: [perUnit(2)] }
 const unlimitedSnapshot: PlanLike = {
-  isMetered: false,
   price: 1800,
   options: [cycle(), flat(1800)],
 }
 const meteredSnapshot: PlanLike = {
-  isMetered: true,
   price: 2900,
   options: [cycle(), flat(2900), limit(1000)],
 }
-const freeSnapshot: PlanLike = { isMetered: false, price: 0, options: [cycle()] }
+const freeSnapshot: PlanLike = { price: 0, options: [cycle()] }
 
 describe('resolvePlanShape', () => {
   it('derives each shape from the plan wire', () => {
@@ -79,7 +76,7 @@ describe('resolvePlanShape', () => {
 
   it('derives the same shapes from a frozen purchase snapshot', () => {
     // A snapshot has no `requiresPayment` and no `type`, so the shape
-    // has to come from `options[]` plus `isMetered`.
+    // has to come from `options[]`.
     expect(resolvePlanShape(paygSnapshot)).toBe('usage-based')
     expect(resolvePlanShape(unlimitedSnapshot)).toBe('recurring-unlimited')
     expect(resolvePlanShape(meteredSnapshot)).toBe('recurring-metered')

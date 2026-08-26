@@ -118,9 +118,11 @@ export {
 export {
   billingCycle,
   charges,
+  countsUsage,
   creditsPerUnitFromBalance,
   headlineCharges,
   includedUnits,
+  meterName,
   peggedCreditsPerUnit,
   perUnitCharge,
   trialDays,

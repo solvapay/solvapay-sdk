@@ -24,6 +24,7 @@
  * Returns `null` values when the active plan isn't metered.
  */
 
+import { countsUsage } from '@solvapay/core'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePurchase } from './usePurchase'
 import { useTransport } from './useTransport'
@@ -76,7 +77,9 @@ function deriveUsage(
 ): UsageSnapshot | null {
   if (!purchase) return null
   const usage = purchase.usage
-  if (purchase.planSnapshot?.isMetered !== true && !usage) return null
+  if (!countsUsage(purchase.planSnapshot) && purchase.planSnapshot?.isMetered !== true && !usage) {
+    return null
+  }
   const used = typeof usage?.used === 'number' ? usage.used : 0
   // `remaining` carries the backend's `-1` unlimited sentinel, which
   // `unlimited` already decodes — only a confirmed finite cap produces a
@@ -109,14 +112,15 @@ export function useUsage(): UseUsageReturn {
 
   // Only metered plans have an allowance to look up; everything else
   // would spend a request to learn nothing.
-  const isMetered = activePurchase?.planSnapshot?.isMetered === true
+  const usageCounted =
+    countsUsage(activePurchase?.planSnapshot) || activePurchase?.planSnapshot?.isMetered === true
   const {
     remaining: limitRemaining,
     unlimited,
     meterName,
   } = useLimits({
     productRef: activePurchase?.productRef,
-    enabled: isMetered,
+    enabled: usageCounted,
   })
 
   const derived = useMemo(

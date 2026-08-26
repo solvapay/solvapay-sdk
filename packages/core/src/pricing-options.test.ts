@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   billingCycle,
+  countsUsage,
   creditsPerUnitFromBalance,
   headlineCharges,
   includedUnits,
+  meterName,
   peggedCreditsPerUnit,
   perUnitCharge,
   trialDays,
@@ -133,6 +135,48 @@ describe('perUnitCharge', () => {
   it('scopes to a named meter', () => {
     expect(perUnitCharge(paygPlan, 'tokens')).toBeNull()
     expect(perUnitCharge(paygPlan, 'requests')?.amountMinor).toBe(2)
+  })
+})
+
+describe('meterName', () => {
+  it('reads the meter off a per-unit charge', () => {
+    expect(meterName(paygPlan)).toBe('requests')
+  })
+
+  it('falls back to the limit option when there is no per-unit charge', () => {
+    const allowanceOnly = {
+      options: [
+        { kind: 'billingCycle', interval: 'month' },
+        { kind: 'charge', per: 'flat', amountMinor: 0, currency: 'usd' },
+        { kind: 'limit', cap: 3, scope: 'billing_period', meter: 'tokens', onExceed: 'block' },
+      ],
+    }
+    expect(perUnitCharge(allowanceOnly)).toBeNull()
+    expect(meterName(allowanceOnly)).toBe('tokens')
+  })
+
+  it('returns null when no option names a meter', () => {
+    expect(meterName(proPlan)).toBeNull()
+  })
+})
+
+describe('countsUsage', () => {
+  it('is true for a per-unit charge or a bare limit', () => {
+    expect(countsUsage(paygPlan)).toBe(true)
+    expect(countsUsage(freePlan)).toBe(true)
+    expect(
+      countsUsage({
+        options: [
+          { kind: 'billingCycle', interval: 'month' },
+          { kind: 'charge', per: 'flat', amountMinor: 0, currency: 'usd' },
+          { kind: 'limit', cap: 3, scope: 'billing_period', meter: 'tokens', onExceed: 'block' },
+        ],
+      }),
+    ).toBe(true)
+  })
+
+  it('is false for a flat recurring plan with no limit', () => {
+    expect(countsUsage(proPlan)).toBe(false)
   })
 })
 

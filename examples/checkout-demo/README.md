@@ -180,6 +180,7 @@ Understanding where each config value lives is required for a reproducible deplo
 | ------------------ | ------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | **Build time**     | Gitignored `.env.prod`    | `NEXT_PUBLIC_*` (product ref, Supabase URL/anon key) | Loaded by `pnpm build:opennext:prod` (`dotenv -e .env.prod`) and **baked into the client bundle**                 |
 | **Deploy time**    | Gitignored `.env.prod`    | `SOLVAPAY_API_BASE_URL` (optional)                   | Forwarded by `scripts/deploy.mjs` as `wrangler deploy --var`                                                      |
+| **Deploy time**    | Gitignored `.env.prod`    | `CLOUDFLARE_ACCOUNT_ID` (required for prod)          | Forwarded by `scripts/deploy.mjs` as a process env var — **not** a Worker `--var`, **not** in `wrangler.jsonc`    |
 | **Runtime (once)** | Cloudflare Worker secrets | `SOLVAPAY_SECRET_KEY`, `SUPABASE_JWT_SECRET`         | `wrangler secret put` — **not** in `.env.prod`; persists across deploys; `deploy.mjs` does **not** re-upload them |
 
 If you skip `wrangler secret put`, the Worker deploys successfully but every `/api/*` request fails at
@@ -218,7 +219,7 @@ Before deploying to `web-app-demo.solvapay.app`, confirm all of the following:
 1. **Repo** — clone `solvapay-sdk` and check out the branch with checkout-demo Cloudflare support.
 2. **Install** — from the **monorepo root**, run `pnpm install` (CI uses `pnpm install --frozen-lockfile`; commit any `pnpm-lock.yaml` changes when `examples/checkout-demo/package.json` changes).
 3. **Wrangler** — `pnpm exec wrangler login` (or set `CLOUDFLARE_API_TOKEN`).
-4. **Cloudflare account** — `pnpm exec wrangler whoami` must list account `98aefe33182e11a1b0e5d7fa89a12a6d` (SolvaPay org), not only a personal account.
+4. **Cloudflare account** — `pnpm exec wrangler whoami` must list the SolvaPay org account (not only a personal account). Copy that id into `.env.prod` as `CLOUDFLARE_ACCOUNT_ID`. Do not put `account_id` in `wrangler.jsonc` — Wrangler does not expand `${CLOUDFLARE_ACCOUNT_ID}` there.
 5. **SolvaPay** — a secret key and product ref for the merchant you want the demo to use (`npx solvapay init` in `examples/checkout-demo/` writes these to gitignored `.env`).
 6. **Supabase** — JWT secret plus anon URL/key for project `ganvogeprtezdpakybib` (see [Supabase prod redirect](#supabase-prod-redirect-required-before-oauth-on-prod) below).
 
@@ -278,14 +279,20 @@ pnpm run deploy:cf   # pnpm -w build:packages && pnpm build:opennext && node scr
 ### Deploy the live demo (`web-app-demo.solvapay.app`) — full walkthrough
 
 Production uses Worker **`solvapay-checkout-demo-prod`** in `[env.production]` of
-[`wrangler.jsonc`](wrangler.jsonc), Cloudflare account **`98aefe33182e11a1b0e5d7fa89a12a6d`**, route
-**`web-app-demo.solvapay.app`**.
+[`wrangler.jsonc`](wrangler.jsonc), route **`web-app-demo.solvapay.app`**. The Cloudflare account
+comes from `CLOUDFLARE_ACCOUNT_ID` in `.env.prod` (see `.env.prod.example`) — it is not committed.
+
+> **Do not put `account_id` in `wrangler.jsonc`.** Wrangler does not expand `${CLOUDFLARE_ACCOUNT_ID}`
+> in that file — a placeholder is sent as the literal account path and every API call 404s.
+> `scripts/deploy.mjs` forwards the env var to the wrangler process. Find the id with
+> `pnpm exec wrangler whoami`.
 
 > **pnpm script names:** use `pnpm run deploy:cf` and `pnpm run deploy:cf:prod`. Plain `pnpm deploy`
 > is reserved by pnpm itself.
 
 > **Prod secrets are scoped to the prod Worker.** Uploading secrets without `--env production` only
-> covers the `*.workers.dev` Worker. Prod always needs `--env production`.
+> covers the `*.workers.dev` Worker. Prod always needs `--env production`. One-off wrangler commands
+> (`secret put`, `secret list`, `tail`) also need `CLOUDFLARE_ACCOUNT_ID` in the shell.
 
 #### Step 0 — Install and build packages
 
@@ -299,6 +306,11 @@ pnpm -w build:packages
 
 ```bash
 cd examples/checkout-demo
+
+# Required so wrangler targets the SolvaPay org account (from `wrangler whoami`).
+# After `.env.prod` exists (step 2) you can load it instead:
+#   export CLOUDFLARE_ACCOUNT_ID="$(grep '^CLOUDFLARE_ACCOUNT_ID=' .env.prod | cut -d= -f2-)"
+export CLOUDFLARE_ACCOUNT_ID
 
 # Interactive:
 pnpm exec wrangler secret put SOLVAPAY_SECRET_KEY --env production
@@ -324,6 +336,9 @@ cp .env.prod.example .env.prod
 Edit `.env.prod` (gitignored). Minimum required fields:
 
 ```bash
+# Cloudflare account — required for prod deploy (from `wrangler whoami`)
+CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
+
 # Baked into the client bundle at build time (pnpm build:opennext:prod)
 NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF=prd_your_product_ref   # must match merchant for SOLVAPAY_SECRET_KEY
 NEXT_PUBLIC_SUPABASE_URL=https://ganvogeprtezdpakybib.supabase.co
@@ -349,7 +364,7 @@ This runs, in order:
 
 1. `pnpm -w build:packages` — rebuild SDK workspace packages
 2. `pnpm build:opennext:prod` — OpenNext production build with `.env.prod` (bakes `NEXT_PUBLIC_*`)
-3. `node scripts/deploy.mjs --prod` — `wrangler deploy --env production` (+ `--var SOLVAPAY_API_BASE_URL` from `.env.prod`)
+3. `node scripts/deploy.mjs --prod` — `wrangler deploy --env production` (+ `--var SOLVAPAY_API_BASE_URL` and `CLOUDFLARE_ACCOUNT_ID` from `.env.prod`)
 
 #### Step 4 — Verify
 
@@ -372,17 +387,18 @@ or email OAuth on `web-app-demo.solvapay.app`.
 
 ### Troubleshooting
 
-| Symptom                                              | Fix                                                                                                                                                   |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CI: `ERR_PNPM_OUTDATED_LOCKFILE` for `checkout-demo` | From repo root: `pnpm install`, commit updated `pnpm-lock.yaml`                                                                                       |
-| CF `error code: 1101` on `/api/*`                    | Missing secrets — `wrangler secret list --env production`; re-run step 1                                                                              |
-| `Product not found: prd_…`                           | `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` must match the merchant for `SOLVAPAY_SECRET_KEY`                                                   |
-| `/checkout` shows "This page couldn't load"          | Missing product ref at build time — set `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` and redeploy `pnpm run deploy:cf:prod`                      |
-| `Failed to fetch plans: 401` on `/checkout`          | `SOLVAPAY_API_BASE_URL` must match the Worker secret's API — see [Two value paths](#two-value-paths-read-this-first). Update `.env.prod` and redeploy |
-| OAuth redirect error on prod                         | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs                                                                       |
-| OpenNext build: proxy warning                        | Use `proxy.ts` for the Next.js proxy convention                                                                                                       |
-| `wrangler whoami` missing SolvaPay account           | Request access to Cloudflare account `98aefe33182e11a1b0e5d7fa89a12a6d`                                                                               |
-| SDK UI changes not visible in local demo             | Rebuild `@solvapay/react` (`pnpm --filter @solvapay/react build` from repo root) or use `pnpm dev` instead of `pnpm dev:local`                        |
+| Symptom                                                | Fix                                                                                                                                                   |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CI: `ERR_PNPM_OUTDATED_LOCKFILE` for `checkout-demo`   | From repo root: `pnpm install`, commit updated `pnpm-lock.yaml`                                                                                       |
+| CF `error code: 1101` on `/api/*`                      | Missing secrets — `wrangler secret list --env production`; re-run step 1                                                                              |
+| `Product not found: prd_…`                             | `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` must match the merchant for `SOLVAPAY_SECRET_KEY`                                                   |
+| `/checkout` shows "This page couldn't load"            | Missing product ref at build time — set `NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF` in `.env.prod` and redeploy `pnpm run deploy:cf:prod`                      |
+| `Failed to fetch plans: 401` on `/checkout`            | `SOLVAPAY_API_BASE_URL` must match the Worker secret's API — see [Two value paths](#two-value-paths-read-this-first). Update `.env.prod` and redeploy |
+| OAuth redirect error on prod                           | Add `https://web-app-demo.solvapay.app/auth/callback` in Supabase redirect URLs                                                                       |
+| OpenNext build: proxy warning                          | Use `proxy.ts` for the Next.js proxy convention                                                                                                       |
+| `wrangler whoami` missing SolvaPay account             | Request access to the SolvaPay Cloudflare org, then set `CLOUDFLARE_ACCOUNT_ID` in `.env.prod` from `wrangler whoami`                                 |
+| `CLOUDFLARE_ACCOUNT_ID is not set` on `deploy:cf:prod` | Add `CLOUDFLARE_ACCOUNT_ID` to `.env.prod` (see `.env.prod.example`) or export it in the shell                                                        |
+| SDK UI changes not visible in local demo               | Rebuild `@solvapay/react` (`pnpm --filter @solvapay/react build` from repo root) or use `pnpm dev` instead of `pnpm dev:local`                        |
 
 ## Demo Flow
 

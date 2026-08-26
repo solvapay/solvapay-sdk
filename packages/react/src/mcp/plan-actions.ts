@@ -20,8 +20,7 @@
 import {
   billingCycle,
   charges,
-  includedUnits,
-  perUnitCharge,
+  countsUsage,
   trialDays,
   type PricingOptionLike,
 } from '@solvapay/core'
@@ -46,17 +45,14 @@ export type ActivationStrategy = 'activate' | 'topup-first' | 'paid-checkout'
 
 /**
  * The subset of a plan — or of the plan snapshot frozen onto a purchase
- * — that the shape derivation reads. The two differ: a plan carries
- * `requiresPayment`, a snapshot carries `isMetered`, and neither
- * carries both. Everything else comes out of `options[]`.
+ * — that the shape derivation reads. A plan carries `requiresPayment`;
+ * a snapshot may not. Usage-counting and the rest come out of `options[]`.
  */
 export interface PlanLike {
   /** Composable pricing options: charges, billing cycle, limit, trial. */
   options?: PricingOptionLike[] | null
   /** `false` marks a free plan. Only present on a plan, not a snapshot. */
   requiresPayment?: boolean | null
-  /** Set on a frozen purchase snapshot when the plan meters usage. */
-  isMetered?: boolean | null
   /** Derived headline amount; only a fallback for snapshots frozen before `options[]`. */
   price?: number | null
   currency?: string | null
@@ -81,10 +77,9 @@ function isPaidPlan(plan: PlanLike): boolean {
   return (plan.price ?? 0) > 0
 }
 
-/** Whether the plan counts usage: a per-unit charge, an included allowance, or a frozen flag. */
+/** Whether the plan counts usage: a per-unit charge, a tier, or a limit. */
 function isMeteredPlan(plan: PlanLike): boolean {
-  if (plan.isMetered === true) return true
-  return perUnitCharge(plan) != null || includedUnits(plan) != null
+  return countsUsage(plan)
 }
 
 /**
