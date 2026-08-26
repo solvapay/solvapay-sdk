@@ -22,7 +22,6 @@ const freePlan: Plan = {
   name: 'Free',
   price: 0,
   requiresPayment: false,
-  freeUnits: 3,
 }
 
 const paidPlan: Plan = {
@@ -114,6 +113,27 @@ describe('useAutoActivateFreePlan', () => {
       planRef: 'plan_free',
     })
     await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1))
+  })
+
+  it('prefers the auto-assigned free plan when more than one is free', async () => {
+    const fallbackFree: Plan = { reference: 'plan_other_free', name: 'Hobby', requiresPayment: false }
+    const assignedFree: Plan = {
+      reference: 'plan_assigned',
+      name: 'Free',
+      requiresPayment: false,
+      options: [{ kind: 'autoAssigned' }],
+    }
+    setLimits({ activationRequired: true })
+    setPlans([fallbackFree, assignedFree, paidPlan])
+    const activate = setActivation()
+
+    renderHook(() => useAutoActivateFreePlan({ productRef: 'prd_api' }))
+
+    await waitFor(() => expect(activate).toHaveBeenCalledTimes(1))
+    expect(activate).toHaveBeenCalledWith({
+      productRef: 'prd_api',
+      planRef: 'plan_assigned',
+    })
   })
 
   it('does not activate when no free plan exists (PAYG-only product)', async () => {

@@ -170,6 +170,35 @@ describe('useUsage', () => {
     expect(result.current.isAtLimit).toBe(false)
   })
 
+  it('counts a free allowance even when the stored isMetered flag is false', () => {
+    setPurchase({
+      activePurchase: meteredPurchase({
+        planSnapshot: {
+          currency: 'USD',
+          price: 0,
+          isMetered: false,
+          options: [
+            { kind: 'billingCycle', interval: 'month' },
+            { kind: 'charge', per: 'flat', amountMinor: 0, currency: 'usd' },
+            { kind: 'limit', cap: 3, scope: 'billing_period', meter: 'tokens', onExceed: 'block' },
+          ],
+        },
+        usage: { used: 1 },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any,
+    })
+    setTransport()
+    setLimits({ remaining: 2, meterName: 'tokens' })
+    const { result } = renderHook(() => useUsage())
+
+    expect(result.current.usage).toMatchObject({
+      meterRef: 'tokens',
+      used: 1,
+      remaining: 2,
+      total: 3,
+    })
+  })
+
   it('returns null usage when the active purchase is not metered', () => {
     setPurchase({
       activePurchase: {

@@ -53,8 +53,8 @@ both a plan and the frozen snapshot on a purchase, which carry different fields.
 `meterName`. The old field claimed credits while carrying a per-cycle item allowance.
 
 **Breaking — `PlanLike`** (`@solvapay/react/mcp`) drops `planType`, `meterRef`,
-`meterId`, and `limit` for `options`, `requiresPayment`, and `isMetered`, matching what
-the backend sends.
+`meterId`, `limit`, and `isMetered` for `options` and `requiresPayment`. Usage-counting
+is derived from `options[]` (`countsUsage`), matching what the backend sends.
 
 **Deprecated on `Plan`.** `pricingOptions`, `creditsPerUnit`, `billingCycle`, `freeUnits`,
 `setupFee`, `trialDays`, `limit`, and `rolloverUnusedUnits` are kept for consumers who

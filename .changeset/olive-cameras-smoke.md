@@ -14,11 +14,12 @@ The type changes below are source-breaking for anyone constructing a `PurchaseIn
 in-flight SDK alignment targets, and no integrator is pinned to the old shape yet.
 
 **Breaking — fields removed from the purchase row.** `planType` is gone from both
-the purchase and its `planSnapshot`; derive it from `isRecurring` and
-`planSnapshot.isMetered` instead. `planSnapshot` also drops `limit`, `meterRef`,
-`meterId`, `freeUnits`, and `creditsPerUnit` — the backend never populated them on
-this route. Read the per-unit credit rate off the plan (`usePlans`), and the cap
-off `useLimits`.
+the purchase and its `planSnapshot`; derive the label from `isRecurring` and the
+frozen `options[]` (`countsUsage` / `billingCycle`) instead of a stored
+`isMetered` flag. `planSnapshot` also drops `limit`, `meterRef`, `meterId`,
+`freeUnits`, and `creditsPerUnit` — the backend never populated them on this
+route. Read the per-unit credit rate off the plan (`usePlans`), and the cap off
+`useLimits`.
 
 **Breaking — fields now required.** `createdAt`, `customerRef`, `currency`,
 `amount`, and `isRecurring` are required on a purchase; `currency` and `price` are
