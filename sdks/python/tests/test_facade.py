@@ -149,6 +149,13 @@ def test_create_solvapay_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert os.environ["SOLVAPAY_SECRET_KEY"] == "sk_test_env"
 
 
+def test_create_solvapay_defers_native_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SOLVAPAY_SECRET_KEY", "sk_test_env")
+    sp = create_solvapay(api_key="sk_test_env", api_base_url="https://api.example.test")
+    assert sp.get_api_client is not None
+    assert getattr(sp, "_bound_client") is None
+
+
 @pytest.mark.asyncio
 async def test_gate_allow_async_and_track_success() -> None:
     client = StubClient(within_limits=True, remaining=3)
@@ -178,6 +185,50 @@ def test_gate_blocking_matches_async_kind() -> None:
     sp = create_solvapay(api_client=client)
     blocking = sp.gate_blocking("cus_abc", product="prd_demo")
     assert blocking.kind == "paywall"
+
+
+@pytest.mark.asyncio
+async def test_gate_missing_backend_customer_ref_is_actionable() -> None:
+    class MissingCustomerClient(StubClient):
+        def get_customer_blocking(self, args_json: str) -> str:
+            _ = json.loads(args_json)
+            return json.dumps(
+                {
+                    "ok": False,
+                    "error": {
+                        "kind": "Api",
+                        "status": 404,
+                        "code": "not_found",
+                        "message": "Customer not found",
+                    },
+                }
+            )
+
+        def check_limits_blocking(self, args_json: str) -> str:
+            _ = json.loads(args_json)
+            return json.dumps(
+                {
+                    "ok": False,
+                    "error": {
+                        "kind": "Api",
+                        "status": 404,
+                        "code": "not_found",
+                        "message": "Customer not found",
+                    },
+                }
+            )
+
+    missing_ref = "cus_RG8I0GVR"
+    api_base = "https://jack-local.ngrok.app"
+    client = MissingCustomerClient()
+    sp = create_solvapay(api_client=client, api_base_url=api_base)
+    with pytest.raises(SolvaPayError) as exc_info:
+        await sp.gate(missing_ref, product="prd_demo")
+    message = str(exc_info.value)
+    assert missing_ref in message
+    assert api_base in message
+    assert "does not exist" in message.lower()
+    assert getattr(exc_info.value, "status", None) == 404
 
 
 @pytest.mark.asyncio

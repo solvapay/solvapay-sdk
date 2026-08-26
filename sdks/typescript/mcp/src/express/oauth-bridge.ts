@@ -13,13 +13,14 @@ import {
   buildAuthInfoFromBearer,
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
-  isFreeMcpMethod,
   logDcrFailureDiagnostic,
   logMcpConfigOnce,
   McpBearerAuthError,
+  requiresBearerAuth,
   resolveOAuthPaths,
   withoutTrailingSlash,
   type BuildAuthInfoFromBearerOptions,
+  type McpAuthMode,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
 import { toOAuthErrorBody } from '../internal/oauth-error-normalize'
@@ -73,6 +74,7 @@ export interface McpOAuthBridgeOptions {
   productRef: string
   mcpPath?: string
   requireAuth?: boolean
+  authMode?: McpAuthMode
   authInfo?: BuildAuthInfoFromBearerOptions
   protectedResourcePath?: string
   authorizationServerPath?: string
@@ -422,6 +424,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     productRef,
     mcpPath = '/mcp',
     requireAuth = true,
+    authMode = 'tools-call',
     authInfo,
     protectedResourcePath = '/.well-known/oauth-protected-resource',
     authorizationServerPath = '/.well-known/oauth-authorization-server',
@@ -520,7 +523,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     const id = getRequestJsonRpcId(req.body)
     const method = getRequestJsonRpcMethod(req.body)
 
-    if (!authHeader && (!requireAuth || isFreeMcpMethod(method))) {
+    if (!authHeader && (!requireAuth || !requiresBearerAuth(method, authMode))) {
       next()
       return
     }

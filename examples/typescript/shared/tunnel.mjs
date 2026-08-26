@@ -7,6 +7,8 @@
  * Usage (from any example package):
  *   node ../shared/tunnel.mjs          # uses MCP_PORT from env or defaults to 3000
  *   pnpm tunnel                        # same via package.json script
+ *   node ../shared/tunnel.mjs -- <cmd> [args...]
+ *     starts a custom server (e.g. a Python MCP example) instead of tsx
  */
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
@@ -77,17 +79,31 @@ function startTunnel(port) {
   })
 }
 
-const tsxCli = findTsxCli()
-if (!tsxCli) {
-  console.error('[tunnel] ERROR: could not find tsx in node_modules')
-  process.exit(1)
+function resolveServerCommand() {
+  const dash = process.argv.indexOf('--')
+  if (dash !== -1) {
+    const rest = process.argv.slice(dash + 1)
+    if (rest.length === 0) {
+      console.error('[tunnel] ERROR: expected a command after --')
+      process.exit(1)
+    }
+    return { cmd: rest[0], args: rest.slice(1) }
+  }
+
+  const tsxCli = findTsxCli()
+  if (!tsxCli) {
+    console.error('[tunnel] ERROR: could not find tsx in node_modules')
+    process.exit(1)
+  }
+
+  // If tsx resolved to a .mjs file (e.g. .ignored_tsx/dist/cli.mjs) we must
+  // invoke it via `node`; otherwise it's an executable symlink we can spawn directly.
+  return tsxCli.endsWith('.mjs')
+    ? { cmd: process.execPath, args: [tsxCli, 'src/index.ts'] }
+    : { cmd: tsxCli, args: ['src/index.ts'] }
 }
 
-// If tsx resolved to a .mjs file (e.g. .ignored_tsx/dist/cli.mjs) we must
-// invoke it via `node`; otherwise it's an executable symlink we can spawn directly.
-const [cmd, args] = tsxCli.endsWith('.mjs')
-  ? [process.execPath, [tsxCli, 'src/index.ts']]
-  : [tsxCli, ['src/index.ts']]
+const { cmd, args } = resolveServerCommand()
 
 console.error(`[tunnel] starting cloudflared quick tunnel → http://localhost:${PORT}`)
 const { url, proc: cfProc } = await startTunnel(PORT)

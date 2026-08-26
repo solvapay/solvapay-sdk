@@ -49,7 +49,8 @@ the vars you need into the target example's own `.env` — each package loads
 dotenv from its directory. Use `SOLVAPAY_API_BASE_URL=http://localhost:3010`
 (provider-app proxy) and remap MCP/example ports to `3030+` so they don't
 collide with platform services. Convenience scripts from the repo root:
-`pnpm mcp:checkout` / `pnpm mcp:checkout:tunnel`.
+`pnpm mcp:checkout` / `pnpm mcp:checkout:tunnel` and
+`pnpm mcp:stock-research` / `pnpm mcp:stock-research:tunnel`.
 
 ## Python
 
@@ -57,7 +58,7 @@ collide with platform services. Convenience scripts from the repo root:
 | ------------------------------------------------- | ------------------------------------------------------------------------ |
 | [get-merchant](./python/get-merchant)             | `SolvaPayClient.get_merchant_blocking` + offline `http.server` test      |
 | [paid-mcp](./python/paid-mcp)                     | Paywalled MCP echo (`solvapay-mcp`) against a mock backend               |
-| [stock-research-mcp](./python/stock-research-mcp) | Paywalled MCP tools joining a ranked watchlist with SEC company data     |
+| [stock-research-mcp](./python/stock-research-mcp) | Paywalled MCP tools joining a ranked watchlist with SEC company data. Ngrok via `pnpm mcp:stock-research:tunnel` |
 
 ```bash
 cd examples/python/get-merchant

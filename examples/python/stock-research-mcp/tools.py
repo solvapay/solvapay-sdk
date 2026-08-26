@@ -12,6 +12,7 @@ from market_data import CompanyNotFoundError, MarketDataSource
 
 CustomerRef = str | Callable[[dict[str, object]], str]
 
+
 _DISCLAIMER_SUFFIX = " Educational research only, not financial advice."
 
 
@@ -21,9 +22,9 @@ def register_tools(
     solvapay: SolvaPay,
     product: str,
     source: MarketDataSource,
-    customer_ref: CustomerRef,
+    customer_ref: CustomerRef | None = None,
 ) -> None:
-    get_customer_ref = _customer_ref_hook(customer_ref)
+    get_customer_ref = _customer_ref_hook(customer_ref) if customer_ref is not None else None
 
     async def top_ranked_assets(_args: dict[str, object], ctx: ResponseContext) -> object:
         feed = await source.top_ranked()

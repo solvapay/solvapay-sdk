@@ -10,6 +10,8 @@ requires-python = ">=3.10"
 dependencies = [
   "solvapay",
   "mcp>=2.0.0,<3",
+  "httpx>=0.27",
+  "starlette>=0.38",
 ]
 
 [project.optional-dependencies]
@@ -27,12 +29,12 @@ solvapay = { path = "../python", editable = true }
 where = ["python"]
 
 [tool.setuptools.package-data]
-solvapay_mcp = ["py.typed"]
+solvapay_mcp = ["py.typed", "data/mcp-app.html"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-pythonpath = ["python"]
+pythonpath = ["python", "."]
 
 [tool.mypy]
 strict = true
@@ -43,6 +45,10 @@ files = [
   "python/solvapay_mcp/register.py",
   "python/solvapay_mcp/response_context.py",
   "python/solvapay_mcp/_layer2.py",
+  "python/solvapay_mcp/widget.py",
+  "python/solvapay_mcp/oauth",
+  "python/solvapay_mcp/asgi",
+  "python/solvapay_mcp/server",
 ]
 warn_unused_ignores = true
 mypy_path = "python"

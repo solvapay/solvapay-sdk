@@ -91,6 +91,8 @@
     "test:clean-install": "pnpm --filter @solvapay/server-native test:clean-install",
     "mcp:checkout": "pnpm --filter @example/mcp-checkout-app dev",
     "mcp:checkout:tunnel": "pnpm --filter @example/mcp-checkout-app tunnel",
+    "mcp:stock-research": "bash examples/python/stock-research-mcp/scripts/http.sh",
+    "mcp:stock-research:tunnel": "bash examples/python/stock-research-mcp/scripts/tunnel.sh",
     "prepare": "husky || true"
   },
   "devDependencies": {

@@ -786,6 +786,33 @@ describe('createMcpOAuthBridge integration', () => {
     expect(state.statusCode).toBe(200)
   })
 
+  it('challenges anonymous initialize when authMode is all', async () => {
+    const middlewares = createMcpOAuthBridge({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      authMode: 'all',
+    })
+    const { res, state } = mockRes()
+    const req = mockReq({
+      method: 'POST',
+      path: '/mcp',
+      headers: { origin: 'cursor://test', 'content-type': 'application/json' },
+      body: { jsonrpc: '2.0', id: 1, method: 'initialize' },
+    })
+
+    await runPipeline(middlewares, req, res, state)
+
+    expect(state.statusCode).toBe(401)
+    expect(state.headers['www-authenticate']).toContain('Bearer')
+    expect(state.headers['www-authenticate']).toContain('resource_metadata=')
+    expect(state.body).toEqual({
+      jsonrpc: '2.0',
+      id: 1,
+      error: { code: -32001, message: 'Unauthorized' },
+    })
+  })
+
   it('exposes WWW-Authenticate via CORS on 401 anonymous tools/call with native origin', async () => {
     const middlewares = createMcpOAuthBridge({
       publicBaseUrl,

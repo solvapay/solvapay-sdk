@@ -25,6 +25,7 @@ import {
   registerAppTool,
   RESOURCE_MIME_TYPE,
 } from './extAppsServer'
+import { defaultMcpAppHtml } from '../defaultMcpAppHtml'
 
 export interface BuildSolvaPayMcpServerOptions extends BuildSolvaPayDescriptorsOptions {
   registerPrompts?: boolean
@@ -164,7 +165,12 @@ export function buildSolvaPayMcpServer(
     ...descriptorOptions
   } = options
 
-  const descriptors = buildSolvaPayDescriptors(descriptorOptions)
+  const descriptors = buildSolvaPayDescriptors({
+    ...descriptorOptions,
+    readHtml:
+      descriptorOptions.readHtml ??
+      (descriptorOptions.htmlPath ? undefined : defaultMcpAppHtml),
+  })
 
   const effectiveServerName =
     serverName ?? descriptorOptions.branding?.brandName ?? 'solvapay-mcp-server'

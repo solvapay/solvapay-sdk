@@ -72,6 +72,7 @@ export {
 } from '@solvapay/mcp-core'
 export type {
   BuildAuthInfoFromBearerOptions,
+  McpAuthMode,
   McpBearerCustomerRefOptions,
   OAuthAuthorizationServerOptions,
   OAuthBridgePaths,

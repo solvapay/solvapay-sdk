@@ -4,19 +4,27 @@ import argparse
 import asyncio
 import json
 import os
+import sys
 
 import httpx
+import uvicorn
 from mcp.client import Client
 from mcp.server.lowlevel.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import CallToolResult
 from solvapay.facade import SolvaPay, create_solvapay
+from solvapay_mcp import create_solvapay_mcp_server
 
+from http_serve import (
+    build_http_app,
+    mcp_bind_host,
+    mcp_listen_port,
+)
 from market_data import HttpMarketData, MarketDataSource
 from tools import register_tools
 
 DEFAULT_PRODUCT = "prd_demo"
-DEFAULT_CUSTOMER_REF = "cus_demo"
+DEFAULT_PUBLIC_BASE_URL = "https://mcp.example.test"
 
 
 class _MockClient:
@@ -68,9 +76,17 @@ def build_server(
     solvapay: SolvaPay,
     product: str,
     source: MarketDataSource,
-    customer_ref: str,
+    public_base_url: str,
+    api_base_url: str | None = None,
+    customer_ref: str | None = None,
 ) -> Server[object]:
-    server: Server[object] = Server("stock-research-mcp")
+    server = create_solvapay_mcp_server(
+        solvapay=solvapay,
+        product_ref=product,
+        public_base_url=public_base_url,
+        api_base_url=api_base_url,
+        server_name="stock-research-mcp",
+    )
     register_tools(
         server,
         solvapay=solvapay,
@@ -117,7 +133,8 @@ async def run_demo(*, within_limits: bool) -> dict[str, object]:
             solvapay=solvapay,
             product=os.environ.get("SOLVAPAY_PRODUCT") or DEFAULT_PRODUCT,
             source=HttpMarketData(http),
-            customer_ref=os.environ.get("SOLVAPAY_CUSTOMER_REF") or DEFAULT_CUSTOMER_REF,
+            public_base_url=DEFAULT_PUBLIC_BASE_URL,
+            customer_ref="cus_demo",
         )
         async with Client(server) as mcp_client:
             listed = await mcp_client.list_tools()
@@ -127,39 +144,81 @@ async def run_demo(*, within_limits: bool) -> dict[str, object]:
     return projected
 
 
-async def run_serve() -> None:
+def _live_solvapay() -> tuple[SolvaPay, str, str | None]:
     api_key = os.environ.get("SOLVAPAY_SECRET_KEY")
     if not api_key:
         raise RuntimeError("SOLVAPAY_SECRET_KEY is missing — copy .env.example to .env")
-    customer_ref = os.environ.get("SOLVAPAY_CUSTOMER_REF")
-    if not customer_ref:
-        raise RuntimeError("SOLVAPAY_CUSTOMER_REF is missing — copy .env.example to .env")
-    product = os.environ.get("SOLVAPAY_PRODUCT")
+    product = os.environ.get("SOLVAPAY_PRODUCT") or os.environ.get("SOLVAPAY_PRODUCT_REF")
     if not product:
         raise RuntimeError("SOLVAPAY_PRODUCT is missing — copy .env.example to .env")
-    solvapay = create_solvapay(
-        api_key=api_key,
-        api_base_url=os.environ.get("SOLVAPAY_API_BASE_URL"),
-    )
+    api_base_url = os.environ.get("SOLVAPAY_API_BASE_URL")
+    if not api_base_url:
+        raise RuntimeError("SOLVAPAY_API_BASE_URL is missing — copy .env.example to .env")
+    solvapay = create_solvapay(api_key=api_key, api_base_url=api_base_url)
+    return solvapay, product, api_base_url
+
+
+async def run_serve() -> None:
+    solvapay, product, api_base_url = _live_solvapay()
+    public_base_url = os.environ.get("MCP_PUBLIC_BASE_URL") or DEFAULT_PUBLIC_BASE_URL
     async with httpx.AsyncClient(timeout=30.0) as http:
         server = build_server(
             solvapay=solvapay,
             product=product,
             source=HttpMarketData(http),
-            customer_ref=customer_ref,
+            public_base_url=public_base_url,
+            api_base_url=api_base_url,
         )
         async with stdio_server() as (read, write):
             await server.run(read, write, server.create_initialization_options())
 
 
+def run_http() -> None:
+    solvapay, product, api_base_url = _live_solvapay()
+    bind_host = mcp_bind_host()
+    port = mcp_listen_port()
+    public_base_url = os.environ.get("MCP_PUBLIC_BASE_URL")
+    if not public_base_url:
+        raise RuntimeError("MCP_PUBLIC_BASE_URL is missing — set it to the public HTTPS origin")
+    # uvicorn.run() owns the event loop. Nesting Server.serve() inside
+    # asyncio.run() accepts TCP but never completes HTTP (MCPJam hangs).
+    http = httpx.AsyncClient(timeout=30.0)
+    server = build_server(
+        solvapay=solvapay,
+        product=product,
+        source=HttpMarketData(http),
+        public_base_url=public_base_url,
+        api_base_url=api_base_url,
+    )
+    app = build_http_app(
+        server,
+        bind_host=bind_host,
+        public_base_url=public_base_url,
+        api_base_url=api_base_url,
+        product_ref=product,
+    )
+    print(f"[stock-research-mcp] listening on http://{bind_host}:{port}", file=sys.stderr)
+    print(f"[stock-research-mcp] MCP endpoint: {public_base_url}/mcp", file=sys.stderr)
+    try:
+        uvicorn.run(app, host=bind_host, port=port, log_level="info")
+    finally:
+        try:
+            asyncio.run(http.aclose())
+        except RuntimeError:
+            pass
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Paid MCP stock-research example")
-    parser.add_argument("--mode", choices=("serve", "demo"), default="demo")
+    parser.add_argument("--mode", choices=("serve", "http", "demo"), default="demo")
     parser.add_argument("--gate", action="store_true")
     args = parser.parse_args()
     _load_dotenv()
     if args.mode == "serve":
         asyncio.run(run_serve())
+        return
+    if args.mode == "http":
+        run_http()
         return
     dumped = asyncio.run(run_demo(within_limits=not args.gate))
     print(json.dumps(dumped, indent=2))

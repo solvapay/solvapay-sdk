@@ -72,6 +72,9 @@ jobs:
       - name: Build packages
         run: pnpm build:packages
 
+      - name: Check vendored MCP App widget
+        run: node tools/mcp-app-widget/check.mjs
+
       - name: Run tests
         run: pnpm test
 
@@ -453,7 +456,7 @@ jobs:
           python -m pyright --project "${GITHUB_WORKSPACE}/sdks/python-mcp"
           python -m ruff check "${GITHUB_WORKSPACE}/sdks/python-mcp/python/solvapay_mcp"
           python -m pytest -q "${GITHUB_WORKSPACE}/examples/python/paid-mcp"
-          python -m pip install httpx
+          python -m pip install httpx uvicorn
           python -m pytest -q "${GITHUB_WORKSPACE}/examples/python/stock-research-mcp"
 
   python-binding-artifacts:

@@ -37,6 +37,9 @@ class SolvaPay:
     ) -> None:
         """Construct a facade from credentials or an injected ``ApiClient``."""
         ...
+    def get_api_client(self) -> ApiClient:
+        """Return the bound client, constructing the native client on first use."""
+        ...
     def payable(
         self, *, product: str, usage_type: str = "requests"
     ) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:

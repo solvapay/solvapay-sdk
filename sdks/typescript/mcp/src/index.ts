@@ -43,6 +43,7 @@ import './native-install'
  */
 
 export { createSolvaPayMcpServer } from './server'
+export { defaultMcpAppHtml } from './defaultMcpAppHtml'
 export type {
   AdditionalToolsContext,
   CreateSolvaPayMcpServerOptions,

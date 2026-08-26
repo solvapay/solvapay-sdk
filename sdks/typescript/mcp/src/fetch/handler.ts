@@ -8,9 +8,10 @@
 
 import {
   buildAuthInfoFromBearer,
-  isFreeMcpMethod,
   McpBearerAuthError,
+  requiresBearerAuth,
   type BuildAuthInfoFromBearerOptions,
+  type McpAuthMode,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
 import {
@@ -35,6 +36,7 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
   productRef: string
   mcpPath?: string
   requireAuth?: boolean
+  authMode?: McpAuthMode
   authInfo?: BuildAuthInfoFromBearerOptions
   protectedResourcePath?: string
   authorizationServerPath?: string
@@ -92,10 +94,11 @@ async function readJsonRpcEnvelope(
  * 1. Serves `OPTIONS` preflight for native-scheme origins.
  * 2. Serves every `.well-known/*` + `/oauth/*` route via
  *    {@link createOAuthFetchRouter}.
- * 3. Enforces bearer-token auth on `tools/call` when `requireAuth`
- *    is true (default). Handshake / listing methods (`initialize`,
- *    `tools/list`, …) stay open so clients and no-code discovery can
- *    connect without a customer JWT. Missing auth on a gated method
+ * 3. Enforces bearer-token auth when `requireAuth` is true (default).
+ *    `authMode: 'tools-call'` (default) gates only `tools/call` so
+ *    handshake / listing stay open for discovery. `authMode: 'all'`
+ *    challenges every JSON-RPC method so hosts that escalate on the
+ *    first 401 prompt at connect. Missing auth on a gated method
  *    returns `401 + WWW-Authenticate: Bearer resource_metadata="…"`.
  * 4. Forwards authenticated MCP requests to `createMcpHandler`'s
  *    `{ fetch }` face with `{ authInfo }` pass-through.
@@ -110,6 +113,7 @@ export function createSolvaPayMcpFetchHandler(
     productRef,
     mcpPath = '/mcp',
     requireAuth = true,
+    authMode = 'tools-call',
     authInfo,
     protectedResourcePath,
     authorizationServerPath,
@@ -159,7 +163,7 @@ export function createSolvaPayMcpFetchHandler(
     let resolvedAuthInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
     if (authHeader || requireAuth) {
       const envelope = await readJsonRpcEnvelope(req)
-      const skipAuth = requireAuth && !authHeader && isFreeMcpMethod(envelope.method)
+      const skipAuth = requireAuth && !authHeader && !requiresBearerAuth(envelope.method, authMode)
       if (!skipAuth) {
         try {
           resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, authInfo)

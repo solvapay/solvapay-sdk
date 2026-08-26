@@ -6,9 +6,9 @@ from typing import Any
 from mcp.client import Client
 from mcp.server.lowlevel.server import Server
 from solvapay.facade import create_solvapay
+
 from solvapay_mcp.register import register_payable_tool
 from solvapay_mcp.response_context import ResponseContext
-
 from tests.mcp_authoring.mock_backend import MockBackend
 from tests.mcp_authoring.scenario import (
     HandlerGate,

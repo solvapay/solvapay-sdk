@@ -28,6 +28,7 @@
   },
   "files": [
     "dist",
+    "mcp-app.html",
     "README.md"
   ],
   "publishConfig": {

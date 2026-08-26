@@ -20,6 +20,7 @@ Gem::Specification.new do |spec|
   spec.files = Dir.chdir(__dir__) do
     Dir[
       "lib/**/*.rb",
+      "lib/**/*.html",
       "sig/**/*.rbs",
       "test/**/*",
       "Gemfile",

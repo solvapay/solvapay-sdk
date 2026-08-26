@@ -121,3 +121,13 @@ describe('isFreeMcpMethod', () => {
     expect(isFreeMcpMethod(undefined)).toBe(true)
   })
 })
+
+describe('requiresBearerAuth', () => {
+  it('gates tools/call in both modes and initialize only in all', async () => {
+    const { requiresBearerAuth } = await import('../src/is-free-mcp-method')
+    expect(requiresBearerAuth('tools/call', 'tools-call')).toBe(true)
+    expect(requiresBearerAuth('tools/call', 'all')).toBe(true)
+    expect(requiresBearerAuth('initialize', 'tools-call')).toBe(false)
+    expect(requiresBearerAuth('initialize', 'all')).toBe(true)
+  })
+})

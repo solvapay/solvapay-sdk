@@ -180,8 +180,14 @@ class SolvaPay:
         limits_cache_ttl: int = _DEFAULT_LIMITS_CACHE_TTL_MS,
         api_client: ApiClient | None = None,
     ) -> None:
+        resolved_base = api_base_url if api_base_url is not None else os.environ.get(
+            "SOLVAPAY_API_BASE_URL"
+        )
+        self._api_base_url = resolved_base
+        self._api_key: str | None = None
+        self._bound_client: ApiClient | None = None
         if api_client is not None:
-            self._client: ApiClient = api_client
+            self._bound_client = api_client
         else:
             key = api_key if api_key is not None else os.environ.get("SOLVAPAY_SECRET_KEY")
             if not key:
@@ -189,11 +195,23 @@ class SolvaPay:
                     "SOLVAPAY_SECRET_KEY is required when api_client is not provided",
                     code="missing_api_key",
                 )
-            from solvapay._solvapay import SolvaPayClient
-
-            self._client = SolvaPayClient(key, api_base_url)
+            self._api_key = key
         self._limits_cache_ttl = limits_cache_ttl
         self._limits_cache: dict[str, dict[str, Any]] = {}
+
+    def get_api_client(self) -> ApiClient:
+        if self._bound_client is not None:
+            return self._bound_client
+        key = self._api_key
+        if not key:
+            _raise_solvapay_error(
+                "SOLVAPAY_SECRET_KEY is required when api_client is not provided",
+                code="missing_api_key",
+            )
+        from solvapay._solvapay import SolvaPayClient
+
+        self._bound_client = SolvaPayClient(key, self._api_base_url)
+        return self._bound_client
 
     def payable(
         self, *, product: str, usage_type: str = "requests"
@@ -312,9 +330,9 @@ class SolvaPay:
                 }
             )
             if blocking:
-                limits_value = _unwrap_envelope(self._client.check_limits_blocking(args_json))
+                limits_value = _unwrap_envelope(self.get_api_client().check_limits_blocking(args_json))
             else:
-                limits_value = _unwrap_envelope(await self._client.check_limits(args_json))
+                limits_value = _unwrap_envelope(await self.get_api_client().check_limits(args_json))
             if not isinstance(limits_value, dict):
                 limits_value = {}
             last_limits = limits_value
@@ -355,7 +373,7 @@ class SolvaPay:
                     {"productRef": product, "limits": last_limits or {"remaining": 0}},
                 )
             _track_usage(
-                self._client,
+                self.get_api_client(),
                 customer_ref=backend_ref,
                 product_ref=product,
                 action=meter_name,
@@ -372,7 +390,7 @@ class SolvaPay:
         ) -> None:
             _ = metadata
             _track_usage(
-                self._client,
+                self.get_api_client(),
                 customer_ref=backend_ref,
                 product_ref=product,
                 action=meter_name,
@@ -390,7 +408,7 @@ class SolvaPay:
             _ = err
             _ = metadata
             _track_usage(
-                self._client,
+                self.get_api_client(),
                 customer_ref=backend_ref,
                 product_ref=product,
                 action=meter_name,
@@ -407,12 +425,48 @@ class SolvaPay:
             track_fail=track_fail,
         )
 
+    def _api_base_label(self) -> str:
+        return self._api_base_url or os.environ.get("SOLVAPAY_API_BASE_URL") or "(unset API base URL)"
+
+    async def _lookup_customer(self, args: dict[str, str], *, blocking: bool) -> Any:
+        args_json = json.dumps(args)
+        if blocking:
+            return _unwrap_envelope(self.get_api_client().get_customer_blocking(args_json))
+        return _unwrap_envelope(await self.get_api_client().get_customer(args_json))
+
+    async def _require_existing_backend_customer(
+        self, customer_ref: str, *, blocking: bool
+    ) -> str:
+        try:
+            await self._lookup_customer({"customerRef": customer_ref}, blocking=blocking)
+        except SolvaPayError as err:
+            status = getattr(err, "status", None)
+            if status == 404:
+                _raise_solvapay_error(
+                    (
+                        f"Customer '{customer_ref}' does not exist on this API "
+                        f"({self._api_base_label()}). A cus_-prefixed value is treated as an "
+                        "already-resolved backend customer ref and is not auto-created. Use a "
+                        "customer that exists on this API (typically via MCP OAuth) or an "
+                        "external ref that does not start with cus_."
+                    ),
+                    code=getattr(err, "code", None) or "customer_not_found",
+                    status=404,
+                )
+            raise
+        return customer_ref
+
     async def _ensure_customer(self, customer_ref: str, *, blocking: bool) -> str:
         kind = _call_sync_decision("classify_customer_ref", {"customerRef": customer_ref})
-        if kind in ("backend", "anonymous") or (
+        is_backend = kind == "backend" or (
             isinstance(customer_ref, str) and customer_ref.startswith("cus_")
-        ):
+        )
+        if kind == "anonymous":
             return customer_ref
+        if is_backend:
+            return await self._require_existing_backend_customer(
+                customer_ref, blocking=blocking
+            )
 
         cached = _shared_customer_dedup.get_cached(customer_ref)
         if cached is not None:
@@ -421,9 +475,9 @@ class SolvaPay:
         args_json = json.dumps({"externalRef": customer_ref})
         try:
             if blocking:
-                existing = _unwrap_envelope(self._client.get_customer_blocking(args_json))
+                existing = _unwrap_envelope(self.get_api_client().get_customer_blocking(args_json))
             else:
-                existing = _unwrap_envelope(await self._client.get_customer(args_json))
+                existing = _unwrap_envelope(await self.get_api_client().get_customer(args_json))
             if isinstance(existing, dict) and existing.get("customerRef"):
                 ref = str(existing["customerRef"])
                 _shared_customer_dedup.put(customer_ref, ref)
@@ -448,9 +502,9 @@ class SolvaPay:
             raise SolvaPayError("build_create_customer_params returned unexpected value")
         create_args = json.dumps(params)
         if blocking:
-            created = _unwrap_envelope(self._client.create_customer_blocking(create_args))
+            created = _unwrap_envelope(self.get_api_client().create_customer_blocking(create_args))
         else:
-            created = _unwrap_envelope(await self._client.create_customer(create_args))
+            created = _unwrap_envelope(await self.get_api_client().create_customer(create_args))
         if not isinstance(created, dict):
             raise SolvaPayError("create_customer did not return an object")
         ref = _call_sync_decision(
@@ -468,7 +522,7 @@ def create_solvapay(
     api_key: str | None = None,
     api_base_url: str | None = None,
     limits_cache_ttl: int = _DEFAULT_LIMITS_CACHE_TTL_MS,
-        api_client: ApiClient | None = None,
+    api_client: ApiClient | None = None,
 ) -> SolvaPay:
     """Factory matching §2.4 / catalog ``create_solvapay``."""
     return SolvaPay(

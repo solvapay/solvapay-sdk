@@ -202,4 +202,5 @@ export {
 export type { McpBearerCustomerRefOptions } from './bearer'
 
 /** True for MCP methods that must not require bearer auth (everything except tools/call). */
-export { isFreeMcpMethod } from './is-free-mcp-method'
+export { isFreeMcpMethod, requiresBearerAuth } from './is-free-mcp-method'
+export type { McpAuthMode } from './is-free-mcp-method'

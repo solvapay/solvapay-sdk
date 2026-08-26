@@ -170,6 +170,14 @@ describe('createSolvaPayMcpFetch', () => {
       expect(res.json.result?.serverInfo?.name).toBe('solvapay-mcp-server')
     })
 
+    it('challenges anonymous initialize when authMode is all', async () => {
+      const handler = buildHandler({ requireAuth: true, authMode: 'all' })
+      const res = await initialize(handler)
+      expect(res.status).toBe(401)
+      expect(res.json.error?.code).toBe(-32001)
+      expect(res.json.error?.message).toBe('Unauthorized')
+    })
+
     it('allows anonymous tools/list when requireAuth defaults to true', async () => {
       const handler = buildHandler({ requireAuth: true })
       await initialize(handler)
