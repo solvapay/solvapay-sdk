@@ -2,16 +2,19 @@
 
 /**
  * `useCheckoutFlow` — headless state engine for the four-step
- * checkout (`plan` → `amount` [PAYG only] → `payment` → `success`).
+ * checkout (`plan` → `amount` [PAYG empty wallet only] → `payment` → `success`).
  *
  * Owns step state, transitions, lifecycle callbacks, and the
- * `transport.activatePlan` side-effect on the PAYG plan→amount edge.
+ * `transport.activatePlan` side-effect on the PAYG plan edge.
  * Knows nothing about layout: consumers compose `<CheckoutSteps.*>`
  * parts (or hand-rolled JSX) on top of the returned state.
  *
  * Must be called inside a `<PlanSelector.Root>` — the hook reads
  * the user's current plan selection from `usePlanSelector()` so the
  * plan grid and the flow share state.
+ *
+ * After PAYG activate, the wallet decides the next step: empty → amount
+ * picker (`credit_topup`); funded → success with no card.
  *
  * Stripe 3DS / redirect returns: when `payment_intent_client_secret` is
  * present in the URL on mount, the hook starts on the `payment` step so
@@ -289,15 +292,27 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     setError(null)
     setStatus('activating')
     try {
-      // Topup-first: for a zero-balance PAYG plan the backend returns
-      // `topup_required` here and creates NO purchase — that's the
-      // expected result, not an error. We treat it as "proceed to the
-      // top-up amount step" and DO NOT consider the plan active. The
-      // active purchase only materializes after a successful top-up
-      // (see `recordPaygSuccess`, which re-activates once credits land).
+      // Activate-then-top-up: PAYG activates immediately even at a zero
+      // balance. The wallet after activate decides the next step — empty
+      // goes to the amount picker (`credit_topup`); funded skips payment.
       await transport.activatePlan({ productRef, planRef: selectedPlanRef })
+      const credits = (await balance.refetch()) ?? balance.credits
+      if (credits == null) {
+        throw new Error('Credit balance is unavailable')
+      }
       setStatus('idle')
-      setStep('amount')
+      if (credits === 0) {
+        setStep('amount')
+      } else {
+        const meta: SuccessMeta = {
+          branch: 'payg',
+          plan: selectedPlanShape,
+          rateLabel: formatPaygRate(selectedPlanShape, locale, balance),
+        }
+        setSuccessMeta(meta)
+        setStep('success')
+        onPurchaseSuccessRef.current?.(meta)
+      }
       return true
     } catch (err) {
       const wrapped = err instanceof Error ? err : new Error('Activation failed')
@@ -306,19 +321,41 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       onErrorRef.current?.(wrapped, 'activate')
       return false
     }
-  }, [productRef, selectedPlanRef, selectedPlanShape, transport])
+  }, [balance, locale, productRef, selectedPlanRef, selectedPlanShape, transport])
 
   const advanceFromPlan = useCallback(async () => {
     if (!selectedPlanShape || !selectedPlanRef) return
     if (branch === 'payg') {
       // PAYG re-activation is a no-op on the backend (the plan is
-      // already the customer's current plan), and the round-trip
-      // adds latency + a transient `status: 'activating'` flicker
-      // for no behavior change. Skip the call and step straight to
-      // the amount picker so the user can top up.
+      // already the customer's current plan). Still read the wallet so a
+      // funded customer skips the amount picker.
       if (planCtx.currentPlanRef === selectedPlanRef) {
         setError(null)
-        setStep('amount')
+        setStatus('activating')
+        try {
+          const credits = (await balance.refetch()) ?? balance.credits
+          if (credits == null) {
+            throw new Error('Credit balance is unavailable')
+          }
+          setStatus('idle')
+          if (credits === 0) {
+            setStep('amount')
+          } else {
+            const meta: SuccessMeta = {
+              branch: 'payg',
+              plan: selectedPlanShape,
+              rateLabel: formatPaygRate(selectedPlanShape, locale, balance),
+            }
+            setSuccessMeta(meta)
+            setStep('success')
+            onPurchaseSuccessRef.current?.(meta)
+          }
+        } catch (err) {
+          const wrapped = err instanceof Error ? err : new Error('Activation failed')
+          setError(wrapped.message)
+          setStatus('error')
+          onErrorRef.current?.(wrapped, 'activate')
+        }
         return
       }
       await runActivate()
@@ -326,7 +363,7 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     }
     setError(null)
     setStep('payment')
-  }, [branch, planCtx.currentPlanRef, runActivate, selectedPlanRef, selectedPlanShape])
+  }, [balance, branch, locale, planCtx.currentPlanRef, runActivate, selectedPlanRef, selectedPlanShape])
 
   const recordPaygSuccess = useCallback(
     (creditsAddedFromBackend?: number) => {
@@ -361,15 +398,11 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
       if (creditsAddedFromBackend !== undefined && creditsAddedFromBackend > 0) {
         adjustBalance(creditsAddedFromBackend)
       }
-      // Topup-first: the plan purchase does NOT exist yet — the plan-step
-      // `activatePlan` returned `topup_required` (zero balance) and
-      // created nothing. Now that the top-up has landed (TopupForm awaits
-      // backend confirmation before firing success), re-activate to
-      // materialize the active PAYG purchase, mirroring the
-      // `ActivationFlow` primitive's self-healing re-activation. Idempotent
-      // — the backend short-circuits to `already_active` if it somehow
-      // exists. Fire-and-forget like the refetch below; `useLimits`
-      // re-reads on the resulting `purchases` change.
+      // Activate-then-top-up: the plan-step `activatePlan` already created
+      // the purchase (or was `already_active`). Re-activate after credits
+      // land as a self-heal — the backend short-circuits to `already_active`.
+      // Fire-and-forget like the refetch below; `useLimits` re-reads on the
+      // resulting `purchases` change.
       if (selectedPlanRef) {
         Promise.resolve(transport.activatePlan({ productRef, planRef: selectedPlanRef })).catch(
           () => {},

@@ -54,9 +54,10 @@ export interface BootstrapPlanLike {
 export type SuccessMeta =
   | {
       branch: 'payg'
-      amountMinor: number
-      currency: string
-      creditsAdded: number
+      /** Omitted when the plan activated against an already-funded wallet. */
+      amountMinor?: number
+      currency?: string
+      creditsAdded?: number
       plan: BootstrapPlanLike
       /** `null` when neither a credit nor a charge rate can be established. */
       rateLabel: string | null

@@ -3,11 +3,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import React from 'react'
 import { ActivationFlow as ShimActivationFlow } from './ActivationFlow'
 import { ActivationFlow, useActivationFlow } from '../primitives/ActivationFlow'
+import { AmountPicker } from '../primitives/AmountPicker'
 import { SolvaPayProvider } from '../SolvaPayProvider'
 import { plansCache } from '../hooks/usePlans'
 import { productCache } from '../hooks/useProduct'
+import { useBalance } from '../hooks/useBalance'
+import { makeProviderInitial } from '../test-helpers/makeProviderInitial'
 import { MissingProviderError, MissingProductRefError } from '../utils/errors'
-import type { ActivationResult, Plan } from '../types'
+import type { ActivationResult, Plan, SolvaPayConfig } from '../types'
 
 const usagePlan: Plan = {
   reference: 'pln_usage',
@@ -22,7 +25,17 @@ const usagePlan: Plan = {
 
 type ActivateCall = { productRef: string; planRef: string }
 
-function makeFakeFetch(responses: Array<{ status: string } & Record<string, unknown>>) {
+function providerConfig(fetchFn: ReturnType<typeof vi.fn>): SolvaPayConfig {
+  return {
+    fetch: fetchFn as unknown as typeof fetch,
+    initial: makeProviderInitial({ customerRef: 'cus_test' }),
+  }
+}
+
+function makeFakeFetch(
+  responses: Array<{ status: string } & Record<string, unknown>>,
+  credits = 0,
+) {
   const activateCalls: ActivateCall[] = []
   let activateIndex = 0
   const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -39,6 +52,12 @@ function makeFakeFetch(responses: Array<{ status: string } & Record<string, unkn
     }
     if (url.includes('/api/check-purchase')) {
       return new Response(JSON.stringify({ purchases: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    if (url.includes('/api/customer-balance')) {
+      return new Response(JSON.stringify({ credits }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -60,13 +79,14 @@ beforeEach(() => {
 })
 
 describe('ActivationFlow (default-tree shim) — state machine', () => {
-  it('summary → activating → activated', async () => {
-    const { fetchFn, activateCalls } = makeFakeFetch([
-      { status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' },
-    ])
+  it('summary → activating → activated when the wallet is funded', async () => {
+    const { fetchFn, activateCalls } = makeFakeFetch(
+      [{ status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' }],
+      500,
+    )
     const onSuccess = vi.fn<(r: ActivationResult) => void>()
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" onSuccess={onSuccess} />
       </SolvaPayProvider>,
     )
@@ -80,12 +100,32 @@ describe('ActivationFlow (default-tree shim) — state machine', () => {
     expect(onSuccess.mock.calls[0][0].kind).toBe('activated')
   })
 
+  it('summary → activating → activated + zero balance → selectAmount', async () => {
+    const { fetchFn } = makeFakeFetch(
+      [{ status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' }],
+      0,
+    )
+    const onSuccess = vi.fn<(r: ActivationResult) => void>()
+    render(
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
+        <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" onSuccess={onSuccess} />
+      </SolvaPayProvider>,
+    )
+
+    await screen.findByText('Confirm your plan')
+    fireEvent.click(screen.getByRole('button', { name: 'Activate' }))
+
+    await waitFor(() => expect(screen.getByText('Add credits')).toBeTruthy())
+    expect(screen.getByText('Top up your credits to start using this plan.')).toBeTruthy()
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
   it('summary → activating → topup_required → selectAmount', async () => {
     const { fetchFn } = makeFakeFetch([
       { status: 'topup_required', productRef: 'prd_usage', planRef: 'pln_usage' },
     ])
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" />
       </SolvaPayProvider>,
     )
@@ -94,16 +134,14 @@ describe('ActivationFlow (default-tree shim) — state machine', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Activate' }))
 
     await waitFor(() => expect(screen.getByText('Add credits')).toBeTruthy())
-    expect(screen.getByText('Top up your credits to activate this plan.')).toBeTruthy()
+    expect(screen.getByText('Top up your credits to start using this plan.')).toBeTruthy()
     expect(screen.getByText('Continue to payment')).toBeTruthy()
   })
 
   it('error state shows Try Again and resets to summary', async () => {
-    const { fetchFn } = makeFakeFetch([
-      { status: 'invalid', message: 'Invalid plan config' },
-    ])
+    const { fetchFn } = makeFakeFetch([{ status: 'invalid', message: 'Invalid plan config' }])
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" />
       </SolvaPayProvider>,
     )
@@ -122,7 +160,7 @@ describe('ActivationFlow (default-tree shim) — state machine', () => {
     ])
     const onBack = vi.fn()
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" onBack={onBack} />
       </SolvaPayProvider>,
     )
@@ -139,12 +177,8 @@ describe('ActivationFlow primitive', () => {
       { status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' },
     ])
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
-        <ActivationFlow.Root
-          productRef="prd_usage"
-          planRef="pln_usage"
-          data-testid="root"
-        >
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
+        <ActivationFlow.Root productRef="prd_usage" planRef="pln_usage" data-testid="root">
           <ActivationFlow.Summary data-testid="summary" />
           <ActivationFlow.ActivateButton data-testid="activate" />
           <ActivationFlow.Activated data-testid="activated" />
@@ -172,7 +206,7 @@ describe('ActivationFlow primitive', () => {
       )
     }
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ActivationFlow.Root productRef="prd_usage" planRef="pln_usage">
           <Probe />
         </ActivationFlow.Root>
@@ -180,6 +214,68 @@ describe('ActivationFlow primitive', () => {
     )
     await waitFor(() => expect(screen.getByTestId('plan').textContent).toBe('pln_usage'))
     expect(screen.getByTestId('step').textContent).toBe('summary')
+  })
+
+  it('stays on topupPayment when a zero-credit balance refetch re-fires activation', async () => {
+    const { fetchFn } = makeFakeFetch(
+      [{ status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' }],
+      0,
+    )
+
+    function Harness() {
+      const [tick, setTick] = React.useState(0)
+      const { refetch } = useBalance()
+      return (
+        <ActivationFlow.Root
+          productRef="prd_usage"
+          planRef="pln_usage"
+          onSuccess={() => {
+            void tick
+          }}
+          data-testid="root"
+        >
+          <ActivationFlow.ActivateButton data-testid="activate" />
+          <ActivationFlow.AmountPicker>
+            <AmountPicker.Option amount={50} data-testid="pill-50" />
+          </ActivationFlow.AmountPicker>
+          <ActivationFlow.ContinueButton data-testid="continue" />
+          <span data-testid="refetch-tick">{tick}</span>
+          <button
+            type="button"
+            data-testid="refetch-balance"
+            onClick={() => {
+              void refetch().then(() => setTick(value => value + 1))
+            }}
+          >
+            refetch
+          </button>
+        </ActivationFlow.Root>
+      )
+    }
+
+    render(
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
+        <Harness />
+      </SolvaPayProvider>,
+    )
+
+    fireEvent.click(await screen.findByTestId('activate'))
+    await waitFor(() =>
+      expect(screen.getByTestId('root').getAttribute('data-state')).toBe('selectAmount'),
+    )
+
+    fireEvent.click(screen.getByTestId('pill-50'))
+    await waitFor(() => expect(screen.getByTestId('continue')).not.toBeDisabled())
+    fireEvent.click(screen.getByTestId('continue'))
+    await waitFor(() =>
+      expect(screen.getByTestId('root').getAttribute('data-state')).toBe('topupPayment'),
+    )
+
+    fireEvent.click(screen.getByTestId('refetch-balance'))
+    await waitFor(() => expect(screen.getByTestId('refetch-tick').textContent).toBe('1'))
+
+    expect(screen.getByTestId('root').getAttribute('data-state')).toBe('topupPayment')
+    expect(screen.queryByTestId('continue')).toBeNull()
   })
 
   it('throws MissingProviderError outside SolvaPayProvider', () => {

@@ -6,8 +6,8 @@
  * Renders the full usage-based activation state machine (summary →
  * activating → selectAmount → topupPayment → retrying → activated | error)
  * with the golden-path copy, the embedded `<CheckoutSummary>` + `<TopupForm>`,
- * and an optional back button. Full control is available by composing the
- * primitive at `@solvapay/react/primitives`.
+ * and an optional back button. After activate, an empty wallet opens the
+ * amount picker; a funded wallet completes immediately.
  */
 
 import React from 'react'
