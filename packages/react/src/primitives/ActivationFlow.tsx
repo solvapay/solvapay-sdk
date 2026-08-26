@@ -43,16 +43,9 @@ import { useCopy } from '../hooks/useCopy'
 import { usePlan } from '../hooks/usePlan'
 import { usePlanSelection } from '../components/PlanSelectionContext'
 import { SolvaPayContext } from '../SolvaPayProvider'
-import {
-  MissingProductRefError,
-  MissingProviderError,
-} from '../utils/errors'
+import { MissingProductRefError, MissingProviderError } from '../utils/errors'
 import { getMinorUnitsPerMajor } from '../utils/format'
-import type {
-  ActivationResult,
-  Plan,
-  UseTopupAmountSelectorReturn,
-} from '../types'
+import type { ActivationResult, Plan, UseTopupAmountSelectorReturn } from '../types'
 
 export type ActivationFlowStep =
   | 'summary'
@@ -154,6 +147,8 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
   // syncing to. Lint suppression below rather than refactor around it.
   useEffect(() => {
     if (state !== 'activated') return
+    // The user is mid top-up; activation state must not rewind their step.
+    if (step === 'selectAmount' || step === 'topupPayment') return
     const isUsagePlan = plan?.type === 'usage-based'
     if (isUsagePlan && (credits === null || balanceLoading)) {
       return
@@ -172,7 +167,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
         onSuccess?.(activationResult)
       }
     }
-  }, [state, result, onSuccess, credits, plan, balanceLoading])
+  }, [state, result, onSuccess, credits, plan, balanceLoading, step])
 
   useEffect(() => {
     if (state === 'topup_required' && (step === 'summary' || step === 'activating')) {
@@ -300,12 +295,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
   const Comp = asChild ? Slot : 'div'
   return (
     <ActivationFlowContext.Provider value={ctx}>
-      <Comp
-        ref={forwardedRef}
-        data-solvapay-activation-flow=""
-        data-state={step}
-        {...rest}
-      >
+      <Comp ref={forwardedRef} data-solvapay-activation-flow="" data-state={step} {...rest}>
         {children}
       </Comp>
     </ActivationFlowContext.Provider>
@@ -337,10 +327,7 @@ type ActivateButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 }
 
 const ActivateButton = forwardRef<HTMLButtonElement, ActivateButtonProps>(
-  function ActivationFlowActivateButton(
-    { asChild, onClick, children, ...rest },
-    forwardedRef,
-  ) {
+  function ActivationFlowActivateButton({ asChild, onClick, children, ...rest }, forwardedRef) {
     const ctx = useFlowCtx('ActivateButton')
     const copy = useCopy()
     if (!matchStep(ctx.step, ['summary', 'activating'])) return null
@@ -405,10 +392,7 @@ type ContinueButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 }
 
 const ContinueButton = forwardRef<HTMLButtonElement, ContinueButtonProps>(
-  function ActivationFlowContinueButton(
-    { asChild, onClick, children, ...rest },
-    forwardedRef,
-  ) {
+  function ActivationFlowContinueButton({ asChild, onClick, children, ...rest }, forwardedRef) {
     const ctx = useFlowCtx('ContinueButton')
     const copy = useCopy()
     if (ctx.step !== 'selectAmount') return null
@@ -492,12 +476,7 @@ const ErrorSlot = forwardRef<HTMLDivElement, SlotProps>(function ActivationFlowE
   if (ctx.step !== 'error') return null
   const Comp = asChild ? Slot : 'div'
   return (
-    <Comp
-      ref={forwardedRef}
-      role="alert"
-      data-solvapay-activation-flow-error=""
-      {...rest}
-    >
+    <Comp ref={forwardedRef} role="alert" data-solvapay-activation-flow-error="" {...rest}>
       {children ?? ctx.error}
     </Comp>
   )
