@@ -7,7 +7,7 @@
  *
  * Node (`@solvapay/server`) and vitest setup call {@link installNativeCoreApi}.
  * Browser installs via eager `@solvapay/core/browser-wasm`. When uninstalled,
- * sync APIs throw — there is no portable TS fallback.
+ * sync APIs consult a portable TS fallback registry and throw only when none is registered.
  */
 
 import { SolvaPayError } from './solvapay-error'
@@ -80,10 +80,17 @@ type NativeCoreApi = {
   callNativeSync: (fn: NativeCoreSyncMethod, argsJson: string) => unknown
 }
 
+type CoreSyncFallback = (args: unknown) => unknown
+
 let installed: NativeCoreApi | null = null
+let fallbacks: Partial<Record<NativeCoreSyncMethod, CoreSyncFallback>> | null = null
 
 export function installNativeCoreApi(api: NativeCoreApi): void {
   installed = api
+}
+
+export function installCoreSyncFallbacks(f: Partial<Record<NativeCoreSyncMethod, CoreSyncFallback>>): void {
+  fallbacks = f
 }
 
 /** @internal test helper */
@@ -93,12 +100,14 @@ export function resetNativeCoreApiForTests(): void {
 
 /**
  * Dispatches a sync core/helper method to the installed binding.
- * Throws when the API is not installed (Rust-only after Step 52 — no portable
- * TS fallback).
+ * When no binding is installed, consults the portable TS fallback registry.
+ * Throws naming the method when neither exists.
  */
 export function dispatchSync<T>(fn: NativeCoreSyncMethod, args: unknown): T {
   if (installed === null) {
-    throw new SolvaPayError('core sync API not installed')
+    const fallback = fallbacks?.[fn]
+    if (fallback !== undefined) return fallback(args) as T
+    throw new SolvaPayError(`core sync API not installed (no portable fallback for ${fn})`)
   }
   return installed.callNativeSync(fn, JSON.stringify(args)) as T
 }

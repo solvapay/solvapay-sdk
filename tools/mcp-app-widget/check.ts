@@ -33,6 +33,15 @@ export function checkVendoredWidget({ root }: { root: string }): string[] {
   if (!html.includes('solvapay://bootstrap.json')) {
     problems.push('Canonical widget is missing solvapay://bootstrap.json')
   }
+  if (!html.includes('no portable fallback for')) {
+    problems.push('Canonical widget is missing portable core fallback dispatch')
+  }
+  // Unique to `portable-fallbacks.ts`. The dispatch throw string is not enough —
+  // Vite can tree-shake the side-effect-only `import '@solvapay/core/portable'`
+  // and still keep `dispatchSync`'s error message, which blanks the MCP Jam iframe.
+  if (!html.includes('EIN (Employer Identification Number)')) {
+    problems.push('Canonical widget is missing portable core fallback implementations')
+  }
   if (canonical.length < MIN_BUNDLE_BYTES) {
     problems.push(
       `Canonical widget is ${canonical.length} bytes; expected a Vite bundle over ${MIN_BUNDLE_BYTES} bytes`,

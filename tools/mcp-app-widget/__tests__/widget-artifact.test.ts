@@ -27,6 +27,44 @@ describe('canonical MCP App widget artifact', () => {
     expect(html).toContain('solvapay://bootstrap.json')
   })
 
+  it('includes portable fallback implementations, not only the dispatch throw', () => {
+    const html = readFileSync(canonicalPath, 'utf8')
+    expect(html).toContain('EIN (Employer Identification Number)')
+  })
+
+  it('registers a portable fallback for every dispatch method the bundle references', () => {
+    const html = readFileSync(canonicalPath, 'utf8')
+    const dispatchSrc = readFileSync(
+      joinRel(REPO_ROOT, 'sdks/typescript/core/src/native-dispatch.ts'),
+      'utf8',
+    )
+    const portableSrc = readFileSync(
+      joinRel(REPO_ROOT, 'sdks/typescript/core/src/portable-fallbacks.ts'),
+      'utf8',
+    )
+    const union = dispatchSrc.slice(
+      dispatchSrc.indexOf('export type NativeCoreSyncMethod'),
+      dispatchSrc.indexOf('type NativeCoreApi'),
+    )
+    const methods = [...union.matchAll(/\| '([A-Za-z0-9_]+)'/g)].map(match => match[1])
+    const fallbackBlock = portableSrc.slice(
+      portableSrc.indexOf('installCoreSyncFallbacks({'),
+      portableSrc.lastIndexOf('})'),
+    )
+    const fallbacks = new Set(
+      [...fallbackBlock.matchAll(/^\s{2}([A-Za-z0-9_]+):/gm)].map(match => match[1]),
+    )
+    const referenced = methods.filter(method => {
+      return (
+        html.includes(`"${method}"`) ||
+        html.includes(`'${method}'`) ||
+        html.includes('`' + method + '`')
+      )
+    })
+    expect(referenced.length).toBeGreaterThan(0)
+    expect(referenced.filter(method => !fallbacks.has(method))).toEqual([])
+  })
+
   it('vendors a byte-identical copy into every SDK', () => {
     const expected = sha256(readFileSync(canonicalPath))
     for (const rel of sdkCopies) {

@@ -70,6 +70,7 @@ export {
   getSellerTaxIdentifierDisplayLabelByType,
   resolveSellerIdentityDisplay,
   installNativeCoreApi,
+  resetNativeCoreApiForTests,
 } from './native-core'
 
 export type { BillingCycle, Charge } from './types/boundary.generated'

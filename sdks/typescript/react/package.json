@@ -10,7 +10,10 @@
     "dist/mcp/styles.css",
     "*.css",
     "dist/index.js",
-    "dist/index.cjs"
+    "dist/index.cjs",
+    "dist/mcp/index.js",
+    "dist/mcp/index.cjs",
+    "src/mcp/index.ts"
   ],
   "exports": {
     ".": {
@@ -76,8 +79,8 @@
   "scripts": {
     "build": "tsup --config tsup.config.ts && cp src/styles.css dist/styles.css && mkdir -p dist/mcp && cp src/mcp/styles.css dist/mcp/styles.css",
     "dev": "tsup --config tsup.config.ts --watch --onSuccess \"cp src/styles.css dist/styles.css && mkdir -p dist/mcp && cp src/mcp/styles.css dist/mcp/styles.css\"",
-    "test": "vitest run",
-    "test:unit": "vitest run",
+    "test": "vitest run && vitest run --config vitest.no-binding.config.ts",
+    "test:unit": "vitest run && vitest run --config vitest.no-binding.config.ts",
     "test:types": "tsc --noEmit -p __tests__/tsconfig.types.json",
     "test:watch": "vitest",
     "lint": "eslint src --config ../../../eslint.config.react.mjs",

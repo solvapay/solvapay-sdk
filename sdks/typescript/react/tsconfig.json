@@ -7,7 +7,8 @@
     "paths": {
       "@solvapay/mcp-core": ["../mcp-core/src"],
       "@solvapay/server": ["../server/src"],
-      "@solvapay/core": ["../core/src"]
+      "@solvapay/core": ["../core/src"],
+      "@solvapay/core/portable": ["../core/src/portable-fallbacks"]
     }
   },
   "include": ["src"],

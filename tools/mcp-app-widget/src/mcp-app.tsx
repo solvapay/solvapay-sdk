@@ -16,9 +16,12 @@ import {
   applyHostStyleVariables,
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps'
+import { installPortableCoreFallbacks } from '@solvapay/core/portable'
 import { McpApp } from '@solvapay/react/mcp'
 import '@solvapay/react/styles.css'
 import '@solvapay/react/mcp/styles.css'
+
+installPortableCoreFallbacks()
 
 function applyContext(ctx: McpUiHostContext | undefined) {
   if (!ctx) return

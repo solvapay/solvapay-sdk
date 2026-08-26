@@ -43,6 +43,7 @@ import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { AppHeader } from './views/AppHeader'
 import { McpHostInfoProvider } from './hooks/useHostInfo'
+import { installPortableCoreFallbacks } from '@solvapay/core/portable'
 
 /**
  * Minimal host-context shape `<McpApp>` reads. Kept loose so the real
@@ -198,6 +199,10 @@ export function McpApp({
   onClose,
   messageOnSuccess,
 }: McpAppProps) {
+  // Must run inside this function body. `@solvapay/react` lists limited
+  // `sideEffects`, so Vite drops a top-level `import '@solvapay/core/portable'`
+  // from the mcp barrel and the iframe first-paints without fallbacks.
+  installPortableCoreFallbacks()
   const cx = resolveMcpClassNames(classNames)
   const [bootstrap, setBootstrap] = useState<McpBootstrap | null>(null)
   const [initError, setInitError] = useState<string | null>(null)

@@ -4,19 +4,32 @@ import { sdkDir, tsPackageDir } from '../../../tools/shared/paths.js'
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@solvapay/core': resolve(__dirname, './src'),
+    alias: [
+      {
+        find: /^@solvapay\/core\/portable$/,
+        replacement: resolve(__dirname, './src/portable-fallbacks.ts'),
+      },
+      { find: /^@solvapay\/core$/, replacement: resolve(__dirname, './src') },
       // Allow vitest.setup to load the Node native dispatcher without a
       // published dependency edge from core → server (that cycle breaks turbo).
-      '@solvapay/server': resolve(tsPackageDir('server'), 'src', 'index.ts'),
-      '@solvapay/server-native': sdkDir('node-native'),
-      '@solvapay/react/credit-estimation': resolve(
-        tsPackageDir('react'),
-        'src',
-        'utils',
-        'credit-estimation.ts',
-      ),
-    },
+      {
+        find: /^@solvapay\/server\/edge$/,
+        replacement: resolve(tsPackageDir('server'), 'src', 'edge.ts'),
+      },
+      {
+        find: /^@solvapay\/server$/,
+        replacement: resolve(tsPackageDir('server'), 'src', 'index.ts'),
+      },
+      {
+        find: '@solvapay/mcp-core',
+        replacement: resolve(tsPackageDir('mcp-core'), 'src', 'index.ts'),
+      },
+      { find: '@solvapay/server-native', replacement: sdkDir('node-native') },
+      {
+        find: '@solvapay/react/credit-estimation',
+        replacement: resolve(tsPackageDir('react'), 'src', 'utils', 'credit-estimation.ts'),
+      },
+    ],
   },
   test: {
     environment: 'node',
