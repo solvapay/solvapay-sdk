@@ -139,10 +139,43 @@ export function includedUnits(
   priced: PricedLike | null | undefined,
   meter?: string,
 ): number | null {
+  return firstLimit(priced, meter)?.cap ?? null
+}
+
+/**
+ * The meter a plan counts against: the per-unit charge's meter, else
+ * the first limit option's meter. `null` when neither names one.
+ */
+export function meterName(priced: PricedLike | null | undefined): string | null {
+  const fromCharge = perUnitCharge(priced)?.meter
+  if (fromCharge) return fromCharge
+  const fromLimit = firstLimit(priced)?.meter
+  return fromLimit ?? null
+}
+
+/**
+ * True when the plan counts usage: a per-unit charge, a tier, or a limit.
+ * Distinct from "prices per unit" — a free allowance has a limit and no
+ * rate, and still needs a usage counter.
+ */
+export function countsUsage(priced: PricedLike | null | undefined): boolean {
+  if (perUnitCharge(priced) != null) return true
+  if (includedUnits(priced) != null) return true
+  return optionsOf(priced).some(option => option.kind === 'tier')
+}
+
+function firstLimit(
+  priced: PricedLike | null | undefined,
+  meter?: string,
+): { cap: number; meter: string | null } | null {
   for (const option of optionsOf(priced)) {
     if (option.kind !== 'limit') continue
     if (meter && option.meter !== meter) continue
-    if (typeof option.cap === 'number') return option.cap
+    if (typeof option.cap !== 'number') continue
+    return {
+      cap: option.cap,
+      meter: typeof option.meter === 'string' && option.meter.length > 0 ? option.meter : null,
+    }
   }
   return null
 }

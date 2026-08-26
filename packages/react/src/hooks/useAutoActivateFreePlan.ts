@@ -93,10 +93,16 @@ export function useAutoActivateFreePlan(
   const { plans } = usePlans({ productRef })
   const { activate, error: activationError } = useActivation()
 
-  const freePlan = useMemo(
-    () => plans.find(p => p.requiresPayment === false && (p.freeUnits ?? 0) > 0),
-    [plans],
-  )
+  const freePlan = useMemo(() => {
+    const free = plans.filter(p => p.requiresPayment === false)
+    if (free.length === 0) return undefined
+    if (free.length === 1) return free[0]
+    return (
+      free.find(p => p.options?.some(option => option.kind === 'autoAssigned')) ??
+      free.find(p => p.default === true) ??
+      free[0]
+    )
+  }, [plans])
 
   // One-shot guard so a failed `activate` doesn't retry on every
   // render. Reset when `${customerRef}:${productRef}` changes —

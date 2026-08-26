@@ -1,3 +1,4 @@
+import { countsUsage } from '@solvapay/core'
 import type { SolvaPay } from '../factory'
 import type { TrackUsageResponse } from '../types'
 import type { ErrorResult } from './types'
@@ -62,8 +63,9 @@ export async function getUsageCore(
     ...(usage?.periodEnd ? { periodEnd: usage.periodEnd } : {}),
   }
 
-  const isMetered = activePurchase.planSnapshot?.isMetered === true
-  if (!isMetered || !activePurchase.productRef) {
+  const usageCounted =
+    countsUsage(activePurchase.planSnapshot) || activePurchase.planSnapshot?.isMetered === true
+  if (!usageCounted || !activePurchase.productRef) {
     return {
       meterRef: null,
       total: null,

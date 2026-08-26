@@ -41,11 +41,7 @@ export interface PurchaseCheckResult {
     productRef?: string
     status?: string
     startDate?: string
-    planSnapshot?: {
-      meterId?: string
-      limit?: number
-      freeUnits?: number
-    }
+    planSnapshot?: Record<string, unknown>
     usage?: {
       used?: number
       overageUnits?: number
