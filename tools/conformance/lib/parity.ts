@@ -96,6 +96,7 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'getSellerTaxIdentifierDisplayLabelByType',
   'getSolvaPayConfig',
   'installNativeCoreApi',
+  'resetNativeCoreApiForTests',
   'isRenewalError',
   'Env',
   'version',
