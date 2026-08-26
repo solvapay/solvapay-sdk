@@ -173,7 +173,7 @@ export const enCopy: SolvaPayCopy = {
     activateButton: 'Activate',
     activatingLabel: 'Activating...',
     topupHeading: 'Add credits',
-    topupSubheading: 'Top up your credits to activate this plan.',
+    topupSubheading: 'Top up your credits to start using this plan.',
     continueToPayment: 'Continue to payment',
     changeAmountButton: 'Change amount',
     retryingHeading: 'Activating your plan...',
