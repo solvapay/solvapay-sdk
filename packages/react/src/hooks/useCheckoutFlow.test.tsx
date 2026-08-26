@@ -7,8 +7,9 @@
  *
  * Coverage:
  *   - stepped traversal (plan → continue → payment → success)
- *   - PAYG branch (plan → continue [activate_plan] → amount →
+ *   - PAYG empty wallet (plan → continue [activate_plan] → amount →
  *     continue → payment → success)
+ *   - PAYG funded wallet (plan → continue [activate_plan] → success)
  *   - lifecycle callbacks fire at the right transition points
  *     (selection, success, error)
  *   - retry / reset semantics
@@ -88,7 +89,11 @@ function makeTransport(
   } as any
 }
 
-function buildCtx(config: SolvaPayConfig, purchases: PurchaseInfo[] = []): SolvaPayContextValue {
+function buildCtx(
+  config: SolvaPayConfig,
+  purchases: PurchaseInfo[] = [],
+  credits = 0,
+): SolvaPayContextValue {
   const active = purchases.find(p => p.status === 'active') ?? null
   return {
     purchase: {
@@ -114,11 +119,11 @@ function buildCtx(config: SolvaPayConfig, purchases: PurchaseInfo[] = []): Solva
     activatePlan: vi.fn().mockResolvedValue({ status: 'activated' }),
     balance: {
       loading: false,
-      credits: 0,
+      credits,
       displayCurrency: 'USD',
       creditsPerMinorUnit: 100,
       displayExchangeRate: 1,
-      refetch: vi.fn(),
+      refetch: vi.fn().mockResolvedValue(credits),
       adjustBalance: vi.fn(),
     },
     _config: config,
@@ -148,6 +153,7 @@ interface WrapperOptions {
    * `topupCurrencyReady === false` skeleton path).
    */
   merchant?: Merchant | null
+  credits?: number
 }
 
 function makeWrapper(opts: WrapperOptions = {}): {
@@ -156,7 +162,7 @@ function makeWrapper(opts: WrapperOptions = {}): {
 } {
   const transport = opts.transport ?? makeTransport()
   const config: SolvaPayConfig = { transport }
-  const ctx = buildCtx(config, opts.purchases ?? [])
+  const ctx = buildCtx(config, opts.purchases ?? [], opts.credits ?? 0)
   plansCache.set(productRef, {
     plans: opts.plans ?? [paygPlan, proPlan],
     timestamp: Date.now(),
@@ -316,6 +322,37 @@ describe('useCheckoutFlow — PAYG branch', () => {
     expect(transport.createTopupPayment).not.toHaveBeenCalled()
   })
 
+  it('advance() from plan → success when the wallet is already funded', async () => {
+    const activate = vi.fn().mockResolvedValue({ status: 'activated' })
+    const { Wrapper, transport } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+      credits: 500,
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+
+    await act(async () => {
+      await result.current.advance()
+    })
+
+    expect(activate).toHaveBeenCalledWith({
+      productRef,
+      planRef: 'pln_payg',
+    })
+    expect(result.current.step).toBe('success')
+    expect(result.current.successMeta).toMatchObject({
+      branch: 'payg',
+      plan: expect.objectContaining({ reference: 'pln_payg' }),
+    })
+    expect(result.current.successMeta).not.toHaveProperty('amountMinor')
+    expect(transport.createTopupPayment).not.toHaveBeenCalled()
+  })
+
   it('skips activatePlan when the selected PAYG plan is already the customer\'s current plan', async () => {
     const activate = vi.fn().mockResolvedValue({ status: 'activated' })
     const purchases: PurchaseInfo[] = [
@@ -357,6 +394,45 @@ describe('useCheckoutFlow — PAYG branch', () => {
     expect(result.current.step).toBe('amount')
     expect(result.current.status).toBe('idle')
     expect(result.current.error).toBeNull()
+  })
+
+  it('skips the amount picker when the current PAYG plan already has credits', async () => {
+    const activate = vi.fn().mockResolvedValue({ status: 'activated' })
+    const purchases: PurchaseInfo[] = [
+      {
+        reference: 'prc_payg_active',
+        customerRef: 'cus_payg',
+        productName: 'Widget API',
+        productRef,
+        status: 'active',
+        startDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        currency: 'USD',
+        amount: 0,
+        isRecurring: false,
+        planSnapshot: { reference: 'pln_payg', currency: 'USD', price: 0, isMetered: true },
+      },
+    ]
+    const { Wrapper, transport } = makeWrapper({
+      transport: makeTransport({ activatePlan: activate }),
+      purchases,
+      credits: 500,
+    })
+    const { result } = renderHook(() => useCheckoutFlow({ productRef }), {
+      wrapper: Wrapper,
+    })
+    act(() => {
+      result.current.selectPlan('pln_payg')
+    })
+    await waitFor(() => expect(result.current.selectedPlanRef).toBe('pln_payg'))
+
+    await act(async () => {
+      await result.current.advance()
+    })
+
+    expect(activate).not.toHaveBeenCalled()
+    expect(result.current.step).toBe('success')
+    expect(transport.createTopupPayment).not.toHaveBeenCalled()
   })
 
   it('flips status to "activating" while the plan→amount transition is in flight', async () => {
@@ -471,10 +547,9 @@ describe('useCheckoutFlow — PAYG branch', () => {
     expect(onPurchaseSuccess).toHaveBeenCalledWith(expect.objectContaining({ branch: 'payg' }))
   })
 
-  it('re-activates the plan on PAYG success so the purchase materializes after top-up (topup-first)', async () => {
-    // Topup-first: the plan-step activate returns `topup_required` (no
-    // purchase). The active PAYG purchase must be created AFTER the top-up
-    // lands — so `activatePlan` is called a second time on success.
+  it('re-activates the plan on PAYG success as a self-heal after top-up', async () => {
+    // Activate-then-top-up: the plan-step activate already created the
+    // purchase. Re-activate after credits land is an `already_active` no-op.
     const activate = vi.fn().mockResolvedValue({ status: 'activated' })
     const { Wrapper } = makeWrapper({
       transport: makeTransport({ activatePlan: activate }),

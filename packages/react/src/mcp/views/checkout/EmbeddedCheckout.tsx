@@ -171,7 +171,7 @@ function McpCheckoutBody({
     // Continue handler below — not on `selectPlan` — so a stray
     // selection doesn't burn a host emit before the user opts in.
     onPurchaseSuccess: meta => {
-      if (meta.branch === 'payg') {
+      if (meta.branch === 'payg' && meta.amountMinor != null && meta.currency != null) {
         void bridge.notifyModelContext({
           text: `Activated ${meta.plan.name ?? 'plan'} with ${formatPrice(
             meta.amountMinor,

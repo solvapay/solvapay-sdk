@@ -22,7 +22,17 @@ const usagePlan: Plan = {
 
 type ActivateCall = { productRef: string; planRef: string }
 
-function makeFakeFetch(responses: Array<{ status: string } & Record<string, unknown>>) {
+function providerConfig(fetchFn: ReturnType<typeof vi.fn>) {
+  return {
+    fetch: fetchFn as unknown as typeof fetch,
+    initial: { customerRef: 'cus_test' },
+  }
+}
+
+function makeFakeFetch(
+  responses: Array<{ status: string } & Record<string, unknown>>,
+  credits = 0,
+) {
   const activateCalls: ActivateCall[] = []
   let activateIndex = 0
   const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -39,6 +49,12 @@ function makeFakeFetch(responses: Array<{ status: string } & Record<string, unkn
     }
     if (url.includes('/api/check-purchase')) {
       return new Response(JSON.stringify({ purchases: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    if (url.includes('/api/customer-balance')) {
+      return new Response(JSON.stringify({ credits }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -60,13 +76,14 @@ beforeEach(() => {
 })
 
 describe('ActivationFlow (default-tree shim) — state machine', () => {
-  it('summary → activating → activated', async () => {
-    const { fetchFn, activateCalls } = makeFakeFetch([
-      { status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' },
-    ])
+  it('summary → activating → activated when the wallet is funded', async () => {
+    const { fetchFn, activateCalls } = makeFakeFetch(
+      [{ status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' }],
+      500,
+    )
     const onSuccess = vi.fn<(r: ActivationResult) => void>()
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" onSuccess={onSuccess} />
       </SolvaPayProvider>,
     )
@@ -80,12 +97,32 @@ describe('ActivationFlow (default-tree shim) — state machine', () => {
     expect(onSuccess.mock.calls[0][0].kind).toBe('activated')
   })
 
+  it('summary → activating → activated + zero balance → selectAmount', async () => {
+    const { fetchFn } = makeFakeFetch(
+      [{ status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' }],
+      0,
+    )
+    const onSuccess = vi.fn<(r: ActivationResult) => void>()
+    render(
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
+        <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" onSuccess={onSuccess} />
+      </SolvaPayProvider>,
+    )
+
+    await screen.findByText('Confirm your plan')
+    fireEvent.click(screen.getByRole('button', { name: 'Activate' }))
+
+    await waitFor(() => expect(screen.getByText('Add credits')).toBeTruthy())
+    expect(screen.getByText('Top up your credits to start using this plan.')).toBeTruthy()
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
   it('summary → activating → topup_required → selectAmount', async () => {
     const { fetchFn } = makeFakeFetch([
       { status: 'topup_required', productRef: 'prd_usage', planRef: 'pln_usage' },
     ])
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" />
       </SolvaPayProvider>,
     )
@@ -94,7 +131,7 @@ describe('ActivationFlow (default-tree shim) — state machine', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Activate' }))
 
     await waitFor(() => expect(screen.getByText('Add credits')).toBeTruthy())
-    expect(screen.getByText('Top up your credits to activate this plan.')).toBeTruthy()
+    expect(screen.getByText('Top up your credits to start using this plan.')).toBeTruthy()
     expect(screen.getByText('Continue to payment')).toBeTruthy()
   })
 
@@ -103,7 +140,7 @@ describe('ActivationFlow (default-tree shim) — state machine', () => {
       { status: 'invalid', message: 'Invalid plan config' },
     ])
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" />
       </SolvaPayProvider>,
     )
@@ -122,7 +159,7 @@ describe('ActivationFlow (default-tree shim) — state machine', () => {
     ])
     const onBack = vi.fn()
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ShimActivationFlow productRef="prd_usage" planRef="pln_usage" onBack={onBack} />
       </SolvaPayProvider>,
     )
@@ -139,7 +176,7 @@ describe('ActivationFlow primitive', () => {
       { status: 'activated', productRef: 'prd_usage', planRef: 'pln_usage' },
     ])
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ActivationFlow.Root
           productRef="prd_usage"
           planRef="pln_usage"
@@ -172,7 +209,7 @@ describe('ActivationFlow primitive', () => {
       )
     }
     render(
-      <SolvaPayProvider config={{ fetch: fetchFn as unknown as typeof fetch }}>
+      <SolvaPayProvider config={providerConfig(fetchFn)}>
         <ActivationFlow.Root productRef="prd_usage" planRef="pln_usage">
           <Probe />
         </ActivationFlow.Root>
