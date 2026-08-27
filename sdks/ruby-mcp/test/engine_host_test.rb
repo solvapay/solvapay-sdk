@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "uri"
 require "minitest/autorun"
 require "solvapay"
 require "solvapay/mcp"

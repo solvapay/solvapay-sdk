@@ -205,22 +205,8 @@ pub fn trial_days(priced: Option<&Value>) -> Option<i64> {
     section = "plans",
     emit_order = 48
 )]
-#[allow(clippy::cast_possible_truncation)]
 pub fn included_units(priced: Option<&Value>, meter: Option<&str>) -> Option<i64> {
-    for option in options_of(priced) {
-        if option.get("kind").and_then(Value::as_str) != Some("limit") {
-            continue;
-        }
-        if let Some(meter_name) = meter.filter(|name| !name.is_empty()) {
-            if option.get("meter").and_then(Value::as_str) != Some(meter_name) {
-                continue;
-            }
-        }
-        if let Some(cap) = option.get("cap").and_then(Value::as_f64) {
-            return Some(cap as i64);
-        }
-    }
-    None
+    first_limit(priced, meter).map(|limit| limit.cap)
 }
 
 /// The meter a plan counts against: per-unit charge meter, else first limit meter.
@@ -231,22 +217,13 @@ pub fn included_units(priced: Option<&Value>, meter: Option<&str>) -> Option<i64
     emit_order = 51
 )]
 pub fn meter_name(priced: Option<&Value>) -> Option<String> {
-    if let Some(meter) = per_unit_charge(priced, None).and_then(|charge| charge.meter) {
+    if let Some(meter) = per_unit_charge(priced, None)
+        .and_then(|charge| charge.meter)
+        .filter(|name| !name.is_empty())
+    {
         return Some(meter);
     }
-    for option in options_of(priced) {
-        if option.get("kind").and_then(Value::as_str) != Some("limit") {
-            continue;
-        }
-        if let Some(meter) = option
-            .get("meter")
-            .and_then(Value::as_str)
-            .filter(|name| !name.is_empty())
-        {
-            return Some(meter.to_owned());
-        }
-    }
-    None
+    first_limit(priced, None).and_then(|limit| limit.meter)
 }
 
 /// True when the plan counts usage: a per-unit charge, a limit, or a tier.
@@ -319,6 +296,39 @@ pub fn credits_per_unit_from_balance(
         .and_then(Value::as_f64);
     let credits = pegged_credits_per_unit(charge.amount_minor, credits_per_minor_unit, rate);
     (credits > 0).then_some(credits)
+}
+
+/// First `kind: limit` option, optionally scoped to a meter.
+struct LimitCap {
+    cap: i64,
+    meter: Option<String>,
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn first_limit(priced: Option<&Value>, meter: Option<&str>) -> Option<LimitCap> {
+    for option in options_of(priced) {
+        if option.get("kind").and_then(Value::as_str) != Some("limit") {
+            continue;
+        }
+        if let Some(meter_name) = meter.filter(|name| !name.is_empty()) {
+            if option.get("meter").and_then(Value::as_str) != Some(meter_name) {
+                continue;
+            }
+        }
+        let Some(cap) = option.get("cap").and_then(Value::as_f64) else {
+            continue;
+        };
+        let meter = option
+            .get("meter")
+            .and_then(Value::as_str)
+            .filter(|name| !name.is_empty())
+            .map(str::to_owned);
+        return Some(LimitCap {
+            cap: cap as i64,
+            meter,
+        });
+    }
+    None
 }
 
 #[cfg(test)]
@@ -498,13 +508,42 @@ mod tests {
     }
 
     #[test]
-    fn counts_usage_from_limit_without_per_unit_rate() {
+    fn meter_name_from_per_unit_charge() {
+        assert_eq!(meter_name(Some(&payg_plan())).as_deref(), Some("requests"));
+    }
+
+    #[test]
+    fn meter_name_falls_back_to_limit_without_per_unit() {
         let priced = json!({
-            "options": [{ "kind": "limit", "cap": 3, "scope": "billing_period", "meter": "requests" }]
+            "options": [
+                { "kind": "billingCycle", "interval": "month" },
+                { "kind": "charge", "per": "flat", "amountMinor": 0, "currency": "usd" },
+                { "kind": "limit", "cap": 3, "scope": "billing_period", "meter": "tokens", "onExceed": "block" }
+            ]
         });
-        assert!(counts_usage(Some(&priced)));
+        assert!(per_unit_charge(Some(&priced), None).is_none());
+        assert_eq!(meter_name(Some(&priced)).as_deref(), Some("tokens"));
+    }
+
+    #[test]
+    fn meter_name_null_when_no_option_names_a_meter() {
+        assert_eq!(meter_name(Some(&pro_plan())), None);
+    }
+
+    #[test]
+    fn counts_usage_from_per_unit_limit_or_tier() {
+        let allowance_only = json!({
+            "options": [
+                { "kind": "billingCycle", "interval": "month" },
+                { "kind": "charge", "per": "flat", "amountMinor": 0, "currency": "usd" },
+                { "kind": "limit", "cap": 3, "scope": "billing_period", "meter": "tokens", "onExceed": "block" }
+            ]
+        });
+        assert!(counts_usage(Some(&payg_plan())));
+        assert!(counts_usage(Some(&free_plan())));
+        assert!(counts_usage(Some(&allowance_only)));
         assert!(!counts_usage(Some(&pro_plan())));
-        assert_eq!(meter_name(Some(&priced)).as_deref(), Some("requests"));
+        assert_eq!(meter_name(Some(&allowance_only)).as_deref(), Some("tokens"));
     }
 
     #[test]
