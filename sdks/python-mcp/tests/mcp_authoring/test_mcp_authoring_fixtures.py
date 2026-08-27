@@ -389,6 +389,7 @@ async def test_replays_http_engine(rel: str) -> None:
         client = SolvaPayClient("sk_test_fixture", base)
         solvapay = create_solvapay(api_client=client)
         config = args.get("config") if isinstance(args.get("config"), dict) else {}
+        oauth_paths = config.get("oauthPaths") if isinstance(config.get("oauthPaths"), dict) else None
         app = create_mcp_engine_starlette(
             Server("http-engine"),
             solvapay=solvapay,
@@ -397,6 +398,7 @@ async def test_replays_http_engine(rel: str) -> None:
             api_base_url=base,
             resource_uri=str(config.get("resourceUri") or "ui://test/view.html"),
             mcp_path=str(config.get("mcpPath") or "/mcp"),
+            oauth_paths=oauth_paths,
         )
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="https://app.example.com") as http:

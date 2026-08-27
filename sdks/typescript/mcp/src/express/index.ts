@@ -113,8 +113,13 @@ export function createSolvaPayMcpExpress(
         const hasBody = method !== 'GET' && method !== 'HEAD'
         let body: BodyInit | undefined
         if (hasBody) {
-          if (typeof req.body === 'string' || req.body instanceof Uint8Array) {
+          if (typeof req.body === 'string') {
             body = req.body
+          } else if (req.body instanceof Uint8Array) {
+            // Copy so the type is `Uint8Array<ArrayBuffer>` (BodyInit), not ArrayBufferLike.
+            const bytes = new Uint8Array(req.body.byteLength)
+            bytes.set(req.body)
+            body = bytes
           } else if (req.body !== undefined) {
             body = JSON.stringify(req.body)
             if (!headers.has('content-type')) headers.set('content-type', 'application/json')

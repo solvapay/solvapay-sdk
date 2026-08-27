@@ -11,12 +11,12 @@ import (
 
 // RetryOptions configures [WithRetry]. Delay math is computed in the guest.
 type RetryOptions struct {
-	MaxRetries       uint32
-	InitialDelay     time.Duration
-	BackoffStrategy  string
-	ShouldRetry      func(err error, attempt uint32) bool
-	OnRetry          func(err error, attempt uint32, delay time.Duration)
-	Sleep            func(ctx context.Context, d time.Duration) error
+	MaxRetries      uint32
+	InitialDelay    time.Duration
+	BackoffStrategy string
+	ShouldRetry     func(err error, attempt uint32) bool
+	OnRetry         func(err error, attempt uint32, delay time.Duration)
+	Sleep           func(ctx context.Context, d time.Duration) error
 }
 
 func DefaultRetryOptions() RetryOptions {

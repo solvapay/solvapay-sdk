@@ -162,6 +162,9 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
             continue
           }
           const message = err instanceof Error ? err.message : String(err)
+          if (message.includes('registerPayable handler returned a raw value')) {
+            throw err instanceof Error ? err : new Error(message)
+          }
           event = {
             kind: 'handlerErr',
             message,

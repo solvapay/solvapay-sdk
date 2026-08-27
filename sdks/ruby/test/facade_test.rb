@@ -4,6 +4,153 @@ require "minitest/autorun"
 require "solvapay"
 
 class FacadeTest < Minitest::Test
+  def self.fake_gate_next(args)
+    event = args["event"].is_a?(Hash) ? args["event"] : {}
+    state = args["state"].is_a?(Hash) ? args["state"] : {}
+    kind = event["kind"]
+    case kind
+    when "start"
+      ref = event["customerRef"].to_s
+      product = event["product"]
+      usage = event["usageType"] || "requests"
+      started = event["startedMs"]
+      if ref.start_with?("cus_") || ref == "anonymous"
+        key = "#{ref}:#{product}:#{usage}"
+        {
+          "state" => {
+            "product" => product,
+            "meterName" => usage,
+            "originalCustomerRef" => ref,
+            "backendRef" => ref,
+            "startedMs" => started,
+            "limitsKey" => key,
+          },
+          "action" => { "kind" => "lookupCache", "key" => key },
+        }
+      else
+        {
+          "state" => {
+            "product" => product,
+            "meterName" => usage,
+            "originalCustomerRef" => ref,
+            "startedMs" => started,
+          },
+          "action" => { "kind" => "ensureCustomer", "customerRef" => ref },
+        }
+      end
+    when "customerResolved"
+      backend = event["backendRef"]
+      key = "#{backend}:#{state["product"]}:#{state["meterName"]}"
+      {
+        "state" => state.merge("backendRef" => backend, "limitsKey" => key),
+        "action" => { "kind" => "lookupCache", "key" => key },
+      }
+    when "cacheMiss"
+      {
+        "state" => state,
+        "action" => {
+          "kind" => "checkLimits",
+          "customerRef" => state["backendRef"],
+          "productRef" => state["product"],
+          "meterName" => state["meterName"],
+          "includeCheckoutSession" => true,
+          "cacheDeleteKey" => state["limitsKey"],
+        },
+      }
+    when "cacheHit"
+      remaining = event["remaining"] || 0
+      limits = event["limits"] || {}
+      backend = state["backendRef"]
+      if remaining.positive?
+        {
+          "state" => state,
+          "action" => {
+            "kind" => "done",
+            "outcome" => "allow",
+            "customerRef" => backend,
+            "product" => state["product"],
+            "meterName" => state["meterName"],
+            "limits" => limits,
+            "cache" => {
+              "op" => "updateRemaining",
+              "key" => state["limitsKey"],
+              "remaining" => [remaining - 1, 0].max,
+            },
+          },
+        }
+      else
+        {
+          "state" => state,
+          "action" => {
+            "kind" => "done",
+            "outcome" => "gate",
+            "customerRef" => backend,
+            "product" => state["product"],
+            "meterName" => state["meterName"],
+            "limits" => limits,
+            "gate" => {
+              "kind" => "payment_required",
+              "product" => state["product"],
+              "checkoutUrl" => "https://pay.example/x",
+              "message" => "Payment required",
+            },
+          },
+        }
+      end
+    when "limitsResult"
+      limits = event["limits"].is_a?(Hash) ? event["limits"] : {}
+      backend = state["backendRef"]
+      if limits["withinLimits"]
+        remaining = limits["remaining"] || 0
+        {
+          "state" => state,
+          "action" => {
+            "kind" => "done",
+            "outcome" => "allow",
+            "customerRef" => backend,
+            "product" => state["product"],
+            "meterName" => state["meterName"],
+            "limits" => limits,
+            "cache" => {
+              "op" => "set",
+              "key" => state["limitsKey"],
+              "remaining" => remaining.positive? ? [remaining - 1, 0].max : 0,
+              "limits" => limits,
+              "timestamp" => event["nowMs"],
+            },
+          },
+        }
+      else
+        {
+          "state" => state,
+          "action" => {
+            "kind" => "done",
+            "outcome" => "gate",
+            "customerRef" => backend,
+            "product" => state["product"],
+            "meterName" => state["meterName"],
+            "limits" => limits,
+            "gate" => {
+              "kind" => "payment_required",
+              "product" => state["product"],
+              "checkoutUrl" => limits["checkoutUrl"] || "https://pay.example/x",
+              "message" => "Payment required",
+            },
+            "track" => {
+              "customerRef" => backend,
+              "productRef" => state["product"],
+              "action" => state["meterName"],
+              "outcome" => "paywall",
+              "durationMs" => 0,
+            },
+          },
+        }
+      end
+    else
+      raise "unexpected gate_next event #{kind}"
+    end
+  end
+
   class StubClient
     attr_reader :checks, :gets, :creates, :tracked
 
@@ -75,6 +222,8 @@ class FacadeTest < Minitest::Test
         args["response"]["customerRef"] || args["fallback"]
       when "resolve_check_limits_params"
         { "productRef" => args["productRef"], "meterName" => args["usageType"] }
+      when "gate_next"
+        FacadeTest.fake_gate_next(args)
       else
         raise "unexpected decision #{name}"
       end

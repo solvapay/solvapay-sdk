@@ -321,7 +321,10 @@ class SolvaPay:
             action = raw_action
             kind = action.get("kind")
             if kind == "ensureCustomer":
-                backend = await self._ensure_customer(str(action.get("customerRef")), blocking=blocking)
+                backend = await self._ensure_customer(
+                    str(action.get("customerRef")),
+                    blocking=blocking,
+                )
                 event = {"kind": "customerResolved", "backendRef": backend, "nowMs": _now_ms()}
                 continue
             if kind == "lookupCache":
@@ -352,10 +355,11 @@ class SolvaPay:
                         "includeCheckoutSession": bool(action.get("includeCheckoutSession")),
                     }
                 )
+                client = self.get_api_client()
                 if blocking:
-                    limits_value = _unwrap_envelope(self.get_api_client().check_limits_blocking(args_json))
+                    limits_value = _unwrap_envelope(client.check_limits_blocking(args_json))
                 else:
-                    limits_value = _unwrap_envelope(await self.get_api_client().check_limits(args_json))
+                    limits_value = _unwrap_envelope(await client.check_limits(args_json))
                 if not isinstance(limits_value, dict):
                     limits_value = {}
                 event = {"kind": "limitsResult", "limits": limits_value, "nowMs": _now_ms()}

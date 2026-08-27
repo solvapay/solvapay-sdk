@@ -44,6 +44,7 @@ class McpOAuthBridgeOptions:
         require_auth: bool = True,
         auth_mode: McpAuthMode = "tools-call",
         oauth_client: object | None = None,
+        oauth_paths: Mapping[str, str] | None = None,
     ) -> None:
         self.public_base_url = public_base_url
         self.api_base_url = without_trailing_slash(api_base_url)
@@ -52,7 +53,7 @@ class McpOAuthBridgeOptions:
         self.require_auth = require_auth
         self.auth_mode = auth_mode
         self.oauth_client = oauth_client
-        self.paths = resolve_oauth_paths()
+        self.paths = resolve_oauth_paths(oauth_paths)
         native_call(
             "assert_valid_product_ref",
             {"productRef": product_ref, "context": "create_mcp_oauth_starlette"},
@@ -343,6 +344,7 @@ def create_mcp_oauth_starlette(
     require_auth: bool = True,
     auth_mode: McpAuthMode = "tools-call",
     oauth_client: object | None = None,
+    oauth_paths: Mapping[str, str] | None = None,
 ) -> ASGIApp:
     options = McpOAuthBridgeOptions(
         public_base_url=public_base_url,
@@ -352,5 +354,6 @@ def create_mcp_oauth_starlette(
         require_auth=require_auth,
         auth_mode=auth_mode,
         oauth_client=oauth_client,
+        oauth_paths=oauth_paths,
     )
     return mount_mcp_oauth_bridge(mcp_app, options)

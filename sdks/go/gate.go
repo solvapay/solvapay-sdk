@@ -209,9 +209,9 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 				return nil, err
 			}
 			event = map[string]any{
-				"kind":        "customerResolved",
+				"kind":       "customerResolved",
 				"backendRef": backendRef,
-				"nowMs":       time.Now().UnixMilli(),
+				"nowMs":      time.Now().UnixMilli(),
 			}
 		case "lookupCache":
 			key, _ := action["key"].(string)
@@ -242,10 +242,10 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 				c.gate.mu.Unlock()
 			}
 			raw, err := c.CheckLimits(ctx, map[string]any{
-				"customerRef":             action["customerRef"],
-				"productRef":              action["productRef"],
-				"meterName":               action["meterName"],
-				"includeCheckoutSession":  asBool(action["includeCheckoutSession"]),
+				"customerRef":            action["customerRef"],
+				"productRef":             action["productRef"],
+				"meterName":              action["meterName"],
+				"includeCheckoutSession": asBool(action["includeCheckoutSession"]),
 			})
 			if err != nil {
 				return nil, err
