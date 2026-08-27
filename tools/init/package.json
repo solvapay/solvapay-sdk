@@ -1,6 +1,6 @@
 {
   "name": "@solvapay/init",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "description": "Shared primitives for SolvaPay CLI tooling (browser auth, env writers, product picker, install runner). Consumed by `solvapay` and `create-solvapay`.",
   "type": "module",
   "main": "./dist/index.cjs",

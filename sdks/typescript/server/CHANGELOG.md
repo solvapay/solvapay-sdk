@@ -1,5 +1,63 @@
 # @solvapay/server changelog
 
+## 2.2.1
+
+### Patch Changes
+
+- a47adff: Free plans with an included allowance now count usage and label the meter correctly.
+
+  `@solvapay/core` adds `countsUsage` (per-unit charge, tier, or limit) and `meterName`
+  (per-unit charge's meter, else the first limit's meter). A free tier with a bare
+  limit is not priced per unit, but it still needs a usage counter and a meter noun —
+  `isMetered` on the wire was the wrong question for both.
+
+  `planMeterName` uses the new reader, so a recurring allowance no longer renders the
+  literal "units". `useAutoActivateFreePlan` no longer requires deprecated `freeUnits`
+  on the plan row. Usage surfaces (`useUsage`, `getUsageCore`, plan cards) derive
+  from `options[]` instead of trusting `planSnapshot.isMetered` alone.
+
+- Updated dependencies [a47adff]
+  - @solvapay/core@1.5.0
+
+## 2.2.0
+
+### Minor Changes
+
+- ec9c24c: `PurchaseInfo` is now the generated `SdkPurchaseResponse`, and usage caps come from the limits endpoint.
+
+  The purchase row the backend actually sends had drifted from the hand-written
+  `PurchaseInfo` interface. Both packages now derive it from the OpenAPI schema, so
+  the type matches the wire.
+
+  The type changes below are source-breaking for anyone constructing a `PurchaseInfo`.
+  `@solvapay/server` still ships them as a minor: it stays inside the 2.x line that the
+  in-flight SDK alignment targets, and no integrator is pinned to the old shape yet.
+
+  **Breaking — fields removed from the purchase row.** `planType` is gone from both
+  the purchase and its `planSnapshot`; derive it from `isRecurring` and
+  `planSnapshot.isMetered` instead. `planSnapshot` also drops `limit`, `meterRef`,
+  `meterId`, `freeUnits`, and `creditsPerUnit` — the backend never populated them on
+  this route. Read the per-unit credit rate off the plan (`usePlans`), and the cap
+  off `useLimits`.
+
+  **Breaking — fields now required.** `createdAt`, `customerRef`, `currency`,
+  `amount`, and `isRecurring` are required on a purchase; `currency` and `price` are
+  required on `planSnapshot`. Code that constructs a `PurchaseInfo` (test fixtures,
+  stub clients, custom transports) must supply them.
+
+  **Fixed — credit-gated plans no longer report as unlimited.** `useUsage().isUnlimited`
+  was `usage.total === null`, and once the cap left the plan snapshot that was true for
+  every metered plan — including pay-as-you-go, which is capped by the credit balance.
+  It now reflects the backend's unlimited signal from `useLimits`, so an unknown cap is
+  no longer mistaken for an absent one. `useUsage` sources `total`, `remaining`,
+  `percentUsed`, and `meterRef` from the same place, which costs one cached limits
+  request for metered plans. `getUsageCore` does the same server-side.
+
+### Patch Changes
+
+- Updated dependencies [e936ac0]
+  - @solvapay/core@1.4.0
+
 ## 2.1.0
 
 ### Minor Changes
