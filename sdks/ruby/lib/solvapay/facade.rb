@@ -90,7 +90,9 @@ module SolvaPay
               "includeCheckoutSession" => action["includeCheckoutSession"],
             },
           )
-          limits = {} #: Hash[String, untyped] unless limits.is_a?(Hash)
+          unless limits.is_a?(Hash)
+            limits = {} #: Hash[String, untyped]
+          end
           event = { "kind" => "limitsResult", "limits" => limits, "nowMs" => @clock.call }
         when "done"
           apply_gate_cache(action["cache"])

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TypedDict
 
 
@@ -71,7 +72,7 @@ def path_aware_protected_resource_path(mcp_path: str) -> str:
 
 
 def resolve_oauth_paths(
-    paths: OAuthBridgePaths | ResolvedOAuthPaths | None = None,
+    paths: OAuthBridgePaths | ResolvedOAuthPaths | Mapping[str, str] | None = None,
 ) -> ResolvedOAuthPaths:
     from solvapay_mcp.core import call
 

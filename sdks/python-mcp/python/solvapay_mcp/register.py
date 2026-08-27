@@ -196,7 +196,7 @@ def _install_dispatch(server: Server[object]) -> None:
                 tools.append(tool)
             return ListToolsResult(tools=tools)
         raw = await _result("tools/list", {})
-        tools: list[Tool] = []
+        listed_tools: list[Tool] = []
         descriptors: dict[str, dict[str, object]] = {}
         desc_raw = call(
             "mcpDescriptors",
@@ -216,8 +216,10 @@ def _install_dispatch(server: Server[object]) -> None:
         if isinstance(raw, dict) and isinstance(raw.get("tools"), list):
             for item in raw["tools"]:
                 if isinstance(item, dict):
-                    name = item.get("name")
-                    descriptor = descriptors.get(str(name)) if isinstance(name, str) else None
+                    tool_name = item.get("name")
+                    descriptor = (
+                        descriptors.get(str(tool_name)) if isinstance(tool_name, str) else None
+                    )
                     if descriptor is not None:
                         meta = descriptor.get("meta")
                         if isinstance(meta, dict):
@@ -229,9 +231,9 @@ def _install_dispatch(server: Server[object]) -> None:
                             ):
                                 meta = {**meta, "ui/resourceUri": ui["resourceUri"]}
                             item = {**item, "_meta": meta, "annotations": descriptor.get("annotations")}
-                    tools.append(Tool.model_validate(item))
+                    listed_tools.append(Tool.model_validate(item))
         payable_tools: dict[str, _PayableTool] = dict(_REGISTRIES.get(server) or {})
-        listed = {tool.name for tool in tools}
+        listed = {tool.name for tool in listed_tools}
         for name, payable_spec in payable_tools.items():
             if name in listed:
                 continue
@@ -240,8 +242,8 @@ def _install_dispatch(server: Server[object]) -> None:
                 tool.title = payable_spec.title
             if payable_spec.description is not None:
                 tool.description = payable_spec.description
-            tools.append(tool)
-        return ListToolsResult(tools=tools)
+            listed_tools.append(tool)
+        return ListToolsResult(tools=listed_tools)
 
     async def on_call_tool(_ctx: object, params: CallToolRequestParams) -> CallToolResult:
         spec = _REGISTRIES.get(server, {}).get(params.name)
