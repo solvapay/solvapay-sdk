@@ -302,7 +302,8 @@ class OauthCatchAll:
         self._config = _oauth_config(options)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not _is_oauth_path(str(scope.get("path") or ""), self._options):
+        path = str(scope.get("path") or "")
+        if scope["type"] != "http" or not _is_oauth_path(path, self._options):
             await self.app(scope, receive, send)
             return
         request = Request(scope, receive)

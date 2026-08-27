@@ -22,7 +22,7 @@ def call(op: str, args: Mapping[str, object] | None = None) -> object:
 
     payload = json.dumps({"op": op, "args": dict(args) if args else {}})
     raw = solvapay_call(payload)
-    if not isinstance(raw, (str, bytes, bytearray)):
+    if not isinstance(raw, str | bytes | bytearray):
         raise TypeError("solvapay_call did not return JSON text")
     envelope = json.loads(raw)
     if not isinstance(envelope, dict) or envelope.get("ok") is not True:

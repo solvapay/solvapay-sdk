@@ -70,15 +70,14 @@ module SolvaPay
               nil
             end
           end
-          event = if cached.is_a?(Hash)
-            {
+          event = { "kind" => "cacheMiss", "nowMs" => now }
+          if cached.is_a?(Hash)
+            event = {
               "kind" => "cacheHit",
               "remaining" => cached.fetch(:remaining),
               "limits" => cached[:limits],
               "nowMs" => now,
             }
-          else
-            { "kind" => "cacheMiss", "nowMs" => now }
           end
         when "checkLimits"
           if action["cacheDeleteKey"].is_a?(String)

@@ -206,7 +206,11 @@ def _install_dispatch(server: Server[object]) -> None:
                 "productRef": binding.product_ref,
                 **({"views": binding.views} if binding.views is not None else {}),
                 **({"csp": binding.csp} if binding.csp is not None else {}),
-                **({"apiBaseUrl": binding.api_base_url} if binding.api_base_url is not None else {}),
+                **(
+                    {"apiBaseUrl": binding.api_base_url}
+                    if binding.api_base_url is not None
+                    else {}
+                ),
             },
         )
         if isinstance(desc_raw, dict) and isinstance(desc_raw.get("tools"), list):
@@ -230,7 +234,11 @@ def _install_dispatch(server: Server[object]) -> None:
                                 and "ui/resourceUri" not in meta
                             ):
                                 meta = {**meta, "ui/resourceUri": ui["resourceUri"]}
-                            item = {**item, "_meta": meta, "annotations": descriptor.get("annotations")}
+                            item = {
+                                **item,
+                                "_meta": meta,
+                                "annotations": descriptor.get("annotations"),
+                            }
                     listed_tools.append(Tool.model_validate(item))
         payable_tools: dict[str, _PayableTool] = dict(_REGISTRIES.get(server) or {})
         listed = {tool.name for tool in listed_tools}
@@ -274,7 +282,11 @@ def _install_dispatch(server: Server[object]) -> None:
                     "publicBaseUrl": binding.public_base_url,
                     "productRef": binding.product_ref,
                     **({"csp": binding.csp} if binding.csp is not None else {}),
-                    **({"apiBaseUrl": binding.api_base_url} if binding.api_base_url is not None else {}),
+                    **(
+                    {"apiBaseUrl": binding.api_base_url}
+                    if binding.api_base_url is not None
+                    else {}
+                ),
                 },
             )
             if isinstance(desc_raw, dict) and isinstance(desc_raw.get("csp"), dict):
@@ -282,7 +294,8 @@ def _install_dispatch(server: Server[object]) -> None:
         if isinstance(raw, dict) and isinstance(raw.get("resources"), list):
             for item in raw["resources"]:
                 if isinstance(item, dict):
-                    if ui_meta is not None and item.get("uri") == (binding.resource_uri if binding else None):
+                    bound_uri = binding.resource_uri if binding else None
+                    if ui_meta is not None and item.get("uri") == bound_uri:
                         item = {**item, "_meta": ui_meta}
                     resources.append(Resource.model_validate(item))
         return ListResourcesResult(resources=resources)
@@ -294,7 +307,6 @@ def _install_dispatch(server: Server[object]) -> None:
         ReadResourceRequestParams,
         ReadResourceResult,
         TextContent,
-        TextResourceContents,
     )
 
     async def on_read_resource(

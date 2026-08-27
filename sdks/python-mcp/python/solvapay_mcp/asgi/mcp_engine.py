@@ -3,13 +3,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from mcp.server.lowlevel.server import Server
+from solvapay.facade import SolvaPay
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 from starlette.types import ASGIApp
 
-from solvapay.facade import SolvaPay
 from solvapay_mcp.asgi.oauth_bridge import apply_native_cors, create_mcp_oauth_starlette
 from solvapay_mcp.oauth.free_methods import McpAuthMode
 from solvapay_mcp.server.engine import bind_engine, dispatch_rpc
