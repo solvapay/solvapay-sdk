@@ -70,6 +70,26 @@ class _MockClient:
     def create_customer_blocking(self, args_json: str) -> str:
         return self.get_customer_blocking(args_json)
 
+    async def mcp_dispatch(self, args_json: str) -> str:
+        return self.mcp_dispatch_blocking(args_json)
+
+    def mcp_dispatch_blocking(self, args_json: str) -> str:
+        from solvapay_mcp.core import call
+
+        payload = json.loads(args_json)
+        value = call("mcpHandleRequest", payload if isinstance(payload, dict) else {})
+        return json.dumps({"ok": True, "value": value})
+
+    async def mcp_oauth_request(self, args_json: str) -> str:
+        return self.mcp_oauth_request_blocking(args_json)
+
+    def mcp_oauth_request_blocking(self, args_json: str) -> str:
+        from solvapay_mcp.core import call
+
+        payload = json.loads(args_json)
+        value = call("mcpOauthRequest", payload if isinstance(payload, dict) else {})
+        return json.dumps({"ok": True, "value": value})
+
 
 def build_server(
     *,

@@ -9,6 +9,7 @@ from solvapay.facade import create_solvapay
 from starlette.testclient import TestClient
 
 from http_serve import build_http_app, is_public_mcp_origin, mcp_auth_mode
+from main import _MockClient as _MainMockClient
 from main import build_server
 from market_data import StubMarketData
 
@@ -18,49 +19,15 @@ PUBLIC = "https://mcp.example.test"
 API = "https://api.test"
 
 
-class _MockClient:
+class _MockClient(_MainMockClient):
     def __init__(self) -> None:
-        self.tracked: list[dict[str, object]] = []
+        super().__init__(within_limits=True)
         self.limit_calls: list[dict[str, object]] = []
-
-    async def check_limits(self, args_json: str) -> str:
-        return self.check_limits_blocking(args_json)
 
     def check_limits_blocking(self, args_json: str) -> str:
         payload = json.loads(args_json)
         self.limit_calls.append(payload)
-        return json.dumps(
-            {
-                "ok": True,
-                "value": {
-                    "withinLimits": True,
-                    "remaining": 5,
-                    "meterName": "requests",
-                    "checkoutUrl": "https://pay.example/x",
-                },
-            }
-        )
-
-    async def track_usage(self, args_json: str) -> str:
-        return self.track_usage_blocking(args_json)
-
-    def track_usage_blocking(self, args_json: str) -> str:
-        self.tracked.append(json.loads(args_json))
-        return json.dumps({"ok": True, "value": {"ok": True}})
-
-    async def get_customer(self, args_json: str) -> str:
-        return self.get_customer_blocking(args_json)
-
-    def get_customer_blocking(self, args_json: str) -> str:
-        params = json.loads(args_json)
-        ref = params.get("customerRef") or "cus_demo"
-        return json.dumps({"ok": True, "value": {"customerRef": ref}})
-
-    async def create_customer(self, args_json: str) -> str:
-        return self.create_customer_blocking(args_json)
-
-    def create_customer_blocking(self, args_json: str) -> str:
-        return self.get_customer_blocking(args_json)
+        return super().check_limits_blocking(args_json)
 
 
 def _server(backend: _MockClient | None = None):

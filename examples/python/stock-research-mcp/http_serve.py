@@ -7,6 +7,8 @@ from mcp.server.lowlevel.server import Server
 from mcp.server.transport_security import TransportSecuritySettings
 from solvapay_mcp.asgi import create_mcp_oauth_starlette
 from solvapay_mcp.oauth import McpAuthMode
+from solvapay_mcp.server.engine import engine_for
+from solvapay_mcp.server.helpers import facade_api_client
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
@@ -93,12 +95,16 @@ def build_http_app(
         ],
     )
     if public_base_url and api_base_url and product_ref:
+        binding = engine_for(server)
+        if binding is None:
+            raise RuntimeError("mcp engine is not bound on this server")
         mcp_app = create_mcp_oauth_starlette(
             mcp_app,
             public_base_url=public_base_url,
             api_base_url=api_base_url,
             product_ref=product_ref,
             auth_mode=auth_mode if auth_mode is not None else mcp_auth_mode(),
+            oauth_client=facade_api_client(binding.solvapay),
         )
     if isinstance(mcp_app, Starlette):
         mcp_app.add_middleware(
