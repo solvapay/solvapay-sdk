@@ -125,6 +125,7 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def generate_request_id: () -> String\n\
          \x20   def iso8601_timestamp: () -> String\n\
          \x20   def track_usage_call: (customer_ref: String, product_ref: String, action: String, outcome: String, duration_ms: Numeric) -> untyped\n\
+         \x20   def apply_gate_cache: (untyped cache) -> void\n\
          \x20 end\n\n\
          \x20 class Payable\n\
          \x20   @facade: Facade\n\
