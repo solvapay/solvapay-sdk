@@ -46,7 +46,7 @@ function bindEnginePayables(
   additionalTools({
     server: {
       registerTool: () => ({}) as never,
-    } as AdditionalToolsContext['server'],
+    } as unknown as AdditionalToolsContext['server'],
     solvaPay,
     resourceUri: '',
     productRef,

@@ -16,30 +16,30 @@
     "node": "CI ubuntu-latest (GHA run 30090741437)",
     "platform": "linux",
     "arch": "x64",
-    "note": "Byte baselines re-recorded for serde_json preserve_order (MA-Py). Cold-start baselines remain the CI host sample — Darwin local runs are faster and must not tighten this gate.",
+    "note": "Byte baselines re-recorded after native helper fold (browser gzip ~133KiB). Cold-start baselines remain the CI host sample — Darwin local runs are faster and must not tighten this gate.",
     "wasmBindgen": "wasm-bindgen 0.2.126",
     "recordedAt": "2026-08-25T14:05:23.224Z"
   },
   "baselines": {
     "browser": {
-      "rawBytes": 162765,
-      "gzipBytes": 70810,
+      "rawBytes": 335304,
+      "gzipBytes": 132751,
       "coldStartMs": 23.341638
     },
     "edge": {
-      "rawBytes": 966697,
-      "gzipBytes": 330824,
+      "rawBytes": 1155901,
+      "gzipBytes": 400679,
       "coldStartMs": 28.019522,
       "note": "CI-enforced alongside browser; §7.8 headline metric remains browser"
     }
   },
   "maxAllowed": {
     "browser": {
-      "gzipBytes": 77891,
+      "gzipBytes": 146026,
       "coldStartMs": 35.012457
     },
     "edge": {
-      "gzipBytes": 363906,
+      "gzipBytes": 440746,
       "coldStartMs": 42.029283
     }
   }

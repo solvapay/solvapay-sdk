@@ -40,17 +40,18 @@ module SolvaPay
         "usageType" => usage_type,
         "startedMs" => started_ms,
       }
-      action = nil
+      action = {} #: Hash[String, untyped]
       loop do
         out = NativeDispatch.call_sync("gate_next", { "state" => state, "event" => event })
         unless out.is_a?(Hash)
           raise SolvaPay::SolvaPayError.new("gate_next returned unexpected value", code: "internal_error")
         end
         state = out["state"]
-        action = out["action"]
-        unless action.is_a?(Hash)
+        next_action = out["action"]
+        unless next_action.is_a?(Hash)
           raise SolvaPay::SolvaPayError.new("gate_next returned unexpected action", code: "internal_error")
         end
+        action = next_action
         case action["kind"]
         when "ensureCustomer"
           backend = ensure_customer(action["customerRef"])
@@ -89,7 +90,7 @@ module SolvaPay
               "includeCheckoutSession" => action["includeCheckoutSession"],
             },
           )
-          limits = {} unless limits.is_a?(Hash)
+          limits = {} #: Hash[String, untyped] unless limits.is_a?(Hash)
           event = { "kind" => "limitsResult", "limits" => limits, "nowMs" => @clock.call }
         when "done"
           apply_gate_cache(action["cache"])
