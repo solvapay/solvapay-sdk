@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSolvaPayMcpFetchHandler } from '../../src/fetch/handler'
 import type { McpServerFactory } from '@modelcontextprotocol/server'
+import { nativeOauthClient } from '../native-oauth-client'
 
 const publicBaseUrl = 'https://mcp.example.com'
 const apiBaseUrl = 'https://api.solvapay.com'
 const productRef = 'prd_test_123'
+const oauthClient = nativeOauthClient(apiBaseUrl)
 
 function mockFactory(): McpServerFactory {
   return vi.fn().mockReturnValue({
@@ -46,6 +48,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       publicBaseUrl,
       apiBaseUrl,
       productRef,
+      oauthClient,
     })
     const res = await handler(
       new Request(`${publicBaseUrl}/mcp`, {
@@ -63,6 +66,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       publicBaseUrl,
       apiBaseUrl,
       productRef,
+      oauthClient,
     })
     const res = await handler(
       new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
@@ -78,6 +82,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       publicBaseUrl,
       apiBaseUrl,
       productRef,
+      oauthClient,
     })
     const res = await handler(
       new Request(`${publicBaseUrl}/mcp`, {
@@ -99,6 +104,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       publicBaseUrl,
       apiBaseUrl,
       productRef,
+      oauthClient,
       mcpPath,
     })
 
@@ -131,6 +137,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       publicBaseUrl,
       apiBaseUrl,
       productRef,
+      oauthClient,
     })
     const jwt =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
@@ -160,6 +167,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       publicBaseUrl,
       apiBaseUrl,
       productRef,
+      oauthClient,
       requireAuth: false,
     })
     const res = await handler(
@@ -178,6 +186,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       publicBaseUrl,
       apiBaseUrl,
       productRef,
+      oauthClient,
     })
     const res = await handler(new Request(`${publicBaseUrl}/mcp`, { method: 'GET' }))
     expect(res.status).toBe(405)
@@ -190,6 +199,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       publicBaseUrl,
       apiBaseUrl,
       productRef,
+      oauthClient,
     })
     const res = await handler(new Request(`${publicBaseUrl}/random`))
     expect(res.status).toBe(404)

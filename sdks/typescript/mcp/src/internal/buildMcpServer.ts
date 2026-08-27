@@ -59,25 +59,43 @@ function jsonRpcResult(body: unknown): unknown {
   return body
 }
 
-function userAgentFromExtra(extra: unknown, server?: McpServer): string | undefined {
-  if (!isRecord(extra)) {
-    return clientVersionUserAgent(server)
-  }
-  const requestInfo = extra.requestInfo
-  if (!isRecord(requestInfo)) {
-    return clientVersionUserAgent(server)
-  }
-  const headers = requestInfo.headers
+function userAgentFromHeaders(headers: unknown): string | undefined {
   if (headers instanceof Headers) {
-    return headers.get('user-agent') ?? clientVersionUserAgent(server)
+    return headers.get('user-agent') ?? undefined
   }
-  if (!isRecord(headers)) {
-    return clientVersionUserAgent(server)
-  }
+  if (!isRecord(headers)) return undefined
   const raw = headers['user-agent'] ?? headers['User-Agent']
   if (typeof raw === 'string') return raw
   if (Array.isArray(raw) && typeof raw[0] === 'string') return raw[0]
-  return clientVersionUserAgent(server)
+  return undefined
+}
+
+export function userAgentFromRequestInfo(requestInfo: unknown): string | undefined {
+  if (requestInfo instanceof Request) {
+    return requestInfo.headers.get('user-agent') ?? undefined
+  }
+  if (!isRecord(requestInfo)) return undefined
+  return userAgentFromHeaders(requestInfo.headers)
+}
+
+function userAgentFromExtra(
+  extra: unknown,
+  server?: McpServer,
+  fallback?: string,
+): string | undefined {
+  if (extra instanceof Request) {
+    return extra.headers.get('user-agent') ?? fallback ?? clientVersionUserAgent(server)
+  }
+  if (isRecord(extra)) {
+    const fromInfo = userAgentFromRequestInfo(extra.requestInfo)
+    if (fromInfo !== undefined) return fromInfo
+    const fromRequest =
+      extra.request instanceof Request
+        ? extra.request.headers.get('user-agent') ?? undefined
+        : userAgentFromHeaders(isRecord(extra.request) ? extra.request.headers : undefined)
+    if (fromRequest !== undefined) return fromRequest
+  }
+  return fallback ?? clientVersionUserAgent(server)
 }
 
 function clientVersionUserAgent(server?: McpServer): string | undefined {
@@ -186,6 +204,7 @@ export function installEngineHandlers(
     resourceCsp?: unknown
     onDispatch?: (rpc: unknown) => void
     onDispatched?: (result: { body: unknown }, durationMs: number) => void
+    requestUserAgent?: string
   },
 ): void {
   const inner = (
@@ -219,8 +238,8 @@ export function installEngineHandlers(
       config: {
         ...options.config,
         payableTools,
-        ...(userAgentFromExtra(extra, server) !== undefined
-          ? { userAgent: userAgentFromExtra(extra, server) }
+        ...(userAgentFromExtra(extra, server, options.requestUserAgent) !== undefined
+          ? { userAgent: userAgentFromExtra(extra, server, options.requestUserAgent) }
           : {}),
       },
       ...(authHeaderFromExtra(extra) !== undefined
@@ -300,7 +319,11 @@ export function installEngineHandlers(
     const hideAudiences = options.config.hideAudiences
     const listedTools =
       hideAudiences !== undefined && hideAudiences.length > 0
-        ? hideToolsByAudience(projected, hideAudiences, userAgentFromExtra(extra, server)).tools
+        ? hideToolsByAudience(
+            projected,
+            hideAudiences,
+            userAgentFromExtra(extra, server, options.requestUserAgent),
+          ).tools
         : projected
     return { ...(isRecord(listed) ? listed : {}), tools: listedTools }
   })

@@ -419,9 +419,6 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     const method = req.method ?? 'GET'
     if (method === 'OPTIONS' && route.corsPreflight) {
       // OPTIONS is claimed by the OAuth table; native CORS lives in the op.
-    } else if (!route.methods.includes(method)) {
-      next()
-      return
     }
     const dispatchPath = route.dispatchPath(pathname, getRequestQuery(req))
     if (route.defaultFormContentType) {

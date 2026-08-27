@@ -10,6 +10,7 @@ import {
   buildSolvaPayMcpServer,
   hideAudiencesFromConfig,
   installEngineHandlers,
+  userAgentFromRequestInfo,
   type HideToolsByAudienceConfig,
 } from '../internal/buildMcpServer'
 import { registerPayableTool, type RegisterPayableToolOptions } from '../registerPayableTool'
@@ -73,7 +74,7 @@ function bindEnginePayables(
 }
 
 function buildServerForRequest(
-  _ctx: McpRequestContext,
+  ctx: McpRequestContext,
   options: {
     descriptorOptions: BuildSolvaPayDescriptorsOptions & {
       registerPrompts: boolean
@@ -103,6 +104,7 @@ function buildServerForRequest(
   }
 
   const hideAudiences = hideAudiencesFromConfig(hideToolsByAudience)
+  const requestUserAgent = userAgentFromRequestInfo(ctx.requestInfo)
   installEngineHandlers(server, {
     solvaPay: descriptorOptions.solvaPay,
     config: {
@@ -122,6 +124,7 @@ function buildServerForRequest(
     resourceCsp: descriptors.resource.csp,
     registerPrompts: descriptorOptions.registerPrompts,
     registerDocsResources: descriptorOptions.registerDocsResources,
+    ...(requestUserAgent !== undefined ? { requestUserAgent } : {}),
   })
 
   return server

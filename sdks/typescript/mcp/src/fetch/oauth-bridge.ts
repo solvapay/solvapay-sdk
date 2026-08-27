@@ -302,7 +302,6 @@ export function createOAuthFetchRouter(options: FetchOAuthOptions): FetchHandler
     for (const route of routes) {
       if (!route.match(pathname)) continue
       if (req.method === 'OPTIONS' && route.corsPreflight) return corsPreflight(req)
-      if (!route.methods.includes(req.method)) return null
       const headers = requestHeaders(req)
       if (route.defaultFormContentType && !headers['content-type']) {
         headers['content-type'] = 'application/x-www-form-urlencoded'
