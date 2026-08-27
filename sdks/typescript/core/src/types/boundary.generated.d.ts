@@ -101,7 +101,7 @@ export type BusinessDetailsInput = {
   /**
    * Explicit tax-ID type override (normally derived from country).
    */
-  taxIdType?: TaxIdType
+  taxIdType?: unknown
 }
 
 /**
@@ -243,7 +243,7 @@ export type GateAction =
   | { kind: 'ensureCustomer'; customerRef: string }
   | { kind: 'lookupCache'; key: string }
   | { kind: 'checkLimits'; customerRef: string; productRef: string; meterName: string; includeCheckoutSession: boolean; cacheDeleteKey?: string }
-  | { kind: 'done'; outcome: string; customerRef: string; product: string; meterName: string; limits: unknown; gate?: PaywallGate; cache?: GateCacheOp; track?: GateTrackOp }
+  | { kind: 'done'; outcome: string; customerRef: string; product: string; meterName: string; limits: unknown; gate?: unknown; cache?: GateCacheOp; track?: GateTrackOp }
 
 /**
  * Cache mutation the host must apply before continuing / returning.

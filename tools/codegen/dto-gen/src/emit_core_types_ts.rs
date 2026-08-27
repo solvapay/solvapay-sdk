@@ -5,7 +5,9 @@ use std::fmt::Write as _;
 use crate::emit_ts::{escape_ts, write_ts_doc};
 use crate::error::GenResult;
 use crate::header::{generated_header, CommentStyle};
-use crate::ir::{Ir, IrCoreField, IrCoreFieldTy, IrCoreShape, IrCoreTsAlias, IrCoreType};
+use crate::ir::{
+    Ir, IrCoreField, IrCoreFieldTy, IrCoreShape, IrCoreTsAlias, IrCoreType, IrCoreTypesTs,
+};
 
 /// Emits the consolidated TypeScript boundary-type declarations.
 ///
@@ -35,7 +37,7 @@ pub fn emit_core_types_ts(ir: &Ir) -> GenResult<String> {
         if overlay.reshape.contains_key(&ts_name) {
             continue;
         }
-        write_core_type(&mut out, ty, &ts_name);
+        write_core_type(&mut out, ty, &ts_name, overlay);
     }
 
     // `BoundaryTypesTsDef` uses `BTreeMap`, so iteration is already key-sorted.
@@ -159,7 +161,7 @@ fn write_alias(out: &mut String, ir: &Ir, name: &str, alias: &IrCoreTsAlias) -> 
                 .collect();
             let _ = writeln!(out, "export type {name} = {{");
             for field in kept {
-                write_field(out, field);
+                write_field(out, field, &ir.core_types_ts);
             }
             out.push_str("}\n\n");
         }
@@ -173,13 +175,13 @@ fn write_alias(out: &mut String, ir: &Ir, name: &str, alias: &IrCoreTsAlias) -> 
     Ok(())
 }
 
-fn write_core_type(out: &mut String, ty: &IrCoreType, ts_name: &str) {
+fn write_core_type(out: &mut String, ty: &IrCoreType, ts_name: &str, overlay: &IrCoreTypesTs) {
     write_ts_doc(out, &ty.rustdoc, "");
     match &ty.shape {
         IrCoreShape::Struct { fields, .. } => {
             let _ = writeln!(out, "export type {ts_name} = {{");
             for field in fields {
-                write_field(out, field);
+                write_field(out, field, overlay);
             }
             out.push_str("}\n\n");
         }
@@ -196,7 +198,7 @@ fn write_core_type(out: &mut String, ty: &IrCoreType, ts_name: &str) {
             for variant in variants {
                 let mut parts = vec![format!("{tag}: '{}'", escape_ts(&variant.wire_name))];
                 for field in &variant.fields {
-                    let (opt, ts_ty) = field_ts(field);
+                    let (opt, ts_ty) = field_ts(field, overlay);
                     parts.push(format!("{}{opt}: {ts_ty}", field.wire_name));
                 }
                 arms.push(format!("  | {{ {} }}", parts.join("; ")));
@@ -208,7 +210,7 @@ fn write_core_type(out: &mut String, ty: &IrCoreType, ts_name: &str) {
             for variant in variants {
                 let mut parts = Vec::new();
                 for field in &variant.fields {
-                    let (opt, ts_ty) = field_ts(field);
+                    let (opt, ts_ty) = field_ts(field, overlay);
                     let ts_ty = literal_success(&variant.rust_name, &field.rust_name, &ts_ty);
                     parts.push(format!("{}{opt}: {ts_ty}", field.wire_name));
                 }
@@ -230,14 +232,14 @@ fn literal_success(variant: &str, field: &str, ts_ty: &str) -> String {
     }
 }
 
-fn write_field(out: &mut String, field: &IrCoreField) {
+fn write_field(out: &mut String, field: &IrCoreField, overlay: &IrCoreTypesTs) {
     write_ts_doc(out, &field.rustdoc, "  ");
-    let (opt, ts_ty) = field_ts(field);
+    let (opt, ts_ty) = field_ts(field, overlay);
     let _ = writeln!(out, "  {}{opt}: {ts_ty}", field.wire_name);
 }
 
-fn field_ts(field: &IrCoreField) -> (&'static str, String) {
-    let ts_ty = map_ty(&field.ty);
+fn field_ts(field: &IrCoreField, overlay: &IrCoreTypesTs) -> (&'static str, String) {
+    let ts_ty = map_ty(&field.ty, overlay);
     if !field.optional {
         return ("", ts_ty);
     }
@@ -248,7 +250,7 @@ fn field_ts(field: &IrCoreField) -> (&'static str, String) {
     }
 }
 
-fn map_ty(ty: &IrCoreFieldTy) -> String {
+fn map_ty(ty: &IrCoreFieldTy, overlay: &IrCoreTypesTs) -> String {
     match ty {
         IrCoreFieldTy::String => "string".into(),
         IrCoreFieldTy::Bool => "boolean".into(),
@@ -260,12 +262,24 @@ fn map_ty(ty: &IrCoreFieldTy) -> String {
         IrCoreFieldTy::Value => "unknown".into(),
         IrCoreFieldTy::Unit => "void".into(),
         IrCoreFieldTy::Tuple(elems) => {
-            let inner = elems.iter().map(map_ty).collect::<Vec<_>>().join(", ");
+            let inner = elems
+                .iter()
+                .map(|elem| map_ty(elem, overlay))
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("[{inner}]")
         }
-        IrCoreFieldTy::Vec(inner) => format!("{}[]", map_ty(inner)),
-        IrCoreFieldTy::Map(inner) => format!("Record<string, {}>", map_ty(inner)),
-        IrCoreFieldTy::Named(name) => name.clone(),
+        IrCoreFieldTy::Vec(inner) => format!("{}[]", map_ty(inner, overlay)),
+        IrCoreFieldTy::Map(inner) => format!("Record<string, {}>", map_ty(inner, overlay)),
+        IrCoreFieldTy::Named(name) => {
+            if overlay.omit.contains(name) {
+                "unknown".into()
+            } else if let Some(renamed) = overlay.rename.get(name) {
+                renamed.clone()
+            } else {
+                name.clone()
+            }
+        }
         IrCoreFieldTy::Result { .. } => "unknown".into(),
     }
 }
