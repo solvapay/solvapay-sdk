@@ -41,6 +41,7 @@ Style/Documentation:
 Layout/LeadingCommentSpace:
   Exclude:
     - 'lib/solvapay/mcp/register.rb'
+    - 'lib/solvapay/mcp/engine.rb'
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes

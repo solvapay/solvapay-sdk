@@ -84,11 +84,37 @@ class _MockClient:
         return self.mcp_oauth_request_blocking(args_json)
 
     def mcp_oauth_request_blocking(self, args_json: str) -> str:
-        from solvapay_mcp.core import call
+        from solvapay_mcp.oauth.discovery import (
+            get_oauth_authorization_server_response,
+            get_oauth_protected_resource_response,
+        )
 
         payload = json.loads(args_json)
-        value = call("mcpOauthRequest", payload if isinstance(payload, dict) else {})
-        return json.dumps({"ok": True, "value": value})
+        path = str(payload.get("path") or "").split("?", 1)[0]
+        config = payload.get("config") if isinstance(payload.get("config"), dict) else {}
+        public = str(config.get("publicBaseUrl") or "")
+        mcp_path = str(config.get("mcpPath") or "/mcp")
+        if "oauth-protected-resource" in path:
+            body: object = get_oauth_protected_resource_response(public, mcp_path=mcp_path)
+        elif path.endswith("/.well-known/oauth-authorization-server") or path.endswith(
+            "/.well-known/openid-configuration"
+        ):
+            body = get_oauth_authorization_server_response(public)
+        else:
+            body = {"error": "not_found"}
+            return json.dumps(
+                {"ok": True, "value": {"status": 404, "headers": {}, "body": body}}
+            )
+        return json.dumps(
+            {
+                "ok": True,
+                "value": {
+                    "status": 200,
+                    "headers": {"content-type": "application/json"},
+                    "body": body,
+                },
+            }
+        )
 
 
 def build_server(

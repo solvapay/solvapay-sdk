@@ -105,7 +105,8 @@ module SolvaPay
               raise SolvaPay::SolvaPayError.new("unexpected gate result", code: "invalid_gate_result")
             end
           when "invokeHandler"
-            limits = action["limits"].is_a?(Hash) ? stringify_keys(action["limits"]) : {}
+            empty_limits = {} #: Hash[String, untyped]
+            limits = action["limits"].is_a?(Hash) ? stringify_keys(action["limits"]) : empty_limits
             ctx = ResponseContext.new(
               customer: {
                 "ref" => action["customerRef"],
@@ -139,13 +140,14 @@ module SolvaPay
               }
             end
           when "done"
+            tracker = allow
             track = action["track"]
-            if track.is_a?(Hash) && !allow.nil?
+            if tracker.is_a?(SolvaPay::PayableAllowResult) && track.is_a?(Hash)
               duration = track["durationMs"].to_f
               if track["outcome"] == "success"
-                allow.track_success(duration: duration)
+                tracker.track_success(duration: duration)
               else
-                allow.track_fail(track["outcome"], duration: duration)
+                tracker.track_fail(track["outcome"], duration: duration)
               end
             end
             result = action["result"]

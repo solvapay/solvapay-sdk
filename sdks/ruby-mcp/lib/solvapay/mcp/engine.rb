@@ -21,7 +21,7 @@ module SolvaPay
         @mcp_path = mcp_path.nil? || mcp_path.empty? ? "/mcp" : mcp_path
         @views = views
         @oauth_paths = oauth_paths
-        @payables = {}
+        @payables = {} #: Hash[String, untyped]
         @mutex = Mutex.new
       end
 
@@ -104,7 +104,8 @@ module SolvaPay
         spec = @mutex.synchronize { @payables[tool] }
         raise SolvaPay::SolvaPayError.new("unknown payable tool: #{tool}", code: "unknown_tool") if spec.nil?
 
-        args = envelope["args"].is_a?(Hash) ? stringify(envelope["args"]) : {}
+        empty_args = {} #: Hash[untyped, untyped]
+        args = envelope["args"].is_a?(Hash) ? stringify(envelope["args"]) : empty_args
         args = symbolize(args)
         unless args.key?(:customer_ref)
           ref = envelope["customerRef"]
@@ -159,7 +160,7 @@ module SolvaPay
       end
 
       def stringify_headers(headers)
-        out = {}
+        out = {} #: Hash[String, String]
         return out unless headers.is_a?(Hash)
 
         headers.each do |key, value|
@@ -169,7 +170,7 @@ module SolvaPay
       end
 
       def rack_headers(env)
-        headers = {}
+        headers = {} #: Hash[String, String]
         env.each do |key, value|
           next unless key.start_with?("HTTP_") && value.is_a?(String)
 
@@ -193,9 +194,11 @@ module SolvaPay
       end
 
       def symbolize(hash)
-        hash.each_with_object({}) do |(key, value), acc|
+        acc = {} #: Hash[Symbol, untyped]
+        hash.each do |key, value|
           acc[key.to_sym] = value
         end
+        acc
       end
     end
   end
