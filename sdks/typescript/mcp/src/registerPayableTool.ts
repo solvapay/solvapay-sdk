@@ -82,7 +82,6 @@ export function registerPayableTool<
     title,
     description,
     handler,
-    buildBootstrap,
     getCustomerRef,
     meta,
     annotations,
@@ -91,7 +90,7 @@ export function registerPayableTool<
 
   const protectedHandler = buildPayableHandler(
     solvaPay,
-    { product, buildBootstrap, getCustomerRef },
+    { product, getCustomerRef },
     handler as unknown as Parameters<typeof buildPayableHandler>[2],
   )
 

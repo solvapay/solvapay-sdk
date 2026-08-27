@@ -1,7 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import React from 'react'
-import { resetNativeCoreApiForTests } from '@solvapay/core'
 import { McpApp, type McpAppFull } from './index'
 import { merchantCache } from '../hooks/useMerchant'
 
@@ -50,12 +49,6 @@ function makeApp(structuredContent: unknown): McpAppFull {
 
   return app
 }
-
-beforeEach(() => {
-  // mcp-core's barrel evaluates `@solvapay/server`, which installs napi.
-  // The widget tree-shakes that away; reset so this file sees `installed === null`.
-  resetNativeCoreApiForTests()
-})
 
 afterEach(() => {
   cleanup()

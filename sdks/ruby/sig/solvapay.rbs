@@ -144,6 +144,7 @@ module SolvaPay
     def generate_request_id: () -> String
     def iso8601_timestamp: () -> String
     def track_usage_call: (customer_ref: String, product_ref: String, action: String, outcome: String, duration_ms: Numeric) -> untyped
+    def apply_gate_cache: (untyped cache) -> void
   end
 
   class Payable

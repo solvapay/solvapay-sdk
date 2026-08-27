@@ -99,6 +99,10 @@ module SolvaPay
         end
       end
 
+      unless action.is_a?(Hash)
+        raise SolvaPay::SolvaPayError.new("gate_next returned unexpected action", code: "internal_error")
+      end
+
       backend_ref = action["customerRef"]
       meter_name = action["meterName"] || usage_type
       if action["track"].is_a?(Hash)

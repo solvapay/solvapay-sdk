@@ -115,8 +115,9 @@ async fn mcp_oauth_protected_resource_discovery() {
         .expect("oauth");
     assert_eq!(got["status"], 200);
     assert_eq!(got["body"]["bearer_methods_supported"], json!(["header"]));
-    // Matches live host bridges, which omit `mcpPath` from this document.
-    assert_eq!(got["body"]["resource"], "https://app.example.com");
+    // Matches the oauth-proxy/discovery-protected-resource fixture: mcpPath
+    // is part of the RFC 9728 resource identifier.
+    assert_eq!(got["body"]["resource"], "https://app.example.com/mcp");
 }
 
 #[tokio::test]
