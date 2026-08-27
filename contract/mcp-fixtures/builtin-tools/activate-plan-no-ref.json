@@ -1,0 +1,94 @@
+{
+  "suite": "builtin-tools",
+  "case": "activate-plan-no-ref",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "activate_plan",
+      "args": {
+        "mode": "text"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": null,
+      "widgetSessionId": "00000000-0000-4000-8000-000000000001"
+    }
+  },
+  "http": [
+    {
+      "method": "GET",
+      "path": "/v1/sdk/platform-config",
+      "status": 200,
+      "body": {
+        "stripePublishableKey": "pk_test"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sdk/merchant",
+      "status": 200,
+      "body": {
+        "displayName": "Acme"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sdk/products/prd_demo",
+      "status": 200,
+      "body": {
+        "name": "Demo"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sdk/products/prd_demo/plans",
+      "status": 200,
+      "body": {
+        "plans": [
+          {
+            "name": "Pro"
+          }
+        ]
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "**Activate a plan — Demo**\n\nPlans available:\nPro · recurring\n\nCommands: `/manage_account` `/topup`",
+          "annotations": {
+            "audience": [
+              "assistant"
+            ]
+          }
+        }
+      ],
+      "structuredContent": {
+        "view": "checkout",
+        "productRef": "prd_demo",
+        "stripePublishableKey": "pk_test",
+        "returnUrl": "https://app.example.com",
+        "merchant": {
+          "displayName": "Acme"
+        },
+        "product": {
+          "name": "Demo"
+        },
+        "plans": [
+          {
+            "name": "Pro"
+          }
+        ],
+        "customer": null
+      },
+      "_meta": {
+        "openai/widgetSessionId": "00000000-0000-4000-8000-000000000001"
+      }
+    }
+  }
+}

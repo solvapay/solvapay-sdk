@@ -49,7 +49,12 @@ ClientMethod = Literal[
     "get_payment_method",
     "get_auto_recharge",
     "save_auto_recharge",
-    "disable_auto_recharge",]
+    "disable_auto_recharge",
+    "mcp_bootstrap",
+    "mcp_call_builtin_tool",
+    "mcp_read_resource",
+    "mcp_oauth_request",
+    "mcp_dispatch",]
 
 SyncMethod = Literal[
     "classify_customer_ref",
@@ -105,6 +110,8 @@ SyncMethod = Literal[
     "included_units",
     "pegged_credits_per_unit",
     "credits_per_unit_from_balance",
+    "meter_name",
+    "counts_usage",
     # --- @solvapay/core pure logic ---
     "validate_business_details",
     "derive_tax_id_type",

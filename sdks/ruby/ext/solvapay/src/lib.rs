@@ -117,6 +117,36 @@ fn verify_webhook_at(
     }
 }
 
+/// Client-less MCP / sync dispatch (`{op, args}` JSON → envelope JSON).
+fn solvapay_call(args_json: String) -> Result<String, Error> {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let parsed: serde_json::Value = match serde_json::from_str(&args_json) {
+            Ok(value) => value,
+            Err(err) => {
+                return crate::error::err_envelope(&solvapay_core::SdkError::transport(
+                    format!("invalid solvapay_call args: {err}"),
+                    false,
+                ));
+            }
+        };
+        let Some(op) = parsed.get("op").and_then(serde_json::Value::as_str) else {
+            return crate::error::err_envelope(&solvapay_core::SdkError::transport(
+                "missing op",
+                false,
+            ));
+        };
+        let args = parsed
+            .get("args")
+            .cloned()
+            .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
+        solvapay_mcp_core::dispatch_sync(op, &args.to_string())
+    }));
+    match result {
+        Ok(json) => Ok(json),
+        Err(payload) => Err(BindingError::from_panic_payload(payload).into_magnus_err()),
+    }
+}
+
 /// `SolvaPay::Error#code` — returns the snake_case `@code` ivar (or `nil`).
 fn error_code(ex: Exception) -> Result<magnus::Value, Error> {
     ex.funcall("instance_variable_get", ("@code",))
@@ -141,6 +171,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     module.define_singleton_method("native_build_info", function!(native_build_info, 0))?;
     module.define_singleton_method("verify_webhook", function!(verify_webhook, 3))?;
     module.define_singleton_method("_verify_webhook_at", function!(verify_webhook_at, 4))?;
+    module.define_singleton_method("solvapay_call", function!(solvapay_call, 1))?;
 
     let native = module.define_module("Native")?;
     let client = native.define_class("Client", ruby.class_object())?;

@@ -1126,6 +1126,15 @@ jobs:
       - name: Superseded server TypeScript gate (Step 53 Rust-only)
         run: pnpm server-superseded-ts:check
 
+      - name: Superseded MCP TypeScript gate (Rust MCP ops)
+        run: pnpm mcp-superseded-ts:check
+
+      - name: Superseded MCP Python gate (Rust MCP ops)
+        run: pnpm mcp-superseded-py:check
+
+      - name: MCP layer-3 adapter line budget
+        run: pnpm mcp-layer3-budget:check
+
   # Step 38 — edge/browser wasm-bindgen cutover (capability split + budgets + Deno).
   wasm-binding:
     name: wasm-binding (Step 38 edge/browser)
@@ -1422,6 +1431,9 @@ jobs:
 
       - name: C fixture conformance (550)
         run: ./sdks/capi/ctest/contract.sh
+
+      - name: C MCP fixture replay
+        run: ./sdks/capi/ctest/mcp.sh
 
       - name: C signature parity
         run: |

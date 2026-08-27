@@ -565,4 +565,19 @@ export interface SolvaPayClient {
 
   // DELETE: /v1/sdk/auto-recharge?customerRef=...
   disableAutoRecharge?(params: { customerRef: string }): Promise<{ success: boolean }>
+
+  /** Fan out merchant, product, plans, and customer snapshots for the MCP widget. */
+  mcpBootstrap?(params: unknown): Promise<unknown>
+
+  /** Invoke one of the twelve SolvaPay builtin MCP tools with optional customer context. */
+  mcpCallBuiltinTool?(params: unknown): Promise<unknown>
+
+  /** Read solvapay://bootstrap.json, the overview resource, or the UI widget resource. */
+  mcpReadResource?(params: unknown): Promise<unknown>
+
+  /** Proxy one OAuth HTTP request (discovery, DCR, token, revoke, authorize). */
+  mcpOauthRequest?(params: unknown): Promise<unknown>
+
+  /** Route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler. */
+  mcpDispatch?(params: unknown): Promise<unknown>
 }

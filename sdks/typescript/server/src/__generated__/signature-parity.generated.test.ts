@@ -466,6 +466,76 @@ expectTypeOf<AssertArity>().toEqualTypeOf<true>()
       type R = ReturnType<NonNullable<SolvaPayClient['listProducts']>>
 expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
 })
+    it('mcpBootstrap presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['mcpBootstrap']>().toEqualTypeOf<
+SolvaPayClientGenerated['mcpBootstrap']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['mcpBootstrap']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['mcpBootstrap']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('mcpCallBuiltinTool presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['mcpCallBuiltinTool']>().toEqualTypeOf<
+SolvaPayClientGenerated['mcpCallBuiltinTool']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['mcpCallBuiltinTool']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['mcpCallBuiltinTool']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('mcpDispatch presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['mcpDispatch']>().toEqualTypeOf<
+SolvaPayClientGenerated['mcpDispatch']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['mcpDispatch']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['mcpDispatch']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('mcpOauthRequest presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['mcpOauthRequest']>().toEqualTypeOf<
+SolvaPayClientGenerated['mcpOauthRequest']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['mcpOauthRequest']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['mcpOauthRequest']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
+    it('mcpReadResource presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['mcpReadResource']>().toEqualTypeOf<
+SolvaPayClientGenerated['mcpReadResource']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['mcpReadResource']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['mcpReadResource']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
     it('processPaymentIntent presence / arity / sync', () => {
 expectTypeOf<SolvaPayClient['processPaymentIntent']>().toEqualTypeOf<
 SolvaPayClientGenerated['processPaymentIntent']

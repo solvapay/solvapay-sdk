@@ -1,13 +1,11 @@
 'use client'
 
 /**
- * Step 2 — PAYG amount picker. Only renders on the PAYG branch; the
- * recurring branch transitions directly from `plan` to `payment`.
+ * Step 2 — PAYG amount picker. Only renders on the PAYG branch when the
+ * wallet is empty after activate; a funded wallet skips this step.
  *
- * Topup-first: the plan is NOT active yet. The plan-step `activate_plan`
- * call returned `topup_required` for a zero-balance customer and created
- * no purchase — the active PAYG purchase only materializes after this
- * top-up succeeds (the flow re-activates once credits land). Clicking
+ * Activate-then-top-up: the plan is already active. This picker collects
+ * a `credit_topup` so the customer can use the product. Clicking
  * `Continue` here just commits the topup amount and advances to the
  * payment step. No network call on this transition.
  */

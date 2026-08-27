@@ -6,11 +6,21 @@ McpAuthMode = Literal["tools-call", "all"]
 
 
 def is_free_mcp_method(mcp_method: str | None) -> bool:
-    method = (mcp_method or "").strip().lower()
-    return method != "tools/call"
+    from solvapay_mcp.core import call
+
+    value = call("mcpIsFreeMethod", {"mcpMethod": mcp_method})
+    if not isinstance(value, bool):
+        raise TypeError("mcpIsFreeMethod did not return a bool")
+    return value
 
 
 def requires_bearer_auth(mcp_method: str | None, auth_mode: McpAuthMode) -> bool:
-    if auth_mode == "all":
-        return True
-    return not is_free_mcp_method(mcp_method)
+    from solvapay_mcp.core import call
+
+    value = call(
+        "mcpRequiresBearerAuth",
+        {"mcpMethod": mcp_method, "authMode": auth_mode},
+    )
+    if not isinstance(value, bool):
+        raise TypeError("mcpRequiresBearerAuth did not return a bool")
+    return value

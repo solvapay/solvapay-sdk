@@ -1,10 +1,11 @@
 /**
  * One-line MCP config summary to stderr, once per process.
  *
- * Stderr keeps MCP stdio transports' stdout clean. The module-scope guard
- * matters for fetch/edge handlers that reconstruct the bridge per request
- * without memoization.
+ * The message body comes from the Rust `mcpConfigLog` op. The
+ * once-per-process guard stays host-side.
  */
+
+import { callMcpSyncOp } from './native-mcp'
 
 let logged = false
 
@@ -14,6 +15,14 @@ export type McpConfigLogInput = {
   publicBaseUrl: string
 }
 
+export function mcpConfigLogMessage(config: McpConfigLogInput): string {
+  return callMcpSyncOp<{ message: string }>('mcpConfigLog', {
+    apiBaseUrl: config.apiBaseUrl,
+    productRef: config.productRef,
+    publicBaseUrl: config.publicBaseUrl,
+  }).message
+}
+
 /**
  * Emit `[solvapay] mcp config …` once. Safe to call from every construction
  * path; subsequent calls are no-ops.
@@ -21,9 +30,7 @@ export type McpConfigLogInput = {
 export function logMcpConfigOnce(config: McpConfigLogInput): void {
   if (logged) return
   logged = true
-  console.warn(
-    `[solvapay] mcp config apiBaseUrl=${config.apiBaseUrl} productRef=${config.productRef} publicBaseUrl=${config.publicBaseUrl}`,
-  )
+  console.warn(mcpConfigLogMessage(config))
 }
 
 /** Test-only: reset the once-per-process guard. */

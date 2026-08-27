@@ -5418,6 +5418,28 @@
         }
       }
     },
+    "solvapay_core::pricing_options::counts_usage": {
+      "name": "counts_usage",
+      "module": "pricing_options",
+      "implTy": null,
+      "rustdoc": "True when the plan counts usage: a per-unit charge, a limit, or a tier.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
     "solvapay_core::pricing_options::credits_per_unit_from_balance": {
       "name": "credits_per_unit_from_balance",
       "module": "pricing_options",
@@ -5509,6 +5531,28 @@
         "optional": true,
         "ty": {
           "kind": "i64"
+        }
+      }
+    },
+    "solvapay_core::pricing_options::meter_name": {
+      "name": "meter_name",
+      "module": "pricing_options",
+      "implTy": null,
+      "rustdoc": "The meter a plan counts against: per-unit charge meter, else first limit meter.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
         }
       }
     },

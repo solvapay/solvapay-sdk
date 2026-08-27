@@ -647,6 +647,83 @@ impl SolvaPayClient {
             })
         })
     }
+
+    // --- MCP composite ---
+
+    /// `mcpBootstrap`
+    pub(crate) fn mcp_bootstrap(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpBootstrapParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_bootstrap(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `mcpCallBuiltinTool`
+    pub(crate) fn mcp_call_builtin_tool(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpCallBuiltinToolParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_call_builtin_tool(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `mcpReadResource`
+    pub(crate) fn mcp_read_resource(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpReadResourceParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_read_resource(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `mcpOauthRequest`
+    pub(crate) fn mcp_oauth_request(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpOauthRequestParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_oauth_request(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `mcpDispatch`
+    pub(crate) fn mcp_dispatch(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpDispatchParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_dispatch(params).await
+                })
+                .await
+            })
+        })
+    }
 }
 
 #[allow(dead_code)] // retained for Step 44 clientSplit methods

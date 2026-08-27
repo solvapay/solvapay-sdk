@@ -48,6 +48,11 @@ const ALL_METHODS: NativeClientMethod[] = [
   'getAutoRecharge',
   'saveAutoRecharge',
   'disableAutoRecharge',
+  'mcpBootstrap',
+  'mcpCallBuiltinTool',
+  'mcpReadResource',
+  'mcpOauthRequest',
+  'mcpDispatch',
 ]
 
 function fakeClient(overrides: Partial<NativeClientLike> = {}): NativeClientLike {

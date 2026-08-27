@@ -17,18 +17,23 @@ class ContractFixturesTest < Minitest::Test
     block = manifest.match(/^operations:\n(.*?)(?=^\S|\z)/m)&.captures&.first
     refute_nil block, "manifest missing operations"
     names = block.scan(/^    names:\n      ts:\s*(\S+)\s*$/).flatten
-    assert_equal 36, names.length
+    assert_equal 41, names.length
 
     relative = FIXTURE_FILES.map { |path| Pathname(path).relative_path_from(FIXTURES_ROOT).to_s }
+    routed = 0
     missing = names.filter_map do |name|
       directory = Contract::Names.camel_to_kebab(name)
       stems = relative
               .select { |path| path.start_with?("client/#{directory}/") }
               .map { |path| File.basename(path, ".json") }
+      next if stems.empty?
+
+      routed += 1
       success = stems.any? { |stem| Contract::Names.success_case?(stem) }
       error = stems.any? { |stem| Contract::Names.error_case?(stem) }
       "#{name}: success=#{success} error=#{error} files=#{stems.inspect}" unless success && error
     end
+    assert_equal 36, routed
     assert_empty missing, missing.join("\n")
   end
 

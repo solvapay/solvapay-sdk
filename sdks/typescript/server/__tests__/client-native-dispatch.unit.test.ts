@@ -54,7 +54,15 @@ const GROUP_C: NativeClientMethod[] = [
   'disableAutoRecharge',
 ]
 
-const ALL_METHODS: NativeClientMethod[] = [...GROUP_A, ...GROUP_B, ...GROUP_C]
+const GROUP_MCP: NativeClientMethod[] = [
+  'mcpBootstrap',
+  'mcpCallBuiltinTool',
+  'mcpReadResource',
+  'mcpOauthRequest',
+  'mcpDispatch',
+]
+
+const ALL_METHODS: NativeClientMethod[] = [...GROUP_A, ...GROUP_B, ...GROUP_C, ...GROUP_MCP]
 
 function fakeClient(overrides: Partial<NativeClientLike> = {}): NativeClientLike {
   const base = Object.fromEntries(
@@ -398,5 +406,49 @@ describe('createSolvaPayClient Group B/C native dispatch', () => {
     const client = createSolvaPayClient({ apiKey: 'sk_test' })
     expect(await client.deleteProduct!('prod_1')).toBeNull()
     expect(await client.deletePlan!('prod_1', 'plan_1')).toBeNull()
+  })
+})
+
+describe('createSolvaPayClient MCP composite native dispatch', () => {
+  const fetchMock = vi.fn()
+
+  beforeEach(() => {
+    resetNativeCache()
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    resetNativeCache()
+    vi.unstubAllGlobals()
+  })
+
+  it('dispatches MCP composite methods to NativeClient', async () => {
+    const calls: Array<{ fn: string; args: string }> = []
+    const native = fakeClient(
+      Object.fromEntries(
+        GROUP_MCP.map(fn => [
+          fn,
+          vi.fn(async (argsJson: string) => {
+            calls.push({ fn, args: argsJson })
+            return JSON.stringify({ ok: true, value: { fromNative: fn } })
+          }),
+        ]),
+      ) as Partial<NativeClientLike>,
+    )
+    setNativeClientForTests(native)
+
+    const client = createSolvaPayClient({ apiKey: 'sk_test' })
+    const payload = { ping: true }
+    expect(await client.mcpBootstrap!(payload)).toEqual({ fromNative: 'mcpBootstrap' })
+    expect(await client.mcpCallBuiltinTool!(payload)).toEqual({
+      fromNative: 'mcpCallBuiltinTool',
+    })
+    expect(await client.mcpReadResource!(payload)).toEqual({ fromNative: 'mcpReadResource' })
+    expect(await client.mcpOauthRequest!(payload)).toEqual({ fromNative: 'mcpOauthRequest' })
+    expect(await client.mcpDispatch!(payload)).toEqual({ fromNative: 'mcpDispatch' })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(calls.map(c => c.fn).sort()).toEqual([...GROUP_MCP].sort())
   })
 })

@@ -69,7 +69,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
     )
     expect(res.status).toBe(200)
     const body = (await res.json()) as { resource: string }
-    expect(body.resource).toBe(publicBaseUrl)
+    expect(body.resource).toBe(`${publicBaseUrl}/mcp`)
   })
 
   it('returns 401 + WWW-Authenticate when no bearer is present on tools/call', async () => {
@@ -91,6 +91,38 @@ describe('createSolvaPayMcpFetchHandler', () => {
     const body = (await res.json()) as { id: number }
     expect(body.id).toBe(7)
   })
+
+  it('aligns WWW-Authenticate metadata with mcpPath and the protected-resource document', async () => {
+    const mcpPath = '/agents'
+    const handler = createSolvaPayMcpFetchHandler({
+      factory: mockFactory(),
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      mcpPath,
+    })
+
+    const discovery = await handler(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
+    )
+    expect(discovery.status).toBe(200)
+    expect(((await discovery.json()) as { resource: string }).resource).toBe(
+      `${publicBaseUrl}${mcpPath}`,
+    )
+
+    const challenge = await handler(
+      new Request(`${publicBaseUrl}${mcpPath}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 9, method: 'tools/call' }),
+      }),
+    )
+    expect(challenge.status).toBe(401)
+    expect(challenge.headers.get('www-authenticate')).toContain(
+      `resource_metadata="${publicBaseUrl}/.well-known/oauth-protected-resource${mcpPath}"`,
+    )
+  })
+
 
   it('forwards authenticated requests to createMcpHandler.fetch', async () => {
     const factory = mockFactory()

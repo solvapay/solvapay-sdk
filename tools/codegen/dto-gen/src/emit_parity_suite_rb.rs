@@ -93,17 +93,20 @@ pub fn emit_parity_suite_rb(ir: &Ir) -> GenResult<String> {
         defaults.initial_delay_ms
     );
 
-    output.push_str(
-        "  def test_all_36_client_operations_have_exact_keyword_signatures\n\
-         \x20   assert_equal 36, OPERATION_SIGNATURES.length\n\
+    let n = operations.len();
+    output.push_str(&format!(
+        "  def test_all_{n}_client_operations_have_exact_keyword_signatures\n\
+         \x20   assert_equal {n}, OPERATION_SIGNATURES.length\n\
          \x20   OPERATION_SIGNATURES.each do |name, expected|\n\
          \x20     method = SolvaPay::Client.instance_method(name)\n\
          \x20     assert_equal expected, method.parameters, name\n\
-         \x20     refute SolvaPay::Client.method_defined?(\"#{name}_blocking\"), name\n\
-         \x20     refute SolvaPay::Client.method_defined?(\"#{name}_async\"), name\n\
+         \x20     refute SolvaPay::Client.method_defined?(\"#{{name}}_blocking\"), name\n\
+         \x20     refute SolvaPay::Client.method_defined?(\"#{{name}}_async\"), name\n\
          \x20   end\n\
-         \x20 end\n\n\
-         \x20 def test_catalogued_generated_helpers_are_module_functions\n\
+         \x20 end\n\n"
+    ));
+    output.push_str(
+        "  def test_catalogued_generated_helpers_are_module_functions\n\
          \x20   GENERATED_HELPERS.each { |name| assert_respond_to SolvaPay, name }\n\
          \x20   assert_respond_to SolvaPay, :create\n\
          \x20   assert_instance_of SolvaPay::Payable, SolvaPay.create(api_client: Object.new).payable(product: \"prd_x\")\n\

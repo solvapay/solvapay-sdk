@@ -4,7 +4,7 @@ import json
 from collections.abc import Mapping
 from typing import Literal
 
-from solvapay_mcp.server.narrate import NARRATORS, ui_placeholder
+from solvapay_mcp.core import call
 
 SolvaPayToolMode = Literal["ui", "text", "auto"]
 
@@ -52,50 +52,14 @@ def narrated_tool_result(
     mode: SolvaPayToolMode = "ui",
     base_meta: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    narrator = NARRATORS.get(tool)
-    if narrator is None:
-        fallback = tool_result(data)
-        if mode == "text" and base_meta and "ui" in base_meta:
-            rest = {k: v for k, v in base_meta.items() if k != "ui"}
-            return {**fallback, "_meta": rest}
-        return {**fallback, "_meta": dict(base_meta)} if base_meta else fallback
-
-    narrated = narrator(data)
-    text = str(narrated["text"])
-    raw_links = narrated.get("links")
-    links = raw_links if isinstance(raw_links, list) else []
-    narrated_block: dict[str, object] = {
-        "type": "text",
-        "text": text,
-        "annotations": {"audience": ["assistant"]},
+    payload: dict[str, object] = {
+        "tool": tool,
+        "payload": dict(data),
+        "mode": mode,
     }
-    resource_links: list[dict[str, object]] = []
-    for item in links:
-        if not isinstance(item, dict):
-            continue
-        uri = item.get("uri")
-        name = item.get("name")
-        if isinstance(uri, str) and isinstance(name, str):
-            resource_links.append(
-                {
-                    "type": "resource_link",
-                    "uri": uri,
-                    "name": name,
-                    "annotations": {"audience": ["user"]},
-                }
-            )
-    placeholder_block: dict[str, object] = {"type": "text", "text": ui_placeholder(tool, data)}
-    content: list[dict[str, object]]
-    if mode == "ui":
-        content = [placeholder_block, narrated_block]
-    else:
-        content = [narrated_block, *resource_links]
-    meta: Mapping[str, object] | None
-    if mode == "text" and base_meta and "ui" in base_meta:
-        meta = {k: v for k, v in base_meta.items() if k != "ui"}
-    else:
-        meta = dict(base_meta) if base_meta else None
-    result: dict[str, object] = {"content": content, "structuredContent": dict(data)}
-    if meta:
-        result["_meta"] = dict(meta)
-    return result
+    if base_meta is not None:
+        payload["meta"] = dict(base_meta)
+    value = call("mcpNarrate", payload)
+    if not isinstance(value, dict):
+        raise TypeError("mcpNarrate did not return a tool result object")
+    return {str(k): v for k, v in value.items()}

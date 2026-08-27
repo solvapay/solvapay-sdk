@@ -54,6 +54,11 @@ export type NativeClientMethod =
   | 'getAutoRecharge'
   | 'saveAutoRecharge'
   | 'disableAutoRecharge'
+  | 'mcpBootstrap'
+  | 'mcpCallBuiltinTool'
+  | 'mcpReadResource'
+  | 'mcpOauthRequest'
+  | 'mcpDispatch'
 
 export type NativeClientConfig = {
   apiKey: string
@@ -121,6 +126,8 @@ export type NativeSyncMethod =
   | 'includedUnits'
   | 'peggedCreditsPerUnit'
   | 'creditsPerUnitFromBalance'
+  | 'meterName'
+  | 'countsUsage'
   // Step 37R-d — @solvapay/core pure logic
   | 'validateBusinessDetails'
   | 'deriveTaxIdType'
@@ -152,6 +159,7 @@ export type NativeBinding = {
   verifyWebhook(body: string, signature: string, secret: string, nowUnixSecs?: number): string
   NativeClient?: NativeClientConstructor
   napiVersion?: () => string
+  solvapayCall?: (argsJson: string) => string
 } & Partial<Record<NativeSyncMethod, (argsJson: string) => string>>
 
 type EnvelopeOk = { ok: true; value: unknown }
@@ -346,7 +354,7 @@ export async function callNative(
  * Success returns the envelope `value` verbatim (no TS re-normalization).
  * Failure throws `SolvaPayError` / `PaywallError`.
  */
-export function callNativeSync(fn: NativeSyncMethod, argsJson: string): unknown {
+export function callNativeSync(fn: NativeSyncMethod | 'solvapayCall', argsJson: string): unknown {
   const binding = loadNativeBinding()
   if (binding === null) {
     throw new SolvaPayError('SolvaPay native binding (@solvapay/server-native) is not available')

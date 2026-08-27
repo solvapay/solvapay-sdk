@@ -415,6 +415,22 @@ function includedUnits(priced: unknown, meter: string | null): number | null {
   return null
 }
 
+function meterName(priced: unknown): string | null {
+  const fromCharge = perUnitCharge(priced, null)?.meter
+  if (typeof fromCharge === 'string' && fromCharge.length > 0) return fromCharge
+  for (const option of optionsOf(priced)) {
+    if (option.kind !== 'limit') continue
+    if (typeof option.meter === 'string' && option.meter.length > 0) return option.meter
+  }
+  return null
+}
+
+function countsUsage(priced: unknown): boolean {
+  if (perUnitCharge(priced, null) != null) return true
+  if (includedUnits(priced, null) != null) return true
+  return optionsOf(priced).some(option => option.kind === 'tier')
+}
+
 function peggedCreditsPerUnit(
   chargeMinor: number,
   creditsPerMinorUnit: number,
@@ -487,6 +503,8 @@ export function installPortableCoreFallbacks(): void {
     const rec = asRecord(args)
     return includedUnits(rec.priced, optionalString(rec.meter))
   },
+  meterName: args => meterName(asRecord(args).priced),
+  countsUsage: args => countsUsage(asRecord(args).priced),
   creditsPerUnitFromBalance: args => {
     const rec = asRecord(args)
     return creditsPerUnitFromBalance(rec.priced, rec.balance, optionalString(rec.meter))

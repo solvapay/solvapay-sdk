@@ -122,6 +122,42 @@ int main(void) {
   }
   printf("ok: null args to client_new\n");
 
+  char *sync_ok = solvapay_call("validateBusinessDetails", "{\"isBusiness\":false}");
+  if (!envelope_ok(sync_ok)) {
+    fprintf(stderr, "FAIL: solvapay_call envelope: %s\n", sync_ok ? sync_ok : "(null)");
+    solvapay_free_string(sync_ok);
+    return 1;
+  }
+  printf("ok: solvapay_call validateBusinessDetails\n");
+  solvapay_free_string(sync_ok);
+
+  char *null_op = solvapay_call(NULL, "{}");
+  if (!envelope_err(null_op)) {
+    fprintf(stderr, "FAIL: null op envelope: %s\n", null_op ? null_op : "(null)");
+    solvapay_free_string(null_op);
+    return 1;
+  }
+  printf("ok: null op → %s\n", null_op);
+  solvapay_free_string(null_op);
+
+  char *unknown_op = solvapay_call("noSuchOp", "{}");
+  if (!envelope_err(unknown_op)) {
+    fprintf(stderr, "FAIL: unknown op envelope: %s\n", unknown_op ? unknown_op : "(null)");
+    solvapay_free_string(unknown_op);
+    return 1;
+  }
+  printf("ok: unknown op → %s\n", unknown_op);
+  solvapay_free_string(unknown_op);
+
+  char *null_args = solvapay_call("validateBusinessDetails", NULL);
+  if (!envelope_err(null_args)) {
+    fprintf(stderr, "FAIL: null args envelope: %s\n", null_args ? null_args : "(null)");
+    solvapay_free_string(null_args);
+    return 1;
+  }
+  printf("ok: null args → %s\n", null_args);
+  solvapay_free_string(null_args);
+
   printf("PASS: C ABI smoke\n");
   return 0;
 }

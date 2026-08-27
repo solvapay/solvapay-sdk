@@ -455,4 +455,30 @@ describe('createOAuthFetchRouter', () => {
     const mcpRes = await router(new Request(`${publicBaseUrl}/mcp`, { method: 'POST' }))
     expect(mcpRes).toBeNull()
   })
+
+  it('puts mcpPath on the protected-resource identifier', async () => {
+    const mcpPath = '/agents'
+    const router = createOAuthFetchRouter({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      mcpPath,
+    })
+
+    const defaultPath = await router(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
+    )
+    expect(defaultPath!.status).toBe(200)
+    expect(((await defaultPath!.json()) as { resource: string }).resource).toBe(
+      `${publicBaseUrl}${mcpPath}`,
+    )
+
+    const pathAware = await router(
+      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource${mcpPath}`),
+    )
+    expect(pathAware!.status).toBe(200)
+    expect(((await pathAware!.json()) as { resource: string }).resource).toBe(
+      `${publicBaseUrl}${mcpPath}`,
+    )
+  })
 })

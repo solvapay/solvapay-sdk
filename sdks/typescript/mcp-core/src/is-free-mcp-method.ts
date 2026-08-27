@@ -5,19 +5,21 @@
  * Handshake + listing (`initialize`, `tools/list`, …) stay open so
  * clients and no-code discovery can connect without a customer JWT.
  */
+
+import { callMcpSyncOp } from './native-mcp'
+
 export type McpAuthMode = 'tools-call' | 'all'
 
 export function isFreeMcpMethod(mcpMethod?: string): boolean {
-  const method = (mcpMethod || '').trim().toLowerCase()
-  return method !== 'tools/call'
+  return callMcpSyncOp('mcpIsFreeMethod', { mcpMethod: mcpMethod ?? null })
 }
 
 export function requiresBearerAuth(
   mcpMethod: string | undefined,
   authMode: McpAuthMode,
 ): boolean {
-  if (authMode === 'all') {
-    return true
-  }
-  return !isFreeMcpMethod(mcpMethod)
+  return callMcpSyncOp('mcpRequiresBearerAuth', {
+    mcpMethod: mcpMethod ?? null,
+    authMode,
+  })
 }

@@ -11,6 +11,7 @@ import {
   billingCycle as readBillingCycle,
   creditsPerUnitFromBalance,
   includedUnits,
+  meterName,
   perUnitCharge,
   type BalancePegLike,
   type PricingOptionLike,
@@ -53,9 +54,10 @@ export interface BootstrapPlanLike {
 export type SuccessMeta =
   | {
       branch: 'payg'
-      amountMinor: number
-      currency: string
-      creditsAdded: number
+      /** Omitted when the plan activated against an already-funded wallet. */
+      amountMinor?: number
+      currency?: string
+      creditsAdded?: number
       plan: BootstrapPlanLike
       /** `null` when neither a credit nor a charge rate can be established. */
       rateLabel: string | null
@@ -195,7 +197,7 @@ export function inferIncludedUnits(plan: BootstrapPlanLike): number | null {
 
 /** The meter a plan counts against, for labelling an allowance. */
 export function planMeterName(plan: BootstrapPlanLike): string | null {
-  return perUnitCharge(plan)?.meter ?? null
+  return meterName(plan)
 }
 
 export function shortCycle(cycle: string | null | undefined): string {

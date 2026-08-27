@@ -160,10 +160,10 @@ fn write_imports(output: &mut String, rows: &[MethodRow<'_>], _blocking: bool) {
                 .strip_prefix("Option<")
                 .and_then(|rest| rest.strip_suffix('>'))
             {
-                if inner != "Value" && !inner.starts_with('&') {
+                if inner != "Value" && !inner.starts_with('&') && !inner.contains("::") {
                     dto_types.insert(inner.to_owned());
                 }
-            } else if param.ty != "Value" && !param.ty.starts_with('&') && param.ty != "()" {
+            } else if param.ty != "Value" && !param.ty.starts_with('&') && param.ty != "()" && !param.ty.contains("::") {
                 dto_types.insert(param.ty.clone());
             }
         }

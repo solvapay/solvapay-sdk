@@ -36,6 +36,8 @@ import {
   billingCycle,
   trialDays,
   includedUnits,
+  meterName,
+  countsUsage,
   peggedCreditsPerUnit,
   creditsPerUnitFromBalance,
 } from '@solvapay/core'
@@ -1933,6 +1935,14 @@ export function createDefaultRegistry(): FixtureRegistry {
         (args.priced ?? null) as Record<string, unknown> | null,
         typeof args.meter === 'string' ? args.meter : undefined,
       ),
+  })
+  registry.register('meterName', {
+    id: 'core',
+    invoke: args => meterName((args.priced ?? null) as Record<string, unknown> | null),
+  })
+  registry.register('countsUsage', {
+    id: 'core',
+    invoke: args => countsUsage((args.priced ?? null) as Record<string, unknown> | null),
   })
   registry.register('peggedCreditsPerUnit', {
     id: 'core',

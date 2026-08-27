@@ -22,7 +22,7 @@
 /*
  ABI version stamped into the cbindgen header as `SOLVAPAY_ABI_VERSION`.
  */
-#define SOLVAPAY_ABI_VERSION 1
+#define SOLVAPAY_ABI_VERSION 2
 
 /*
  Non-envelope status codes for `solvapay_client_new` and similar edges.
@@ -89,6 +89,15 @@ enum SolvapayStatus solvapay_client_new(const char *config_json,
  `client` must be null or a handle from [`solvapay_client_new`].
  */
 char *solvapay_client_call(struct SolvapayClient *client, const char *op, const char *args_json);
+
+/*
+ Client-less sync dispatch (`validateBusinessDetails`, MCP ops, …).
+
+ # Safety
+
+ `op` and `args_json` must be valid NUL-terminated C strings when non-null.
+ */
+char *solvapay_call(const char *op, const char *args_json);
 
 /*
  Verifies a webhook signature. Returns a JSON envelope (caller frees).

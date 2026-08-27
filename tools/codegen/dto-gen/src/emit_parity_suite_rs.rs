@@ -128,12 +128,16 @@ pub fn emit_parity_suite_rs(ir: &Ir) -> GenResult<String> {
     }
     output.push_str("}\n\n");
 
+    let n = ops.len();
+    let _ = writeln!(
+        output,
+        "#[test]\n\
+         fn operation_signatures_count_is_{n}() {{\n\
+         \x20   assert_eq!(OPERATION_SIGNATURES.len(), {n});\n\
+         }}\n"
+    );
     output.push_str(
         "#[test]\n\
-         fn operation_signatures_count_is_36() {\n\
-         \x20   assert_eq!(OPERATION_SIGNATURES.len(), 36);\n\
-         }\n\n\
-         #[test]\n\
          fn operation_signatures_are_sorted_unique() {\n\
          \x20   let names: Vec<&str> = OPERATION_SIGNATURES.iter().map(|(n, _)| *n).collect();\n\
          \x20   let mut sorted = names.clone();\n\
@@ -297,7 +301,7 @@ mod tests {
     #[test]
     fn emits_count_assert_defaults_and_no_tautologies() {
         let output = emit_parity_suite_rs(&empty_ir()).unwrap();
-        assert!(output.contains("assert_eq!(OPERATION_SIGNATURES.len(), 36)"));
+        assert!(output.contains("assert_eq!(OPERATION_SIGNATURES.len(), 0)"));
         assert!(output.contains("EXPECTED_LIMITS_CACHE_TTL_MS"));
         assert!(output.contains("EXPECTED_MAX_RETRIES"));
         assert!(output.contains("EXPECTED_INITIAL_DELAY_MS"));

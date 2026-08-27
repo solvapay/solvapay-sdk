@@ -1411,6 +1411,54 @@
         "params"
       ]
     },
+    "countsUsage": {
+      "core": "solvapay_core::pricing_options::counts_usage",
+      "names": {
+        "ts": "countsUsage",
+        "py": "counts_usage",
+        "rb": "counts_usage",
+        "go": "CountsUsage",
+        "rust": "counts_usage"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "countsUsage"
+      },
+      "args": [
+        {
+          "name": "priced",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 52,
+      "section": "plans",
+      "doc": "Binding for `countsUsage`.",
+      "docWasm": null,
+      "rustFnName": "counts_usage_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "priced.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "counts_usage",
+      "clientCallArgs": []
+    },
     "createCheckoutSession": {
       "core": "solvapay_transport::SolvaPayClient::create_checkout_session",
       "names": {
@@ -3314,6 +3362,181 @@
       "coreCall": null,
       "clientCallArgs": []
     },
+    "mcpBootstrap": {
+      "core": "solvapay_transport::SolvaPayClient::mcp_bootstrap",
+      "names": {
+        "ts": "mcpBootstrap",
+        "py": "mcp_bootstrap",
+        "rb": "mcp_bootstrap",
+        "go": "McpBootstrap",
+        "rust": "mcp_bootstrap"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "mcpBootstrap"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 36,
+      "section": "MCP composite",
+      "doc": "`mcpBootstrap`",
+      "docWasm": null,
+      "rustFnName": "mcp_bootstrap",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::McpBootstrapParams",
+      "coreCall": "mcp_bootstrap",
+      "clientCallArgs": []
+    },
+    "mcpCallBuiltinTool": {
+      "core": "solvapay_transport::SolvaPayClient::mcp_call_builtin_tool",
+      "names": {
+        "ts": "mcpCallBuiltinTool",
+        "py": "mcp_call_builtin_tool",
+        "rb": "mcp_call_builtin_tool",
+        "go": "McpCallBuiltinTool",
+        "rust": "mcp_call_builtin_tool"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "mcpCallBuiltinTool"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 37,
+      "section": "MCP composite",
+      "doc": "`mcpCallBuiltinTool`",
+      "docWasm": null,
+      "rustFnName": "mcp_call_builtin_tool",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::McpCallBuiltinToolParams",
+      "coreCall": "mcp_call_builtin_tool",
+      "clientCallArgs": []
+    },
+    "mcpDispatch": {
+      "core": "solvapay_transport::SolvaPayClient::mcp_dispatch",
+      "names": {
+        "ts": "mcpDispatch",
+        "py": "mcp_dispatch",
+        "rb": "mcp_dispatch",
+        "go": "McpDispatch",
+        "rust": "mcp_dispatch"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "mcpDispatch"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 40,
+      "section": "MCP composite",
+      "doc": "`mcpDispatch`",
+      "docWasm": null,
+      "rustFnName": "mcp_dispatch",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::McpDispatchParams",
+      "coreCall": "mcp_dispatch",
+      "clientCallArgs": []
+    },
+    "mcpOauthRequest": {
+      "core": "solvapay_transport::SolvaPayClient::mcp_oauth_request",
+      "names": {
+        "ts": "mcpOauthRequest",
+        "py": "mcp_oauth_request",
+        "rb": "mcp_oauth_request",
+        "go": "McpOauthRequest",
+        "rust": "mcp_oauth_request"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "mcpOauthRequest"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 39,
+      "section": "MCP composite",
+      "doc": "`mcpOauthRequest`",
+      "docWasm": null,
+      "rustFnName": "mcp_oauth_request",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::McpOauthRequestParams",
+      "coreCall": "mcp_oauth_request",
+      "clientCallArgs": []
+    },
+    "mcpReadResource": {
+      "core": "solvapay_transport::SolvaPayClient::mcp_read_resource",
+      "names": {
+        "ts": "mcpReadResource",
+        "py": "mcp_read_resource",
+        "rb": "mcp_read_resource",
+        "go": "McpReadResource",
+        "rust": "mcp_read_resource"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "mcpReadResource"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 38,
+      "section": "MCP composite",
+      "doc": "`mcpReadResource`",
+      "docWasm": null,
+      "rustFnName": "mcp_read_resource",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::McpReadResourceParams",
+      "coreCall": "mcp_read_resource",
+      "clientCallArgs": []
+    },
     "mcpViewMaps": {
       "core": "solvapay_core::mcp::mcp_view_maps",
       "names": {
@@ -3346,6 +3569,54 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "mcp_view_maps",
+      "clientCallArgs": []
+    },
+    "meterName": {
+      "core": "solvapay_core::pricing_options::meter_name",
+      "names": {
+        "ts": "meterName",
+        "py": "meter_name",
+        "rb": "meter_name",
+        "go": "MeterName",
+        "rust": "meter_name"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "meterName"
+      },
+      "args": [
+        {
+          "name": "priced",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 51,
+      "section": "plans",
+      "doc": "Binding for `meterName`.",
+      "docWasm": null,
+      "rustFnName": "meter_name_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "priced.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "meter_name",
       "clientCallArgs": []
     },
     "minorUnitsPerMajor": {

@@ -12,10 +12,10 @@ use solvapay_core::{
     build_create_customer_params, build_gate_message, build_nudge_message, build_paywall_gate,
     charges, classify_cancel_error, classify_create_error, classify_customer_ref,
     classify_lookup_error, classify_paywall_state, classify_reactivate_error,
-    coerce_customer_options, credits_per_unit_from_balance, decide_paywall_outcome,
+    coerce_customer_options, counts_usage, credits_per_unit_from_balance, decide_paywall_outcome,
     evaluate_cached_limits, evaluate_fresh_limits, evaluate_product_readiness,
     extract_backend_customer_ref, headline_charges, included_units, is_cached_customer_ref_valid,
-    is_email_conflict, is_error_result, map_route_error, normalize_cancel_response,
+    is_email_conflict, is_error_result, map_route_error, meter_name, normalize_cancel_response,
     normalize_reactivate_response, paywall_client_payload, pegged_credits_per_unit,
     per_unit_charge, project_payment_intent_result, project_topup_process_outcome,
     project_usage_snapshot, require_product_ref, resolve_check_limits_params,
@@ -784,6 +784,26 @@ pub fn credits_per_unit_from_balance_binding(args_json: String) -> String {
             balance.as_ref(),
             meter.as_deref(),
         ))
+    })
+}
+
+/// Binding for `meterName`.
+#[pyfunction(name = "meter_name")]
+pub fn meter_name_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&meter_name(priced.as_ref()))
+    })
+}
+
+/// Binding for `countsUsage`.
+#[pyfunction(name = "counts_usage")]
+pub fn counts_usage_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        Ok(Value::Bool(counts_usage(priced.as_ref())))
     })
 }
 

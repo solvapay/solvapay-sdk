@@ -102,20 +102,24 @@ pub fn emit_parity_suite_c(ir: &Ir) -> GenResult<String> {
          }\n\n",
     );
 
-    output.push_str(
-        "int main(void) {\n\
+    let n = symbols.len();
+    let _ = writeln!(
+        output,
+        "int main(void) {{\n\
          \tkeep_abi_symbols();\n\
-         \tif (solvapay_abi_version() != SOLVAPAY_ABI_VERSION) {\n\
+         \tif (solvapay_abi_version() != SOLVAPAY_ABI_VERSION) {{\n\
          \t\tfprintf(stderr, \"FAIL: abi_version=%u header=%d\\n\",\n\
          \t\t        solvapay_abi_version(), SOLVAPAY_ABI_VERSION);\n\
          \t\treturn 1;\n\
-         \t}\n\
+         \t}}\n\
          \tsize_t nops = sizeof(kOps) / sizeof(kOps[0]);\n\
-         \tif (nops != 36) {\n\
-         \t\tfprintf(stderr, \"FAIL: kOps len = %zu, want 36\\n\", nops);\n\
+         \tif (nops != {n}) {{\n\
+         \t\tfprintf(stderr, \"FAIL: kOps len = %zu, want {n}\\n\", nops);\n\
          \t\treturn 1;\n\
-         \t}\n\
-         \tSolvapayClient *client = NULL;\n\
+         \t}}\n"
+    );
+    output.push_str(
+        "\tSolvapayClient *client = NULL;\n\
          \tSolvapayStatus status = solvapay_client_new(\n\
          \t    \"{\\\"apiKey\\\":\\\"sk_parity\\\",\\\"apiBaseUrl\\\":\\\"http://127.0.0.1:1\\\"}\",\n\
          \t    &client);\n\
@@ -160,9 +164,14 @@ pub fn emit_parity_suite_c(ir: &Ir) -> GenResult<String> {
          \t\t\tsolvapay_free_string(env);\n\
          \t\t}\n\
          \t}\n\
-         \tsolvapay_client_free(client);\n\
-         \tprintf(\"OK: C signature parity (36 ops)\\n\");\n\
-         \treturn 0;\n\
+         \tsolvapay_client_free(client);\n"
+    );
+    let _ = writeln!(
+        output,
+        "\tprintf(\"OK: C signature parity ({n} ops)\\n\");"
+    );
+    output.push_str(
+        "\treturn 0;\n\
          }\n",
     );
 
@@ -235,7 +244,7 @@ mod tests {
     fn emits_count_assert_keep_symbols_and_no_tautologies() {
         let output = emit_parity_suite_c(&empty_ir()).unwrap();
         assert!(output.contains("@generated"));
-        assert!(output.contains("nops != 36"));
+        assert!(output.contains("nops != 0"));
         assert!(output.contains("(void)&solvapay_client_call"));
         assert!(output.contains("unknown op"));
         assert!(output.contains("kRequiredArgs[][kMaxRequired]"));

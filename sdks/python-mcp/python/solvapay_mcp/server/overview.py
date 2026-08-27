@@ -50,3 +50,12 @@ need an authenticated caller return `Unauthorized` when it is missing.
   and their slash-command shortcuts.
 - Documentation: https://docs.solvapay.com/sdks/typescript/guides/mcp-app.
 """
+
+
+def overview_body() -> str:
+    from solvapay_mcp.core import call
+
+    value = call("mcpOverviewResource", {})
+    if not isinstance(value, dict) or not isinstance(value.get("body"), str):
+        raise TypeError("mcpOverviewResource did not return a body")
+    return str(value["body"])

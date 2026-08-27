@@ -1,32 +1,24 @@
 /**
- * Sync MCP payload/descriptor delegation layer (Step 37R-d).
+ * Sync MCP payload/descriptor delegation layer.
  *
  * Install-gated so this module never statically imports `node:module` /
- * `@solvapay/server-native` — Deno/edge/browser stay on TypeScript fallback.
+ * `@solvapay/server-native`. Node publishes napi dispatch; edge publishes
+ * WASM (`solvapayCall`). Uninstalled dispatch throws — no TypeScript fallback.
  *
  * Node consumers call `installNativeMcpApi`, or pick up the ambient
  * `Symbol.for('solvapay.nativeSyncApi')` published by `@solvapay/server`.
- * Edge never installs / never publishes.
  */
 
-import {
-  buildPromptDescriptorMetadata as buildPromptDescriptorMetadataTs,
-  buildPromptUserMessage as buildPromptUserMessageTs,
-  buildToolDescriptorMetadata as buildToolDescriptorMetadataTs,
-  deriveIcons as deriveIconsTs,
-  validatePublicBaseUrl as validatePublicBaseUrlTs,
-  type BuildPromptDescriptorMetadataOptions,
-  type BuildToolDescriptorMetadataOptions,
-  type PromptDescriptorMetadata,
-  type ToolDescriptorMetadata,
+import type {
+  BuildPromptDescriptorMetadataOptions,
+  BuildToolDescriptorMetadataOptions,
+  PromptDescriptorMetadata,
+  ToolDescriptorMetadata,
 } from './descriptor-metadata'
-import {
-  assertResponseResult as assertResponseResultTs,
-  makeResponseResult as makeResponseResultTs,
-} from './response-envelope'
-import { paywallToolResult as paywallToolResultTs } from './paywallToolResult'
-import { MCP_TOOL_NAMES, type McpToolName } from './tool-names'
-import { TOOL_FOR_VIEW, VIEW_FOR_TOOL } from './types'
+import type { McpToolName } from './tool-names'
+import type { PaywallStructuredContent } from '@solvapay/server'
+import { PaywallError } from '@solvapay/server'
+import type { PaywallToolResultContext } from './paywallToolResult'
 import type {
   ContentBlock,
   PaywallToolResult,
@@ -37,9 +29,7 @@ import type {
   SolvaPayPromptResult,
   SolvaPayToolIcon,
 } from './types'
-import type { PaywallStructuredContent } from '@solvapay/server'
-import { PaywallError } from '@solvapay/server'
-import type { PaywallToolResultContext } from './paywallToolResult'
+import { TOOL_FOR_VIEW, VIEW_FOR_TOOL } from './types'
 
 export type NativeMcpSyncMethod =
   | 'paywallToolResult'
@@ -55,7 +45,7 @@ export type NativeMcpSyncMethod =
   | 'validatePublicBaseUrl'
 
 type NativeMcpApi = {
-  callNativeSync: (fn: NativeMcpSyncMethod, argsJson: string) => unknown
+  callNativeSync: (fn: NativeMcpSyncMethod | 'solvapayCall', argsJson: string) => unknown
 }
 
 /** Must match `SOLVAPAY_NATIVE_SYNC_API` in `@solvapay/server` native-registry. */
@@ -92,17 +82,24 @@ function readAmbientApi(): NativeMcpApi | null {
   return isNativeMcpApi(api) ? api : null
 }
 
-function getApi(): NativeMcpApi | null {
-  return installed ?? readAmbientApi()
+function requireApi(): NativeMcpApi {
+  const api = installed ?? readAmbientApi()
+  if (api === null) {
+    throw new Error('SolvaPay native MCP API is not installed')
+  }
+  return api
 }
 
-function dispatchSync<T>(fn: NativeMcpSyncMethod, args: unknown, tsFallback: () => T): T {
-  // The install (or ambient publish) is the gate: Node publishes napi dispatch
-  // (`@solvapay/server` index), edge publishes WASM dispatch (`@solvapay/server`
-  // edge). Uninstalled / edge-without-publish → TypeScript fallback.
-  const api = getApi()
-  if (api === null) return tsFallback()
-  return api.callNativeSync(fn, JSON.stringify(args)) as T
+function dispatchSync<T>(fn: NativeMcpSyncMethod, args: unknown): T {
+  return requireApi().callNativeSync(fn, JSON.stringify(args)) as T
+}
+
+/**
+ * Client-less MCP op via `solvapayCall`. Throws when no native/WASM API
+ * is installed — there is no TypeScript fallback.
+ */
+export function callMcpSyncOp<T>(op: string, args: unknown): T {
+  return requireApi().callNativeSync('solvapayCall', JSON.stringify({ op, args })) as T
 }
 
 /**
@@ -111,19 +108,14 @@ function dispatchSync<T>(fn: NativeMcpSyncMethod, args: unknown, tsFallback: () 
  */
 export async function paywallToolResult(
   errOrGate: PaywallError | PaywallStructuredContent,
-  ctx: PaywallToolResultContext = {},
+  _ctx: PaywallToolResultContext = {},
 ): Promise<PaywallToolResult> {
-  const api = getApi()
-  if (api === null) {
-    return paywallToolResultTs(errOrGate, ctx)
-  }
-
   const paywallContent: PaywallStructuredContent =
     errOrGate instanceof PaywallError ? errOrGate.structuredContent : errOrGate
   const narrationText =
     errOrGate instanceof PaywallError ? errOrGate.message : paywallContent.message
 
-  return api.callNativeSync(
+  return requireApi().callNativeSync(
     'paywallToolResult',
     JSON.stringify({ message: narrationText, structuredContent: paywallContent }),
   ) as PaywallToolResult
@@ -134,24 +126,16 @@ export function makeResponseResult<TData>(
   options: ResponseOptions | undefined,
   emittedBlocks: ContentBlock[],
 ): ResponseResult<TData> {
-  return dispatchSync(
-    'makeResponseResult',
-    {
-      data,
-      ...(options !== undefined ? { options } : {}),
-      ...(emittedBlocks.length > 0 ? { emittedBlocks } : {}),
-    },
-    () => makeResponseResultTs(data, options, emittedBlocks),
-  )
+  return dispatchSync('makeResponseResult', {
+    data,
+    ...(options !== undefined ? { options } : {}),
+    ...(emittedBlocks.length > 0 ? { emittedBlocks } : {}),
+  })
 }
 
 export function assertResponseResult(value: unknown): ResponseResult<unknown> {
-  const api = getApi()
-  if (api === null) {
-    return assertResponseResultTs(value)
-  }
   try {
-    return api.callNativeSync(
+    return requireApi().callNativeSync(
       'assertResponseResult',
       JSON.stringify({ value }),
     ) as ResponseResult<unknown>
@@ -163,7 +147,7 @@ export function assertResponseResult(value: unknown): ResponseResult<unknown> {
 
 /** Fixture-visible accessor; `MCP_TOOL_NAMES` const keeps `as const` identity. */
 export function getMcpToolNamesTable(): Record<string, string> {
-  return dispatchSync('MCP_TOOL_NAMES', {}, () => ({ ...MCP_TOOL_NAMES }))
+  return dispatchSync('MCP_TOOL_NAMES', {})
 }
 
 /** Fixture-visible combined view maps. */
@@ -171,52 +155,39 @@ export function mcpViewMaps(): {
   TOOL_FOR_VIEW: typeof TOOL_FOR_VIEW
   VIEW_FOR_TOOL: typeof VIEW_FOR_TOOL
 } {
-  return dispatchSync('mcpViewMaps', {}, () => ({
-    TOOL_FOR_VIEW: { ...TOOL_FOR_VIEW },
-    VIEW_FOR_TOOL: { ...VIEW_FOR_TOOL },
-  }))
+  return dispatchSync('mcpViewMaps', {})
 }
 
 export function deriveIcons(
   branding: SolvaPayMerchantBranding | undefined,
 ): SolvaPayToolIcon[] | undefined {
-  const result = dispatchSync(
-    'deriveIcons',
-    { branding: branding ?? null },
-    () => deriveIconsTs(branding) ?? null,
-  )
+  const result = dispatchSync<SolvaPayToolIcon[] | null>('deriveIcons', {
+    branding: branding ?? null,
+  })
   return result === null ? undefined : result
 }
 
 export function buildToolDescriptorMetadata(
   options: BuildToolDescriptorMetadataOptions,
 ): ToolDescriptorMetadata[] {
-  return dispatchSync('buildToolDescriptorMetadata', options, () =>
-    buildToolDescriptorMetadataTs(options),
-  )
+  return dispatchSync('buildToolDescriptorMetadata', options)
 }
 
 export function buildPromptDescriptorMetadata(
   options: BuildPromptDescriptorMetadataOptions = {},
 ): PromptDescriptorMetadata[] {
-  return dispatchSync('buildPromptDescriptorMetadata', options, () =>
-    buildPromptDescriptorMetadataTs(options),
-  )
+  return dispatchSync('buildPromptDescriptorMetadata', options)
 }
 
 export function buildPromptUserMessage(
   promptName: McpToolName,
   args: Record<string, unknown>,
 ): SolvaPayPromptResult {
-  return dispatchSync('buildPromptUserMessage', { promptName, args }, () =>
-    buildPromptUserMessageTs(promptName, args),
-  )
+  return dispatchSync('buildPromptUserMessage', { promptName, args })
 }
 
 export function validatePublicBaseUrl(publicBaseUrl: string): string | null {
-  return dispatchSync('validatePublicBaseUrl', { publicBaseUrl }, () =>
-    validatePublicBaseUrlTs(publicBaseUrl),
-  )
+  return dispatchSync('validatePublicBaseUrl', { publicBaseUrl })
 }
 
 /**
@@ -225,13 +196,7 @@ export function validatePublicBaseUrl(publicBaseUrl: string): string | null {
 export function buildPayableToolResult(
   envelope: ResponseResult<unknown>,
 ): SolvaPayCallToolResult {
-  const api = getApi()
-  if (api === null) {
-    throw new Error(
-      'SolvaPay native MCP API is not installed; buildPayableToolResult requires native dispatch',
-    )
-  }
-  return api.callNativeSync(
+  return requireApi().callNativeSync(
     'buildPayableToolResult',
     JSON.stringify({ envelope }),
   ) as SolvaPayCallToolResult

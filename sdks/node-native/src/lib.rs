@@ -37,7 +37,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use error::BindingError;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use solvapay_core::verify_webhook as core_verify_webhook;
+use solvapay_core::{verify_webhook as core_verify_webhook, SdkError};
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native_client;
@@ -65,6 +65,34 @@ pub fn verify_webhook_json(
     let value = core_verify_webhook(body, signature, secret, now_unix_secs)
         .map_err(BindingError::from_webhook)?;
     serde_json::to_string(&value).map_err(|e| BindingError::serialize_failed(e.to_string()))
+}
+
+/// Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
+#[cfg(not(target_arch = "wasm32"))]
+#[napi(js_name = "solvapayCall")]
+pub fn solvapay_call(args_json: String) -> String {
+    match catch_unwind(AssertUnwindSafe(|| {
+        let parsed: serde_json::Value = match serde_json::from_str(&args_json) {
+            Ok(value) => value,
+            Err(err) => {
+                return crate::error::err_envelope(&SdkError::transport(
+                    format!("invalid solvapay_call args: {err}"),
+                    false,
+                ));
+            }
+        };
+        let Some(op) = parsed.get("op").and_then(serde_json::Value::as_str) else {
+            return crate::error::err_envelope(&SdkError::transport("missing op", false));
+        };
+        let args = parsed
+            .get("args")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+        solvapay_mcp_core::dispatch_sync(op, &args.to_string())
+    })) {
+        Ok(json) => json,
+        Err(payload) => crate::error::envelope_from_panic_payload(payload),
+    }
 }
 
 /// Returns the crate version string (`CARGO_PKG_VERSION`).

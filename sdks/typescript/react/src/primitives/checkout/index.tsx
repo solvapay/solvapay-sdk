@@ -818,22 +818,31 @@ function Success({ className, children }: SuccessProps) {
   }
   const meta = flow.successMeta
   if (meta.branch === 'payg') {
+    const chargedAmount = meta.amountMinor
+    const chargedCurrency = meta.currency
+    const charged = chargedAmount != null && chargedCurrency != null
     return (
       <div className={className ?? 'solvapay-checkout-success'} data-branch="payg">
         <div className="solvapay-checkout-success-check" aria-hidden="true">
           ✓
         </div>
-        <h2 className="solvapay-checkout-success-heading">Credits added</h2>
+        <h2 className="solvapay-checkout-success-heading">
+          {charged ? 'Credits added' : 'Plan activated'}
+        </h2>
         <p className="solvapay-checkout-success-subheading">Pay as you go plan is active.</p>
         <dl className="solvapay-checkout-receipt" data-variant="payg">
-          <div className="solvapay-checkout-receipt-row">
-            <dt>Amount</dt>
-            <dd>{formatPrice(meta.amountMinor, meta.currency, { locale })}</dd>
-          </div>
-          <div className="solvapay-checkout-receipt-row">
-            <dt>Credits</dt>
-            <dd>+{meta.creditsAdded.toLocaleString(locale)}</dd>
-          </div>
+          {charged ? (
+            <>
+              <div className="solvapay-checkout-receipt-row">
+                <dt>Amount</dt>
+                <dd>{formatPrice(chargedAmount, chargedCurrency, { locale })}</dd>
+              </div>
+              <div className="solvapay-checkout-receipt-row">
+                <dt>Credits</dt>
+                <dd>+{(meta.creditsAdded ?? 0).toLocaleString(locale)}</dd>
+              </div>
+            </>
+          ) : null}
           <div className="solvapay-checkout-receipt-row">
             <dt>Plan</dt>
             <dd>{meta.plan.name ?? 'Pay as you go'}</dd>

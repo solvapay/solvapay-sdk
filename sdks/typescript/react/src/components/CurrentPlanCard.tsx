@@ -20,6 +20,7 @@
  * - `usage-based` — `<BalanceBadge>` line; no date
  */
 
+import { countsUsage } from '@solvapay/core'
 import React from 'react'
 import { usePurchase } from '../hooks/usePurchase'
 import { usePurchaseStatus } from '../hooks/usePurchaseStatus'
@@ -116,7 +117,8 @@ function PlanTypeLine({
   className?: string
 }) {
   const copy = useCopy()
-  const isMetered = purchase.planSnapshot?.isMetered === true
+  const isMetered =
+    countsUsage(purchase.planSnapshot) || purchase.planSnapshot?.isMetered === true
 
   if (purchase.isRecurring) {
     const date = formatDate(purchase.nextBillingDate)
@@ -197,7 +199,9 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
 
   if (!activePurchase) return null
 
-  const isUsageBased = activePurchase.planSnapshot?.isMetered === true
+  const isUsageBased =
+    countsUsage(activePurchase.planSnapshot) ||
+    activePurchase.planSnapshot?.isMetered === true
   const planType = activePurchase.isRecurring
     ? 'recurring'
     : isUsageBased

@@ -81,33 +81,33 @@ def get_oauth_protected_resource_response(
     *,
     mcp_path: str | None = None,
 ) -> dict[str, object]:
-    origin = without_trailing_slash(public_base_url)
-    return {
-        "resource": mcp_resource_identifier(origin, mcp_path),
-        "authorization_servers": [origin],
-        "scopes_supported": ["openid", "profile", "email"],
-        "bearer_methods_supported": ["header"],
+    from solvapay_mcp.core import call
+
+    payload: dict[str, object] = {
+        "kind": "protected-resource",
+        "publicBaseUrl": public_base_url,
     }
+    if mcp_path is not None:
+        payload["mcpPath"] = mcp_path
+    value = call("mcpOauthDiscovery", payload)
+    if not isinstance(value, dict):
+        raise TypeError("mcpOauthDiscovery did not return an object")
+    return {str(k): v for k, v in value.items()}
 
 
 def get_oauth_authorization_server_response(
     public_base_url: str,
     paths: OAuthBridgePaths | ResolvedOAuthPaths | None = None,
 ) -> dict[str, object]:
-    base = without_trailing_slash(public_base_url)
-    resolved = resolve_oauth_paths(paths)
-    return {
-        "issuer": base,
-        "authorization_endpoint": f"{base}{resolved['authorize']}",
-        "token_endpoint": f"{base}{resolved['token']}",
-        "registration_endpoint": f"{base}{resolved['register']}",
-        "revocation_endpoint": f"{base}{resolved['revoke']}",
-        "token_endpoint_auth_methods_supported": [
-            "client_secret_basic",
-            "client_secret_post",
-        ],
-        "response_types_supported": ["code"],
-        "grant_types_supported": ["authorization_code", "refresh_token"],
-        "scopes_supported": ["openid", "profile", "email"],
-        "code_challenge_methods_supported": ["S256"],
+    from solvapay_mcp.core import call
+
+    payload: dict[str, object] = {
+        "kind": "authorization-server",
+        "publicBaseUrl": public_base_url,
     }
+    if paths is not None:
+        payload["paths"] = dict(paths)
+    value = call("mcpOauthDiscovery", payload)
+    if not isinstance(value, dict):
+        raise TypeError("mcpOauthDiscovery did not return an object")
+    return {str(k): v for k, v in value.items()}

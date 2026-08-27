@@ -32,7 +32,7 @@ use crate::error::{
 };
 
 /// ABI version stamped into the cbindgen header as `SOLVAPAY_ABI_VERSION`.
-pub const SOLVAPAY_ABI_VERSION: u32 = 1;
+pub const SOLVAPAY_ABI_VERSION: u32 = 2;
 
 /// Opaque client handle for the C ABI (never dereferenced as a Rust pointer).
 #[repr(C)]
@@ -157,6 +157,20 @@ pub unsafe extern "C" fn solvapay_client_new(
     }
 }
 
+/// Reads `op` + `args_json` C strings into owned UTF-8, or an error envelope.
+fn read_op_args(op: *const c_char, args_json: *const c_char) -> Result<(String, String), String> {
+    let Some(op_str) = read_c_str(op) else {
+        return Err(err_envelope(&SdkError::transport("null op argument", false)));
+    };
+    let Some(args) = read_c_str(args_json) else {
+        return Err(err_envelope(&SdkError::transport(
+            "null args_json argument",
+            false,
+        )));
+    };
+    Ok((op_str.into_owned(), args.into_owned()))
+}
+
 /// Generic op dispatch. Always returns a JSON envelope string (caller frees).
 ///
 /// Invalid handles / null args yield an error envelope (never null for those
@@ -173,20 +187,9 @@ pub unsafe extern "C" fn solvapay_client_call(
     args_json: *const c_char,
 ) -> *mut c_char {
     let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-        let Some(op_str) = read_c_str(op) else {
-            return into_c_string(err_envelope(&SdkError::transport(
-                "null op argument",
-                false,
-            )));
-        };
-        let args = match read_c_str(args_json) {
-            Some(a) => a,
-            None => {
-                return into_c_string(err_envelope(&SdkError::transport(
-                    "null args_json argument",
-                    false,
-                )));
-            }
+        let (op_str, args) = match read_op_args(op, args_json) {
+            Ok(pair) => pair,
+            Err(env) => return into_c_string(env),
         };
         match handle::with_client(client, |c| dispatch::dispatch(c, &op_str, &args)) {
             Ok(envelope) => into_c_string(envelope),
@@ -201,6 +204,26 @@ pub unsafe extern "C" fn solvapay_client_call(
                 false,
             ))),
         }
+    }));
+    match result {
+        Ok(ptr) => ptr,
+        Err(payload) => into_c_string(envelope_from_panic_payload(payload)),
+    }
+}
+
+/// Client-less sync dispatch (`validateBusinessDetails`, MCP ops, …).
+///
+/// # Safety
+///
+/// `op` and `args_json` must be valid NUL-terminated C strings when non-null.
+#[no_mangle]
+pub unsafe extern "C" fn solvapay_call(op: *const c_char, args_json: *const c_char) -> *mut c_char {
+    let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+        let (op_str, args) = match read_op_args(op, args_json) {
+            Ok(pair) => pair,
+            Err(env) => return into_c_string(env),
+        };
+        into_c_string(solvapay_mcp_core::dispatch_sync(&op_str, &args))
     }));
     match result {
         Ok(ptr) => ptr,
@@ -292,7 +315,7 @@ mod tests {
     #[test]
     fn abi_version_matches_const() {
         assert_eq!(solvapay_abi_version(), SOLVAPAY_ABI_VERSION);
-        assert_eq!(SOLVAPAY_ABI_VERSION, 1);
+        assert_eq!(SOLVAPAY_ABI_VERSION, 2);
     }
 
     #[test]
@@ -375,6 +398,48 @@ mod tests {
         unsafe {
             solvapay_client_free(out);
         }
+    }
+
+    #[test]
+    fn solvapay_call_validate_business_details() {
+        let op = CString::new("validateBusinessDetails").unwrap();
+        let args = CString::new(r#"{"isBusiness":false}"#).unwrap();
+        let env = parse_envelope(unsafe { solvapay_call(op.as_ptr(), args.as_ptr()) });
+        assert_eq!(env["ok"], true);
+    }
+
+    #[test]
+    fn solvapay_call_null_op_is_error_envelope() {
+        let args = CString::new("{}").unwrap();
+        let env = parse_envelope(unsafe { solvapay_call(ptr::null(), args.as_ptr()) });
+        assert_eq!(env["ok"], false);
+        assert!(env["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("null op"));
+    }
+
+    #[test]
+    fn solvapay_call_unknown_op_is_error_envelope() {
+        let op = CString::new("noSuchOp").unwrap();
+        let args = CString::new("{}").unwrap();
+        let env = parse_envelope(unsafe { solvapay_call(op.as_ptr(), args.as_ptr()) });
+        assert_eq!(env["ok"], false);
+        assert!(env["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("unknown op"));
+    }
+
+    #[test]
+    fn solvapay_call_null_args_is_error_envelope() {
+        let op = CString::new("validateBusinessDetails").unwrap();
+        let env = parse_envelope(unsafe { solvapay_call(op.as_ptr(), ptr::null()) });
+        assert_eq!(env["ok"], false);
+        assert!(env["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("null args"));
     }
 
     #[test]

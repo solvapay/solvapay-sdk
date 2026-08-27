@@ -119,6 +119,31 @@ export function createBuildBootstrapPayload(
     getCustomerRef = defaultGetCustomerRefHelper,
   } = options
 
+  const nativeBootstrap = (
+    solvaPay.apiClient as typeof solvaPay.apiClient & {
+      mcpBootstrap?: (params: {
+        view: string
+        productRef: string
+        publicBaseUrl: string
+        customerRef?: string | null
+      }) => Promise<unknown>
+    }
+  ).mcpBootstrap
+  if (typeof nativeBootstrap === 'function') {
+    return async (view, extra) => {
+      const payload = await nativeBootstrap({
+        view,
+        productRef,
+        publicBaseUrl,
+        customerRef: getCustomerRef(extra),
+      })
+      if (payload === null || typeof payload !== 'object') {
+        throw new Error('mcpBootstrap returned a non-object payload')
+      }
+      return payload as BootstrapPayload
+    }
+  }
+
   const fetchPublishableKey = async (): Promise<string | null> => {
     try {
       const platform = await solvaPay.apiClient.getPlatformConfig?.()

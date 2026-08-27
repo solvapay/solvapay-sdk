@@ -42,6 +42,11 @@ module SolvaPay
       get_auto_recharge
       save_auto_recharge
       disable_auto_recharge
+      mcp_bootstrap
+      mcp_call_builtin_tool
+      mcp_read_resource
+      mcp_oauth_request
+      mcp_dispatch
     ].freeze
 
     SYNC_METHODS = %w[
@@ -122,6 +127,8 @@ module SolvaPay
       included_units
       pegged_credits_per_unit
       credits_per_unit_from_balance
+      meter_name
+      counts_usage
     ].freeze
 
     RAW_VERIFY_WEBHOOK = SolvaPay.method(:verify_webhook)

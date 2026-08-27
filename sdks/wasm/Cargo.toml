@@ -18,6 +18,7 @@ default = []
 # helpers only (no webhook, no transport, no secret-key client).
 edge = [
     "solvapay-core/webhook-verify",
+    "solvapay-mcp-core/engine",
     "dep:solvapay-dto",
     "dep:solvapay-transport",
     "dep:wasm-bindgen-futures",
@@ -29,6 +30,7 @@ js-sys = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 solvapay-core = { path = "../../core/solvapay-core", default-features = false }
+solvapay-mcp-core = { path = "../../core/solvapay-mcp", default-features = false }
 solvapay-dto = { path = "../../core/solvapay-dto", optional = true }
 solvapay-transport = { path = "../../core/solvapay-transport", optional = true }
 wasm-bindgen = { workspace = true }

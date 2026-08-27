@@ -1,0 +1,43 @@
+{
+  "suite": "engine",
+  "case": "gate-denied",
+  "input": {
+    "fn": "mcpResume",
+    "args": {
+      "token": "tok_fixture",
+      "handlerEnvelope": {
+        "kind": "gate",
+        "gate": {
+          "kind": "payment_required",
+          "product": "prd_demo",
+          "checkoutUrl": "https://pay.test/x",
+          "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc",
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
+            }
+          ],
+          "isError": false,
+          "structuredContent": {
+            "kind": "payment_required",
+            "product": "prd_demo",
+            "checkoutUrl": "https://pay.test/x",
+            "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
+          }
+        }
+      }
+    }
+  }
+}

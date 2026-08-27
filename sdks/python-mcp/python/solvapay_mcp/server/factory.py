@@ -8,7 +8,12 @@ from mcp.server.lowlevel.server import Server
 from mcp.types import Icon, Prompt, PromptArgument, Resource, Tool, ToolAnnotations
 from solvapay.facade import SolvaPay
 
-from solvapay_mcp.register import register_builtin_tool, register_prompt, register_resource
+from solvapay_mcp.register import (
+    register_builtin_tool,
+    register_prompt,
+    register_resource,
+    set_hide_tools_by_audience,
+)
 from solvapay_mcp.server.descriptors import build_solvapay_descriptors
 from solvapay_mcp.widget import default_mcp_app_html
 
@@ -62,6 +67,7 @@ def create_solvapay_mcp_server(
     csp: dict[str, list[str]] | None = None,
     api_base_url: str | None = None,
     server_name: str = "solvapay-mcp-server",
+    hide_tools_by_audience: list[str] | None = None,
 ) -> Server[object]:
     bundle = build_solvapay_descriptors(
         solvapay=solvapay,
@@ -184,4 +190,6 @@ def create_solvapay_mcp_server(
                 ),
                 handler,
             )
+    if hide_tools_by_audience:
+        set_hide_tools_by_audience(server, hide_tools_by_audience)
     return server

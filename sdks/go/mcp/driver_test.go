@@ -142,7 +142,7 @@ func cloneMap(m map[string]any) map[string]any {
 
 func TestReplaysFixture(t *testing.T) {
 	root := lookupMcpFixtures(t)
-	for _, rel := range mcpAuthoringFixtures {
+	for _, rel := range registerPayableFixtures() {
 		t.Run(rel, func(t *testing.T) {
 			raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
 			if err != nil {

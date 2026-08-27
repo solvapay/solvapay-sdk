@@ -45,6 +45,7 @@ files = [
   "python/solvapay_mcp/register.py",
   "python/solvapay_mcp/response_context.py",
   "python/solvapay_mcp/_layer2.py",
+  "python/solvapay_mcp/core.py",
   "python/solvapay_mcp/widget.py",
   "python/solvapay_mcp/oauth",
   "python/solvapay_mcp/asgi",

@@ -11,7 +11,7 @@
 
 import type { LimitResponseWithPlan, PaywallStructuredContent, SolvaPay } from '@solvapay/server'
 import { PaywallError } from '@solvapay/server'
-import { makeResponseResult } from './response-envelope'
+import { makeResponseResult } from './native-mcp'
 import type {
   BootstrapPlan,
   BootstrapProduct,

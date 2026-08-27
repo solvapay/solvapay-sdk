@@ -2,7 +2,7 @@
  * Node-only: install mcp-core napi delegation when this package loads.
  *
  * Edge/Deno consumers use `@solvapay/mcp/fetch` (not this module) and
- * never install — they stay on the TypeScript fallback.
+ * pick up WASM dispatch from `@solvapay/server/edge` (`publishWasmSyncApi`).
  */
 
 import { installNativeMcpApi } from '@solvapay/mcp-core'

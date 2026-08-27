@@ -891,6 +891,56 @@ describe('createMcpOAuthBridge integration', () => {
     )
     expect(state.statusCode).toBe(201)
   })
+
+  it('puts mcpPath on the protected-resource identifier and the auth challenge', async () => {
+    const mcpPath = '/agents'
+    const middlewares = createMcpOAuthBridge({
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      mcpPath,
+    })
+
+    const discovery = mockRes()
+    await runPipeline(
+      middlewares,
+      mockReq({ method: 'GET', path: '/.well-known/oauth-protected-resource' }),
+      discovery.res,
+      discovery.state,
+    )
+    expect(discovery.state.statusCode).toBe(200)
+    expect(discovery.state.body).toEqual(
+      expect.objectContaining({ resource: `${publicBaseUrl}${mcpPath}` }),
+    )
+
+    const pathAware = mockRes()
+    await runPipeline(
+      middlewares,
+      mockReq({ method: 'GET', path: `/.well-known/oauth-protected-resource${mcpPath}` }),
+      pathAware.res,
+      pathAware.state,
+    )
+    expect(pathAware.state.statusCode).toBe(200)
+    expect(pathAware.state.body).toEqual(
+      expect.objectContaining({ resource: `${publicBaseUrl}${mcpPath}` }),
+    )
+
+    const challenge = mockRes()
+    await runPipeline(
+      middlewares,
+      mockReq({
+        method: 'POST',
+        path: mcpPath,
+        body: { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'echo' } },
+      }),
+      challenge.res,
+      challenge.state,
+    )
+    expect(challenge.state.statusCode).toBe(401)
+    expect(challenge.state.headers['www-authenticate']).toContain(
+      `resource_metadata="${publicBaseUrl}/.well-known/oauth-protected-resource${mcpPath}"`,
+    )
+  })
 })
 
 type AnyMiddleware = (

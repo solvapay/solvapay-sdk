@@ -279,7 +279,14 @@ impl SolvaPayClient {
         &self,
         params: CreateCheckoutSessionRequest,
     ) -> Result<CreateCheckoutSessionResponse, SdkError> {
-        self.execute_typed(
+        deserialize_value(self.create_checkout_session_json(params).await?)
+    }
+
+    pub(crate) async fn create_checkout_session_json(
+        &self,
+        params: CreateCheckoutSessionRequest,
+    ) -> Result<Value, SdkError> {
+        self.execute_json(
             Method::Post,
             "/v1/sdk/checkout-sessions".to_owned(),
             BTreeMap::new(),
@@ -301,7 +308,14 @@ impl SolvaPayClient {
         &self,
         params: CreateCustomerSessionRequest,
     ) -> Result<CreateCustomerSessionResponse, SdkError> {
-        self.execute_typed(
+        deserialize_value(self.create_customer_session_json(params).await?)
+    }
+
+    pub(crate) async fn create_customer_session_json(
+        &self,
+        params: CreateCustomerSessionRequest,
+    ) -> Result<Value, SdkError> {
+        self.execute_json(
             Method::Post,
             "/v1/sdk/customers/customer-sessions".to_owned(),
             BTreeMap::new(),
@@ -315,7 +329,11 @@ impl SolvaPayClient {
     /// `GET /v1/sdk/merchant` — merchant profile.
     #[solvapay_core::solvapay_export(catalog = "operation", section = "Group A", emit_order = 8)]
     pub async fn get_merchant(&self) -> Result<SdkMerchantResponseDto, SdkError> {
-        self.execute_typed(
+        deserialize_value(self.get_merchant_json().await?)
+    }
+
+    pub(crate) async fn get_merchant_json(&self) -> Result<Value, SdkError> {
+        self.execute_json(
             Method::Get,
             "/v1/sdk/merchant".to_owned(),
             BTreeMap::new(),
@@ -329,7 +347,11 @@ impl SolvaPayClient {
     /// `GET /v1/sdk/platform-config` — publishable platform config.
     #[solvapay_core::solvapay_export(catalog = "operation", section = "Group A", emit_order = 9)]
     pub async fn get_platform_config(&self) -> Result<SdkPlatformConfigResponseDto, SdkError> {
-        self.execute_typed(
+        deserialize_value(self.get_platform_config_json().await?)
+    }
+
+    pub(crate) async fn get_platform_config_json(&self) -> Result<Value, SdkError> {
+        self.execute_json(
             Method::Get,
             "/v1/sdk/platform-config".to_owned(),
             BTreeMap::new(),
@@ -354,6 +376,13 @@ impl SolvaPayClient {
         &self,
         params: CreatePaymentIntentParams,
     ) -> Result<CreatePaymentIntentResult, SdkError> {
+        deserialize_value(self.create_payment_intent_json(params).await?)
+    }
+
+    pub(crate) async fn create_payment_intent_json(
+        &self,
+        params: CreatePaymentIntentParams,
+    ) -> Result<Value, SdkError> {
         let body = CreatePaymentIntentBody {
             product_ref: &params.product_ref,
             plan_ref: &params.plan_ref,
@@ -367,7 +396,7 @@ impl SolvaPayClient {
             "payment-{planRef}-{epochMs}-{random9}",
             vars,
         );
-        self.execute_typed(
+        self.execute_json(
             Method::Post,
             "/v1/sdk/payment-intents".to_owned(),
             BTreeMap::new(),
@@ -392,6 +421,13 @@ impl SolvaPayClient {
         &self,
         params: CreateTopupPaymentIntentParams,
     ) -> Result<CreateTopupPaymentIntentResult, SdkError> {
+        deserialize_value(self.create_topup_payment_intent_json(params).await?)
+    }
+
+    pub(crate) async fn create_topup_payment_intent_json(
+        &self,
+        params: CreateTopupPaymentIntentParams,
+    ) -> Result<Value, SdkError> {
         let body = CreateTopupPaymentIntentBody {
             customer_ref: &params.customer_ref,
             purpose: "credit_topup",
@@ -408,7 +444,7 @@ impl SolvaPayClient {
             "topup-{epochMs}-{random9}",
             BTreeMap::new(),
         );
-        self.execute_typed(
+        self.execute_json(
             Method::Post,
             "/v1/sdk/payment-intents".to_owned(),
             BTreeMap::new(),
@@ -432,6 +468,13 @@ impl SolvaPayClient {
         &self,
         params: ProcessPaymentIntentParams,
     ) -> Result<solvapay_dto::schemas::ProcessPaymentResult, SdkError> {
+        deserialize_value(self.process_payment_intent_json(params).await?)
+    }
+
+    pub(crate) async fn process_payment_intent_json(
+        &self,
+        params: ProcessPaymentIntentParams,
+    ) -> Result<Value, SdkError> {
         let path = format!(
             "/v1/sdk/payment-intents/{}/process",
             params.payment_intent_id
@@ -441,7 +484,7 @@ impl SolvaPayClient {
             customer_ref: &params.customer_ref,
             plan_ref: non_empty_opt(params.plan_ref.as_deref()),
         };
-        self.execute_typed(
+        self.execute_json(
             Method::Post,
             path,
             BTreeMap::new(),
@@ -1048,7 +1091,7 @@ impl SolvaPayClient {
     }
 
     /// Executes a shell request and returns the parsed JSON [`Value`].
-    async fn execute_json<B>(
+    pub(crate) async fn execute_json<B>(
         &self,
         method: Method,
         path: String,

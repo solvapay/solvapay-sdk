@@ -198,6 +198,36 @@ export interface SolvaPayClientGenerated {
  */
   listProducts?(): Promise<overlays.ListProductsResult>
 /**
+ * Fan out merchant, product, plans, and customer snapshots for the MCP widget.
+ * @param params View, product ref, public base URL, and optional customer ref.
+ * @returns Bootstrap payload JSON for the embedded MCP App widget.
+ */
+  mcpBootstrap?(params: unknown): Promise<unknown>
+/**
+ * Invoke one of the twelve SolvaPay builtin MCP tools with optional customer context.
+ * @param params Tool name, arguments, server config, and optional customer ref.
+ * @returns Builtin tool result JSON (narrated content and structured payload).
+ */
+  mcpCallBuiltinTool?(params: unknown): Promise<unknown>
+/**
+ * Route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler.
+ * @param params JSON-RPC body, engine config, and optional Authorization header.
+ * @returns Dispatch envelope (rpc, challenge, or invokeHandler).
+ */
+  mcpDispatch?(params: unknown): Promise<unknown>
+/**
+ * Proxy one OAuth HTTP request (discovery, DCR, token, revoke, authorize).
+ * @param params Method, path, headers, body, and OAuth config.
+ * @returns HTTP status, headers, and body for the OAuth response.
+ */
+  mcpOauthRequest?(params: unknown): Promise<unknown>
+/**
+ * Read solvapay://bootstrap.json, the overview resource, or the UI widget resource.
+ * @param params Resource URI, server config, and optional customer ref.
+ * @returns Resource contents JSON for MCP resources/read.
+ */
+  mcpReadResource?(params: unknown): Promise<unknown>
+/**
  * Process a completed payment intent into a purchase or top-up outcome.
  * @param params Process request identifying the payment intent.
  * @returns Normalized process-payment result (purchase, top-up, or error branch).

@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "core/solvapay-core",
+  "core/solvapay-mcp",
   "core/solvapay-dto",
   "core/solvapay-export",
   "core/solvapay-transport",

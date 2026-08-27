@@ -7,8 +7,9 @@
  * `Request` construction, and tool-result wrapping.
  */
 
+import { callMcpSyncOp } from './native-mcp'
 import type { BootstrapPayload, McpToolExtra, SolvaPayCallToolResult } from './types'
-import { NARRATORS, uiPlaceholder, type IntentTool } from './narrate'
+import type { IntentTool } from './narrate'
 
 /**
  * ISO 4217 currencies where the "minor unit" equals the major unit.
@@ -232,62 +233,12 @@ export function narratedToolResult(
   mode: SolvaPayToolMode = 'ui',
   baseMeta: Record<string, unknown> | undefined = undefined,
 ): SolvaPayCallToolResult {
-  const narrator = (
-    NARRATORS as Record<
-      string,
-      (d: BootstrapPayload) => { text: string; links?: Array<{ uri: string; name: string }> }
-    >
-  )[tool]
-  if (!narrator) {
-    const fallback = toolResult(data)
-    if (mode === 'text' && baseMeta && 'ui' in baseMeta) {
-      const { ui: _ui, ...rest } = baseMeta as Record<string, unknown>
-      return { ...fallback, _meta: rest }
-    }
-    return baseMeta ? { ...fallback, _meta: baseMeta } : fallback
-  }
-
-  const { text, links } = narrator(data)
-
-  const narratedBlock: SolvaPayCallToolResult['content'][number] = {
-    type: 'text',
-    text,
-    annotations: { audience: ['assistant'] },
-  }
-
-  const resourceLinkBlocks = (links ?? []).map(l => ({
-    type: 'resource_link',
-    uri: l.uri,
-    name: l.name,
-    annotations: { audience: ['user'] },
-    // `resource_link` isn't in the structural content union we use for
-    // `SolvaPayCallToolResult`, but the official SDK accepts it — we
-    // cast at the boundary to keep the local type narrow while still
-    // shipping the enrichment.
-  })) as unknown as SolvaPayCallToolResult['content']
-
-  const placeholderBlock: SolvaPayCallToolResult['content'][number] = {
-    type: 'text',
-    text: uiPlaceholder(tool as IntentTool, data),
-  }
-
-  const content: SolvaPayCallToolResult['content'] =
-    mode === 'ui'
-      ? [placeholderBlock, narratedBlock]
-      : mode === 'text'
-        ? [narratedBlock, ...resourceLinkBlocks]
-        : [narratedBlock, ...resourceLinkBlocks]
-
-  const meta =
-    mode === 'text' && baseMeta && 'ui' in baseMeta
-      ? Object.fromEntries(Object.entries(baseMeta).filter(([k]) => k !== 'ui'))
-      : baseMeta
-
-  return {
-    content,
-    structuredContent: data as unknown as Record<string, unknown>,
-    ...(meta ? { _meta: meta } : {}),
-  }
+  return callMcpSyncOp<SolvaPayCallToolResult>('mcpNarrate', {
+    tool,
+    payload: data,
+    mode,
+    ...(baseMeta !== undefined ? { meta: baseMeta } : {}),
+  })
 }
 
 /**

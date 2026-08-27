@@ -306,6 +306,14 @@ export function includedUnits(
   return dispatchSync('includedUnits', { priced: priced ?? null, meter: meter ?? null })
 }
 
+export function meterName(priced: PricedLike | null | undefined): string | null {
+  return dispatchSync('meterName', { priced: priced ?? null })
+}
+
+export function countsUsage(priced: PricedLike | null | undefined): boolean {
+  return dispatchSync('countsUsage', { priced: priced ?? null })
+}
+
 export function peggedCreditsPerUnit(
   chargeMinor: number,
   creditsPerMinorUnit: number,

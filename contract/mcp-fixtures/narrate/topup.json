@@ -1,0 +1,42 @@
+{
+  "suite": "narrate",
+  "case": "topup",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "topup",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_x",
+        "stripePublishableKey": null,
+        "returnUrl": "https://example.test/r",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Inc."
+        },
+        "product": {
+          "reference": "prd_x",
+          "name": "Acme Knowledge Base"
+        },
+        "plans": [],
+        "customer": {
+          "ref": "cus_1",
+          "purchase": null,
+          "paymentMethod": null,
+          "balance": {
+            "credits": 865500,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "creditsPerMinorUnit": 100
+          },
+          "usage": null
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "**Top up — Acme Knowledge Base**\n\nBalance: 865,500 credits (~$86.55)\nTop-up presets: $10.00 · $25.00 · $50.00 · $100.00\n\nCommands: `/manage_account`"
+    }
+  }
+}

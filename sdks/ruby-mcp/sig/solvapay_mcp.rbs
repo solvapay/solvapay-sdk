@@ -32,6 +32,26 @@ module SolvaPay
     def self.stringify_keys: (untyped value) -> untyped
     def self.to_mcp_response: (untyped payload) -> untyped
 
+    class Engine
+      def initialize: (
+        client: untyped,
+        product_ref: String,
+        public_base_url: String,
+        ?resource_uri: String,
+        ?mcp_path: String,
+        ?views: Array[String]?,
+        ?oauth_paths: Hash[String, untyped]?
+      ) -> void
+      def register_payable: (
+        String name,
+        product: String,
+        handler: ^(untyped, ResponseContext) -> untyped,
+        ?get_customer_ref: (^(untyped) -> String)?,
+        ?usage_type: String
+      ) -> Engine
+      def call: (Hash[String, untyped] env) -> [Integer, Hash[String, String], Array[String]]
+    end
+
     module Layer2
       def self.paywall_tool_result: (String message, untyped gate) -> Hash[String, untyped]
       def self.make_response_result: (untyped data, untyped options, Array[untyped] emitted_blocks) -> Hash[String, untyped]

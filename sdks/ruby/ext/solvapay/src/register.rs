@@ -20,6 +20,7 @@ use crate::decisions::classify_lookup_error_binding;
 use crate::decisions::classify_paywall_state_binding;
 use crate::decisions::classify_reactivate_error_binding;
 use crate::decisions::coerce_customer_options_binding;
+use crate::decisions::counts_usage_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::decide_paywall_outcome_binding;
 use crate::decisions::evaluate_cached_limits_binding;
@@ -32,6 +33,7 @@ use crate::decisions::is_cached_customer_ref_valid_binding;
 use crate::decisions::is_email_conflict_binding;
 use crate::decisions::is_error_result_binding;
 use crate::decisions::map_route_error_binding;
+use crate::decisions::meter_name_binding;
 use crate::decisions::normalize_cancel_response_binding;
 use crate::decisions::normalize_reactivate_response_binding;
 use crate::decisions::paywall_error_to_client_payload_binding;
@@ -267,6 +269,8 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "credits_per_unit_from_balance",
         function!(credits_per_unit_from_balance_binding, 1),
     )?;
+    native.define_singleton_method("meter_name", function!(meter_name_binding, 1))?;
+    native.define_singleton_method("counts_usage", function!(counts_usage_binding, 1))?;
     native.define_singleton_method(
         "validate_business_details",
         function!(validate_business_details_binding, 1),
@@ -447,5 +451,19 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "disable_auto_recharge",
         method!(SolvaPayClient::disable_auto_recharge, 1),
     )?;
+    client.define_method("mcp_bootstrap", method!(SolvaPayClient::mcp_bootstrap, 1))?;
+    client.define_method(
+        "mcp_call_builtin_tool",
+        method!(SolvaPayClient::mcp_call_builtin_tool, 1),
+    )?;
+    client.define_method(
+        "mcp_read_resource",
+        method!(SolvaPayClient::mcp_read_resource, 1),
+    )?;
+    client.define_method(
+        "mcp_oauth_request",
+        method!(SolvaPayClient::mcp_oauth_request, 1),
+    )?;
+    client.define_method("mcp_dispatch", method!(SolvaPayClient::mcp_dispatch, 1))?;
     Ok(())
 }

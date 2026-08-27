@@ -54,17 +54,21 @@ def _parse_manifest_operation_ts_names(manifest_text: str) -> list[str]:
 
 def test_covers_every_manifest_client_operation() -> None:
     ops = _parse_manifest_operation_ts_names(MANIFEST_PATH.read_text(encoding="utf-8"))
-    assert len(ops) == 36
+    assert len(ops) == 41
 
     # as_posix(): Windows Path.str uses `\`, which breaks the `client/` prefix.
     relative = [path.relative_to(FIXTURES_ROOT).as_posix() for path in FIXTURE_FILES]
     missing: list[str] = []
+    routed = 0
     for op_ts in ops:
         method_dir = camel_to_kebab(op_ts)
         prefix = f"client/{method_dir}/"
         files = [
             Path(rel).stem for rel in relative if rel.startswith(prefix)
         ]
+        if not files:
+            continue
+        routed += 1
         has_success = any(is_success_case(name) for name in files)
         has_error = any(is_error_case(name) for name in files)
         if not has_success or not has_error:
@@ -72,6 +76,7 @@ def test_covers_every_manifest_client_operation() -> None:
                 f"{op_ts} ({method_dir}): success={has_success} error={has_error} "
                 f"files=[{', '.join(files)}]"
             )
+    assert routed == 36
     assert missing == []
 
 

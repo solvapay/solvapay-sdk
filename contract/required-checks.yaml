@@ -170,7 +170,7 @@ checks:
     gate: Shared fixture conformance; Per-language parity/coverage
   - name: node-binding delegation inventory
     jobId: node-binding-delegation
-    gate: node-binding-delegation; server-superseded-ts
+    gate: node-binding-delegation; server-superseded-ts; mcp-superseded-ts; mcp-superseded-py; mcp-layer3-budget
   - name: wasm-binding (Step 38 edge/browser)
     jobId: wasm-binding
     gate: Browser-WASM symbol audit; Performance regression; Shared fixture conformance

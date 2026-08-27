@@ -1,0 +1,21 @@
+{
+  "suite": "oauth",
+  "case": "normalize-rfc-passthrough",
+  "input": {
+    "fn": "mcpNormalizeOauthError",
+    "args": {
+      "body": {
+        "error": "invalid_grant",
+        "error_description": "bad code"
+      },
+      "text": "",
+      "status": 400
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "invalid_grant",
+      "error_description": "bad code"
+    }
+  }
+}

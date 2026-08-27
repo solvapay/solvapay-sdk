@@ -9,6 +9,8 @@
  * framework-neutral `@solvapay/mcp` package should take on.
  */
 
+import { callMcpSyncOp } from '../native-mcp'
+
 export const SOLVAPAY_OVERVIEW_URI = 'docs://solvapay/overview.md'
 export const SOLVAPAY_OVERVIEW_MIME_TYPE = 'text/markdown'
 
@@ -59,3 +61,8 @@ need an authenticated caller return \`Unauthorized\` when it is missing.
   and their slash-command shortcuts.
 - Documentation: https://docs.solvapay.com/sdks/typescript/guides/mcp-app.
 `
+
+/** Overview markdown from the Rust `mcpOverviewResource` op. */
+export function solvapayOverviewBody(): string {
+  return callMcpSyncOp<{ body: string }>('mcpOverviewResource', {}).body
+}

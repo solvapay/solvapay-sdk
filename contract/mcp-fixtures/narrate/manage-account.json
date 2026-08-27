@@ -1,0 +1,69 @@
+{
+  "suite": "narrate",
+  "case": "manage-account",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "manage_account",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_x",
+        "stripePublishableKey": null,
+        "returnUrl": "https://example.test/r",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Inc."
+        },
+        "product": {
+          "reference": "prd_x",
+          "name": "Acme Knowledge Base"
+        },
+        "plans": [
+          {
+            "type": "recurring",
+            "name": "Free",
+            "requiresPayment": false,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 0,
+                "currency": "usd"
+              }
+            ]
+          },
+          {
+            "type": "recurring",
+            "name": "Unlimited",
+            "price": 50000,
+            "currency": "USD",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 50000,
+                "currency": "usd"
+              }
+            ]
+          }
+        ],
+        "customer": null
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "**Welcome to Acme Knowledge Base**\n\nNo active plan. Plans available:\nFree · no payment required\nUnlimited · recurring · $500.00/month\n\nCommands: `/activate_plan` `/upgrade`",
+      "links": []
+    }
+  }
+}

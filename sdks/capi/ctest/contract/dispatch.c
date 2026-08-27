@@ -46,6 +46,11 @@ static const char *kClientOps[] = {
   "getAutoRecharge",
   "saveAutoRecharge",
   "disableAutoRecharge",
+  "mcpBootstrap",
+  "mcpCallBuiltinTool",
+  "mcpReadResource",
+  "mcpOauthRequest",
+  "mcpDispatch",
 };
 
 static const size_t kClientOpCount = sizeof(kClientOps) / sizeof(kClientOps[0]);

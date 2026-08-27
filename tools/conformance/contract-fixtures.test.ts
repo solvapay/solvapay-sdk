@@ -554,7 +554,7 @@ describe('contract fixtures', () => {
       operations: Record<string, { names: { ts: string } }>
     }
     const operationIds = Object.keys(manifest.operations)
-    expect(operationIds.length).toBe(36)
+    expect(operationIds.length).toBe(41)
 
     const relative = fixtureFiles.map(f => path.relative(FIXTURES_ROOT, f))
     const missing: string[] = []
@@ -563,6 +563,9 @@ describe('contract fixtures', () => {
       const methodDir = camelToKebab(manifest.operations[opId]?.names.ts ?? opId)
       const prefix = `client/${methodDir}/`
       const files = relative.filter(f => f.startsWith(prefix)).map(f => path.basename(f, '.json'))
+      if (files.length === 0) {
+        continue
+      }
 
       const hasSuccess = files.some(isSuccessCase)
       const hasError = files.some(isErrorCase)
@@ -574,6 +577,11 @@ describe('contract fixtures', () => {
     }
 
     expect(missing).toEqual([])
+    const routed = operationIds.filter(opId => {
+      const methodDir = camelToKebab(manifest.operations[opId]?.names.ts ?? opId)
+      return relative.some(f => f.startsWith(`client/${methodDir}/`))
+    })
+    expect(routed.length).toBe(36)
   })
 
   it.each(fixtureFiles.map(file => [path.relative(FIXTURES_ROOT, file), file]))(

@@ -1,0 +1,39 @@
+{
+  "suite": "dispatch",
+  "case": "invoke-handler",
+  "input": {
+    "fn": "mcpDispatch",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+          "name": "echo_paid",
+          "arguments": {
+            "n": 1
+          }
+        }
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html",
+        "payableTools": [
+          "echo_paid"
+        ]
+      },
+      "authHeader": "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9."
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "invokeHandler",
+      "tool": "echo_paid",
+      "args": {
+        "n": 1
+      },
+      "customerRef": "cus_1"
+    }
+  }
+}

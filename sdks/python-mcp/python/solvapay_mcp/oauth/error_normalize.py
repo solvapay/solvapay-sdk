@@ -90,15 +90,12 @@ def build_error_description(nest_body: Mapping[str, object]) -> str | None:
 
 
 def to_oauth_error_body(body: object, text: str, status: int) -> dict[str, object]:
-    if has_oauth_error_shape(body) and isinstance(body, dict):
-        return dict(body)
-    if isinstance(body, dict):
-        error = derive_oauth_error_code(status, body)
-        description = build_error_description(body)
-        if description:
-            return {"error": error, "error_description": description}
-        return {"error": error}
-    fallback = "server_error" if status >= 500 else "invalid_request"
-    if isinstance(text, str) and 0 < len(text) < 500:
-        return {"error": fallback, "error_description": text}
-    return {"error": fallback}
+    from solvapay_mcp.core import call
+
+    value = call(
+        "mcpNormalizeOauthError",
+        {"body": body, "text": text, "status": status},
+    )
+    if not isinstance(value, dict):
+        raise TypeError("mcpNormalizeOauthError did not return an object")
+    return {str(k): v for k, v in value.items()}

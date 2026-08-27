@@ -1,0 +1,32 @@
+{
+  "suite": "bootstrap",
+  "case": "unauthenticated",
+  "input": {
+    "fn": "mcpBootstrap",
+    "args": {
+      "view": "account",
+      "productRef": "prd_demo",
+      "publicBaseUrl": "https://app.example.com"
+    }
+  },
+  "expect": {
+    "result": {
+      "view": "account",
+      "productRef": "prd_demo",
+      "stripePublishableKey": "pk_test",
+      "returnUrl": "https://app.example.com",
+      "merchant": {
+        "displayName": "Acme"
+      },
+      "product": {
+        "name": "Demo"
+      },
+      "plans": [
+        {
+          "name": "Pro"
+        }
+      ],
+      "customer": null
+    }
+  }
+}

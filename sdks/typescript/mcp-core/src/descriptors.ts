@@ -33,40 +33,19 @@
  * doesn't consume the key.
  */
 
-import { assertValidProductRef } from '@solvapay/core'
-import {
-  activatePlanCore,
-  cancelPurchaseCore,
-  createCheckoutSessionCore,
-  createCustomerSessionCore,
-  createPaymentIntentCore,
-  createTopupPaymentIntentCore,
-  attachBusinessDetailsCore,
-  isErrorResult,
-  processPaymentIntentCore,
-  reactivatePurchaseCore,
-  type SolvaPay,
-} from '@solvapay/server'
+import { mcpDescriptors } from './mcp-descriptors'
+import { type SolvaPay } from '@solvapay/server'
 import { z } from 'zod'
 import { logMcpConfigOnce } from './config-log'
-import {
-  buildSolvaPayRequest,
-  defaultGetCustomerRef as defaultGetCustomerRefHelper,
-  narratedToolResult,
-  parseMode,
-  previewJson,
-  toolErrorResult,
-  toolResult,
-} from './helpers'
-import type { IntentTool } from './narrate'
+import { defaultGetCustomerRef as defaultGetCustomerRefHelper, previewJson, toolErrorResult } from './helpers'
 import { createBuildBootstrapPayload, type BuildBootstrapPayloadFn } from './bootstrap-payload'
-import { mergeCsp } from './csp'
+import { dispatchSolvaPayBuiltin } from './dispatch-builtin'
 import {
   SOLVAPAY_BOOTSTRAP_MIME_TYPE,
   SOLVAPAY_BOOTSTRAP_URI,
 } from './resources/bootstrap'
 import {
-  SOLVAPAY_OVERVIEW_MARKDOWN,
+  solvapayOverviewBody,
   SOLVAPAY_OVERVIEW_MIME_TYPE,
   SOLVAPAY_OVERVIEW_URI,
 } from './resources/overview'
@@ -260,13 +239,15 @@ export function buildSolvaPayDescriptors(
   } = options
   const toolIcons = deriveIcons(branding)
 
-  if (!/^https?:\/\//i.test(publicBaseUrl)) {
-    throw new Error(
-      'buildSolvaPayDescriptors: publicBaseUrl must be an http(s) URL (Stripe confirmPayment rejects `ui://`).',
-    )
-  }
-
-  assertValidProductRef(productRef, 'buildSolvaPayDescriptors')
+  const coreDescriptors = mcpDescriptors({
+    resourceUri,
+    publicBaseUrl,
+    productRef,
+    views,
+    ...(csp !== undefined ? { csp } : {}),
+    ...(apiBaseUrl !== undefined ? { apiBaseUrl } : {}),
+    ...(branding !== undefined ? { branding } : {}),
+  })
 
   if (!htmlPath && !readHtml) {
     throw new Error(
@@ -308,22 +289,22 @@ export function buildSolvaPayDescriptors(
   const UI_ONLY_PREFIX =
     'UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. '
 
-  const buildRequest = (
-    extra: McpToolExtra | undefined,
-    init: { method?: string; query?: Record<string, string | undefined>; body?: unknown } = {},
-  ) => buildSolvaPayRequest(extra, { ...init, getCustomerRef })
-
-  const requireCustomerRef = (extra: McpToolExtra | undefined): SolvaPayCallToolResult | string => {
-    const ref = getCustomerRef(extra)
-    if (!ref) {
-      return toolErrorResult({
-        error: 'Unauthorized',
-        status: 401,
-        details: 'customer_ref missing from MCP auth context',
-      })
-    }
-    return ref
+  const builtinConfig = {
+    productRef,
+    publicBaseUrl,
+    resourceUri,
+    views,
   }
+
+  const runBuiltin = (name: string, args: Record<string, unknown>, extra: McpToolExtra | undefined) =>
+    dispatchSolvaPayBuiltin({
+      solvaPay,
+      name,
+      args,
+      extra,
+      config: builtinConfig,
+      getCustomerRef,
+    })
 
   const trace = async (
     name: string,
@@ -392,14 +373,7 @@ export function buildSolvaPayDescriptors(
       meta: toolMeta,
       annotations: INTENT_TOOL_ANNOTATIONS[view],
       handler: async (args, extra) =>
-        trace(name, args, extra, async () => {
-          const mode = parseMode(args.mode)
-          const data = await buildBootstrapPayload(view, extra)
-          return narratedToolResult(name as IntentTool, data, mode, {
-            ...toolMeta,
-            'openai/widgetSessionId': crypto.randomUUID(),
-          })
-        }),
+        trace(name, args, extra, () => runBuiltin(name, args, extra)),
     })
   }
 
@@ -453,22 +427,9 @@ export function buildSolvaPayDescriptors(
     meta: uiToolMeta,
     annotations: solvapayTool({}),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createCheckoutSession, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const effectiveProduct =
-          typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
-        const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
-
-        const result = await createCheckoutSessionCore(
-          buildRequest(extra, { method: 'POST' }),
-          { productRef: effectiveProduct, planRef },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
+      trace(MCP_TOOL_NAMES.createCheckoutSession, args, extra, () =>
+        runBuiltin(MCP_TOOL_NAMES.createCheckoutSession, args, extra),
+      ),
   })
 
   pushTool({
@@ -484,24 +445,9 @@ export function buildSolvaPayDescriptors(
     meta: uiToolMeta,
     annotations: solvapayTool({}),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createPayment, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const planRef = typeof args.planRef === 'string' ? args.planRef : ''
-        const effectiveProduct =
-          typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
-        const currency =
-          typeof args.currency === 'string' && args.currency ? args.currency : undefined
-
-        const result = await createPaymentIntentCore(
-          buildRequest(extra, { method: 'POST' }),
-          { planRef, productRef: effectiveProduct, ...(currency && { currency }) },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
+      trace(MCP_TOOL_NAMES.createPayment, args, extra, () =>
+        runBuiltin(MCP_TOOL_NAMES.createPayment, args, extra),
+      ),
   })
 
   pushTool({
@@ -517,23 +463,9 @@ export function buildSolvaPayDescriptors(
     meta: uiToolMeta,
     annotations: solvapayTool({ destructiveHint: true }),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.processPayment, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const paymentIntentId = typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
-        const effectiveProduct =
-          typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
-        const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
-
-        const result = await processPaymentIntentCore(
-          buildRequest(extra, { method: 'POST' }),
-          { paymentIntentId, productRef: effectiveProduct, planRef },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
+      trace(MCP_TOOL_NAMES.processPayment, args, extra, () =>
+        runBuiltin(MCP_TOOL_NAMES.processPayment, args, extra),
+      ),
   })
 
   pushTool({
@@ -545,15 +477,9 @@ export function buildSolvaPayDescriptors(
     meta: uiToolMeta,
     annotations: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createCustomerSession, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-        const result = await createCustomerSessionCore(buildRequest(extra, { method: 'POST' }), {
-          solvaPay,
-        })
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
+      trace(MCP_TOOL_NAMES.createCustomerSession, args, extra, () =>
+        runBuiltin(MCP_TOOL_NAMES.createCustomerSession, args, extra),
+      ),
   })
 
   pushTool({
@@ -569,22 +495,9 @@ export function buildSolvaPayDescriptors(
     meta: uiToolMeta,
     annotations: solvapayTool({}),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createTopupPayment, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const amount = typeof args.amount === 'number' ? args.amount : 0
-        const currency = typeof args.currency === 'string' ? args.currency : ''
-        const description = typeof args.description === 'string' ? args.description : undefined
-
-        const result = await createTopupPaymentIntentCore(
-          buildRequest(extra, { method: 'POST' }),
-          { amount, currency, description },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
+      trace(MCP_TOOL_NAMES.createTopupPayment, args, extra, () =>
+        runBuiltin(MCP_TOOL_NAMES.createTopupPayment, args, extra),
+      ),
   })
 
   pushTool({
@@ -603,40 +516,9 @@ export function buildSolvaPayDescriptors(
     meta: uiToolMeta,
     annotations: solvapayTool({}),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.attachBusinessDetails, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const paymentIntentId =
-          typeof args.paymentIntentId === 'string' ? args.paymentIntentId : ''
-        const isBusiness = args.isBusiness === true
-        const businessName =
-          typeof args.businessName === 'string' ? args.businessName : undefined
-        const country = typeof args.country === 'string' ? args.country : undefined
-        const taxId = typeof args.taxId === 'string' ? args.taxId : undefined
-        const taxIdType =
-          args.taxIdType === 'eu_vat' ||
-          args.taxIdType === 'gb_vat' ||
-          args.taxIdType === 'us_ein'
-            ? args.taxIdType
-            : undefined
-
-        const result = await attachBusinessDetailsCore(
-          buildRequest(extra, { method: 'POST' }),
-          {
-            paymentIntentId,
-            customerRef: auth,
-            isBusiness,
-            ...(businessName !== undefined && { businessName }),
-            ...(country !== undefined && { country }),
-            ...(taxId !== undefined && { taxId }),
-            ...(taxIdType !== undefined && { taxIdType }),
-          },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
+      trace(MCP_TOOL_NAMES.attachBusinessDetails, args, extra, () =>
+        runBuiltin(MCP_TOOL_NAMES.attachBusinessDetails, args, extra),
+      ),
   })
 
   pushTool({
@@ -651,21 +533,9 @@ export function buildSolvaPayDescriptors(
     meta: uiToolMeta,
     annotations: solvapayTool({ destructiveHint: true, idempotentHint: true }),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.cancelRenewal, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const purchaseRef = typeof args.purchaseRef === 'string' ? args.purchaseRef : ''
-        const reason = typeof args.reason === 'string' ? args.reason : undefined
-
-        const result = await cancelPurchaseCore(
-          buildRequest(extra, { method: 'POST' }),
-          { purchaseRef, reason },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
+      trace(MCP_TOOL_NAMES.cancelRenewal, args, extra, () =>
+        runBuiltin(MCP_TOOL_NAMES.cancelRenewal, args, extra),
+      ),
   })
 
   pushTool({
@@ -677,19 +547,9 @@ export function buildSolvaPayDescriptors(
     meta: uiToolMeta,
     annotations: solvapayTool({ idempotentHint: true }),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.reactivateRenewal, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const purchaseRef = typeof args.purchaseRef === 'string' ? args.purchaseRef : ''
-        const result = await reactivatePurchaseCore(
-          buildRequest(extra, { method: 'POST' }),
-          { purchaseRef },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
+      trace(MCP_TOOL_NAMES.reactivateRenewal, args, extra, () =>
+        runBuiltin(MCP_TOOL_NAMES.reactivateRenewal, args, extra),
+      ),
   })
 
   pushTool({
@@ -706,52 +566,14 @@ export function buildSolvaPayDescriptors(
     meta: toolMeta,
     annotations: solvapayTool({}),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.activatePlan, args, extra, async () => {
-        const effectiveProduct =
-          typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
-        const planRef = typeof args.planRef === 'string' && args.planRef ? args.planRef : undefined
-        const mode = parseMode(args.mode)
-
-        // No plan picked yet — return the picker bootstrap with
-        // `view: 'checkout'` so the React shell opens the checkout
-        // surface's embedded plan picker (the merged Activate/Plan
-        // surface). Text-only hosts narrate the markdown summary
-        // listing the available plans. Respect the `views` filter so
-        // consumers that disable checkout don't accidentally expose the
-        // picker as an alternate entry point.
-        if (!planRef) {
-          if (!enabledViews.has('checkout')) {
-            return toolErrorResult({
-              error: 'activate_plan requires a planRef on this server',
-              status: 400,
-              details:
-                'The checkout view (where the plan picker lives) is not enabled on this server. Pass `planRef` to activate a specific plan, or re-enable the "checkout" view via the `views` option.',
-            })
-          }
-          return narratedToolResult(
-            MCP_TOOL_NAMES.activatePlan as IntentTool,
-            await buildBootstrapPayload('checkout', extra),
-            mode,
-            { ...toolMeta, 'openai/widgetSessionId': crypto.randomUUID() },
-          )
-        }
-
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const result = await activatePlanCore(
-          buildRequest(extra, { method: 'POST' }),
-          { productRef: effectiveProduct, planRef },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
+      trace(MCP_TOOL_NAMES.activatePlan, args, extra, () =>
+        runBuiltin(MCP_TOOL_NAMES.activatePlan, args, extra),
+      ),
   })
 
   // ------- UI resource -------
 
-  const resolvedCsp = mergeCsp(csp, apiBaseUrl)
+  const resolvedCsp = coreDescriptors.csp
   const resource: SolvaPayResourceDescriptor = {
     uri: resourceUri,
     mimeType: 'text/html;profile=mcp-app',
@@ -775,7 +597,7 @@ export function buildSolvaPayDescriptors(
       description:
         'Agent-facing "start here" doc — explains the five intent tools, dual-audience fallback, and auth model before any tool is called.',
       mimeType: SOLVAPAY_OVERVIEW_MIME_TYPE,
-      readBody: () => SOLVAPAY_OVERVIEW_MARKDOWN,
+      readBody: () => solvapayOverviewBody(),
     },
   ]
 

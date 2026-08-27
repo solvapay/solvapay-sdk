@@ -36,6 +36,11 @@ class SignatureParityGeneratedTest < Minitest::Test
     "get_user_info" => [[:keyreq, :params]],
     "list_plans" => [[:keyreq, :product_ref]],
     "list_products" => [],
+    "mcp_bootstrap" => [[:keyreq, :params]],
+    "mcp_call_builtin_tool" => [[:keyreq, :params]],
+    "mcp_dispatch" => [[:keyreq, :params]],
+    "mcp_oauth_request" => [[:keyreq, :params]],
+    "mcp_read_resource" => [[:keyreq, :params]],
     "process_payment_intent" => [[:keyreq, :params]],
     "reactivate_purchase" => [[:keyreq, :params]],
     "save_auto_recharge" => [[:keyreq, :params]],
@@ -54,6 +59,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     build_paywall_gate
     charges
     classify_paywall_state
+    counts_usage
     credits_per_unit_from_balance
     credits_to_display_minor_units
     derive_tax_id_type
@@ -65,6 +71,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     headline_charges
     included_units
     is_zero_decimal_currency
+    meter_name
     minor_units_per_major
     paywall_error_to_client_payload
     pegged_credits_per_unit
@@ -80,8 +87,8 @@ class SignatureParityGeneratedTest < Minitest::Test
   EXPECTED_MAX_RETRIES = 2
   EXPECTED_INITIAL_DELAY_MS = 500
 
-  def test_all_36_client_operations_have_exact_keyword_signatures
-    assert_equal 36, OPERATION_SIGNATURES.length
+  def test_all_41_client_operations_have_exact_keyword_signatures
+    assert_equal 41, OPERATION_SIGNATURES.length
     OPERATION_SIGNATURES.each do |name, expected|
       method = SolvaPay::Client.instance_method(name)
       assert_equal expected, method.parameters, name

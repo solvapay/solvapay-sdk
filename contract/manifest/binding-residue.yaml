@@ -866,6 +866,14 @@ includedUnits:
       priced: PricedLike | null | undefined
     paramStyle:
       meter: optionalNull
+meterName:
+  tsWrapper:
+    paramTypes:
+      priced: PricedLike | null | undefined
+countsUsage:
+  tsWrapper:
+    paramTypes:
+      priced: PricedLike | null | undefined
 peggedCreditsPerUnit:
   tsWrapper:
     paramStyle:

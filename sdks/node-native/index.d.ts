@@ -128,6 +128,16 @@ export declare class NativeClient {
   saveAutoRecharge(argsJson: string): Promise<string>
   /** `DELETE /v1/sdk/auto-recharge` */
   disableAutoRecharge(argsJson: string): Promise<string>
+  /** `mcpBootstrap` */
+  mcpBootstrap(argsJson: string): Promise<string>
+  /** `mcpCallBuiltinTool` */
+  mcpCallBuiltinTool(argsJson: string): Promise<string>
+  /** `mcpReadResource` */
+  mcpReadResource(argsJson: string): Promise<string>
+  /** `mcpOauthRequest` */
+  mcpOauthRequest(argsJson: string): Promise<string>
+  /** `mcpDispatch` */
+  mcpDispatch(argsJson: string): Promise<string>
 }
 
 /**
@@ -192,6 +202,9 @@ export declare function classifyReactivateError(argsJson: string): string
 
 /** Binding for `coerceCustomerOptions`. */
 export declare function coerceCustomerOptions(argsJson: string): string
+
+/** Binding for `countsUsage`. */
+export declare function countsUsage(argsJson: string): string
 
 /** Binding for `creditsPerUnitFromBalance`. */
 export declare function creditsPerUnitFromBalance(argsJson: string): string
@@ -264,6 +277,9 @@ export declare function MCP_TOOL_NAMES(argsJson: string): string
 
 /** Binding for `mcpViewMaps`. */
 export declare function mcpViewMaps(argsJson: string): string
+
+/** Binding for `meterName`. */
+export declare function meterName(argsJson: string): string
 
 /** Binding for `minorUnitsPerMajor`. */
 export declare function minorUnitsPerMajor(argsJson: string): string
@@ -356,6 +372,9 @@ export declare function selectActivePurchases(argsJson: string): string
 
 /** Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`. */
 export declare function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(argsJson: string): string
+
+/** Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`. */
+export declare function solvapayCall(argsJson: string): string
 
 /** Binding for `trialDays`. */
 export declare function trialDays(argsJson: string): string

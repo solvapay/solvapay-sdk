@@ -1,0 +1,148 @@
+{
+  "suite": "narrate",
+  "case": "mode-ui",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "manage_account",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_x",
+        "stripePublishableKey": null,
+        "returnUrl": "https://example.test/r",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Inc."
+        },
+        "product": {
+          "reference": "prd_x",
+          "name": "Acme Knowledge Base"
+        },
+        "plans": [],
+        "customer": {
+          "ref": "cus_1",
+          "purchase": {
+            "customerRef": "cus_1",
+            "purchases": [
+              {
+                "planSnapshot": {
+                  "name": "Unlimited",
+                  "isMetered": false,
+                  "price": 50000,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "charge",
+                      "per": "flat",
+                      "amountMinor": 50000,
+                      "currency": "usd"
+                    }
+                  ]
+                },
+                "billingCycle": "monthly",
+                "endDate": "2026-05-01T00:00:00Z"
+              }
+            ]
+          },
+          "paymentMethod": null,
+          "balance": {
+            "credits": 100,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "creditsPerMinorUnit": 100
+          },
+          "usage": null
+        }
+      },
+      "mode": "ui",
+      "meta": {
+        "ui": {
+          "resourceUri": "ui://x"
+        },
+        "openai/widgetSessionId": "00000000-0000-4000-8000-000000000001"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Opened your Acme Knowledge Base account. Balance: 100 credits (~$0.01). Account details are shown in the panel."
+        },
+        {
+          "type": "text",
+          "text": "**Acme Knowledge Base — your account**\n\nPlan: Unlimited · $500.00/monthly · renews May 1, 2026\nBalance: 100 credits (~$0.01)\n\nCommands: `/topup` `/upgrade`",
+          "annotations": {
+            "audience": [
+              "assistant"
+            ]
+          }
+        }
+      ],
+      "structuredContent": {
+        "view": "account",
+        "productRef": "prd_x",
+        "stripePublishableKey": null,
+        "returnUrl": "https://example.test/r",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Inc."
+        },
+        "product": {
+          "reference": "prd_x",
+          "name": "Acme Knowledge Base"
+        },
+        "plans": [],
+        "customer": {
+          "ref": "cus_1",
+          "purchase": {
+            "customerRef": "cus_1",
+            "purchases": [
+              {
+                "planSnapshot": {
+                  "name": "Unlimited",
+                  "isMetered": false,
+                  "price": 50000,
+                  "currency": "USD",
+                  "options": [
+                    {
+                      "kind": "billingCycle",
+                      "interval": "month"
+                    },
+                    {
+                      "kind": "charge",
+                      "per": "flat",
+                      "amountMinor": 50000,
+                      "currency": "usd"
+                    }
+                  ]
+                },
+                "billingCycle": "monthly",
+                "endDate": "2026-05-01T00:00:00Z"
+              }
+            ]
+          },
+          "paymentMethod": null,
+          "balance": {
+            "credits": 100,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1,
+            "creditsPerMinorUnit": 100
+          },
+          "usage": null
+        }
+      },
+      "_meta": {
+        "ui": {
+          "resourceUri": "ui://x"
+        },
+        "openai/widgetSessionId": "00000000-0000-4000-8000-000000000001"
+      }
+    }
+  }
+}

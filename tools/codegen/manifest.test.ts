@@ -79,6 +79,11 @@ const FIXTURE_OPERATION_IDS = SHIM_JS_NAMES.filter(id =>
     'getUserInfo',
     'listPlans',
     'listProducts',
+    'mcpBootstrap',
+    'mcpCallBuiltinTool',
+    'mcpDispatch',
+    'mcpOauthRequest',
+    'mcpReadResource',
     'processPaymentIntent',
     'reactivatePurchase',
     'saveAutoRecharge',
@@ -94,11 +99,16 @@ function buildFixtureManifest(): SdkContractManifest {
   const operations: SdkContractManifest['operations'] = {}
   for (const id of FIXTURE_OPERATION_IDS) {
     const isCheckLimits = id === 'checkLimits'
+    const isMcpComposite = id.startsWith('mcp')
     operations[id] = {
-      route: {
-        method: isCheckLimits ? 'POST' : 'GET',
-        path: isCheckLimits ? '/v1/sdk/limits' : '/v1/sdk/merchant',
-      },
+      ...(isMcpComposite
+        ? {}
+        : {
+            route: {
+              method: isCheckLimits ? 'POST' : 'GET',
+              path: isCheckLimits ? '/v1/sdk/limits' : '/v1/sdk/merchant',
+            },
+          }),
       names: deriveNames(id),
       optionalOnClient: false,
       request: isCheckLimits ? 'CheckLimitRequest' : undefined,

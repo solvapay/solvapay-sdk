@@ -1561,6 +1561,181 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+  mcpBootstrap:
+    names:
+      ts: mcpBootstrap
+      py: mcp_bootstrap
+      rb: mcp_bootstrap
+      go: McpBootstrap
+      rust: mcp_bootstrap
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    shadow:
+      volatile: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP bootstrap failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Fan out merchant, product, plans, and customer snapshots for the MCP widget.'
+      params:
+        params: 'View, product ref, public base URL, and optional customer ref.'
+      returns: 'Bootstrap payload JSON for the embedded MCP App widget.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  mcpCallBuiltinTool:
+    names:
+      ts: mcpCallBuiltinTool
+      py: mcp_call_builtin_tool
+      rb: mcp_call_builtin_tool
+      go: McpCallBuiltinTool
+      rust: mcp_call_builtin_tool
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    shadow:
+      volatile: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP builtin tool failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Invoke one of the twelve SolvaPay builtin MCP tools with optional customer context.'
+      params:
+        params: 'Tool name, arguments, server config, and optional customer ref.'
+      returns: 'Builtin tool result JSON (narrated content and structured payload).'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  mcpReadResource:
+    names:
+      ts: mcpReadResource
+      py: mcp_read_resource
+      rb: mcp_read_resource
+      go: McpReadResource
+      rust: mcp_read_resource
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    shadow:
+      volatile: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP resource read failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Read solvapay://bootstrap.json, the overview resource, or the UI widget resource.'
+      params:
+        params: 'Resource URI, server config, and optional customer ref.'
+      returns: 'Resource contents JSON for MCP resources/read.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  mcpOauthRequest:
+    names:
+      ts: mcpOauthRequest
+      py: mcp_oauth_request
+      rb: mcp_oauth_request
+      go: McpOauthRequest
+      rust: mcp_oauth_request
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    shadow:
+      volatile: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP OAuth request failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Proxy one OAuth HTTP request (discovery, DCR, token, revoke, authorize).'
+      params:
+        params: 'Method, path, headers, body, and OAuth config.'
+      returns: 'HTTP status, headers, and body for the OAuth response.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+  mcpDispatch:
+    names:
+      ts: mcpDispatch
+      py: mcp_dispatch
+      rb: mcp_dispatch
+      go: McpDispatch
+      rust: mcp_dispatch
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    shadow:
+      volatile: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP dispatch failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler.'
+      params:
+        params: 'JSON-RPC body, engine config, and optional Authorization header.'
+      returns: 'Dispatch envelope (rpc, challenge, or invokeHandler).'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
   disableAutoRecharge:
     route:
       method: DELETE
@@ -1601,6 +1776,10 @@ operations:
       rust: [async, blocking]
 
 overlays:
+  McpJsonValue:
+    kind: synthetic
+    doc: 'Untyped JSON object used by routeless MCP composite operations.'
+    marker: true
   AssignCreditsRequest:
     kind: extendDto
     base: GrantCustomerCreditsRequest
@@ -3035,6 +3214,44 @@ coreHelpers:
       params:
         options: 'A priced plan and optional meter name.'
       returns: 'Cap (0 means unlimited), or null when no limit is configured.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  meterName:
+    names:
+      ts: meterName
+      py: meter_name
+      rb: meter_name
+      go: MeterName
+      rust: meter_name
+    params: []
+    docs:
+      summary: 'Read the meter a plan counts against from a per-unit charge or limit option.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Meter name, or null when neither a per-unit charge nor a limit names one.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+  countsUsage:
+    names:
+      ts: countsUsage
+      py: counts_usage
+      rb: counts_usage
+      go: CountsUsage
+      rust: counts_usage
+    params: []
+    docs:
+      summary: 'True when the plan counts usage via a per-unit charge, limit, or tier.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Whether the plan has a usage counter even without a per-unit rate.'
     sync:
       ts: sync
       py: sync

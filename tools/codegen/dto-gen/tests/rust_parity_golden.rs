@@ -19,7 +19,7 @@ fn rust_parity_matches_committed_and_has_real_defaults() {
     )
     .expect("committed parity");
     assert_eq!(support::rustfmt_source(&emitted, "parity"), committed);
-    assert!(emitted.contains("assert_eq!(OPERATION_SIGNATURES.len(), 36)"));
+    assert!(emitted.contains("assert_eq!(OPERATION_SIGNATURES.len(), 41)"));
     assert!(emitted.contains("_assert_typed_surface"));
     assert!(emitted.contains("_parity_sink"));
     assert!(!emitted.contains("2 == 2"));

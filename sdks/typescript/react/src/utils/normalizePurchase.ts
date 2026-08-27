@@ -26,6 +26,7 @@ export function normalizeOneTimePurchase(input: OneTimePurchaseInfo): PurchaseIn
       price: input.amount,
       currency: input.currency,
       isMetered: false,
+      options: [],
     },
   }
 }

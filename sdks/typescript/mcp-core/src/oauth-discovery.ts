@@ -3,9 +3,11 @@
  * (no Node, no fetch, no Express) — both `@solvapay/mcp/express` and
  * `@solvapay/mcp/fetch` import them to produce the well-known responses.
  *
- * Kept in `@solvapay/mcp-core` so third-party adapter authors (raw JSON-RPC,
- * `fastmcp`, …) can reuse the exact same shapes with zero transitive deps.
+ * Document bodies come from the Rust `mcpOauthDiscovery` op. Path helpers
+ * stay here because adapters use them for HTTP routing.
  */
+
+import { callMcpSyncOp } from './native-mcp'
 
 export interface OAuthBridgePaths {
   register?: string
@@ -34,31 +36,62 @@ export function resolveOAuthPaths(paths: OAuthBridgePaths = {}): Required<OAuthB
   return { ...DEFAULT_OAUTH_PATHS, ...paths }
 }
 
-export function getOAuthProtectedResourceResponse(publicBaseUrl: string) {
-  const resource = withoutTrailingSlash(publicBaseUrl)
-  return {
-    resource,
-    authorization_servers: [resource],
-    scopes_supported: ['openid', 'profile', 'email'],
-  }
+export function withLeadingSlash(value: string): string {
+  return value.startsWith('/') ? value : `/${value}`
 }
 
-export function getOAuthAuthorizationServerResponse({
-  publicBaseUrl,
-  paths,
-}: OAuthAuthorizationServerOptions) {
-  const base = withoutTrailingSlash(publicBaseUrl)
-  const p = resolveOAuthPaths(paths)
-  return {
-    issuer: base,
-    authorization_endpoint: `${base}${p.authorize}`,
-    token_endpoint: `${base}${p.token}`,
-    registration_endpoint: `${base}${p.register}`,
-    revocation_endpoint: `${base}${p.revoke}`,
-    token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
-    response_types_supported: ['code'],
-    grant_types_supported: ['authorization_code', 'refresh_token'],
-    scopes_supported: ['openid', 'profile', 'email'],
-    code_challenge_methods_supported: ['S256'],
-  }
+export function mcpResourceIdentifier(publicBaseUrl: string, mcpPath?: string): string {
+  const origin = withoutTrailingSlash(publicBaseUrl)
+  if (!mcpPath) return origin
+  const path = withoutTrailingSlash(withLeadingSlash(mcpPath))
+  return path ? `${origin}${path}` : origin
+}
+
+/** RFC 9728 path-aware protected-resource metadata URL for an MCP mount. */
+export function pathAwareProtectedResourcePath(mcpPath: string): string {
+  const path = withoutTrailingSlash(withLeadingSlash(mcpPath))
+  return path && path !== '/'
+    ? `/.well-known/oauth-protected-resource${path}`
+    : '/.well-known/oauth-protected-resource'
+}
+
+export type OAuthProtectedResourceDocument = {
+  resource: string
+  authorization_servers: string[]
+  scopes_supported: string[]
+  bearer_methods_supported: string[]
+}
+
+export type OAuthAuthorizationServerDocument = {
+  issuer: string
+  authorization_endpoint: string
+  token_endpoint: string
+  registration_endpoint: string
+  revocation_endpoint: string
+  token_endpoint_auth_methods_supported: string[]
+  response_types_supported: string[]
+  grant_types_supported: string[]
+  scopes_supported: string[]
+  code_challenge_methods_supported: string[]
+}
+
+export function getOAuthProtectedResourceResponse(
+  publicBaseUrl: string,
+  mcpPath?: string,
+): OAuthProtectedResourceDocument {
+  return callMcpSyncOp('mcpOauthDiscovery', {
+    kind: 'protected-resource',
+    publicBaseUrl,
+    ...(mcpPath !== undefined ? { mcpPath } : {}),
+  })
+}
+
+export function getOAuthAuthorizationServerResponse(
+  options: OAuthAuthorizationServerOptions,
+): OAuthAuthorizationServerDocument {
+  return callMcpSyncOp('mcpOauthDiscovery', {
+    kind: 'authorization-server',
+    publicBaseUrl: options.publicBaseUrl,
+    ...(options.paths !== undefined ? { paths: options.paths } : {}),
+  })
 }

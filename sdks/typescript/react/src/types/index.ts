@@ -234,7 +234,7 @@ export interface BalanceStatus {
   displayExchangeRate: number | null
   /** Backend-computed display block — render verbatim when present. */
   display: CreditDisplayBlock | null
-  refetch: () => Promise<void>
+  refetch: () => Promise<number | null>
   /**
    * Optimistically adjusts the in-memory balance. Does not start auto-recharge
    * reconcile polling — call {@link reconcileAfterUsageDebit} with the server

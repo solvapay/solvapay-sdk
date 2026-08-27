@@ -9,8 +9,10 @@
 import {
   buildAuthInfoFromBearer,
   McpBearerAuthError,
-  requiresBearerAuth,
+  mcpAuthGate,
+  pathAwareProtectedResourcePath,
   type BuildAuthInfoFromBearerOptions,
+  type McpAuthGateChallenge,
   type McpAuthMode,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
@@ -24,6 +26,7 @@ import {
 import { buildMcpHandlerFace } from './legacyJsonFallback'
 import { applyNativeCors, authChallenge, corsPreflight } from './cors'
 import { createOAuthFetchRouter } from './oauth-bridge'
+import type { McpOauthRequestClient } from '../internal/mcp-oauth-request'
 
 /** Response shaping for modern (2026-07-28) request exchanges. */
 export type McpResponseMode = NonNullable<CreateMcpHandlerOptions['responseMode']>
@@ -41,6 +44,7 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
   protectedResourcePath?: string
   authorizationServerPath?: string
   oauthPaths?: OAuthBridgePaths
+  oauthClient?: McpOauthRequestClient | null
   /**
    * Response shaping for modern (2026-07-28) traffic. Edge runtimes that
    * cannot hold a stream should pass `'json'` (single JSON body; mid-call
@@ -58,6 +62,15 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
   legacy?: CreateMcpHandlerOptions['legacy']
   /** Forwarded to `createMcpHandler` for out-of-band error reporting. */
   onerror?: CreateMcpHandlerOptions['onerror']
+}
+
+function gateChallenge(req: Request, gate: McpAuthGateChallenge): Response {
+  const headers = new Headers()
+  for (const [key, value] of Object.entries(gate.headers)) {
+    headers.set(key, value)
+  }
+  applyNativeCors(req.headers, headers)
+  return new Response(JSON.stringify(gate.body), { status: gate.status, headers })
 }
 
 function getJsonRpcId(body: unknown): string | number | null {
@@ -118,18 +131,23 @@ export function createSolvaPayMcpFetchHandler(
     protectedResourcePath,
     authorizationServerPath,
     oauthPaths,
+    oauthClient,
     responseMode,
     legacy,
     onerror,
   } = options
 
+  const metadataPath = protectedResourcePath ?? pathAwareProtectedResourcePath(mcpPath)
+
   const oauthRouter = createOAuthFetchRouter({
     publicBaseUrl,
     apiBaseUrl,
     productRef,
+    mcpPath,
     protectedResourcePath,
     authorizationServerPath,
     oauthPaths,
+    oauthClient,
   })
 
   const mcpHandler = buildMcpHandlerFace(factory, {
@@ -163,8 +181,20 @@ export function createSolvaPayMcpFetchHandler(
     let resolvedAuthInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
     if (authHeader || requireAuth) {
       const envelope = await readJsonRpcEnvelope(req)
-      const skipAuth = requireAuth && !authHeader && !requiresBearerAuth(envelope.method, authMode)
-      if (!skipAuth) {
+      const gate = requireAuth
+        ? mcpAuthGate({
+            rpcMethod: envelope.method,
+            authHeader,
+            authMode,
+            publicBaseUrl,
+            mcpPath,
+            jsonRpcId: envelope.id,
+          })
+        : { kind: 'allow' as const }
+      if (gate.kind === 'challenge') {
+        return gateChallenge(req, gate)
+      }
+      if (authHeader) {
         try {
           resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, authInfo)
           if (!resolvedAuthInfo) {
@@ -173,7 +203,7 @@ export function createSolvaPayMcpFetchHandler(
         } catch {
           return authChallenge(req, {
             publicBaseUrl,
-            protectedResourcePath,
+            protectedResourcePath: metadataPath,
             jsonRpcId: envelope.id,
           })
         }

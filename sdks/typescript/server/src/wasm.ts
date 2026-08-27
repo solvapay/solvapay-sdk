@@ -115,6 +115,8 @@ export type WasmSyncMethod =
   | 'includedUnits'
   | 'peggedCreditsPerUnit'
   | 'creditsPerUnitFromBalance'
+  | 'meterName'
+  | 'countsUsage'
   // @solvapay/core pure logic
   | 'validateBusinessDetails'
   | 'deriveTaxIdType'
@@ -141,6 +143,7 @@ export type WasmSyncMethod =
   | 'buildPromptUserMessage'
   | 'validatePublicBaseUrl'
   | 'buildPayableToolResult'
+  | 'solvapayCall'
 
 export type WasmClientConfig = {
   apiKey: string

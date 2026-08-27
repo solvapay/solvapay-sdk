@@ -32,6 +32,10 @@ type expectError struct {
 	Message string `json:"message"`
 }
 
+func isRoutedClientOp(fn string) bool {
+	return !strings.HasPrefix(fn, "mcp")
+}
+
 func TestFacadeInventoryHasSuccessAndErrorPerOperation(t *testing.T) {
 	fixtures := loadClientFixtures(t)
 	success := map[string]bool{}
@@ -39,7 +43,7 @@ func TestFacadeInventoryHasSuccessAndErrorPerOperation(t *testing.T) {
 	for _, f := range fixtures {
 		var expect expectResult
 		if err := json.Unmarshal(f.Expect, &expect); err != nil {
-			t.Fatalf("%s: parse expect: %v", f.Case, err)
+			t.Fatalf("unmarshal expect: %v", err)
 		}
 		if expect.Error != nil {
 			errorCases[f.Input.Fn] = true
@@ -49,6 +53,9 @@ func TestFacadeInventoryHasSuccessAndErrorPerOperation(t *testing.T) {
 	}
 	for _, sig := range operationSignatures {
 		fn := dispatch.ToCamel(sig.name)
+		if !isRoutedClientOp(fn) {
+			continue
+		}
 		if !success[fn] {
 			t.Errorf("missing success fixture for %s", fn)
 		}
@@ -65,6 +72,9 @@ func TestLiveScenariosCoverEveryOperationSignature(t *testing.T) {
 	}
 	for _, sig := range operationSignatures {
 		fn := dispatch.ToCamel(sig.name)
+		if !isRoutedClientOp(fn) {
+			continue
+		}
 		if _, ok := ops[fn]; !ok {
 			t.Errorf("SCENARIOS missing coverage for operationSignatures op %s", fn)
 		}

@@ -30,10 +30,9 @@
 
 import type { LimitResponseWithPlan, ProtectHandlerContext, SolvaPay } from '@solvapay/server'
 import { isPaywallStructuredContent } from '@solvapay/server'
-import { buildPayableToolResult } from './native-mcp'
+import { assertResponseResult, buildPayableToolResult } from './native-mcp'
 import type { BuildBootstrapPayloadFn } from './bootstrap-payload'
 import { buildResponseContext } from './response-context'
-import { assertResponseResult } from './response-envelope'
 import type {
   BootstrapPayload,
   McpToolExtra,

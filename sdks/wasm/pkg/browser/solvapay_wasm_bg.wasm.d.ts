@@ -20,6 +20,7 @@ export const peggedCreditsPerUnit: (a: number, b: number) => [number, number];
 export const perUnitCharge: (a: number, b: number) => [number, number];
 export const resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
 export const resolveTaxBehavior: (a: number, b: number) => [number, number];
+export const solvapayCall: (a: number, b: number) => [number, number];
 export const trialDays: (a: number, b: number) => [number, number];
 export const validateBusinessDetails: (a: number, b: number) => [number, number];
 export const wasmVersion: () => [number, number];

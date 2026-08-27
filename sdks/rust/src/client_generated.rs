@@ -403,6 +403,86 @@ impl Client {
         self.inner.api.list_products().await
     }
 
+    /// Fan out merchant, product, plans, and customer snapshots for the MCP widget.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — View, product ref, public base URL, and optional customer ref.
+    ///
+    /// # Returns
+    ///
+    /// Bootstrap payload JSON for the embedded MCP App widget.
+    pub async fn mcp_bootstrap(
+        &self,
+        params: solvapay_transport::McpBootstrapParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.mcp_bootstrap(params).await
+    }
+
+    /// Invoke one of the twelve SolvaPay builtin MCP tools with optional customer context.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Tool name, arguments, server config, and optional customer ref.
+    ///
+    /// # Returns
+    ///
+    /// Builtin tool result JSON (narrated content and structured payload).
+    pub async fn mcp_call_builtin_tool(
+        &self,
+        params: solvapay_transport::McpCallBuiltinToolParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.mcp_call_builtin_tool(params).await
+    }
+
+    /// Route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — JSON-RPC body, engine config, and optional Authorization header.
+    ///
+    /// # Returns
+    ///
+    /// Dispatch envelope (rpc, challenge, or invokeHandler).
+    pub async fn mcp_dispatch(
+        &self,
+        params: solvapay_transport::McpDispatchParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.mcp_dispatch(params).await
+    }
+
+    /// Proxy one OAuth HTTP request (discovery, DCR, token, revoke, authorize).
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Method, path, headers, body, and OAuth config.
+    ///
+    /// # Returns
+    ///
+    /// HTTP status, headers, and body for the OAuth response.
+    pub async fn mcp_oauth_request(
+        &self,
+        params: solvapay_transport::McpOauthRequestParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.mcp_oauth_request(params).await
+    }
+
+    /// Read solvapay://bootstrap.json, the overview resource, or the UI widget resource.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Resource URI, server config, and optional customer ref.
+    ///
+    /// # Returns
+    ///
+    /// Resource contents JSON for MCP resources/read.
+    pub async fn mcp_read_resource(
+        &self,
+        params: solvapay_transport::McpReadResourceParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.mcp_read_resource(params).await
+    }
+
     /// Process a completed payment intent into a purchase or top-up outcome.
     ///
     /// # Arguments

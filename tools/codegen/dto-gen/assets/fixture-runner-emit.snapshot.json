@@ -71,6 +71,8 @@
     "billingCycle",
     "trialDays",
     "includedUnits",
+    "meterName",
+    "countsUsage",
     "peggedCreditsPerUnit",
     "creditsPerUnitFromBalance",
     "mapRouteError",

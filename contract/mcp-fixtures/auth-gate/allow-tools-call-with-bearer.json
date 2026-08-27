@@ -1,0 +1,18 @@
+{
+  "suite": "auth-gate",
+  "case": "allow-tools-call-with-bearer",
+  "input": {
+    "fn": "mcpAuthGate",
+    "args": {
+      "rpcMethod": "tools/call",
+      "authHeader": "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9.",
+      "authMode": "tools-call",
+      "publicBaseUrl": "https://mcp.example.com"
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "allow"
+    }
+  }
+}

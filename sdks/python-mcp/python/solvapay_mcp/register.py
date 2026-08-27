@@ -49,6 +49,7 @@ _RESOURCE_REGISTRIES: WeakKeyDictionary[Server[object], list[_RegisteredResource
 )
 _PROMPT_REGISTRIES: WeakKeyDictionary[Server[object], list[_RegisteredPrompt]] = WeakKeyDictionary()
 _DISPATCH_INSTALLED: WeakSet[Server[object]] = WeakSet()
+_HIDE_AUDIENCES: WeakKeyDictionary[Server[object], list[str]] = WeakKeyDictionary()
 _request_customer_ref: ContextVar[str | None] = ContextVar(
     "solvapay_mcp_customer_ref", default=None
 )
@@ -111,6 +112,13 @@ def set_format_gate_override(fn: FormatGateFn | None) -> None:
     _format_gate_override = fn
 
 
+def set_hide_tools_by_audience(server: Server[object], audiences: list[str] | None) -> None:
+    if audiences:
+        _HIDE_AUDIENCES[server] = list(audiences)
+    elif server in _HIDE_AUDIENCES:
+        del _HIDE_AUDIENCES[server]
+
+
 def _now_ms() -> int:
     return int(time.time() * 1000)
 
@@ -168,6 +176,26 @@ def _install_dispatch(server: Server[object]) -> None:
             if payable_spec.description is not None:
                 tool.description = payable_spec.description
             tools.append(tool)
+        hide = _HIDE_AUDIENCES.get(server)
+        if hide:
+            from solvapay_mcp.core import hide_tools_by_audience
+
+            listed: list[dict[str, object]] = []
+            for tool in tools:
+                meta = tool.meta if isinstance(tool.meta, dict) else {}
+                listed.append({"name": tool.name, "_meta": dict(meta)})
+            filtered = hide_tools_by_audience(listed, hide)
+            kept: list[str] = []
+            raw_tools = filtered.get("tools")
+            if isinstance(raw_tools, list):
+                for item in raw_tools:
+                    if isinstance(item, dict) and isinstance(item.get("name"), str):
+                        kept.append(str(item["name"]))
+            order = {name: index for index, name in enumerate(kept)}
+            tools = sorted(
+                [tool for tool in tools if tool.name in order],
+                key=lambda tool: order[tool.name],
+            )
         return ListToolsResult(tools=tools)
 
     async def on_call_tool(_ctx: object, params: CallToolRequestParams) -> CallToolResult:

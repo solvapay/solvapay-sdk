@@ -86,12 +86,16 @@ async fn all_thirty_six_operations_are_dispatchable() {
     covered.extend(GROUP_B_FNS.iter().copied());
     covered.extend(GROUP_C_FNS.iter().copied());
 
-    let expected: BTreeSet<&str> = OPERATION_NAMES.iter().copied().collect();
+    let expected: BTreeSet<&str> = OPERATION_NAMES
+        .iter()
+        .copied()
+        .filter(|name| !name.starts_with("mcp"))
+        .collect();
     assert_eq!(
         covered, expected,
-        "GROUP_A ∪ GROUP_B ∪ GROUP_C must equal OPERATION_NAMES"
+        "GROUP_A ∪ GROUP_B ∪ GROUP_C must equal routed OPERATION_NAMES"
     );
-    assert_eq!(covered.len(), 36, "expected 36 client methods");
+    assert_eq!(covered.len(), 36, "expected 36 routed client methods");
 
     let root = client_fixtures_root();
     let mut missing = Vec::new();

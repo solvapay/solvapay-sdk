@@ -41,6 +41,8 @@ mod host_transport;
 #[cfg(target_arch = "wasm32")]
 mod payload_builders;
 #[cfg(target_arch = "wasm32")]
+mod mcp;
+#[cfg(target_arch = "wasm32")]
 mod webhook;
 
 /// Returns the crate version string (`CARGO_PKG_VERSION`) as a packed handle.

@@ -1,0 +1,45 @@
+{
+  "suite": "builtin-tools",
+  "case": "create-payment-intent",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "create_payment_intent",
+      "args": {
+        "planRef": "pln_pro",
+        "productRef": "prd_demo"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents",
+      "status": 200,
+      "body": {
+        "clientSecret": "sec_1",
+        "publishableKey": "pk_test"
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"clientSecret\":\"sec_1\",\"publishableKey\":\"pk_test\"}"
+        }
+      ],
+      "structuredContent": {
+        "clientSecret": "sec_1",
+        "publishableKey": "pk_test"
+      }
+    }
+  }
+}

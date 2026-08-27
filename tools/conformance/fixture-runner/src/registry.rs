@@ -9,11 +9,11 @@ use solvapay_core::{
     build_gate_message, build_nudge_message, build_payable_tool_result, build_paywall_gate,
     charges, classify_cancel_error, classify_create_error, classify_customer_ref,
     classify_lookup_error, classify_paywall_state, classify_reactivate_error,
-    coerce_customer_options, credits_per_unit_from_balance, decide_paywall_outcome,
+    coerce_customer_options, counts_usage, credits_per_unit_from_balance, decide_paywall_outcome,
     evaluate_cached_limits, evaluate_fresh_limits, extract_backend_customer_ref,
     get_business_country_options, get_seller_tax_identifier_display_label, headline_charges,
     included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
-    is_zero_decimal_currency, mcp_view_maps, normalize_cancel_response,
+    is_zero_decimal_currency, mcp_view_maps, meter_name, normalize_cancel_response,
     normalize_reactivate_response, paywall_client_payload, paywall_tool_result,
     pegged_credits_per_unit, per_unit_charge, project_topup_process_outcome,
     resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
@@ -138,6 +138,12 @@ fn invoke_coerce_customer_options(input: &FixtureInput) -> Result<Value, Binding
     to_value(&coerce_customer_options(email.as_deref(), name.as_deref()))
 }
 
+fn invoke_counts_usage(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    Ok(Value::Bool(counts_usage(priced.as_ref())))
+}
+
 fn invoke_credits_per_unit_from_balance(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
@@ -247,6 +253,12 @@ fn invoke_is_zero_decimal_currency(input: &FixtureInput) -> Result<Value, Bindin
 fn invoke_mcp_view_maps(input: &FixtureInput) -> Result<Value, BindingError> {
     let _args = args_map(input);
     to_value(&mcp_view_maps())
+}
+
+fn invoke_meter_name(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&meter_name(priced.as_ref()))
 }
 
 fn invoke_normalize_cancel_response(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -917,6 +929,20 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_included_units),
+        },
+    );
+    registry.register(
+        "meterName",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_meter_name),
+        },
+    );
+    registry.register(
+        "countsUsage",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_counts_usage),
         },
     );
     registry.register(

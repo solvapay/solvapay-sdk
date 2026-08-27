@@ -62,8 +62,17 @@ pub fn emit_native_ts(ir: &Ir, toolchain: Toolchain) -> GenResult<String> {
     let mcp_comment = chrome_str(file, &["syncGroupComments", "mcp"], "native-ts")?;
     let postamble = chrome_str(file, &["postamble"], "native-ts")?;
 
-    let client_union = render_union_members(symbols_for(ir, IrBindingArtifact::Client));
-    let sync_union = render_sync_union(ir, core_comment, mcp_comment);
+    let client_symbols: Vec<&IrBindingSymbol> = symbols_for(ir, IrBindingArtifact::Client)
+        .into_iter()
+        .filter(|sym| {
+            toolchain != Toolchain::Wasm || sym.section.as_deref() != Some("MCP composite")
+        })
+        .collect();
+    let client_union = render_union_members(client_symbols);
+    let mut sync_union = render_sync_union(ir, core_comment, mcp_comment);
+    if toolchain == Toolchain::Wasm {
+        sync_union.push_str("\n  | 'solvapayCall'");
+    }
 
     // Blank line after each union (prettier / committed style).
     let header = format!("{}\n", generated_header(CommentStyle::Block, flag));

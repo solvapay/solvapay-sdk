@@ -200,6 +200,26 @@ pub fn dispatch(client: &SolvaPayClient, op: &str, args_json: &str) -> String {
             let params: DisableAutoRechargeParams = parse_args_json(&args_json)?;
             client.disable_auto_recharge(params).await
         })),
+        "mcpBootstrap" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::McpBootstrapParams = parse_args_json(&args_json)?;
+            client.mcp_bootstrap(params).await
+        })),
+        "mcpCallBuiltinTool" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::McpCallBuiltinToolParams = parse_args_json(&args_json)?;
+            client.mcp_call_builtin_tool(params).await
+        })),
+        "mcpReadResource" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::McpReadResourceParams = parse_args_json(&args_json)?;
+            client.mcp_read_resource(params).await
+        })),
+        "mcpOauthRequest" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::McpOauthRequestParams = parse_args_json(&args_json)?;
+            client.mcp_oauth_request(params).await
+        })),
+        "mcpDispatch" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::McpDispatchParams = parse_args_json(&args_json)?;
+            client.mcp_dispatch(params).await
+        })),
         other => err_envelope(&SdkError::transport(format!("unknown op: {other}"), false)),
     }
 }

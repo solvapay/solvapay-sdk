@@ -22,6 +22,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/*
+ Client-less sync dispatch (`validateBusinessDetails`, MCP ops, …).
+
+ # Safety
+
+ `op` and `args_json` must be valid NUL-terminated C strings when non-null.
+ */
+char *solvapay_call(const char *op, const char *args_json);
+
 #if defined(SOLVAPAY_FIXTURE_HOST)
 /*
  Invokes a fixture-runner registry helper and returns a JSON envelope.

@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { buildDefaultCheckoutPlanFilter, formatPaygRate } from './shared'
+import { buildDefaultCheckoutPlanFilter, formatPaygRate, planMeterName } from './shared'
 import type { Plan } from '../../types'
 
 /**
@@ -138,5 +138,32 @@ describe('formatPaygRate', () => {
 
   it('returns null for a plan with no per-unit charge', () => {
     expect(formatPaygRate(recurring, 'en-US', usdBalance)).toBeNull()
+  })
+})
+
+describe('planMeterName', () => {
+  it('reads the meter off a per-unit charge', () => {
+    expect(planMeterName(payg)).toBe('requests')
+  })
+
+  it('falls back to the limit option on a free allowance with no per-unit charge', () => {
+    const allowance: Plan = {
+      reference: 'pln_free_tokens',
+      name: 'Free',
+      price: 0,
+      currency: 'usd',
+      requiresPayment: false,
+      type: 'recurring',
+      options: [
+        cycle(),
+        flat(0),
+        { kind: 'limit', cap: 3, scope: 'billing_period', meter: 'tokens', onExceed: 'block' },
+      ],
+    }
+    expect(planMeterName(allowance)).toBe('tokens')
+  })
+
+  it('returns null when no option names a meter', () => {
+    expect(planMeterName(recurring)).toBeNull()
   })
 })

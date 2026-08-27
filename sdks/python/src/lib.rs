@@ -155,6 +155,36 @@ fn _verify_webhook_at(
     }
 }
 
+/// Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
+#[pyfunction]
+fn solvapay_call(args_json: String) -> String {
+    match catch_unwind(AssertUnwindSafe(|| {
+        let parsed: serde_json::Value = match serde_json::from_str(&args_json) {
+            Ok(value) => value,
+            Err(err) => {
+                return crate::error::err_envelope(&solvapay_core::SdkError::transport(
+                    format!("invalid solvapay_call args: {err}"),
+                    false,
+                ));
+            }
+        };
+        let Some(op) = parsed.get("op").and_then(serde_json::Value::as_str) else {
+            return crate::error::err_envelope(&solvapay_core::SdkError::transport(
+                "missing op",
+                false,
+            ));
+        };
+        let args = parsed
+            .get("args")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+        solvapay_mcp_core::dispatch_sync(op, &args.to_string())
+    })) {
+        Ok(json) => json,
+        Err(payload) => crate::error::envelope_from_panic_payload(payload),
+    }
+}
+
 /// Compiled extension module `solvapay._solvapay`.
 ///
 /// Default thread-safe (no `gil_used = true` opt-out) — core is lock-light
@@ -168,6 +198,7 @@ fn _solvapay(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(native_build_info, m)?)?;
     m.add_function(wrap_pyfunction!(verify_webhook, m)?)?;
     m.add_function(wrap_pyfunction!(_verify_webhook_at, m)?)?;
+    m.add_function(wrap_pyfunction!(solvapay_call, m)?)?;
     register::register_generated(m)?;
     fixture_host::register(m)?;
     Ok(())

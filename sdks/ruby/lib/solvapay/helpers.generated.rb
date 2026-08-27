@@ -62,6 +62,14 @@ module SolvaPay
     NativeDispatch.call_sync("classify_paywall_state", args)
   end
 
+  # True when the plan counts usage via a per-unit charge, limit, or tier.
+  # @return Whether the plan has a usage counter even without a per-unit rate.
+  def self.counts_usage(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("counts_usage", args)
+  end
+
   # Credits per metered call when the charge currency matches the balance peg.
   # @return Credits per unit, or null when the rate cannot be established honestly.
   def self.credits_per_unit_from_balance(priced: nil, balance: nil, meter: nil)
@@ -153,6 +161,14 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["currency"] = currency
     NativeDispatch.call_sync("is_zero_decimal_currency", args)
+  end
+
+  # Read the meter a plan counts against from a per-unit charge or limit option.
+  # @return Meter name, or null when neither a per-unit charge nor a limit names one.
+  def self.meter_name(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("meter_name", args)
   end
 
   # Return how many minor units make one major unit for a currency.

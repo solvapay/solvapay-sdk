@@ -18,6 +18,14 @@ const ALLOWLIST = new Set([
   'repo/check-referenced-paths.test.ts',
   'repo/package-locality.test.ts',
   'conformance/wasm-fixture-server.mjs',
+  'conformance/lib/mcp-fixture-coverage.ts',
+  'conformance/lib/mcp-fixture-coverage.test.ts',
+  'conformance/lib/mcp-layer3-budget.ts',
+  'conformance/lib/mcp-layer3-budget.test.ts',
+  'conformance/lib/superseded-mcp-py-check.ts',
+  'conformance/lib/superseded-mcp-py-check.test.ts',
+  'conformance/record-mcp-fixtures.ts',
+  'mcp-app-widget/__tests__/widget-artifact.test.ts',
 ])
 
 const ROOT_ARITHMETIC = [

@@ -4,8 +4,11 @@
  * ActivationFlow compound primitive.
  *
  * Drives the usage-based plan activation state machine:
- *   summary → activating → (topup_required → selectAmount → topupPayment →
- *     retrying) → activated | error.
+ *   summary → activating → (activated + empty wallet → selectAmount →
+ *     topupPayment → retrying) → activated | error.
+ *
+ * `topup_required` remains a tolerated legacy activate status that also
+ * opens the amount picker.
  *
  * `Root` exposes `data-state` set to the current step and publishes the
  * shared context consumed by leaves. Leaves render only during their
@@ -126,7 +129,14 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
   const { activate, state, error, result, reset } = useActivation()
   const currency = plan?.currency ?? 'USD'
   const amountSelector = useTopupAmountSelector({ currency })
-  const { adjustBalance, creditsPerMinorUnit, displayExchangeRate } = useBalance()
+  const {
+    credits,
+    adjustBalance,
+    creditsPerMinorUnit,
+    displayExchangeRate,
+    refetch,
+    loading: balanceLoading,
+  } = useBalance()
 
   const [step, setStep] = useState<ActivationFlowStep>('summary')
   const calledSuccessRef = useRef(false)
@@ -136,7 +146,19 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
   // useEffect is intentional — the hook's state is the external system we're
   // syncing to. Lint suppression below rather than refactor around it.
   useEffect(() => {
-    if (state === 'activated' && !calledSuccessRef.current) {
+    if (state !== 'activated') return
+    // The user is mid top-up; activation state must not rewind their step.
+    if (step === 'selectAmount' || step === 'topupPayment') return
+    const isUsagePlan = plan?.type === 'usage-based'
+    if (isUsagePlan && (credits === null || balanceLoading)) {
+      return
+    }
+    if (isUsagePlan && credits === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStep('selectAmount')
+      return
+    }
+    if (!calledSuccessRef.current) {
       calledSuccessRef.current = true
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep('activated')
@@ -145,7 +167,7 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
         onSuccess?.(activationResult)
       }
     }
-  }, [state, result, onSuccess])
+  }, [state, result, onSuccess, credits, plan, balanceLoading, step])
 
   useEffect(() => {
     if (state === 'topup_required' && (step === 'summary' || step === 'activating')) {
@@ -166,7 +188,10 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
     if (!resolvedPlanRef) return
     setStep('activating')
     await activate({ productRef, planRef: resolvedPlanRef })
-  }, [activate, productRef, resolvedPlanRef])
+    // Wallet after activate decides the next step; do not use a stale
+    // in-memory 0 (or a never-fetched null) from before the purchase existed.
+    await refetch()
+  }, [activate, productRef, resolvedPlanRef, refetch])
 
   const goToTopupPayment = useCallback(() => {
     if (amountSelector.validate()) setStep('topupPayment')

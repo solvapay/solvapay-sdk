@@ -309,6 +309,9 @@ fn emit_client(ir: &Ir, toolchain: Toolchain, art: &Value) -> GenResult<String> 
     let mut chunks: Vec<String> = Vec::new();
     let mut prev_section: Option<&str> = None;
     for sym in &symbols {
+        if toolchain == Toolchain::Wasm && is_mcp_composite(sym) {
+            continue;
+        }
         let is_first = prev_section.is_none();
         if sym.section.as_deref() != prev_section {
             prev_section = sym.section.as_deref();
@@ -836,7 +839,8 @@ fn emit_go_client(ir: &Ir) -> GenResult<String> {
     let symbols = symbols_for(ir, IrBindingArtifact::Client);
     let mut dto_types: Vec<String> = symbols
         .iter()
-        .filter_map(|sym| sym.dto_type.clone())
+        .filter_map(|sym| sym.dto_type.as_deref().and_then(solvapay_dto_import_ident))
+        .map(str::to_owned)
         .collect();
     dto_types.sort();
     dto_types.dedup();
@@ -905,7 +909,7 @@ use solvapay_core::{
     is_email_conflict, is_error_result, map_route_error, normalize_cancel_response,
     normalize_reactivate_response, paywall_client_payload, project_payment_intent_result,
     billing_cycle, charges, credits_per_unit_from_balance, headline_charges,
-    included_units, pegged_credits_per_unit, per_unit_charge,
+    counts_usage, included_units, meter_name, pegged_credits_per_unit, per_unit_charge,
     project_topup_process_outcome, project_usage_snapshot, require_product_ref,
     trial_days,
     resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
@@ -1078,7 +1082,8 @@ fn emit_c_client(ir: &Ir) -> GenResult<String> {
     let symbols = symbols_for(ir, IrBindingArtifact::Client);
     let mut dto_types: Vec<String> = symbols
         .iter()
-        .filter_map(|sym| sym.dto_type.clone())
+        .filter_map(|sym| sym.dto_type.as_deref().and_then(solvapay_dto_import_ident))
+        .map(str::to_owned)
         .collect();
     dto_types.sort();
     dto_types.dedup();
@@ -1607,6 +1612,18 @@ fn chrome_str<'a>(art: &'a Value, path: &[&str]) -> GenResult<&'a str> {
             path.join(".")
         ))
     })
+}
+
+fn is_mcp_composite(sym: &IrBindingSymbol) -> bool {
+    sym.section.as_deref() == Some("MCP composite")
+}
+
+fn solvapay_dto_import_ident(dto: &str) -> Option<&str> {
+    if dto.contains("::") {
+        None
+    } else {
+        Some(dto)
+    }
 }
 
 fn mcp_symbol_ids(chrome: &Value) -> GenResult<Vec<String>> {

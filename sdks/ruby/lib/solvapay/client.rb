@@ -238,6 +238,46 @@ module SolvaPay
       NativeDispatch.call_client(@native_client, "list_products", args)
     end
 
+    # Fan out merchant, product, plans, and customer snapshots for the MCP widget.
+    # @param params View, product ref, public base URL, and optional customer ref.
+    # @return Bootstrap payload JSON for the embedded MCP App widget.
+    def mcp_bootstrap(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "mcp_bootstrap", args)
+    end
+
+    # Invoke one of the twelve SolvaPay builtin MCP tools with optional customer context.
+    # @param params Tool name, arguments, server config, and optional customer ref.
+    # @return Builtin tool result JSON (narrated content and structured payload).
+    def mcp_call_builtin_tool(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "mcp_call_builtin_tool", args)
+    end
+
+    # Route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler.
+    # @param params JSON-RPC body, engine config, and optional Authorization header.
+    # @return Dispatch envelope (rpc, challenge, or invokeHandler).
+    def mcp_dispatch(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "mcp_dispatch", args)
+    end
+
+    # Proxy one OAuth HTTP request (discovery, DCR, token, revoke, authorize).
+    # @param params Method, path, headers, body, and OAuth config.
+    # @return HTTP status, headers, and body for the OAuth response.
+    def mcp_oauth_request(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "mcp_oauth_request", args)
+    end
+
+    # Read solvapay://bootstrap.json, the overview resource, or the UI widget resource.
+    # @param params Resource URI, server config, and optional customer ref.
+    # @return Resource contents JSON for MCP resources/read.
+    def mcp_read_resource(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "mcp_read_resource", args)
+    end
+
     # Process a completed payment intent into a purchase or top-up outcome.
     # @param params Process request identifying the payment intent.
     # @return Normalized process-payment result (purchase, top-up, or error branch).

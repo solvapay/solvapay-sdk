@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TypedDict
 
+from solvapay_mcp.core import call
+
 
 class SolvaPayMcpCsp(TypedDict, total=False):
     resourceDomains: list[str]
@@ -27,54 +29,20 @@ SOLVAPAY_DEFAULT_CSP: dict[str, list[str]] = {
 }
 
 
-def _parse_origin(url: str | None) -> str | None:
-    if not url:
-        return None
-    try:
-        from urllib.parse import urlparse
-
-        parsed = urlparse(url)
-        if not parsed.scheme or not parsed.netloc:
-            return None
-        return f"{parsed.scheme}://{parsed.netloc}"
-    except ValueError:
-        return None
-
-
 def merge_csp(
     overrides: Mapping[str, list[str]] | None = None,
     api_base_url: str | None = None,
 ) -> dict[str, list[str]]:
-    api_origin = _parse_origin(api_base_url)
-    extra_resource = [api_origin] if api_origin else None
-    extra_connect = [api_origin] if api_origin else None
-
-    def merge(base: list[str], *extras: list[str] | None) -> list[str]:
-        combined: list[str] = []
-        for extra in extras:
-            if extra:
-                combined.extend(extra)
-        if not combined:
-            return list(base)
-        seen: list[str] = []
-        for item in [*base, *combined]:
-            if item not in seen:
-                seen.append(item)
-        return seen
-
+    payload: dict[str, object] = {}
+    if overrides:
+        payload["overrides"] = dict(overrides)
+    if api_base_url:
+        payload["apiBaseUrl"] = api_base_url
+    value = call("mcpMergeCsp", payload)
+    if not isinstance(value, dict):
+        raise TypeError("mcpMergeCsp did not return an object")
     return {
-        "resourceDomains": merge(
-            SOLVAPAY_DEFAULT_CSP["resourceDomains"],
-            overrides.get("resourceDomains") if overrides else None,
-            extra_resource,
-        ),
-        "connectDomains": merge(
-            SOLVAPAY_DEFAULT_CSP["connectDomains"],
-            overrides.get("connectDomains") if overrides else None,
-            extra_connect,
-        ),
-        "frameDomains": merge(
-            SOLVAPAY_DEFAULT_CSP["frameDomains"],
-            overrides.get("frameDomains") if overrides else None,
-        ),
+        "resourceDomains": list(value["resourceDomains"]),
+        "connectDomains": list(value["connectDomains"]),
+        "frameDomains": list(value["frameDomains"]),
     }

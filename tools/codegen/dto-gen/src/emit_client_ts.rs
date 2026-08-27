@@ -151,6 +151,7 @@ fn emit_params(ir: &Ir, params: &[IrParam]) -> String {
 
 fn ts_param_type(ir: &Ir, ty: &IrTypeRef) -> String {
     match ty {
+        IrTypeRef::Named(name) if name == "McpJsonValue" => "unknown".into(),
         IrTypeRef::Named(name) => {
             let aliased = hand_alias(name);
             if is_hand_type(name) {
@@ -169,6 +170,9 @@ fn ts_response_type(ir: &Ir, name: &str) -> String {
     let aliased = hand_alias(name);
     if name == "void" {
         return "void".into();
+    }
+    if name == "McpJsonValue" {
+        return "unknown".into();
     }
     if is_hand_type(name) || is_hand_type(aliased) {
         return aliased.to_string();

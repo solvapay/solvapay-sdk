@@ -295,6 +295,11 @@ export function classifyReactivateError(args_json: string): string;
 export function coerceCustomerOptions(args_json: string): string;
 
 /**
+ * Binding for `countsUsage`.
+ */
+export function countsUsage(args_json: string): string;
+
+/**
  * Binding for `creditsPerUnitFromBalance`.
  */
 export function creditsPerUnitFromBalance(args_json: string): string;
@@ -410,6 +415,11 @@ export function mapRouteError(args_json: string): string;
 export function mcpViewMaps(args_json: string): string;
 
 /**
+ * Binding for `meterName`.
+ */
+export function meterName(args_json: string): string;
+
+/**
  * Binding for `minorUnitsPerMajor`.
  */
 export function minorUnitsPerMajor(args_json: string): string;
@@ -508,6 +518,11 @@ export function retryNextDelayMs(args_json: string): string;
  * Binding for `selectActivePurchases`.
  */
 export function selectActivePurchases(args_json: string): string;
+
+/**
+ * Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
+ */
+export function solvapayCall(args_json: string): string;
 
 /**
  * Binding for `trialDays`.
@@ -620,6 +635,7 @@ export interface InitOutput {
     readonly classifyPaywallState: (a: number, b: number) => [number, number];
     readonly classifyReactivateError: (a: number, b: number) => [number, number];
     readonly coerceCustomerOptions: (a: number, b: number) => [number, number];
+    readonly countsUsage: (a: number, b: number) => [number, number];
     readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
     readonly decidePaywallOutcome: (a: number, b: number) => [number, number];
@@ -643,6 +659,7 @@ export interface InitOutput {
     readonly makeResponseResult: (a: number, b: number) => [number, number];
     readonly mapRouteError: (a: number, b: number) => [number, number];
     readonly mcpViewMaps: (a: number, b: number) => [number, number];
+    readonly meterName: (a: number, b: number) => [number, number];
     readonly minorUnitsPerMajor: (a: number, b: number) => [number, number];
     readonly normalizeCancelResponse: (a: number, b: number) => [number, number];
     readonly normalizeReactivateResponse: (a: number, b: number) => [number, number];
@@ -663,6 +680,7 @@ export interface InitOutput {
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
     readonly retryNextDelayMs: (a: number, b: number) => [number, number];
     readonly selectActivePurchases: (a: number, b: number) => [number, number];
+    readonly solvapayCall: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
     readonly validateActivatePlanParams: (a: number, b: number) => [number, number];
     readonly validateAttachBusinessDetailsParams: (a: number, b: number) => [number, number];

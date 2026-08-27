@@ -42,6 +42,8 @@
  * the same filter without each re-implementing the reach-in.
  */
 
+import { callMcpSyncOp } from './native-mcp'
+
 /**
  * Structural shape of the subset of `McpServer` we need. Typed
  * structurally so `@solvapay/mcp-core` stays free of any
@@ -109,6 +111,25 @@ export interface ApplyHideToolsByAudienceOptions {
 /** Liberal pattern matching ChatGPT's MCP runtime client. */
 const CHATGPT_CLIENT_RE = /openai-mcp/i
 
+export type HideToolsByAudienceResult = {
+  tools: ToolDescriptorLike[]
+  bypassed?: boolean
+}
+
+/** Data-plane audience filter (`mcpHideToolsByAudience`). */
+export function hideToolsByAudience(
+  tools: ToolDescriptorLike[],
+  audiences: readonly string[],
+  userAgent?: string,
+): HideToolsByAudienceResult {
+  if (audiences.length === 0) return { tools }
+  return callMcpSyncOp('mcpHideToolsByAudience', {
+    tools,
+    audiences: [...audiences],
+    ...(userAgent !== undefined ? { userAgent } : {}),
+  })
+}
+
 function readHeader(headers: RequestHeaders | undefined, name: string): string | undefined {
   if (!headers) return undefined
   if (headers instanceof Headers) {
@@ -146,7 +167,6 @@ export function applyHideToolsByAudience(
   options: ApplyHideToolsByAudienceOptions = {},
 ): void {
   if (!audiences || audiences.length === 0) return
-  const hidden = new Set(audiences)
   const bypassWhen = options.bypassWhen ?? defaultIsChatGptRequest
 
   const inner = (server as McpServerLike).server
@@ -180,13 +200,29 @@ export function applyHideToolsByAudience(
       }
       return res
     }
-    const tools = Array.isArray(res?.tools) ? res.tools : []
+    const listed = Array.isArray(res?.tools) ? res.tools : []
+    const ua = readUserAgentFromContext({
+      server,
+      extra: ctx as ApplyHideToolsByAudienceExtra | undefined,
+    })
+    const filtered = hideToolsByAudience(
+      listed,
+      audiences,
+      options.bypassWhen ? undefined : ua,
+    )
+    if (filtered.bypassed) {
+      const context = ua ? `ua=${ua}` : 'no user-agent'
+      if (!warned.has(context)) {
+        warned.add(context)
+        console.warn(
+          `[solvapay/mcp] hideToolsByAudience filter bypassed (${context}); returning full tools/list catalog.`,
+        )
+      }
+      return res
+    }
     return {
       ...res,
-      tools: tools.filter(t => {
-        const audience = (t?._meta as { audience?: unknown } | undefined)?.audience
-        return !hidden.has(typeof audience === 'string' ? audience : '')
-      }),
+      tools: filtered.tools,
     }
   }
 

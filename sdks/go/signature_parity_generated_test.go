@@ -47,6 +47,11 @@ var operationSignatures = []operationSignature{
 	{"GetUserInfo", []string{"params"}, []string{"map[string]interface {}"}},
 	{"ListPlans", []string{"productRef"}, []string{"string"}},
 	{"ListProducts", nil, nil},
+	{"McpBootstrap", []string{"params"}, []string{"map[string]interface {}"}},
+	{"McpCallBuiltinTool", []string{"params"}, []string{"map[string]interface {}"}},
+	{"McpDispatch", []string{"params"}, []string{"map[string]interface {}"}},
+	{"McpOauthRequest", []string{"params"}, []string{"map[string]interface {}"}},
+	{"McpReadResource", []string{"params"}, []string{"map[string]interface {}"}},
 	{"ProcessPaymentIntent", []string{"params"}, []string{"map[string]interface {}"}},
 	{"ReactivatePurchase", []string{"params"}, []string{"map[string]interface {}"}},
 	{"SaveAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
@@ -103,6 +108,11 @@ var (
 	_ = (*solvapay.Client).GetUserInfo
 	_ = (*solvapay.Client).ListPlans
 	_ = (*solvapay.Client).ListProducts
+	_ = (*solvapay.Client).McpBootstrap
+	_ = (*solvapay.Client).McpCallBuiltinTool
+	_ = (*solvapay.Client).McpDispatch
+	_ = (*solvapay.Client).McpOauthRequest
+	_ = (*solvapay.Client).McpReadResource
 	_ = (*solvapay.Client).ProcessPaymentIntent
 	_ = (*solvapay.Client).ReactivatePurchase
 	_ = (*solvapay.Client).SaveAutoRecharge
@@ -113,10 +123,10 @@ var (
 	_ = (*solvapay.Client).UpdateProduct
 )
 
-func TestOperationSignaturesCountIs36(t *testing.T) {
+func TestOperationSignaturesCountIs41(t *testing.T) {
 	t.Helper()
-	if got := len(operationSignatures); got != 36 {
-		t.Fatalf("operationSignatures len = %d, want 36", got)
+	if got := len(operationSignatures); got != 41 {
+		t.Fatalf("operationSignatures len = %d, want 41", got)
 	}
 }
 

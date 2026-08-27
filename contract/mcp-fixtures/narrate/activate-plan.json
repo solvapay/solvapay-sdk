@@ -1,0 +1,57 @@
+{
+  "suite": "narrate",
+  "case": "activate-plan",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "activate_plan",
+      "payload": {
+        "view": "account",
+        "productRef": "prd_x",
+        "stripePublishableKey": null,
+        "returnUrl": "https://example.test/r",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Inc."
+        },
+        "product": {
+          "reference": "prd_x",
+          "name": "Acme Knowledge Base"
+        },
+        "plans": [
+          {
+            "type": "recurring",
+            "name": "Free",
+            "requiresPayment": false,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              }
+            ]
+          },
+          {
+            "type": "usage-based",
+            "name": "Starter",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "charge",
+                "per": "unit",
+                "amountMinor": 1,
+                "currency": "usd",
+                "meter": "requests"
+              }
+            ]
+          }
+        ],
+        "customer": null
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "**Activate a plan — Acme Knowledge Base**\n\nPlans available:\nFree · no payment required\nStarter · pay as you go\n\nCommands: `/manage_account` `/topup`"
+    }
+  }
+}

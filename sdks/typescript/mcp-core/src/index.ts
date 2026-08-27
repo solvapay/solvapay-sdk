@@ -125,19 +125,30 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 // merchant-facing `@solvapay/mcp` public entry — exported here so the
 // contract harness and adapters can share the same constructors.
 export { assertResponseResult, makeResponseResult } from './native-mcp'
-export { getMcpToolNamesTable, mcpViewMaps, installNativeMcpApi } from './native-mcp'
+export {
+  callMcpSyncOp,
+  getMcpToolNamesTable,
+  mcpViewMaps,
+  installNativeMcpApi,
+} from './native-mcp'
 
 // ---- CSP baseline ----
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export { applyHideToolsByAudience, defaultIsChatGptRequest } from './hideToolsByAudience'
+export {
+  applyHideToolsByAudience,
+  defaultIsChatGptRequest,
+  hideToolsByAudience,
+} from './hideToolsByAudience'
 export type {
   ApplyHideToolsByAudienceContext,
   ApplyHideToolsByAudienceExtra,
   ApplyHideToolsByAudienceOptions,
   HideToolsByAudienceBypass,
 } from './hideToolsByAudience'
+export { mcpDescriptors } from './mcp-descriptors'
+export type { McpDescriptorTool, McpDescriptorsBundle, McpDescriptorsInput } from './mcp-descriptors'
 export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
 export type { BuildSolvaPayDescriptorsOptions, SolvaPayDescriptorBundle } from './descriptors'
 export {
@@ -158,6 +169,7 @@ export type {
 export { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resources/bootstrap'
 
 export {
+  solvapayOverviewBody,
   SOLVAPAY_OVERVIEW_MARKDOWN,
   SOLVAPAY_OVERVIEW_MIME_TYPE,
   SOLVAPAY_OVERVIEW_URI,
@@ -173,7 +185,7 @@ export { buildPayableHandler } from './payable-handler'
 export type { BuildPayableHandlerContext } from './payable-handler'
 
 // ---- Config logging + DCR diagnostics (framework-neutral) ----
-export { logMcpConfigOnce, resetMcpConfigLogForTests } from './config-log'
+export { logMcpConfigOnce, mcpConfigLogMessage, resetMcpConfigLogForTests } from './config-log'
 export type { McpConfigLogInput } from './config-log'
 export { logDcrFailureDiagnostic } from './dcr-diagnostics'
 export type { DcrFailureDiagnosticInput } from './dcr-diagnostics'
@@ -183,10 +195,29 @@ export {
   DEFAULT_OAUTH_PATHS,
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
+  mcpResourceIdentifier,
+  pathAwareProtectedResourcePath,
   resolveOAuthPaths,
+  withLeadingSlash,
   withoutTrailingSlash,
 } from './oauth-discovery'
 export type { OAuthAuthorizationServerOptions, OAuthBridgePaths } from './oauth-discovery'
+
+export {
+  buildErrorDescription,
+  deriveOAuthErrorCode,
+  hasOAuthErrorShape,
+  toOAuthErrorBody,
+  VALID_OAUTH_TOKEN_ERROR_CODES,
+} from './oauth-error-normalize'
+export type { OAuthErrorBody, OAuthTokenErrorCode } from './oauth-error-normalize'
+
+export { mcpAuthGate } from './auth-gate'
+export type {
+  McpAuthGateChallenge,
+  McpAuthGateInput,
+  McpAuthGateResult,
+} from './auth-gate'
 
 // ---- Auth info + bearer helpers ----
 export { buildAuthInfoFromBearer } from './auth-bridge'

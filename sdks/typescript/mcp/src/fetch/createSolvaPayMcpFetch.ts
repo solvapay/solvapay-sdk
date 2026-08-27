@@ -18,6 +18,7 @@ import {
   type CreateSolvaPayMcpFetchHandlerOptions,
   type McpRequestContext,
 } from './handler'
+import type { McpOauthRequestClient } from '../internal/mcp-oauth-request'
 
 export type { AdditionalToolsContext } from '../server'
 
@@ -114,6 +115,7 @@ export function createSolvaPayMcpFetch(
 
   const apiBaseUrl = handlerRest.apiBaseUrl
   const bypassWarned = new Set<string>()
+  const nativeOauth = isOauthRequestClient(solvaPay.apiClient) ? solvaPay.apiClient : undefined
 
   const descriptorOptions = {
     solvaPay,
@@ -147,5 +149,16 @@ export function createSolvaPayMcpFetch(
     productRef,
     responseMode: handlerRest.responseMode ?? 'json',
     ...handlerRest,
+    ...(handlerRest.oauthClient === undefined && nativeOauth !== undefined
+      ? { oauthClient: nativeOauth }
+      : {}),
   })
+}
+
+function isOauthRequestClient(value: unknown): value is McpOauthRequestClient {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    typeof (value as McpOauthRequestClient).mcpOauthRequest === 'function'
+  )
 }

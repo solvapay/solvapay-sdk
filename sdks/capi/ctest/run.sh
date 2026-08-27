@@ -90,3 +90,6 @@ else
 fi
 
 echo "OK: C ABI smoke passed"
+
+echo "==> C MCP fixtures + engine"
+"$CTEST/mcp.sh"

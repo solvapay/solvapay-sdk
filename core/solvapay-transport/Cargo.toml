@@ -18,6 +18,9 @@ solvapay-dto = { path = "../solvapay-dto", version = "0.1.0" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
+[target.'cfg(not(all(target_arch = "wasm32", target_os = "unknown")))'.dependencies]
+solvapay-mcp-core = { path = "../solvapay-mcp", default-features = false, features = ["server", "engine"] }
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 reqwest = { workspace = true }
 

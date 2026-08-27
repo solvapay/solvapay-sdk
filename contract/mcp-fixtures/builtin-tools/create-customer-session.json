@@ -1,0 +1,40 @@
+{
+  "suite": "builtin-tools",
+  "case": "create-customer-session",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "create_customer_session",
+      "args": {},
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/customers/customer-sessions",
+      "status": 200,
+      "body": {
+        "url": "https://portal.example/s"
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"url\":\"https://portal.example/s\"}"
+        }
+      ],
+      "structuredContent": {
+        "url": "https://portal.example/s"
+      }
+    }
+  }
+}

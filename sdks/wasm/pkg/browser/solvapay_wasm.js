@@ -382,6 +382,26 @@ export function resolveTaxBehavior(args_json) {
 }
 
 /**
+ * Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function solvapayCall(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.solvapayCall(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `trialDays`.
  * @param {string} args_json
  * @returns {string}

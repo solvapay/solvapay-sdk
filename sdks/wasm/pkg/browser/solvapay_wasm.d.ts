@@ -97,6 +97,11 @@ export function resolveSellerIdentityDisplay(args_json: string): string;
 export function resolveTaxBehavior(args_json: string): string;
 
 /**
+ * Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
+ */
+export function solvapayCall(args_json: string): string;
+
+/**
  * Binding for `trialDays`.
  */
 export function trialDays(args_json: string): string;
@@ -137,6 +142,7 @@ export interface InitOutput {
     readonly perUnitCharge: (a: number, b: number) => [number, number];
     readonly resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
+    readonly solvapayCall: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
     readonly validateBusinessDetails: (a: number, b: number) => [number, number];
     readonly wasmVersion: () => [number, number];

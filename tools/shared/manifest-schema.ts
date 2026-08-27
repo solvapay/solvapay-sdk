@@ -9,7 +9,11 @@ import { z } from 'zod'
 export const LANGUAGES = ['ts', 'py', 'rb', 'go', 'rust'] as const
 export type Language = (typeof LANGUAGES)[number]
 
-export const EXPECTED_OPERATION_COUNT = 36
+/** Wire (OpenAPI-backed) client operations. Routeless MCP composites are extra. */
+export const EXPECTED_ROUTED_OPERATION_COUNT = 36
+export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 5
+export const EXPECTED_OPERATION_COUNT =
+  EXPECTED_ROUTED_OPERATION_COUNT + EXPECTED_MCP_COMPOSITE_OPERATION_COUNT
 
 export const EXPECTED_TOP_LEVEL_IDS = [
   'verifyWebhook',
@@ -312,10 +316,12 @@ const DocsDefSchema = z
   .default({ params: {} })
 
 const Operation = z.object({
-  route: z.object({
-    method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-    path: z.string().min(1),
-  }),
+  route: z
+    .object({
+      method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
+      path: z.string().min(1),
+    })
+    .optional(),
   names: LangNames,
   optionalOnClient: z.boolean().default(false),
   request: z.string().min(1).optional(),
@@ -448,7 +454,7 @@ export type BindingResidue = z.infer<typeof BindingResidueSchema>
  * this set (wasm adds infra `wasmVersion` / `WasmClient` excluded below).
  */
 export const SHIM_JS_NAMES = [
-  // Client dispatch (36)
+  // Client dispatch (36 routed + 5 MCP composite)
   'activatePlan',
   'assignCredits',
   'attachBusinessDetails',
@@ -477,6 +483,11 @@ export const SHIM_JS_NAMES = [
   'getUserInfo',
   'listPlans',
   'listProducts',
+  'mcpBootstrap',
+  'mcpCallBuiltinTool',
+  'mcpDispatch',
+  'mcpOauthRequest',
+  'mcpReadResource',
   'processPaymentIntent',
   'reactivatePurchase',
   'saveAutoRecharge',
@@ -534,6 +545,8 @@ export const SHIM_JS_NAMES = [
   'billingCycle',
   'trialDays',
   'includedUnits',
+  'meterName',
+  'countsUsage',
   'peggedCreditsPerUnit',
   'creditsPerUnitFromBalance',
   'validateProcessPaymentIntentParams',
@@ -612,6 +625,8 @@ export const BINDING_CATALOG_BOUNDARY_CORE_HELPERS = [
   'billingCycle',
   'trialDays',
   'includedUnits',
+  'meterName',
+  'countsUsage',
   'peggedCreditsPerUnit',
   'creditsPerUnitFromBalance',
 ] as const
@@ -876,9 +891,11 @@ export function assertNoNameCollisions(manifest: SdkContractManifest): string[] 
 }
 
 export function assertOperationCount(manifest: SdkContractManifest): string[] {
-  const count = Object.keys(manifest.operations).length
-  if (count !== EXPECTED_OPERATION_COUNT) {
-    return [`Operation count: expected ${EXPECTED_OPERATION_COUNT}, found ${count}`]
+  const count = Object.values(manifest.operations).filter(op => op.route != null).length
+  if (count !== EXPECTED_ROUTED_OPERATION_COUNT) {
+    return [
+      `Routed operation count: expected ${EXPECTED_ROUTED_OPERATION_COUNT}, found ${count}`,
+    ]
   }
   return []
 }
@@ -1050,12 +1067,14 @@ export function crossCheckOpenApi(
   }
 
   for (const [id, operation] of Object.entries(manifest.operations)) {
-    const pathItem = paths[operation.route.path]
-    const method = methodKey(operation.route.method)
-    if (!pathItem || pathItem[method] === undefined) {
-      issues.push(
-        `OpenAPI route: operations.${id} ${operation.route.method} ${operation.route.path} not found in snapshot`,
-      )
+    if (operation.route != null) {
+      const pathItem = paths[operation.route.path]
+      const method = methodKey(operation.route.method)
+      if (!pathItem || pathItem[method] === undefined) {
+        issues.push(
+          `OpenAPI route: operations.${id} ${operation.route.method} ${operation.route.path} not found in snapshot`,
+        )
+      }
     }
 
     const refs = [operation.request, operation.response].filter(

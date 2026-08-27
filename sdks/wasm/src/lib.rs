@@ -56,6 +56,31 @@ pub fn wasm_version() -> String {
     env!("CARGO_PKG_VERSION").to_owned()
 }
 
+/// Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
+#[wasm_bindgen(js_name = solvapayCall)]
+pub fn solvapay_call(args_json: String) -> String {
+    let parsed: serde_json::Value = match serde_json::from_str(&args_json) {
+        Ok(value) => value,
+        Err(err) => {
+            return solvapay_core::err_envelope(&solvapay_core::SdkError::transport(
+                format!("invalid solvapay_call args: {err}"),
+                false,
+            ));
+        }
+    };
+    let Some(op) = parsed.get("op").and_then(serde_json::Value::as_str) else {
+        return solvapay_core::err_envelope(&solvapay_core::SdkError::transport(
+            "missing op",
+            false,
+        ));
+    };
+    let args = parsed
+        .get("args")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+    solvapay_mcp_core::dispatch_sync(op, &args.to_string())
+}
+
 /// Edge-only wasm-bindgen exports (`verifyWebhook`).
 #[cfg(feature = "edge")]
 mod edge_api {
@@ -169,5 +194,22 @@ mod tests {
             err.message(),
             "Invalid webhook payload: body is not valid JSON"
         );
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
+mod solvapay_call_tests {
+    use super::solvapay_call;
+
+    #[test]
+    fn mcp_merge_csp_via_solvapay_call() {
+        let envelope = solvapay_call(r#"{"op":"mcpMergeCsp","args":{}}"#.to_owned());
+        let parsed: serde_json::Value = serde_json::from_str(&envelope).expect("envelope json");
+        assert_eq!(parsed["ok"], true);
+        let domains = parsed["value"]["resourceDomains"]
+            .as_array()
+            .expect("resourceDomains");
+        assert!(domains.iter().any(|d| d == "https://js.stripe.com"));
     }
 }

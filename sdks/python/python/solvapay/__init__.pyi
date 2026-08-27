@@ -343,6 +343,66 @@ class SolvaPayClient:
         @returns Product list projection.
         """
         ...
+    async def mcp_bootstrap(self, args_json: str) -> str:
+        """Fan out merchant, product, plans, and customer snapshots for the MCP widget.
+        @param params View, product ref, public base URL, and optional customer ref.
+        @returns Bootstrap payload JSON for the embedded MCP App widget.
+        """
+        ...
+    def mcp_bootstrap_blocking(self, args_json: str) -> str:
+        """Fan out merchant, product, plans, and customer snapshots for the MCP widget.
+        @param params View, product ref, public base URL, and optional customer ref.
+        @returns Bootstrap payload JSON for the embedded MCP App widget.
+        """
+        ...
+    async def mcp_call_builtin_tool(self, args_json: str) -> str:
+        """Invoke one of the twelve SolvaPay builtin MCP tools with optional customer context.
+        @param params Tool name, arguments, server config, and optional customer ref.
+        @returns Builtin tool result JSON (narrated content and structured payload).
+        """
+        ...
+    def mcp_call_builtin_tool_blocking(self, args_json: str) -> str:
+        """Invoke one of the twelve SolvaPay builtin MCP tools with optional customer context.
+        @param params Tool name, arguments, server config, and optional customer ref.
+        @returns Builtin tool result JSON (narrated content and structured payload).
+        """
+        ...
+    async def mcp_dispatch(self, args_json: str) -> str:
+        """Route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler.
+        @param params JSON-RPC body, engine config, and optional Authorization header.
+        @returns Dispatch envelope (rpc, challenge, or invokeHandler).
+        """
+        ...
+    def mcp_dispatch_blocking(self, args_json: str) -> str:
+        """Route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler.
+        @param params JSON-RPC body, engine config, and optional Authorization header.
+        @returns Dispatch envelope (rpc, challenge, or invokeHandler).
+        """
+        ...
+    async def mcp_oauth_request(self, args_json: str) -> str:
+        """Proxy one OAuth HTTP request (discovery, DCR, token, revoke, authorize).
+        @param params Method, path, headers, body, and OAuth config.
+        @returns HTTP status, headers, and body for the OAuth response.
+        """
+        ...
+    def mcp_oauth_request_blocking(self, args_json: str) -> str:
+        """Proxy one OAuth HTTP request (discovery, DCR, token, revoke, authorize).
+        @param params Method, path, headers, body, and OAuth config.
+        @returns HTTP status, headers, and body for the OAuth response.
+        """
+        ...
+    async def mcp_read_resource(self, args_json: str) -> str:
+        """Read solvapay://bootstrap.json, the overview resource, or the UI widget resource.
+        @param params Resource URI, server config, and optional customer ref.
+        @returns Resource contents JSON for MCP resources/read.
+        """
+        ...
+    def mcp_read_resource_blocking(self, args_json: str) -> str:
+        """Read solvapay://bootstrap.json, the overview resource, or the UI widget resource.
+        @param params Resource URI, server config, and optional customer ref.
+        @returns Resource contents JSON for MCP resources/read.
+        """
+        ...
     async def process_payment_intent(self, args_json: str) -> str:
         """Process a completed payment intent into a purchase or top-up outcome.
         @param params Process request identifying the payment intent.

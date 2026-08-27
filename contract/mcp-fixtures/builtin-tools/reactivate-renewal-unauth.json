@@ -1,0 +1,33 @@
+{
+  "suite": "builtin-tools",
+  "case": "reactivate_renewal-unauth",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "reactivate_renewal",
+      "args": {},
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": null
+    }
+  },
+  "expect": {
+    "result": {
+      "isError": true,
+      "content": [
+        {
+          "type": "text",
+          "text": "customer_ref missing from MCP auth context"
+        }
+      ],
+      "structuredContent": {
+        "error": "Unauthorized",
+        "status": 401,
+        "details": "customer_ref missing from MCP auth context"
+      }
+    }
+  }
+}

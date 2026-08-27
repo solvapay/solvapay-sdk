@@ -1,0 +1,28 @@
+{
+  "suite": "oauth",
+  "case": "discovery-protected-resource-mcp-path",
+  "input": {
+    "fn": "mcpOauthDiscovery",
+    "args": {
+      "kind": "protected-resource",
+      "publicBaseUrl": "https://mcp.example.com",
+      "mcpPath": "/mcp"
+    }
+  },
+  "expect": {
+    "result": {
+      "resource": "https://mcp.example.com/mcp",
+      "authorization_servers": [
+        "https://mcp.example.com"
+      ],
+      "scopes_supported": [
+        "openid",
+        "profile",
+        "email"
+      ],
+      "bearer_methods_supported": [
+        "header"
+      ]
+    }
+  }
+}

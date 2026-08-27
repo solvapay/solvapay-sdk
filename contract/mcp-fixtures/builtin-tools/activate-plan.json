@@ -1,0 +1,45 @@
+{
+  "suite": "builtin-tools",
+  "case": "activate-plan",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "activate_plan",
+      "args": {
+        "planRef": "pln_pro",
+        "productRef": "prd_demo"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/activate",
+      "status": 200,
+      "body": {
+        "status": "active",
+        "planRef": "pln_pro"
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"status\":\"active\",\"planRef\":\"pln_pro\"}"
+        }
+      ],
+      "structuredContent": {
+        "status": "active",
+        "planRef": "pln_pro"
+      }
+    }
+  }
+}

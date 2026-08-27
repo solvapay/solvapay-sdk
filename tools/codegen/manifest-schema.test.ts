@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   EXPECTED_OPERATION_COUNT,
+  EXPECTED_ROUTED_OPERATION_COUNT,
   EXPECTED_TOP_LEVEL_IDS,
   SdkContractManifestSchema,
   assertBindingReconciliation,
@@ -61,10 +62,17 @@ function op(
 
 function minimalManifest(overrides: Partial<SdkContractManifest> = {}): SdkContractManifest {
   const operations: SdkContractManifest['operations'] = {}
-  for (let i = 0; i < EXPECTED_OPERATION_COUNT; i += 1) {
+  for (let i = 0; i < EXPECTED_ROUTED_OPERATION_COUNT; i += 1) {
     const id = i === 0 ? 'checkLimits' : `op${String(i).padStart(2, '0')}`
     operations[id] = op(id, {
       route: { method: 'GET', path: `/v1/sdk/paths/${id}` },
+      request: undefined,
+      response: 'LimitResponse',
+    })
+  }
+  for (let i = 0; i < 5; i += 1) {
+    const id = `mcpOp${String(i).padStart(2, '0')}`
+    operations[id] = op(id, {
       request: undefined,
       response: 'LimitResponse',
     })
@@ -334,7 +342,7 @@ describe('coverage and collisions', () => {
     expect(issues.some(i => /collision/i.test(i) && /ts/.test(i))).toBe(true)
   })
 
-  it('requires exactly 36 operations', () => {
+  it('requires exactly 36 routed operations', () => {
     const manifest = minimalManifest()
     delete manifest.operations.op35
     expect(assertOperationCount(manifest).some(i => /36/.test(i))).toBe(true)

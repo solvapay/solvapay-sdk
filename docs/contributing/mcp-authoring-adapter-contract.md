@@ -13,23 +13,36 @@ core (`buildPaywallGate` / `buildGateMessage` / `paywallToolResult`).
 ## Three layers
 
 1. **Layer 1 — MCP protocol (per-ecosystem SDK).** `McpServer`, transports,
-   `tools/call` framing, input-schema validation, result serialization. Never
-   reimplemented in the SolvaPay core. TypeScript uses
-   `@modelcontextprotocol/server`.
-2. **Layer 2 — shared Rust decision core.** Classify → build gate → decide,
-   `paywallToolResult` envelope, `buildPayableToolResult` allow-path unwrap,
-   `checkLimits` / `trackUsage`. Gate `message` and `structuredContent` are
-   byte-identical across languages because they come from this one core.
-3. **Layer 3 — hand-written adapter (this contract).** Registers a merchant
-   handler as a paywalled tool, resolves the customer, runs the layer-2
-   decision, unwraps `ctx.respond` into an MCP `CallToolResult`, and records
-   usage. TypeScript: `registerPayableTool` + `buildPayableHandler`.
+   SSE / streamable HTTP, `tools/call` framing. Never reimplemented in the
+   SolvaPay core. C has no host MCP SDK: the reference adapter is
+   [`sdks/capi/ctest/mcp_engine.c`](../../sdks/capi/ctest/mcp_engine.c), which
+   routes HTTP through `solvapay_client_call("mcpDispatch" | "mcpOauthRequest")`
+   and resumes payable tools with `solvapay_call("mcpResume", …)`.
+2. **Layer 2 — shared Rust MCP core** (`core/solvapay-mcp`, plus payable
+   decisions in `solvapay-core`). Sync ops (`mcpDescriptors`, `mcpAuthGate`,
+   `mcpOauthDiscovery`, `mcpMergeCsp`, …) are `(args_json) -> envelope` via
+   `solvapay_call`. Async fan-out (`mcpBootstrap`, `mcpCallBuiltinTool`,
+   `mcpReadResource`, `mcpOauthRequest`, `mcpDispatch`) lives on
+   `SolvaPayClient`. `mcpDispatch` services builtin tools and resources
+   internally and, for a merchant payable tool, returns
+   `{kind:"invokeHandler", token, …}` so the host runs the handler and
+   resumes with `mcpResume`. Gate `message` / `structuredContent` still
+   come from `paywallToolResult` — the engine does not author gate copy.
+3. **Layer 3 — thin host glue (~150–280 code lines).** Descriptor → host-SDK
+   registration, converting the web framework request into
+   `mcpOauthRequest` / `mcpDispatch` JSON, invoking the merchant
+   handler on `invokeHandler`, and passing the bearer header or resolved
+   `customerRef` **in** as JSON. There is no `getCustomerRef` callback into
+   Rust. HTTP `authInfo` plumbing is no longer TypeScript-specific; every
+   language feeds `authHeader` on the engine op. The C file above is the
+   smallest expression of that loop (OAuth + three-way dispatch branch +
+   demo `mcpResume`); stringly-typed ABI JSON lives in `mcp_json.c` beside
+   it. Languages with a payable host SDK reuse their existing gate instead
+   of the echo handler.
 
-Layer 3 owns: customer-ref resolution _hooks_, compiling a merchant `handler`
-into `ctx.respond` / `ctx.gate` / `ctx.emit`, registering the tool on the
-host SDK, unwrapping the response envelope, and projecting usage. Layer 3
-must **delegate** paywall classification, gate assembly, gate narration, and
-`paywallToolResult` shaping to layer 2. It must not rewrite gate copy.
+Layer 3 must **delegate** paywall classification, gate assembly, gate
+narration, and `paywallToolResult` shaping to layer 2. It must not rewrite
+gate copy.
 
 ## Required public surface
 
@@ -40,7 +53,8 @@ Each language exposes a `registerPayable` equivalent that takes:
 - `product` (product ref)
 - optional `title`, `description`, input schema
 - `handler: (args, ctx) => ctx.respond(...)`
-- optional `getCustomerRef(args) => string` (the `"hook"` customer-ref source)
+- optional `getCustomerRef(args) => string` (layer-3 `"hook"` source; resolved
+  in the host and passed into layer 2 as JSON — Rust never calls back out)
 
 `ctx` members (sourced from TypeScript `PayableHandler` / `ResponseContext`):
 
@@ -57,10 +71,11 @@ a raw value is a loud error, not a silent wrap.
 
 ## Mandatory decision sequence
 
-1. **Resolve customer ref.** `"hook"` → `getCustomerRef`. `"toolArgs"` →
+1. **Resolve customer ref.** `"hook"` → host `getCustomerRef` (layer 3). `"toolArgs"` →
    `args.customer_ref` (the tool `inputSchema` must declare `customer_ref` so
-   the host MCP SDK forwards it). HTTP `authInfo` plumbing is
-   TypeScript-transport-specific and out of this corpus.
+   the host MCP SDK forwards it). Pass the resolved ref or the raw `Authorization`
+   header into `mcpAuthGate` / `mcpDispatch` as JSON. This is not
+   TypeScript-specific.
 2. **Ensure customer.** Map the resolved identity to a backend customer ref
    (`createCustomer` / `getCustomer` as the language client already does).
 3. **Decide** via layer 2 (`paywall.decide` / `decidePaywallOutcome`):
@@ -163,15 +178,52 @@ They match the never-moves list in [`architecture.md`](./architecture.md).
 
 1. Load `*.json` recursively from the `mcpFixtures` lookup path.
 2. Parse each file with the §5.3 envelope (`suite`, `case`, `input.fn`,
-   `input.args`, `expect.result`). `input.fn` is always `registerPayable`.
-3. Validate `input.args` as the scenario documented next to the corpus
-   (`contract/mcp-fixtures/README.md`) — no silent defaults.
-4. Register the tool on a real host MCP server, drive `initialize` →
+   `input.args`, `expect.result`). `input.fn` is `registerPayable` for
+   payable scenarios and a Rust op name (`mcpDispatch`, `mcpNarrate`, …)
+   for core characterization fixtures.
+3. **Characterization fixtures are immutable.** Once committed under
+   `contract/mcp-fixtures/`, do not edit a fixture to make an
+   implementation pass. A mismatch is a regression in the runner or the
+   Rust core.
+4. Replay **every** corpus file. Payable suites go through
+   `registerPayable`. Sync ops go through `solvapay_call` /
+   `callMcpSyncOp`. Async ops (`mcpDispatch`, `mcpOauthRequest`,
+   `mcpBootstrap`, `mcpCallBuiltinTool`) go through the language client.
+   Do not list a suite and early-return without asserting.
+5. Validate `registerPayable` `input.args` as the scenario documented next
+   to the corpus (`contract/mcp-fixtures/README.md`) — no silent defaults.
+6. Register the tool on a real host MCP server, drive `initialize` →
    `notifications/initialized` → `tools/call`, and assert `toolResult` plus
    the usage projection.
-5. Install the language's native layer-2 dispatch so gate copy comes from
+7. Install the language's native layer-2 dispatch so gate copy comes from
    Rust (`paywallToolResult`), not a hand-written fallback.
-6. Mirror `pnpm test:mcp-contract` as the focused command.
+8. Mirror `pnpm test:mcp-contract` as the focused command. C skips only
+   `registerPayable` (no payable host SDK); every other `input.fn` must
+   assert.
+
+## Host / core boundary
+
+`mcpDispatch` is the single JSON-RPC entry point. Hosts convert the HTTP
+request into `{ rpc, config, authHeader }`, call `mcpDispatch`, and
+branch three ways:
+
+| `kind`           | Host work                                              |
+| ---------------- | ------------------------------------------------------ |
+| `rpc`            | Write the JSON-RPC body (usually HTTP 200)             |
+| `challenge`      | Write `status` + `WWW-Authenticate` + body             |
+| `invokeHandler`  | Run the merchant handler, then `mcpResume` with the token |
+
+OAuth and discovery HTTP go through `mcpOauthRequest`. Builtin tools and
+resources are serviced **inside** `mcpDispatch`; hosts never handle
+`callBuiltin` / `readResource` envelopes.
+
+What stays per language: MCP protocol transport, request/response body
+conversion, framework routing, host-SDK tool registration, bearer parse
+to `authHeader` / `customerRef`, and invoking the merchant handler.
+
+Layer-3 non-transport glue (the dispatch loop + OAuth router) is gated
+to **≤ 280 code lines** per reference adapter (`pnpm mcp-layer3-budget:check`).
+The C file above is the smallest expression of that loop.
 
 ## Go host-model notes (MA-Go)
 

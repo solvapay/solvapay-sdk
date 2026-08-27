@@ -106,8 +106,9 @@ pub use paywall_state::{
 };
 pub use plans::validate_list_plans_params;
 pub use pricing_options::{
-    billing_cycle, charges, credits_per_unit_from_balance, headline_charges, included_units,
-    pegged_credits_per_unit, per_unit_charge, trial_days, BillingCycle, Charge,
+    billing_cycle, charges, counts_usage, credits_per_unit_from_balance, headline_charges,
+    included_units, meter_name, pegged_credits_per_unit, per_unit_charge, trial_days, BillingCycle,
+    Charge,
 };
 pub use product::validate_get_product_params;
 pub use product_readiness::{

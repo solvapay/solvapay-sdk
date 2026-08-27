@@ -100,6 +100,41 @@ describe('getUsageCore', () => {
     })
   })
 
+  it('projects usage from checkLimits when the snapshot counts usage without isMetered', async () => {
+    mockCheckPurchase.mockResolvedValue({
+      customerRef: 'cus_ABC',
+      purchases: [
+        {
+          reference: 'pur_1',
+          status: 'active',
+          productRef: 'prd_1',
+          planSnapshot: {
+            isMetered: false,
+            options: [
+              { kind: 'limit', cap: 3, scope: 'billing_period', meter: 'tokens', onExceed: 'block' },
+            ],
+          },
+          usage: { used: 1 },
+        },
+      ],
+    })
+    mockCheckLimits.mockResolvedValue({ meterName: 'tokens', remaining: 2 })
+
+    const result = await getUsageCore(fakeRequest())
+
+    expect(mockCheckLimits).toHaveBeenCalledWith({
+      customerRef: 'cus_ABC',
+      productRef: 'prd_1',
+    })
+    expect(result).toMatchObject({
+      meterRef: 'tokens',
+      used: 1,
+      remaining: 2,
+      total: 3,
+      purchaseRef: 'pur_1',
+    })
+  })
+
   it('skips checkLimits when the active plan is not metered', async () => {
     mockCheckPurchase.mockResolvedValue({
       customerRef: 'cus_ABC',

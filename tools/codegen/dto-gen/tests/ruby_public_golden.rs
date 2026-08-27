@@ -35,6 +35,6 @@ fn public_client_helpers_and_rbs_match_committed() {
         rbs,
         fs::read_to_string(support::paths().generated_path("rbRbs").expect("rbRbs")).expect("RBS")
     );
-    assert_eq!(emitted.client_rb.matches("    def ").count(), 37);
+    assert_eq!(emitted.client_rb.matches("    def ").count(), 42);
     assert!(!rbs.contains("SolvaPay::Native"));
 }

@@ -106,6 +106,11 @@ module SolvaPay
     def get_user_info: (params: Hash[String, untyped]) -> untyped
     def list_plans: (product_ref: String) -> untyped
     def list_products: () -> untyped
+    def mcp_bootstrap: (params: Hash[String, untyped]) -> untyped
+    def mcp_call_builtin_tool: (params: Hash[String, untyped]) -> untyped
+    def mcp_dispatch: (params: Hash[String, untyped]) -> untyped
+    def mcp_oauth_request: (params: Hash[String, untyped]) -> untyped
+    def mcp_read_resource: (params: Hash[String, untyped]) -> untyped
     def process_payment_intent: (params: Hash[String, untyped]) -> untyped
     def reactivate_purchase: (params: Hash[String, untyped]) -> untyped
     def save_auto_recharge: (params: Hash[String, untyped]) -> untyped
@@ -175,6 +180,7 @@ module SolvaPay
   def self.build_paywall_gate: (input: Hash[String, untyped]) -> untyped
   def self.charges: (?priced: untyped) -> untyped
   def self.classify_paywall_state: (input: Hash[String, untyped]) -> untyped
+  def self.counts_usage: (?priced: untyped) -> untyped
   def self.credits_per_unit_from_balance: (?priced: untyped, ?balance: untyped, ?meter: String) -> untyped
   def self.credits_to_display_minor_units: (credits: Float, credits_per_minor_unit: Float, display_exchange_rate: Float, display_currency: String) -> untyped
   def self.derive_tax_id_type: (country: String) -> untyped
@@ -186,6 +192,7 @@ module SolvaPay
   def self.headline_charges: (?priced: untyped) -> untyped
   def self.included_units: (?priced: untyped, ?meter: String) -> untyped
   def self.is_zero_decimal_currency: (currency: String) -> untyped
+  def self.meter_name: (?priced: untyped) -> untyped
   def self.minor_units_per_major: (currency: String) -> untyped
   def self.paywall_error_to_client_payload: (error: Hash[String, untyped]) -> untyped
   def self.pegged_credits_per_unit: (charge_minor: Float, credits_per_minor_unit: Float, ?usd_to_charge_rate: Float) -> untyped

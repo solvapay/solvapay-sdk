@@ -25,6 +25,7 @@ serde_json = { workspace = true }
 solvapay-core = { path = "../../core/solvapay-core" }
 solvapay-dto = { path = "../../core/solvapay-dto" }
 solvapay-transport = { path = "../../core/solvapay-transport" }
+solvapay-mcp-core = { path = "../../core/solvapay-mcp" }
 
 [lints]
 workspace = true

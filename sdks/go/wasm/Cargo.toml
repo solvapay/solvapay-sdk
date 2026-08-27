@@ -14,6 +14,7 @@ crate-type = ["cdylib", "rlib"]
 solvapay-core = { path = "../../../core/solvapay-core", default-features = false, features = ["server"] }
 solvapay-dto = { path = "../../../core/solvapay-dto" }
 solvapay-transport = { path = "../../../core/solvapay-transport" }
+solvapay-mcp-core = { path = "../../../core/solvapay-mcp" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 pollster = "0.4.0"

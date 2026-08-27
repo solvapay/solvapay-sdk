@@ -1,4 +1,4 @@
-import { projectUsageSnapshot } from '../native-decisions'
+import { countsUsage, projectUsageSnapshot } from '../native-decisions'
 import type { SolvaPay } from '../factory'
 import type { TrackUsageResponse } from '../types'
 import type { ErrorResult } from './types'
@@ -51,13 +51,14 @@ export async function getUsageCore(
   }
 
   const snapshot = activePurchase.planSnapshot
-  const isMetered =
-    typeof snapshot === 'object' &&
-    snapshot !== null &&
-    'isMetered' in snapshot &&
-    snapshot.isMetered === true
+  const usageCounted =
+    countsUsage(snapshot) ||
+    (typeof snapshot === 'object' &&
+      snapshot !== null &&
+      'isMetered' in snapshot &&
+      snapshot.isMetered === true)
   const productRef = activePurchase.productRef
-  if (!isMetered || typeof productRef !== 'string' || productRef.length === 0) {
+  if (!usageCounted || typeof productRef !== 'string' || productRef.length === 0) {
     return projectUsageSnapshot(activePurchase, null)
   }
 

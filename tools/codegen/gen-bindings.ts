@@ -108,8 +108,8 @@ export function suggestBindingStub(
   )
   return bindingStubFields({
     id: opId,
-    method: op.route.method,
-    routePath: op.route.path,
+    method: op.route?.method ?? 'POST',
+    routePath: op.route?.path ?? '',
     pathRefs,
     bodyParamName: bodyParam?.name,
     dtoType: op.request ?? bodyParam?.ref,

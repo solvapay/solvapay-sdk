@@ -2,28 +2,29 @@
  * Node `(req, res, next)` OAuth bridge middleware for the SolvaPay MCP
  * server.
  *
- * Lifted verbatim from `@solvapay/mcp-express` when it was folded into
- * this package as a subpath export. Pure JSON discovery builders come
- * from `@solvapay/mcp-core`; everything request/response-shaped lives
- * here so `@solvapay/mcp-core` stays runtime-agnostic.
+ * Route bodies go through `mcpOauthRequest`. Path matching, CORS
+ * preflight, and `mcpAuthMiddleware` stay here — those are transport.
  */
 
 import {
   assertValidProductRef,
   buildAuthInfoFromBearer,
-  getOAuthAuthorizationServerResponse,
-  getOAuthProtectedResourceResponse,
-  logDcrFailureDiagnostic,
   logMcpConfigOnce,
+  mcpAuthGate,
   McpBearerAuthError,
-  requiresBearerAuth,
+  pathAwareProtectedResourcePath,
   resolveOAuthPaths,
   withoutTrailingSlash,
   type BuildAuthInfoFromBearerOptions,
   type McpAuthMode,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
-import { toOAuthErrorBody } from '../internal/oauth-error-normalize'
+import {
+  mcpOauthRequest,
+  type McpOauthRequestClient,
+  type McpOauthRequestConfig,
+  type McpOauthRequestResult,
+} from '../internal/mcp-oauth-request'
 
 type JsonRpcId = string | number | null
 
@@ -51,21 +52,32 @@ export interface OAuthRegisterHandlerOptions {
   apiBaseUrl: string
   productRef: string
   path?: string
+  publicBaseUrl?: string
+  oauthClient?: McpOauthRequestClient | null
 }
 
 export interface OAuthAuthorizeHandlerOptions {
   apiBaseUrl: string
   path?: string
+  publicBaseUrl?: string
+  productRef?: string
+  oauthClient?: McpOauthRequestClient | null
 }
 
 export interface OAuthTokenHandlerOptions {
   apiBaseUrl: string
   path?: string
+  publicBaseUrl?: string
+  productRef?: string
+  oauthClient?: McpOauthRequestClient | null
 }
 
 export interface OAuthRevokeHandlerOptions {
   apiBaseUrl: string
   path?: string
+  publicBaseUrl?: string
+  productRef?: string
+  oauthClient?: McpOauthRequestClient | null
 }
 
 export interface McpOAuthBridgeOptions {
@@ -79,12 +91,8 @@ export interface McpOAuthBridgeOptions {
   protectedResourcePath?: string
   authorizationServerPath?: string
   oauthPaths?: OAuthBridgePaths
+  oauthClient?: McpOauthRequestClient | null
 }
-
-// Native-scheme origins used by MCP clients during DCR/auth flows. These origins
-// don't carry credentials, so we can mirror them back in the Access-Control-Allow-Origin
-// header without widening to a bare "*".
-const NATIVE_CLIENT_ORIGIN_SCHEMES = ['cursor:', 'vscode:', 'vscode-webview:', 'claude:'] as const
 
 function getRequestAuthHeader(req: RequestLike): string | null {
   const header = req.headers?.authorization
@@ -144,6 +152,8 @@ function getRequestQuery(req: RequestLike): string {
   return qIndex === -1 ? '' : raw.slice(qIndex)
 }
 
+const NATIVE_CLIENT_ORIGIN_SCHEMES = ['cursor:', 'vscode:', 'vscode-webview:', 'claude:'] as const
+
 function isNativeClientOrigin(origin: string): boolean {
   try {
     const url = new URL(origin)
@@ -164,63 +174,29 @@ function applyCorsHeaders(req: RequestLike, res: ResponseLike) {
   }
 }
 
-function handlePreflight(req: RequestLike, res: ResponseLike) {
-  applyCorsHeaders(req, res)
-  const requestedMethod = getHeader(req, 'access-control-request-method') ?? 'POST'
-  const requestedHeaders =
-    getHeader(req, 'access-control-request-headers') ?? 'authorization, content-type'
-  res.setHeader('Access-Control-Allow-Methods', `${requestedMethod}, OPTIONS`)
-  res.setHeader('Access-Control-Allow-Headers', requestedHeaders)
-  res.setHeader('Access-Control-Max-Age', '600')
-  res.status(204)
-  if (typeof res.end === 'function') {
-    res.end()
-  } else {
-    res.json({})
+function requestHeaders(req: RequestLike): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(req.headers ?? {})) {
+    if (typeof value === 'string') out[key.toLowerCase()] = value
+    else if (Array.isArray(value) && value[0]) out[key.toLowerCase()] = value[0]
   }
+  return out
 }
 
-async function readJsonFromResponse(upstream: Response): Promise<{ body: unknown; text: string }> {
-  const text = await upstream.text()
-  if (!text) return { body: {}, text: '' }
-  try {
-    return { body: JSON.parse(text), text }
-  } catch {
-    return { body: text, text }
+function applyOauthResult(res: ResponseLike, result: McpOauthRequestResult): void {
+  for (const [name, value] of Object.entries(result.headers)) {
+    res.setHeader(name, value)
   }
-}
-
-async function relayJsonResponse(upstream: Response, res: ResponseLike): Promise<void> {
-  const { body, text } = await readJsonFromResponse(upstream)
-  res.status(upstream.status)
-  const contentType = upstream.headers.get('content-type')
-  if (contentType) res.setHeader('Content-Type', contentType)
-  if (text === '' && upstream.status === 204) {
+  res.status(result.status)
+  if (result.body === null || result.body === undefined) {
     if (typeof res.end === 'function') {
       res.end()
       return
     }
-  }
-  res.json(body)
-}
-
-async function relayOAuthJsonResponse(upstream: Response, res: ResponseLike): Promise<void> {
-  if (upstream.ok || upstream.status === 204) {
-    await relayJsonResponse(upstream, res)
+    res.json({})
     return
   }
-
-  const { body, text } = await readJsonFromResponse(upstream)
-  const normalized = toOAuthErrorBody(body, text, upstream.status)
-  res.status(upstream.status)
-  res.setHeader('Content-Type', 'application/json')
-  res.json(normalized)
-}
-
-function sendUpstreamError(res: ResponseLike, _error: unknown) {
-  res.status(502)
-  res.setHeader('Content-Type', 'application/json')
-  res.json({ error: 'upstream_unreachable' })
+  res.json(result.body)
 }
 
 function serializeRegisterBody(body: unknown): string {
@@ -256,164 +232,154 @@ function serializeRequestBody(contentType: string | null, body: unknown): string
   return JSON.stringify(body ?? {})
 }
 
+function oauthConfig(options: {
+  apiBaseUrl: string
+  productRef?: string
+  publicBaseUrl?: string
+  mcpPath?: string
+  oauthPaths?: OAuthBridgePaths
+}): McpOauthRequestConfig {
+  return {
+    publicBaseUrl: options.publicBaseUrl ?? '',
+    productRef: options.productRef ?? '',
+    apiBaseUrl: options.apiBaseUrl,
+    ...(options.mcpPath !== undefined ? { mcpPath: options.mcpPath } : {}),
+    ...(options.oauthPaths !== undefined ? { oauthPaths: options.oauthPaths } : {}),
+  }
+}
+
+async function dispatchOauth(
+  req: RequestLike,
+  res: ResponseLike,
+  path: string,
+  body: string,
+  config: McpOauthRequestConfig,
+  client: McpOauthRequestClient | null | undefined,
+): Promise<void> {
+  applyOauthResult(
+    res,
+    await mcpOauthRequest(
+      {
+        method: req.method ?? 'GET',
+        path,
+        headers: requestHeaders(req),
+        body,
+        config,
+      },
+      client,
+    ),
+  )
+}
+
 export function createOAuthRegisterHandler(options: OAuthRegisterHandlerOptions): Middleware {
   const path = options.path ?? '/oauth/register'
-  const api = withoutTrailingSlash(options.apiBaseUrl)
-  const upstream = `${api}/v1/customer/auth/register?product_ref=${encodeURIComponent(options.productRef)}`
+  const config = oauthConfig(options)
 
   return async (req, res, next) => {
     if (req.path !== path) {
       next()
       return
     }
-
-    if (req.method === 'OPTIONS') {
-      handlePreflight(req, res)
-      return
-    }
-
-    if (req.method !== 'POST') {
+    if (req.method !== 'OPTIONS' && req.method !== 'POST') {
       next()
       return
     }
-
-    try {
-      const response = await fetch(upstream, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: serializeRegisterBody(req.body),
-      })
-      if (!response.ok) {
-        const bodyText = await response.clone().text()
-        logDcrFailureDiagnostic({
-          productRef: options.productRef,
-          apiBaseUrl: api,
-          status: response.status,
-          bodyText,
-        })
-      }
-      applyCorsHeaders(req, res)
-      await relayJsonResponse(response, res)
-    } catch (error) {
-      applyCorsHeaders(req, res)
-      sendUpstreamError(res, error)
-    }
+    await dispatchOauth(
+      req,
+      res,
+      '/oauth/register',
+      serializeRegisterBody(req.body),
+      config,
+      options.oauthClient,
+    )
   }
 }
 
 export function createOAuthAuthorizeHandler(options: OAuthAuthorizeHandlerOptions): Middleware {
   const path = options.path ?? '/oauth/authorize'
-  const api = withoutTrailingSlash(options.apiBaseUrl)
+  const config = oauthConfig(options)
 
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (req.path !== path) {
       next()
       return
     }
-
-    if (req.method === 'OPTIONS') {
-      handlePreflight(req, res)
-      return
-    }
-
-    if (req.method !== 'GET') {
+    if (req.method !== 'OPTIONS' && req.method !== 'GET') {
       next()
       return
     }
-
-    const query = getRequestQuery(req)
-    const location = `${api}/v1/customer/auth/authorize${query}`
-    res.setHeader('Location', location)
-    res.status(302)
-    if (typeof res.end === 'function') {
-      res.end()
-      return
-    }
-    res.json({})
+    await dispatchOauth(
+      req,
+      res,
+      `/oauth/authorize${getRequestQuery(req)}`,
+      '',
+      config,
+      options.oauthClient,
+    )
   }
 }
 
 export function createOAuthTokenHandler(options: OAuthTokenHandlerOptions): Middleware {
   const path = options.path ?? '/oauth/token'
-  const api = withoutTrailingSlash(options.apiBaseUrl)
-  const upstream = `${api}/v1/customer/auth/token`
+  const config = oauthConfig(options)
 
   return async (req, res, next) => {
     if (req.path !== path) {
       next()
       return
     }
-
-    if (req.method === 'OPTIONS') {
-      handlePreflight(req, res)
-      return
-    }
-
-    if (req.method !== 'POST') {
+    if (req.method !== 'OPTIONS' && req.method !== 'POST') {
       next()
       return
     }
-
     const contentType = getHeader(req, 'content-type') ?? 'application/x-www-form-urlencoded'
-    const authorization = getHeader(req, 'authorization')
-
-    const headers: Record<string, string> = { 'content-type': contentType }
-    if (authorization) headers['authorization'] = authorization
-
-    try {
-      const response = await fetch(upstream, {
-        method: 'POST',
-        headers,
-        body: serializeRequestBody(contentType, req.body),
-      })
-      applyCorsHeaders(req, res)
-      await relayOAuthJsonResponse(response, res)
-    } catch (error) {
-      applyCorsHeaders(req, res)
-      sendUpstreamError(res, error)
-    }
+    const headers = requestHeaders(req)
+    headers['content-type'] = contentType
+    applyOauthResult(
+      res,
+      await mcpOauthRequest(
+        {
+          method: req.method ?? 'POST',
+          path: '/oauth/token',
+          headers,
+          body: serializeRequestBody(contentType, req.body),
+          config,
+        },
+        options.oauthClient,
+      ),
+    )
   }
 }
 
 export function createOAuthRevokeHandler(options: OAuthRevokeHandlerOptions): Middleware {
   const path = options.path ?? '/oauth/revoke'
-  const api = withoutTrailingSlash(options.apiBaseUrl)
-  const upstream = `${api}/v1/customer/auth/revoke`
+  const config = oauthConfig(options)
 
   return async (req, res, next) => {
     if (req.path !== path) {
       next()
       return
     }
-
-    if (req.method === 'OPTIONS') {
-      handlePreflight(req, res)
-      return
-    }
-
-    if (req.method !== 'POST') {
+    if (req.method !== 'OPTIONS' && req.method !== 'POST') {
       next()
       return
     }
-
     const contentType = getHeader(req, 'content-type') ?? 'application/x-www-form-urlencoded'
-    const authorization = getHeader(req, 'authorization')
-
-    const headers: Record<string, string> = { 'content-type': contentType }
-    if (authorization) headers['authorization'] = authorization
-
-    try {
-      const response = await fetch(upstream, {
-        method: 'POST',
-        headers,
-        body: serializeRequestBody(contentType, req.body),
-      })
-      applyCorsHeaders(req, res)
-      await relayOAuthJsonResponse(response, res)
-    } catch (error) {
-      applyCorsHeaders(req, res)
-      sendUpstreamError(res, error)
-    }
+    const headers = requestHeaders(req)
+    headers['content-type'] = contentType
+    applyOauthResult(
+      res,
+      await mcpOauthRequest(
+        {
+          method: req.method ?? 'POST',
+          path: '/oauth/revoke',
+          headers,
+          body: serializeRequestBody(contentType, req.body),
+          config,
+        },
+        options.oauthClient,
+      ),
+    )
   }
 }
 
@@ -429,6 +395,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     protectedResourcePath = '/.well-known/oauth-protected-resource',
     authorizationServerPath = '/.well-known/oauth-authorization-server',
     oauthPaths,
+    oauthClient,
   } = options
 
   assertValidProductRef(productRef, 'createMcpOAuthBridge')
@@ -439,64 +406,72 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
   })
 
   const paths = resolveOAuthPaths(oauthPaths)
+  const config = oauthConfig({
+    publicBaseUrl,
+    productRef,
+    apiBaseUrl,
+    mcpPath,
+    ...(oauthPaths !== undefined ? { oauthPaths } : {}),
+  })
+  const metadataPath = pathAwareProtectedResourcePath(mcpPath)
 
-  // SolvaPay is an OAuth 2.0 authorization server (RFC 8414), not an OpenID Provider.
-  // Returning 404 tells strict OIDC validators (current Cursor) to fall back to
-  // RFC 8414 on `/.well-known/oauth-authorization-server`.
-  const openidDiscoveryMiddleware: Middleware = (req, res, next) => {
+  const openidDiscoveryMiddleware: Middleware = async (req, res, next) => {
     if (req.method !== 'GET' || req.path !== '/.well-known/openid-configuration') {
       next()
       return
     }
-
-    applyCorsHeaders(req, res)
-    res.status(404)
-    if (typeof res.end === 'function') {
-      res.end()
-    } else {
-      res.json({ error: 'not_found' })
-    }
+    await dispatchOauth(req, res, '/.well-known/openid-configuration', '', config, oauthClient)
   }
 
-  const protectedResourceMiddleware: Middleware = (req, res, next) => {
-    if (req.method !== 'GET' || req.path !== protectedResourcePath) {
+  const protectedResourceMiddleware: Middleware = async (req, res, next) => {
+    const path = req.path ?? ''
+    const matches =
+      path === protectedResourcePath ||
+      path === metadataPath ||
+      path.startsWith('/.well-known/oauth-protected-resource/')
+    if (req.method !== 'GET' || !matches) {
       next()
       return
     }
-
-    res.json(getOAuthProtectedResourceResponse(publicBaseUrl))
+    await dispatchOauth(req, res, path, '', config, oauthClient)
   }
 
-  const authorizationServerMiddleware: Middleware = (req, res, next) => {
+  const authorizationServerMiddleware: Middleware = async (req, res, next) => {
     if (req.method !== 'GET' || req.path !== authorizationServerPath) {
       next()
       return
     }
-
-    if (!productRef) {
-      res.status(500).json({ error: 'SOLVAPAY_PRODUCT_REF missing' })
-      return
-    }
-
-    res.json(
-      getOAuthAuthorizationServerResponse({
-        publicBaseUrl,
-        paths,
-      }),
-    )
+    await dispatchOauth(req, res, '/.well-known/oauth-authorization-server', '', config, oauthClient)
   }
 
   const registerMiddleware = createOAuthRegisterHandler({
     apiBaseUrl,
     productRef,
     path: paths.register,
+    publicBaseUrl,
+    oauthClient,
   })
   const authorizeMiddleware = createOAuthAuthorizeHandler({
     apiBaseUrl,
     path: paths.authorize,
+    publicBaseUrl,
+    productRef,
+    oauthClient,
   })
-  const tokenMiddleware = createOAuthTokenHandler({ apiBaseUrl, path: paths.token })
-  const revokeMiddleware = createOAuthRevokeHandler({ apiBaseUrl, path: paths.revoke })
+  const tokenMiddleware = createOAuthTokenHandler({
+    apiBaseUrl,
+    path: paths.token,
+    publicBaseUrl,
+    productRef,
+    oauthClient,
+  })
+  const revokeMiddleware = createOAuthRevokeHandler({
+    apiBaseUrl,
+    path: paths.revoke,
+    publicBaseUrl,
+    productRef,
+    oauthClient,
+  })
 
   const mcpAuthMiddleware: Middleware = (req, res, next) => {
     if (req.path !== mcpPath) {
@@ -523,7 +498,25 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     const id = getRequestJsonRpcId(req.body)
     const method = getRequestJsonRpcMethod(req.body)
 
-    if (!authHeader && (!requireAuth || !requiresBearerAuth(method, authMode))) {
+    const gate = requireAuth
+        ? mcpAuthGate({
+          rpcMethod: method,
+          authHeader,
+          authMode,
+          publicBaseUrl,
+          mcpPath,
+          jsonRpcId: id,
+        })
+      : { kind: 'allow' as const }
+    if (gate.kind === 'challenge') {
+      applyCorsHeaders(req, res)
+      for (const [key, value] of Object.entries(gate.headers)) {
+        res.setHeader(key, value)
+      }
+      res.status(gate.status).json(gate.body)
+      return
+    }
+    if (!authHeader) {
       next()
       return
     }
@@ -539,7 +532,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     } catch {
       applyCorsHeaders(req, res)
       res.setHeader('Access-Control-Expose-Headers', 'WWW-Authenticate')
-      setMcpChallengeHeader(res, publicBaseUrl, protectedResourcePath)
+      setMcpChallengeHeader(res, publicBaseUrl, metadataPath)
 
       if (req.method === 'POST') {
         res.status(401).json(makeUnauthorizedJsonRpc(id))

@@ -1840,6 +1840,7 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
+ "solvapay-mcp-core",
  "solvapay-transport",
  "tokio",
  "wiremock",
@@ -1883,6 +1884,7 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
+ "solvapay-mcp-core",
  "solvapay-transport",
 ]
 
@@ -1897,8 +1899,23 @@ dependencies = [
  "serde_json",
  "solvapay",
  "solvapay-core",
+ "solvapay-mcp-core",
  "thiserror",
  "tokio",
+ "wiremock",
+]
+
+[[package]]
+name = "solvapay-mcp-core"
+version = "0.1.0"
+dependencies = [
+ "repo-paths",
+ "serde",
+ "serde_json",
+ "solvapay-core",
+ "tokio",
+ "uuid",
+ "wiremock",
 ]
 
 [[package]]
@@ -1912,6 +1929,7 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
+ "solvapay-mcp-core",
  "solvapay-transport",
 ]
 
@@ -1925,6 +1943,7 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
+ "solvapay-mcp-core",
  "solvapay-transport",
  "tokio",
 ]
@@ -1939,6 +1958,7 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
+ "solvapay-mcp-core",
  "solvapay-transport",
  "tokio",
 ]
@@ -1959,6 +1979,7 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
+ "solvapay-mcp-core",
  "tokio",
  "walkdir",
  "wasm-bindgen",
@@ -1977,6 +1998,7 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
+ "solvapay-mcp-core",
  "solvapay-transport",
  "wasm-bindgen",
  "wasm-bindgen-futures",

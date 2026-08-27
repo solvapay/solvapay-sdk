@@ -1311,6 +1311,179 @@ impl SolvaPayClient {
             })
         })
     }
+
+    // --- MCP composite ---
+
+    /// `mcpBootstrap`
+    fn mcp_bootstrap<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::McpBootstrapParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_bootstrap(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::mcp_bootstrap`] (interpreter detached while awaiting).
+    #[pyo3(name = "mcp_bootstrap_blocking")]
+    fn mcp_bootstrap_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpBootstrapParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_bootstrap(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `mcpCallBuiltinTool`
+    fn mcp_call_builtin_tool<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::McpCallBuiltinToolParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_call_builtin_tool(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::mcp_call_builtin_tool`] (interpreter detached while awaiting).
+    #[pyo3(name = "mcp_call_builtin_tool_blocking")]
+    fn mcp_call_builtin_tool_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpCallBuiltinToolParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_call_builtin_tool(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `mcpReadResource`
+    fn mcp_read_resource<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::McpReadResourceParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_read_resource(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::mcp_read_resource`] (interpreter detached while awaiting).
+    #[pyo3(name = "mcp_read_resource_blocking")]
+    fn mcp_read_resource_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpReadResourceParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_read_resource(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `mcpOauthRequest`
+    fn mcp_oauth_request<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::McpOauthRequestParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_oauth_request(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::mcp_oauth_request`] (interpreter detached while awaiting).
+    #[pyo3(name = "mcp_oauth_request_blocking")]
+    fn mcp_oauth_request_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpOauthRequestParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_oauth_request(params).await
+                })
+                .await
+            })
+        })
+    }
+
+    /// `mcpDispatch`
+    fn mcp_dispatch<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::McpDispatchParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_dispatch(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::mcp_dispatch`] (interpreter detached while awaiting).
+    #[pyo3(name = "mcp_dispatch_blocking")]
+    fn mcp_dispatch_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpDispatchParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_dispatch(params).await
+                })
+                .await
+            })
+        })
+    }
 }
 
 /// Extracts path refs from a combined args object, leaving the remaining body.

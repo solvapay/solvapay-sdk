@@ -155,6 +155,8 @@ export {
   billingCycle,
   trialDays,
   includedUnits,
+  meterName,
+  countsUsage,
   peggedCreditsPerUnit,
   creditsPerUnitFromBalance,
   isErrorResult,

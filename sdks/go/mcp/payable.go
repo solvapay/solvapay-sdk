@@ -98,12 +98,20 @@ func compileInputSchema(fields map[string]any) (json.RawMessage, error) {
 }
 
 func dispatchPayable(ctx context.Context, req *mcpsdk.CallToolRequest, opts Options) (*mcpsdk.CallToolResult, error) {
-	started := time.Now()
 	args := map[string]any{}
 	if req != nil && req.Params != nil && len(req.Params.Arguments) > 0 && string(req.Params.Arguments) != "null" {
 		if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
 			return nil, fmt.Errorf("decode tool arguments: %w", err)
 		}
+	}
+	return InvokePayable(ctx, args, opts)
+}
+
+// InvokePayable runs the payable decision sequence for one tool call.
+func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcpsdk.CallToolResult, error) {
+	started := time.Now()
+	if args == nil {
+		args = map[string]any{}
 	}
 	customerRef, err := resolveCustomerRef(ctx, args, opts.GetCustomerRef)
 	if err != nil {

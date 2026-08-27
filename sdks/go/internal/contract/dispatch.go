@@ -97,6 +97,8 @@ var SyncExports = map[string]string{
 	"includedUnits":                               "sv_included_units_binding",
 	"peggedCreditsPerUnit":                        "sv_pegged_credits_per_unit_binding",
 	"creditsPerUnitFromBalance":                   "sv_credits_per_unit_from_balance_binding",
+	"meterName":                                   "sv_meter_name_binding",
+	"countsUsage":                                 "sv_counts_usage_binding",
 }
 
 // Replay runs one fixture and returns a normalized outcome (does not assert expect).

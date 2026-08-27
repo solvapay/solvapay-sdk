@@ -26,6 +26,7 @@ include = [
   "solvapay_version",
   "solvapay_client_new",
   "solvapay_client_call",
+  "solvapay_call",
   "solvapay_verify_webhook",
   "solvapay_client_free",
   "solvapay_free_string",

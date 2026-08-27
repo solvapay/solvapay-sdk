@@ -661,3 +661,83 @@ pub unsafe extern "C" fn sv_disable_auto_recharge(args_ptr: *mut u8, args_len: u
         }))
     }))
 }
+
+/// `mcpBootstrap`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_mcp_bootstrap(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::McpBootstrapParams = parse_args_json(&args_json)?;
+            client.mcp_bootstrap(params).await
+        }))
+    }))
+}
+
+/// `mcpCallBuiltinTool`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_mcp_call_builtin_tool(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::McpCallBuiltinToolParams = parse_args_json(&args_json)?;
+            client.mcp_call_builtin_tool(params).await
+        }))
+    }))
+}
+
+/// `mcpReadResource`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_mcp_read_resource(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::McpReadResourceParams = parse_args_json(&args_json)?;
+            client.mcp_read_resource(params).await
+        }))
+    }))
+}
+
+/// `mcpOauthRequest`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_mcp_oauth_request(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::McpOauthRequestParams = parse_args_json(&args_json)?;
+            client.mcp_oauth_request(params).await
+        }))
+    }))
+}
+
+/// `mcpDispatch`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_mcp_dispatch(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::McpDispatchParams = parse_args_json(&args_json)?;
+            client.mcp_dispatch(params).await
+        }))
+    }))
+}

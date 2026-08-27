@@ -226,9 +226,13 @@ const DISPATCH_FNS: &[&str] = &[
     "updateProduct",
 ];
 
-/// Returns whether the dispatch table covers every `OPERATION_NAMES` entry.
+/// Returns whether the dispatch table covers every routed `OPERATION_NAMES` entry.
 pub fn dispatch_covers_all_operations() -> bool {
-    let expected: std::collections::BTreeSet<&str> = OPERATION_NAMES.iter().copied().collect();
+    let expected: std::collections::BTreeSet<&str> = OPERATION_NAMES
+        .iter()
+        .copied()
+        .filter(|name| !name.starts_with("mcp"))
+        .collect();
     let actual: std::collections::BTreeSet<&str> = DISPATCH_FNS.iter().copied().collect();
     expected == actual
 }
@@ -528,11 +532,15 @@ mod coverage_tests {
 
     #[test]
     fn dispatch_table_matches_operation_names() {
-        let expected: BTreeSet<&str> = OPERATION_NAMES.iter().copied().collect();
+        let expected: BTreeSet<&str> = OPERATION_NAMES
+            .iter()
+            .copied()
+            .filter(|name| !name.starts_with("mcp"))
+            .collect();
         let actual: BTreeSet<&str> = DISPATCH_FNS.iter().copied().collect();
         assert_eq!(
             expected, actual,
-            "DISPATCH_FNS must equal error_templates::OPERATION_NAMES"
+            "DISPATCH_FNS must equal routed error_templates::OPERATION_NAMES"
         );
         assert!(dispatch_covers_all_operations());
         assert_eq!(DISPATCH_FNS.len(), 36);

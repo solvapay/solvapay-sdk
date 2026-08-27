@@ -110,7 +110,7 @@ func parseObservation(result json.RawMessage) (observation, error) {
 
 func TestFixtureRoundTripsStrictSchema(t *testing.T) {
 	root := lookupMcpFixtures(t)
-	for _, rel := range mcpAuthoringFixtures {
+	for _, rel := range registerPayableFixtures() {
 		t.Run(rel, func(t *testing.T) {
 			raw, err := os.ReadFile(root + "/" + rel)
 			if err != nil {

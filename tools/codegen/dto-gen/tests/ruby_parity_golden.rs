@@ -19,7 +19,7 @@ fn ruby_parity_matches_committed_and_has_real_defaults() {
     )
     .expect("committed parity");
     assert_eq!(emitted, committed);
-    assert!(emitted.contains("assert_equal 36"));
+    assert!(emitted.contains("assert_equal 41"));
     assert!(!emitted.contains("2 == 2"));
     assert!(!emitted.contains("or true"));
 }

@@ -223,6 +223,51 @@ pub fn included_units(priced: Option<&Value>, meter: Option<&str>) -> Option<i64
     None
 }
 
+/// The meter a plan counts against: per-unit charge meter, else first limit meter.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "plans",
+    emit_order = 51
+)]
+pub fn meter_name(priced: Option<&Value>) -> Option<String> {
+    if let Some(meter) = per_unit_charge(priced, None).and_then(|charge| charge.meter) {
+        return Some(meter);
+    }
+    for option in options_of(priced) {
+        if option.get("kind").and_then(Value::as_str) != Some("limit") {
+            continue;
+        }
+        if let Some(meter) = option
+            .get("meter")
+            .and_then(Value::as_str)
+            .filter(|name| !name.is_empty())
+        {
+            return Some(meter.to_owned());
+        }
+    }
+    None
+}
+
+/// True when the plan counts usage: a per-unit charge, a limit, or a tier.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "plans",
+    emit_order = 52
+)]
+pub fn counts_usage(priced: Option<&Value>) -> bool {
+    if per_unit_charge(priced, None).is_some() {
+        return true;
+    }
+    if included_units(priced, None).is_some() {
+        return true;
+    }
+    options_of(priced)
+        .into_iter()
+        .any(|option| option.get("kind").and_then(Value::as_str) == Some("tier"))
+}
+
 /// Credits consumed per metered unit for `charge_minor` in the charge currency.
 #[crate::solvapay_export(
     artifact = "decisions",
@@ -450,6 +495,16 @@ mod tests {
     #[test]
     fn included_units_null_when_absent() {
         assert_eq!(included_units(Some(&pro_plan()), None), None);
+    }
+
+    #[test]
+    fn counts_usage_from_limit_without_per_unit_rate() {
+        let priced = json!({
+            "options": [{ "kind": "limit", "cap": 3, "scope": "billing_period", "meter": "requests" }]
+        });
+        assert!(counts_usage(Some(&priced)));
+        assert!(!counts_usage(Some(&pro_plan())));
+        assert_eq!(meter_name(Some(&priced)).as_deref(), Some("requests"));
     }
 
     #[test]

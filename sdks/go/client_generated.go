@@ -540,6 +540,101 @@ func (c *Client) ListProducts(ctx context.Context) (any, error) {
 	return out, nil
 }
 
+// McpBootstrap fan out merchant, product, plans, and customer snapshots for the MCP widget.
+// The params parameter is View, product ref, public base URL, and optional customer ref.
+// Returns Bootstrap payload JSON for the embedded MCP App widget.
+func (c *Client) McpBootstrap(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_mcp_bootstrap", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// McpCallBuiltinTool invoke one of the twelve SolvaPay builtin MCP tools with optional customer context.
+// The params parameter is Tool name, arguments, server config, and optional customer ref.
+// Returns Builtin tool result JSON (narrated content and structured payload).
+func (c *Client) McpCallBuiltinTool(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_mcp_call_builtin_tool", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// McpDispatch route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler.
+// The params parameter is JSON-RPC body, engine config, and optional Authorization header.
+// Returns Dispatch envelope (rpc, challenge, or invokeHandler).
+func (c *Client) McpDispatch(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_mcp_dispatch", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// McpOauthRequest proxy one OAuth HTTP request (discovery, DCR, token, revoke, authorize).
+// The params parameter is Method, path, headers, body, and OAuth config.
+// Returns HTTP status, headers, and body for the OAuth response.
+func (c *Client) McpOauthRequest(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_mcp_oauth_request", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// McpReadResource read solvapay://bootstrap.json, the overview resource, or the UI widget resource.
+// The params parameter is Resource URI, server config, and optional customer ref.
+// Returns Resource contents JSON for MCP resources/read.
+func (c *Client) McpReadResource(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_mcp_read_resource", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProcessPaymentIntent process a completed payment intent into a purchase or top-up outcome.
 // The params parameter is Process request identifying the payment intent.
 // Returns Normalized process-payment result (purchase, top-up, or error branch).

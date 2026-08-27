@@ -1,29 +1,30 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Mapping
-from urllib.parse import quote, urlencode
+from collections.abc import Mapping
+from urllib.parse import urlencode
 
 import httpx
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse, RedirectResponse, Response
+from starlette.responses import JSONResponse, Response
 from starlette.routing import Mount, Route
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from solvapay_mcp.asgi.mcp_oauth_request import (
+    McpOauthRequestConfig,
+    mcp_oauth_request,
+)
 from solvapay_mcp.oauth.auth_bridge import build_auth_info_from_bearer
+from solvapay_mcp.oauth.auth_gate import mcp_auth_gate
 from solvapay_mcp.oauth.bearer import McpBearerAuthError
 from solvapay_mcp.oauth.config_log import log_mcp_config_once
-from solvapay_mcp.oauth.dcr_diagnostics import log_dcr_failure_diagnostic
 from solvapay_mcp.oauth.discovery import (
-    get_oauth_authorization_server_response,
-    get_oauth_protected_resource_response,
     path_aware_protected_resource_path,
     resolve_oauth_paths,
     without_trailing_slash,
 )
-from solvapay_mcp.oauth.error_normalize import to_oauth_error_body
-from solvapay_mcp.oauth.free_methods import McpAuthMode, requires_bearer_auth
+from solvapay_mcp.oauth.free_methods import McpAuthMode
 from solvapay_mcp.register import reset_request_customer_ref, set_request_customer_ref
 from solvapay_mcp.server.native import native_call
 
@@ -44,6 +45,7 @@ class McpOAuthBridgeOptions:
         require_auth: bool = True,
         auth_mode: McpAuthMode = "tools-call",
         http_client: httpx.AsyncClient | None = None,
+        oauth_client: object | None = None,
     ) -> None:
         self.public_base_url = public_base_url
         self.api_base_url = without_trailing_slash(api_base_url)
@@ -52,6 +54,7 @@ class McpOAuthBridgeOptions:
         self.require_auth = require_auth
         self.auth_mode = auth_mode
         self.http_client = http_client
+        self.oauth_client = oauth_client
         self.paths = resolve_oauth_paths()
         native_call(
             "assert_valid_product_ref",
@@ -73,25 +76,6 @@ def apply_native_cors(request: Request, response: Response) -> None:
     if origin and _is_native_origin(origin):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
-
-
-def _preflight(request: Request) -> Response:
-    requested_method = request.headers.get("access-control-request-method", "POST")
-    requested_headers = request.headers.get(
-        "access-control-request-headers", "authorization, content-type"
-    )
-    response = Response(status_code=204)
-    apply_native_cors(request, response)
-    response.headers["Access-Control-Allow-Methods"] = f"{requested_method}, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = requested_headers
-    response.headers["Access-Control-Max-Age"] = "600"
-    return response
-
-
-def _method_not_allowed() -> JSONResponse:
-    response = JSONResponse({"error": "method_not_allowed"}, status_code=405)
-    response.headers["Allow"] = "POST, OPTIONS"
-    return response
 
 
 def _jsonrpc_id(body: object) -> str | int | None:
@@ -169,8 +153,31 @@ class McpAuthMiddleware:
                 auth_header = value.decode("latin1")
                 break
         rpc_method = _jsonrpc_method(parsed)
-        gated = requires_bearer_auth(rpc_method, self._options.auth_mode)
-        if not auth_header and (not self._options.require_auth or not gated):
+        if self._options.require_auth:
+            gate = mcp_auth_gate(
+                public_base_url=self._options.public_base_url,
+                rpc_method=rpc_method,
+                auth_header=auth_header,
+                auth_mode=self._options.auth_mode,
+                mcp_path=self._options.mcp_path,
+                json_rpc_id=_jsonrpc_id(parsed),
+            )
+            if gate.get("kind") == "challenge":
+                body = gate.get("body")
+                status = gate.get("status")
+                response = JSONResponse(
+                    body if isinstance(body, dict) else {"error": "Unauthorized"},
+                    status_code=status if isinstance(status, int) else 401,
+                )
+                apply_native_cors(request, response)
+                headers = gate.get("headers")
+                if isinstance(headers, dict):
+                    for key, value in headers.items():
+                        if isinstance(value, str):
+                            response.headers[str(key)] = value
+                await send_response(response)
+                return
+        if not auth_header:
             await self.app(scope, replay_receive, send)
             return
 
@@ -223,146 +230,77 @@ def _serialize_form(body: object) -> str:
     return ""
 
 
-async def _upstream_json(
-    client: httpx.AsyncClient,
-    method: str,
-    url: str,
-    *,
-    headers: dict[str, str],
-    content: str,
-    oauth_normalize: bool,
-    on_failure: Callable[[int, str], None] | None = None,
-) -> Response:
-    try:
-        upstream = await client.request(method, url, headers=headers, content=content)
-    except httpx.HTTPError:
-        return JSONResponse({"error": "upstream_unreachable"}, status_code=502)
-    text = upstream.text
-    if on_failure is not None and not upstream.is_success:
-        on_failure(upstream.status_code, text)
-    parsed: object
-    try:
-        parsed = json.loads(text) if text else {}
-    except json.JSONDecodeError:
-        parsed = text
-    if oauth_normalize and not upstream.is_success and upstream.status_code != 204:
-        parsed = to_oauth_error_body(parsed, text, upstream.status_code)
-    if upstream.status_code == 204 and text == "":
-        return Response(status_code=204)
-    content_type = upstream.headers.get("content-type", "application/json")
-    response: Response
-    if isinstance(parsed, dict | list):
-        response = JSONResponse(parsed, status_code=upstream.status_code)
-    else:
-        response = Response(text, status_code=upstream.status_code, media_type=content_type)
-    return response
+def _oauth_config(options: McpOAuthBridgeOptions) -> McpOauthRequestConfig:
+    config: McpOauthRequestConfig = {
+        "publicBaseUrl": options.public_base_url,
+        "productRef": options.product_ref,
+        "apiBaseUrl": options.api_base_url,
+        "mcpPath": options.mcp_path,
+        "oauthPaths": {
+            "register": options.paths["register"],
+            "authorize": options.paths["authorize"],
+            "token": options.paths["token"],
+            "revoke": options.paths["revoke"],
+        },
+    }
+    return config
+
+
+def _response_from_result(result: Mapping[str, object]) -> Response:
+    status = result.get("status")
+    if not isinstance(status, int):
+        raise RuntimeError("mcpOauthRequest returned a result without status")
+    headers: dict[str, str] = {}
+    raw_headers = result.get("headers")
+    if isinstance(raw_headers, dict):
+        for key, value in raw_headers.items():
+            if isinstance(value, str):
+                headers[str(key)] = value
+    body = result.get("body")
+    if body is None:
+        return Response(status_code=status, headers=headers)
+    if isinstance(body, str):
+        return Response(body, status_code=status, headers=headers)
+    return JSONResponse(body, status_code=status, headers=headers)
+
+
+def _request_headers(request: Request) -> dict[str, str]:
+    return {key.lower(): value for key, value in request.headers.items()}
+
+
+async def _read_body(request: Request) -> str:
+    if request.method in ("GET", "OPTIONS", "HEAD"):
+        return ""
+    content_type = request.headers.get("content-type", "application/json")
+    raw = await request.body()
+    if "application/x-www-form-urlencoded" in content_type:
+        try:
+            form = await request.form()
+            return _serialize_form(dict(form))
+        except Exception:
+            return raw.decode("utf-8") if raw else ""
+    return raw.decode("utf-8") if raw else ""
 
 
 def create_oauth_routes(options: McpOAuthBridgeOptions) -> list[Route]:
-    api = options.api_base_url
-    product = options.product_ref
-    paths = options.paths
+    config = _oauth_config(options)
 
-    async def client() -> httpx.AsyncClient:
-        if options.http_client is not None:
-            return options.http_client
-        return httpx.AsyncClient()
-
-    async def openid(_request: Request) -> Response:
-        return Response(status_code=404)
-
-    async def protected_resource(_request: Request) -> JSONResponse:
-        return JSONResponse(
-            get_oauth_protected_resource_response(
-                options.public_base_url,
-                mcp_path=options.mcp_path,
-            )
-        )
-
-    async def authorization_server(_request: Request) -> JSONResponse:
-        return JSONResponse(
-            get_oauth_authorization_server_response(options.public_base_url, paths)
-        )
-
-    async def register(request: Request) -> Response:
-        if request.method == "OPTIONS":
-            return _preflight(request)
-        if request.method != "POST":
-            return _method_not_allowed()
-        raw = await request.body()
-        http = await client()
-        owns = options.http_client is None
-        try:
-            response = await _upstream_json(
-                http,
-                "POST",
-                f"{api}/v1/customer/auth/register?product_ref={quote(product, safe='')}",
-                headers={"content-type": "application/json"},
-                content=raw.decode("utf-8") if raw else "{}",
-                oauth_normalize=False,
-                on_failure=lambda status, body_text: log_dcr_failure_diagnostic(
-                    product_ref=product,
-                    api_base_url=api,
-                    status=status,
-                    body_text=body_text,
-                ),
-            )
-        finally:
-            if owns:
-                await http.aclose()
-        apply_native_cors(request, response)
-        return response
-
-    async def authorize(request: Request) -> Response:
-        if request.method == "OPTIONS":
-            return _preflight(request)
+    async def dispatch(request: Request) -> Response:
+        path = request.url.path
         query = request.url.query
-        location = f"{api}/v1/customer/auth/authorize"
-        if query:
-            location = f"{location}?{query}"
-        return RedirectResponse(location, status_code=302)
-
-    async def proxy_tokenish(request: Request, upstream_path: str) -> Response:
-        if request.method == "OPTIONS":
-            return _preflight(request)
-        if request.method != "POST":
-            return _method_not_allowed()
-        content_type = request.headers.get("content-type", "application/x-www-form-urlencoded")
-        raw = await request.body()
-        if "application/x-www-form-urlencoded" in content_type:
-            try:
-                form = await request.form()
-                content = _serialize_form(dict(form))
-            except Exception:
-                content = raw.decode("utf-8")
-        else:
-            content = raw.decode("utf-8") if raw else ""
-        headers = {"content-type": content_type}
-        authorization = request.headers.get("authorization")
-        if authorization:
-            headers["authorization"] = authorization
-        http = await client()
-        owns = options.http_client is None
-        try:
-            response = await _upstream_json(
-                http,
-                "POST",
-                f"{api}{upstream_path}",
-                headers=headers,
-                content=content,
-                oauth_normalize=True,
-            )
-        finally:
-            if owns:
-                await http.aclose()
-        apply_native_cors(request, response)
-        return response
-
-    async def token(request: Request) -> Response:
-        return await proxy_tokenish(request, "/v1/customer/auth/token")
-
-    async def revoke(request: Request) -> Response:
-        return await proxy_tokenish(request, "/v1/customer/auth/revoke")
+        full_path = f"{path}?{query}" if query else path
+        result = await mcp_oauth_request(
+            {
+                "method": request.method,
+                "path": full_path,
+                "headers": _request_headers(request),
+                "body": await _read_body(request),
+                "config": config,
+            },
+            client=options.oauth_client,
+            http_client=options.http_client,
+        )
+        return _response_from_result(result)
 
     metadata_paths: list[str] = []
     for candidate in (
@@ -373,13 +311,13 @@ def create_oauth_routes(options: McpOAuthBridgeOptions) -> list[Route]:
         if candidate and candidate not in metadata_paths:
             metadata_paths.append(candidate)
     return [
-        Route(OPENID_PATH, openid, methods=["GET"]),
-        *[Route(path, protected_resource, methods=["GET"]) for path in metadata_paths],
-        Route(AUTHORIZATION_SERVER_PATH, authorization_server, methods=["GET"]),
-        Route(paths["register"], register, methods=["POST", "OPTIONS"]),
-        Route(paths["authorize"], authorize, methods=["GET", "OPTIONS"]),
-        Route(paths["token"], token, methods=["POST", "OPTIONS"]),
-        Route(paths["revoke"], revoke, methods=["POST", "OPTIONS"]),
+        Route(OPENID_PATH, dispatch, methods=["GET"]),
+        *[Route(path, dispatch, methods=["GET"]) for path in metadata_paths],
+        Route(AUTHORIZATION_SERVER_PATH, dispatch, methods=["GET"]),
+        Route(options.paths["register"], dispatch, methods=["POST", "OPTIONS"]),
+        Route(options.paths["authorize"], dispatch, methods=["GET", "OPTIONS"]),
+        Route(options.paths["token"], dispatch, methods=["POST", "OPTIONS"]),
+        Route(options.paths["revoke"], dispatch, methods=["POST", "OPTIONS"]),
     ]
 
 
@@ -404,6 +342,7 @@ def create_mcp_oauth_starlette(
     require_auth: bool = True,
     auth_mode: McpAuthMode = "tools-call",
     http_client: httpx.AsyncClient | None = None,
+    oauth_client: object | None = None,
 ) -> ASGIApp:
     options = McpOAuthBridgeOptions(
         public_base_url=public_base_url,
@@ -413,5 +352,6 @@ def create_mcp_oauth_starlette(
         require_auth=require_auth,
         auth_mode=auth_mode,
         http_client=http_client,
+        oauth_client=oauth_client,
     )
     return mount_mcp_oauth_bridge(mcp_app, options)

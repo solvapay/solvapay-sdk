@@ -132,7 +132,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
 
   const optimisticUntilRef = useRef(0)
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const fetchBalanceRef = useRef<(() => Promise<void>) | null>(null)
+  const fetchBalanceRef = useRef<(() => Promise<number | null>) | null>(null)
   const reconcileRunningRef = useRef(false)
   const reconcilePollRef = useRef<{ baseline: number; generation: number; pending: number } | null>(
     null,
@@ -156,8 +156,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     setHasAttachBusinessDetails(!!transportRef.current.attachBusinessDetails)
   }, [config])
 
-  const fetchBalanceImpl = useCallback(async () => {
-    if (optimisticUntilRef.current > Date.now()) return
+  const fetchBalanceImpl = useCallback(async (): Promise<number | null> => {
+    if (optimisticUntilRef.current > Date.now()) return creditsValueRef.current
 
     if (!isAuthenticated && !internalCustomerRef) {
       creditsValueRef.current = null
@@ -168,10 +168,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       setDisplayBlockValue(null)
       setBalanceLoading(false)
       balanceLoadedRef.current = false
-      return
+      return null
     }
 
-    if (balanceInFlightRef.current) return
+    if (balanceInFlightRef.current) return creditsValueRef.current
     balanceInFlightRef.current = true
     if (!balanceLoadedRef.current) {
       setBalanceLoading(true)
@@ -181,9 +181,7 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       if (!transportRef.current.getBalance) {
         // MCP transport: balance lives on the bootstrap snapshot and
         // refreshes via `refreshBootstrap()`. Nothing to fetch here.
-        setBalanceLoading(false)
-        balanceInFlightRef.current = false
-        return
+        return creditsValueRef.current
       }
       const data = await transportRef.current.getBalance()
       creditsValueRef.current = data.credits ?? null
@@ -193,8 +191,10 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       setDisplayExchangeRateValue(data.displayExchangeRate ?? null)
       setDisplayBlockValue(data.display ?? null)
       balanceLoadedRef.current = true
+      return creditsValueRef.current
     } catch (error) {
       console.error('[SolvaPayProvider] Failed to fetch balance:', error)
+      return creditsValueRef.current
     } finally {
       setBalanceLoading(false)
       balanceInFlightRef.current = false

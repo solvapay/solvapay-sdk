@@ -140,6 +140,17 @@ impl ClientShell {
         self
     }
 
+    /// Sends an HTTP request on the underlying transport with no auth injection.
+    ///
+    /// Used by OAuth customer-auth proxying, which must not attach the merchant
+    /// secret key.
+    pub async fn send_http(
+        &self,
+        request: crate::http::HttpRequest,
+    ) -> Result<crate::http::HttpResponse, SdkError> {
+        self.transport.send(request).await
+    }
+
     /// Sets the retry policy used by [`ClientShell::execute`].
     ///
     /// # Arguments
@@ -204,6 +215,11 @@ impl ClientShell {
     pub fn with_sleeper(mut self, sleeper: SleeperFn) -> Self {
         self.sleeper = sleeper;
         self
+    }
+
+    /// Host delay (retry backoff and MCP renewal settle).
+    pub async fn delay(&self, duration: std::time::Duration) {
+        (self.sleeper)(duration).await
     }
 
     /// Returns the normalized base URL (no trailing slash).

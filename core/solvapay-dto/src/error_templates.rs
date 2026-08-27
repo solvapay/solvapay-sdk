@@ -66,6 +66,11 @@ pub const OPERATION_NAMES: &[&str] = &[
     "getUserInfo",
     "listPlans",
     "listProducts",
+    "mcpBootstrap",
+    "mcpCallBuiltinTool",
+    "mcpDispatch",
+    "mcpOauthRequest",
+    "mcpReadResource",
     "processPaymentIntent",
     "reactivatePurchase",
     "saveAutoRecharge",
@@ -230,6 +235,31 @@ pub mod operations {
     pub mod list_products {
         /// Default failure template.
         pub const DEFAULT: &str = "List products failed ({status}): {body}";
+    }
+    /// Templates for `mcpBootstrap`.
+    pub mod mcp_bootstrap {
+        /// Default failure template.
+        pub const DEFAULT: &str = "MCP bootstrap failed ({status}): {body}";
+    }
+    /// Templates for `mcpCallBuiltinTool`.
+    pub mod mcp_call_builtin_tool {
+        /// Default failure template.
+        pub const DEFAULT: &str = "MCP builtin tool failed ({status}): {body}";
+    }
+    /// Templates for `mcpDispatch`.
+    pub mod mcp_dispatch {
+        /// Default failure template.
+        pub const DEFAULT: &str = "MCP dispatch failed ({status}): {body}";
+    }
+    /// Templates for `mcpOauthRequest`.
+    pub mod mcp_oauth_request {
+        /// Default failure template.
+        pub const DEFAULT: &str = "MCP OAuth request failed ({status}): {body}";
+    }
+    /// Templates for `mcpReadResource`.
+    pub mod mcp_read_resource {
+        /// Default failure template.
+        pub const DEFAULT: &str = "MCP resource read failed ({status}): {body}";
     }
     /// Templates for `processPaymentIntent`.
     pub mod process_payment_intent {
