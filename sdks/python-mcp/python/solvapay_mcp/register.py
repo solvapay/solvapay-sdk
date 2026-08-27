@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from contextvars import ContextVar, Token
@@ -28,10 +27,11 @@ from solvapay.facade import SolvaPay
 from solvapay.results import PayableAllowResult, PayablePaywallResult
 
 from solvapay_mcp._layer2 import (
+    _call,
     assert_response_result,
-    build_payable_tool_result,
     paywall_tool_result,
 )
+from solvapay_mcp.core import call
 from solvapay_mcp.response_context import ResponseContext
 
 Handler = Callable[[dict[str, object], ResponseContext], Awaitable[object]]
@@ -132,6 +132,10 @@ def _tools(server: Server[object]) -> dict[str, _PayableTool]:
     return registry
 
 
+def ensure_dispatch(server: Server[object]) -> None:
+    _install_dispatch(server)
+
+
 def _builtins(server: Server[object]) -> dict[str, _BuiltinTool]:
     registry = _BUILTIN_REGISTRIES.get(server)
     if registry is None:
@@ -164,57 +168,113 @@ def _install_dispatch(server: Server[object]) -> None:
         return
     _DISPATCH_INSTALLED.add(server)
 
+    from solvapay_mcp.server.engine import dispatch_rpc, engine_for
+
+    def _rpc(method: str, params: object, request_id: object = 1) -> dict[str, object]:
+        return {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
+
+    async def _result(method: str, params: object) -> object:
+        envelope = await dispatch_rpc(server, _rpc(method, params))
+        kind = envelope.get("kind")
+        if kind == "challenge":
+            raise ValueError("mcp auth challenge")
+        rpc = envelope.get("rpc") if kind == "rpc" else envelope
+        if isinstance(rpc, dict):
+            return rpc.get("result")
+        return rpc
+
     async def on_list_tools(_ctx: object, _params: PaginatedRequestParams) -> ListToolsResult:
+        raw = await _result("tools/list", {})
         tools: list[Tool] = []
-        for spec in (_BUILTIN_REGISTRIES.get(server) or {}).values():
-            tools.append(spec.tool)
+        binding = engine_for(server)
+        descriptors: dict[str, dict[str, object]] = {}
+        if binding is not None:
+            desc_raw = call(
+                "mcpDescriptors",
+                {
+                    "resourceUri": binding.resource_uri,
+                    "publicBaseUrl": binding.public_base_url,
+                    "productRef": binding.product_ref,
+                    **({"views": binding.views} if binding.views is not None else {}),
+                    **({"csp": binding.csp} if binding.csp is not None else {}),
+                    **({"apiBaseUrl": binding.api_base_url} if binding.api_base_url is not None else {}),
+                },
+            )
+            if isinstance(desc_raw, dict) and isinstance(desc_raw.get("tools"), list):
+                for item in desc_raw["tools"]:
+                    if isinstance(item, dict) and isinstance(item.get("name"), str):
+                        descriptors[str(item["name"])] = item
+        if isinstance(raw, dict) and isinstance(raw.get("tools"), list):
+            for item in raw["tools"]:
+                if isinstance(item, dict):
+                    name = item.get("name")
+                    descriptor = descriptors.get(str(name)) if isinstance(name, str) else None
+                    if descriptor is not None:
+                        meta = descriptor.get("meta")
+                        if isinstance(meta, dict):
+                            ui = meta.get("ui")
+                            if (
+                                isinstance(ui, dict)
+                                and "resourceUri" in ui
+                                and "ui/resourceUri" not in meta
+                            ):
+                                meta = {**meta, "ui/resourceUri": ui["resourceUri"]}
+                            item = {**item, "_meta": meta, "annotations": descriptor.get("annotations")}
+                    tools.append(Tool.model_validate(item))
         payable_tools: dict[str, _PayableTool] = dict(_REGISTRIES.get(server) or {})
+        listed = {tool.name for tool in tools}
         for name, payable_spec in payable_tools.items():
+            if name in listed:
+                continue
             tool = Tool(name=name, input_schema=payable_spec.input_schema)
             if payable_spec.title is not None:
                 tool.title = payable_spec.title
             if payable_spec.description is not None:
                 tool.description = payable_spec.description
             tools.append(tool)
-        hide = _HIDE_AUDIENCES.get(server)
-        if hide:
-            from solvapay_mcp.core import hide_tools_by_audience
-
-            listed: list[dict[str, object]] = []
-            for tool in tools:
-                meta = tool.meta if isinstance(tool.meta, dict) else {}
-                listed.append({"name": tool.name, "_meta": dict(meta)})
-            filtered = hide_tools_by_audience(listed, hide)
-            kept: list[str] = []
-            raw_tools = filtered.get("tools")
-            if isinstance(raw_tools, list):
-                for item in raw_tools:
-                    if isinstance(item, dict) and isinstance(item.get("name"), str):
-                        kept.append(str(item["name"]))
-            order = {name: index for index, name in enumerate(kept)}
-            tools = sorted(
-                [tool for tool in tools if tool.name in order],
-                key=lambda tool: order[tool.name],
-            )
         return ListToolsResult(tools=tools)
 
     async def on_call_tool(_ctx: object, params: CallToolRequestParams) -> CallToolResult:
-        builtin = _BUILTIN_REGISTRIES.get(server, {}).get(params.name)
-        if builtin is not None:
-            arguments = params.arguments if isinstance(params.arguments, dict) else {}
-            payload = await builtin.handler(dict(arguments))
-            return _to_call_tool_result(payload)
         spec = _REGISTRIES.get(server, {}).get(params.name)
-        if spec is None:
-            raise ValueError(f"Unknown tool: {params.name}")
-        arguments = params.arguments if isinstance(params.arguments, dict) else {}
-        payload = await _invoke_payable(spec, dict(arguments))
-        return _to_call_tool_result(payload)
+        if spec is not None:
+            arguments = params.arguments if isinstance(params.arguments, dict) else {}
+            payload = await _invoke_payable(spec, dict(arguments))
+            return _to_call_tool_result(payload)
+        raw = await _result(
+            "tools/call",
+            {"name": params.name, "arguments": params.arguments or {}},
+        )
+        if isinstance(raw, Mapping):
+            return _to_call_tool_result(raw)
+        raise TypeError("tools/call did not return an object")
 
     async def on_list_resources(
         _ctx: object, _params: PaginatedRequestParams
     ) -> ListResourcesResult:
-        return ListResourcesResult(resources=[item.resource for item in _resources(server)])
+        raw = await _result("resources/list", {})
+        resources: list[Resource] = []
+        ui_meta: dict[str, object] | None = None
+        binding = engine_for(server)
+        if binding is not None:
+            desc_raw = call(
+                "mcpDescriptors",
+                {
+                    "resourceUri": binding.resource_uri,
+                    "publicBaseUrl": binding.public_base_url,
+                    "productRef": binding.product_ref,
+                    **({"csp": binding.csp} if binding.csp is not None else {}),
+                    **({"apiBaseUrl": binding.api_base_url} if binding.api_base_url is not None else {}),
+                },
+            )
+            if isinstance(desc_raw, dict) and isinstance(desc_raw.get("csp"), dict):
+                ui_meta = {"ui": {"csp": desc_raw["csp"], "prefersBorder": False}}
+        if isinstance(raw, dict) and isinstance(raw.get("resources"), list):
+            for item in raw["resources"]:
+                if isinstance(item, dict):
+                    if ui_meta is not None and item.get("uri") == (binding.resource_uri if binding else None):
+                        item = {**item, "_meta": ui_meta}
+                    resources.append(Resource.model_validate(item))
+        return ListResourcesResult(resources=resources)
 
     from mcp.types import (
         GetPromptRequestParams,
@@ -229,45 +289,34 @@ def _install_dispatch(server: Server[object]) -> None:
     async def on_read_resource(
         _ctx: object, params: ReadResourceRequestParams
     ) -> ReadResourceResult:
-
-        if not isinstance(params, ReadResourceRequestParams):
-            raise ValueError("invalid resources/read params")
-        uri = str(params.uri)
-        for item in _resources(server):
-            if str(item.resource.uri) == uri:
-                text = await item.read()
-                return ReadResourceResult(
-                    contents=[
-                        TextResourceContents(
-                            uri=item.resource.uri,
-                            mime_type=item.resource.mime_type,
-                            text=text,
-                            _meta=item.resource.meta,
-                        )
-                    ]
-                )
-        raise ValueError(f"Unknown resource: {uri}")
+        raw = await _result("resources/read", {"uri": str(params.uri)})
+        if isinstance(raw, dict):
+            return ReadResourceResult.model_validate(raw)
+        raise TypeError("resources/read did not return an object")
 
     async def on_list_prompts(_ctx: object, _params: PaginatedRequestParams) -> ListPromptsResult:
-        return ListPromptsResult(prompts=[item.prompt for item in _prompts(server)])
+        raw = await _result("prompts/list", {})
+        prompts: list[Prompt] = []
+        if isinstance(raw, dict) and isinstance(raw.get("prompts"), list):
+            for item in raw["prompts"]:
+                if isinstance(item, dict):
+                    prompts.append(Prompt.model_validate(item))
+        return ListPromptsResult(prompts=prompts)
 
     async def on_get_prompt(_ctx: object, params: GetPromptRequestParams) -> GetPromptResult:
-
-        if not isinstance(params, GetPromptRequestParams):
-            raise ValueError("invalid prompts/get params")
-        for item in _prompts(server):
-            if item.prompt.name == params.name:
-                args = params.arguments if isinstance(params.arguments, dict) else {}
-                text = await item.handler({str(k): str(v) for k, v in args.items()})
-                return GetPromptResult(
-                    messages=[
-                        PromptMessage(
-                            role="user",
-                            content=TextContent(type="text", text=text),
-                        )
-                    ]
+        arguments = params.arguments if isinstance(params.arguments, dict) else {}
+        raw = await _result("prompts/get", {"name": params.name, "arguments": arguments})
+        if isinstance(raw, dict) and "messages" in raw:
+            return GetPromptResult.model_validate(raw)
+        text = str(raw)
+        return GetPromptResult(
+            messages=[
+                PromptMessage(
+                    role="user",
+                    content=TextContent(type="text", text=text),
                 )
-        raise ValueError(f"Unknown prompt: {params.name}")
+            ]
+        )
 
     server.add_request_handler("tools/list", PaginatedRequestParams, on_list_tools)
     server.add_request_handler("tools/call", CallToolRequestParams, on_call_tool)
@@ -389,8 +438,21 @@ def _to_call_tool_result(payload: Mapping[str, object]) -> CallToolResult:
     )
 
 
+def _invoke_payable_next(state: object, event: Mapping[str, object]) -> dict[str, object]:
+    out = _call("invoke_payable_next", {"state": state, "event": dict(event)})
+    if not isinstance(out, dict):
+        raise SolvaPayError("invoke_payable_next returned unexpected value")
+    return {str(k): v for k, v in out.items()}
+
+
+def _as_action_map(out: Mapping[str, object]) -> dict[str, object]:
+    raw = out.get("action")
+    if not isinstance(raw, dict):
+        raise SolvaPayError("invoke_payable_next returned unexpected action")
+    return {str(k): v for k, v in raw.items()}
+
+
 async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[str, object]:
-    started = _now_ms()
     try:
         customer_ref = await _resolve_customer_ref(args, spec.get_customer_ref)
     except MissingCustomerRefError as err:
@@ -403,51 +465,93 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
                 "details": str(err),
             },
         }
-    gate_result = await spec.solvapay.gate(customer_ref, product=spec.product)
-    if isinstance(gate_result, PayablePaywallResult):
-        gate = dict(gate_result.content)
-        message = str(gate.get("message") or "Payment required")
-        return _format_gate(message, gate)
-
-    if not isinstance(gate_result, PayableAllowResult):
-        raise TypeError("unexpected gate result")
-
-    limits: Mapping[str, object] = {}
-    decision = gate_result.decision
-    maybe_limits = decision.get("limits") if isinstance(decision, Mapping) else None
-    if isinstance(maybe_limits, Mapping):
-        limits = maybe_limits
-
-    ctx = ResponseContext(
-        customer={
-            "ref": gate_result.customer_ref,
-            "balance": limits.get("creditBalance", 0),
-            "remaining": limits.get("remaining"),
-            "withinLimits": limits.get("withinLimits", True),
-            "plan": limits.get("plan"),
-        },
-        product={"reference": spec.product, "name": spec.product},
-        product_ref=spec.product,
-    )
-    try:
-        returned = await spec.handler(args, ctx)
-    except PaywallError as err:
-        gate = dict(err.structured_content)
-        message = str(err)
-        return _format_gate(message, gate)
-    except Exception as err:
-        gate_result.track_fail(err, duration=max(0, _now_ms() - started))
-        return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": json.dumps({"success": False, "error": str(err)}, indent=2),
+    state: object = None
+    event: dict[str, object] = {
+        "kind": "start",
+        "customerRef": customer_ref,
+        "product": spec.product,
+        "usageType": "requests",
+        "startedMs": _now_ms(),
+    }
+    allow: PayableAllowResult | None = None
+    while True:
+        out = _invoke_payable_next(state, event)
+        state = out.get("state")
+        action = _as_action_map(out)
+        kind = action.get("kind")
+        if kind == "runGate":
+            gate_result = await spec.solvapay.gate(
+                str(action.get("customerRef")),
+                product=str(action.get("product") or spec.product),
+            )
+            if isinstance(gate_result, PayablePaywallResult):
+                gate = dict(gate_result.content)
+                message = str(gate.get("message") or "Payment required")
+                if _format_gate_override is not None:
+                    return _format_gate(message, gate)
+                event = {"kind": "gatePaywall", "gate": gate, "message": message}
+                continue
+            if not isinstance(gate_result, PayableAllowResult):
+                raise TypeError("unexpected gate result")
+            allow = gate_result
+            limits: Mapping[str, object] = {}
+            decision = gate_result.decision
+            maybe_limits = decision.get("limits") if isinstance(decision, Mapping) else None
+            if isinstance(maybe_limits, Mapping):
+                limits = maybe_limits
+            event = {
+                "kind": "gateAllow",
+                "customerRef": gate_result.customer_ref,
+                "limits": dict(limits),
+            }
+            continue
+        if kind == "invokeHandler":
+            limits_raw = action.get("limits")
+            limits = limits_raw if isinstance(limits_raw, Mapping) else {}
+            ctx = ResponseContext(
+                customer={
+                    "ref": str(action.get("customerRef") or ""),
+                    "balance": limits.get("creditBalance", 0),
+                    "remaining": limits.get("remaining"),
+                    "withinLimits": limits.get("withinLimits", True),
+                    "plan": limits.get("plan"),
+                },
+                product={"reference": spec.product, "name": spec.product},
+                product_ref=spec.product,
+            )
+            try:
+                returned = await spec.handler(args, ctx)
+            except PaywallError as err:
+                gate = dict(err.structured_content)
+                message = str(err)
+                if _format_gate_override is not None:
+                    return _format_gate(message, gate)
+                event = {"kind": "handlerPaywall", "gate": gate, "message": message}
+                continue
+            except Exception as err:
+                event = {
+                    "kind": "handlerErr",
+                    "message": str(err),
+                    "nowMs": _now_ms(),
                 }
-            ],
-            "isError": True,
-        }
-
-    envelope = assert_response_result(returned)
-    result = build_payable_tool_result(envelope)
-    gate_result.track_success(duration=max(0, _now_ms() - started))
-    return result
+                continue
+            envelope = assert_response_result(returned)
+            event = {
+                "kind": "handlerOk",
+                "envelope": envelope,
+                "nowMs": _now_ms(),
+            }
+            continue
+        if kind == "done":
+            track = action.get("track")
+            if isinstance(track, Mapping) and allow is not None:
+                duration = float(track.get("durationMs") or 0)
+                if str(track.get("outcome")) == "success":
+                    allow.track_success(duration=duration)
+                else:
+                    allow.track_fail(track.get("outcome"), duration=duration)
+            result = action.get("result")
+            if not isinstance(result, dict):
+                raise SolvaPayError("invoke_payable_next done missing result")
+            return {str(k): v for k, v in result.items()}
+        raise SolvaPayError(f"invoke_payable_next unknown action kind: {kind}")

@@ -166,10 +166,7 @@ pub fn emit_parity_suite_c(ir: &Ir) -> GenResult<String> {
          \t}\n\
          \tsolvapay_client_free(client);\n"
     );
-    let _ = writeln!(
-        output,
-        "\tprintf(\"OK: C signature parity ({n} ops)\\n\");"
-    );
+    let _ = writeln!(output, "\tprintf(\"OK: C signature parity ({n} ops)\\n\");");
     output.push_str(
         "\treturn 0;\n\
          }\n",
@@ -214,6 +211,7 @@ mod tests {
                 rb: id.into(),
                 go: id.into(),
                 rust: id.into(),
+                c: id.into(),
             },
             catalog: IrBindingCatalogLink::Operation(id.into()),
             args: vec![],

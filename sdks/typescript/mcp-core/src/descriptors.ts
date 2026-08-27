@@ -1,45 +1,18 @@
 /**
- * `buildSolvaPayDescriptors(options)` — framework-neutral tool surface
- * builder that every SolvaPay MCP adapter (`@solvapay/mcp`, future
- * `@solvapay/mcp-fastmcp`, raw JSON-RPC adapters) maps onto its own
- * registration API.
- *
- * Body is lifted from the original
- * `packages/server/src/mcp/server.ts#createSolvaPayMcpServer`. The only
- * mechanical difference: instead of calling `registerAppTool(server, ...)`,
- * we push `{ name, handler, ... }` onto a `tools[]` array the adapter
- * iterates.
- *
- * ----
- *
- * `_meta["openai/widgetSessionId"]` workaround. Every intent-tool
- * response stamps a freshly-minted UUID on `_meta["openai/widgetSessionId"]`.
- * This is a low-risk forward-looking workaround for the ChatGPT MCP
- * connector's stale `link_<id>` routing bug, where the host returns
- * `-32000 MCP Resource not found` on the second `tools/call` of a
- * session even though the call never reaches the server. A fresh UUID
- * per invocation gives the host a routing key that changes every call,
- * which the OpenAI Apps SDK community thread reports unsticks the
- * failure mode.
- *
- * Sources:
- *   - https://community.openai.com/t/connector-tool-calls-generating-fresh-mcp-session-each-invocation/1364975
- *   - https://github.com/openai/openai-apps-sdk-examples/issues/165
- *   - https://developers.openai.com/apps-sdk/reference/ (`_meta` payload)
- *   - openai/openai-apps-sdk-examples shopping_cart_python uses the
- *     same `meta["openai/widgetSessionId"]` shape.
- *
- * Removable once the upstream bug ships a fix; safe on any host that
- * doesn't consume the key.
+ * Framework-neutral descriptor metadata. JSON-RPC handlers live in the
+ * Rust engine (`mcpDispatch`); this module only projects `mcpDescriptors`
+ * plus host-owned HTML reading into adapter-shaped objects.
  */
 
 import { mcpDescriptors } from './mcp-descriptors'
 import { type SolvaPay } from '@solvapay/server'
 import { z } from 'zod'
 import { logMcpConfigOnce } from './config-log'
-import { defaultGetCustomerRef as defaultGetCustomerRefHelper, previewJson, toolErrorResult } from './helpers'
-import { createBuildBootstrapPayload, type BuildBootstrapPayloadFn } from './bootstrap-payload'
-import { dispatchSolvaPayBuiltin } from './dispatch-builtin'
+import {
+  buildPromptUserMessage,
+  deriveIcons,
+  validatePublicBaseUrl,
+} from './native-mcp'
 import {
   SOLVAPAY_BOOTSTRAP_MIME_TYPE,
   SOLVAPAY_BOOTSTRAP_URI,
@@ -50,7 +23,7 @@ import {
   SOLVAPAY_OVERVIEW_URI,
 } from './resources/overview'
 import { MCP_TOOL_NAMES } from './tool-names'
-import { SOLVAPAY_MCP_VIEW_KINDS, TOOL_FOR_VIEW } from './types'
+import { SOLVAPAY_MCP_VIEW_KINDS } from './types'
 import type {
   McpToolExtra,
   SolvaPayBootstrapResourceDescriptor,
@@ -60,170 +33,46 @@ import type {
   SolvaPayMcpViewKind,
   SolvaPayMerchantBranding,
   SolvaPayPromptDescriptor,
-  SolvaPayPromptResult,
   SolvaPayResourceDescriptor,
-  SolvaPayToolAnnotations,
   SolvaPayToolDescriptor,
-  SolvaPayToolIcon,
 } from './types'
-
-/**
- * Project `SolvaPayMerchantBranding` into an `icons[]` array suitable
- * for MCP host chrome — either the per-tool `SolvaPayToolDescriptor`
- * or the server-level `Implementation.icons[]` returned at
- * `initialize`. Prefers the square `iconUrl` (expected shape for
- * avatar slots); falls back to the landscape `logoUrl` with a note
- * that hosts may need to letterbox. Returns `undefined` when neither
- * asset is set.
- *
- * Exported so the MCP adapter (`@solvapay/mcp`) can reuse the same
- * branding → icon projection when building the server-level
- * `Implementation` payload, keeping per-tool and server-wide icons in
- * lock-step.
- */
-export function deriveIcons(
-  branding: SolvaPayMerchantBranding | undefined,
-): SolvaPayToolIcon[] | undefined {
-  if (!branding) return undefined
-  const assets: SolvaPayToolIcon[] = []
-  if (branding.iconUrl) {
-    assets.push({ src: branding.iconUrl, sizes: ['any', '512x512'] })
-  } else if (branding.logoUrl) {
-    assets.push({ src: branding.logoUrl })
-  }
-  return assets.length > 0 ? assets : undefined
-}
-
-/**
- * All SolvaPay tools talk to the SolvaPay backend, so `openWorldHint`
- * is universal. This helper stamps it on every annotation set and keeps
- * each call site focused on the read/destructive/idempotent decision.
- */
-const solvapayTool = (
-  hints: Omit<SolvaPayToolAnnotations, 'openWorldHint'>,
-): SolvaPayToolAnnotations => ({ openWorldHint: true, ...hints })
-
-/**
- * Per-view annotation map for the intent tools registered via
- * `pushIntentTool`. Keep aligned with `TOOL_FOR_VIEW`.
- */
-const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPayToolAnnotations> = {
-  account: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-  topup: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-  checkout: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-}
 
 const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
 
+export { deriveIcons }
+
 export interface BuildSolvaPayDescriptorsOptions {
-  /** Initialised SolvaPay instance. */
   solvaPay: SolvaPay
-  /** Default product ref for this MCP server (used when tool args omit it). */
   productRef: string
-  /** UI resource URI served by this server (e.g. `'ui://my-app/mcp-app.html'`). */
   resourceUri: string
-  /**
-   * Absolute filesystem path to the built HTML bundle referenced by
-   * `resourceUri`. Node-only convenience — dynamic-imports
-   * `node:fs/promises` internally. Provide `readHtml` instead for edge
-   * runtimes.
-   */
   htmlPath?: string
-  /**
-   * Edge-neutral alternative to `htmlPath`. One of `htmlPath` or
-   * `readHtml` must be provided.
-   */
   readHtml?: () => Promise<string>
-  /**
-   * Public `https://` origin used as `return_url` for Stripe confirmations.
-   * Required because MCP hosts set `window.location.origin` to `"null"`,
-   * which Stripe's `confirmPayment` validator rejects.
-   */
   publicBaseUrl: string
-  /** Which `open_*` tools to register. Defaults to every known view. */
   views?: SolvaPayMcpViewKind[]
-  /** Additional CSP allow-lists merged with the Stripe baseline. */
   csp?: SolvaPayMcpCsp
-  /**
-   * Configured SolvaPay API origin (e.g. `'https://api.solvapay.com'`
-   * or `'https://api-dev.solvapay.com'`). When provided, the origin is
-   * auto-appended to `csp.resourceDomains` + `csp.connectDomains` so
-   * the widget iframe can load merchant branding images (served by
-   * `GET /v1/files/public/provider-assets/...`) and make XHR / fetch
-   * calls back to the API without the integrator hand-extending the
-   * CSP. Pass the same value you pass to `createSolvaPay({ apiBaseUrl })`.
-   */
   apiBaseUrl?: string
-  /**
-   * Override customer-ref extraction. Defaults to reading
-   * `extra.http.authInfo.extra.customer_ref` (populated by the MCP
-   * OAuth bridge), falling back to the SDK v1 flat `extra.authInfo`.
-   */
   getCustomerRef?: (extra?: McpToolExtra) => string | null
-  /**
-   * Fired for every tool call so integrators can add tracing / logging.
-   * Called before the core helper runs; the result is available on the
-   * `response` callback (`onToolResult`).
-   */
   onToolCall?: (name: string, args: unknown, extra?: McpToolExtra) => void
-  /** Fired after every tool call completes (success or error). */
   onToolResult?: (
     name: string,
     result: SolvaPayCallToolResult,
     meta: { durationMs: number },
   ) => void
-  /**
-   * Merchant branding used to personalise the MCP host chrome — when
-   * provided, every emitted tool descriptor carries an `icons[]` the
-   * adapter surfaces on `tools/list` so hosts can replace the default
-   * globe / placeholder with the merchant's mark. Prefer fetching the
-   * SDK merchant payload at server startup (`getMerchantCore` exposes
-   * `iconUrl` / `logoUrl` / `displayName`) and passing the result in.
-   */
   branding?: SolvaPayMerchantBranding
 }
 
 export interface SolvaPayDescriptorBundle {
   tools: SolvaPayToolDescriptor[]
   resource: SolvaPayResourceDescriptor
-  /**
-   * Slash-command prompts that hosts with prompt support (Claude
-   * Desktop, Cursor, etc.) surface as `/upgrade`, `/manage_account`,
-   * `/topup`, and `/activate_plan`. Hosts without prompt support
-   * silently ignore the list — registration is purely additive.
-   */
   prompts: SolvaPayPromptDescriptor[]
-  /**
-   * Narrated docs resources — agent-facing "read me first" content
-   * served over `docs://solvapay/*`. Lives alongside the UI resource so
-   * agents can `resources/read` before trying a tool.
-   */
   docsResources: SolvaPayDocsResourceDescriptor[]
-  /**
-   * Idempotent bootstrap snapshot at `solvapay://bootstrap.json` — the
-   * widget reads this when the host scrubs `structuredContent` from the
-   * opening tool-result notification.
-   */
   bootstrapResource: SolvaPayBootstrapResourceDescriptor
-  /**
-   * Parallelised fetch of merchant + product + plans + (optional)
-   * customer snapshot that backs every `open_*` tool. Exposed so the
-   * paywall envelope (`paywallToolResult`, `buildPayableHandler`) can
-   * embed the full payload in its `structuredContent`.
-   */
-  buildBootstrapPayload: BuildBootstrapPayloadFn
 }
 
-/**
- * Build the framework-neutral SolvaPay tool + resource descriptors. The
- * returned bundle is adapter-shaped — pass it to the registration helper
- * exported by `@solvapay/mcp` (or any future adapter package).
- */
 export function buildSolvaPayDescriptors(
   options: BuildSolvaPayDescriptorsOptions,
 ): SolvaPayDescriptorBundle {
   const {
-    solvaPay,
     productRef,
     resourceUri,
     htmlPath,
@@ -232,12 +81,23 @@ export function buildSolvaPayDescriptors(
     views = DEFAULT_VIEWS,
     csp,
     apiBaseUrl,
-    getCustomerRef = defaultGetCustomerRefHelper,
-    onToolCall,
-    onToolResult,
     branding,
   } = options
-  const toolIcons = deriveIcons(branding)
+
+  if (!htmlPath && !readHtml) {
+    throw new Error(
+      'buildSolvaPayDescriptors: either `htmlPath` (node) or `readHtml` (edge) must be provided.',
+    )
+  }
+
+  const urlError = validatePublicBaseUrl(publicBaseUrl)
+  if (urlError) throw new Error(urlError)
+
+  logMcpConfigOnce({
+    apiBaseUrl: apiBaseUrl ?? '(unset)',
+    productRef,
+    publicBaseUrl,
+  })
 
   const coreDescriptors = mcpDescriptors({
     resourceUri,
@@ -249,344 +109,29 @@ export function buildSolvaPayDescriptors(
     ...(branding !== undefined ? { branding } : {}),
   })
 
-  if (!htmlPath && !readHtml) {
-    throw new Error(
-      'buildSolvaPayDescriptors: either `htmlPath` (node) or `readHtml` (edge) must be provided.',
-    )
-  }
-
-  logMcpConfigOnce({
-    apiBaseUrl: apiBaseUrl ?? '(unset)',
-    productRef,
-    publicBaseUrl,
-  })
-
-  const toolMeta = { ui: { resourceUri } }
-  // State-change tools that need a server round-trip from inside the
-  // embedded UI but offer no LLM-facing use.
-  // `visibility: ['app']` is the SEP-1865 signal MCP Apps hosts read to
-  // keep these transport tools out of the model's tool list while the
-  // embedded iframe can still call them (`app` is included). The
-  // proprietary `audience` tag stays for the server-side
-  // `hideToolsByAudience` opt-in on non-SEP-1865 hosts.
-  const uiToolMeta = {
-    ui: { resourceUri, visibility: ['app'] as const },
-    audience: 'ui' as const,
-    // ChatGPT Apps SDK rejects iframe `callTool` unless this flag is set.
-    // Dual-stamp with `ui.visibility: ['app']` for MCP Apps hosts.
-    'openai/widgetAccessible': true as const,
-  }
-  const enabledViews = new Set<SolvaPayMcpViewKind>(views)
-  const tools: SolvaPayToolDescriptor[] = []
-
-  // Push a tool into the emitted list, augmented with the shared
-  // brand-icon set so every advertised tool carries the same merchant
-  // mark in `tools/list`.
-  const pushTool = (descriptor: SolvaPayToolDescriptor): void => {
-    tools.push(toolIcons ? { ...descriptor, icons: toolIcons } : descriptor)
-  }
-
-  const UI_ONLY_PREFIX =
-    'UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. '
-
-  const builtinConfig = {
-    productRef,
-    publicBaseUrl,
-    resourceUri,
-    views,
-  }
-
-  const runBuiltin = (name: string, args: Record<string, unknown>, extra: McpToolExtra | undefined) =>
-    dispatchSolvaPayBuiltin({
-      solvaPay,
-      name,
-      args,
-      extra,
-      config: builtinConfig,
-      getCustomerRef,
-    })
-
-  const trace = async (
-    name: string,
-    args: Record<string, unknown>,
-    extra: McpToolExtra | undefined,
-    handler: () => Promise<SolvaPayCallToolResult>,
-  ): Promise<SolvaPayCallToolResult> => {
-    const started = Date.now()
-    onToolCall?.(name, args, extra)
-    try {
-      const result = await handler()
-      if (onToolResult) onToolResult(name, result, { durationMs: Date.now() - started })
-      return result
-    } catch (err) {
-      // Errors thrown from `buildBootstrapPayload` and downstream
-      // helpers can carry an upstream HTTP `status` and a
-      // human-readable `details` string (see
-      // `createBootstrapMerchantError` in `bootstrap-payload.ts`).
-      // Read them off the caught value when present so the recovery
-      // message reaches `content[0].text` and `structuredContent.status`
-      // matches the upstream — otherwise both used to collapse to 500
-      // / `previewJson(err)`.
-      const carrier =
-        err && typeof err === 'object'
-          ? (err as { status?: unknown; details?: unknown })
-          : undefined
-      const status = typeof carrier?.status === 'number' ? carrier.status : 500
-      const message = err instanceof Error ? err.message : String(err)
-      const details =
-        typeof carrier?.details === 'string' && carrier.details.length > 0
-          ? carrier.details
-          : err instanceof Error
-            ? err.message
-            : previewJson(err)
-      const errorResult = toolErrorResult({
-        error: message,
-        status,
-        details,
-      })
-      if (onToolResult) onToolResult(name, errorResult, { durationMs: Date.now() - started })
-      return errorResult
-    }
-  }
-
-  // ------- bootstrap / open_* tools -------
-
-  const buildBootstrapPayload: BuildBootstrapPayloadFn = createBuildBootstrapPayload({
-    solvaPay,
-    productRef,
-    publicBaseUrl,
-    getCustomerRef,
-  })
-
-  const pushIntentTool = (view: keyof typeof TOOL_FOR_VIEW, title: string, description: string) => {
-    if (!enabledViews.has(view)) return
-    const name = TOOL_FOR_VIEW[view]
-    pushTool({
-      name,
-      title,
-      description,
-      // Every intent tool accepts an optional `mode` so users /
-      // agents on any host can opt into text-only responses (or
-      // suppress the narrated markdown when they know the host is
-      // rendering the UI iframe). Default `'auto'` emits both.
-      inputSchema: { mode: z.enum(['ui', 'text', 'auto']).optional() },
-      meta: toolMeta,
-      annotations: INTENT_TOOL_ANNOTATIONS[view],
-      handler: async (args, extra) =>
-        trace(name, args, extra, () => runBuiltin(name, args, extra)),
-    })
-  }
-
-  const MODE_HINT =
-    " By default renders the UI iframe with a one-line placeholder; pass `mode: 'text'` for a markdown-only summary on CLI / text-only hosts, or `mode: 'auto'` to include both."
-
-  pushIntentTool(
-    'checkout',
-    'Upgrade plan',
-    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. This tool only returns a read-only snapshot or opens the UI — actual charges happen later in the embedded checkout after the customer confirms. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).' +
-      MODE_HINT,
-  )
-  pushIntentTool(
-    'account',
-    'Manage account',
-    "Show or manage the current customer's SolvaPay account: plan, balance, usage, payment method, cancel/reactivate auto-renewal. On UI hosts this opens the embedded account view; on text hosts returns a markdown summary. Also available: upgrade (start/change a paid plan), activate_plan (pick or activate), topup (add credits)." +
-      MODE_HINT,
-  )
-  pushIntentTool(
-    'topup',
-    'Top up credits',
-    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. This tool only returns a read-only snapshot or opens the UI — credits are not charged until the customer confirms payment in the embedded flow. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).' +
-      MODE_HINT,
-  )
-  // `activate_plan` is registered below (transport section) as a
-  // dual-audience tool that handles both the picker bootstrap (no
-  // planRef) and smart activation (planRef provided), replacing the
-  // legacy `open_plan_activation` intent. The picker bootstrap now
-  // surfaces inside the `checkout` view (the tabbed shell and its
-  // dedicated activate surface are gone).
-
-  // Paywall responses are text-only narrations on `content[0].text`
-  // with the structured gate riding on `structuredContent` (see
-  // `buildPayableHandler` and `paywallToolResult`). No dedicated
-  // `open_paywall` tool exists — hosts never open the widget iframe
-  // on a gate, and the LLM recovers by calling the `upgrade` /
-  // `topup` / `activate_plan` intent tool named inline in the
-  // narration.
-
-  // ------- transport tools -------
-
-  pushTool({
-    name: MCP_TOOL_NAMES.createCheckoutSession,
-    description:
-      UI_ONLY_PREFIX +
-      'Create a SolvaPay hosted checkout session and return its URL. The UI opens this URL in a new tab when Stripe Elements is blocked by the host sandbox.',
-    inputSchema: {
-      planRef: z.string().optional(),
-      productRef: z.string().optional(),
-    },
-    meta: uiToolMeta,
-    annotations: solvapayTool({}),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createCheckoutSession, args, extra, () =>
-        runBuiltin(MCP_TOOL_NAMES.createCheckoutSession, args, extra),
-      ),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.createPayment,
-    description:
-      UI_ONLY_PREFIX +
-      'Create a Stripe payment intent for the authenticated customer to purchase a plan. Returns { clientSecret, publishableKey, accountId?, customerRef } for confirmation with Stripe Elements in the app UI.',
-    inputSchema: {
-      planRef: z.string(),
-      productRef: z.string(),
-      currency: z.string().optional(),
-    },
-    meta: uiToolMeta,
-    annotations: solvapayTool({}),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createPayment, args, extra, () =>
-        runBuiltin(MCP_TOOL_NAMES.createPayment, args, extra),
-      ),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.processPayment,
-    description:
-      UI_ONLY_PREFIX +
-      'Process a Stripe payment intent after client-side confirmation and create the SolvaPay purchase. Call after confirmPayment resolves to short-circuit webhook latency.',
-    inputSchema: {
-      paymentIntentId: z.string(),
-      productRef: z.string(),
-      planRef: z.string().optional(),
-    },
-    meta: uiToolMeta,
-    annotations: solvapayTool({ destructiveHint: true }),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.processPayment, args, extra, () =>
-        runBuiltin(MCP_TOOL_NAMES.processPayment, args, extra),
-      ),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.createCustomerSession,
-    description:
-      UI_ONLY_PREFIX +
-      'Create a SolvaPay hosted customer portal session and return its URL. Used to let a paid customer manage or cancel their purchase in a new tab.',
+  const tools: SolvaPayToolDescriptor[] = coreDescriptors.tools.map(tool => ({
+    name: tool.name,
+    ...(tool.title !== undefined ? { title: tool.title } : {}),
+    description: tool.description,
     inputSchema: {},
-    meta: uiToolMeta,
-    annotations: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createCustomerSession, args, extra, () =>
-        runBuiltin(MCP_TOOL_NAMES.createCustomerSession, args, extra),
-      ),
-  })
+    meta: tool.meta,
+    annotations: tool.annotations as SolvaPayToolDescriptor['annotations'],
+    ...(tool.icons !== undefined ? { icons: tool.icons as SolvaPayToolDescriptor['icons'] } : {}),
+  }))
 
-  pushTool({
-    name: MCP_TOOL_NAMES.createTopupPayment,
-    description:
-      UI_ONLY_PREFIX +
-      'Create a Stripe payment intent for a credit top-up. Credits are recorded by the SolvaPay webhook after confirmation.',
-    inputSchema: {
-      amount: z.number().int().positive(),
-      currency: z.string(),
-      description: z.string().optional(),
-    },
-    meta: uiToolMeta,
-    annotations: solvapayTool({}),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createTopupPayment, args, extra, () =>
-        runBuiltin(MCP_TOOL_NAMES.createTopupPayment, args, extra),
-      ),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.attachBusinessDetails,
-    description:
-      UI_ONLY_PREFIX +
-      'Attach business purchase details to a payment intent and retrieve the computed tax breakdown.',
-    inputSchema: {
-      paymentIntentId: z.string(),
-      isBusiness: z.boolean(),
-      businessName: z.string().optional(),
-      country: z.string().optional(),
-      taxId: z.string().optional(),
-      taxIdType: z.enum(['eu_vat', 'gb_vat', 'us_ein']).optional(),
-    },
-    meta: uiToolMeta,
-    annotations: solvapayTool({}),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.attachBusinessDetails, args, extra, () =>
-        runBuiltin(MCP_TOOL_NAMES.attachBusinessDetails, args, extra),
-      ),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.cancelRenewal,
-    description:
-      UI_ONLY_PREFIX +
-      'Cancel the auto-renewal on an active purchase. Backend keeps access until the current period ends.',
-    inputSchema: {
-      purchaseRef: z.string(),
-      reason: z.string().optional(),
-    },
-    meta: uiToolMeta,
-    annotations: solvapayTool({ destructiveHint: true, idempotentHint: true }),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.cancelRenewal, args, extra, () =>
-        runBuiltin(MCP_TOOL_NAMES.cancelRenewal, args, extra),
-      ),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.reactivateRenewal,
-    description:
-      UI_ONLY_PREFIX +
-      "Undo a pending cancellation so auto-renewal resumes. Only valid while the purchase is still active and its end date hasn't passed.",
-    inputSchema: { purchaseRef: z.string() },
-    meta: uiToolMeta,
-    annotations: solvapayTool({ idempotentHint: true }),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.reactivateRenewal, args, extra, () =>
-        runBuiltin(MCP_TOOL_NAMES.reactivateRenewal, args, extra),
-      ),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.activatePlan,
-    title: 'Activate plan',
-    description:
-      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded checkout picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan + usage), topup (add credits).' +
-      MODE_HINT,
-    inputSchema: {
-      productRef: z.string().optional(),
-      planRef: z.string().optional(),
-      mode: z.enum(['ui', 'text', 'auto']).optional(),
-    },
-    meta: toolMeta,
-    annotations: solvapayTool({}),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.activatePlan, args, extra, () =>
-        runBuiltin(MCP_TOOL_NAMES.activatePlan, args, extra),
-      ),
-  })
-
-  // ------- UI resource -------
-
-  const resolvedCsp = coreDescriptors.csp
   const resource: SolvaPayResourceDescriptor = {
     uri: resourceUri,
     mimeType: 'text/html;profile=mcp-app',
-    csp: resolvedCsp,
+    csp: coreDescriptors.csp,
     readHtml: readHtml
       ? readHtml
       : async () => {
           const fs = await import('node:fs/promises')
-          // htmlPath is validated above; non-null here.
           return fs.readFile(htmlPath as string, 'utf-8')
         },
   }
 
+  const enabledViews = new Set<SolvaPayMcpViewKind>(views)
   const prompts = buildSolvaPayPrompts({ enabledViews })
 
   const docsResources: SolvaPayDocsResourceDescriptor[] = [
@@ -608,36 +153,16 @@ export function buildSolvaPayDescriptors(
     description:
       'Current merchant/product/plans/customer snapshot for the embedded UI. Widgets read this idempotently when the host scrubs structuredContent from tool results.',
     mimeType: SOLVAPAY_BOOTSTRAP_MIME_TYPE,
-    // View is an echoed routing label — the widget resolves the actual
-    // surface from host context (`inferViewFromHost`), so any view kind
-    // produces identical merchant/product/plans/customer data.
-    readPayload: extra => buildBootstrapPayload('account', extra),
   }
 
-  return { tools, resource, prompts, docsResources, bootstrapResource, buildBootstrapPayload }
+  return { tools, resource, prompts, docsResources, bootstrapResource }
 }
 
-/**
- * Build the framework-neutral slash-command prompt descriptors for the
- * five SolvaPay intent tools. Exposed standalone so adapters that don't
- * want the full descriptor bundle (or want to register prompts on an
- * already-built server) can still pick them up.
- *
- * Each prompt is intentionally one `user` message that mirrors how a
- * human would invoke the intent — this makes slash-commands feel like
- * natural shortcuts, and keeps the prompts compatible with text hosts
- * that don't expose the MCP UI shell.
- */
 export function buildSolvaPayPrompts(
   options: { enabledViews?: Set<SolvaPayMcpViewKind> } = {},
 ): SolvaPayPromptDescriptor[] {
   const enabled = options.enabledViews ?? new Set<SolvaPayMcpViewKind>(DEFAULT_VIEWS)
-
   const prompts: SolvaPayPromptDescriptor[] = []
-
-  const userMessage = (text: string): SolvaPayPromptResult => ({
-    messages: [{ role: 'user', content: { type: 'text', text } }],
-  })
 
   if (enabled.has('checkout')) {
     prompts.push({
@@ -645,12 +170,7 @@ export function buildSolvaPayPrompts(
       title: 'Upgrade plan',
       description: 'Start or change a paid plan for the current customer.',
       argsSchema: { planRef: z.string().optional() },
-      handler: async ({ planRef }) =>
-        userMessage(
-          typeof planRef === 'string' && planRef
-            ? `Activate plan ${planRef} for me.`
-            : 'Show me the upgrade options for my SolvaPay account.',
-        ),
+      handler: args => buildPromptUserMessage(MCP_TOOL_NAMES.upgrade, args),
     })
   }
 
@@ -660,7 +180,7 @@ export function buildSolvaPayPrompts(
       title: 'Manage account',
       description:
         'Show the current plan, balance, payment method, and cancel/reactivate controls for the current customer.',
-      handler: async () => userMessage('Show me my SolvaPay account.'),
+      handler: args => buildPromptUserMessage(MCP_TOOL_NAMES.manageAccount, args),
     })
   }
 
@@ -670,31 +190,17 @@ export function buildSolvaPayPrompts(
       title: 'Top up credits',
       description: 'Add SolvaPay credits to the current customer.',
       argsSchema: { amount: z.string().optional() },
-      handler: async ({ amount }) =>
-        userMessage(
-          typeof amount === 'string' && amount
-            ? `Top up my SolvaPay credits by ${amount}.`
-            : 'I want to top up my SolvaPay credits.',
-        ),
+      handler: args => buildPromptUserMessage(MCP_TOOL_NAMES.topup, args),
     })
   }
 
-  // `activate_plan` gets a prompt whenever the checkout view is enabled
-  // (the picker bootstrap lives there now). When checkout is disabled
-  // the prompt is pointless — `activate_plan` without a planRef would
-  // just error.
   if (enabled.has('checkout')) {
     prompts.push({
       name: MCP_TOOL_NAMES.activatePlan,
       title: 'Activate plan',
       description: 'Pick a plan to activate, or activate a specific plan by ref.',
       argsSchema: { planRef: z.string().optional() },
-      handler: async ({ planRef }) =>
-        userMessage(
-          typeof planRef === 'string' && planRef
-            ? `Activate plan ${planRef} on my SolvaPay account.`
-            : 'What plans can I activate on my SolvaPay account?',
-        ),
+      handler: args => buildPromptUserMessage(MCP_TOOL_NAMES.activatePlan, args),
     })
   }
 

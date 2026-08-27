@@ -22,12 +22,6 @@
       "development": "./src/browser-wasm.ts",
       "import": "./dist/browser-wasm.js",
       "require": "./dist/browser-wasm.cjs"
-    },
-    "./portable": {
-      "types": "./dist/portable-fallbacks.d.ts",
-      "development": "./src/portable-fallbacks.ts",
-      "import": "./dist/portable-fallbacks.js",
-      "require": "./dist/portable-fallbacks.cjs"
     }
   },
   "files": [
@@ -52,11 +46,6 @@
         "types": "./dist/browser-wasm.d.ts",
         "import": "./dist/browser-wasm.js",
         "require": "./dist/browser-wasm.cjs"
-      },
-      "./portable": {
-        "types": "./dist/portable-fallbacks.d.ts",
-        "import": "./dist/portable-fallbacks.js",
-        "require": "./dist/portable-fallbacks.cjs"
       }
     }
   },
@@ -68,14 +57,11 @@
   "sideEffects": [
     "./dist/browser-wasm.js",
     "./dist/browser-wasm.cjs",
-    "./src/browser-wasm.ts",
-    "./dist/portable-fallbacks.js",
-    "./dist/portable-fallbacks.cjs",
-    "./src/portable-fallbacks.ts"
+    "./src/browser-wasm.ts"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/business-details-public.ts src/browser-wasm.ts src/portable-fallbacks.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external @solvapay/server-wasm && cp business-details-public.d.ts dist/business-details-public.d.ts",
-    "dev": "tsup src/index.ts src/business-details-public.ts src/browser-wasm.ts src/portable-fallbacks.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external @solvapay/server-wasm --watch",
+    "build": "tsup src/index.ts src/business-details-public.ts src/browser-wasm.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external @solvapay/server-wasm && cp business-details-public.d.ts dist/business-details-public.d.ts",
+    "dev": "tsup src/index.ts src/business-details-public.ts src/browser-wasm.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external @solvapay/server-wasm --watch",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",

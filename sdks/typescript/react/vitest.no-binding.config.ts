@@ -8,8 +8,8 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^@solvapay\/core\/portable$/,
-        replacement: resolve(tsPackageDir('core'), 'src', 'portable-fallbacks.ts'),
+        find: /^@solvapay\/core\/browser-wasm$/,
+        replacement: resolve(__dirname, './vitest.browser-wasm-stub.ts'),
       },
     ],
   },

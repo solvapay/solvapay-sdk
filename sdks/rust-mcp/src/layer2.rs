@@ -35,6 +35,16 @@ pub fn set_format_gate_override(format_gate: Option<FormatGateFn>) {
     *slot = format_gate;
 }
 
+/// Whether a test-seams `format_gate` override is installed.
+#[cfg(feature = "test-seams")]
+pub fn format_gate_override_active() -> bool {
+    let slot = match format_gate_slot().read() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    slot.is_some()
+}
+
 /// Construct a branded response envelope.
 pub fn make_response_result(
     data: Value,
@@ -101,6 +111,31 @@ pub fn format_gate(message: &str, gate: &PaywallGate) -> Result<CallToolResult, 
             .map_err(|e| PayableError::Handler(format!("serialize paywall gate: {e}")))?,
     );
     result.is_error = Some(false);
+    Ok(result)
+}
+
+/// Decode a driver-formatted MCP tool result JSON object.
+pub fn json_to_call_tool_result(value: Value) -> Result<CallToolResult, PayableError> {
+    let content_values = value
+        .get("content")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let content = values_to_blocks(content_values)?;
+    let is_error = value.get("isError").and_then(Value::as_bool);
+    let mut result = if is_error == Some(true) {
+        CallToolResult::error(content)
+    } else {
+        CallToolResult::success(content)
+    };
+    if let Some(structured) = value.get("structuredContent") {
+        if !structured.is_null() {
+            result.structured_content = Some(structured.clone());
+        }
+    }
+    if let Some(flag) = is_error {
+        result.is_error = Some(flag);
+    }
     Ok(result)
 }
 

@@ -1249,6 +1249,9 @@ jobs:
       - name: Webhook edge corpus (WASM)
         run: node tools/conformance/replay-webhook-edge-wasm.mjs
 
+      - name: Client fixture corpus (WASM FetchTransport)
+        run: pnpm exec vitest run tools/conformance/contract-fixtures-wasm.test.ts
+
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:

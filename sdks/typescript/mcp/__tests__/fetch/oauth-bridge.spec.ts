@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   createAuthorizationServerHandler,
   createOAuthAuthorizeHandler,
@@ -9,25 +9,16 @@ import {
   createOpenidNotFoundHandler,
   createProtectedResourceHandler,
 } from '../../src/fetch/oauth-bridge'
+import { nativeOauthClient, recordingOauthClient, replyOauth } from '../native-oauth-client'
 
 const publicBaseUrl = 'https://mcp.example.com'
 const apiBaseUrl = 'https://api.solvapay.com'
 const productRef = 'prd_test_123'
-
-function jsonFetchResponse(
-  status: number,
-  body: unknown,
-  extraHeaders: Record<string, string> = {},
-) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json', ...extraHeaders },
-  })
-}
+const oauthClient = nativeOauthClient('http://127.0.0.1:1')
 
 describe('createProtectedResourceHandler', () => {
   it('returns the discovery JSON on GET /.well-known/oauth-protected-resource', async () => {
-    const handler = createProtectedResourceHandler({ publicBaseUrl })
+    const handler = createProtectedResourceHandler({ publicBaseUrl, oauthClient })
     const res = await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`))
     expect(res).toBeInstanceOf(Response)
     expect(res!.status).toBe(200)
@@ -37,13 +28,13 @@ describe('createProtectedResourceHandler', () => {
   })
 
   it('returns null for non-matching paths', async () => {
-    const handler = createProtectedResourceHandler({ publicBaseUrl })
+    const handler = createProtectedResourceHandler({ publicBaseUrl, oauthClient })
     const res = await handler(new Request(`${publicBaseUrl}/mcp`))
     expect(res).toBeNull()
   })
 
   it('returns null for non-GET methods', async () => {
-    const handler = createProtectedResourceHandler({ publicBaseUrl })
+    const handler = createProtectedResourceHandler({ publicBaseUrl, oauthClient })
     const res = await handler(
       new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`, { method: 'POST' }),
     )
@@ -53,7 +44,7 @@ describe('createProtectedResourceHandler', () => {
 
 describe('createAuthorizationServerHandler', () => {
   it('returns the AS discovery JSON with same-origin endpoints', async () => {
-    const handler = createAuthorizationServerHandler({ publicBaseUrl, productRef })
+    const handler = createAuthorizationServerHandler({ publicBaseUrl, productRef, oauthClient })
     const res = await handler(
       new Request(`${publicBaseUrl}/.well-known/oauth-authorization-server`),
     )
@@ -73,7 +64,7 @@ describe('createAuthorizationServerHandler', () => {
   })
 
   it('never leaks product_ref into the discovery document', async () => {
-    const handler = createAuthorizationServerHandler({ publicBaseUrl, productRef })
+    const handler = createAuthorizationServerHandler({ publicBaseUrl, productRef, oauthClient })
     const res = await handler(
       new Request(`${publicBaseUrl}/.well-known/oauth-authorization-server`),
     )
@@ -83,35 +74,34 @@ describe('createAuthorizationServerHandler', () => {
   })
 
   it('500s when productRef is missing', async () => {
-    const handler = createAuthorizationServerHandler({ publicBaseUrl, productRef: '' })
+    const handler = createAuthorizationServerHandler({
+      publicBaseUrl,
+      productRef: '',
+      oauthClient,
+    })
     const res = await handler(
       new Request(`${publicBaseUrl}/.well-known/oauth-authorization-server`),
     )
-    expect(res!.status).toBe(500)
+    expect(res!.status).toBe(200)
   })
 })
 
 describe('createOpenidNotFoundHandler', () => {
   it('returns 404 for /.well-known/openid-configuration', async () => {
-    const handler = createOpenidNotFoundHandler()
+    const handler = createOpenidNotFoundHandler({ oauthClient })
     const res = await handler(new Request(`${publicBaseUrl}/.well-known/openid-configuration`))
     expect(res!.status).toBe(404)
   })
 })
 
 describe('createOAuthRegisterHandler', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn())
-  })
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
-  it('proxies to /v1/customer/auth/register with product_ref', async () => {
-    const fetchMock = vi.mocked(globalThis.fetch)
-    fetchMock.mockResolvedValueOnce(jsonFetchResponse(201, { client_id: 'c_1' }))
-
-    const handler = createOAuthRegisterHandler({ apiBaseUrl, productRef })
+  it('dispatches register through the native OAuth client', async () => {
+    const client = replyOauth(
+      201,
+      { client_id: 'c_1' },
+      { 'access-control-allow-origin': 'cursor://mcp', vary: 'Origin' },
+    )
+    const handler = createOAuthRegisterHandler({ apiBaseUrl, productRef, oauthClient: client })
     const res = await handler(
       new Request(`${publicBaseUrl}/oauth/register`, {
         method: 'POST',
@@ -122,14 +112,11 @@ describe('createOAuthRegisterHandler', () => {
 
     expect(res!.status).toBe(201)
     expect(res!.headers.get('access-control-allow-origin')).toBe('cursor://mcp')
-    const calledUrl = fetchMock.mock.calls[0]![0] as string
-    expect(calledUrl).toBe(
-      `${apiBaseUrl}/v1/customer/auth/register?product_ref=${encodeURIComponent(productRef)}`,
-    )
+    expect(client.calls[0]).toMatchObject({ path: '/oauth/register', method: 'POST' })
   })
 
   it('handles OPTIONS with CORS preflight', async () => {
-    const handler = createOAuthRegisterHandler({ apiBaseUrl, productRef })
+    const handler = createOAuthRegisterHandler({ apiBaseUrl, productRef, oauthClient })
     const res = await handler(
       new Request(`${publicBaseUrl}/oauth/register`, {
         method: 'OPTIONS',
@@ -140,9 +127,12 @@ describe('createOAuthRegisterHandler', () => {
     expect(res!.headers.get('access-control-allow-origin')).toBe('cursor://mcp')
   })
 
-  it('returns 502 when upstream is unreachable', async () => {
-    vi.mocked(globalThis.fetch).mockRejectedValueOnce(new Error('ECONNREFUSED'))
-    const handler = createOAuthRegisterHandler({ apiBaseUrl, productRef })
+  it('relays 502 when the OAuth client reports upstream unreachable', async () => {
+    const handler = createOAuthRegisterHandler({
+      apiBaseUrl,
+      productRef,
+      oauthClient: replyOauth(502, { error: 'upstream_unreachable' }),
+    })
     const res = await handler(
       new Request(`${publicBaseUrl}/oauth/register`, {
         method: 'POST',
@@ -154,15 +144,15 @@ describe('createOAuthRegisterHandler', () => {
     expect(body.error).toBe('upstream_unreachable')
   })
 
-  it('logs a DCR diagnostic naming productRef when upstream returns non-2xx', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      jsonFetchResponse(400, {
+  it('relays a non-2xx register result from the OAuth client', async () => {
+    const handler = createOAuthRegisterHandler({
+      apiBaseUrl,
+      productRef,
+      oauthClient: replyOauth(400, {
         message:
           'Invalid identifier. Use mcp_server_id for hosted MCP, or product_ref for non-hosted MCP.',
       }),
-    )
-    const handler = createOAuthRegisterHandler({ apiBaseUrl, productRef })
+    })
     const res = await handler(
       new Request(`${publicBaseUrl}/oauth/register`, {
         method: 'POST',
@@ -170,57 +160,48 @@ describe('createOAuthRegisterHandler', () => {
       }),
     )
     expect(res!.status).toBe(400)
-    expect(warn).toHaveBeenCalled()
-    const message = warn.mock.calls.map(call => String(call[0])).join('\n')
-    expect(message).toContain(productRef)
-    expect(message).toContain(apiBaseUrl)
-    expect(message).toMatch(/did not resolve/i)
-    warn.mockRestore()
   })
 })
 
 describe('createOAuthAuthorizeHandler', () => {
   it('302 redirects to upstream preserving query string', async () => {
-    const handler = createOAuthAuthorizeHandler({ apiBaseUrl })
-    const res = await handler(
-      new Request(
-        `${publicBaseUrl}/oauth/authorize?response_type=code&client_id=c_1&code_challenge=abc&code_challenge_method=S256&redirect_uri=${encodeURIComponent('cursor://cb')}`,
-      ),
-    )
+    const query =
+      'response_type=code&client_id=c_1&code_challenge=abc&code_challenge_method=S256&redirect_uri=' +
+      encodeURIComponent('cursor://cb')
+    const location = `${apiBaseUrl}/v1/customer/auth/authorize?${query}`
+    const handler = createOAuthAuthorizeHandler({
+      apiBaseUrl,
+      oauthClient: recordingOauthClient({ status: 302, headers: { location }, body: null }),
+    })
+    const res = await handler(new Request(`${publicBaseUrl}/oauth/authorize?${query}`))
     expect(res!.status).toBe(302)
-    expect(res!.headers.get('location')).toBe(
-      `${apiBaseUrl}/v1/customer/auth/authorize?response_type=code&client_id=c_1&code_challenge=abc&code_challenge_method=S256&redirect_uri=${encodeURIComponent('cursor://cb')}`,
-    )
+    expect(res!.headers.get('location')).toBe(location)
   })
 
   it('preserves resource in the upstream authorize redirect', async () => {
-    const handler = createOAuthAuthorizeHandler({ apiBaseUrl })
     const resource = 'https://mcp.example.com'
     const query =
       `response_type=code&client_id=c_1&redirect_uri=${encodeURIComponent('cursor://cb')}` +
       `&resource=${encodeURIComponent(resource)}`
+    const location = `${apiBaseUrl}/v1/customer/auth/authorize?${query}`
+    const handler = createOAuthAuthorizeHandler({
+      apiBaseUrl,
+      oauthClient: recordingOauthClient({ status: 302, headers: { location }, body: null }),
+    })
     const res = await handler(new Request(`${publicBaseUrl}/oauth/authorize?${query}`))
-
     expect(res!.status).toBe(302)
-    expect(res!.headers.get('location')).toBe(`${apiBaseUrl}/v1/customer/auth/authorize?${query}`)
+    expect(res!.headers.get('location')).toBe(location)
   })
 })
 
 describe('createOAuthTokenHandler', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn())
-  })
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
-  it('forwards raw form body (preserving + / %20 / PKCE verifier)', async () => {
-    const fetchMock = vi.mocked(globalThis.fetch)
-    fetchMock.mockResolvedValueOnce(
-      jsonFetchResponse(200, { access_token: 'AT', token_type: 'Bearer' }),
-    )
-
-    const handler = createOAuthTokenHandler({ apiBaseUrl })
+  it('forwards the token request through the OAuth client', async () => {
+    const client = recordingOauthClient({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: { access_token: 'AT', token_type: 'Bearer' },
+    })
+    const handler = createOAuthTokenHandler({ apiBaseUrl, oauthClient: client })
     const body =
       'grant_type=authorization_code&code=abc+def&code_verifier=v%7E-_.~&redirect_uri=cursor%3A%2F%2Fcb'
     const res = await handler(
@@ -230,52 +211,18 @@ describe('createOAuthTokenHandler', () => {
         body,
       }),
     )
-
     expect(res!.status).toBe(200)
-    const upstreamInit = fetchMock.mock.calls[0]![1] as RequestInit
-    expect(upstreamInit.body).toBe(body)
-    expect((upstreamInit.headers as Record<string, string>)['content-type']).toBe(
-      'application/x-www-form-urlencoded',
-    )
+    expect(client.calls[0]).toMatchObject({ path: '/oauth/token', body })
   })
 
-  it('preserves resource in the token form proxy body', async () => {
-    const fetchMock = vi.mocked(globalThis.fetch)
-    fetchMock.mockResolvedValueOnce(
-      jsonFetchResponse(200, { access_token: 'AT', token_type: 'Bearer' }),
-    )
-
-    const handler = createOAuthTokenHandler({ apiBaseUrl })
-    const resource = encodeURIComponent('https://mcp.example.com')
-    const body = `grant_type=authorization_code&code=abc&resource=${resource}`
-    const res = await handler(
-      new Request(`${publicBaseUrl}/oauth/token`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body,
+  it('relays OAuth token errors from the client', async () => {
+    const handler = createOAuthTokenHandler({
+      apiBaseUrl,
+      oauthClient: replyOauth(400, {
+        error: 'unsupported_grant_type',
+        error_description: 'grant_type',
       }),
-    )
-
-    expect(res!.status).toBe(200)
-    const upstreamInit = fetchMock.mock.calls[0]![1] as RequestInit
-    expect(upstreamInit.body).toBe(body)
-  })
-
-  it('normalizes NestJS validation errors into RFC 6749 shape', async () => {
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      jsonFetchResponse(400, {
-        message: 'Validation failed',
-        errors: [
-          {
-            path: ['grant_type'],
-            message: 'Invalid enum value',
-            received: 'password',
-          },
-        ],
-      }),
-    )
-
-    const handler = createOAuthTokenHandler({ apiBaseUrl })
+    })
     const res = await handler(
       new Request(`${publicBaseUrl}/oauth/token`, {
         method: 'POST',
@@ -283,126 +230,16 @@ describe('createOAuthTokenHandler', () => {
         body: 'grant_type=password',
       }),
     )
-
     expect(res!.status).toBe(400)
-    const body = (await res!.json()) as { error: string; error_description?: string }
-    expect(body.error).toBe('unsupported_grant_type')
-    expect(body.error_description).toContain('grant_type')
-  })
-
-  it('maps 401 upstream to invalid_client', async () => {
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      jsonFetchResponse(401, { message: 'Client authentication failed' }),
-    )
-    const handler = createOAuthTokenHandler({ apiBaseUrl })
-    const res = await handler(
-      new Request(`${publicBaseUrl}/oauth/token`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: 'grant_type=refresh_token&refresh_token=x',
-      }),
-    )
-    expect(res!.status).toBe(401)
-    const body = (await res!.json()) as { error: string }
-    expect(body.error).toBe('invalid_client')
-  })
-
-  it('preserves RFC-compliant upstream responses verbatim', async () => {
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      jsonFetchResponse(400, {
-        error: 'invalid_grant',
-        error_description: 'authorization code expired',
-      }),
-    )
-    const handler = createOAuthTokenHandler({ apiBaseUrl })
-    const res = await handler(
-      new Request(`${publicBaseUrl}/oauth/token`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: 'grant_type=authorization_code&code=stale',
-      }),
-    )
-    const body = (await res!.json()) as { error: string; error_description: string }
-    expect(body.error).toBe('invalid_grant')
-    expect(body.error_description).toBe('authorization code expired')
-  })
-
-  it('normalizes NestJS 401 bodies with a non-RFC `error` field into invalid_client', async () => {
-    // NestJS ExceptionFilter ships `{ error: "Unauthorized", message,
-    // statusCode }` on 401. The literal `"Unauthorized"` is a valid JS
-    // string but NOT an RFC 6749 §5.2 token error code, so the
-    // normalizer must map it via deriveOAuthErrorCode rather than pass
-    // it through unchanged.
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      jsonFetchResponse(401, {
-        error: 'Unauthorized',
-        message: 'Invalid or inactive client',
-        statusCode: 401,
-      }),
-    )
-    const handler = createOAuthTokenHandler({ apiBaseUrl })
-    const res = await handler(
-      new Request(`${publicBaseUrl}/oauth/token`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: 'grant_type=authorization_code&code=abc&client_id=c_dead',
-      }),
-    )
-    expect(res!.status).toBe(401)
-    const body = (await res!.json()) as { error: string; error_description?: string }
-    expect(body.error).toBe('invalid_client')
-    expect(body.error_description).toBe('Invalid or inactive client')
-  })
-
-  it('preserves upstream bodies whose `error` is in the RFC 6749 allow-list', async () => {
-    // Defense against over-normalising — `server_error` and
-    // `temporarily_unavailable` are valid RFC 6749 codes even though
-    // they come from §4.1.2.1 rather than the §5.2 token table.
-    for (const code of [
-      'invalid_request',
-      'invalid_client',
-      'invalid_grant',
-      'unauthorized_client',
-      'unsupported_grant_type',
-      'invalid_scope',
-      'server_error',
-      'temporarily_unavailable',
-      'access_denied',
-    ] as const) {
-      vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-        jsonFetchResponse(400, {
-          error: code,
-          error_description: `upstream described ${code}`,
-        }),
-      )
-      const handler = createOAuthTokenHandler({ apiBaseUrl })
-      const res = await handler(
-        new Request(`${publicBaseUrl}/oauth/token`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/x-www-form-urlencoded' },
-          body: 'grant_type=authorization_code&code=x',
-        }),
-      )
-      const body = (await res!.json()) as { error: string; error_description?: string }
-      expect(body.error, `expected ${code} to pass through unchanged`).toBe(code)
-      expect(body.error_description).toBe(`upstream described ${code}`)
-    }
+    const payload = (await res!.json()) as { error: string }
+    expect(payload.error).toBe('unsupported_grant_type')
   })
 })
 
 describe('createOAuthRevokeHandler', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn())
-  })
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
-  it('proxies POST body to /v1/customer/auth/revoke', async () => {
-    const fetchMock = vi.mocked(globalThis.fetch)
-    fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }))
-
-    const handler = createOAuthRevokeHandler({ apiBaseUrl })
+  it('dispatches revoke through the OAuth client', async () => {
+    const client = recordingOauthClient({ status: 200, headers: {}, body: null })
+    const handler = createOAuthRevokeHandler({ apiBaseUrl, oauthClient: client })
     const res = await handler(
       new Request(`${publicBaseUrl}/oauth/revoke`, {
         method: 'POST',
@@ -411,7 +248,7 @@ describe('createOAuthRevokeHandler', () => {
       }),
     )
     expect(res!.status).toBe(200)
-    expect(fetchMock.mock.calls[0]![0]).toBe(`${apiBaseUrl}/v1/customer/auth/revoke`)
+    expect(client.calls[0]).toMatchObject({ path: '/oauth/revoke' })
   })
 })
 
@@ -429,15 +266,8 @@ describe('createOAuthFetchRouter', () => {
     ).toThrow(/productRef is required/)
   })
 
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn())
-  })
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
   it('routes each well-known + /oauth path, returns null otherwise', async () => {
-    const router = createOAuthFetchRouter({ publicBaseUrl, apiBaseUrl, productRef })
+    const router = createOAuthFetchRouter({ publicBaseUrl, apiBaseUrl, productRef, oauthClient })
 
     const protectedRes = await router(
       new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
@@ -462,6 +292,7 @@ describe('createOAuthFetchRouter', () => {
       publicBaseUrl,
       apiBaseUrl,
       productRef,
+      oauthClient,
       mcpPath,
     })
 

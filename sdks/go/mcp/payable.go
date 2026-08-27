@@ -109,7 +109,6 @@ func dispatchPayable(ctx context.Context, req *mcpsdk.CallToolRequest, opts Opti
 
 // InvokePayable runs the payable decision sequence for one tool call.
 func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcpsdk.CallToolResult, error) {
-	started := time.Now()
 	if args == nil {
 		args = map[string]any{}
 	}
@@ -117,86 +116,211 @@ func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcp
 	if err != nil {
 		return nil, err
 	}
-	outcome, err := opts.Client.Gate(ctx, customerRef, solvapay.GateOpts{
-		Product:   opts.Product,
-		UsageType: opts.UsageType,
-	})
-	if err != nil {
-		return nil, err
+	var state any
+	event := map[string]any{
+		"kind":        "start",
+		"customerRef": customerRef,
+		"product":     opts.Product,
+		"usageType":   opts.UsageType,
+		"startedMs":   time.Now().UnixMilli(),
 	}
-	switch typed := outcome.(type) {
-	case *solvapay.Paywall:
-		message := gateMessage(typed.Gate)
-		payload, err := formatGate(ctx, message, typed.Gate)
+	var allow *solvapay.Allow
+	for {
+		outRaw, err := callLayer2(ctx, "sv_invoke_payable_next_binding", map[string]any{
+			"state": state,
+			"event": event,
+		})
 		if err != nil {
 			return nil, err
 		}
-		return payloadToCallToolResult(payload)
-	case *solvapay.Allow:
-		return runAllow(ctx, started, typed, args, opts)
-	default:
-		return nil, fmt.Errorf("unexpected gate result %T", outcome)
+		var out struct {
+			State  any             `json:"state"`
+			Action json.RawMessage `json:"action"`
+		}
+		if err := json.Unmarshal(outRaw, &out); err != nil {
+			return nil, fmt.Errorf("decode invokePayableNext: %w", err)
+		}
+		state = out.State
+		var head struct {
+			Kind string `json:"kind"`
+		}
+		if err := json.Unmarshal(out.Action, &head); err != nil {
+			return nil, fmt.Errorf("decode invokePayableNext action: %w", err)
+		}
+		switch head.Kind {
+		case "runGate":
+			{
+				var action struct {
+					CustomerRef string `json:"customerRef"`
+					Product     string `json:"product"`
+					UsageType   string `json:"usageType"`
+				}
+				if err := json.Unmarshal(out.Action, &action); err != nil {
+					return nil, err
+				}
+				outcome, err := opts.Client.Gate(ctx, action.CustomerRef, solvapay.GateOpts{
+					Product:   action.Product,
+					UsageType: action.UsageType,
+				})
+				if err != nil {
+					return nil, err
+				}
+				switch typed := outcome.(type) {
+				case *solvapay.Paywall:
+					message := gateMessage(typed.Gate)
+					payload, err := formatGate(ctx, message, typed.Gate)
+					if err != nil {
+						return nil, err
+					}
+					if formatGateOverrideActive() {
+						return payloadToCallToolResult(payload)
+					}
+					var gate any
+					if err := json.Unmarshal(typed.Gate, &gate); err != nil {
+						return nil, err
+					}
+					event = map[string]any{
+						"kind":    "gatePaywall",
+						"gate":    gate,
+						"message": message,
+					}
+				case *solvapay.Allow:
+					allow = typed
+					snap := typed.Customer()
+					event = map[string]any{
+						"kind":        "gateAllow",
+						"customerRef": snap.Ref,
+						"limits": map[string]any{
+							"creditBalance": snap.Balance,
+							"remaining":     snap.Remaining,
+							"withinLimits":  snap.WithinLimits,
+							"plan":          snap.Plan,
+						},
+					}
+				default:
+					return nil, fmt.Errorf("unexpected gate result %T", outcome)
+				}
+			}
+		case "invokeHandler":
+			{
+				var action struct {
+					CustomerRef string          `json:"customerRef"`
+					Limits      json.RawMessage `json:"limits"`
+				}
+				if err := json.Unmarshal(out.Action, &action); err != nil {
+					return nil, err
+				}
+				var limits map[string]any
+				if len(action.Limits) > 0 && string(action.Limits) != "null" {
+					if err := json.Unmarshal(action.Limits, &limits); err != nil {
+						return nil, err
+					}
+				}
+				if limits == nil {
+					limits = map[string]any{}
+				}
+				rc := &ResponseContext{
+					ctx: ctx,
+					Customer: CustomerView{
+						Ref:          action.CustomerRef,
+						Balance:      limits["creditBalance"],
+						Remaining:    limits["remaining"],
+						WithinLimits: limits["withinLimits"],
+						Plan:         limits["plan"],
+					},
+					Product:    ProductView{Reference: opts.Product, Name: opts.Product},
+					productRef: opts.Product,
+				}
+				if rc.Customer.Balance == nil {
+					rc.Customer.Balance = 0
+				}
+				if rc.Customer.WithinLimits == nil {
+					rc.Customer.WithinLimits = true
+				}
+				returned, err := opts.Handler(ctx, args, rc)
+				var signal *GateSignal
+				if errors.As(err, &signal) {
+					payload, ferr := formatGate(ctx, signal.Reason, signal.Gate)
+					if ferr != nil {
+						return nil, ferr
+					}
+					if formatGateOverrideActive() {
+						return payloadToCallToolResult(payload)
+					}
+					var gate any
+					if err := json.Unmarshal(signal.Gate, &gate); err != nil {
+						return nil, err
+					}
+					event = map[string]any{
+						"kind":    "handlerPaywall",
+						"gate":    gate,
+						"message": signal.Reason,
+					}
+					continue
+				}
+				if err != nil {
+					event = map[string]any{
+						"kind":    "handlerErr",
+						"message": err.Error(),
+						"nowMs":   time.Now().UnixMilli(),
+					}
+					continue
+				}
+				if !returned.valid() {
+					event = map[string]any{
+						"kind":    "handlerErr",
+						"message": "handler must return ctx.Respond(...)",
+						"nowMs":   time.Now().UnixMilli(),
+					}
+					continue
+				}
+				envelope, err := assertResponseResult(ctx, returned.payload)
+				if err != nil {
+					event = map[string]any{
+						"kind":    "handlerErr",
+						"message": err.Error(),
+						"nowMs":   time.Now().UnixMilli(),
+					}
+					continue
+				}
+				event = map[string]any{
+					"kind":     "handlerOk",
+					"envelope": json.RawMessage(envelope),
+					"nowMs":    time.Now().UnixMilli(),
+				}
+			}
+		case "done":
+			var doneAction struct {
+				Result json.RawMessage `json:"result"`
+				Track  *struct {
+					Outcome    string  `json:"outcome"`
+					DurationMs float64 `json:"durationMs"`
+				} `json:"track"`
+			}
+			if err := json.Unmarshal(out.Action, &doneAction); err != nil {
+				return nil, err
+			}
+			if doneAction.Track != nil && allow != nil {
+				elapsed := doneAction.Track.DurationMs
+				if doneAction.Track.Outcome == "success" {
+					if err := allow.TrackSuccess(ctx, solvapay.TrackOpts{Duration: &elapsed}); err != nil {
+						return nil, err
+					}
+				} else {
+					if err := allow.TrackFail(ctx, errors.New(doneAction.Track.Outcome), solvapay.TrackOpts{Duration: &elapsed}); err != nil {
+						return nil, err
+					}
+				}
+			}
+			return payloadToCallToolResult(doneAction.Result)
+		default:
+			return nil, fmt.Errorf("invokePayableNext unknown action kind %s", head.Kind)
+		}
 	}
 }
 
-func runAllow(ctx context.Context, started time.Time, allow *solvapay.Allow, args map[string]any, opts Options) (*mcpsdk.CallToolResult, error) {
-	snap := allow.Customer()
-	rc := &ResponseContext{
-		ctx: ctx,
-		Customer: CustomerView{
-			Ref:          snap.Ref,
-			Balance:      snap.Balance,
-			Remaining:    snap.Remaining,
-			WithinLimits: snap.WithinLimits,
-			Plan:         snap.Plan,
-		},
-		Product:    ProductView{Reference: opts.Product, Name: opts.Product},
-		productRef: opts.Product,
-	}
-	returned, err := opts.Handler(ctx, args, rc)
-	var signal *GateSignal
-	if errors.As(err, &signal) {
-		payload, ferr := formatGate(ctx, signal.Reason, signal.Gate)
-		if ferr != nil {
-			return nil, ferr
-		}
-		return payloadToCallToolResult(payload)
-	}
-	elapsed := float64(time.Since(started).Milliseconds())
-	if elapsed < 0 {
-		elapsed = 0
-	}
-	if err != nil {
-		if trackErr := allow.TrackFail(ctx, err, solvapay.TrackOpts{Duration: &elapsed}); trackErr != nil {
-			return nil, trackErr
-		}
-		return errorToolResult(err.Error())
-	}
-	if !returned.valid() {
-		inner := fmt.Errorf("handler must return ctx.Respond(...)")
-		if trackErr := allow.TrackFail(ctx, inner, solvapay.TrackOpts{Duration: &elapsed}); trackErr != nil {
-			return nil, trackErr
-		}
-		return errorToolResult(inner.Error())
-	}
-	envelope, err := assertResponseResult(ctx, returned.payload)
-	if err != nil {
-		if trackErr := allow.TrackFail(ctx, err, solvapay.TrackOpts{Duration: &elapsed}); trackErr != nil {
-			return nil, trackErr
-		}
-		return errorToolResult(err.Error())
-	}
-	payload, err := buildPayableToolResult(ctx, envelope)
-	if err != nil {
-		if trackErr := allow.TrackFail(ctx, err, solvapay.TrackOpts{Duration: &elapsed}); trackErr != nil {
-			return nil, trackErr
-		}
-		return errorToolResult(err.Error())
-	}
-	if err := allow.TrackSuccess(ctx, solvapay.TrackOpts{Duration: &elapsed}); err != nil {
-		return nil, err
-	}
-	return payloadToCallToolResult(payload)
+func formatGateOverrideActive() bool {
+	return fmt.Sprintf("%p", formatGate) != fmt.Sprintf("%p", paywallToolResult)
 }
 
 func resolveCustomerRef(ctx context.Context, args map[string]any, hook GetCustomerRef) (string, error) {

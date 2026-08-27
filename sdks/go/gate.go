@@ -173,156 +173,150 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 	if opts.Product == "" {
 		return nil, &Error{Code: "invalid_config", Message: "product is required"}
 	}
-	started := time.Now()
-	backendRef, err := c.ensureCustomer(ctx, customerRef)
-	if err != nil {
-		return nil, err
+	startedMs := time.Now().UnixMilli()
+	var state any
+	event := map[string]any{
+		"kind":        "start",
+		"customerRef": customerRef,
+		"product":     opts.Product,
+		"usageType":   opts.UsageType,
+		"startedMs":   startedMs,
 	}
-	usageType := opts.UsageType
-	limitsKey := backendRef + ":" + opts.Product + ":" + usageType
-	now := time.Now()
-
-	var withinLimits bool
-	var lastLimits map[string]any
-
-	c.gate.mu.Lock()
-	cached, hit := c.gate.limitsCache[limitsKey]
-	ttl := c.gate.limitsTTL
-	c.gate.mu.Unlock()
-
-	if hit && now.Sub(cached.storedAt) < ttl {
-		evalJSON, err := callDecisionJSON(ctx, "sv_evaluate_cached_limits_binding", map[string]any{
-			"remaining": cached.remaining,
+	var action map[string]any
+	for {
+		outJSON, err := callDecisionJSON(ctx, "sv_gate_next_binding", map[string]any{
+			"state": state,
+			"event": event,
 		})
 		if err != nil {
 			return nil, err
 		}
-		var eval struct {
-			WithinLimits bool `json:"withinLimits"`
-			Remaining    any  `json:"remaining"`
-			Evict        bool `json:"evict"`
+		var out struct {
+			State  any            `json:"state"`
+			Action map[string]any `json:"action"`
 		}
-		if err := json.Unmarshal(evalJSON, &eval); err != nil {
-			return nil, fmt.Errorf("solvapay: evaluate_cached_limits: %w", err)
+		if err := json.Unmarshal(outJSON, &out); err != nil {
+			return nil, fmt.Errorf("solvapay: gate_next: %w", err)
 		}
-		withinLimits = eval.WithinLimits
-		c.gate.mu.Lock()
-		if withinLimits {
-			entry := c.gate.limitsCache[limitsKey]
-			entry.remaining = eval.Remaining
-			c.gate.limitsCache[limitsKey] = entry
-		}
-		if eval.Evict {
-			delete(c.gate.limitsCache, limitsKey)
-		}
-		lastLimits = cached.limits
-		c.gate.mu.Unlock()
-	} else {
-		if hit {
-			c.gate.mu.Lock()
-			delete(c.gate.limitsCache, limitsKey)
-			c.gate.mu.Unlock()
-		}
-		raw, err := c.CheckLimits(ctx, map[string]any{
-			"customerRef": backendRef,
-			"productRef":  opts.Product,
-			"meterName":   usageType,
-		})
-		if err != nil {
-			return nil, err
-		}
-		lastLimits = asObject(raw)
-		freshJSON, err := callDecisionJSON(ctx, "sv_evaluate_fresh_limits_binding", map[string]any{
-			"withinLimits": asBool(lastLimits["withinLimits"]),
-			"remaining":    asFloat(lastLimits["remaining"]),
-		})
-		if err != nil {
-			return nil, err
-		}
-		var fresh struct {
-			WithinLimits bool `json:"withinLimits"`
-			Remaining    any  `json:"remaining"`
-			ShouldCache  bool `json:"shouldCache"`
-		}
-		if err := json.Unmarshal(freshJSON, &fresh); err != nil {
-			return nil, fmt.Errorf("solvapay: evaluate_fresh_limits: %w", err)
-		}
-		withinLimits = fresh.WithinLimits
-		if fresh.ShouldCache {
-			c.gate.mu.Lock()
-			c.gate.limitsCache[limitsKey] = limitsCacheEntry{
-				storedAt:  now,
-				remaining: fresh.Remaining,
-				limits:    lastLimits,
+		state = out.State
+		action = out.Action
+		kind, _ := action["kind"].(string)
+		switch kind {
+		case "ensureCustomer":
+			ref, _ := action["customerRef"].(string)
+			backendRef, err := c.ensureCustomer(ctx, ref)
+			if err != nil {
+				return nil, err
 			}
+			event = map[string]any{
+				"kind":        "customerResolved",
+				"backendRef": backendRef,
+				"nowMs":       time.Now().UnixMilli(),
+			}
+		case "lookupCache":
+			key, _ := action["key"].(string)
+			now := time.Now()
+			c.gate.mu.Lock()
+			cached, hit := c.gate.limitsCache[key]
+			ttl := c.gate.limitsTTL
 			c.gate.mu.Unlock()
-		}
-	}
-
-	checkoutURL, _ := lastLimits["checkoutUrl"].(string)
-	decisionJSON, err := callDecisionJSON(ctx, "sv_decide_paywall_outcome_binding", map[string]any{
-		"withinLimits": withinLimits,
-		"product":      opts.Product,
-		"limits":       lastLimits,
-		"checkoutUrl":  checkoutURL,
-	})
-	if err != nil {
-		return nil, err
-	}
-	var decision struct {
-		Outcome string          `json:"outcome"`
-		Gate    json.RawMessage `json:"gate"`
-	}
-	if err := json.Unmarshal(decisionJSON, &decision); err != nil {
-		return nil, fmt.Errorf("solvapay: decide_paywall_outcome: %w", err)
-	}
-
-	meterJSON, err := callDecisionJSON(ctx, "sv_resolve_check_limits_params_binding", map[string]any{
-		"productRef": opts.Product,
-		"usageType":  usageType,
-	})
-	if err != nil {
-		return nil, err
-	}
-	var resolved struct {
-		MeterName string `json:"meterName"`
-	}
-	if err := json.Unmarshal(meterJSON, &resolved); err != nil {
-		return nil, fmt.Errorf("solvapay: resolve_check_limits_params: %w", err)
-	}
-	if resolved.MeterName == "" {
-		return nil, &Error{Code: "internal_error", Message: "resolve_check_limits_params returned unexpected value"}
-	}
-
-	if decision.Outcome == "gate" {
-		gate := decision.Gate
-		if len(gate) == 0 || string(gate) == "null" {
-			built, err := callDecisionJSON(ctx, "sv_build_paywall_gate_binding", map[string]any{
-				"productRef": opts.Product,
-				"limits":     lastLimits,
+			if hit && now.Sub(cached.storedAt) < ttl {
+				event = map[string]any{
+					"kind":      "cacheHit",
+					"remaining": cached.remaining,
+					"limits":    cached.limits,
+					"nowMs":     now.UnixMilli(),
+				}
+			} else {
+				if hit {
+					c.gate.mu.Lock()
+					delete(c.gate.limitsCache, key)
+					c.gate.mu.Unlock()
+				}
+				event = map[string]any{"kind": "cacheMiss", "nowMs": now.UnixMilli()}
+			}
+		case "checkLimits":
+			if deleteKey, ok := action["cacheDeleteKey"].(string); ok && deleteKey != "" {
+				c.gate.mu.Lock()
+				delete(c.gate.limitsCache, deleteKey)
+				c.gate.mu.Unlock()
+			}
+			raw, err := c.CheckLimits(ctx, map[string]any{
+				"customerRef":             action["customerRef"],
+				"productRef":              action["productRef"],
+				"meterName":               action["meterName"],
+				"includeCheckoutSession":  asBool(action["includeCheckoutSession"]),
 			})
 			if err != nil {
 				return nil, err
 			}
-			gate = built
+			event = map[string]any{
+				"kind":   "limitsResult",
+				"limits": asObject(raw),
+				"nowMs":  time.Now().UnixMilli(),
+			}
+		case "done":
+			if err := c.applyGateCache(action["cache"]); err != nil {
+				return nil, err
+			}
+			backendRef, _ := action["customerRef"].(string)
+			meterName, _ := action["meterName"].(string)
+			lastLimits := asObject(action["limits"])
+			if track, ok := action["track"].(map[string]any); ok && track != nil {
+				duration := asFloat(track["durationMs"])
+				if err := c.trackUsage(ctx, backendRef, opts.Product, meterName, "paywall", duration); err != nil {
+					return nil, err
+				}
+			}
+			outcome, _ := action["outcome"].(string)
+			if outcome == "gate" {
+				gate, err := json.Marshal(action["gate"])
+				if err != nil {
+					return nil, fmt.Errorf("solvapay: gate_next gate: %w", err)
+				}
+				return &Paywall{Gate: gate}, nil
+			}
+			return &Allow{
+				client:     c,
+				backendRef: backendRef,
+				product:    opts.Product,
+				meterName:  meterName,
+				limits:     lastLimits,
+			}, nil
+		default:
+			return nil, &Error{Code: "internal_error", Message: "gate_next returned unknown action kind"}
 		}
-		duration := float64(time.Since(started).Milliseconds())
-		if duration < 0 {
-			duration = 0
-		}
-		if err := c.trackUsage(ctx, backendRef, opts.Product, resolved.MeterName, "paywall", duration); err != nil {
-			return nil, err
-		}
-		return &Paywall{Gate: gate}, nil
 	}
+}
 
-	return &Allow{
-		client:     c,
-		backendRef: backendRef,
-		product:    opts.Product,
-		meterName:  resolved.MeterName,
-		limits:     lastLimits,
-	}, nil
+func (c *Client) applyGateCache(raw any) error {
+	cache, ok := raw.(map[string]any)
+	if !ok || cache == nil {
+		return nil
+	}
+	op, _ := cache["op"].(string)
+	key, _ := cache["key"].(string)
+	if key == "" {
+		return nil
+	}
+	c.gate.mu.Lock()
+	defer c.gate.mu.Unlock()
+	switch op {
+	case "delete":
+		delete(c.gate.limitsCache, key)
+	case "updateRemaining":
+		entry := c.gate.limitsCache[key]
+		entry.remaining = cache["remaining"]
+		c.gate.limitsCache[key] = entry
+	case "set":
+		ts := time.UnixMilli(int64(asFloat(cache["timestamp"])))
+		c.gate.limitsCache[key] = limitsCacheEntry{
+			storedAt:  ts,
+			remaining: cache["remaining"],
+			limits:    asObject(cache["limits"]),
+		}
+	}
+	return nil
 }
 
 func (c *Client) ensureCustomer(ctx context.Context, customerRef string) (string, error) {

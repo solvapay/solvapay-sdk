@@ -5,9 +5,10 @@
  */
 
 import { formatLayer3BudgetReport, runLayer3BudgetCheck } from './lib/mcp-layer3-budget.js'
+import { runSurfaceLocBudgetCheck } from './lib/surface-loc-budget.js'
 import { REPO_ROOT } from '../shared/paths.js'
 
-const issues = runLayer3BudgetCheck(REPO_ROOT)
+const issues = [...runLayer3BudgetCheck(REPO_ROOT), ...runSurfaceLocBudgetCheck(REPO_ROOT)]
 const report = formatLayer3BudgetReport(issues)
 if (issues.length > 0) {
   console.error(report)

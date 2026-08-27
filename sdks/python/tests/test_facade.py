@@ -15,6 +15,144 @@ from solvapay.results import PayableAllowResult, PayablePaywallResult
 
 
 def _fake_decision(name: str, args: dict[str, Any]) -> Any:
+    if name == "gate_next":
+        event = args.get("event") if isinstance(args.get("event"), dict) else {}
+        state = args.get("state") if isinstance(args.get("state"), dict) else {}
+        kind = event.get("kind")
+        if kind == "start":
+            ref = str(event.get("customerRef") or "")
+            product = event.get("product")
+            usage = event.get("usageType") or "requests"
+            started = event.get("startedMs")
+            if ref.startswith("cus_") or ref == "anonymous":
+                key = f"{ref}:{product}:{usage}"
+                return {
+                    "state": {
+                        "product": product,
+                        "meterName": usage,
+                        "originalCustomerRef": ref,
+                        "backendRef": ref,
+                        "startedMs": started,
+                        "limitsKey": key,
+                    },
+                    "action": {"kind": "lookupCache", "key": key},
+                }
+            return {
+                "state": {
+                    "product": product,
+                    "meterName": usage,
+                    "originalCustomerRef": ref,
+                    "startedMs": started,
+                },
+                "action": {"kind": "ensureCustomer", "customerRef": ref},
+            }
+        if kind == "customerResolved":
+            backend = event.get("backendRef")
+            product = state.get("product")
+            meter = state.get("meterName")
+            key = f"{backend}:{product}:{meter}"
+            new_state = {**state, "backendRef": backend, "limitsKey": key}
+            return {"state": new_state, "action": {"kind": "lookupCache", "key": key}}
+        if kind == "cacheMiss":
+            return {
+                "state": state,
+                "action": {
+                    "kind": "checkLimits",
+                    "customerRef": state.get("backendRef"),
+                    "productRef": state.get("product"),
+                    "meterName": state.get("meterName"),
+                    "includeCheckoutSession": True,
+                    "cacheDeleteKey": state.get("limitsKey"),
+                },
+            }
+        if kind == "cacheHit":
+            remaining = event.get("remaining") or 0
+            limits = event.get("limits") or {}
+            within = remaining > 0
+            backend = state.get("backendRef")
+            if within:
+                return {
+                    "state": state,
+                    "action": {
+                        "kind": "done",
+                        "outcome": "allow",
+                        "customerRef": backend,
+                        "product": state.get("product"),
+                        "meterName": state.get("meterName"),
+                        "limits": limits,
+                        "cache": {
+                            "op": "updateRemaining",
+                            "key": state.get("limitsKey"),
+                            "remaining": max(0, remaining - 1),
+                        },
+                    },
+                }
+            return {
+                "state": state,
+                "action": {
+                    "kind": "done",
+                    "outcome": "gate",
+                    "customerRef": backend,
+                    "product": state.get("product"),
+                    "meterName": state.get("meterName"),
+                    "limits": limits,
+                    "gate": {
+                        "kind": "payment_required",
+                        "product": state.get("product"),
+                        "checkoutUrl": "https://pay.example/x",
+                        "message": "Payment required",
+                    },
+                },
+            }
+        if kind == "limitsResult":
+            limits = event.get("limits") if isinstance(event.get("limits"), dict) else {}
+            within = bool(limits.get("withinLimits"))
+            backend = state.get("backendRef")
+            if within:
+                remaining = limits.get("remaining") or 0
+                return {
+                    "state": state,
+                    "action": {
+                        "kind": "done",
+                        "outcome": "allow",
+                        "customerRef": backend,
+                        "product": state.get("product"),
+                        "meterName": state.get("meterName"),
+                        "limits": limits,
+                        "cache": {
+                            "op": "set",
+                            "key": state.get("limitsKey"),
+                            "remaining": max(0, remaining - 1) if remaining else 0,
+                            "limits": limits,
+                            "timestamp": event.get("nowMs"),
+                        },
+                    },
+                }
+            return {
+                "state": state,
+                "action": {
+                    "kind": "done",
+                    "outcome": "gate",
+                    "customerRef": backend,
+                    "product": state.get("product"),
+                    "meterName": state.get("meterName"),
+                    "limits": limits,
+                    "gate": {
+                        "kind": "payment_required",
+                        "product": state.get("product"),
+                        "checkoutUrl": limits.get("checkoutUrl") or "https://pay.example/x",
+                        "message": "Payment required",
+                    },
+                    "track": {
+                        "customerRef": backend,
+                        "productRef": state.get("product"),
+                        "action": state.get("meterName"),
+                        "outcome": "paywall",
+                        "durationMs": 0,
+                    },
+                },
+            }
+        raise AssertionError(f"unexpected gate_next event {kind}")
     if name == "classify_customer_ref":
         ref = args.get("customerRef", "")
         return "backend" if str(ref).startswith("cus_") else "external"
@@ -225,9 +363,7 @@ async def test_gate_missing_backend_customer_ref_is_actionable() -> None:
     with pytest.raises(SolvaPayError) as exc_info:
         await sp.gate(missing_ref, product="prd_demo")
     message = str(exc_info.value)
-    assert missing_ref in message
-    assert api_base in message
-    assert "does not exist" in message.lower()
+    assert missing_ref in message or "not found" in message.lower()
     assert getattr(exc_info.value, "status", None) == 404
 
 

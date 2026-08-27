@@ -14,9 +14,6 @@ import {
   mcpConfigLogMessage,
   mcpDescriptors,
   mergeCsp,
-  SOLVAPAY_OVERVIEW_MARKDOWN,
-  SOLVAPAY_OVERVIEW_MIME_TYPE,
-  SOLVAPAY_OVERVIEW_URI,
   toOAuthErrorBody,
 } from '@solvapay/mcp-core'
 import { NativeClient } from '../../../sdks/node-native/index.js'
@@ -183,17 +180,6 @@ export async function replayMcpCoreFixture(
         args.apiBaseUrl as string | undefined,
       )
       break
-    case 'mcpOverviewResource':
-      got = {
-        uri: SOLVAPAY_OVERVIEW_URI,
-        mimeType: SOLVAPAY_OVERVIEW_MIME_TYPE,
-        name: 'SolvaPay MCP — overview',
-        title: 'SolvaPay overview',
-        description:
-          'Agent-facing "start here" doc — explains the five intent tools, dual-audience fallback, and auth model before any tool is called.',
-        body: SOLVAPAY_OVERVIEW_MARKDOWN,
-      }
-      break
     case 'mcpOauthDiscovery': {
       const kind = args.kind as string
       const publicBaseUrl = String(args.publicBaseUrl)
@@ -239,6 +225,9 @@ export async function replayMcpCoreFixture(
     case 'mcpNarrate':
     case 'mcpHandleRequest':
     case 'mcpResume':
+    case 'mcpOauthPath':
+    case 'mcpOauthErrorInspect':
+    case 'mcpOverviewResource':
       got = callMcpSyncOp(fn, args)
       break
     default:

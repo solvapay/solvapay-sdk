@@ -249,6 +249,9 @@ pub struct LangNames {
     pub go: String,
     /// Rust name.
     pub rust: String,
+    /// C ABI name (dispatch key). Optional in tests; empty defaults to `ts`.
+    #[serde(default)]
+    pub c: String,
 }
 
 /// Generic type parameter (`withRetry<T>`).

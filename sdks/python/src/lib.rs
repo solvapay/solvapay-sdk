@@ -37,11 +37,9 @@ mod runtime;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub use client::SolvaPayClient;
 use error::{BindingError, SolvaPayError};
 use pyo3::prelude::*;
-use solvapay_core::verify_webhook as core_verify_webhook;
-
-pub use client::SolvaPayClient;
 
 /// Inner pure helper: verifies a webhook and returns the JSON body string.
 ///
@@ -63,9 +61,8 @@ pub fn verify_webhook_json(
     secret: &str,
     now_unix_secs: i64,
 ) -> std::result::Result<String, BindingError> {
-    let value = core_verify_webhook(body, signature, secret, now_unix_secs)
-        .map_err(BindingError::from_webhook)?;
-    serde_json::to_string(&value).map_err(|e| BindingError::serialize_failed(e.to_string()))
+    solvapay_core::verify_webhook_json(body, signature, secret, now_unix_secs)
+        .map_err(BindingError::from_webhook)
 }
 
 /// Returns the crate / release-train version string.
@@ -159,26 +156,7 @@ fn _verify_webhook_at(
 #[pyfunction]
 fn solvapay_call(args_json: String) -> String {
     match catch_unwind(AssertUnwindSafe(|| {
-        let parsed: serde_json::Value = match serde_json::from_str(&args_json) {
-            Ok(value) => value,
-            Err(err) => {
-                return crate::error::err_envelope(&solvapay_core::SdkError::transport(
-                    format!("invalid solvapay_call args: {err}"),
-                    false,
-                ));
-            }
-        };
-        let Some(op) = parsed.get("op").and_then(serde_json::Value::as_str) else {
-            return crate::error::err_envelope(&solvapay_core::SdkError::transport(
-                "missing op",
-                false,
-            ));
-        };
-        let args = parsed
-            .get("args")
-            .cloned()
-            .unwrap_or_else(|| serde_json::json!({}));
-        solvapay_mcp_core::dispatch_sync(op, &args.to_string())
+        solvapay_mcp_core::solvapay_call(&args_json)
     })) {
         Ok(json) => json,
         Err(payload) => crate::error::envelope_from_panic_payload(payload),

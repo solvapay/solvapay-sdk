@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { joinRel, REPO_ROOT } from '../shared/paths.js'
@@ -24,6 +24,14 @@ export function checkVendoredWidget({ root }: { root: string }): string[] {
     }
   }
 
+  const distPath = joinRel(root, layout.distRel)
+  if (existsSync(distPath)) {
+    const distHash = createHash('sha256').update(readFileSync(distPath)).digest('hex')
+    if (distHash !== expected) {
+      problems.push(`${layout.distRel} drifted from ${layout.canonicalRel}`)
+    }
+  }
+
   if (!html.includes('id="root"')) {
     problems.push('Canonical widget is missing id="root"')
   }
@@ -33,14 +41,8 @@ export function checkVendoredWidget({ root }: { root: string }): string[] {
   if (!html.includes('solvapay://bootstrap.json')) {
     problems.push('Canonical widget is missing solvapay://bootstrap.json')
   }
-  if (!html.includes('no portable fallback for')) {
-    problems.push('Canonical widget is missing portable core fallback dispatch')
-  }
-  // Unique to `portable-fallbacks.ts`. The dispatch throw string is not enough —
-  // Vite can tree-shake the side-effect-only `import '@solvapay/core/portable'`
-  // and still keep `dispatchSync`'s error message, which blanks the MCP Jam iframe.
-  if (!html.includes('EIN (Employer Identification Number)')) {
-    problems.push('Canonical widget is missing portable core fallback implementations')
+  if (!html.includes('WebAssembly') && !html.includes('application/wasm')) {
+    problems.push('Canonical widget is missing inlined browser WASM')
   }
   if (canonical.length < MIN_BUNDLE_BYTES) {
     problems.push(

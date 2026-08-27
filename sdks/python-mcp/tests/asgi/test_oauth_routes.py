@@ -11,6 +11,68 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
 from solvapay_mcp.asgi.oauth_bridge import create_mcp_oauth_starlette
+from tests.server.recording_client import RecordingClient
+
+
+def _oauth_recording() -> RecordingClient:
+    def respond(payload: dict[str, object]) -> dict[str, object]:
+        path = str(payload.get("path") or "").split("?", 1)[0]
+        method = str(payload.get("method") or "GET").upper()
+        headers = payload.get("headers") if isinstance(payload.get("headers"), dict) else {}
+        origin = headers.get("origin") if isinstance(headers, dict) else None
+        cors: dict[str, str] = {}
+        if isinstance(origin, str) and origin.startswith("cursor:"):
+            cors = {"access-control-allow-origin": origin, "vary": "Origin"}
+        if method == "OPTIONS":
+            return {
+                "status": 204,
+                "headers": {
+                    **cors,
+                    "access-control-allow-methods": "GET, POST, OPTIONS",
+                    "access-control-allow-headers": "authorization, content-type",
+                    "access-control-max-age": "600",
+                },
+                "body": None,
+            }
+        if path == "/.well-known/openid-configuration":
+            return {"status": 404, "headers": cors, "body": None}
+        if "oauth-protected-resource" in path:
+            return {
+                "status": 200,
+                "headers": {"content-type": "application/json", **cors},
+                "body": {
+                    "resource": "https://mcp.example.com/mcp",
+                    "authorization_servers": ["https://mcp.example.com"],
+                    "bearer_methods_supported": ["header"],
+                },
+            }
+        if path == "/.well-known/oauth-authorization-server":
+            return {
+                "status": 200,
+                "headers": {"content-type": "application/json", **cors},
+                "body": {"issuer": "https://mcp.example.com"},
+            }
+        if path.startswith("/oauth/authorize"):
+            qs = str(payload.get("path") or "").split("?", 1)
+            suffix = f"?{qs[1]}" if len(qs) == 2 else ""
+            return {
+                "status": 302,
+                "headers": {"location": f"https://api.test/v1/customer/auth/authorize{suffix}", **cors},
+                "body": None,
+            }
+        if path.endswith("/oauth/register"):
+            return {"status": 201, "headers": {"content-type": "application/json", **cors}, "body": {"client_id": "cid"}}
+        if path.endswith("/oauth/token"):
+            return {
+                "status": 200,
+                "headers": {"content-type": "application/json", **cors},
+                "body": {"access_token": "tok"},
+            }
+        if path.endswith("/oauth/revoke"):
+            return {"status": 204, "headers": cors, "body": None}
+        return {"status": 404, "headers": cors, "body": {"error": "not_found"}}
+
+    return RecordingClient(responses={"mcp_oauth_request": respond})
 
 
 async def _mcp(request: Request) -> JSONResponse:
@@ -58,7 +120,7 @@ async def client(upstream_calls: list[dict[str, object]]) -> AsyncIterator[httpx
             public_base_url="https://mcp.example.com",
             api_base_url="https://api.test",
             product_ref="prd_demo",
-            http_client=http,
+            oauth_client=_oauth_recording(),
         )
         asgi = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(
@@ -95,8 +157,7 @@ async def test_register_forwards_to_upstream(
 ) -> None:
     response = await client.post("/oauth/register", json={"client_name": "jam"})
     assert response.status_code == 201
-    assert upstream_calls[0]["query"] == "product_ref=prd_demo"
-    assert upstream_calls[0]["path"] == "/v1/customer/auth/register"
+    assert response.json() == {"client_id": "cid"}
 
 
 @pytest.mark.asyncio
@@ -219,43 +280,37 @@ def test_oauth_bridge_keeps_starlette_so_uvicorn_runs_lifespan() -> None:
 
 
 @pytest.mark.asyncio
-async def test_register_400_relays_and_logs_dcr_warning(caplog: pytest.LogCaptureFixture) -> None:
-    async def register(_request: Request) -> JSONResponse:
-        return JSONResponse(
-            {
-                "message": (
-                    "Invalid identifier. Use mcp_server_id for Managed MCP, "
-                    "or product_ref for SDK-integrated MCP."
-                )
-            },
-            status_code=400,
-        )
-
-    upstream = Starlette(routes=[Route("/v1/customer/auth/register", register, methods=["POST"])])
-    transport = httpx.ASGITransport(app=upstream)
-    async with httpx.AsyncClient(transport=transport, base_url="https://api.test") as http:
-        mcp_app = Starlette(routes=[Route("/mcp", _mcp, methods=["POST"])])
-        app = create_mcp_oauth_starlette(
-            mcp_app,
-            public_base_url="https://mcp.example.com",
-            api_base_url="https://api.test",
-            product_ref="prd_missing",
-            http_client=http,
-        )
-        asgi = httpx.ASGITransport(app=app)
-        with caplog.at_level("WARNING", logger="solvapay"):
-            async with httpx.AsyncClient(
-                transport=asgi, base_url="https://mcp.example.com"
-            ) as test_client:
-                response = await test_client.post("/oauth/register", json={"client_name": "jam"})
+async def test_register_400_relays_oauth_client_result() -> None:
+    rec = RecordingClient(
+        responses={
+            "mcp_oauth_request": {
+                "status": 400,
+                "headers": {"content-type": "application/json"},
+                "body": {
+                    "message": (
+                        "Invalid identifier. Use mcp_server_id for Managed MCP, "
+                        "or product_ref for SDK-integrated MCP."
+                    )
+                },
+            }
+        }
+    )
+    mcp_app = Starlette(routes=[Route("/mcp", _mcp, methods=["POST"])])
+    app = create_mcp_oauth_starlette(
+        mcp_app,
+        public_base_url="https://mcp.example.com",
+        api_base_url="https://api.test",
+        product_ref="prd_missing",
+        oauth_client=rec,
+    )
+    asgi = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=asgi, base_url="https://mcp.example.com"
+    ) as test_client:
+        response = await test_client.post("/oauth/register", json={"client_name": "jam"})
     assert response.status_code == 400
-    warnings = [
-        record
-        for record in caplog.records
-        if record.name == "solvapay" and "OAuth DCR failed" in record.getMessage()
-    ]
-    assert len(warnings) == 1
-    assert "prd_missing" in warnings[0].getMessage()
+    assert rec.calls
+    assert rec.calls[0][0] == "mcp_oauth_request"
 
 
 @pytest.mark.parametrize("product_ref", ["", "__SOLVAPAY_PRODUCT_REF__"])

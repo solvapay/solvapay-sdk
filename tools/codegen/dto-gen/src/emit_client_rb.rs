@@ -504,6 +504,7 @@ mod tests {
                 rb: rb.into(),
                 go: name.into(),
                 rust: rb.into(),
+                c: name.into(),
             },
             required,
             ty: IrTypeRef::String,
@@ -519,6 +520,7 @@ mod tests {
             rb: value.into(),
             go: value.into(),
             rust: value.into(),
+            c: value.into(),
         }
     }
 

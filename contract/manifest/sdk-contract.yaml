@@ -183,6 +183,7 @@ operations:
       rb: check_limits
       go: CheckLimits
       rust: check_limits
+      c: checkLimits
     optionalOnClient: false
     request: CheckLimitsRequest
     response: LimitResponseWithPlan
@@ -211,6 +212,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   trackUsage:
     route:
       method: POST
@@ -221,6 +223,7 @@ operations:
       rb: track_usage
       go: TrackUsage
       rust: track_usage
+      c: trackUsage
     optionalOnClient: false
     request: TrackUsageRequest
     response: UsageRecordResponse
@@ -249,6 +252,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   trackUsageBulk:
     route:
       method: POST
@@ -259,6 +263,7 @@ operations:
       rb: track_usage_bulk
       go: TrackUsageBulk
       rust: track_usage_bulk
+      c: trackUsageBulk
     optionalOnClient: true
     request: TrackUsageBulkRequest
     response: BulkUsageResponse
@@ -287,6 +292,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   createCustomer:
     route:
       method: POST
@@ -297,6 +303,7 @@ operations:
       rb: create_customer
       go: CreateCustomer
       rust: create_customer
+      c: createCustomer
     optionalOnClient: true
     request: CreateCustomerRequest
     response: CreateCustomerResult
@@ -326,6 +333,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   updateCustomer:
     route:
       method: PATCH
@@ -336,6 +344,7 @@ operations:
       rb: update_customer
       go: UpdateCustomer
       rust: update_customer
+      c: updateCustomer
     optionalOnClient: true
     request: UpdateCustomerRequest
     response: UpdateCustomerResult
@@ -369,6 +378,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   getCustomer:
     route:
       method: GET
@@ -379,6 +389,7 @@ operations:
       rb: get_customer
       go: GetCustomer
       rust: get_customer
+      c: getCustomer
     optionalOnClient: false
     request: GetCustomerParams
     response: CustomerResponseMapped
@@ -413,6 +424,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   assignCredits:
     route:
       method: POST
@@ -423,6 +435,7 @@ operations:
       rb: assign_credits
       go: AssignCredits
       rust: assign_credits
+      c: assignCredits
     optionalOnClient: true
     request: AssignCreditsRequest
     response: GrantCustomerCreditsResponse
@@ -452,6 +465,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   getMerchant:
     route:
       method: GET
@@ -462,6 +476,7 @@ operations:
       rb: get_merchant
       go: GetMerchant
       rust: get_merchant
+      c: getMerchant
     optionalOnClient: true
     response: SdkMerchantResponseDto
     overlays: []
@@ -484,6 +499,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   getPlatformConfig:
     route:
       method: GET
@@ -494,6 +510,7 @@ operations:
       rb: get_platform_config
       go: GetPlatformConfig
       rust: get_platform_config
+      c: getPlatformConfig
     optionalOnClient: true
     response: SdkPlatformConfigResponseDto
     overlays: []
@@ -516,6 +533,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   getProduct:
     route:
       method: GET
@@ -526,6 +544,7 @@ operations:
       rb: get_product
       go: GetProduct
       rust: get_product
+      c: getProduct
     optionalOnClient: true
     response: SdkProductResponse
     overlays: []
@@ -554,6 +573,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   listProducts:
     route:
       method: GET
@@ -564,6 +584,7 @@ operations:
       rb: list_products
       go: ListProducts
       rust: list_products
+      c: listProducts
     optionalOnClient: true
     response: ListProductsResult
     overlays: [ListProductsResult]
@@ -588,6 +609,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   createProduct:
     route:
       method: POST
@@ -598,6 +620,7 @@ operations:
       rb: create_product
       go: CreateProduct
       rust: create_product
+      c: createProduct
     optionalOnClient: true
     request: CreateProductRequest
     response: CreateProductResult
@@ -626,6 +649,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   bootstrapMcpProduct:
     route:
       method: POST
@@ -636,6 +660,7 @@ operations:
       rb: bootstrap_mcp_product
       go: BootstrapMcpProduct
       rust: bootstrap_mcp_product
+      c: bootstrapMcpProduct
     optionalOnClient: true
     request: McpBootstrapDto
     response: McpBootstrapResponse
@@ -664,6 +689,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   configureMcpPlans:
     route:
       method: PUT
@@ -674,6 +700,7 @@ operations:
       rb: configure_mcp_plans
       go: ConfigureMcpPlans
       rust: configure_mcp_plans
+      c: configureMcpPlans
     optionalOnClient: true
     request: ConfigureMcpPlansDto
     response: ConfigureMcpPlansResponse
@@ -706,6 +733,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   updateProduct:
     route:
       method: PUT
@@ -716,6 +744,7 @@ operations:
       rb: update_product
       go: UpdateProduct
       rust: update_product
+      c: updateProduct
     optionalOnClient: true
     request: UpdateProductRequest
     response: SdkProductResponse
@@ -748,6 +777,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   deleteProduct:
     route:
       method: DELETE
@@ -758,6 +788,7 @@ operations:
       rb: delete_product
       go: DeleteProduct
       rust: delete_product
+      c: deleteProduct
     optionalOnClient: true
     response: void
     overlays: [void]
@@ -785,6 +816,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   cloneProduct:
     route:
       method: POST
@@ -795,6 +827,7 @@ operations:
       rb: clone_product
       go: CloneProduct
       rust: clone_product
+      c: cloneProduct
     optionalOnClient: true
     request: CloneProductDto
     response: CloneProductResult
@@ -827,6 +860,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   listPlans:
     route:
       method: GET
@@ -837,6 +871,7 @@ operations:
       rb: list_plans
       go: ListPlans
       rust: list_plans
+      c: listPlans
     optionalOnClient: true
     response: ListPlansResult
     overlays: [ListPlansResult]
@@ -868,6 +903,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   createPlan:
     route:
       method: POST
@@ -878,6 +914,7 @@ operations:
       rb: create_plan
       go: CreatePlan
       rust: create_plan
+      c: createPlan
     optionalOnClient: true
     request: CreatePlanRequest
     response: Plan
@@ -906,6 +943,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   updatePlan:
     route:
       method: PUT
@@ -916,6 +954,7 @@ operations:
       rb: update_plan
       go: UpdatePlan
       rust: update_plan
+      c: updatePlan
     optionalOnClient: true
     request: UpdatePlanRequest
     response: Plan
@@ -952,6 +991,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   deletePlan:
     route:
       method: DELETE
@@ -962,6 +1002,7 @@ operations:
       rb: delete_plan
       go: DeletePlan
       rust: delete_plan
+      c: deletePlan
     optionalOnClient: true
     response: void
     overlays: [void]
@@ -993,6 +1034,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   createPaymentIntent:
     route:
       method: POST
@@ -1003,6 +1045,7 @@ operations:
       rb: create_payment_intent
       go: CreatePaymentIntent
       rust: create_payment_intent
+      c: createPaymentIntent
     optionalOnClient: true
     request: CreatePaymentIntentParams
     response: CreatePaymentIntentResult
@@ -1032,6 +1075,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   createTopupPaymentIntent:
     route:
       method: POST
@@ -1042,6 +1086,7 @@ operations:
       rb: create_topup_payment_intent
       go: CreateTopupPaymentIntent
       rust: create_topup_payment_intent
+      c: createTopupPaymentIntent
     optionalOnClient: true
     request: CreateTopupPaymentIntentParams
     response: CreateTopupPaymentIntentResult
@@ -1077,6 +1122,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   cancelPurchase:
     route:
       method: POST
@@ -1087,6 +1133,7 @@ operations:
       rb: cancel_purchase
       go: CancelPurchase
       rust: cancel_purchase
+      c: cancelPurchase
     optionalOnClient: true
     request: CancelPurchaseRequest
     response: PurchaseInfo
@@ -1126,6 +1173,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   reactivatePurchase:
     route:
       method: POST
@@ -1136,6 +1184,7 @@ operations:
       rb: reactivate_purchase
       go: ReactivatePurchase
       rust: reactivate_purchase
+      c: reactivatePurchase
     optionalOnClient: true
     response: PurchaseInfo
     overlays: [ReactivatePurchaseParams]
@@ -1174,6 +1223,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   processPaymentIntent:
     route:
       method: POST
@@ -1184,6 +1234,7 @@ operations:
       rb: process_payment_intent
       go: ProcessPaymentIntent
       rust: process_payment_intent
+      c: processPaymentIntent
     optionalOnClient: true
     request: ProcessPaymentIntentParams
     response: ProcessPaymentResult
@@ -1219,6 +1270,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   attachBusinessDetails:
     route:
       method: POST
@@ -1229,6 +1281,7 @@ operations:
       rb: attach_business_details
       go: AttachBusinessDetails
       rust: attach_business_details
+      c: attachBusinessDetails
     optionalOnClient: true
     request: AttachBusinessDetailsParams
     response: AttachBusinessDetailsResult
@@ -1257,6 +1310,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   getUserInfo:
     route:
       method: POST
@@ -1267,6 +1321,7 @@ operations:
       rb: get_user_info
       go: GetUserInfo
       rust: get_user_info
+      c: getUserInfo
     optionalOnClient: true
     request: UserInfoRequest
     response: UserInfoResponse
@@ -1295,6 +1350,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   getCustomerBalance:
     route:
       method: GET
@@ -1305,6 +1361,7 @@ operations:
       rb: get_customer_balance
       go: GetCustomerBalance
       rust: get_customer_balance
+      c: getCustomerBalance
     optionalOnClient: true
     request: GetCustomerBalanceParams
     response: GetCustomerBalanceResult
@@ -1333,6 +1390,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   createCheckoutSession:
     route:
       method: POST
@@ -1343,6 +1401,7 @@ operations:
       rb: create_checkout_session
       go: CreateCheckoutSession
       rust: create_checkout_session
+      c: createCheckoutSession
     optionalOnClient: false
     request: CreateCheckoutSessionRequest
     response: CreateCheckoutSessionResponse
@@ -1371,6 +1430,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   createCustomerSession:
     route:
       method: POST
@@ -1381,6 +1441,7 @@ operations:
       rb: create_customer_session
       go: CreateCustomerSession
       rust: create_customer_session
+      c: createCustomerSession
     optionalOnClient: false
     request: CreateCustomerSessionRequest
     response: CreateCustomerSessionResponse
@@ -1409,6 +1470,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   activatePlan:
     route:
       method: POST
@@ -1419,6 +1481,7 @@ operations:
       rb: activate_plan
       go: ActivatePlan
       rust: activate_plan
+      c: activatePlan
     optionalOnClient: true
     request: ActivatePlanDto
     response: ActivatePlanResponseDto
@@ -1447,6 +1510,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   getPaymentMethod:
     route:
       method: GET
@@ -1457,6 +1521,7 @@ operations:
       rb: get_payment_method
       go: GetPaymentMethod
       rust: get_payment_method
+      c: getPaymentMethod
     optionalOnClient: true
     request: GetPaymentMethodParams
     response: PaymentMethodInfo
@@ -1485,6 +1550,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   getAutoRecharge:
     route:
       method: GET
@@ -1495,6 +1561,7 @@ operations:
       rb: get_auto_recharge
       go: GetAutoRecharge
       rust: get_auto_recharge
+      c: getAutoRecharge
     optionalOnClient: true
     request: GetAutoRechargeParams
     response: AutoRechargeResponse
@@ -1523,6 +1590,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   saveAutoRecharge:
     route:
       method: PUT
@@ -1533,6 +1601,7 @@ operations:
       rb: save_auto_recharge
       go: SaveAutoRecharge
       rust: save_auto_recharge
+      c: saveAutoRecharge
     optionalOnClient: true
     request: SaveAutoRechargeInput
     response: SaveAutoRechargeResponse
@@ -1561,6 +1630,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   mcpBootstrap:
     names:
       ts: mcpBootstrap
@@ -1568,6 +1638,7 @@ operations:
       rb: mcp_bootstrap
       go: McpBootstrap
       rust: mcp_bootstrap
+      c: mcpBootstrap
     optionalOnClient: true
     request: McpJsonValue
     response: McpJsonValue
@@ -1596,6 +1667,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   mcpCallBuiltinTool:
     names:
       ts: mcpCallBuiltinTool
@@ -1603,6 +1675,7 @@ operations:
       rb: mcp_call_builtin_tool
       go: McpCallBuiltinTool
       rust: mcp_call_builtin_tool
+      c: mcpCallBuiltinTool
     optionalOnClient: true
     request: McpJsonValue
     response: McpJsonValue
@@ -1631,6 +1704,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   mcpReadResource:
     names:
       ts: mcpReadResource
@@ -1638,6 +1712,7 @@ operations:
       rb: mcp_read_resource
       go: McpReadResource
       rust: mcp_read_resource
+      c: mcpReadResource
     optionalOnClient: true
     request: McpJsonValue
     response: McpJsonValue
@@ -1666,6 +1741,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   mcpOauthRequest:
     names:
       ts: mcpOauthRequest
@@ -1673,6 +1749,7 @@ operations:
       rb: mcp_oauth_request
       go: McpOauthRequest
       rust: mcp_oauth_request
+      c: mcpOauthRequest
     optionalOnClient: true
     request: McpJsonValue
     response: McpJsonValue
@@ -1701,6 +1778,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   mcpDispatch:
     names:
       ts: mcpDispatch
@@ -1708,6 +1786,7 @@ operations:
       rb: mcp_dispatch
       go: McpDispatch
       rust: mcp_dispatch
+      c: mcpDispatch
     optionalOnClient: true
     request: McpJsonValue
     response: McpJsonValue
@@ -1736,6 +1815,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
   disableAutoRecharge:
     route:
       method: DELETE
@@ -1746,6 +1826,7 @@ operations:
       rb: disable_auto_recharge
       go: DisableAutoRecharge
       rust: disable_auto_recharge
+      c: disableAutoRecharge
     optionalOnClient: true
     request: DisableAutoRechargeParams
     response: DisableAutoRechargeResponse
@@ -1774,6 +1855,7 @@ operations:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
 
 overlays:
   McpJsonValue:
@@ -2490,6 +2572,7 @@ topLevel:
       rb: verify_webhook
       go: VerifyWebhook
       rust: verify_webhook
+      c: verifyWebhook
     params:
       - name: options
         object:
@@ -2514,6 +2597,7 @@ topLevel:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   withRetry:
     names:
       ts: withRetry
@@ -2521,6 +2605,7 @@ topLevel:
       rb: with_retry
       go: WithRetry
       rust: with_retry
+      c: withRetry
     params:
       - name: fn
         type: unknown
@@ -2543,6 +2628,7 @@ topLevel:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   buildPaywallGate:
     names:
       ts: buildPaywallGate
@@ -2550,6 +2636,7 @@ topLevel:
       rb: build_paywall_gate
       go: BuildPaywallGate
       rust: build_paywall_gate
+      c: buildPaywallGate
     params:
       - name: input
         type: unknown
@@ -2565,6 +2652,7 @@ topLevel:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   buildGateMessage:
     names:
       ts: buildGateMessage
@@ -2572,6 +2660,7 @@ topLevel:
       rb: build_gate_message
       go: BuildGateMessage
       rust: build_gate_message
+      c: buildGateMessage
     params:
       - name: input
         type: unknown
@@ -2587,6 +2676,7 @@ topLevel:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   buildNudgeMessage:
     names:
       ts: buildNudgeMessage
@@ -2594,6 +2684,7 @@ topLevel:
       rb: build_nudge_message
       go: BuildNudgeMessage
       rust: build_nudge_message
+      c: buildNudgeMessage
     params:
       - name: input
         type: unknown
@@ -2609,6 +2700,7 @@ topLevel:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   classifyPaywallState:
     names:
       ts: classifyPaywallState
@@ -2616,6 +2708,7 @@ topLevel:
       rb: classify_paywall_state
       go: ClassifyPaywallState
       rust: classify_paywall_state
+      c: classifyPaywallState
     params:
       - name: input
         type: unknown
@@ -2631,6 +2724,7 @@ topLevel:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   paywallErrorToClientPayload:
     names:
       ts: paywallErrorToClientPayload
@@ -2638,6 +2732,7 @@ topLevel:
       rb: paywall_error_to_client_payload
       go: PaywallErrorToClientPayload
       rust: paywall_error_to_client_payload
+      c: paywallErrorToClientPayload
     params:
       - name: error
         type: unknown
@@ -2653,6 +2748,7 @@ topLevel:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   SolvaPayError:
     names:
       ts: SolvaPayError
@@ -2660,6 +2756,7 @@ topLevel:
       rb: SolvaPayError
       go: SolvaPayError
       rust: SolvaPayError
+      c: SolvaPayError
     params:
       - name: message
         type: string
@@ -2681,6 +2778,7 @@ topLevel:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   PaywallError:
     names:
       ts: PaywallError
@@ -2688,6 +2786,7 @@ topLevel:
       rb: PaywallError
       go: PaywallError
       rust: PaywallError
+      c: PaywallError
     params:
       - name: message
         type: string
@@ -2703,6 +2802,7 @@ topLevel:
       rb: sync
       go: sync
       rust: sync
+      c: sync
 
 coreHelpers:
   validateBusinessDetails:
@@ -2712,6 +2812,7 @@ coreHelpers:
       rb: validate_business_details
       go: ValidateBusinessDetails
       rust: validate_business_details
+      c: validateBusinessDetails
     params: []
     docs:
       summary: 'Validate seller business-details fields before submission.'
@@ -2724,6 +2825,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   deriveTaxIdType:
     names:
       ts: deriveTaxIdType
@@ -2731,6 +2833,7 @@ coreHelpers:
       rb: derive_tax_id_type
       go: DeriveTaxIdType
       rust: derive_tax_id_type
+      c: deriveTaxIdType
     params: []
     docs:
       summary: 'Derive the tax ID type for a business country.'
@@ -2743,6 +2846,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   resolveTaxBehavior:
     names:
       ts: resolveTaxBehavior
@@ -2750,6 +2854,7 @@ coreHelpers:
       rb: resolve_tax_behavior
       go: ResolveTaxBehavior
       rust: resolve_tax_behavior
+      c: resolveTaxBehavior
     params: []
     docs:
       summary: 'Resolve inclusive vs exclusive tax behavior for a currency/country pair.'
@@ -2762,6 +2867,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   getTaxIdExample:
     names:
       ts: getTaxIdExample
@@ -2769,6 +2875,7 @@ coreHelpers:
       rb: get_tax_id_example
       go: GetTaxIdExample
       rust: get_tax_id_example
+      c: getTaxIdExample
     params: []
     docs:
       summary: 'Return an example tax ID string for a country.'
@@ -2781,6 +2888,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   getTaxIdFieldLabel:
     names:
       ts: getTaxIdFieldLabel
@@ -2788,6 +2896,7 @@ coreHelpers:
       rb: get_tax_id_field_label
       go: GetTaxIdFieldLabel
       rust: get_tax_id_field_label
+      c: getTaxIdFieldLabel
     params: []
     docs:
       summary: 'Return the localized field label for a country tax ID.'
@@ -2800,6 +2909,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   getTaxIdHelperText:
     names:
       ts: getTaxIdHelperText
@@ -2807,6 +2917,7 @@ coreHelpers:
       rb: get_tax_id_helper_text
       go: GetTaxIdHelperText
       rust: get_tax_id_helper_text
+      c: getTaxIdHelperText
     params: []
     docs:
       summary: 'Return helper text describing the tax ID format for a country.'
@@ -2819,6 +2930,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   BUSINESS_COUNTRY_DISPLAY_NAMES:
     names:
       ts: BUSINESS_COUNTRY_DISPLAY_NAMES
@@ -2826,6 +2938,7 @@ coreHelpers:
       rb: BUSINESS_COUNTRY_DISPLAY_NAMES
       go: BUSINESS_COUNTRY_DISPLAY_NAMES
       rust: BUSINESS_COUNTRY_DISPLAY_NAMES
+      c: BUSINESS_COUNTRY_DISPLAY_NAMES
     docs:
       summary: 'Map of supported business country codes to display names.'
     sync:
@@ -2834,6 +2947,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   BUSINESS_COUNTRY_OPTIONS:
     names:
       ts: BUSINESS_COUNTRY_OPTIONS
@@ -2841,6 +2955,7 @@ coreHelpers:
       rb: BUSINESS_COUNTRY_OPTIONS
       go: BUSINESS_COUNTRY_OPTIONS
       rust: BUSINESS_COUNTRY_OPTIONS
+      c: BUSINESS_COUNTRY_OPTIONS
     docs:
       summary: 'Ordered list of business country options for seller identity forms.'
     sync:
@@ -2849,6 +2964,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   COUNTRY_TO_TAX_ID_TYPE:
     names:
       ts: COUNTRY_TO_TAX_ID_TYPE
@@ -2856,6 +2972,7 @@ coreHelpers:
       rb: COUNTRY_TO_TAX_ID_TYPE
       go: COUNTRY_TO_TAX_ID_TYPE
       rust: COUNTRY_TO_TAX_ID_TYPE
+      c: COUNTRY_TO_TAX_ID_TYPE
     docs:
       summary: 'Map of business country codes to default tax ID types.'
     sync:
@@ -2864,6 +2981,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   SUPPORTED_BUSINESS_COUNTRIES:
     names:
       ts: SUPPORTED_BUSINESS_COUNTRIES
@@ -2871,6 +2989,7 @@ coreHelpers:
       rb: SUPPORTED_BUSINESS_COUNTRIES
       go: SUPPORTED_BUSINESS_COUNTRIES
       rust: SUPPORTED_BUSINESS_COUNTRIES
+      c: SUPPORTED_BUSINESS_COUNTRIES
     docs:
       summary: 'Frozen list of country codes supported for seller business details.'
     sync:
@@ -2879,6 +2998,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   TAX_BEHAVIORS:
     names:
       ts: TAX_BEHAVIORS
@@ -2886,6 +3006,7 @@ coreHelpers:
       rb: TAX_BEHAVIORS
       go: TAX_BEHAVIORS
       rust: TAX_BEHAVIORS
+      c: TAX_BEHAVIORS
     docs:
       summary: 'Frozen set of supported tax behavior values.'
     sync:
@@ -2894,6 +3015,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   TAX_EXCLUSIVE_CURRENCIES:
     names:
       ts: TAX_EXCLUSIVE_CURRENCIES
@@ -2901,6 +3023,7 @@ coreHelpers:
       rb: TAX_EXCLUSIVE_CURRENCIES
       go: TAX_EXCLUSIVE_CURRENCIES
       rust: TAX_EXCLUSIVE_CURRENCIES
+      c: TAX_EXCLUSIVE_CURRENCIES
     docs:
       summary: 'Currencies that default to tax-exclusive pricing behavior.'
     sync:
@@ -2909,6 +3032,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   TAX_ID_EXAMPLE_BY_COUNTRY:
     names:
       ts: TAX_ID_EXAMPLE_BY_COUNTRY
@@ -2916,6 +3040,7 @@ coreHelpers:
       rb: TAX_ID_EXAMPLE_BY_COUNTRY
       go: TAX_ID_EXAMPLE_BY_COUNTRY
       rust: TAX_ID_EXAMPLE_BY_COUNTRY
+      c: TAX_ID_EXAMPLE_BY_COUNTRY
     docs:
       summary: 'Map of country codes to example tax ID strings.'
     sync:
@@ -2924,6 +3049,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   TAX_ID_TYPES:
     names:
       ts: TAX_ID_TYPES
@@ -2931,6 +3057,7 @@ coreHelpers:
       rb: TAX_ID_TYPES
       go: TAX_ID_TYPES
       rust: TAX_ID_TYPES
+      c: TAX_ID_TYPES
     docs:
       summary: 'Frozen set of supported tax ID type values.'
     sync:
@@ -2939,6 +3066,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   creditsToDisplayMinorUnits:
     names:
       ts: creditsToDisplayMinorUnits
@@ -2946,6 +3074,7 @@ coreHelpers:
       rb: credits_to_display_minor_units
       go: CreditsToDisplayMinorUnits
       rust: credits_to_display_minor_units
+      c: creditsToDisplayMinorUnits
     params: []
     docs:
       summary: 'Convert credit units into display minor units for a currency.'
@@ -2958,6 +3087,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   isZeroDecimalCurrency:
     names:
       ts: isZeroDecimalCurrency
@@ -2965,6 +3095,7 @@ coreHelpers:
       rb: is_zero_decimal_currency
       go: IsZeroDecimalCurrency
       rust: is_zero_decimal_currency
+      c: isZeroDecimalCurrency
     params: []
     docs:
       summary: 'Return whether a currency uses zero decimal places.'
@@ -2977,6 +3108,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   minorUnitsPerMajor:
     names:
       ts: minorUnitsPerMajor
@@ -2984,6 +3116,7 @@ coreHelpers:
       rb: minor_units_per_major
       go: MinorUnitsPerMajor
       rust: minor_units_per_major
+      c: minorUnitsPerMajor
     params: []
     docs:
       summary: 'Return how many minor units make one major unit for a currency.'
@@ -2996,6 +3129,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   resolveSellerIdentityDisplay:
     names:
       ts: resolveSellerIdentityDisplay
@@ -3003,6 +3137,7 @@ coreHelpers:
       rb: resolve_seller_identity_display
       go: ResolveSellerIdentityDisplay
       rust: resolve_seller_identity_display
+      c: resolveSellerIdentityDisplay
     params: []
     docs:
       summary: 'Resolve seller identity fields into a display projection.'
@@ -3015,6 +3150,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   getSellerTaxIdentifierDisplayLabel:
     names:
       ts: getSellerTaxIdentifierDisplayLabel
@@ -3022,6 +3158,7 @@ coreHelpers:
       rb: get_seller_tax_identifier_display_label
       go: GetSellerTaxIdentifierDisplayLabel
       rust: get_seller_tax_identifier_display_label
+      c: getSellerTaxIdentifierDisplayLabel
     params: []
     docs:
       summary: 'Return the display label for a seller tax identifier type.'
@@ -3034,6 +3171,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE:
     names:
       ts: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
@@ -3041,6 +3179,7 @@ coreHelpers:
       rb: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
       go: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
       rust: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      c: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     docs:
       summary: 'Map of seller tax identifier types to display labels.'
     sync:
@@ -3049,6 +3188,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   evaluateProductReadiness:
     names:
       ts: evaluateProductReadiness
@@ -3056,6 +3196,7 @@ coreHelpers:
       rb: evaluate_product_readiness
       go: EvaluateProductReadiness
       rust: evaluate_product_readiness
+      c: evaluateProductReadiness
     params: []
     docs:
       summary: 'Evaluate whether a product can be sold (active status plus an active plan).'
@@ -3068,6 +3209,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   assertValidProductRef:
     names:
       ts: assertValidProductRef
@@ -3075,6 +3217,7 @@ coreHelpers:
       rb: assert_valid_product_ref
       go: AssertValidProductRef
       rust: assert_valid_product_ref
+      c: assertValidProductRef
     params: []
     docs:
       summary: 'Reject empty, placeholder, or non-prd_ product refs at construction time.'
@@ -3087,6 +3230,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   requireProductRef:
     names:
       ts: requireProductRef
@@ -3094,6 +3238,7 @@ coreHelpers:
       rb: require_product_ref
       go: RequireProductRef
       rust: require_product_ref
+      c: requireProductRef
     params: []
     docs:
       summary: 'Resolve a product ref from metadata or env, or throw a named missing-ref error.'
@@ -3106,6 +3251,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   charges:
     names:
       ts: charges
@@ -3113,6 +3259,7 @@ coreHelpers:
       rb: charges
       go: Charges
       rust: charges
+      c: charges
     params: []
     docs:
       summary: 'Return every charge option on a plan, in wire order.'
@@ -3125,6 +3272,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   headlineCharges:
     names:
       ts: headlineCharges
@@ -3132,6 +3280,7 @@ coreHelpers:
       rb: headline_charges
       go: HeadlineCharges
       rust: headline_charges
+      c: headlineCharges
     params: []
     docs:
       summary: 'Return the headline flat charge in each currency, excluding setup fees.'
@@ -3144,6 +3293,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   perUnitCharge:
     names:
       ts: perUnitCharge
@@ -3151,6 +3301,7 @@ coreHelpers:
       rb: per_unit_charge
       go: PerUnitCharge
       rust: per_unit_charge
+      c: perUnitCharge
     params: []
     docs:
       summary: 'Return the first per-unit charge, optionally scoped to one meter.'
@@ -3163,6 +3314,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   billingCycle:
     names:
       ts: billingCycle
@@ -3170,6 +3322,7 @@ coreHelpers:
       rb: billing_cycle
       go: BillingCycle
       rust: billing_cycle
+      c: billingCycle
     params: []
     docs:
       summary: 'Read the billing-cycle option from a plan.'
@@ -3182,6 +3335,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   trialDays:
     names:
       ts: trialDays
@@ -3189,6 +3343,7 @@ coreHelpers:
       rb: trial_days
       go: TrialDays
       rust: trial_days
+      c: trialDays
     params: []
     docs:
       summary: 'Read the free-trial length in days from a plan.'
@@ -3201,6 +3356,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   includedUnits:
     names:
       ts: includedUnits
@@ -3208,6 +3364,7 @@ coreHelpers:
       rb: included_units
       go: IncludedUnits
       rust: included_units
+      c: includedUnits
     params: []
     docs:
       summary: 'Read the included-unit cap for a meter from the limit option.'
@@ -3220,6 +3377,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   meterName:
     names:
       ts: meterName
@@ -3227,6 +3385,7 @@ coreHelpers:
       rb: meter_name
       go: MeterName
       rust: meter_name
+      c: meterName
     params: []
     docs:
       summary: 'Read the meter a plan counts against from a per-unit charge or limit option.'
@@ -3239,6 +3398,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   countsUsage:
     names:
       ts: countsUsage
@@ -3246,6 +3406,7 @@ coreHelpers:
       rb: counts_usage
       go: CountsUsage
       rust: counts_usage
+      c: countsUsage
     params: []
     docs:
       summary: 'True when the plan counts usage via a per-unit charge, limit, or tier.'
@@ -3258,6 +3419,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   peggedCreditsPerUnit:
     names:
       ts: peggedCreditsPerUnit
@@ -3265,6 +3427,7 @@ coreHelpers:
       rb: pegged_credits_per_unit
       go: PeggedCreditsPerUnit
       rust: pegged_credits_per_unit
+      c: peggedCreditsPerUnit
     params: []
     docs:
       summary: 'Convert a per-unit charge in minor units to credits via the USD peg.'
@@ -3277,6 +3440,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   creditsPerUnitFromBalance:
     names:
       ts: creditsPerUnitFromBalance
@@ -3284,6 +3448,7 @@ coreHelpers:
       rb: credits_per_unit_from_balance
       go: CreditsPerUnitFromBalance
       rust: credits_per_unit_from_balance
+      c: creditsPerUnitFromBalance
     params: []
     docs:
       summary: 'Credits per metered call when the charge currency matches the balance peg.'
@@ -3296,6 +3461,7 @@ coreHelpers:
       rb: sync
       go: sync
       rust: sync
+      c: sync
 
 facade:
   createSolvaPay:
@@ -3305,6 +3471,7 @@ facade:
       rb: SolvaPay.create
       go: solvapay.New
       rust: 'Client::new'
+      c: solvapay_client_new
     params:
       - name: config
         type: unknown
@@ -3320,6 +3487,7 @@ facade:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   createSolvaPayClient:
     names:
       ts: createSolvaPayClient
@@ -3327,6 +3495,7 @@ facade:
       rb: create_solva_pay_client
       go: CreateSolvaPayClient
       rust: create_solva_pay_client
+      c: createSolvaPayClient
     params:
       - name: opts
         type: unknown
@@ -3342,6 +3511,7 @@ facade:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   payable:
     names:
       ts: payable
@@ -3349,6 +3519,7 @@ facade:
       rb: payable
       go: Payable
       rust: payable
+      c: payable
     params:
       - name: options
         type: unknown
@@ -3364,6 +3535,7 @@ facade:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   protect:
     names:
       ts: protect
@@ -3371,6 +3543,7 @@ facade:
       rb: protect
       go: Protect
       rust: protect
+      c: protect
     params:
       - name: options
         type: unknown
@@ -3386,6 +3559,7 @@ facade:
       rb: sync
       go: sync
       rust: sync
+      c: sync
   gate:
     names:
       ts: payable.gate
@@ -3393,6 +3567,7 @@ facade:
       rb: sp.gate
       go: sp.Gate
       rust: sp.gate
+      c: gate
     params:
       - name: options
         type: unknown
@@ -3408,6 +3583,7 @@ facade:
       rb: blocking
       go: blocking
       rust: [async, blocking]
+      c: blocking
 
 errors:
   webhook:
@@ -3453,78 +3629,91 @@ nameOverrides:
     rb: SolvaPay.create
     go: solvapay.New
     rust: 'Client::new'
+    c: solvapay_client_new
   gate:
     ts: payable.gate
     py: sp.gate
     rb: sp.gate
     go: sp.Gate
     rust: sp.gate
+    c: gate
   SolvaPayError:
     ts: SolvaPayError
     py: SolvaPayError
     rb: SolvaPayError
     go: SolvaPayError
     rust: SolvaPayError
+    c: SolvaPayError
   PaywallError:
     ts: PaywallError
     py: PaywallError
     rb: PaywallError
     go: PaywallError
     rust: PaywallError
+    c: PaywallError
   BUSINESS_COUNTRY_DISPLAY_NAMES:
     ts: BUSINESS_COUNTRY_DISPLAY_NAMES
     py: BUSINESS_COUNTRY_DISPLAY_NAMES
     rb: BUSINESS_COUNTRY_DISPLAY_NAMES
     go: BUSINESS_COUNTRY_DISPLAY_NAMES
     rust: BUSINESS_COUNTRY_DISPLAY_NAMES
+    c: BUSINESS_COUNTRY_DISPLAY_NAMES
   BUSINESS_COUNTRY_OPTIONS:
     ts: BUSINESS_COUNTRY_OPTIONS
     py: BUSINESS_COUNTRY_OPTIONS
     rb: BUSINESS_COUNTRY_OPTIONS
     go: BUSINESS_COUNTRY_OPTIONS
     rust: BUSINESS_COUNTRY_OPTIONS
+    c: BUSINESS_COUNTRY_OPTIONS
   COUNTRY_TO_TAX_ID_TYPE:
     ts: COUNTRY_TO_TAX_ID_TYPE
     py: COUNTRY_TO_TAX_ID_TYPE
     rb: COUNTRY_TO_TAX_ID_TYPE
     go: COUNTRY_TO_TAX_ID_TYPE
     rust: COUNTRY_TO_TAX_ID_TYPE
+    c: COUNTRY_TO_TAX_ID_TYPE
   SUPPORTED_BUSINESS_COUNTRIES:
     ts: SUPPORTED_BUSINESS_COUNTRIES
     py: SUPPORTED_BUSINESS_COUNTRIES
     rb: SUPPORTED_BUSINESS_COUNTRIES
     go: SUPPORTED_BUSINESS_COUNTRIES
     rust: SUPPORTED_BUSINESS_COUNTRIES
+    c: SUPPORTED_BUSINESS_COUNTRIES
   TAX_BEHAVIORS:
     ts: TAX_BEHAVIORS
     py: TAX_BEHAVIORS
     rb: TAX_BEHAVIORS
     go: TAX_BEHAVIORS
     rust: TAX_BEHAVIORS
+    c: TAX_BEHAVIORS
   TAX_EXCLUSIVE_CURRENCIES:
     ts: TAX_EXCLUSIVE_CURRENCIES
     py: TAX_EXCLUSIVE_CURRENCIES
     rb: TAX_EXCLUSIVE_CURRENCIES
     go: TAX_EXCLUSIVE_CURRENCIES
     rust: TAX_EXCLUSIVE_CURRENCIES
+    c: TAX_EXCLUSIVE_CURRENCIES
   TAX_ID_EXAMPLE_BY_COUNTRY:
     ts: TAX_ID_EXAMPLE_BY_COUNTRY
     py: TAX_ID_EXAMPLE_BY_COUNTRY
     rb: TAX_ID_EXAMPLE_BY_COUNTRY
     go: TAX_ID_EXAMPLE_BY_COUNTRY
     rust: TAX_ID_EXAMPLE_BY_COUNTRY
+    c: TAX_ID_EXAMPLE_BY_COUNTRY
   TAX_ID_TYPES:
     ts: TAX_ID_TYPES
     py: TAX_ID_TYPES
     rb: TAX_ID_TYPES
     go: TAX_ID_TYPES
     rust: TAX_ID_TYPES
+    c: TAX_ID_TYPES
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE:
     ts: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     py: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     rb: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     go: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     rust: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    c: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
 
 reservedWords:
   ts: []
@@ -3532,3 +3721,4 @@ reservedWords:
   rb: []
   go: []
   rust: []
+  c: []

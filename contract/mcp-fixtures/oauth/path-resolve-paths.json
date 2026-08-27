@@ -1,0 +1,21 @@
+{
+  "suite": "oauth",
+  "case": "path-resolve-paths",
+  "input": {
+    "fn": "mcpOauthPath",
+    "args": {
+      "kind": "resolve-paths",
+      "paths": {
+        "token": "/custom/token"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "register": "/oauth/register",
+      "authorize": "/oauth/authorize",
+      "token": "/custom/token",
+      "revoke": "/oauth/revoke"
+    }
+  }
+}

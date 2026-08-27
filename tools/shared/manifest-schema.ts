@@ -6,7 +6,7 @@
 
 import { z } from 'zod'
 
-export const LANGUAGES = ['ts', 'py', 'rb', 'go', 'rust'] as const
+export const LANGUAGES = ['ts', 'py', 'rb', 'go', 'rust', 'c'] as const
 export type Language = (typeof LANGUAGES)[number]
 
 /** Wire (OpenAPI-backed) client operations. Routeless MCP composites are extra. */
@@ -33,6 +33,7 @@ const LangNames = z.object({
   rb: z.string().min(1),
   go: z.string().min(1),
   rust: z.string().min(1),
+  c: z.string().min(1),
 })
 
 const PartialLangNames = z.object({
@@ -41,6 +42,7 @@ const PartialLangNames = z.object({
   rb: z.string().min(1).optional(),
   go: z.string().min(1).optional(),
   rust: z.string().min(1).optional(),
+  c: z.string().min(1).optional(),
 })
 
 const ClientSyncMatrix = z.object({
@@ -49,6 +51,7 @@ const ClientSyncMatrix = z.object({
   rb: z.literal('blocking'),
   go: z.literal('blocking'),
   rust: z.array(z.enum(['async', 'blocking'])).nonempty(),
+  c: z.literal('blocking'),
 })
 
 const PureSyncMatrix = z.object({
@@ -57,6 +60,7 @@ const PureSyncMatrix = z.object({
   rb: z.literal('sync'),
   go: z.literal('sync'),
   rust: z.literal('sync'),
+  c: z.literal('sync'),
 })
 
 const SyncMatrix = z.union([ClientSyncMatrix, PureSyncMatrix])
@@ -755,8 +759,9 @@ export const SdkContractManifestSchema = z.object({
       rb: z.array(z.string()).default([]),
       go: z.array(z.string()).default([]),
       rust: z.array(z.string()).default([]),
+      c: z.array(z.string()).default([]),
     })
-    .default({ ts: [], py: [], rb: [], go: [], rust: [] }),
+    .default({ ts: [], py: [], rb: [], go: [], rust: [], c: [] }),
 })
 
 export type SdkContractManifest = z.infer<typeof SdkContractManifestSchema>
@@ -818,6 +823,7 @@ export function deriveNames(operationId: string): LangNames {
     rb: snake,
     go: toPascalCase(operationId),
     rust: snake,
+    c: operationId,
   }
 }
 
@@ -891,13 +897,21 @@ export function assertNoNameCollisions(manifest: SdkContractManifest): string[] 
 }
 
 export function assertOperationCount(manifest: SdkContractManifest): string[] {
-  const count = Object.values(manifest.operations).filter(op => op.route != null).length
-  if (count !== EXPECTED_ROUTED_OPERATION_COUNT) {
-    return [
-      `Routed operation count: expected ${EXPECTED_ROUTED_OPERATION_COUNT}, found ${count}`,
-    ]
+  const ops = Object.values(manifest.operations)
+  const routedCount = ops.filter(op => op.route != null).length
+  const compositeCount = ops.filter(op => op.route == null).length
+  const issues: string[] = []
+  if (routedCount !== EXPECTED_ROUTED_OPERATION_COUNT) {
+    issues.push(
+      `Routed operation count: expected ${EXPECTED_ROUTED_OPERATION_COUNT}, found ${routedCount}`,
+    )
   }
-  return []
+  if (compositeCount !== EXPECTED_MCP_COMPOSITE_OPERATION_COUNT) {
+    issues.push(
+      `MCP composite operation count: expected ${EXPECTED_MCP_COMPOSITE_OPERATION_COUNT}, found ${compositeCount}`,
+    )
+  }
+  return issues
 }
 
 export function assertTopLevelSet(manifest: SdkContractManifest): string[] {

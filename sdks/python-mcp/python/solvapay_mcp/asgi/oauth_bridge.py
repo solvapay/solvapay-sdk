@@ -4,11 +4,10 @@ import json
 from collections.abc import Mapping
 from urllib.parse import urlencode
 
-import httpx
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-from starlette.routing import Mount, Route
+from starlette.routing import Mount
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from solvapay_mcp.asgi.mcp_oauth_request import (
@@ -44,7 +43,6 @@ class McpOAuthBridgeOptions:
         mcp_path: str = "/mcp",
         require_auth: bool = True,
         auth_mode: McpAuthMode = "tools-call",
-        http_client: httpx.AsyncClient | None = None,
         oauth_client: object | None = None,
     ) -> None:
         self.public_base_url = public_base_url
@@ -53,7 +51,6 @@ class McpOAuthBridgeOptions:
         self.mcp_path = mcp_path
         self.require_auth = require_auth
         self.auth_mode = auth_mode
-        self.http_client = http_client
         self.oauth_client = oauth_client
         self.paths = resolve_oauth_paths()
         native_call(
@@ -282,12 +279,34 @@ async def _read_body(request: Request) -> str:
     return raw.decode("utf-8") if raw else ""
 
 
-def create_oauth_routes(options: McpOAuthBridgeOptions) -> list[Route]:
-    config = _oauth_config(options)
+def _is_oauth_path(path: str, options: McpOAuthBridgeOptions) -> bool:
+    if path in {OPENID_PATH, AUTHORIZATION_SERVER_PATH, PROTECTED_RESOURCE_PATH}:
+        return True
+    if path.startswith(f"{PROTECTED_RESOURCE_PATH}/"):
+        return True
+    if path.endswith(PROTECTED_RESOURCE_PATH):
+        return True
+    return path in {
+        options.paths["register"],
+        options.paths["authorize"],
+        options.paths["token"],
+        options.paths["revoke"],
+    }
 
-    async def dispatch(request: Request) -> Response:
-        path = request.url.path
+
+class OauthCatchAll:
+    def __init__(self, app: ASGIApp, options: McpOAuthBridgeOptions) -> None:
+        self.app = app
+        self._options = options
+        self._config = _oauth_config(options)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not _is_oauth_path(str(scope.get("path") or ""), self._options):
+            await self.app(scope, receive, send)
+            return
+        request = Request(scope, receive)
         query = request.url.query
+        path = request.url.path
         full_path = f"{path}?{query}" if query else path
         result = await mcp_oauth_request(
             {
@@ -295,40 +314,22 @@ def create_oauth_routes(options: McpOAuthBridgeOptions) -> list[Route]:
                 "path": full_path,
                 "headers": _request_headers(request),
                 "body": await _read_body(request),
-                "config": config,
+                "config": self._config,
             },
-            client=options.oauth_client,
-            http_client=options.http_client,
+            client=self._options.oauth_client,
         )
-        return _response_from_result(result)
-
-    metadata_paths: list[str] = []
-    for candidate in (
-        PROTECTED_RESOURCE_PATH,
-        path_aware_protected_resource_path(options.mcp_path),
-        f"{without_trailing_slash(options.mcp_path)}{PROTECTED_RESOURCE_PATH}",
-    ):
-        if candidate and candidate not in metadata_paths:
-            metadata_paths.append(candidate)
-    return [
-        Route(OPENID_PATH, dispatch, methods=["GET"]),
-        *[Route(path, dispatch, methods=["GET"]) for path in metadata_paths],
-        Route(AUTHORIZATION_SERVER_PATH, dispatch, methods=["GET"]),
-        Route(options.paths["register"], dispatch, methods=["POST", "OPTIONS"]),
-        Route(options.paths["authorize"], dispatch, methods=["GET", "OPTIONS"]),
-        Route(options.paths["token"], dispatch, methods=["POST", "OPTIONS"]),
-        Route(options.paths["revoke"], dispatch, methods=["POST", "OPTIONS"]),
-    ]
+        response = _response_from_result(result)
+        await response(scope, receive, send)
 
 
 def mount_mcp_oauth_bridge(mcp_app: ASGIApp, options: McpOAuthBridgeOptions) -> ASGIApp:
     if isinstance(mcp_app, Starlette):
-        for route in reversed(create_oauth_routes(options)):
-            mcp_app.routes.insert(0, route)
         mcp_app.add_middleware(McpAuthMiddleware, options=options)
+        mcp_app.add_middleware(OauthCatchAll, options=options)
         return mcp_app
-    outer = Starlette(routes=[*create_oauth_routes(options), Mount("/", app=mcp_app)])
+    outer = Starlette(routes=[Mount("/", app=mcp_app)])
     outer.add_middleware(McpAuthMiddleware, options=options)
+    outer.add_middleware(OauthCatchAll, options=options)
     return outer
 
 
@@ -341,7 +342,6 @@ def create_mcp_oauth_starlette(
     mcp_path: str = "/mcp",
     require_auth: bool = True,
     auth_mode: McpAuthMode = "tools-call",
-    http_client: httpx.AsyncClient | None = None,
     oauth_client: object | None = None,
 ) -> ASGIApp:
     options = McpOAuthBridgeOptions(
@@ -351,7 +351,6 @@ def create_mcp_oauth_starlette(
         mcp_path=mcp_path,
         require_auth=require_auth,
         auth_mode=auth_mode,
-        http_client=http_client,
         oauth_client=oauth_client,
     )
     return mount_mcp_oauth_bridge(mcp_app, options)

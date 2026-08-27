@@ -14,9 +14,9 @@ import type { McpServer } from '@modelcontextprotocol/server'
 import type { BuildSolvaPayDescriptorsOptions } from '@solvapay/mcp-core'
 import type { SolvaPay } from '@solvapay/server'
 import {
-  applyHideToolsByAudience,
   buildSolvaPayMcpServer,
-  normaliseHideToolsByAudience,
+  hideAudiencesFromConfig,
+  installEngineHandlers,
   type HideToolsByAudienceConfig,
 } from './internal/buildMcpServer'
 
@@ -102,12 +102,9 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
    * `openai-mcp/1.0.0 (ChatGPT)` and the broad pattern survives a UA
    * version bump.
    *
-   * To extend the bypass to a future iframe-capable host, pass the
-   * object form: `{ audiences: ['ui'], bypassWhen: ctx => … }`.
-   *
-   * To disable the bypass and apply the filter unconditionally
-   * (e.g. on a known text-only deployment), pass `{ audiences:
-   * ['ui'], bypassWhen: () => false }`.
+   * To extend the bypass, the engine matches `userAgent` against
+   * `/openai-mcp/i`. Custom host predicates are not applied on the
+   * JSON-RPC loop — pass `hideAudiences` through `EngineConfig`.
    */
   hideToolsByAudience?: HideToolsByAudienceConfig
 }
@@ -126,7 +123,7 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
     ...descriptorOptions
   } = options
 
-  const { server, descriptors } = buildSolvaPayMcpServer({
+  const { server, descriptors, payables } = buildSolvaPayMcpServer({
     ...descriptorOptions,
     registerPrompts,
     registerDocsResources,
@@ -137,25 +134,64 @@ export function createSolvaPayMcpServer(options: CreateSolvaPayMcpServerOptions)
   if (additionalTools) {
     const { solvaPay, productRef, resourceUri } = descriptorOptions
     const registerPayable: AdditionalToolsContext['registerPayable'] = (name, opts) => {
-      // Spread `opts` *first* so an explicit `undefined` on
-      // `opts.product` / `opts.buildBootstrap` (shape allows it via
-      // `?:`) can't overwrite the defaults set below. `resourceUri` is
-      // no longer forwarded: merchant payable tools use text-only
-      // paywall / nudge responses per the SEP-1865 refactor.
       registerPayableTool(server, name, {
         solvaPay,
         ...opts,
         product: opts.product ?? productRef,
-        buildBootstrap: opts.buildBootstrap ?? descriptors.buildBootstrapPayload,
       })
     }
     additionalTools({ server, solvaPay, resourceUri, productRef, registerPayable })
   }
 
-  // Apply the tools/list audience filter last so it sees every tool
-  // registered by the descriptor loop + `additionalTools` hook.
-  const { audiences, options: filterOptions } = normaliseHideToolsByAudience(hideToolsByAudience)
-  applyHideToolsByAudience(server, audiences, filterOptions)
+  const hideAudiences = hideAudiencesFromConfig(hideToolsByAudience)
+  installEngineHandlers(server, {
+    solvaPay: descriptorOptions.solvaPay,
+    config: {
+      productRef: descriptorOptions.productRef,
+      publicBaseUrl: descriptorOptions.publicBaseUrl,
+      resourceUri: descriptorOptions.resourceUri,
+      ...(descriptorOptions.views !== undefined ? { views: [...descriptorOptions.views] } : {}),
+      ...(descriptorOptions.csp !== undefined ? { csp: descriptorOptions.csp } : {}),
+      ...(descriptorOptions.apiBaseUrl !== undefined
+        ? { apiBaseUrl: descriptorOptions.apiBaseUrl }
+        : {}),
+      ...(descriptorOptions.branding !== undefined ? { branding: descriptorOptions.branding } : {}),
+      ...(hideAudiences !== undefined ? { hideAudiences } : {}),
+    },
+    payables,
+    readHtml: descriptors.resource.readHtml,
+    resourceCsp: descriptors.resource.csp,
+    registerPrompts,
+    registerDocsResources,
+    ...(descriptorOptions.onToolCall !== undefined
+      ? {
+          onDispatch: (rpc: unknown) => {
+            descriptorOptions.onToolCall?.('*', rpc, undefined)
+          },
+        }
+      : {}),
+    ...(descriptorOptions.onToolResult !== undefined
+      ? {
+          onDispatched: (result: { body: unknown }, durationMs: number) => {
+            descriptorOptions.onToolResult?.(
+              '*',
+              {
+                content: [
+                  {
+                    type: 'text',
+                    text:
+                      typeof result.body === 'string'
+                        ? result.body
+                        : JSON.stringify(result.body ?? null),
+                  },
+                ],
+              },
+              { durationMs },
+            )
+          },
+        }
+      : {}),
+  })
 
   return server
 }

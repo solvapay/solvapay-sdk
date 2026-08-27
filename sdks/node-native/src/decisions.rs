@@ -630,6 +630,19 @@ pub fn evaluate_product_readiness_binding(args_json: String) -> String {
     })
 }
 
+// --- paywall-decision ---
+
+/// Binding for `gateNext`.
+#[napi(js_name = "gateNext")]
+pub fn gate_next_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = optional_value(&args, "state");
+        let event = optional_value(&args, "event");
+        result_as_value(gate_next(state.as_ref(), event.as_ref()))
+    })
+}
+
 // --- retry ---
 
 /// Binding for `retryNextDelayMs`.
@@ -702,6 +715,33 @@ pub fn charges_binding(args_json: String) -> String {
         to_value(&charges(priced.as_ref()))
     })
 }
+
+// --- auth-resolution ---
+
+/// Binding for `resolveAuthenticatedUser`.
+#[napi(js_name = "resolveAuthenticatedUser")]
+pub fn resolve_authenticated_user_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = require_typed::<AuthResolutionInput>(&args, "input")?;
+        result_as_value(resolve_authenticated_user(&input))
+    })
+}
+
+// --- balance-poll ---
+
+/// Binding for `evaluateBalanceObservation`.
+#[napi(js_name = "evaluateBalanceObservation")]
+pub fn evaluate_balance_observation_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let baseline = require_f64(&args, "baseline")?;
+        let credits = require_f64(&args, "credits")?;
+        to_value(&evaluate_balance_observation(baseline, credits))
+    })
+}
+
+// --- plans ---
 
 /// Binding for `headlineCharges`.
 #[napi(js_name = "headlineCharges")]

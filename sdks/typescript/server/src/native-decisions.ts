@@ -480,6 +480,23 @@ export function resolveFallbackGateLimits(checkoutUrl?: string): PaywallDecision
   return dispatchSync('resolveFallbackGateLimits', { checkoutUrl: checkoutUrl ?? null })
 }
 
+export function evaluateBalanceObservation(baseline: number, credits: number): number | null {
+  return dispatchSync('evaluateBalanceObservation', { baseline, credits })
+}
+
+export function gateNext(
+  state: unknown | null | undefined,
+  event: unknown | null | undefined,
+): unknown {
+  return dispatchSync('gateNext', { state: state ?? null, event: event ?? null })
+}
+
+export function resolveAuthenticatedUser(input: AuthResolutionInput): unknown {
+  return dispatchSync('resolveAuthenticatedUser', {
+    input,
+  })
+}
+
 // --- paywall state / gate / payload ---
 
 export function classifyPaywallState(limits: LimitResponseWithPlan | null): PaywallState {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  EXPECTED_MCP_COMPOSITE_OPERATION_COUNT,
   EXPECTED_OPERATION_COUNT,
   EXPECTED_ROUTED_OPERATION_COUNT,
   EXPECTED_TOP_LEVEL_IDS,
@@ -25,6 +26,7 @@ const DEFAULT_SYNC = {
   rb: 'blocking' as const,
   go: 'blocking' as const,
   rust: ['async', 'blocking'] as ('async' | 'blocking')[],
+  c: 'blocking' as const,
 }
 
 const PURE_SYNC = {
@@ -33,6 +35,7 @@ const PURE_SYNC = {
   rb: 'sync' as const,
   go: 'sync' as const,
   rust: 'sync' as const,
+  c: 'sync' as const,
 }
 
 function op(
@@ -70,9 +73,10 @@ function minimalManifest(overrides: Partial<SdkContractManifest> = {}): SdkContr
       response: 'LimitResponse',
     })
   }
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < EXPECTED_MCP_COMPOSITE_OPERATION_COUNT; i += 1) {
     const id = `mcpOp${String(i).padStart(2, '0')}`
     operations[id] = op(id, {
+      route: undefined,
       request: undefined,
       response: 'LimitResponse',
     })
@@ -115,6 +119,7 @@ function minimalManifest(overrides: Partial<SdkContractManifest> = {}): SdkContr
           rb: 'sp.gate',
           go: 'sp.Gate',
           rust: 'sp.gate',
+          c: 'gate',
         },
         sync: DEFAULT_SYNC,
         params: [],
@@ -170,9 +175,10 @@ function minimalManifest(overrides: Partial<SdkContractManifest> = {}): SdkContr
         rb: 'sp.gate',
         go: 'sp.Gate',
         rust: 'sp.gate',
+        c: 'gate',
       },
     },
-    reservedWords: { go: [], py: [], rb: [], rust: [], ts: [] },
+    reservedWords: { go: [], py: [], rb: [], rust: [], ts: [], c: [] },
     bindings: {},
   }
 
@@ -205,6 +211,7 @@ describe('deriveNames', () => {
       rb: 'check_limits',
       go: 'CheckLimits',
       rust: 'check_limits',
+      c: 'checkLimits',
     })
   })
 
@@ -215,6 +222,7 @@ describe('deriveNames', () => {
       rb: 'create_solva_pay_client',
       go: 'CreateSolvaPayClient',
       rust: 'create_solva_pay_client',
+      c: 'createSolvaPayClient',
     })
   })
 })
@@ -234,6 +242,7 @@ describe('SdkContractManifestSchema', () => {
         rb: 'check_limits',
         go: '',
         rust: 'check_limits',
+        c: 'checkLimits',
       },
     })
     const result = SdkContractManifestSchema.safeParse(manifest)
@@ -346,6 +355,23 @@ describe('coverage and collisions', () => {
     const manifest = minimalManifest()
     delete manifest.operations.op35
     expect(assertOperationCount(manifest).some(i => /36/.test(i))).toBe(true)
+  })
+
+  it('requires exactly 5 routeless MCP composite operations', () => {
+    const manifest = minimalManifest()
+    delete manifest.operations.mcpOp04
+    const issues = assertOperationCount(manifest)
+    expect(
+      issues.some(
+        i =>
+          /composite/i.test(i) &&
+          i.includes(String(EXPECTED_MCP_COMPOSITE_OPERATION_COUNT)),
+      ),
+    ).toBe(true)
+  })
+
+  it('passes when routed and composite counts match', () => {
+    expect(assertOperationCount(minimalManifest())).toEqual([])
   })
 
   it('requires the expected topLevel id set', () => {
@@ -600,10 +626,16 @@ describe('crossCheckOpenApi', () => {
     })
     const snapshot: OpenApiSnapshot = {
       paths: Object.fromEntries(
-        Object.values(manifest.operations).map(operation => [
-          operation.route.path,
-          { [operation.route.method.toLowerCase()]: {} },
-        ]),
+        Object.values(manifest.operations).flatMap(operation =>
+          operation.route == null
+            ? []
+            : [
+                [
+                  operation.route.path,
+                  { [operation.route.method.toLowerCase()]: {} },
+                ],
+              ],
+        ),
       ),
       components: { schemas: { LimitResponse: {} } },
     }

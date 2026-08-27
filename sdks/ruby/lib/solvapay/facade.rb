@@ -32,38 +32,86 @@ module SolvaPay
     # @return [PayableAllowResult, PayablePaywallResult] Paywall or allow result with usage trackers.
     def gate(customer_ref, product:, usage_type: "requests")
       started_ms = @clock.call
-      backend_ref = ensure_customer(customer_ref)
-      limits_key = [backend_ref, product, usage_type].join(":")
-      within_limits, remaining, limits = evaluate_limits(
-        limits_key,
-        customer_ref: backend_ref,
-        product: product,
-        usage_type: usage_type,
-      )
-      decision = NativeDispatch.call_sync(
-        "decide_paywall_outcome",
-        {
-          "withinLimits" => within_limits,
-          "product" => product,
-          "limits" => limits,
-          "checkoutUrl" => limits&.fetch("checkoutUrl", nil),
-        },
-      )
-      meter_name = resolved_meter_name(product, usage_type)
-      if decision["outcome"] == "gate"
-        gate = decision["gate"]
-        gate ||= NativeDispatch.call_sync(
-          "build_paywall_gate",
-          { "productRef" => product, "limits" => limits || { "remaining" => remaining } },
-        )
-        elapsed = @clock.call - started_ms
+      state = nil
+      event = {
+        "kind" => "start",
+        "customerRef" => customer_ref,
+        "product" => product,
+        "usageType" => usage_type,
+        "startedMs" => started_ms,
+      }
+      action = nil
+      loop do
+        out = NativeDispatch.call_sync("gate_next", { "state" => state, "event" => event })
+        unless out.is_a?(Hash)
+          raise SolvaPay::SolvaPayError.new("gate_next returned unexpected value", code: "internal_error")
+        end
+        state = out["state"]
+        action = out["action"]
+        unless action.is_a?(Hash)
+          raise SolvaPay::SolvaPayError.new("gate_next returned unexpected action", code: "internal_error")
+        end
+        case action["kind"]
+        when "ensureCustomer"
+          backend = ensure_customer(action["customerRef"])
+          event = { "kind" => "customerResolved", "backendRef" => backend, "nowMs" => @clock.call }
+        when "lookupCache"
+          key = action["key"]
+          now = @clock.call
+          cached = @mutex.synchronize do
+            value = @limits_cache[key]
+            if value && now - value.fetch(:timestamp) < @limits_cache_ttl
+              value.dup
+            else
+              @limits_cache.delete(key)
+              nil
+            end
+          end
+          if cached.is_a?(Hash)
+            event = {
+              "kind" => "cacheHit",
+              "remaining" => cached.fetch(:remaining),
+              "limits" => cached[:limits],
+              "nowMs" => now,
+            }
+          else
+            event = { "kind" => "cacheMiss", "nowMs" => now }
+          end
+        when "checkLimits"
+          if action["cacheDeleteKey"].is_a?(String)
+            @mutex.synchronize { @limits_cache.delete(action["cacheDeleteKey"]) }
+          end
+          limits = @client.check_limits(
+            params: {
+              "customerRef" => action["customerRef"],
+              "productRef" => action["productRef"],
+              "meterName" => action["meterName"],
+              "includeCheckoutSession" => action["includeCheckoutSession"],
+            },
+          )
+          limits = {} unless limits.is_a?(Hash)
+          event = { "kind" => "limitsResult", "limits" => limits, "nowMs" => @clock.call }
+        when "done"
+          apply_gate_cache(action["cache"])
+          break
+        else
+          raise SolvaPay::SolvaPayError.new("gate_next returned unknown action kind", code: "internal_error")
+        end
+      end
+
+      backend_ref = action["customerRef"]
+      meter_name = action["meterName"] || usage_type
+      if action["track"].is_a?(Hash)
         track_usage_call(
           customer_ref: backend_ref,
           product_ref: product,
           action: meter_name,
           outcome: "paywall",
-          duration_ms: elapsed.negative? ? 0 : elapsed,
+          duration_ms: action["track"]["durationMs"] || 0,
         )
+      end
+      if action["outcome"] == "gate"
+        gate = action["gate"]
         return PayablePaywallResult.new(content: gate)
       end
 
@@ -71,7 +119,7 @@ module SolvaPay
         backend_ref: backend_ref,
         product: product,
         usage_type: usage_type,
-        decision: decision,
+        decision: { "outcome" => "allow", "limits" => action["limits"] },
         meter_name: meter_name,
       )
     end
@@ -86,60 +134,27 @@ module SolvaPay
 
     private
 
-    def evaluate_limits(key, customer_ref:, product:, usage_type:)
-      now = @clock.call
-      cached = @mutex.synchronize do
-        value = @limits_cache[key]
-        if value && now - value.fetch(:timestamp) < @limits_cache_ttl
-          value.dup
-        else
-          @limits_cache.delete(key)
-          nil
-        end
-      end
+    def apply_gate_cache(cache)
+      return unless cache.is_a?(Hash)
 
-      if cached.is_a?(Hash)
-        evaluation = NativeDispatch.call_sync(
-          "evaluate_cached_limits",
-          { "remaining" => cached.fetch(:remaining) },
-        )
-        @mutex.synchronize do
-          if evaluation["evict"]
-            @limits_cache.delete(key)
-          elsif evaluation["withinLimits"]
-            entry = @limits_cache[key]
-            entry[:remaining] = evaluation["remaining"] if entry.is_a?(Hash)
-          end
-        end
-        return [evaluation["withinLimits"], evaluation["remaining"], cached[:limits]]
-      end
+      key = cache["key"]
+      return unless key.is_a?(String)
 
-      limits = @client.check_limits(
-        params: {
-          "customerRef" => customer_ref,
-          "productRef" => product,
-          "meterName" => usage_type,
-        },
-      )
-      unless limits.is_a?(Hash)
-        limits = {} #: Hash[String, untyped]
-      end
-      evaluation = NativeDispatch.call_sync(
-        "evaluate_fresh_limits",
-        {
-          # Coerce JSON truthiness to a bool for the decision core.
-          "withinLimits" => !!limits["withinLimits"], # rubocop:disable Style/DoubleNegation
-          "remaining" => limits.fetch("remaining", 0),
-        },
-      )
       @mutex.synchronize do
-        @limits_cache[key] = {
-          timestamp: now,
-          remaining: evaluation["remaining"],
-          limits: limits,
-        }
+        case cache["op"]
+        when "delete"
+          @limits_cache.delete(key)
+        when "updateRemaining"
+          entry = @limits_cache[key]
+          entry[:remaining] = cache["remaining"] if entry.is_a?(Hash)
+        when "set"
+          @limits_cache[key] = {
+            timestamp: cache["timestamp"] || @clock.call,
+            remaining: cache["remaining"],
+            limits: cache["limits"],
+          }
+        end
       end
-      [evaluation["withinLimits"], evaluation["remaining"], limits]
     end
 
     def ensure_customer(customer_ref)

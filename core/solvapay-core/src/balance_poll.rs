@@ -89,6 +89,12 @@ impl BalancePollPolicy {
 /// # Returns
 ///
 /// `Some(credits - baseline)` when `credits > baseline`; otherwise `None`.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "balance-poll",
+    emit_order = 44
+)]
 pub fn evaluate_balance_observation(baseline: f64, credits: f64) -> Option<f64> {
     (credits > baseline).then_some(credits - baseline)
 }

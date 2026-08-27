@@ -85,9 +85,7 @@ pub(super) async fn handle(
         let body = mcp_oauth_discovery(&OauthDiscoveryInput {
             kind: OauthDiscoveryKind::ProtectedResource,
             public_base_url: params.config.public_base_url.clone(),
-            // Hosts historically omit `mcpPath` from this document; keep
-            // `mcpOauthDiscovery` itself path-aware for the sync op.
-            mcp_path: None,
+            mcp_path: params.config.mcp_path.clone(),
             paths: params.config.oauth_paths.clone(),
         });
         return Ok(http_json_response(200, body, cors));

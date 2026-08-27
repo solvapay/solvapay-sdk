@@ -4,7 +4,13 @@ import { createMcpHandler } from '@modelcontextprotocol/server'
 import { toNodeHandler } from '@modelcontextprotocol/node'
 import { createMcpOAuthBridge } from '@solvapay/mcp/express'
 import { createServer } from './server'
-import { mcpPublicBaseUrl, paywallEnabled, solvapayApiBaseUrl, solvapayProductRef } from './config'
+import {
+  mcpPublicBaseUrl,
+  paywallEnabled,
+  solvaPay,
+  solvapayApiBaseUrl,
+  solvapayProductRef,
+} from './config'
 
 // SDK v2 is stateless: no session map, no `initialize` routing. The factory
 // runs per request and `createMcpHandler` owns the transport lifecycle.
@@ -21,6 +27,7 @@ app.use(
     productRef: solvapayProductRef,
     requireAuth: paywallEnabled,
     mcpPath: '/mcp',
+    ...(solvaPay ? { oauthClient: solvaPay.apiClient } : {}),
   }),
 )
 

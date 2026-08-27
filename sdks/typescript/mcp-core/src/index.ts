@@ -74,7 +74,6 @@ export type {
 export {
   buildSolvaPayRequest,
   defaultGetCustomerRef,
-  enrichPurchase,
   narratedToolResult,
   parseMode,
   previewJson,
@@ -125,28 +124,19 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 // merchant-facing `@solvapay/mcp` public entry — exported here so the
 // contract harness and adapters can share the same constructors.
 export { assertResponseResult, makeResponseResult } from './native-mcp'
-export {
-  callMcpSyncOp,
-  getMcpToolNamesTable,
-  mcpViewMaps,
-  installNativeMcpApi,
-} from './native-mcp'
+export { callMcpSyncOp, getMcpToolNamesTable, mcpViewMaps, installNativeMcpApi } from './native-mcp'
+export { runMcpEngineRequest } from './engine-dispatch'
+export type {
+  McpEngineConfig,
+  McpEngineHttpResult,
+  McpEnginePayable,
+} from './engine-dispatch'
 
 // ---- CSP baseline ----
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 
 // ---- Descriptor + payable builders ----
-export {
-  applyHideToolsByAudience,
-  defaultIsChatGptRequest,
-  hideToolsByAudience,
-} from './hideToolsByAudience'
-export type {
-  ApplyHideToolsByAudienceContext,
-  ApplyHideToolsByAudienceExtra,
-  ApplyHideToolsByAudienceOptions,
-  HideToolsByAudienceBypass,
-} from './hideToolsByAudience'
+export { hideToolsByAudience } from './hideToolsByAudience'
 export { mcpDescriptors } from './mcp-descriptors'
 export type { McpDescriptorTool, McpDescriptorsBundle, McpDescriptorsInput } from './mcp-descriptors'
 export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
@@ -170,16 +160,9 @@ export { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resource
 
 export {
   solvapayOverviewBody,
-  SOLVAPAY_OVERVIEW_MARKDOWN,
   SOLVAPAY_OVERVIEW_MIME_TYPE,
   SOLVAPAY_OVERVIEW_URI,
 } from './resources/overview'
-
-export { createBuildBootstrapPayload } from './bootstrap-payload'
-export type {
-  BuildBootstrapPayloadFn,
-  CreateBuildBootstrapPayloadOptions,
-} from './bootstrap-payload'
 
 export { buildPayableHandler } from './payable-handler'
 export type { BuildPayableHandlerContext } from './payable-handler'

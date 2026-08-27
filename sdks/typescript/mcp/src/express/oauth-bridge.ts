@@ -13,14 +13,20 @@ import {
   mcpAuthGate,
   McpBearerAuthError,
   pathAwareProtectedResourcePath,
-  resolveOAuthPaths,
   withoutTrailingSlash,
   type BuildAuthInfoFromBearerOptions,
   type McpAuthMode,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
 import {
+  DEFAULT_AUTHORIZATION_SERVER_PATH,
+  DEFAULT_PROTECTED_RESOURCE_PATH,
+  oauthConfig,
+  oauthProxyRoutes,
+} from '../internal/oauth-route-table'
+import {
   mcpOauthRequest,
+  requireOauthClient,
   type McpOauthRequestClient,
   type McpOauthRequestConfig,
   type McpOauthRequestResult,
@@ -232,22 +238,6 @@ function serializeRequestBody(contentType: string | null, body: unknown): string
   return JSON.stringify(body ?? {})
 }
 
-function oauthConfig(options: {
-  apiBaseUrl: string
-  productRef?: string
-  publicBaseUrl?: string
-  mcpPath?: string
-  oauthPaths?: OAuthBridgePaths
-}): McpOauthRequestConfig {
-  return {
-    publicBaseUrl: options.publicBaseUrl ?? '',
-    productRef: options.productRef ?? '',
-    apiBaseUrl: options.apiBaseUrl,
-    ...(options.mcpPath !== undefined ? { mcpPath: options.mcpPath } : {}),
-    ...(options.oauthPaths !== undefined ? { oauthPaths: options.oauthPaths } : {}),
-  }
-}
-
 async function dispatchOauth(
   req: RequestLike,
   res: ResponseLike,
@@ -266,7 +256,7 @@ async function dispatchOauth(
         body,
         config,
       },
-      client,
+      requireOauthClient(client),
     ),
   )
 }
@@ -345,7 +335,7 @@ export function createOAuthTokenHandler(options: OAuthTokenHandlerOptions): Midd
           body: serializeRequestBody(contentType, req.body),
           config,
         },
-        options.oauthClient,
+        requireOauthClient(options.oauthClient),
       ),
     )
   }
@@ -377,7 +367,7 @@ export function createOAuthRevokeHandler(options: OAuthRevokeHandlerOptions): Mi
           body: serializeRequestBody(contentType, req.body),
           config,
         },
-        options.oauthClient,
+        requireOauthClient(options.oauthClient),
       ),
     )
   }
@@ -392,8 +382,8 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     requireAuth = true,
     authMode = 'tools-call',
     authInfo,
-    protectedResourcePath = '/.well-known/oauth-protected-resource',
-    authorizationServerPath = '/.well-known/oauth-authorization-server',
+    protectedResourcePath = DEFAULT_PROTECTED_RESOURCE_PATH,
+    authorizationServerPath = DEFAULT_AUTHORIZATION_SERVER_PATH,
     oauthPaths,
     oauthClient,
   } = options
@@ -405,7 +395,6 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     publicBaseUrl,
   })
 
-  const paths = resolveOAuthPaths(oauthPaths)
   const config = oauthConfig({
     publicBaseUrl,
     productRef,
@@ -414,63 +403,48 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     ...(oauthPaths !== undefined ? { oauthPaths } : {}),
   })
   const metadataPath = pathAwareProtectedResourcePath(mcpPath)
+  const routes = oauthProxyRoutes({
+    mcpPath,
+    protectedResourcePath,
+    authorizationServerPath,
+    ...(oauthPaths !== undefined ? { oauthPaths } : {}),
+  })
 
-  const openidDiscoveryMiddleware: Middleware = async (req, res, next) => {
-    if (req.method !== 'GET' || req.path !== '/.well-known/openid-configuration') {
+  const oauthMiddlewares: Middleware[] = routes.map(route => async (req, res, next) => {
+    const pathname = req.path ?? ''
+    if (!route.match(pathname)) {
       next()
       return
     }
-    await dispatchOauth(req, res, '/.well-known/openid-configuration', '', config, oauthClient)
-  }
-
-  const protectedResourceMiddleware: Middleware = async (req, res, next) => {
-    const path = req.path ?? ''
-    const matches =
-      path === protectedResourcePath ||
-      path === metadataPath ||
-      path.startsWith('/.well-known/oauth-protected-resource/')
-    if (req.method !== 'GET' || !matches) {
+    const method = req.method ?? 'GET'
+    if (method === 'OPTIONS' && route.corsPreflight) {
+      // OPTIONS is claimed by the OAuth table; native CORS lives in the op.
+    } else if (!route.methods.includes(method)) {
       next()
       return
     }
-    await dispatchOauth(req, res, path, '', config, oauthClient)
-  }
-
-  const authorizationServerMiddleware: Middleware = async (req, res, next) => {
-    if (req.method !== 'GET' || req.path !== authorizationServerPath) {
-      next()
+    const dispatchPath = route.dispatchPath(pathname, getRequestQuery(req))
+    if (route.defaultFormContentType) {
+      const contentType = getHeader(req, 'content-type') ?? 'application/x-www-form-urlencoded'
+      const headers = requestHeaders(req)
+      headers['content-type'] = contentType
+      applyOauthResult(
+        res,
+        await mcpOauthRequest(
+          {
+            method,
+            path: dispatchPath,
+            headers,
+            body: serializeRequestBody(contentType, req.body),
+            config,
+          },
+          requireOauthClient(oauthClient),
+        ),
+      )
       return
     }
-    await dispatchOauth(req, res, '/.well-known/oauth-authorization-server', '', config, oauthClient)
-  }
-
-  const registerMiddleware = createOAuthRegisterHandler({
-    apiBaseUrl,
-    productRef,
-    path: paths.register,
-    publicBaseUrl,
-    oauthClient,
-  })
-  const authorizeMiddleware = createOAuthAuthorizeHandler({
-    apiBaseUrl,
-    path: paths.authorize,
-    publicBaseUrl,
-    productRef,
-    oauthClient,
-  })
-  const tokenMiddleware = createOAuthTokenHandler({
-    apiBaseUrl,
-    path: paths.token,
-    publicBaseUrl,
-    productRef,
-    oauthClient,
-  })
-  const revokeMiddleware = createOAuthRevokeHandler({
-    apiBaseUrl,
-    path: paths.revoke,
-    publicBaseUrl,
-    productRef,
-    oauthClient,
+    const body = dispatchPath === '/oauth/register' ? serializeRegisterBody(req.body) : ''
+    await dispatchOauth(req, res, dispatchPath, body, config, oauthClient)
   })
 
   const mcpAuthMiddleware: Middleware = (req, res, next) => {
@@ -543,14 +517,5 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     }
   }
 
-  return [
-    openidDiscoveryMiddleware,
-    protectedResourceMiddleware,
-    authorizationServerMiddleware,
-    registerMiddleware,
-    authorizeMiddleware,
-    tokenMiddleware,
-    revokeMiddleware,
-    mcpAuthMiddleware,
-  ]
+  return [...oauthMiddlewares, mcpAuthMiddleware]
 }

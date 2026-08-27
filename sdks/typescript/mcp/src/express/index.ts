@@ -1,17 +1,7 @@
-// TODO(solvapay-sdk): add a turnkey `createSolvaPayMcpExpress` factory
-// here (parity with `createSolvaPayMcpFetch` from `./fetch`: it should
-// bundle the OAuth bridge below, a `StreamableHTTPServerTransport`, and
-// the `McpServer` returned by `createSolvaPayMcpServer` into one
-// `app.use(...)`-mountable middleware stack). Until that ships, the only
-// Express surface this subpath exposes is the OAuth bridge middleware,
-// which is why Node + Express is currently absent from the `create-mcp-app`
-// skill's hosting matrix. Once the factory lands, restore the Node +
-// Express row in `skills/solvapay/create-mcp-app/hosting/alternatives.md`
-// (and its cursor-plugin mirror).
-
 /**
  * `@solvapay/mcp/express` — Node `(req, res, next)` OAuth bridge
- * middleware for the SolvaPay MCP server.
+ * middleware for the SolvaPay MCP server, plus a turnkey factory that
+ * wraps `createSolvaPayMcpFetch` (JSON `mcpDispatch` loop by default).
  *
  * Pair with `@solvapay/mcp` (root entry — MCP server factory +
  * `registerPayableTool`) and `@solvapay/mcp-core` (framework-neutral
@@ -22,24 +12,16 @@
  * @example
  * ```ts
  * import express from 'express'
- * import { createMcpHandler } from '@modelcontextprotocol/server'
- * import { toNodeHandler } from '@modelcontextprotocol/node'
- * import { createMcpOAuthBridge } from '@solvapay/mcp/express'
+ * import { createSolvaPayMcpExpress } from '@solvapay/mcp/express'
  *
  * const app = express()
  * app.use(express.json())
- * app.use(express.urlencoded({ extended: false }))
- * app.use(...createMcpOAuthBridge({
- *   publicBaseUrl: 'https://my-mcp.example.com',
- *   apiBaseUrl: 'https://api.solvapay.com',
- *   productRef: 'prd_video',
+ * app.use(createSolvaPayMcpExpress({
+ *   solvaPay,
+ *   productRef,
+ *   publicBaseUrl,
+ *   apiBaseUrl,
  * }))
- * // Pass `req.body` — Express supplies `next` as the 3rd arg, which
- * // `toNodeHandler` must not treat as the pre-parsed body.
- * const handleMcp = toNodeHandler(createMcpHandler(() => server))
- * app.all('/mcp', (req, res) => {
- *   void handleMcp(req, res, req.body)
- * })
  * ```
  */
 
@@ -77,3 +59,78 @@ export type {
   OAuthAuthorizationServerOptions,
   OAuthBridgePaths,
 } from '@solvapay/mcp-core'
+
+import {
+  createSolvaPayMcpFetch,
+  type CreateSolvaPayMcpFetchOptions,
+} from '../fetch/createSolvaPayMcpFetch'
+
+type ExpressRequest = {
+  method?: string
+  url?: string
+  originalUrl?: string
+  protocol?: string
+  headers: Record<string, string | string[] | undefined>
+  body?: unknown
+  get?: (name: string) => string | undefined
+}
+
+type ExpressResponse = {
+  status: (code: number) => ExpressResponse
+  setHeader: (name: string, value: string) => void
+  end: (chunk?: string | Buffer) => void
+}
+
+function headerValue(
+  headers: Record<string, string | string[] | undefined>,
+  name: string,
+): string | undefined {
+  const value = headers[name] ?? headers[name.toLowerCase()]
+  if (typeof value === 'string') return value
+  if (Array.isArray(value) && typeof value[0] === 'string') return value[0]
+  return undefined
+}
+
+export function createSolvaPayMcpExpress(
+  options: CreateSolvaPayMcpFetchOptions,
+): (req: ExpressRequest, res: ExpressResponse, next?: (err?: unknown) => void) => void {
+  const fetchHandler = createSolvaPayMcpFetch({
+    ...options,
+    responseMode: options.responseMode ?? 'json',
+  })
+  return (req, res, next): void => {
+    void (async () => {
+      try {
+        const host = req.get?.('host') ?? headerValue(req.headers, 'host') ?? 'localhost'
+        const proto = req.protocol ?? 'http'
+        const path = req.originalUrl ?? req.url ?? '/'
+        const headers = new Headers()
+        for (const [key, value] of Object.entries(req.headers)) {
+          if (typeof value === 'string') headers.set(key, value)
+          else if (Array.isArray(value)) headers.set(key, value.join(', '))
+        }
+        const method = req.method ?? 'GET'
+        const hasBody = method !== 'GET' && method !== 'HEAD'
+        let body: BodyInit | undefined
+        if (hasBody) {
+          if (typeof req.body === 'string' || req.body instanceof Uint8Array) {
+            body = req.body
+          } else if (req.body !== undefined) {
+            body = JSON.stringify(req.body)
+            if (!headers.has('content-type')) headers.set('content-type', 'application/json')
+          }
+        }
+        const request = new Request(`${proto}://${host}${path}`, { method, headers, body })
+        const response = await fetchHandler(request)
+        res.status(response.status)
+        response.headers.forEach((value, key) => {
+          res.setHeader(key, value)
+        })
+        res.end(Buffer.from(await response.arrayBuffer()))
+      } catch (error) {
+        if (next) next(error)
+        else throw error
+      }
+    })()
+  }
+}

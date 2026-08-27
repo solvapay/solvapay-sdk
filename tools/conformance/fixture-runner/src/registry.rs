@@ -10,19 +10,20 @@ use solvapay_core::{
     charges, classify_cancel_error, classify_create_error, classify_customer_ref,
     classify_lookup_error, classify_paywall_state, classify_reactivate_error,
     coerce_customer_options, counts_usage, credits_per_unit_from_balance, decide_paywall_outcome,
-    evaluate_cached_limits, evaluate_fresh_limits, extract_backend_customer_ref,
-    get_business_country_options, get_seller_tax_identifier_display_label, headline_charges,
-    included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
-    is_zero_decimal_currency, mcp_view_maps, meter_name, normalize_cancel_response,
-    normalize_reactivate_response, paywall_client_payload, paywall_tool_result,
-    pegged_credits_per_unit, per_unit_charge, project_topup_process_outcome,
-    resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
-    resolve_purchase_customer_ref, trial_days, validate_activate_plan_params,
-    validate_attach_business_details_params, validate_checkout_session_params,
-    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
+    evaluate_balance_observation, evaluate_cached_limits, evaluate_fresh_limits,
+    extract_backend_customer_ref, gate_next, get_business_country_options,
+    get_seller_tax_identifier_display_label, headline_charges, included_units, invoke_payable_next,
+    is_cached_customer_ref_valid, is_email_conflict, is_error_result, is_zero_decimal_currency,
+    mcp_view_maps, meter_name, normalize_cancel_response, normalize_reactivate_response,
+    paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
+    project_topup_process_outcome, resolve_authenticated_user, resolve_check_limits_params,
+    resolve_fallback_gate_limits, resolve_product_ref, resolve_purchase_customer_ref, trial_days,
+    validate_activate_plan_params, validate_attach_business_details_params,
+    validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, GateContent, PaywallGate, PaywallGateLimits,
-    PaywallLimits, PaywallState, ResponseEnvelope,
+    validate_topup_payment_intent_params, AuthResolutionInput, GateContent, PaywallGate,
+    PaywallGateLimits, PaywallLimits, PaywallState, ResponseEnvelope,
 };
 
 #[allow(unused_imports)]
@@ -170,6 +171,13 @@ fn invoke_decide_paywall_outcome(input: &FixtureInput) -> Result<Value, BindingE
     ))
 }
 
+fn invoke_evaluate_balance_observation(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let baseline = require_f64(&args, "baseline")?;
+    let credits = require_f64(&args, "credits")?;
+    to_value(&evaluate_balance_observation(baseline, credits))
+}
+
 fn invoke_evaluate_cached_limits(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let remaining = require_f64(&args, "remaining")?;
@@ -190,6 +198,13 @@ fn invoke_extract_backend_customer_ref(input: &FixtureInput) -> Result<Value, Bi
     Ok(Value::String(extract_backend_customer_ref(
         response, &fallback,
     )))
+}
+
+fn invoke_gate_next(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let state = optional_value(&args, "state");
+    let event = optional_value(&args, "event");
+    result_as_value(gate_next(state.as_ref(), event.as_ref()))
 }
 
 fn invoke_get_business_country_options(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -218,6 +233,13 @@ fn invoke_included_units(input: &FixtureInput) -> Result<Value, BindingError> {
     let priced = optional_value(&args, "priced");
     let meter = optional_string(&args, "meter")?;
     to_value(&included_units(priced.as_ref(), meter.as_deref()))
+}
+
+fn invoke_invoke_payable_next(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let state = optional_value(&args, "state");
+    let event = optional_value(&args, "event");
+    result_as_value(invoke_payable_next(state.as_ref(), event.as_ref()))
 }
 
 fn invoke_is_cached_customer_ref_valid(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -314,6 +336,12 @@ fn invoke_project_topup_process_outcome(input: &FixtureInput) -> Result<Value, B
         status.as_deref(),
         message.as_deref(),
     ))
+}
+
+fn invoke_resolve_authenticated_user(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let input = require_typed::<AuthResolutionInput>(&args, "input")?;
+    result_as_value(resolve_authenticated_user(&input))
 }
 
 fn invoke_resolve_check_limits_params(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -690,7 +718,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "resolveAuthenticatedUser",
         Binding {
             id: "core",
-            invoke: Box::new(crate::bindings::helpers::invoke_resolve_authenticated_user),
+            invoke: Box::new(invoke_resolve_authenticated_user),
         },
     );
     registry.register(
@@ -1034,6 +1062,27 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_build_payable_tool_result),
+        },
+    );
+    registry.register(
+        "evaluateBalanceObservation",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_evaluate_balance_observation),
+        },
+    );
+    registry.register(
+        "gateNext",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_gate_next),
+        },
+    );
+    registry.register(
+        "invokePayableNext",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_invoke_payable_next),
         },
     );
     registry.register(

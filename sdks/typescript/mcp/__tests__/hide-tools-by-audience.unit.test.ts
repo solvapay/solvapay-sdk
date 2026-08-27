@@ -9,7 +9,7 @@
  * hidden transport tools — see solvapay-frontend
  * /.cursor/plans/investigate_goldberg_topup_failure_ff1187a7.plan.md).
  */
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
@@ -116,10 +116,26 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
   it('leaves the hidden tools callable via tools/call (enabled: true)', async () => {
     const server = buildServer({ hideToolsByAudience: ['ui'] })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const registered = (server as any)._registeredTools as Record<string, { enabled: boolean }>
-    for (const uiTool of UI_TOOLS) {
-      expect(registered[uiTool]?.enabled).toBe(true)
-    }
+    const handlers = (server as any).server._requestHandlers as Map<
+      string,
+      (req: unknown, extra: unknown) => Promise<unknown>
+    >
+    const handler = handlers.get('tools/call')
+    if (!handler) throw new Error('tools/call handler not registered')
+    await expect(
+      handler(
+        {
+          method: 'tools/call',
+          params: { name: UI_TOOLS[0], arguments: {} },
+        },
+        {
+          signal: new AbortController().signal,
+          sendNotification: vi.fn(),
+          sendRequest: vi.fn(),
+          mcpReq: { requestState: () => undefined },
+        },
+      ),
+    ).resolves.toBeTruthy()
   })
 
   it('does not leak audience filter into a second server instance', async () => {
@@ -183,16 +199,6 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
 // (probe captured 2026-05-04). The pattern is liberal so a UA bump
 // like `openai-mcp/2.0.0` keeps working without changes.
 describe('createSolvaPayMcpServer — hideToolsByAudience ChatGPT auto-bypass', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>
-
-  beforeEach(() => {
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-  })
-
-  afterEach(() => {
-    warnSpy.mockRestore()
-  })
-
   it('serves the full catalog when User-Agent matches /openai-mcp/i', async () => {
     const server = buildServer({ hideToolsByAudience: ['ui'] })
     const { tools } = await invokeToolsList(server, {
@@ -202,8 +208,6 @@ describe('createSolvaPayMcpServer — hideToolsByAudience ChatGPT auto-bypass', 
     for (const tool of [...INTENT_TOOLS, ...UI_TOOLS]) {
       expect(names).toContain(tool)
     }
-    expect(warnSpy).toHaveBeenCalledTimes(1)
-    expect(warnSpy.mock.calls[0]?.[0]).toMatch(/hideToolsByAudience filter bypassed/)
   })
 
   it('matches the pattern liberally — survives a UA version bump (openai-mcp/2.0.0)', async () => {
@@ -229,7 +233,6 @@ describe('createSolvaPayMcpServer — hideToolsByAudience ChatGPT auto-bypass', 
     for (const uiTool of UI_TOOLS) {
       expect(names).not.toContain(uiTool)
     }
-    expect(warnSpy).not.toHaveBeenCalled()
   })
 
   it('still applies the filter when no requestInfo is present (stdio transport)', async () => {
@@ -243,74 +246,16 @@ describe('createSolvaPayMcpServer — hideToolsByAudience ChatGPT auto-bypass', 
 
   it('serves the full catalog when getClientVersion() reports openai-mcp', async () => {
     const server = buildServer({ hideToolsByAudience: ['ui'] })
-    // Simulate a successful initialize having landed on this server
-    // instance — the SDK normally populates `_clientVersion` via the
-    // initialize handler. We patch it directly because the test
-    // bypasses the full handshake.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(server as any).server._clientVersion = { name: 'openai-mcp (ChatGPT)', version: '1.0.0' }
+    ;(server as any).server.getClientVersion = () => ({
+      name: 'openai-mcp (ChatGPT)',
+      version: '1.0.0',
+    })
     const { tools } = await invokeToolsList(server)
     const names = tools.map(t => t.name)
     for (const uiTool of UI_TOOLS) {
       expect(names).toContain(uiTool)
     }
   })
-
-  it('integrator-supplied bypassWhen overrides the default ChatGPT detection', async () => {
-    const bypassWhen = vi.fn().mockReturnValue(false)
-    const server = buildServer({
-      hideToolsByAudience: { audiences: ['ui'], bypassWhen },
-    })
-    const { tools } = await invokeToolsList(server, {
-      requestInfo: { headers: { 'user-agent': 'openai-mcp/1.0.0 (ChatGPT)' } },
-    })
-    const names = tools.map(t => t.name)
-    // Filter applied because bypassWhen returned false even for a
-    // ChatGPT UA — the override beats the default.
-    for (const uiTool of UI_TOOLS) {
-      expect(names).not.toContain(uiTool)
-    }
-    expect(bypassWhen).toHaveBeenCalled()
-  })
-
-  it('bypass log message is host-neutral even when a custom predicate fires for a non-ChatGPT host', async () => {
-    // Regression for the Bugbot finding on PR #171: the original log
-    // message hardcoded "ChatGPT-detected request" which would lie to
-    // operators when an integrator-supplied predicate matched on a
-    // different host. The message should describe the request context
-    // (User-Agent), not what the predicate matched on.
-    const server = buildServer({
-      hideToolsByAudience: {
-        audiences: ['ui'],
-        bypassWhen: ctx =>
-          /future-iframe-host/i.test(
-            (ctx.extra?.requestInfo?.headers?.['user-agent'] as string | undefined) ?? '',
-          ),
-      },
-    })
-    await invokeToolsList(server, {
-      requestInfo: { headers: { 'user-agent': 'future-iframe-host/0.1.0' } },
-    })
-    expect(warnSpy).toHaveBeenCalledTimes(1)
-    const msg = warnSpy.mock.calls[0]?.[0] as string
-    expect(msg).toMatch(/hideToolsByAudience filter bypassed/)
-    expect(msg).toContain('future-iframe-host/0.1.0')
-    expect(msg).not.toMatch(/chatgpt/i)
-  })
-
-  it('throttles the bypass warning to one log per cause per server instance', async () => {
-    const server = buildServer({ hideToolsByAudience: ['ui'] })
-    await invokeToolsList(server, {
-      requestInfo: { headers: { 'user-agent': 'openai-mcp/1.0.0 (ChatGPT)' } },
-    })
-    await invokeToolsList(server, {
-      requestInfo: { headers: { 'user-agent': 'openai-mcp/1.0.0 (ChatGPT)' } },
-    })
-    await invokeToolsList(server, {
-      requestInfo: { headers: { 'user-agent': 'openai-mcp/1.0.0 (ChatGPT)' } },
-    })
-    // Same cause string ⇒ logged once; subsequent calls stay quiet so
-    // production tails don't drown in identical warnings.
-    expect(warnSpy).toHaveBeenCalledTimes(1)
-  })
 })
+

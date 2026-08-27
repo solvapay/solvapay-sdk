@@ -16,6 +16,50 @@ class RecordingClient:
         if not isinstance(payload, dict):
             payload = {}
         self.calls.append((method, payload))
+        if method in {"mcp_dispatch", "mcp_dispatch_blocking"} and "mcp_dispatch" not in self.responses:
+            from solvapay_mcp.core import call
+
+            value = call("mcpHandleRequest", payload)
+            if isinstance(value, dict) and value.get("kind") == "callBuiltin":
+                value = {
+                    "kind": "rpc",
+                    "rpc": {
+                        "jsonrpc": "2.0",
+                        "id": value.get("rpcId"),
+                        "result": {
+                            "content": [{"type": "text", "text": str(value.get("name") or "")}],
+                            "isError": True,
+                        },
+                    },
+                }
+            elif isinstance(value, dict) and value.get("kind") == "readResource":
+                uri = value.get("uri")
+                text = "{}"
+                if uri == "solvapay://bootstrap.json":
+                    config = payload.get("config") if isinstance(payload.get("config"), dict) else {}
+                    text = json.dumps(
+                        {
+                            "productRef": config.get("productRef"),
+                            "returnUrl": config.get("publicBaseUrl"),
+                        }
+                    )
+                value = {
+                    "kind": "rpc",
+                    "rpc": {
+                        "jsonrpc": "2.0",
+                        "id": value.get("rpcId"),
+                        "result": {
+                            "contents": [
+                                {
+                                    "uri": uri,
+                                    "mimeType": "application/json",
+                                    "text": text,
+                                }
+                            ]
+                        },
+                    },
+                }
+            return json.dumps({"ok": True, "value": value})
         value = self.responses.get(method, {})
         if callable(value):
             value = value(payload)

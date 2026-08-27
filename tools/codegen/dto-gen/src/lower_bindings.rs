@@ -197,6 +197,7 @@ fn binding_symbol_json(symbol: &IrBindingSymbol) -> serde_json::Value {
             "rb": symbol.names.rb,
             "go": symbol.names.go,
             "rust": symbol.names.rust,
+            "c": symbol.names.c,
         },
         "catalog": catalog_json(&symbol.catalog),
         "args": args,
@@ -335,6 +336,7 @@ mod tests {
             rb: id.into(),
             go: id.into(),
             rust: id.into(),
+            c: id.into(),
         }
     }
 

@@ -4,6 +4,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from '../../shared/paths.js'
 import {
+  LAYER3_ADAPTERS,
   countCodeLines,
   formatLayer3BudgetReport,
   runLayer3BudgetCheck,
@@ -22,6 +23,22 @@ describe('mcp-layer3-budget', () => {
     writeFileSync(path.join(root, 'sdks/ruby-mcp/lib/solvapay/mcp/engine.rb'), "class Engine\nend\n")
     mkdirSync(path.join(root, 'sdks/capi/ctest'), { recursive: true })
     writeFileSync(path.join(root, 'sdks/capi/ctest/mcp_engine.c'), 'int main() { return 0; }\n')
+    mkdirSync(path.join(root, 'sdks/typescript/mcp-core/src'), { recursive: true })
+    writeFileSync(path.join(root, 'sdks/typescript/mcp-core/src/engine-dispatch.ts'), 'export {}\n')
+    mkdirSync(path.join(root, 'sdks/python-mcp/python/solvapay_mcp/server'), {
+      recursive: true,
+    })
+    writeFileSync(
+      path.join(root, 'sdks/python-mcp/python/solvapay_mcp/server/engine.py'),
+      'def dispatch():\n  return None\n',
+    )
+    mkdirSync(path.join(root, 'sdks/python-mcp/python/solvapay_mcp/asgi'), {
+      recursive: true,
+    })
+    writeFileSync(
+      path.join(root, 'sdks/python-mcp/python/solvapay_mcp/asgi/mcp_engine.py'),
+      'def create_app():\n  return None\n',
+    )
     const issues = runLayer3BudgetCheck(root)
     expect(issues.some(i => i.adapter === 'rust' && i.codeLines > 280)).toBe(true)
     expect(formatLayer3BudgetReport(issues)).toMatch(/rust/)
@@ -31,6 +48,15 @@ describe('mcp-layer3-budget', () => {
     expect(
       countCodeLines('// comment\n\nfn handle() {\n  dispatch();\n}\n'),
     ).toBe(3)
+  })
+
+  it('covers the Python ASGI engine adapter', () => {
+    expect(LAYER3_ADAPTERS.some(adapter => adapter.id === 'py-asgi')).toBe(true)
+    expect(
+      LAYER3_ADAPTERS.some(
+        adapter => adapter.rel === 'sdks/python-mcp/python/solvapay_mcp/asgi/mcp_engine.py',
+      ),
+    ).toBe(true)
   })
 
   it('passes the live reference adapters', () => {

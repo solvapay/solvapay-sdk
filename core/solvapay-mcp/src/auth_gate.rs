@@ -18,7 +18,10 @@ pub enum McpAuthMode {
 /// Whether `mcpMethod` is free (no bearer) in `tools-call` mode.
 #[must_use]
 pub fn is_free_mcp_method(mcp_method: Option<&str>) -> bool {
-    !mcp_method.unwrap_or("").trim().eq_ignore_ascii_case("tools/call")
+    !mcp_method
+        .unwrap_or("")
+        .trim()
+        .eq_ignore_ascii_case("tools/call")
 }
 
 /// Whether a bearer is required for this method + mode.

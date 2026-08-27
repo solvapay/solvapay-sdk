@@ -20,7 +20,11 @@ import {
 } from '@solvapay/server'
 import type { SideOutcome, WireExchange } from './compare.js'
 
-/** All 36 client operation ids (manifest / OPERATION_NAMES order). */
+/**
+ * Routed (HTTP) client operation ids — the shadow harness compares wire
+ * exchanges, so MCP composites (no route) are excluded. Length is
+ * `EXPECTED_ROUTED_OPERATION_COUNT`.
+ */
 export const FACADE_SHADOW_OPERATION_NAMES = [
   'activatePlan',
   'assignCredits',

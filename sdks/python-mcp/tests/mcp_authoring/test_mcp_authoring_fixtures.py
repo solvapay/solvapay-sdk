@@ -86,8 +86,17 @@ MCP_AUTHORING_FIXTURES = [
     "oauth/discovery-authorization-server.json",
     "oauth/discovery-protected-resource-mcp-path.json",
     "oauth/discovery-protected-resource.json",
+    "oauth/error-inspect-build-description.json",
+    "oauth/error-inspect-derive-code.json",
+    "oauth/error-inspect-has-shape.json",
     "oauth/normalize-nestjs-401.json",
     "oauth/normalize-rfc-passthrough.json",
+    "oauth/path-leading-slash.json",
+    "oauth/path-protected-resource.json",
+    "oauth/path-resolve-paths.json",
+    "oauth/path-resource-identifier.json",
+    "oauth/path-strip-trailing-slash.json",
+    "oauth/request-protected-resource-mcp-path.json",
     "overview/resource.json",
 ]
 
@@ -96,6 +105,8 @@ REGISTER_PAYABLE_FIXTURES = [
     for rel in MCP_AUTHORING_FIXTURES
     if rel.startswith(("allow/", "customer-ref/", "error/", "gate/"))
 ]
+
+CLIENT_REQUEST_FIXTURES = ("oauth/request-protected-resource-mcp-path.json",)
 
 CORE_OP_FIXTURES = [
     rel
@@ -112,12 +123,20 @@ CORE_OP_FIXTURES = [
             "dispatch/",
         )
     )
+    and rel not in CLIENT_REQUEST_FIXTURES
 ]
 
 ASYNC_OP_FIXTURES = [
     rel
     for rel in MCP_AUTHORING_FIXTURES
     if rel.startswith(("bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/"))
+    or rel in CLIENT_REQUEST_FIXTURES
+]
+
+HTTP_ENGINE_FIXTURES = [
+    rel
+    for rel in MCP_AUTHORING_FIXTURES
+    if rel.startswith(("dispatch/", "oauth-proxy/")) and not rel.endswith("invoke-handler.json")
 ]
 
 
@@ -334,6 +353,86 @@ def test_replays_async_op(rel: str) -> None:
         }[fn]
         got = unwrap_envelope(method(json.dumps(args)))
         _assert_async(rel, fn, got, expect)
+    finally:
+        if server is not None:
+            server.close()
+
+
+@pytest.mark.parametrize("rel", HTTP_ENGINE_FIXTURES)
+@pytest.mark.asyncio
+async def test_replays_http_engine(rel: str) -> None:
+    import httpx
+    from mcp.server.lowlevel.server import Server
+    from solvapay.facade import create_solvapay
+    from solvapay._solvapay import SolvaPayClient
+
+    from solvapay_mcp.asgi.mcp_engine import create_mcp_engine_starlette
+
+    raw = _load_fixture(lookup_mcp_fixtures(), rel)
+    input_block = raw["input"] if isinstance(raw["input"], dict) else {}
+    fn = str(input_block.get("fn"))
+    args = input_block.get("args") if isinstance(input_block.get("args"), dict) else {}
+    expect = raw["expect"]["result"] if isinstance(raw["expect"], dict) else None
+    unreachable = (
+        isinstance(expect, dict)
+        and expect.get("status") == 502
+        and isinstance(expect.get("body"), dict)
+        and expect["body"].get("error") == "upstream_unreachable"
+    )
+    stubs = raw.get("http") if isinstance(raw.get("http"), list) else []
+    server: _StubServer | None = None
+    base = "http://127.0.0.1:1"
+    if not unreachable and stubs:
+        server = _StubServer([s for s in stubs if isinstance(s, dict)])
+        base = server.url
+    try:
+        client = SolvaPayClient("sk_test_fixture", base)
+        solvapay = create_solvapay(api_client=client)
+        config = args.get("config") if isinstance(args.get("config"), dict) else {}
+        app = create_mcp_engine_starlette(
+            Server("http-engine"),
+            solvapay=solvapay,
+            product_ref=str(config.get("productRef") or "prd_demo"),
+            public_base_url=str(config.get("publicBaseUrl") or "https://app.example.com"),
+            api_base_url=base,
+            resource_uri=str(config.get("resourceUri") or "ui://test/view.html"),
+            mcp_path=str(config.get("mcpPath") or "/mcp"),
+        )
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="https://app.example.com") as http:
+            if fn == "mcpDispatch":
+                headers = {}
+                auth = args.get("authHeader")
+                if isinstance(auth, str) and auth:
+                    headers["authorization"] = auth
+                response = await http.post("/mcp", json=args.get("rpc"), headers=headers)
+            else:
+                method = str(args.get("method") or "GET")
+                path = str(args.get("path") or "/")
+                body = args.get("body") or ""
+                headers = args.get("headers") if isinstance(args.get("headers"), dict) else {}
+                header_map = {str(key): str(value) for key, value in headers.items()}
+                response = await http.request(method, path, content=body if isinstance(body, str) else None, headers=header_map)
+        if fn == "mcpOauthRequest":
+            got_headers = {key.lower(): value for key, value in response.headers.items()}
+            body_json: object
+            try:
+                body_json = response.json()
+            except Exception:
+                body_json = response.text or None
+            _assert_async(
+                rel,
+                fn,
+                {"status": response.status_code, "headers": got_headers, "body": body_json},
+                expect,
+            )
+            return
+        if isinstance(expect, dict) and expect.get("kind") == "challenge":
+            assert response.status_code == expect.get("status")
+            assert response.json() == expect.get("body")
+            return
+        assert response.status_code == 200
+        assert response.json() == expect.get("rpc") if isinstance(expect, dict) else None
     finally:
         if server is not None:
             server.close()

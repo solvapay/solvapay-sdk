@@ -14,17 +14,25 @@ import {
   assertValidProductRef,
   logMcpConfigOnce,
   pathAwareProtectedResourcePath,
-  resolveOAuthPaths,
   withoutTrailingSlash,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
 import { corsPreflight } from './cors'
 import {
   mcpOauthRequest,
+  requireOauthClient,
   type McpOauthRequestClient,
   type McpOauthRequestConfig,
   type McpOauthRequestResult,
 } from '../internal/mcp-oauth-request'
+import {
+  DEFAULT_AUTHORIZATION_SERVER_PATH,
+  DEFAULT_PROTECTED_RESOURCE_PATH,
+  OPENID_PATH,
+  matchesProtectedResource,
+  oauthConfig,
+  oauthProxyRoutes,
+} from '../internal/oauth-route-table'
 
 export interface FetchOAuthOptions {
   publicBaseUrl: string
@@ -73,22 +81,6 @@ function responseFromResult(result: McpOauthRequestResult): Response {
   return new Response(JSON.stringify(result.body), { status: result.status, headers })
 }
 
-function oauthConfig(options: {
-  publicBaseUrl?: string
-  apiBaseUrl: string
-  productRef?: string
-  mcpPath?: string
-  oauthPaths?: OAuthBridgePaths
-}): McpOauthRequestConfig {
-  return {
-    publicBaseUrl: options.publicBaseUrl ?? '',
-    productRef: options.productRef ?? '',
-    apiBaseUrl: options.apiBaseUrl,
-    ...(options.mcpPath !== undefined ? { mcpPath: options.mcpPath } : {}),
-    ...(options.oauthPaths !== undefined ? { oauthPaths: options.oauthPaths } : {}),
-  }
-}
-
 async function dispatchOauth(
   req: Request,
   path: string,
@@ -105,7 +97,7 @@ async function dispatchOauth(
         body,
         config,
       },
-      client,
+      requireOauthClient(client),
     ),
   )
 }
@@ -116,7 +108,7 @@ export function createProtectedResourceHandler(options: {
   mcpPath?: string
   oauthClient?: McpOauthRequestClient | null
 }): FetchHandler {
-  const path = options.protectedResourcePath ?? '/.well-known/oauth-protected-resource'
+  const path = options.protectedResourcePath ?? DEFAULT_PROTECTED_RESOURCE_PATH
   const metadataPath = options.mcpPath
     ? pathAwareProtectedResourcePath(options.mcpPath)
     : path
@@ -128,10 +120,7 @@ export function createProtectedResourceHandler(options: {
   })
   return async req => {
     const pathname = pathOf(req)
-    const matches =
-      pathname === path ||
-      pathname === metadataPath ||
-      pathname.startsWith('/.well-known/oauth-protected-resource/')
+    const matches = matchesProtectedResource(pathname, path, metadataPath)
     if (req.method !== 'GET' || !matches) return null
     return dispatchOauth(req, pathname, '', config, options.oauthClient)
   }
@@ -144,7 +133,7 @@ export function createAuthorizationServerHandler(options: {
   productRef: string
   oauthClient?: McpOauthRequestClient | null
 }): FetchHandler {
-  const path = options.authorizationServerPath ?? '/.well-known/oauth-authorization-server'
+  const path = options.authorizationServerPath ?? DEFAULT_AUTHORIZATION_SERVER_PATH
   const config = oauthConfig({
     publicBaseUrl: options.publicBaseUrl,
     apiBaseUrl: '',
@@ -152,7 +141,7 @@ export function createAuthorizationServerHandler(options: {
     ...(options.paths !== undefined ? { oauthPaths: options.paths } : {}),
   })
   return async req => {
-    if (req.method !== 'GET' || pathOf(req) !== path) return null
+    if (pathOf(req) !== path) return null
     return dispatchOauth(
       req,
       '/.well-known/oauth-authorization-server',
@@ -168,8 +157,8 @@ export function createOpenidNotFoundHandler(
 ): FetchHandler {
   const config = oauthConfig({ publicBaseUrl: '', apiBaseUrl: '', productRef: '' })
   return async req => {
-    if (req.method !== 'GET' || pathOf(req) !== '/.well-known/openid-configuration') return null
-    return dispatchOauth(req, '/.well-known/openid-configuration', '', config, options.oauthClient)
+    if (req.method !== 'GET' || pathOf(req) !== OPENID_PATH) return null
+    return dispatchOauth(req, OPENID_PATH, '', config, options.oauthClient)
   }
 }
 
@@ -240,7 +229,7 @@ export function createOAuthTokenHandler(options: {
           body: await req.text(),
           config,
         },
-        options.oauthClient,
+        requireOauthClient(options.oauthClient),
       ),
     )
   }
@@ -271,7 +260,7 @@ export function createOAuthRevokeHandler(options: {
           body: await req.text(),
           config,
         },
-        options.oauthClient,
+        requireOauthClient(options.oauthClient),
       ),
     )
   }
@@ -290,56 +279,46 @@ export function createOAuthFetchRouter(options: FetchOAuthOptions): FetchHandler
     publicBaseUrl: options.publicBaseUrl,
   })
 
-  const paths = resolveOAuthPaths(options.oauthPaths)
-  const handlers: FetchHandler[] = [
-    createOpenidNotFoundHandler({ oauthClient: options.oauthClient }),
-    createProtectedResourceHandler({
-      publicBaseUrl: options.publicBaseUrl,
-      protectedResourcePath: options.protectedResourcePath,
-      mcpPath: options.mcpPath,
-      oauthClient: options.oauthClient,
-    }),
-    createAuthorizationServerHandler({
-      publicBaseUrl: options.publicBaseUrl,
-      authorizationServerPath: options.authorizationServerPath,
-      paths,
-      productRef: options.productRef,
-      oauthClient: options.oauthClient,
-    }),
-    createOAuthRegisterHandler({
-      apiBaseUrl: options.apiBaseUrl,
-      productRef: options.productRef,
-      path: paths.register,
-      publicBaseUrl: options.publicBaseUrl,
-      oauthClient: options.oauthClient,
-    }),
-    createOAuthAuthorizeHandler({
-      apiBaseUrl: options.apiBaseUrl,
-      path: paths.authorize,
-      publicBaseUrl: options.publicBaseUrl,
-      productRef: options.productRef,
-      oauthClient: options.oauthClient,
-    }),
-    createOAuthTokenHandler({
-      apiBaseUrl: options.apiBaseUrl,
-      path: paths.token,
-      publicBaseUrl: options.publicBaseUrl,
-      productRef: options.productRef,
-      oauthClient: options.oauthClient,
-    }),
-    createOAuthRevokeHandler({
-      apiBaseUrl: options.apiBaseUrl,
-      path: paths.revoke,
-      publicBaseUrl: options.publicBaseUrl,
-      productRef: options.productRef,
-      oauthClient: options.oauthClient,
-    }),
-  ]
+  const config = oauthConfig({
+    publicBaseUrl: options.publicBaseUrl,
+    apiBaseUrl: options.apiBaseUrl,
+    productRef: options.productRef,
+    ...(options.mcpPath !== undefined ? { mcpPath: options.mcpPath } : {}),
+    ...(options.oauthPaths !== undefined ? { oauthPaths: options.oauthPaths } : {}),
+  })
+  const routes = oauthProxyRoutes({
+    ...(options.mcpPath !== undefined ? { mcpPath: options.mcpPath } : {}),
+    ...(options.protectedResourcePath !== undefined
+      ? { protectedResourcePath: options.protectedResourcePath }
+      : {}),
+    ...(options.authorizationServerPath !== undefined
+      ? { authorizationServerPath: options.authorizationServerPath }
+      : {}),
+    ...(options.oauthPaths !== undefined ? { oauthPaths: options.oauthPaths } : {}),
+  })
 
   return async req => {
-    for (const handler of handlers) {
-      const response = await handler(req)
-      if (response) return response
+    const pathname = pathOf(req)
+    for (const route of routes) {
+      if (!route.match(pathname)) continue
+      if (req.method === 'OPTIONS' && route.corsPreflight) return corsPreflight(req)
+      if (!route.methods.includes(req.method)) return null
+      const headers = requestHeaders(req)
+      if (route.defaultFormContentType && !headers['content-type']) {
+        headers['content-type'] = 'application/x-www-form-urlencoded'
+      }
+      return responseFromResult(
+        await mcpOauthRequest(
+          {
+            method: req.method,
+            path: route.dispatchPath(pathname, queryOf(req)),
+            headers,
+            body: req.method === 'GET' || req.method === 'HEAD' ? '' : await req.text(),
+            config,
+          },
+          requireOauthClient(options.oauthClient),
+        ),
+      )
     }
     return null
   }

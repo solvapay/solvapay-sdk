@@ -1,0 +1,14 @@
+{
+  "suite": "oauth",
+  "case": "path-leading-slash",
+  "input": {
+    "fn": "mcpOauthPath",
+    "args": {
+      "kind": "leading-slash",
+      "value": "mcp"
+    }
+  },
+  "expect": {
+    "result": "/mcp"
+  }
+}

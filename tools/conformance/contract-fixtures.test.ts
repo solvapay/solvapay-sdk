@@ -2,25 +2,9 @@ import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parse as parseYaml } from 'yaml'
-import { installNativeCoreApi, resetNativeCoreApiForTests } from '@solvapay/core'
-import '@solvapay/core/portable'
-import { callNativeSync } from '@solvapay/server'
 import { createDefaultRegistry, replayFixture } from './lib/fixture-harness.js'
 import { parseFixture } from './lib/fixture-schema.js'
 import { contractInputPath } from '../shared/repo-paths.js'
-
-const PORTABLE_FIXTURE_DOMAINS = [
-  'business-details',
-  'credit-display',
-  'seller-identity',
-  'plan-pricing',
-] as const
-
-function isPortableDomainFixture(relativePath: string): boolean {
-  return PORTABLE_FIXTURE_DOMAINS.some(
-    domain => relativePath === domain || relativePath.startsWith(`${domain}/`),
-  )
-}
 
 const FIXTURES_ROOT = contractInputPath('fixtures')
 const MANIFEST_PATH = contractInputPath('sdkManifest')
@@ -606,19 +590,4 @@ describe('contract fixtures', () => {
       await replayFixture(fixture, { registry })
     },
   )
-
-  it.each(
-    fixtureFiles
-      .map(file => [path.relative(FIXTURES_ROOT, file), file] as const)
-      .filter(([relative]) => isPortableDomainFixture(relative)),
-  )('replays %s on the portable fallback path', async (_label, file) => {
-    const fixture = parseFixture(JSON.parse(readFileSync(file, 'utf8')))
-    const registry = createDefaultRegistry()
-    resetNativeCoreApiForTests()
-    try {
-      await replayFixture(fixture, { registry })
-    } finally {
-      installNativeCoreApi({ callNativeSync })
-    }
-  })
 })

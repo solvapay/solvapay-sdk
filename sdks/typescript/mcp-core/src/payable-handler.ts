@@ -1,42 +1,20 @@
 /**
  * `buildPayableHandler(solvaPay, ctx, handler)` — framework-neutral
  * wrapper that produces an MCP tool handler enforcing the SolvaPay
- * paywall.
- *
- * Merchant handlers receive a `ResponseContext` as their second
- * argument and return the `ResponseResult` envelope produced by
- * `ctx.respond(data, options?)`. `buildPayableHandler` unwraps the
- * envelope and — for text-only paywall / nudge responses — ships
- * a clean narration + structuredContent pair without routing through
- * any widget iframe.
- *
- * Per SEP-1865 / MCP Apps (2026-01-26), the widget iframe for payable
- * data tools has been deprecated outright: merchant-registered
- * paywalled tools no longer advertise `_meta.ui.resourceUri` at the
- * descriptor level, so hosts never open an uninvited iframe on a
- * successful tool call. Paywall / nudge / activation responses are
- * plain text narrations naming the recovery intent tool (`upgrade` /
- * `topup` / `activate_plan`) and inlining `gate.checkoutUrl` for
- * terminal-only hosts.
- *
- * The widget iframe is reserved for the three SolvaPay intent tools
- * (`upgrade`, `manage_account`, `topup`) where the user deliberately
- * asked for a checkout UI.
- *
- * Every SolvaPay MCP adapter (`@solvapay/mcp`, future `fastmcp`
- * adapters) wraps this in its framework-specific `registerTool` /
- * `registerAppTool` call.
+ * paywall via the shared Rust `invokePayableNext` driver.
  */
 
-import type { LimitResponseWithPlan, ProtectHandlerContext, SolvaPay } from '@solvapay/server'
-import { isPaywallStructuredContent } from '@solvapay/server'
-import { assertResponseResult, buildPayableToolResult } from './native-mcp'
-import type { BuildBootstrapPayloadFn } from './bootstrap-payload'
+import type { LimitResponseWithPlan, PaywallArgs, SolvaPay } from '@solvapay/server'
+import { isPaywallStructuredContent, PaywallError } from '@solvapay/server'
+import { defaultGetCustomerRef } from './helpers'
+import {
+  assertResponseResult,
+  invokePayableNext,
+} from './native-mcp'
 import { buildResponseContext } from './response-context'
 import type {
   BootstrapPayload,
   McpToolExtra,
-  PaywallToolResult,
   ResponseContext,
   ResponseResult,
   SolvaPayCallToolResult,
@@ -48,15 +26,11 @@ export interface BuildPayableHandlerContext {
   /**
    * Builds the full `BootstrapPayload`. Still accepted on the context
    * for intent-tool reuse, but NO LONGER consumed by the payable
-   * branch: merchant paywall / nudge responses are text-only now. A
-   * future intent-tool helper may re-use this hook; leaving it on the
-   * type preserves compat for direct callers (`registerPayableTool`).
+   * branch.
    *
-   * @deprecated No longer called by `buildPayableHandler`. Kept on the
-   * context for backwards compatibility with callers that pass it
-   * through a bound helper (e.g. `registerPayable`).
+   * @deprecated No longer called by `buildPayableHandler`.
    */
-  buildBootstrap?: BuildBootstrapPayloadFn
+  buildBootstrap?: (view: string, extra?: McpToolExtra) => Promise<BootstrapPayload>
   /**
    * Override customer-ref extraction. Defaults to the MCP adapter's
    * behavior (reads `extra.http.authInfo.extra.customer_ref`, falling
@@ -65,35 +39,51 @@ export interface BuildPayableHandlerContext {
   getCustomerRef?: (args: Record<string, unknown>, extra?: McpToolExtra) => string | Promise<string>
 }
 
-/**
- * Merchant handler contract: `(args, ctx) => ctx.respond(data, options?)`.
- * `buildPayableHandler` unwraps the returned `ResponseResult` envelope
- * into the adapter-facing `SolvaPayCallToolResult`.
- */
 type MerchantHandler<TArgs, TResult> = (
   args: TArgs,
   ctx: ResponseContext,
 ) => Promise<ResponseResult<TResult>>
 
+type InvokeAction = {
+  kind?: unknown
+  customerRef?: unknown
+  product?: unknown
+  usageType?: unknown
+  limits?: unknown
+  result?: unknown
+  track?: { outcome?: unknown; durationMs?: unknown } | null
+  gate?: unknown
+  message?: unknown
+}
+
+function nowMs(): number {
+  return Date.now()
+}
+
+async function resolveCustomerRef(
+  args: Record<string, unknown>,
+  extra: McpToolExtra | undefined,
+  getCustomerRef: BuildPayableHandlerContext['getCustomerRef'],
+): Promise<string> {
+  if (getCustomerRef) {
+    const resolved = await getCustomerRef(args, extra)
+    if (typeof resolved === 'string' && resolved.trim()) {
+      return resolved.trim()
+    }
+  }
+  const fromExtra = defaultGetCustomerRef(extra)
+  if (fromExtra) {
+    return fromExtra
+  }
+  const raw = args.customer_ref
+  if (typeof raw === 'string' && raw.trim()) {
+    return raw.trim()
+  }
+  return 'anonymous'
+}
+
 /**
- * Build a paywall-protected MCP tool handler. Returned function is a
- * `(args, extra) => Promise<SolvaPayCallToolResult>` that any MCP
- * adapter can register directly.
- *
- * The handler:
- *  1. Builds a `ResponseContext` from the pre-check `LimitResponseWithPlan`
- *     and passes it as the second arg to the merchant handler.
- *  2. Routes the call through `solvaPay.payable({ product }).mcp(wrappedBusinessLogic)`.
- *  3. Detects paywall results via `isPaywallStructuredContent` and
- *     ships them verbatim — the adapter's `formatGate` already
- *     produced the clean `{ isError: false, content[0].text =
- *     gate.message, structuredContent = gate }` shape.
- *  4. Unwraps the merchant's `ResponseResult` envelope into the
- *     terminal `SolvaPayCallToolResult`: applies `options.text` /
- *     `options.nudge` (as a text suffix) and flushes `ctx.emit(...)`
- *     blocks into `content[]`.
- *  5. Silently ignores `options.units` (V1 billing stays at one usage
- *     unit per call; credit debit = units × plan.creditsPerUnit).
+ * Build a paywall-protected MCP tool handler.
  */
 export function buildPayableHandler<TArgs extends Record<string, unknown>, TResult>(
   solvaPay: SolvaPay,
@@ -102,87 +92,110 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
 ): (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult> {
   const { product, getCustomerRef } = ctx
 
-  // The business logic passed to `.mcp(...)` is called by
-  // `paywall.protect` with `(args, handlerContext)`. We close over
-  // `solvaPay` + `product` to construct the merchant-facing
-  // `ResponseContext` and invoke the merchant handler.
-  const wrappedBusinessLogic = async (
-    args: Record<string, unknown>,
-    handlerContext?: ProtectHandlerContext,
-  ): Promise<ResponseResult<TResult>> => {
-    const limits: LimitResponseWithPlan | null = handlerContext?.limits ?? null
-    const customerRef = handlerContext?.customerRef ?? ''
-
-    const { ctx: responseCtx } = buildResponseContext({
-      customerRef,
-      limits,
-      product,
-      solvaPay,
-    })
-
-    return handler(args as TArgs, responseCtx)
-  }
-
-  const protectedHandler = solvaPay
-    .payable({ product, getCustomerRef })
-    .mcp(wrappedBusinessLogic)
-
   return async (
     args: Record<string, unknown>,
     extra?: McpToolExtra,
   ): Promise<SolvaPayCallToolResult> => {
-    const result = (await protectedHandler(args, extra)) as
-      | PaywallToolResult
-      | SolvaPayCallToolResult
+    const customerRef = await resolveCustomerRef(args, extra, getCustomerRef)
+    let state: unknown = null
+    let event: Record<string, unknown> = {
+      kind: 'start',
+      customerRef,
+      product,
+      usageType: 'requests',
+      startedMs: nowMs(),
+    }
+    let allowCustomerRef: string | null = null
 
-    // ——————————————————————————————————————————————————————————————
-    // Paywall branch — text-only.
-    // ——————————————————————————————————————————————————————————————
-    //
-    // `McpAdapter.formatGate` already delivers the clean shape
-    // (`isError: false`, `content[0].text = gate.message`,
-    // `structuredContent = gate`). The server's state engine —
-    // `classifyPaywallState` + `buildGateMessage` — produced a
-    // narration that names the recovery intent tool (`upgrade` /
-    // `topup` / `activate_plan`) and inlines `checkoutUrl` for
-    // terminal-only hosts. We ship the result verbatim.
-    //
-    // `_meta.ui` is intentionally not stamped: merchant payable-tool
-    // descriptors no longer advertise `_meta.ui.resourceUri`, so
-    // hosts never open an uninvited iframe for a successful data
-    // tool (the original "empty MCP App" complaint). The widget
-    // iframe is reserved for the three SolvaPay intent tools.
-    if (isPaywallStructuredContent(result.structuredContent)) {
-      return {
-        ...(result as SolvaPayCallToolResult),
-        isError: false,
-        structuredContent: result.structuredContent as unknown as Record<string, unknown>,
+    for (;;) {
+      const out = invokePayableNext(state, event)
+      state = out.state
+      const action = out.action as InvokeAction
+      const kind = action.kind
+      if (kind === 'runGate') {
+        const decision = await solvaPay.paywall.decide(
+          { auth: { customer_ref: String(action.customerRef ?? customerRef) } } as PaywallArgs,
+          { product: String(action.product ?? product) },
+        )
+        if (decision.outcome === 'gate') {
+          const message =
+            decision.gate.kind === 'activation_required' ? 'Activation required' : 'Payment required'
+          event = {
+            kind: 'gatePaywall',
+            gate: decision.gate,
+            message: decision.gate.message || message,
+          }
+          continue
+        }
+        allowCustomerRef = decision.customerRef
+        event = {
+          kind: 'gateAllow',
+          customerRef: decision.customerRef,
+          limits: decision.limits,
+        }
+        continue
       }
+      if (kind === 'invokeHandler') {
+        const limits = (action.limits ?? null) as LimitResponseWithPlan | null
+        const handlerRef = String(action.customerRef ?? allowCustomerRef ?? '')
+        const { ctx: responseCtx } = buildResponseContext({
+          customerRef: handlerRef,
+          limits,
+          product,
+          solvaPay,
+        })
+        try {
+          const returned = await handler(args as TArgs, responseCtx)
+          const envelope = assertResponseResult(returned)
+          event = {
+            kind: 'handlerOk',
+            envelope,
+            nowMs: nowMs(),
+          }
+        } catch (err) {
+          if (err instanceof PaywallError) {
+            event = {
+              kind: 'handlerPaywall',
+              gate: err.structuredContent,
+              message: err.message,
+            }
+            continue
+          }
+          const message = err instanceof Error ? err.message : String(err)
+          event = {
+            kind: 'handlerErr',
+            message,
+            nowMs: nowMs(),
+          }
+        }
+        continue
+      }
+      if (kind === 'done') {
+        const track = action.track
+        if (track && allowCustomerRef) {
+          const duration =
+            typeof track.durationMs === 'number' ? track.durationMs : Number(track.durationMs ?? 0)
+          const outcome = track.outcome === 'success' ? 'success' : 'fail'
+          await solvaPay.apiClient.trackUsage({
+            customerRef: allowCustomerRef,
+            productRef: product,
+            actionType: 'api_call',
+            units: 1,
+            outcome,
+            duration,
+            metadata: { action: 'requests' },
+            timestamp: new Date().toISOString(),
+          })
+        }
+        const result = action.result as SolvaPayCallToolResult
+        if (isPaywallStructuredContent(result.structuredContent)) {
+          return { ...result, isError: false }
+        }
+        return result
+      }
+      throw new Error(`invokePayableNext unknown action kind: ${String(kind)}`)
     }
-
-    // ——————————————————————————————————————————————————————————————
-    // Error branch — non-paywall errors (thrown `Error`, formatError
-    // output) pass through untouched. `structuredContent` here is the
-    // adapter's error payload, not a `ResponseResult` envelope.
-    // ——————————————————————————————————————————————————————————————
-    if (result.isError) {
-      return result as SolvaPayCallToolResult
-    }
-
-    // ——————————————————————————————————————————————————————————————
-    // Success branch — unwrap the `ResponseResult` envelope.
-    // ——————————————————————————————————————————————————————————————
-    //
-    // `assertResponseResult` enforces the invariant that merchants
-    // returned via `ctx.respond(...)`. If a handler bypassed the
-    // TypeScript contract and returned a raw value, the assertion
-    // throws a merchant-actionable error pointing at the fix.
-    const envelope = assertResponseResult(result.structuredContent)
-    return buildPayableToolResult(envelope)
   }
 }
 
-// Keep the `BootstrapPayload` type in the symbol table of this module so
-// consumers that only import the handler don't have to pull the types
-// entry point separately.
 export type { BootstrapPayload }

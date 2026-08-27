@@ -221,6 +221,9 @@ export declare function deriveIcons(argsJson: string): string
 /** Binding for `deriveTaxIdType`. */
 export declare function deriveTaxIdType(argsJson: string): string
 
+/** Binding for `evaluateBalanceObservation`. */
+export declare function evaluateBalanceObservation(argsJson: string): string
+
 /** Binding for `evaluateCachedLimits`. */
 export declare function evaluateCachedLimits(argsJson: string): string
 
@@ -232,6 +235,9 @@ export declare function evaluateProductReadiness(argsJson: string): string
 
 /** Binding for `extractBackendCustomerRef`. */
 export declare function extractBackendCustomerRef(argsJson: string): string
+
+/** Binding for `gateNext`. */
+export declare function gateNext(argsJson: string): string
 
 /** Binding for `getBusinessCountryOptions`. */
 export declare function getBusinessCountryOptions(argsJson: string): string
@@ -253,6 +259,9 @@ export declare function headlineCharges(argsJson: string): string
 
 /** Binding for `includedUnits`. */
 export declare function includedUnits(argsJson: string): string
+
+/** Binding for `invokePayableNext`. */
+export declare function invokePayableNext(argsJson: string): string
 
 /** Binding for `isCachedCustomerRefValid`. */
 export declare function isCachedCustomerRefValid(argsJson: string): string
@@ -333,6 +342,9 @@ export declare function projectUsageSnapshot(argsJson: string): string
 
 /** Binding for `requireProductRef`. Throws when neither source is set. */
 export declare function requireProductRef(argsJson: string): string
+
+/** Binding for `resolveAuthenticatedUser`. */
+export declare function resolveAuthenticatedUser(argsJson: string): string
 
 /**
  * Binding for `resolveCheckLimitsParams`.

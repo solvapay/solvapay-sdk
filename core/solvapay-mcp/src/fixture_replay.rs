@@ -59,7 +59,11 @@ fn replays_sync_mcp_fixtures() {
         let fn_name = fixture["input"]["fn"].as_str().unwrap();
         if matches!(
             fn_name,
-            "registerPayable" | "mcpBootstrap" | "mcpCallBuiltinTool" | "mcpOauthRequest" | "mcpDispatch"
+            "registerPayable"
+                | "mcpBootstrap"
+                | "mcpCallBuiltinTool"
+                | "mcpOauthRequest"
+                | "mcpDispatch"
         ) {
             continue;
         }
@@ -67,8 +71,7 @@ fn replays_sync_mcp_fixtures() {
         let expect = fixture["expect"]["result"].clone();
         match fn_name {
             "mcpHandleRequest" => {
-                let input: HandleRequestInput =
-                    serde_json::from_value(args.clone()).expect(&rel);
+                let input: HandleRequestInput = serde_json::from_value(args.clone()).expect(&rel);
                 let got = mcp_handle_request(&input).expect(&rel);
                 if rel.ends_with("tools-list.json") {
                     assert_eq!(got["kind"], "rpc", "{rel}");
@@ -101,4 +104,3 @@ fn replays_sync_mcp_fixtures() {
         }
     }
 }
-

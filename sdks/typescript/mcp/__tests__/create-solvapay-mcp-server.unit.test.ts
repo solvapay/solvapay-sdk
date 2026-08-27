@@ -46,6 +46,55 @@ function buildTestServer(overrides: Partial<Parameters<typeof createSolvaPayMcpS
   return { server, solvaPay }
 }
 
+async function invokeHandler(
+  server: ReturnType<typeof createSolvaPayMcpServer>,
+  method: string,
+  params: Record<string, unknown> = {},
+) {
+  const handlers = (
+    server as unknown as {
+      server: { _requestHandlers: Map<string, (req: unknown, extra: unknown) => Promise<unknown>> }
+    }
+  ).server._requestHandlers
+  const handler = handlers.get(method)
+  if (!handler) throw new Error(`${method} handler not registered`)
+  return handler(
+    { method, params },
+    {
+      signal: new AbortController().signal,
+      sendNotification: vi.fn(),
+      sendRequest: vi.fn(),
+      mcpReq: { requestState: () => undefined },
+    },
+  )
+}
+
+async function listedTools(server: ReturnType<typeof createSolvaPayMcpServer>) {
+  return (await invokeHandler(server, 'tools/list')) as {
+    tools: Array<{
+      name: string
+      description?: string
+      annotations?: unknown
+      _meta?: Record<string, unknown> & { ui?: { resourceUri?: string; visibility?: unknown; icons?: Array<{ src: string }> } }
+    }>
+  }
+}
+
+async function listedToolNames(server: ReturnType<typeof createSolvaPayMcpServer>): Promise<string[]> {
+  const listed = await listedTools(server)
+  return listed.tools.map(t => t.name)
+}
+
+async function listedPrompts(server: ReturnType<typeof createSolvaPayMcpServer>) {
+  return (await invokeHandler(server, 'prompts/list')) as { prompts: Array<{ name: string }> }
+}
+
+async function listedResources(server: ReturnType<typeof createSolvaPayMcpServer>) {
+  return (await invokeHandler(server, 'resources/list')) as {
+    resources: Array<{ uri: string; metadata?: { _meta?: { ui?: { prefersBorder?: boolean } } }; _meta?: { ui?: { prefersBorder?: boolean } } }>
+  }
+}
+
 describe('createSolvaPayMcpServer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -64,12 +113,9 @@ describe('createSolvaPayMcpServer', () => {
     ).toThrow(/http\(s\)/)
   })
 
-  it('registers the full transport surface', () => {
+  it('registers the full transport surface', async () => {
     const { server } = buildTestServer()
-    // The MCP SDK exposes registered tools via an internal collection; use
-    // the listTools method available on McpServer.
-    // @ts-expect-error — accessing private _registeredTools for test coverage
-    const toolNames = Object.keys(server._registeredTools ?? {})
+    const toolNames = await listedToolNames(server)
     const expected = [
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
@@ -92,22 +138,15 @@ describe('createSolvaPayMcpServer', () => {
     expect(toolNames).not.toContain('check_usage')
   })
 
-  it('registers attach_business_details so the checkout Payment step can compute tax (DEV-650)', () => {
-    // Regression guard: the descriptor list (mcp-core) already covered
-    // this tool, but the server-factory registration assertion did not —
-    // an omitted/stale registration surfaced only at runtime as
-    // `MCP error -32602: Tool attach_business_details not found` when the
-    // checkout auto-attached consumer details on the Payment step.
+  it('registers attach_business_details so the checkout Payment step can compute tax (DEV-650)', async () => {
     const { server } = buildTestServer()
-    // @ts-expect-error — accessing private _registeredTools for test coverage
-    const toolNames = Object.keys(server._registeredTools ?? {})
+    const toolNames = await listedToolNames(server)
     expect(toolNames).toContain(MCP_TOOL_NAMES.attachBusinessDetails)
   })
 
-  it('gates intent tools on the views option', () => {
+  it('gates intent tools on the views option', async () => {
     const { server } = buildTestServer({ views: ['checkout'] })
-    // @ts-expect-error — accessing private _registeredTools for test coverage
-    const toolNames = Object.keys(server._registeredTools ?? {})
+    const toolNames = await listedToolNames(server)
     expect(toolNames).toContain(MCP_TOOL_NAMES.upgrade)
     expect(toolNames).not.toContain(MCP_TOOL_NAMES.manageAccount)
     expect(toolNames).not.toContain('open_paywall')
@@ -123,11 +162,10 @@ describe('createSolvaPayMcpServer', () => {
     expect(typeof ctx.registerPayable).toBe('function')
   })
 
-  it('registers the slash-command prompts by default', () => {
+  it('registers the slash-command prompts by default', async () => {
     const { server } = buildTestServer()
-    // @ts-expect-error — private registry used for coverage only
-    const promptNames = Object.keys(server._registeredPrompts ?? {})
-    expect(promptNames.sort()).toEqual(
+    const { prompts } = await listedPrompts(server)
+    expect(prompts.map(p => p.name).sort()).toEqual(
       [
         MCP_TOOL_NAMES.activatePlan,
         MCP_TOOL_NAMES.manageAccount,
@@ -137,66 +175,57 @@ describe('createSolvaPayMcpServer', () => {
     )
   })
 
-  it('opts out of prompts when registerPrompts: false', () => {
+  it('opts out of prompts when registerPrompts: false', async () => {
     const { server } = buildTestServer({ registerPrompts: false })
-    // @ts-expect-error — private registry used for coverage only
-    const promptNames = Object.keys(server._registeredPrompts ?? {})
-    expect(promptNames).toEqual([])
+    const { prompts } = await listedPrompts(server)
+    expect(prompts).toEqual([])
   })
 
-  it('only registers prompts for enabled views', () => {
+  it('only registers prompts for enabled views', async () => {
     const { server } = buildTestServer({ views: ['checkout', 'account'] })
-    // @ts-expect-error — private registry used for coverage only
-    const promptNames = Object.keys(server._registeredPrompts ?? {})
-    // `/activate_plan` is wired to the checkout view (it opens the
-    // embedded plan picker when called without a planRef).
-    expect(promptNames.sort()).toEqual(
+    const { prompts } = await listedPrompts(server)
+    expect(prompts.map(p => p.name).sort()).toEqual(
       [MCP_TOOL_NAMES.activatePlan, MCP_TOOL_NAMES.manageAccount, MCP_TOOL_NAMES.upgrade].sort(),
     )
   })
 
-  it('registers the docs overview resource by default', () => {
+  it('registers the docs overview resource by default', async () => {
     const { server } = buildTestServer()
-    // @ts-expect-error — private registry used for coverage only
-    const resourceUris = Object.keys(server._registeredResources ?? {})
-    expect(resourceUris).toContain('docs://solvapay/overview.md')
+    const { resources } = await listedResources(server)
+    expect(resources.map(r => r.uri)).toContain('docs://solvapay/overview.md')
   })
 
-  it('registers the bootstrap resource by default', () => {
+  it('registers the bootstrap resource by default', async () => {
     const { server } = buildTestServer()
-    // @ts-expect-error — private registry used for coverage only
-    const resourceUris = Object.keys(server._registeredResources ?? {})
-    expect(resourceUris).toContain('solvapay://bootstrap.json')
+    const { resources } = await listedResources(server)
+    expect(resources.map(r => r.uri)).toContain('solvapay://bootstrap.json')
   })
 
-  it('opts out of the docs resource when registerDocsResources: false', () => {
+  it('opts out of the docs resource when registerDocsResources: false', async () => {
     const { server } = buildTestServer({ registerDocsResources: false })
-    // @ts-expect-error — private registry used for coverage only
-    const resourceUris = Object.keys(server._registeredResources ?? {})
-    expect(resourceUris).not.toContain('docs://solvapay/overview.md')
+    const { resources } = await listedResources(server)
+    expect(resources.map(r => r.uri)).not.toContain('docs://solvapay/overview.md')
   })
 
-  it('mentions sibling intent tools in the upgrade description', () => {
+  it('mentions sibling intent tools in the upgrade description', async () => {
     const { server } = buildTestServer()
-    // @ts-expect-error — private registry used for coverage only
-    const registered = server._registeredTools ?? {}
-    const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+    const { tools } = await listedTools(server)
+    const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)
     expect(upgrade?.description).toContain('Also available')
     expect(upgrade?.description).toContain('manage_account')
     expect(upgrade?.description).toContain('activate_plan')
   })
 
   describe('tool annotations', () => {
-    it('flows readOnly + idempotent annotations on all intent tools', () => {
+    it('flows readOnly + idempotent annotations on all intent tools', async () => {
       const { server } = buildTestServer()
-      // @ts-expect-error — private registry used for coverage only
-      const registered = server._registeredTools ?? {}
+      const { tools } = await listedTools(server)
       for (const name of [
         MCP_TOOL_NAMES.manageAccount,
         MCP_TOOL_NAMES.upgrade,
         MCP_TOOL_NAMES.topup,
       ]) {
-        const tool = registered[name]
+        const tool = tools.find(t => t.name === name)
         expect(tool?.annotations).toEqual({
           readOnlyHint: true,
           idempotentHint: true,
@@ -247,7 +276,7 @@ describe('createSolvaPayMcpServer', () => {
   })
 
   describe('tool _meta.ui descriptor', () => {
-    it('does NOT advertise _meta.ui.resourceUri on merchant payable tools (text-only paywall; widget reserved for intent tools)', () => {
+    it('does NOT advertise _meta.ui.resourceUri on merchant payable tools (text-only paywall; widget reserved for intent tools)', async () => {
       const { server } = buildTestServer({
         additionalTools: ({ registerPayable }) => {
           registerPayable('search_knowledge', {
@@ -257,29 +286,19 @@ describe('createSolvaPayMcpServer', () => {
           })
         },
       })
-      // @ts-expect-error — private registry used for coverage only
-      const registered = server._registeredTools ?? {}
-      const payable = registered['search_knowledge']
+      const { tools } = await listedTools(server)
+      const payable = tools.find(t => t.name === 'search_knowledge')
       const ui = (payable?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
-      // Merchant payable tools intentionally carry no
-      // `_meta.ui.resourceUri`: the descriptor-advertising contract
-      // per SEP-1865 says hosts MUST open the iframe on every call,
-      // so stamping it meant data tools triggered an empty widget on
-      // every successful call. Paywall / nudge / activation
-      // responses are text-only narrations now.
       expect(ui?.resourceUri).toBeUndefined()
-      // SolvaPay intent tools — where opening the iframe IS the UX —
-      // still advertise their UI resource.
-      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+      const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)
       const upgradeUi = (upgrade?._meta as { ui?: { resourceUri?: string } } | undefined)?.ui
       expect(upgradeUi?.resourceUri).toBe('ui://test/view.html')
     })
 
-    it('stamps _meta.ui.visibility and openai/widgetAccessible on UI-only transport tools but not intent tools', () => {
+    it('stamps _meta.ui.visibility and openai/widgetAccessible on UI-only transport tools but not intent tools', async () => {
       const { server } = buildTestServer()
-      // @ts-expect-error — private registry used for coverage only
-      const registered = server._registeredTools ?? {}
-      const createPayment = registered[MCP_TOOL_NAMES.createPayment]
+      const { tools } = await listedTools(server)
+      const createPayment = tools.find(t => t.name === MCP_TOOL_NAMES.createPayment)
       const transportMeta = createPayment?._meta as
         | { ui?: { visibility?: readonly string[] } }
         | undefined
@@ -288,7 +307,7 @@ describe('createSolvaPayMcpServer', () => {
         (createPayment?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
       ).toBe(true)
 
-      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+      const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)
       const intentUi = (upgrade?._meta as { ui?: { visibility?: readonly string[] } } | undefined)
         ?.ui
       expect(intentUi?.visibility).not.toEqual(['app'])
@@ -297,7 +316,7 @@ describe('createSolvaPayMcpServer', () => {
       ).toBeUndefined()
     })
 
-    it('stamps _meta.ui.icons on every intent tool when branding is provided', () => {
+    it('stamps _meta.ui.icons on every intent tool when branding is provided', async () => {
       const { server } = buildTestServer({
         branding: {
           brandName: 'Acme',
@@ -305,24 +324,22 @@ describe('createSolvaPayMcpServer', () => {
           logoUrl: 'https://cdn.acme.test/logo.png',
         },
       })
-      // @ts-expect-error — private registry used for coverage only
-      const registered = server._registeredTools ?? {}
-      const manageAccount = registered[MCP_TOOL_NAMES.manageAccount]
+      const { tools } = await listedTools(server)
+      const manageAccount = tools.find(t => t.name === MCP_TOOL_NAMES.manageAccount)
       const ui = (manageAccount?._meta as { ui?: { icons?: Array<{ src: string }> } } | undefined)
         ?.ui
       expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
     })
 
-    it('falls back to logoUrl when branding omits iconUrl', () => {
+    it('falls back to logoUrl when branding omits iconUrl', async () => {
       const { server } = buildTestServer({
         branding: {
           brandName: 'Acme',
           logoUrl: 'https://cdn.acme.test/logo.png',
         },
       })
-      // @ts-expect-error — private registry used for coverage only
-      const registered = server._registeredTools ?? {}
-      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+      const { tools } = await listedTools(server)
+      const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)
       const ui = (upgrade?._meta as { ui?: { icons?: Array<{ src: string }> } } | undefined)?.ui
       expect(ui?.icons?.[0]?.src).toBe('https://cdn.acme.test/logo.png')
     })
@@ -443,18 +460,11 @@ describe('createSolvaPayMcpServer', () => {
       expect(ui?.resourceUri).toBe('ui://test/view.html')
     })
 
-    it('advertises prefersBorder: false on the app UI resource (widget paints its own frame)', () => {
-      // The SolvaPay widget renders its own `.solvapay-mcp-card` frame
-      // plus `<AppHeader>` merchant strip; a host-painted outer card
-      // (prefersBorder: true) nested the two containers on MCP Jam.
-      // Hosts that honour the preference now render us flush inside
-      // their conversation surface.
+    it('advertises prefersBorder: false on the app UI resource (widget paints its own frame)', async () => {
       const { server } = buildTestServer()
-      // @ts-expect-error — private registry used for coverage only
-      const resources = server._registeredResources ?? {}
-      const entry = resources['ui://test/view.html']
-      const metaUi = (entry?.metadata?._meta as { ui?: { prefersBorder?: boolean } } | undefined)
-        ?.ui
+      const { resources } = await listedResources(server)
+      const entry = resources.find(r => r.uri === 'ui://test/view.html')
+      const metaUi = (entry?._meta ?? entry?.metadata?._meta)?.ui
       expect(metaUi?.prefersBorder).toBe(false)
     })
   })

@@ -3,7 +3,6 @@ import { PaywallError, isPaywallStructuredContent } from '@solvapay/server'
 import {
   buildSolvaPayRequest,
   defaultGetCustomerRef,
-  enrichPurchase,
   paywallToolResult,
   toolErrorResult,
   toolResult,
@@ -215,48 +214,5 @@ describe('buildSolvaPayRequest', () => {
   it('respects a custom getCustomerRef override', () => {
     const req = buildSolvaPayRequest(undefined, { getCustomerRef: () => 'override_ref' })
     expect(req.headers.get('x-user-id')).toBe('override_ref')
-  })
-})
-
-describe('enrichPurchase', () => {
-  it('adds a priceDisplay for originalAmount + currency', () => {
-    const enriched = enrichPurchase({
-      reference: 'pur_1',
-      amount: 5426,
-      originalAmount: 50000,
-      currency: 'sek',
-    })
-    expect(enriched.priceDisplay).toMatch(/SEK/)
-    // USD equivalent shown alongside because currency !== USD.
-    expect(enriched.priceUsdDisplay).toMatch(/\$/)
-  })
-
-  it('falls back to USD when originalAmount is missing', () => {
-    const enriched = enrichPurchase({ reference: 'pur_2', amount: 1234 })
-    expect(enriched.priceDisplay).toMatch(/\$/)
-    expect(enriched.priceUsdDisplay).toBeUndefined()
-  })
-
-  it('does not add priceUsdDisplay for USD purchases', () => {
-    const enriched = enrichPurchase({
-      reference: 'pur_3',
-      amount: 1000,
-      originalAmount: 1000,
-      currency: 'usd',
-    })
-    expect(enriched.priceDisplay).toMatch(/\$/)
-    expect(enriched.priceUsdDisplay).toBeUndefined()
-  })
-
-  it('enriches the nested planSnapshot when it has a price', () => {
-    const enriched = enrichPurchase({
-      reference: 'pur_4',
-      amount: 1000,
-      originalAmount: 50000,
-      currency: 'sek',
-      planSnapshot: { price: 50000, currency: 'sek', name: 'Pro' },
-    })
-    const snap = enriched.planSnapshot as Record<string, unknown>
-    expect(snap.priceDisplay).toMatch(/SEK/)
   })
 })

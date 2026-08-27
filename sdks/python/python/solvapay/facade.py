@@ -299,89 +299,93 @@ class SolvaPay:
         usage_type: str,
         blocking: bool,
     ) -> PayableGateResult:
-        backend_ref = await self._ensure_customer(customer_ref, blocking=blocking)
-        limits_key = f"{backend_ref}:{product}:{usage_type}"
-        cached = self._limits_cache.get(limits_key)
-        now = _now_ms()
-        within_limits: bool
-        remaining: float | int | None
-        last_limits: dict[str, Any] | None = None
-
-        if cached is not None and now - cached["timestamp"] < self._limits_cache_ttl:
-            cached_eval = _call_sync_decision(
-                "evaluate_cached_limits",
-                {"remaining": cached["remaining"]},
-            )
-            within_limits = bool(cached_eval["withinLimits"])
-            remaining = cached_eval.get("remaining")
-            if within_limits:
-                cached["remaining"] = remaining
-            if cached_eval.get("evict"):
-                self._limits_cache.pop(limits_key, None)
-            last_limits = cached.get("limits")
-        else:
-            if cached is not None:
-                self._limits_cache.pop(limits_key, None)
-            args_json = json.dumps(
-                {
-                    "customerRef": backend_ref,
-                    "productRef": product,
-                    "meterName": usage_type,
-                }
-            )
-            if blocking:
-                limits_value = _unwrap_envelope(self.get_api_client().check_limits_blocking(args_json))
-            else:
-                limits_value = _unwrap_envelope(await self.get_api_client().check_limits(args_json))
-            if not isinstance(limits_value, dict):
-                limits_value = {}
-            last_limits = limits_value
-            fresh = _call_sync_decision(
-                "evaluate_fresh_limits",
-                {
-                    "withinLimits": bool(limits_value.get("withinLimits", False)),
-                    "remaining": limits_value.get("remaining", 0),
-                },
-            )
-            within_limits = bool(fresh["withinLimits"])
-            remaining = fresh.get("remaining")
-            self._limits_cache[limits_key] = {
-                "timestamp": now,
-                "remaining": remaining,
-                "limits": limits_value,
-            }
-
-        decision = _call_sync_decision(
-            "decide_paywall_outcome",
-            {
-                "withinLimits": within_limits,
-                "product": product,
-                "limits": last_limits,
-                "checkoutUrl": (last_limits or {}).get("checkoutUrl"),
-            },
-        )
-        if not isinstance(decision, dict):
-            raise SolvaPayError("decide_paywall_outcome returned unexpected value")
-
-        meter_name = _resolved_meter_name(product, usage_type)
-
-        if decision.get("outcome") == "gate":
-            gate = decision.get("gate") or {}
-            if not isinstance(gate, dict):
-                gate = _call_sync_decision(
-                    "build_paywall_gate",
-                    {"productRef": product, "limits": last_limits or {"remaining": 0}},
+        started_ms = _now_ms()
+        state: dict[str, Any] | None = None
+        event: dict[str, Any] = {
+            "kind": "start",
+            "customerRef": customer_ref,
+            "product": product,
+            "usageType": usage_type,
+            "startedMs": started_ms,
+        }
+        action: dict[str, Any]
+        while True:
+            out = _call_sync_decision("gate_next", {"state": state, "event": event})
+            if not isinstance(out, dict):
+                raise SolvaPayError("gate_next returned unexpected value")
+            raw_state = out.get("state")
+            state = raw_state if isinstance(raw_state, dict) else None
+            raw_action = out.get("action")
+            if not isinstance(raw_action, dict):
+                raise SolvaPayError("gate_next returned unexpected action")
+            action = raw_action
+            kind = action.get("kind")
+            if kind == "ensureCustomer":
+                backend = await self._ensure_customer(str(action.get("customerRef")), blocking=blocking)
+                event = {"kind": "customerResolved", "backendRef": backend, "nowMs": _now_ms()}
+                continue
+            if kind == "lookupCache":
+                key = str(action.get("key"))
+                cached = self._limits_cache.get(key)
+                now = _now_ms()
+                if cached is not None and now - cached["timestamp"] < self._limits_cache_ttl:
+                    event = {
+                        "kind": "cacheHit",
+                        "remaining": cached["remaining"],
+                        "limits": cached.get("limits"),
+                        "nowMs": now,
+                    }
+                else:
+                    if cached is not None:
+                        self._limits_cache.pop(key, None)
+                    event = {"kind": "cacheMiss", "nowMs": now}
+                continue
+            if kind == "checkLimits":
+                delete_key = action.get("cacheDeleteKey")
+                if isinstance(delete_key, str):
+                    self._limits_cache.pop(delete_key, None)
+                args_json = json.dumps(
+                    {
+                        "customerRef": action.get("customerRef"),
+                        "productRef": action.get("productRef"),
+                        "meterName": action.get("meterName"),
+                        "includeCheckoutSession": bool(action.get("includeCheckoutSession")),
+                    }
                 )
+                if blocking:
+                    limits_value = _unwrap_envelope(self.get_api_client().check_limits_blocking(args_json))
+                else:
+                    limits_value = _unwrap_envelope(await self.get_api_client().check_limits(args_json))
+                if not isinstance(limits_value, dict):
+                    limits_value = {}
+                event = {"kind": "limitsResult", "limits": limits_value, "nowMs": _now_ms()}
+                continue
+            if kind == "done":
+                break
+            raise SolvaPayError(f"gate_next returned unknown action kind: {kind}")
+
+        self._apply_gate_cache(action.get("cache"))
+        backend_ref = str(action.get("customerRef"))
+        meter_name = str(action.get("meterName") or usage_type)
+        last_limits = action.get("limits") if isinstance(action.get("limits"), dict) else {}
+        track = action.get("track") if isinstance(action.get("track"), dict) else None
+        if track is not None:
             _track_usage(
                 self.get_api_client(),
-                customer_ref=backend_ref,
-                product_ref=product,
-                action=meter_name,
+                customer_ref=str(track.get("customerRef") or backend_ref),
+                product_ref=str(track.get("productRef") or product),
+                action=str(track.get("action") or meter_name),
                 outcome="paywall",
                 request_id=_generate_request_id(),
-                duration_ms=max(0, _now_ms() - now),
+                duration_ms=float(track.get("durationMs") or 0),
             )
+        if action.get("outcome") == "gate":
+            gate = action.get("gate")
+            if not isinstance(gate, dict):
+                raise SolvaPayError("gate_next done/gate missing gate payload")
             return PayablePaywallResult(kind="paywall", content=gate)
+
+        decision = {"outcome": "allow", "limits": last_limits}
 
         def track_success(
             *,
@@ -425,36 +429,34 @@ class SolvaPay:
             track_fail=track_fail,
         )
 
-    def _api_base_label(self) -> str:
-        return self._api_base_url or os.environ.get("SOLVAPAY_API_BASE_URL") or "(unset API base URL)"
+    def _apply_gate_cache(self, cache: object) -> None:
+        if not isinstance(cache, dict):
+            return
+        op = cache.get("op")
+        key = cache.get("key")
+        if not isinstance(key, str):
+            return
+        if op == "delete":
+            self._limits_cache.pop(key, None)
+            return
+        if op == "updateRemaining":
+            entry = self._limits_cache.get(key)
+            if isinstance(entry, dict) and "remaining" in cache:
+                entry["remaining"] = cache.get("remaining")
+            return
+        if op == "set":
+            limits = cache.get("limits") if isinstance(cache.get("limits"), dict) else {}
+            self._limits_cache[key] = {
+                "timestamp": cache.get("timestamp") or _now_ms(),
+                "remaining": cache.get("remaining"),
+                "limits": limits,
+            }
 
     async def _lookup_customer(self, args: dict[str, str], *, blocking: bool) -> Any:
         args_json = json.dumps(args)
         if blocking:
             return _unwrap_envelope(self.get_api_client().get_customer_blocking(args_json))
         return _unwrap_envelope(await self.get_api_client().get_customer(args_json))
-
-    async def _require_existing_backend_customer(
-        self, customer_ref: str, *, blocking: bool
-    ) -> str:
-        try:
-            await self._lookup_customer({"customerRef": customer_ref}, blocking=blocking)
-        except SolvaPayError as err:
-            status = getattr(err, "status", None)
-            if status == 404:
-                _raise_solvapay_error(
-                    (
-                        f"Customer '{customer_ref}' does not exist on this API "
-                        f"({self._api_base_label()}). A cus_-prefixed value is treated as an "
-                        "already-resolved backend customer ref and is not auto-created. Use a "
-                        "customer that exists on this API (typically via MCP OAuth) or an "
-                        "external ref that does not start with cus_."
-                    ),
-                    code=getattr(err, "code", None) or "customer_not_found",
-                    status=404,
-                )
-            raise
-        return customer_ref
 
     async def _ensure_customer(self, customer_ref: str, *, blocking: bool) -> str:
         kind = _call_sync_decision("classify_customer_ref", {"customerRef": customer_ref})
@@ -464,9 +466,7 @@ class SolvaPay:
         if kind == "anonymous":
             return customer_ref
         if is_backend:
-            return await self._require_existing_backend_customer(
-                customer_ref, blocking=blocking
-            )
+            return customer_ref
 
         cached = _shared_customer_dedup.get_cached(customer_ref)
         if cached is not None:

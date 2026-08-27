@@ -10,6 +10,7 @@ pub mod emit_bindings_ts;
 pub mod emit_client_go;
 pub mod emit_client_rb;
 pub mod emit_client_rs;
+pub mod emit_client_runtime_ts;
 pub mod emit_client_ts;
 pub mod emit_conformance_c;
 pub mod emit_conformance_chrome;
@@ -51,6 +52,7 @@ pub use emit_bindings_ts::emit_native_ts;
 pub use emit_client_go::emit_client_go;
 pub use emit_client_rb::{emit_client_rb, EmittedRubyPublic};
 pub use emit_client_rs::{emit_client_rs, EmittedRustClient};
+pub use emit_client_runtime_ts::emit_client_runtime_ts;
 pub use emit_client_ts::emit_client_ts;
 pub use emit_conformance_c::emit_conformance_c;
 pub use emit_conformance_go::emit_conformance_go;
@@ -128,6 +130,8 @@ pub struct GenOutputs<'a> {
     pub ts_out: Option<&'a Path>,
     /// `--ts-client-out`
     pub ts_client_out: Option<&'a Path>,
+    /// `--ts-client-runtime-out`
+    pub ts_client_runtime_out: Option<&'a Path>,
     /// `--ts-parity-out`
     pub ts_parity_out: Option<&'a Path>,
     /// `--dump-bindings`
@@ -256,6 +260,12 @@ pub fn generate_from_snapshot(
                 "--ts-client-out",
                 outputs.ts_client_out,
                 emit_client_ts,
+                false,
+            ),
+            (
+                "--ts-client-runtime-out",
+                outputs.ts_client_runtime_out,
+                emit_client_runtime_ts,
                 false,
             ),
             (
@@ -681,6 +691,7 @@ mod output_dispatch_tests {
         let flags = [
             "--ts-out",
             "--ts-client-out",
+            "--ts-client-runtime-out",
             "--ts-parity-out",
             "--dump-bindings",
             "--dump-boundary-types",

@@ -16,6 +16,27 @@ export const MCP_REPLAY_LIST_FILES = [
   'sdks/rust-mcp/tests/mcp_authoring_fixtures.rs',
 ] as const
 
+export const RUST_CORE_SKIP_FNS = [
+  'registerPayable',
+  'mcpBootstrap',
+  'mcpCallBuiltinTool',
+  'mcpOauthRequest',
+  'mcpDispatch',
+] as const
+
+export const C_SKIP_FNS = ['registerPayable'] as const
+
+export const HTTP_ENGINE_FILES = [
+  'sdks/go/mcp/engine_test.go',
+  'sdks/rust-mcp/tests/mcp_authoring_fixtures.rs',
+  'sdks/capi/ctest/replay_fixtures.py',
+  'sdks/python-mcp/tests/mcp_authoring/test_mcp_authoring_fixtures.py',
+  'sdks/ruby-mcp/test/mcp_authoring_fixtures_test.rb',
+  'sdks/typescript/mcp/__tests__/engine-http-fixtures.unit.test.ts',
+] as const
+
+export const HTTP_ENGINE_INVOKE_HANDLER_EXCLUSION = 'invoke-handler.json'
+
 export type ReplayListDrift = {
   file: string
   missing: string[]
@@ -68,4 +89,23 @@ export function replayListDrift(repoRoot: string, corpus: readonly string[]): Re
 
 export function typescriptCoreReplaySkipsAsync(source: string): boolean {
   return /case 'mcpBootstrap':\s*case 'mcpHandleRequest':/.test(source.replace(/\s+/g, ' '))
+}
+
+export function extractQuotedSkipFns(source: string): string[] {
+  const block = source.match(/matches!\(\s*fn_name,\s*([\s\S]*?)\)/)
+  if (block === null || block[1] === undefined) {
+    const cSkip = source.match(/SKIP_FNS\s*=\s*\{([^}]+)\}/)
+    if (cSkip === null || cSkip[1] === undefined) return []
+    return [...cSkip[1].matchAll(/"([A-Za-z]+)"/g)].map(match => match[1]).sort()
+  }
+  return [...block[1].matchAll(/"([A-Za-z]+)"/g)].map(match => match[1]).sort()
+}
+
+export function httpEngineExcludesInvokeHandler(source: string): boolean {
+  return (
+    source.includes(HTTP_ENGINE_INVOKE_HANDLER_EXCLUSION) &&
+    /not rel\.endswith\("invoke-handler\.json"\)|!rel\.end_with\?\("invoke-handler\.json"\)|rel\.ends_with\("invoke-handler\.json"\)[\s\S]{0,80}continue|rel\.endsWith\(['"]invoke-handler\.json['"]\)[\s\S]{0,80}continue|!rel\.endsWith\(['"]invoke-handler\.json['"]\)|strings\.HasSuffix\(rel, "invoke-handler\.json"\)/.test(
+      source,
+    )
+  )
 }

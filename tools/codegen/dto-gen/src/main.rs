@@ -32,6 +32,7 @@ fn run() -> Result<(), GenError> {
     let mut manifest: Option<PathBuf> = None;
     let mut ts_out: Option<PathBuf> = None;
     let mut ts_client_out: Option<PathBuf> = None;
+    let mut ts_client_runtime_out: Option<PathBuf> = None;
     let mut ts_parity_out: Option<PathBuf> = None;
     let mut dump_bindings: Option<PathBuf> = None;
     let mut node_bindings_out: Option<PathBuf> = None;
@@ -85,6 +86,9 @@ fn run() -> Result<(), GenError> {
             }
             "--ts-client-out" => {
                 ts_client_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--ts-client-runtime-out" => {
+                ts_client_runtime_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
             "--ts-parity-out" => {
                 ts_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
@@ -210,6 +214,7 @@ fn run() -> Result<(), GenError> {
         &GenOutputs {
             ts_out: ts_out.as_deref(),
             ts_client_out: ts_client_out.as_deref(),
+            ts_client_runtime_out: ts_client_runtime_out.as_deref(),
             ts_parity_out: ts_parity_out.as_deref(),
             dump_bindings: dump_bindings.as_deref(),
             dump_boundary_types: dump_boundary_types.as_deref(),

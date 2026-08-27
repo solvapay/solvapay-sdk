@@ -2,8 +2,8 @@
 
 use serde_json::Value;
 use solvapay_core::{
-    envelope_from_panic_payload, parse_args_json, run_envelope_sync, SdkError, BusinessDetailsInput,
-    validate_business_details,
+    envelope_from_panic_payload, parse_args_json, run_envelope_sync, validate_business_details,
+    BusinessDetailsInput, SdkError,
 };
 
 use crate::auth_gate::{
@@ -15,13 +15,18 @@ use crate::dcr::{mcp_dcr_diagnostics, DcrDiagnosticsInput};
 use crate::descriptors::{mcp_descriptors, McpDescriptorsInput};
 use crate::hide_tools::{mcp_hide_tools_by_audience, HideToolsInput};
 use crate::narrate::{mcp_narrate, NarrateInput};
-use crate::oauth::{mcp_normalize_oauth_error, mcp_oauth_discovery, OauthDiscoveryInput};
+use crate::oauth::{
+    mcp_normalize_oauth_error, mcp_oauth_discovery, mcp_oauth_error_inspect, mcp_oauth_path,
+    OauthDiscoveryInput, OauthErrorInspectInput, OauthPathInput,
+};
 use crate::overview::mcp_overview_resource;
 
 /// Dispatch a sync op. Unknown ops become a Transport error envelope.
 #[must_use]
 pub fn dispatch_sync(op: &str, args_json: &str) -> String {
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| dispatch_inner(op, args_json))) {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        dispatch_inner(op, args_json)
+    })) {
         Ok(s) => s,
         Err(payload) => envelope_from_panic_payload(payload),
     }
@@ -59,6 +64,14 @@ fn dispatch_inner(op: &str, args_json: &str) -> String {
         "mcpOauthDiscovery" => {
             let input: OauthDiscoveryInput = parse_args_json(args_json)?;
             Ok(mcp_oauth_discovery(&input))
+        }
+        "mcpOauthPath" => {
+            let input: OauthPathInput = parse_args_json(args_json)?;
+            Ok(mcp_oauth_path(&input))
+        }
+        "mcpOauthErrorInspect" => {
+            let input: OauthErrorInspectInput = parse_args_json(args_json)?;
+            Ok(mcp_oauth_error_inspect(&input))
         }
         "mcpNormalizeOauthError" => {
             let args: Value = parse_args_json(args_json)?;
@@ -114,7 +127,10 @@ fn dispatch_inner(op: &str, args_json: &str) -> String {
             }
             #[cfg(not(feature = "engine"))]
             {
-                Err(SdkError::transport("mcpHandleRequest requires engine feature", false))
+                Err(SdkError::transport(
+                    "mcpHandleRequest requires engine feature",
+                    false,
+                ))
             }
         }
         "mcpResume" => {
@@ -126,9 +142,57 @@ fn dispatch_inner(op: &str, args_json: &str) -> String {
             }
             #[cfg(not(feature = "engine"))]
             {
-                Err(SdkError::transport("mcpResume requires engine feature", false))
+                Err(SdkError::transport(
+                    "mcpResume requires engine feature",
+                    false,
+                ))
             }
         }
         other => Err(SdkError::transport(format!("unknown op: {other}"), false)),
     })
+}
+
+/// Parse `{op, args}` JSON and run [`dispatch_sync`].
+#[must_use]
+pub fn solvapay_call(args_json: &str) -> String {
+    let parsed: Value = match serde_json::from_str(args_json) {
+        Ok(value) => value,
+        Err(err) => {
+            return solvapay_core::err_envelope(&SdkError::transport(
+                format!("invalid solvapay_call args: {err}"),
+                false,
+            ));
+        }
+    };
+    let Some(op) = parsed.get("op").and_then(Value::as_str) else {
+        return solvapay_core::err_envelope(&SdkError::transport("missing op", false));
+    };
+    let args = parsed
+        .get("args")
+        .cloned()
+        .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
+    dispatch_sync(op, &args.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::solvapay_call;
+    use serde_json::Value;
+
+    #[test]
+    fn solvapay_call_rejects_missing_op() {
+        let parsed: Value = serde_json::from_str(&solvapay_call("{}")).expect("json");
+        assert_eq!(parsed["ok"], false);
+        assert_eq!(parsed["error"]["message"], "missing op");
+    }
+
+    #[test]
+    fn solvapay_call_dispatches_mcp_oauth_path() {
+        let envelope = solvapay_call(
+            r#"{"op":"mcpOauthPath","args":{"kind":"strip-trailing-slash","value":"https://api.test/"}}"#,
+        );
+        let parsed: Value = serde_json::from_str(&envelope).expect("json");
+        assert_eq!(parsed["ok"], true);
+        assert_eq!(parsed["value"], "https://api.test");
+    }
 }

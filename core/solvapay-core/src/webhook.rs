@@ -165,6 +165,22 @@ pub fn verify_webhook(
     serde_json::from_str(body).map_err(|_| WebhookError::new(WebhookErrorCode::InvalidPayload))
 }
 
+/// Verifies a webhook and serializes the parsed JSON body.
+///
+/// # Errors
+///
+/// Returns the same [`WebhookError`] as [`verify_webhook`]. Serialize failure
+/// of a parsed `Value` is reported as [`WebhookErrorCode::InvalidPayload`].
+pub fn verify_webhook_json(
+    body: &str,
+    signature: &str,
+    secret: &str,
+    now_unix_secs: i64,
+) -> Result<String, WebhookError> {
+    let value = verify_webhook(body, signature, secret, now_unix_secs)?;
+    serde_json::to_string(&value).map_err(|_| WebhookError::new(WebhookErrorCode::InvalidPayload))
+}
+
 /// Parses `t={unix},v1={hex}` from a comma-separated signature header (§6.1 step 1).
 ///
 /// First matching `t=` / `v1=` part wins (extra comma parts are ignored).

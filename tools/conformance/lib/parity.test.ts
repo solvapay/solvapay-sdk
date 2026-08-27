@@ -13,6 +13,7 @@ const PURE_SYNC = {
   rb: 'sync' as const,
   go: 'sync' as const,
   rust: 'sync' as const,
+  c: 'sync' as const,
 }
 
 const CLIENT_SYNC = {
@@ -21,6 +22,7 @@ const CLIENT_SYNC = {
   rb: 'blocking' as const,
   go: 'blocking' as const,
   rust: ['async', 'blocking'] as ('async' | 'blocking')[],
+  c: 'blocking' as const,
 }
 
 function stubManifest(): SdkContractManifest {
@@ -73,6 +75,7 @@ function stubManifest(): SdkContractManifest {
           rb: 'sp.gate',
           go: 'sp.Gate',
           rust: 'sp.gate',
+          c: 'gate',
         },
         sync: CLIENT_SYNC,
         params: [],
@@ -120,9 +123,10 @@ function stubManifest(): SdkContractManifest {
         rb: 'sp.gate',
         go: 'sp.Gate',
         rust: 'sp.gate',
+        c: 'gate',
       },
     },
-    reservedWords: { go: [], py: [], rb: [], rust: [], ts: [] },
+    reservedWords: { go: [], py: [], rb: [], rust: [], ts: [], c: [] },
   }
 }
 

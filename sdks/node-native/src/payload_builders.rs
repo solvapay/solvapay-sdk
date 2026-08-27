@@ -389,6 +389,17 @@ pub fn build_payable_tool_result_binding(args_json: String) -> String {
     })
 }
 
+/// Binding for `invokePayableNext`.
+#[napi(js_name = "invokePayableNext")]
+pub fn invoke_payable_next_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = optional_value(&args, "state");
+        let event = optional_value(&args, "event");
+        result_as_value(invoke_payable_next(state.as_ref(), event.as_ref()))
+    })
+}
+
 /// Optional `args.views` string array.
 fn optional_views(args: &Map<String, Value>) -> Result<Option<Vec<String>>, SdkError> {
     match args.get("views") {

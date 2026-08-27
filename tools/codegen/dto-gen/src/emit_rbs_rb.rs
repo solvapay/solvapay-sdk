@@ -345,6 +345,7 @@ mod tests {
                     rb: "derive_tax_id_type".into(),
                     go: "DeriveTaxIdType".into(),
                     rust: "derive_tax_id_type".into(),
+                    c: "deriveTaxIdType".into(),
                 },
                 optional_on_client: false,
                 params: vec![],
@@ -384,6 +385,7 @@ mod tests {
                     rb: "derive_tax_id_type".into(),
                     go: "DeriveTaxIdType".into(),
                     rust: "derive_tax_id_type".into(),
+                    c: "deriveTaxIdType".into(),
                 },
                 catalog: IrBindingCatalogLink::TopLevel("deriveTaxIdType".into()),
                 args: vec![IrBindingArg {

@@ -81,8 +81,17 @@ var mcpAuthoringFixtures = []string{
 	"oauth/discovery-authorization-server.json",
 	"oauth/discovery-protected-resource-mcp-path.json",
 	"oauth/discovery-protected-resource.json",
+	"oauth/error-inspect-build-description.json",
+	"oauth/error-inspect-derive-code.json",
+	"oauth/error-inspect-has-shape.json",
 	"oauth/normalize-nestjs-401.json",
 	"oauth/normalize-rfc-passthrough.json",
+	"oauth/path-leading-slash.json",
+	"oauth/path-protected-resource.json",
+	"oauth/path-resolve-paths.json",
+	"oauth/path-resource-identifier.json",
+	"oauth/path-strip-trailing-slash.json",
+	"oauth/request-protected-resource-mcp-path.json",
 	"overview/resource.json",
 }
 
@@ -99,6 +108,14 @@ func registerPayableFixtures() []string {
 	return out
 }
 
+func isAsyncClientFixture(rel string) bool {
+	return strings.HasPrefix(rel, "bootstrap/") ||
+		strings.HasPrefix(rel, "builtin-tools/") ||
+		strings.HasPrefix(rel, "oauth-proxy/") ||
+		strings.HasPrefix(rel, "dispatch/") ||
+		rel == "oauth/request-protected-resource-mcp-path.json"
+}
+
 func coreOpFixtures() []string {
 	var out []string
 	for _, rel := range mcpAuthoringFixtures {
@@ -106,10 +123,7 @@ func coreOpFixtures() []string {
 			strings.HasPrefix(rel, "customer-ref/") ||
 			strings.HasPrefix(rel, "error/") ||
 			strings.HasPrefix(rel, "gate/") ||
-			strings.HasPrefix(rel, "bootstrap/") ||
-			strings.HasPrefix(rel, "builtin-tools/") ||
-			strings.HasPrefix(rel, "oauth-proxy/") ||
-			strings.HasPrefix(rel, "dispatch/") {
+			isAsyncClientFixture(rel) {
 			continue
 		}
 		out = append(out, rel)

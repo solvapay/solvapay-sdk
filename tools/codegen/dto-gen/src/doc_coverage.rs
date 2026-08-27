@@ -65,6 +65,7 @@ mod tests {
                 rb: id.into(),
                 go: id.into(),
                 rust: id.into(),
+                c: id.into(),
             },
             optional_on_client: false,
             params: vec![],

@@ -190,6 +190,7 @@ mod tests {
                 rb: "check_limits".into(),
                 go: "CheckLimits".into(),
                 rust: "check_limits".into(),
+                c: "checkLimits".into(),
             },
             optional_on_client: false,
             params: vec![IrParam {
@@ -200,6 +201,7 @@ mod tests {
                     rb: "params".into(),
                     go: "params".into(),
                     rust: "params".into(),
+                    c: "params".into(),
                 },
                 required: true,
                 ty: IrTypeRef::Named("CheckLimitsRequest".into()),

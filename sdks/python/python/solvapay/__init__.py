@@ -7,6 +7,7 @@ from importlib import metadata
 from solvapay.errors import PaywallError, SolvaPayError
 from solvapay.facade import ApiClient, SolvaPay, create_solvapay
 from solvapay.results import PayableAllowResult, PayableGateResult, PayablePaywallResult
+from solvapay.retry import with_retry, with_retry_blocking
 
 try:
     from solvapay._solvapay import (
@@ -54,4 +55,6 @@ __all__ = [
     "native_build_info",
     "version",
     "verify_webhook",
+    "with_retry",
+    "with_retry_blocking",
 ]

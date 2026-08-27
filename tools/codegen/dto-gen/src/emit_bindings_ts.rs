@@ -160,6 +160,7 @@ mod tests {
                 rb: id.into(),
                 go: id.into(),
                 rust: id.into(),
+                c: id.into(),
             },
             catalog: IrBindingCatalogLink::None,
             args: vec![],

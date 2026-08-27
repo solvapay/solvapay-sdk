@@ -18,7 +18,6 @@ export default defineConfig({
     '@solvapay/server',
     '@solvapay/core',
     '@solvapay/core/browser-wasm',
-    '@solvapay/core/portable',
     '@solvapay/mcp-core',
     '@solvapay/server-wasm',
     '@solvapay/server-wasm/browser',

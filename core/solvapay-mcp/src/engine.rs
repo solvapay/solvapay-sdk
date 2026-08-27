@@ -43,6 +43,15 @@ pub struct EngineConfig {
     /// User-Agent used by audience filtering (ChatGPT bypass).
     #[serde(default)]
     pub user_agent: Option<String>,
+    /// Optional CSP overrides forwarded to [`mcp_descriptors`].
+    #[serde(default)]
+    pub csp: Option<crate::csp::SolvaPayMcpCsp>,
+    /// Optional API origin for CSP auto-include.
+    #[serde(default)]
+    pub api_base_url: Option<String>,
+    /// Optional branding forwarded to [`mcp_descriptors`].
+    #[serde(default)]
+    pub branding: Option<crate::descriptors::BrandingIn>,
 }
 
 /// Input for [`mcp_handle_request`].
@@ -108,8 +117,7 @@ fn base64url_decode(input: &str) -> Option<String> {
 }
 
 fn base64_decode(input: &str) -> Option<Vec<u8>> {
-    const TABLE: &[u8] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = Vec::new();
     let mut buf = 0u32;
     let mut n = 0u32;
@@ -130,6 +138,34 @@ fn base64_decode(input: &str) -> Option<Vec<u8>> {
 
 fn rpc_ok(id: Value, result: Value) -> Value {
     json!({ "kind": "rpc", "rpc": { "jsonrpc": "2.0", "id": id, "result": result } })
+}
+
+fn descriptors_for(config: &EngineConfig) -> Result<crate::descriptors::McpDescriptors, String> {
+    mcp_descriptors(&McpDescriptorsInput {
+        resource_uri: config.resource_uri.clone(),
+        public_base_url: config.public_base_url.clone(),
+        product_ref: config.product_ref.clone(),
+        views: config.views.clone(),
+        csp: config.csp.clone(),
+        api_base_url: config.api_base_url.clone(),
+        branding: config.branding.clone(),
+    })
+}
+
+fn with_legacy_ui_meta(mut tool: Value) -> Value {
+    if let Some(meta) = tool.get_mut("_meta") {
+        let uri = meta
+            .get("ui")
+            .and_then(|ui| ui.get("resourceUri"))
+            .and_then(Value::as_str)
+            .map(str::to_owned);
+        if let Some(uri) = uri {
+            if meta.get("ui/resourceUri").is_none() {
+                meta["ui/resourceUri"] = json!(uri);
+            }
+        }
+    }
+    tool
 }
 
 /// Route one JSON-RPC request.
@@ -154,7 +190,9 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
         body,
     } = gate
     {
-        return Ok(json!({ "kind": "challenge", "status": status, "headers": headers, "body": body }));
+        return Ok(
+            json!({ "kind": "challenge", "status": status, "headers": headers, "body": body }),
+        );
     }
 
     match method {
@@ -167,35 +205,27 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
             Ok(rpc_ok(
                 id,
                 json!({
-                    "protocolVersion": proto,
-                    "capabilities": { "tools": {}, "resources": {}, "prompts": {} },
-        "serverInfo": { "name": "solvapay-mcp", "version": env!("CARGO_PKG_VERSION") },
-                }),
+                            "protocolVersion": proto,
+                            "capabilities": { "tools": {}, "resources": {}, "prompts": {} },
+                "serverInfo": { "name": "solvapay-mcp", "version": env!("CARGO_PKG_VERSION") },
+                        }),
             ))
         }
         "notifications/initialized" | "ping" => Ok(rpc_ok(id, json!({}))),
         "tools/list" => {
-            let desc = mcp_descriptors(&McpDescriptorsInput {
-                resource_uri: input.config.resource_uri.clone(),
-                public_base_url: input.config.public_base_url.clone(),
-                product_ref: input.config.product_ref.clone(),
-                views: input.config.views.clone(),
-                csp: None,
-                api_base_url: None,
-                branding: None,
-            })?;
+            let desc = descriptors_for(&input.config)?;
             let tools: Vec<Value> = desc
                 .tools
                 .iter()
                 .map(|t| {
-                    json!({
+                    with_legacy_ui_meta(json!({
                         "name": t.name,
                         "title": t.title,
                         "description": t.description,
                         "inputSchema": t.input_schema,
                         "annotations": t.annotations,
                         "_meta": t.meta,
-                    })
+                    }))
                 })
                 .collect();
             let filtered = mcp_hide_tools_by_audience(&HideToolsInput {
@@ -203,7 +233,10 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
                 audiences: input.config.hide_audiences.clone().unwrap_or_default(),
                 user_agent: input.config.user_agent.clone(),
             });
-            Ok(rpc_ok(id, json!({ "tools": filtered.get("tools").cloned().unwrap_or(Value::Array(Vec::new())) })))
+            Ok(rpc_ok(
+                id,
+                json!({ "tools": filtered.get("tools").cloned().unwrap_or(Value::Array(Vec::new())) }),
+            ))
         }
         "tools/call" => {
             let name = input
@@ -244,27 +277,26 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
         "resources/list" => {
             let origin = mcp_resource_identifier(&input.config.public_base_url, None);
             let _ = origin;
+            let desc = descriptors_for(&input.config)?;
+            let mut ui = desc.resource.clone();
+            if ui.get("name").is_none() {
+                ui["name"] = json!("SolvaPay UI");
+            }
+            ui["_meta"] = json!({
+                "ui": {
+                    "csp": desc.csp,
+                    "prefersBorder": false
+                }
+            });
             Ok(rpc_ok(
                 id,
                 json!({
-                    "resources": [
-                        { "uri": "docs://solvapay/overview.md", "name": "SolvaPay MCP — overview", "mimeType": "text/markdown" },
-                        { "uri": "solvapay://bootstrap.json", "name": "SolvaPay bootstrap", "mimeType": "application/json" },
-                        { "uri": input.config.resource_uri, "name": "SolvaPay UI", "mimeType": "text/html;profile=mcp-app" }
-                    ]
+                    "resources": [desc.docs, desc.bootstrap, ui]
                 }),
             ))
         }
         "prompts/list" => {
-            let desc = mcp_descriptors(&McpDescriptorsInput {
-                resource_uri: input.config.resource_uri.clone(),
-                public_base_url: input.config.public_base_url.clone(),
-                product_ref: input.config.product_ref.clone(),
-                views: input.config.views.clone(),
-                csp: None,
-                api_base_url: None,
-                branding: None,
-            })?;
+            let desc = descriptors_for(&input.config)?;
             Ok(rpc_ok(id, json!({ "prompts": desc.prompts })))
         }
         "resources/read" => {
@@ -298,15 +330,7 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
                 .pointer("/params/name")
                 .and_then(Value::as_str)
                 .unwrap_or("");
-            let desc = mcp_descriptors(&McpDescriptorsInput {
-                resource_uri: input.config.resource_uri.clone(),
-                public_base_url: input.config.public_base_url.clone(),
-                product_ref: input.config.product_ref.clone(),
-                views: input.config.views.clone(),
-                csp: None,
-                api_base_url: None,
-                branding: None,
-            })?;
+            let desc = descriptors_for(&input.config)?;
             let prompt = desc.prompts.iter().find(|p| p.name == name);
             Ok(rpc_ok(
                 id,

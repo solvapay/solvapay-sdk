@@ -19,10 +19,8 @@
  * directly alongside `<SolvaPayProvider>` and `createMcpAppAdapter`.
  */
 
-// Portable core fallbacks for the `ui://` widget (no napi / WASM install).
-import { installPortableCoreFallbacks } from '@solvapay/core/portable'
-
-installPortableCoreFallbacks()
+// Browser WASM for the `ui://` widget (eager install on import).
+import '@solvapay/core/browser-wasm'
 
 export { createMcpAppAdapter } from './adapter'
 export type { McpAppLike } from './adapter'

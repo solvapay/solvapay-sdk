@@ -22,16 +22,13 @@ import {
   classifyCreateError,
   classifyCustomerRef,
   classifyLookupError,
-  decidePaywallOutcome,
-  evaluateCachedLimits,
-  evaluateFreshLimits,
   extractBackendCustomerRef,
+  gateNext,
   isEmailConflict,
   paywallErrorToClientPayload as paywallErrorToClientPayloadDispatch,
   requireProductRef,
   resolveCheckLimitsParams,
 } from './native-decisions'
-import { buildPaywallGate } from './paywall-gate'
 import { withRetry, createRequestDeduplicator } from './utils'
 
 // Re-export types for convenience
@@ -228,6 +225,43 @@ export class SolvaPayPaywall {
     return `solvapay_${timestamp}_${random}`
   }
 
+  private applyGateCache(
+    cache:
+      | {
+          op: string
+          key: string
+          remaining?: number
+          limits?: LimitResponseWithPlan
+          timestamp?: number
+        }
+      | undefined,
+  ): void {
+    if (cache == null) {
+      return
+    }
+    if (cache.op === 'delete') {
+      this.limitsCache.delete(cache.key)
+      return
+    }
+    if (cache.op === 'updateRemaining' && cache.remaining !== undefined) {
+      const entry = this.limitsCache.get(cache.key)
+      if (entry) {
+        entry.remaining = cache.remaining
+      }
+      return
+    }
+    if (cache.op === 'set' && cache.remaining !== undefined && cache.limits != null) {
+      this.limitsCache.set(cache.key, {
+        remaining: cache.remaining,
+        checkoutUrl:
+          typeof cache.limits.checkoutUrl === 'string' ? cache.limits.checkoutUrl : undefined,
+        meterName: typeof cache.limits.meterName === 'string' ? cache.limits.meterName : undefined,
+        timestamp: cache.timestamp ?? Date.now(),
+        limits: cache.limits,
+      })
+    }
+  }
+
   /**
    * Pure decision routine — performs customer resolution, limits cache
    * lookup / fresh `checkLimits` fetch, and returns a `PaywallDecision`
@@ -258,129 +292,126 @@ export class SolvaPayPaywall {
       ? getCustomerRef(args)
       : args.auth?.customer_ref || 'anonymous'
 
-    let backendCustomerRef: string
-    if (inputCustomerRef.startsWith('cus_')) {
-      backendCustomerRef = inputCustomerRef
-    } else {
-      backendCustomerRef = await this.ensureCustomer(inputCustomerRef, inputCustomerRef)
-    }
-
-    const limitsCacheKey = `${backendCustomerRef}:${product}:${usageType}`
-    const cachedLimits = this.limitsCache.get(limitsCacheKey)
-    const now = Date.now()
-
-    let withinLimits: boolean
-    let remaining: number
-    let checkoutUrl: string | undefined
-    let resolvedMeterName: string | undefined
-    let lastLimitsCheck: LimitResponseWithPlan | undefined
-
-    const hasFreshCachedLimits = cachedLimits && now - cachedLimits.timestamp < this.limitsCacheTTL
-
-    if (hasFreshCachedLimits) {
-      checkoutUrl = cachedLimits.checkoutUrl
-      resolvedMeterName = cachedLimits.meterName
-      // Surface the cached `LimitResponseWithPlan` so the downstream
-      // handler context carries balance/plan even on cache hits.
-      lastLimitsCheck = cachedLimits.limits
-
-      const cachedEval = evaluateCachedLimits(cachedLimits.remaining)
-      withinLimits = cachedEval.withinLimits
-      remaining = cachedEval.remaining
-      if (cachedEval.withinLimits) {
-        cachedLimits.remaining = cachedEval.remaining
+    type GateAction = {
+      kind: string
+      outcome?: string
+      customerRef?: string
+      productRef?: string
+      meterName?: string
+      product?: string
+      key?: string
+      includeCheckoutSession?: boolean
+      cacheDeleteKey?: string
+      limits?: LimitResponseWithPlan
+      gate?: PaywallStructuredContent
+      cache?: {
+        op: string
+        key: string
+        remaining?: number
+        limits?: LimitResponseWithPlan
+        timestamp?: number
       }
-      if (cachedEval.evict) {
-        this.limitsCache.delete(limitsCacheKey)
-      }
-    } else {
-      if (cachedLimits) {
-        this.limitsCache.delete(limitsCacheKey)
-      }
-      const limitsCheck = await this.apiClient.checkLimits({
-        customerRef: backendCustomerRef,
-        productRef: product,
-        meterName: usageType,
-        // `paywall.decide()` bakes `checkoutUrl` into the 402
-        // `PaywallStructuredContent` (consumed by
-        // `<PaywallNotice.HostedCheckoutLink>`), so we opt in. Other
-        // callers of `apiClient.checkLimits` (notably
-        // `checkLimitsCore`, which powers the React `useLimits` hook)
-        // leave this unset and the backend skips the session-creation
-        // side effect.
-        includeCheckoutSession: true,
-      })
-
-      lastLimitsCheck = limitsCheck
-      checkoutUrl = limitsCheck.checkoutUrl
-      resolvedMeterName = limitsCheck.meterName
-
-      // checkLimits reflects pre-request allowance. Consume one unit for
-      // this in-flight request so cached follow-up requests don't get an
-      // extra free call.
-      const freshEval = evaluateFreshLimits(limitsCheck.withinLimits, limitsCheck.remaining)
-      withinLimits = freshEval.withinLimits
-      remaining = freshEval.remaining
-
-      if (freshEval.shouldCache) {
-        this.limitsCache.set(limitsCacheKey, {
-          remaining,
-          checkoutUrl,
-          meterName: resolvedMeterName,
-          timestamp: now,
-          limits: limitsCheck,
-        })
+      track?: {
+        customerRef: string
+        productRef: string
+        action: string
+        durationMs: number
       }
     }
 
-    const decision = decidePaywallOutcome({
-      withinLimits,
+    let state: unknown = null
+    let event: Record<string, unknown> = {
+      kind: 'start',
+      customerRef: inputCustomerRef,
       product,
-      limits: lastLimitsCheck ?? null,
-      checkoutUrl,
-      // Core's PaywallDecisionLimits uses unknown pass-throughs; gate assembly
-      // accepts the same runtime shape as LimitResponseWithPlan.
-      buildGate: (productRef, limits) =>
-        buildPaywallGate(productRef, limits as Parameters<typeof buildPaywallGate>[1]),
-    })
-
-    if (decision.outcome === 'gate') {
-      const latencyMs = Date.now() - startTime
-      // Awaited (not floated) so the call survives runtimes that
-      // terminate the request context as soon as the response returns
-      // (Cloudflare Workers, Vercel Edge, Supabase Edge). Without
-      // this, the `POST /v1/sdk/usages` fetch gets dropped before it
-      // reaches the backend and `sumForMeter` always returns 0 — the
-      // paywall never decrements free-quota and never gates. Errors
-      // are swallowed because tracking failures must never escalate
-      // into tool-call failures.
-      await this.trackUsage(
-        backendCustomerRef,
-        product,
-        resolvedMeterName || usageType,
-        'paywall',
-        requestId,
-        latencyMs,
-      ).catch(() => undefined)
-
-      return {
-        outcome: 'gate',
-        gate: decision.gate,
-        limits: lastLimitsCheck ?? null,
-        customerRef: backendCustomerRef,
-      }
+      usageType,
+      startedMs: startTime,
     }
 
-    // `withinLimits` implies `lastLimitsCheck` was populated — the
-    // cache-hit branch always sets it from the cached entry and the
-    // cache-miss branch assigns `limitsCheck` directly. The non-null
-    // assertion keeps the `allow` payload's `limits` field strictly
-    // typed.
-    return {
-      outcome: 'allow',
-      args,
-      limits: lastLimitsCheck!,
-      customerRef: backendCustomerRef,
+    for (;;) {
+      const out = gateNext(state, event) as { state: unknown; action: GateAction }
+      state = out.state
+      const action = out.action
+
+      if (action.kind === 'ensureCustomer') {
+        const backendRef = await this.ensureCustomer(
+          String(action.customerRef),
+          String(action.customerRef),
+        )
+        event = { kind: 'customerResolved', backendRef, nowMs: Date.now() }
+        continue
+      }
+
+      if (action.kind === 'lookupCache') {
+        const key = String(action.key)
+        const cached = this.limitsCache.get(key)
+        const now = Date.now()
+        if (cached && now - cached.timestamp < this.limitsCacheTTL) {
+          event = {
+            kind: 'cacheHit',
+            remaining: cached.remaining,
+            limits: cached.limits,
+            nowMs: now,
+          }
+        } else {
+          if (cached) {
+            this.limitsCache.delete(key)
+          }
+          event = { kind: 'cacheMiss', nowMs: now }
+        }
+        continue
+      }
+
+      if (action.kind === 'checkLimits') {
+        if (typeof action.cacheDeleteKey === 'string') {
+          this.limitsCache.delete(action.cacheDeleteKey)
+        }
+        const limitsCheck = await this.apiClient.checkLimits({
+          customerRef: String(action.customerRef),
+          productRef: String(action.productRef),
+          meterName: String(action.meterName),
+          includeCheckoutSession: action.includeCheckoutSession === true,
+        })
+        event = { kind: 'limitsResult', limits: limitsCheck, nowMs: Date.now() }
+        continue
+      }
+
+      if (action.kind === 'done') {
+        this.applyGateCache(action.cache)
+        if (action.track) {
+          await this.trackUsage(
+            action.track.customerRef,
+            action.track.productRef,
+            action.track.action,
+            'paywall',
+            requestId,
+            action.track.durationMs,
+          ).catch(() => undefined)
+        }
+        const lastLimits = action.limits ?? null
+        if (action.outcome === 'gate') {
+          if (action.gate == null) {
+            throw new SolvaPayError('gate_next done/gate missing gate payload')
+          }
+          return {
+            outcome: 'gate',
+            gate: action.gate,
+            limits: lastLimits,
+            customerRef: String(action.customerRef),
+          }
+        }
+        if (lastLimits == null) {
+          throw new SolvaPayError('gate_next done/allow missing limits payload')
+        }
+        return {
+          outcome: 'allow',
+          args,
+          limits: lastLimits,
+          customerRef: String(action.customerRef),
+        }
+      }
+
+      throw new SolvaPayError(`gate_next returned unknown action kind: ${action.kind}`)
     }
   }
 

@@ -6,8 +6,8 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^@solvapay\/core\/portable$/,
-        replacement: resolve(__dirname, './src/portable-fallbacks.ts'),
+        find: /^@solvapay\/core\/browser-wasm$/,
+        replacement: resolve(__dirname, './src/browser-wasm.ts'),
       },
       { find: /^@solvapay\/core$/, replacement: resolve(__dirname, './src') },
       // Allow vitest.setup to load the Node native dispatcher without a

@@ -18,10 +18,7 @@ import (
 func asyncOpFixtures() []string {
 	var out []string
 	for _, rel := range mcpAuthoringFixtures {
-		if strings.HasPrefix(rel, "bootstrap/") ||
-			strings.HasPrefix(rel, "builtin-tools/") ||
-			strings.HasPrefix(rel, "oauth-proxy/") ||
-			strings.HasPrefix(rel, "dispatch/") {
+		if isAsyncClientFixture(rel) {
 			out = append(out, rel)
 		}
 	}

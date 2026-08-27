@@ -6,8 +6,13 @@ import { REPO_ROOT } from '../../shared/paths.js'
 import {
   discoverMcpFixtureRels,
   extractFixtureRels,
+  extractQuotedSkipFns,
   replayListDrift,
   typescriptCoreReplaySkipsAsync,
+  C_SKIP_FNS,
+  HTTP_ENGINE_FILES,
+  httpEngineExcludesInvokeHandler,
+  RUST_CORE_SKIP_FNS,
 } from './mcp-fixture-coverage.js'
 import { readFileSync } from 'node:fs'
 import { joinRoot } from '../../shared/paths.js'
@@ -59,6 +64,18 @@ describe('mcp fixture coverage', () => {
 
   it('C replay skips only registerPayable', () => {
     const source = readFileSync(joinRoot('sdks/capi/ctest/replay_fixtures.py'), 'utf8')
-    expect(source).toMatch(/SKIP_FNS = \{"registerPayable"\}/)
+    expect(extractQuotedSkipFns(source)).toEqual([...C_SKIP_FNS])
+  })
+
+  it('Rust core replay skips only host/async client ops', () => {
+    const source = readFileSync(joinRoot('core/solvapay-mcp/src/fixture_replay.rs'), 'utf8')
+    expect(extractQuotedSkipFns(source)).toEqual([...RUST_CORE_SKIP_FNS].sort())
+  })
+
+  it('HTTP engine suites exclude invoke-handler.json', () => {
+    for (const rel of HTTP_ENGINE_FILES) {
+      const source = readFileSync(joinRoot(rel), 'utf8')
+      expect(httpEngineExcludesInvokeHandler(source), rel).toBe(true)
+    }
   })
 })

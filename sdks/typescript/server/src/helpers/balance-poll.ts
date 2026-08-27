@@ -1,3 +1,5 @@
+import { evaluateBalanceObservation } from '../native-decisions'
+
 export const TOPUP_BALANCE_POLL_DELAYS_MS = [500, 1000, 2000, 4000] as const
 
 /** Backoff for client-side balance reconciliation after async credit top-ups (e.g. auto-recharge). */
@@ -12,8 +14,9 @@ export async function pollBalanceUntilIncreased(
     await new Promise<void>(resolve => setTimeout(resolve, delay))
     try {
       const post = await getBalance()
-      if (post.credits > baseline) {
-        return { creditsAdded: post.credits - baseline }
+      const delta = evaluateBalanceObservation(baseline, post.credits)
+      if (delta !== null) {
+        return { creditsAdded: delta }
       }
     } catch {
       // ignore — try the next delay

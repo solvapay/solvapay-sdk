@@ -29,6 +29,7 @@ app.use(
     productRef: solvapayProductRef,
     requireAuth: true,
     mcpPath: '/mcp',
+    oauthClient: solvaPay.apiClient,
   }),
 )
 

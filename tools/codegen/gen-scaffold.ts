@@ -6,7 +6,7 @@
  *   pnpm gen:scaffold operation <id> --method GET --path /v1/sdk/foo/{ref}
  *
  * Derives request/response DTO refs and path-param names from the OpenAPI
- * snapshot. Fills all five language names via `deriveNames`. Leaves a docs
+ * snapshot. Fills all six language names via `deriveNames`. Leaves a docs
  * placeholder for human prose. Optionally scaffolds a `bindings:` stub.
  *
  * Full workflow: docs/contributing/sdk-codegen.md (Workflow A).
@@ -31,6 +31,7 @@ const DEFAULT_SYNC = {
   rb: 'blocking',
   go: 'blocking',
   rust: ['async', 'blocking'],
+  c: 'blocking',
 } as const
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'

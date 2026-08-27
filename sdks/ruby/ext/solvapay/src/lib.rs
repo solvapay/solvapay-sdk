@@ -36,7 +36,6 @@ use error::BindingError;
 use magnus::method;
 use magnus::prelude::*;
 use magnus::{function, Error, Exception, Ruby};
-use solvapay_core::verify_webhook as core_verify_webhook;
 
 pub use client::SolvaPayClient;
 
@@ -53,9 +52,8 @@ pub fn verify_webhook_json(
     secret: &str,
     now_unix_secs: i64,
 ) -> std::result::Result<String, BindingError> {
-    let value = core_verify_webhook(body, signature, secret, now_unix_secs)
-        .map_err(BindingError::from_webhook)?;
-    serde_json::to_string(&value).map_err(|e| BindingError::serialize_failed(e.to_string()))
+    solvapay_core::verify_webhook_json(body, signature, secret, now_unix_secs)
+        .map_err(BindingError::from_webhook)
 }
 
 /// Returns the crate / release-train version string.
@@ -120,26 +118,7 @@ fn verify_webhook_at(
 /// Client-less MCP / sync dispatch (`{op, args}` JSON → envelope JSON).
 fn solvapay_call(args_json: String) -> Result<String, Error> {
     let result = catch_unwind(AssertUnwindSafe(|| {
-        let parsed: serde_json::Value = match serde_json::from_str(&args_json) {
-            Ok(value) => value,
-            Err(err) => {
-                return crate::error::err_envelope(&solvapay_core::SdkError::transport(
-                    format!("invalid solvapay_call args: {err}"),
-                    false,
-                ));
-            }
-        };
-        let Some(op) = parsed.get("op").and_then(serde_json::Value::as_str) else {
-            return crate::error::err_envelope(&solvapay_core::SdkError::transport(
-                "missing op",
-                false,
-            ));
-        };
-        let args = parsed
-            .get("args")
-            .cloned()
-            .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
-        solvapay_mcp_core::dispatch_sync(op, &args.to_string())
+        solvapay_mcp_core::solvapay_call(&args_json)
     }));
     match result {
         Ok(json) => Ok(json),

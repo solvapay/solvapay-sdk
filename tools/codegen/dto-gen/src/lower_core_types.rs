@@ -695,6 +695,7 @@ pub fn ignore_me(_u: UnusedRoot) {}
                 rb: id.into(),
                 go: id.into(),
                 rust: id.into(),
+                c: id.into(),
             },
             catalog: crate::ir::IrBindingCatalogLink::None,
             args: vec![],

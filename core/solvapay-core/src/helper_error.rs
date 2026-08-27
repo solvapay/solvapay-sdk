@@ -54,4 +54,9 @@ impl HelperErrorResult {
             details: None,
         }
     }
+
+    /// Transport-shaped helper error used by JSON step drivers.
+    pub fn transport(details: impl Into<String>) -> Self {
+        Self::with_details("Transport", 400, details)
+    }
 }

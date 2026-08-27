@@ -733,6 +733,8 @@ pub struct IrLangNames {
     pub go: String,
     /// Rust.
     pub rust: String,
+    /// C ABI dispatch / symbol name (camelCase op id, matching TypeScript).
+    pub c: String,
 }
 
 /// One IR parameter.

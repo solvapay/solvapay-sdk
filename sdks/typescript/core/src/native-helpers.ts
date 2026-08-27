@@ -419,3 +419,20 @@ export function decidePaywallOutcome<TGate>(input: {
     checkoutUrl: input.checkoutUrl ?? null,
   })
 }
+
+export function evaluateBalanceObservation(baseline: number, credits: number): number | null {
+  return dispatchSync('evaluateBalanceObservation', { baseline, credits })
+}
+
+export function gateNext(
+  state: unknown | null | undefined,
+  event: unknown | null | undefined,
+): unknown {
+  return dispatchSync('gateNext', { state: state ?? null, event: event ?? null })
+}
+
+export function resolveAuthenticatedUser(input: AuthResolutionInput): unknown {
+  return dispatchSync('resolveAuthenticatedUser', {
+    input,
+  })
+}

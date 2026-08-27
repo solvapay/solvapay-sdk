@@ -558,6 +558,22 @@ pub unsafe extern "C" fn sv_build_payable_tool_result_binding(
     }))
 }
 
+/// Binding for `invokePayableNext`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_invoke_payable_next_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = optional_value(&args, "state");
+        let event = optional_value(&args, "event");
+        result_as_value(invoke_payable_next(state.as_ref(), event.as_ref()))
+    }))
+}
+
 fn optional_views(args: &Map<String, Value>) -> Result<Option<Vec<String>>, SdkError> {
     match args.get("views") {
         None => Ok(None),

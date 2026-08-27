@@ -100,9 +100,12 @@ SyncMethod = Literal[
     "paywall_error_to_client_payload",
     "require_product_ref",
     "evaluate_product_readiness",
+    "gate_next",
     "retry_next_delay_ms",
     "assert_valid_product_ref",
     "charges",
+    "resolve_authenticated_user",
+    "evaluate_balance_observation",
     "headline_charges",
     "per_unit_charge",
     "billing_cycle",
@@ -137,7 +140,8 @@ SyncMethod = Literal[
     "build_prompt_descriptor_metadata",
     "build_prompt_user_message",
     "validate_public_base_url",
-    "build_payable_tool_result",]
+    "build_payable_tool_result",
+    "invoke_payable_next",]
 
 from typing import get_args
 

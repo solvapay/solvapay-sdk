@@ -3,8 +3,8 @@
  * (no Node, no fetch, no Express) — both `@solvapay/mcp/express` and
  * `@solvapay/mcp/fetch` import them to produce the well-known responses.
  *
- * Document bodies come from the Rust `mcpOauthDiscovery` op. Path helpers
- * stay here because adapters use them for HTTP routing.
+ * Document bodies and path helpers come from the Rust `mcpOauthDiscovery` /
+ * `mcpOauthPath` ops.
  */
 
 import { callMcpSyncOp } from './native-mcp'
@@ -29,30 +29,31 @@ export const DEFAULT_OAUTH_PATHS: Required<OAuthBridgePaths> = {
 }
 
 export function withoutTrailingSlash(value: string): string {
-  return value.replace(/\/$/, '')
+  return callMcpSyncOp('mcpOauthPath', { kind: 'strip-trailing-slash', value })
 }
 
 export function resolveOAuthPaths(paths: OAuthBridgePaths = {}): Required<OAuthBridgePaths> {
-  return { ...DEFAULT_OAUTH_PATHS, ...paths }
+  return callMcpSyncOp('mcpOauthPath', { kind: 'resolve-paths', paths })
 }
 
 export function withLeadingSlash(value: string): string {
-  return value.startsWith('/') ? value : `/${value}`
+  return callMcpSyncOp('mcpOauthPath', { kind: 'leading-slash', value })
 }
 
 export function mcpResourceIdentifier(publicBaseUrl: string, mcpPath?: string): string {
-  const origin = withoutTrailingSlash(publicBaseUrl)
-  if (!mcpPath) return origin
-  const path = withoutTrailingSlash(withLeadingSlash(mcpPath))
-  return path ? `${origin}${path}` : origin
+  return callMcpSyncOp('mcpOauthPath', {
+    kind: 'resource-identifier',
+    publicBaseUrl,
+    ...(mcpPath !== undefined ? { mcpPath } : {}),
+  })
 }
 
 /** RFC 9728 path-aware protected-resource metadata URL for an MCP mount. */
 export function pathAwareProtectedResourcePath(mcpPath: string): string {
-  const path = withoutTrailingSlash(withLeadingSlash(mcpPath))
-  return path && path !== '/'
-    ? `/.well-known/oauth-protected-resource${path}`
-    : '/.well-known/oauth-protected-resource'
+  return callMcpSyncOp('mcpOauthPath', {
+    kind: 'protected-resource-path',
+    mcpPath,
+  })
 }
 
 export type OAuthProtectedResourceDocument = {

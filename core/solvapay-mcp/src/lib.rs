@@ -38,11 +38,13 @@ pub use narrate::{
     tool_result, ui_placeholder, NarrateInput,
 };
 pub use oauth::{
-    mcp_normalize_oauth_error, mcp_oauth_discovery, mcp_resource_identifier,
-    path_aware_protected_resource_path, OauthDiscoveryInput, OauthDiscoveryKind, OauthPaths,
+    mcp_normalize_oauth_error, mcp_oauth_discovery, mcp_oauth_error_inspect, mcp_oauth_path,
+    mcp_resource_identifier, path_aware_protected_resource_path, OauthDiscoveryInput,
+    OauthDiscoveryKind, OauthErrorInspectInput, OauthErrorInspectKind, OauthPathInput,
+    OauthPathKind, OauthPaths,
 };
 pub use overview::mcp_overview_resource;
-pub use sync_dispatch::dispatch_sync;
+pub use sync_dispatch::{dispatch_sync, solvapay_call};
 
 #[cfg(feature = "engine")]
 pub use engine::{mcp_handle_request, mcp_resume, EngineConfig, HandleRequestInput, ResumeInput};

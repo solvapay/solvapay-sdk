@@ -73,7 +73,13 @@ export {
   resetNativeCoreApiForTests,
 } from './native-core'
 
-export type { BillingCycle, Charge } from './types/boundary.generated'
+export type {
+  AuthResolutionInput,
+  AuthenticatedUser,
+  BillingCycle,
+  Charge,
+  GateNextOutput,
+} from './types/boundary.generated'
 
 export type {
   BalancePegLike,
@@ -163,8 +169,11 @@ export {
   mapRouteError,
   validateGetProductParams,
   decidePaywallOutcome,
+  evaluateBalanceObservation,
   evaluateCachedLimits,
   evaluateFreshLimits,
+  gateNext,
+  resolveAuthenticatedUser,
   resolveFallbackGateLimits,
   resolveProductRef,
   requireProductRef,

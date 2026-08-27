@@ -1483,6 +1483,9 @@ importers:
       '@solvapay/react':
         specifier: workspace:*
         version: link:../../sdks/typescript/react
+      '@solvapay/server-wasm':
+        specifier: workspace:*
+        version: link:../../sdks/wasm
       react:
         specifier: ^19.2.5
         version: 19.2.5

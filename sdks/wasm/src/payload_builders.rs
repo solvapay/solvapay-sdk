@@ -208,6 +208,19 @@ pub fn seller_tax_identifier_display_label_by_type_binding(args_json: String) ->
 
 // --- MCP payload / descriptors (edge-only) ---
 
+/// Binding for `invokePayableNext`.
+#[wasm_bindgen(js_name = "invokePayableNext")]
+pub fn invoke_payable_next_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = optional_value(&args, "state");
+        let event = optional_value(&args, "event");
+        result_as_value(invoke_payable_next(state.as_ref(), event.as_ref()))
+    })
+}
+
+// --- MCP payload / descriptors (edge-only) ---
+
 /// Edge-only MCP payload / descriptor envelope bindings (server surface).
 ///
 /// Excluded from the browser profile so the public bundle never ships

@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { REPO_ROOT, joinRel } from '../../shared/paths.js'
+import { joinRel, REPO_ROOT } from '../../shared/paths.js'
 import { lookupPath, mcpAppWidgetLayout } from '../../shared/repo-paths.js'
 import { checkVendoredWidget } from '../check.js'
 import { vendorWidget } from '../vendor.js'
@@ -27,42 +27,10 @@ describe('canonical MCP App widget artifact', () => {
     expect(html).toContain('solvapay://bootstrap.json')
   })
 
-  it('includes portable fallback implementations, not only the dispatch throw', () => {
+  it('includes inlined browser WASM, not a TypeScript portable fallback', () => {
     const html = readFileSync(canonicalPath, 'utf8')
-    expect(html).toContain('EIN (Employer Identification Number)')
-  })
-
-  it('registers a portable fallback for every dispatch method the bundle references', () => {
-    const html = readFileSync(canonicalPath, 'utf8')
-    const dispatchSrc = readFileSync(
-      joinRel(REPO_ROOT, 'sdks/typescript/core/src/native-dispatch.ts'),
-      'utf8',
-    )
-    const portableSrc = readFileSync(
-      joinRel(REPO_ROOT, 'sdks/typescript/core/src/portable-fallbacks.ts'),
-      'utf8',
-    )
-    const union = dispatchSrc.slice(
-      dispatchSrc.indexOf('export type NativeCoreSyncMethod'),
-      dispatchSrc.indexOf('type NativeCoreApi'),
-    )
-    const methods = [...union.matchAll(/\| '([A-Za-z0-9_]+)'/g)].map(match => match[1])
-    const fallbackBlock = portableSrc.slice(
-      portableSrc.indexOf('installCoreSyncFallbacks({'),
-      portableSrc.lastIndexOf('})'),
-    )
-    const fallbacks = new Set(
-      [...fallbackBlock.matchAll(/^\s{2}([A-Za-z0-9_]+):/gm)].map(match => match[1]),
-    )
-    const referenced = methods.filter(method => {
-      return (
-        html.includes(`"${method}"`) ||
-        html.includes(`'${method}'`) ||
-        html.includes('`' + method + '`')
-      )
-    })
-    expect(referenced.length).toBeGreaterThan(0)
-    expect(referenced.filter(method => !fallbacks.has(method))).toEqual([])
+    expect(html.includes('WebAssembly') || html.includes('application/wasm')).toBe(true)
+    expect(html).not.toContain('EIN (Employer Identification Number)')
   })
 
   it('vendors a byte-identical copy into every SDK', () => {
@@ -70,6 +38,10 @@ describe('canonical MCP App widget artifact', () => {
     for (const rel of sdkCopies) {
       expect(sha256(readFileSync(joinRel(REPO_ROOT, rel))), rel).toBe(expected)
     }
+  })
+
+  it('matches dist when the widget build output is present', () => {
+    expect(checkVendoredWidget({ root: REPO_ROOT })).toEqual([])
   })
 })
 

@@ -53,53 +53,98 @@ module SolvaPay
       end
 
       def invoke_payable(solvapay:, product:, handler:, get_customer_ref:, args:)
-        started_ms = (Time.now.to_f * 1_000).to_i
         customer_ref = resolve_customer_ref(args, get_customer_ref)
-        gate_result = solvapay.gate(customer_ref, product: product)
-        case gate_result
-        when SolvaPay::PayablePaywallResult
-          gate = stringify_keys(gate_result.content)
-          message = gate["message"]
-          message = "Payment required" unless message.is_a?(String) && !message.empty?
-          format_gate(message, gate)
-        when SolvaPay::PayableAllowResult
-          limits = limits_from_decision(gate_result.decision)
-          ctx = ResponseContext.new(
-            customer: {
-              "ref" => gate_result.customer_ref,
-              "balance" => limits.fetch("creditBalance", 0),
-              "remaining" => limits["remaining"],
-              "withinLimits" => limits.fetch("withinLimits", true),
-              "plan" => limits["plan"],
-            },
-            product: { "reference" => product, "name" => product },
-            product_ref: product,
-          )
-          begin
-            returned = handler.call(args, ctx)
-          rescue SolvaPay::PaywallError => e
-            gate = stringify_keys(e.structured_content)
-            return format_gate(e.message, gate)
-          rescue StandardError => e
-            elapsed = (Time.now.to_f * 1_000).to_i - started_ms
-            gate_result.track_fail(e, duration: elapsed.negative? ? 0 : elapsed)
-            return {
-              "content" => [
-                {
-                  "type" => "text",
-                  "text" => JSON.pretty_generate({ "success" => false, "error" => e.message }),
-                },
-              ],
-              "isError" => true,
-            }
+        state = nil
+        event = {
+          "kind" => "start",
+          "customerRef" => customer_ref,
+          "product" => product,
+          "usageType" => "requests",
+          "startedMs" => (Time.now.to_f * 1_000).to_i,
+        }
+        allow = nil
+        loop do
+          out = NativeDispatch.call_sync("invoke_payable_next", { "state" => state, "event" => event })
+          raise SolvaPay::SolvaPayError.new("invoke_payable_next returned unexpected value", code: "invalid_invoke") unless out.is_a?(Hash)
+
+          state = out["state"]
+          action = out["action"]
+          raise SolvaPay::SolvaPayError.new("invoke_payable_next returned unexpected action", code: "invalid_invoke") unless action.is_a?(Hash)
+
+          kind = action["kind"]
+          case kind
+          when "runGate"
+            gate_result = solvapay.gate(action["customerRef"], product: action["product"] || product)
+            case gate_result
+            when SolvaPay::PayablePaywallResult
+              gate = stringify_keys(gate_result.content)
+              message = gate["message"]
+              message = "Payment required" unless message.is_a?(String) && !message.empty?
+              return format_gate(message, gate) unless format_gate_override.nil?
+
+              event = { "kind" => "gatePaywall", "gate" => gate, "message" => message }
+            when SolvaPay::PayableAllowResult
+              allow = gate_result
+              limits = limits_from_decision(gate_result.decision)
+              event = {
+                "kind" => "gateAllow",
+                "customerRef" => gate_result.customer_ref,
+                "limits" => limits,
+              }
+            else
+              raise SolvaPay::SolvaPayError.new("unexpected gate result", code: "invalid_gate_result")
+            end
+          when "invokeHandler"
+            limits = action["limits"].is_a?(Hash) ? stringify_keys(action["limits"]) : {}
+            ctx = ResponseContext.new(
+              customer: {
+                "ref" => action["customerRef"],
+                "balance" => limits.fetch("creditBalance", 0),
+                "remaining" => limits["remaining"],
+                "withinLimits" => limits.fetch("withinLimits", true),
+                "plan" => limits["plan"],
+              },
+              product: { "reference" => product, "name" => product },
+              product_ref: product,
+            )
+            begin
+              returned = handler.call(args, ctx)
+            rescue SolvaPay::PaywallError => e
+              gate = stringify_keys(e.structured_content)
+              return format_gate(e.message, gate) unless format_gate_override.nil?
+
+              event = { "kind" => "handlerPaywall", "gate" => gate, "message" => e.message }
+            rescue StandardError => e
+              event = {
+                "kind" => "handlerErr",
+                "message" => e.message,
+                "nowMs" => (Time.now.to_f * 1_000).to_i,
+              }
+            else
+              envelope = Layer2.assert_response_result(returned)
+              event = {
+                "kind" => "handlerOk",
+                "envelope" => envelope,
+                "nowMs" => (Time.now.to_f * 1_000).to_i,
+              }
+            end
+          when "done"
+            track = action["track"]
+            if track.is_a?(Hash) && !allow.nil?
+              duration = track["durationMs"].to_f
+              if track["outcome"] == "success"
+                allow.track_success(duration: duration)
+              else
+                allow.track_fail(track["outcome"], duration: duration)
+              end
+            end
+            result = action["result"]
+            raise SolvaPay::SolvaPayError.new("invoke_payable_next done missing result", code: "invalid_invoke") unless result.is_a?(Hash)
+
+            return stringify_keys(result)
+          else
+            raise SolvaPay::SolvaPayError.new("invoke_payable_next unknown action kind: #{kind}", code: "invalid_invoke")
           end
-          envelope = Layer2.assert_response_result(returned)
-          result = Layer2.build_payable_tool_result(envelope)
-          elapsed = (Time.now.to_f * 1_000).to_i - started_ms
-          gate_result.track_success(duration: elapsed.negative? ? 0 : elapsed)
-          result
-        else
-          raise SolvaPay::SolvaPayError.new("unexpected gate result", code: "invalid_gate_result")
         end
       end
 

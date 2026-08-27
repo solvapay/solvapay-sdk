@@ -97,8 +97,17 @@ const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "oauth/discovery-authorization-server.json",
     "oauth/discovery-protected-resource-mcp-path.json",
     "oauth/discovery-protected-resource.json",
+    "oauth/error-inspect-build-description.json",
+    "oauth/error-inspect-derive-code.json",
+    "oauth/error-inspect-has-shape.json",
     "oauth/normalize-nestjs-401.json",
     "oauth/normalize-rfc-passthrough.json",
+    "oauth/path-leading-slash.json",
+    "oauth/path-protected-resource.json",
+    "oauth/path-resolve-paths.json",
+    "oauth/path-resource-identifier.json",
+    "oauth/path-strip-trailing-slash.json",
+    "oauth/request-protected-resource-mcp-path.json",
     "overview/resource.json",
 ];
 
@@ -111,26 +120,29 @@ fn register_payable_fixtures() -> impl Iterator<Item = &'static str> {
     })
 }
 
+fn is_async_client_fixture(rel: &str) -> bool {
+    rel.starts_with("bootstrap/")
+        || rel.starts_with("builtin-tools/")
+        || rel.starts_with("oauth-proxy/")
+        || rel.starts_with("dispatch/")
+        || rel == "oauth/request-protected-resource-mcp-path.json"
+}
+
 fn core_op_fixtures() -> impl Iterator<Item = &'static str> {
     MCP_AUTHORING_FIXTURES.iter().copied().filter(|rel| {
         !(rel.starts_with("allow/")
             || rel.starts_with("customer-ref/")
             || rel.starts_with("error/")
             || rel.starts_with("gate/")
-            || rel.starts_with("bootstrap/")
-            || rel.starts_with("builtin-tools/")
-            || rel.starts_with("oauth-proxy/")
-            || rel.starts_with("dispatch/"))
+            || is_async_client_fixture(rel))
     })
 }
 
 fn async_op_fixtures() -> impl Iterator<Item = &'static str> {
-    MCP_AUTHORING_FIXTURES.iter().copied().filter(|rel| {
-        rel.starts_with("bootstrap/")
-            || rel.starts_with("builtin-tools/")
-            || rel.starts_with("oauth-proxy/")
-            || rel.starts_with("dispatch/")
-    })
+    MCP_AUTHORING_FIXTURES
+        .iter()
+        .copied()
+        .filter(|rel| is_async_client_fixture(rel))
 }
 
 fn usage_projection_json(item: &UsageProjection) -> Value {

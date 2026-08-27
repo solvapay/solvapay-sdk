@@ -265,6 +265,7 @@ mod tests {
             rb: rust.into(),
             go: go.into(),
             rust: rust.into(),
+            c: rust.into(),
         }
     }
 

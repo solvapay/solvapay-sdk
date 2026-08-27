@@ -5,6 +5,58 @@
 import type { SupportedBusinessCountry, TaxIdType } from '../business-details'
 
 /**
+ * Inputs for [`resolve_authenticated_user`] (facade resolves env / Request).
+ */
+export type AuthResolutionInput = {
+  /**
+   * `x-user-id` header value when present.
+   */
+  headerUserId: string | null
+  /**
+   * Raw `Authorization` header value when present.
+   */
+  authorizationHeader: string | null
+  /**
+   * JWT secret (`SOLVAPAY_JWT_SECRET` || `SUPABASE_JWT_SECRET`).
+   */
+  jwtSecret: string | null
+  /**
+   * `SOLVAPAY_AUTH_STRICT === 'true'`.
+   */
+  strictMode: boolean
+  /**
+   * Facade default: `options.includeEmail !== false`.
+   */
+  includeEmail: boolean
+  /**
+   * Facade default: `options.includeName !== false`.
+   */
+  includeName: boolean
+  /**
+   * Explicit clock for `exp` / `nbf` (jose uses wall clock; fixtures use far dates).
+   */
+  nowUnixSecs: number
+}
+
+/**
+ * Successful authenticated-user payload (email/name serialize as explicit `null`).
+ */
+export type AuthenticatedUser = {
+  /**
+   * Subject / middleware user id.
+   */
+  userId: string
+  /**
+   * Email when extracted; otherwise JSON `null`.
+   */
+  email: string | null
+  /**
+   * Display name when extracted; otherwise JSON `null`.
+   */
+  name: string | null
+}
+
+/**
  * A billing-cycle option — present only on recurring plans.
  */
 export type BillingCycle = {
@@ -182,6 +234,151 @@ export type FreshLimitsEvaluation = {
    * When true, host should write the decremented entry into the cache.
    */
   shouldCache: boolean
+}
+
+/**
+ * Next host action, or a terminal allow/gate.
+ */
+export type GateAction =
+  | { kind: 'ensureCustomer'; customerRef: string }
+  | { kind: 'lookupCache'; key: string }
+  | { kind: 'checkLimits'; customerRef: string; productRef: string; meterName: string; includeCheckoutSession: boolean; cacheDeleteKey?: string }
+  | { kind: 'done'; outcome: string; customerRef: string; product: string; meterName: string; limits: unknown; gate?: PaywallGate; cache?: GateCacheOp; track?: GateTrackOp }
+
+/**
+ * Cache mutation the host must apply before continuing / returning.
+ */
+export type GateCacheOp =
+  | { op: 'set'; key: string; remaining: number; limits: unknown; timestamp: number }
+  | { op: 'updateRemaining'; key: string; remaining: number }
+  | { op: 'delete'; key: string }
+
+/**
+ * Opaque-enough driver state passed back on every step.
+ */
+export type GateDriverState = {
+  /**
+   * Product reference used for limits and the assembled gate.
+   */
+  product: string
+  /**
+   * Resolved meter name (`usageType` with the `requests` default).
+   */
+  meterName: string
+  /**
+   * Customer ref supplied on `start`.
+   */
+  originalCustomerRef: string
+  /**
+   * Backend customer ref after classify / ensure.
+   */
+  backendRef?: string
+  /**
+   * Host clock at `start` (ms). Used for paywall `track` duration.
+   */
+  startedMs: number
+  /**
+   * `backendRef:product:meterName` once the backend ref is known.
+   */
+  limitsKey?: string
+}
+
+/**
+ * Driver output: updated state plus the next action.
+ */
+export type GateNextOutput = {
+  /**
+   * State to pass into the next `gate_next` call.
+   */
+  state: GateDriverState
+  /**
+   * Host action or terminal result.
+   */
+  action: GateAction
+}
+
+/**
+ * Paywall usage track the host must fire on a gate outcome.
+ */
+export type GateTrackOp = {
+  /**
+   * Backend customer ref.
+   */
+  customerRef: string
+  /**
+   * Product reference.
+   */
+  productRef: string
+  /**
+   * Meter / action name.
+   */
+  action: string
+  /**
+   * Always `"paywall"` for this driver.
+   */
+  outcome: string
+  /**
+   * Elapsed ms from `start` (`max(0, nowMs - startedMs)`).
+   */
+  durationMs: number
+}
+
+/**
+ * Next host action or a formatted tool result.
+ */
+export type InvokePayableAction =
+  | { kind: 'runGate'; customerRef: string; product: string; usageType: string }
+  | { kind: 'invokeHandler'; customerRef: string; limits: unknown }
+  | { kind: 'done'; result: unknown; track?: InvokePayableTrack }
+
+/**
+ * Driver output.
+ */
+export type InvokePayableNextOutput = {
+  /**
+   * State to pass into the next call.
+   */
+  state: InvokePayableState
+  /**
+   * Host action or terminal result.
+   */
+  action: InvokePayableAction
+}
+
+/**
+ * Driver state between payable steps.
+ */
+export type InvokePayableState = {
+  /**
+   * Product the tool is protected against.
+   */
+  product: string
+  /**
+   * Meter / usage type.
+   */
+  usageType: string
+  /**
+   * Customer ref after host resolution.
+   */
+  customerRef: string
+  /**
+   * Host clock at start (ms).
+   */
+  startedMs: number
+}
+
+/**
+ * Post-handler usage track.
+ */
+export type InvokePayableTrack = {
+  /**
+   * `"success"` or `"fail"`.
+   */
+  outcome: string
+  /**
+   * Elapsed ms from start.
+   */
+  durationMs: number
 }
 
 /**

@@ -4,13 +4,12 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::{Map, Value};
 use solvapay_core::{
-    build_create_customer_params, classify_customer_ref, decide_paywall_outcome,
-    evaluate_cached_limits, evaluate_fresh_limits, extract_backend_customer_ref,
-    resolve_check_limits_params, CustomerRefKind, HelperErrorResult, PaywallOutcome, SdkError,
+    build_create_customer_params, classify_customer_ref, extract_backend_customer_ref, gate_next,
+    GateAction, GateCacheOp, CustomerRefKind, HelperErrorResult, SdkError,
 };
 use solvapay_dto::{
     CheckLimitRequest, CheckLimitsRequest, CreateCustomerRequest, CreateUsageRequest,
@@ -94,54 +93,116 @@ impl Client {
         }
     }
 
-    /// Paywall gate for a customer and product (§2.4). Limit decisions delegate to core.
+    /// Paywall gate for a customer and product (§2.4). Sequencing is [`gate_next`].
     pub async fn gate(&self, customer_ref: &str, opts: GateOpts) -> Result<GateOutcome, SdkError> {
-        let started = Instant::now();
-        let meter_name =
-            resolve_check_limits_params(Some(&opts.product), None, Some(&opts.usage_type))
-                .map_err(helper_to_sdk)?
-                .meter_name;
-        let backend_ref = self.ensure_customer(customer_ref).await?;
-        let limits_key = format!("{}:{}:{}", backend_ref, opts.product, meter_name);
-        let (within_limits, _remaining, limits) = self
-            .evaluate_limits(&limits_key, &backend_ref, &opts.product, &meter_name)
-            .await?;
-
-        let checkout_url = limits
-            .get("checkoutUrl")
-            .and_then(Value::as_str)
-            .map(str::to_owned);
-        let limits_for_decision = if limits.is_null() {
-            None
-        } else {
-            Some(&limits)
-        };
-
-        match decide_paywall_outcome(
-            within_limits,
-            &opts.product,
-            limits_for_decision,
-            checkout_url.as_deref(),
-        ) {
-            PaywallOutcome::Allow => Ok(GateOutcome::Allow(Allow {
-                client: self.clone(),
-                backend_ref,
-                product: opts.product,
-                meter_name,
-                limits,
-            })),
-            PaywallOutcome::Gate { gate } => {
-                let duration_ms = started.elapsed().as_secs_f64() * 1000.0;
-                self.track_usage_event(
-                    &backend_ref,
-                    &opts.product,
-                    &meter_name,
-                    CreateUsageRequestOutcome::Paywall,
-                    duration_ms.max(0.0),
-                    None,
-                )
-                .await?;
-                Ok(GateOutcome::Paywall(gate))
+        let started_ms = now_ms();
+        let mut state: Option<Value> = None;
+        let mut event = serde_json::json!({
+            "kind": "start",
+            "customerRef": customer_ref,
+            "product": opts.product,
+            "usageType": opts.usage_type,
+            "startedMs": started_ms,
+        });
+        loop {
+            let out = gate_next(state.as_ref(), Some(&event)).map_err(helper_to_sdk)?;
+            state = Some(serde_json::to_value(&out.state).map_err(|err| {
+                SdkError::transport(format!("serialize gate state: {err}"), false)
+            })?);
+            match out.action {
+                GateAction::EnsureCustomer { customer_ref: ref_to_ensure } => {
+                    let backend = self.ensure_customer(&ref_to_ensure).await?;
+                    event = serde_json::json!({
+                        "kind": "customerResolved",
+                        "backendRef": backend,
+                        "nowMs": now_ms(),
+                    });
+                }
+                GateAction::LookupCache { key } => {
+                    let now = now_ms();
+                    let hit = {
+                        let gate = self.inner.gate.lock().await;
+                        gate.limits_cache.get(&key).and_then(|entry| {
+                            (now.saturating_sub(entry.timestamp_ms) < self.inner.limits_cache_ttl_ms)
+                                .then(|| (entry.remaining, entry.limits.clone()))
+                        })
+                    };
+                    if let Some((remaining, limits)) = hit {
+                        event = serde_json::json!({
+                            "kind": "cacheHit",
+                            "remaining": remaining,
+                            "limits": limits,
+                            "nowMs": now,
+                        });
+                    } else {
+                        {
+                            let mut gate = self.inner.gate.lock().await;
+                            gate.limits_cache.remove(&key);
+                        }
+                        event = serde_json::json!({ "kind": "cacheMiss", "nowMs": now });
+                    }
+                }
+                GateAction::CheckLimits {
+                    customer_ref: backend,
+                    product_ref,
+                    meter_name,
+                    include_checkout_session,
+                    cache_delete_key,
+                } => {
+                    if let Some(key) = cache_delete_key {
+                        let mut gate = self.inner.gate.lock().await;
+                        gate.limits_cache.remove(&key);
+                    }
+                    let limits = self
+                        .fetch_limits(
+                            &backend,
+                            &product_ref,
+                            &meter_name,
+                            include_checkout_session,
+                        )
+                        .await?;
+                    event = serde_json::json!({
+                        "kind": "limitsResult",
+                        "limits": limits,
+                        "nowMs": now_ms(),
+                    });
+                }
+                GateAction::Done {
+                    outcome,
+                    customer_ref: backend_ref,
+                    product,
+                    meter_name,
+                    limits,
+                    gate,
+                    cache,
+                    track,
+                } => {
+                    self.apply_gate_cache(cache).await;
+                    if let Some(track) = track {
+                        self.track_usage_event(
+                            &track.customer_ref,
+                            &track.product_ref,
+                            &track.action,
+                            CreateUsageRequestOutcome::Paywall,
+                            track.duration_ms.max(0.0),
+                            None,
+                        )
+                        .await?;
+                    }
+                    if outcome == "gate" {
+                        let gate = gate.ok_or_else(|| {
+                            SdkError::transport("gate_next done/gate missing gate", false)
+                        })?;
+                        return Ok(GateOutcome::Paywall(gate));
+                    }
+                    return Ok(GateOutcome::Allow(Allow {
+                        client: self.clone(),
+                        backend_ref,
+                        product,
+                        meter_name,
+                        limits,
+                    }));
+                }
             }
         }
     }
@@ -200,64 +261,36 @@ impl Client {
         Ok(())
     }
 
-    async fn evaluate_limits(
-        &self,
-        key: &str,
-        customer_ref: &str,
-        product: &str,
-        usage_type: &str,
-    ) -> Result<(bool, f64, Value), SdkError> {
-        let now = now_ms();
-        {
-            let mut gate = self.inner.gate.lock().await;
-            if let Some(entry) = gate.limits_cache.get(key) {
-                if now.saturating_sub(entry.timestamp_ms) < self.inner.limits_cache_ttl_ms {
-                    let cached_remaining = entry.remaining;
-                    let cached_limits = entry.limits.clone();
-                    let evaluation = evaluate_cached_limits(cached_remaining);
-                    if evaluation.evict {
-                        gate.limits_cache.remove(key);
-                    } else if evaluation.within_limits {
-                        if let Some(slot) = gate.limits_cache.get_mut(key) {
-                            slot.remaining = evaluation.remaining;
-                        }
-                    }
-                    return Ok((
-                        evaluation.within_limits,
-                        evaluation.remaining,
-                        cached_limits,
-                    ));
-                }
-                gate.limits_cache.remove(key);
+    async fn apply_gate_cache(&self, cache: Option<GateCacheOp>) {
+        let Some(cache) = cache else {
+            return;
+        };
+        let mut gate = self.inner.gate.lock().await;
+        match cache {
+            GateCacheOp::Delete { key } => {
+                gate.limits_cache.remove(&key);
             }
-        }
-
-        let limits = self.fetch_limits(customer_ref, product, usage_type).await?;
-        let within = limits
-            .get("withinLimits")
-            .and_then(Value::as_bool)
-            .unwrap_or(false);
-        let remaining = limits
-            .get("remaining")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
-        let evaluation = evaluate_fresh_limits(within, remaining);
-
-        {
-            let mut gate = self.inner.gate.lock().await;
-            if evaluation.should_cache {
+            GateCacheOp::UpdateRemaining { key, remaining } => {
+                if let Some(entry) = gate.limits_cache.get_mut(&key) {
+                    entry.remaining = remaining;
+                }
+            }
+            GateCacheOp::Set {
+                key,
+                remaining,
+                limits,
+                timestamp,
+            } => {
                 gate.limits_cache.insert(
-                    key.to_owned(),
+                    key,
                     LimitsCacheEntry {
-                        timestamp_ms: now,
-                        remaining: evaluation.remaining,
-                        limits: limits.clone(),
+                        timestamp_ms: timestamp.max(0) as u64,
+                        remaining,
+                        limits,
                     },
                 );
             }
         }
-
-        Ok((evaluation.within_limits, evaluation.remaining, limits))
     }
 
     async fn fetch_limits(
@@ -265,16 +298,18 @@ impl Client {
         customer_ref: &str,
         product: &str,
         usage_type: &str,
+        include_checkout_session: bool,
     ) -> Result<Value, SdkError> {
+        let include = include_checkout_session.then_some(true);
         let params = CheckLimitsRequest {
             base: CheckLimitRequest {
                 customer_ref: Some(customer_ref.to_owned()),
                 product_ref: Some(product.to_owned()),
                 meter_name: Some(usage_type.to_owned()),
-                include_checkout_session: None,
+                include_checkout_session: include,
                 usage_type: None,
             },
-            include_checkout_session: None,
+            include_checkout_session: include,
         };
         self.inner.api.check_limits(params).await
     }

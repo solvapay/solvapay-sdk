@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use solvapay_core::{
-    build_prompt_descriptor_metadata, build_tool_descriptor_metadata, validate_public_base_url,
-    assert_valid_product_ref, BuildPromptDescriptorMetadataOptions,
+    assert_valid_product_ref, build_prompt_descriptor_metadata, build_tool_descriptor_metadata,
+    validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, MerchantBranding, PromptDescriptorMetadata,
     ToolDescriptorMetadata,
 };
@@ -105,7 +105,9 @@ fn mode_schema() -> Value {
 
 fn input_schema_for(name: &str) -> Value {
     match name {
-        "upgrade" | "manage_account" | "topup" => json_schema(json!({ "mode": mode_schema() }), &[]),
+        "upgrade" | "manage_account" | "topup" => {
+            json_schema(json!({ "mode": mode_schema() }), &[])
+        }
         "create_checkout_session" => json_schema(
             json!({ "planRef": { "type": "string" }, "productRef": { "type": "string" } }),
             &[],
@@ -150,7 +152,10 @@ fn input_schema_for(name: &str) -> Value {
             json!({ "purchaseRef": { "type": "string" }, "reason": { "type": "string" } }),
             &["purchaseRef"],
         ),
-        "reactivate_renewal" => json_schema(json!({ "purchaseRef": { "type": "string" } }), &["purchaseRef"]),
+        "reactivate_renewal" => json_schema(
+            json!({ "purchaseRef": { "type": "string" } }),
+            &["purchaseRef"],
+        ),
         "activate_plan" => json_schema(
             json!({
                 "productRef": { "type": "string" },
@@ -166,7 +171,9 @@ fn input_schema_for(name: &str) -> Value {
 fn tool_from_meta(meta: ToolDescriptorMetadata) -> McpToolDescriptor {
     let name = meta.name.clone();
     let annotations = serde_json::to_value(&meta.annotations).unwrap_or_else(|_| json!({}));
-    let icons = meta.icons.and_then(|icons| serde_json::to_value(icons).ok());
+    let icons = meta
+        .icons
+        .and_then(|icons| serde_json::to_value(icons).ok());
     McpToolDescriptor {
         name: name.clone(),
         title: meta.title,

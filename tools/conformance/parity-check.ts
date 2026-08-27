@@ -9,6 +9,14 @@ import path from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { SdkContractManifestSchema, type SdkContractManifest } from '../shared/manifest-schema.js'
 import { checkParity, formatParityReport } from './lib/parity.js'
+import {
+  checkGeneratedClientMethods,
+  readCClientMethods,
+  readGoClientMethods,
+  readPyClientMethods,
+  readRbClientMethods,
+  readRustClientMethods,
+} from './lib/generated-client-surfaces.js'
 import { REPO_ROOT } from '../shared/paths.js'
 import { contractInputPath, generatedEntry } from '../shared/repo-paths.js'
 import { readTsSurface } from './lib/ts-surface.js'
@@ -39,6 +47,13 @@ function main(): number {
     facadeMethods: surface.facadeMethods,
     derivedBindings: snapshot.bindings,
   })
+  issues.push(
+    ...checkGeneratedClientMethods(manifest, readPyClientMethods(REPO_ROOT), 'py'),
+    ...checkGeneratedClientMethods(manifest, readRbClientMethods(REPO_ROOT), 'rb'),
+    ...checkGeneratedClientMethods(manifest, readGoClientMethods(REPO_ROOT), 'go'),
+    ...checkGeneratedClientMethods(manifest, readRustClientMethods(REPO_ROOT), 'rust'),
+    ...checkGeneratedClientMethods(manifest, readCClientMethods(REPO_ROOT), 'c'),
+  )
   const report = formatParityReport(issues)
   if (issues.length > 0) {
     console.error(report)

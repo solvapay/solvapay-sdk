@@ -1,6 +1,160 @@
 {
   "_comment": "generated — do not edit; regenerate with dto-gen --dump-boundary-types",
   "types": {
+    "AuthResolutionInput": {
+      "module": "auth_resolution",
+      "rustdoc": "Inputs for [`resolve_authenticated_user`] (facade resolves env / Request).",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "header_user_id",
+            "wireName": "headerUserId",
+            "rustdoc": "`x-user-id` header value when present.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "authorization_header",
+            "wireName": "authorizationHeader",
+            "rustdoc": "Raw `Authorization` header value when present.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "jwt_secret",
+            "wireName": "jwtSecret",
+            "rustdoc": "JWT secret (`SOLVAPAY_JWT_SECRET` || `SUPABASE_JWT_SECRET`).",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "strict_mode",
+            "wireName": "strictMode",
+            "rustdoc": "`SOLVAPAY_AUTH_STRICT === 'true'`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "include_email",
+            "wireName": "includeEmail",
+            "rustdoc": "Facade default: `options.includeEmail !== false`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "include_name",
+            "wireName": "includeName",
+            "rustdoc": "Facade default: `options.includeName !== false`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "now_unix_secs",
+            "wireName": "nowUnixSecs",
+            "rustdoc": "Explicit clock for `exp` / `nbf` (jose uses wall clock; fixtures use far dates).",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "i64"
+            }
+          }
+        ]
+      }
+    },
+    "AuthenticatedUser": {
+      "module": "auth_resolution",
+      "rustdoc": "Successful authenticated-user payload (email/name serialize as explicit `null`).",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "user_id",
+            "wireName": "userId",
+            "rustdoc": "Subject / middleware user id.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "email",
+            "wireName": "email",
+            "rustdoc": "Email when extracted; otherwise JSON `null`.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "name",
+            "wireName": "name",
+            "rustdoc": "Display name when extracted; otherwise JSON `null`.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
     "BillingCycle": {
       "module": "pricing_options",
       "rustdoc": "A billing-cycle option — present only on recurring plans.",
@@ -883,6 +1037,377 @@
         ]
       }
     },
+    "GateAction": {
+      "module": "gate_driver",
+      "rustdoc": "Next host action, or a terminal allow/gate.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "taggedEnum",
+        "tag": "kind",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "EnsureCustomer",
+            "wireName": "ensureCustomer",
+            "rustdoc": "Host must resolve/create the customer, then send `customerResolved`.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "customer_ref",
+                "wireName": "customerRef",
+                "rustdoc": "Original customer ref.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "LookupCache",
+            "wireName": "lookupCache",
+            "rustdoc": "Host looks up the limits cache (applying TTL itself) and sends\n`cacheHit` or `cacheMiss`.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "key",
+                "wireName": "key",
+                "rustdoc": "Limits cache key.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "CheckLimits",
+            "wireName": "checkLimits",
+            "rustdoc": "Host calls `checkLimits` (must pass `includeCheckoutSession`).",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "customer_ref",
+                "wireName": "customerRef",
+                "rustdoc": "Backend customer ref.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "product_ref",
+                "wireName": "productRef",
+                "rustdoc": "Product reference.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "meter_name",
+                "wireName": "meterName",
+                "rustdoc": "Meter name.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "include_checkout_session",
+                "wireName": "includeCheckoutSession",
+                "rustdoc": "Always `true` — gate assembly needs `checkoutUrl`.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "bool"
+                }
+              },
+              {
+                "rustName": "cache_delete_key",
+                "wireName": "cacheDeleteKey",
+                "rustdoc": "Optional key to delete before the HTTP call (stale entry).",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "Done",
+            "wireName": "done",
+            "rustdoc": "Terminal allow or gate. Host applies `cache` / `track` then returns.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "outcome",
+                "wireName": "outcome",
+                "rustdoc": "`\"allow\"` or `\"gate\"`.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "customer_ref",
+                "wireName": "customerRef",
+                "rustdoc": "Backend customer ref.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "product",
+                "wireName": "product",
+                "rustdoc": "Product reference.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "meter_name",
+                "wireName": "meterName",
+                "rustdoc": "Meter name.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "limits",
+                "wireName": "limits",
+                "rustdoc": "Last `checkLimits` body (or cached copy). Empty object when absent.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "value"
+                }
+              },
+              {
+                "rustName": "gate",
+                "wireName": "gate",
+                "rustdoc": "Assembled gate when `outcome` is `\"gate\"`.",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "PaywallGate"
+                }
+              },
+              {
+                "rustName": "cache",
+                "wireName": "cache",
+                "rustdoc": "Optional cache mutation.",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "GateCacheOp"
+                }
+              },
+              {
+                "rustName": "track",
+                "wireName": "track",
+                "rustdoc": "Optional paywall usage track.",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "GateTrackOp"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "GateCacheOp": {
+      "module": "gate_driver",
+      "rustdoc": "Cache mutation the host must apply before continuing / returning.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "taggedEnum",
+        "tag": "op",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "Set",
+            "wireName": "set",
+            "rustdoc": "Write a fresh cache-miss evaluation.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "key",
+                "wireName": "key",
+                "rustdoc": "Limits cache key.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "remaining",
+                "wireName": "remaining",
+                "rustdoc": "Remaining after optimistic consume.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": "serialize_whole_f64",
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "f64"
+                }
+              },
+              {
+                "rustName": "limits",
+                "wireName": "limits",
+                "rustdoc": "Raw `checkLimits` body.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "value"
+                }
+              },
+              {
+                "rustName": "timestamp",
+                "wireName": "timestamp",
+                "rustdoc": "Host `nowMs` at the miss.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "i64"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "UpdateRemaining",
+            "wireName": "updateRemaining",
+            "rustdoc": "Optimistic decrement on a cache hit that stays within limits.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "key",
+                "wireName": "key",
+                "rustdoc": "Limits cache key.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "remaining",
+                "wireName": "remaining",
+                "rustdoc": "Remaining after decrement.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": "serialize_whole_f64",
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "f64"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "Delete",
+            "wireName": "delete",
+            "rustdoc": "Evict a spent or stale entry.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "key",
+                "wireName": "key",
+                "rustdoc": "Limits cache key.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
     "GateContent": {
       "module": "paywall_state",
       "rustdoc": "Gate structured-content fields read by [`build_gate_message`].",
@@ -903,6 +1428,213 @@
             "cfgFeature": null,
             "ty": {
               "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "GateDriverState": {
+      "module": "gate_driver",
+      "rustdoc": "Opaque-enough driver state passed back on every step.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "product",
+            "wireName": "product",
+            "rustdoc": "Product reference used for limits and the assembled gate.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "meter_name",
+            "wireName": "meterName",
+            "rustdoc": "Resolved meter name (`usageType` with the `requests` default).",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "original_customer_ref",
+            "wireName": "originalCustomerRef",
+            "rustdoc": "Customer ref supplied on `start`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "backend_ref",
+            "wireName": "backendRef",
+            "rustdoc": "Backend customer ref after classify / ensure.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "started_ms",
+            "wireName": "startedMs",
+            "rustdoc": "Host clock at `start` (ms). Used for paywall `track` duration.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "i64"
+            }
+          },
+          {
+            "rustName": "limits_key",
+            "wireName": "limitsKey",
+            "rustdoc": "`backendRef:product:meterName` once the backend ref is known.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "GateNextOutput": {
+      "module": "gate_driver",
+      "rustdoc": "Driver output: updated state plus the next action.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "state",
+            "wireName": "state",
+            "rustdoc": "State to pass into the next `gate_next` call.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "GateDriverState"
+            }
+          },
+          {
+            "rustName": "action",
+            "wireName": "action",
+            "rustdoc": "Host action or terminal result.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "GateAction"
+            }
+          }
+        ]
+      }
+    },
+    "GateTrackOp": {
+      "module": "gate_driver",
+      "rustdoc": "Paywall usage track the host must fire on a gate outcome.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "customer_ref",
+            "wireName": "customerRef",
+            "rustdoc": "Backend customer ref.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "product_ref",
+            "wireName": "productRef",
+            "rustdoc": "Product reference.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "action",
+            "wireName": "action",
+            "rustdoc": "Meter / action name.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "outcome",
+            "wireName": "outcome",
+            "rustdoc": "Always `\"paywall\"` for this driver.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "duration_ms",
+            "wireName": "durationMs",
+            "rustdoc": "Elapsed ms from `start` (`max(0, nowMs - startedMs)`).",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
             }
           }
         ]
@@ -954,6 +1686,277 @@
             "cfgFeature": null,
             "ty": {
               "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "InvokePayableAction": {
+      "module": "invoke_payable",
+      "rustdoc": "Next host action or a formatted tool result.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "taggedEnum",
+        "tag": "kind",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "RunGate",
+            "wireName": "runGate",
+            "rustdoc": "Host must call `gate(customerRef, product, usageType)`.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "customer_ref",
+                "wireName": "customerRef",
+                "rustdoc": "Resolved customer ref.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "product",
+                "wireName": "product",
+                "rustdoc": "Product reference.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "usage_type",
+                "wireName": "usageType",
+                "rustdoc": "Meter name.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "InvokeHandler",
+            "wireName": "invokeHandler",
+            "rustdoc": "Host must invoke the merchant handler with this customer/limits snapshot.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "customer_ref",
+                "wireName": "customerRef",
+                "rustdoc": "Backend customer ref.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "limits",
+                "wireName": "limits",
+                "rustdoc": "Limits snapshot from the allow arm.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "value"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "Done",
+            "wireName": "done",
+            "rustdoc": "Terminal MCP tool result. Host applies `track` then returns `result`.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "result",
+                "wireName": "result",
+                "rustdoc": "Formatted MCP tool result.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "value"
+                }
+              },
+              {
+                "rustName": "track",
+                "wireName": "track",
+                "rustdoc": "Optional usage track (`success` / `fail` / omitted for paywall —\npaywall tracking is owned by the gate driver).",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "InvokePayableTrack"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "InvokePayableNextOutput": {
+      "module": "invoke_payable",
+      "rustdoc": "Driver output.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "state",
+            "wireName": "state",
+            "rustdoc": "State to pass into the next call.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "InvokePayableState"
+            }
+          },
+          {
+            "rustName": "action",
+            "wireName": "action",
+            "rustdoc": "Host action or terminal result.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "InvokePayableAction"
+            }
+          }
+        ]
+      }
+    },
+    "InvokePayableState": {
+      "module": "invoke_payable",
+      "rustdoc": "Driver state between payable steps.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "product",
+            "wireName": "product",
+            "rustdoc": "Product the tool is protected against.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "usage_type",
+            "wireName": "usageType",
+            "rustdoc": "Meter / usage type.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "customer_ref",
+            "wireName": "customerRef",
+            "rustdoc": "Customer ref after host resolution.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "started_ms",
+            "wireName": "startedMs",
+            "rustdoc": "Host clock at start (ms).",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "i64"
+            }
+          }
+        ]
+      }
+    },
+    "InvokePayableTrack": {
+      "module": "invoke_payable",
+      "rustdoc": "Post-handler usage track.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "outcome",
+            "wireName": "outcome",
+            "rustdoc": "`\"success\"` or `\"fail\"`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "duration_ms",
+            "wireName": "durationMs",
+            "rustdoc": "Elapsed ms from start.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
             }
           }
         ]
@@ -4216,6 +5219,57 @@
         }
       }
     },
+    "solvapay_core::fixture_host::construct_sdk_error_envelope": {
+      "name": "construct_sdk_error_envelope",
+      "module": "fixture_host",
+      "implTy": null,
+      "rustdoc": "Builds an error envelope for `constructSdkError` fixtures.\n\nAlways returns `{\"ok\":false,\"error\":…}` — the error-model corpus never\nexpects a success envelope.",
+      "params": [
+        {
+          "rustName": "args_json",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::fixture_host::resolve_authenticated_user_from_json": {
+      "name": "resolve_authenticated_user_from_json",
+      "module": "fixture_host",
+      "implTy": null,
+      "rustdoc": "Resolves `resolveAuthenticatedUser` fixture args into a JSON value.\n\nAuth failures serialize as the success-envelope *value* (the helper-auth\ncorpus asserts `expect.result`, not `expect.error`).\n\n# Errors\n\nReturns [`SdkError::Transport`] when required fields are missing or mistyped.",
+      "params": [
+        {
+          "rustName": "args_json",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "SdkError"
+          }
+        }
+      }
+    },
     "solvapay_core::fuzz_oracle::EnvelopeFuzzInput::decode": {
       "name": "decode",
       "module": "fuzz_oracle",
@@ -4382,6 +5436,44 @@
         }
       }
     },
+    "solvapay_core::gate_driver::gate_next": {
+      "name": "gate_next",
+      "module": "gate_driver",
+      "implTy": null,
+      "rustdoc": "Advance the gate sequence by one step.\n\n# Arguments\n\n* `state` - Previous [`GateNextOutput::state`], or `None` on `start`.\n* `event` - Host event tagged with `kind`.\n\n# Errors\n\n[`HelperErrorResult`] transport when `event` is missing `kind` or a required field.\nProduct-ref failures reuse the limits helper 400 payload.",
+      "params": [
+        {
+          "rustName": "state",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "event",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "named",
+            "name": "GateNextOutput"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
     "solvapay_core::hmac_util::bytes_to_hex_lower": {
       "name": "bytes_to_hex_lower",
       "module": "hmac_util",
@@ -4473,6 +5565,44 @@
         "optional": false,
         "ty": {
           "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::invoke_payable::invoke_payable_next": {
+      "name": "invoke_payable_next",
+      "module": "invoke_payable",
+      "implTy": null,
+      "rustdoc": "Advance payable invocation by one step.\n\n# Arguments\n\n* `state` - Previous state, or `None` on `start`.\n* `event` - Host event tagged with `kind`.\n\n# Errors\n\n[`HelperErrorResult`] on malformed events, missing gate payloads, or\nenvelopes that fail [`assert_response_result`].",
+      "params": [
+        {
+          "rustName": "state",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "event",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "named",
+            "name": "InvokePayableNextOutput"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
         }
       }
     },
@@ -6219,6 +7349,59 @@
           "kind": "result",
           "ok": {
             "kind": "value"
+          },
+          "err": {
+            "kind": "named",
+            "name": "WebhookError"
+          }
+        }
+      }
+    },
+    "solvapay_core::webhook::verify_webhook_json": {
+      "name": "verify_webhook_json",
+      "module": "webhook",
+      "implTy": null,
+      "rustdoc": "Verifies a webhook and serializes the parsed JSON body.\n\n# Errors\n\nReturns the same [`WebhookError`] as [`verify_webhook`]. Serialize failure\nof a parsed `Value` is reported as [`WebhookErrorCode::InvalidPayload`].",
+      "params": [
+        {
+          "rustName": "body",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "signature",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "secret",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "now_unix_secs",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "i64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "string"
           },
           "err": {
             "kind": "named",

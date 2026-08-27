@@ -94,6 +94,124 @@ fn resolve_paths(paths: Option<&OauthPaths>) -> (String, String, String, String)
     )
 }
 
+/// Path-helper kinds for [`mcp_oauth_path`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum OauthPathKind {
+    /// Strip one trailing `/`.
+    StripTrailingSlash,
+    /// Ensure a leading `/`.
+    LeadingSlash,
+    /// Origin + optional MCP mount.
+    ResourceIdentifier,
+    /// RFC 9728 path-aware well-known location.
+    ProtectedResourcePath,
+    /// Merge default OAuth route paths with overrides.
+    ResolvePaths,
+}
+
+/// Input for [`mcp_oauth_path`].
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OauthPathInput {
+    /// Which helper to run.
+    pub kind: OauthPathKind,
+    /// String argument for slash helpers.
+    #[serde(default)]
+    pub value: Option<String>,
+    /// Public origin for resource identifiers.
+    #[serde(default)]
+    pub public_base_url: Option<String>,
+    /// Optional MCP mount path.
+    #[serde(default)]
+    pub mcp_path: Option<String>,
+    /// Optional path overrides for `resolve-paths`.
+    #[serde(default)]
+    pub paths: Option<OauthPaths>,
+}
+
+/// Run one OAuth path helper.
+#[must_use]
+pub fn mcp_oauth_path(input: &OauthPathInput) -> Value {
+    match input.kind {
+        OauthPathKind::StripTrailingSlash => {
+            Value::String(without_trailing_slash(input.value.as_deref().unwrap_or("")).to_owned())
+        }
+        OauthPathKind::LeadingSlash => {
+            Value::String(with_leading_slash(input.value.as_deref().unwrap_or("")))
+        }
+        OauthPathKind::ResourceIdentifier => Value::String(mcp_resource_identifier(
+            input.public_base_url.as_deref().unwrap_or(""),
+            input.mcp_path.as_deref(),
+        )),
+        OauthPathKind::ProtectedResourcePath => Value::String(path_aware_protected_resource_path(
+            input.mcp_path.as_deref().unwrap_or(""),
+        )),
+        OauthPathKind::ResolvePaths => {
+            let (register, authorize, token, revoke) = resolve_paths(input.paths.as_ref());
+            json!({
+                "register": register,
+                "authorize": authorize,
+                "token": token,
+                "revoke": revoke,
+            })
+        }
+    }
+}
+
+/// Error-inspect kinds for [`mcp_oauth_error_inspect`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum OauthErrorInspectKind {
+    /// RFC 6749 `error` field with a known code.
+    HasShape,
+    /// Map status + Nest/Zod body to an RFC code.
+    DeriveCode,
+    /// Human-readable `error_description`.
+    BuildDescription,
+}
+
+/// Input for [`mcp_oauth_error_inspect`].
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OauthErrorInspectInput {
+    /// Which inspect helper to run.
+    pub kind: OauthErrorInspectKind,
+    /// Upstream body.
+    #[serde(default)]
+    pub body: Value,
+    /// HTTP status for `derive-code`.
+    #[serde(default)]
+    pub status: Option<i64>,
+}
+
+/// Inspect one OAuth error field without building the full RFC body.
+#[must_use]
+pub fn mcp_oauth_error_inspect(input: &OauthErrorInspectInput) -> Value {
+    match input.kind {
+        OauthErrorInspectKind::HasShape => Value::Bool(has_oauth_error_shape(&input.body)),
+        OauthErrorInspectKind::DeriveCode => {
+            let status = input.status.unwrap_or(400);
+            let code = input
+                .body
+                .as_object()
+                .map(|obj| derive_oauth_error_code(status, obj))
+                .unwrap_or(if status >= 500 {
+                    "server_error"
+                } else {
+                    "invalid_request"
+                });
+            Value::String(code.to_owned())
+        }
+        OauthErrorInspectKind::BuildDescription => input
+            .body
+            .as_object()
+            .and_then(build_error_description)
+            .map(Value::String)
+            .unwrap_or(Value::Null),
+    }
+}
+
 /// Build an OAuth discovery document.
 #[must_use]
 pub fn mcp_oauth_discovery(input: &OauthDiscoveryInput) -> Value {
@@ -170,7 +288,10 @@ fn derive_oauth_error_code(status: i64, nest_body: &Map<String, Value>) -> &'sta
     if touches("grant_type") {
         let grant_err = errs.iter().find(|err| path_has(err, "grant_type"));
         let received = grant_err.and_then(|err| err.get("received"));
-        if received.is_some() && received != Some(&Value::String("undefined".to_owned())) && received != Some(&Value::String(String::new())) {
+        if received.is_some()
+            && received != Some(&Value::String("undefined".to_owned()))
+            && received != Some(&Value::String(String::new()))
+        {
             return "unsupported_grant_type";
         }
         return "invalid_request";

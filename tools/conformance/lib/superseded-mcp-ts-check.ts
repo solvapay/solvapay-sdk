@@ -20,7 +20,12 @@ export type McpSupersededIssue = {
 const PACKAGES = ['mcp-core', 'mcp'] as const
 
 /** Filenames that used to hold host-local MCP semantics. */
-const FORBIDDEN_FILES = ['narrate-local.ts', 'builtin-handlers.ts'] as const
+const FORBIDDEN_FILES = [
+  'narrate-local.ts',
+  'builtin-handlers.ts',
+  'dispatch-builtin.ts',
+  'bootstrap-payload.ts',
+] as const
 
 type ContentRule = {
   token: string
@@ -39,6 +44,27 @@ const CONTENT_RULES: readonly ContentRule[] = [
     token: 'local narrator markdown',
     pattern: /\*\*Welcome to |Opened \{p\} top-up|Plans available:/,
     remediation: 'Do not author narrator markdown in TypeScript; call mcpNarrate.',
+  },
+  {
+    token: 'host OAuth path helper',
+    pattern: /value\.replace\(\/\\\/\$\//,
+    remediation: 'Call mcpOauthPath; do not reimplement slash helpers in TypeScript.',
+  },
+  {
+    token: 'host OAuth error inspect',
+    pattern: /touches\(['"]grant_type['"]\)/,
+    remediation: 'Call mcpOauthErrorInspect; do not reimplement OAuth error mapping in TypeScript.',
+  },
+  {
+    token: 'local OAuth route table',
+    pattern: /\/v1\/customer\/auth\/token|\/v1\/customer\/auth\/register/,
+    remediation:
+      'Call mcpOauthRequest; do not reimplement the OAuth proxy route table in TypeScript.',
+  },
+  {
+    token: 'overview markdown',
+    pattern: /# SolvaPay MCP server — overview/,
+    remediation: 'Call mcpOverviewResource; do not vendor overview markdown in TypeScript.',
   },
 ]
 

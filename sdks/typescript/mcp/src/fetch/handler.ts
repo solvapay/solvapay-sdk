@@ -11,9 +11,12 @@ import {
   McpBearerAuthError,
   mcpAuthGate,
   pathAwareProtectedResourcePath,
+  runMcpEngineRequest,
   type BuildAuthInfoFromBearerOptions,
-  type McpAuthGateChallenge,
   type McpAuthMode,
+  type McpEngineConfig,
+  type McpEngineHttpResult,
+  type McpEnginePayable,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
 import {
@@ -46,6 +49,22 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
   oauthPaths?: OAuthBridgePaths
   oauthClient?: McpOauthRequestClient | null
   /**
+   * When set, POST `/mcp` in JSON mode is routed through `mcpDispatch`
+   * instead of per-tool `McpServer` registration. SSE/streamable HTTP
+   * still uses `factory` + `createMcpHandler`.
+   */
+  engine?: {
+    mcpDispatch: (params: {
+      rpc: unknown
+      config: Record<string, unknown>
+      authHeader?: string
+    }) => Promise<unknown>
+    config: Omit<McpEngineConfig, 'userAgent' | 'payableTools'>
+    payables: Map<string, McpEnginePayable>
+    onDispatch?: (rpc: unknown) => void
+    onDispatched?: (result: McpEngineHttpResult, durationMs: number) => void
+  }
+  /**
    * Response shaping for modern (2026-07-28) traffic. Edge runtimes that
    * cannot hold a stream should pass `'json'` (single JSON body; mid-call
    * notifications are dropped). Defaults to `'auto'`.
@@ -64,13 +83,19 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
   onerror?: CreateMcpHandlerOptions['onerror']
 }
 
-function gateChallenge(req: Request, gate: McpAuthGateChallenge): Response {
-  const headers = new Headers()
-  for (const [key, value] of Object.entries(gate.headers)) {
-    headers.set(key, value)
-  }
+function engineHttpResponse(
+  req: Request,
+  result: { status: number; headers: Record<string, string>; body: unknown },
+): Response {
+  const headers = new Headers(result.headers)
   applyNativeCors(req.headers, headers)
-  return new Response(JSON.stringify(gate.body), { status: gate.status, headers })
+  const body =
+    result.body === null || result.body === undefined
+      ? null
+      : typeof result.body === 'string'
+        ? result.body
+        : JSON.stringify(result.body)
+  return new Response(body, { status: result.status, headers })
 }
 
 function getJsonRpcId(body: unknown): string | number | null {
@@ -132,6 +157,7 @@ export function createSolvaPayMcpFetchHandler(
     authorizationServerPath,
     oauthPaths,
     oauthClient,
+    engine,
     responseMode,
     legacy,
     onerror,
@@ -177,36 +203,89 @@ export function createSolvaPayMcpFetchHandler(
       return new Response(null, { status: 405, headers })
     }
 
-    const authHeader = req.headers.get('authorization')
-    let resolvedAuthInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
-    if (authHeader || requireAuth) {
-      const envelope = await readJsonRpcEnvelope(req)
-      const gate = requireAuth
-        ? mcpAuthGate({
-            rpcMethod: envelope.method,
-            authHeader,
-            authMode,
-            publicBaseUrl,
-            mcpPath,
-            jsonRpcId: envelope.id,
-          })
-        : { kind: 'allow' as const }
-      if (gate.kind === 'challenge') {
-        return gateChallenge(req, gate)
+    const useEngine = engine !== undefined && (responseMode === undefined || responseMode === 'json')
+    if (useEngine && engine !== undefined && req.method === 'POST') {
+      let rpc: unknown
+      try {
+        rpc = await req.json()
+      } catch {
+        const headers = new Headers({ 'content-type': 'application/json' })
+        applyNativeCors(req.headers, headers)
+        return new Response(
+          JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }),
+          { status: 400, headers },
+        )
       }
-      if (authHeader) {
-        try {
-          resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, authInfo)
-          if (!resolvedAuthInfo) {
-            throw new McpBearerAuthError('Missing bearer token')
-          }
-        } catch {
-          return authChallenge(req, {
-            publicBaseUrl,
-            protectedResourcePath: metadataPath,
-            jsonRpcId: envelope.id,
-          })
+      const payableTools = [...engine.payables.keys()].sort()
+      try {
+        const result = await runMcpEngineRequest({
+          mcpDispatch: engine.mcpDispatch,
+          rpc,
+          config: {
+            ...engine.config,
+            payableTools,
+            authMode,
+            mcpPath,
+            userAgent: req.headers.get('user-agent') ?? undefined,
+          },
+          ...(req.headers.get('authorization')
+            ? { authHeader: req.headers.get('authorization') ?? undefined }
+            : {}),
+          payables: engine.payables,
+          ...(engine.onDispatch !== undefined ? { onDispatch: engine.onDispatch } : {}),
+          ...(engine.onDispatched !== undefined ? { onDispatched: engine.onDispatched } : {}),
+        })
+        return engineHttpResponse(req, result)
+      } catch (error) {
+        const headers = new Headers({ 'content-type': 'application/json' })
+        applyNativeCors(req.headers, headers)
+        return new Response(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: getJsonRpcId(rpc),
+            error: {
+              code: -32603,
+              message: error instanceof Error ? error.message : 'internal_error',
+            },
+          }),
+          { status: 500, headers },
+        )
+      }
+    }
+
+    const authHeader = req.headers.get('authorization')
+    const envelope = await readJsonRpcEnvelope(req)
+    if (requireAuth) {
+      const gate = mcpAuthGate({
+        publicBaseUrl,
+        rpcMethod: envelope.method,
+        authHeader,
+        authMode,
+        mcpPath,
+        jsonRpcId: envelope.id,
+      })
+      if (gate.kind === 'challenge') {
+        return engineHttpResponse(req, {
+          status: gate.status,
+          headers: gate.headers,
+          body: gate.body,
+        })
+      }
+    }
+
+    let resolvedAuthInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
+    if (authHeader) {
+      try {
+        resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, authInfo)
+        if (!resolvedAuthInfo) {
+          throw new McpBearerAuthError('Missing bearer token')
         }
+      } catch {
+        return authChallenge(req, {
+          publicBaseUrl,
+          protectedResourcePath: metadataPath,
+          jsonRpcId: (await readJsonRpcEnvelope(req)).id,
+        })
       }
     }
 

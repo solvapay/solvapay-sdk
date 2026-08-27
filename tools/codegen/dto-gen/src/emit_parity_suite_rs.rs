@@ -218,6 +218,7 @@ mod tests {
             rb: rust.into(),
             go: rust.into(),
             rust: rust.into(),
+            c: rust.into(),
         }
     }
 

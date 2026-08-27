@@ -9,7 +9,6 @@ import type { CallToolResult } from '@modelcontextprotocol/server'
 import { z } from 'zod'
 import {
   buildPayableHandler,
-  type BuildBootstrapPayloadFn,
   type McpToolExtra,
   type PayableHandler,
   type SolvaPayToolAnnotations,
@@ -19,6 +18,10 @@ import type { SolvaPay } from '@solvapay/server'
 import { registerAppTool } from './internal/extAppsServer'
 
 type ZodObjectSchema = ReturnType<typeof z.object>
+type BuildBootstrapPayloadFn = (
+  view: string,
+  extra?: McpToolExtra,
+) => Promise<unknown>
 
 /** Accepted `schema` forms: a `z.object()` schema or a raw `{ field: z.string() }` shape. */
 export type InputSchemaOption = ZodObjectSchema | Record<string, z.ZodType> | undefined

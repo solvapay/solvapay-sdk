@@ -308,7 +308,11 @@ export interface SolvaPayToolDescriptor {
    * built.
    */
   icons?: SolvaPayToolIcon[]
-  handler: (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult>
+  /**
+   * Optional adapter-local handler. Builtin tools are served by
+   * `mcpDispatch`; merchant payable tools still supply a handler.
+   */
+  handler?: (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult>
 }
 
 /**
@@ -355,7 +359,7 @@ export interface SolvaPayBootstrapResourceDescriptor {
   title?: string
   description: string
   mimeType: string
-  readPayload: (extra?: McpToolExtra) => Promise<BootstrapPayload>
+  readPayload?: (extra?: McpToolExtra) => Promise<BootstrapPayload>
 }
 
 /**

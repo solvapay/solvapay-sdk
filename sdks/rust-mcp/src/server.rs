@@ -193,6 +193,9 @@ impl McpHttpServer {
                     mcp_path: Some(self.mcp_path.clone()),
                     hide_audiences: None,
                     user_agent: req.headers.get("user-agent").cloned(),
+                    csp: None,
+                    api_base_url: None,
+                    branding: None,
                 },
                 auth_header: req.headers.get("authorization").cloned(),
             })

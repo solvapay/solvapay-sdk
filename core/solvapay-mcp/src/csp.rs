@@ -63,7 +63,10 @@ fn merge_list(base: &[String], extras: &[Vec<String>]) -> Vec<String> {
 
 /// Merge integrator CSP overrides with the Stripe baseline and optional API origin.
 #[must_use]
-pub fn mcp_merge_csp(overrides: Option<&SolvaPayMcpCsp>, api_base_url: Option<&str>) -> SolvaPayMcpCsp {
+pub fn mcp_merge_csp(
+    overrides: Option<&SolvaPayMcpCsp>,
+    api_base_url: Option<&str>,
+) -> SolvaPayMcpCsp {
     let base = default_csp();
     let api_origin = parse_origin(api_base_url);
     let extra_origin = api_origin

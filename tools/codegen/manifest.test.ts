@@ -38,6 +38,7 @@ const DEFAULT_SYNC = {
   rb: 'blocking' as const,
   go: 'blocking' as const,
   rust: ['async', 'blocking'] as ('async' | 'blocking')[],
+  c: 'blocking' as const,
 }
 
 const PURE_SYNC = {
@@ -46,6 +47,7 @@ const PURE_SYNC = {
   rb: 'sync' as const,
   go: 'sync' as const,
   rust: 'sync' as const,
+  c: 'sync' as const,
 }
 
 /** Real client op ids so fixture bindings reconcile against SHIM_JS_NAMES. */
@@ -161,6 +163,7 @@ function buildFixtureManifest(): SdkContractManifest {
           rb: 'sp.gate',
           go: 'sp.Gate',
           rust: 'sp.gate',
+          c: 'gate',
         },
         sync: DEFAULT_SYNC,
       },
@@ -215,9 +218,10 @@ function buildFixtureManifest(): SdkContractManifest {
         rb: 'sp.gate',
         go: 'sp.Gate',
         rust: 'sp.gate',
+        c: 'gate',
       },
     },
-    reservedWords: { ts: [], py: [], rb: [], go: [], rust: [] },
+    reservedWords: { ts: [], py: [], rb: [], go: [], rust: [], c: [] },
   }
 }
 

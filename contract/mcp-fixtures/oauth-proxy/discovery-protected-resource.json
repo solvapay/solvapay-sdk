@@ -22,7 +22,7 @@
         "content-type": "application/json"
       },
       "body": {
-        "resource": "https://app.example.com",
+        "resource": "https://app.example.com/mcp",
         "authorization_servers": [
           "https://app.example.com"
         ],

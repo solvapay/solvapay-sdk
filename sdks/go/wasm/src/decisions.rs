@@ -942,6 +942,24 @@ pub unsafe extern "C" fn sv_evaluate_product_readiness_binding(
     }))
 }
 
+// --- paywall-decision ---
+
+/// Binding for `gateNext`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_gate_next_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = optional_value(&args, "state");
+        let event = optional_value(&args, "event");
+        result_as_value(gate_next(state.as_ref(), event.as_ref()))
+    }))
+}
+
 // --- retry ---
 
 /// Binding for `retryNextDelayMs`.
@@ -1032,6 +1050,49 @@ pub unsafe extern "C" fn sv_charges_binding(args_ptr: *mut u8, args_len: usize) 
         to_value(&charges(priced.as_ref()))
     }))
 }
+
+// --- auth-resolution ---
+
+/// Binding for `resolveAuthenticatedUser`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_resolve_authenticated_user_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let input = require_typed::<AuthResolutionInput>(&args, "input")?;
+        result_as_value(resolve_authenticated_user(&input))
+    }))
+}
+
+// --- balance-poll ---
+
+/// Binding for `evaluateBalanceObservation`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_evaluate_balance_observation_binding(
+    args_ptr: *mut u8,
+    args_len: usize,
+) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let baseline = require_f64(&args, "baseline")?;
+        let credits = require_f64(&args, "credits")?;
+        to_value(&evaluate_balance_observation(baseline, credits))
+    }))
+}
+
+// --- plans ---
 
 /// Binding for `headlineCharges`.
 ///

@@ -117,9 +117,13 @@ module SolvaPay
       paywall_error_to_client_payload
       require_product_ref
       evaluate_product_readiness
+      gate_next
       retry_next_delay_ms
       assert_valid_product_ref
+      invoke_payable_next
       charges
+      resolve_authenticated_user
+      evaluate_balance_observation
       headline_charges
       per_unit_charge
       billing_cycle

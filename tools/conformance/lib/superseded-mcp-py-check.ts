@@ -15,7 +15,13 @@ export type McpPySupersededIssue = {
 
 const PYTHON_ROOT = 'sdks/python-mcp/python/solvapay_mcp'
 
-const FORBIDDEN_FILES = ['server/narrate_local.py', 'server/builtin_handlers.py'] as const
+const FORBIDDEN_FILES = [
+  'server/narrate_local.py',
+  'server/builtin_handlers.py',
+  'server/dispatch_builtin.py',
+  'server/bootstrap.py',
+  'server/descriptors.py',
+] as const
 
 type ContentRule = {
   token: string
@@ -38,6 +44,26 @@ const CONTENT_RULES: readonly ContentRule[] = [
     token: 'native_available skip',
     pattern: /pytest\.skip.*native_available|native_available\(\).*skip/i,
     remediation: 'Do not skip when the native binding is missing; fail loudly.',
+  },
+  {
+    token: 'host OAuth path helper',
+    pattern: /value\[:-1\] if value\.endswith\("\/"\)/,
+    remediation: 'Call mcpOauthPath; do not reimplement slash helpers in Python.',
+  },
+  {
+    token: 'host OAuth error inspect',
+    pattern: /touches\(["']grant_type["']\)/,
+    remediation: 'Call mcpOauthErrorInspect; do not reimplement OAuth error mapping in Python.',
+  },
+  {
+    token: 'local OAuth route table',
+    pattern: /\/v1\/customer\/auth\/token|\/v1\/customer\/auth\/register/,
+    remediation: 'Call mcpOauthRequest; do not reimplement the OAuth proxy route table in Python.',
+  },
+  {
+    token: 'overview markdown',
+    pattern: /# SolvaPay MCP server — overview/,
+    remediation: 'Call mcpOverviewResource; do not vendor overview markdown in Python.',
   },
 ]
 

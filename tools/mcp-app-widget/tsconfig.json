@@ -10,7 +10,7 @@
     "baseUrl": ".",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "paths": {
-      "@solvapay/core/portable": ["../../sdks/typescript/core/src/portable-fallbacks"]
+      "@solvapay/core/browser-wasm": ["../../sdks/typescript/core/src/browser-wasm.ts"]
     }
   },
   "include": ["src"]

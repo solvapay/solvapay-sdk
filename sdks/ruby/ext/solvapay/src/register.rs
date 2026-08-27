@@ -23,10 +23,12 @@ use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::counts_usage_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::decide_paywall_outcome_binding;
+use crate::decisions::evaluate_balance_observation_binding;
 use crate::decisions::evaluate_cached_limits_binding;
 use crate::decisions::evaluate_fresh_limits_binding;
 use crate::decisions::evaluate_product_readiness_binding;
 use crate::decisions::extract_backend_customer_ref_binding;
+use crate::decisions::gate_next_binding;
 use crate::decisions::headline_charges_binding;
 use crate::decisions::included_units_binding;
 use crate::decisions::is_cached_customer_ref_valid_binding;
@@ -43,6 +45,7 @@ use crate::decisions::project_payment_intent_result_binding;
 use crate::decisions::project_topup_process_outcome_binding;
 use crate::decisions::project_usage_snapshot_binding;
 use crate::decisions::require_product_ref_binding;
+use crate::decisions::resolve_authenticated_user_binding;
 use crate::decisions::resolve_check_limits_params_binding;
 use crate::decisions::resolve_fallback_gate_limits_binding;
 use crate::decisions::resolve_product_ref_binding;
@@ -73,6 +76,7 @@ use crate::payload_builders::get_seller_tax_identifier_display_label_binding;
 use crate::payload_builders::get_tax_id_example_binding;
 use crate::payload_builders::get_tax_id_field_label_binding;
 use crate::payload_builders::get_tax_id_helper_text_binding;
+use crate::payload_builders::invoke_payable_next_binding;
 use crate::payload_builders::is_zero_decimal_currency_binding;
 use crate::payload_builders::make_response_result_binding;
 use crate::payload_builders::mcp_tool_names_binding;
@@ -250,12 +254,21 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         "evaluate_product_readiness",
         function!(evaluate_product_readiness_binding, 1),
     )?;
+    native.define_singleton_method("gate_next", function!(gate_next_binding, 1))?;
     native.define_singleton_method("retry_next_delay_ms", function!(retry_next_delay_ms, 1))?;
     native.define_singleton_method(
         "assert_valid_product_ref",
         function!(assert_valid_product_ref_binding, 1),
     )?;
     native.define_singleton_method("charges", function!(charges_binding, 1))?;
+    native.define_singleton_method(
+        "resolve_authenticated_user",
+        function!(resolve_authenticated_user_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "evaluate_balance_observation",
+        function!(evaluate_balance_observation_binding, 1),
+    )?;
     native.define_singleton_method("headline_charges", function!(headline_charges_binding, 1))?;
     native.define_singleton_method("per_unit_charge", function!(per_unit_charge_binding, 1))?;
     native.define_singleton_method("billing_cycle", function!(billing_cycle_binding, 1))?;
@@ -357,6 +370,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "build_payable_tool_result",
         function!(build_payable_tool_result_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "invoke_payable_next",
+        function!(invoke_payable_next_binding, 1),
     )?;
     client.define_method(
         "create_customer",

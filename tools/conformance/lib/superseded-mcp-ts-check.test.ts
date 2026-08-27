@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { joinRel, tsPackageRel } from '../../shared/paths.js'
+import { joinRel, tsPackageRel, REPO_ROOT } from '../../shared/paths.js'
 import {
   formatMcpSupersededReport,
   runMcpSupersededTsCheck,
@@ -39,6 +39,19 @@ describe('mcp-superseded-ts-check fixtures', () => {
     expect(formatMcpSupersededReport(issues)).toMatch(/narrate-local/)
   })
 
+  it('fails when dispatch-builtin.ts or bootstrap-payload.ts still exist', () => {
+    const coreSrc = joinRel('', tsPackageRel('mcp-core'), 'src')
+    const mcpSrc = joinRel('', tsPackageRel('mcp'), 'src')
+    const root = makeRepo({
+      [`${coreSrc}/dispatch-builtin.ts`]: 'export async function dispatchSolvaPayBuiltin() {}\n',
+      [`${coreSrc}/bootstrap-payload.ts`]: 'export function createBuildBootstrapPayload() {}\n',
+      [`${mcpSrc}/index.ts`]: 'export const ok = true\n',
+    })
+    const issues = runMcpSupersededTsCheck(root)
+    expect(issues.some(i => i.token === 'dispatch-builtin.ts')).toBe(true)
+    expect(issues.some(i => i.token === 'bootstrap-payload.ts')).toBe(true)
+  })
+
   it('fails on tsFallback', () => {
     const coreSrc = joinRel('', tsPackageRel('mcp-core'), 'src')
     const mcpSrc = joinRel('', tsPackageRel('mcp'), 'src')
@@ -62,6 +75,30 @@ describe('mcp-superseded-ts-check fixtures', () => {
     expect(issues.some(i => i.token === 'local narrator markdown')).toBe(true)
   })
 
+  it('fails on a local OAuth route table', () => {
+    const coreSrc = joinRel('', tsPackageRel('mcp-core'), 'src')
+    const mcpSrc = joinRel('', tsPackageRel('mcp'), 'src')
+    const root = makeRepo({
+      [`${coreSrc}/ok.ts`]: 'export const ok = true\n',
+      [`${mcpSrc}/internal/mcp-oauth-request.ts`]:
+        "return proxyCustomerAuth(params, '/v1/customer/auth/token', true)\n",
+    })
+    const issues = runMcpSupersededTsCheck(root)
+    expect(issues.some(i => i.token === 'local OAuth route table')).toBe(true)
+  })
+
+  it('fails on reimplemented OAuth path helpers', () => {
+    const coreSrc = joinRel('', tsPackageRel('mcp-core'), 'src')
+    const mcpSrc = joinRel('', tsPackageRel('mcp'), 'src')
+    const root = makeRepo({
+      [`${coreSrc}/oauth-discovery.ts`]:
+        "export function withoutTrailingSlash(value: string): string { return value.replace(/\\/$/, '') }\n",
+      [`${mcpSrc}/index.ts`]: 'export const ok = true\n',
+    })
+    const issues = runMcpSupersededTsCheck(root)
+    expect(issues.some(i => i.token === 'host OAuth path helper')).toBe(true)
+  })
+
   it('passes a clean Rust-delegating MCP tree', () => {
     const coreSrc = joinRel('', tsPackageRel('mcp-core'), 'src')
     const mcpSrc = joinRel('', tsPackageRel('mcp'), 'src')
@@ -75,5 +112,9 @@ describe('mcp-superseded-ts-check fixtures', () => {
     })
     expect(runMcpSupersededTsCheck(root)).toEqual([])
     expect(formatMcpSupersededReport([])).toBe('mcp-superseded-ts:check: OK')
+  })
+
+  it('passes the live MCP TypeScript tree', () => {
+    expect(runMcpSupersededTsCheck(REPO_ROOT)).toEqual([])
   })
 })

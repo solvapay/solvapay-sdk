@@ -182,6 +182,7 @@ mod tests {
                     rb: "check_limits".into(),
                     go: "CheckLimits".into(),
                     rust: "check_limits".into(),
+                    c: "checkLimits".into(),
                 },
                 optional_on_client: false,
                 params: vec![],

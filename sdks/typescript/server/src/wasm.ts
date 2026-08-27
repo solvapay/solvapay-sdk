@@ -105,9 +105,12 @@ export type WasmSyncMethod =
   | 'paywallErrorToClientPayload'
   | 'requireProductRef'
   | 'evaluateProductReadiness'
+  | 'gateNext'
   | 'retryNextDelayMs'
   | 'assertValidProductRef'
   | 'charges'
+  | 'resolveAuthenticatedUser'
+  | 'evaluateBalanceObservation'
   | 'headlineCharges'
   | 'perUnitCharge'
   | 'billingCycle'
@@ -143,6 +146,7 @@ export type WasmSyncMethod =
   | 'buildPromptUserMessage'
   | 'validatePublicBaseUrl'
   | 'buildPayableToolResult'
+  | 'invokePayableNext'
   | 'solvapayCall'
 
 export type WasmClientConfig = {

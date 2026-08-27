@@ -26,6 +26,7 @@ pub enum GenError {
         "usage: dto-gen --snapshot <sdk-v1.snapshot.json> --out <crates/solvapay-dto/src> \
          [--manifest <sdk-contract.yaml>] [--ts-out <overlays.generated.d.ts>] \
          [--ts-client-out <client.generated.d.ts>] \
+         [--ts-client-runtime-out <client.runtime.generated.ts>] \
          [--ts-parity-out <signature-parity.generated.test.ts>] \
          [--native-py-out <_native.py>] [--py-stub-out <__init__.pyi>] \
          [--py-parity-out <signature_parity_generated_test.py>] \

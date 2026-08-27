@@ -221,6 +221,22 @@ What stays per language: MCP protocol transport, request/response body
 conversion, framework routing, host-SDK tool registration, bearer parse
 to `authHeader` / `customerRef`, and invoking the merchant handler.
 
+Production layer-3 HTTP engines:
+
+| Language   | Adapter |
+| ---------- | ------- |
+| Rust       | `sdks/rust-mcp/src/server.rs` |
+| Go         | `sdks/go/mcp/engine.go` |
+| Ruby       | `sdks/ruby-mcp/lib/solvapay/mcp/engine.rb` |
+| C          | `sdks/capi/ctest/mcp_engine.c` |
+| TypeScript | `sdks/typescript/mcp-core/src/engine-dispatch.ts` + fetch JSON `POST /mcp` |
+| Python     | `sdks/python-mcp/python/solvapay_mcp/server/engine.py` + Starlette `create_mcp_engine_starlette` |
+
+Characterization fixtures under `contract/mcp-fixtures/` are immutable
+expectations. Replay must assert equality (or the documented
+`invoke-handler.json` / `tools-list.json` partials); do not early-return a
+suite without asserting.
+
 Layer-3 non-transport glue (the dispatch loop + OAuth router) is gated
 to **≤ 280 code lines** per reference adapter (`pnpm mcp-layer3-budget:check`).
 The C file above is the smallest expression of that loop.

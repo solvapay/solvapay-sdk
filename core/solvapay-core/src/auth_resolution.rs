@@ -23,7 +23,8 @@ const DETAILS_MALFORMED: &str = "Malformed authentication token";
 const DETAILS_MISSING_SUB: &str = "Authentication token missing subject (sub) claim";
 
 /// Inputs for [`resolve_authenticated_user`] (facade resolves env / Request).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuthResolutionInput {
     /// `x-user-id` header value when present.
     pub header_user_id: Option<String>,
@@ -63,6 +64,12 @@ pub struct AuthenticatedUser {
 ///
 /// [`AuthenticatedUser`] on success, or a 401 [`HelperErrorResult`] on the
 /// bearer failure paths. The header path never returns 401 for JWT problems.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "auth-resolution",
+    emit_order = 43
+)]
 pub fn resolve_authenticated_user(
     input: &AuthResolutionInput,
 ) -> Result<AuthenticatedUser, HelperErrorResult> {

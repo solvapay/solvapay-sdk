@@ -59,33 +59,13 @@ pub fn wasm_version() -> String {
 /// Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
 #[wasm_bindgen(js_name = solvapayCall)]
 pub fn solvapay_call(args_json: String) -> String {
-    let parsed: serde_json::Value = match serde_json::from_str(&args_json) {
-        Ok(value) => value,
-        Err(err) => {
-            return solvapay_core::err_envelope(&solvapay_core::SdkError::transport(
-                format!("invalid solvapay_call args: {err}"),
-                false,
-            ));
-        }
-    };
-    let Some(op) = parsed.get("op").and_then(serde_json::Value::as_str) else {
-        return solvapay_core::err_envelope(&solvapay_core::SdkError::transport(
-            "missing op",
-            false,
-        ));
-    };
-    let args = parsed
-        .get("args")
-        .cloned()
-        .unwrap_or_else(|| serde_json::json!({}));
-    solvapay_mcp_core::dispatch_sync(op, &args.to_string())
+    solvapay_mcp_core::solvapay_call(&args_json)
 }
 
 /// Edge-only wasm-bindgen exports (`verifyWebhook`).
 #[cfg(feature = "edge")]
 mod edge_api {
     use super::error::BindingError;
-    use solvapay_core::verify_webhook as core_verify_webhook;
     use wasm_bindgen::prelude::*;
 
     /// Inner pure helper: verifies a webhook and returns the JSON body string.
@@ -108,9 +88,8 @@ mod edge_api {
         secret: &str,
         now_unix_secs: i64,
     ) -> Result<String, BindingError> {
-        let value = core_verify_webhook(body, signature, secret, now_unix_secs)
-            .map_err(BindingError::from_webhook)?;
-        serde_json::to_string(&value).map_err(|e| BindingError::serialize_failed(e.to_string()))
+        solvapay_core::verify_webhook_json(body, signature, secret, now_unix_secs)
+            .map_err(BindingError::from_webhook)
     }
 
     /// Verifies a SolvaPay webhook signature with an explicit clock.

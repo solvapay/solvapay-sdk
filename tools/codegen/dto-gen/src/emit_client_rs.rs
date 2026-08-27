@@ -163,7 +163,11 @@ fn write_imports(output: &mut String, rows: &[MethodRow<'_>], _blocking: bool) {
                 if inner != "Value" && !inner.starts_with('&') && !inner.contains("::") {
                     dto_types.insert(inner.to_owned());
                 }
-            } else if param.ty != "Value" && !param.ty.starts_with('&') && param.ty != "()" && !param.ty.contains("::") {
+            } else if param.ty != "Value"
+                && !param.ty.starts_with('&')
+                && param.ty != "()"
+                && !param.ty.contains("::")
+            {
                 dto_types.insert(param.ty.clone());
             }
         }
@@ -702,6 +706,7 @@ mod tests {
             rb: value.into(),
             go: value.into(),
             rust: value.into(),
+            c: value.into(),
         }
     }
 

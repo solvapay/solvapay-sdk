@@ -17,10 +17,14 @@ pub mod credit_display;
 pub mod customer_sync;
 pub mod envelope;
 pub mod error;
+#[cfg(feature = "server")]
+pub mod fixture_host;
 pub mod fuzz_oracle;
+pub mod gate_driver;
 pub mod helper_error;
 #[cfg(feature = "hmac-crypto")]
 mod hmac_util;
+pub mod invoke_payable;
 pub mod limits;
 pub mod mcp;
 pub mod payment;
@@ -74,7 +78,14 @@ pub use envelope::{
     parse_args_json, run_envelope_result, run_envelope_sync,
 };
 pub use error::{render_template, SdkError};
+pub use gate_driver::{
+    gate_next, GateAction, GateCacheOp, GateDriverState, GateNextOutput, GateTrackOp,
+};
 pub use helper_error::HelperErrorResult;
+pub use invoke_payable::{
+    invoke_payable_next, InvokePayableAction, InvokePayableNextOutput, InvokePayableState,
+    InvokePayableTrack,
+};
 pub use limits::{resolve_check_limits_params, CheckLimitsParams};
 pub use mcp::{
     assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
@@ -131,7 +142,7 @@ pub use seller_identity::{
 };
 pub use usage::{project_usage_snapshot, UsageSnapshot};
 #[cfg(feature = "webhook-verify")]
-pub use webhook::{verify_webhook, WebhookError, WebhookErrorCode};
+pub use webhook::{verify_webhook, verify_webhook_json, WebhookError, WebhookErrorCode};
 
 #[cfg(test)]
 mod feature_gates {

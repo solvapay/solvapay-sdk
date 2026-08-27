@@ -82,6 +82,9 @@ generated:
   - id: tsClient
     path: sdks/typescript/server/src/types/client.generated.d.ts
     flag: --ts-client-out
+  - id: tsClientRuntime
+    path: sdks/typescript/server/src/client.runtime.generated.ts
+    flag: --ts-client-runtime-out
   - id: tsGenerated
     path: sdks/typescript/server/src/types/generated.ts
   - id: tsParity
@@ -253,6 +256,7 @@ drift:
   - rustDto
   - tsOverlays
   - tsClient
+  - tsClientRuntime
   - tsGenerated
   - tsParity
   - nativeTs

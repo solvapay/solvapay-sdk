@@ -8,7 +8,7 @@
     "paths": {
       "@solvapay/mcp-core": ["../mcp-core/src"],
       "@solvapay/core": ["../core/src"],
-      "@solvapay/core/portable": ["../core/src/portable-fallbacks"]
+      "@solvapay/core/browser-wasm": ["../core/src/browser-wasm"]
     }
   },
   "references": [],

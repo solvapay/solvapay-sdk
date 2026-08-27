@@ -116,9 +116,12 @@ export type NativeSyncMethod =
   | 'paywallErrorToClientPayload'
   | 'requireProductRef'
   | 'evaluateProductReadiness'
+  | 'gateNext'
   | 'retryNextDelayMs'
   | 'assertValidProductRef'
   | 'charges'
+  | 'resolveAuthenticatedUser'
+  | 'evaluateBalanceObservation'
   | 'headlineCharges'
   | 'perUnitCharge'
   | 'billingCycle'
@@ -154,6 +157,7 @@ export type NativeSyncMethod =
   | 'buildPromptUserMessage'
   | 'validatePublicBaseUrl'
   | 'buildPayableToolResult'
+  | 'invokePayableNext'
 
 export type NativeBinding = {
   verifyWebhook(body: string, signature: string, secret: string, nowUnixSecs?: number): string

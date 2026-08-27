@@ -4,11 +4,12 @@
  */
 
 import type { BuildSolvaPayDescriptorsOptions } from '@solvapay/mcp-core'
-import { defaultIsChatGptRequest } from '@solvapay/mcp-core'
+import { buildPayableHandler } from '@solvapay/mcp-core'
+import type { McpEnginePayable } from '@solvapay/mcp-core'
 import {
-  applyHideToolsByAudience,
   buildSolvaPayMcpServer,
-  normaliseHideToolsByAudience,
+  hideAudiencesFromConfig,
+  installEngineHandlers,
   type HideToolsByAudienceConfig,
 } from '../internal/buildMcpServer'
 import { registerPayableTool, type RegisterPayableToolOptions } from '../registerPayableTool'
@@ -34,8 +35,45 @@ export interface CreateSolvaPayMcpFetchOptions
   serverVersion?: string
 }
 
+function bindEnginePayables(
+  payables: Map<string, McpEnginePayable>,
+  solvaPay: AdditionalToolsContext['solvaPay'],
+  productRef: string,
+  additionalTools: ((ctx: AdditionalToolsContext) => void) | undefined,
+): void {
+  if (!additionalTools) return
+  additionalTools({
+    server: {
+      registerTool: () => ({}) as never,
+    } as AdditionalToolsContext['server'],
+    solvaPay,
+    resourceUri: '',
+    productRef,
+    registerPayable: (name, opts) => {
+      const product = opts.product ?? productRef
+      const protectedHandler = buildPayableHandler(
+        solvaPay,
+        {
+          product,
+          getCustomerRef: opts.getCustomerRef,
+        },
+        opts.handler as never,
+      )
+      payables.set(name, {
+        invoke: (args, customerRef) =>
+          protectedHandler(
+            args,
+            customerRef
+              ? { authInfo: { extra: { customer_ref: customerRef } } }
+              : undefined,
+          ),
+      })
+    },
+  })
+}
+
 function buildServerForRequest(
-  ctx: McpRequestContext,
+  _ctx: McpRequestContext,
   options: {
     descriptorOptions: BuildSolvaPayDescriptorsOptions & {
       registerPrompts: boolean
@@ -45,10 +83,10 @@ function buildServerForRequest(
     }
     additionalTools?: (ctx: AdditionalToolsContext) => void
     hideToolsByAudience?: HideToolsByAudienceConfig
-    bypassWarned: Set<string>
+    payables: Map<string, McpEnginePayable>
   },
 ) {
-  const { descriptorOptions, additionalTools, hideToolsByAudience, bypassWarned } = options
+  const { descriptorOptions, additionalTools, hideToolsByAudience, payables } = options
 
   const { server, descriptors } = buildSolvaPayMcpServer(descriptorOptions)
 
@@ -59,31 +97,32 @@ function buildServerForRequest(
         solvaPay,
         ...opts,
         product: opts.product ?? productRef,
-        buildBootstrap: opts.buildBootstrap ?? descriptors.buildBootstrapPayload,
       } as RegisterPayableToolOptions)
     }
     additionalTools({ server, solvaPay, resourceUri, productRef, registerPayable })
   }
 
-  const { audiences, options: filterOptions } = normaliseHideToolsByAudience(hideToolsByAudience)
-  if (audiences && audiences.length > 0) {
-    const bypass = (filterOptions.bypassWhen ?? defaultIsChatGptRequest)({
-      server,
-      extra: ctx.requestInfo ? { requestInfo: ctx.requestInfo } : undefined,
-    })
-    if (bypass) {
-      const ua = ctx.requestInfo?.headers.get('user-agent') ?? undefined
-      const context = ua ? `ua=${ua}` : 'no user-agent'
-      if (!bypassWarned.has(context)) {
-        bypassWarned.add(context)
-        console.warn(
-          `[solvapay/mcp] hideToolsByAudience filter bypassed (${context}); returning full tools/list catalog.`,
-        )
-      }
-    } else {
-      applyHideToolsByAudience(server, audiences, filterOptions)
-    }
-  }
+  const hideAudiences = hideAudiencesFromConfig(hideToolsByAudience)
+  installEngineHandlers(server, {
+    solvaPay: descriptorOptions.solvaPay,
+    config: {
+      productRef: descriptorOptions.productRef,
+      publicBaseUrl: descriptorOptions.publicBaseUrl,
+      resourceUri: descriptorOptions.resourceUri,
+      ...(descriptorOptions.views !== undefined ? { views: [...descriptorOptions.views] } : {}),
+      ...(descriptorOptions.csp !== undefined ? { csp: descriptorOptions.csp } : {}),
+      ...(descriptorOptions.apiBaseUrl !== undefined
+        ? { apiBaseUrl: descriptorOptions.apiBaseUrl }
+        : {}),
+      ...(descriptorOptions.branding !== undefined ? { branding: descriptorOptions.branding } : {}),
+      ...(hideAudiences !== undefined ? { hideAudiences } : {}),
+    },
+    payables,
+    readHtml: descriptors.resource.readHtml,
+    resourceCsp: descriptors.resource.csp,
+    registerPrompts: descriptorOptions.registerPrompts,
+    registerDocsResources: descriptorOptions.registerDocsResources,
+  })
 
   return server
 }
@@ -114,8 +153,16 @@ export function createSolvaPayMcpFetch(
   } = options
 
   const apiBaseUrl = handlerRest.apiBaseUrl
-  const bypassWarned = new Set<string>()
   const nativeOauth = isOauthRequestClient(solvaPay.apiClient) ? solvaPay.apiClient : undefined
+  const payables = new Map<string, McpEnginePayable>()
+  const mcpDispatch =
+    typeof solvaPay.apiClient.mcpDispatch === 'function'
+      ? solvaPay.apiClient.mcpDispatch.bind(solvaPay.apiClient)
+      : undefined
+  if (mcpDispatch !== undefined) {
+    bindEnginePayables(payables, solvaPay, productRef, additionalTools)
+  }
+  const hideAudiences = hideAudiencesFromConfig(hideToolsByAudience)
 
   const descriptorOptions = {
     solvaPay,
@@ -141,7 +188,7 @@ export function createSolvaPayMcpFetch(
     factory: ctx =>
       buildServerForRequest(ctx, {
         descriptorOptions,
-        bypassWarned,
+        payables,
         ...(additionalTools !== undefined ? { additionalTools } : {}),
         ...(hideToolsByAudience !== undefined ? { hideToolsByAudience } : {}),
       }),
@@ -151,6 +198,53 @@ export function createSolvaPayMcpFetch(
     ...handlerRest,
     ...(handlerRest.oauthClient === undefined && nativeOauth !== undefined
       ? { oauthClient: nativeOauth }
+      : {}),
+    ...(mcpDispatch !== undefined
+      ? {
+          engine: {
+            mcpDispatch,
+            config: {
+              productRef,
+              publicBaseUrl,
+              resourceUri: resourceUri ?? 'ui://widget.html',
+              ...(apiBaseUrl !== undefined ? { apiBaseUrl } : {}),
+              ...(views !== undefined ? { views: [...views] } : {}),
+              ...(hideAudiences !== undefined ? { hideAudiences } : {}),
+            },
+            payables,
+            ...(onToolCall !== undefined
+              ? {
+                  onDispatch: (rpc: unknown) => {
+                    onToolCall('*', rpc, undefined)
+                  },
+                }
+              : {}),
+            ...(onToolResult !== undefined
+              ? {
+                  onDispatched: (
+                    result: { body: unknown },
+                    durationMs: number,
+                  ) => {
+                    onToolResult(
+                      '*',
+                      {
+                        content: [
+                          {
+                            type: 'text',
+                            text:
+                              typeof result.body === 'string'
+                                ? result.body
+                                : JSON.stringify(result.body ?? null),
+                          },
+                        ],
+                      },
+                      { durationMs },
+                    )
+                  },
+                }
+              : {}),
+          },
+        }
       : {}),
   })
 }

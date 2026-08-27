@@ -1,5 +1,5 @@
 /**
- * Canonical dto-gen invocation for all five SDK surfaces.
+ * Canonical dto-gen invocation for all six SDK surfaces.
  *
  * Modes:
  *   (default)  Regenerate Rust DTOs, TS/Python/Ruby/Go/Rust clients, binding shims.

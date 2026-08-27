@@ -4,6 +4,8 @@ require "json"
 require "minitest/autorun"
 require "solvapay/mcp"
 require "socket"
+require "stringio"
+require "uri"
 require_relative "mcp_authoring/driver"
 require_relative "mcp_authoring/mock_backend"
 require_relative "mcp_authoring/repo_paths"
@@ -82,8 +84,17 @@ MCP_AUTHORING_FIXTURES = [
   "oauth/discovery-authorization-server.json",
   "oauth/discovery-protected-resource-mcp-path.json",
   "oauth/discovery-protected-resource.json",
+  "oauth/error-inspect-build-description.json",
+  "oauth/error-inspect-derive-code.json",
+  "oauth/error-inspect-has-shape.json",
   "oauth/normalize-nestjs-401.json",
   "oauth/normalize-rfc-passthrough.json",
+  "oauth/path-leading-slash.json",
+  "oauth/path-protected-resource.json",
+  "oauth/path-resolve-paths.json",
+  "oauth/path-resource-identifier.json",
+  "oauth/path-strip-trailing-slash.json",
+  "oauth/request-protected-resource-mcp-path.json",
   "overview/resource.json",
 ].freeze
 
@@ -91,12 +102,20 @@ REGISTER_PAYABLE_FIXTURES = MCP_AUTHORING_FIXTURES.select do |rel|
   rel.start_with?("allow/", "customer-ref/", "error/", "gate/")
 end.freeze
 
+CLIENT_REQUEST_FIXTURES = ["oauth/request-protected-resource-mcp-path.json"].freeze
+
 CORE_OP_FIXTURES = MCP_AUTHORING_FIXTURES.reject do |rel|
-  rel.start_with?("allow/", "customer-ref/", "error/", "gate/", "bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/")
+  rel.start_with?("allow/", "customer-ref/", "error/", "gate/", "bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/") ||
+    CLIENT_REQUEST_FIXTURES.include?(rel)
 end.freeze
 
 ASYNC_OP_FIXTURES = MCP_AUTHORING_FIXTURES.select do |rel|
-  rel.start_with?("bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/")
+  rel.start_with?("bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/") ||
+    CLIENT_REQUEST_FIXTURES.include?(rel)
+end.freeze
+
+HTTP_ENGINE_FIXTURES = MCP_AUTHORING_FIXTURES.select do |rel|
+  (rel.start_with?("dispatch/") || rel.start_with?("oauth-proxy/")) && !rel.end_with?("invoke-handler.json")
 end.freeze
 
 class McpAuthoringFixturesTest < Minitest::Test
@@ -202,6 +221,65 @@ class McpAuthoringFixturesTest < Minitest::Test
         server&.shutdown
       end
     end
+  end
+
+  HTTP_ENGINE_FIXTURES.each do |rel|
+    define_method("test_replays_http_engine_#{rel.tr("/", "_").delete_suffix(".json")}") do
+      raw = load_fixture(rel)
+      fn = raw.dig("input", "fn")
+      args = raw.dig("input", "args") || {}
+      expect = raw.dig("expect", "result")
+      unreachable = expect.is_a?(Hash) && expect["status"] == 502 && expect.dig("body", "error") == "upstream_unreachable"
+      stubs = raw["http"]
+      server = unreachable || stubs.nil? || stubs.empty? ? nil : FixtureHttp.new(Array(stubs))
+      begin
+        client = SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: server ? server.url : "http://127.0.0.1:1")
+        cfg = args["config"] || {}
+        engine = SolvaPay::Mcp::Engine.new(
+          client: client,
+          product_ref: cfg["productRef"] || "prd_demo",
+          public_base_url: cfg["publicBaseUrl"] || "https://app.example.com",
+          resource_uri: cfg["resourceUri"] || "ui://test/view.html",
+          mcp_path: cfg["mcpPath"] || "/mcp",
+          oauth_paths: cfg["oauthPaths"],
+        )
+        if fn == "mcpDispatch"
+          status, headers, body = engine.call(
+            rack_env("POST", "/mcp", JSON.generate(args["rpc"]), auth: args["authHeader"]),
+          )
+        else
+          status, headers, body = engine.call(
+            rack_env(args["method"] || "GET", args["path"] || "/", args["body"].to_s),
+          )
+        end
+        parsed = body.join.empty? ? nil : JSON.parse(body.join)
+        if fn == "mcpOauthRequest"
+          header_map = {}
+          headers.each { |key, value| header_map[key.to_s.downcase] = value }
+          assert_async(rel, fn, { "status" => status, "headers" => header_map, "body" => parsed }, json_norm(expect))
+        elsif expect.is_a?(Hash) && expect["kind"] == "challenge"
+          assert_equal expect["status"], status
+          assert_equal json_norm(expect["body"]), json_norm(parsed)
+        else
+          assert_equal 200, status
+          assert_equal json_norm(expect["rpc"]), json_norm(parsed)
+        end
+      ensure
+        server&.shutdown
+      end
+    end
+  end
+
+  def rack_env(method, path, body = "", auth: nil)
+    uri = URI.parse(path)
+    env = {
+      "REQUEST_METHOD" => method,
+      "PATH_INFO" => uri.path,
+      "QUERY_STRING" => uri.query.to_s,
+      "rack.input" => StringIO.new(body),
+    }
+    env["HTTP_AUTHORIZATION"] = auth unless auth.nil? || auth.empty?
+    env
   end
 
   def load_fixture(rel)

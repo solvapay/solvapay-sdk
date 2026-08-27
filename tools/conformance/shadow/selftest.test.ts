@@ -29,7 +29,7 @@ describe('shadow selftest (stub backend)', () => {
     await divergeStub.close()
   })
 
-  it('scenario catalog covers all 36 operations', () => {
+  it('scenario catalog covers every routed operation', () => {
     const covered = scenarioOperationCoverage()
     for (const op of FACADE_SHADOW_OPERATION_NAMES) {
       expect(covered.has(op), `missing scenario for ${op}`).toBe(true)

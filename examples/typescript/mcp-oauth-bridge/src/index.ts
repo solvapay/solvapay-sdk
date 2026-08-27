@@ -11,6 +11,7 @@ import {
   paywallEnabled,
   port,
   solvapayApiBaseUrl,
+  solvaPay,
   solvapayProductRef,
   solvapayWebhookSecret,
 } from './config'
@@ -70,6 +71,7 @@ app.use(
     productRef: solvapayProductRef,
     requireAuth: paywallEnabled,
     mcpPath: '/mcp',
+    ...(solvaPay ? { oauthClient: solvaPay.apiClient } : {}),
   }),
 )
 

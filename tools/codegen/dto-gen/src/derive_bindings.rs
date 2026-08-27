@@ -175,7 +175,7 @@ fn binding_core_path(func: &IrCoreFn) -> String {
     func.binding_core()
 }
 
-/// Five-language names from a canonical id.
+/// Six-language names from a canonical id.
 #[must_use]
 pub fn lang_names(id: &str) -> IrLangNames {
     if is_screaming_snake(id) {
@@ -185,6 +185,7 @@ pub fn lang_names(id: &str) -> IrLangNames {
             rb: id.to_owned(),
             go: id.to_owned(),
             rust: id.to_owned(),
+            c: id.to_owned(),
         };
     }
     let snake = to_snake_case(id);
@@ -194,6 +195,7 @@ pub fn lang_names(id: &str) -> IrLangNames {
         rb: snake.clone(),
         go: rust_type_name(id),
         rust: snake,
+        c: id.to_owned(),
     }
 }
 
@@ -453,6 +455,7 @@ mod tests {
         assert_eq!(camel.rb, "classify_customer_ref");
         assert_eq!(camel.go, "ClassifyCustomerRef");
         assert_eq!(camel.rust, "classify_customer_ref");
+        assert_eq!(camel.c, "classifyCustomerRef");
         let scream = lang_names("MCP_TOOL_NAMES");
         assert_eq!(scream.ts, "MCP_TOOL_NAMES");
         assert_eq!(scream.go, "MCP_TOOL_NAMES");
@@ -595,6 +598,7 @@ mod tests {
                     rb: "classify_customer_ref".into(),
                     go: "ClassifyCustomerRef".into(),
                     rust: "classify_customer_ref".into(),
+                    c: "classifyCustomerRef".into(),
                 },
                 catalog: IrBindingCatalogLink::None,
                 args: vec![],

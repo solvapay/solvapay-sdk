@@ -972,6 +972,19 @@ requireProductRef:
       required: false
       extract: optionalString
       local: env_product
+resolveAuthenticatedUser:
+  tsWrapper:
+    dispatchArgs: |-
+      input
+  args:
+    - name: input
+      type: value
+      required: true
+      extract: requireTyped
+      local: input
+      typedAs: AuthResolutionInput
+  callArgs:
+    - "&input"
 evaluateProductReadiness:
   tsWrapper:
     signature: |-

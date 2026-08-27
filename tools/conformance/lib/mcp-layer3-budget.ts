@@ -18,6 +18,21 @@ export const LAYER3_ADAPTERS = [
   { id: 'go', rel: 'sdks/go/mcp/engine.go', maxCodeLines: 280 },
   { id: 'ruby', rel: 'sdks/ruby-mcp/lib/solvapay/mcp/engine.rb', maxCodeLines: 280 },
   { id: 'c', rel: 'sdks/capi/ctest/mcp_engine.c', maxCodeLines: 280 },
+  {
+    id: 'ts',
+    rel: 'sdks/typescript/mcp-core/src/engine-dispatch.ts',
+    maxCodeLines: 280,
+  },
+  {
+    id: 'py',
+    rel: 'sdks/python-mcp/python/solvapay_mcp/server/engine.py',
+    maxCodeLines: 280,
+  },
+  {
+    id: 'py-asgi',
+    rel: 'sdks/python-mcp/python/solvapay_mcp/asgi/mcp_engine.py',
+    maxCodeLines: 280,
+  },
 ] as const
 
 export function countCodeLines(source: string): number {

@@ -169,6 +169,7 @@ fn lower_params(
                 rb: snake.clone(),
                 go: param.name.clone(),
                 rust: snake,
+                c: param.name.clone(),
             },
             required: param.required,
             ty,
@@ -180,12 +181,18 @@ fn lower_params(
 }
 
 fn to_ir_names(names: LangNames) -> IrLangNames {
+    let c = if names.c.is_empty() {
+        names.ts.clone()
+    } else {
+        names.c
+    };
     IrLangNames {
         ts: names.ts,
         py: names.py,
         rb: names.rb,
         go: names.go,
         rust: names.rust,
+        c,
     }
 }
 
@@ -202,6 +209,7 @@ fn default_names(id: &str) -> LangNames {
         rb: snake.clone(),
         go: pascal,
         rust: snake,
+        c: id.to_string(),
     }
 }
 

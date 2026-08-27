@@ -36,6 +36,7 @@ export type NativeMcpSyncMethod =
   | 'makeResponseResult'
   | 'assertResponseResult'
   | 'buildPayableToolResult'
+  | 'invokePayableNext'
   | 'MCP_TOOL_NAMES'
   | 'mcpViewMaps'
   | 'deriveIcons'
@@ -188,6 +189,13 @@ export function buildPromptUserMessage(
 
 export function validatePublicBaseUrl(publicBaseUrl: string): string | null {
   return dispatchSync('validatePublicBaseUrl', { publicBaseUrl })
+}
+
+export function invokePayableNext(
+  state: unknown | null | undefined,
+  event: unknown,
+): { state: unknown; action: Record<string, unknown> } {
+  return dispatchSync('invokePayableNext', { state: state ?? null, event })
 }
 
 /**

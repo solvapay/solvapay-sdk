@@ -1,0 +1,32 @@
+{
+  "suite": "paywall",
+  "case": "gate-next-start-anonymous-lookup-cache",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "event": {
+        "kind": "start",
+        "customerRef": "anonymous",
+        "product": "prd_1",
+        "usageType": "requests",
+        "startedMs": 1000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "anonymous",
+        "backendRef": "anonymous",
+        "startedMs": 1000,
+        "limitsKey": "anonymous:prd_1:requests"
+      },
+      "action": {
+        "kind": "lookupCache",
+        "key": "anonymous:prd_1:requests"
+      }
+    }
+  }
+}

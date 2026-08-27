@@ -14,8 +14,7 @@
 
 import type { PaywallStructuredContent } from '@solvapay/server'
 import { PaywallError } from '@solvapay/server'
-import type { McpToolExtra, PaywallToolResult } from './types'
-import type { BuildBootstrapPayloadFn } from './bootstrap-payload'
+import type { BootstrapPayload, McpToolExtra, PaywallToolResult } from './types'
 
 export interface PaywallToolResultContext {
   /**
@@ -28,7 +27,7 @@ export interface PaywallToolResultContext {
    * @deprecated Not called by `paywallToolResult`. Will be removed in
    * a future major.
    */
-  buildBootstrap?: BuildBootstrapPayloadFn
+  buildBootstrap?: (view: string, extra?: McpToolExtra) => Promise<BootstrapPayload>
   /** Forwarded for logging / telemetry; not consumed by the text path. */
   extra?: McpToolExtra
 }

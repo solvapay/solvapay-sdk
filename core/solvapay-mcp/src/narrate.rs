@@ -3,8 +3,8 @@
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use solvapay_core::{
-    billing_cycle, credits_per_unit_from_balance, credits_to_display_minor_units,
-    headline_charges, is_zero_decimal_currency, trial_days, CreditsToDisplayInput,
+    billing_cycle, credits_per_unit_from_balance, credits_to_display_minor_units, headline_charges,
+    is_zero_decimal_currency, trial_days, CreditsToDisplayInput,
 };
 
 /// Input for [`mcp_narrate`].
@@ -103,7 +103,9 @@ fn format_date(iso: Option<&str>) -> Option<String> {
 }
 
 fn is_plan_purchase(purchase: &Value) -> bool {
-    purchase.get("planSnapshot").is_some_and(|snap| !snap.is_null())
+    purchase
+        .get("planSnapshot")
+        .is_some_and(|snap| !snap.is_null())
         && purchase
             .pointer("/metadata/purpose")
             .and_then(Value::as_str)
@@ -120,12 +122,15 @@ fn balance_row(customer: Option<&Value>) -> Option<String> {
     if balance.is_null() {
         return None;
     }
-    let credits = balance.get("credits").and_then(Value::as_f64).unwrap_or(0.0);
+    let credits = balance
+        .get("credits")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.0);
     let currency = balance.get("displayCurrency").and_then(Value::as_str);
     let credits_per_minor = balance.get("creditsPerMinorUnit").and_then(Value::as_f64);
     let display_minor = match (currency, credits_per_minor) {
-        (Some(currency), Some(rate)) if rate > 0.0 => credits_to_display_minor_units(
-            &CreditsToDisplayInput {
+        (Some(currency), Some(rate)) if rate > 0.0 => {
+            credits_to_display_minor_units(&CreditsToDisplayInput {
                 credits,
                 credits_per_minor_unit: rate,
                 display_exchange_rate: balance
@@ -133,8 +138,8 @@ fn balance_row(customer: Option<&Value>) -> Option<String> {
                     .and_then(Value::as_f64)
                     .unwrap_or(1.0),
                 display_currency: currency.to_owned(),
-            },
-        ),
+            })
+        }
         _ => None,
     };
     let money = format_money(display_minor.map(|n| n as f64), currency);
@@ -199,10 +204,7 @@ fn plans_list_lines(plans: &[Value]) -> Vec<String> {
     plans
         .iter()
         .map(|plan| {
-            let name = plan
-                .get("name")
-                .and_then(Value::as_str)
-                .unwrap_or("Plan");
+            let name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
             let mut parts = vec![name.to_owned(), plan_type_label(plan).to_owned()];
             let price = format_plan_prices(plan);
             if !price.is_empty() && !is_free_plan(plan) {
@@ -303,9 +305,11 @@ pub fn narrate_manage_account(data: &Value) -> Value {
             lines.push(bal);
         }
         if active.pointer("/planSnapshot/isMetered") == Some(&Value::Bool(true)) {
-            if let Some(credits) =
-                credits_per_unit_from_balance(active.get("planSnapshot"), customer.and_then(|c| c.get("balance")), None)
-            {
+            if let Some(credits) = credits_per_unit_from_balance(
+                active.get("planSnapshot"),
+                customer.and_then(|c| c.get("balance")),
+                None,
+            ) {
                 let fmt = format_grouped_number(credits as f64);
                 lines.push(format!("Cost per call: {fmt} credits"));
             }
@@ -486,7 +490,12 @@ pub fn tool_error_result(error: &str, status: u16, details: Option<&str>) -> Val
 
 /// Mode-aware narrated tool result.
 #[must_use]
-pub fn narrated_tool_result(tool: &str, data: &Value, mode: &str, base_meta: Option<&Value>) -> Value {
+pub fn narrated_tool_result(
+    tool: &str,
+    data: &Value,
+    mode: &str,
+    base_meta: Option<&Value>,
+) -> Value {
     let Some(narrated) = narrator_for(tool, data) else {
         let mut fallback = tool_result(data);
         if mode == "text" {

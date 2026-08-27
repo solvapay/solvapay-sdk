@@ -15,6 +15,7 @@
 mod client;
 mod config;
 mod gate;
+mod retry;
 
 #[cfg(all(feature = "blocking", not(target_arch = "wasm32")))]
 pub mod blocking;
@@ -37,10 +38,13 @@ pub use solvapay_transport::ReqwestTransport;
 #[cfg(target_arch = "wasm32")]
 pub use solvapay_transport::FetchTransport;
 
+pub use retry::{with_retry, with_retry_if};
+
 // --- Core re-exports ---
 pub use solvapay_core::{
     decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits, resolve_product_ref,
-    PaywallGate, PaywallOutcome, RetryPolicy, SdkError,
+    verify_webhook, PaywallGate, PaywallOutcome, RetryPolicy, SdkError, WebhookError,
+    WebhookErrorCode,
 };
 pub use solvapay_dto::SdkMerchantResponseDto;
 
@@ -48,7 +52,10 @@ pub use solvapay_dto::SdkMerchantResponseDto;
 mod re_exports {
     #![allow(clippy::missing_docs_in_private_items)]
 
-    use super::{Client, ClientShell, Config, RetryPolicy, SdkError, SolvaPayClient, Transport};
+    use super::{
+        verify_webhook, Client, ClientShell, Config, RetryPolicy, SdkError, SolvaPayClient,
+        Transport,
+    };
 
     /// Compile-time guard that the Step 46 public surface is wired (46.1).
     #[test]
@@ -60,5 +67,6 @@ mod re_exports {
         fn _typed_client(_: SolvaPayClient) {}
         fn _transport(_: &dyn Transport) {}
         fn _shell(_: ClientShell) {}
+        let _ = verify_webhook;
     }
 }

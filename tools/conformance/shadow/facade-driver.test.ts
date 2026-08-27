@@ -1,10 +1,11 @@
 import { createServer } from 'node:http'
 import { describe, expect, it } from 'vitest'
+import { EXPECTED_ROUTED_OPERATION_COUNT } from '../../shared/manifest-schema.js'
 import { FACADE_SHADOW_OPERATION_NAMES, installFacadeDriverSession } from './facade-driver.js'
 
 describe('facade shadow driver', () => {
-  it('registers all 36 camelCase operations', () => {
-    expect(FACADE_SHADOW_OPERATION_NAMES).toHaveLength(36)
+  it('registers every routed camelCase operation (excludes MCP composites)', () => {
+    expect(FACADE_SHADOW_OPERATION_NAMES).toHaveLength(EXPECTED_ROUTED_OPERATION_COUNT)
     const session = installFacadeDriverSession({
       apiKey: 'sk_test',
       apiBaseUrl: 'http://127.0.0.1:9',
