@@ -1,5 +1,28 @@
 # @solvapay/react changelog
 
+## 2.0.1
+
+### Patch Changes
+
+- a47adff: Free plans with an included allowance now count usage and label the meter correctly.
+
+  `@solvapay/core` adds `countsUsage` (per-unit charge, tier, or limit) and `meterName`
+  (per-unit charge's meter, else the first limit's meter). A free tier with a bare
+  limit is not priced per unit, but it still needs a usage counter and a meter noun —
+  `isMetered` on the wire was the wrong question for both.
+
+  `planMeterName` uses the new reader, so a recurring allowance no longer renders the
+  literal "units". `useAutoActivateFreePlan` no longer requires deprecated `freeUnits`
+  on the plan row. Usage surfaces (`useUsage`, `getUsageCore`, plan cards) derive
+  from `options[]` instead of trusting `planSnapshot.isMetered` alone.
+
+- 30f7021: PAYG embedded checkout now activates first, then shows the credit top-up picker only when the wallet is empty.
+
+  A funded wallet skips the amount and payment steps. `ActivationFlow` follows the same contract: API `activated` at zero credits opens the amount picker instead of firing `onSuccess`. Once the customer is on the amount or payment step, a later zero-credit balance refetch no longer rewinds them back to the picker.
+
+- Updated dependencies [a47adff]
+  - @solvapay/core@1.5.0
+
 ## 2.0.0
 
 ### Major Changes
