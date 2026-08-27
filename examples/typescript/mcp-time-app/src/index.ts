@@ -2,7 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import { createMcpHandler } from '@modelcontextprotocol/server'
 import { toNodeHandler } from '@modelcontextprotocol/node'
-import { createMcpOAuthBridge } from '@solvapay/mcp/express'
+import { createMcpOAuthBridge, type McpOAuthBridgeOptions } from '@solvapay/mcp/express'
 import { createServer } from './server'
 import {
   mcpPublicBaseUrl,
@@ -28,7 +28,7 @@ app.use(
     requireAuth: paywallEnabled,
     mcpPath: '/mcp',
     ...(solvaPay ? { oauthClient: solvaPay.apiClient } : {}),
-  }),
+  } as McpOAuthBridgeOptions),
 )
 
 app.get('/health', (_req, res) => {

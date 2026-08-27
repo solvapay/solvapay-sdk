@@ -21,7 +21,10 @@ def call(op: str, args: Mapping[str, object] | None = None) -> object:
         raise RuntimeError("SolvaPay native MCP API is not installed")
 
     payload = json.dumps({"op": op, "args": dict(args) if args else {}})
-    envelope = json.loads(solvapay_call(payload))
+    raw = solvapay_call(payload)
+    if not isinstance(raw, (str, bytes, bytearray)):
+        raise TypeError("solvapay_call did not return JSON text")
+    envelope = json.loads(raw)
     if not isinstance(envelope, dict) or envelope.get("ok") is not True:
         message = "mcp op failed"
         error = envelope.get("error") if isinstance(envelope, dict) else None

@@ -51,7 +51,7 @@ class McpOAuthBridgeOptions:
         self.product_ref = product_ref
         self.mcp_path = mcp_path
         self.require_auth = require_auth
-        self.auth_mode = auth_mode
+        self.auth_mode: McpAuthMode = auth_mode
         self.oauth_client = oauth_client
         self.paths = resolve_oauth_paths(oauth_paths)
         native_call(

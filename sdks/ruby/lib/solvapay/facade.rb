@@ -46,11 +46,13 @@ module SolvaPay
         unless out.is_a?(Hash)
           raise SolvaPay::SolvaPayError.new("gate_next returned unexpected value", code: "internal_error")
         end
+
         state = out["state"]
         next_action = out["action"]
         unless next_action.is_a?(Hash)
           raise SolvaPay::SolvaPayError.new("gate_next returned unexpected action", code: "internal_error")
         end
+
         action = next_action
         case action["kind"]
         when "ensureCustomer"
@@ -68,15 +70,15 @@ module SolvaPay
               nil
             end
           end
-          if cached.is_a?(Hash)
-            event = {
+          event = if cached.is_a?(Hash)
+            {
               "kind" => "cacheHit",
               "remaining" => cached.fetch(:remaining),
               "limits" => cached[:limits],
               "nowMs" => now,
             }
           else
-            event = { "kind" => "cacheMiss", "nowMs" => now }
+            { "kind" => "cacheMiss", "nowMs" => now }
           end
         when "checkLimits"
           if action["cacheDeleteKey"].is_a?(String)
