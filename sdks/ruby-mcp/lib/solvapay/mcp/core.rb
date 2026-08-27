@@ -7,8 +7,8 @@ module SolvaPay
   module Mcp
     module Core
       class << self
-        def call(op, args)
-          envelope = JSON.parse(SolvaPay.solvapay_call(JSON.generate({ "op" => op, "args" => args })))
+        def call(opcode, args)
+          envelope = JSON.parse(SolvaPay.solvapay_call(JSON.generate({ "op" => opcode, "args" => args })))
           raise SolvaPay::SolvaPayError, envelope.dig("error", "message") || "mcp op failed" unless envelope["ok"]
 
           envelope["value"]

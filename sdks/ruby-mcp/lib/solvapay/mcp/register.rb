@@ -65,11 +65,21 @@ module SolvaPay
         allow = nil
         loop do
           out = NativeDispatch.call_sync("invoke_payable_next", { "state" => state, "event" => event })
-          raise SolvaPay::SolvaPayError.new("invoke_payable_next returned unexpected value", code: "invalid_invoke") unless out.is_a?(Hash)
+          unless out.is_a?(Hash)
+            raise SolvaPay::SolvaPayError.new(
+              "invoke_payable_next returned unexpected value",
+              code: "invalid_invoke",
+            )
+          end
 
           state = out["state"]
           action = out["action"]
-          raise SolvaPay::SolvaPayError.new("invoke_payable_next returned unexpected action", code: "invalid_invoke") unless action.is_a?(Hash)
+          unless action.is_a?(Hash)
+            raise SolvaPay::SolvaPayError.new(
+              "invoke_payable_next returned unexpected action",
+              code: "invalid_invoke",
+            )
+          end
 
           kind = action["kind"]
           case kind
@@ -139,11 +149,19 @@ module SolvaPay
               end
             end
             result = action["result"]
-            raise SolvaPay::SolvaPayError.new("invoke_payable_next done missing result", code: "invalid_invoke") unless result.is_a?(Hash)
+            unless result.is_a?(Hash)
+              raise SolvaPay::SolvaPayError.new(
+                "invoke_payable_next done missing result",
+                code: "invalid_invoke",
+              )
+            end
 
             return stringify_keys(result)
           else
-            raise SolvaPay::SolvaPayError.new("invoke_payable_next unknown action kind: #{kind}", code: "invalid_invoke")
+            raise SolvaPay::SolvaPayError.new(
+              "invoke_payable_next unknown action kind: #{kind}",
+              code: "invalid_invoke",
+            )
           end
         end
       end
