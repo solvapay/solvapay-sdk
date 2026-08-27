@@ -10,10 +10,8 @@ use solvapay::transport::{McpDispatchParams, McpOauthConfig, McpOauthRequestPara
 use solvapay::{Client, SdkError};
 use solvapay_mcp_core::EngineConfig;
 
-use crate::register::{
-    invoke_payable, GetCustomerRef, PayableError, PayableHandler, PayableTool,
-};
 use crate::call_sync;
+use crate::register::{invoke_payable, GetCustomerRef, PayableError, PayableHandler, PayableTool};
 
 /// Incoming HTTP request for [`McpHttpServer::handle`].
 #[derive(Debug, Clone)]
@@ -203,7 +201,10 @@ impl McpHttpServer {
         match envelope.get("kind").and_then(Value::as_str) {
             Some("rpc") => json_response(200, envelope.get("rpc").cloned().unwrap_or(Value::Null)),
             Some("challenge") => {
-                let status = envelope.get("status").and_then(Value::as_u64).unwrap_or(401) as u16;
+                let status = envelope
+                    .get("status")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(401) as u16;
                 Ok(McpHttpResponse {
                     status,
                     headers: string_headers(envelope.get("headers")),
@@ -229,9 +230,10 @@ impl McpHttpServer {
             .and_then(Value::as_str)
             .ok_or_else(|| SdkError::transport("invokeHandler missing token", false))?
             .to_owned();
-        let spec = self.payables.get(&tool).ok_or_else(|| {
-            SdkError::transport(format!("unknown payable tool: {tool}"), false)
-        })?;
+        let spec = self
+            .payables
+            .get(&tool)
+            .ok_or_else(|| SdkError::transport(format!("unknown payable tool: {tool}"), false))?;
         let mut args: JsonObject = match envelope.get("args") {
             Some(Value::Object(map)) => map.clone(),
             _ => Map::new(),
@@ -251,8 +253,9 @@ impl McpHttpServer {
         )
         .await
         .map_err(payable_to_sdk)?;
-        let handler_envelope = serde_json::to_value(&result)
-            .map_err(|err| SdkError::transport(format!("serialize handler result: {err}"), false))?;
+        let handler_envelope = serde_json::to_value(&result).map_err(|err| {
+            SdkError::transport(format!("serialize handler result: {err}"), false)
+        })?;
         let resumed = call_sync(
             "mcpResume",
             &json!({ "token": token, "handlerEnvelope": handler_envelope }),
@@ -270,7 +273,10 @@ fn payable_to_sdk(err: PayableError) -> SdkError {
 }
 
 fn http_from_oauth_envelope(envelope: &Value) -> Result<McpHttpResponse, SdkError> {
-    let status = envelope.get("status").and_then(Value::as_u64).unwrap_or(500) as u16;
+    let status = envelope
+        .get("status")
+        .and_then(Value::as_u64)
+        .unwrap_or(500) as u16;
     Ok(McpHttpResponse {
         status,
         headers: string_headers(envelope.get("headers")),

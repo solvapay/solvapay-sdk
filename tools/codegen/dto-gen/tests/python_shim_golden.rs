@@ -89,7 +89,7 @@ fn python_full_surface_matches_committed() {
     }
 
     let decision_names = names_for(&ir, IrBindingArtifact::Decisions);
-    assert_eq!(decision_names.len(), 55);
+    assert_eq!(decision_names.len(), 58);
     for name in &decision_names {
         assert!(
             emitted
@@ -104,7 +104,7 @@ fn python_full_surface_matches_committed() {
     }
 
     let payload_names = names_for(&ir, IrBindingArtifact::PayloadBuilders);
-    assert_eq!(payload_names.len(), 24);
+    assert_eq!(payload_names.len(), 25);
     for name in &payload_names {
         assert!(
             emitted

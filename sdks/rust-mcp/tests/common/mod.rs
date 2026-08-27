@@ -1,5 +1,11 @@
 //! Shared MCP-authoring fixture helpers.
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(
+    dead_code,
+    unused,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic
+)]
 
 pub mod driver;
 pub mod mock_transport;

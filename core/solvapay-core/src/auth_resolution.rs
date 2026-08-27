@@ -66,7 +66,7 @@ pub struct AuthenticatedUser {
 /// bearer failure paths. The header path never returns 401 for JWT problems.
 #[crate::solvapay_export(
     artifact = "decisions",
-    catalog = "coreHelper",
+    catalog = "none",
     section = "auth-resolution",
     emit_order = 43
 )]

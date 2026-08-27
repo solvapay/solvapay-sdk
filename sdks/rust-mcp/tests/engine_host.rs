@@ -85,7 +85,10 @@ async fn engine_loop_invoke_handler_then_resume() {
     assert_eq!(body["jsonrpc"], "2.0");
     assert_eq!(body["id"], 3);
     assert_eq!(body["result"]["structuredContent"]["echo"]["n"], 1);
-    assert_eq!(body["result"]["structuredContent"]["echo"]["customer_ref"], "cus_1");
+    assert_eq!(
+        body["result"]["structuredContent"]["echo"]["customer_ref"],
+        "cus_1"
+    );
     let text = body["result"]["content"][0]["text"].as_str().unwrap();
     assert!(text.contains("\"n\":1"), "{text}");
 }

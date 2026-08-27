@@ -19,6 +19,7 @@ pub fn default_mcp_app_html() -> &'static str {
 }
 
 pub use core::call_sync;
+pub use layer2::{assert_response_result, build_payable_tool_result, make_response_result};
 pub use register::{
     invoke_payable, register_payable_tool, GetCustomerRef, PayableError, PayableHandler,
     PayableTool,

@@ -11,14 +11,17 @@ use serde_json::Value;
 use solvapay_core::{
     credits_to_display_minor_units, derive_tax_id_type, get_business_country_options,
     get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
-    get_tax_id_helper_text, is_zero_decimal_currency, minor_units_per_major,
+    get_tax_id_helper_text, invoke_payable_next, is_zero_decimal_currency, minor_units_per_major,
     resolve_seller_identity_display, resolve_tax_behavior,
     seller_tax_identifier_display_label_by_type, validate_business_details, BusinessDetailsInput,
     CreditsToDisplayInput, SdkError, SellerIdentityInput,
 };
 use wasm_bindgen::prelude::*;
 
-use crate::args::{args_map, optional_string, require_f64, require_string, to_value};
+use crate::args::{
+    args_map, optional_string, optional_value, require_f64, require_string, result_as_value,
+    to_value,
+};
 use crate::error::run_envelope_sync;
 
 // --- business-details (public-safe) ---

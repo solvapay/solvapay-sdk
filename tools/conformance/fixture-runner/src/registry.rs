@@ -16,14 +16,13 @@ use solvapay_core::{
     is_cached_customer_ref_valid, is_email_conflict, is_error_result, is_zero_decimal_currency,
     mcp_view_maps, meter_name, normalize_cancel_response, normalize_reactivate_response,
     paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
-    project_topup_process_outcome, resolve_authenticated_user, resolve_check_limits_params,
-    resolve_fallback_gate_limits, resolve_product_ref, resolve_purchase_customer_ref, trial_days,
-    validate_activate_plan_params, validate_attach_business_details_params,
-    validate_checkout_session_params, validate_create_payment_intent_params,
-    validate_get_product_params, validate_list_plans_params,
+    project_topup_process_outcome, resolve_check_limits_params, resolve_fallback_gate_limits,
+    resolve_product_ref, resolve_purchase_customer_ref, trial_days, validate_activate_plan_params,
+    validate_attach_business_details_params, validate_checkout_session_params,
+    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, AuthResolutionInput, GateContent, PaywallGate,
-    PaywallGateLimits, PaywallLimits, PaywallState, ResponseEnvelope,
+    validate_topup_payment_intent_params, GateContent, PaywallGate, PaywallGateLimits,
+    PaywallLimits, PaywallState, ResponseEnvelope,
 };
 
 #[allow(unused_imports)]
@@ -336,12 +335,6 @@ fn invoke_project_topup_process_outcome(input: &FixtureInput) -> Result<Value, B
         status.as_deref(),
         message.as_deref(),
     ))
-}
-
-fn invoke_resolve_authenticated_user(input: &FixtureInput) -> Result<Value, BindingError> {
-    let args = args_map(input);
-    let input = require_typed::<AuthResolutionInput>(&args, "input")?;
-    result_as_value(resolve_authenticated_user(&input))
 }
 
 fn invoke_resolve_check_limits_params(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -718,7 +711,7 @@ pub fn create_default_registry() -> BindingRegistry {
         "resolveAuthenticatedUser",
         Binding {
             id: "core",
-            invoke: Box::new(invoke_resolve_authenticated_user),
+            invoke: Box::new(crate::bindings::helpers::invoke_resolve_authenticated_user),
         },
     );
     registry.register(

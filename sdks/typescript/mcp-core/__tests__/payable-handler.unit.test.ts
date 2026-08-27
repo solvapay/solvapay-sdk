@@ -205,6 +205,8 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       // V1: trackUsage is called without a caller-supplied `units` so
       // the default stays at the hard-coded 1-credit-per-call billing.
       expect(client.__trackUsageCalls[0].units ?? 1).toBe(1)
+      const metadata = client.__trackUsageCalls[0].metadata as { requestId?: unknown }
+      expect(typeof metadata.requestId).toBe('string')
     })
   })
 

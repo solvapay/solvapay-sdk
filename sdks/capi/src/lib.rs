@@ -160,7 +160,10 @@ pub unsafe extern "C" fn solvapay_client_new(
 /// Reads `op` + `args_json` C strings into owned UTF-8, or an error envelope.
 fn read_op_args(op: *const c_char, args_json: *const c_char) -> Result<(String, String), String> {
     let Some(op_str) = read_c_str(op) else {
-        return Err(err_envelope(&SdkError::transport("null op argument", false)));
+        return Err(err_envelope(&SdkError::transport(
+            "null op argument",
+            false,
+        )));
     };
     let Some(args) = read_c_str(args_json) else {
         return Err(err_envelope(&SdkError::transport(

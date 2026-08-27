@@ -198,15 +198,9 @@ pub async fn invoke_payable(
                 let ctx = ResponseContext::new(
                     CustomerView {
                         customer_ref: handler_ref,
-                        balance: limits
-                            .get("creditBalance")
-                            .cloned()
-                            .unwrap_or(json!(0)),
+                        balance: limits.get("creditBalance").cloned().unwrap_or(json!(0)),
                         remaining: limits.get("remaining").cloned().unwrap_or(Value::Null),
-                        within_limits: limits
-                            .get("withinLimits")
-                            .cloned()
-                            .unwrap_or(json!(true)),
+                        within_limits: limits.get("withinLimits").cloned().unwrap_or(json!(true)),
                         plan: limits.get("plan").cloned().unwrap_or(Value::Null),
                     },
                     ProductView {
@@ -278,12 +272,14 @@ pub async fn invoke_payable(
     }
 }
 
+/// Host clock as unix milliseconds.
 fn now_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_millis() as i64)
 }
 
+/// Map a helper-error result into [`PayableError`].
 fn helper_to_payable(err: HelperErrorResult) -> PayableError {
     PayableError::Sdk(Box::new(SdkError::Api {
         message: err.details.unwrap_or(err.error),
@@ -292,6 +288,7 @@ fn helper_to_payable(err: HelperErrorResult) -> PayableError {
     }))
 }
 
+/// Paywall copy: gate message, or `"Payment required"` when empty.
 fn paywall_message(gate: &PaywallGate) -> String {
     if gate.message.is_empty() {
         "Payment required".to_owned()
@@ -300,6 +297,7 @@ fn paywall_message(gate: &PaywallGate) -> String {
     }
 }
 
+/// Whether the test-seams `format_gate` override is installed.
 fn paywall_override_active() -> bool {
     #[cfg(feature = "test-seams")]
     {
@@ -309,6 +307,7 @@ fn paywall_override_active() -> bool {
     false
 }
 
+/// Limits snapshot JSON passed into `invoke_payable_next` on the allow path.
 fn allow_limits_value(allow: &Allow) -> Value {
     let snap = allow.customer();
     json!({

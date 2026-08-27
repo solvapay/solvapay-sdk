@@ -282,6 +282,7 @@ impl SolvaPayClient {
         deserialize_value(self.create_checkout_session_json(params).await?)
     }
 
+    /// Untyped JSON twin of [`Self::create_checkout_session`].
     pub(crate) async fn create_checkout_session_json(
         &self,
         params: CreateCheckoutSessionRequest,
@@ -311,6 +312,7 @@ impl SolvaPayClient {
         deserialize_value(self.create_customer_session_json(params).await?)
     }
 
+    /// Untyped JSON twin of [`Self::create_customer_session`].
     pub(crate) async fn create_customer_session_json(
         &self,
         params: CreateCustomerSessionRequest,
@@ -332,6 +334,7 @@ impl SolvaPayClient {
         deserialize_value(self.get_merchant_json().await?)
     }
 
+    /// Untyped JSON twin of [`Self::get_merchant`].
     pub(crate) async fn get_merchant_json(&self) -> Result<Value, SdkError> {
         self.execute_json(
             Method::Get,
@@ -350,6 +353,7 @@ impl SolvaPayClient {
         deserialize_value(self.get_platform_config_json().await?)
     }
 
+    /// Untyped JSON twin of [`Self::get_platform_config`].
     pub(crate) async fn get_platform_config_json(&self) -> Result<Value, SdkError> {
         self.execute_json(
             Method::Get,
@@ -379,6 +383,7 @@ impl SolvaPayClient {
         deserialize_value(self.create_payment_intent_json(params).await?)
     }
 
+    /// Untyped JSON twin of [`Self::create_payment_intent`].
     pub(crate) async fn create_payment_intent_json(
         &self,
         params: CreatePaymentIntentParams,
@@ -424,6 +429,7 @@ impl SolvaPayClient {
         deserialize_value(self.create_topup_payment_intent_json(params).await?)
     }
 
+    /// Untyped JSON twin of [`Self::create_topup_payment_intent`].
     pub(crate) async fn create_topup_payment_intent_json(
         &self,
         params: CreateTopupPaymentIntentParams,
@@ -471,6 +477,7 @@ impl SolvaPayClient {
         deserialize_value(self.process_payment_intent_json(params).await?)
     }
 
+    /// Untyped JSON twin of [`Self::process_payment_intent`].
     pub(crate) async fn process_payment_intent_json(
         &self,
         params: ProcessPaymentIntentParams,

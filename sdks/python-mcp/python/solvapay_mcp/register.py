@@ -184,26 +184,35 @@ def _install_dispatch(server: Server[object]) -> None:
         return rpc
 
     async def on_list_tools(_ctx: object, _params: PaginatedRequestParams) -> ListToolsResult:
+        binding = engine_for(server)
+        if binding is None:
+            tools: list[Tool] = []
+            for name, payable_spec in dict(_REGISTRIES.get(server) or {}).items():
+                tool = Tool(name=name, input_schema=payable_spec.input_schema)
+                if payable_spec.title is not None:
+                    tool.title = payable_spec.title
+                if payable_spec.description is not None:
+                    tool.description = payable_spec.description
+                tools.append(tool)
+            return ListToolsResult(tools=tools)
         raw = await _result("tools/list", {})
         tools: list[Tool] = []
-        binding = engine_for(server)
         descriptors: dict[str, dict[str, object]] = {}
-        if binding is not None:
-            desc_raw = call(
-                "mcpDescriptors",
-                {
-                    "resourceUri": binding.resource_uri,
-                    "publicBaseUrl": binding.public_base_url,
-                    "productRef": binding.product_ref,
-                    **({"views": binding.views} if binding.views is not None else {}),
-                    **({"csp": binding.csp} if binding.csp is not None else {}),
-                    **({"apiBaseUrl": binding.api_base_url} if binding.api_base_url is not None else {}),
-                },
-            )
-            if isinstance(desc_raw, dict) and isinstance(desc_raw.get("tools"), list):
-                for item in desc_raw["tools"]:
-                    if isinstance(item, dict) and isinstance(item.get("name"), str):
-                        descriptors[str(item["name"])] = item
+        desc_raw = call(
+            "mcpDescriptors",
+            {
+                "resourceUri": binding.resource_uri,
+                "publicBaseUrl": binding.public_base_url,
+                "productRef": binding.product_ref,
+                **({"views": binding.views} if binding.views is not None else {}),
+                **({"csp": binding.csp} if binding.csp is not None else {}),
+                **({"apiBaseUrl": binding.api_base_url} if binding.api_base_url is not None else {}),
+            },
+        )
+        if isinstance(desc_raw, dict) and isinstance(desc_raw.get("tools"), list):
+            for item in desc_raw["tools"]:
+                if isinstance(item, dict) and isinstance(item.get("name"), str):
+                    descriptors[str(item["name"])] = item
         if isinstance(raw, dict) and isinstance(raw.get("tools"), list):
             for item in raw["tools"]:
                 if isinstance(item, dict):

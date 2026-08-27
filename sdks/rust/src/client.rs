@@ -9,7 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::{Map, Value};
 use solvapay_core::{
     build_create_customer_params, classify_customer_ref, extract_backend_customer_ref, gate_next,
-    GateAction, GateCacheOp, CustomerRefKind, HelperErrorResult, SdkError,
+    CustomerRefKind, GateAction, GateCacheOp, HelperErrorResult, SdkError,
 };
 use solvapay_dto::{
     CheckLimitRequest, CheckLimitsRequest, CreateCustomerRequest, CreateUsageRequest,
@@ -110,7 +110,9 @@ impl Client {
                 SdkError::transport(format!("serialize gate state: {err}"), false)
             })?);
             match out.action {
-                GateAction::EnsureCustomer { customer_ref: ref_to_ensure } => {
+                GateAction::EnsureCustomer {
+                    customer_ref: ref_to_ensure,
+                } => {
                     let backend = self.ensure_customer(&ref_to_ensure).await?;
                     event = serde_json::json!({
                         "kind": "customerResolved",
@@ -123,7 +125,8 @@ impl Client {
                     let hit = {
                         let gate = self.inner.gate.lock().await;
                         gate.limits_cache.get(&key).and_then(|entry| {
-                            (now.saturating_sub(entry.timestamp_ms) < self.inner.limits_cache_ttl_ms)
+                            (now.saturating_sub(entry.timestamp_ms)
+                                < self.inner.limits_cache_ttl_ms)
                                 .then(|| (entry.remaining, entry.limits.clone()))
                         })
                     };

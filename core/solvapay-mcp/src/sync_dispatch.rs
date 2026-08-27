@@ -175,6 +175,7 @@ pub fn solvapay_call(args_json: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::solvapay_call;
     use serde_json::Value;

@@ -904,8 +904,9 @@ use solvapay_core::{
     build_create_customer_params, build_gate_message, build_nudge_message, build_paywall_gate,
     classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
     classify_paywall_state, classify_reactivate_error, coerce_customer_options,
-    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits,
-    evaluate_product_readiness, extract_backend_customer_ref, is_cached_customer_ref_valid,
+    decide_paywall_outcome, evaluate_balance_observation, evaluate_cached_limits,
+    evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref,
+    gate_next, is_cached_customer_ref_valid, resolve_authenticated_user,
     is_email_conflict, is_error_result, map_route_error, normalize_cancel_response,
     normalize_reactivate_response, paywall_client_payload, project_payment_intent_result,
     billing_cycle, charges, credits_per_unit_from_balance, headline_charges,
@@ -918,7 +919,8 @@ use solvapay_core::{
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, Backoff, GateContent, PaymentIntentSource, PaywallGate,
+    validate_topup_payment_intent_params, AuthResolutionInput, Backoff, GateContent,
+    PaymentIntentSource, PaywallGate,
     PaywallGateLimits, PaywallLimits, PaywallState, ProductReadinessInput, RetryPolicy,
     RouteErrorInput, RouteErrorKind, SdkError, DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_RETRIES,
 };
@@ -941,7 +943,8 @@ use solvapay_core::{
     build_tool_descriptor_metadata, credits_to_display_minor_units, derive_icons,
     derive_tax_id_type, get_business_country_options, get_seller_tax_identifier_display_label,
     get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, is_zero_decimal_currency,
-    build_payable_tool_result, make_response_result, mcp_tool_names_json, mcp_view_maps,
+    build_payable_tool_result, invoke_payable_next, make_response_result, mcp_tool_names_json,
+    mcp_view_maps,
     minor_units_per_major, paywall_tool_result, resolve_seller_identity_display,
     resolve_tax_behavior,
     seller_tax_identifier_display_label_by_type, validate_business_details,
@@ -952,7 +955,8 @@ use solvapay_core::{
 
 use crate::abi::{pack, read_string};
 use crate::args::{
-    args_map, optional_string, require_f64, require_string, require_typed, to_value,
+    args_map, optional_string, optional_value, require_f64, require_string, require_typed,
+    result_as_value, to_value,
 };
 use crate::error::run_envelope_sync;
 "#;

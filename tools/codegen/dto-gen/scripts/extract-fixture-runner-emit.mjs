@@ -27,7 +27,7 @@ const EXTRAS = [
   'constructSdkError',
   'resolveAuthenticatedUser',
 ];
-const SKIP = ['retryNextDelayMs'];
+const SKIP = ['retryNextDelayMs', 'resolveAuthenticatedUser'];
 const WEBHOOK_KEEP = ['verifyWebhook'];
 
 function captureInvoke(src, from) {

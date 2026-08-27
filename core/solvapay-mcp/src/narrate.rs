@@ -257,65 +257,67 @@ pub fn narrate_manage_account(data: &Value) -> Value {
     let active = active_purchase(customer);
     let name = product_name(data);
     let mut lines: Vec<String> = Vec::new();
-    if active.is_none() {
-        lines.push(format!("**Welcome to {name}**"));
-        lines.push(String::new());
-        if let Some(bal) = balance_row(customer) {
-            lines.push(bal);
-        }
-        let plans = data
-            .get("plans")
-            .and_then(Value::as_array)
-            .cloned()
-            .unwrap_or_default();
-        if plans.is_empty() {
-            lines.push("No active plan.".to_owned());
-        } else {
-            lines.push("No active plan. Plans available:".to_owned());
-            lines.extend(plans_list_lines(&plans));
-        }
-        lines.push(String::new());
-        lines.push(commands_line(&["activate_plan", "upgrade"]));
-    } else {
-        let active = active.expect("checked");
-        lines.push(format!("**{name} — your account**"));
-        lines.push(String::new());
-        if let Some(plan) = active.get("planSnapshot").filter(|s| !s.is_null()) {
-            let plan_name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
-            let price = format_money(
-                plan.get("price").and_then(Value::as_f64),
-                plan.get("currency").and_then(Value::as_str),
-            );
-            let cycle = active
-                .get("billingCycle")
-                .and_then(Value::as_str)
-                .map(|c| format!("/{c}"))
+    match active {
+        None => {
+            lines.push(format!("**Welcome to {name}**"));
+            lines.push(String::new());
+            if let Some(bal) = balance_row(customer) {
+                lines.push(bal);
+            }
+            let plans = data
+                .get("plans")
+                .and_then(Value::as_array)
+                .cloned()
                 .unwrap_or_default();
-            let end = format_date(active.get("endDate").and_then(Value::as_str));
-            let mut parts = vec![plan_name.to_owned()];
-            if let Some(price) = price {
-                parts.push(format!("{price}{cycle}"));
+            if plans.is_empty() {
+                lines.push("No active plan.".to_owned());
+            } else {
+                lines.push("No active plan. Plans available:".to_owned());
+                lines.extend(plans_list_lines(&plans));
             }
-            if let Some(end) = end {
-                parts.push(format!("renews {end}"));
+            lines.push(String::new());
+            lines.push(commands_line(&["activate_plan", "upgrade"]));
+        }
+        Some(active) => {
+            lines.push(format!("**{name} — your account**"));
+            lines.push(String::new());
+            if let Some(plan) = active.get("planSnapshot").filter(|s| !s.is_null()) {
+                let plan_name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
+                let price = format_money(
+                    plan.get("price").and_then(Value::as_f64),
+                    plan.get("currency").and_then(Value::as_str),
+                );
+                let cycle = active
+                    .get("billingCycle")
+                    .and_then(Value::as_str)
+                    .map(|c| format!("/{c}"))
+                    .unwrap_or_default();
+                let end = format_date(active.get("endDate").and_then(Value::as_str));
+                let mut parts = vec![plan_name.to_owned()];
+                if let Some(price) = price {
+                    parts.push(format!("{price}{cycle}"));
+                }
+                if let Some(end) = end {
+                    parts.push(format!("renews {end}"));
+                }
+                lines.push(format!("Plan: {}", parts.join(" · ")));
             }
-            lines.push(format!("Plan: {}", parts.join(" · ")));
-        }
-        if let Some(bal) = balance_row(customer) {
-            lines.push(bal);
-        }
-        if active.pointer("/planSnapshot/isMetered") == Some(&Value::Bool(true)) {
-            if let Some(credits) = credits_per_unit_from_balance(
-                active.get("planSnapshot"),
-                customer.and_then(|c| c.get("balance")),
-                None,
-            ) {
-                let fmt = format_grouped_number(credits as f64);
-                lines.push(format!("Cost per call: {fmt} credits"));
+            if let Some(bal) = balance_row(customer) {
+                lines.push(bal);
             }
+            if active.pointer("/planSnapshot/isMetered") == Some(&Value::Bool(true)) {
+                if let Some(credits) = credits_per_unit_from_balance(
+                    active.get("planSnapshot"),
+                    customer.and_then(|c| c.get("balance")),
+                    None,
+                ) {
+                    let fmt = format_grouped_number(credits as f64);
+                    lines.push(format!("Cost per call: {fmt} credits"));
+                }
+            }
+            lines.push(String::new());
+            lines.push(commands_line(&["topup", "upgrade"]));
         }
-        lines.push(String::new());
-        lines.push(commands_line(&["topup", "upgrade"]));
     }
     let mut links = Vec::new();
     if let Some(portal) = hosted_portal_link(data) {

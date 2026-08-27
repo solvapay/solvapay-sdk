@@ -20,9 +20,7 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 
 fn client(server: &MockServer) -> SolvaPayClient {
     let transport: SharedTransport = Arc::new(ReqwestTransport::new().expect("reqwest"));
-    SolvaPayClient::new(
-        ClientShell::new(transport, "sk_test_fixture").with_base_url(server.uri()),
-    )
+    SolvaPayClient::new(ClientShell::new(transport, "sk_test_fixture").with_base_url(server.uri()))
 }
 
 #[tokio::test]

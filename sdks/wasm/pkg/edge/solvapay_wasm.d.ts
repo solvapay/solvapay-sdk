@@ -325,6 +325,11 @@ export function deriveIcons(args_json: string): string;
 export function deriveTaxIdType(args_json: string): string;
 
 /**
+ * Binding for `evaluateBalanceObservation`.
+ */
+export function evaluateBalanceObservation(args_json: string): string;
+
+/**
  * Binding for `evaluateCachedLimits`.
  */
 export function evaluateCachedLimits(args_json: string): string;
@@ -343,6 +348,11 @@ export function evaluateProductReadiness(args_json: string): string;
  * Binding for `extractBackendCustomerRef`.
  */
 export function extractBackendCustomerRef(args_json: string): string;
+
+/**
+ * Binding for `gateNext`.
+ */
+export function gateNext(args_json: string): string;
 
 /**
  * Binding for `getBusinessCountryOptions`.
@@ -378,6 +388,11 @@ export function headlineCharges(args_json: string): string;
  * Binding for `includedUnits`.
  */
 export function includedUnits(args_json: string): string;
+
+/**
+ * Binding for `invokePayableNext`.
+ */
+export function invokePayableNext(args_json: string): string;
 
 /**
  * Binding for `isCachedCustomerRefValid`.
@@ -473,6 +488,11 @@ export function projectUsageSnapshot(args_json: string): string;
  * Binding for `requireProductRef`. Throws when neither source is set.
  */
 export function requireProductRef(args_json: string): string;
+
+/**
+ * Binding for `resolveAuthenticatedUser`.
+ */
+export function resolveAuthenticatedUser(args_json: string): string;
 
 /**
  * Binding for `resolveCheckLimitsParams`.
@@ -641,10 +661,12 @@ export interface InitOutput {
     readonly decidePaywallOutcome: (a: number, b: number) => [number, number];
     readonly deriveIcons: (a: number, b: number) => [number, number];
     readonly deriveTaxIdType: (a: number, b: number) => [number, number];
+    readonly evaluateBalanceObservation: (a: number, b: number) => [number, number];
     readonly evaluateCachedLimits: (a: number, b: number) => [number, number];
     readonly evaluateFreshLimits: (a: number, b: number) => [number, number];
     readonly evaluateProductReadiness: (a: number, b: number) => [number, number];
     readonly extractBackendCustomerRef: (a: number, b: number) => [number, number];
+    readonly gateNext: (a: number, b: number) => [number, number];
     readonly getBusinessCountryOptions: (a: number, b: number) => [number, number];
     readonly getSellerTaxIdentifierDisplayLabel: (a: number, b: number) => [number, number];
     readonly getTaxIdExample: (a: number, b: number) => [number, number];
@@ -652,6 +674,7 @@ export interface InitOutput {
     readonly getTaxIdHelperText: (a: number, b: number) => [number, number];
     readonly headlineCharges: (a: number, b: number) => [number, number];
     readonly includedUnits: (a: number, b: number) => [number, number];
+    readonly invokePayableNext: (a: number, b: number) => [number, number];
     readonly isCachedCustomerRefValid: (a: number, b: number) => [number, number];
     readonly isEmailConflict: (a: number, b: number) => [number, number];
     readonly isErrorResult: (a: number, b: number) => [number, number];
@@ -671,6 +694,7 @@ export interface InitOutput {
     readonly projectTopupProcessOutcome: (a: number, b: number) => [number, number];
     readonly projectUsageSnapshot: (a: number, b: number) => [number, number];
     readonly requireProductRef: (a: number, b: number) => [number, number];
+    readonly resolveAuthenticatedUser: (a: number, b: number) => [number, number];
     readonly resolveCheckLimitsParams: (a: number, b: number) => [number, number];
     readonly resolveFallbackGateLimits: (a: number, b: number) => [number, number];
     readonly resolveProductRef: (a: number, b: number) => [number, number];

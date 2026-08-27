@@ -124,7 +124,8 @@
     "resolveAuthenticatedUser": "crate::bindings::helpers::invoke_resolve_authenticated_user"
   },
   "skip": [
-    "retryNextDelayMs"
+    "retryNextDelayMs",
+    "resolveAuthenticatedUser"
   ],
   "webhookKeep": [
     "verifyWebhook"

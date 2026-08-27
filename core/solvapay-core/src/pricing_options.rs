@@ -300,10 +300,13 @@ pub fn credits_per_unit_from_balance(
 
 /// First `kind: limit` option, optionally scoped to a meter.
 struct LimitCap {
+    /// Included-unit cap from the plan option.
     cap: i64,
+    /// Meter name when the option is meter-scoped.
     meter: Option<String>,
 }
 
+/// Return the first matching limit option, optionally filtered by meter name.
 #[allow(clippy::cast_possible_truncation)]
 fn first_limit(priced: Option<&Value>, meter: Option<&str>) -> Option<LimitCap> {
     for option in options_of(priced) {

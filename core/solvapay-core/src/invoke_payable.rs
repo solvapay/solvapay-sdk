@@ -30,6 +30,7 @@ pub struct InvokePayableState {
 
 /// Next host action or a formatted tool result.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum InvokePayableAction {
     /// Host must call `gate(customerRef, product, usageType)`.
@@ -122,6 +123,7 @@ pub fn invoke_payable_next(
     }
 }
 
+/// Handle a `start` event by asking the host to run the paywall gate.
 fn start(event: &Value) -> Result<InvokePayableNextOutput, HelperErrorResult> {
     let customer_ref = require_str(event, "customerRef")?;
     let product = require_str(event, "product")?;
@@ -148,6 +150,7 @@ fn start(event: &Value) -> Result<InvokePayableNextOutput, HelperErrorResult> {
     })
 }
 
+/// Handle a gated `gatePaywall` event: format the paywall tool result and stop.
 fn on_gate_paywall(
     state: InvokePayableState,
     event: &Value,
@@ -156,6 +159,7 @@ fn on_gate_paywall(
     Ok(done(state, result, None))
 }
 
+/// Handle a `gateAllow` event by asking the host to invoke the merchant handler.
 fn on_gate_allow(
     mut state: InvokePayableState,
     event: &Value,
@@ -174,6 +178,7 @@ fn on_gate_allow(
     })
 }
 
+/// Handle a `handlerPaywall` event: format the paywall tool result and stop.
 fn on_handler_paywall(
     state: InvokePayableState,
     event: &Value,
@@ -182,6 +187,7 @@ fn on_handler_paywall(
     Ok(done(state, result, None))
 }
 
+/// Handle a `handlerOk` event: brand the envelope and emit a success track.
 fn on_handler_ok(
     state: InvokePayableState,
     event: &Value,
@@ -212,6 +218,7 @@ fn on_handler_ok(
     ))
 }
 
+/// Handle a `handlerErr` event: emit an error tool result and a fail track.
 fn on_handler_err(
     state: InvokePayableState,
     event: &Value,
@@ -243,6 +250,7 @@ fn on_handler_err(
     ))
 }
 
+/// Build a paywall MCP tool result from the host-supplied gate payload.
 fn format_paywall(event: &Value) -> Result<Value, HelperErrorResult> {
     let gate_value = event
         .get("gate")
@@ -266,6 +274,7 @@ fn format_paywall(event: &Value) -> Result<Value, HelperErrorResult> {
         .map_err(|err| HelperErrorResult::transport(format!("serialize paywall result: {err}")))
 }
 
+/// Terminal output: keep state, return the tool result, optional usage track.
 fn done(
     state: InvokePayableState,
     result: Value,
@@ -277,6 +286,7 @@ fn done(
     }
 }
 
+/// Deserialize driver state from the host payload.
 fn require_state(state: Option<&Value>) -> Result<InvokePayableState, HelperErrorResult> {
     let value = state
         .ok_or_else(|| HelperErrorResult::transport("invoke_payable_next state is required"))?;
@@ -285,6 +295,7 @@ fn require_state(state: Option<&Value>) -> Result<InvokePayableState, HelperErro
     })
 }
 
+/// Read a required string field from a JSON object.
 fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
     value
         .get(key)

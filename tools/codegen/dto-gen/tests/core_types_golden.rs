@@ -12,7 +12,7 @@ use dto_gen::lower_core_types::{
 use dto_gen::manifest::Manifest;
 
 /// Locked closure size. Bump only when a root or nested named type is added/removed.
-const RESOLVED_COUNT: usize = 59;
+const RESOLVED_COUNT: usize = 70;
 
 fn lowered() -> BTreeMap<String, IrCoreType> {
     let core_src = paths().contract_input("coreSrc").expect("coreSrc");
@@ -179,6 +179,20 @@ fn object_keys(body: &str) -> BTreeSet<String> {
     let chars: Vec<char> = body.chars().collect();
     let mut i = 0usize;
     while i < chars.len() {
+        if chars[i] == '/' && i + 1 < chars.len() && chars[i + 1] == '*' {
+            i += 2;
+            while i + 1 < chars.len() && !(chars[i] == '*' && chars[i + 1] == '/') {
+                i += 1;
+            }
+            i = i.saturating_add(2);
+            continue;
+        }
+        if chars[i] == '/' && i + 1 < chars.len() && chars[i + 1] == '/' {
+            while i < chars.len() && chars[i] != '\n' {
+                i += 1;
+            }
+            continue;
+        }
         match chars[i] {
             '{' => {
                 depth += 1;

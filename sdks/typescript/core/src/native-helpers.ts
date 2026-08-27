@@ -37,7 +37,7 @@ import type { PlansHelperError } from './plans'
 import type { ProductHelperError } from './product'
 import type { RenewalHelperError } from './renewal'
 import type { UsageSnapshot, UsageSnapshotPurchase } from './usage'
-import type { BillingCycle, Charge } from './types/boundary.generated'
+import type { AuthResolutionInput, BillingCycle, Charge } from './types/boundary.generated'
 import type { BalancePegLike, PricedLike } from './pricing-options-types'
 
 // --- customer-sync ---

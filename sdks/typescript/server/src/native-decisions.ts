@@ -19,6 +19,7 @@
 import { SolvaPayError } from '@solvapay/core'
 import type {
   ActivatePlanValidationError,
+  AuthResolutionInput,
   CachedLimitsEvaluation,
   CheckoutHelperError,
   CoercedCustomerOptions,

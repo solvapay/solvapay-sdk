@@ -1,5 +1,7 @@
 //! Composite MCP ops on [`crate::SolvaPayClient`] (server/edge; not browser WASM).
 
+#![allow(clippy::missing_docs_in_private_items)]
+
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
@@ -7,9 +9,10 @@ use serde_json::{json, Map, Value};
 use solvapay_core::{
     is_error_result, normalize_cancel_response, normalize_reactivate_response,
     project_topup_process_outcome, project_usage_snapshot, resolve_purchase_customer_ref,
-    select_active_purchases, validate_activate_plan_params, validate_attach_business_details_params,
-    validate_create_payment_intent_params, validate_process_payment_intent_params,
-    validate_purchase_ref, validate_topup_payment_intent_params, SdkError,
+    select_active_purchases, validate_activate_plan_params,
+    validate_attach_business_details_params, validate_create_payment_intent_params,
+    validate_process_payment_intent_params, validate_purchase_ref,
+    validate_topup_payment_intent_params, SdkError,
 };
 use solvapay_dto::{
     ActivatePlanDto, AttachBusinessDetailsParams, CancelPurchaseParams, CheckLimitsRequest,
@@ -19,12 +22,12 @@ use solvapay_dto::{
 };
 use solvapay_mcp_core::{
     mcp_descriptors, mcp_handle_request, mcp_overview_resource, narrated_tool_result,
-    parse_mode, tool_error_result, tool_result, HandleRequestInput,
-    McpDescriptorsInput, new_widget_session_id,
+    new_widget_session_id, parse_mode, tool_error_result, tool_result, HandleRequestInput,
+    McpDescriptorsInput,
 };
 
-use crate::http::{HeaderName, HttpRequest, HttpResponse, Method};
 use crate::client::SolvaPayClient;
+use crate::http::{HeaderName, HttpRequest, HttpResponse, Method};
 
 mod oauth_proxy;
 
@@ -160,7 +163,7 @@ fn unauthenticated() -> Value {
     )
 }
 
-fn require_customer<'a>(customer_ref: Option<&'a str>) -> Result<&'a str, Value> {
+fn require_customer(customer_ref: Option<&str>) -> Result<&str, Value> {
     customer_ref.ok_or_else(unauthenticated)
 }
 
@@ -243,7 +246,10 @@ fn enrich_purchase(mut purchase: Value) -> Value {
         }
         if let Some(Value::Object(snap)) = obj.get_mut("planSnapshot") {
             let price = snap.get("price").and_then(Value::as_f64);
-            let snap_currency = snap.get("currency").and_then(Value::as_str).map(str::to_owned);
+            let snap_currency = snap
+                .get("currency")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
             if let Some(display) = format_minor_intl(price, snap_currency.as_deref()) {
                 snap.insert("priceDisplay".to_owned(), Value::String(display));
             }
@@ -261,10 +267,28 @@ fn format_minor_intl(amount: Option<f64>, currency: Option<&str>) -> Option<Stri
 fn format_money_intl(amount_minor: f64, currency: &str) -> Option<String> {
     let zero = matches!(
         currency.to_ascii_lowercase().as_str(),
-        "bif" | "clp" | "djf" | "gnf" | "jpy" | "kmf" | "krw" | "mga" | "pyg" | "rwf" | "ugx"
-            | "vnd" | "vuv" | "xaf" | "xof" | "xpf"
+        "bif"
+            | "clp"
+            | "djf"
+            | "gnf"
+            | "jpy"
+            | "kmf"
+            | "krw"
+            | "mga"
+            | "pyg"
+            | "rwf"
+            | "ugx"
+            | "vnd"
+            | "vuv"
+            | "xaf"
+            | "xof"
+            | "xpf"
     );
-    let major = if zero { amount_minor } else { amount_minor / 100.0 };
+    let major = if zero {
+        amount_minor
+    } else {
+        amount_minor / 100.0
+    };
     let fraction = if zero { 0 } else { 2 };
     Some(format_major_intl(major, currency, fraction))
 }
@@ -460,7 +484,10 @@ impl SolvaPayClient {
                     Ok(v) => v,
                     Err(err) => return Ok(err),
                 };
-                let plan_ref = args.get("planRef").and_then(Value::as_str).map(str::to_owned);
+                let plan_ref = args
+                    .get("planRef")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
                 let session = self
                     .create_checkout_session_json(CreateCheckoutSessionRequest {
                         customer_ref: Some(customer_ref.to_owned()),
@@ -502,7 +529,10 @@ impl SolvaPayClient {
                         plan_ref: plan_ref.to_owned(),
                         product_ref: product_ref.to_owned(),
                         customer_ref: customer_ref.to_owned(),
-                        currency: args.get("currency").and_then(Value::as_str).map(str::to_owned),
+                        currency: args
+                            .get("currency")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
                         idempotency_key: None,
                     })
                     .await?;
@@ -528,7 +558,10 @@ impl SolvaPayClient {
                         payment_intent_id: payment_intent_id.to_owned(),
                         product_ref: Some(product_ref.to_owned()),
                         customer_ref: customer_ref.to_owned(),
-                        plan_ref: args.get("planRef").and_then(Value::as_str).map(str::to_owned),
+                        plan_ref: args
+                            .get("planRef")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
                     })
                     .await?;
                 let outcome = project_topup_process_outcome(
@@ -595,7 +628,10 @@ impl SolvaPayClient {
                             .get("businessName")
                             .and_then(Value::as_str)
                             .map(str::to_owned),
-                        country: args.get("country").and_then(Value::as_str).map(str::to_owned),
+                        country: args
+                            .get("country")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
                         tax_id: args.get("taxId").and_then(Value::as_str).map(str::to_owned),
                         tax_id_type: args
                             .get("taxIdType")
@@ -624,12 +660,17 @@ impl SolvaPayClient {
                 let cancelled = self
                     .cancel_purchase(CancelPurchaseParams {
                         purchase_ref: purchase_ref.to_owned(),
-                        reason: args.get("reason").and_then(Value::as_str).map(str::to_owned),
+                        reason: args
+                            .get("reason")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
                     })
                     .await?;
                 match normalize_cancel_response(&cancelled) {
                     Ok(value) => {
-                        self.shell().delay(std::time::Duration::from_millis(500)).await;
+                        self.shell()
+                            .delay(std::time::Duration::from_millis(500))
+                            .await;
                         Ok(wrap_ok(value))
                     }
                     Err(err) => Ok(helper_error_tool(&err)),
@@ -655,7 +696,9 @@ impl SolvaPayClient {
                     .await?;
                 match normalize_reactivate_response(&reactivated) {
                     Ok(value) => {
-                        self.shell().delay(std::time::Duration::from_millis(500)).await;
+                        self.shell()
+                            .delay(std::time::Duration::from_millis(500))
+                            .await;
                         Ok(wrap_ok(value))
                     }
                     Err(err) => Ok(helper_error_tool(&err)),
@@ -700,9 +743,7 @@ impl SolvaPayClient {
                     Ok(v) => v,
                     Err(err) => return Ok(err),
                 };
-                if let Some(err) =
-                    validate_activate_plan_params(Some(product_ref), plan_ref)
-                {
+                if let Some(err) = validate_activate_plan_params(Some(product_ref), plan_ref) {
                     return Ok(helper_error_tool(&err));
                 }
                 let activated = self
@@ -911,9 +952,7 @@ async fn check_purchase(client: &SolvaPayClient, customer_ref: &str) -> Value {
     }
 }
 
-pub(crate) fn native_cors_headers(
-    origin: Option<&str>,
-) -> Vec<(String, String)> {
+pub(crate) fn native_cors_headers(origin: Option<&str>) -> Vec<(String, String)> {
     let Some(origin) = origin.filter(|o| {
         o.starts_with("cursor:")
             || o.starts_with("vscode:")

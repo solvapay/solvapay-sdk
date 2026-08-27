@@ -14,6 +14,7 @@ export const getTaxIdFieldLabel: (a: number, b: number) => [number, number];
 export const getTaxIdHelperText: (a: number, b: number) => [number, number];
 export const headlineCharges: (a: number, b: number) => [number, number];
 export const includedUnits: (a: number, b: number) => [number, number];
+export const invokePayableNext: (a: number, b: number) => [number, number];
 export const isZeroDecimalCurrency: (a: number, b: number) => [number, number];
 export const minorUnitsPerMajor: (a: number, b: number) => [number, number];
 export const peggedCreditsPerUnit: (a: number, b: number) => [number, number];

@@ -87,6 +87,7 @@ pub struct GateTrackOp {
 
 /// Next host action, or a terminal allow/gate.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum GateAction {
     /// Host must resolve/create the customer, then send `customerResolved`.
@@ -200,6 +201,7 @@ pub fn gate_next(
     }
 }
 
+/// Handle a `start` event: ensure the customer or look up the limits cache.
 fn start(event: &Value) -> Result<GateNextOutput, HelperErrorResult> {
     let customer_ref = require_str(event, "customerRef")?;
     let product = require_str(event, "product")?;
@@ -231,6 +233,7 @@ fn start(event: &Value) -> Result<GateNextOutput, HelperErrorResult> {
     }
 }
 
+/// Handle a `cacheHit` event and decide allow vs check-limits.
 fn on_cache_hit(
     state: GateDriverState,
     event: &Value,
@@ -253,6 +256,7 @@ fn on_cache_hit(
     Ok(finish(state, eval.within_limits, limits, cache, now_ms))
 }
 
+/// Handle a `cacheMiss` event by requesting a fresh `checkLimits` call.
 fn on_cache_miss(
     state: GateDriverState,
     _event: &Value,
@@ -273,6 +277,7 @@ fn on_cache_miss(
     })
 }
 
+/// Handle a `limitsResult` event and produce the terminal gate outcome.
 fn on_limits_result(
     state: GateDriverState,
     event: &Value,
@@ -302,6 +307,7 @@ fn on_limits_result(
     Ok(finish(state, eval.within_limits, limits, cache, now_ms))
 }
 
+/// Build the terminal allow/gate action, optional cache write, and usage track.
 fn finish(
     state: GateDriverState,
     within_limits: bool,
@@ -361,16 +367,19 @@ fn finish(
     }
 }
 
+/// Cache key `{backend}:{product}:{meter}` used by the host lookup.
 fn limits_key(backend: &str, product: &str, meter: &str) -> String {
     format!("{backend}:{product}:{meter}")
 }
 
+/// Deserialize driver state from the host payload.
 fn require_state(state: Option<&Value>) -> Result<GateDriverState, HelperErrorResult> {
     let value = state.ok_or_else(|| HelperErrorResult::transport("gate_next state is required"))?;
     serde_json::from_value(value.clone())
         .map_err(|err| HelperErrorResult::transport(format!("gate_next invalid state: {err}")))
 }
 
+/// Read a required string field from a JSON object.
 fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
     value
         .get(key)
@@ -380,6 +389,7 @@ fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
         .ok_or_else(|| HelperErrorResult::transport(format!("gate_next {key} is required")))
 }
 
+/// Read a required number field from a JSON object.
 fn require_f64(value: &Value, key: &str) -> Result<f64, HelperErrorResult> {
     value
         .get(key)

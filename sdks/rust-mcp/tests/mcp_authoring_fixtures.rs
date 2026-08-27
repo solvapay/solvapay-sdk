@@ -460,7 +460,9 @@ async fn replays_dispatch_and_oauth_through_http_server() {
             },
         );
         if fn_name == "mcpDispatch" {
-            if let Some(names) = args.pointer("/config/payableTools").and_then(Value::as_array)
+            if let Some(names) = args
+                .pointer("/config/payableTools")
+                .and_then(Value::as_array)
             {
                 for name in names {
                     let name = name.as_str().unwrap().to_owned();
@@ -504,7 +506,10 @@ async fn replays_dispatch_and_oauth_through_http_server() {
                 body: args["body"].as_str().unwrap_or("").as_bytes().to_vec(),
             }
         };
-        let got = host.handle(req).await.unwrap_or_else(|e| panic!("{rel}: {e:?}"));
+        let got = host
+            .handle(req)
+            .await
+            .unwrap_or_else(|e| panic!("{rel}: {e:?}"));
         if fn_name == "mcpOauthRequest" {
             let body: Value = if got.body.is_empty() {
                 Value::Null

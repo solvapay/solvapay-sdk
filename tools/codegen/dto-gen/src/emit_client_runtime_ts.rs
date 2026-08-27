@@ -95,7 +95,7 @@ fn await_payload(entry: &IrEntryPoint) -> String {
 }
 
 fn split_payload(entry: &IrEntryPoint, binding: &IrBindingSymbol) -> String {
-    let mut parts: Vec<String> = binding.split_path_refs.iter().cloned().collect();
+    let mut parts: Vec<String> = binding.split_path_refs.to_vec();
     for param in &entry.params {
         if binding.split_path_refs.iter().any(|key| key == &param.name) {
             continue;

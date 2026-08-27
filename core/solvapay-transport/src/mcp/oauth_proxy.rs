@@ -7,12 +7,10 @@ use solvapay_mcp_core::{
     OauthDiscoveryInput, OauthDiscoveryKind,
 };
 
-use super::{
-    http_json_response, native_cors_headers, proxy_customer_auth, McpOauthRequestParams,
-};
+use super::{http_json_response, native_cors_headers, proxy_customer_auth, McpOauthRequestParams};
+use crate::client::SolvaPayClient;
 use crate::http::Method;
 use crate::shell::encode_query_component;
-use crate::client::SolvaPayClient;
 
 fn path_only(path: &str) -> &str {
     path.split('?').next().unwrap_or(path)
@@ -170,7 +168,11 @@ pub(super) async fn handle(
         return proxy_tokenish(client, "/v1/customer/auth/revoke", params, cors).await;
     }
 
-    Ok(http_json_response(404, json!({ "error": "not_found" }), cors))
+    Ok(http_json_response(
+        404,
+        json!({ "error": "not_found" }),
+        cors,
+    ))
 }
 
 async fn proxy_tokenish(
@@ -214,11 +216,11 @@ fn upstream_to_json(
         return json!({ "status": 204, "headers": headers, "body": null });
     }
     let parsed: Value = serde_json::from_str(&text).unwrap_or(Value::String(text.clone()));
-    let body = if oauth_normalize && !(200..300).contains(&response.status) && response.status != 204
-    {
-        mcp_normalize_oauth_error(&parsed, &text, i64::from(response.status))
-    } else {
-        parsed
-    };
+    let body =
+        if oauth_normalize && !(200..300).contains(&response.status) && response.status != 204 {
+            mcp_normalize_oauth_error(&parsed, &text, i64::from(response.status))
+        } else {
+            parsed
+        };
     http_json_response(response.status, body, cors)
 }

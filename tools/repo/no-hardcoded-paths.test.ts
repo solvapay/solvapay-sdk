@@ -22,6 +22,8 @@ const ALLOWLIST = new Set([
   'conformance/lib/mcp-fixture-coverage.test.ts',
   'conformance/lib/mcp-layer3-budget.ts',
   'conformance/lib/mcp-layer3-budget.test.ts',
+  'conformance/lib/generated-client-surfaces.ts',
+  'conformance/lib/surface-loc-budget.ts',
   'conformance/lib/superseded-mcp-py-check.ts',
   'conformance/lib/superseded-mcp-py-check.test.ts',
   'conformance/record-mcp-fixtures.ts',

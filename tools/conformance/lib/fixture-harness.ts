@@ -49,6 +49,7 @@ import {
   deriveIcons,
   getMcpToolNamesTable,
   installNativeMcpApi,
+  invokePayableNext,
   makeResponseResult,
   mcpViewMaps,
   paywallToolResult,
@@ -76,7 +77,9 @@ import {
   coerceCustomerOptions,
   createSolvaPayClient,
   decidePaywallOutcome,
+  evaluateBalanceObservation,
   evaluateCachedLimits,
+  gateNext,
   evaluateFreshLimits,
   extractBackendCustomerRef,
   getAuthenticatedUserCore,
@@ -2120,6 +2123,26 @@ export function createDefaultRegistry(): FixtureRegistry {
           buildPaywallGate(product, limits as Parameters<typeof buildPaywallGate>[1]),
       })
     },
+  })
+
+  registry.register('evaluateBalanceObservation', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.baseline !== 'number' || typeof args.credits !== 'number') {
+        throw new Error('evaluateBalanceObservation args.baseline and args.credits must be numbers')
+      }
+      return evaluateBalanceObservation(args.baseline, args.credits)
+    },
+  })
+
+  registry.register('gateNext', {
+    id: 'core',
+    invoke: args => gateNext(args.state, args.event),
+  })
+
+  registry.register('invokePayableNext', {
+    id: 'core',
+    invoke: args => invokePayableNext(args.state, args.event),
   })
 
   return registry

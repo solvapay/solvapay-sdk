@@ -17,6 +17,7 @@ default = []
 # sync decision / MCP payload envelopes. `browser` = public-safe pure sync
 # helpers only (no webhook, no transport, no secret-key client).
 edge = [
+    "solvapay-core/client-full",
     "solvapay-core/webhook-verify",
     "solvapay-mcp-core/engine",
     "dep:solvapay-dto",

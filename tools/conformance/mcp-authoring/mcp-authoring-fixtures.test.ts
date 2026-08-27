@@ -150,7 +150,7 @@ describe('MCP-authoring fixtures', () => {
     'gate/activation-required.json',
     'gate/handler-invoked.json',
   ] as const)(
-    'fails %s when formatGate is adapter-authored instead of native paywallToolResult',
+    'uses native paywallToolResult for %s even when formatGate is adapter-authored',
     async rel => {
       const raw: unknown = JSON.parse(readFileSync(path.join(root, rel), 'utf8'))
       const fixture = parseFixture(raw)
@@ -158,10 +158,10 @@ describe('MCP-authoring fixtures', () => {
       const { toolResult } = await runMcpAuthoringFixture(fixture, {
         formatGate: 'adapter-authored',
       })
-      expect(toolResult).toMatchObject({
+      expect(toolResult).toEqual(observation.toolResult)
+      expect(toolResult).not.toMatchObject({
         content: [{ type: 'text', text: 'adapter-authored' }],
       })
-      expect(toolResult).not.toEqual(observation.toolResult)
     },
   )
 })

@@ -7,9 +7,10 @@ use solvapay_core::{
     build_prompt_user_message, build_tool_descriptor_metadata, credits_to_display_minor_units,
     derive_icons, derive_tax_id_type, get_business_country_options,
     get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
-    get_tax_id_helper_text, is_zero_decimal_currency, make_response_result, mcp_tool_names_json,
-    mcp_view_maps, minor_units_per_major, paywall_tool_result, resolve_seller_identity_display,
-    resolve_tax_behavior, seller_tax_identifier_display_label_by_type, validate_business_details,
+    get_tax_id_helper_text, invoke_payable_next, is_zero_decimal_currency, make_response_result,
+    mcp_tool_names_json, mcp_view_maps, minor_units_per_major, paywall_tool_result,
+    resolve_seller_identity_display, resolve_tax_behavior,
+    seller_tax_identifier_display_label_by_type, validate_business_details,
     validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, BusinessDetailsInput, CreditsToDisplayInput,
     MerchantBranding, PaywallGate, ResponseEnvelope, SdkError, SellerIdentityInput,
@@ -17,7 +18,8 @@ use solvapay_core::{
 
 use crate::abi::{pack, read_string};
 use crate::args::{
-    args_map, optional_string, require_f64, require_string, require_typed, to_value,
+    args_map, optional_string, optional_value, require_f64, require_string, require_typed,
+    result_as_value, to_value,
 };
 use crate::error::run_envelope_sync;
 // --- business-details ---

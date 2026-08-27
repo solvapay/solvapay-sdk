@@ -115,7 +115,7 @@ export type { IntentTool, NarratorOutput } from './narrate'
 // stamping has no consumers. Downstream code that constructed its
 // own `_meta.ui` envelope with this helper should drop it outright —
 // the descriptor is the only trigger now.
-export { paywallToolResult } from './native-mcp'
+export { invokePayableNext, paywallToolResult } from './native-mcp'
 export type { PaywallToolResultContext } from './paywallToolResult'
 
 // ---- Response envelope helpers (adapter-internal) ----

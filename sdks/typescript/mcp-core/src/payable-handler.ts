@@ -183,7 +183,10 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
             units: 1,
             outcome,
             duration,
-            metadata: { action: 'requests' },
+            metadata: {
+              action: 'requests',
+              requestId: `solvapay_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+            },
             timestamp: new Date().toISOString(),
           })
         }

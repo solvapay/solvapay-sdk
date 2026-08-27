@@ -4601,8 +4601,7 @@
         "c": "resolveAuthenticatedUser"
       },
       "catalog": {
-        "kind": "coreHelper",
-        "id": "resolveAuthenticatedUser"
+        "kind": "none"
       },
       "args": [
         {
