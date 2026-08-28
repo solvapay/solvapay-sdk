@@ -44,14 +44,6 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^@solvapay\/core$/, replacement: `${packagesDir}/core/src/index.ts` },
-      {
-        find: /^@solvapay\/core\/browser-wasm$/,
-        replacement: `${packagesDir}/core/src/browser-wasm.ts`,
-      },
-      {
-        find: /^@solvapay\/server-wasm\/browser$/,
-        replacement: `${packagesDir}/../wasm/runtime/browser-web.js`,
-      },
       { find: /^@solvapay\/server$/, replacement: `${packagesDir}/server/src/index.ts` },
       { find: /^@solvapay\/mcp-core$/, replacement: `${packagesDir}/mcp-core/src/index.ts` },
       { find: /^@solvapay\/mcp$/, replacement: `${packagesDir}/mcp/src/index.ts` },

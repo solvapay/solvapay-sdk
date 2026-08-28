@@ -201,6 +201,10 @@ export interface BootstrapPayload {
   product: BootstrapProduct
   plans: BootstrapPlan[]
   customer: BootstrapCustomer | null
+  taxIdFields?: Record<
+    string,
+    { label?: string | null; example?: string | null; helperText?: string | null }
+  >
 }
 
 /**

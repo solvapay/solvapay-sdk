@@ -27,10 +27,15 @@ describe('canonical MCP App widget artifact', () => {
     expect(html).toContain('solvapay://bootstrap.json')
   })
 
-  it('includes inlined browser WASM, not a TypeScript portable fallback', () => {
+  it('does not embed WebAssembly', () => {
     const html = readFileSync(canonicalPath, 'utf8')
-    expect(html.includes('WebAssembly') || html.includes('application/wasm')).toBe(true)
-    expect(html).not.toContain('EIN (Employer Identification Number)')
+    expect(html.includes('WebAssembly') || html.includes('application/wasm')).toBe(false)
+  })
+
+  it('does not fetch data: URLs (host connect-src rejects them)', () => {
+    const html = readFileSync(canonicalPath, 'utf8')
+    expect(html).not.toContain('href="data:,"')
+    expect(html).not.toContain('href="data:')
   })
 
   it('vendors a byte-identical copy into every SDK', () => {

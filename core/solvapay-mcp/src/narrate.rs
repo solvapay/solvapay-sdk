@@ -543,12 +543,12 @@ pub fn narrated_tool_result(
         "type": "text",
         "text": ui_placeholder(tool, data),
     });
-    let content = if mode == "ui" {
-        vec![placeholder_block, narrated_block]
-    } else {
+    let content = if mode == "text" {
         let mut blocks = vec![narrated_block];
         blocks.extend(resource_links);
         blocks
+    } else {
+        vec![placeholder_block, narrated_block]
     };
     let meta = if mode == "text" {
         strip_ui_meta(base_meta)

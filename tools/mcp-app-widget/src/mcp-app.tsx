@@ -17,7 +17,6 @@ import {
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps'
 import { McpApp } from '@solvapay/react/mcp'
-import '@solvapay/core/browser-wasm'
 import '@solvapay/react/styles.css'
 import '@solvapay/react/mcp/styles.css'
 

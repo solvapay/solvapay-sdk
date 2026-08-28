@@ -356,6 +356,8 @@ export type GetCustomerBalanceResult = {
   display?: CreditDisplayBlock
   displayCurrency: string
   displayExchangeRate: number
+  displayMinorUnits?: number
+  minorUnitsPerMajor?: number
 }
 
 /**
@@ -409,6 +411,14 @@ export type ListProductItem = {
 export type ListProductsResult = Array<ListProductItem>
 
 /**
+ * SDK-only type `McpBillingCycleDisplay`.
+ */
+export type McpBillingCycleDisplay = {
+  count?: number
+  interval: string
+}
+
+/**
  * SDK-only type `McpBootstrapResponse`.
  */
 export type McpBootstrapResponse = {
@@ -420,6 +430,28 @@ export type McpBootstrapResponse = {
 }
 
 /**
+ * SDK-only type `McpPlanDisplay`.
+ */
+export type McpPlanDisplay = {
+  billingCycle?: McpBillingCycleDisplay
+  countsUsage: boolean
+  creditsPerUnit?: number
+  includedUnits?: number
+  meterName?: string
+  perUnitCharge?: unknown
+  trialDays?: number
+}
+
+/**
+ * SDK-only type `McpPlanPricingOption`.
+ */
+export type McpPlanPricingOption = {
+  currency: string
+  default?: boolean
+  price: number
+}
+
+/**
  * SDK-only type `McpServerInfo`.
  */
 export type McpServerInfo = {
@@ -428,6 +460,15 @@ export type McpServerInfo = {
   reference?: string
   subdomain?: string
   url: string
+}
+
+/**
+ * SDK-only type `McpTaxIdFieldCopy`.
+ */
+export type McpTaxIdFieldCopy = {
+  example?: string
+  helperText?: string
+  label?: string
 }
 
 /**

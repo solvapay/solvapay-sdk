@@ -10,7 +10,11 @@ import { callMcpSyncOp } from './native-mcp'
 import type { SolvaPayMcpCsp } from './types'
 
 export const SOLVAPAY_DEFAULT_CSP: Required<SolvaPayMcpCsp> = {
-  resourceDomains: ['https://js.stripe.com', 'https://*.stripe.com', 'https://b.stripecdn.com'],
+  resourceDomains: [
+    'https://js.stripe.com',
+    'https://*.stripe.com',
+    'https://b.stripecdn.com',
+  ],
   connectDomains: [
     'https://api.stripe.com',
     'https://m.stripe.com',

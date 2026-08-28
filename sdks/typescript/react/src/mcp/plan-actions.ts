@@ -17,13 +17,13 @@
  * unlimited ones.
  */
 
+import { charges, type PricingOptionLike } from '@solvapay/core'
 import {
-  billingCycle,
-  charges,
-  countsUsage,
-  trialDays,
-  type PricingOptionLike,
-} from '@solvapay/core'
+  planBillingCycleInterval,
+  planCountsUsage,
+  planTrialDays,
+  type PlanDisplayBlock,
+} from '../utils/planDisplay'
 
 export type PlanShape =
   | 'free'
@@ -56,6 +56,8 @@ export interface PlanLike {
   /** Derived headline amount; only a fallback for snapshots frozen before `options[]`. */
   price?: number | null
   currency?: string | null
+  display?: PlanDisplayBlock | null
+  pricingOptions?: Array<{ price: number }>
 }
 
 export interface PurchaseSnapshotLike {
@@ -73,13 +75,17 @@ export interface PurchaseSnapshotLike {
  */
 function isPaidPlan(plan: PlanLike): boolean {
   if (plan.requiresPayment === false) return false
+  if (plan.pricingOptions?.some(option => option.price > 0)) return true
+  if (plan.display) {
+    return plan.requiresPayment === true || (plan.price ?? 0) > 0
+  }
   if (charges(plan).some(charge => charge.amountMinor > 0)) return true
   return (plan.price ?? 0) > 0
 }
 
 /** Whether the plan counts usage: a per-unit charge, a tier, or a limit. */
 function isMeteredPlan(plan: PlanLike): boolean {
-  return countsUsage(plan)
+  return planCountsUsage(plan)
 }
 
 /**
@@ -95,11 +101,11 @@ function isMeteredPlan(plan: PlanLike): boolean {
  */
 export function resolvePlanShape(plan: PlanLike | null | undefined): PlanShape | null {
   if (!plan) return null
-  if ((trialDays(plan) ?? 0) > 0) return 'trial'
+  if (planTrialDays(plan) > 0) return 'trial'
   if (!isPaidPlan(plan)) return 'free'
 
   const metered = isMeteredPlan(plan)
-  if (billingCycle(plan)) return metered ? 'recurring-metered' : 'recurring-unlimited'
+  if (planBillingCycleInterval(plan)) return metered ? 'recurring-metered' : 'recurring-unlimited'
   return metered ? 'usage-based' : 'recurring-unlimited'
 }
 

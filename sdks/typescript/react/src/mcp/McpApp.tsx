@@ -35,6 +35,7 @@ import {
   type McpAppBootstrapLike,
 } from './bootstrap'
 import { seedMcpCaches } from './cache-seed'
+import { seedTaxIdFields } from '../utils/tax-id-fields'
 import { McpAppShell } from './McpAppShell'
 import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
 import type { McpAccountViewProps } from './views/McpAccountView'
@@ -43,7 +44,6 @@ import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { AppHeader } from './views/AppHeader'
 import { McpHostInfoProvider } from './hooks/useHostInfo'
-import '@solvapay/core/browser-wasm'
 
 /**
  * Minimal host-context shape `<McpApp>` reads. Kept loose so the real
@@ -99,6 +99,8 @@ export interface McpAppFull extends McpAppBootstrapLike, McpAppLike, McpBridgeAp
    * minimal adapters don't have to stub it.
    */
   requestTeardown?: () => Promise<void> | void
+  /** Optional host logging (ext-apps logging capability). */
+  log?: (message: string) => void
 }
 
 export interface McpAppViewOverrides {
@@ -186,6 +188,39 @@ interface ToolResultNotificationParams {
   structuredContent?: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _meta?: any
+}
+
+class McpAppErrorBoundary extends React.Component<
+  {
+    children: React.ReactNode
+    fallback: (message: string) => React.ReactNode
+    onError?: (message: string) => void
+  },
+  { message: string | null }
+> {
+  override state: { message: string | null } = { message: null }
+
+  static getDerivedStateFromError(error: unknown): { message: string } {
+    return { message: error instanceof Error ? error.message : String(error) }
+  }
+
+  override componentDidCatch(error: Error): void {
+    this.props.onError?.(error.message)
+  }
+
+  override render(): React.ReactNode {
+    if (this.state.message) return this.props.fallback(this.state.message)
+    return this.props.children
+  }
+}
+
+function renderLoadError(cx: ReturnType<typeof resolveMcpClassNames>, message: string) {
+  return (
+    <div className={`${cx.card} ${cx.error}`.trim()}>
+      <h2 className={cx.heading}>Unable to load SolvaPay</h2>
+      <p>{message}</p>
+    </div>
+  )
 }
 
 export function McpApp({
@@ -481,6 +516,7 @@ export function McpApp({
         // module caches so every hook sees the refreshed snapshot.
         const fresh = await fetchMcpBootstrap(app)
         const next = bootstrapToInitial(fresh)
+        seedTaxIdFields(fresh.taxIdFields)
         seedMcpCaches(next, resolved)
         return next
       },
@@ -497,6 +533,7 @@ export function McpApp({
   // `initial` change even under strict-mode double rendering.
   const seededInitialRef = useRef<SolvaPayProviderInitial | null>(null)
   if (initial && seededInitialRef.current !== initial) {
+    seedTaxIdFields(bootstrap?.taxIdFields)
     seedMcpCaches(initial, providerConfig)
     seededInitialRef.current = initial
   }
@@ -514,6 +551,7 @@ export function McpApp({
       try {
         const fresh = await fetchMcpBootstrap(app)
         const next = bootstrapToInitial(fresh)
+        seedTaxIdFields(fresh.taxIdFields)
         seedMcpCaches(next, providerConfig)
         setBootstrap(fresh)
       } finally {
@@ -559,10 +597,7 @@ export function McpApp({
           merchant={(effectiveBootstrap?.merchant as Merchant | undefined) ?? null}
         />
         {initError ? (
-          <div className={`${cx.card} ${cx.error}`.trim()}>
-            <h2 className={cx.heading}>Unable to load SolvaPay</h2>
-            <p>{initError}</p>
-          </div>
+          renderLoadError(cx, initError)
         ) : !effectiveBootstrap ? (
           // Intent-tool / fallback entries show a loading card while the
           // in-flight `fetchMcpBootstrap` call resolves. Data-tool iframe
@@ -586,18 +621,23 @@ export function McpApp({
             <aside className="solvapay-mcp-shell-sidebar" aria-hidden="true" />
           </>
         ) : (
-          <SolvaPayProvider config={providerConfig}>
-            <McpBridgeProvider app={app} messageOnSuccess={messageOnSuccess}>
-              <McpAppShell
-                bootstrap={effectiveBootstrap}
-                views={views}
-                classNames={classNames}
-                {...(footer !== undefined ? { footer } : {})}
-                onRefreshBootstrap={refreshBootstrap}
-                onClose={effectiveOnClose}
-              />
-            </McpBridgeProvider>
-          </SolvaPayProvider>
+          <McpAppErrorBoundary
+            fallback={message => renderLoadError(cx, message)}
+            onError={message => app.log?.(message)}
+          >
+            <SolvaPayProvider config={providerConfig}>
+              <McpBridgeProvider app={app} messageOnSuccess={messageOnSuccess}>
+                <McpAppShell
+                  bootstrap={effectiveBootstrap}
+                  views={views}
+                  classNames={classNames}
+                  {...(footer !== undefined ? { footer } : {})}
+                  onRefreshBootstrap={refreshBootstrap}
+                  onClose={effectiveOnClose}
+                />
+              </McpBridgeProvider>
+            </SolvaPayProvider>
+          </McpAppErrorBoundary>
         )}
       </main>
     </McpHostInfoProvider>

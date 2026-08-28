@@ -15,5 +15,7 @@ export function mockBalanceStatus(overrides: Partial<BalanceStatus> = {}): Balan
     reconcileAfterUsageDebit: vi.fn(),
     ...rest,
     display: display ?? null,
+    displayMinorUnits: rest.displayMinorUnits ?? null,
+    minorUnitsPerMajor: rest.minorUnitsPerMajor ?? null,
   }
 }

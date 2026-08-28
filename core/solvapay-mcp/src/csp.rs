@@ -83,3 +83,15 @@ pub fn mcp_merge_csp(
         frame_domains: merge_list(&base.frame_domains, &[ov.frame_domains]),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_omits_data_scheme() {
+        let csp = mcp_merge_csp(None, None);
+        assert!(!csp.connect_domains.iter().any(|d| d == "data:"));
+        assert!(!csp.resource_domains.iter().any(|d| d == "data:"));
+    }
+}

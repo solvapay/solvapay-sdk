@@ -95,4 +95,5 @@ def test_narrated_tool_result_auto_keeps_ui_meta() -> None:
         {"ui": {"resourceUri": "ui://x"}},
     )
     assert result["_meta"]["ui"]["resourceUri"] == "ui://x"
-    assert result["content"][0]["annotations"]["audience"] == ["assistant"]
+    assert isinstance(result["content"], list)
+    assert result["content"][0]["type"] == "text"

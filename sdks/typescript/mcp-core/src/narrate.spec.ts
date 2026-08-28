@@ -420,15 +420,18 @@ describe('narratedToolResult', () => {
     expect(r.structuredContent).toEqual(payload)
   })
 
-  it('mode=auto emits narrated text + _meta.ui with assistant audience', () => {
+  it('mode=auto emits placeholder + assistant narration + _meta.ui', () => {
     const r = narratedToolResult('manage_account', payload, 'auto', {
       ui: { resourceUri: 'ui://x' },
     })
+    expect(r.content).toHaveLength(2)
     expect(r.content[0].type).toBe('text')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).text).toContain('Acme Knowledge Base')
+    expect((r.content[0] as any).text).toContain('Opened your Acme Knowledge Base account.')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).annotations).toEqual({ audience: ['assistant'] })
+    expect((r.content[0] as any).annotations).toBeUndefined()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((r.content[1] as any).annotations).toEqual({ audience: ['assistant'] })
     expect(r._meta).toEqual({ ui: { resourceUri: 'ui://x' } })
     expect(r.structuredContent).toEqual(payload)
   })

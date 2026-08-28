@@ -7,12 +7,16 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use solvapay_core::{
-    is_error_result, normalize_cancel_response, normalize_reactivate_response,
-    project_topup_process_outcome, project_usage_snapshot, resolve_purchase_customer_ref,
-    select_active_purchases, validate_activate_plan_params,
-    validate_attach_business_details_params, validate_create_payment_intent_params,
-    validate_process_payment_intent_params, validate_purchase_ref,
-    validate_topup_payment_intent_params, SdkError,
+    billing_cycle, counts_usage, credits_per_unit_from_balance, credits_to_display_minor_units,
+    get_business_country_options, get_tax_id_example, get_tax_id_field_label,
+    get_tax_id_helper_text, headline_charges, included_units, is_error_result, meter_name,
+    minor_units_per_major, normalize_cancel_response, normalize_reactivate_response,
+    per_unit_charge, project_topup_process_outcome, project_usage_snapshot,
+    resolve_purchase_customer_ref, resolve_seller_identity_display, select_active_purchases,
+    trial_days, validate_activate_plan_params, validate_attach_business_details_params,
+    validate_create_payment_intent_params, validate_process_payment_intent_params,
+    validate_purchase_ref, validate_topup_payment_intent_params, CreditsToDisplayInput, SdkError,
+    SellerIdentityInput,
 };
 use solvapay_dto::{
     ActivatePlanDto, AttachBusinessDetailsParams, CancelPurchaseParams, CheckLimitsRequest,
@@ -175,8 +179,13 @@ fn wrap_ok(value: Value) -> Value {
     tool_result(&value)
 }
 
-fn widget_meta(session: &str) -> Value {
-    json!({ "openai/widgetSessionId": session })
+fn widget_meta(session: &str, resource_uri: Option<&str>) -> Value {
+    let mut meta = json!({ "openai/widgetSessionId": session });
+    if let Some(uri) = resource_uri.filter(|uri| !uri.is_empty()) {
+        meta["ui"] = json!({ "resourceUri": uri });
+        meta["ui/resourceUri"] = json!(uri);
+    }
+    meta
 }
 
 fn sdk_error_placeholder(err: &SdkError) -> Value {
@@ -221,6 +230,117 @@ fn bootstrap_lookup_error(prefix: &str, placeholder: &Value) -> SdkError {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
+fn enrich_plan(mut plan: Value, balance: Option<&Value>) -> Value {
+    let default_currency = plan
+        .get("currency")
+        .and_then(Value::as_str)
+        .unwrap_or("USD")
+        .to_ascii_uppercase();
+    let charges = headline_charges(Some(&plan));
+    let pricing_options: Vec<Value> = charges
+        .iter()
+        .map(|charge| {
+            json!({
+                "currency": charge.currency,
+                "price": charge.amount_minor as i64,
+                "default": charge.currency.eq_ignore_ascii_case(&default_currency),
+            })
+        })
+        .collect();
+    let display = json!({
+        "billingCycle": billing_cycle(Some(&plan)),
+        "countsUsage": counts_usage(Some(&plan)),
+        "includedUnits": included_units(Some(&plan), None),
+        "meterName": meter_name(Some(&plan)),
+        "perUnitCharge": per_unit_charge(Some(&plan), None),
+        "creditsPerUnit": credits_per_unit_from_balance(Some(&plan), balance, None),
+        "trialDays": trial_days(Some(&plan)),
+    });
+    if let Some(obj) = plan.as_object_mut() {
+        if !pricing_options.is_empty() {
+            obj.insert("pricingOptions".to_owned(), Value::Array(pricing_options));
+        }
+        obj.insert("display".to_owned(), display);
+    }
+    plan
+}
+
+fn enrich_merchant(mut merchant: Value) -> Value {
+    let identity = resolve_seller_identity_display(&SellerIdentityInput {
+        country: merchant
+            .get("country")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        vat_number: merchant
+            .get("vatNumber")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        tax_id: merchant
+            .get("taxId")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        company_number: merchant
+            .get("companyNumber")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+    });
+    if let Some(obj) = merchant.as_object_mut() {
+        obj.insert(
+            "identityDisplay".to_owned(),
+            serde_json::to_value(identity).unwrap_or(Value::Null),
+        );
+    }
+    merchant
+}
+
+fn enrich_balance(mut balance: Value) -> Value {
+    let credits = balance.get("credits").and_then(Value::as_f64);
+    let credits_per_minor_unit = balance.get("creditsPerMinorUnit").and_then(Value::as_f64);
+    let display_currency = balance
+        .get("displayCurrency")
+        .and_then(Value::as_str)
+        .map(str::to_owned);
+    let display_exchange_rate = balance
+        .get("displayExchangeRate")
+        .and_then(Value::as_f64)
+        .unwrap_or(1.0);
+    if let (Some(credits), Some(credits_per_minor_unit), Some(display_currency)) =
+        (credits, credits_per_minor_unit, display_currency)
+    {
+        let display_minor = credits_to_display_minor_units(&CreditsToDisplayInput {
+            credits,
+            credits_per_minor_unit,
+            display_exchange_rate,
+            display_currency: display_currency.clone(),
+        });
+        let minor_per_major = minor_units_per_major(&display_currency);
+        if let Some(obj) = balance.as_object_mut() {
+            if let Some(minor) = display_minor {
+                obj.insert("displayMinorUnits".to_owned(), json!(minor));
+            }
+            obj.insert("minorUnitsPerMajor".to_owned(), json!(minor_per_major));
+        }
+    }
+    balance
+}
+
+fn tax_id_fields_table() -> Value {
+    let mut map = Map::new();
+    for option in get_business_country_options() {
+        let code = option.value;
+        map.insert(
+            code.clone(),
+            json!({
+                "label": get_tax_id_field_label(&code),
+                "example": get_tax_id_example(&code),
+                "helperText": get_tax_id_helper_text(&code),
+            }),
+        );
+    }
+    Value::Object(map)
+}
+
 fn enrich_purchase(mut purchase: Value) -> Value {
     let amount = purchase.get("amount").and_then(Value::as_f64);
     let original = purchase.get("originalAmount").and_then(Value::as_f64);
@@ -253,6 +373,9 @@ fn enrich_purchase(mut purchase: Value) -> Value {
             if let Some(display) = format_minor_intl(price, snap_currency.as_deref()) {
                 snap.insert("priceDisplay".to_owned(), Value::String(display));
             }
+        }
+        if let Some(snap) = obj.remove("planSnapshot") {
+            obj.insert("planSnapshot".to_owned(), enrich_plan(snap, None));
         }
     }
     purchase
@@ -366,7 +489,7 @@ impl SolvaPayClient {
         }
 
         let plans_raw = self.list_plans(&params.product_ref).await;
-        let plans = match plans_raw {
+        let plans_unenriched = match plans_raw {
             Ok(Value::Array(items)) => items,
             Ok(Value::Object(map)) => map
                 .get("plans")
@@ -400,30 +523,45 @@ impl SolvaPayClient {
                         .unwrap_or(Value::Null),
                     Err(err) => sdk_error_placeholder(&err),
                 };
+                let balance_value = if is_error_result(&balance) {
+                    Value::Null
+                } else {
+                    enrich_balance(balance)
+                };
                 let purchase = if is_error_result(&purchase_result) {
                     Value::Null
                 } else {
-                    purchase_result
+                    enrich_purchase(purchase_result)
                 };
                 Some(json!({
                     "ref": customer_ref,
                     "purchase": purchase,
                     "paymentMethod": if is_error_result(&payment_method) { Value::Null } else { payment_method },
-                    "balance": if is_error_result(&balance) { Value::Null } else { balance },
+                    "balance": balance_value,
                     "usage": if is_error_result(&usage) { Value::Null } else { usage },
                 }))
             }
         };
+
+        let balance_for_plans = customer
+            .as_ref()
+            .and_then(|c| c.get("balance"))
+            .filter(|b| !b.is_null());
+        let plans: Vec<Value> = plans_unenriched
+            .into_iter()
+            .map(|plan| enrich_plan(plan, balance_for_plans))
+            .collect();
 
         Ok(json!({
             "view": params.view,
             "productRef": params.product_ref,
             "stripePublishableKey": stripe_publishable_key,
             "returnUrl": params.public_base_url,
-            "merchant": merchant_value,
+            "merchant": enrich_merchant(merchant_value),
             "product": product_value,
             "plans": plans,
             "customer": customer,
+            "taxIdFields": tax_id_fields_table(),
         }))
     }
 
@@ -452,7 +590,10 @@ impl SolvaPayClient {
             .as_deref()
             .map(str::trim)
             .filter(|s| !s.is_empty());
-        let mode = parse_mode(args.get("mode").and_then(Value::as_str));
+        let mode = match parse_mode(args.get("mode").and_then(Value::as_str)) {
+            "text" => "text",
+            _ => "ui",
+        };
         let session = params
             .widget_session_id
             .clone()
@@ -476,7 +617,7 @@ impl SolvaPayClient {
                     params.name.as_str(),
                     &payload,
                     mode,
-                    Some(&widget_meta(&session)),
+                    Some(&widget_meta(&session, params.config.resource_uri.as_deref())),
                 ))
             }
             "create_checkout_session" => {
@@ -736,7 +877,7 @@ impl SolvaPayClient {
                         "activate_plan",
                         &payload,
                         mode,
-                        Some(&widget_meta(&session)),
+                        Some(&widget_meta(&session, params.config.resource_uri.as_deref())),
                     ));
                 }
                 let customer_ref = match require_customer(customer_ref) {
@@ -1009,4 +1150,88 @@ pub(crate) fn http_json_response(status: u16, body: Value, extra: Vec<(String, S
         headers.insert(k, Value::String(v));
     }
     json!({ "status": status, "headers": headers, "body": body })
+}
+
+#[cfg(test)]
+mod enrich_tests {
+    #![allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::missing_docs_in_private_items
+    )]
+
+    use super::*;
+
+    #[test]
+    fn enrich_plan_emits_pricing_options_and_display() {
+        let plan = json!({
+            "name": "Pro",
+            "currency": "USD",
+            "options": [
+                { "kind": "billingCycle", "interval": "month" },
+                { "kind": "charge", "per": "flat", "amountMinor": 1800, "currency": "USD" },
+                { "kind": "charge", "per": "unit", "amountMinor": 2, "currency": "USD", "meter": "requests" },
+                { "kind": "limit", "cap": 1000, "meter": "requests" }
+            ]
+        });
+        let balance = json!({
+            "displayCurrency": "USD",
+            "creditsPerMinorUnit": 100,
+            "displayExchangeRate": 1
+        });
+        let enriched = enrich_plan(plan, Some(&balance));
+        assert_eq!(enriched["pricingOptions"][0]["currency"], "USD");
+        assert_eq!(enriched["pricingOptions"][0]["price"], 1800);
+        assert_eq!(enriched["pricingOptions"][0]["default"], true);
+        assert_eq!(enriched["display"]["billingCycle"]["interval"], "month");
+        assert_eq!(enriched["display"]["countsUsage"], true);
+        assert_eq!(enriched["display"]["includedUnits"], 1000);
+        assert_eq!(enriched["display"]["meterName"], "requests");
+        assert_eq!(enriched["display"]["perUnitCharge"]["amountMinor"], 2);
+        assert_eq!(enriched["display"]["creditsPerUnit"], 200);
+    }
+
+    #[test]
+    fn enrich_merchant_emits_identity_display() {
+        let merchant = json!({
+            "displayName": "Acme",
+            "country": "DE",
+            "vatNumber": "DE123456789"
+        });
+        let enriched = enrich_merchant(merchant);
+        assert_eq!(enriched["identityDisplay"]["taxIdentifier"]["label"], "VAT number");
+        assert_eq!(
+            enriched["identityDisplay"]["taxIdentifier"]["value"],
+            "DE123456789"
+        );
+    }
+
+    #[test]
+    fn enrich_balance_emits_display_minor_units() {
+        let balance = json!({
+            "credits": 1500,
+            "creditsPerMinorUnit": 100,
+            "displayCurrency": "USD",
+            "displayExchangeRate": 1
+        });
+        let enriched = enrich_balance(balance);
+        assert_eq!(enriched["displayMinorUnits"], 15);
+        assert_eq!(enriched["minorUnitsPerMajor"], 100);
+    }
+
+    #[test]
+    fn tax_id_fields_covers_supported_countries() {
+        let table = tax_id_fields_table();
+        let obj = table.as_object().expect("object");
+        assert!(obj.len() >= 30);
+        assert_eq!(table["DE"]["label"], "VAT ID");
+        assert_eq!(table["DE"]["example"], "DE123456789");
+        assert!(table["DE"]["helperText"]
+            .as_str()
+            .unwrap()
+            .contains("DE123456789"));
+        assert_eq!(table["US"]["label"], "EIN (Employer Identification Number)");
+        assert_eq!(table["GB"]["label"], "VAT Number");
+    }
 }

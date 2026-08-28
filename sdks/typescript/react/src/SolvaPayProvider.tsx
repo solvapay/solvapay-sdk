@@ -125,6 +125,12 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
   const [displayBlockValue, setDisplayBlockValue] = useState<CreditDisplayBlock | null>(
     initial?.balance?.display ?? null,
   )
+  const [displayMinorUnitsValue, setDisplayMinorUnitsValue] = useState<number | null>(
+    initial?.balance?.displayMinorUnits ?? null,
+  )
+  const [minorUnitsPerMajorValue, setMinorUnitsPerMajorValue] = useState<number | null>(
+    initial?.balance?.minorUnitsPerMajor ?? null,
+  )
   const [balanceLoading, setBalanceLoading] = useState(false)
   const balanceInFlightRef = useRef(false)
   const balanceLoadedRef = useRef(!!initial?.balance)
@@ -190,6 +196,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       setCreditsPerMinorUnitValue(data.creditsPerMinorUnit ?? null)
       setDisplayExchangeRateValue(data.displayExchangeRate ?? null)
       setDisplayBlockValue(data.display ?? null)
+      setDisplayMinorUnitsValue(data.displayMinorUnits ?? null)
+      setMinorUnitsPerMajorValue(data.minorUnitsPerMajor ?? null)
       balanceLoadedRef.current = true
       return creditsValueRef.current
     } catch (error) {
@@ -231,6 +239,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       creditsPerMinorUnit?: number | null
       displayExchangeRate?: number | null
       display?: CreditDisplayBlock | null
+      displayMinorUnits?: number | null
+      minorUnitsPerMajor?: number | null
     }) => {
       creditsValueRef.current = data.credits ?? null
       setCreditsValue(data.credits ?? null)
@@ -238,6 +248,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       setCreditsPerMinorUnitValue(data.creditsPerMinorUnit ?? null)
       setDisplayExchangeRateValue(data.displayExchangeRate ?? null)
       setDisplayBlockValue(data.display ?? null)
+      setDisplayMinorUnitsValue(data.displayMinorUnits ?? null)
+      setMinorUnitsPerMajorValue(data.minorUnitsPerMajor ?? null)
       balanceLoadedRef.current = true
     },
     [],
@@ -598,6 +610,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
     setCreditsPerMinorUnitValue(next.balance?.creditsPerMinorUnit ?? null)
     setDisplayExchangeRateValue(next.balance?.displayExchangeRate ?? null)
     setDisplayBlockValue(next.balance?.display ?? null)
+    setDisplayMinorUnitsValue(next.balance?.displayMinorUnits ?? null)
+    setMinorUnitsPerMajorValue(next.balance?.minorUnitsPerMajor ?? null)
     balanceLoadedRef.current = !!next.balance
   }, [])
 
@@ -733,6 +747,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       creditsPerMinorUnit: creditsPerMinorUnitValue,
       displayExchangeRate: displayExchangeRateValue,
       display: displayBlockValue,
+      displayMinorUnits: displayMinorUnitsValue,
+      minorUnitsPerMajor: minorUnitsPerMajorValue,
       refetch: fetchBalanceImpl,
       adjustBalance: adjustBalanceImpl,
       reconcileAfterUsageDebit: reconcileAfterUsageDebitImpl,
@@ -744,6 +760,8 @@ export const SolvaPayProvider: React.FC<SolvaPayProviderProps> = ({ config, chil
       creditsPerMinorUnitValue,
       displayExchangeRateValue,
       displayBlockValue,
+      displayMinorUnitsValue,
+      minorUnitsPerMajorValue,
       fetchBalanceImpl,
       adjustBalanceImpl,
       reconcileAfterUsageDebitImpl,

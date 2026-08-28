@@ -7,19 +7,19 @@
  * build its own layout on top of `useCheckoutFlow`.
  */
 
-import {
-  billingCycle as readBillingCycle,
-  creditsPerUnitFromBalance,
-  includedUnits,
-  meterName,
-  perUnitCharge,
-  type BalancePegLike,
-  type PricingOptionLike,
-} from '@solvapay/core'
+import type { BalancePegLike, PricingOptionLike } from '@solvapay/core'
 import type { Plan } from '../../types'
 import { formatPrice } from '../../utils/format'
 import { isPaygPlan } from '../../utils/isPayg'
 import { getPlanPricingOptions, type PlanPricingOption } from '../../utils/planPricing'
+import {
+  planBillingCycleInterval,
+  planCreditsPerUnit,
+  planIncludedUnits,
+  planMeterNameValue,
+  planPerUnitCharge,
+  type PlanDisplayBlock,
+} from '../../utils/planDisplay'
 
 export type CheckoutStep = 'plan' | 'amount' | 'payment' | 'success'
 
@@ -49,6 +49,7 @@ export interface BootstrapPlanLike {
     setupFee?: number
     default?: boolean
   }>
+  display?: PlanDisplayBlock
 }
 
 export type SuccessMeta =
@@ -155,7 +156,7 @@ export function formatContinueLabel(
  * the wire has no scalar `billingCycle`.
  */
 export function planBillingInterval(plan: BootstrapPlanLike): string | null {
-  return readBillingCycle(plan)?.interval ?? null
+  return planBillingCycleInterval(plan)
 }
 
 /**
@@ -171,12 +172,12 @@ export function formatPaygRate(
   locale?: string,
   balance?: BalancePegLike | null,
 ): string | null {
-  const credits = creditsPerUnitFromBalance(plan, balance)
+  const credits = planCreditsPerUnit(plan, balance)
   if (credits != null) {
     return `${credits.toLocaleString(locale)} ${credits === 1 ? 'credit' : 'credits'} / call`
   }
 
-  const charge = perUnitCharge(plan)
+  const charge = planPerUnitCharge(plan)
   if (charge && charge.amountMinor > 0) {
     return `${formatPrice(charge.amountMinor, charge.currency.toUpperCase(), { locale })} / call`
   }
@@ -191,13 +192,12 @@ export function formatPaygRate(
  * as an allowance.
  */
 export function inferIncludedUnits(plan: BootstrapPlanLike): number | null {
-  const cap = includedUnits(plan)
-  return cap != null && cap > 0 ? cap : null
+  return planIncludedUnits(plan)
 }
 
 /** The meter a plan counts against, for labelling an allowance. */
 export function planMeterName(plan: BootstrapPlanLike): string | null {
-  return meterName(plan)
+  return planMeterNameValue(plan)
 }
 
 export function shortCycle(cycle: string | null | undefined): string {

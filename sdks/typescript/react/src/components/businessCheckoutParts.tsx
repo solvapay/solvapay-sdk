@@ -21,6 +21,7 @@ import {
   type SupportedBusinessCountry,
   type TaxBreakdown,
 } from '@solvapay/core'
+import { lookupTaxIdField } from '../utils/tax-id-fields'
 import { useLocale } from '../hooks/useCopy'
 import { formatPrice } from '../utils/format'
 
@@ -37,6 +38,50 @@ export function mapBusinessFieldErrors(
     }
   }
   return errors
+}
+
+export function mapAttachFieldErrors(
+  err: unknown,
+): Partial<Record<keyof BusinessDetailsInput, string>> {
+  if (!err || typeof err !== 'object') return {}
+  const record = err as {
+    fieldErrors?: unknown
+    structuredContent?: unknown
+  }
+  const fromField = asFieldErrorMap(record.fieldErrors)
+  if (fromField) return fromField
+  if (record.structuredContent && typeof record.structuredContent === 'object') {
+    const structured = record.structuredContent as {
+      fieldErrors?: unknown
+      issues?: Array<{ path?: unknown; message?: string }>
+    }
+    const fromStructured = asFieldErrorMap(structured.fieldErrors)
+    if (fromStructured) return fromStructured
+    if (Array.isArray(structured.issues)) {
+      const errors: Partial<Record<keyof BusinessDetailsInput, string>> = {}
+      for (const issue of structured.issues) {
+        const key = Array.isArray(issue.path) ? issue.path[0] : undefined
+        if (typeof key === 'string' && isBusinessDetailsKey(key) && issue.message && !errors[key]) {
+          errors[key] = issue.message
+        }
+      }
+      return errors
+    }
+  }
+  return {}
+}
+
+function asFieldErrorMap(
+  value: unknown,
+): Partial<Record<keyof BusinessDetailsInput, string>> | null {
+  if (!value || typeof value !== 'object') return null
+  const errors: Partial<Record<keyof BusinessDetailsInput, string>> = {}
+  for (const [key, message] of Object.entries(value as Record<string, unknown>)) {
+    if (isBusinessDetailsKey(key) && typeof message === 'string' && message) {
+      errors[key] = message
+    }
+  }
+  return Object.keys(errors).length > 0 ? errors : null
 }
 
 function isBusinessDetailsKey(key: PropertyKey): key is keyof BusinessDetailsInput {
@@ -78,6 +123,8 @@ function isSupportedBusinessCountry(value: string): value is SupportedBusinessCo
 }
 
 function resolveTaxIdLabel(country: string): string {
+  const fromTable = lookupTaxIdField(country)
+  if (fromTable?.label) return fromTable.label
   if (country && isSupportedBusinessCountry(country)) {
     return getTaxIdFieldLabel(country)
   }
@@ -85,6 +132,8 @@ function resolveTaxIdLabel(country: string): string {
 }
 
 function resolveTaxIdPlaceholder(country: string): string {
+  const fromTable = lookupTaxIdField(country)
+  if (fromTable?.example) return fromTable.example
   if (country && isSupportedBusinessCountry(country)) {
     return getTaxIdExample(country)
   }
@@ -92,6 +141,8 @@ function resolveTaxIdPlaceholder(country: string): string {
 }
 
 function resolveTaxIdHelperText(country: string): string {
+  const fromTable = lookupTaxIdField(country)
+  if (fromTable?.helperText) return fromTable.helperText
   if (country && isSupportedBusinessCountry(country)) {
     return getTaxIdHelperText(country)
   }

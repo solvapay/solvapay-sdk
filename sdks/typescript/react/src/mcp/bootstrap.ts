@@ -49,6 +49,7 @@ export interface McpBootstrap {
   plans: BootstrapPlan[]
   /** Per-customer snapshot — null when the bootstrap call was unauthenticated. */
   customer: BootstrapCustomer | null
+  taxIdFields?: Record<string, { label?: string | null; example?: string | null; helperText?: string | null }>
 }
 
 /**
@@ -306,6 +307,10 @@ export function parseBootstrapFromToolResult(
     product: (structured?.product ?? { reference: ref }) as BootstrapProduct,
     plans: Array.isArray(structured?.plans) ? (structured.plans as BootstrapPlan[]) : [],
     customer: (structured?.customer ?? null) as BootstrapCustomer | null,
+    taxIdFields:
+      structured?.taxIdFields && typeof structured.taxIdFields === 'object'
+        ? (structured.taxIdFields as McpBootstrap['taxIdFields'])
+        : undefined,
   }
 }
 

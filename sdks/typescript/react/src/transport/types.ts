@@ -60,6 +60,8 @@ export interface TransportBalanceResult {
   displayExchangeRate: number
   /** Backend-computed display values — render verbatim, do not reconvert. */
   display?: CreditDisplayBlock
+  displayMinorUnits?: number
+  minorUnitsPerMajor?: number
 }
 
 /**

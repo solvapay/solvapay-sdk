@@ -1642,7 +1642,7 @@ operations:
     optionalOnClient: true
     request: McpJsonValue
     response: McpJsonValue
-    overlays: [McpJsonValue]
+    overlays: [McpJsonValue, McpPlanDisplay, McpPlanPricingOption, McpTaxIdFieldCopy]
     normalization: []
     shadow:
       volatile: []
@@ -2267,6 +2267,69 @@ overlays:
         required: true
       display:
         ref: CreditDisplayBlock
+        required: false
+      displayMinorUnits:
+        type: number
+        required: false
+      minorUnitsPerMajor:
+        type: number
+        required: false
+  McpBillingCycleDisplay:
+    kind: synthetic
+    fields:
+      interval:
+        type: string
+        required: true
+      count:
+        type: number
+        required: false
+  McpPlanDisplay:
+    kind: synthetic
+    fields:
+      billingCycle:
+        ref: McpBillingCycleDisplay
+        required: false
+      countsUsage:
+        type: boolean
+        required: true
+      includedUnits:
+        type: number
+        required: false
+      meterName:
+        type: string
+        required: false
+      creditsPerUnit:
+        type: number
+        required: false
+      perUnitCharge:
+        type: unknown
+        required: false
+      trialDays:
+        type: number
+        required: false
+  McpPlanPricingOption:
+    kind: synthetic
+    fields:
+      currency:
+        type: string
+        required: true
+      price:
+        type: number
+        required: true
+      default:
+        type: boolean
+        required: false
+  McpTaxIdFieldCopy:
+    kind: synthetic
+    fields:
+      label:
+        type: string
+        required: false
+      example:
+        type: string
+        required: false
+      helperText:
+        type: string
         required: false
   GetCustomerParams:
     kind: synthetic

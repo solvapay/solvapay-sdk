@@ -24,7 +24,14 @@ from solvapay_mcp.oauth.discovery import (
     without_trailing_slash,
 )
 from solvapay_mcp.oauth.free_methods import McpAuthMode
-from solvapay_mcp.register import reset_request_customer_ref, set_request_customer_ref
+from solvapay_mcp.register import (
+    reset_request_auth_header,
+    reset_request_customer_ref,
+    reset_request_user_agent,
+    set_request_auth_header,
+    set_request_customer_ref,
+    set_request_user_agent,
+)
 from solvapay_mcp.server.native import native_call
 
 NATIVE_CLIENT_ORIGIN_SCHEMES = ("cursor:", "vscode:", "vscode-webview:", "claude:")
@@ -146,70 +153,78 @@ class McpAuthMiddleware:
             parsed = None
 
         auth_header = None
+        user_agent = None
         for key, value in scope.get("headers", []):
             if key == b"authorization":
                 auth_header = value.decode("latin1")
-                break
-        rpc_method = _jsonrpc_method(parsed)
-        if self._options.require_auth:
-            gate = mcp_auth_gate(
-                public_base_url=self._options.public_base_url,
-                rpc_method=rpc_method,
-                auth_header=auth_header,
-                auth_mode=self._options.auth_mode,
-                mcp_path=self._options.mcp_path,
-                json_rpc_id=_jsonrpc_id(parsed),
-            )
-            if gate.get("kind") == "challenge":
-                body = gate.get("body")
-                status = gate.get("status")
+            elif key == b"user-agent":
+                user_agent = value.decode("latin1")
+        auth_header_token = set_request_auth_header(auth_header)
+        user_agent_token = set_request_user_agent(user_agent)
+        try:
+            rpc_method = _jsonrpc_method(parsed)
+            if self._options.require_auth:
+                gate = mcp_auth_gate(
+                    public_base_url=self._options.public_base_url,
+                    rpc_method=rpc_method,
+                    auth_header=auth_header,
+                    auth_mode=self._options.auth_mode,
+                    mcp_path=self._options.mcp_path,
+                    json_rpc_id=_jsonrpc_id(parsed),
+                )
+                if gate.get("kind") == "challenge":
+                    body = gate.get("body")
+                    status = gate.get("status")
+                    response = JSONResponse(
+                        body if isinstance(body, dict) else {"error": "Unauthorized"},
+                        status_code=status if isinstance(status, int) else 401,
+                    )
+                    apply_native_cors(request, response)
+                    headers = gate.get("headers")
+                    if isinstance(headers, dict):
+                        for key, value in headers.items():
+                            if isinstance(value, str):
+                                response.headers[str(key)] = value
+                    await send_response(response)
+                    return
+            if not auth_header:
+                await self.app(scope, replay_receive, send)
+                return
+
+            token = set_request_customer_ref(None)
+            try:
+                auth = build_auth_info_from_bearer(auth_header)
+                if auth is None:
+                    raise McpBearerAuthError("Missing bearer token")
+                extra = auth.get("extra")
+                ref = extra.get("customer_ref") if isinstance(extra, dict) else None
+                if isinstance(ref, str) and ref.strip():
+                    reset_request_customer_ref(token)
+                    token = set_request_customer_ref(ref.strip())
+                scope["solvapay_auth"] = auth
+                await self.app(scope, replay_receive, send)
+            except (McpBearerAuthError, ValueError, json.JSONDecodeError):
                 response = JSONResponse(
-                    body if isinstance(body, dict) else {"error": "Unauthorized"},
-                    status_code=status if isinstance(status, int) else 401,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": _jsonrpc_id(parsed),
+                        "error": {"code": -32001, "message": "Unauthorized"},
+                    },
+                    status_code=401,
                 )
                 apply_native_cors(request, response)
-                headers = gate.get("headers")
-                if isinstance(headers, dict):
-                    for key, value in headers.items():
-                        if isinstance(value, str):
-                            response.headers[str(key)] = value
+                response.headers["Access-Control-Expose-Headers"] = "WWW-Authenticate"
+                public = without_trailing_slash(self._options.public_base_url)
+                metadata_path = path_aware_protected_resource_path(self._options.mcp_path)
+                response.headers["WWW-Authenticate"] = (
+                    f'Bearer resource_metadata="{public}{metadata_path}"'
+                )
                 await send_response(response)
-                return
-        if not auth_header:
-            await self.app(scope, replay_receive, send)
-            return
-
-        token = set_request_customer_ref(None)
-        try:
-            auth = build_auth_info_from_bearer(auth_header)
-            if auth is None:
-                raise McpBearerAuthError("Missing bearer token")
-            extra = auth.get("extra")
-            ref = extra.get("customer_ref") if isinstance(extra, dict) else None
-            if isinstance(ref, str) and ref.strip():
+            finally:
                 reset_request_customer_ref(token)
-                token = set_request_customer_ref(ref.strip())
-            scope["solvapay_auth"] = auth
-            await self.app(scope, replay_receive, send)
-        except (McpBearerAuthError, ValueError, json.JSONDecodeError):
-            response = JSONResponse(
-                {
-                    "jsonrpc": "2.0",
-                    "id": _jsonrpc_id(parsed),
-                    "error": {"code": -32001, "message": "Unauthorized"},
-                },
-                status_code=401,
-            )
-            apply_native_cors(request, response)
-            response.headers["Access-Control-Expose-Headers"] = "WWW-Authenticate"
-            public = without_trailing_slash(self._options.public_base_url)
-            metadata_path = path_aware_protected_resource_path(self._options.mcp_path)
-            response.headers["WWW-Authenticate"] = (
-                f'Bearer resource_metadata="{public}{metadata_path}"'
-            )
-            await send_response(response)
         finally:
-            reset_request_customer_ref(token)
+            reset_request_auth_header(auth_header_token)
+            reset_request_user_agent(user_agent_token)
 
 
 def _serialize_form(body: object) -> str:

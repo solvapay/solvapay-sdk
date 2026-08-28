@@ -53,6 +53,12 @@ _HIDE_AUDIENCES: WeakKeyDictionary[Server[object], list[str]] = WeakKeyDictionar
 _request_customer_ref: ContextVar[str | None] = ContextVar(
     "solvapay_mcp_customer_ref", default=None
 )
+_request_auth_header: ContextVar[str | None] = ContextVar(
+    "solvapay_mcp_auth_header", default=None
+)
+_request_user_agent: ContextVar[str | None] = ContextVar(
+    "solvapay_mcp_user_agent", default=None
+)
 
 
 class MissingCustomerRefError(SolvaPayError):
@@ -104,6 +110,86 @@ def get_request_customer_ref() -> str | None:
     if isinstance(raw, str) and raw.strip():
         return raw.strip()
     return None
+
+
+def set_request_auth_header(header: str | None) -> Token[str | None]:
+    return _request_auth_header.set(header)
+
+
+def reset_request_auth_header(token: Token[str | None]) -> None:
+    _request_auth_header.reset(token)
+
+
+def get_request_auth_header() -> str | None:
+    raw = _request_auth_header.get()
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    return None
+
+
+def set_request_user_agent(user_agent: str | None) -> Token[str | None]:
+    return _request_user_agent.set(user_agent)
+
+
+def reset_request_user_agent(token: Token[str | None]) -> None:
+    _request_user_agent.reset(token)
+
+
+def get_request_user_agent() -> str | None:
+    raw = _request_user_agent.get()
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    return None
+
+
+def _header_from_mapping(headers: object, name: str) -> str | None:
+    get = getattr(headers, "get", None)
+    if not callable(get):
+        return None
+    value = get(name) or get(name.title())
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _request_from_ctx(ctx: object) -> object | None:
+    request = getattr(ctx, "request", None)
+    if request is not None:
+        return request
+    request_context = getattr(ctx, "request_context", None)
+    return getattr(request_context, "request", None) if request_context is not None else None
+
+
+def auth_header_from_ctx(ctx: object | None) -> str | None:
+    if ctx is None:
+        return None
+    request = _request_from_ctx(ctx)
+    headers = getattr(request, "headers", None)
+    if headers is None:
+        headers = getattr(ctx, "headers", None)
+    found = _header_from_mapping(headers, "authorization")
+    if found is not None:
+        return found
+    auth_info = getattr(ctx, "auth_info", None)
+    if auth_info is None:
+        auth_info = getattr(request, "auth", None) if request is not None else None
+    token = auth_info.get("token") if isinstance(auth_info, Mapping) else getattr(auth_info, "token", None)
+    if isinstance(token, str) and token.strip():
+        stripped = token.strip()
+        if stripped.lower().startswith("bearer "):
+            return stripped
+        return f"Bearer {stripped}"
+    return None
+
+
+def user_agent_from_ctx(ctx: object | None) -> str | None:
+    if ctx is None:
+        return None
+    request = _request_from_ctx(ctx)
+    headers = getattr(request, "headers", None)
+    if headers is None:
+        headers = getattr(ctx, "headers", None)
+    return _header_from_mapping(headers, "user-agent")
 
 
 def set_format_gate_override(fn: FormatGateFn | None) -> None:
@@ -173,11 +259,20 @@ def _install_dispatch(server: Server[object]) -> None:
     def _rpc(method: str, params: object, request_id: object = 1) -> dict[str, object]:
         return {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
 
-    async def _result(method: str, params: object) -> object:
-        envelope = await dispatch_rpc(server, _rpc(method, params))
+    async def _result(method: str, params: object, ctx: object | None = None) -> object:
+        envelope = await dispatch_rpc(
+            server,
+            _rpc(method, params),
+            auth_header=get_request_auth_header() or auth_header_from_ctx(ctx),
+            user_agent=get_request_user_agent() or user_agent_from_ctx(ctx),
+        )
         kind = envelope.get("kind")
         if kind == "challenge":
-            raise ValueError("mcp auth challenge")
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": "Unauthorized"}],
+                "structuredContent": {"error": "Unauthorized", "status": 401},
+            }
         rpc = envelope.get("rpc") if kind == "rpc" else envelope
         if isinstance(rpc, dict):
             return rpc.get("result")
@@ -195,7 +290,7 @@ def _install_dispatch(server: Server[object]) -> None:
                     tool.description = payable_spec.description
                 tools.append(tool)
             return ListToolsResult(tools=tools)
-        raw = await _result("tools/list", {})
+        raw = await _result("tools/list", {}, _ctx)
         listed_tools: list[Tool] = []
         descriptors: dict[str, dict[str, object]] = {}
         desc_raw = call(
@@ -228,12 +323,15 @@ def _install_dispatch(server: Server[object]) -> None:
                         meta = descriptor.get("meta")
                         if isinstance(meta, dict):
                             ui = meta.get("ui")
-                            if (
-                                isinstance(ui, dict)
-                                and "resourceUri" in ui
-                                and "ui/resourceUri" not in meta
-                            ):
-                                meta = {**meta, "ui/resourceUri": ui["resourceUri"]}
+                            if isinstance(ui, dict) and isinstance(ui.get("resourceUri"), str):
+                                uri = str(ui["resourceUri"])
+                                extra: dict[str, object] = {}
+                                if "ui/resourceUri" not in meta:
+                                    extra["ui/resourceUri"] = uri
+                                if "openai/outputTemplate" not in meta:
+                                    extra["openai/outputTemplate"] = uri
+                                if extra:
+                                    meta = {**meta, **extra}
                             item = {
                                 **item,
                                 "_meta": meta,
@@ -254,6 +352,9 @@ def _install_dispatch(server: Server[object]) -> None:
         return ListToolsResult(tools=listed_tools)
 
     async def on_call_tool(_ctx: object, params: CallToolRequestParams) -> CallToolResult:
+        from solvapay_mcp.server.request_log import log_mcp_tool_call
+
+        log_mcp_tool_call(params.name)
         spec = _REGISTRIES.get(server, {}).get(params.name)
         if spec is not None:
             arguments = params.arguments if isinstance(params.arguments, dict) else {}
@@ -261,16 +362,22 @@ def _install_dispatch(server: Server[object]) -> None:
             return _to_call_tool_result(payload)
         raw = await _result(
             "tools/call",
-            {"name": params.name, "arguments": params.arguments or {}},
+            {"name": params.name, "arguments": _intent_tool_arguments(params.name, params.arguments)},
+            _ctx,
         )
         if isinstance(raw, Mapping):
-            return _to_call_tool_result(raw)
+            binding = engine_for(server)
+            stamped = _stamp_widget_result_meta(
+                raw,
+                binding.resource_uri if binding is not None else None,
+            )
+            return _to_call_tool_result(stamped)
         raise TypeError("tools/call did not return an object")
 
     async def on_list_resources(
         _ctx: object, _params: PaginatedRequestParams
     ) -> ListResourcesResult:
-        raw = await _result("resources/list", {})
+        raw = await _result("resources/list", {}, _ctx)
         resources: list[Resource] = []
         ui_meta: dict[str, object] | None = None
         binding = engine_for(server)
@@ -307,18 +414,50 @@ def _install_dispatch(server: Server[object]) -> None:
         ReadResourceRequestParams,
         ReadResourceResult,
         TextContent,
+        TextResourceContents,
     )
+    from solvapay_mcp.widget import MCP_APP_MIME_TYPE, default_mcp_app_html
 
     async def on_read_resource(
         _ctx: object, params: ReadResourceRequestParams
     ) -> ReadResourceResult:
-        raw = await _result("resources/read", {"uri": str(params.uri)})
+        uri = str(params.uri)
+        binding = engine_for(server)
+        if binding is not None and uri == binding.resource_uri:
+            desc_raw = call(
+                "mcpDescriptors",
+                {
+                    "resourceUri": binding.resource_uri,
+                    "publicBaseUrl": binding.public_base_url,
+                    "productRef": binding.product_ref,
+                    **({"csp": binding.csp} if binding.csp is not None else {}),
+                    **(
+                        {"apiBaseUrl": binding.api_base_url}
+                        if binding.api_base_url is not None
+                        else {}
+                    ),
+                },
+            )
+            ui: dict[str, object] = {"prefersBorder": False}
+            if isinstance(desc_raw, dict) and isinstance(desc_raw.get("csp"), dict):
+                ui["csp"] = desc_raw["csp"]
+            return ReadResourceResult(
+                contents=[
+                    TextResourceContents(
+                        uri=uri,
+                        mimeType=MCP_APP_MIME_TYPE,
+                        text=default_mcp_app_html(),
+                        meta={"ui": ui},
+                    )
+                ]
+            )
+        raw = await _result("resources/read", {"uri": uri}, _ctx)
         if isinstance(raw, dict):
             return ReadResourceResult.model_validate(raw)
         raise TypeError("resources/read did not return an object")
 
     async def on_list_prompts(_ctx: object, _params: PaginatedRequestParams) -> ListPromptsResult:
-        raw = await _result("prompts/list", {})
+        raw = await _result("prompts/list", {}, _ctx)
         prompts: list[Prompt] = []
         if isinstance(raw, dict) and isinstance(raw.get("prompts"), list):
             for item in raw["prompts"]:
@@ -328,7 +467,7 @@ def _install_dispatch(server: Server[object]) -> None:
 
     async def on_get_prompt(_ctx: object, params: GetPromptRequestParams) -> GetPromptResult:
         arguments = params.arguments if isinstance(params.arguments, dict) else {}
-        raw = await _result("prompts/get", {"name": params.name, "arguments": arguments})
+        raw = await _result("prompts/get", {"name": params.name, "arguments": arguments}, _ctx)
         if isinstance(raw, dict) and "messages" in raw:
             return GetPromptResult.model_validate(raw)
         text = str(raw)
@@ -418,6 +557,36 @@ def _format_gate(message: str, gate: dict[str, object]) -> dict[str, object]:
     if _format_gate_override is not None:
         return _format_gate_override(message, gate)
     return paywall_tool_result(message, gate)
+
+
+_INTENT_UI_TOOLS = frozenset({"upgrade", "manage_account", "topup", "activate_plan"})
+
+
+def _intent_tool_arguments(name: str, arguments: object) -> dict[str, object]:
+    args = dict(arguments) if isinstance(arguments, dict) else {}
+    if name in _INTENT_UI_TOOLS and args.get("mode") != "text":
+        args["mode"] = "ui"
+    return args
+
+
+def _stamp_widget_result_meta(
+    payload: Mapping[str, object],
+    resource_uri: str | None,
+) -> dict[str, object]:
+    out = dict(payload)
+    if not resource_uri:
+        return out
+    meta = dict(out["_meta"]) if isinstance(out.get("_meta"), dict) else {}
+    ui = dict(meta["ui"]) if isinstance(meta.get("ui"), dict) else {}
+    if "resourceUri" not in ui:
+        ui["resourceUri"] = resource_uri
+    meta["ui"] = ui
+    if "ui/resourceUri" not in meta:
+        meta["ui/resourceUri"] = resource_uri
+    if "openai/outputTemplate" not in meta:
+        meta["openai/outputTemplate"] = resource_uri
+    out["_meta"] = meta
+    return out
 
 
 def _to_call_tool_result(payload: Mapping[str, object]) -> CallToolResult:

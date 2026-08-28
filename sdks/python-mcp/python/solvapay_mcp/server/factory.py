@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
+from mcp.server.apps import APP_MIME_TYPE, EXTENSION_ID
 from mcp.server.lowlevel.server import Server
 from solvapay.facade import SolvaPay
 
@@ -24,6 +25,7 @@ def create_solvapay_mcp_server(
 ) -> Server[object]:
     del read_html
     server: Server[object] = Server(server_name)
+    server.extensions[EXTENSION_ID] = {"mimeTypes": [APP_MIME_TYPE]}
     bind_engine(
         server,
         solvapay=solvapay,

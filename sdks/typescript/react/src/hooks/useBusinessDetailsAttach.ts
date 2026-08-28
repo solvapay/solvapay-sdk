@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  validateBusinessDetails,
-  type BusinessDetailsInput,
-  type TaxBreakdown,
-} from '@solvapay/core'
-import { mapBusinessFieldErrors } from '../components/businessCheckoutParts'
+import { type BusinessDetailsInput, type TaxBreakdown } from '@solvapay/core'
+import { mapAttachFieldErrors } from '../components/businessCheckoutParts'
 
 export const defaultBusinessDetails: BusinessDetailsInput = { isBusiness: false }
 
@@ -77,12 +73,6 @@ export function useBusinessDetailsAttach(
         return !attachBusinessDetails
       }
 
-      const validation = validateBusinessDetails(input)
-      if (!validation.success) {
-        setFieldErrors(mapBusinessFieldErrors(input))
-        return false
-      }
-
       setFieldErrors({})
       const requestId = ++attachRequestIdRef.current
       setBusinessDetailsAttaching(true)
@@ -91,7 +81,13 @@ export function useBusinessDetailsAttach(
         const result = await attachBusinessDetails({
           paymentIntentId: processorPaymentId,
           ...(customerRef ? { customerRef } : {}),
-          ...validation.data,
+          isBusiness: input.isBusiness,
+          ...(input.businessName !== undefined ? { businessName: input.businessName } : {}),
+          ...(input.country !== undefined ? { country: input.country } : {}),
+          ...(input.customerCountry !== undefined ? { customerCountry: input.customerCountry } : {}),
+          ...(input.customerName !== undefined ? { customerName: input.customerName } : {}),
+          ...(input.taxId !== undefined ? { taxId: input.taxId } : {}),
+          ...(input.taxIdType !== undefined ? { taxIdType: input.taxIdType } : {}),
         })
         if (requestId !== attachRequestIdRef.current) return false
         setTaxBreakdown(result.taxBreakdown)
@@ -107,6 +103,7 @@ export function useBusinessDetailsAttach(
         const msg = err instanceof Error ? err.message : String(err)
         setBusinessDetailsAttached(false)
         setBusinessDetailsError(msg)
+        setFieldErrors(mapAttachFieldErrors(err))
         return false
       } finally {
         if (requestId === attachRequestIdRef.current) {
@@ -119,13 +116,6 @@ export function useBusinessDetailsAttach(
 
   useEffect(() => {
     if (!processorPaymentId || !attachBusinessDetails) return
-
-    const validation = validateBusinessDetails(businessDetails)
-    if (!validation.success) {
-      setFieldErrors(mapBusinessFieldErrors(businessDetails))
-      setBusinessDetailsAttached(false)
-      return
-    }
 
     setFieldErrors({})
     const timer = setTimeout(() => {

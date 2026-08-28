@@ -111,10 +111,9 @@ export function toolResult(data: unknown): SolvaPayCallToolResult {
  *   `BootstrapPayload` on `structuredContent` for grounding.
  * - `'text'` — strip the UI resource ref and emit the full narrated
  *   markdown so CLI / text-only hosts get a human summary.
- * - `'auto'` — emit both the narrated markdown and the UI resource
- *   ref. The narrated block is annotated with `audience: ['assistant']`
- *   so audience-aware hosts pass it to the model without showing it in
- *   the user pane.
+ * - `'auto'` — same user-visible envelope as `'ui'` (placeholder +
+ *   `_meta.ui`) plus the assistant-audience narration. Hosts that
+ *   omit the placeholder (MCPJam) never mount the iframe.
  */
 export type SolvaPayToolMode = 'ui' | 'text' | 'auto'
 
@@ -133,9 +132,8 @@ export function parseMode(raw: unknown): SolvaPayToolMode {
  *  - `text` emits the full narrated markdown (plus any
  *    `resource_link` blocks) and strips `_meta.ui.*` so UI-capable
  *    hosts render text-only for this call.
- *  - `auto` emits both. The narrated text block is annotated with
- *    `audience: ['assistant']` so audience-aware hosts still hide it
- *    from the user pane while feeding it to the model.
+ *  - `auto` emits the same placeholder + `_meta.ui` envelope as `ui`,
+ *    plus the assistant-audience narration.
  *
  * The narrator is picked by the `tool` name; unknown tools fall back
  * to the JSON dump that `toolResult` produces today.

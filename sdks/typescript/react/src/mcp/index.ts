@@ -19,9 +19,6 @@
  * directly alongside `<SolvaPayProvider>` and `createMcpAppAdapter`.
  */
 
-// Browser WASM for the `ui://` widget (eager install on import).
-import '@solvapay/core/browser-wasm'
-
 export { createMcpAppAdapter } from './adapter'
 export type { McpAppLike } from './adapter'
 export { MCP_TOOL_NAMES } from '@solvapay/mcp-core'

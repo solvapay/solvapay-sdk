@@ -50,6 +50,7 @@ async function invokeHandler(
   server: ReturnType<typeof createSolvaPayMcpServer>,
   method: string,
   params: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {},
 ) {
   const handlers = (
     server as unknown as {
@@ -65,6 +66,7 @@ async function invokeHandler(
       sendNotification: vi.fn(),
       sendRequest: vi.fn(),
       mcpReq: { requestState: () => undefined },
+      ...extra,
     },
   )
 }
@@ -205,6 +207,51 @@ describe('createSolvaPayMcpServer', () => {
     const { server } = buildTestServer({ registerDocsResources: false })
     const { resources } = await listedResources(server)
     expect(resources.map(r => r.uri)).not.toContain('docs://solvapay/overview.md')
+  })
+
+  it('forwards Authorization from the host request into generated mcpDispatch', async () => {
+    const mcpDispatch = vi.fn().mockResolvedValue({
+      kind: 'rpc',
+      rpc: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: {
+          content: [{ type: 'text', text: 'Opened your account.' }],
+          _meta: { ui: { resourceUri: 'ui://solvapay/mcp-app.html' } },
+          structuredContent: { view: 'account' },
+        },
+      },
+    })
+    const solvaPay = createSolvaPay({
+      apiClient: {
+        checkLimits: vi.fn(),
+        trackUsage: vi.fn(),
+        mcpDispatch,
+      } as unknown as SolvaPayClient,
+    })
+    const server = createSolvaPayMcpServer({
+      solvaPay,
+      productRef: 'prd_test',
+      resourceUri: 'ui://solvapay/mcp-app.html',
+      htmlPath: '/tmp/fake/view.html',
+      publicBaseUrl: 'https://example.com',
+    })
+    const result = (await invokeHandler(
+      server,
+      'tools/call',
+      { name: MCP_TOOL_NAMES.manageAccount, arguments: {} },
+      {
+        request: new Request('https://example.com/mcp', {
+          headers: { authorization: 'Bearer host-token' },
+        }),
+      },
+    )) as { _meta?: { ui?: { resourceUri?: string } }; isError?: boolean }
+
+    expect(mcpDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ authHeader: 'Bearer host-token' }),
+    )
+    expect(result.isError).not.toBe(true)
+    expect(result._meta?.ui?.resourceUri).toBe('ui://solvapay/mcp-app.html')
   })
 
   it('mentions sibling intent tools in the upgrade description', async () => {

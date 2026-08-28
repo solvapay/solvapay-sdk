@@ -552,6 +552,65 @@ pub struct ListProductItem {
 /// List of `ListProductItem`.
 pub type ListProductsResult = Vec<ListProductItem>;
 
+/// SDK-only type `McpBillingCycleDisplay`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct McpBillingCycleDisplay {
+    /// Overlay field.
+    #[serde(rename = "count")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<f64>,
+    /// Overlay field.
+    #[serde(rename = "interval")]
+    pub interval: String,
+}
+
+/// SDK-only type `McpPlanDisplay`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct McpPlanDisplay {
+    /// Overlay field.
+    #[serde(rename = "billingCycle")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub billing_cycle: Option<McpBillingCycleDisplay>,
+    /// Overlay field.
+    #[serde(rename = "countsUsage")]
+    pub counts_usage: bool,
+    /// Overlay field.
+    #[serde(rename = "creditsPerUnit")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credits_per_unit: Option<f64>,
+    /// Overlay field.
+    #[serde(rename = "includedUnits")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub included_units: Option<f64>,
+    /// Overlay field.
+    #[serde(rename = "meterName")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meter_name: Option<String>,
+    /// Overlay field.
+    #[serde(rename = "perUnitCharge")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub per_unit_charge: Option<Value>,
+    /// Overlay field.
+    #[serde(rename = "trialDays")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trial_days: Option<f64>,
+}
+
+/// SDK-only type `McpPlanPricingOption`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct McpPlanPricingOption {
+    /// Overlay field.
+    #[serde(rename = "currency")]
+    pub currency: String,
+    /// Overlay field.
+    #[serde(rename = "default")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<bool>,
+    /// Overlay field.
+    #[serde(rename = "price")]
+    pub price: f64,
+}
+
 /// SDK-only type `McpServerInfo`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct McpServerInfo {
@@ -574,6 +633,23 @@ pub struct McpServerInfo {
     /// Overlay field.
     #[serde(rename = "url")]
     pub url: String,
+}
+
+/// SDK-only type `McpTaxIdFieldCopy`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct McpTaxIdFieldCopy {
+    /// Overlay field.
+    #[serde(rename = "example")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub example: Option<String>,
+    /// Overlay field.
+    #[serde(rename = "helperText")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub helper_text: Option<String>,
+    /// Overlay field.
+    #[serde(rename = "label")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 /// SDK-only type `OneTimePurchaseInfo`.
@@ -932,6 +1008,14 @@ pub struct GetCustomerBalanceResult {
     /// Overlay field.
     #[serde(rename = "displayExchangeRate")]
     pub display_exchange_rate: f64,
+    /// Overlay field.
+    #[serde(rename = "displayMinorUnits")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub display_minor_units: Option<f64>,
+    /// Overlay field.
+    #[serde(rename = "minorUnitsPerMajor")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub minor_units_per_major: Option<f64>,
 }
 
 /// SDK-only type `RetryOptions`.

@@ -15,8 +15,9 @@ import type {
 } from '@solvapay/server'
 
 export type { PurchaseInfo }
+import type { PlanDisplayBlock } from '../utils/planDisplay'
 import type { AuthAdapter } from '../adapters/auth'
-import type { PricingOptionLike, TaxBehavior } from '@solvapay/core'
+import type { PricingOptionLike, TaxBehavior, SellerIdentityDisplay } from '@solvapay/core'
 import type { PartialSolvaPayCopy } from '../i18n/types'
 import type { SolvaPayTransport, CreditDisplayBlock } from '../transport/types'
 
@@ -69,6 +70,8 @@ export interface Merchant {
    * letterbox a landscape mark.
    */
   iconUrl?: string
+  /** Precomputed seller identity rows (MCP bootstrap). */
+  identityDisplay?: SellerIdentityDisplay | null
 }
 
 export interface UseMerchantReturn {
@@ -234,6 +237,10 @@ export interface BalanceStatus {
   displayExchangeRate: number | null
   /** Backend-computed display block — render verbatim when present. */
   display: CreditDisplayBlock | null
+  /** Precomputed fiat equivalent of `credits`, in minor units. */
+  displayMinorUnits: number | null
+  /** Minor units per major unit of `displayCurrency`. */
+  minorUnitsPerMajor: number | null
   refetch: () => Promise<number | null>
   /**
    * Optimistically adjusts the in-memory balance. Does not start auto-recharge
@@ -570,6 +577,7 @@ export interface Plan {
   interval?: string
   metadata?: Record<string, unknown>
   taxBehavior?: TaxBehavior
+  display?: PlanDisplayBlock
 }
 
 /**

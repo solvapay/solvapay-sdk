@@ -76,7 +76,8 @@ export function McpCustomerDetailsCard({
 }: McpCustomerDetailsCardProps) {
   const cx = resolveMcpClassNames(classNames)
   const { name, email, customerRef, loading } = useCustomer()
-  const { credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate } = useBalance()
+  const { credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate, displayMinorUnits } =
+    useBalance()
   const locale = useHostLocale()
 
   if (loading && !customerRef) {
@@ -92,16 +93,16 @@ export function McpCustomerDetailsCard({
   const showBalance = !hideBalance && typeof credits === 'number' && credits > 0
 
   const displayMinor =
-    showBalance &&
-    typeof creditsPerMinorUnit === 'number' &&
-    creditsPerMinorUnit > 0 &&
-    displayCurrency
-      ? creditsToDisplayMinorUnits({
-          credits: credits ?? 0,
-          creditsPerMinorUnit,
-          displayExchangeRate: displayExchangeRate ?? 1,
-          displayCurrency,
-        })
+    showBalance && displayCurrency
+      ? (displayMinorUnits ??
+        (typeof creditsPerMinorUnit === 'number' && creditsPerMinorUnit > 0
+          ? creditsToDisplayMinorUnits({
+              credits: credits ?? 0,
+              creditsPerMinorUnit,
+              displayExchangeRate: displayExchangeRate ?? 1,
+              displayCurrency,
+            })
+          : null))
       : null
 
   return (
@@ -184,12 +185,14 @@ export function McpSellerDetailsCard({
   const supportEmail = merchant.supportEmail
   const supportUrl = merchant.supportUrl
 
-  const sellerIdentity = resolveSellerIdentityDisplay({
-    country: merchant.country,
-    vatNumber: merchant.vatNumber,
-    taxId: merchant.taxId,
-    companyNumber: merchant.companyNumber,
-  })
+  const sellerIdentity =
+    merchant.identityDisplay ??
+    resolveSellerIdentityDisplay({
+      country: merchant.country,
+      vatNumber: merchant.vatNumber,
+      taxId: merchant.taxId,
+      companyNumber: merchant.companyNumber,
+    })
 
   return (
     <section className={cx.card} aria-label="Seller">

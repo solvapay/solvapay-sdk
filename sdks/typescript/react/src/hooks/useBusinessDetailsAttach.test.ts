@@ -110,4 +110,32 @@ describe('useBusinessDetailsAttach', () => {
 
     expect(result.current.businessDetailsAttached).toBe(false)
   })
+
+  it('surfaces field errors from the attach response rather than a local pre-gate', async () => {
+    const attachError = Object.assign(new Error('Invalid VAT ID'), {
+      fieldErrors: { taxId: 'Invalid VAT ID' },
+    })
+    const attachBusinessDetails = vi.fn().mockRejectedValue(attachError)
+
+    const { result } = renderHook(() =>
+      useBusinessDetailsAttach({
+        processorPaymentId: 'pi_test_123',
+        attachBusinessDetails,
+      }),
+    )
+
+    let attached = false
+    await act(async () => {
+      attached = await result.current.runAttach({
+        isBusiness: true,
+        businessName: 'Acme AB',
+        country: 'SE',
+        taxId: 'bad',
+      })
+    })
+
+    expect(attached).toBe(false)
+    expect(attachBusinessDetails).toHaveBeenCalled()
+    expect(result.current.fieldErrors.taxId).toBe('Invalid VAT ID')
+  })
 })

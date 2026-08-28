@@ -215,6 +215,8 @@ export type GetCustomerBalanceResult = {
   creditsPerMinorUnit: number
   displayExchangeRate: number
   display?: CreditDisplayBlock
+  displayMinorUnits?: number
+  minorUnitsPerMajor?: number
 }
 
 export type AutoRechargeInput = {

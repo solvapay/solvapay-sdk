@@ -71,6 +71,8 @@ async fn mcp_bootstrap_unauthenticated_matches_widget_placeholders() {
     assert_eq!(got["product"]["name"], "Demo");
     assert_eq!(got["plans"][0]["name"], "Pro");
     assert_eq!(got["customer"], Value::Null);
+    assert!(got["merchant"].get("identityDisplay").is_some());
+    assert!(got["taxIdFields"]["DE"]["label"].is_string());
 }
 
 #[tokio::test]

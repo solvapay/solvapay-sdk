@@ -41,8 +41,11 @@ export function checkVendoredWidget({ root }: { root: string }): string[] {
   if (!html.includes('solvapay://bootstrap.json')) {
     problems.push('Canonical widget is missing solvapay://bootstrap.json')
   }
-  if (!html.includes('WebAssembly') && !html.includes('application/wasm')) {
-    problems.push('Canonical widget is missing inlined browser WASM')
+  if (html.includes('href="data:')) {
+    problems.push('Canonical widget must not load data: URLs (host connect-src rejects them)')
+  }
+  if (html.includes('WebAssembly') || html.includes('application/wasm')) {
+    problems.push('Canonical widget must not embed WebAssembly')
   }
   if (canonical.length < MIN_BUNDLE_BYTES) {
     problems.push(

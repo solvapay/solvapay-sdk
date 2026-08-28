@@ -59,15 +59,27 @@ function jsonRpcResult(body: unknown): unknown {
   return body
 }
 
-function userAgentFromHeaders(headers: unknown): string | undefined {
+function headerFromHeaders(headers: unknown, name: string): string | undefined {
   if (headers instanceof Headers) {
-    return headers.get('user-agent') ?? undefined
+    return headers.get(name) ?? undefined
   }
   if (!isRecord(headers)) return undefined
-  const raw = headers['user-agent'] ?? headers['User-Agent']
+  const titled = name
+    .split('-')
+    .map(part => (part.length > 0 ? `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}` : part))
+    .join('-')
+  const raw = headers[name] ?? headers[titled]
   if (typeof raw === 'string') return raw
   if (Array.isArray(raw) && typeof raw[0] === 'string') return raw[0]
   return undefined
+}
+
+function userAgentFromHeaders(headers: unknown): string | undefined {
+  return headerFromHeaders(headers, 'user-agent')
+}
+
+function authorizationFromHeaders(headers: unknown): string | undefined {
+  return headerFromHeaders(headers, 'authorization')
 }
 
 export function userAgentFromRequestInfo(requestInfo: unknown): string | undefined {
@@ -107,6 +119,9 @@ function clientVersionUserAgent(server?: McpServer): string | undefined {
 }
 
 function authHeaderFromExtra(extra: unknown): string | undefined {
+  if (extra instanceof Request) {
+    return extra.headers.get('authorization') ?? undefined
+  }
   if (!isRecord(extra)) return undefined
   const http = extra.http
   if (isRecord(http) && isRecord(http.authInfo) && typeof http.authInfo.token === 'string') {
@@ -114,6 +129,17 @@ function authHeaderFromExtra(extra: unknown): string | undefined {
   }
   if (isRecord(extra.authInfo) && typeof extra.authInfo.token === 'string') {
     return `Bearer ${extra.authInfo.token}`
+  }
+  if (extra.requestInfo instanceof Request) {
+    const fromInfo = extra.requestInfo.headers.get('authorization')
+    if (fromInfo) return fromInfo
+  }
+  if (extra.request instanceof Request) {
+    const fromRequest = extra.request.headers.get('authorization')
+    if (fromRequest) return fromRequest
+  }
+  if (isRecord(extra.request)) {
+    return authorizationFromHeaders(extra.request.headers)
   }
   return undefined
 }
@@ -190,6 +216,20 @@ type RegisteredToolLike = {
 function registeredTools(server: McpServer): Record<string, RegisteredToolLike> {
   return ((server as unknown as { _registeredTools?: Record<string, RegisteredToolLike> })
     ._registeredTools ?? {})
+}
+
+function stampWidgetResultMeta(raw: unknown, resourceUri: string | undefined): unknown {
+  if (!resourceUri || !isRecord(raw)) return raw
+  const meta = isRecord(raw._meta) ? { ...raw._meta } : {}
+  const ui = isRecord(meta.ui) ? { ...meta.ui } : {}
+  if (typeof ui.resourceUri !== 'string') {
+    ui.resourceUri = resourceUri
+  }
+  meta.ui = ui
+  if (meta['ui/resourceUri'] === undefined) {
+    meta['ui/resourceUri'] = resourceUri
+  }
+  return { ...raw, _meta: meta }
 }
 
 export function installEngineHandlers(
@@ -340,7 +380,8 @@ export function installEngineHandlers(
         return (await invoke(args, extra)) as CallToolResult
       }
     }
-    return run('tools/call', request, extra)
+    const raw = await run('tools/call', request, extra)
+    return stampWidgetResultMeta(raw, options.config.resourceUri)
   })
 
   setHandler('resources/list', async (request, extra) => {

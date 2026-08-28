@@ -10,7 +10,7 @@
  */
 
 import React, { forwardRef, useContext } from 'react'
-import { creditsToDisplayMinorUnits, minorUnitsPerMajor } from '@solvapay/core'
+import { creditsToDisplayMinorUnits, minorUnitsPerMajor as minorUnitsPerMajorFn } from '@solvapay/core'
 import { Slot } from './slot'
 import { useBalance } from '../hooks/useBalance'
 import { useCopy, useLocale } from '../hooks/useCopy'
@@ -35,7 +35,7 @@ export const BalanceBadge = forwardRef<HTMLSpanElement, BalanceBadgeProps>(funct
   const solva = useContext(SolvaPayContext)
   if (!solva) throw new MissingProviderError('BalanceBadge')
 
-  const { credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate, loading } =
+  const { credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate, displayMinorUnits, minorUnitsPerMajor, loading } =
     useBalance()
   const copy = useCopy()
   const locale = useLocale()
@@ -73,15 +73,19 @@ export const BalanceBadge = forwardRef<HTMLSpanElement, BalanceBadgeProps>(funct
   const formattedCredits = new Intl.NumberFormat(locale).format(credits)
 
   let currencyEquivalent = ''
-  if (!numberOnly && displayCurrency && creditsPerMinorUnit) {
-    const displayMinor = creditsToDisplayMinorUnits({
-      credits,
-      creditsPerMinorUnit,
-      displayExchangeRate: displayExchangeRate ?? 1,
-      displayCurrency,
-    })
+  if (!numberOnly && displayCurrency) {
+    const displayMinor =
+      displayMinorUnits ??
+      (creditsPerMinorUnit
+        ? creditsToDisplayMinorUnits({
+            credits,
+            creditsPerMinorUnit,
+            displayExchangeRate: displayExchangeRate ?? 1,
+            displayCurrency,
+          })
+        : null)
     if (displayMinor !== null) {
-      const minorPerMajor = minorUnitsPerMajor(displayCurrency)
+      const minorPerMajor = minorUnitsPerMajor ?? minorUnitsPerMajorFn(displayCurrency)
       const formatted = new Intl.NumberFormat(locale, {
         style: 'currency',
         currency: displayCurrency,

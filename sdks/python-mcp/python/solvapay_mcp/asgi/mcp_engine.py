@@ -60,6 +60,9 @@ def create_mcp_engine_route(
             )
             apply_native_cors(request, response)
             return response
+        from solvapay_mcp.server.request_log import log_mcp_rpc
+
+        log_mcp_rpc(rpc)
         envelope = await dispatch_rpc(
             server,
             rpc,

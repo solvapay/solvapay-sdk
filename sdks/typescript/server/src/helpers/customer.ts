@@ -21,6 +21,8 @@ export type CustomerBalanceResult = {
   creditsPerMinorUnit: number
   displayExchangeRate: number
   display?: CreditDisplayBlock
+  displayMinorUnits?: number
+  minorUnitsPerMajor?: number
 }
 
 /**

@@ -9,7 +9,7 @@
  * via the `confirm` prop (`false` to skip, string to replace).
  */
 
-import { countsUsage } from '@solvapay/core'
+import { planCountsUsage } from '../utils/planDisplay'
 import React, { forwardRef, useCallback, useContext, useMemo } from 'react'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
@@ -43,9 +43,7 @@ function resolveConfirmText(
 ): string | null {
   if (confirm === false) return null
   if (typeof confirm === 'string') return confirm
-  const isUsageBased =
-    (countsUsage(purchase?.planSnapshot) || purchase?.planSnapshot?.isMetered === true) &&
-    purchase?.isRecurring !== true
+  const isUsageBased = planCountsUsage(purchase?.planSnapshot) && purchase?.isRecurring !== true
   if (isUsageBased) return defaults.usageBased
   return defaults.recurring
 }

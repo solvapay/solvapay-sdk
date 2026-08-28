@@ -53,7 +53,19 @@ function unwrap<T>(result: CallToolResultLike): T {
     const first = result.content?.[0]
     const message =
       first && 'text' in first && typeof first.text === 'string' ? first.text : 'MCP tool failed'
-    throw new Error(message)
+    const error = new Error(message) as Error & {
+      fieldErrors?: unknown
+      structuredContent?: unknown
+    }
+    error.structuredContent = result.structuredContent
+    if (
+      result.structuredContent &&
+      typeof result.structuredContent === 'object' &&
+      'fieldErrors' in result.structuredContent
+    ) {
+      error.fieldErrors = (result.structuredContent as { fieldErrors?: unknown }).fieldErrors
+    }
+    throw error
   }
   if (result.structuredContent !== undefined) {
     return result.structuredContent as T
