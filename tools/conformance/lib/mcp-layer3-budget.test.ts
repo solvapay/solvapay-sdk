@@ -18,7 +18,7 @@ describe('mcp-layer3-budget', () => {
     mkdirSync(path.join(root, path.dirname(rel)), { recursive: true })
     writeFileSync(path.join(root, rel), body)
     mkdirSync(path.join(root, 'sdks/go/mcp'), { recursive: true })
-    writeFileSync(path.join(root, 'sdks/go/mcp/engine.go'), 'package mcp\n')
+    writeFileSync(path.join(root, 'sdks/go/mcp/handler.go'), 'package mcp\n')
     mkdirSync(path.join(root, 'sdks/ruby-mcp/lib/solvapay/mcp'), { recursive: true })
     writeFileSync(path.join(root, 'sdks/ruby-mcp/lib/solvapay/mcp/engine.rb'), "class Engine\nend\n")
     mkdirSync(path.join(root, 'sdks/capi/ctest'), { recursive: true })

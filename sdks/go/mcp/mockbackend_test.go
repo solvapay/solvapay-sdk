@@ -13,6 +13,7 @@ type mockBackend struct {
 	limits      map[string]any
 	mu          sync.Mutex
 	trackBodies []map[string]any
+	limitBodies []map[string]any
 }
 
 func newMockBackend(limits map[string]any) *mockBackend {
@@ -24,6 +25,15 @@ func (m *mockBackend) server() *httptest.Server {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/limits":
+			body, _ := io.ReadAll(r.Body)
+			var payload map[string]any
+			if err := json.Unmarshal(body, &payload); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			m.mu.Lock()
+			m.limitBodies = append(m.limitBodies, payload)
+			m.mu.Unlock()
 			_ = json.NewEncoder(w).Encode(m.limits)
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/usages":
 			body, _ := io.ReadAll(r.Body)
@@ -95,5 +105,13 @@ func (m *mockBackend) usage() []map[string]any {
 	defer m.mu.Unlock()
 	out := make([]map[string]any, len(m.trackBodies))
 	copy(out, m.trackBodies)
+	return out
+}
+
+func (m *mockBackend) limitsCalls() []map[string]any {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]map[string]any, len(m.limitBodies))
+	copy(out, m.limitBodies)
 	return out
 }

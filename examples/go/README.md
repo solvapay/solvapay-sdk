@@ -4,6 +4,7 @@
 | --------------------------------- | ------------------------------------------------------------------------ |
 | [`get-merchant`](./get-merchant/) | `Client.GetMerchant` with local `.env` (offline `httptest` test covered) |
 | [`paid-mcp`](./paid-mcp/)         | Paywalled MCP tool (`solvapay-go/mcp`) against a mock backend            |
+| [`weather-mcp`](./weather-mcp/)   | Paywalled wttr.in weather tools over stdio and HTTP OAuth                |
 
 Published consumers use `go get github.com/solvapay/solvapay-go`. The example modules under this tree keep a local `replace` so they build against the monorepo binding in CI.
 
@@ -12,6 +13,7 @@ Published consumers use `go get github.com/solvapay/solvapay-go`. The example mo
 ```bash
 cd examples/go/get-merchant && go test ./...
 cd examples/go/paid-mcp && go test ./...
+cd examples/go/weather-mcp && go test ./...
 ```
 
 ## Live run (optional credentials)

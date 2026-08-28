@@ -10,8 +10,33 @@ Import this package as `github.com/solvapay/solvapay-go/mcp`. Import the host SD
 mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 ```
 
-The pinned host SDK is v1.3.1 (Go 1.23). v1.7.0+ requires Go 1.25.
+The pinned host SDK is v1.7.0 (Go 1.25).
 
+## HTTP server (MCP 2026-07-28)
+
+`NewServer` + `NewStreamableHandler` is the Streamable HTTP path. The official SDK
+owns `resultType` / `ttlMs` / `cacheScope` / `server/discover`; this package
+registers SolvaPay builtins, the widget resource, auth gate, and OAuth routes.
+
+```go
+srv, err := solvapaymcp.NewServer(ctx, client, solvapaymcp.ServerConfig{
+    ProductRef:    "prd_demo",
+    PublicBaseURL: "https://mcp.example.com",
+})
+_ = srv.RegisterPayable("echo_paid", opts)
+http.Handle("/", solvapaymcp.NewStreamableHandler(srv))
+```
+
+`Server.RegisterPayable` is the HTTP path: `tools/call` goes through `mcpDispatch`,
+which reads the OAuth `Authorization` bearer and injects the customer into the
+paywall gate. It therefore requires an authenticated Streamable HTTP transport
+(`NewStreamableHandler`). `AuthMode` is `"tools-call"` or `"all"`; there is no
+unauthenticated payable mode on `Server`.
+
+`RegisterPayableTool` is the stdio / in-process path on a raw
+`github.com/modelcontextprotocol/go-sdk/mcp` server. It does not read HTTP
+headers. Identity comes from a `GetCustomerRef` hook or a `customer_ref`
+argument.
 ## Host-model caveats
 
 - `CallToolResult.IsError` uses `json:"isError,omitempty"`, so `false` is omitted on

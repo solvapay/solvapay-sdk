@@ -15,7 +15,7 @@ export type Layer3BudgetIssue = {
 
 export const LAYER3_ADAPTERS = [
   { id: 'rust', rel: 'sdks/rust-mcp/src/server.rs', maxCodeLines: 280 },
-  { id: 'go', rel: 'sdks/go/mcp/engine.go', maxCodeLines: 280 },
+  { id: 'go', rel: 'sdks/go/mcp/handler.go', maxCodeLines: 280 },
   { id: 'ruby', rel: 'sdks/ruby-mcp/lib/solvapay/mcp/engine.rb', maxCodeLines: 280 },
   { id: 'c', rel: 'sdks/capi/ctest/mcp_engine.c', maxCodeLines: 280 },
   {

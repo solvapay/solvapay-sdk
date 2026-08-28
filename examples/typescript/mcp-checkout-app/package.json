@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/core": "^2.0.0",
-    "@modelcontextprotocol/ext-apps": "^1.7.1",
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "@solvapay/core": "workspace:*",

@@ -36,7 +36,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25'
 
       - name: Rebuild embedded WASI guest
         run: ./sdks/go/scripts/build-wasm.sh

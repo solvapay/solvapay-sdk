@@ -78,12 +78,16 @@ ruby -I../../../sdks/ruby/lib test/get_merchant_test.rb
 
 ## Go
 
-| Example                           | Description                            |
-| --------------------------------- | -------------------------------------- |
-| [get-merchant](./go/get-merchant) | `Client.GetMerchant` + `httptest` test |
+| Example                           | Description                                                                 |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| [get-merchant](./go/get-merchant) | `Client.GetMerchant` + `httptest` test                                      |
+| [paid-mcp](./go/paid-mcp)         | Paywalled MCP echo (`solvapay-go/mcp`) against a mock backend               |
+| [weather-mcp](./go/weather-mcp)   | Paywalled wttr.in weather tools; HTTP OAuth for MCPJam (`go test ./...`)    |
 
 ```bash
 cd examples/go/get-merchant && go test ./...
+cd examples/go/paid-mcp && go test ./...
+cd examples/go/weather-mcp && go test ./...
 ```
 
 ## Rust

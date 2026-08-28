@@ -16,8 +16,20 @@ type ListedPackage = {
   optionalDependencies?: Record<string, ListedDependency>
 }
 
-const CRITICAL_LIBRARIES = ['react', 'react-dom', 'vite', 'vitest', '@types/react']
+const CRITICAL_LIBRARIES = [
+  'react',
+  'react-dom',
+  'vite',
+  'vitest',
+  '@types/react',
+  '@modelcontextprotocol/core',
+  '@modelcontextprotocol/server',
+  '@modelcontextprotocol/node',
+  '@modelcontextprotocol/ext-apps',
+]
 
+// Native MCP host-SDK versions are fetched live by `lib/mcp-pins.ts`
+// and gated by `mcp-sdk-pins.test.ts` — no hardcoded latest table.
 // NOTE: cross-package version drift is no longer enforced here — since the
 // Changesets migration (PR #127) each `@solvapay/*` publishable package is
 // versioned independently. The runtime adapters (`@solvapay/mcp-core`,

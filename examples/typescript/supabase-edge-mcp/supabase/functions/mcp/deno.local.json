@@ -12,7 +12,7 @@
     "@modelcontextprotocol/core/": "npm:/@modelcontextprotocol/core@^2.0.0/",
     "@modelcontextprotocol/server": "npm:@modelcontextprotocol/server@^2.0.0",
     "@modelcontextprotocol/server/": "npm:/@modelcontextprotocol/server@^2.0.0/",
-    "@modelcontextprotocol/ext-apps/": "npm:/@modelcontextprotocol/ext-apps@^1.7.1/",
+    "@modelcontextprotocol/ext-apps/": "npm:/@modelcontextprotocol/ext-apps@^1.7.5/",
     "zod": "npm:zod@4.3.6"
   }
 }

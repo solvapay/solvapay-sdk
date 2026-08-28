@@ -1284,7 +1284,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25'
 
       - name: Rebuild embedded WASI guest
         run: ./sdks/go/scripts/build-wasm.sh
@@ -1335,6 +1335,10 @@ jobs:
         working-directory: examples/go/paid-mcp
         run: go test ./...
 
+      - name: Go weather-mcp example
+        working-directory: examples/go/weather-mcp
+        run: go test ./...
+
       - name: Fresh-module go get smoke (local replace)
         shell: bash
         run: |
@@ -1344,7 +1348,7 @@ jobs:
           printf '%s\n' \
             'module github.com/solvapay/solvapay-go-smoke' \
             '' \
-            'go 1.23' \
+            'go 1.25' \
             '' \
             'require github.com/solvapay/solvapay-go v0.0.0' \
             '' \
@@ -1474,7 +1478,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25'
 
       - name: go build + vet
         env:

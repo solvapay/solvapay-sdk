@@ -223,14 +223,14 @@ to `authHeader` / `customerRef`, and invoking the merchant handler.
 
 Production layer-3 HTTP engines:
 
-| Language   | Adapter |
-| ---------- | ------- |
-| Rust       | `sdks/rust-mcp/src/server.rs` |
-| Go         | `sdks/go/mcp/engine.go` |
-| Ruby       | `sdks/ruby-mcp/lib/solvapay/mcp/engine.rb` |
-| C          | `sdks/capi/ctest/mcp_engine.c` |
-| TypeScript | `sdks/typescript/mcp-core/src/engine-dispatch.ts` + fetch JSON `POST /mcp` |
-| Python     | `sdks/python-mcp/python/solvapay_mcp/server/engine.py` + Starlette `create_mcp_engine_starlette` |
+| Language   | Adapter | Payables |
+| ---------- | ------- | -------- |
+| Rust       | `sdks/rust-mcp/src/server.rs` | `mcpDispatch` → `invokeHandler` → `mcpResume` |
+| Go         | `sdks/go/mcp/handler.go` + `server.go` | `mcpDispatch` → `invokeHandler` → `mcpResume` (same as Rust/Ruby) |
+| Ruby       | `sdks/ruby-mcp/lib/solvapay/mcp/engine.rb` | `mcpDispatch` → `invokeHandler` → `mcpResume` |
+| C          | `sdks/capi/ctest/mcp_engine.c` | `mcpDispatch` → `invokeHandler` → `mcpResume` |
+| TypeScript | `sdks/typescript/mcp-core/src/engine-dispatch.ts` + fetch JSON `POST /mcp` | `mcpDispatch` |
+| Python     | `sdks/python-mcp/python/solvapay_mcp/server/engine.py` + Starlette `create_mcp_engine_starlette` | `mcpDispatch` |
 
 Characterization fixtures under `contract/mcp-fixtures/` are immutable
 expectations. Replay must assert equality (or the documented

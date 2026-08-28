@@ -27,7 +27,6 @@ export const RUST_CORE_SKIP_FNS = [
 export const C_SKIP_FNS = ['registerPayable'] as const
 
 export const HTTP_ENGINE_FILES = [
-  'sdks/go/mcp/engine_test.go',
   'sdks/rust-mcp/tests/mcp_authoring_fixtures.rs',
   'sdks/capi/ctest/replay_fixtures.py',
   'sdks/python-mcp/tests/mcp_authoring/test_mcp_authoring_fixtures.py',

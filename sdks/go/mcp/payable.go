@@ -33,11 +33,7 @@ type formatGateFn func(ctx context.Context, message string, gate json.RawMessage
 
 var formatGate formatGateFn = paywallToolResult
 
-// RegisterPayableTool registers a paywalled tool on a low-level MCP server.
-func RegisterPayableTool(server *mcpsdk.Server, name string, opts Options) error {
-	if server == nil {
-		return fmt.Errorf("mcp server is required")
-	}
+func validatePayableOptions(name string, opts *Options) error {
 	if name == "" {
 		return fmt.Errorf("tool name is required")
 	}
@@ -52,6 +48,17 @@ func RegisterPayableTool(server *mcpsdk.Server, name string, opts Options) error
 	}
 	if opts.UsageType == "" {
 		opts.UsageType = "requests"
+	}
+	return nil
+}
+
+// RegisterPayableTool registers a paywalled tool on a low-level MCP server.
+func RegisterPayableTool(server *mcpsdk.Server, name string, opts Options) error {
+	if server == nil {
+		return fmt.Errorf("mcp server is required")
+	}
+	if err := validatePayableOptions(name, &opts); err != nil {
+		return err
 	}
 	schema, err := compileInputSchema(opts.InputSchema)
 	if err != nil {

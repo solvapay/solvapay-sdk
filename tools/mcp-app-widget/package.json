@@ -11,7 +11,7 @@
     "lint": "eslint src __tests__"
   },
   "dependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.7.1",
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@solvapay/react": "workspace:*",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
