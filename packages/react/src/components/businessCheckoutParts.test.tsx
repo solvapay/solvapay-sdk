@@ -100,77 +100,143 @@ describe('createBusinessDetailsParts.Fields', () => {
   })
 })
 
-describe('createTaxSummaryParts.Rows', () => {
-  const inclusiveBreakdown: TaxBreakdown = {
-    subtotal: 800,
-    taxAmount: 200,
-    taxRate: 0.25,
-    treatment: 'standard',
-    total: 1000,
-    currency: 'EUR',
-    inclusive: true,
+describe('createTaxSummaryParts — DEV-723 buyer-facing tax copy', () => {
+  const base: TaxBreakdown = {
+    subtotal: 9000,
+    taxAmount: 0,
+    taxRate: 0,
+    treatment: 'none',
+    total: 9000,
+    currency: 'USD',
+    inclusive: false,
   }
 
-  it('renders Subtotal, VAT (25%, incl.), and Total labels in a dl', () => {
-    const ctx = makeSummaryCtx({ taxBreakdown: inclusiveBreakdown })
+  function renderRows(breakdown: TaxBreakdown, ctxOverrides?: Partial<TaxSummaryContextSlice>) {
+    const ctx = makeSummaryCtx({ taxBreakdown: breakdown, ...ctxOverrides })
     const { Rows } = createTaxSummaryParts(() => ctx, 'payment-form')
+    return render(<Rows />)
+  }
 
-    const { container } = render(<Rows />)
+  describe('a zero tax amount is an amount, never "Free"', () => {
+    it('renders $0 for an exclusive zero-VAT sale', () => {
+      renderRows(base)
 
-    expect(screen.getByText('Subtotal')).toBeInTheDocument()
-    expect(screen.getByText('VAT (25%, incl.)')).toBeInTheDocument()
-    expect(screen.getByText('Total')).toBeInTheDocument()
-    expect(container.querySelector('dl')).toBeTruthy()
-    expect(container.querySelector('.solvapay-tax-summary-row--total')).toBeTruthy()
+      expect(screen.queryByText('Free')).not.toBeInTheDocument()
+      expect(screen.getByText('VAT')).toBeInTheDocument()
+      expect(screen.getByText('$0')).toBeInTheDocument()
+    })
+
+    it('renders $0 for a reverse-charge sale', () => {
+      renderRows({ ...base, treatment: 'reverse_charge' })
+
+      expect(screen.getByText('VAT (reverse charge)')).toBeInTheDocument()
+      expect(screen.queryByText('Free')).not.toBeInTheDocument()
+      expect(screen.getByText('$0')).toBeInTheDocument()
+    })
+
+    it('renders $0 for a zero subtotal and total', () => {
+      renderRows({ ...base, subtotal: 0, total: 0 }, { baseAmountMinor: 0 })
+
+      expect(screen.queryByText('Free')).not.toBeInTheDocument()
+      expect(screen.getAllByText('$0').length).toBe(3)
+    })
+
+    it('renders $0 on the standalone Tax leaf', () => {
+      const ctx = makeSummaryCtx({ taxBreakdown: base })
+      const { Tax } = createTaxSummaryParts(() => ctx, 'payment-form')
+
+      render(<Tax />)
+
+      expect(screen.queryByText('Free')).not.toBeInTheDocument()
+      expect(screen.getByText('$0')).toBeInTheDocument()
+    })
   })
 
-  it('hides tax row when treatment is not_collecting', () => {
-    const ctx = makeSummaryCtx({
-      taxBreakdown: {
-        ...inclusiveBreakdown,
-        treatment: 'not_collecting',
-        taxAmount: 0,
-        taxRate: 0,
+  describe('included vs excluded VAT reads the same to the buyer', () => {
+    const exclusive: TaxBreakdown = {
+      subtotal: 7200,
+      taxAmount: 1800,
+      taxRate: 0.25,
+      treatment: 'standard',
+      total: 9000,
+      currency: 'EUR',
+      inclusive: false,
+    }
+
+    it('labels the subtotal as net and the VAT with a bare rate when tax is added on top', () => {
+      renderRows(exclusive)
+
+      expect(screen.getByText('Subtotal (excl. VAT)')).toBeInTheDocument()
+      expect(screen.getByText('VAT (25%)')).toBeInTheDocument()
+      expect(screen.getByText('Total')).toBeInTheDocument()
+    })
+
+    it('renders identical labels when the same tax is included in the price', () => {
+      renderRows({ ...exclusive, inclusive: true })
+
+      expect(screen.getByText('Subtotal (excl. VAT)')).toBeInTheDocument()
+      expect(screen.getByText('VAT (25%)')).toBeInTheDocument()
+      // The `incl.` marker is gone on purpose: the rows themselves now say
+      // which amount is net and which is gross, in both directions.
+      expect(screen.queryByText('VAT (25%, incl.)')).not.toBeInTheDocument()
+      expect(screen.queryByText('VAT (25%, excl.)')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('no-tax-assessed treatments drop the row and explain instead', () => {
+    it.each(['not_collecting', 'not_supported'] as const)(
+      'replaces the VAT row with a note for %s',
+      treatment => {
+        renderRows({ ...base, treatment })
+
+        expect(screen.queryByText(/VAT/)).not.toBeInTheDocument()
+        expect(screen.getByText('Tax is not collected on this purchase.')).toBeInTheDocument()
+        // With no VAT row there is nothing to be exclusive of.
+        expect(screen.getByText('Subtotal')).toBeInTheDocument()
+        expect(screen.getByText('Total')).toBeInTheDocument()
       },
-    })
-    const { Rows } = createTaxSummaryParts(() => ctx, 'payment-form')
+    )
 
-    render(<Rows />)
+    it.each(['not_collecting', 'not_supported'] as const)(
+      'hides the standalone Tax leaf for %s',
+      treatment => {
+        const ctx = makeSummaryCtx({ taxBreakdown: { ...base, treatment } })
+        const { Tax } = createTaxSummaryParts(() => ctx, 'payment-form')
 
-    expect(screen.queryByText(/VAT/)).not.toBeInTheDocument()
-    expect(screen.getByText('Total')).toBeInTheDocument()
-  })
+        const { container } = render(<Tax />)
 
-  it('renders nothing for consumer checkouts', () => {
-    const ctx = makeSummaryCtx({
-      isBusiness: false,
-      taxBreakdown: inclusiveBreakdown,
-    })
-    const { Rows } = createTaxSummaryParts(() => ctx, 'payment-form')
-
-    const { container } = render(<Rows />)
-
-    expect(container).toBeEmptyDOMElement()
-  })
-})
-
-describe('createTaxSummaryParts.Tax', () => {
-  it('formats inclusive VAT label on the default Tax leaf', () => {
-    const ctx = makeSummaryCtx({
-      taxBreakdown: {
-        subtotal: 800,
-        taxAmount: 200,
-        taxRate: 0.25,
-        treatment: 'standard',
-        total: 1000,
-        currency: 'EUR',
-        inclusive: true,
+        expect(container).toBeEmptyDOMElement()
       },
+    )
+
+    it('explains reverse charge under the rows', () => {
+      renderRows({ ...base, treatment: 'reverse_charge' })
+
+      expect(
+        screen.getByText(
+          'VAT reverse charge applies — you are responsible for reporting VAT in your jurisdiction.',
+        ),
+      ).toBeInTheDocument()
     })
-    const { Tax } = createTaxSummaryParts(() => ctx, 'payment-form')
+  })
 
-    render(<Tax />)
+  describe('structure', () => {
+    it('renders a definition list with a total row', () => {
+      const { container } = renderRows(base)
 
-    expect(screen.getByText('VAT (25%, incl.)')).toBeInTheDocument()
+      expect(container.querySelector('dl')).toBeTruthy()
+      expect(container.querySelector('.solvapay-tax-summary-row--total')).toBeTruthy()
+      // dt/dd must be direct children of dl or a div — never of a <p>.
+      expect(container.querySelector('p dt')).toBeNull()
+    })
+
+    it('renders nothing for consumer checkouts', () => {
+      const ctx = makeSummaryCtx({ isBusiness: false, taxBreakdown: base })
+      const { Rows } = createTaxSummaryParts(() => ctx, 'payment-form')
+
+      const { container } = render(<Rows />)
+
+      expect(container).toBeEmptyDOMElement()
+    })
   })
 })

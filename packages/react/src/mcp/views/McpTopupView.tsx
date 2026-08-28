@@ -265,11 +265,7 @@ function EmbeddedTopup({
               placeholder="Tax / VAT ID"
             />
           </TopupForm.BusinessDetails.Root>
-          <TopupForm.Summary.Root className={cx.taxSummary}>
-            <TopupForm.Summary.Subtotal />
-            <TopupForm.Summary.Tax />
-            <TopupForm.Summary.Total />
-          </TopupForm.Summary.Root>
+          <TopupForm.Summary.Rows className={cx.taxSummary} />
           <TopupForm.PaymentElement />
           <TopupForm.Error className={cx.error} />
           <MandateText mode="topup" amountMinor={committedAmountMinor} currency={currency} />
