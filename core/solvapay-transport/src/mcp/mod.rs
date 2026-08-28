@@ -617,7 +617,10 @@ impl SolvaPayClient {
                     params.name.as_str(),
                     &payload,
                     mode,
-                    Some(&widget_meta(&session, params.config.resource_uri.as_deref())),
+                    Some(&widget_meta(
+                        &session,
+                        params.config.resource_uri.as_deref(),
+                    )),
                 ))
             }
             "create_checkout_session" => {
@@ -877,7 +880,10 @@ impl SolvaPayClient {
                         "activate_plan",
                         &payload,
                         mode,
-                        Some(&widget_meta(&session, params.config.resource_uri.as_deref())),
+                        Some(&widget_meta(
+                            &session,
+                            params.config.resource_uri.as_deref(),
+                        )),
                     ));
                 }
                 let customer_ref = match require_customer(customer_ref) {
@@ -1200,7 +1206,10 @@ mod enrich_tests {
             "vatNumber": "DE123456789"
         });
         let enriched = enrich_merchant(merchant);
-        assert_eq!(enriched["identityDisplay"]["taxIdentifier"]["label"], "VAT number");
+        assert_eq!(
+            enriched["identityDisplay"]["taxIdentifier"]["label"],
+            "VAT number"
+        );
         assert_eq!(
             enriched["identityDisplay"]["taxIdentifier"]["value"],
             "DE123456789"

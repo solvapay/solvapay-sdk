@@ -175,30 +175,8 @@ impl McpHttpServer {
     async fn handle_mcp(&self, req: &McpHttpRequest) -> Result<McpHttpResponse, SdkError> {
         let rpc: Value = serde_json::from_slice(&req.body)
             .map_err(|err| SdkError::transport(format!("invalid JSON-RPC body: {err}"), false))?;
-        let method = rpc.get("method").and_then(Value::as_str).map(str::to_owned);
-        if method.as_deref() == Some("resources/read") {
-            let uri = rpc
-                .pointer("/params/uri")
-                .and_then(Value::as_str)
-                .unwrap_or("");
-            if uri == self.resource_uri {
-                let id = rpc.get("id").cloned().unwrap_or(Value::Null);
-                return json_response(
-                    200,
-                    json!({
-                        "jsonrpc": "2.0",
-                        "id": id,
-                        "result": {
-                            "contents": [{
-                                "uri": uri,
-                                "mimeType": crate::MCP_APP_MIME_TYPE,
-                                "text": crate::default_mcp_app_html(),
-                                "_meta": { "ui": { "prefersBorder": false } }
-                            }]
-                        }
-                    }),
-                );
-            }
+        if let Some(html) = crate::widget::widget_html_rpc(&rpc, &self.resource_uri) {
+            return json_response(200, html);
         }
         let mut payable_tools: Vec<String> = self.payables.keys().cloned().collect();
         payable_tools.sort();
@@ -224,13 +202,7 @@ impl McpHttpServer {
             })
             .await?;
         match envelope.get("kind").and_then(Value::as_str) {
-            Some("rpc") => {
-                let mut rpc_out = envelope.get("rpc").cloned().unwrap_or(Value::Null);
-                if method.as_deref() == Some("tools/call") {
-                    stamp_widget_result_meta(&mut rpc_out, &self.resource_uri);
-                }
-                json_response(200, rpc_out)
-            }
+            Some("rpc") => json_response(200, envelope.get("rpc").cloned().unwrap_or(Value::Null)),
             Some("challenge") => {
                 let status = envelope
                     .get("status")
@@ -294,31 +266,6 @@ impl McpHttpServer {
         .map_err(|err| SdkError::transport(err, false))?;
         json_response(200, resumed.get("rpc").cloned().unwrap_or(resumed))
     }
-}
-
-fn stamp_widget_result_meta(rpc: &mut Value, resource_uri: &str) {
-    let Some(result) = rpc.get_mut("result") else {
-        return;
-    };
-    let Some(obj) = result.as_object_mut() else {
-        return;
-    };
-    let mut meta = match obj.get("_meta") {
-        Some(Value::Object(existing)) => existing.clone(),
-        _ => Map::new(),
-    };
-    let mut ui = match meta.get("ui") {
-        Some(Value::Object(existing)) => existing.clone(),
-        _ => Map::new(),
-    };
-    if !ui.contains_key("resourceUri") {
-        ui.insert("resourceUri".to_owned(), json!(resource_uri));
-    }
-    meta.insert("ui".to_owned(), Value::Object(ui));
-    if !meta.contains_key("ui/resourceUri") {
-        meta.insert("ui/resourceUri".to_owned(), json!(resource_uri));
-    }
-    obj.insert("_meta".to_owned(), Value::Object(meta));
 }
 
 fn payable_to_sdk(err: PayableError) -> SdkError {

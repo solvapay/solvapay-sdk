@@ -60,7 +60,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Welcome to Demo**\n\nNo active plan. Plans available:\nPro · recurring\n\nCommands: `/activate_plan` `/upgrade`",
+          "text": "**Welcome to Demo**\n\nNo active plan. Plans available:\nPro \u00b7 recurring\n\nCommands: `/activate_plan` `/upgrade`",
           "annotations": {
             "audience": [
               "assistant"
@@ -74,20 +74,186 @@
         "stripePublishableKey": "pk_test",
         "returnUrl": "https://app.example.com",
         "merchant": {
-          "displayName": "Acme"
+          "displayName": "Acme",
+          "identityDisplay": {
+            "taxIdentifier": null,
+            "companyNumber": null
+          }
         },
         "product": {
           "name": "Demo"
         },
         "plans": [
           {
-            "name": "Pro"
+            "name": "Pro",
+            "display": {
+              "billingCycle": null,
+              "countsUsage": false,
+              "includedUnits": null,
+              "meterName": null,
+              "perUnitCharge": null,
+              "creditsPerUnit": null,
+              "trialDays": null
+            }
           }
         ],
-        "customer": null
+        "customer": null,
+        "taxIdFields": {
+          "AT": {
+            "label": "VAT ID",
+            "example": "ATU12345678",
+            "helperText": "Enter your full VAT ID including the country code, e.g. ATU12345678"
+          },
+          "BE": {
+            "label": "VAT ID",
+            "example": "BE0123456789",
+            "helperText": "Enter your full VAT ID including the country code, e.g. BE0123456789"
+          },
+          "BG": {
+            "label": "VAT ID",
+            "example": "BG0123456789",
+            "helperText": "Enter your full VAT ID including the country code, e.g. BG0123456789"
+          },
+          "HR": {
+            "label": "VAT ID",
+            "example": "HR12345678912",
+            "helperText": "Enter your full VAT ID including the country code, e.g. HR12345678912"
+          },
+          "CY": {
+            "label": "VAT ID",
+            "example": "CY12345678Z",
+            "helperText": "Enter your full VAT ID including the country code, e.g. CY12345678Z"
+          },
+          "CZ": {
+            "label": "VAT ID",
+            "example": "CZ1234567890",
+            "helperText": "Enter your full VAT ID including the country code, e.g. CZ1234567890"
+          },
+          "DK": {
+            "label": "VAT ID",
+            "example": "DK12345678",
+            "helperText": "Enter your full VAT ID including the country code, e.g. DK12345678"
+          },
+          "EE": {
+            "label": "VAT ID",
+            "example": "EE123456789",
+            "helperText": "Enter your full VAT ID including the country code, e.g. EE123456789"
+          },
+          "FI": {
+            "label": "VAT ID",
+            "example": "FI12345678",
+            "helperText": "Enter your full VAT ID including the country code, e.g. FI12345678"
+          },
+          "FR": {
+            "label": "VAT ID",
+            "example": "FRAB123456789",
+            "helperText": "Enter your full VAT ID including the country code, e.g. FRAB123456789"
+          },
+          "DE": {
+            "label": "VAT ID",
+            "example": "DE123456789",
+            "helperText": "Enter your full VAT ID including the country code, e.g. DE123456789"
+          },
+          "GR": {
+            "label": "VAT ID",
+            "example": "EL123456789",
+            "helperText": "Enter your full VAT ID including the country code, e.g. EL123456789"
+          },
+          "HU": {
+            "label": "VAT ID",
+            "example": "HU12345678",
+            "helperText": "Enter your full VAT ID including the country code, e.g. HU12345678"
+          },
+          "IE": {
+            "label": "VAT ID",
+            "example": "IE1234567AB",
+            "helperText": "Enter your full VAT ID including the country code, e.g. IE1234567AB"
+          },
+          "IT": {
+            "label": "VAT ID",
+            "example": "IT12345678912",
+            "helperText": "Enter your full VAT ID including the country code, e.g. IT12345678912"
+          },
+          "JP": {
+            "label": "Registration number (T\u014droku Bang\u014d)",
+            "example": "T1234567891234",
+            "helperText": "Enter your tax ID, e.g. T1234567891234"
+          },
+          "LV": {
+            "label": "VAT ID",
+            "example": "LV12345678912",
+            "helperText": "Enter your full VAT ID including the country code, e.g. LV12345678912"
+          },
+          "LT": {
+            "label": "VAT ID",
+            "example": "LT123456789",
+            "helperText": "Enter your full VAT ID including the country code, e.g. LT123456789"
+          },
+          "LU": {
+            "label": "VAT ID",
+            "example": "LU12345678",
+            "helperText": "Enter your full VAT ID including the country code, e.g. LU12345678"
+          },
+          "MT": {
+            "label": "VAT ID",
+            "example": "MT12345678",
+            "helperText": "Enter your full VAT ID including the country code, e.g. MT12345678"
+          },
+          "NL": {
+            "label": "VAT ID",
+            "example": "NL123456789B12",
+            "helperText": "Enter your full VAT ID including the country code, e.g. NL123456789B12"
+          },
+          "PL": {
+            "label": "VAT ID",
+            "example": "PL1234567890",
+            "helperText": "Enter your full VAT ID including the country code, e.g. PL1234567890"
+          },
+          "PT": {
+            "label": "VAT ID",
+            "example": "PT123456789",
+            "helperText": "Enter your full VAT ID including the country code, e.g. PT123456789"
+          },
+          "RO": {
+            "label": "VAT ID",
+            "example": "RO1234567891",
+            "helperText": "Enter your full VAT ID including the country code, e.g. RO1234567891"
+          },
+          "SK": {
+            "label": "VAT ID",
+            "example": "SK1234567891",
+            "helperText": "Enter your full VAT ID including the country code, e.g. SK1234567891"
+          },
+          "SI": {
+            "label": "VAT ID",
+            "example": "SI12345678",
+            "helperText": "Enter your full VAT ID including the country code, e.g. SI12345678"
+          },
+          "ES": {
+            "label": "VAT ID",
+            "example": "ESA1234567Z",
+            "helperText": "Enter your full VAT ID including the country code, e.g. ESA1234567Z"
+          },
+          "SE": {
+            "label": "VAT ID",
+            "example": "SE123456789123",
+            "helperText": "Enter your full VAT ID including the country code, e.g. SE123456789123"
+          },
+          "GB": {
+            "label": "VAT Number",
+            "example": "GB123456789",
+            "helperText": "Enter your full VAT number including the country code, e.g. GB123456789"
+          },
+          "US": {
+            "label": "EIN (Employer Identification Number)",
+            "example": "12-3456789",
+            "helperText": "Enter your EIN, e.g. 12-3456789"
+          }
+        }
       },
       "_meta": {
-        "openai/widgetSessionId": "00000000-0000-4000-8000-000000000001"
+        "openai/widgetSessionId": "00000000-0000-4000-8000-000000000001",
+        "ui/resourceUri": "ui://test/view.html"
       }
     }
   }

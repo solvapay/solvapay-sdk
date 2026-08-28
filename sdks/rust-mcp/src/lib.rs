@@ -7,6 +7,7 @@ mod layer2;
 mod register;
 mod response_context;
 mod server;
+mod widget;
 
 /// MIME type for the vendored MCP App widget (`text/html;profile=mcp-app`).
 pub const MCP_APP_MIME_TYPE: &str = "text/html;profile=mcp-app";
