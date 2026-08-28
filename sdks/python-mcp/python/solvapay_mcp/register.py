@@ -153,11 +153,12 @@ def _header_from_mapping(headers: object, name: str) -> str | None:
 
 
 def _request_from_ctx(ctx: object) -> object | None:
-    request = getattr(ctx, "request", None)
+    request: object = getattr(ctx, "request", None)
     if request is not None:
         return request
-    request_context = getattr(ctx, "request_context", None)
-    return getattr(request_context, "request", None) if request_context is not None else None
+    request_context: object = getattr(ctx, "request_context", None)
+    nested: object = getattr(request_context, "request", None)
+    return nested
 
 
 def auth_header_from_ctx(ctx: object | None) -> str | None:
@@ -173,7 +174,11 @@ def auth_header_from_ctx(ctx: object | None) -> str | None:
     auth_info = getattr(ctx, "auth_info", None)
     if auth_info is None:
         auth_info = getattr(request, "auth", None) if request is not None else None
-    token = auth_info.get("token") if isinstance(auth_info, Mapping) else getattr(auth_info, "token", None)
+    token = (
+        auth_info.get("token")
+        if isinstance(auth_info, Mapping)
+        else getattr(auth_info, "token", None)
+    )
     if isinstance(token, str) and token.strip():
         stripped = token.strip()
         if stripped.lower().startswith("bearer "):
@@ -362,7 +367,10 @@ def _install_dispatch(server: Server[object]) -> None:
             return _to_call_tool_result(payload)
         raw = await _result(
             "tools/call",
-            {"name": params.name, "arguments": _intent_tool_arguments(params.name, params.arguments)},
+            {
+                "name": params.name,
+                "arguments": _intent_tool_arguments(params.name, params.arguments),
+            },
             _ctx,
         )
         if isinstance(raw, Mapping):
@@ -416,6 +424,7 @@ def _install_dispatch(server: Server[object]) -> None:
         TextContent,
         TextResourceContents,
     )
+
     from solvapay_mcp.widget import MCP_APP_MIME_TYPE, default_mcp_app_html
 
     async def on_read_resource(
@@ -445,9 +454,9 @@ def _install_dispatch(server: Server[object]) -> None:
                 contents=[
                     TextResourceContents(
                         uri=uri,
-                        mimeType=MCP_APP_MIME_TYPE,
+                        mime_type=MCP_APP_MIME_TYPE,
                         text=default_mcp_app_html(),
-                        meta={"ui": ui},
+                        _meta={"ui": ui},
                     )
                 ]
             )
@@ -576,8 +585,14 @@ def _stamp_widget_result_meta(
     out = dict(payload)
     if not resource_uri:
         return out
-    meta = dict(out["_meta"]) if isinstance(out.get("_meta"), dict) else {}
-    ui = dict(meta["ui"]) if isinstance(meta.get("ui"), dict) else {}
+    raw_meta = out.get("_meta")
+    meta: dict[str, object] = {}
+    if isinstance(raw_meta, dict):
+        meta = {str(key): value for key, value in raw_meta.items()}
+    raw_ui = meta.get("ui")
+    ui: dict[str, object] = {}
+    if isinstance(raw_ui, dict):
+        ui = {str(key): value for key, value in raw_ui.items()}
     if "resourceUri" not in ui:
         ui["resourceUri"] = resource_uri
     meta["ui"] = ui

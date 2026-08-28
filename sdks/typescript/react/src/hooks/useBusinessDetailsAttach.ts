@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { type BusinessDetailsInput, type TaxBreakdown } from '@solvapay/core'
+import {
+  TAX_ID_TYPES,
+  type BusinessDetailsInput,
+  type TaxBreakdown,
+  type TaxIdType,
+} from '@solvapay/core'
 import { mapAttachFieldErrors } from '../components/businessCheckoutParts'
 
 export const defaultBusinessDetails: BusinessDetailsInput = { isBusiness: false }
+
+function taxIdTypeFromInput(value: unknown): TaxIdType | undefined {
+  return TAX_ID_TYPES.find(candidate => candidate === value)
+}
 
 export type AttachBusinessDetailsFn = (params: {
   paymentIntentId: string
@@ -78,6 +87,7 @@ export function useBusinessDetailsAttach(
       setBusinessDetailsAttaching(true)
 
       try {
+        const taxIdType = taxIdTypeFromInput(input.taxIdType)
         const result = await attachBusinessDetails({
           paymentIntentId: processorPaymentId,
           ...(customerRef ? { customerRef } : {}),
@@ -87,7 +97,7 @@ export function useBusinessDetailsAttach(
           ...(input.customerCountry !== undefined ? { customerCountry: input.customerCountry } : {}),
           ...(input.customerName !== undefined ? { customerName: input.customerName } : {}),
           ...(input.taxId !== undefined ? { taxId: input.taxId } : {}),
-          ...(input.taxIdType !== undefined ? { taxIdType: input.taxIdType } : {}),
+          ...(taxIdType !== undefined ? { taxIdType } : {}),
         })
         if (requestId !== attachRequestIdRef.current) return false
         setTaxBreakdown(result.taxBreakdown)
