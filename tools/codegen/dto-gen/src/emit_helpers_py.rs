@@ -94,7 +94,12 @@ fn emit_py_fn(out: &mut String, entry: &IrEntryPoint, args: &[IrBindingArg], nat
 }
 
 fn write_py_def(out: &mut String, name: &str, params: &[String]) {
-    let one_line = format!("def {name}({}) -> Any:", params.join(", "));
+    write_py_def_ret(out, name, params, "Any");
+}
+
+/// Writes a `def` so ruff E501 stays under 100 columns.
+pub(crate) fn write_py_def_ret(out: &mut String, name: &str, params: &[String], ret: &str) {
+    let one_line = format!("def {name}({}) -> {ret}:", params.join(", "));
     if one_line.len() <= 100 {
         out.push_str(&one_line);
         out.push('\n');
@@ -104,7 +109,7 @@ fn write_py_def(out: &mut String, name: &str, params: &[String]) {
     for param in params {
         let _ = writeln!(out, "    {param},");
     }
-    out.push_str(") -> Any:\n");
+    let _ = writeln!(out, ") -> {ret}:");
 }
 
 fn py_arg_type(arg: &IrBindingArg) -> &'static str {

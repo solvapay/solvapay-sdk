@@ -5,6 +5,7 @@ use std::fmt::Write as _;
 use crate::doc_render::render_entry_doc_lines;
 use crate::emit_client_go::{render_godoc, uncapitalize};
 use crate::emit_client_rs::render_rustdoc;
+use crate::emit_helpers_py::write_py_def_ret;
 use crate::emit_pyi_py::{render_pydoc, write_pydoc_block};
 use crate::error::{GenError, GenResult};
 use crate::header::{generated_header, CommentStyle};
@@ -114,12 +115,7 @@ pub fn emit_mcp_py(ir: &Ir) -> GenResult<String> {
         } else {
             "object"
         };
-        let _ = writeln!(
-            out,
-            "def {}({}) -> {ret}:",
-            entry.names.py,
-            params.join(", ")
-        );
+        write_py_def_ret(&mut out, &entry.names.py, &params, ret);
         write_pydoc_block(&mut out, &render_pydoc(entry), "    ");
         out.push_str("    call_args: dict[str, object] = {}\n");
         for param in &entry.params {
