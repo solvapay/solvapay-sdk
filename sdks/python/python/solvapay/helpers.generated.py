@@ -82,7 +82,11 @@ def counts_usage(priced: Any | None = None) -> Any:
         payload["priced"] = priced
     return call_native_sync("counts_usage", json.dumps(payload))
 
-def credits_per_unit_from_balance(priced: Any | None = None, balance: Any | None = None, meter: str | None = None) -> Any:
+def credits_per_unit_from_balance(
+    priced: Any | None = None,
+    balance: Any | None = None,
+    meter: str | None = None,
+) -> Any:
     """Credits per metered call when the charge currency matches the balance peg.
     @returns Credits per unit, or null when the rate cannot be established honestly.
     """
@@ -95,7 +99,12 @@ def credits_per_unit_from_balance(priced: Any | None = None, balance: Any | None
         payload["meter"] = meter
     return call_native_sync("credits_per_unit_from_balance", json.dumps(payload))
 
-def credits_to_display_minor_units(credits: float, credits_per_minor_unit: float, display_exchange_rate: float, display_currency: str) -> Any:
+def credits_to_display_minor_units(
+    credits: float,
+    credits_per_minor_unit: float,
+    display_exchange_rate: float,
+    display_currency: str,
+) -> Any:
     """Convert credit units into display minor units for a currency.
     @returns Display amount in minor units.
     """
@@ -121,7 +130,14 @@ def evaluate_product_readiness() -> Any:
     payload: dict[str, Any] = {}
     return call_native_sync("evaluate_product_readiness", json.dumps(payload))
 
-def format_price(amount_minor: float, currency: str, interval: str | None = None, interval_count: float | None = None, free: str | None = None, currency_display: str | None = None) -> Any:
+def format_price(
+    amount_minor: float,
+    currency: str,
+    interval: str | None = None,
+    interval_count: float | None = None,
+    free: str | None = None,
+    currency_display: str | None = None,
+) -> Any:
     """Format a minor-unit amount as buyer-facing money.
     @returns Formatted price string.
     """
@@ -244,7 +260,11 @@ def paywall_error_to_client_payload(message: str, structured_content: Any) -> An
     payload["structuredContent"] = structured_content
     return call_native_sync("paywall_error_to_client_payload", json.dumps(payload))
 
-def pegged_credits_per_unit(charge_minor: float, credits_per_minor_unit: float, usd_to_charge_rate: float | None = None) -> Any:
+def pegged_credits_per_unit(
+    charge_minor: float,
+    credits_per_minor_unit: float,
+    usd_to_charge_rate: float | None = None,
+) -> Any:
     """Convert a per-unit charge in minor units to credits via the USD peg.
     @returns Credits per metered unit (0 for a free meter).
     """
@@ -277,7 +297,12 @@ def require_product_ref(metadata_product: str | None = None, env_product: str | 
         payload["envProduct"] = env_product
     return call_native_sync("require_product_ref", json.dumps(payload))
 
-def resolve_seller_identity_display(country: str | None = None, vat_number: str | None = None, tax_id: str | None = None, company_number: str | None = None) -> Any:
+def resolve_seller_identity_display(
+    country: str | None = None,
+    vat_number: str | None = None,
+    tax_id: str | None = None,
+    company_number: str | None = None,
+) -> Any:
     """Resolve seller identity fields into a display projection.
     @returns Display projection for seller identity.
     """

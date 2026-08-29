@@ -16,13 +16,14 @@ export const PAYWALL_GATE_SMOKE_INPUT = {
   },
 }
 
-/** @type {{ kind: string, product: string, checkoutUrl: string, message: string }} */
+/** @type {{ kind: string, product: string, checkoutUrl: string, message: string, shortMessage: string }} */
 export const PAYWALL_GATE_SMOKE_EXPECTED = {
   kind: 'payment_required',
   product: 'prd_demo',
   checkoutUrl: 'https://pay.test/x',
   message:
     "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser.",
+  shortMessage: 'Payment required',
 }
 
 export const CUSTOMER_SMOKE_REF = 'cus_smoke_1'

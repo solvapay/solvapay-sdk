@@ -59,24 +59,24 @@ module SolvaPay
           key = action["key"]
           now = @clock.call
           cached = @mutex.synchronize { @limits_cache[key] }
-          if cached.is_a?(Hash)
-            event = {
-              "kind" => "limitsCacheEntry",
-              "found" => true,
-              "remaining" => cached.fetch(:remaining),
-              "limits" => cached[:limits],
-              "timestampMs" => cached.fetch(:timestamp),
-              "nowMs" => now,
-              "randomUnit" => random_unit,
-            }
-          else
-            event = {
-              "kind" => "limitsCacheEntry",
-              "found" => false,
-              "nowMs" => now,
-              "randomUnit" => random_unit,
-            }
-          end
+          event = if cached.is_a?(Hash)
+                    {
+                      "kind" => "limitsCacheEntry",
+                      "found" => true,
+                      "remaining" => cached.fetch(:remaining),
+                      "limits" => cached[:limits],
+                      "timestampMs" => cached.fetch(:timestamp),
+                      "nowMs" => now,
+                      "randomUnit" => random_unit,
+                    }
+                  else
+                    {
+                      "kind" => "limitsCacheEntry",
+                      "found" => false,
+                      "nowMs" => now,
+                      "randomUnit" => random_unit,
+                    }
+                  end
         when "checkLimits"
           if action["cacheDeleteKey"].is_a?(String)
             @mutex.synchronize { @limits_cache.delete(action["cacheDeleteKey"]) }
@@ -151,6 +151,7 @@ module SolvaPay
           unless cache["timestamp"].is_a?(Numeric)
             raise SolvaPay::SolvaPayError.new("gate_next cache set missing timestamp", code: "internal_error")
           end
+
           @limits_cache[key] = {
             timestamp: cache["timestamp"],
             remaining: cache["remaining"],
@@ -220,6 +221,7 @@ module SolvaPay
         unless out.is_a?(Hash)
           raise SolvaPay::SolvaPayError.new("ensure_customer_next returned unexpected value", code: "internal_error")
         end
+
         unless out["action"].is_a?(Hash)
           details = out["details"]
           details = out["error"] unless details.is_a?(String) && !details.empty?
@@ -232,34 +234,34 @@ module SolvaPay
           key = action["key"].to_s
           cached = @mutex.synchronize { @customer_cache[key] }
           event = if cached.is_a?(Hash)
-            {
-              "kind" => "customerCacheEntry",
-              "found" => true,
-              "backendRef" => cached[:value],
-              "timestampMs" => cached[:timestamp_ms],
-              "nowMs" => @clock.call,
-            }
-          else
-            { "kind" => "customerCacheEntry", "found" => false, "nowMs" => @clock.call }
-          end
+                    {
+                      "kind" => "customerCacheEntry",
+                      "found" => true,
+                      "backendRef" => cached[:value],
+                      "timestampMs" => cached[:timestamp_ms],
+                      "nowMs" => @clock.call,
+                    }
+                  else
+                    { "kind" => "customerCacheEntry", "found" => false, "nowMs" => @clock.call }
+                  end
         when "getCustomer"
           params = if action["byExternalRef"]
-            { "externalRef" => action["byExternalRef"] }
-          else
-            { "email" => action["byEmail"] }
-          end
+                     { "externalRef" => action["byExternalRef"] }
+                   else
+                     { "email" => action["byEmail"] }
+                   end
           begin
             existing = @client.get_customer(params: params)
-            if existing.is_a?(Hash) && existing["customerRef"]
-              event = {
-                "kind" => "customerLookupResult",
-                "found" => true,
-                "customer" => existing,
-                "nowMs" => @clock.call,
-              }
-            else
-              event = { "kind" => "customerLookupResult", "found" => false, "nowMs" => @clock.call }
-            end
+            event = if existing.is_a?(Hash) && existing["customerRef"]
+                      {
+                        "kind" => "customerLookupResult",
+                        "found" => true,
+                        "customer" => existing,
+                        "nowMs" => @clock.call,
+                      }
+                    else
+                      { "kind" => "customerLookupResult", "found" => false, "nowMs" => @clock.call }
+                    end
           rescue SolvaPayError => e
             event = {
               "kind" => "customerLookupResult",
@@ -302,6 +304,7 @@ module SolvaPay
           unless backend.is_a?(String) && !backend.empty?
             raise SolvaPayError.new("ensure_customer_next resolved without backendRef", code: "internal_error")
           end
+
           cache = action["cache"]
           if cache.is_a?(Hash) && cache["key"].is_a?(String)
             write_customer_cache(cache["key"], backend, cache["timestampMs"])
@@ -314,9 +317,7 @@ module SolvaPay
     end
 
     def paywall_short_message(content)
-      unless content.is_a?(Hash)
-        raise SolvaPayError.new("paywall result missing gate content", code: "internal_error")
-      end
+      raise SolvaPayError.new("paywall result missing gate content", code: "internal_error") unless content.is_a?(Hash)
 
       message = content["shortMessage"]
       unless message.is_a?(String) && !message.empty?
@@ -336,7 +337,7 @@ module SolvaPay
         next if overflow <= 0
 
         oldest = @customer_cache.min_by(overflow) { |_cache_key, entry| entry[:timestamp_ms].to_i }
-        oldest.each { |cache_key, _entry| @customer_cache.delete(cache_key) }
+        oldest.each_key { |cache_key| @customer_cache.delete(cache_key) }
       end
     end
 

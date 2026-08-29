@@ -562,12 +562,21 @@ def counts_usage(priced: object | None = None) -> bool:
     @returns Whether the plan has a usage counter even without a per-unit rate.
     """
     ...
-def credits_per_unit_from_balance(priced: object | None = None, balance: object | None = None, meter: str | None = None) -> int | None:
+def credits_per_unit_from_balance(
+    priced: object | None = None,
+    balance: object | None = None,
+    meter: str | None = None,
+) -> int | None:
     """Credits per metered call when the charge currency matches the balance peg.
     @returns Credits per unit, or null when the rate cannot be established honestly.
     """
     ...
-def credits_to_display_minor_units(credits: float, credits_per_minor_unit: float, display_exchange_rate: float, display_currency: str) -> int | None:
+def credits_to_display_minor_units(
+    credits: float,
+    credits_per_minor_unit: float,
+    display_exchange_rate: float,
+    display_currency: str,
+) -> int | None:
     """Convert credit units into display minor units for a currency.
     @returns Display amount in minor units.
     """
@@ -582,7 +591,14 @@ def evaluate_product_readiness() -> object:
     @returns Readiness result with issues and plan counts.
     """
     ...
-def format_price(amount_minor: float, currency: str, interval: str | None = None, interval_count: float | None = None, free: str | None = None, currency_display: str | None = None) -> str:
+def format_price(
+    amount_minor: float,
+    currency: str,
+    interval: str | None = None,
+    interval_count: float | None = None,
+    free: str | None = None,
+    currency_display: str | None = None,
+) -> str:
     """Format a minor-unit amount as buyer-facing money.
     @returns Formatted price string.
     """
@@ -647,7 +663,11 @@ def paywall_error_to_client_payload(message: str, structured_content: object) ->
     @returns Client payload object for paywall responses.
     """
     ...
-def pegged_credits_per_unit(charge_minor: float, credits_per_minor_unit: float, usd_to_charge_rate: float | None = None) -> int:
+def pegged_credits_per_unit(
+    charge_minor: float,
+    credits_per_minor_unit: float,
+    usd_to_charge_rate: float | None = None,
+) -> int:
     """Convert a per-unit charge in minor units to credits via the USD peg.
     @returns Credits per metered unit (0 for a free meter).
     """
@@ -662,7 +682,12 @@ def require_product_ref(metadata_product: str | None = None, env_product: str | 
     @returns A product ref string, or throws when neither is set.
     """
     ...
-def resolve_seller_identity_display(country: str | None = None, vat_number: str | None = None, tax_id: str | None = None, company_number: str | None = None) -> object:
+def resolve_seller_identity_display(
+    country: str | None = None,
+    vat_number: str | None = None,
+    tax_id: str | None = None,
+    company_number: str | None = None,
+) -> object:
     """Resolve seller identity fields into a display projection.
     @returns Display projection for seller identity.
     """

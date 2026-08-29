@@ -124,12 +124,11 @@ pub fn emit_pyi_py(ir: &Ir) -> GenResult<String> {
                 }
             })
             .collect::<Vec<_>>();
-        let _ = writeln!(
-            out,
-            "def {}({}) -> {}:",
-            entry.names.py,
-            params.join(", "),
-            py_helper_return(ir, binding)
+        write_pyi_def(
+            &mut out,
+            &entry.names.py,
+            &params,
+            &py_helper_return(ir, binding),
         );
         write_pydoc_block(&mut out, &doc, "    ");
         out.push_str("    ...\n");
@@ -181,6 +180,20 @@ pub(crate) fn write_pydoc_block(out: &mut String, doc: &str, indent: &str) {
         }
     }
     let _ = writeln!(out, "{indent}\"\"\"");
+}
+
+fn write_pyi_def(out: &mut String, name: &str, params: &[String], ret: &str) {
+    let one_line = format!("def {name}({}) -> {ret}:", params.join(", "));
+    if one_line.len() <= 100 {
+        out.push_str(&one_line);
+        out.push('\n');
+        return;
+    }
+    let _ = writeln!(out, "def {name}(");
+    for param in params {
+        let _ = writeln!(out, "    {param},");
+    }
+    let _ = writeln!(out, ") -> {ret}:");
 }
 
 fn py_arg_type(arg: &IrBindingArg) -> &'static str {

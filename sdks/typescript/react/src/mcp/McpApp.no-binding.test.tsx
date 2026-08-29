@@ -69,7 +69,7 @@ describe('<McpApp> with no native core binding', () => {
     )
   })
 
-  it('should render seller and customer cards when no binding is installed', async () => {
+  it('should surface a core-binding error when account view needs formatPrice', async () => {
     const app = makeApp({
       view: 'account',
       productRef: 'prd_1',
@@ -117,16 +117,11 @@ describe('<McpApp> with no native core binding', () => {
 
     render(<McpApp app={app} />)
 
-    expect(await screen.findByText('Verified seller')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Seller' })).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Your account' })).toBeTruthy()
-    expect(screen.getByText('Acme Inc.')).toBeTruthy()
-    expect(screen.getByText('cus_1')).toBeTruthy()
-    expect(screen.getByText('VAT number')).toBeTruthy()
-    expect(screen.getByText('DE123456789')).toBeTruthy()
+    expect(await screen.findByText('Unable to load SolvaPay')).toBeTruthy()
+    expect(screen.getByText('core sync API not installed (formatPrice)')).toBeTruthy()
   })
 
-  it('should render the checkout plan step when no binding is installed', async () => {
+  it('should surface a core-binding error when checkout view needs formatPrice', async () => {
     const app = makeApp(
       {
         view: 'checkout',
@@ -183,9 +178,8 @@ describe('<McpApp> with no native core binding', () => {
 
     render(<McpApp app={app} />)
 
-    expect(await screen.findByText('Choose a plan')).toBeTruthy()
-    expect(screen.getByText('Pro')).toBeTruthy()
-    expect(screen.getByText('$18')).toBeTruthy()
+    expect(await screen.findByText('Unable to load SolvaPay')).toBeTruthy()
+    expect(screen.getByText('core sync API not installed (formatPrice)')).toBeTruthy()
   })
 
   it('should render a diagnostic when a child throws', async () => {

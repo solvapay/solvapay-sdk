@@ -72,8 +72,7 @@ fn emit_py_fn(out: &mut String, entry: &IrEntryPoint, args: &[IrBindingArg], nat
             }
         })
         .collect::<Vec<_>>();
-    let sig = params.join(", ");
-    let _ = writeln!(out, "def {}({sig}) -> Any:", entry.names.py);
+    write_py_def(out, &entry.names.py, &params);
     write_pydoc_block(out, &render_pydoc(entry), "    ");
     out.push_str("    payload: dict[str, Any] = {}\n");
     for arg in &public_args {
@@ -92,6 +91,20 @@ fn emit_py_fn(out: &mut String, entry: &IrEntryPoint, args: &[IrBindingArg], nat
         out,
         "    return call_native_sync({native_name:?}, json.dumps(payload))\n"
     );
+}
+
+fn write_py_def(out: &mut String, name: &str, params: &[String]) {
+    let one_line = format!("def {name}({}) -> Any:", params.join(", "));
+    if one_line.len() <= 100 {
+        out.push_str(&one_line);
+        out.push('\n');
+        return;
+    }
+    let _ = writeln!(out, "def {name}(");
+    for param in params {
+        let _ = writeln!(out, "    {param},");
+    }
+    out.push_str(") -> Any:\n");
 }
 
 fn py_arg_type(arg: &IrBindingArg) -> &'static str {

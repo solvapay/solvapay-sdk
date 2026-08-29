@@ -442,17 +442,12 @@ fn format_error_observation(error: &ErrorObservation) -> String {
     )
 }
 
-/// Serializes JSON for compact mismatch output in failure messages.
+/// Treat whole-number JSON floats (`1000.0`) as integers so serde's integer
+/// and float encodings of the same magnitude compare equal.
 ///
 /// # Arguments
 ///
-/// * `value` - JSON value to stringify.
-///
-/// # Returns
-///
-/// Compact single-line JSON string, or `"<unserializable>"` when serialization fails.
-/// Treat whole-number JSON floats (`1000.0`) as integers so serde's integer
-/// and float encodings of the same magnitude compare equal.
+/// * `value` - JSON tree to rewrite in place.
 #[allow(clippy::cast_possible_truncation, clippy::float_cmp)]
 fn canonicalize_json_numbers(value: &mut Value) {
     match value {
@@ -483,6 +478,15 @@ fn canonicalize_json_numbers(value: &mut Value) {
     }
 }
 
+/// Serializes JSON for compact mismatch output in failure messages.
+///
+/// # Arguments
+///
+/// * `value` - JSON value to stringify.
+///
+/// # Returns
+///
+/// Compact single-line JSON string, or `"<unserializable>"` when serialization fails.
 fn compact_json(value: &Value) -> String {
     match serde_json::to_string(value) {
         Ok(s) => s,
