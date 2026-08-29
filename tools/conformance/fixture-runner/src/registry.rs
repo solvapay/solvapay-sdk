@@ -11,16 +11,18 @@ use solvapay_core::{
     classify_lookup_error, classify_paywall_state, classify_reactivate_error,
     coerce_customer_options, counts_usage, credits_per_unit_from_balance, decide_paywall_outcome,
     ensure_customer_next, evaluate_balance_observation, evaluate_cached_limits,
-    evaluate_fresh_limits, extract_backend_customer_ref, gate_next, get_business_country_options,
+    evaluate_fresh_limits, extract_backend_customer_ref, format_price, format_subtotal_label,
+    format_vat_summary_label, gate_next, get_business_country_options,
     get_seller_tax_identifier_display_label, headline_charges, included_units, invoke_payable_next,
     is_cached_customer_ref_valid, is_email_conflict, is_error_result, is_zero_decimal_currency,
     mcp_view_maps, meter_name, normalize_cancel_response, normalize_reactivate_response,
     paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
     project_topup_process_outcome, resolve_check_limits_params, resolve_fallback_gate_limits,
-    resolve_product_ref, resolve_purchase_customer_ref, should_retry_usage_error, trial_days,
-    validate_activate_plan_params, validate_attach_business_details_params,
-    validate_checkout_session_params, validate_create_payment_intent_params,
-    validate_get_product_params, validate_list_plans_params,
+    resolve_product_ref, resolve_purchase_customer_ref, resolve_tax_treatment_note,
+    reverse_charge_note, should_retry_usage_error, should_show_tax_row, tax_not_collected_note,
+    to_major_units, trial_days, validate_activate_plan_params,
+    validate_attach_business_details_params, validate_checkout_session_params,
+    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, GateContent, PaywallGate, PaywallGateLimits,
     PaywallLimits, PaywallState, ResponseEnvelope,
@@ -30,6 +32,16 @@ use solvapay_core::{
 use crate::extract::*;
 use crate::model::FixtureInput;
 use crate::runner::{Binding, BindingError, BindingRegistry};
+
+fn invoke_reverse_charge_note(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    Ok(Value::String(reverse_charge_note()))
+}
+
+fn invoke_tax_not_collected_note(input: &FixtureInput) -> Result<Value, BindingError> {
+    let _args = args_map(input);
+    Ok(Value::String(tax_not_collected_note()))
+}
 
 fn invoke_attach_business_details_validation_error(
     input: &FixtureInput,
@@ -204,6 +216,40 @@ fn invoke_extract_backend_customer_ref(input: &FixtureInput) -> Result<Value, Bi
     let fallback = require_string(&args, "fallback")?;
     Ok(Value::String(extract_backend_customer_ref(
         response, &fallback,
+    )))
+}
+
+fn invoke_format_price(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let amount_minor = require_f64(&args, "amountMinor")?;
+    let currency = require_string(&args, "currency")?;
+    let interval = optional_string(&args, "interval")?;
+    let interval_count = optional_f64(&args, "intervalCount")?;
+    let free = optional_string(&args, "free")?;
+    let currency_display = optional_string(&args, "currencyDisplay")?;
+    Ok(Value::String(format_price(
+        amount_minor,
+        &currency,
+        interval.as_deref(),
+        interval_count,
+        free.as_deref(),
+        currency_display.as_deref(),
+    )))
+}
+
+fn invoke_format_subtotal_label(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let treatment = optional_string(&args, "treatment")?;
+    Ok(Value::String(format_subtotal_label(treatment.as_deref())))
+}
+
+fn invoke_format_vat_summary_label(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let treatment = optional_string(&args, "treatment")?;
+    let tax_rate = require_f64(&args, "taxRate")?;
+    Ok(Value::String(format_vat_summary_label(
+        treatment.as_deref(),
+        tax_rate,
     )))
 }
 
@@ -383,10 +429,29 @@ fn invoke_resolve_purchase_customer_ref(input: &FixtureInput) -> Result<Value, B
     )))
 }
 
+fn invoke_resolve_tax_treatment_note(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let treatment = optional_string(&args, "treatment")?;
+    to_value(&resolve_tax_treatment_note(treatment.as_deref()))
+}
+
 fn invoke_should_retry_usage_error(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let message = require_string(&args, "message")?;
     Ok(Value::Bool(should_retry_usage_error(&message)))
+}
+
+fn invoke_should_show_tax_row(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let treatment = optional_string(&args, "treatment")?;
+    Ok(Value::Bool(should_show_tax_row(treatment.as_deref())))
+}
+
+fn invoke_to_major_units(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let amount_minor = require_f64(&args, "amountMinor")?;
+    let currency = require_string(&args, "currency")?;
+    to_value(&to_major_units(amount_minor, &currency))
 }
 
 fn invoke_trial_days(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1065,6 +1130,20 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "REVERSE_CHARGE_NOTE",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_reverse_charge_note),
+        },
+    );
+    registry.register(
+        "TAX_NOT_COLLECTED_NOTE",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_tax_not_collected_note),
+        },
+    );
+    registry.register(
         "buildPayableToolResult",
         Binding {
             id: "core",
@@ -1083,6 +1162,27 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_evaluate_balance_observation),
+        },
+    );
+    registry.register(
+        "formatPrice",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_format_price),
+        },
+    );
+    registry.register(
+        "formatSubtotalLabel",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_format_subtotal_label),
+        },
+    );
+    registry.register(
+        "formatVatSummaryLabel",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_format_vat_summary_label),
         },
     );
     registry.register(
@@ -1107,10 +1207,31 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "resolveTaxTreatmentNote",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_resolve_tax_treatment_note),
+        },
+    );
+    registry.register(
         "shouldRetryUsageError",
         Binding {
             id: "core",
             invoke: Box::new(invoke_should_retry_usage_error),
+        },
+    );
+    registry.register(
+        "shouldShowTaxRow",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_should_show_tax_row),
+        },
+    );
+    registry.register(
+        "toMajorUnits",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_to_major_units),
         },
     );
 

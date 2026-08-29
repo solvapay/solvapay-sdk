@@ -127,7 +127,8 @@ describe('<McpCustomerDetailsCard>', () => {
     )
     renderWith(ctx, <McpCustomerDetailsCard />)
     expect(screen.getByText(/159,600 credits/)).toBeTruthy()
-    expect(screen.getByText(/~kr150\.98|~SEK 150\.98/)).toBeTruthy()
+    expect(document.body.textContent).toMatch(/150\.98/)
+    expect(document.body.textContent).toMatch(/kr/)
     expect(screen.queryByText(/15,103/)).toBeNull()
   })
 

@@ -15,8 +15,8 @@ pub mod business_details;
 pub mod checkout;
 pub mod credit_display;
 pub mod customer_sync;
-pub mod envelope;
 pub mod ensure_customer;
+pub mod envelope;
 pub mod error;
 #[cfg(feature = "server")]
 pub mod fixture_host;
@@ -28,6 +28,7 @@ mod hmac_util;
 pub mod invoke_payable;
 pub mod limits;
 pub mod mcp;
+pub mod money_format;
 pub mod payment;
 pub mod paywall_decision;
 pub mod paywall_gate;
@@ -44,6 +45,7 @@ pub mod retry;
 pub mod route_error;
 pub mod seller_identity;
 mod serde_util;
+pub mod tax_summary;
 pub mod usage;
 #[cfg(feature = "webhook-verify")]
 pub mod webhook;
@@ -75,13 +77,13 @@ pub use customer_sync::{
     is_email_conflict, CoercedCustomerOptions, CreateCustomerParams, CreateErrorKind,
     CustomerRefKind, LookupErrorKind,
 };
-pub use envelope::{
-    envelope_from_panic_payload, err_envelope, internal_error_envelope, ok_envelope,
-    parse_args_json, run_envelope_result, run_envelope_sync,
-};
 pub use ensure_customer::{
     ensure_customer_next, EnsureCustomerAction, EnsureCustomerCacheWrite, EnsureCustomerNextOutput,
     EnsureCustomerState, EnsurePending,
+};
+pub use envelope::{
+    envelope_from_panic_payload, err_envelope, internal_error_envelope, ok_envelope,
+    parse_args_json, run_envelope_result, run_envelope_sync,
 };
 pub use error::{render_template, SdkError};
 pub use gate_driver::{
@@ -103,6 +105,7 @@ pub use mcp::{
     ToolDescriptorMetadata, ToolIcon, MCP_TOOL_NAMES, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW,
     VIEW_FOR_TOOL,
 };
+pub use money_format::{format_grouped_major, format_major_fixed, format_price, to_major_units};
 pub use payment::{
     attach_business_details_validation_error, project_payment_intent_result,
     project_topup_process_outcome, validate_attach_business_details_params,
@@ -146,6 +149,11 @@ pub use seller_identity::{
     get_seller_tax_identifier_display_label, resolve_seller_identity_display,
     seller_tax_identifier_display_label_by_type, SellerIdentityDisplay, SellerIdentityInput,
     SellerIdentityRow, SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
+};
+pub use tax_summary::{
+    format_subtotal_label, format_vat_summary_label, resolve_tax_treatment_note,
+    reverse_charge_note, should_show_tax_row, tax_not_collected_note, REVERSE_CHARGE_NOTE,
+    TAX_NOT_COLLECTED_NOTE,
 };
 pub use usage::{project_usage_snapshot, should_retry_usage_error, UsageSnapshot};
 #[cfg(feature = "webhook-verify")]

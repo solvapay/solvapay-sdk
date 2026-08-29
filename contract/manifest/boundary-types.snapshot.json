@@ -6729,6 +6729,168 @@
         }
       }
     },
+    "solvapay_core::money_format::format_grouped_major": {
+      "name": "format_grouped_major",
+      "module": "money_format",
+      "implTy": null,
+      "rustdoc": "Group the integer part of `major` with comma thousands separators.\n\n# Arguments\n\n* `major` - Major-unit amount (may be negative)\n* `fraction` - Decimal places to emit (`0` omits the point)\n\n# Returns\n\nSigned grouped number such as `\"1,000\"` or `\"19.99\"`.",
+      "params": [
+        {
+          "rustName": "major",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "rustName": "fraction",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "usize"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::money_format::format_major_fixed": {
+      "name": "format_major_fixed",
+      "module": "money_format",
+      "implTy": null,
+      "rustdoc": "Narration-stable formatter: `$`/`€`/`£`/`¥` prefix, otherwise `CODE amount`.\n\nPreserves byte-parity with the previous `narrate.rs` / transport helpers.\nPrefer [`format_price`] for buyer-facing checkout.\n\n# Arguments\n\n* `major` - Major-unit amount\n* `currency` - ISO currency code\n* `fraction` - Decimal places\n\n# Returns\n\nFormatted money string.",
+      "params": [
+        {
+          "rustName": "major",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "rustName": "currency",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "fraction",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "named",
+            "name": "usize"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::money_format::format_price": {
+      "name": "format_price",
+      "module": "money_format",
+      "implTy": null,
+      "rustdoc": "Format a minor-unit amount as buyer-facing money, optionally with an\ninterval suffix.\n\nWhole amounts drop trailing zeros (`$10`, not `$10.00`). A zero amount\nrenders as `\"Free\"` unless `free` is `\"\"`.\n\n# Arguments\n\n* `amount_minor` - Amount in minor units\n* `currency` - ISO currency code (any casing)\n* `interval` - Recurring interval unit (`month`, `year`)\n* `interval_count` - How many of `interval` per cycle; `None` means `1`\n* `free` - Copy used when the amount is 0; `None` defaults to `\"Free\"`;\n  `Some(\"\")` disables the zero-check\n* `currency_display` - `\"symbol\"` (default) or `\"code\"`\n\n# Returns\n\nFormatted price string.",
+      "params": [
+        {
+          "rustName": "amount_minor",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "rustName": "currency",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "interval",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "interval_count",
+          "byRef": false,
+          "optional": true,
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "rustName": "free",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "currency_display",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::money_format::to_major_units": {
+      "name": "to_major_units",
+      "module": "money_format",
+      "implTy": null,
+      "rustdoc": "Convert a minor-unit amount to its major-unit equivalent.\n\n# Arguments\n\n* `amount_minor` - Minor-unit amount\n* `currency` - ISO currency code\n\n# Returns\n\n`amount_minor` unchanged for zero-decimal currencies; otherwise\n`amount_minor / 100`.",
+      "params": [
+        {
+          "rustName": "amount_minor",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "rustName": "currency",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "f64"
+        }
+      }
+    },
     "solvapay_core::payment::attach_business_details_validation_error": {
       "name": "attach_business_details_validation_error",
       "module": "payment",
@@ -8067,6 +8229,128 @@
               }
             ]
           }
+        }
+      }
+    },
+    "solvapay_core::tax_summary::format_subtotal_label": {
+      "name": "format_subtotal_label",
+      "module": "tax_summary",
+      "implTy": null,
+      "rustdoc": "Subtotal row label: `Subtotal (excl. VAT)` whenever a VAT row shows.\n\n# Arguments\n\n* `treatment` - Tax-breakdown treatment, or `None` when unknown\n\n# Returns\n\n`\"Subtotal (excl. VAT)\"` when [`should_show_tax_row`] is true, otherwise\n`\"Subtotal\"`.",
+      "params": [
+        {
+          "rustName": "treatment",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::tax_summary::format_vat_summary_label": {
+      "name": "format_vat_summary_label",
+      "module": "tax_summary",
+      "implTy": null,
+      "rustdoc": "VAT row label. Reverse charge is named; otherwise a bare rate, never\n`incl.` / `excl.`.\n\n`tax_rate` may be a fraction (`0.25`) or a whole percent (`25`). A rate of\n`0` falls through to bare `\"VAT\"`.\n\n# Arguments\n\n* `treatment` - Tax-breakdown treatment\n* `tax_rate` - Rate as a 0–1 fraction or a whole percent\n\n# Returns\n\n`\"VAT (reverse charge)\"`, `\"VAT (N%)\"`, or `\"VAT\"`.",
+      "params": [
+        {
+          "rustName": "treatment",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "tax_rate",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::tax_summary::resolve_tax_treatment_note": {
+      "name": "resolve_tax_treatment_note",
+      "module": "tax_summary",
+      "implTy": null,
+      "rustdoc": "Explanatory note for a non-standard tax treatment, if any.\n\n# Arguments\n\n* `treatment` - Tax-breakdown treatment, or `None` when unknown\n\n# Returns\n\nReverse-charge or not-collected copy, or `None` for `standard` / `none` /\nmissing treatments.",
+      "params": [
+        {
+          "rustName": "treatment",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::tax_summary::reverse_charge_note": {
+      "name": "reverse_charge_note",
+      "module": "tax_summary",
+      "implTy": null,
+      "rustdoc": "Reverse-charge note constant.\n\n# Returns\n\nOwned [`REVERSE_CHARGE_NOTE`] copy.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::tax_summary::should_show_tax_row": {
+      "name": "should_show_tax_row",
+      "module": "tax_summary",
+      "implTy": null,
+      "rustdoc": "Whether a VAT amount row should render for `treatment`.\n\nThe row is shown whenever VAT was considered — including zero-rated and\nreverse charge — and hidden only when no tax was assessed\n(`not_collecting` / `not_supported`).\n\n# Arguments\n\n* `treatment` - Tax-breakdown treatment, or `None` when unknown\n\n# Returns\n\n`false` for `not_collecting` and `not_supported`; `true` otherwise\n(including `None`).",
+      "params": [
+        {
+          "rustName": "treatment",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::tax_summary::tax_not_collected_note": {
+      "name": "tax_not_collected_note",
+      "module": "tax_summary",
+      "implTy": null,
+      "rustdoc": "Tax-not-collected note constant.\n\n# Returns\n\nOwned [`TAX_NOT_COLLECTED_NOTE`] copy.",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
         }
       }
     },

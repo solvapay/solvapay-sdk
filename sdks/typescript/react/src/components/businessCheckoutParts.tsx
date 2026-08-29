@@ -17,6 +17,12 @@ import {
   getTaxIdFieldLabel,
   getTaxIdExample,
   getTaxIdHelperText,
+  shouldShowTaxRow,
+  formatSubtotalLabel,
+  formatVatSummaryLabel as formatVatSummaryLabelCore,
+  resolveTaxTreatmentNote,
+  REVERSE_CHARGE_NOTE,
+  TAX_NOT_COLLECTED_NOTE,
   type BusinessDetailsInput,
   type SupportedBusinessCountry,
   type TaxBreakdown,
@@ -161,41 +167,13 @@ function resolveTaxIdHelperText(country: string): string {
  *    prices tax-inclusive or tax-exclusive. The buyer never has to know
  *    which `taxBehavior` the plan uses.
  */
-export const REVERSE_CHARGE_NOTE =
-  'VAT reverse charge applies — you are responsible for reporting VAT in your jurisdiction.'
-export const TAX_NOT_COLLECTED_NOTE = 'Tax is not collected on this purchase.'
+export { REVERSE_CHARGE_NOTE, TAX_NOT_COLLECTED_NOTE, shouldShowTaxRow, formatSubtotalLabel }
 
 export function formatVatSummaryLabel(breakdown: {
   treatment: TaxBreakdown['treatment']
   taxRate: number
 }): string {
-  if (breakdown.treatment === 'reverse_charge') {
-    return 'VAT (reverse charge)'
-  }
-
-  if (breakdown.taxRate > 0) {
-    const ratePercent =
-      breakdown.taxRate <= 1 ? Math.round(breakdown.taxRate * 100) : breakdown.taxRate
-    return `VAT (${ratePercent}%)`
-  }
-
-  return 'VAT'
-}
-
-/**
- * A VAT row is shown whenever VAT was actually considered for the sale —
- * including when it came out at zero (zero-rated, no tax due, reverse
- * charge). It is replaced by an explanatory note only when no tax was
- * assessed at all: the seller is not registered in the buyer's jurisdiction
- * (`not_collecting`) or Stripe does not support the jurisdiction/product
- * (`not_supported`).
- */
-export function shouldShowTaxRow(treatment: TaxBreakdown['treatment'] | null): boolean {
-  return treatment !== 'not_collecting' && treatment !== 'not_supported'
-}
-
-export function formatSubtotalLabel(treatment: TaxBreakdown['treatment'] | null): string {
-  return shouldShowTaxRow(treatment) ? 'Subtotal (excl. VAT)' : 'Subtotal'
+  return formatVatSummaryLabelCore(breakdown.treatment, breakdown.taxRate)
 }
 
 type DataAttr = Record<`data-solvapay-${string}`, ''>
@@ -521,12 +499,7 @@ export function createTaxSummaryParts(
     if (!ctx.isBusiness) return null
     if (!treatment || treatment === 'standard') return null
     const Comp = asChild ? Slot : 'p'
-    const defaultNote =
-      treatment === 'reverse_charge'
-        ? REVERSE_CHARGE_NOTE
-        : treatment === 'not_collecting' || treatment === 'not_supported'
-          ? TAX_NOT_COLLECTED_NOTE
-          : null
+    const defaultNote = resolveTaxTreatmentNote(treatment)
     if (!defaultNote && !children) return null
     return (
       <Comp ref={forwardedRef} {...{ [attr(prefix, 'summary-tax-note')]: '' }} {...rest}>

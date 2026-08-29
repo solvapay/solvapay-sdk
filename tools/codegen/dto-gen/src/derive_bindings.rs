@@ -389,6 +389,12 @@ fn call_arg_token(param: &IrCoreParam) -> String {
     if param.ty.optional {
         return match &param.ty.ty {
             IrCoreFieldTy::String => format!("{local}.as_deref()"),
+            IrCoreFieldTy::F64
+            | IrCoreFieldTy::I64
+            | IrCoreFieldTy::U16
+            | IrCoreFieldTy::U32
+            | IrCoreFieldTy::U64
+            | IrCoreFieldTy::Bool => local.to_owned(),
             _ => format!("{local}.as_ref()"),
         };
     }

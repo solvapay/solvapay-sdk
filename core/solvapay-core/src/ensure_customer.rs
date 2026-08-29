@@ -9,8 +9,8 @@ use serde_json::{Map, Value};
 
 use crate::customer_sync::{
     build_create_customer_params, classify_create_error, classify_customer_ref,
-    classify_lookup_error, extract_backend_customer_ref, is_email_conflict, CreateErrorKind,
-    CreateCustomerParams, CustomerRefKind, LookupErrorKind,
+    classify_lookup_error, extract_backend_customer_ref, is_email_conflict, CreateCustomerParams,
+    CreateErrorKind, CustomerRefKind, LookupErrorKind,
 };
 use crate::helper_error::HelperErrorResult;
 
@@ -168,8 +168,8 @@ pub fn ensure_customer_next(
     state: Option<&Value>,
     event: Option<&Value>,
 ) -> Result<EnsureCustomerNextOutput, HelperErrorResult> {
-    let event =
-        event.ok_or_else(|| HelperErrorResult::transport("ensure_customer_next event is required"))?;
+    let event = event
+        .ok_or_else(|| HelperErrorResult::transport("ensure_customer_next event is required"))?;
     let kind = event.get("kind").and_then(Value::as_str).ok_or_else(|| {
         HelperErrorResult::transport("ensure_customer_next event.kind is required")
     })?;
@@ -203,9 +203,7 @@ fn start(event: &Value) -> Result<EnsureCustomerNextOutput, HelperErrorResult> {
         .get("dedupTTLMs")
         .and_then(Value::as_i64)
         .unwrap_or(DEFAULT_DEDUP_TTL_MS);
-    let cache_key = external_ref
-        .clone()
-        .unwrap_or_else(|| customer_ref.clone());
+    let cache_key = external_ref.clone().unwrap_or_else(|| customer_ref.clone());
     let mut state = EnsureCustomerState {
         customer_ref: customer_ref.clone(),
         external_ref,
@@ -222,7 +220,9 @@ fn start(event: &Value) -> Result<EnsureCustomerNextOutput, HelperErrorResult> {
         generated_email_attempted: false,
     };
     match classify_customer_ref(&customer_ref) {
-        CustomerRefKind::Anonymous | CustomerRefKind::Backend => Ok(resolved(state, customer_ref, None)),
+        CustomerRefKind::Anonymous | CustomerRefKind::Backend => {
+            Ok(resolved(state, customer_ref, None))
+        }
         CustomerRefKind::NeedsEnsure => {
             state.pending = EnsurePending::Cache;
             Ok(EnsureCustomerNextOutput {
@@ -241,11 +241,14 @@ fn on_cache_entry(
     let found = require_bool(event, "found")?;
     let now_ms = event.get("nowMs").and_then(Value::as_i64).unwrap_or(0);
     if found {
-        let timestamp_ms = event.get("timestampMs").and_then(Value::as_i64).ok_or_else(|| {
-            HelperErrorResult::transport(
-                "ensure_customer_next customerCacheEntry.timestampMs is required when found",
-            )
-        })?;
+        let timestamp_ms = event
+            .get("timestampMs")
+            .and_then(Value::as_i64)
+            .ok_or_else(|| {
+                HelperErrorResult::transport(
+                    "ensure_customer_next customerCacheEntry.timestampMs is required when found",
+                )
+            })?;
         let age = now_ms.saturating_sub(timestamp_ms);
         if age < state.dedup_ttl_ms {
             let backend_ref = require_str(event, "backendRef")?;
@@ -406,14 +409,11 @@ fn on_update_result(
     event: &Value,
 ) -> Result<EnsureCustomerNextOutput, HelperErrorResult> {
     let now_ms = event.get("nowMs").and_then(Value::as_i64).unwrap_or(0);
-    let backend_ref = state
-        .pending_backend_ref
-        .clone()
-        .ok_or_else(|| {
-            HelperErrorResult::transport(
-                "ensure_customer_next customerUpdateResult missing pending backend ref",
-            )
-        })?;
+    let backend_ref = state.pending_backend_ref.clone().ok_or_else(|| {
+        HelperErrorResult::transport(
+            "ensure_customer_next customerUpdateResult missing pending backend ref",
+        )
+    })?;
     let cache = Some(cache_write(&state, backend_ref.clone(), now_ms));
     Ok(resolved(state, backend_ref, cache))
 }
@@ -516,9 +516,8 @@ fn cache_write(
 
 /// Deserialize driver state.
 fn require_state(state: Option<&Value>) -> Result<EnsureCustomerState, HelperErrorResult> {
-    let value = state.ok_or_else(|| {
-        HelperErrorResult::transport("ensure_customer_next state is required")
-    })?;
+    let value = state
+        .ok_or_else(|| HelperErrorResult::transport("ensure_customer_next state is required"))?;
     serde_json::from_value(value.clone()).map_err(|err| {
         HelperErrorResult::transport(format!("ensure_customer_next invalid state: {err}"))
     })
@@ -538,12 +537,9 @@ fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
 
 /// Required boolean field.
 fn require_bool(value: &Value, key: &str) -> Result<bool, HelperErrorResult> {
-    value
-        .get(key)
-        .and_then(Value::as_bool)
-        .ok_or_else(|| {
-            HelperErrorResult::transport(format!("ensure_customer_next {key} must be a boolean"))
-        })
+    value.get(key).and_then(Value::as_bool).ok_or_else(|| {
+        HelperErrorResult::transport(format!("ensure_customer_next {key} must be a boolean"))
+    })
 }
 
 /// Optional non-empty string (`null` / `''` omitted).
@@ -747,6 +743,9 @@ mod tests {
             })),
         )
         .unwrap_err();
-        assert!(err.details.unwrap().contains("createCustomer is not available"));
+        assert!(err
+            .details
+            .unwrap()
+            .contains("createCustomer is not available"));
     }
 }

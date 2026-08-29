@@ -239,6 +239,15 @@ export declare function evaluateProductReadiness(argsJson: string): string
 /** Binding for `extractBackendCustomerRef`. */
 export declare function extractBackendCustomerRef(argsJson: string): string
 
+/** Binding for `formatPrice`. */
+export declare function formatPrice(argsJson: string): string
+
+/** Binding for `formatSubtotalLabel`. */
+export declare function formatSubtotalLabel(argsJson: string): string
+
+/** Binding for `formatVatSummaryLabel`. */
+export declare function formatVatSummaryLabel(argsJson: string): string
+
 /** Binding for `gateNext`. */
 export declare function gateNext(argsJson: string): string
 
@@ -374,6 +383,9 @@ export declare function resolveSellerIdentityDisplay(argsJson: string): string
 /** Binding for `resolveTaxBehavior`. */
 export declare function resolveTaxBehavior(argsJson: string): string
 
+/** Binding for `resolveTaxTreatmentNote`. */
+export declare function resolveTaxTreatmentNote(argsJson: string): string
+
 /**
  * Binding for `retryNextDelayMs`.
  *
@@ -381,6 +393,9 @@ export declare function resolveTaxBehavior(argsJson: string): string
  * Envelope value is delay milliseconds, or `null` when retries are exhausted.
  */
 export declare function retryNextDelayMs(argsJson: string): string
+
+/** Binding for `REVERSE_CHARGE_NOTE`. */
+export declare function REVERSE_CHARGE_NOTE(argsJson: string): string
 
 /** Binding for `selectActivePurchases`. */
 export declare function selectActivePurchases(argsJson: string): string
@@ -391,8 +406,17 @@ export declare function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(argsJson: st
 /** Binding for `shouldRetryUsageError`. */
 export declare function shouldRetryUsageError(argsJson: string): string
 
+/** Binding for `shouldShowTaxRow`. */
+export declare function shouldShowTaxRow(argsJson: string): string
+
 /** Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`. */
 export declare function solvapayCall(argsJson: string): string
+
+/** Binding for `TAX_NOT_COLLECTED_NOTE`. */
+export declare function TAX_NOT_COLLECTED_NOTE(argsJson: string): string
+
+/** Binding for `toMajorUnits`. */
+export declare function toMajorUnits(argsJson: string): string
 
 /** Binding for `trialDays`. */
 export declare function trialDays(argsJson: string): string

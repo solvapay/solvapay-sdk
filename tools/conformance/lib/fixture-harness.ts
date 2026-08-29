@@ -23,6 +23,14 @@ import {
   minorUnitsPerMajor,
   resolveSellerIdentityDisplay,
   resolveTaxBehavior,
+  resolveTaxTreatmentNote,
+  REVERSE_CHARGE_NOTE,
+  shouldShowTaxRow,
+  TAX_NOT_COLLECTED_NOTE,
+  formatPrice,
+  formatSubtotalLabel,
+  formatVatSummaryLabel,
+  toMajorUnits,
   SolvaPayError,
   type PaywallDecisionLimits,
   validateBusinessDetails,
@@ -606,6 +614,49 @@ function isResolveTaxBehaviorArgs(
 
 function isCurrencyArg(args: Record<string, unknown>): args is { currency: string } {
   return typeof args.currency === 'string'
+}
+
+function isOptionalTreatmentArg(
+  args: Record<string, unknown>,
+): args is { treatment?: string | null } {
+  return (
+    args.treatment === undefined || args.treatment === null || typeof args.treatment === 'string'
+  )
+}
+
+function isFormatVatSummaryLabelArgs(args: Record<string, unknown>): args is {
+  treatment?: string | null
+  taxRate: number
+} {
+  return isOptionalTreatmentArg(args) && typeof args.taxRate === 'number'
+}
+
+function isFormatPriceArgs(args: Record<string, unknown>): args is {
+  amountMinor: number
+  currency: string
+  interval?: string | null
+  intervalCount?: number | null
+  free?: string | null
+  currencyDisplay?: string | null
+} {
+  return (
+    typeof args.amountMinor === 'number' &&
+    typeof args.currency === 'string' &&
+    (args.interval === undefined || args.interval === null || typeof args.interval === 'string') &&
+    (args.intervalCount === undefined ||
+      args.intervalCount === null ||
+      typeof args.intervalCount === 'number') &&
+    (args.free === undefined || args.free === null || typeof args.free === 'string') &&
+    (args.currencyDisplay === undefined ||
+      args.currencyDisplay === null ||
+      typeof args.currencyDisplay === 'string')
+  )
+}
+
+function isToMajorUnitsArgs(
+  args: Record<string, unknown>,
+): args is { amountMinor: number; currency: string } {
+  return typeof args.amountMinor === 'number' && typeof args.currency === 'string'
 }
 
 function isCreditsToDisplayArgs(args: Record<string, unknown>): args is {
@@ -1438,6 +1489,85 @@ export function createDefaultRegistry(): FixtureRegistry {
         throw new Error('resolveTaxBehavior args must include string behavior and currency')
       }
       return resolveTaxBehavior(args.behavior, args.currency)
+    },
+  })
+
+  registry.register('shouldShowTaxRow', {
+    id: 'core',
+    invoke: args => {
+      if (!isOptionalTreatmentArg(args)) {
+        throw new Error('shouldShowTaxRow args.treatment must be string, null, or omitted')
+      }
+      return shouldShowTaxRow(args.treatment)
+    },
+  })
+
+  registry.register('formatSubtotalLabel', {
+    id: 'core',
+    invoke: args => {
+      if (!isOptionalTreatmentArg(args)) {
+        throw new Error('formatSubtotalLabel args.treatment must be string, null, or omitted')
+      }
+      return formatSubtotalLabel(args.treatment)
+    },
+  })
+
+  registry.register('formatVatSummaryLabel', {
+    id: 'core',
+    invoke: args => {
+      if (!isFormatVatSummaryLabelArgs(args)) {
+        throw new Error(
+          'formatVatSummaryLabel args must include taxRate (number); treatment string, null, or omitted',
+        )
+      }
+      return formatVatSummaryLabel(args.treatment, args.taxRate)
+    },
+  })
+
+  registry.register('resolveTaxTreatmentNote', {
+    id: 'core',
+    invoke: args => {
+      if (!isOptionalTreatmentArg(args)) {
+        throw new Error('resolveTaxTreatmentNote args.treatment must be string, null, or omitted')
+      }
+      return resolveTaxTreatmentNote(args.treatment)
+    },
+  })
+
+  registry.register('REVERSE_CHARGE_NOTE', {
+    id: 'core',
+    invoke: () => REVERSE_CHARGE_NOTE,
+  })
+
+  registry.register('TAX_NOT_COLLECTED_NOTE', {
+    id: 'core',
+    invoke: () => TAX_NOT_COLLECTED_NOTE,
+  })
+
+  registry.register('formatPrice', {
+    id: 'core',
+    invoke: args => {
+      if (!isFormatPriceArgs(args)) {
+        throw new Error('formatPrice args must include amountMinor (number) and currency (string)')
+      }
+      return formatPrice(
+        args.amountMinor,
+        args.currency,
+        args.interval,
+        args.intervalCount,
+        args.free,
+        args.currencyDisplay,
+      )
+    },
+  })
+
+  registry.register('toMajorUnits', {
+    id: 'core',
+    invoke: args => {
+      if (!isToMajorUnitsArgs(args)) {
+        throw new Error('toMajorUnits args must include amountMinor (number) and currency (string)')
+      }
+      return toMajorUnits(args.amountMinor, args.currency)
     },
   })
 

@@ -84,6 +84,9 @@ pub enum TaxBreakdownTreatment {
     /// Wire value `not_collecting`.
     #[serde(rename = "not_collecting")]
     NotCollecting,
+    /// Wire value `not_supported`.
+    #[serde(rename = "not_supported")]
+    NotSupported,
     /// Wire value `reverse_charge`.
     #[serde(rename = "reverse_charge")]
     ReverseCharge,

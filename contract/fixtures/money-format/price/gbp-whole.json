@@ -1,0 +1,14 @@
+{
+  "suite": "money-format",
+  "case": "price-gbp-whole",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 500,
+      "currency": "gbp"
+    }
+  },
+  "expect": {
+    "result": "£5"
+  }
+}

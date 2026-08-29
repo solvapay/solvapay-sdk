@@ -1,12 +1,17 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const REVERSE_CHARGE_NOTE: (a: number, b: number) => [number, number];
 export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
+export const TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
 export const billingCycle: (a: number, b: number) => [number, number];
 export const charges: (a: number, b: number) => [number, number];
 export const creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
 export const creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
 export const deriveTaxIdType: (a: number, b: number) => [number, number];
+export const formatPrice: (a: number, b: number) => [number, number];
+export const formatSubtotalLabel: (a: number, b: number) => [number, number];
+export const formatVatSummaryLabel: (a: number, b: number) => [number, number];
 export const getBusinessCountryOptions: (a: number, b: number) => [number, number];
 export const getSellerTaxIdentifierDisplayLabel: (a: number, b: number) => [number, number];
 export const getTaxIdExample: (a: number, b: number) => [number, number];
@@ -21,7 +26,10 @@ export const peggedCreditsPerUnit: (a: number, b: number) => [number, number];
 export const perUnitCharge: (a: number, b: number) => [number, number];
 export const resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
 export const resolveTaxBehavior: (a: number, b: number) => [number, number];
+export const resolveTaxTreatmentNote: (a: number, b: number) => [number, number];
+export const shouldShowTaxRow: (a: number, b: number) => [number, number];
 export const solvapayCall: (a: number, b: number) => [number, number];
+export const toMajorUnits: (a: number, b: number) => [number, number];
 export const trialDays: (a: number, b: number) => [number, number];
 export const validateBusinessDetails: (a: number, b: number) => [number, number];
 export const wasmVersion: () => [number, number];

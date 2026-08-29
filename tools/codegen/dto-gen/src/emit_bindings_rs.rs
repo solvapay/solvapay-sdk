@@ -943,8 +943,9 @@ use solvapay_core::{
     build_payable_tool_result, invoke_payable_next, make_response_result, mcp_tool_names_json,
     mcp_view_maps,
     minor_units_per_major, paywall_tool_result, resolve_seller_identity_display,
-    resolve_tax_behavior,
-    seller_tax_identifier_display_label_by_type, validate_business_details,
+    resolve_tax_behavior, resolve_tax_treatment_note, reverse_charge_note, should_show_tax_row,
+    seller_tax_identifier_display_label_by_type, format_price, format_subtotal_label,
+    format_vat_summary_label, tax_not_collected_note, to_major_units, validate_business_details,
     validate_public_base_url, BuildPromptDescriptorMetadataOptions,
     BuildToolDescriptorMetadataOptions, BusinessDetailsInput, CreditsToDisplayInput,
     MerchantBranding, PaywallGate, ResponseEnvelope, SdkError, SellerIdentityInput,
@@ -952,8 +953,8 @@ use solvapay_core::{
 
 use crate::abi::{pack, read_string};
 use crate::args::{
-    args_map, optional_string, optional_value, require_f64, require_string, require_typed,
-    result_as_value, to_value,
+    args_map, optional_f64, optional_string, optional_value, require_f64, require_string,
+    require_typed, result_as_value, to_value,
 };
 use crate::error::run_envelope_sync;
 "#;

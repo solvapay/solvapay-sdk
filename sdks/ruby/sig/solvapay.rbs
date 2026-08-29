@@ -171,12 +171,14 @@ module SolvaPay
   BUSINESS_COUNTRY_DISPLAY_NAMES: untyped
   BUSINESS_COUNTRY_OPTIONS: untyped
   COUNTRY_TO_TAX_ID_TYPE: untyped
+  REVERSE_CHARGE_NOTE: untyped
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: untyped
   SUPPORTED_BUSINESS_COUNTRIES: untyped
   TAX_BEHAVIORS: untyped
   TAX_EXCLUSIVE_CURRENCIES: untyped
   TAX_ID_EXAMPLE_BY_COUNTRY: untyped
   TAX_ID_TYPES: untyped
+  TAX_NOT_COLLECTED_NOTE: untyped
   def self.assert_valid_product_ref: (product_ref: String, context: String) -> untyped
   def self.billing_cycle: (?priced: untyped) -> untyped
   def self.build_gate_message: (input: Hash[String, untyped]) -> untyped
@@ -189,6 +191,9 @@ module SolvaPay
   def self.credits_to_display_minor_units: (credits: Float, credits_per_minor_unit: Float, display_exchange_rate: Float, display_currency: String) -> untyped
   def self.derive_tax_id_type: (country: String) -> untyped
   def self.evaluate_product_readiness: () -> untyped
+  def self.format_price: (amount_minor: Float, currency: String, ?interval: String, ?interval_count: Float, ?free: String, ?currency_display: String) -> untyped
+  def self.format_subtotal_label: (?treatment: String) -> untyped
+  def self.format_vat_summary_label: (?treatment: String, tax_rate: Float) -> untyped
   def self.get_seller_tax_identifier_display_label: (?country: String) -> untyped
   def self.get_tax_id_example: (country: String) -> untyped
   def self.get_tax_id_field_label: (country: String) -> untyped
@@ -204,6 +209,9 @@ module SolvaPay
   def self.require_product_ref: (?metadata_product: String, ?env_product: String) -> untyped
   def self.resolve_seller_identity_display: (?country: String, ?vat_number: String, ?tax_id: String, ?company_number: String) -> untyped
   def self.resolve_tax_behavior: (behavior: String, currency: String) -> untyped
+  def self.resolve_tax_treatment_note: (?treatment: String) -> untyped
+  def self.should_show_tax_row: (?treatment: String) -> untyped
+  def self.to_major_units: (amount_minor: Float, currency: String) -> untyped
   def self.trial_days: (?priced: untyped) -> untyped
   def self.validate_business_details: () -> untyped
 end

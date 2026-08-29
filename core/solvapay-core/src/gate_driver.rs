@@ -295,17 +295,21 @@ fn on_limits_cache_entry(
     state: GateDriverState,
     event: &Value,
 ) -> Result<GateNextOutput, HelperErrorResult> {
-    let found = event
-        .get("found")
-        .and_then(Value::as_bool)
-        .ok_or_else(|| HelperErrorResult::transport("gate_next limitsCacheEntry.found is required"))?;
+    let found = event.get("found").and_then(Value::as_bool).ok_or_else(|| {
+        HelperErrorResult::transport("gate_next limitsCacheEntry.found is required")
+    })?;
     let now_ms = event.get("nowMs").and_then(Value::as_i64).unwrap_or(0);
     if !found {
         return check_limits_action(state, None);
     }
-    let timestamp_ms = event.get("timestampMs").and_then(Value::as_i64).ok_or_else(|| {
-        HelperErrorResult::transport("gate_next limitsCacheEntry.timestampMs is required when found")
-    })?;
+    let timestamp_ms = event
+        .get("timestampMs")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| {
+            HelperErrorResult::transport(
+                "gate_next limitsCacheEntry.timestampMs is required when found",
+            )
+        })?;
     let age = now_ms.saturating_sub(timestamp_ms);
     if age >= state.limits_cache_ttl_ms {
         let delete_key = state.limits_key.clone();
@@ -325,7 +329,14 @@ fn on_limits_cache_entry(
     } else {
         None
     };
-    Ok(finish(state, eval.within_limits, limits, cache, now_ms, event)?)
+    Ok(finish(
+        state,
+        eval.within_limits,
+        limits,
+        cache,
+        now_ms,
+        event,
+    )?)
 }
 
 /// Ask the host to call `checkLimits`, optionally deleting a stale cache key first.
@@ -333,9 +344,10 @@ fn check_limits_action(
     state: GateDriverState,
     cache_delete_key: Option<String>,
 ) -> Result<GateNextOutput, HelperErrorResult> {
-    let customer_ref = state.backend_ref.clone().ok_or_else(|| {
-        HelperErrorResult::transport("gate_next checkLimits without backendRef")
-    })?;
+    let customer_ref = state
+        .backend_ref
+        .clone()
+        .ok_or_else(|| HelperErrorResult::transport("gate_next checkLimits without backendRef"))?;
     Ok(GateNextOutput {
         action: GateAction::CheckLimits {
             customer_ref,
@@ -380,7 +392,14 @@ fn on_limits_result(
     } else {
         None
     };
-    Ok(finish(state, eval.within_limits, limits, cache, now_ms, event)?)
+    Ok(finish(
+        state,
+        eval.within_limits,
+        limits,
+        cache,
+        now_ms,
+        event,
+    )?)
 }
 
 /// Handle a successful handler run: emit a complete `trackUsage` body.
@@ -475,7 +494,8 @@ fn finish(
         }),
         crate::paywall_decision::PaywallOutcome::Gate { gate } => {
             let random_unit = require_f64(event, "randomUnit")?;
-            let request = build_usage_request(&state, "paywall", duration_ms, now_ms, random_unit, None);
+            let request =
+                build_usage_request(&state, "paywall", duration_ms, now_ms, random_unit, None);
             Ok(GateNextOutput {
                 action: GateAction::Gate {
                     customer_ref,
@@ -671,7 +691,9 @@ mod tests {
         )
         .unwrap();
         match &out.action {
-            GateAction::Allow { cache, customer, .. } => {
+            GateAction::Allow {
+                cache, customer, ..
+            } => {
                 assert_eq!(customer.customer_ref, "cus_abc");
                 assert_eq!(customer.balance, 0.0);
                 assert!(customer.within_limits);
@@ -719,10 +741,7 @@ mod tests {
                 assert_eq!(request["duration"], 250);
                 assert_eq!(request["actionType"], "api_call");
                 assert_eq!(request["metadata"]["action"], "requests");
-                assert_eq!(
-                    request["metadata"]["requestId"],
-                    "solvapay_1250_i"
-                );
+                assert_eq!(request["metadata"]["requestId"], "solvapay_1250_i");
             }
             other => panic!("unexpected {other:?}"),
         }
@@ -770,23 +789,21 @@ mod tests {
         )
         .unwrap();
         match &out.action {
-            GateAction::Allow { cache, .. } => {
-                match cache {
-                    Some(GateCacheOp::Set {
-                        remaining,
-                        timestamp,
-                        checkout_url,
-                        meter_name,
-                        ..
-                    }) => {
-                        assert_eq!(*remaining, 2.0);
-                        assert_eq!(*timestamp, 1_100);
-                        assert_eq!(checkout_url.as_deref(), Some("https://pay"));
-                        assert_eq!(meter_name.as_deref(), Some("requests"));
-                    }
-                    other => panic!("unexpected cache {other:?}"),
+            GateAction::Allow { cache, .. } => match cache {
+                Some(GateCacheOp::Set {
+                    remaining,
+                    timestamp,
+                    checkout_url,
+                    meter_name,
+                    ..
+                }) => {
+                    assert_eq!(*remaining, 2.0);
+                    assert_eq!(*timestamp, 1_100);
+                    assert_eq!(checkout_url.as_deref(), Some("https://pay"));
+                    assert_eq!(meter_name.as_deref(), Some("requests"));
                 }
-            }
+                other => panic!("unexpected cache {other:?}"),
+            },
             other => panic!("unexpected {other:?}"),
         }
     }
@@ -940,7 +957,9 @@ mod tests {
         )
         .unwrap();
         match &out.action {
-            GateAction::CheckLimits { cache_delete_key, .. } => {
+            GateAction::CheckLimits {
+                cache_delete_key, ..
+            } => {
                 assert_eq!(cache_delete_key.as_deref(), Some("cus_abc:prd_1:requests"));
             }
             other => panic!("unexpected {other:?}"),

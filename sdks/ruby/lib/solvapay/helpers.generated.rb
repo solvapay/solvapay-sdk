@@ -4,8 +4,12 @@
 # Generated portable helper forwarding.
 
 module SolvaPay
+  # Buyer-facing note when VAT reverse charge applies.
+  REVERSE_CHARGE_NOTE = NativeDispatch.call_sync("REVERSE_CHARGE_NOTE", {}).freeze
   # Map of seller tax identifier types to display labels.
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = NativeDispatch.call_sync("SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE", {}).freeze
+  # Buyer-facing note when tax is not collected on the purchase.
+  TAX_NOT_COLLECTED_NOTE = NativeDispatch.call_sync("TAX_NOT_COLLECTED_NOTE", {}).freeze
   # Reject empty, placeholder, or non-prd_ product refs at construction time.
   # @return Throws when the ref is not a real prd_ identifier.
   def self.assert_valid_product_ref(product_ref:, context:)
@@ -105,6 +109,36 @@ module SolvaPay
   def self.evaluate_product_readiness
     args = {} #: Hash[String, untyped]
     NativeDispatch.call_sync("evaluate_product_readiness", args)
+  end
+
+  # Format a minor-unit amount as buyer-facing money.
+  # @return Formatted price string.
+  def self.format_price(amount_minor:, currency:, interval: nil, interval_count: nil, free: nil, currency_display: nil)
+    args = {} #: Hash[String, untyped]
+    args["amountMinor"] = amount_minor
+    args["currency"] = currency
+    args["interval"] = interval unless interval.nil?
+    args["intervalCount"] = interval_count unless interval_count.nil?
+    args["free"] = free unless free.nil?
+    args["currencyDisplay"] = currency_display unless currency_display.nil?
+    NativeDispatch.call_sync("format_price", args)
+  end
+
+  # Return the checkout subtotal label for a tax treatment.
+  # @return Subtotal or Subtotal (excl. VAT).
+  def self.format_subtotal_label(treatment: nil)
+    args = {} #: Hash[String, untyped]
+    args["treatment"] = treatment unless treatment.nil?
+    NativeDispatch.call_sync("format_subtotal_label", args)
+  end
+
+  # Return the VAT row label for a treatment and rate.
+  # @return VAT label string.
+  def self.format_vat_summary_label(treatment: nil, tax_rate:)
+    args = {} #: Hash[String, untyped]
+    args["treatment"] = treatment unless treatment.nil?
+    args["taxRate"] = tax_rate
+    NativeDispatch.call_sync("format_vat_summary_label", args)
   end
 
   # Return the display label for a seller tax identifier type.
@@ -234,6 +268,31 @@ module SolvaPay
     args["behavior"] = behavior
     args["currency"] = currency
     NativeDispatch.call_sync("resolve_tax_behavior", args)
+  end
+
+  # Return the buyer-facing note for a non-standard tax treatment.
+  # @return Note string, or null when no note applies.
+  def self.resolve_tax_treatment_note(treatment: nil)
+    args = {} #: Hash[String, untyped]
+    args["treatment"] = treatment unless treatment.nil?
+    NativeDispatch.call_sync("resolve_tax_treatment_note", args)
+  end
+
+  # Return whether a VAT amount row should render for a tax treatment.
+  # @return True when a VAT row should be shown.
+  def self.should_show_tax_row(treatment: nil)
+    args = {} #: Hash[String, untyped]
+    args["treatment"] = treatment unless treatment.nil?
+    NativeDispatch.call_sync("should_show_tax_row", args)
+  end
+
+  # Convert a minor-unit amount to its major-unit equivalent.
+  # @return Major-unit amount.
+  def self.to_major_units(amount_minor:, currency:)
+    args = {} #: Hash[String, untyped]
+    args["amountMinor"] = amount_minor
+    args["currency"] = currency
+    NativeDispatch.call_sync("to_major_units", args)
   end
 
   # Read the free-trial length in days from a plan.

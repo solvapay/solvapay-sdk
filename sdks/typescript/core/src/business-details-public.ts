@@ -36,6 +36,12 @@ export {
   validateBusinessDetails,
   getSellerTaxIdentifierDisplayLabel,
   resolveSellerIdentityDisplay,
+  shouldShowTaxRow,
+  formatSubtotalLabel,
+  formatVatSummaryLabel,
+  resolveTaxTreatmentNote,
+  formatPrice,
+  toMajorUnits,
 } from './native-core'
 
 export {
@@ -43,3 +49,5 @@ export {
   type SellerIdentityDisplay,
   type SellerIdentityRow,
 } from './seller-identity'
+
+export { REVERSE_CHARGE_NOTE, TAX_NOT_COLLECTED_NOTE } from './tax-summary'

@@ -155,3 +155,80 @@ export function resolveSellerIdentityDisplay(input: {
     companyNumber: input.companyNumber ?? null,
   })
 }
+
+// --- tax-summary ---
+
+/**
+ * Return whether a VAT amount row should render for a tax treatment.
+ * @returns True when a VAT row should be shown.
+ */
+export function shouldShowTaxRow(treatment: string | null | undefined): boolean {
+  return dispatchSync('shouldShowTaxRow', { treatment: treatment ?? null })
+}
+
+/**
+ * Return the checkout subtotal label for a tax treatment.
+ * @returns Subtotal or Subtotal (excl. VAT).
+ */
+export function formatSubtotalLabel(treatment: string | null | undefined): string {
+  return dispatchSync('formatSubtotalLabel', { treatment: treatment ?? null })
+}
+
+/**
+ * Return the VAT row label for a treatment and rate.
+ * @returns VAT label string.
+ */
+export function formatVatSummaryLabel(
+  treatment: string | null | undefined,
+  taxRate: number,
+): string {
+  return dispatchSync('formatVatSummaryLabel', { treatment: treatment ?? null, taxRate })
+}
+
+/**
+ * Return the buyer-facing note for a non-standard tax treatment.
+ * @returns Note string, or null when no note applies.
+ */
+export function resolveTaxTreatmentNote(treatment: string | null | undefined): string | null {
+  return dispatchSync('resolveTaxTreatmentNote', { treatment: treatment ?? null })
+}
+
+/** Buyer-facing note when VAT reverse charge applies. */
+export function REVERSE_CHARGE_NOTE(): string { return dispatchSync('REVERSE_CHARGE_NOTE', {}) }
+
+/** Buyer-facing note when tax is not collected on the purchase. */
+export function TAX_NOT_COLLECTED_NOTE(): string {
+  return dispatchSync('TAX_NOT_COLLECTED_NOTE', {})
+}
+
+// --- money-format ---
+
+/**
+ * Format a minor-unit amount as buyer-facing money.
+ * @returns Formatted price string.
+ */
+export function formatPrice(
+  amountMinor: number,
+  currency: string,
+  interval: string | null | undefined,
+  intervalCount: number | null | undefined,
+  free: string | null | undefined,
+  currencyDisplay: string | null | undefined,
+): string {
+  return dispatchSync('formatPrice', {
+    amountMinor,
+    currency,
+    interval: interval ?? null,
+    intervalCount: intervalCount ?? null,
+    free: free ?? null,
+    currencyDisplay: currencyDisplay ?? null,
+  })
+}
+
+/**
+ * Convert a minor-unit amount to its major-unit equivalent.
+ * @returns Major-unit amount.
+ */
+export function toMajorUnits(amountMinor: number, currency: string): number {
+  return dispatchSync('toMajorUnits', { amountMinor, currency })
+}

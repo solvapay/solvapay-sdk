@@ -18,7 +18,15 @@
         "minorUnitsPerMajor",
         "resolveSellerIdentityDisplay",
         "getSellerTaxIdentifierDisplayLabel",
-        "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE"
+        "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+        "shouldShowTaxRow",
+        "formatSubtotalLabel",
+        "formatVatSummaryLabel",
+        "resolveTaxTreatmentNote",
+        "REVERSE_CHARGE_NOTE",
+        "TAX_NOT_COLLECTED_NOTE",
+        "formatPrice",
+        "toMajorUnits"
       ],
       "helpersMembers": [
         "classifyCustomerRef",
@@ -93,12 +101,22 @@
         "creditsToDisplayMinorUnits",
         "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
         "getSellerTaxIdentifierDisplayLabel",
-        "resolveSellerIdentityDisplay"
+        "resolveSellerIdentityDisplay",
+        "shouldShowTaxRow",
+        "formatSubtotalLabel",
+        "formatVatSummaryLabel",
+        "resolveTaxTreatmentNote",
+        "REVERSE_CHARGE_NOTE",
+        "TAX_NOT_COLLECTED_NOTE",
+        "formatPrice",
+        "toMajorUnits"
       ],
       "sectionBefore": {
         "validateBusinessDetails": "// --- business-details ---",
         "minorUnitsPerMajor": "// --- credit-display ---",
-        "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE": "// --- seller-identity ---"
+        "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE": "// --- seller-identity ---",
+        "shouldShowTaxRow": "// --- tax-summary ---",
+        "formatPrice": "// --- money-format ---"
       }
     },
     "nativeHelpers": {

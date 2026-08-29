@@ -518,8 +518,12 @@ def _verify_webhook_at(
 
 from typing import Any
 
+REVERSE_CHARGE_NOTE: Any
+"""Buyer-facing note when VAT reverse charge applies."""
 SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: Any
 """Map of seller tax identifier types to display labels."""
+TAX_NOT_COLLECTED_NOTE: Any
+"""Buyer-facing note when tax is not collected on the purchase."""
 def assert_valid_product_ref(product_ref: str, context: str) -> Any:
     """Reject empty, placeholder, or non-prd_ product refs at construction time.
     @returns Throws when the ref is not a real prd_ identifier.
@@ -578,6 +582,21 @@ def derive_tax_id_type(country: str) -> Any:
 def evaluate_product_readiness() -> Any:
     """Evaluate whether a product can be sold (active status plus an active plan).
     @returns Readiness result with issues and plan counts.
+    """
+    ...
+def format_price(amount_minor: float, currency: str, interval: str | None = None, interval_count: float | None = None, free: str | None = None, currency_display: str | None = None) -> Any:
+    """Format a minor-unit amount as buyer-facing money.
+    @returns Formatted price string.
+    """
+    ...
+def format_subtotal_label(treatment: str | None = None) -> Any:
+    """Return the checkout subtotal label for a tax treatment.
+    @returns Subtotal or Subtotal (excl. VAT).
+    """
+    ...
+def format_vat_summary_label(treatment: str | None = None, tax_rate: float) -> Any:
+    """Return the VAT row label for a treatment and rate.
+    @returns VAT label string.
     """
     ...
 def get_seller_tax_identifier_display_label(country: str | None = None) -> Any:
@@ -653,6 +672,21 @@ def resolve_seller_identity_display(country: str | None = None, vat_number: str 
 def resolve_tax_behavior(behavior: str, currency: str) -> Any:
     """Resolve inclusive vs exclusive tax behavior for a currency/country pair.
     @returns Resolved tax behavior.
+    """
+    ...
+def resolve_tax_treatment_note(treatment: str | None = None) -> Any:
+    """Return the buyer-facing note for a non-standard tax treatment.
+    @returns Note string, or null when no note applies.
+    """
+    ...
+def should_show_tax_row(treatment: str | None = None) -> Any:
+    """Return whether a VAT amount row should render for a tax treatment.
+    @returns True when a VAT row should be shown.
+    """
+    ...
+def to_major_units(amount_minor: float, currency: str) -> Any:
+    """Convert a minor-unit amount to its major-unit equivalent.
+    @returns Major-unit amount.
     """
     ...
 def trial_days(priced: Any | None = None) -> Any:

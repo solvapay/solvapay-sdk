@@ -3,8 +3,8 @@
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use solvapay_core::{
-    billing_cycle, credits_per_unit_from_balance, credits_to_display_minor_units, headline_charges,
-    is_zero_decimal_currency, trial_days, CreditsToDisplayInput,
+    billing_cycle, credits_per_unit_from_balance, credits_to_display_minor_units, format_major_fixed,
+    headline_charges, is_zero_decimal_currency, to_major_units, trial_days, CreditsToDisplayInput,
 };
 
 /// Input for [`mcp_narrate`].
@@ -60,31 +60,14 @@ fn format_grouped_number(value: f64) -> String {
 }
 
 fn format_major(major: f64, currency: &str, fraction: usize) -> String {
-    let code = currency.to_ascii_uppercase();
-    let int_part = major.trunc() as i64;
-    let grouped = group_int(int_part.abs());
-    let sign = if major.is_sign_negative() { "-" } else { "" };
-    let formatted = if fraction == 0 {
-        format!("{sign}{grouped}")
-    } else {
-        let scale = 10_i64.pow(fraction as u32);
-        let frac = ((major.abs() * scale as f64).round() as i64) % scale;
-        format!("{sign}{grouped}.{frac:0width$}", width = fraction)
-    };
-    match code.as_str() {
-        "USD" => format!("${formatted}"),
-        "EUR" => format!("€{formatted}"),
-        "GBP" => format!("£{formatted}"),
-        "JPY" => format!("¥{formatted}"),
-        other => format!("{other}\u{00a0}{formatted}"),
-    }
+    format_major_fixed(major, currency, fraction)
 }
 
 fn format_money(amount_minor: Option<f64>, currency: Option<&str>) -> Option<String> {
     let amount = amount_minor?;
     let currency = currency.filter(|c| !c.is_empty())?;
     let zero = is_zero(currency);
-    let major = if zero { amount } else { amount / 100.0 };
+    let major = to_major_units(amount, currency);
     Some(format_major(major, currency, if zero { 0 } else { 2 }))
 }
 

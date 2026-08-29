@@ -34,6 +34,42 @@
       "coreCall": null,
       "clientCallArgs": []
     },
+    "REVERSE_CHARGE_NOTE": {
+      "core": "solvapay_core::tax_summary::reverse_charge_note",
+      "names": {
+        "ts": "REVERSE_CHARGE_NOTE",
+        "py": "REVERSE_CHARGE_NOTE",
+        "rb": "REVERSE_CHARGE_NOTE",
+        "go": "REVERSE_CHARGE_NOTE",
+        "rust": "REVERSE_CHARGE_NOTE",
+        "c": "REVERSE_CHARGE_NOTE"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "REVERSE_CHARGE_NOTE"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 4,
+      "section": "tax-summary",
+      "doc": "Binding for `REVERSE_CHARGE_NOTE`.",
+      "docWasm": null,
+      "rustFnName": "reverse_charge_note_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "reverse_charge_note",
+      "clientCallArgs": []
+    },
     "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE": {
       "core": "solvapay_core::seller_identity::seller_tax_identifier_display_label_by_type",
       "names": {
@@ -66,6 +102,42 @@
       "verbatimBodyWasm": "let _args = args_map(&args_json)?;\n        let mut map = serde_json::Map::new();\n        for (key, label) in seller_tax_identifier_display_label_by_type() {\n            map.insert((*key).to_owned(), Value::String((*label).to_owned()));\n        }\n        Ok(Value::Object(map))",
       "dtoType": null,
       "coreCall": null,
+      "clientCallArgs": []
+    },
+    "TAX_NOT_COLLECTED_NOTE": {
+      "core": "solvapay_core::tax_summary::tax_not_collected_note",
+      "names": {
+        "ts": "TAX_NOT_COLLECTED_NOTE",
+        "py": "TAX_NOT_COLLECTED_NOTE",
+        "rb": "TAX_NOT_COLLECTED_NOTE",
+        "go": "TAX_NOT_COLLECTED_NOTE",
+        "rust": "TAX_NOT_COLLECTED_NOTE",
+        "c": "TAX_NOT_COLLECTED_NOTE"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "TAX_NOT_COLLECTED_NOTE"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 5,
+      "section": "tax-summary",
+      "doc": "Binding for `TAX_NOT_COLLECTED_NOTE`.",
+      "docWasm": null,
+      "rustFnName": "tax_not_collected_note_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "tax_not_collected_note",
       "clientCallArgs": []
     },
     "activatePlan": {
@@ -2492,6 +2564,219 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "extract_backend_customer_ref",
+      "clientCallArgs": []
+    },
+    "formatPrice": {
+      "core": "solvapay_core::money_format::format_price",
+      "names": {
+        "ts": "formatPrice",
+        "py": "format_price",
+        "rb": "format_price",
+        "go": "FormatPrice",
+        "rust": "format_price",
+        "c": "formatPrice"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "formatPrice"
+      },
+      "args": [
+        {
+          "name": "amountMinor",
+          "type": "f64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "amount_minor"
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "interval",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "intervalCount",
+          "type": "f64?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "interval_count"
+        },
+        {
+          "name": "free",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "currencyDisplay",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "currency_display"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 0,
+      "section": "money-format",
+      "doc": "Binding for `formatPrice`.",
+      "docWasm": null,
+      "rustFnName": "format_price_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "amount_minor",
+          "&currency",
+          "interval.as_deref()",
+          "interval_count",
+          "free.as_deref()",
+          "currency_display.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "format_price",
+      "clientCallArgs": []
+    },
+    "formatSubtotalLabel": {
+      "core": "solvapay_core::tax_summary::format_subtotal_label",
+      "names": {
+        "ts": "formatSubtotalLabel",
+        "py": "format_subtotal_label",
+        "rb": "format_subtotal_label",
+        "go": "FormatSubtotalLabel",
+        "rust": "format_subtotal_label",
+        "c": "formatSubtotalLabel"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "formatSubtotalLabel"
+      },
+      "args": [
+        {
+          "name": "treatment",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 1,
+      "section": "tax-summary",
+      "doc": "Binding for `formatSubtotalLabel`.",
+      "docWasm": null,
+      "rustFnName": "format_subtotal_label_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "treatment.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "format_subtotal_label",
+      "clientCallArgs": []
+    },
+    "formatVatSummaryLabel": {
+      "core": "solvapay_core::tax_summary::format_vat_summary_label",
+      "names": {
+        "ts": "formatVatSummaryLabel",
+        "py": "format_vat_summary_label",
+        "rb": "format_vat_summary_label",
+        "go": "FormatVatSummaryLabel",
+        "rust": "format_vat_summary_label",
+        "c": "formatVatSummaryLabel"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "formatVatSummaryLabel"
+      },
+      "args": [
+        {
+          "name": "treatment",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "taxRate",
+          "type": "f64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "tax_rate"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 2,
+      "section": "tax-summary",
+      "doc": "Binding for `formatVatSummaryLabel`.",
+      "docWasm": null,
+      "rustFnName": "format_vat_summary_label_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "treatment.as_deref()",
+          "tax_rate"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "format_vat_summary_label",
       "clientCallArgs": []
     },
     "gateNext": {
@@ -5127,6 +5412,55 @@
       "coreCall": null,
       "clientCallArgs": []
     },
+    "resolveTaxTreatmentNote": {
+      "core": "solvapay_core::tax_summary::resolve_tax_treatment_note",
+      "names": {
+        "ts": "resolveTaxTreatmentNote",
+        "py": "resolve_tax_treatment_note",
+        "rb": "resolve_tax_treatment_note",
+        "go": "ResolveTaxTreatmentNote",
+        "rust": "resolve_tax_treatment_note",
+        "c": "resolveTaxTreatmentNote"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "resolveTaxTreatmentNote"
+      },
+      "args": [
+        {
+          "name": "treatment",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 3,
+      "section": "tax-summary",
+      "doc": "Binding for `resolveTaxTreatmentNote`.",
+      "docWasm": null,
+      "rustFnName": "resolve_tax_treatment_note_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "treatment.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "resolve_tax_treatment_note",
+      "clientCallArgs": []
+    },
     "retryNextDelayMs": {
       "core": "solvapay_core::retry::RetryPolicy::next_delay",
       "names": {
@@ -5327,6 +5661,115 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "should_retry_usage_error",
+      "clientCallArgs": []
+    },
+    "shouldShowTaxRow": {
+      "core": "solvapay_core::tax_summary::should_show_tax_row",
+      "names": {
+        "ts": "shouldShowTaxRow",
+        "py": "should_show_tax_row",
+        "rb": "should_show_tax_row",
+        "go": "ShouldShowTaxRow",
+        "rust": "should_show_tax_row",
+        "c": "shouldShowTaxRow"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "shouldShowTaxRow"
+      },
+      "args": [
+        {
+          "name": "treatment",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 0,
+      "section": "tax-summary",
+      "doc": "Binding for `shouldShowTaxRow`.",
+      "docWasm": null,
+      "rustFnName": "should_show_tax_row_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "treatment.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "should_show_tax_row",
+      "clientCallArgs": []
+    },
+    "toMajorUnits": {
+      "core": "solvapay_core::money_format::to_major_units",
+      "names": {
+        "ts": "toMajorUnits",
+        "py": "to_major_units",
+        "rb": "to_major_units",
+        "go": "ToMajorUnits",
+        "rust": "to_major_units",
+        "c": "toMajorUnits"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "toMajorUnits"
+      },
+      "args": [
+        {
+          "name": "amountMinor",
+          "type": "f64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "amount_minor"
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 1,
+      "section": "money-format",
+      "doc": "Binding for `toMajorUnits`.",
+      "docWasm": null,
+      "rustFnName": "to_major_units_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "amount_minor",
+          "&currency"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "to_major_units",
       "clientCallArgs": []
     },
     "trackUsage": {

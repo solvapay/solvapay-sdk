@@ -1,0 +1,16 @@
+{
+  "suite": "money-format",
+  "case": "price-interval-3-months",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 2500,
+      "currency": "usd",
+      "interval": "month",
+      "intervalCount": 3
+    }
+  },
+  "expect": {
+    "result": "$25 / 3 months"
+  }
+}

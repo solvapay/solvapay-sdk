@@ -103,3 +103,34 @@ export type TaxBreakdown = {
   currency: string
   inclusive: boolean
 }
+
+export declare const REVERSE_CHARGE_NOTE: string
+export declare const TAX_NOT_COLLECTED_NOTE: string
+
+export declare function shouldShowTaxRow(
+  treatment: TaxBreakdown['treatment'] | null | undefined,
+): boolean
+
+export declare function formatSubtotalLabel(
+  treatment: TaxBreakdown['treatment'] | null | undefined,
+): string
+
+export declare function formatVatSummaryLabel(
+  treatment: TaxBreakdown['treatment'] | null | undefined,
+  taxRate: number,
+): string
+
+export declare function resolveTaxTreatmentNote(
+  treatment: TaxBreakdown['treatment'] | null | undefined,
+): string | null
+
+export declare function formatPrice(
+  amountMinor: number,
+  currency: string,
+  interval?: string | null,
+  intervalCount?: number | null,
+  free?: string | null,
+  currencyDisplay?: string | null,
+): string
+
+export declare function toMajorUnits(amountMinor: number, currency: string): number

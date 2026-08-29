@@ -1,0 +1,14 @@
+{
+  "suite": "money-format",
+  "case": "price-sek-10050",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 10050,
+      "currency": "sek"
+    }
+  },
+  "expect": {
+    "result": "100.50 kr"
+  }
+}

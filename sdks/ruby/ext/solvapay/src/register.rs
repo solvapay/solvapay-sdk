@@ -73,6 +73,9 @@ use crate::payload_builders::build_tool_descriptor_metadata_binding;
 use crate::payload_builders::credits_to_display_minor_units_binding;
 use crate::payload_builders::derive_icons_binding;
 use crate::payload_builders::derive_tax_id_type_binding;
+use crate::payload_builders::format_price_binding;
+use crate::payload_builders::format_subtotal_label_binding;
+use crate::payload_builders::format_vat_summary_label_binding;
 use crate::payload_builders::get_business_country_options_binding;
 use crate::payload_builders::get_seller_tax_identifier_display_label_binding;
 use crate::payload_builders::get_tax_id_example_binding;
@@ -87,7 +90,12 @@ use crate::payload_builders::minor_units_per_major_binding;
 use crate::payload_builders::paywall_tool_result_binding;
 use crate::payload_builders::resolve_seller_identity_display_binding;
 use crate::payload_builders::resolve_tax_behavior_binding;
+use crate::payload_builders::resolve_tax_treatment_note_binding;
+use crate::payload_builders::reverse_charge_note_binding;
 use crate::payload_builders::seller_tax_identifier_display_label_by_type_binding;
+use crate::payload_builders::should_show_tax_row_binding;
+use crate::payload_builders::tax_not_collected_note_binding;
+use crate::payload_builders::to_major_units_binding;
 use crate::payload_builders::validate_business_details_binding;
 use crate::payload_builders::validate_public_base_url_binding;
 
@@ -294,6 +302,11 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     )?;
     native.define_singleton_method("meter_name", function!(meter_name_binding, 1))?;
     native.define_singleton_method("counts_usage", function!(counts_usage_binding, 1))?;
+    native.define_singleton_method("format_price", function!(format_price_binding, 1))?;
+    native.define_singleton_method(
+        "should_show_tax_row",
+        function!(should_show_tax_row_binding, 1),
+    )?;
     native.define_singleton_method(
         "validate_business_details",
         function!(validate_business_details_binding, 1),
@@ -301,6 +314,15 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "derive_tax_id_type",
         function!(derive_tax_id_type_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "format_subtotal_label",
+        function!(format_subtotal_label_binding, 1),
+    )?;
+    native.define_singleton_method("to_major_units", function!(to_major_units_binding, 1))?;
+    native.define_singleton_method(
+        "format_vat_summary_label",
+        function!(format_vat_summary_label_binding, 1),
     )?;
     native.define_singleton_method(
         "resolve_tax_behavior",
@@ -311,8 +333,20 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(get_tax_id_example_binding, 1),
     )?;
     native.define_singleton_method(
+        "resolve_tax_treatment_note",
+        function!(resolve_tax_treatment_note_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "REVERSE_CHARGE_NOTE",
+        function!(reverse_charge_note_binding, 1),
+    )?;
+    native.define_singleton_method(
         "get_tax_id_field_label",
         function!(get_tax_id_field_label_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "TAX_NOT_COLLECTED_NOTE",
+        function!(tax_not_collected_note_binding, 1),
     )?;
     native.define_singleton_method(
         "get_tax_id_helper_text",

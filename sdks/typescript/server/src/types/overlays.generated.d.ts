@@ -35,7 +35,7 @@ export type SolvaPayErrorInit = {
 /**
  * Enum for `TaxBreakdown.treatment`.
  */
-export type TaxBreakdownTreatment = 'none' | 'not_collecting' | 'reverse_charge' | 'standard'
+export type TaxBreakdownTreatment = 'none' | 'not_collecting' | 'not_supported' | 'reverse_charge' | 'standard'
 
 /**
  * Projected succeeded arm.

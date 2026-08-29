@@ -64,6 +64,9 @@ class SignatureParityGeneratedTest < Minitest::Test
     credits_to_display_minor_units
     derive_tax_id_type
     evaluate_product_readiness
+    format_price
+    format_subtotal_label
+    format_vat_summary_label
     get_seller_tax_identifier_display_label
     get_tax_id_example
     get_tax_id_field_label
@@ -79,6 +82,9 @@ class SignatureParityGeneratedTest < Minitest::Test
     require_product_ref
     resolve_seller_identity_display
     resolve_tax_behavior
+    resolve_tax_treatment_note
+    should_show_tax_row
+    to_major_units
     trial_days
     validate_business_details
   ].freeze

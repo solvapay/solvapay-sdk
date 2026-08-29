@@ -595,7 +595,7 @@ export const SHIM_JS_NAMES = [
   'validateProcessPaymentIntentParams',
   'validatePurchaseRef',
   'validateTopupPaymentIntentParams',
-  // Payload builders (24)
+  // Payload builders (32)
   'assertResponseResult',
   'buildPromptDescriptorMetadata',
   'buildPromptUserMessage',
@@ -603,6 +603,9 @@ export const SHIM_JS_NAMES = [
   'creditsToDisplayMinorUnits',
   'deriveIcons',
   'deriveTaxIdType',
+  'formatPrice',
+  'formatSubtotalLabel',
+  'formatVatSummaryLabel',
   'getBusinessCountryOptions',
   'getSellerTaxIdentifierDisplayLabel',
   'getTaxIdExample',
@@ -615,9 +618,14 @@ export const SHIM_JS_NAMES = [
   'mcpViewMaps',
   'minorUnitsPerMajor',
   'paywallToolResult',
+  'REVERSE_CHARGE_NOTE',
   'resolveSellerIdentityDisplay',
   'resolveTaxBehavior',
+  'resolveTaxTreatmentNote',
   'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE',
+  'shouldShowTaxRow',
+  'TAX_NOT_COLLECTED_NOTE',
+  'toMajorUnits',
   'validateBusinessDetails',
   'validatePublicBaseUrl',
   // Webhook
@@ -954,14 +962,10 @@ export function assertMcpCounts(manifest: SdkContractManifest): string[] {
   const layer2Count = entries.filter(entry => entry.surface === 'layer2').length
   const issues: string[] = []
   if (syncOpCount !== EXPECTED_MCP_SYNC_OP_COUNT) {
-    issues.push(
-      `MCP syncOp count: expected ${EXPECTED_MCP_SYNC_OP_COUNT}, found ${syncOpCount}`,
-    )
+    issues.push(`MCP syncOp count: expected ${EXPECTED_MCP_SYNC_OP_COUNT}, found ${syncOpCount}`)
   }
   if (layer2Count !== EXPECTED_MCP_LAYER2_COUNT) {
-    issues.push(
-      `MCP layer2 count: expected ${EXPECTED_MCP_LAYER2_COUNT}, found ${layer2Count}`,
-    )
+    issues.push(`MCP layer2 count: expected ${EXPECTED_MCP_LAYER2_COUNT}, found ${layer2Count}`)
   }
   return issues
 }

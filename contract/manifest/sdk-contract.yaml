@@ -2496,7 +2496,7 @@ overlays:
         type: number
         required: true
       treatment:
-        enum: [reverse_charge, standard, none, not_collecting]
+        enum: [reverse_charge, standard, none, not_collecting, not_supported]
         required: true
       total:
         type: number
@@ -3385,6 +3385,166 @@ coreHelpers:
       c: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     docs:
       summary: 'Map of seller tax identifier types to display labels.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  shouldShowTaxRow:
+    names:
+      ts: shouldShowTaxRow
+      py: should_show_tax_row
+      rb: should_show_tax_row
+      go: ShouldShowTaxRow
+      rust: should_show_tax_row
+      c: shouldShowTaxRow
+    params: []
+    docs:
+      summary: 'Return whether a VAT amount row should render for a tax treatment.'
+      params:
+        options: 'Tax treatment, or null when unknown.'
+      returns: 'True when a VAT row should be shown.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  formatSubtotalLabel:
+    names:
+      ts: formatSubtotalLabel
+      py: format_subtotal_label
+      rb: format_subtotal_label
+      go: FormatSubtotalLabel
+      rust: format_subtotal_label
+      c: formatSubtotalLabel
+    params: []
+    docs:
+      summary: 'Return the checkout subtotal label for a tax treatment.'
+      params:
+        options: 'Tax treatment, or null when unknown.'
+      returns: 'Subtotal or Subtotal (excl. VAT).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  formatVatSummaryLabel:
+    names:
+      ts: formatVatSummaryLabel
+      py: format_vat_summary_label
+      rb: format_vat_summary_label
+      go: FormatVatSummaryLabel
+      rust: format_vat_summary_label
+      c: formatVatSummaryLabel
+    params: []
+    docs:
+      summary: 'Return the VAT row label for a treatment and rate.'
+      params:
+        options: 'Tax treatment and numeric tax rate.'
+      returns: 'VAT label string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  resolveTaxTreatmentNote:
+    names:
+      ts: resolveTaxTreatmentNote
+      py: resolve_tax_treatment_note
+      rb: resolve_tax_treatment_note
+      go: ResolveTaxTreatmentNote
+      rust: resolve_tax_treatment_note
+      c: resolveTaxTreatmentNote
+    params: []
+    docs:
+      summary: 'Return the buyer-facing note for a non-standard tax treatment.'
+      params:
+        options: 'Tax treatment, or null when unknown.'
+      returns: 'Note string, or null when no note applies.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  REVERSE_CHARGE_NOTE:
+    names:
+      ts: REVERSE_CHARGE_NOTE
+      py: REVERSE_CHARGE_NOTE
+      rb: REVERSE_CHARGE_NOTE
+      go: REVERSE_CHARGE_NOTE
+      rust: REVERSE_CHARGE_NOTE
+      c: REVERSE_CHARGE_NOTE
+    docs:
+      summary: 'Buyer-facing note when VAT reverse charge applies.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  TAX_NOT_COLLECTED_NOTE:
+    names:
+      ts: TAX_NOT_COLLECTED_NOTE
+      py: TAX_NOT_COLLECTED_NOTE
+      rb: TAX_NOT_COLLECTED_NOTE
+      go: TAX_NOT_COLLECTED_NOTE
+      rust: TAX_NOT_COLLECTED_NOTE
+      c: TAX_NOT_COLLECTED_NOTE
+    docs:
+      summary: 'Buyer-facing note when tax is not collected on the purchase.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  formatPrice:
+    names:
+      ts: formatPrice
+      py: format_price
+      rb: format_price
+      go: FormatPrice
+      rust: format_price
+      c: formatPrice
+    params: []
+    docs:
+      summary: 'Format a minor-unit amount as buyer-facing money.'
+      params:
+        options: 'Amount, currency, and optional free-copy, interval, and display mode.'
+      returns: 'Formatted price string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  toMajorUnits:
+    names:
+      ts: toMajorUnits
+      py: to_major_units
+      rb: to_major_units
+      go: ToMajorUnits
+      rust: to_major_units
+      c: toMajorUnits
+    params: []
+    docs:
+      summary: 'Convert a minor-unit amount to its major-unit equivalent.'
+      params:
+        options: 'Minor-unit amount and ISO currency code.'
+      returns: 'Major-unit amount.'
     sync:
       ts: sync
       py: sync
@@ -4852,6 +5012,20 @@ nameOverrides:
     go: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     rust: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     c: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+  REVERSE_CHARGE_NOTE:
+    ts: REVERSE_CHARGE_NOTE
+    py: REVERSE_CHARGE_NOTE
+    rb: REVERSE_CHARGE_NOTE
+    go: REVERSE_CHARGE_NOTE
+    rust: REVERSE_CHARGE_NOTE
+    c: REVERSE_CHARGE_NOTE
+  TAX_NOT_COLLECTED_NOTE:
+    ts: TAX_NOT_COLLECTED_NOTE
+    py: TAX_NOT_COLLECTED_NOTE
+    rb: TAX_NOT_COLLECTED_NOTE
+    go: TAX_NOT_COLLECTED_NOTE
+    rust: TAX_NOT_COLLECTED_NOTE
+    c: TAX_NOT_COLLECTED_NOTE
 
 reservedWords:
   ts: []

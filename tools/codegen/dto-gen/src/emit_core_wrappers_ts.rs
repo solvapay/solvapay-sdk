@@ -26,7 +26,13 @@ const PAYWALL_STATE_SECTION: &str = "paywall state / gate / payload";
 const RETRY_SECTION: &str = "retry";
 const PRODUCT_READINESS_SECTION: &str = "product-readiness";
 
-const DOMAIN_SECTIONS: &[&str] = &["business-details", "credit-display", "seller-identity"];
+const DOMAIN_SECTIONS: &[&str] = &[
+    "business-details",
+    "credit-display",
+    "seller-identity",
+    "tax-summary",
+    "money-format",
+];
 
 /// Which wrapper file to emit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

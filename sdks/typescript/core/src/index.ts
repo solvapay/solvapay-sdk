@@ -69,6 +69,12 @@ export {
   getSellerTaxIdentifierDisplayLabel,
   getSellerTaxIdentifierDisplayLabelByType,
   resolveSellerIdentityDisplay,
+  shouldShowTaxRow,
+  formatSubtotalLabel,
+  formatVatSummaryLabel,
+  resolveTaxTreatmentNote,
+  formatPrice,
+  toMajorUnits,
   installNativeCoreApi,
   resetNativeCoreApiForTests,
 } from './native-core'
@@ -121,6 +127,8 @@ export {
   type SellerIdentityDisplay,
   type SellerIdentityRow,
 } from './seller-identity'
+
+export { REVERSE_CHARGE_NOTE, TAX_NOT_COLLECTED_NOTE } from './tax-summary'
 
 export {
   SOLVAPAY_PRODUCT_REF_PLACEHOLDER,

@@ -2,7 +2,9 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const MCP_TOOL_NAMES: (a: number, b: number) => [number, number];
+export const REVERSE_CHARGE_NOTE: (a: number, b: number) => [number, number];
 export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
+export const TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
 export const __wbg_wasmclient_free: (a: number, b: number) => void;
 export const assertResponseResult: (a: number, b: number) => [number, number];
 export const assertValidProductRef: (a: number, b: number) => [number, number];
@@ -36,6 +38,9 @@ export const evaluateCachedLimits: (a: number, b: number) => [number, number];
 export const evaluateFreshLimits: (a: number, b: number) => [number, number];
 export const evaluateProductReadiness: (a: number, b: number) => [number, number];
 export const extractBackendCustomerRef: (a: number, b: number) => [number, number];
+export const formatPrice: (a: number, b: number) => [number, number];
+export const formatSubtotalLabel: (a: number, b: number) => [number, number];
+export const formatVatSummaryLabel: (a: number, b: number) => [number, number];
 export const gateNext: (a: number, b: number) => [number, number];
 export const getBusinessCountryOptions: (a: number, b: number) => [number, number];
 export const getSellerTaxIdentifierDisplayLabel: (a: number, b: number) => [number, number];
@@ -72,10 +77,13 @@ export const resolvePurchaseCustomerRef: (a: number, b: number) => [number, numb
 export const resolveReturnUrl: (a: number, b: number) => [number, number];
 export const resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
 export const resolveTaxBehavior: (a: number, b: number) => [number, number];
+export const resolveTaxTreatmentNote: (a: number, b: number) => [number, number];
 export const retryNextDelayMs: (a: number, b: number) => [number, number];
 export const selectActivePurchases: (a: number, b: number) => [number, number];
 export const shouldRetryUsageError: (a: number, b: number) => [number, number];
+export const shouldShowTaxRow: (a: number, b: number) => [number, number];
 export const solvapayCall: (a: number, b: number) => [number, number];
+export const toMajorUnits: (a: number, b: number) => [number, number];
 export const trialDays: (a: number, b: number) => [number, number];
 export const validateActivatePlanParams: (a: number, b: number) => [number, number];
 export const validateAttachBusinessDetailsParams: (a: number, b: number) => [number, number];

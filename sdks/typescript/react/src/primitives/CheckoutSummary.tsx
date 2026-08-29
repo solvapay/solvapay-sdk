@@ -25,9 +25,8 @@ import { usePlanSelection } from '../components/PlanSelectionContext'
 import {
   formatVatSummaryLabel,
   shouldShowTaxRow,
-  REVERSE_CHARGE_NOTE,
-  TAX_NOT_COLLECTED_NOTE,
-} from '../components/businessCheckoutParts'
+  resolveTaxTreatmentNote,
+} from '@solvapay/core'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { Plan, Product } from '../types'
@@ -219,7 +218,7 @@ const TaxSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummaryT
   const { taxRate, treatment } = ctx.taxBreakdown
   if (!shouldShowTaxRow(treatment)) return null
   const Comp = asChild ? Slot : 'span'
-  const defaultLabel = formatVatSummaryLabel({ treatment, taxRate: taxRate ?? 0 })
+  const defaultLabel = formatVatSummaryLabel(treatment, taxRate ?? 0)
   return (
     <Comp ref={forwardedRef} data-solvapay-checkout-summary-tax="" {...rest}>
       {children ?? (
@@ -254,12 +253,7 @@ const TaxTreatmentNoteSlot = forwardRef<
   const treatment = ctx.taxBreakdown?.treatment
   if (!treatment || treatment === 'standard') return null
   const Comp = asChild ? Slot : 'p'
-  const defaultNote =
-    treatment === 'reverse_charge'
-      ? REVERSE_CHARGE_NOTE
-      : treatment === 'not_collecting' || treatment === 'not_supported'
-        ? TAX_NOT_COLLECTED_NOTE
-        : null
+  const defaultNote = resolveTaxTreatmentNote(treatment)
   if (!defaultNote && !children) return null
   return (
     <Comp ref={forwardedRef} data-solvapay-checkout-summary-tax-treatment-note="" {...rest}>

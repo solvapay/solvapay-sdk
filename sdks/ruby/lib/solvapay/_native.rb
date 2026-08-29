@@ -51,15 +51,23 @@ module SolvaPay
 
     SYNC_METHODS = %w[
       classify_customer_ref
+      format_price
+      should_show_tax_row
       validate_business_details
       coerce_customer_options
       derive_tax_id_type
+      format_subtotal_label
+      to_major_units
       build_create_customer_params
+      format_vat_summary_label
       resolve_tax_behavior
       extract_backend_customer_ref
       get_tax_id_example
+      resolve_tax_treatment_note
+      REVERSE_CHARGE_NOTE
       classify_lookup_error
       get_tax_id_field_label
+      TAX_NOT_COLLECTED_NOTE
       classify_create_error
       get_tax_id_helper_text
       get_business_country_options

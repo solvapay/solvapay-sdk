@@ -22,6 +22,26 @@ export function MCP_TOOL_NAMES(args_json) {
 }
 
 /**
+ * Binding for `REVERSE_CHARGE_NOTE`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function REVERSE_CHARGE_NOTE(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.REVERSE_CHARGE_NOTE(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
  * @param {string} args_json
  * @returns {string}
@@ -33,6 +53,26 @@ export function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `TAX_NOT_COLLECTED_NOTE`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function TAX_NOT_COLLECTED_NOTE(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.TAX_NOT_COLLECTED_NOTE(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -1192,6 +1232,66 @@ export function extractBackendCustomerRef(args_json) {
 }
 
 /**
+ * Binding for `formatPrice`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function formatPrice(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.formatPrice(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `formatSubtotalLabel`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function formatSubtotalLabel(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.formatSubtotalLabel(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `formatVatSummaryLabel`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function formatVatSummaryLabel(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.formatVatSummaryLabel(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `gateNext`.
  * @param {string} args_json
  * @returns {string}
@@ -1912,6 +2012,26 @@ export function resolveTaxBehavior(args_json) {
 }
 
 /**
+ * Binding for `resolveTaxTreatmentNote`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function resolveTaxTreatmentNote(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.resolveTaxTreatmentNote(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Binding for `retryNextDelayMs`.
  * @param {string} args_json
  * @returns {string}
@@ -1972,6 +2092,26 @@ export function shouldRetryUsageError(args_json) {
 }
 
 /**
+ * Binding for `shouldShowTaxRow`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function shouldShowTaxRow(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.shouldShowTaxRow(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
  * @param {string} args_json
  * @returns {string}
@@ -1983,6 +2123,26 @@ export function solvapayCall(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.solvapayCall(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `toMajorUnits`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function toMajorUnits(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.toMajorUnits(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);

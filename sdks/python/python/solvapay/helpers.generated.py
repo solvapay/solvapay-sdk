@@ -121,6 +121,42 @@ def evaluate_product_readiness() -> Any:
     payload: dict[str, Any] = {}
     return call_native_sync("evaluate_product_readiness", json.dumps(payload))
 
+def format_price(amount_minor: float, currency: str, interval: str | None = None, interval_count: float | None = None, free: str | None = None, currency_display: str | None = None) -> Any:
+    """Format a minor-unit amount as buyer-facing money.
+    @returns Formatted price string.
+    """
+    payload: dict[str, Any] = {}
+    payload["amountMinor"] = amount_minor
+    payload["currency"] = currency
+    if interval is not None:
+        payload["interval"] = interval
+    if interval_count is not None:
+        payload["intervalCount"] = interval_count
+    if free is not None:
+        payload["free"] = free
+    if currency_display is not None:
+        payload["currencyDisplay"] = currency_display
+    return call_native_sync("format_price", json.dumps(payload))
+
+def format_subtotal_label(treatment: str | None = None) -> Any:
+    """Return the checkout subtotal label for a tax treatment.
+    @returns Subtotal or Subtotal (excl. VAT).
+    """
+    payload: dict[str, Any] = {}
+    if treatment is not None:
+        payload["treatment"] = treatment
+    return call_native_sync("format_subtotal_label", json.dumps(payload))
+
+def format_vat_summary_label(treatment: str | None = None, tax_rate: float) -> Any:
+    """Return the VAT row label for a treatment and rate.
+    @returns VAT label string.
+    """
+    payload: dict[str, Any] = {}
+    if treatment is not None:
+        payload["treatment"] = treatment
+    payload["taxRate"] = tax_rate
+    return call_native_sync("format_vat_summary_label", json.dumps(payload))
+
 def get_seller_tax_identifier_display_label(country: str | None = None) -> Any:
     """Return the display label for a seller tax identifier type.
     @returns Display label string.
@@ -265,6 +301,33 @@ def resolve_tax_behavior(behavior: str, currency: str) -> Any:
     payload["currency"] = currency
     return call_native_sync("resolve_tax_behavior", json.dumps(payload))
 
+def resolve_tax_treatment_note(treatment: str | None = None) -> Any:
+    """Return the buyer-facing note for a non-standard tax treatment.
+    @returns Note string, or null when no note applies.
+    """
+    payload: dict[str, Any] = {}
+    if treatment is not None:
+        payload["treatment"] = treatment
+    return call_native_sync("resolve_tax_treatment_note", json.dumps(payload))
+
+def should_show_tax_row(treatment: str | None = None) -> Any:
+    """Return whether a VAT amount row should render for a tax treatment.
+    @returns True when a VAT row should be shown.
+    """
+    payload: dict[str, Any] = {}
+    if treatment is not None:
+        payload["treatment"] = treatment
+    return call_native_sync("should_show_tax_row", json.dumps(payload))
+
+def to_major_units(amount_minor: float, currency: str) -> Any:
+    """Convert a minor-unit amount to its major-unit equivalent.
+    @returns Major-unit amount.
+    """
+    payload: dict[str, Any] = {}
+    payload["amountMinor"] = amount_minor
+    payload["currency"] = currency
+    return call_native_sync("to_major_units", json.dumps(payload))
+
 def trial_days(priced: Any | None = None) -> Any:
     """Read the free-trial length in days from a plan.
     @returns Trial length in days, or null when the plan has no trial.
@@ -282,8 +345,12 @@ def validate_business_details() -> Any:
     return call_native_sync("validate_business_details", json.dumps(payload))
 
 _CONSTANT_IDS = frozenset({
+    # Buyer-facing note when VAT reverse charge applies.
+    "REVERSE_CHARGE_NOTE",
     # Map of seller tax identifier types to display labels.
     "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+    # Buyer-facing note when tax is not collected on the purchase.
+    "TAX_NOT_COLLECTED_NOTE",
 })
 
 def __getattr__(name: str) -> Any:

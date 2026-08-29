@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use solvapay_core::{
     billing_cycle, counts_usage, credits_per_unit_from_balance, credits_to_display_minor_units,
-    get_business_country_options, get_tax_id_example, get_tax_id_field_label,
+    format_major_fixed, get_business_country_options, get_tax_id_example, get_tax_id_field_label,
     get_tax_id_helper_text, headline_charges, included_units, is_error_result, meter_name,
     minor_units_per_major, normalize_cancel_response, normalize_reactivate_response,
     per_unit_charge, project_topup_process_outcome, project_usage_snapshot,
@@ -392,60 +392,14 @@ fn format_minor_intl(amount: Option<f64>, currency: Option<&str>) -> Option<Stri
 }
 
 fn format_money_intl(amount_minor: f64, currency: &str) -> Option<String> {
-    let zero = matches!(
-        currency.to_ascii_lowercase().as_str(),
-        "bif"
-            | "clp"
-            | "djf"
-            | "gnf"
-            | "jpy"
-            | "kmf"
-            | "krw"
-            | "mga"
-            | "pyg"
-            | "rwf"
-            | "ugx"
-            | "vnd"
-            | "vuv"
-            | "xaf"
-            | "xof"
-            | "xpf"
-    );
-    let major = if zero {
-        amount_minor
-    } else {
-        amount_minor / 100.0
-    };
+    let zero = solvapay_core::is_zero_decimal_currency(currency);
+    let major = solvapay_core::to_major_units(amount_minor, currency);
     let fraction = if zero { 0 } else { 2 };
     Some(format_major_intl(major, currency, fraction))
 }
 
 fn format_major_intl(major: f64, currency: &str, fraction: usize) -> String {
-    let code = currency.to_ascii_uppercase();
-    let int_part = major.trunc() as i64;
-    let mut grouped = String::new();
-    let digits: Vec<char> = int_part.abs().to_string().chars().collect();
-    for (i, ch) in digits.iter().enumerate() {
-        if i > 0 && (digits.len() - i).is_multiple_of(3) {
-            grouped.push(',');
-        }
-        grouped.push(*ch);
-    }
-    let sign = if major.is_sign_negative() { "-" } else { "" };
-    let formatted = if fraction == 0 {
-        format!("{sign}{grouped}")
-    } else {
-        let scale = 10_i64.pow(fraction as u32);
-        let frac = ((major.abs() * scale as f64).round() as i64) % scale;
-        format!("{sign}{grouped}.{frac:0width$}", width = fraction)
-    };
-    match code.as_str() {
-        "USD" => format!("${formatted}"),
-        "EUR" => format!("€{formatted}"),
-        "GBP" => format!("£{formatted}"),
-        "JPY" => format!("¥{formatted}"),
-        other => format!("{other}\u{00a0}{formatted}"),
-    }
+    format_major_fixed(major, currency, fraction)
 }
 
 fn check_limits_request(customer_ref: &str, product_ref: &str) -> CheckLimitsRequest {

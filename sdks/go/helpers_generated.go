@@ -9,9 +9,19 @@ import (
 	"github.com/solvapay/solvapay-go/internal/nativecall"
 )
 
+// REVERSE_CHARGE_NOTE buyer-facing note when VAT reverse charge applies.
+func REVERSE_CHARGE_NOTE(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_reverse_charge_note_binding", "{}")
+}
+
 // SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE map of seller tax identifier types to display labels.
 func SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_seller_tax_identifier_display_label_by_type_binding", "{}")
+}
+
+// TAX_NOT_COLLECTED_NOTE buyer-facing note when tax is not collected on the purchase.
+func TAX_NOT_COLLECTED_NOTE(ctx context.Context) (any, error) {
+	return nativecall.CallSync(ctx, "sv_tax_not_collected_note_binding", "{}")
 }
 
 // AssertValidProductRef reject empty, placeholder, or non-prd_ product refs at construction time.
@@ -115,6 +125,36 @@ func DeriveTaxIdType(ctx context.Context, country any) (any, error) {
 // Returns Readiness result with issues and plan counts.
 func EvaluateProductReadiness(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_evaluate_product_readiness_binding", mustJSON(map[string]any{}))
+}
+
+// FormatPrice format a minor-unit amount as buyer-facing money.
+// Returns Formatted price string.
+func FormatPrice(ctx context.Context, amountMinor any, currency any, interval any, intervalCount any, free any, currencyDisplay any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_format_price_binding", mustJSON(map[string]any{
+		"amountMinor": amountMinor,
+		"currency": currency,
+		"interval": interval,
+		"intervalCount": intervalCount,
+		"free": free,
+		"currencyDisplay": currencyDisplay,
+	}))
+}
+
+// FormatSubtotalLabel return the checkout subtotal label for a tax treatment.
+// Returns Subtotal or Subtotal (excl. VAT).
+func FormatSubtotalLabel(ctx context.Context, treatment any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_format_subtotal_label_binding", mustJSON(map[string]any{
+		"treatment": treatment,
+	}))
+}
+
+// FormatVatSummaryLabel return the VAT row label for a treatment and rate.
+// Returns VAT label string.
+func FormatVatSummaryLabel(ctx context.Context, treatment any, taxRate any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_format_vat_summary_label_binding", mustJSON(map[string]any{
+		"treatment": treatment,
+		"taxRate": taxRate,
+	}))
 }
 
 // GetSellerTaxIdentifierDisplayLabel return the display label for a seller tax identifier type.
@@ -243,6 +283,31 @@ func ResolveSellerIdentityDisplay(ctx context.Context, country any, vatNumber an
 func ResolveTaxBehavior(ctx context.Context, behavior any, currency any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_resolve_tax_behavior_binding", mustJSON(map[string]any{
 		"behavior": behavior,
+		"currency": currency,
+	}))
+}
+
+// ResolveTaxTreatmentNote return the buyer-facing note for a non-standard tax treatment.
+// Returns Note string, or null when no note applies.
+func ResolveTaxTreatmentNote(ctx context.Context, treatment any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_resolve_tax_treatment_note_binding", mustJSON(map[string]any{
+		"treatment": treatment,
+	}))
+}
+
+// ShouldShowTaxRow return whether a VAT amount row should render for a tax treatment.
+// Returns True when a VAT row should be shown.
+func ShouldShowTaxRow(ctx context.Context, treatment any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_should_show_tax_row_binding", mustJSON(map[string]any{
+		"treatment": treatment,
+	}))
+}
+
+// ToMajorUnits convert a minor-unit amount to its major-unit equivalent.
+// Returns Major-unit amount.
+func ToMajorUnits(ctx context.Context, amountMinor any, currency any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_to_major_units_binding", mustJSON(map[string]any{
+		"amountMinor": amountMinor,
 		"currency": currency,
 	}))
 }

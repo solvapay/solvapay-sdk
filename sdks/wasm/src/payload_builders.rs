@@ -9,20 +9,58 @@
 
 use serde_json::Value;
 use solvapay_core::{
-    credits_to_display_minor_units, derive_tax_id_type, get_business_country_options,
+    credits_to_display_minor_units, derive_tax_id_type, format_price, format_subtotal_label,
+    format_vat_summary_label, get_business_country_options,
     get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
     get_tax_id_helper_text, invoke_payable_next, is_zero_decimal_currency, minor_units_per_major,
-    resolve_seller_identity_display, resolve_tax_behavior,
-    seller_tax_identifier_display_label_by_type, validate_business_details, BusinessDetailsInput,
+    resolve_seller_identity_display, resolve_tax_behavior, resolve_tax_treatment_note,
+    reverse_charge_note, seller_tax_identifier_display_label_by_type, should_show_tax_row,
+    tax_not_collected_note, to_major_units, validate_business_details, BusinessDetailsInput,
     CreditsToDisplayInput, SdkError, SellerIdentityInput,
 };
 use wasm_bindgen::prelude::*;
 
 use crate::args::{
-    args_map, optional_string, optional_value, require_f64, require_string, result_as_value,
-    to_value,
+    args_map, optional_f64, optional_string, optional_value, require_f64, require_string,
+    result_as_value, to_value,
 };
 use crate::error::run_envelope_sync;
+
+// --- money-format (public-safe) ---
+
+/// Binding for `formatPrice`.
+#[wasm_bindgen(js_name = "formatPrice")]
+pub fn format_price_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let amount_minor = require_f64(&args, "amountMinor")?;
+        let currency = require_string(&args, "currency")?;
+        let interval = optional_string(&args, "interval")?;
+        let interval_count = optional_f64(&args, "intervalCount")?;
+        let free = optional_string(&args, "free")?;
+        let currency_display = optional_string(&args, "currencyDisplay")?;
+        Ok(Value::String(format_price(
+            amount_minor,
+            &currency,
+            interval.as_deref(),
+            interval_count,
+            free.as_deref(),
+            currency_display.as_deref(),
+        )))
+    })
+}
+
+// --- tax-summary (public-safe) ---
+
+/// Binding for `shouldShowTaxRow`.
+#[wasm_bindgen(js_name = "shouldShowTaxRow")]
+pub fn should_show_tax_row_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let treatment = optional_string(&args, "treatment")?;
+        Ok(Value::Bool(should_show_tax_row(treatment.as_deref())))
+    })
+}
 
 // --- business-details (public-safe) ---
 
@@ -52,6 +90,49 @@ pub fn derive_tax_id_type_binding(args_json: String) -> String {
         }
     })
 }
+
+// --- tax-summary (public-safe) ---
+
+/// Binding for `formatSubtotalLabel`.
+#[wasm_bindgen(js_name = "formatSubtotalLabel")]
+pub fn format_subtotal_label_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let treatment = optional_string(&args, "treatment")?;
+        Ok(Value::String(format_subtotal_label(treatment.as_deref())))
+    })
+}
+
+// --- money-format (public-safe) ---
+
+/// Binding for `toMajorUnits`.
+#[wasm_bindgen(js_name = "toMajorUnits")]
+pub fn to_major_units_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let amount_minor = require_f64(&args, "amountMinor")?;
+        let currency = require_string(&args, "currency")?;
+        to_value(&to_major_units(amount_minor, &currency))
+    })
+}
+
+// --- tax-summary (public-safe) ---
+
+/// Binding for `formatVatSummaryLabel`.
+#[wasm_bindgen(js_name = "formatVatSummaryLabel")]
+pub fn format_vat_summary_label_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let treatment = optional_string(&args, "treatment")?;
+        let tax_rate = require_f64(&args, "taxRate")?;
+        Ok(Value::String(format_vat_summary_label(
+            treatment.as_deref(),
+            tax_rate,
+        )))
+    })
+}
+
+// --- business-details (public-safe) ---
 
 /// Binding for `resolveTaxBehavior`.
 #[wasm_bindgen(js_name = "resolveTaxBehavior")]
@@ -86,6 +167,29 @@ pub fn get_tax_id_example_binding(args_json: String) -> String {
     })
 }
 
+// --- tax-summary (public-safe) ---
+
+/// Binding for `resolveTaxTreatmentNote`.
+#[wasm_bindgen(js_name = "resolveTaxTreatmentNote")]
+pub fn resolve_tax_treatment_note_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let treatment = optional_string(&args, "treatment")?;
+        to_value(&resolve_tax_treatment_note(treatment.as_deref()))
+    })
+}
+
+/// Binding for `REVERSE_CHARGE_NOTE`.
+#[wasm_bindgen(js_name = "REVERSE_CHARGE_NOTE")]
+pub fn reverse_charge_note_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        Ok(Value::String(reverse_charge_note()))
+    })
+}
+
+// --- business-details (public-safe) ---
+
 /// Binding for `getTaxIdFieldLabel`.
 #[wasm_bindgen(js_name = "getTaxIdFieldLabel")]
 pub fn get_tax_id_field_label_binding(args_json: String) -> String {
@@ -101,6 +205,19 @@ pub fn get_tax_id_field_label_binding(args_json: String) -> String {
         }
     })
 }
+
+// --- tax-summary (public-safe) ---
+
+/// Binding for `TAX_NOT_COLLECTED_NOTE`.
+#[wasm_bindgen(js_name = "TAX_NOT_COLLECTED_NOTE")]
+pub fn tax_not_collected_note_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let _args = args_map(&args_json)?;
+        Ok(Value::String(tax_not_collected_note()))
+    })
+}
+
+// --- business-details (public-safe) ---
 
 /// Binding for `getTaxIdHelperText`.
 #[wasm_bindgen(js_name = "getTaxIdHelperText")]

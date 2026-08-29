@@ -9,8 +9,14 @@ pub use solvapay_core::{
     TaxIdType, ValidateBusinessDetailsResult,
 };
 
+/// Buyer-facing note when VAT reverse charge applies.
+pub use solvapay_core::tax_summary::reverse_charge_note as REVERSE_CHARGE_NOTE;
+
 /// Map of seller tax identifier types to display labels.
 pub use solvapay_core::seller_identity::seller_tax_identifier_display_label_by_type as SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE;
+
+/// Buyer-facing note when tax is not collected on the purchase.
+pub use solvapay_core::tax_summary::tax_not_collected_note as TAX_NOT_COLLECTED_NOTE;
 
 /// Reject empty, placeholder, or non-prd_ product refs at construction time.
 ///
@@ -95,6 +101,27 @@ pub use solvapay_core::business_details::derive_tax_id_type;
 ///
 /// Readiness result with issues and plan counts.
 pub use solvapay_core::product_readiness::evaluate_product_readiness;
+
+/// Format a minor-unit amount as buyer-facing money.
+///
+/// # Returns
+///
+/// Formatted price string.
+pub use solvapay_core::money_format::format_price;
+
+/// Return the checkout subtotal label for a tax treatment.
+///
+/// # Returns
+///
+/// Subtotal or Subtotal (excl. VAT).
+pub use solvapay_core::tax_summary::format_subtotal_label;
+
+/// Return the VAT row label for a treatment and rate.
+///
+/// # Returns
+///
+/// VAT label string.
+pub use solvapay_core::tax_summary::format_vat_summary_label;
 
 /// Return the display label for a seller tax identifier type.
 ///
@@ -200,6 +227,27 @@ pub use solvapay_core::seller_identity::resolve_seller_identity_display;
 ///
 /// Resolved tax behavior.
 pub use solvapay_core::business_details::resolve_tax_behavior;
+
+/// Return the buyer-facing note for a non-standard tax treatment.
+///
+/// # Returns
+///
+/// Note string, or null when no note applies.
+pub use solvapay_core::tax_summary::resolve_tax_treatment_note;
+
+/// Return whether a VAT amount row should render for a tax treatment.
+///
+/// # Returns
+///
+/// True when a VAT row should be shown.
+pub use solvapay_core::tax_summary::should_show_tax_row;
+
+/// Convert a minor-unit amount to its major-unit equivalent.
+///
+/// # Returns
+///
+/// Major-unit amount.
+pub use solvapay_core::money_format::to_major_units;
 
 /// Read the free-trial length in days from a plan.
 ///

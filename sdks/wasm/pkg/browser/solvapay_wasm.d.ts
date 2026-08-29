@@ -2,9 +2,19 @@
 /* eslint-disable */
 
 /**
+ * Binding for `REVERSE_CHARGE_NOTE`.
+ */
+export function REVERSE_CHARGE_NOTE(args_json: string): string;
+
+/**
  * Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`.
  */
 export function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(args_json: string): string;
+
+/**
+ * Binding for `TAX_NOT_COLLECTED_NOTE`.
+ */
+export function TAX_NOT_COLLECTED_NOTE(args_json: string): string;
 
 /**
  * Binding for `billingCycle`.
@@ -30,6 +40,21 @@ export function creditsToDisplayMinorUnits(args_json: string): string;
  * Binding for `deriveTaxIdType`.
  */
 export function deriveTaxIdType(args_json: string): string;
+
+/**
+ * Binding for `formatPrice`.
+ */
+export function formatPrice(args_json: string): string;
+
+/**
+ * Binding for `formatSubtotalLabel`.
+ */
+export function formatSubtotalLabel(args_json: string): string;
+
+/**
+ * Binding for `formatVatSummaryLabel`.
+ */
+export function formatVatSummaryLabel(args_json: string): string;
 
 /**
  * Binding for `getBusinessCountryOptions`.
@@ -102,9 +127,24 @@ export function resolveSellerIdentityDisplay(args_json: string): string;
 export function resolveTaxBehavior(args_json: string): string;
 
 /**
+ * Binding for `resolveTaxTreatmentNote`.
+ */
+export function resolveTaxTreatmentNote(args_json: string): string;
+
+/**
+ * Binding for `shouldShowTaxRow`.
+ */
+export function shouldShowTaxRow(args_json: string): string;
+
+/**
  * Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
  */
 export function solvapayCall(args_json: string): string;
+
+/**
+ * Binding for `toMajorUnits`.
+ */
+export function toMajorUnits(args_json: string): string;
 
 /**
  * Binding for `trialDays`.
@@ -128,12 +168,17 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly REVERSE_CHARGE_NOTE: (a: number, b: number) => [number, number];
     readonly SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: (a: number, b: number) => [number, number];
+    readonly TAX_NOT_COLLECTED_NOTE: (a: number, b: number) => [number, number];
     readonly billingCycle: (a: number, b: number) => [number, number];
     readonly charges: (a: number, b: number) => [number, number];
     readonly creditsPerUnitFromBalance: (a: number, b: number) => [number, number];
     readonly creditsToDisplayMinorUnits: (a: number, b: number) => [number, number];
     readonly deriveTaxIdType: (a: number, b: number) => [number, number];
+    readonly formatPrice: (a: number, b: number) => [number, number];
+    readonly formatSubtotalLabel: (a: number, b: number) => [number, number];
+    readonly formatVatSummaryLabel: (a: number, b: number) => [number, number];
     readonly getBusinessCountryOptions: (a: number, b: number) => [number, number];
     readonly getSellerTaxIdentifierDisplayLabel: (a: number, b: number) => [number, number];
     readonly getTaxIdExample: (a: number, b: number) => [number, number];
@@ -148,7 +193,10 @@ export interface InitOutput {
     readonly perUnitCharge: (a: number, b: number) => [number, number];
     readonly resolveSellerIdentityDisplay: (a: number, b: number) => [number, number];
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
+    readonly resolveTaxTreatmentNote: (a: number, b: number) => [number, number];
+    readonly shouldShowTaxRow: (a: number, b: number) => [number, number];
     readonly solvapayCall: (a: number, b: number) => [number, number];
+    readonly toMajorUnits: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
     readonly validateBusinessDetails: (a: number, b: number) => [number, number];
     readonly wasmVersion: () => [number, number];

@@ -7,11 +7,8 @@ describe('formatPrice', () => {
       expect(formatPrice(1999, 'usd')).toBe('$19.99')
     })
 
-    it('formats EUR with explicit locale', () => {
-      // sv-SE uses "space NBSP" and appends kr after the number
-      const out = formatPrice(19900, 'sek', { locale: 'sv-SE' })
-      expect(out).toContain('199')
-      expect(out.toLowerCase()).toContain('kr')
+    it('formats SEK with a suffix symbol (locale is ignored)', () => {
+      expect(formatPrice(19900, 'sek', { locale: 'sv-SE' })).toBe('199\u00a0kr')
     })
 
     it('formats GBP whole amount without trailing zeros', () => {
@@ -19,19 +16,15 @@ describe('formatPrice', () => {
     })
 
     it('trims trailing zeros on whole SEK amounts', () => {
-      // Intl inserts NBSP between the currency code and the number.
-      expect(formatPrice(10000, 'sek', { locale: 'en' }).replace(/\u00A0/g, ' ')).toBe('SEK 100')
+      expect(formatPrice(10000, 'sek', { locale: 'en' })).toBe('100\u00a0kr')
     })
 
     it('keeps two decimals on fractional SEK amounts', () => {
-      expect(formatPrice(10050, 'sek', { locale: 'en' }).replace(/\u00A0/g, ' ')).toBe('SEK 100.50')
+      expect(formatPrice(10050, 'sek', { locale: 'en' })).toBe('100.50\u00a0kr')
     })
 
-    it('renders sv-SE SEK whole amount without decimals', () => {
-      const out = formatPrice(10000, 'sek', { locale: 'sv-SE' })
-      expect(out).toContain('100')
-      expect(out).not.toContain(',00')
-      expect(out.toLowerCase()).toContain('kr')
+    it('renders SEK whole amount without decimals regardless of locale', () => {
+      expect(formatPrice(10000, 'sek', { locale: 'sv-SE' })).toBe('100\u00a0kr')
     })
 
     it('handles case-insensitive currency codes', () => {
