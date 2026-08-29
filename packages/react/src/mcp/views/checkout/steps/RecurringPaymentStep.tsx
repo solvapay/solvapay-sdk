@@ -96,12 +96,10 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
             placeholder="Tax / VAT ID"
           />
         </PaymentForm.BusinessDetails.Root>
-        <PaymentForm.TaxSummary.Root className={cx.taxSummary}>
-          <PaymentForm.TaxSummary.Subtotal />
-          <PaymentForm.TaxSummary.Tax />
-          <PaymentForm.TaxSummary.Total />
-          <PaymentForm.TaxSummary.TaxNote />
-        </PaymentForm.TaxSummary.Root>
+        {/* `Rows` (not the bare leaves) so every line is labelled — the leaves
+            render amounts only, which is why business checkout showed a naked
+            "$90 / VAT Free / $90" column. DEV-723. */}
+        <PaymentForm.TaxSummary.Rows className={cx.taxSummary} />
         <PaymentForm.PaymentElement />
         <PaymentForm.Error className={cx.error} />
         <PaymentForm.MandateText />
