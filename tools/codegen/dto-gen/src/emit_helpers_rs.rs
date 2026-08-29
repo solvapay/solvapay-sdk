@@ -28,11 +28,7 @@ pub fn emit_helpers_rs(ir: &Ir) -> GenResult<String> {
         if !entry.emission.rust.is_generated() {
             continue;
         }
-        if is_constant_entry(entry) {
-            collect_named_types(ir, binding.core.as_str(), &mut type_names)?;
-        } else {
-            collect_named_types(ir, binding.core.as_str(), &mut type_names)?;
-        }
+        collect_named_types(ir, binding.core.as_str(), &mut type_names)?;
         for line in render_rustdoc(entry) {
             if line.is_empty() {
                 items.push_str("///\n");
