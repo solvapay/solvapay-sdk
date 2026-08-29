@@ -22,6 +22,12 @@ import { useCopy, useLocale } from '../hooks/useCopy'
 import { formatPrice } from '../utils/format'
 import { interpolate } from '../i18n/interpolate'
 import { usePlanSelection } from '../components/PlanSelectionContext'
+import {
+  formatVatSummaryLabel,
+  shouldShowTaxRow,
+  REVERSE_CHARGE_NOTE,
+  TAX_NOT_COLLECTED_NOTE,
+} from '../components/businessCheckoutParts'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { Plan, Product } from '../types'
@@ -105,9 +111,11 @@ const Root = forwardRef<HTMLElement, RootProps>(function CheckoutSummaryRoot(
   const taxMinor = taxBreakdown?.taxAmount ?? 0
   const totalMinor = taxBreakdown?.total ?? baseAmountMinor
 
-  const subtotalFormatted = formatPrice(subtotalMinor, taxCurrency, { locale })
-  const taxFormatted = formatPrice(taxMinor, taxCurrency, { locale })
-  const totalFormatted = formatPrice(totalMinor, taxCurrency, { locale })
+  // `free: ''` — summary amounts are amounts. Without it a zero VAT (or a
+  // zero subtotal/total) renders as the word "Free". DEV-723.
+  const subtotalFormatted = formatPrice(subtotalMinor, taxCurrency, { locale, free: '' })
+  const taxFormatted = formatPrice(taxMinor, taxCurrency, { locale, free: '' })
+  const totalFormatted = formatPrice(totalMinor, taxCurrency, { locale, free: '' })
 
   const ctx = useMemo<CheckoutSummaryContextValue>(
     () => ({
@@ -210,14 +218,10 @@ const TaxSlot = forwardRef<HTMLSpanElement, LeafProps>(function CheckoutSummaryT
 ) {
   const ctx = useCheckoutSummaryContext('Tax')
   if (!ctx.taxBreakdown) return null
-  const Comp = asChild ? Slot : 'span'
   const { taxRate, treatment } = ctx.taxBreakdown
-  const defaultLabel =
-    treatment === 'reverse_charge'
-      ? `VAT reverse charge (${ctx.taxFormatted})`
-      : taxRate != null
-        ? `Tax (${Math.round(taxRate * 100)}%)`
-        : 'Tax'
+  if (!shouldShowTaxRow(treatment)) return null
+  const Comp = asChild ? Slot : 'span'
+  const defaultLabel = formatVatSummaryLabel({ treatment, taxRate: taxRate ?? 0 })
   return (
     <Comp ref={forwardedRef} data-solvapay-checkout-summary-tax="" {...rest}>
       {children ?? (
@@ -254,9 +258,9 @@ const TaxTreatmentNoteSlot = forwardRef<
     const Comp = asChild ? Slot : 'p'
     const defaultNote =
       treatment === 'reverse_charge'
-        ? 'VAT reverse charge applies — you are responsible for reporting VAT in your jurisdiction.'
-        : treatment === 'not_collecting'
-          ? 'Tax is not collected on this purchase.'
+        ? REVERSE_CHARGE_NOTE
+        : treatment === 'not_collecting' || treatment === 'not_supported'
+          ? TAX_NOT_COLLECTED_NOTE
           : null
     if (!defaultNote && !children) return null
     return (
