@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -16,10 +15,9 @@ for _name in dir(_generated):
         continue
     globals()[_name] = getattr(_generated, _name)
 
-# Explicit re-exports so mypy sees the public surface (dir() copy is runtime-only).
-Layer2Fn = Callable[..., dict[str, object]]
-paywall_tool_result: Layer2Fn = _generated.paywall_tool_result
-make_response_result: Layer2Fn = _generated.make_response_result
-assert_response_result: Layer2Fn = _generated.assert_response_result
-build_payable_tool_result: Layer2Fn = _generated.build_payable_tool_result
-invoke_payable_next: Layer2Fn = _generated.invoke_payable_next
+# Explicit aliases for the hand-written call sites (mypy reads `_layer2.pyi`).
+paywall_tool_result = _generated.paywall_tool_result
+make_response_result = _generated.make_response_result
+assert_response_result = _generated.assert_response_result
+build_payable_tool_result = _generated.build_payable_tool_result
+invoke_payable_next = _generated.invoke_payable_next

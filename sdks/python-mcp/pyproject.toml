@@ -29,7 +29,7 @@ solvapay = { path = "../python", editable = true }
 where = ["python"]
 
 [tool.setuptools.package-data]
-solvapay_mcp = ["py.typed", "data/mcp-app.html"]
+solvapay_mcp = ["py.typed", "*.pyi", "data/mcp-app.html"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

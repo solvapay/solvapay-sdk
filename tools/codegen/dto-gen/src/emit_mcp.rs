@@ -32,7 +32,7 @@ fn is_engine(entry: &IrEntryPoint) -> bool {
 /// `sdks/ruby-mcp/lib/solvapay/mcp/layer2.generated.rb`
 pub fn emit_mcp_rb(ir: &Ir) -> GenResult<String> {
     let mut out = format!(
-        "{}# frozen_string_literal: true\n# rubocop:disable Naming/MethodName, Layout/LeadingCommentSpace\n\n",
+        "{}# frozen_string_literal: true\n\n# rubocop:disable Naming/MethodName, Layout/LeadingCommentSpace, Layout/LineLength\n\n",
         generated_header(CommentStyle::Hash, "rb-mcp-layer2-out")
     );
     out.push_str(
@@ -72,7 +72,7 @@ pub fn emit_mcp_rb(ir: &Ir) -> GenResult<String> {
          \x20   end\n\
          \x20 end\n\
          end\n\
-         # rubocop:enable Naming/MethodName, Layout/LeadingCommentSpace\n",
+         # rubocop:enable Naming/MethodName, Layout/LeadingCommentSpace, Layout/LineLength\n",
     );
     Ok(out)
 }
