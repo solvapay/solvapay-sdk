@@ -149,10 +149,25 @@ function resolveTaxIdHelperText(country: string): string {
   return ''
 }
 
+/**
+ * Buyer-facing tax copy (DEV-723). Two rules hold across every surface —
+ * MCP SDK checkout, hosted checkout and receipts:
+ *
+ * 1. A zero tax amount renders as a real zero (`$0`), never as `Free`.
+ *    `Free` is plan-price language; VAT of nothing is not a gift.
+ * 2. Included-vs-excluded is carried by the *rows*, not by a marker on one
+ *    side only: the subtotal says `Subtotal (excl. VAT)` whenever a VAT row
+ *    is shown, so net / tax / gross reads the same whether the provider
+ *    prices tax-inclusive or tax-exclusive. The buyer never has to know
+ *    which `taxBehavior` the plan uses.
+ */
+export const REVERSE_CHARGE_NOTE =
+  'VAT reverse charge applies — you are responsible for reporting VAT in your jurisdiction.'
+export const TAX_NOT_COLLECTED_NOTE = 'Tax is not collected on this purchase.'
+
 export function formatVatSummaryLabel(breakdown: {
   treatment: TaxBreakdown['treatment']
   taxRate: number
-  inclusive: boolean
 }): string {
   if (breakdown.treatment === 'reverse_charge') {
     return 'VAT (reverse charge)'
@@ -161,16 +176,26 @@ export function formatVatSummaryLabel(breakdown: {
   if (breakdown.taxRate > 0) {
     const ratePercent =
       breakdown.taxRate <= 1 ? Math.round(breakdown.taxRate * 100) : breakdown.taxRate
-    return breakdown.inclusive ? `VAT (${ratePercent}%, incl.)` : `VAT (${ratePercent}%)`
+    return `VAT (${ratePercent}%)`
   }
 
   return 'VAT'
 }
 
-function shouldShowTaxRow(treatment: TaxBreakdown['treatment'] | null, taxRate: number): boolean {
-  if (treatment === 'not_collecting') return false
-  if (treatment === 'reverse_charge') return true
-  return taxRate > 0
+/**
+ * A VAT row is shown whenever VAT was actually considered for the sale —
+ * including when it came out at zero (zero-rated, no tax due, reverse
+ * charge). It is replaced by an explanatory note only when no tax was
+ * assessed at all: the seller is not registered in the buyer's jurisdiction
+ * (`not_collecting`) or Stripe does not support the jurisdiction/product
+ * (`not_supported`).
+ */
+export function shouldShowTaxRow(treatment: TaxBreakdown['treatment'] | null): boolean {
+  return treatment !== 'not_collecting' && treatment !== 'not_supported'
+}
+
+export function formatSubtotalLabel(treatment: TaxBreakdown['treatment'] | null): string {
+  return shouldShowTaxRow(treatment) ? 'Subtotal (excl. VAT)' : 'Subtotal'
 }
 
 type DataAttr = Record<`data-solvapay-${string}`, ''>
@@ -395,12 +420,14 @@ function useSummaryAmounts(useCtx: (part: string) => TaxSummaryContextSlice, par
   const totalMinor = ctx.taxBreakdown?.total ?? ctx.baseAmountMinor
 
   return {
-    subtotalFormatted: formatPrice(subtotalMinor, currency, { locale }),
-    taxFormatted: formatPrice(taxMinor, currency, { locale }),
-    totalFormatted: formatPrice(totalMinor, currency, { locale }),
+    // `free: ''` — a summary line is an amount, not a price. Without it
+    // formatPrice turns any zero (VAT, and a zero subtotal or total) into
+    // the word "Free". DEV-723.
+    subtotalFormatted: formatPrice(subtotalMinor, currency, { locale, free: '' }),
+    taxFormatted: formatPrice(taxMinor, currency, { locale, free: '' }),
+    totalFormatted: formatPrice(totalMinor, currency, { locale, free: '' }),
     taxRate: ctx.taxBreakdown?.taxRate ?? 0,
     treatment: ctx.taxBreakdown?.treatment ?? null,
-    inclusive: ctx.taxBreakdown?.inclusive ?? false,
     attaching: ctx.businessDetailsAttaching,
   }
 }
@@ -450,13 +477,13 @@ export function createTaxSummaryParts(
     forwardedRef,
   ) {
     const ctx = useCtx('Summary.Tax')
-    const { taxFormatted, taxRate, treatment, inclusive } = useSummaryAmounts(useCtx, 'Summary.Tax')
+    const { taxFormatted, taxRate, treatment } = useSummaryAmounts(useCtx, 'Summary.Tax')
     if (!ctx.isBusiness) return null
+    if (!shouldShowTaxRow(treatment)) return null
     const Comp = asChild ? Slot : 'span'
     const defaultLabel = formatVatSummaryLabel({
       treatment: treatment ?? 'standard',
       taxRate,
-      inclusive,
     })
     return (
       <Comp ref={forwardedRef} {...{ [attr(prefix, 'summary-tax')]: '' }} {...rest}>
@@ -496,9 +523,9 @@ export function createTaxSummaryParts(
     const Comp = asChild ? Slot : 'p'
     const defaultNote =
       treatment === 'reverse_charge'
-        ? 'VAT reverse charge applies — you are responsible for reporting VAT in your jurisdiction.'
-        : treatment === 'not_collecting'
-          ? 'Tax is not collected on this purchase.'
+        ? REVERSE_CHARGE_NOTE
+        : treatment === 'not_collecting' || treatment === 'not_supported'
+          ? TAX_NOT_COLLECTED_NOTE
           : null
     if (!defaultNote && !children) return null
     return (
@@ -513,40 +540,36 @@ export function createTaxSummaryParts(
     forwardedRef,
   ) {
     const ctx = useCtx('Summary.Rows')
-    const { taxRate, treatment, inclusive, taxFormatted } = useSummaryAmounts(
-      useCtx,
-      'Summary.Rows',
-    )
+    const { taxRate, treatment, taxFormatted } = useSummaryAmounts(useCtx, 'Summary.Rows')
     if (!ctx.isBusiness) return null
-    const showTaxRow = shouldShowTaxRow(treatment, taxRate)
+    const showTaxRow = shouldShowTaxRow(treatment)
     const vatLabel = formatVatSummaryLabel({
       treatment: treatment ?? 'standard',
       taxRate,
-      inclusive,
     })
 
     const content = (
       <dl className="solvapay-tax-summary-rows">
-        <p className="solvapay-tax-summary-row">
-          <dt>Subtotal</dt>
+        <div className="solvapay-tax-summary-row">
+          <dt>{formatSubtotalLabel(treatment)}</dt>
           <dd>
             <Subtotal />
           </dd>
-        </p>
+        </div>
         {showTaxRow ? (
-          <p className="solvapay-tax-summary-row">
+          <div className="solvapay-tax-summary-row">
             <dt>{vatLabel}</dt>
             <dd>
               <span {...{ [attr(prefix, 'summary-tax-amount')]: '' }}>{taxFormatted}</span>
             </dd>
-          </p>
+          </div>
         ) : null}
-        <p className="solvapay-tax-summary-row solvapay-tax-summary-row--total">
+        <div className="solvapay-tax-summary-row solvapay-tax-summary-row--total">
           <dt>Total</dt>
           <dd>
             <Total />
           </dd>
-        </p>
+        </div>
         <TaxNote />
         {children}
       </dl>

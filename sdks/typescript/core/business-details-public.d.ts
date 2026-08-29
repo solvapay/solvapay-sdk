@@ -98,7 +98,7 @@ export type TaxBreakdown = {
   subtotal: number
   taxAmount: number
   taxRate: number
-  treatment: 'reverse_charge' | 'standard' | 'none' | 'not_collecting'
+  treatment: 'reverse_charge' | 'standard' | 'none' | 'not_collecting' | 'not_supported'
   total: number
   currency: string
   inclusive: boolean
