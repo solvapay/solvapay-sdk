@@ -80,6 +80,32 @@ function runDtoGen(): CliResult {
   }
 }
 
+function formatGeneratedGo(): CliResult {
+  const goFiles = GENERATED_PATHS.filter(rel => rel.endsWith('.go'))
+  if (goFiles.length === 0) {
+    return { exitCode: 0, stdout: '', stderr: '' }
+  }
+  const result = spawnSync('gofmt', ['-w', ...goFiles], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  })
+  if (result.error) {
+    return {
+      exitCode: 1,
+      stdout: result.stdout ?? '',
+      stderr: `Failed to run gofmt: ${result.error.message}\n`,
+    }
+  }
+  if (result.status !== 0) {
+    return {
+      exitCode: result.status ?? 1,
+      stdout: result.stdout ?? '',
+      stderr: result.stderr || 'gofmt failed\n',
+    }
+  }
+  return { exitCode: 0, stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
+}
+
 function runGenerateTypes(): CliResult {
   const result = spawnSync('tsx', [lookupPath('generateTypesScript')], {
     cwd: REPO_ROOT,
@@ -173,6 +199,14 @@ export function runGen(options: CliOptions): CliResult {
   const gen = runDtoGen()
   if (gen.exitCode !== 0) {
     return gen
+  }
+  const gofmt = formatGeneratedGo()
+  if (gofmt.exitCode !== 0) {
+    return {
+      exitCode: gofmt.exitCode,
+      stdout: `${gen.stdout}${gofmt.stdout}`,
+      stderr: `${gen.stderr}${gofmt.stderr}`,
+    }
   }
   const types = runGenerateTypes()
   if (types.exitCode !== 0) {
