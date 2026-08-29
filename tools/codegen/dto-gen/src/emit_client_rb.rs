@@ -7,7 +7,8 @@ use crate::doc_render::render_entry_doc_lines;
 use crate::error::GenResult;
 use crate::header::{generated_header, CommentStyle};
 use crate::ir::{
-    Ir, IrBindingArtifact, IrBindingCatalogLink, IrBindingSymbol, IrEntryPoint, IrRubyReceiver,
+    Ir, IrBindingArg, IrBindingArtifact, IrBindingCatalogLink, IrBindingSymbol, IrEntryPoint,
+    IrRubyReceiver,
 };
 
 fn ruby_file_header(flag: &str, trailer: &str) -> String {
@@ -187,19 +188,18 @@ fn emit_method(output: &mut String, entry: &IrEntryPoint, native_name: &str, cli
 fn emit_module_helper(output: &mut String, entry: &IrEntryPoint, binding: &IrBindingSymbol) {
     write_yard(output, entry, "  ");
     let signature = if entry.params.is_empty() && !binding.args.is_empty() {
-        let names = binding
+        let public_args: Vec<&IrBindingArg> = binding
             .args
             .iter()
             .filter(|arg| !arg.host_injected)
-            .map(|arg| {
-                let ruby_name = snake(&arg.name);
-                if arg.required {
-                    format!("{ruby_name}:")
-                } else {
-                    format!("{ruby_name}: nil")
-                }
-            })
-            .collect::<Vec<_>>();
+            .collect();
+        let mut names = Vec::new();
+        for arg in public_args.iter().filter(|arg| arg.required) {
+            names.push(format!("{}:", snake(&arg.name)));
+        }
+        for arg in public_args.iter().filter(|arg| !arg.required) {
+            names.push(format!("{}: nil", snake(&arg.name)));
+        }
         if names.is_empty() {
             String::new()
         } else {

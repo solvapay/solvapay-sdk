@@ -2,6 +2,8 @@
 
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
+use std::io::Write as IoWrite;
+use std::process::{Command, Stdio};
 
 use crate::emit_client_go::{render_godoc, uncapitalize};
 use crate::emit_helpers::{catalog_helper_bindings, is_constant_entry};
@@ -78,7 +80,34 @@ pub fn emit_helpers_go(ir: &Ir) -> GenResult<String> {
         }
         out.push_str("\t}))\n}\n\n");
     }
-    Ok(out)
+    gofmt_source(&out)
+}
+
+/// Formats generated Go so the golden test matches `gofmt` in `pnpm gen`.
+fn gofmt_source(src: &str) -> GenResult<String> {
+    let mut child = Command::new("gofmt")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| GenError::Parse(format!("failed to spawn gofmt: {e}")))?;
+    child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| GenError::Parse("gofmt stdin is closed".into()))?
+        .write_all(src.as_bytes())
+        .map_err(|e| GenError::Parse(format!("failed to write gofmt stdin: {e}")))?;
+    let output = child
+        .wait_with_output()
+        .map_err(|e| GenError::Parse(format!("gofmt failed: {e}")))?;
+    if !output.status.success() {
+        return Err(GenError::Parse(format!(
+            "gofmt exited {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        )));
+    }
+    String::from_utf8(output.stdout).map_err(|e| GenError::Parse(format!("gofmt stdout: {e}")))
 }
 
 fn go_export_census(ir: &Ir) -> BTreeSet<String> {

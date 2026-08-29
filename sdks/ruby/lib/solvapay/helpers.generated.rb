@@ -134,7 +134,7 @@ module SolvaPay
 
   # Return the VAT row label for a treatment and rate.
   # @return VAT label string.
-  def self.format_vat_summary_label(treatment: nil, tax_rate:)
+  def self.format_vat_summary_label(tax_rate:, treatment: nil)
     args = {} #: Hash[String, untyped]
     args["treatment"] = treatment unless treatment.nil?
     args["taxRate"] = tax_rate

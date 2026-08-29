@@ -5,70 +5,70 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from solvapay._native import call_native_sync
 from solvapay_mcp.core import call as call_sync_op
+
 
 def _as_object_map(value: object) -> dict[str, object]:
     if not isinstance(value, dict):
         raise TypeError("native call returned unexpected value")
     return {str(k): v for k, v in value.items()}
 
-def MCP_TOOL_NAMES() -> Any:
+def MCP_TOOL_NAMES() -> dict[str, object]:
     """Frozen map of SolvaPay MCP intent and UI tool names.
     @returns JSON object of canonical tool names.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     return _as_object_map(call_native_sync("MCP_TOOL_NAMES", json.dumps(call_args)))
 
-def assert_response_result(value: Any) -> Any:
+def assert_response_result(value: object) -> dict[str, object]:
     """Assert a value is a branded response envelope; brand failures are Transport errors.
     @param value Candidate handler return value.
     @returns The branded envelope, or a Transport error.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["value"] = value
     return _as_object_map(call_native_sync("assert_response_result", json.dumps(call_args)))
 
-def build_payable_tool_result(envelope: Any) -> Any:
+def build_payable_tool_result(envelope: object) -> dict[str, object]:
     """Unwrap a branded response envelope into an allow-path MCP tool result.
     @param envelope Branded handler return from makeResponseResult.
     @returns MCP allow-path tool result with structuredContent.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["envelope"] = envelope
     return _as_object_map(call_native_sync("build_payable_tool_result", json.dumps(call_args)))
 
-def build_prompt_descriptor_metadata(views: Any | None = None) -> Any:
+def build_prompt_descriptor_metadata(views: object | None = None) -> dict[str, object]:
     """Build ordered prompt descriptor metadata for enabled views.
     @param views Enabled views; defaults to checkout, account, and topup.
     @returns Ordered prompt descriptor metadata list.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     if views is not None:
         call_args["views"] = views
     return _as_object_map(call_native_sync("build_prompt_descriptor_metadata", json.dumps(call_args)))
 
-def build_prompt_user_message(prompt_name: Any, args: Any) -> Any:
+def build_prompt_user_message(prompt_name: object, args: object) -> dict[str, object]:
     """Build the user-role prompt message for a SolvaPay slash-command prompt.
     @param prompt_name Prompt name (upgrade, manage_account, topup).
     @param args Prompt argument object.
     @returns Prompt user message with text content.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["promptName"] = prompt_name
     call_args["args"] = args
     return _as_object_map(call_native_sync("build_prompt_user_message", json.dumps(call_args)))
 
-def build_tool_descriptor_metadata(resource_uri: Any, views: Any | None = None, branding: Any | None = None) -> Any:
+def build_tool_descriptor_metadata(resource_uri: object, views: object | None = None, branding: object | None = None) -> dict[str, object]:
     """Build ordered tool descriptor metadata for enabled views.
     @param resource_uri UI resource URI stamped onto metadata.
     @param views Enabled views; defaults to checkout, account, and topup.
     @param branding Optional merchant branding for icons.
     @returns Ordered tool descriptor metadata list.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["resourceUri"] = resource_uri
     if views is not None:
         call_args["views"] = views
@@ -76,37 +76,37 @@ def build_tool_descriptor_metadata(resource_uri: Any, views: Any | None = None, 
         call_args["branding"] = branding
     return _as_object_map(call_native_sync("build_tool_descriptor_metadata", json.dumps(call_args)))
 
-def derive_icons(branding: Any | None = None) -> Any:
+def derive_icons(branding: object | None = None) -> dict[str, object]:
     """Project merchant branding into MCP tool icons; absent branding yields null.
     @param branding Optional merchant branding with iconUrl or logoUrl.
     @returns Icon list, or null when branding has neither icon nor logo.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     if branding is not None:
         call_args["branding"] = branding
     return _as_object_map(call_native_sync("derive_icons", json.dumps(call_args)))
 
-def invoke_payable_next(state: Any | None = None, event: Any | None = None) -> Any:
+def invoke_payable_next(state: object | None = None, event: object | None = None) -> dict[str, object]:
     """Advance the payable-tool state machine by one event.
     @param state Opaque machine state from the previous step.
     @param event Next event (start, gatePaywall, gateAllow, handler*).
     @returns Next state plus optional MCP result or host callback.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     if state is not None:
         call_args["state"] = state
     if event is not None:
         call_args["event"] = event
     return _as_object_map(call_native_sync("invoke_payable_next", json.dumps(call_args)))
 
-def make_response_result(data: Any, options: Any | None = None, emitted_blocks: Any | None = None) -> Any:
+def make_response_result(data: object, options: object | None = None, emitted_blocks: object | None = None) -> dict[str, object]:
     """Construct a branded handler response envelope (__solvapayResponse).
     @param data Merchant handler data payload.
     @param options Optional response options object.
     @param emitted_blocks Content blocks queued via ctx.emit before respond.
     @returns Branded ResponseEnvelope.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["data"] = data
     if options is not None:
         call_args["options"] = options
@@ -114,7 +114,7 @@ def make_response_result(data: Any, options: Any | None = None, emitted_blocks: 
         call_args["emittedBlocks"] = emitted_blocks
     return _as_object_map(call_native_sync("make_response_result", json.dumps(call_args)))
 
-def mcp_auth_gate(public_base_url: Any, rpc_method: Any | None = None, auth_header: Any | None = None, auth_mode: Any | None = None, mcp_path: Any | None = None, json_rpc_id: Any | None = None) -> Any:
+def mcp_auth_gate(public_base_url: object, rpc_method: object | None = None, auth_header: object | None = None, auth_mode: object | None = None, mcp_path: object | None = None, json_rpc_id: object | None = None) -> object:
     """Decide allow versus 401 WWW-Authenticate challenge for an MCP request.
     @param public_base_url Public origin for the WWW-Authenticate resource.
     @param rpc_method JSON-RPC method; may be absent.
@@ -124,7 +124,7 @@ def mcp_auth_gate(public_base_url: Any, rpc_method: Any | None = None, auth_head
     @param json_rpc_id JSON-RPC id echoed on the challenge body.
     @returns Allow decision or HTTP challenge payload.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["publicBaseUrl"] = public_base_url
     if rpc_method is not None:
         call_args["rpcMethod"] = rpc_method
@@ -138,20 +138,20 @@ def mcp_auth_gate(public_base_url: Any, rpc_method: Any | None = None, auth_head
         call_args["jsonRpcId"] = json_rpc_id
     return call_sync_op("mcpAuthGate", call_args)
 
-def mcp_config_log(api_base_url: Any, product_ref: Any, public_base_url: Any) -> Any:
+def mcp_config_log(api_base_url: object, product_ref: object, public_base_url: object) -> object:
     """Build the one-line MCP config log payload (once-per-process is host-side).
     @param api_base_url API origin.
     @param product_ref Product reference.
     @param public_base_url Public MCP origin.
     @returns Config log message object.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["apiBaseUrl"] = api_base_url
     call_args["productRef"] = product_ref
     call_args["publicBaseUrl"] = public_base_url
     return call_sync_op("mcpConfigLog", call_args)
 
-def mcp_dcr_diagnostics(product_ref: Any, api_base_url: Any, status: Any, body_text: Any | None = None) -> Any:
+def mcp_dcr_diagnostics(product_ref: object, api_base_url: object, status: object, body_text: object | None = None) -> object:
     """Build the OAuth DCR failure diagnostic log line.
     @param product_ref Configured product reference.
     @param api_base_url Configured API origin.
@@ -159,7 +159,7 @@ def mcp_dcr_diagnostics(product_ref: Any, api_base_url: Any, status: Any, body_t
     @param body_text Upstream body text used to pick the hint.
     @returns Diagnostic message object.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["productRef"] = product_ref
     call_args["apiBaseUrl"] = api_base_url
     call_args["status"] = status
@@ -167,7 +167,7 @@ def mcp_dcr_diagnostics(product_ref: Any, api_base_url: Any, status: Any, body_t
         call_args["bodyText"] = body_text
     return call_sync_op("mcpDcrDiagnostics", call_args)
 
-def mcp_descriptors(resource_uri: Any, public_base_url: Any, product_ref: Any, views: Any | None = None, csp: Any | None = None, api_base_url: Any | None = None, branding: Any | None = None) -> Any:
+def mcp_descriptors(resource_uri: object, public_base_url: object, product_ref: object, views: object | None = None, csp: object | None = None, api_base_url: object | None = None, branding: object | None = None) -> object:
     """Build MCP tool, prompt, and resource descriptors for a product.
     @param resource_uri UI resource URI stamped onto tool metadata.
     @param public_base_url Public http(s) origin of the MCP server.
@@ -178,7 +178,7 @@ def mcp_descriptors(resource_uri: Any, public_base_url: Any, product_ref: Any, v
     @param branding Optional merchant branding for tool icons.
     @returns Descriptor bundle with tools, prompts, and resources.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["resourceUri"] = resource_uri
     call_args["publicBaseUrl"] = public_base_url
     call_args["productRef"] = product_ref
@@ -192,58 +192,58 @@ def mcp_descriptors(resource_uri: Any, public_base_url: Any, product_ref: Any, v
         call_args["branding"] = branding
     return call_sync_op("mcpDescriptors", call_args)
 
-def mcp_handle_request(rpc: Any, config: Any, auth_header: Any | None = None) -> Any:
+def mcp_handle_request(rpc: object, config: object, auth_header: object | None = None) -> object:
     """Run one MCP JSON-RPC request through the engine (requires the engine feature).
     @param rpc JSON-RPC request object.
     @param config Engine config including product and public origin.
     @param auth_header Optional Authorization header.
     @returns Engine response or invokeHandler continuation.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["rpc"] = rpc
     call_args["config"] = config
     if auth_header is not None:
         call_args["authHeader"] = auth_header
     return call_sync_op("mcpHandleRequest", call_args)
 
-def mcp_hide_tools_by_audience(tools: Any, audiences: Any, user_agent: Any | None = None) -> Any:
+def mcp_hide_tools_by_audience(tools: object, audiences: object, user_agent: object | None = None) -> object:
     """Filter tools/list descriptors by _meta.audience, with a ChatGPT UA bypass.
     @param tools Tool descriptors; hidden tools include _meta.audience.
     @param audiences Audiences to hide (for example ui).
     @param user_agent Optional User-Agent; openai-mcp bypasses the filter.
     @returns Filtered tools list, optionally marked bypassed.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["tools"] = tools
     call_args["audiences"] = audiences
     if user_agent is not None:
         call_args["userAgent"] = user_agent
     return call_sync_op("mcpHideToolsByAudience", call_args)
 
-def mcp_is_free_method(mcp_method: Any | None = None) -> Any:
+def mcp_is_free_method(mcp_method: object | None = None) -> object:
     """Return whether an MCP JSON-RPC method is free (no bearer) in tools-call mode.
     @param mcp_method JSON-RPC method name; tools/call is gated.
     @returns True when the method does not require a bearer in tools-call mode.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     if mcp_method is not None:
         call_args["mcpMethod"] = mcp_method
     return call_sync_op("mcpIsFreeMethod", call_args)
 
-def mcp_merge_csp(overrides: Any | None = None, api_base_url: Any | None = None) -> Any:
+def mcp_merge_csp(overrides: object | None = None, api_base_url: object | None = None) -> object:
     """Merge integrator CSP overrides with the Stripe baseline allow-lists.
     @param overrides Optional resource/connect/frame domain overrides.
     @param api_base_url Optional API origin added to connect-src.
     @returns Merged CSP directive lists.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     if overrides is not None:
         call_args["overrides"] = overrides
     if api_base_url is not None:
         call_args["apiBaseUrl"] = api_base_url
     return call_sync_op("mcpMergeCsp", call_args)
 
-def mcp_narrate(tool: Any, payload: Any, kind: Any | None = None, mode: Any | None = None, meta: Any | None = None) -> Any:
+def mcp_narrate(tool: object, payload: object, kind: object | None = None, mode: object | None = None, meta: object | None = None) -> object:
     """Narrate an intent-tool bootstrap payload as markdown or a tool-result envelope.
     @param tool Intent tool name.
     @param payload Bootstrap payload to narrate.
@@ -252,7 +252,7 @@ def mcp_narrate(tool: Any, payload: Any, kind: Any | None = None, mode: Any | No
     @param meta Base _meta stamped onto narrated envelopes.
     @returns Narration markdown or a narrated MCP tool result.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["tool"] = tool
     call_args["payload"] = payload
     if kind is not None:
@@ -263,14 +263,14 @@ def mcp_narrate(tool: Any, payload: Any, kind: Any | None = None, mode: Any | No
         call_args["meta"] = meta
     return call_sync_op("mcpNarrate", call_args)
 
-def mcp_normalize_oauth_error(body: Any | None = None, text: Any | None = None, status: Any | None = None) -> Any:
+def mcp_normalize_oauth_error(body: object | None = None, text: object | None = None, status: object | None = None) -> object:
     """Normalize an upstream OAuth error into the frozen RFC error body.
     @param body Parsed upstream JSON body.
     @param text Raw upstream body text.
     @param status HTTP status; defaults to 400.
     @returns Normalized OAuth error object.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     if body is not None:
         call_args["body"] = body
     if text is not None:
@@ -279,7 +279,7 @@ def mcp_normalize_oauth_error(body: Any | None = None, text: Any | None = None, 
         call_args["status"] = status
     return call_sync_op("mcpNormalizeOauthError", call_args)
 
-def mcp_oauth_discovery(kind: Any, public_base_url: Any, mcp_path: Any | None = None, paths: Any | None = None) -> Any:
+def mcp_oauth_discovery(kind: object, public_base_url: object, mcp_path: object | None = None, paths: object | None = None) -> object:
     """Build an OAuth protected-resource or authorization-server discovery document.
     @param kind protected-resource or authorization-server.
     @param public_base_url Public origin with trailing slash stripped.
@@ -287,7 +287,7 @@ def mcp_oauth_discovery(kind: Any, public_base_url: Any, mcp_path: Any | None = 
     @param paths Optional OAuth route path overrides.
     @returns RFC 9728 or RFC 8414 discovery JSON.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["kind"] = kind
     call_args["publicBaseUrl"] = public_base_url
     if mcp_path is not None:
@@ -296,14 +296,14 @@ def mcp_oauth_discovery(kind: Any, public_base_url: Any, mcp_path: Any | None = 
         call_args["paths"] = paths
     return call_sync_op("mcpOauthDiscovery", call_args)
 
-def mcp_oauth_error_inspect(kind: Any, body: Any | None = None, status: Any | None = None) -> Any:
+def mcp_oauth_error_inspect(kind: object, body: object | None = None, status: object | None = None) -> object:
     """Inspect an upstream OAuth error body without building a full RFC error.
     @param kind has-shape, derive-code, or build-description.
     @param body Upstream error body.
     @param status HTTP status used by derive-code.
     @returns Boolean, error code, or description string.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["kind"] = kind
     if body is not None:
         call_args["body"] = body
@@ -311,7 +311,7 @@ def mcp_oauth_error_inspect(kind: Any, body: Any | None = None, status: Any | No
         call_args["status"] = status
     return call_sync_op("mcpOauthErrorInspect", call_args)
 
-def mcp_oauth_path(kind: Any, value: Any | None = None, public_base_url: Any | None = None, mcp_path: Any | None = None, paths: Any | None = None) -> Any:
+def mcp_oauth_path(kind: object, value: object | None = None, public_base_url: object | None = None, mcp_path: object | None = None, paths: object | None = None) -> object:
     """Run one OAuth path helper (slash, resource identifier, or resolve-paths).
     @param kind Which path helper to run.
     @param value String argument for slash helpers.
@@ -320,7 +320,7 @@ def mcp_oauth_path(kind: Any, value: Any | None = None, public_base_url: Any | N
     @param paths Optional path overrides for resolve-paths.
     @returns Normalized path string or resolved path map.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["kind"] = kind
     if value is not None:
         call_args["value"] = value
@@ -332,61 +332,61 @@ def mcp_oauth_path(kind: Any, value: Any | None = None, public_base_url: Any | N
         call_args["paths"] = paths
     return call_sync_op("mcpOauthPath", call_args)
 
-def mcp_overview_resource() -> Any:
+def mcp_overview_resource() -> object:
     """Return the frozen MCP overview resource document.
     @returns Overview markdown and metadata for the overview resource.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     return call_sync_op("mcpOverviewResource", call_args)
 
-def mcp_requires_bearer_auth(mcp_method: Any | None = None, auth_mode: Any | None = None) -> Any:
+def mcp_requires_bearer_auth(mcp_method: object | None = None, auth_mode: object | None = None) -> object:
     """Return whether a bearer is required for a method under the given auth mode.
     @param mcp_method JSON-RPC method name.
     @param auth_mode tools-call or all; defaults to tools-call.
     @returns True when a bearer token is required.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     if mcp_method is not None:
         call_args["mcpMethod"] = mcp_method
     if auth_mode is not None:
         call_args["authMode"] = auth_mode
     return call_sync_op("mcpRequiresBearerAuth", call_args)
 
-def mcp_resume(token: Any, handler_envelope: Any) -> Any:
+def mcp_resume(token: object, handler_envelope: object) -> object:
     """Resume an engine continuation after a host payable handler returns.
     @param token Continuation token from invokeHandler.
     @param handler_envelope Host handler outcome envelope.
     @returns Completed JSON-RPC response.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["token"] = token
     call_args["handlerEnvelope"] = handler_envelope
     return call_sync_op("mcpResume", call_args)
 
-def mcp_view_maps() -> Any:
+def mcp_view_maps() -> dict[str, object]:
     """Return the frozen view-to-tool and view-to-prompt maps.
     @returns View maps used by descriptor builders.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     return _as_object_map(call_native_sync("mcp_view_maps", json.dumps(call_args)))
 
-def paywall_tool_result(message: Any, structured_content: Any) -> Any:
+def paywall_tool_result(message: object, structured_content: object) -> dict[str, object]:
     """Build a text-only MCP paywall tool result (isError false) from narration and a gate.
     @param message Narration text for content[0].
     @param structured_content Machine-readable PaywallGate payload.
     @returns MCP tool result with isError false and structuredContent.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["message"] = message
     call_args["structuredContent"] = structured_content
     return _as_object_map(call_native_sync("paywall_tool_result", json.dumps(call_args)))
 
-def validate_public_base_url(public_base_url: Any) -> Any:
+def validate_public_base_url(public_base_url: object) -> dict[str, object]:
     """Validate publicBaseUrl is http(s); returns a frozen error message or null.
     @param public_base_url Candidate public origin.
     @returns Error message string when invalid; null when valid.
     """
-    call_args: dict[str, Any] = {}
+    call_args: dict[str, object] = {}
     call_args["publicBaseUrl"] = public_base_url
     return _as_object_map(call_native_sync("validate_public_base_url", json.dumps(call_args)))
 

@@ -85,10 +85,9 @@ pub fn emit_mcp_py(ir: &Ir) -> GenResult<String> {
     out.push_str(
         "\"\"\"Generated MCP named wrappers.\"\"\"\n\n\
          from __future__ import annotations\n\n\
-         import json\n\
-         from typing import Any\n\n\
+         import json\n\n\
          from solvapay._native import call_native_sync\n\
-         from solvapay_mcp.core import call as call_sync_op\n\n\
+         from solvapay_mcp.core import call as call_sync_op\n\n\n\
          def _as_object_map(value: object) -> dict[str, object]:\n\
          \x20   if not isinstance(value, dict):\n\
          \x20       raise TypeError(\"native call returned unexpected value\")\n\
@@ -103,15 +102,25 @@ pub fn emit_mcp_py(ir: &Ir) -> GenResult<String> {
             .iter()
             .map(|p| {
                 if p.required {
-                    format!("{}: Any", p.names.py)
+                    format!("{}: object", p.names.py)
                 } else {
-                    format!("{}: Any | None = None", p.names.py)
+                    format!("{}: object | None = None", p.names.py)
                 }
             })
             .collect::<Vec<_>>();
-        let _ = writeln!(out, "def {}({}) -> Any:", entry.names.py, params.join(", "));
+        let ret = if is_layer2(entry) {
+            "dict[str, object]"
+        } else {
+            "object"
+        };
+        let _ = writeln!(
+            out,
+            "def {}({}) -> {ret}:",
+            entry.names.py,
+            params.join(", ")
+        );
         write_pydoc_block(&mut out, &render_pydoc(entry), "    ");
-        out.push_str("    call_args: dict[str, Any] = {}\n");
+        out.push_str("    call_args: dict[str, object] = {}\n");
         for param in &entry.params {
             let local = &param.names.py;
             if param.required {
