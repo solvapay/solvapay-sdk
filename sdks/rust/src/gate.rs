@@ -82,6 +82,26 @@ impl Allow {
         self.customer.clone()
     }
 
+    /// Backend customer reference used for usage tracking.
+    pub fn backend_ref(&self) -> &str {
+        &self.backend_ref
+    }
+
+    /// Product reference this allow decision was issued for.
+    pub fn product(&self) -> &str {
+        &self.product
+    }
+
+    /// Meter name used when recording usage for this allow.
+    pub fn meter_name(&self) -> &str {
+        &self.meter_name
+    }
+
+    /// Limits payload from the last successful check.
+    pub fn limits(&self) -> &Value {
+        &self.limits
+    }
+
     /// Copy the core driver snapshot onto the host `CustomerSnapshot`.
     pub(crate) fn from_core_customer(
         customer: solvapay_core::CustomerSnapshot,

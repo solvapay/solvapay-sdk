@@ -337,7 +337,7 @@ module SolvaPay
         next if overflow <= 0
 
         oldest = @customer_cache.min_by(overflow) { |_cache_key, entry| entry[:timestamp_ms].to_i }
-        oldest.each_key { |cache_key| @customer_cache.delete(cache_key) }
+        oldest.map { |cache_key, _entry| cache_key }.each { |cache_key| @customer_cache.delete(cache_key) }
       end
     end
 

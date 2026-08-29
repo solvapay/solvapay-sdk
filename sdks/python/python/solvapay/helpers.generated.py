@@ -9,6 +9,7 @@ from typing import Any
 
 from solvapay._native import call_native_sync
 
+
 def assert_valid_product_ref(product_ref: str, context: str) -> Any:
     """Reject empty, placeholder, or non-prd_ product refs at construction time.
     @returns Throws when the ref is not a real prd_ identifier.

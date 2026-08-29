@@ -23,7 +23,7 @@ pub fn emit_helpers_py(ir: &Ir) -> GenResult<String> {
          from __future__ import annotations\n\n\
          import json\n\
          from typing import Any\n\n\
-         from solvapay._native import call_native_sync\n\n",
+         from solvapay._native import call_native_sync\n\n\n",
     );
     let mut constants: Vec<(&str, &IrEntryPoint)> = Vec::new();
     for (binding, entry) in catalog_helper_bindings(ir) {
