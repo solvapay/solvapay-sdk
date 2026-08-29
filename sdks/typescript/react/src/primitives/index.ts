@@ -7,6 +7,8 @@
  * `@solvapay/react` is a thin shim over these primitives.
  */
 
+import '@solvapay/core/browser-wasm'
+
 export { Slot, Slottable } from './slot'
 export { composeRefs, setRef } from './composeRefs'
 export { composeEventHandlers } from './composeEventHandlers'

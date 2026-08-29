@@ -370,7 +370,6 @@ externalGenerated:
     cwd: sdks/wasm
     # Only solvapay_wasm.js carries @generated; the two .d.ts files have lint pragmas; _bg.wasm is binary.
     marker: null
-    binary: true
     nonDeterministic: true
   - id: goCoreWasm
     # wasm32-wasip1 output is not bit-stable across hosts (mac vs linux/amd64 vs
