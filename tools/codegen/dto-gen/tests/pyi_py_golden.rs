@@ -44,8 +44,8 @@ fn pyi_py_matches_committed() {
         "missing @generated header"
     );
     assert!(
-        emitted.contains("from typing import Any"),
-        "helper stubs require Any"
+        !emitted.contains("from typing import Any"),
+        "helper stubs must not use typing.Any under mypy disallow_any_explicit"
     );
     assert_matches(
         &emitted,

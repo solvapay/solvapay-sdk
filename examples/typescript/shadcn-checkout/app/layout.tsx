@@ -1,5 +1,3 @@
-import '@solvapay/server/edge'
-
 import { Providers } from './providers'
 import './globals.css'
 
