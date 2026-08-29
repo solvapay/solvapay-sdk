@@ -37,6 +37,11 @@
     },
     {
       "package": "@solvapay/core",
+      "symbol": "REVERSE_CHARGE_NOTE",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/core",
       "symbol": "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
       "reason": "type-guard-or-const"
     },
@@ -73,6 +78,11 @@
     {
       "package": "@solvapay/core",
       "symbol": "TAX_ID_TYPES",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/core",
+      "symbol": "TAX_NOT_COLLECTED_NOTE",
       "reason": "type-guard-or-const"
     },
     {
