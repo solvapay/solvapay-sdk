@@ -185,9 +185,8 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       usageBasedPlan =
         plans
           .map((p: Record<string, unknown>) => ({ ...p, ...readMeteredPricing(p) }))
-          .find(
-            (p: any) => p.type === 'usage-based' && p.creditsPerUnit > 0 && p.freeUnits > 0,
-          ) || null
+          .find((p: any) => p.type === 'usage-based' && p.creditsPerUnit > 0 && p.freeUnits > 0) ||
+        null
 
       if (!usageBasedPlan) {
         const createdPlan = await apiClient.createPlan({

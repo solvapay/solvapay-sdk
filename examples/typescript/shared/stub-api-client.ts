@@ -37,10 +37,7 @@ type StubPlan = ListPlansResponse[number]
  * authored only on `options[]`; a pure-metered plan has no flat charge and
  * omits `price`.
  */
-function deriveHeadlinePrice(
-  options: StubPlan['options'],
-  currency = 'USD',
-): number | undefined {
+function deriveHeadlinePrice(options: StubPlan['options'], currency = 'USD'): number | undefined {
   const cur = currency.toUpperCase()
   const opts = options as Array<Record<string, unknown>>
   const isFlat = (option: Record<string, unknown>, oneTime: boolean) =>

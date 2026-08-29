@@ -23,6 +23,7 @@ use crate::decisions::coerce_customer_options_binding;
 use crate::decisions::counts_usage_binding;
 use crate::decisions::credits_per_unit_from_balance_binding;
 use crate::decisions::decide_paywall_outcome_binding;
+use crate::decisions::ensure_customer_next_binding;
 use crate::decisions::evaluate_balance_observation_binding;
 use crate::decisions::evaluate_cached_limits_binding;
 use crate::decisions::evaluate_fresh_limits_binding;
@@ -53,6 +54,7 @@ use crate::decisions::resolve_purchase_customer_ref_binding;
 use crate::decisions::resolve_return_url_binding;
 use crate::decisions::retry_next_delay_ms;
 use crate::decisions::select_active_purchases_binding;
+use crate::decisions::should_retry_usage_error_binding;
 use crate::decisions::trial_days_binding;
 use crate::decisions::validate_activate_plan_params_binding;
 use crate::decisions::validate_attach_business_details_params_binding;
@@ -197,6 +199,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(resolve_check_limits_params_binding, 1),
     )?;
     native.define_singleton_method(
+        "should_retry_usage_error",
+        function!(should_retry_usage_error_binding, 1),
+    )?;
+    native.define_singleton_method(
         "validate_list_plans_params",
         function!(validate_list_plans_params_binding, 1),
     )?;
@@ -259,6 +265,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "assert_valid_product_ref",
         function!(assert_valid_product_ref_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "ensure_customer_next",
+        function!(ensure_customer_next_binding, 1),
     )?;
     native.define_singleton_method("charges", function!(charges_binding, 1))?;
     native.define_singleton_method(

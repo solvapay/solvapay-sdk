@@ -9,14 +9,9 @@ import type { BusinessDetailsInput, TaxBreakdown } from '@solvapay/core'
 
 /** SDK purchase row. Generated from OpenAPI `SdkPurchaseResponse`, plus
  * fields the wire sends that the local snapshot DTO has not listed yet. */
-export type PurchaseInfo = Omit<
-  components['schemas']['SdkPurchaseResponse'],
-  'planSnapshot'
-> & {
+export type PurchaseInfo = Omit<components['schemas']['SdkPurchaseResponse'], 'planSnapshot'> & {
   planRef?: string
-  planSnapshot?:
-    | (components['schemas']['SdkPlanSnapshotDto'] & { isMetered?: boolean })
-    | null
+  planSnapshot?: (components['schemas']['SdkPlanSnapshotDto'] & { isMetered?: boolean }) | null
 }
 
 export type AttachBusinessDetailsParams = {
@@ -345,7 +340,7 @@ export interface ConfigureMcpPlansResponse {
  * SolvaPay API Client Interface
  *
  * This interface defines the contract for communicating with the SolvaPay backend.
- * Uses auto-generated types from the OpenAPI specification.
+ * Uses types derived by dto-gen from the OpenAPI specification.
  * You can provide your own implementation or use the default createSolvaPayClient().
  */
 export interface SolvaPayClient {
@@ -508,15 +503,10 @@ export interface SolvaPayClient {
   }>
 
   // POST: /v1/sdk/purchases/{purchaseRef}/cancel
-  cancelPurchase?(params: {
-    purchaseRef: string
-    reason?: string
-  }): Promise<PurchaseInfo>
+  cancelPurchase?(params: { purchaseRef: string; reason?: string }): Promise<PurchaseInfo>
 
   // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
-  reactivatePurchase?(params: {
-    purchaseRef: string
-  }): Promise<PurchaseInfo>
+  reactivatePurchase?(params: { purchaseRef: string }): Promise<PurchaseInfo>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
   // `productRef` is optional because credit-topup PIs (no product) are
@@ -566,7 +556,7 @@ export interface SolvaPayClient {
   ): Promise<SaveAutoRechargeResponse>
 
   // DELETE: /v1/sdk/auto-recharge?customerRef=...
-  disableAutoRecharge?(params: { customerRef: string }): Promise<{ success: boolean }>
+  disableAutoRecharge?(params: { customerRef: string }): Promise<{ success: true }>
 
   /** Fan out merchant, product, plans, and customer snapshots for the MCP widget. */
   mcpBootstrap?(params: unknown): Promise<unknown>

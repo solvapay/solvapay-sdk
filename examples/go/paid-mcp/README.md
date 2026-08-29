@@ -5,7 +5,7 @@ Runnable paywalled MCP tool against a mock backend.
 ```bash
 cd examples/go/paid-mcp
 go test ./...
-go run . 
+go run .
 go run . --gate
 ```
 

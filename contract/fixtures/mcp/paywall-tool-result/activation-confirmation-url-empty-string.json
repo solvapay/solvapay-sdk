@@ -10,20 +10,27 @@
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/confirm",
         "message": "activate",
-        "confirmationUrl": ""
+        "confirmationUrl": "",
+        "shortMessage": "Activation required"
       }
     }
   },
   "expect": {
     "result": {
       "isError": false,
-      "content": [{ "type": "text", "text": "activate" }],
+      "content": [
+        {
+          "type": "text",
+          "text": "activate"
+        }
+      ],
       "structuredContent": {
         "kind": "activation_required",
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/confirm",
         "message": "activate",
-        "confirmationUrl": ""
+        "confirmationUrl": "",
+        "shortMessage": "Activation required"
       }
     }
   }

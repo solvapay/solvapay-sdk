@@ -127,10 +127,7 @@ export const writeSolvaPaySecretToEnv = async (
   return { filePath: envPath, action: 'updated' }
 }
 
-const readEnvKeyFromFile = async (
-  key: string,
-  cwd: string,
-): Promise<string | undefined> => {
+const readEnvKeyFromFile = async (key: string, cwd: string): Promise<string | undefined> => {
   const envPath = path.join(cwd, '.env')
   const exists = await envFileExists(envPath)
   if (!exists) {

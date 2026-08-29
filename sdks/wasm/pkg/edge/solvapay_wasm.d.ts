@@ -145,6 +145,26 @@ export class WasmClient {
      */
     listProducts(_args_json: string): Promise<string>;
     /**
+     * `mcpBootstrap`
+     */
+    mcpBootstrap(args_json: string): Promise<string>;
+    /**
+     * `mcpCallBuiltinTool`
+     */
+    mcpCallBuiltinTool(args_json: string): Promise<string>;
+    /**
+     * `mcpDispatch`
+     */
+    mcpDispatch(args_json: string): Promise<string>;
+    /**
+     * `mcpOauthRequest`
+     */
+    mcpOauthRequest(args_json: string): Promise<string>;
+    /**
+     * `mcpReadResource`
+     */
+    mcpReadResource(args_json: string): Promise<string>;
+    /**
      * Constructs a client over `FetchTransport` + `ClientShell`.
      *
      * # Arguments
@@ -323,6 +343,11 @@ export function deriveIcons(args_json: string): string;
  * Binding for `deriveTaxIdType`.
  */
 export function deriveTaxIdType(args_json: string): string;
+
+/**
+ * Binding for `ensureCustomerNext`.
+ */
+export function ensureCustomerNext(args_json: string): string;
 
 /**
  * Binding for `evaluateBalanceObservation`.
@@ -540,6 +565,11 @@ export function retryNextDelayMs(args_json: string): string;
 export function selectActivePurchases(args_json: string): string;
 
 /**
+ * Binding for `shouldRetryUsageError`.
+ */
+export function shouldRetryUsageError(args_json: string): string;
+
+/**
  * Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
  */
 export function solvapayCall(args_json: string): string;
@@ -661,6 +691,7 @@ export interface InitOutput {
     readonly decidePaywallOutcome: (a: number, b: number) => [number, number];
     readonly deriveIcons: (a: number, b: number) => [number, number];
     readonly deriveTaxIdType: (a: number, b: number) => [number, number];
+    readonly ensureCustomerNext: (a: number, b: number) => [number, number];
     readonly evaluateBalanceObservation: (a: number, b: number) => [number, number];
     readonly evaluateCachedLimits: (a: number, b: number) => [number, number];
     readonly evaluateFreshLimits: (a: number, b: number) => [number, number];
@@ -704,6 +735,7 @@ export interface InitOutput {
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
     readonly retryNextDelayMs: (a: number, b: number) => [number, number];
     readonly selectActivePurchases: (a: number, b: number) => [number, number];
+    readonly shouldRetryUsageError: (a: number, b: number) => [number, number];
     readonly solvapayCall: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
     readonly validateActivatePlanParams: (a: number, b: number) => [number, number];
@@ -747,6 +779,11 @@ export interface InitOutput {
     readonly wasmclient_getUserInfo: (a: number, b: number, c: number) => any;
     readonly wasmclient_listPlans: (a: number, b: number, c: number) => any;
     readonly wasmclient_listProducts: (a: number, b: number, c: number) => any;
+    readonly wasmclient_mcpBootstrap: (a: number, b: number, c: number) => any;
+    readonly wasmclient_mcpCallBuiltinTool: (a: number, b: number, c: number) => any;
+    readonly wasmclient_mcpDispatch: (a: number, b: number, c: number) => any;
+    readonly wasmclient_mcpOauthRequest: (a: number, b: number, c: number) => any;
+    readonly wasmclient_mcpReadResource: (a: number, b: number, c: number) => any;
     readonly wasmclient_new: (a: number, b: number, c: number, d: number) => number;
     readonly wasmclient_processPaymentIntent: (a: number, b: number, c: number) => any;
     readonly wasmclient_reactivatePurchase: (a: number, b: number, c: number) => any;

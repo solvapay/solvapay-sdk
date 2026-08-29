@@ -9,12 +9,12 @@ into each language's idiomatic exception type (see [architecture.md](./architect
 `core/solvapay-core/src/error.rs` defines `SdkError`, the single
 cross-language error surface. It has four kinds:
 
-| Kind        | Meaning                                                            | Maps to (TS)                     |
-| ----------- | ----------------------------------------------------------------- | -------------------------------- |
-| `Api`       | Backend/API failure; carries a rendered message template + status | `SolvaPayError`                  |
-| `Paywall`   | Payment required / limit exceeded; carries the full gate          | `PaywallError` (402 formatting)  |
-| `Webhook`   | Webhook verification failure; carries a stable `WebhookErrorCode` | `SolvaPayError`                  |
-| `Transport` | Transport / I/O failure — the **only** transport error surface    | `SolvaPayError`                  |
+| Kind        | Meaning                                                           | Maps to (TS)                    |
+| ----------- | ----------------------------------------------------------------- | ------------------------------- |
+| `Api`       | Backend/API failure; carries a rendered message template + status | `SolvaPayError`                 |
+| `Paywall`   | Payment required / limit exceeded; carries the full gate          | `PaywallError` (402 formatting) |
+| `Webhook`   | Webhook verification failure; carries a stable `WebhookErrorCode` | `SolvaPayError`                 |
+| `Transport` | Transport / I/O failure — the **only** transport error surface    | `SolvaPayError`                 |
 
 Messages come from manifest-frozen templates (`error_templates.rs`, generated),
 so wording is consistent across surfaces and stable across releases.

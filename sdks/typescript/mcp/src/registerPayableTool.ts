@@ -18,10 +18,7 @@ import type { SolvaPay } from '@solvapay/server'
 import { registerAppTool } from './internal/extAppsServer'
 
 type ZodObjectSchema = ReturnType<typeof z.object>
-type BuildBootstrapPayloadFn = (
-  view: string,
-  extra?: McpToolExtra,
-) => Promise<unknown>
+type BuildBootstrapPayloadFn = (view: string, extra?: McpToolExtra) => Promise<unknown>
 
 /** Accepted `schema` forms: a `z.object()` schema or a raw `{ field: z.string() }` shape. */
 export type InputSchemaOption = ZodObjectSchema | Record<string, z.ZodType> | undefined
@@ -58,10 +55,7 @@ export interface RegisterPayableToolOptions<
   description?: string
   handler: PayableHandler<InferHandlerArgs<InputSchema>, TData>
   buildBootstrap?: BuildBootstrapPayloadFn
-  getCustomerRef?: (
-    args: Record<string, unknown>,
-    extra?: McpToolExtra,
-  ) => string | Promise<string>
+  getCustomerRef?: (args: Record<string, unknown>, extra?: McpToolExtra) => string | Promise<string>
   meta?: Record<string, unknown>
   annotations?: SolvaPayToolAnnotations
   icons?: SolvaPayToolIcon[]
@@ -102,9 +96,7 @@ export function registerPayableTool<
     ...(hasIcons ? { icons } : {}),
   }
   const hasUi = Object.keys(mergedUi).length > 0
-  const toolMeta: Record<string, unknown> = hasUi
-    ? { ...baseMeta, ui: mergedUi }
-    : { ...baseMeta }
+  const toolMeta: Record<string, unknown> = hasUi ? { ...baseMeta, ui: mergedUi } : { ...baseMeta }
 
   const effectiveAnnotations: SolvaPayToolAnnotations = {
     readOnlyHint: true,

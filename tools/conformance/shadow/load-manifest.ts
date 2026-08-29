@@ -4,7 +4,10 @@
 
 import { readFileSync } from 'node:fs'
 import { parse as parseYaml } from 'yaml'
-import { SdkContractManifestSchema, type SdkContractManifest } from '../../shared/manifest-schema.js'
+import {
+  SdkContractManifestSchema,
+  type SdkContractManifest,
+} from '../../shared/manifest-schema.js'
 import { contractInputPath } from '../../shared/repo-paths.js'
 
 const DEFAULT_MANIFEST = contractInputPath('sdkManifest')

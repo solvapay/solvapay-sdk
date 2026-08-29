@@ -4,6 +4,7 @@
 
 mod core;
 mod layer2;
+mod layer2_generated;
 mod register;
 mod response_context;
 mod server;

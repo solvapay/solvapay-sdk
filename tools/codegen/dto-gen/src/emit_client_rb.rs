@@ -93,13 +93,11 @@ fn emit_helpers(ir: &Ir) -> String {
         let Some(entry) = ir.entry_points.get(id) else {
             continue;
         };
-        if matches!(
-            id.as_str(),
-            "verifyWebhook" | "withRetry" | "SolvaPayError" | "PaywallError"
-        ) {
+        if !entry.emission.rb.is_generated() {
             continue;
         }
         if entry.ruby_target.receiver == IrRubyReceiver::Constant {
+            write_yard(&mut output, entry, "  ");
             let _ = writeln!(
                 output,
                 "  {} = NativeDispatch.call_sync(\"{}\", {{}}).freeze",
@@ -338,8 +336,8 @@ fn snake(value: &str) -> String {
 mod tests {
     use super::*;
     use crate::ir::{
-        IrAvailability, IrDefaults, IrDocModel, IrEntrySection, IrErrorKind, IrLangNames, IrParam,
-        IrRubyTarget, IrSyncKind, IrTypeRef,
+        IrAvailability, IrDefaults, IrDocModel, IrEmissionMatrix, IrEntrySection, IrErrorKind,
+        IrLangNames, IrParam, IrRubyTarget, IrSyncKind, IrTypeRef,
     };
 
     #[test]
@@ -358,6 +356,9 @@ mod tests {
             response: None,
             availability: availability(),
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: "sample".into(),
@@ -393,6 +394,9 @@ mod tests {
             response: None,
             availability: availability(),
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: "create_plan".into(),
@@ -428,6 +432,9 @@ mod tests {
             response: None,
             availability: availability(),
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: "update_customer".into(),
@@ -467,6 +474,9 @@ mod tests {
             response: None,
             availability: availability(),
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: "check_limits".into(),

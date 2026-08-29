@@ -3,7 +3,7 @@
  */
 
 import { retryNextDelayMs } from './native-decisions'
-import type { RetryOptions } from './types'
+import type { RetryOptions, TrackUsageRequest } from './types'
 
 /**
  * Execute an async function with automatic retry logic.
@@ -300,5 +300,23 @@ export function createRequestDeduplicator<T = unknown>(
     clearCache,
     clearAllCache,
     getStats,
+  }
+}
+
+export function mergeUsageRequest(
+  rendered: TrackUsageRequest,
+  extraMetadata?: Record<string, unknown>,
+): TrackUsageRequest {
+  if (extraMetadata == null) {
+    return rendered
+  }
+  return {
+    ...rendered,
+    metadata: {
+      ...(typeof rendered.metadata === 'object' && rendered.metadata !== null
+        ? rendered.metadata
+        : {}),
+      ...extraMetadata,
+    },
   }
 }

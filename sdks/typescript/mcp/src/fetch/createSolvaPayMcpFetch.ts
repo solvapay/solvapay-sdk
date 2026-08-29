@@ -64,9 +64,7 @@ function bindEnginePayables(
         invoke: (args, customerRef) =>
           protectedHandler(
             args,
-            customerRef
-              ? { authInfo: { extra: { customer_ref: customerRef } } }
-              : undefined,
+            customerRef ? { authInfo: { extra: { customer_ref: customerRef } } } : undefined,
           ),
       })
     },
@@ -224,10 +222,7 @@ export function createSolvaPayMcpFetch(
               : {}),
             ...(onToolResult !== undefined
               ? {
-                  onDispatched: (
-                    result: { body: unknown },
-                    durationMs: number,
-                  ) => {
+                  onDispatched: (result: { body: unknown }, durationMs: number) => {
                     onToolResult(
                       '*',
                       {

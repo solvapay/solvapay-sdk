@@ -13,21 +13,6 @@ import {
 } from './client.runtime.generated'
 import type { SolvaPayClient } from './types'
 
-type WasmClientMethod = Exclude<
-  NativeClientMethod,
-  'mcpBootstrap' | 'mcpCallBuiltinTool' | 'mcpReadResource' | 'mcpOauthRequest' | 'mcpDispatch'
->
-
-function isWasmClientMethod(fn: NativeClientMethod): fn is WasmClientMethod {
-  return (
-    fn !== 'mcpBootstrap' &&
-    fn !== 'mcpCallBuiltinTool' &&
-    fn !== 'mcpReadResource' &&
-    fn !== 'mcpOauthRequest' &&
-    fn !== 'mcpDispatch'
-  )
-}
-
 /**
  * True on Deno / Cloudflare Workers / Vercel Edge-light — even when those
  * hosts expose a `process` / `nodejs_compat` shim that looks Node-like.
@@ -197,13 +182,7 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
 
     // Edge (Deno / Workers / edge-light) — never touch `./native`.
     // Also used under Node vitest when a fake WasmClient override is installed.
-    // MCP composite ops live only on the Node native core (wasm.ts excludes them).
     if (!isNodeRuntime()) {
-      if (!isWasmClientMethod(fn)) {
-        throw new SolvaPayError(
-          `${fn} requires the Node native core; it is not available on the WASM edge client`,
-        )
-      }
       const wasm = await import('./wasm')
       return (await wasm.callWasm(fn, argsJson, nativeConfig)) as T
     }
@@ -212,11 +191,6 @@ export function createSolvaPayClient(opts: ServerClientOptions): SolvaPayClient 
     // requiring a Deno/Workers runtime.
     const wasm = await import('./wasm')
     if (wasm.isWasmClientOverrideActive()) {
-      if (!isWasmClientMethod(fn)) {
-        throw new SolvaPayError(
-          `${fn} requires the Node native core; it is not available on the WASM edge client`,
-        )
-      }
       return (await wasm.callWasm(fn, argsJson, nativeConfig)) as T
     }
 

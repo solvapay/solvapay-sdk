@@ -18,18 +18,9 @@ import {
 } from '@solvapay/mcp-core'
 import { NativeClient } from '../../../sdks/node-native/index.js'
 import type { Fixture } from '../lib/fixture-schema.js'
-import {
-  fixtureHttpStubs,
-  isUnreachableExpect,
-  withFixtureHttp,
-} from './http-stub.js'
+import { fixtureHttpStubs, isUnreachableExpect, withFixtureHttp } from './http-stub.js'
 
-const CLIENT_OPS = new Set([
-  'mcpBootstrap',
-  'mcpCallBuiltinTool',
-  'mcpOauthRequest',
-  'mcpDispatch',
-])
+const CLIENT_OPS = new Set(['mcpBootstrap', 'mcpCallBuiltinTool', 'mcpOauthRequest', 'mcpDispatch'])
 
 function mcpDcrDiagnostics(args: Record<string, unknown>): unknown {
   const lines: string[] = []
@@ -84,10 +75,7 @@ function assertCoreResult(rel: string, fn: string, got: unknown, expectResult: u
     assertOauth(rel, got, expectResult)
     return
   }
-  if (
-    (fn === 'mcpHandleRequest' || fn === 'mcpDispatch') &&
-    rel.endsWith('invoke-handler.json')
-  ) {
+  if ((fn === 'mcpHandleRequest' || fn === 'mcpDispatch') && rel.endsWith('invoke-handler.json')) {
     expect(isRecord(got) && isRecord(expectResult)).toBe(true)
     if (!isRecord(got) || !isRecord(expectResult)) return
     expect(got.kind).toEqual(expectResult.kind)

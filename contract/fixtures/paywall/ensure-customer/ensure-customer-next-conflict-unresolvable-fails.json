@@ -1,0 +1,31 @@
+{
+  "suite": "paywall",
+  "case": "ensure-customer-next-conflict-unresolvable-fails",
+  "input": {
+    "fn": "ensureCustomerNext",
+    "args": {
+      "state": {
+        "customerRef": "user-1",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true,
+        "dedupTTLMs": 60000,
+        "cacheKey": "user-1",
+        "pending": "lookupConflictExternal",
+        "lastError": "409 already exists",
+        "createAttempted": true
+      },
+      "event": {
+        "kind": "customerLookupResult",
+        "found": false,
+        "errorMessage": "404"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Transport",
+      "status": 400,
+      "details": "Failed to resolve existing customer for user-1 after conflict: 404. Ensure the existing customer is linked to this externalRef."
+    }
+  }
+}

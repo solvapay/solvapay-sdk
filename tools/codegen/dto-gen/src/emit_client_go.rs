@@ -199,7 +199,7 @@ pub(crate) fn serialize_kind(binding: &IrBindingSymbol) -> GenResult<IrSerialize
 }
 
 /// Builds godoc lines: first word is the Go identifier (D19 / §5.6).
-fn render_godoc(entry: &IrEntryPoint, name: &str) -> Vec<String> {
+pub(crate) fn render_godoc(entry: &IrEntryPoint, name: &str) -> Vec<String> {
     let raw = render_entry_doc_lines(entry, |p| p.names.go.as_str());
     let mut out = Vec::new();
     let mut params = Vec::new();
@@ -253,7 +253,7 @@ fn split_param_doc(line: &str) -> (&str, &str) {
     }
 }
 
-fn uncapitalize(line: &str) -> String {
+pub(crate) fn uncapitalize(line: &str) -> String {
     let mut chars = line.chars();
     match chars.next() {
         Some(first) => first.to_lowercase().collect::<String>() + chars.as_str(),
@@ -267,8 +267,8 @@ mod tests {
     use super::*;
     use crate::ir::{
         IrAvailability, IrBindingArtifact, IrBindingCall, IrBindingCatalogLink, IrDefaults,
-        IrDocModel, IrEntrySection, IrEnvelopeMode, IrErrorKind, IrLangNames, IrRubyReceiver,
-        IrRubyTarget, IrSyncKind,
+        IrDocModel, IrEmissionMatrix, IrEntrySection, IrEnvelopeMode, IrErrorKind, IrLangNames,
+        IrRubyReceiver, IrRubyTarget, IrSyncKind,
     };
     use std::collections::BTreeMap;
 
@@ -313,6 +313,9 @@ mod tests {
                     rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
                 },
                 sync_ts: IrSyncKind::Async,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: None,
+                feature: None,
                 ruby_target: IrRubyTarget {
                     owner: "SolvaPay::Client".into(),
                     name: "get_merchant".into(),

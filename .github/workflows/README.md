@@ -139,15 +139,15 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 ## Quick Reference
 
-| Action                   | How to trigger                                                                  |
-| ------------------------ | ------------------------------------------------------------------------------- |
-| Publish preview snapshot | Push to `dev`                                                                   |
-| Cut stable release       | Push to `main` (auto-opens Version Packages PR), then merge the generated PR    |
-| Write a changeset        | `pnpm changeset` (interactive)                                                  |
-| Inspect pending releases | `pnpm changeset status --verbose`                                               |
-| Local npm publish dry-run | `pnpm release:dryrun` (gates + `pnpm -r publish --dry-run`, no `NPM_TOKEN`)    |
-| Verify fetch-runtime     | `pnpm validate:fetch-runtime` (or `pnpm tsx tools/repo/validate-fetch-runtime.ts`) |
-| Run the Deno gate        | `pnpm --filter @example/supabase-edge-mcp validate:workspace`                   |
+| Action                    | How to trigger                                                                     |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| Publish preview snapshot  | Push to `dev`                                                                      |
+| Cut stable release        | Push to `main` (auto-opens Version Packages PR), then merge the generated PR       |
+| Write a changeset         | `pnpm changeset` (interactive)                                                     |
+| Inspect pending releases  | `pnpm changeset status --verbose`                                                  |
+| Local npm publish dry-run | `pnpm release:dryrun` (gates + `pnpm -r publish --dry-run`, no `NPM_TOKEN`)        |
+| Verify fetch-runtime      | `pnpm validate:fetch-runtime` (or `pnpm tsx tools/repo/validate-fetch-runtime.ts`) |
+| Run the Deno gate         | `pnpm --filter @example/supabase-edge-mcp validate:workspace`                      |
 
 ## Troubleshooting
 
@@ -186,7 +186,7 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
   a divergence means the merge commit differs from what CI saw. Rerun
   `pnpm --filter @example/supabase-edge-mcp validate:workspace` locally
   on the merged branch.
-- If the *post-publish* `validate` step is the one failing, the newly
+- If the _post-publish_ `validate` step is the one failing, the newly
   published tarballs are broken (bad `exports` map or peer range), not
   the source. The publish already happened; fix forward with a new
   changeset. Locally, reproduce with `deno check --reload=npm: …` — Deno

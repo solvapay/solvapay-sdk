@@ -155,7 +155,9 @@ if (!USE_REAL_BACKEND || !SOLVAPAY_SECRET_KEY) {
       console.log('\n📋 To run this integration test:')
       console.log('   1. Set USE_REAL_BACKEND=true')
       console.log('   2. Set SOLVAPAY_SECRET_KEY=<valid sandbox key>')
-      console.log('   3. Set SOLVAPAY_API_BASE_URL=http://localhost:3001 (required when USE_REAL_BACKEND=true)')
+      console.log(
+        '   3. Set SOLVAPAY_API_BASE_URL=http://localhost:3001 (required when USE_REAL_BACKEND=true)',
+      )
       console.log('   4. Run: pnpm exec vitest run __tests__/customer-update.integration.test.ts\n')
     })
   })

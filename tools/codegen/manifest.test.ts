@@ -1,12 +1,15 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { parse as parseYaml } from 'yaml'
 import {
-  BINDING_CATALOG_BOUNDARY_CORE_HELPERS,
+  bindingCatalogBoundaryIds,
+  EXPECTED_MCP_LAYER2_COUNT,
+  EXPECTED_MCP_SYNC_OP_COUNT,
   EXPECTED_OPERATION_COUNT,
   EXPECTED_TOP_LEVEL_IDS,
   SHIM_JS_NAMES,
+  SdkContractManifestSchema,
   deriveNames,
   type SdkContractManifest,
 } from '../shared/manifest-schema.js'
@@ -128,9 +131,16 @@ function buildFixtureManifest(): SdkContractManifest {
     }
   }
 
+  const realCatalog = SdkContractManifestSchema.parse(
+    parseYaml(readFileSync(REAL_MANIFEST, 'utf8')),
+  )
   const topLevel: SdkContractManifest['topLevel'] = {}
   for (const id of EXPECTED_TOP_LEVEL_IDS) {
-    topLevel[id] = { names: deriveNames(id), sync: PURE_SYNC }
+    topLevel[id] = {
+      names: deriveNames(id),
+      sync: PURE_SYNC,
+      availability: realCatalog.topLevel[id]?.availability,
+    }
   }
 
   return {
@@ -143,11 +153,21 @@ function buildFixtureManifest(): SdkContractManifest {
     },
     topLevel,
     coreHelpers: Object.fromEntries(
-      BINDING_CATALOG_BOUNDARY_CORE_HELPERS.map(id => [
+      bindingCatalogBoundaryIds(realCatalog.coreHelpers).map(id => [
         id,
         { names: deriveNames(id), sync: PURE_SYNC },
       ]),
     ),
+    mcp: Object.fromEntries([
+      ...Array.from({ length: EXPECTED_MCP_SYNC_OP_COUNT }, (_, i) => {
+        const id = `mcpSync${String(i).padStart(2, '0')}`
+        return [id, { names: deriveNames(id), sync: PURE_SYNC, surface: 'syncOp' as const }]
+      }),
+      ...Array.from({ length: EXPECTED_MCP_LAYER2_COUNT }, (_, i) => {
+        const id = `mcpLayer${String(i).padStart(2, '0')}`
+        return [id, { names: deriveNames(id), sync: PURE_SYNC, surface: 'layer2' as const }]
+      }),
+    ]),
     facade: {
       createSolvaPay: { names: deriveNames('createSolvaPay'), sync: PURE_SYNC },
       createSolvaPayClient: {
@@ -205,6 +225,11 @@ function buildFixtureManifest(): SdkContractManifest {
       retry: { maxRetries: 2, initialDelayMs: 500, backoff: 'fixed' },
       webhookToleranceSec: 300,
       limitsCacheTTLMs: 10000,
+      customerDedupTTLMs: 60000,
+      customerDedupMaxCacheSize: 1000,
+      anonymousCustomerRef: 'anonymous',
+      requestIdFormat: 'solvapay_{epochMs}_{random9}',
+      usageActionType: 'api_call',
       idempotencyKeyFormats: {
         payment: 'payment-{planRef}-{epochMs}-{random9}',
         topup: 'topup-{epochMs}-{random9}',
@@ -328,5 +353,63 @@ describe('manifest CLI', () => {
       REAL_SNAPSHOT,
     ])
     expect(result.exitCode).toBe(0)
+  })
+
+  it('committed manifest declares every sync_dispatch op', () => {
+    const dispatchSrc = readFileSync(
+      path.join(process.cwd(), 'core/solvapay-mcp/src/sync_dispatch.rs'),
+      'utf8',
+    )
+    const opNames = [...dispatchSrc.matchAll(/"([A-Za-z][A-Za-z0-9]+)"\s*=>/g)].map(m => m[1])
+    expect(opNames.length).toBeGreaterThan(0)
+
+    const raw = readFileSync(REAL_MANIFEST, 'utf8')
+    const manifest = parseYaml(raw) as SdkContractManifest
+    const mcpKeys = new Set(Object.keys(manifest.mcp ?? {}))
+
+    for (const op of opNames) {
+      const catalogued =
+        op === 'validateBusinessDetails'
+          ? manifest.coreHelpers?.validateBusinessDetails != null
+          : mcpKeys.has(op)
+      expect(catalogued, `${op} must be in mcp: or coreHelpers.validateBusinessDetails`).toBe(true)
+    }
+  })
+
+  it('committed manifest declares every layer-2 binding symbol', () => {
+    const snapshot = JSON.parse(
+      readFileSync(
+        path.join(process.cwd(), 'contract/manifest/binding-symbols.snapshot.json'),
+        'utf8',
+      ),
+    ) as { bindings: Record<string, { section?: string }> }
+    const layer2Ids = Object.entries(snapshot.bindings)
+      .filter(([, symbol]) => symbol.section === 'MCP payload / descriptors')
+      .map(([id]) => id)
+
+    const raw = readFileSync(REAL_MANIFEST, 'utf8')
+    const manifest = parseYaml(raw) as SdkContractManifest
+    for (const id of layer2Ids) {
+      expect(manifest.mcp?.[id]?.surface).toBe('layer2')
+    }
+  })
+
+  it('mcp names follow the per-language derivation', () => {
+    const raw = readFileSync(REAL_MANIFEST, 'utf8')
+    const manifest = parseYaml(raw) as SdkContractManifest
+    const nameOverrides = manifest.nameOverrides ?? {}
+    for (const [id, entry] of Object.entries(manifest.mcp ?? {})) {
+      const derived = deriveNames(id)
+      const overrides = nameOverrides[id] ?? {}
+      const expected = {
+        ts: overrides.ts ?? derived.ts,
+        py: overrides.py ?? derived.py,
+        rb: overrides.rb ?? derived.rb,
+        go: overrides.go ?? derived.go,
+        rust: overrides.rust ?? derived.rust,
+        c: overrides.c ?? derived.c,
+      }
+      expect(entry.names, id).toEqual(expected)
+    }
   })
 })

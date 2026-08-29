@@ -33,6 +33,13 @@ pub fn emit_parity_suite_py(ir: &Ir) -> GenResult<String> {
     out.push_str("from pathlib import Path\n\n");
     out.push_str("import pytest\n\n");
     out.push_str("from solvapay.errors import PaywallError, SolvaPayError\n");
+    out.push_str("from solvapay.defaults import (\n\
+    _ANONYMOUS_CUSTOMER_REF,\n\
+    _CUSTOMER_DEDUP_MAX_CACHE_SIZE,\n\
+    _CUSTOMER_DEDUP_TTL_MS,\n\
+    _REQUEST_ID_FORMAT,\n\
+    _USAGE_ACTION_TYPE,\n\
+)\n");
     out.push_str("from solvapay.facade import create_solvapay\n\n");
 
     out.push_str("OPERATION_NAMES = (\n");
@@ -62,6 +69,31 @@ pub fn emit_parity_suite_py(ir: &Ir) -> GenResult<String> {
         out,
         "    assert default == {}  # limitsCacheTTLMs",
         defaults.limits_cache_ttl_ms
+    );
+    let _ = writeln!(
+        out,
+        "    assert _CUSTOMER_DEDUP_TTL_MS == {}  # customerDedupTTLMs",
+        defaults.customer_dedup_ttl_ms
+    );
+    let _ = writeln!(
+        out,
+        "    assert _CUSTOMER_DEDUP_MAX_CACHE_SIZE == {}  # customerDedupMaxCacheSize",
+        defaults.customer_dedup_max_cache_size
+    );
+    let _ = writeln!(
+        out,
+        "    assert _ANONYMOUS_CUSTOMER_REF == '{}'  # anonymousCustomerRef",
+        defaults.anonymous_customer_ref
+    );
+    let _ = writeln!(
+        out,
+        "    assert _REQUEST_ID_FORMAT == '{}'  # requestIdFormat",
+        defaults.request_id_format
+    );
+    let _ = writeln!(
+        out,
+        "    assert _USAGE_ACTION_TYPE == '{}'  # usageActionType",
+        defaults.usage_action_type
     );
     out.push('\n');
 
@@ -170,8 +202,8 @@ pub fn emit_parity_suite_py(ir: &Ir) -> GenResult<String> {
 mod tests {
     use super::*;
     use crate::ir::{
-        IrAvailability, IrDefaults, IrEntryPoint, IrEntrySection, IrErrorKind, IrLangNames,
-        IrRubyReceiver, IrRubyTarget, IrSyncKind,
+        IrAvailability, IrDefaults, IrEmissionMatrix, IrEntryPoint, IrEntrySection, IrErrorKind,
+        IrLangNames, IrRubyReceiver, IrRubyTarget, IrSyncKind,
     };
     use std::collections::BTreeMap;
 
@@ -220,6 +252,9 @@ mod tests {
                     rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
                 },
                 sync_ts: IrSyncKind::Async,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: None,
+                feature: None,
                 ruby_target: IrRubyTarget {
                     owner: "SolvaPay::Client".into(),
                     name: "check_limits".into(),
@@ -290,6 +325,9 @@ mod tests {
                 rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
             },
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: py.into(),

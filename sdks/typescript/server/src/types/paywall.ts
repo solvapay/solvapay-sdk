@@ -57,6 +57,8 @@ export type PaywallStructuredContent =
       product: string
       checkoutUrl: string
       message: string
+      /** Kind-derived throw text (`Activation required` / `Payment required`). */
+      shortMessage: string
       /**
        * Quota balance at the moment the paywall tripped. Optional so
        * older server versions (pre-balance-on-payment_required) stay
@@ -72,6 +74,8 @@ export type PaywallStructuredContent =
       /** Product ref from paywall metadata (or env default) */
       product: string
       message: string
+      /** Kind-derived throw text (`Activation required` / `Payment required`). */
+      shortMessage: string
       /**
        * Best URL for completing purchase or confirmation; mirrors confirmationUrl when present.
        */
@@ -141,6 +145,8 @@ export type PaywallDecision<T> =
       args: T
       limits: LimitResponseWithPlan
       customerRef: string
+      /** Opaque `gate_next` state for `handlerSucceeded` / `handlerFailed`. */
+      driverState: unknown
     }
   | {
       outcome: 'gate'

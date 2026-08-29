@@ -27,8 +27,8 @@ from solvapay.facade import SolvaPay
 from solvapay.results import PayableAllowResult, PayablePaywallResult
 
 from solvapay_mcp._layer2 import (
-    _call,
     assert_response_result,
+    invoke_payable_next,
     paywall_tool_result,
 )
 from solvapay_mcp.core import call
@@ -646,7 +646,7 @@ def _to_call_tool_result(payload: Mapping[str, object]) -> CallToolResult:
 
 
 def _invoke_payable_next(state: object, event: Mapping[str, object]) -> dict[str, object]:
-    out = _call("invoke_payable_next", {"state": state, "event": dict(event)})
+    out = invoke_payable_next(state, dict(event))
     if not isinstance(out, dict):
         raise SolvaPayError("invoke_payable_next returned unexpected value")
     return {str(k): v for k, v in out.items()}

@@ -24,8 +24,9 @@ class FacadeTest < Minitest::Test
             "backendRef" => ref,
             "startedMs" => started,
             "limitsKey" => key,
+            "limitsCacheTTLMs" => event["limitsCacheTTLMs"] || 10_000,
           },
-          "action" => { "kind" => "lookupCache", "key" => key },
+          "action" => { "kind" => "readLimitsCache", "key" => key },
         }
       else
         {
@@ -43,21 +44,26 @@ class FacadeTest < Minitest::Test
       key = "#{backend}:#{state["product"]}:#{state["meterName"]}"
       {
         "state" => state.merge("backendRef" => backend, "limitsKey" => key),
-        "action" => { "kind" => "lookupCache", "key" => key },
+        "action" => { "kind" => "readLimitsCache", "key" => key },
       }
-    when "cacheMiss"
-      {
-        "state" => state,
-        "action" => {
-          "kind" => "checkLimits",
-          "customerRef" => state["backendRef"],
-          "productRef" => state["product"],
-          "meterName" => state["meterName"],
-          "includeCheckoutSession" => true,
-          "cacheDeleteKey" => state["limitsKey"],
-        },
-      }
-    when "cacheHit"
+    when "limitsCacheEntry"
+      ttl = (state["limitsCacheTTLMs"] || 10_000).to_i
+      now = (event["nowMs"] || 0).to_i
+      ts = (event["timestampMs"] || 0).to_i
+      stale = event["found"] && now - ts >= ttl
+      unless event["found"] && !stale
+        return {
+          "state" => state,
+          "action" => {
+            "kind" => "checkLimits",
+            "customerRef" => state["backendRef"],
+            "productRef" => state["product"],
+            "meterName" => state["meterName"],
+            "includeCheckoutSession" => true,
+            "cacheDeleteKey" => state["limitsKey"],
+          },
+        }
+      end
       remaining = event["remaining"] || 0
       limits = event["limits"] || {}
       backend = state["backendRef"]
@@ -65,8 +71,7 @@ class FacadeTest < Minitest::Test
         {
           "state" => state,
           "action" => {
-            "kind" => "done",
-            "outcome" => "allow",
+            "kind" => "allow",
             "customerRef" => backend,
             "product" => state["product"],
             "meterName" => state["meterName"],
@@ -82,8 +87,7 @@ class FacadeTest < Minitest::Test
         {
           "state" => state,
           "action" => {
-            "kind" => "done",
-            "outcome" => "gate",
+            "kind" => "gate",
             "customerRef" => backend,
             "product" => state["product"],
             "meterName" => state["meterName"],
@@ -93,6 +97,7 @@ class FacadeTest < Minitest::Test
               "product" => state["product"],
               "checkoutUrl" => "https://pay.example/x",
               "message" => "Payment required",
+              "shortMessage" => "Payment required",
             },
           },
         }
@@ -105,8 +110,7 @@ class FacadeTest < Minitest::Test
         {
           "state" => state,
           "action" => {
-            "kind" => "done",
-            "outcome" => "allow",
+            "kind" => "allow",
             "customerRef" => backend,
             "product" => state["product"],
             "meterName" => state["meterName"],
@@ -124,8 +128,7 @@ class FacadeTest < Minitest::Test
         {
           "state" => state,
           "action" => {
-            "kind" => "done",
-            "outcome" => "gate",
+            "kind" => "gate",
             "customerRef" => backend,
             "product" => state["product"],
             "meterName" => state["meterName"],
@@ -135,20 +138,113 @@ class FacadeTest < Minitest::Test
               "product" => state["product"],
               "checkoutUrl" => limits["checkoutUrl"] || "https://pay.example/x",
               "message" => "Payment required",
+              "shortMessage" => "Payment required",
             },
-            "track" => {
-              "customerRef" => backend,
-              "productRef" => state["product"],
-              "action" => state["meterName"],
-              "outcome" => "paywall",
-              "durationMs" => 0,
-            },
+            "request" => fake_usage_request(state, "paywall"),
+          },
+        }
+      end
+    when "handlerSucceeded"
+      {
+        "state" => state,
+        "action" => {
+          "kind" => "emitUsage",
+          "request" => fake_usage_request(state, "success", event["durationMs"] || 0),
+        },
+      }
+    when "handlerFailed"
+      if event["isPaywallError"]
+        { "state" => state, "action" => { "kind" => "skipUsage" } }
+      else
+        {
+          "state" => state,
+          "action" => {
+            "kind" => "emitUsage",
+            "request" => fake_usage_request(state, "fail", event["durationMs"] || 0),
           },
         }
       end
     else
       raise "unexpected gate_next event #{kind}"
     end
+  end
+
+  def self.fake_ensure_customer_next(args)
+    event = args["event"].is_a?(Hash) ? args["event"] : {}
+    state = args["state"].is_a?(Hash) ? args["state"] : {}
+    case event["kind"]
+    when "start"
+      ref = event["customerRef"].to_s
+      {
+        "state" => { "customerRef" => ref },
+        "action" => { "kind" => "readCustomerCache", "key" => ref },
+      }
+    when "customerCacheEntry"
+      if event["found"]
+        {
+          "state" => state,
+          "action" => { "kind" => "resolved", "backendRef" => event["backendRef"] },
+        }
+      else
+        {
+          "state" => state,
+          "action" => { "kind" => "getCustomer", "byExternalRef" => state["customerRef"] },
+        }
+      end
+    when "customerLookupResult"
+      if event["found"]
+        ref = event.dig("customer", "customerRef")
+        {
+          "state" => state,
+          "action" => {
+            "kind" => "resolved",
+            "backendRef" => ref,
+            "cache" => {
+              "key" => state["customerRef"],
+              "backendRef" => ref,
+              "timestampMs" => event["nowMs"],
+            },
+          },
+        }
+      else
+        {
+          "state" => state,
+          "action" => {
+            "kind" => "createCustomer",
+            "params" => { "externalRef" => state["customerRef"] },
+          },
+        }
+      end
+    when "customerCreateResult"
+      ref = event.dig("customer", "customerRef")
+      {
+        "state" => state,
+        "action" => {
+          "kind" => "resolved",
+          "backendRef" => ref,
+          "cache" => {
+            "key" => state["customerRef"],
+            "backendRef" => ref,
+            "timestampMs" => event["nowMs"],
+          },
+        },
+      }
+    else
+      raise "unexpected ensure_customer_next event #{event["kind"]}"
+    end
+  end
+
+  def self.fake_usage_request(state, outcome, duration = 0)
+    {
+      "customerRef" => state["backendRef"],
+      "actionType" => "api_call",
+      "units" => 1,
+      "outcome" => outcome,
+      "productRef" => state["product"],
+      "duration" => duration,
+      "metadata" => { "action" => state["meterName"], "requestId" => "solvapay_test" },
+      "timestamp" => "1970-01-01T00:00:00.000Z",
+    }
   end
 
   class StubClient
@@ -213,6 +309,7 @@ class FacadeTest < Minitest::Test
               "product" => args["product"],
               "checkoutUrl" => args["checkoutUrl"],
               "message" => "Payment required",
+              "shortMessage" => "Payment required",
             },
           }
         end
@@ -224,6 +321,14 @@ class FacadeTest < Minitest::Test
         { "productRef" => args["productRef"], "meterName" => args["usageType"] }
       when "gate_next"
         FacadeTest.fake_gate_next(args)
+      when "ensure_customer_next"
+        FacadeTest.fake_ensure_customer_next(args)
+      when "should_retry_usage_error"
+        args["message"].to_s.include?("Customer not found")
+      when "retry_next_delay_ms"
+        attempt = args["attempt"].to_i
+        max = args["maxRetries"].to_i
+        attempt < max ? 0 : nil
       else
         raise "unexpected decision #{name}"
       end
@@ -278,6 +383,18 @@ class FacadeTest < Minitest::Test
     assert_equal 0, client.creates
   end
 
+  def test_customer_cache_evicts_past_max
+    facade = SolvaPay.create(api_client: StubClient.new)
+    assert_equal 1000, SolvaPay::CUSTOMER_DEDUP_MAX_CACHE_SIZE
+    (SolvaPay::CUSTOMER_DEDUP_MAX_CACHE_SIZE + 1).times do |index|
+      facade.send(:write_customer_cache, "k#{index}", "cus_#{index}", index)
+    end
+    cache = facade.instance_variable_get(:@customer_cache)
+    refute cache.key?("k0")
+    assert cache.key?("k#{SolvaPay::CUSTOMER_DEDUP_MAX_CACHE_SIZE}")
+    assert_equal SolvaPay::CUSTOMER_DEDUP_MAX_CACHE_SIZE, cache.size
+  end
+
   def test_limits_cache_uses_default_ttl_and_decrements
     now = 1_000
     client = StubClient.new(remaining: 3)
@@ -296,6 +413,28 @@ class FacadeTest < Minitest::Test
     protected = paywall.payable(product: "prd_x").protect { blocked = true }
     assert_raises(SolvaPay::PaywallError) { protected.call(customer_ref: "cus_123") }
     assert_equal false, blocked
+    assert_equal "Payment required", begin
+      paywall.payable(product: "prd_x").protect { true }.call(customer_ref: "cus_123")
+    rescue SolvaPay::PaywallError => error
+      error.message
+    end
+
+    activation = SolvaPay.create(api_client: StubClient.new(within_limits: false, remaining: 0))
+    def activation.gate(*, **)
+      SolvaPay::PayablePaywallResult.new(
+        content: {
+          "kind" => "activation_required",
+          "product" => "prd_x",
+          "message" => "Activate a plan",
+          "shortMessage" => "Activation required",
+          "checkoutUrl" => "https://pay.example/x",
+        },
+      )
+    end
+    error = assert_raises(SolvaPay::PaywallError) do
+      activation.payable(product: "prd_x").protect { true }.call(customer_ref: "cus_123")
+    end
+    assert_equal "Activation required", error.message
 
     client = StubClient.new
     allowed = SolvaPay.create(api_client: client)

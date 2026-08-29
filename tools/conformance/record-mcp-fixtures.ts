@@ -18,7 +18,10 @@ import {
 } from '../../sdks/typescript/mcp-core/src/index.ts'
 import { createOAuthFetchRouter } from '../../sdks/typescript/mcp/src/fetch/oauth-bridge.ts'
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../contract/mcp-fixtures')
+const root = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../contract/mcp-fixtures',
+)
 
 function writeFixture(rel: string, body: unknown): void {
   const full = path.join(root, rel)
@@ -156,7 +159,9 @@ function recordNarrate(): void {
         type: 'usage-based',
         name: 'Starter',
         requiresPayment: true,
-        options: [{ kind: 'charge', per: 'unit', amountMinor: 1, currency: 'usd', meter: 'requests' }],
+        options: [
+          { kind: 'charge', per: 'unit', amountMinor: 1, currency: 'usd', meter: 'requests' },
+        ],
       },
     ] as never,
   })
@@ -170,7 +175,10 @@ function recordNarrate(): void {
   writeFixture('narrate/placeholder.json', {
     suite: 'narrate',
     case: 'placeholder',
-    input: { fn: 'mcpNarrate', args: { tool: 'manage_account', payload: active, kind: 'placeholder' } },
+    input: {
+      fn: 'mcpNarrate',
+      args: { tool: 'manage_account', payload: active, kind: 'placeholder' },
+    },
     expect: { result: { text: uiPlaceholder('manage_account', active) } },
   })
 
@@ -461,10 +469,20 @@ function recordBuiltins(): void {
       },
     },
     http: [
-      { method: 'GET', path: '/v1/sdk/platform-config', status: 200, body: { stripePublishableKey: 'pk_test' } },
+      {
+        method: 'GET',
+        path: '/v1/sdk/platform-config',
+        status: 200,
+        body: { stripePublishableKey: 'pk_test' },
+      },
       { method: 'GET', path: '/v1/sdk/merchant', status: 200, body: { displayName: 'Acme' } },
       { method: 'GET', path: '/v1/sdk/products/prd_demo', status: 200, body: { name: 'Demo' } },
-      { method: 'GET', path: '/v1/sdk/products/prd_demo/plans', status: 200, body: { plans: [{ name: 'Pro' }] } },
+      {
+        method: 'GET',
+        path: '/v1/sdk/products/prd_demo/plans',
+        status: 200,
+        body: { plans: [{ name: 'Pro' }] },
+      },
     ],
     expect: {
       result: narratedToolResult('activate_plan', pickerPayload as never, 'text', pickerMeta),
@@ -485,10 +503,20 @@ function recordBuiltins(): void {
       },
     },
     http: [
-      { method: 'GET', path: '/v1/sdk/platform-config', status: 200, body: { stripePublishableKey: 'pk_test' } },
+      {
+        method: 'GET',
+        path: '/v1/sdk/platform-config',
+        status: 200,
+        body: { stripePublishableKey: 'pk_test' },
+      },
       { method: 'GET', path: '/v1/sdk/merchant', status: 200, body: { displayName: 'Acme' } },
       { method: 'GET', path: '/v1/sdk/products/prd_demo', status: 200, body: { name: 'Demo' } },
-      { method: 'GET', path: '/v1/sdk/products/prd_demo/plans', status: 200, body: { plans: [{ name: 'Pro' }] } },
+      {
+        method: 'GET',
+        path: '/v1/sdk/products/prd_demo/plans',
+        status: 200,
+        body: { plans: [{ name: 'Pro' }] },
+      },
     ],
     expect: {
       result: narratedToolResult(
@@ -514,10 +542,20 @@ function recordBuiltins(): void {
       },
     },
     http: [
-      { method: 'GET', path: '/v1/sdk/platform-config', status: 200, body: { stripePublishableKey: 'pk_test' } },
+      {
+        method: 'GET',
+        path: '/v1/sdk/platform-config',
+        status: 200,
+        body: { stripePublishableKey: 'pk_test' },
+      },
       { method: 'GET', path: '/v1/sdk/merchant', status: 200, body: { displayName: 'Acme' } },
       { method: 'GET', path: '/v1/sdk/products/prd_demo', status: 200, body: { name: 'Demo' } },
-      { method: 'GET', path: '/v1/sdk/products/prd_demo/plans', status: 200, body: { plans: [{ name: 'Pro' }] } },
+      {
+        method: 'GET',
+        path: '/v1/sdk/products/prd_demo/plans',
+        status: 200,
+        body: { plans: [{ name: 'Pro' }] },
+      },
     ],
     expect: {
       result: narratedToolResult(
@@ -543,10 +581,20 @@ function recordBuiltins(): void {
       },
     },
     http: [
-      { method: 'GET', path: '/v1/sdk/platform-config', status: 200, body: { stripePublishableKey: 'pk_test' } },
+      {
+        method: 'GET',
+        path: '/v1/sdk/platform-config',
+        status: 200,
+        body: { stripePublishableKey: 'pk_test' },
+      },
       { method: 'GET', path: '/v1/sdk/merchant', status: 200, body: { displayName: 'Acme' } },
       { method: 'GET', path: '/v1/sdk/products/prd_demo', status: 200, body: { name: 'Demo' } },
-      { method: 'GET', path: '/v1/sdk/products/prd_demo/plans', status: 200, body: { plans: [{ name: 'Pro' }] } },
+      {
+        method: 'GET',
+        path: '/v1/sdk/products/prd_demo/plans',
+        status: 200,
+        body: { plans: [{ name: 'Pro' }] },
+      },
     ],
     expect: {
       result: narratedToolResult(
@@ -586,7 +634,11 @@ async function recordOauth(): Promise<void> {
   const get = async (pathName: string, method = 'GET') => {
     const res = await router(new Request(`https://app.example.com${pathName}`, { method }))
     if (!res) {
-      return { status: 405, headers: { 'content-type': 'application/json' }, body: { error: 'method_not_allowed' } }
+      return {
+        status: 405,
+        headers: { 'content-type': 'application/json' },
+        body: { error: 'method_not_allowed' },
+      }
     }
     return responseToJson(res)
   }
@@ -601,7 +653,11 @@ async function recordOauth(): Promise<void> {
         path: '/.well-known/oauth-protected-resource',
         headers: {},
         body: '',
-        config: { publicBaseUrl: 'https://app.example.com', productRef: 'prd_demo', mcpPath: '/mcp' },
+        config: {
+          publicBaseUrl: 'https://app.example.com',
+          productRef: 'prd_demo',
+          mcpPath: '/mcp',
+        },
       },
     },
     expect: { result: await get('/.well-known/oauth-protected-resource') },
@@ -696,7 +752,11 @@ async function recordOauth(): Promise<void> {
           config: { publicBaseUrl: 'https://app.example.com', productRef: 'prd_demo' },
         },
       },
-      expect: { result: tokenRes ? await responseToJson(tokenRes) : { status: 502, body: { error: 'upstream_unreachable' } } },
+      expect: {
+        result: tokenRes
+          ? await responseToJson(tokenRes)
+          : { status: 502, body: { error: 'upstream_unreachable' } },
+      },
     })
     const registerRes = await router(
       new Request('https://app.example.com/oauth/register', {
@@ -718,7 +778,11 @@ async function recordOauth(): Promise<void> {
           config: { publicBaseUrl: 'https://app.example.com', productRef: 'prd_demo' },
         },
       },
-      expect: { result: registerRes ? await responseToJson(registerRes) : { status: 502, body: { error: 'upstream_unreachable' } } },
+      expect: {
+        result: registerRes
+          ? await responseToJson(registerRes)
+          : { status: 502, body: { error: 'upstream_unreachable' } },
+      },
     })
   } finally {
     globalThis.fetch = originalFetch
@@ -765,7 +829,11 @@ function recordDispatch(): void {
           jsonrpc: '2.0',
           id: 1,
           method: 'initialize',
-          params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'fixture', version: '0' } },
+          params: {
+            protocolVersion: '2025-06-18',
+            capabilities: {},
+            clientInfo: { name: 'fixture', version: '0' },
+          },
         },
         config,
       },
@@ -792,7 +860,12 @@ function recordDispatch(): void {
     input: {
       fn: 'mcpDispatch',
       args: {
-        rpc: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'upgrade', arguments: {} } },
+        rpc: {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name: 'upgrade', arguments: {} },
+        },
         config,
       },
     },

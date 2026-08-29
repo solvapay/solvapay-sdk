@@ -214,7 +214,10 @@ function collectWithPath(acc: PathReference[], source: string, value: unknown): 
       if (token === '' || token === '.') {
         continue
       }
-      if (extractLayoutTokens(token).length === 0 && !layoutPrefixes().some(p => token === p || token.startsWith(`${p}/`))) {
+      if (
+        extractLayoutTokens(token).length === 0 &&
+        !layoutPrefixes().some(p => token === p || token.startsWith(`${p}/`))
+      ) {
         continue
       }
       pushRef(acc, source, token, path.resolve(REPO_ROOT, token))

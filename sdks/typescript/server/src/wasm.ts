@@ -59,6 +59,11 @@ export type WasmClientMethod =
   | 'getAutoRecharge'
   | 'saveAutoRecharge'
   | 'disableAutoRecharge'
+  | 'mcpBootstrap'
+  | 'mcpCallBuiltinTool'
+  | 'mcpReadResource'
+  | 'mcpOauthRequest'
+  | 'mcpDispatch'
 
 /** Sync pure-logic envelope functions on the WASM binding (edge profile). */
 export type WasmSyncMethod =
@@ -89,6 +94,7 @@ export type WasmSyncMethod =
   | 'validatePurchaseRef'
   | 'projectUsageSnapshot'
   | 'resolveCheckLimitsParams'
+  | 'shouldRetryUsageError'
   | 'validateListPlansParams'
   | 'isErrorResult'
   | 'mapRouteError'
@@ -108,6 +114,7 @@ export type WasmSyncMethod =
   | 'gateNext'
   | 'retryNextDelayMs'
   | 'assertValidProductRef'
+  | 'ensureCustomerNext'
   | 'charges'
   | 'resolveAuthenticatedUser'
   | 'evaluateBalanceObservation'

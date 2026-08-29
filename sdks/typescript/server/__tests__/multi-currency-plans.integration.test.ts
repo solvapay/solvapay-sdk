@@ -145,7 +145,9 @@ if (!USE_REAL_BACKEND || !SOLVAPAY_SECRET_KEY) {
       console.log('\n📋 To run paid-plan integration tests:')
       console.log('   1. Set USE_REAL_BACKEND=true')
       console.log('   2. Set SOLVAPAY_SECRET_KEY=<your_secret_key>')
-      console.log('   3. Set SOLVAPAY_API_BASE_URL=http://localhost:3010 (required when USE_REAL_BACKEND=true)')
+      console.log(
+        '   3. Set SOLVAPAY_API_BASE_URL=http://localhost:3010 (required when USE_REAL_BACKEND=true)',
+      )
       console.log('   4. Run: pnpm test:integration:multi-currency\n')
     })
   })

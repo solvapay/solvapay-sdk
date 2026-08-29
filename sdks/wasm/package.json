@@ -46,6 +46,14 @@
     "node": ">=18"
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solvapay/solvapay-sdk.git",
+    "directory": "sdks/wasm"
+  },
   "scripts": {
     "build": "node scripts/check-artifacts-present.mjs",
     "build:wasm": "node scripts/build.mjs",

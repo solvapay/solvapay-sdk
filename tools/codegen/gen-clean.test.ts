@@ -1,8 +1,8 @@
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { generatedEntry, lookupPath } from '../shared/repo-paths.js'
-import { executeClean, interpretVerifyStatus, planClean, realCleanFs } from './gen-clean.js'
+import { generatedEntry, loadRepoPathsManifest, lookupPath } from '../shared/repo-paths.js'
+import { executeClean, interpretVerifyStatus, planClean, realCleanFs, runCli } from './gen-clean.js'
 
 const TEMP_ROOT = lookupPath('scriptsTmp')
 const tempDirs: string[] = []
@@ -80,5 +80,41 @@ describe('interpretVerifyStatus', () => {
   it('should report success for a clean git status', () => {
     const report = interpretVerifyStatus('', [`${generatedEntry('nodeBindings').path}/args.rs`])
     expect(report.missing).toEqual([])
+  })
+})
+
+describe('planClean vs externalGenerated', () => {
+  it('does not include any externalGenerated path', () => {
+    const plan = planClean()
+    const rels = new Set([
+      ...plan.files.map(item => item.rel),
+      ...plan.directories.map(item => item.rel),
+    ])
+    for (const entry of loadRepoPathsManifest().externalGenerated) {
+      for (const rel of entry.paths) {
+        expect(rels.has(rel), rel).toBe(false)
+      }
+    }
+  })
+})
+
+describe('runCli footer', () => {
+  it('names each external generator that gen:clean does not cover', () => {
+    const fs = {
+      exists: () => false,
+      readFile: () => '',
+      isDirectory: () => false,
+      listFiles: () => [],
+      remove: () => {
+        throw new Error('must not delete in this test')
+      },
+    }
+    const result = runCli([], { fs })
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toMatch(/external generators \(not covered by gen:clean\)/)
+    const tail = result.stdout.split('external generators (not covered by gen:clean)')[1] ?? ''
+    for (const entry of loadRepoPathsManifest().externalGenerated) {
+      expect(tail).toContain(`${entry.id}: ${entry.generator}`)
+    }
   })
 })

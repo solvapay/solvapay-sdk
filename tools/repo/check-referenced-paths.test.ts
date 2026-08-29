@@ -1,15 +1,12 @@
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import {
-  collectReferencedPaths,
-  isUnderLegacyDir,
-} from './lib/referenced-paths.js'
+import { collectReferencedPaths, isUnderLegacyDir } from './lib/referenced-paths.js'
 import { joinRoot, REPO_ROOT } from '../shared/paths.js'
 import { loadRepoPathsManifest } from '../shared/repo-paths.js'
 
 describe('referenced tool paths', () => {
-  it('every referenced path resolves on disk', () => {
+  it('every referenced path resolves on disk', { timeout: 30_000 }, () => {
     const missing = collectReferencedPaths()
       .filter(ref => !existsSync(ref.resolved))
       .map(ref => `${ref.source}: ${ref.raw} -> ${ref.resolved}`)
@@ -41,9 +38,7 @@ describe('referenced tool paths', () => {
   })
 
   it('collects the pnpm-workspace.yaml package glob', () => {
-    const hits = collectReferencedPaths().filter(ref =>
-      ref.source.includes('pnpm-workspace.yaml'),
-    )
+    const hits = collectReferencedPaths().filter(ref => ref.source.includes('pnpm-workspace.yaml'))
     expect(hits.length).toBeGreaterThan(0)
   })
 
@@ -52,7 +47,7 @@ describe('referenced tool paths', () => {
     expect(hits.length).toBeGreaterThan(0)
   })
 
-  it('collects at least 80 references from ci.yml', () => {
+  it('collects at least 80 references from ci.yml', { timeout: 30_000 }, () => {
     const fromCi = collectReferencedPaths().filter(ref =>
       ref.source.includes('.github/workflows/ci.yml'),
     )

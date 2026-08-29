@@ -17,10 +17,7 @@ import {
   type McpEnginePayable,
   type SolvaPayDescriptorBundle,
 } from '@solvapay/mcp-core'
-import {
-  registerAppResource,
-  RESOURCE_MIME_TYPE,
-} from './extAppsServer'
+import { registerAppResource, RESOURCE_MIME_TYPE } from './extAppsServer'
 import { defaultMcpAppHtml } from '../defaultMcpAppHtml'
 
 export interface BuildSolvaPayMcpServerOptions extends BuildSolvaPayDescriptorsOptions {
@@ -103,7 +100,7 @@ function userAgentFromExtra(
     if (fromInfo !== undefined) return fromInfo
     const fromRequest =
       extra.request instanceof Request
-        ? extra.request.headers.get('user-agent') ?? undefined
+        ? (extra.request.headers.get('user-agent') ?? undefined)
         : userAgentFromHeaders(isRecord(extra.request) ? extra.request.headers : undefined)
     if (fromRequest !== undefined) return fromRequest
   }
@@ -146,7 +143,11 @@ function authHeaderFromExtra(extra: unknown): string | undefined {
 
 function resolveMcpDispatch(
   solvaPay: BuildSolvaPayDescriptorsOptions['solvaPay'],
-): (params: { rpc: unknown; config: Record<string, unknown>; authHeader?: string }) => Promise<unknown> {
+): (params: {
+  rpc: unknown
+  config: Record<string, unknown>
+  authHeader?: string
+}) => Promise<unknown> {
   const client = solvaPay.apiClient as {
     mcpDispatch?: (params: {
       rpc: unknown
@@ -214,8 +215,10 @@ type RegisteredToolLike = {
 }
 
 function registeredTools(server: McpServer): Record<string, RegisteredToolLike> {
-  return ((server as unknown as { _registeredTools?: Record<string, RegisteredToolLike> })
-    ._registeredTools ?? {})
+  return (
+    (server as unknown as { _registeredTools?: Record<string, RegisteredToolLike> })
+      ._registeredTools ?? {}
+  )
 }
 
 function stampWidgetResultMeta(raw: unknown, resourceUri: string | undefined): unknown {
@@ -455,17 +458,12 @@ export function installEngineHandlers(
 export function buildSolvaPayMcpServer(
   options: BuildSolvaPayMcpServerOptions,
 ): BuiltSolvaPayMcpServer {
-  const {
-    serverName,
-    serverVersion = '1.0.0',
-    ...descriptorOptions
-  } = options
+  const { serverName, serverVersion = '1.0.0', ...descriptorOptions } = options
 
   const descriptors = buildSolvaPayDescriptors({
     ...descriptorOptions,
     readHtml:
-      descriptorOptions.readHtml ??
-      (descriptorOptions.htmlPath ? undefined : defaultMcpAppHtml),
+      descriptorOptions.readHtml ?? (descriptorOptions.htmlPath ? undefined : defaultMcpAppHtml),
   })
 
   const effectiveServerName =

@@ -1,1 +1,144 @@
-{"ticker":"AAPL","cik":"0000320193","company":"Apple","summary":{"status":"ok","text":"The Company designs, manufactures and markets smartphones, personal computers, tablets, wearables and accessories, and sells a variety of related services. The Company’s fiscal year is the 52- or 53-week period that ends on the last Saturday of September.\n\nMac ® is the Company’s line of personal computers based on its macOS ® operating system. The Mac line includes laptops MacBook Air ® and MacBook Pro ® , as well as desktops iMac ® , Mac mini ® , Mac Studio ® and Mac Pro ® ."},"earnings":{"status":"ok","latest":{"period":"2026-06-30","actualEPS":1.91,"estimateEPS":1.9271,"surprise":-0.0171,"surprisePercent":-0.8873,"result":"miss"},"history":[{"period":"2026-06-30","actualEPS":1.91,"estimateEPS":1.9271,"surprise":-0.0171,"surprisePercent":-0.8873,"result":"miss"},{"period":"2026-03-31","actualEPS":2.01,"estimateEPS":1.9884,"surprise":0.0216,"surprisePercent":1.0863,"result":"beat"},{"period":"2025-12-31","actualEPS":2.84,"estimateEPS":2.7257,"surprise":0.1143,"surprisePercent":4.1934,"result":"beat"},{"period":"2025-09-30","actualEPS":1.85,"estimateEPS":1.8075,"surprise":0.0425,"surprisePercent":2.3513,"result":"beat"}]},"filings":{"status":"ok","key":[{"form":"10-K","filingDate":"2025-10-31","accessionNumber":"0000320193-25-000079","url":"https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"},{"form":"10-Q","filingDate":"2026-07-31","accessionNumber":"0000320193-26-000020","url":"https://www.sec.gov/Archives/edgar/data/320193/000032019326000020/aapl-20260627.htm"},{"form":"8-K","filingDate":"2026-07-30","accessionNumber":"0000320193-26-000018","url":"https://www.sec.gov/Archives/edgar/data/320193/000032019326000018/aapl-20260730.htm"}],"recent":[{"form":"4","filingDate":"2026-08-20","accessionNumber":"0001140361-26-033928","url":"https://www.sec.gov/Archives/edgar/data/320193/000114036126033928/xslF345X06/form4.xml"},{"form":"4","filingDate":"2026-08-13","accessionNumber":"0001140361-26-032884","url":"https://www.sec.gov/Archives/edgar/data/320193/000114036126032884/xslF345X06/form4.xml"},{"form":"144","filingDate":"2026-08-11","accessionNumber":"0001950047-26-007959","url":"https://www.sec.gov/Archives/edgar/data/320193/000195004726007959/xsl144X01/primary_doc.xml"},{"form":"10-Q","filingDate":"2026-07-31","accessionNumber":"0000320193-26-000020","url":"https://www.sec.gov/Archives/edgar/data/320193/000032019326000020/aapl-20260627.htm"},{"form":"8-K","filingDate":"2026-07-30","accessionNumber":"0000320193-26-000018","url":"https://www.sec.gov/Archives/edgar/data/320193/000032019326000018/aapl-20260730.htm"},{"form":"4","filingDate":"2026-06-17","accessionNumber":"0001140361-26-025622","url":"https://www.sec.gov/Archives/edgar/data/320193/000114036126025622/xslF345X06/form4.xml"},{"form":"4","filingDate":"2026-06-17","accessionNumber":"0001140361-26-025620","url":"https://www.sec.gov/Archives/edgar/data/320193/000114036126025620/xslF345X06/form4.xml"},{"form":"4","filingDate":"2026-05-29","accessionNumber":"0001140361-26-023363","url":"https://www.sec.gov/Archives/edgar/data/320193/000114036126023363/xslF345X06/form4.xml"},{"form":"SD","filingDate":"2026-05-28","accessionNumber":"0001140361-26-023149","url":"https://www.sec.gov/Archives/edgar/data/320193/000114036126023149/ef20073373_sd.htm"},{"form":"144","filingDate":"2026-05-27","accessionNumber":"0001921094-26-000555","url":"https://www.sec.gov/Archives/edgar/data/320193/000192109426000555/xsl144X01/primary_doc.xml"}]},"links":{"secEdgar":"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193&type=&dateb=&owner=include&count=40","companyPage":"https://zelothorn.com/company/AAPL"},"generatedAt":"2026-08-25T22:23:26.869Z"}
+{
+  "ticker": "AAPL",
+  "cik": "0000320193",
+  "company": "Apple",
+  "summary": {
+    "status": "ok",
+    "text": "The Company designs, manufactures and markets smartphones, personal computers, tablets, wearables and accessories, and sells a variety of related services. The Company’s fiscal year is the 52- or 53-week period that ends on the last Saturday of September.\n\nMac ® is the Company’s line of personal computers based on its macOS ® operating system. The Mac line includes laptops MacBook Air ® and MacBook Pro ® , as well as desktops iMac ® , Mac mini ® , Mac Studio ® and Mac Pro ® ."
+  },
+  "earnings": {
+    "status": "ok",
+    "latest": {
+      "period": "2026-06-30",
+      "actualEPS": 1.91,
+      "estimateEPS": 1.9271,
+      "surprise": -0.0171,
+      "surprisePercent": -0.8873,
+      "result": "miss"
+    },
+    "history": [
+      {
+        "period": "2026-06-30",
+        "actualEPS": 1.91,
+        "estimateEPS": 1.9271,
+        "surprise": -0.0171,
+        "surprisePercent": -0.8873,
+        "result": "miss"
+      },
+      {
+        "period": "2026-03-31",
+        "actualEPS": 2.01,
+        "estimateEPS": 1.9884,
+        "surprise": 0.0216,
+        "surprisePercent": 1.0863,
+        "result": "beat"
+      },
+      {
+        "period": "2025-12-31",
+        "actualEPS": 2.84,
+        "estimateEPS": 2.7257,
+        "surprise": 0.1143,
+        "surprisePercent": 4.1934,
+        "result": "beat"
+      },
+      {
+        "period": "2025-09-30",
+        "actualEPS": 1.85,
+        "estimateEPS": 1.8075,
+        "surprise": 0.0425,
+        "surprisePercent": 2.3513,
+        "result": "beat"
+      }
+    ]
+  },
+  "filings": {
+    "status": "ok",
+    "key": [
+      {
+        "form": "10-K",
+        "filingDate": "2025-10-31",
+        "accessionNumber": "0000320193-25-000079",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-07-31",
+        "accessionNumber": "0000320193-26-000020",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000020/aapl-20260627.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-07-30",
+        "accessionNumber": "0000320193-26-000018",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000018/aapl-20260730.htm"
+      }
+    ],
+    "recent": [
+      {
+        "form": "4",
+        "filingDate": "2026-08-20",
+        "accessionNumber": "0001140361-26-033928",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000114036126033928/xslF345X06/form4.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-13",
+        "accessionNumber": "0001140361-26-032884",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000114036126032884/xslF345X06/form4.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-08-11",
+        "accessionNumber": "0001950047-26-007959",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000195004726007959/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-07-31",
+        "accessionNumber": "0000320193-26-000020",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000020/aapl-20260627.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-07-30",
+        "accessionNumber": "0000320193-26-000018",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000018/aapl-20260730.htm"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-06-17",
+        "accessionNumber": "0001140361-26-025622",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000114036126025622/xslF345X06/form4.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-06-17",
+        "accessionNumber": "0001140361-26-025620",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000114036126025620/xslF345X06/form4.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-05-29",
+        "accessionNumber": "0001140361-26-023363",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000114036126023363/xslF345X06/form4.xml"
+      },
+      {
+        "form": "SD",
+        "filingDate": "2026-05-28",
+        "accessionNumber": "0001140361-26-023149",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000114036126023149/ef20073373_sd.htm"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-05-27",
+        "accessionNumber": "0001921094-26-000555",
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000192109426000555/xsl144X01/primary_doc.xml"
+      }
+    ]
+  },
+  "links": {
+    "secEdgar": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193&type=&dateb=&owner=include&count=40",
+    "companyPage": "https://zelothorn.com/company/AAPL"
+  },
+  "generatedAt": "2026-08-25T22:23:26.869Z"
+}

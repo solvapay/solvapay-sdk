@@ -17,6 +17,8 @@ thiserror = { workspace = true }
 futures = "0.3.31"
 
 [features]
+default = ["engine"]
+engine = []
 # Test-only seam for the negative "gate copy must come from layer 2" suite.
 test-seams = []
 

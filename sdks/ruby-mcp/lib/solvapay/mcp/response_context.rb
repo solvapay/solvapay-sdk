@@ -32,6 +32,7 @@ module SolvaPay
             "product" => @product_ref,
             "checkoutUrl" => "",
             "message" => message,
+            "shortMessage" => "Payment required",
           },
         )
       end

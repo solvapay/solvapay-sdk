@@ -38,9 +38,7 @@ export function findRepoRoot(startDir: string): string {
     }
     const parent = path.dirname(dir)
     if (parent === dir) {
-      throw new Error(
-        `Could not find repo root (${WORKSPACE_MARKER}) walking up from ${startDir}`,
-      )
+      throw new Error(`Could not find repo root (${WORKSPACE_MARKER}) walking up from ${startDir}`)
     }
     dir = parent
   }

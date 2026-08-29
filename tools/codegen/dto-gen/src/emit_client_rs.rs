@@ -207,7 +207,7 @@ fn write_rustdoc(output: &mut String, row: &MethodRow<'_>, indent: &str) {
 }
 
 /// Maps shared IR doc lines into idiomatic rustdoc (`# Arguments` / `# Returns`).
-fn render_rustdoc(entry: &IrEntryPoint) -> Vec<String> {
+pub(crate) fn render_rustdoc(entry: &IrEntryPoint) -> Vec<String> {
     let raw = render_entry_doc_lines(entry, |p| p.names.rust.as_str());
     let mut out = Vec::new();
     let mut params = Vec::new();
@@ -410,8 +410,8 @@ fn binding_by_catalog(ir: &Ir, artifact: IrBindingArtifact) -> BTreeMap<String, 
 mod tests {
     use super::*;
     use crate::ir::{
-        IrAvailability, IrBindingArg, IrBindingCall, IrDefaults, IrDocModel, IrEnvelopeMode,
-        IrErrorKind, IrLangNames, IrParam, IrRubyReceiver, IrRubyTarget,
+        IrAvailability, IrBindingArg, IrBindingCall, IrDefaults, IrDocModel, IrEmissionMatrix,
+        IrEnvelopeMode, IrErrorKind, IrLangNames, IrParam, IrRubyReceiver, IrRubyTarget,
     };
     use std::collections::BTreeMap;
 
@@ -625,6 +625,9 @@ mod tests {
             response: response.map(str::to_owned),
             availability: availability(),
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: rust.into(),

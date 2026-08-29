@@ -64,7 +64,9 @@ afterEach(() => {
 
 describe('<McpApp> with no native core binding', () => {
   it('should throw from dispatchSync when no binding is installed', () => {
-    expect(() => minorUnitsPerMajor('USD')).toThrow(/core sync API not installed \(minorUnitsPerMajor\)/)
+    expect(() => minorUnitsPerMajor('USD')).toThrow(
+      /core sync API not installed \(minorUnitsPerMajor\)/,
+    )
   })
 
   it('should render seller and customer cards when no binding is installed', async () => {
@@ -85,8 +87,16 @@ describe('<McpApp> with no native core binding', () => {
       product: { reference: 'prd_1', name: 'Acme Knowledge Base' },
       plans: [],
       taxIdFields: {
-        DE: { label: 'VAT ID', example: 'DE123456789', helperText: 'Enter your full VAT ID including the country code, e.g. DE123456789' },
-        GB: { label: 'VAT Number', example: 'GB123456789', helperText: 'Enter your full VAT number including the country code, e.g. GB123456789' },
+        DE: {
+          label: 'VAT ID',
+          example: 'DE123456789',
+          helperText: 'Enter your full VAT ID including the country code, e.g. DE123456789',
+        },
+        GB: {
+          label: 'VAT Number',
+          example: 'GB123456789',
+          helperText: 'Enter your full VAT number including the country code, e.g. GB123456789',
+        },
       },
       customer: {
         ref: 'cus_1',

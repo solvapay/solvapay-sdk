@@ -1,7 +1,13 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { TS_PACKAGE_IDS, tsPackageDir, type TsPackageId } from '../shared/paths.js'
+import {
+  REPO_PATHS,
+  REPO_ROOT,
+  TS_PACKAGE_IDS,
+  tsPackageDir,
+  type TsPackageId,
+} from '../shared/paths.js'
 
 type ExportTarget = string | Record<string, string>
 type ExportMap = Record<string, ExportTarget>
@@ -69,5 +75,30 @@ describe('published export maps', () => {
     expect(browserWasm).toBeTypeOf('object')
     expect((browserWasm as Record<string, string>).development).toBe('./src/browser-wasm.ts')
     expect(pkg.sideEffects).toContain('./src/browser-wasm.ts')
+  })
+})
+
+describe('@solvapay/server-wasm publish metadata', () => {
+  const pkgPath = path.join(REPO_ROOT, REPO_PATHS.sdks.wasm, 'package.json')
+  const pkgDir = path.dirname(pkgPath)
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {
+    name: string
+    license?: string
+    files?: string[]
+    publishConfig?: { access?: string }
+    repository?: { directory?: string }
+  }
+
+  it('is public on npm with a repository directory and license', () => {
+    expect(pkg.name).toBe('@solvapay/server-wasm')
+    expect(pkg.publishConfig?.access).toBe('public')
+    expect(pkg.repository?.directory).toBe(REPO_PATHS.sdks.wasm)
+    expect(pkg.license).toBeTruthy()
+  })
+
+  it('packs only paths that exist on disk', () => {
+    expect(pkg.files).toBeDefined()
+    const missing = (pkg.files ?? []).filter(rel => !existsSync(path.join(pkgDir, rel)))
+    expect(missing).toEqual([])
   })
 })

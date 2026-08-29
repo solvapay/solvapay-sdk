@@ -1,0 +1,31 @@
+{
+  "suite": "paywall",
+  "case": "ensure-customer-next-start-reads-cache",
+  "input": {
+    "fn": "ensureCustomerNext",
+    "args": {
+      "event": {
+        "kind": "start",
+        "customerRef": "user-1",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "customerRef": "user-1",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true,
+        "dedupTTLMs": 60000,
+        "cacheKey": "user-1",
+        "pending": "cache"
+      },
+      "action": {
+        "kind": "readCustomerCache",
+        "key": "user-1"
+      }
+    }
+  }
+}

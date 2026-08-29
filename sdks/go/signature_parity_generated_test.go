@@ -78,6 +78,21 @@ const expectedMaxRetries = 2
 // Frozen initial retry delay from the contract manifest `defaults:`.
 const expectedInitialDelayMs = 500
 
+// Frozen customer-dedup TTL from the contract manifest `defaults:`.
+const expectedCustomerDedupTTLMs = 60000
+
+// Frozen customer-dedup max cache size from the contract manifest `defaults:`.
+const expectedCustomerDedupMaxCacheSize = 1000
+
+// Frozen anonymous customer ref from the contract manifest `defaults:`.
+const expectedAnonymousCustomerRef = "anonymous"
+
+// Frozen trackUsage request-id format from the contract manifest `defaults:`.
+const expectedRequestIdFormat = "solvapay_{epochMs}_{random9}"
+
+// Frozen trackUsage actionType from the contract manifest `defaults:`.
+const expectedUsageActionType = "api_call"
+
 // Compile-time surface refs: each catalogued method is addressable.
 var (
 	_ = (*solvapay.Client).ActivatePlan
@@ -198,14 +213,29 @@ func TestExportedClientMethodsMatchCensus(t *testing.T) {
 
 func TestRuntimeDefaultsMatchManifest(t *testing.T) {
 	t.Helper()
-	if expectedLimitsCacheTTLMs != 10000 {
-		t.Fatalf("limits cache TTL = %d, want 10000", expectedLimitsCacheTTLMs)
+	if expectedLimitsCacheTTLMs != solvapay.DefaultLimitsCacheTTLMs {
+		t.Fatalf("limits cache TTL = %d, want %d", expectedLimitsCacheTTLMs, solvapay.DefaultLimitsCacheTTLMs)
 	}
-	if expectedMaxRetries != 2 {
-		t.Fatalf("max retries = %d, want 2", expectedMaxRetries)
+	if expectedMaxRetries != solvapay.DefaultMaxRetries {
+		t.Fatalf("max retries = %d, want %d", expectedMaxRetries, solvapay.DefaultMaxRetries)
 	}
-	if expectedInitialDelayMs != 500 {
-		t.Fatalf("initial delay = %d, want 500", expectedInitialDelayMs)
+	if expectedInitialDelayMs != solvapay.DefaultInitialDelayMs {
+		t.Fatalf("initial delay = %d, want %d", expectedInitialDelayMs, solvapay.DefaultInitialDelayMs)
+	}
+	if expectedCustomerDedupTTLMs != solvapay.CustomerDedupTTLMs {
+		t.Fatalf("customer dedup TTL = %d, want %d", expectedCustomerDedupTTLMs, solvapay.CustomerDedupTTLMs)
+	}
+	if expectedCustomerDedupMaxCacheSize != solvapay.CustomerDedupMaxCacheSize {
+		t.Fatalf("customer dedup max = %d, want %d", expectedCustomerDedupMaxCacheSize, solvapay.CustomerDedupMaxCacheSize)
+	}
+	if expectedAnonymousCustomerRef != solvapay.AnonymousCustomerRef {
+		t.Fatalf("anonymous ref = %q, want %q", expectedAnonymousCustomerRef, solvapay.AnonymousCustomerRef)
+	}
+	if expectedRequestIdFormat != solvapay.RequestIDFormat {
+		t.Fatalf("request id format = %q, want %q", expectedRequestIdFormat, solvapay.RequestIDFormat)
+	}
+	if expectedUsageActionType != solvapay.UsageActionType {
+		t.Fatalf("usage action type = %q, want %q", expectedUsageActionType, solvapay.UsageActionType)
 	}
 }
 

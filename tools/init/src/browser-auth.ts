@@ -137,9 +137,7 @@ const parseVerifiedProduct = (payload: unknown): VerifiedProductSummary | undefi
   if (!payload || typeof payload !== 'object') return undefined
   const root = payload as Record<string, unknown>
   const data =
-    root.data && typeof root.data === 'object'
-      ? (root.data as Record<string, unknown>)
-      : root
+    root.data && typeof root.data === 'object' ? (root.data as Record<string, unknown>) : root
   const name = typeof data.name === 'string' ? data.name : undefined
   const status = typeof data.status === 'string' ? data.status : undefined
   if (!name || !status) return undefined

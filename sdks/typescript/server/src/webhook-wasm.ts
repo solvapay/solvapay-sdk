@@ -6,12 +6,7 @@
  * identifiers so existing imports keep working. Prefer importing from `./wasm`.
  */
 
-import {
-  type WasmBinding,
-  resetWasmCache,
-  setWasmBindingForTests,
-  verifyWebhookWasm,
-} from './wasm'
+import { type WasmBinding, resetWasmCache, setWasmBindingForTests, verifyWebhookWasm } from './wasm'
 
 export { verifyWebhookWasm }
 

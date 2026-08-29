@@ -1,1 +1,144 @@
-{"ticker":"TRGP","cik":"0001389170","company":"Targa Resources","summary":{"status":"ok","text":"The risk of incurring environmental costs and liabilities in connection with our operations is significant due to our handling of natural gas, NGLs, crude oil and other petroleum products, because of air emissions and product-related discharges arising out of our operations, and as a result of historical industry operations and waste disposal practices. For example, an accidental release from one of our facilities could subject us to substantial liabilities arising from environmental cleanup and restoration costs, claims made by neighboring landowners and other third parties for personal injury, natural resource and property damages and fines or penalties for related violations of environmental laws or regulations.\n\nMoreover, stricter laws, regulations or enforcement policies could significantly increase our operational or compliance costs and the cost of any remediation that may become necessary. For example, in March 2023, the EPA issued its Good Neighbor Plan rule, which imposes emissions-related requirements on fossil fuel-fired power plants and other industrial users in 22 states, including Texas and Louisiana, which could reduce demand for our products and accelerate the transition away from oil and gas to other sources of energy. The Good Neighbor Plan was to have become effective in 2026, but in June 2024, was stayed by the U.S. Supreme Court. However, following the change in Presidential administrations, the EPA has announced its intention to revisit the Good Neighbor Plan. We cannot predict what actions the current Presidential administration will take with respect to the Good Neighbor Plan and any such actions and their timing remain uncertain."},"earnings":{"status":"ok","latest":{"period":"2026-06-30","actualEPS":3.54,"estimateEPS":2.7718,"surprise":0.7682,"surprisePercent":27.7148,"result":"beat"},"history":[{"period":"2026-06-30","actualEPS":3.54,"estimateEPS":2.7718,"surprise":0.7682,"surprisePercent":27.7148,"result":"beat"},{"period":"2026-03-31","actualEPS":2.21,"estimateEPS":2.56,"surprise":-0.35,"surprisePercent":-13.6719,"result":"miss"},{"period":"2025-12-31","actualEPS":2.53,"estimateEPS":2.3435,"surprise":0.1865,"surprisePercent":7.9582,"result":"beat"},{"period":"2025-09-30","actualEPS":2.2,"estimateEPS":2.1338,"surprise":0.0662,"surprisePercent":3.1024,"result":"beat"}]},"filings":{"status":"ok","key":[{"form":"10-K","filingDate":"2026-02-19","accessionNumber":"0001193125-26-059296","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526059296/trgp-20251231.htm"},{"form":"10-Q","filingDate":"2026-08-06","accessionNumber":"0001193125-26-337729","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526337729/trgp-20260630.htm"},{"form":"8-K","filingDate":"2026-08-25","accessionNumber":"0001193125-26-364099","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526364099/d135085d8k.htm"}],"recent":[{"form":"8-K","filingDate":"2026-08-25","accessionNumber":"0001193125-26-364099","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526364099/d135085d8k.htm"},{"form":"4","filingDate":"2026-08-24","accessionNumber":"0001193125-26-363663","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526363663/xslF345X06/ownership.xml"},{"form":"144","filingDate":"2026-08-20","accessionNumber":"0001959173-26-006286","url":"https://www.sec.gov/Archives/edgar/data/1389170/000195917326006286/xsl144X01/primary_doc.xml"},{"form":"4","filingDate":"2026-08-20","accessionNumber":"0001193125-26-359254","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526359254/xslF345X06/ownership.xml"},{"form":"10-Q","filingDate":"2026-08-06","accessionNumber":"0001193125-26-337729","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526337729/trgp-20260630.htm"},{"form":"8-K","filingDate":"2026-08-06","accessionNumber":"0001193125-26-336525","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526336525/trgp-20260806.htm"},{"form":"4","filingDate":"2026-08-04","accessionNumber":"0001193125-26-332932","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526332932/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-08-04","accessionNumber":"0001193125-26-332928","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526332928/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-08-04","accessionNumber":"0001193125-26-332926","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526332926/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-07-23","accessionNumber":"0001193125-26-314264","url":"https://www.sec.gov/Archives/edgar/data/1389170/000119312526314264/xslF345X06/ownership.xml"}]},"links":{"secEdgar":"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001389170&type=&dateb=&owner=include&count=40","companyPage":"https://zelothorn.com/company/TRGP"},"generatedAt":"2026-08-25T22:23:25.182Z"}
+{
+  "ticker": "TRGP",
+  "cik": "0001389170",
+  "company": "Targa Resources",
+  "summary": {
+    "status": "ok",
+    "text": "The risk of incurring environmental costs and liabilities in connection with our operations is significant due to our handling of natural gas, NGLs, crude oil and other petroleum products, because of air emissions and product-related discharges arising out of our operations, and as a result of historical industry operations and waste disposal practices. For example, an accidental release from one of our facilities could subject us to substantial liabilities arising from environmental cleanup and restoration costs, claims made by neighboring landowners and other third parties for personal injury, natural resource and property damages and fines or penalties for related violations of environmental laws or regulations.\n\nMoreover, stricter laws, regulations or enforcement policies could significantly increase our operational or compliance costs and the cost of any remediation that may become necessary. For example, in March 2023, the EPA issued its Good Neighbor Plan rule, which imposes emissions-related requirements on fossil fuel-fired power plants and other industrial users in 22 states, including Texas and Louisiana, which could reduce demand for our products and accelerate the transition away from oil and gas to other sources of energy. The Good Neighbor Plan was to have become effective in 2026, but in June 2024, was stayed by the U.S. Supreme Court. However, following the change in Presidential administrations, the EPA has announced its intention to revisit the Good Neighbor Plan. We cannot predict what actions the current Presidential administration will take with respect to the Good Neighbor Plan and any such actions and their timing remain uncertain."
+  },
+  "earnings": {
+    "status": "ok",
+    "latest": {
+      "period": "2026-06-30",
+      "actualEPS": 3.54,
+      "estimateEPS": 2.7718,
+      "surprise": 0.7682,
+      "surprisePercent": 27.7148,
+      "result": "beat"
+    },
+    "history": [
+      {
+        "period": "2026-06-30",
+        "actualEPS": 3.54,
+        "estimateEPS": 2.7718,
+        "surprise": 0.7682,
+        "surprisePercent": 27.7148,
+        "result": "beat"
+      },
+      {
+        "period": "2026-03-31",
+        "actualEPS": 2.21,
+        "estimateEPS": 2.56,
+        "surprise": -0.35,
+        "surprisePercent": -13.6719,
+        "result": "miss"
+      },
+      {
+        "period": "2025-12-31",
+        "actualEPS": 2.53,
+        "estimateEPS": 2.3435,
+        "surprise": 0.1865,
+        "surprisePercent": 7.9582,
+        "result": "beat"
+      },
+      {
+        "period": "2025-09-30",
+        "actualEPS": 2.2,
+        "estimateEPS": 2.1338,
+        "surprise": 0.0662,
+        "surprisePercent": 3.1024,
+        "result": "beat"
+      }
+    ]
+  },
+  "filings": {
+    "status": "ok",
+    "key": [
+      {
+        "form": "10-K",
+        "filingDate": "2026-02-19",
+        "accessionNumber": "0001193125-26-059296",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526059296/trgp-20251231.htm"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-08-06",
+        "accessionNumber": "0001193125-26-337729",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526337729/trgp-20260630.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-08-25",
+        "accessionNumber": "0001193125-26-364099",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526364099/d135085d8k.htm"
+      }
+    ],
+    "recent": [
+      {
+        "form": "8-K",
+        "filingDate": "2026-08-25",
+        "accessionNumber": "0001193125-26-364099",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526364099/d135085d8k.htm"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-24",
+        "accessionNumber": "0001193125-26-363663",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526363663/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-08-20",
+        "accessionNumber": "0001959173-26-006286",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000195917326006286/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-20",
+        "accessionNumber": "0001193125-26-359254",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526359254/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-08-06",
+        "accessionNumber": "0001193125-26-337729",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526337729/trgp-20260630.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-08-06",
+        "accessionNumber": "0001193125-26-336525",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526336525/trgp-20260806.htm"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0001193125-26-332932",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526332932/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0001193125-26-332928",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526332928/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0001193125-26-332926",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526332926/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-23",
+        "accessionNumber": "0001193125-26-314264",
+        "url": "https://www.sec.gov/Archives/edgar/data/1389170/000119312526314264/xslF345X06/ownership.xml"
+      }
+    ]
+  },
+  "links": {
+    "secEdgar": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001389170&type=&dateb=&owner=include&count=40",
+    "companyPage": "https://zelothorn.com/company/TRGP"
+  },
+  "generatedAt": "2026-08-25T22:23:25.182Z"
+}

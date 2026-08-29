@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from importlib import metadata
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+from typing import Any
 
 from solvapay.errors import PaywallError, SolvaPayError
 from solvapay.facade import ApiClient, SolvaPay, create_solvapay
@@ -58,3 +61,29 @@ __all__ = [
     "with_retry",
     "with_retry_blocking",
 ]
+
+
+def _load_generated_helpers() -> Any:
+    path = Path(__file__).resolve().parent / "helpers.generated.py"
+    spec = spec_from_file_location("solvapay._helpers_generated", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load generated helpers from {path}")
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_generated_helpers = _load_generated_helpers()
+for _name in dir(_generated_helpers):
+    if _name.startswith("_"):
+        continue
+    globals()[_name] = getattr(_generated_helpers, _name)
+    __all__.append(_name)
+for _name in getattr(_generated_helpers, "_CONSTANT_IDS", ()):
+    if _name not in __all__:
+        __all__.append(_name)
+
+
+def __getattr__(name: str) -> Any:
+    """Forward generated lazy constants (PEP 562)."""
+    return getattr(_generated_helpers, name)

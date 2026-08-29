@@ -145,6 +145,7 @@ pub fn build_create_customer_params(
 ) -> CreateCustomerParams {
     let email = match email {
         Some(s) if !s.is_empty() => s.to_owned(),
+        _ if customer_ref.contains('@') => customer_ref.to_owned(),
         _ => format!("{customer_ref}-{now_ms}@auto-created.local"),
     };
     let name = name.and_then(|s| {
@@ -304,6 +305,30 @@ mod tests {
         assert_eq!(params.email, "user-1-1700000000000@auto-created.local");
         assert_eq!(params.external_ref.as_deref(), Some("ext"));
         assert!(params.metadata.is_empty());
+    }
+
+    #[test]
+    fn create_params_uses_at_heuristic_when_email_omitted() {
+        let params = build_create_customer_params(
+            "ada@example.com",
+            Some("ext"),
+            None,
+            None,
+            1_700_000_000_000,
+        );
+        assert_eq!(params.email, "ada@example.com");
+    }
+
+    #[test]
+    fn create_params_explicit_email_wins_over_at_heuristic() {
+        let params = build_create_customer_params(
+            "ada@example.com",
+            None,
+            Some("other@example.com"),
+            None,
+            1_700_000_000_000,
+        );
+        assert_eq!(params.email, "other@example.com");
     }
 
     #[test]

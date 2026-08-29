@@ -139,13 +139,13 @@ solvapay-sdk/
 
 ### Rust crate responsibilities
 
-| Crate                | Responsibility                                                                                          | Dependency discipline                                                          |
-| -------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Crate                | Responsibility                                                                                                                            | Dependency discipline                                                                                                             |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `solvapay-core`      | Validation, retry policy, webhook verify, helper decision cores, paywall, business/credit/seller logic, MCP payload builders, error model | `serde`, `hmac`/`sha2`, `subtle`. **No** `reqwest`, **no** `tokio`, **no** `wasm-bindgen` — this is what keeps browser WASM small |
-| `solvapay-dto`       | Generated wire models + SDK overlays                                                                     | `serde` only; generated — never hand-edited                                    |
-| `solvapay-export`    | Inert `#[solvapay_export]` marker scanned by dto-gen                                                     | Proc-macro crate; no runtime logic                                             |
-| `solvapay-transport` | `Transport` trait, `reqwest`/rustls (native) + Fetch (wasm32) impls, client shell, 36 routed methods + 5 MCP composites (41 total) | Depends on core + dto; async but runtime-agnostic                             |
-| `solvapay`           | Public crates.io facade: idiomatic re-exports + `blocking` feature                                       | Depends on transport + core; ergonomics only, no new logic                    |
+| `solvapay-dto`       | Generated wire models + SDK overlays                                                                                                      | `serde` only; generated — never hand-edited                                                                                       |
+| `solvapay-export`    | Inert `#[solvapay_export]` marker scanned by dto-gen                                                                                      | Proc-macro crate; no runtime logic                                                                                                |
+| `solvapay-transport` | `Transport` trait, `reqwest`/rustls (native) + Fetch (wasm32) impls, client shell, 36 routed methods + 5 MCP composites (41 total)        | Depends on core + dto; async but runtime-agnostic                                                                                 |
+| `solvapay`           | Public crates.io facade: idiomatic re-exports + `blocking` feature                                                                        | Depends on transport + core; ergonomics only, no new logic                                                                        |
 
 ## What's implemented where
 
@@ -155,7 +155,7 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 **Pure logic — `solvapay-core`:**
 
 - **Webhook verify** → `core/solvapay-core/src/webhook.rs` (+ shared
-  `hmac_util.rs`) ← `sdks/typescript/server/src/{webhook-native,webhook-wasm}.ts`
+  `hmac_util.rs`) ← `sdks/typescript/server/src/{native,webhook-wasm}.ts`
 - **Retry policy** (schedules, not sleeps) → `.../src/retry.rs`
 - **Paywall** → `paywall_state.rs`, `paywall_gate.rs`, `paywall_decision.rs`,
   `paywall_payload.rs`, plus the host-callback sequencers `gate_driver.rs`
@@ -192,14 +192,14 @@ routeless MCP composites (`mcpBootstrap`, `mcpCallBuiltinTool`, `mcpReadResource
 Five first-party surfaces, plus an optional C ABI. All expose the same public
 capabilities; only syntax differs (cross-surface parity is enforced in CI).
 
-| Surface        | Binding toolchain                                          | Status                                                                        |
-| -------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| TypeScript     | napi-rs (Node native), wasm-bindgen (edge + browser)      | GA — the published `@solvapay/*` packages                                     |
-| Python         | PyO3 + maturin (`abi3` wheels) + `solvapay-mcp` adapter   | Built + tested in CI; publish is TestPyPI-gated (not GA)                      |
-| Ruby           | Magnus + rb-sys (platform gems) + `solvapay-mcp` adapter  | Built + tested in CI; publish gated (not GA)                                  |
-| Go             | wazero + embedded `wasm32-wasip1` core (`//go:embed`) + `solvapay-go/mcp` adapter | Built + tested in CI; subtree module release (not GA)                         |
-| Rust           | `solvapay` crate (thin facade, no FFI) + `blocking` feature + `solvapay-mcp` adapter | Built + tested in CI; crates.io publish gated (not GA)                        |
-| C ABI (opt.)   | cbindgen + opaque handles (`sdks/capi`)            | Generated `dispatch.rs` (golden-tested); opaque handles + `ctest` engine      |
+| Surface      | Binding toolchain                                                                    | Status                                                                   |
+| ------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| TypeScript   | napi-rs (Node native), wasm-bindgen (edge + browser)                                 | GA — the published `@solvapay/*` packages                                |
+| Python       | PyO3 + maturin (`abi3` wheels) + `solvapay-mcp` adapter                              | Built + tested in CI; publish is TestPyPI-gated (not GA)                 |
+| Ruby         | Magnus + rb-sys (platform gems) + `solvapay-mcp` adapter                             | Built + tested in CI; publish gated (not GA)                             |
+| Go           | wazero + embedded `wasm32-wasip1` core (`//go:embed`) + `solvapay-go/mcp` adapter    | Built + tested in CI; subtree module release (not GA)                    |
+| Rust         | `solvapay` crate (thin facade, no FFI) + `blocking` feature + `solvapay-mcp` adapter | Built + tested in CI; crates.io publish gated (not GA)                   |
+| C ABI (opt.) | cbindgen + opaque handles (`sdks/capi`)                                              | Generated `dispatch.rs` (golden-tested); opaque handles + `ctest` engine |
 
 The TypeScript surface further splits by runtime:
 
@@ -310,7 +310,8 @@ Some surfaces are deliberately hand-written and never move to Rust (redesign-v2
   artifacts mean TypeScript contributors do not need a Rust/wasm-bindgen
   toolchain for `pnpm build:packages`.
 - Per-package versioning is driven by Changesets; branch/release flow is in
-  [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and `docs/publishing.mdx`.
+  [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and
+  [`docs/publishing.mdx`](../publishing.mdx).
 
 ## Where to read next
 
@@ -323,4 +324,5 @@ Some surfaces are deliberately hand-written and never move to Rust (redesign-v2
 - [`error-handling.md`](./error-handling.md) — the `SdkError` model and stable codes
 - [`performance.md`](./performance.md) — WASM budgets and measurement methodology
 - [`CONTRIBUTING.md`](../../CONTRIBUTING.md) — setup and pull request workflow
+- [`docs/publishing.mdx`](../publishing.mdx) — Changesets, publish workflows, and the unpublished-dependency gate
 - package-level `README.md` files for package-specific constraints

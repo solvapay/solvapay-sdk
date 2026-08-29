@@ -71,9 +71,7 @@ function workspacePackages(): WorkspacePkg[] {
 }
 
 function ownerOf(abs: string, packages: WorkspacePkg[]): WorkspacePkg | undefined {
-  const matches = packages.filter(
-    pkg => abs === pkg.dir || abs.startsWith(pkg.dir + path.sep),
-  )
+  const matches = packages.filter(pkg => abs === pkg.dir || abs.startsWith(pkg.dir + path.sep))
   matches.sort((a, b) => b.dir.length - a.dir.length)
   return matches[0]
 }

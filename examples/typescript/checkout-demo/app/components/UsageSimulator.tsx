@@ -16,8 +16,7 @@ export function UsageSimulator() {
   const { credits, adjustBalance, reconcileAfterUsageDebit, refetch } = useBalance()
   const { activePurchase } = usePurchase()
 
-  const productRef =
-    activePurchase?.productRef ?? process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
+  const productRef = activePurchase?.productRef ?? process.env.NEXT_PUBLIC_SOLVAPAY_PRODUCT_REF
   const { plans } = usePlans({ productRef: productRef ?? undefined })
 
   // The plan is the only source for the credit rate — the purchase's plan

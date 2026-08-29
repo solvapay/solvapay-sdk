@@ -90,6 +90,7 @@ hood) and flips the card to **Manage purchase**.
 
 For a public URL, run `pnpm tunnel` / `pnpm mcp:checkout:tunnel` (cloudflared)
 or enable the platform `mcpapp` ngrok tunnel on `:3030`.
+
 ## Flow
 
 ```mermaid

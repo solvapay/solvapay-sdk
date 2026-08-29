@@ -2,27 +2,25 @@
 
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde_json::{Map, Value};
+use serde_json::Value;
 use solvapay_core::{
-    build_create_customer_params, classify_customer_ref, extract_backend_customer_ref, gate_next,
-    CustomerRefKind, GateAction, GateCacheOp, HelperErrorResult, SdkError,
+    ensure_customer_next, gate_next, should_retry_usage_error, EnsureCustomerAction, GateAction,
+    GateCacheOp, HelperErrorResult, RetryPolicy, SdkError,
 };
 use solvapay_dto::{
-    CheckLimitRequest, CheckLimitsRequest, CreateCustomerRequest, CreateUsageRequest,
-    CreateUsageRequestActionType, CreateUsageRequestOutcome, GetCustomerParams, TrackUsageRequest,
+    CheckLimitRequest, CheckLimitsRequest, CreateCustomerRequest, GetCustomerParams,
+    TrackUsageRequest, UpdateCustomerParams,
 };
-use solvapay_transport::random9_from_f64;
 use solvapay_transport::{ClientShell, SharedTransport, SolvaPayClient};
 use tokio::sync::{Mutex, Notify};
 
-use crate::config::Config;
+use crate::config::{Config, CUSTOMER_DEDUP_MAX_CACHE_SIZE};
 use crate::gate::{Allow, GateOpts, GateOutcome, Payable};
-
-const CUSTOMER_CACHE_TTL_MS: u64 = 60_000;
+use crate::retry::with_retry_if;
 
 /// Public async SolvaPay SDK client.
 #[derive(Clone)]
@@ -48,9 +46,10 @@ struct LimitsCacheEntry {
     limits: Value,
 }
 
+#[derive(Clone)]
 struct CustomerCacheEntry {
     value: String,
-    expires_at_ms: u64,
+    timestamp_ms: i64,
 }
 
 struct CustomerInflight {
@@ -103,6 +102,7 @@ impl Client {
             "product": opts.product,
             "usageType": opts.usage_type,
             "startedMs": started_ms,
+            "limitsCacheTTLMs": self.inner.limits_cache_ttl_ms,
         });
         loop {
             let out = gate_next(state.as_ref(), Some(&event)).map_err(helper_to_sdk)?;
@@ -120,29 +120,31 @@ impl Client {
                         "nowMs": now_ms(),
                     });
                 }
-                GateAction::LookupCache { key } => {
+                GateAction::ReadLimitsCache { key } => {
                     let now = now_ms();
                     let hit = {
                         let gate = self.inner.gate.lock().await;
-                        gate.limits_cache.get(&key).and_then(|entry| {
-                            (now.saturating_sub(entry.timestamp_ms)
-                                < self.inner.limits_cache_ttl_ms)
-                                .then(|| (entry.remaining, entry.limits.clone()))
+                        gate.limits_cache.get(&key).map(|entry| {
+                            (entry.remaining, entry.limits.clone(), entry.timestamp_ms)
                         })
                     };
-                    if let Some((remaining, limits)) = hit {
+                    if let Some((remaining, limits, timestamp_ms)) = hit {
                         event = serde_json::json!({
-                            "kind": "cacheHit",
+                            "kind": "limitsCacheEntry",
+                            "found": true,
                             "remaining": remaining,
                             "limits": limits,
+                            "timestampMs": timestamp_ms,
                             "nowMs": now,
+                            "randomUnit": self.random_unit(),
                         });
                     } else {
-                        {
-                            let mut gate = self.inner.gate.lock().await;
-                            gate.limits_cache.remove(&key);
-                        }
-                        event = serde_json::json!({ "kind": "cacheMiss", "nowMs": now });
+                        event = serde_json::json!({
+                            "kind": "limitsCacheEntry",
+                            "found": false,
+                            "nowMs": now,
+                            "randomUnit": self.random_unit(),
+                        });
                     }
                 }
                 GateAction::CheckLimits {
@@ -168,43 +170,43 @@ impl Client {
                         "kind": "limitsResult",
                         "limits": limits,
                         "nowMs": now_ms(),
+                        "randomUnit": self.random_unit(),
                     });
                 }
-                GateAction::Done {
-                    outcome,
+                GateAction::Allow {
                     customer_ref: backend_ref,
                     product,
                     meter_name,
                     limits,
-                    gate,
+                    customer,
                     cache,
-                    track,
                 } => {
                     self.apply_gate_cache(cache).await;
-                    if let Some(track) = track {
-                        self.track_usage_event(
-                            &track.customer_ref,
-                            &track.product_ref,
-                            &track.action,
-                            CreateUsageRequestOutcome::Paywall,
-                            track.duration_ms.max(0.0),
-                            None,
-                        )
-                        .await?;
-                    }
-                    if outcome == "gate" {
-                        let gate = gate.ok_or_else(|| {
-                            SdkError::transport("gate_next done/gate missing gate", false)
-                        })?;
-                        return Ok(GateOutcome::Paywall(gate));
-                    }
                     return Ok(GateOutcome::Allow(Allow {
                         client: self.clone(),
                         backend_ref,
                         product,
                         meter_name,
                         limits,
+                        customer: Allow::from_core_customer(customer),
+                        driver_state: state.clone().unwrap_or(Value::Null),
                     }));
+                }
+                GateAction::Gate {
+                    gate,
+                    cache,
+                    request,
+                    ..
+                } => {
+                    self.apply_gate_cache(cache).await;
+                    self.post_usage_request(request).await?;
+                    return Ok(GateOutcome::Paywall(gate));
+                }
+                GateAction::EmitUsage { .. } | GateAction::SkipUsage => {
+                    return Err(SdkError::transport(
+                        "gate_next returned a usage action during decide",
+                        false,
+                    ));
                 }
             }
         }
@@ -219,48 +221,36 @@ impl Client {
         }
     }
 
-    pub(crate) async fn track_usage_event(
+    pub(crate) fn random_unit(&self) -> f64 {
+        self.inner.api.shell().random_unit()
+    }
+
+    pub(crate) async fn emit_handler_usage(
         &self,
-        backend_ref: &str,
-        product: &str,
-        action: &str,
-        outcome: CreateUsageRequestOutcome,
-        duration_ms: f64,
-        extra_metadata: Option<Map<String, Value>>,
+        state: &Value,
+        event: Value,
     ) -> Result<(), SdkError> {
-        let shell = self.inner.api.shell();
-        let now_ms = shell.now_ms();
-        let request_id = format!(
-            "solvapay_{}_{}",
-            now_ms,
-            random9_from_f64(shell.random_unit())
-        );
-        let mut metadata = extra_metadata.unwrap_or_default();
-        metadata.insert("action".to_owned(), Value::String(action.to_owned()));
-        metadata.insert("requestId".to_owned(), Value::String(request_id));
-        let overlay: BTreeMap<String, Value> = metadata.into_iter().collect();
+        let out = gate_next(Some(state), Some(&event)).map_err(helper_to_sdk)?;
+        match out.action {
+            GateAction::SkipUsage => Ok(()),
+            GateAction::EmitUsage { request } => self.post_usage_request(request).await,
+            other => Err(SdkError::transport(
+                format!("gate_next handler event returned unexpected action: {other:?}"),
+                false,
+            )),
+        }
+    }
 
-        let base = CreateUsageRequest {
-            customer_ref: Some(backend_ref.to_owned()),
-            product_ref: Some(product.to_owned()),
-            duration: Some(duration_ms),
-            metadata: None,
-            action_type: Some(CreateUsageRequestActionType::ApiCall),
-            description: None,
-            error_message: None,
-            idempotency_key: None,
-            outcome: Some(outcome),
-            purchase_ref: None,
-            timestamp: Some(iso8601_millis(now_ms)),
-            units: Some(1),
-        };
-
-        let params = TrackUsageRequest {
-            customer_ref: backend_ref.to_owned(),
-            base,
-            metadata: Some(overlay),
-        };
-        self.inner.api.track_usage(params).await?;
+    pub(crate) async fn post_usage_request(&self, request: Value) -> Result<(), SdkError> {
+        let params: TrackUsageRequest = serde_json::from_value(request).map_err(|err| {
+            SdkError::transport(format!("gate_next usage request: {err}"), false)
+        })?;
+        with_retry_if(
+            || self.inner.api.track_usage(params.clone()),
+            RetryPolicy::default(),
+            |err, _attempt| should_retry_usage_error(&sdk_error_message(err)),
+        )
+        .await?;
         Ok(())
     }
 
@@ -283,6 +273,8 @@ impl Client {
                 remaining,
                 limits,
                 timestamp,
+                checkout_url: _,
+                meter_name: _,
             } => {
                 gate.limits_cache.insert(
                     key,
@@ -318,23 +310,6 @@ impl Client {
     }
 
     async fn ensure_customer(&self, customer_ref: &str) -> Result<String, SdkError> {
-        match classify_customer_ref(customer_ref) {
-            CustomerRefKind::Anonymous | CustomerRefKind::Backend => {
-                return Ok(customer_ref.to_owned());
-            }
-            CustomerRefKind::NeedsEnsure => {}
-        }
-
-        let now = now_ms();
-        {
-            let gate = self.inner.gate.lock().await;
-            if let Some(entry) = gate.customer_cache.get(customer_ref) {
-                if now < entry.expires_at_ms {
-                    return Ok(entry.value.clone());
-                }
-            }
-        }
-
         let (inflight, is_leader) = {
             let mut gate = self.inner.gate.lock().await;
             match gate.customer_inflight.get(customer_ref) {
@@ -377,66 +352,162 @@ impl Client {
     }
 
     async fn find_or_create_customer(&self, customer_ref: &str) -> Result<String, SdkError> {
-        let lookup = GetCustomerParams {
-            customer_ref: None,
-            email: None,
-            external_ref: Some(customer_ref.to_owned()),
-        };
-        if let Ok(mapped) = self.inner.api.get_customer(lookup).await {
-            if !mapped.customer_ref.is_empty() {
-                self.cache_customer(customer_ref, &mapped.customer_ref)
-                    .await;
-                return Ok(mapped.customer_ref);
+        let mut state: Option<Value> = None;
+        let mut event = serde_json::json!({
+            "kind": "start",
+            "customerRef": customer_ref,
+            "canCreateCustomer": true,
+            "canUpdateCustomer": true,
+            "nowMs": now_ms() as i64,
+        });
+        loop {
+            let out = ensure_customer_next(state.as_ref(), Some(&event)).map_err(helper_to_sdk)?;
+            state = Some(serde_json::to_value(&out.state).map_err(|err| {
+                SdkError::transport(format!("ensure_customer_next state: {err}"), false)
+            })?);
+            match out.action {
+                EnsureCustomerAction::ReadCustomerCache { key } => {
+                    let cached = {
+                        let gate = self.inner.gate.lock().await;
+                        gate.customer_cache.get(&key).cloned()
+                    };
+                    event = match cached {
+                        Some(entry) => serde_json::json!({
+                            "kind": "customerCacheEntry",
+                            "found": true,
+                            "backendRef": entry.value,
+                            "timestampMs": entry.timestamp_ms,
+                            "nowMs": now_ms() as i64,
+                        }),
+                        None => serde_json::json!({
+                            "kind": "customerCacheEntry",
+                            "found": false,
+                            "nowMs": now_ms() as i64,
+                        }),
+                    };
+                }
+                EnsureCustomerAction::GetCustomer {
+                    by_external_ref,
+                    by_email,
+                } => {
+                    let lookup = GetCustomerParams {
+                        customer_ref: None,
+                        email: by_email,
+                        external_ref: by_external_ref,
+                    };
+                    match self.inner.api.get_customer(lookup).await {
+                        Ok(mapped) if !mapped.customer_ref.is_empty() => {
+                            event = serde_json::json!({
+                                "kind": "customerLookupResult",
+                                "found": true,
+                                "customer": {
+                                    "customerRef": mapped.customer_ref,
+                                    "externalRef": mapped.external_ref,
+                                },
+                                "nowMs": now_ms() as i64,
+                            });
+                        }
+                        Ok(_) => {
+                            event = serde_json::json!({
+                                "kind": "customerLookupResult",
+                                "found": false,
+                                "nowMs": now_ms() as i64,
+                            });
+                        }
+                        Err(err) => {
+                            event = serde_json::json!({
+                                "kind": "customerLookupResult",
+                                "found": false,
+                                "errorMessage": sdk_error_message(&err),
+                                "nowMs": now_ms() as i64,
+                            });
+                        }
+                    }
+                }
+                EnsureCustomerAction::CreateCustomer { params } => {
+                    let request = CreateCustomerRequest {
+                        description: None,
+                        email: Some(params.email),
+                        external_ref: params.external_ref,
+                        metadata: Some(
+                            params
+                                .metadata
+                                .into_iter()
+                                .collect::<std::collections::BTreeMap<_, _>>(),
+                        ),
+                        name: params.name,
+                        telephone: None,
+                    };
+                    match self.inner.api.create_customer(request).await {
+                        Ok(created) => {
+                            event = serde_json::json!({
+                                "kind": "customerCreateResult",
+                                "ok": true,
+                                "customer": { "customerRef": created.customer_ref },
+                                "nowMs": now_ms() as i64,
+                            });
+                        }
+                        Err(err) => {
+                            event = serde_json::json!({
+                                "kind": "customerCreateResult",
+                                "ok": false,
+                                "errorMessage": sdk_error_message(&err),
+                                "nowMs": now_ms() as i64,
+                            });
+                        }
+                    }
+                }
+                EnsureCustomerAction::UpdateCustomer {
+                    customer_ref: backend,
+                    patch,
+                } => {
+                    let params = UpdateCustomerParams {
+                        email: None,
+                        external_ref: patch
+                            .get("externalRef")
+                            .and_then(Value::as_str)
+                            .map(str::to_owned),
+                        metadata: None,
+                        name: None,
+                        telephone: None,
+                    };
+                    match self.inner.api.update_customer(&backend, params).await {
+                        Ok(_) => {
+                            event = serde_json::json!({
+                                "kind": "customerUpdateResult",
+                                "ok": true,
+                                "nowMs": now_ms() as i64,
+                            });
+                        }
+                        Err(err) => {
+                            event = serde_json::json!({
+                                "kind": "customerUpdateResult",
+                                "ok": false,
+                                "errorMessage": sdk_error_message(&err),
+                                "nowMs": now_ms() as i64,
+                            });
+                        }
+                    }
+                }
+                EnsureCustomerAction::Resolved {
+                    backend_ref,
+                    cache,
+                } => {
+                    if let Some(write) = cache {
+                        let mut gate = self.inner.gate.lock().await;
+                        insert_customer_cache(
+                            &mut gate.customer_cache,
+                            write.key,
+                            CustomerCacheEntry {
+                                value: write.backend_ref,
+                                timestamp_ms: write.timestamp_ms,
+                            },
+                        );
+                    }
+                    return Ok(backend_ref);
+                }
             }
         }
-
-        let email = customer_ref.contains('@').then_some(customer_ref);
-        let params = build_create_customer_params(
-            customer_ref,
-            Some(customer_ref),
-            email,
-            None,
-            now_ms() as i64,
-        );
-        let request = CreateCustomerRequest {
-            description: None,
-            email: Some(params.email),
-            external_ref: params.external_ref,
-            metadata: Some(
-                params
-                    .metadata
-                    .into_iter()
-                    .collect::<std::collections::BTreeMap<_, _>>(),
-            ),
-            name: params.name,
-            telephone: None,
-        };
-        let created = self.inner.api.create_customer(request).await?;
-        let map = Map::from_iter([(
-            "customerRef".to_owned(),
-            Value::String(created.customer_ref.clone()),
-        )]);
-        let backend = extract_backend_customer_ref(&map, customer_ref);
-        if backend.is_empty() {
-            return Err(SdkError::transport(
-                "createCustomer did not return customerRef",
-                false,
-            ));
-        }
-        self.cache_customer(customer_ref, &backend).await;
-        Ok(backend)
-    }
-
-    async fn cache_customer(&self, key: &str, backend_ref: &str) {
-        let expires = now_ms().saturating_add(CUSTOMER_CACHE_TTL_MS);
-        let mut gate = self.inner.gate.lock().await;
-        gate.customer_cache.insert(
-            key.to_owned(),
-            CustomerCacheEntry {
-                value: backend_ref.to_owned(),
-                expires_at_ms: expires,
-            },
-        );
     }
 }
 
@@ -448,10 +519,39 @@ fn build_shell(transport: SharedTransport, config: &Config) -> ClientShell {
     shell.with_retry_policy(config.retry_policy)
 }
 
-fn now_ms() -> u64 {
+fn insert_customer_cache(
+    cache: &mut HashMap<String, CustomerCacheEntry>,
+    key: String,
+    entry: CustomerCacheEntry,
+) {
+    cache.insert(key, entry);
+    let overflow = cache.len().saturating_sub(CUSTOMER_DEDUP_MAX_CACHE_SIZE);
+    if overflow == 0 {
+        return;
+    }
+    let mut oldest: Vec<(String, i64)> = cache
+        .iter()
+        .map(|(cache_key, cached)| (cache_key.clone(), cached.timestamp_ms))
+        .collect();
+    oldest.sort_by_key(|(_, timestamp)| *timestamp);
+    for (cache_key, _) in oldest.into_iter().take(overflow) {
+        cache.remove(&cache_key);
+    }
+}
+
+pub(crate) fn now_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_millis() as u64)
+}
+
+fn sdk_error_message(err: &SdkError) -> String {
+    match err {
+        SdkError::Api { message, .. } | SdkError::Paywall { message, .. } | SdkError::Transport { message, .. } => {
+            message.clone()
+        }
+        other => format!("{other:?}"),
+    }
 }
 
 fn helper_to_sdk(err: HelperErrorResult) -> SdkError {
@@ -535,6 +635,25 @@ mod tests {
                 }
             })
         }
+    }
+
+    #[test]
+    fn customer_cache_evicts_past_max() {
+        assert_eq!(CUSTOMER_DEDUP_MAX_CACHE_SIZE, 1000);
+        let mut cache = HashMap::new();
+        for index in 0..=CUSTOMER_DEDUP_MAX_CACHE_SIZE {
+            insert_customer_cache(
+                &mut cache,
+                format!("k{index}"),
+                CustomerCacheEntry {
+                    value: format!("cus_{index}"),
+                    timestamp_ms: index as i64,
+                },
+            );
+        }
+        assert!(!cache.contains_key("k0"));
+        assert!(cache.contains_key(&format!("k{CUSTOMER_DEDUP_MAX_CACHE_SIZE}")));
+        assert_eq!(cache.len(), CUSTOMER_DEDUP_MAX_CACHE_SIZE);
     }
 
     #[test]

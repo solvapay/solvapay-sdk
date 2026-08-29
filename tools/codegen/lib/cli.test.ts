@@ -14,7 +14,10 @@ describe('codegen CLI shell', () => {
   })
 
   it('wraps parse errors with usage', () => {
-    const result: CliResult = parseErrorResult(new Error('Unknown argument: --nope'), 'Usage:\n  pnpm gen\n')
+    const result: CliResult = parseErrorResult(
+      new Error('Unknown argument: --nope'),
+      'Usage:\n  pnpm gen\n',
+    )
     expect(result.exitCode).toBe(1)
     expect(result.stdout).toBe('')
     expect(result.stderr).toContain('Unknown argument: --nope')

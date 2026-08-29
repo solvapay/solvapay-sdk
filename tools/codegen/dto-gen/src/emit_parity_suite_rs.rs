@@ -40,7 +40,11 @@ pub fn emit_parity_suite_rs(ir: &Ir) -> GenResult<String> {
     output.push_str(
         "//! Generated signature-parity suite (§2.8) — typed surface, arity, sync matrix, defaults.\n\n\
          #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]\n\n\
-         use solvapay::{Client, Config, RetryPolicy, SdkError, DEFAULT_LIMITS_CACHE_TTL_MS};\n\
+         use solvapay::{\n\
+         \x20   ANONYMOUS_CUSTOMER_REF, CUSTOMER_DEDUP_MAX_CACHE_SIZE, CUSTOMER_DEDUP_TTL_MS,\n\
+         \x20   Client, Config, DEFAULT_LIMITS_CACHE_TTL_MS, REQUEST_ID_FORMAT, RetryPolicy,\n\
+         \x20   SdkError, USAGE_ACTION_TYPE,\n\
+         };\n\
          #[cfg(feature = \"blocking\")]\n\
          use solvapay::blocking::BlockingClient;\n",
     );
@@ -92,8 +96,38 @@ pub fn emit_parity_suite_rs(ir: &Ir) -> GenResult<String> {
     let _ = writeln!(
         output,
         "/// Frozen initial retry delay from the contract manifest `defaults:`.\n\
-         const EXPECTED_INITIAL_DELAY_MS: u64 = {};\n",
+         const EXPECTED_INITIAL_DELAY_MS: u64 = {};",
         defaults.initial_delay_ms
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen customer-dedup TTL from the contract manifest `defaults:`.\n\
+         const EXPECTED_CUSTOMER_DEDUP_TTL_MS: u64 = {};",
+        defaults.customer_dedup_ttl_ms
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen customer-dedup max cache size from the contract manifest `defaults:`.\n\
+         const EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE: usize = {};",
+        defaults.customer_dedup_max_cache_size
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen anonymous customer ref from the contract manifest `defaults:`.\n\
+         const EXPECTED_ANONYMOUS_CUSTOMER_REF: &str = \"{}\";",
+        defaults.anonymous_customer_ref
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen trackUsage request-id format from the contract manifest `defaults:`.\n\
+         const EXPECTED_REQUEST_ID_FORMAT: &str = \"{}\";",
+        defaults.request_id_format
+    );
+    let _ = writeln!(
+        output,
+        "/// Frozen trackUsage actionType from the contract manifest `defaults:`.\n\
+         const EXPECTED_USAGE_ACTION_TYPE: &str = \"{}\";\n",
+        defaults.usage_action_type
     );
 
     output.push_str(
@@ -152,6 +186,11 @@ pub fn emit_parity_suite_rs(ir: &Ir) -> GenResult<String> {
          \x20   let retry = RetryPolicy::default();\n\
          \x20   assert_eq!(EXPECTED_MAX_RETRIES, retry.max_retries);\n\
          \x20   assert_eq!(EXPECTED_INITIAL_DELAY_MS, retry.initial_delay_ms);\n\
+         \x20   assert_eq!(EXPECTED_CUSTOMER_DEDUP_TTL_MS, CUSTOMER_DEDUP_TTL_MS);\n\
+         \x20   assert_eq!(EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE, CUSTOMER_DEDUP_MAX_CACHE_SIZE);\n\
+         \x20   assert_eq!(EXPECTED_ANONYMOUS_CUSTOMER_REF, ANONYMOUS_CUSTOMER_REF);\n\
+         \x20   assert_eq!(EXPECTED_REQUEST_ID_FORMAT, REQUEST_ID_FORMAT);\n\
+         \x20   assert_eq!(EXPECTED_USAGE_ACTION_TYPE, USAGE_ACTION_TYPE);\n\
          }\n",
     );
 
@@ -190,8 +229,9 @@ mod tests {
     use super::*;
     use crate::ir::{
         IrAvailability, IrBindingArtifact, IrBindingCall, IrBindingCatalogLink, IrBindingSymbol,
-        IrDefaults, IrDocModel, IrEntryPoint, IrEntrySection, IrEnvelopeMode, IrErrorKind,
-        IrLangNames, IrParam, IrRubyReceiver, IrRubyTarget, IrSerializeKind, IrSyncKind, IrTypeRef,
+        IrDefaults, IrDocModel, IrEmissionMatrix, IrEntryPoint, IrEntrySection, IrEnvelopeMode,
+        IrErrorKind, IrLangNames, IrParam, IrRubyReceiver, IrRubyTarget, IrSerializeKind,
+        IrSyncKind, IrTypeRef,
     };
     use std::collections::BTreeMap;
 
@@ -241,6 +281,9 @@ mod tests {
                 rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
             },
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: rust.into(),

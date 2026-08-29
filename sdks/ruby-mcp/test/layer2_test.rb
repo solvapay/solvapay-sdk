@@ -28,8 +28,8 @@ class Layer2Test < Minitest::Test
     assert args.key?("structuredContent")
   end
 
-  def test_make_response_result_omits_empty_emitted_blocks
-    SolvaPay::Mcp::Layer2.make_response_result({ "ok" => true }, { "text" => "hi" }, [])
+  def test_make_response_result_omits_nil_emitted_blocks
+    SolvaPay::Mcp::Layer2.make_response_result({ "ok" => true }, { "text" => "hi" }, nil)
     name, args = @calls.last
     assert_equal "make_response_result", name
     assert args.key?("data")

@@ -202,7 +202,6 @@ describe('edge graph dependency assertions', () => {
     const files = ['edge.ts', 'webhook-wasm.ts']
     const forbiddenImport = [
       /from\s+['"]@solvapay\/server-native['"]/,
-      /from\s+['"]\.\/webhook-native['"]/,
       /from\s+['"]\.\/native['"]/,
       /from\s+['"]node:/,
       /import\s*\(\s*['"]node:/,

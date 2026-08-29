@@ -16,7 +16,11 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { insertSectionEntry, renderYamlFragment, sectionHasEntry } from './lib/manifest-edit.js'
-import { clientBindingsFromYaml, nextClientEmitOrder, bindingStubFields } from './lib/binding-stub.js'
+import {
+  clientBindingsFromYaml,
+  nextClientEmitOrder,
+  bindingStubFields,
+} from './lib/binding-stub.js'
 import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 import { deriveNames, toSnakeCase } from '../shared/manifest-schema.js'
 import type { OpenApiSpec } from './lib/openapi-pipeline.js'

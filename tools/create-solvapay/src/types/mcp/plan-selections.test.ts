@@ -36,19 +36,17 @@ describe('plan-selections', () => {
 
   it('rejects paid recurring defaults', () => {
     expect(() =>
-      validatePlanSelections([
-        { name: 'Pro', type: 'recurring', price: 2000, default: true },
-      ]),
+      validatePlanSelections([{ name: 'Pro', type: 'recurring', price: 2000, default: true }]),
     ).toThrow(/cannot be the default plan/)
   })
 
   it('rejects one-time and hybrid defaults', () => {
-    expect(() =>
-      validatePlanSelections([{ type: 'one-time', price: 0, default: true }]),
-    ).toThrow(/cannot be the default plan/)
-    expect(() =>
-      validatePlanSelections([{ type: 'hybrid', price: 0, default: true }]),
-    ).toThrow(/cannot be the default plan/)
+    expect(() => validatePlanSelections([{ type: 'one-time', price: 0, default: true }])).toThrow(
+      /cannot be the default plan/,
+    )
+    expect(() => validatePlanSelections([{ type: 'hybrid', price: 0, default: true }])).toThrow(
+      /cannot be the default plan/,
+    )
   })
 
   it('rejects multiple default flags', () => {

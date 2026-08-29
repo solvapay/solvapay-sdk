@@ -9,6 +9,7 @@ rescue LoadError
   require "solvapay/solvapay"
 end
 
+require_relative "solvapay/defaults"
 require_relative "solvapay/errors"
 require_relative "solvapay/results"
 require_relative "solvapay/_native"

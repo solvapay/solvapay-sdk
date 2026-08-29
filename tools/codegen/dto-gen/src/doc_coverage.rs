@@ -34,8 +34,8 @@ pub fn check_doc_coverage(ir: &Ir) -> GenResult<()> {
 mod tests {
     use super::*;
     use crate::ir::{
-        IrAvailability, IrDefaults, IrDocModel, IrEntryPoint, IrEntrySection, IrErrorKind,
-        IrLangNames, IrRubyReceiver, IrRubyTarget, IrSyncKind,
+        IrAvailability, IrDefaults, IrDocModel, IrEmissionMatrix, IrEntryPoint, IrEntrySection,
+        IrErrorKind, IrLangNames, IrRubyReceiver, IrRubyTarget, IrSyncKind,
     };
     use std::collections::BTreeMap;
 
@@ -80,6 +80,9 @@ mod tests {
                 rust: vec![IrSyncKind::Async],
             },
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: id.into(),

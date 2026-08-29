@@ -36,7 +36,12 @@ function read(file: string): string {
 function parseSemver(raw: string): SemverTriple {
   const cleaned = raw.replace(/^v/, '')
   const match = cleaned.match(/^(\d+)\.(\d+)\.(\d+)/)
-  if (match === null || match[1] === undefined || match[2] === undefined || match[3] === undefined) {
+  if (
+    match === null ||
+    match[1] === undefined ||
+    match[2] === undefined ||
+    match[3] === undefined
+  ) {
     throw new Error(`not a semver: ${raw}`)
   }
   return [Number(match[1]), Number(match[2]), Number(match[3])]
@@ -166,7 +171,6 @@ function gemLockResolved(lock: string, name: string): string | undefined {
   return match?.[1]
 }
 
-
 function cargoTomlRmcpVersion(src: string): string | undefined {
   const match = src.match(/rmcp\s*=\s*\{\s*version\s*=\s*"([^"]+)"/)
   return match?.[1]
@@ -242,7 +246,13 @@ describe('MCP host-SDK pins', () => {
         floorExact: new Set([NPM_EXT_APPS]),
       },
       {
-        file: joinRel(toolPackageDir('create-solvapay'), 'templates', 'mcp', '_base', 'package.json'),
+        file: joinRel(
+          toolPackageDir('create-solvapay'),
+          'templates',
+          'mcp',
+          '_base',
+          'package.json',
+        ),
         floorExact: new Set([NPM_EXT_APPS]),
       },
     ]
@@ -326,7 +336,9 @@ describe('MCP host-SDK pins', () => {
           } else if (pkg === NPM_EXT_APPS) {
             const floor = npmRangeFloor(extracted)
             if (floor !== target) {
-              violations.push(`${rel}: ${key} ${extracted} floor ${floor ?? '(none)'} !== ${target}`)
+              violations.push(
+                `${rel}: ${key} ${extracted} floor ${floor ?? '(none)'} !== ${target}`,
+              )
             }
           } else if (!npmRangeAdmits(extracted, target)) {
             violations.push(`${rel}: ${key} ${extracted} does not admit ${target}`)

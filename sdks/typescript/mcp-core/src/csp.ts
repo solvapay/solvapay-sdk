@@ -6,15 +6,11 @@
  * overrides on top via `mergeCsp`.
  */
 
-import { callMcpSyncOp } from './native-mcp'
+import { mcpMergeCsp } from './native-mcp.generated'
 import type { SolvaPayMcpCsp } from './types'
 
 export const SOLVAPAY_DEFAULT_CSP: Required<SolvaPayMcpCsp> = {
-  resourceDomains: [
-    'https://js.stripe.com',
-    'https://*.stripe.com',
-    'https://b.stripecdn.com',
-  ],
+  resourceDomains: ['https://js.stripe.com', 'https://*.stripe.com', 'https://b.stripecdn.com'],
   connectDomains: [
     'https://api.stripe.com',
     'https://m.stripe.com',
@@ -41,8 +37,8 @@ export function mergeCsp(
   overrides: SolvaPayMcpCsp | undefined,
   apiBaseUrl?: string,
 ): Required<SolvaPayMcpCsp> {
-  return callMcpSyncOp('mcpMergeCsp', {
-    ...(overrides !== undefined ? { overrides } : {}),
-    ...(apiBaseUrl !== undefined ? { apiBaseUrl } : {}),
-  })
+  return mcpMergeCsp(
+    overrides,
+    apiBaseUrl,
+  ) as Required<SolvaPayMcpCsp>
 }

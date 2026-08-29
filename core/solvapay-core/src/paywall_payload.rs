@@ -30,6 +30,8 @@ pub struct PaywallClientPayload {
     pub message: String,
     /// Recovery discriminator.
     pub kind: PaywallGateKind,
+    /// Kind-derived short label, echoed from the gate.
+    pub short_message: String,
     /// Activation-only: plans when present on the gate.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plans: Option<Value>,
@@ -93,6 +95,7 @@ pub fn paywall_client_payload(gate: &PaywallGate) -> PaywallClientPayload {
         checkout_url: gate.checkout_url.clone(),
         message: gate.message.clone(),
         kind: gate.kind,
+        short_message: gate.short_message.clone(),
         plans,
         balance,
         product_details,
@@ -118,6 +121,7 @@ mod tests {
             product: "prd_demo".into(),
             checkout_url: "https://pay.test/confirm".into(),
             message: "activate".into(),
+            short_message: "Activation required".into(),
             confirmation_url: None,
             plans: None,
             balance: None,
@@ -131,6 +135,7 @@ mod tests {
             product: "prd_demo".into(),
             checkout_url: "https://pay.test/x".into(),
             message: "pay".into(),
+            short_message: "Payment required".into(),
             confirmation_url: None,
             plans: None,
             balance: None,
@@ -159,6 +164,7 @@ mod tests {
         assert_eq!(payload.product, "prd_demo");
         assert_eq!(payload.checkout_url, "https://pay.test/confirm");
         assert_eq!(payload.message, "activate");
+        assert_eq!(payload.short_message, "Activation required");
     }
 
     #[test]

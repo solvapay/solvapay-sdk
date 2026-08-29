@@ -114,10 +114,11 @@ jobs:
       # Catches the "stale preview baseline" failure mode we hit in April
       # 2026, where `core`/`auth`/`solvapay` sat at `1.0.8-preview.10` on
       # main and `pnpm publish` baked that string into every workspace dep
-      # reference of the freshly-published siblings. Fail loud here rather
-      # than after npm has already accepted the broken manifests.
-      - name: Reject pre-release versions in workspace
-        run: pnpm exec tsx tools/repo/check-release-dryrun.ts --stable-versions-only
+      # reference of the freshly-published siblings. Also requires every
+      # workspace:* production dep of a publishable package to already exist
+      # on the npm registry (or a declared UNPUBLISHED_DEP_ALLOWLIST entry).
+      - name: Release dry-run gate
+        run: pnpm exec tsx tools/repo/check-release-dryrun.ts --registry
 
       - name: Check dependency health
         run: pnpm deps:check

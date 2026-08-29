@@ -1,1 +1,144 @@
-{"ticker":"MPC","cik":"0001510295","company":"Marathon Petroleum","summary":{"status":"ok","text":"MPC has nearly 140 years of history in the energy business, and is a leading, integrated, downstream and midstream energy company. We operate one of the nation's largest refining systems with approximately 3.0 million barrels per day of crude oil refining capacity and believe we are one of the largest wholesale suppliers of gasoline and distillates to resellers in the United States. We distribute our refined products through one of the largest terminal operations in the United States and one of the largest private domestic fleets of inland petroleum product barges. Our integrated midstream energy asset network links producers of natural gas and NGLs from some of the largest supply basins in the United States to domestic and international markets. In addition, we are one of the largest producers and marketers of renewable diesel in the United States.\n\nOur operations consist of three reportable operating segments: Refining & Marketing, Midstream and Renewable Diesel. Each of these segments is organized and managed based upon the nature of the products and services it offers."},"earnings":{"status":"ok","latest":{"period":"2026-06-30","actualEPS":17.73,"estimateEPS":13.8643,"surprise":3.8657,"surprisePercent":27.8824,"result":"beat"},"history":[{"period":"2026-06-30","actualEPS":17.73,"estimateEPS":13.8643,"surprise":3.8657,"surprisePercent":27.8824,"result":"beat"},{"period":"2026-03-31","actualEPS":1.65,"estimateEPS":0.7548,"surprise":0.8952,"surprisePercent":118.601,"result":"beat"},{"period":"2025-12-31","actualEPS":4.07,"estimateEPS":2.9062,"surprise":1.1638,"surprisePercent":40.0454,"result":"beat"},{"period":"2025-09-30","actualEPS":3.01,"estimateEPS":3.1789,"surprise":-0.1689,"surprisePercent":-5.3132,"result":"miss"}]},"filings":{"status":"ok","key":[{"form":"10-K","filingDate":"2026-02-26","accessionNumber":"0001510295-26-000009","url":"https://www.sec.gov/Archives/edgar/data/1510295/000151029526000009/mpc-20251231.htm"},{"form":"10-Q","filingDate":"2026-08-04","accessionNumber":"0001510295-26-000061","url":"https://www.sec.gov/Archives/edgar/data/1510295/000151029526000061/mpc-20260630.htm"},{"form":"8-K","filingDate":"2026-08-04","accessionNumber":"0001510295-26-000060","url":"https://www.sec.gov/Archives/edgar/data/1510295/000151029526000060/mpc-20260804.htm"}],"recent":[{"form":"144","filingDate":"2026-08-24","accessionNumber":"0001959173-26-006399","url":"https://www.sec.gov/Archives/edgar/data/1510295/000195917326006399/xsl144X01/primary_doc.xml"},{"form":"144","filingDate":"2026-08-20","accessionNumber":"0001957799-26-000163","url":"https://www.sec.gov/Archives/edgar/data/1510295/000195779926000163/xsl144X01/primary_doc.xml"},{"form":"4","filingDate":"2026-08-19","accessionNumber":"0001193125-26-356892","url":"https://www.sec.gov/Archives/edgar/data/1510295/000119312526356892/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-08-17","accessionNumber":"0001193125-26-354289","url":"https://www.sec.gov/Archives/edgar/data/1510295/000119312526354289/xslF345X06/ownership.xml"},{"form":"144","filingDate":"2026-08-17","accessionNumber":"0001959173-26-006060","url":"https://www.sec.gov/Archives/edgar/data/1510295/000195917326006060/xsl144X01/primary_doc.xml"},{"form":"4","filingDate":"2026-08-14","accessionNumber":"0001193125-26-352231","url":"https://www.sec.gov/Archives/edgar/data/1510295/000119312526352231/xslF345X06/ownership.xml"},{"form":"144","filingDate":"2026-08-12","accessionNumber":"0001959173-26-005932","url":"https://www.sec.gov/Archives/edgar/data/1510295/000195917326005932/xsl144X01/primary_doc.xml"},{"form":"4","filingDate":"2026-08-04","accessionNumber":"0001193125-26-332984","url":"https://www.sec.gov/Archives/edgar/data/1510295/000119312526332984/xslF345X06/ownership.xml"},{"form":"10-Q","filingDate":"2026-08-04","accessionNumber":"0001510295-26-000061","url":"https://www.sec.gov/Archives/edgar/data/1510295/000151029526000061/mpc-20260630.htm"},{"form":"8-K","filingDate":"2026-08-04","accessionNumber":"0001510295-26-000060","url":"https://www.sec.gov/Archives/edgar/data/1510295/000151029526000060/mpc-20260804.htm"}]},"links":{"secEdgar":"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001510295&type=&dateb=&owner=include&count=40","companyPage":"https://zelothorn.com/company/MPC"},"generatedAt":"2026-08-25T22:23:26.443Z"}
+{
+  "ticker": "MPC",
+  "cik": "0001510295",
+  "company": "Marathon Petroleum",
+  "summary": {
+    "status": "ok",
+    "text": "MPC has nearly 140 years of history in the energy business, and is a leading, integrated, downstream and midstream energy company. We operate one of the nation's largest refining systems with approximately 3.0 million barrels per day of crude oil refining capacity and believe we are one of the largest wholesale suppliers of gasoline and distillates to resellers in the United States. We distribute our refined products through one of the largest terminal operations in the United States and one of the largest private domestic fleets of inland petroleum product barges. Our integrated midstream energy asset network links producers of natural gas and NGLs from some of the largest supply basins in the United States to domestic and international markets. In addition, we are one of the largest producers and marketers of renewable diesel in the United States.\n\nOur operations consist of three reportable operating segments: Refining & Marketing, Midstream and Renewable Diesel. Each of these segments is organized and managed based upon the nature of the products and services it offers."
+  },
+  "earnings": {
+    "status": "ok",
+    "latest": {
+      "period": "2026-06-30",
+      "actualEPS": 17.73,
+      "estimateEPS": 13.8643,
+      "surprise": 3.8657,
+      "surprisePercent": 27.8824,
+      "result": "beat"
+    },
+    "history": [
+      {
+        "period": "2026-06-30",
+        "actualEPS": 17.73,
+        "estimateEPS": 13.8643,
+        "surprise": 3.8657,
+        "surprisePercent": 27.8824,
+        "result": "beat"
+      },
+      {
+        "period": "2026-03-31",
+        "actualEPS": 1.65,
+        "estimateEPS": 0.7548,
+        "surprise": 0.8952,
+        "surprisePercent": 118.601,
+        "result": "beat"
+      },
+      {
+        "period": "2025-12-31",
+        "actualEPS": 4.07,
+        "estimateEPS": 2.9062,
+        "surprise": 1.1638,
+        "surprisePercent": 40.0454,
+        "result": "beat"
+      },
+      {
+        "period": "2025-09-30",
+        "actualEPS": 3.01,
+        "estimateEPS": 3.1789,
+        "surprise": -0.1689,
+        "surprisePercent": -5.3132,
+        "result": "miss"
+      }
+    ]
+  },
+  "filings": {
+    "status": "ok",
+    "key": [
+      {
+        "form": "10-K",
+        "filingDate": "2026-02-26",
+        "accessionNumber": "0001510295-26-000009",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000151029526000009/mpc-20251231.htm"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0001510295-26-000061",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000151029526000061/mpc-20260630.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0001510295-26-000060",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000151029526000060/mpc-20260804.htm"
+      }
+    ],
+    "recent": [
+      {
+        "form": "144",
+        "filingDate": "2026-08-24",
+        "accessionNumber": "0001959173-26-006399",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000195917326006399/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-08-20",
+        "accessionNumber": "0001957799-26-000163",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000195779926000163/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-19",
+        "accessionNumber": "0001193125-26-356892",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000119312526356892/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-17",
+        "accessionNumber": "0001193125-26-354289",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000119312526354289/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-08-17",
+        "accessionNumber": "0001959173-26-006060",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000195917326006060/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-14",
+        "accessionNumber": "0001193125-26-352231",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000119312526352231/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-08-12",
+        "accessionNumber": "0001959173-26-005932",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000195917326005932/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0001193125-26-332984",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000119312526332984/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0001510295-26-000061",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000151029526000061/mpc-20260630.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0001510295-26-000060",
+        "url": "https://www.sec.gov/Archives/edgar/data/1510295/000151029526000060/mpc-20260804.htm"
+      }
+    ]
+  },
+  "links": {
+    "secEdgar": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001510295&type=&dateb=&owner=include&count=40",
+    "companyPage": "https://zelothorn.com/company/MPC"
+  },
+  "generatedAt": "2026-08-25T22:23:26.443Z"
+}

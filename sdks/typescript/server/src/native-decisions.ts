@@ -303,6 +303,10 @@ export function projectUsageSnapshot(
   })
 }
 
+export function shouldRetryUsageError(message: string): boolean {
+  return dispatchSync('shouldRetryUsageError', { message })
+}
+
 // --- limits ---
 
 export function resolveCheckLimitsParams(
@@ -325,14 +329,26 @@ export function validateListPlansParams(
   return dispatchSync('validateListPlansParams', { productRef: productRef ?? null })
 }
 
+/**
+ * Return every charge option on a plan, in wire order.
+ * @returns Charge objects (flat, unit, or seat).
+ */
 export function charges(priced: PricedLike | null | undefined): Charge[] {
   return dispatchSync('charges', { priced: priced ?? null })
 }
 
+/**
+ * Return the headline flat charge in each currency, excluding setup fees.
+ * @returns One flat charge per currency, in first-seen order.
+ */
 export function headlineCharges(priced: PricedLike | null | undefined): Charge[] {
   return dispatchSync('headlineCharges', { priced: priced ?? null })
 }
 
+/**
+ * Return the first per-unit charge, optionally scoped to one meter.
+ * @returns The metered charge, or null when the plan does not meter usage.
+ */
 export function perUnitCharge(
   priced: PricedLike | null | undefined,
   meter?: string | null,
@@ -340,14 +356,26 @@ export function perUnitCharge(
   return dispatchSync('perUnitCharge', { priced: priced ?? null, meter: meter ?? null })
 }
 
+/**
+ * Read the billing-cycle option from a plan.
+ * @returns Interval (and count when greater than 1), or null.
+ */
 export function billingCycle(priced: PricedLike | null | undefined): BillingCycle | null {
   return dispatchSync('billingCycle', { priced: priced ?? null })
 }
 
+/**
+ * Read the free-trial length in days from a plan.
+ * @returns Trial length in days, or null when the plan has no trial.
+ */
 export function trialDays(priced: PricedLike | null | undefined): number | null {
   return dispatchSync('trialDays', { priced: priced ?? null })
 }
 
+/**
+ * Read the included-unit cap for a meter from the limit option.
+ * @returns Cap (0 means unlimited), or null when no limit is configured.
+ */
 export function includedUnits(
   priced: PricedLike | null | undefined,
   meter?: string | null,
@@ -355,14 +383,26 @@ export function includedUnits(
   return dispatchSync('includedUnits', { priced: priced ?? null, meter: meter ?? null })
 }
 
+/**
+ * Read the meter a plan counts against from a per-unit charge or limit option.
+ * @returns Meter name, or null when neither a per-unit charge nor a limit names one.
+ */
 export function meterName(priced: PricedLike | null | undefined): string | null {
   return dispatchSync('meterName', { priced: priced ?? null })
 }
 
+/**
+ * True when the plan counts usage via a per-unit charge, limit, or tier.
+ * @returns Whether the plan has a usage counter even without a per-unit rate.
+ */
 export function countsUsage(priced: PricedLike | null | undefined): boolean {
   return dispatchSync('countsUsage', { priced: priced ?? null })
 }
 
+/**
+ * Convert a per-unit charge in minor units to credits via the USD peg.
+ * @returns Credits per metered unit (0 for a free meter).
+ */
 export function peggedCreditsPerUnit(
   chargeMinor: number,
   creditsPerMinorUnit: number,
@@ -375,6 +415,10 @@ export function peggedCreditsPerUnit(
   })
 }
 
+/**
+ * Credits per metered call when the charge currency matches the balance peg.
+ * @returns Credits per unit, or null when the rate cannot be established honestly.
+ */
 export function creditsPerUnitFromBalance(
   priced: PricedLike | null | undefined,
   balance: BalancePegLike | null | undefined,
@@ -423,6 +467,10 @@ export function resolveProductRef(
   })
 }
 
+/**
+ * Resolve a product ref from metadata or env, or throw a named missing-ref error.
+ * @returns A product ref string, or throws when neither is set.
+ */
 export function requireProductRef(
   metadataProduct?: string | null,
   envProduct?: string | null,
@@ -433,6 +481,10 @@ export function requireProductRef(
   })
 }
 
+/**
+ * Evaluate whether a product can be sold (active status plus an active plan).
+ * @returns Readiness result with issues and plan counts.
+ */
 export function evaluateProductReadiness(product: {
   status: string
   plans?: Array<{ isActive: boolean }>
@@ -445,6 +497,10 @@ export function evaluateProductReadiness(product: {
   return dispatchSync('evaluateProductReadiness', product)
 }
 
+/**
+ * Reject empty, placeholder, or non-prd_ product refs at construction time.
+ * @returns Throws when the ref is not a real prd_ identifier.
+ */
 export function assertValidProductRef(productRef: string, context: string): void {
   dispatchSync('assertValidProductRef', { productRef, context })
 }
@@ -460,6 +516,12 @@ export function evaluateFreshLimits(
   return dispatchSync('evaluateFreshLimits', { withinLimits, remaining })
 }
 
+/**
+ * Produce allow vs gate at the decision point.
+ *
+ * `buildGate` is accepted for API compatibility with the former TS body; the
+ * Rust path ignores it and uses in-crate `build_paywall_gate`.
+ */
 export function decidePaywallOutcome<TGate>(input: {
   withinLimits: boolean
   product: string
@@ -485,6 +547,13 @@ export function evaluateBalanceObservation(baseline: number, credits: number): n
   return dispatchSync('evaluateBalanceObservation', { baseline, credits })
 }
 
+export function ensureCustomerNext(
+  state: unknown | null | undefined,
+  event: unknown | null | undefined,
+): unknown {
+  return dispatchSync('ensureCustomerNext', { state: state ?? null, event: event ?? null })
+}
+
 export function gateNext(
   state: unknown | null | undefined,
   event: unknown | null | undefined,
@@ -500,14 +569,26 @@ export function resolveAuthenticatedUser(input: AuthResolutionInput): unknown {
 
 // --- paywall state / gate / payload ---
 
+/**
+ * Classify paywall state from limits and product context.
+ * @returns Canonical paywall state label.
+ */
 export function classifyPaywallState(limits: LimitResponseWithPlan | null): PaywallState {
   return dispatchSync('classifyPaywallState', { limits })
 }
 
+/**
+ * Build the human-readable paywall gate message from state and gate content.
+ * @returns Gate message string.
+ */
 export function buildGateMessage(state: PaywallState, gate: PaywallStructuredContent): string {
   return dispatchSync('buildGateMessage', { state, gate })
 }
 
+/**
+ * Build a soft nudge message when usage approaches plan limits.
+ * @returns Nudge message string.
+ */
 export function buildNudgeMessage(
   state: PaywallState,
   limits: LimitResponseWithPlan | null,
@@ -519,10 +600,18 @@ type LimitsLike = Omit<LimitResponseWithPlan, 'plan'> & {
   plan?: LimitResponseWithPlan['plan']
 }
 
+/**
+ * Build the structured paywall gate payload for a product and limits snapshot.
+ * @returns Structured gate content for paywall responses.
+ */
 export function buildPaywallGate(productRef: string, limits: LimitsLike): PaywallStructuredContent {
   return dispatchSync('buildPaywallGate', { productRef, limits })
 }
 
+/**
+ * Project a PaywallError into the client-facing payload shape.
+ * @returns Client payload object for paywall responses.
+ */
 export function paywallErrorToClientPayload(error: PaywallErrorLike): Record<string, unknown> {
   return dispatchSync('paywallErrorToClientPayload', {
     message: error.message,

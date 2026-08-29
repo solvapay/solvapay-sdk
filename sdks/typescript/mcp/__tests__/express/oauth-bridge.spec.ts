@@ -148,11 +148,7 @@ describe('createOAuthRegisterHandler', () => {
       oauthClient: replyOauth(502, { error: 'upstream_unreachable' }),
     })
     const { res, state } = mockRes()
-    await handler(
-      mockReq({ method: 'POST', path: '/oauth/register', body: {} }),
-      res,
-      vi.fn(),
-    )
+    await handler(mockReq({ method: 'POST', path: '/oauth/register', body: {} }), res, vi.fn())
     expect(state.statusCode).toBe(502)
     expect(state.body).toEqual({ error: 'upstream_unreachable' })
   })
@@ -160,8 +156,7 @@ describe('createOAuthRegisterHandler', () => {
 
 describe('createOAuthAuthorizeHandler', () => {
   it('302 redirects using the OAuth client location', async () => {
-    const location =
-      `${apiBaseUrl}/v1/customer/auth/authorize?response_type=code&client_id=c_1`
+    const location = `${apiBaseUrl}/v1/customer/auth/authorize?response_type=code&client_id=c_1`
     const handler = createOAuthAuthorizeHandler({
       apiBaseUrl,
       oauthClient: recordingOauthClient({ status: 302, headers: { location }, body: null }),
@@ -264,20 +259,20 @@ describe('createMcpOAuthBridge integration', () => {
 
   it('mounts discovery, register, authorize, token and revoke middlewares', async () => {
     const middlewares = createMcpOAuthBridge({
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-    oauthClient,
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
     })
     expect(middlewares.length).toBeGreaterThanOrEqual(7)
   })
 
   it('serves discovery doc hosted on publicBaseUrl — and no product_ref leaks into it', async () => {
     const middlewares = createMcpOAuthBridge({
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-    oauthClient,
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
     })
     const { res, state } = mockRes()
     const req = mockReq({ method: 'GET', path: '/.well-known/oauth-authorization-server' })
@@ -291,10 +286,10 @@ describe('createMcpOAuthBridge integration', () => {
 
   it('returns 405 with Allow: POST, OPTIONS on GET /mcp', async () => {
     const middlewares = createMcpOAuthBridge({
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-    oauthClient,
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
     })
     const { res, state } = mockRes()
     const req = mockReq({
@@ -312,10 +307,10 @@ describe('createMcpOAuthBridge integration', () => {
 
   it('mirrors native-scheme Origin on GET /mcp 405', async () => {
     const middlewares = createMcpOAuthBridge({
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-    oauthClient,
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
     })
     const { res, state } = mockRes()
     const req = mockReq({
@@ -333,10 +328,10 @@ describe('createMcpOAuthBridge integration', () => {
 
   it('allows anonymous initialize through mcp auth middleware', async () => {
     const middlewares = createMcpOAuthBridge({
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-    oauthClient,
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
     })
     const { res, state } = mockRes()
     const req = mockReq({
@@ -355,10 +350,10 @@ describe('createMcpOAuthBridge integration', () => {
 
   it('challenges anonymous initialize when authMode is all', async () => {
     const middlewares = createMcpOAuthBridge({
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-    oauthClient,
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
       authMode: 'all',
     })
     const { res, state } = mockRes()
@@ -383,10 +378,10 @@ describe('createMcpOAuthBridge integration', () => {
 
   it('exposes WWW-Authenticate via CORS on 401 anonymous tools/call with native origin', async () => {
     const middlewares = createMcpOAuthBridge({
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-    oauthClient,
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
     })
     const { res, state } = mockRes()
     const req = mockReq({
@@ -417,10 +412,10 @@ describe('createMcpOAuthBridge integration', () => {
 
   it('returns 404 on GET /.well-known/openid-configuration (SolvaPay is an OAuth AS, not an OIDC Provider)', async () => {
     const middlewares = createMcpOAuthBridge({
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-    oauthClient,
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
     })
     const { res, state } = mockRes()
     const req = mockReq({
@@ -461,10 +456,10 @@ describe('createMcpOAuthBridge integration', () => {
   it('puts mcpPath on the protected-resource identifier and the auth challenge', async () => {
     const mcpPath = '/agents'
     const middlewares = createMcpOAuthBridge({
-    publicBaseUrl,
-    apiBaseUrl,
-    productRef,
-    oauthClient,
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
       mcpPath,
     })
 

@@ -66,14 +66,11 @@ func filterToolsByAudience(ctx context.Context, tools []*mcpsdk.Tool, audiences 
 		}
 		payload = append(payload, item)
 	}
-	args := map[string]any{
-		"tools":     payload,
-		"audiences": audiences,
-	}
+	var userAgentArg any
 	if userAgent != "" {
-		args["userAgent"] = userAgent
+		userAgentArg = userAgent
 	}
-	raw, err := CallSync(ctx, "mcpHideToolsByAudience", args)
+	raw, err := McpHideToolsByAudience(ctx, payload, audiences, userAgentArg)
 	if err != nil {
 		return nil, err
 	}

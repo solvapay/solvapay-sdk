@@ -166,7 +166,9 @@ export function buildTestPlanOptions(opts: CreateTestPlanOptions): WireOption[] 
 
   const recurring = planType === 'recurring' || planType === 'hybrid'
   if (recurring) {
-    options.push(BILLING_CYCLE_BY_CYCLE[opts.billingCycle ?? 'monthly'] ?? BILLING_CYCLE_BY_CYCLE.monthly)
+    options.push(
+      BILLING_CYCLE_BY_CYCLE[opts.billingCycle ?? 'monthly'] ?? BILLING_CYCLE_BY_CYCLE.monthly,
+    )
   }
 
   if (planType === 'recurring' || planType === 'one-time') {

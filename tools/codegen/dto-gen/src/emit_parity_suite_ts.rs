@@ -19,7 +19,16 @@ pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
     );
     out.push_str("import { describe, expect, expectTypeOf, it, vi } from 'vitest'\n");
     out.push_str("import { SolvaPayError } from '@solvapay/core'\n");
-    out.push_str("import { PaywallError } from '../paywall'\n");
+    out.push_str(
+        "import {\n\
+         \x20 ANONYMOUS_CUSTOMER_REF,\n\
+         \x20 CUSTOMER_DEDUP_MAX_CACHE_SIZE,\n\
+         \x20 CUSTOMER_DEDUP_TTL_MS,\n\
+         \x20 PaywallError,\n\
+         \x20 REQUEST_ID_FORMAT,\n\
+         \x20 USAGE_ACTION_TYPE,\n\
+         } from '../paywall'\n",
+    );
     out.push_str("import type { SolvaPayClient } from '../types/client'\n");
     out.push_str("import type { SolvaPayClientGenerated } from '../types/client.generated'\n");
     out.push_str("import * as nativeDecisions from '../native-decisions'\n");
@@ -37,8 +46,20 @@ pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
         out,
         "  const expectedMaxRetries = {}\n\
          \x20 const expectedInitialDelayMs = {}\n\
-         \x20 const expectedLimitsCacheTTLMs = {}\n",
-        defaults.max_retries, defaults.initial_delay_ms, defaults.limits_cache_ttl_ms
+         \x20 const expectedLimitsCacheTTLMs = {}\n\
+         \x20 const expectedCustomerDedupTTLMs = {}\n\
+         \x20 const expectedCustomerDedupMaxCacheSize = {}\n\
+         \x20 const expectedAnonymousCustomerRef = '{}'\n\
+         \x20 const expectedRequestIdFormat = '{}'\n\
+         \x20 const expectedUsageActionType = '{}'\n",
+        defaults.max_retries,
+        defaults.initial_delay_ms,
+        defaults.limits_cache_ttl_ms,
+        defaults.customer_dedup_ttl_ms,
+        defaults.customer_dedup_max_cache_size,
+        defaults.anonymous_customer_ref,
+        defaults.request_id_format,
+        defaults.usage_action_type
     );
 
     out.push_str(
@@ -79,6 +100,13 @@ pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
                 const paywall = new SolvaPayPaywall({} as never)\n\
                 expect(Reflect.get(paywall, 'limitsCacheTTL')).toBe(expectedLimitsCacheTTLMs)\n\
              })\n\
+             it('customer-dedup and usage defaults match the contract', () => {\n\
+                expect(CUSTOMER_DEDUP_TTL_MS).toBe(expectedCustomerDedupTTLMs)\n\
+                expect(CUSTOMER_DEDUP_MAX_CACHE_SIZE).toBe(expectedCustomerDedupMaxCacheSize)\n\
+                expect(ANONYMOUS_CUSTOMER_REF).toBe(expectedAnonymousCustomerRef)\n\
+                expect(REQUEST_ID_FORMAT).toBe(expectedRequestIdFormat)\n\
+                expect(USAGE_ACTION_TYPE).toBe(expectedUsageActionType)\n\
+             })\n\
            })\n\n",
     );
 
@@ -95,6 +123,7 @@ pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
                  product: 'prd_x',\n\
                  checkoutUrl: 'https://example.com/checkout',\n\
                  message: 'Payment required',\n\
+                 shortMessage: 'Payment required',\n\
                })\n\
                 expect(err.name).toBe('PaywallError')\n\
                 expect(err.structuredContent.kind).toBe('payment_required')\n\
@@ -151,8 +180,8 @@ pub fn emit_parity_suite_ts(ir: &Ir) -> GenResult<String> {
 mod tests {
     use super::*;
     use crate::ir::{
-        IrAvailability, IrDefaults, IrEntryPoint, IrEntrySection, IrErrorKind, IrLangNames,
-        IrRubyReceiver, IrRubyTarget, IrSyncKind,
+        IrAvailability, IrDefaults, IrEmissionMatrix, IrEntryPoint, IrEntrySection, IrErrorKind,
+        IrLangNames, IrRubyReceiver, IrRubyTarget, IrSyncKind,
     };
     use std::collections::BTreeMap;
 
@@ -197,6 +226,9 @@ mod tests {
                     rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
                 },
                 sync_ts: IrSyncKind::Async,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: None,
+                feature: None,
                 ruby_target: IrRubyTarget {
                     owner: "SolvaPay::Client".into(),
                     name: "check_limits".into(),

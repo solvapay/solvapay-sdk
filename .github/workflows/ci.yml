@@ -73,7 +73,7 @@ jobs:
         run: pnpm build:packages
 
       - name: Check vendored MCP App widget
-        run: pnpm exec tsx tools/mcp-app-widget/check.ts
+        run: pnpm generated:external --rebuild --id mcpAppWidget
 
       - name: Run tests
         run: pnpm test
@@ -210,6 +210,11 @@ jobs:
         # fails on uncovered entries; this named step makes the signal explicit.
         run: cargo test -q -p dto-gen --lib doc_coverage -- --nocapture
 
+      - name: doc parity gate
+        # Cross-language emitted-summary parity (Phase 3). doc_coverage proves the
+        # IR has a summary; this proves every language actually rendered it.
+        run: cargo test -q -p dto-gen --test doc_parity -- --nocapture
+
       - name: solvapay-dto regen drift
         # Canonical flag set lives in tools/codegen/gen.ts — humans and CI share `pnpm gen` / `pnpm gen:check`.
         working-directory: .
@@ -218,6 +223,10 @@ jobs:
       - name: '@generated header gate'
         working-directory: .
         run: pnpm exec tsx tools/codegen/check-generated-headers.ts
+
+      - name: External generated markers
+        working-directory: .
+        run: pnpm generated:external --markers-only
 
       - name: Setup Node.js (wasm Fetch harness)
         uses: actions/setup-node@v4
@@ -265,6 +274,10 @@ jobs:
 
       - name: fixture suite (bound pure-core suites; unbound skipped)
         run: cargo run -q -p fixture-runner -- contract/fixtures
+
+      - name: Generator completeness (gen:verify)
+        working-directory: .
+        run: pnpm gen:verify
 
   rust-mcp:
     name: rust-mcp
@@ -784,6 +797,15 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.6.0
+
+      - name: Install repo JS deps
+        working-directory: .
+        run: pnpm install --frozen-lockfile
+
       - name: Install Rust toolchain + WASI target
         run: rustup show && rustup target add wasm32-wasip1-threads
 
@@ -795,6 +817,10 @@ jobs:
 
       - name: Build WASI fallback
         run: npx napi build --platform --release --target wasm32-wasip1-threads
+
+      - name: WASI generated-file drift
+        working-directory: .
+        run: pnpm generated:external --rebuild --id nodeNativeNapi
 
       - name: Smoke test (NAPI_RS_FORCE_WASI=error)
         # CLI ≥3.7: only `true` / `error` force WASI (`1` is ignored).
@@ -1132,6 +1158,15 @@ jobs:
       - name: Superseded MCP Python gate (Rust MCP ops)
         run: pnpm mcp-superseded-py:check
 
+      - name: Superseded MCP Go gate (Rust MCP ops)
+        run: pnpm mcp-superseded-go:check
+
+      - name: Superseded MCP Ruby gate (Rust MCP ops)
+        run: pnpm mcp-superseded-rb:check
+
+      - name: Superseded MCP Rust gate (Rust MCP ops)
+        run: pnpm mcp-superseded-rs:check
+
       - name: MCP layer-3 adapter line budget
         run: pnpm mcp-layer3-budget:check
 
@@ -1191,10 +1226,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Rebuild wasm artifacts + drift check
-        working-directory: sdks/wasm
-        run: |
-          pnpm build:wasm
-          pnpm build:check-drift
+        working-directory: .
+        run: pnpm generated:external --rebuild --id wasmPkg
 
       - name: Cargo feature / exclusivity checks
         run: |
@@ -1286,23 +1319,23 @@ jobs:
         with:
           go-version: '1.25'
 
-      - name: Rebuild embedded WASI guest
-        run: ./sdks/go/scripts/build-wasm.sh
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: WASM freshness note (CI uses rebuilt artifact)
-        # cargo wasm32-wasip1 output is not bit-stable across hosts (mac vs
-        # linux/amd64 vs GHA), even on the same rustc channel without wasm-opt.
-        # Always rebuild above; subsequent Go steps use that file. Warn when the
-        # committed blob drifts so local `go test` without a rebuild stays honest.
-        run: |
-          if ! git diff --exit-code -- sdks/go/solvapay_core.wasm; then
-            echo "::warning::committed solvapay_core.wasm differs from this runner's rebuild (cross-host wasm is not bit-stable). CI tests use the rebuilt artifact."
-            echo "Refresh the committed blob from linux/amd64 when go-wasm/core sources change:"
-            echo "  docker run --rm --platform linux/amd64 -v \"\$PWD:/workspace\" -w /workspace/rust \\"
-            echo "    rust:1.96.0-bookworm bash -c 'export PATH=/usr/local/cargo/bin:\$PATH; rustup target add wasm32-wasip1; ./sdks/go/scripts/build-wasm.sh'"
-          else
-            echo "OK: committed solvapay_core.wasm matches this runner's rebuild"
-          fi
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.6.0
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild embedded WASI guest
+        # wasm32-wasip1 is not bit-stable across hosts; goCoreWasm is
+        # nonDeterministic so a hash/gitDiff mismatch warns instead of failing.
+        run: pnpm generated:external --rebuild --id goCoreWasm
 
       - name: gofmt
         working-directory: sdks/go
@@ -1395,18 +1428,18 @@ jobs:
       - name: cargo build -p solvapay-c
         run: cargo build -p solvapay-c
 
-      - name: cbindgen header drift check
-        run: |
-          if ! git diff --exit-code -- sdks/capi/include/solvapay.h; then
-            echo "sdks/capi/include/solvapay.h is stale — rebuild and commit:" >&2
-            echo "  cargo build -p solvapay-c" >&2
-            exit 1
-          fi
-          if ! grep -q '@generated' sdks/capi/include/solvapay.h; then
-            echo "missing @generated header: sdks/capi/include/solvapay.h" >&2
-            exit 1
-          fi
-          echo "OK: solvapay.h up to date and @generated"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.6.0
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
 
       - name: cargo test -p solvapay-c
         # Handle registry is process-global; parallel lib tests race on reuse assertions.
@@ -1415,23 +1448,8 @@ jobs:
       - name: cargo clippy -p solvapay-c
         run: cargo clippy -p solvapay-c --all-targets --features fixture-host -- -D warnings
 
-      - name: cbindgen fixture-host header drift check
-        run: |
-          cargo build -p solvapay-c --features fixture-host
-          if ! git diff --exit-code -- sdks/capi/include/solvapay.h sdks/capi/include/solvapay_fixture_host.h; then
-            echo "C headers stale — rebuild and commit:" >&2
-            echo "  cargo build -p solvapay-c --features fixture-host" >&2
-            exit 1
-          fi
-          if grep -q 'solvapay_fh_' sdks/capi/include/solvapay.h; then
-            echo "solvapay.h must not export fixture-host symbols" >&2
-            exit 1
-          fi
-          if ! grep -q '@generated' sdks/capi/include/solvapay_fixture_host.h; then
-            echo "missing @generated header: sdks/capi/include/solvapay_fixture_host.h" >&2
-            exit 1
-          fi
-          echo "OK: solvapay_fixture_host.h up to date and @generated"
+      - name: cbindgen header drift check
+        run: pnpm generated:external --rebuild --id capiHeader,capiFixtureHostHeader
 
       - name: C smoke (create/call/free + handle misuse)
         run: ./sdks/capi/ctest/run.sh
@@ -1545,6 +1563,9 @@ jobs:
         continue-on-error: false
         # Validates non-generated documentation links (skips docs/api/** which are generated by docs repo)
         # Note: Documentation is built by the docs repo, not in this CI workflow
+
+      - name: Check retired symbols
+        run: pnpm retired-symbols:check
 
       - name: Check TypeDoc configuration
         id: check-typedoc

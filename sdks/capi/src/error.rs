@@ -81,6 +81,7 @@ mod tests {
             product: "prod_1".to_owned(),
             checkout_url: "https://checkout.example/x".to_owned(),
             message: "Payment required".to_owned(),
+            short_message: "Payment required".to_owned(),
             confirmation_url: None,
             plans: None,
             balance: None,

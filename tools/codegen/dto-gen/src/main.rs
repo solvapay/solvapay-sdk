@@ -44,22 +44,31 @@ fn run() -> Result<(), GenError> {
     let mut wasm_ts_out: Option<PathBuf> = None;
     let mut native_py_out: Option<PathBuf> = None;
     let mut py_stub_out: Option<PathBuf> = None;
+    let mut py_helpers_out: Option<PathBuf> = None;
     let mut py_parity_out: Option<PathBuf> = None;
     let mut py_conformance_out: Option<PathBuf> = None;
     let mut native_rb_out: Option<PathBuf> = None;
     let mut rb_client_out: Option<PathBuf> = None;
     let mut rb_rbs_out: Option<PathBuf> = None;
+    let mut rb_mcp_rbs_out: Option<PathBuf> = None;
     let mut rb_parity_out: Option<PathBuf> = None;
     let mut rb_conformance_out: Option<PathBuf> = None;
     let mut go_conformance_out: Option<PathBuf> = None;
     let mut rs_client_out: Option<PathBuf> = None;
+    let mut rs_helpers_out: Option<PathBuf> = None;
     let mut rs_parity_out: Option<PathBuf> = None;
     let mut go_client_out: Option<PathBuf> = None;
+    let mut go_helpers_out: Option<PathBuf> = None;
     let mut go_parity_out: Option<PathBuf> = None;
     let mut c_bindings_out: Option<PathBuf> = None;
     let mut c_conformance_out: Option<PathBuf> = None;
     let mut c_parity_out: Option<PathBuf> = None;
     let mut fixture_runner_out: Option<PathBuf> = None;
+    let mut rb_mcp_layer2_out: Option<PathBuf> = None;
+    let mut py_mcp_layer2_out: Option<PathBuf> = None;
+    let mut go_mcp_layer2_out: Option<PathBuf> = None;
+    let mut ts_mcp_native_out: Option<PathBuf> = None;
+    let mut rs_mcp_layer2_out: Option<PathBuf> = None;
     let mut core_src: Option<PathBuf> = None;
     let mut binding_residue: Option<PathBuf> = None;
     let mut transport_src: Option<PathBuf> = None;
@@ -123,6 +132,9 @@ fn run() -> Result<(), GenError> {
             "--py-stub-out" => {
                 py_stub_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--py-helpers-out" => {
+                py_helpers_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "--py-parity-out" => {
                 py_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
@@ -138,6 +150,9 @@ fn run() -> Result<(), GenError> {
             "--rb-rbs-out" => {
                 rb_rbs_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--rb-mcp-rbs-out" => {
+                rb_mcp_rbs_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "--rb-parity-out" => {
                 rb_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
@@ -150,11 +165,32 @@ fn run() -> Result<(), GenError> {
             "--rs-client-out" => {
                 rs_client_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
+            "--rs-helpers-out" => {
+                rs_helpers_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--rb-mcp-layer2-out" => {
+                rb_mcp_layer2_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--py-mcp-layer2-out" => {
+                py_mcp_layer2_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--go-mcp-layer2-out" => {
+                go_mcp_layer2_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--ts-mcp-native-out" => {
+                ts_mcp_native_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--rs-mcp-layer2-out" => {
+                rs_mcp_layer2_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
             "--rs-parity-out" => {
                 rs_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
             "--go-client-out" => {
                 go_client_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
+            }
+            "--go-helpers-out" => {
+                go_helpers_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
             }
             "--go-parity-out" => {
                 go_parity_out = Some(PathBuf::from(args.next().ok_or(GenError::Usage)?));
@@ -232,22 +268,31 @@ fn run() -> Result<(), GenError> {
             wasm_ts_out: wasm_ts_out.as_deref(),
             native_py_out: native_py_out.as_deref(),
             py_stub_out: py_stub_out.as_deref(),
+            py_helpers_out: py_helpers_out.as_deref(),
             py_parity_out: py_parity_out.as_deref(),
             py_conformance_out: py_conformance_out.as_deref(),
             native_rb_out: native_rb_out.as_deref(),
             rb_client_out: rb_client_out.as_deref(),
             rb_rbs_out: rb_rbs_out.as_deref(),
+            rb_mcp_rbs_out: rb_mcp_rbs_out.as_deref(),
             rb_parity_out: rb_parity_out.as_deref(),
             rb_conformance_out: rb_conformance_out.as_deref(),
             go_conformance_out: go_conformance_out.as_deref(),
             rs_client_out: rs_client_out.as_deref(),
+            rs_helpers_out: rs_helpers_out.as_deref(),
             rs_parity_out: rs_parity_out.as_deref(),
             go_client_out: go_client_out.as_deref(),
+            go_helpers_out: go_helpers_out.as_deref(),
             go_parity_out: go_parity_out.as_deref(),
             c_bindings_out: c_bindings_out.as_deref(),
             c_conformance_out: c_conformance_out.as_deref(),
             c_parity_out: c_parity_out.as_deref(),
             fixture_runner_out: fixture_runner_out.as_deref(),
+            rb_mcp_layer2_out: rb_mcp_layer2_out.as_deref(),
+            py_mcp_layer2_out: py_mcp_layer2_out.as_deref(),
+            go_mcp_layer2_out: go_mcp_layer2_out.as_deref(),
+            ts_mcp_native_out: ts_mcp_native_out.as_deref(),
+            rs_mcp_layer2_out: rs_mcp_layer2_out.as_deref(),
         },
     )
 }

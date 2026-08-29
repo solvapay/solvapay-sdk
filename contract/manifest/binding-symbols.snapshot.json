@@ -2176,6 +2176,65 @@
       "coreCall": "disable_auto_recharge",
       "clientCallArgs": []
     },
+    "ensureCustomerNext": {
+      "core": "solvapay_core::ensure_customer::ensure_customer_next",
+      "names": {
+        "ts": "ensureCustomerNext",
+        "py": "ensure_customer_next",
+        "rb": "ensure_customer_next",
+        "go": "EnsureCustomerNext",
+        "rust": "ensure_customer_next",
+        "c": "ensureCustomerNext"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "state",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "event",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 42,
+      "section": "paywall-decision",
+      "doc": "Binding for `ensureCustomerNext`.",
+      "docWasm": null,
+      "rustFnName": "ensure_customer_next_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "resultAsValue",
+        "args": [
+          "state.as_ref()",
+          "event.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "ensure_customer_next",
+      "clientCallArgs": []
+    },
     "evaluateBalanceObservation": {
       "core": "solvapay_core::balance_poll::evaluate_balance_observation",
       "names": {
@@ -5220,6 +5279,54 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": null,
+      "clientCallArgs": []
+    },
+    "shouldRetryUsageError": {
+      "core": "solvapay_core::usage::should_retry_usage_error",
+      "names": {
+        "ts": "shouldRetryUsageError",
+        "py": "should_retry_usage_error",
+        "rb": "should_retry_usage_error",
+        "go": "ShouldRetryUsageError",
+        "rust": "should_retry_usage_error",
+        "c": "shouldRetryUsageError"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "message",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 26,
+      "section": "usage",
+      "doc": "Binding for `shouldRetryUsageError`.",
+      "docWasm": null,
+      "rustFnName": "should_retry_usage_error_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "&message"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "should_retry_usage_error",
       "clientCallArgs": []
     },
     "trackUsage": {

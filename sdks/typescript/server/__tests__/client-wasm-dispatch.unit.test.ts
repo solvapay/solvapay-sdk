@@ -54,7 +54,15 @@ const GROUP_C: WasmClientMethod[] = [
   'disableAutoRecharge',
 ]
 
-const ALL_METHODS: WasmClientMethod[] = [...GROUP_A, ...GROUP_B, ...GROUP_C]
+const GROUP_MCP: WasmClientMethod[] = [
+  'mcpBootstrap',
+  'mcpCallBuiltinTool',
+  'mcpReadResource',
+  'mcpOauthRequest',
+  'mcpDispatch',
+]
+
+const ALL_METHODS: WasmClientMethod[] = [...GROUP_A, ...GROUP_B, ...GROUP_C, ...GROUP_MCP]
 
 function fakeClient(overrides: Partial<WasmClientLike> = {}): WasmClientLike {
   const base = Object.fromEntries(
@@ -398,5 +406,47 @@ describe('createSolvaPayClient Group B/C WASM dispatch', () => {
     const client = createSolvaPayClient({ apiKey: 'sk_test' })
     expect(await client.deleteProduct!('prod_1')).toBeNull()
     expect(await client.deletePlan!('prod_1', 'plan_1')).toBeNull()
+  })
+})
+
+describe('createSolvaPayClient Group MCP WASM dispatch', () => {
+  const fetchMock = vi.fn()
+
+  beforeEach(() => {
+    resetWasmCache()
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    resetWasmCache()
+    vi.unstubAllGlobals()
+  })
+
+  it('dispatches each Group MCP method to WasmClient', async () => {
+    const calls: Array<{ fn: string; args: string }> = []
+    const wasm = fakeClient(
+      Object.fromEntries(
+        GROUP_MCP.map(fn => [
+          fn,
+          vi.fn(async (argsJson: string) => {
+            calls.push({ fn, args: argsJson })
+            return JSON.stringify({ ok: true, value: { fromWasm: fn } })
+          }),
+        ]),
+      ) as Partial<WasmClientLike>,
+    )
+    setWasmClientForTests(wasm)
+
+    const client = createSolvaPayClient({ apiKey: 'sk_test' })
+    const payload = { ping: true }
+    expect(await client.mcpBootstrap!(payload)).toEqual({ fromWasm: 'mcpBootstrap' })
+    expect(await client.mcpCallBuiltinTool!(payload)).toEqual({ fromWasm: 'mcpCallBuiltinTool' })
+    expect(await client.mcpReadResource!(payload)).toEqual({ fromWasm: 'mcpReadResource' })
+    expect(await client.mcpOauthRequest!(payload)).toEqual({ fromWasm: 'mcpOauthRequest' })
+    expect(await client.mcpDispatch!(payload)).toEqual({ fromWasm: 'mcpDispatch' })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(calls.map(c => c.fn).sort()).toEqual([...GROUP_MCP].sort())
   })
 })

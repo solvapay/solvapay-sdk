@@ -337,6 +337,7 @@ fn collect_named_refs(ty: &IrTypeRef, out: &mut Vec<String>) {
         IrTypeRef::Named(n) => out.push(n.clone()),
         IrTypeRef::Vec(inner) | IrTypeRef::Map(inner) => collect_named_refs(inner, out),
         IrTypeRef::LiteralString(_)
+        | IrTypeRef::LiteralBool(_)
         | IrTypeRef::String
         | IrTypeRef::I64
         | IrTypeRef::F64
@@ -426,7 +427,7 @@ fn render_overlay_type_ref(ir: &Ir, ty: &IrTypeRef) -> String {
         IrTypeRef::String | IrTypeRef::LiteralString(_) => "String".into(),
         IrTypeRef::I64 => "i64".into(),
         IrTypeRef::F64 => "f64".into(),
-        IrTypeRef::Bool => "bool".into(),
+        IrTypeRef::Bool | IrTypeRef::LiteralBool(_) => "bool".into(),
         IrTypeRef::Value => "Value".into(),
         IrTypeRef::Vec(inner) => format!("Vec<{}>", render_overlay_type_ref(ir, inner)),
         IrTypeRef::Map(inner) => {
@@ -683,7 +684,7 @@ fn render_type_ref(ty: &IrTypeRef) -> String {
         IrTypeRef::String | IrTypeRef::LiteralString(_) => "String".into(),
         IrTypeRef::I64 => "i64".into(),
         IrTypeRef::F64 => "f64".into(),
-        IrTypeRef::Bool => "bool".into(),
+        IrTypeRef::Bool | IrTypeRef::LiteralBool(_) => "bool".into(),
         IrTypeRef::Value => "Value".into(),
         IrTypeRef::Vec(inner) => format!("Vec<{}>", render_type_ref(inner)),
         IrTypeRef::Map(inner) => {

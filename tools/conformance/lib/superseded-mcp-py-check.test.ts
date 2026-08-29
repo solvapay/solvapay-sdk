@@ -3,10 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { REPO_ROOT } from '../../shared/paths.js'
-import {
-  formatMcpPySupersededReport,
-  runMcpSupersededPyCheck,
-} from './superseded-mcp-py-check.js'
+import { formatMcpPySupersededReport, runMcpSupersededPyCheck } from './superseded-mcp-py-check.js'
 
 function makeRepo(files: Record<string, string>): string {
   const root = mkdtempSync(path.join(tmpdir(), 'superseded-mcp-py-'))

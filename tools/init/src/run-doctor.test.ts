@@ -39,10 +39,7 @@ describe('runDoctorInDirectory', () => {
   it('fails when the secret key is missing', async () => {
     vi.mocked(readSolvaPaySecretKeyFromEnv).mockResolvedValue(undefined)
     vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue(undefined)
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ status: 401, ok: false }),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401, ok: false }))
 
     const report = await runDoctorInDirectory({ cwd: TEST_CWD })
 
@@ -91,10 +88,7 @@ describe('runDoctorInDirectory', () => {
   it('targets api-dev when --dev is set', async () => {
     vi.mocked(readSolvaPaySecretKeyFromEnv).mockResolvedValue(undefined)
     vi.mocked(readSolvaPayProductRefFromEnv).mockResolvedValue(undefined)
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ status: 401, ok: false }),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401, ok: false }))
 
     const report = await runDoctorInDirectory({ cwd: TEST_CWD, options: { dev: true } })
 

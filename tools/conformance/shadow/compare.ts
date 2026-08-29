@@ -18,10 +18,8 @@ export type WireExchange = {
 /**
  * Outcome of one side for a scenario.
  *
- * Step 53: the two sides are the npm facade binding (WASM `FetchTransport`) and
- * the Rust CLI (shadow-invoker). The `ts*` field/label names below are retained
- * only for report/golden compatibility — "ts" now denotes the facade side, not
- * a TypeScript implementation.
+ * Side A is the npm `@solvapay/server` facade over the WASM `FetchTransport`.
+ * Side B is the Rust CLI (shadow-invoker).
  */
 export type SideOutcome = {
   ok: boolean
@@ -33,21 +31,17 @@ export type SideOutcome = {
 export type Divergence = {
   op: string
   args: unknown
-  tsNormalized: unknown
+  facadeNormalized: unknown
   rustNormalized: unknown
-  tsRaw: unknown
+  facadeRaw: unknown
   rustRaw: unknown
-  /**
-   * Facade-side wire dump. Serialized key remains `tsWire` for persisted
-   * shadow-report compatibility (Step 53: facade ≠ TypeScript body).
-   */
-  tsWire: WireExchange[]
+  facadeWire: WireExchange[]
   rustWire: WireExchange[]
   path?: string
 }
 
 export type CompareResult =
-  | { identical: true; tsNormalized: unknown; rustNormalized: unknown }
+  | { identical: true; facadeNormalized: unknown; rustNormalized: unknown }
   | { identical: false; divergence: Divergence }
 
 /**
@@ -149,15 +143,18 @@ function canonicalizeOutcomeValue(ok: boolean, value: unknown): unknown {
 export function compareSides(input: {
   op: string
   args: unknown
-  ts: SideOutcome
+  facade: SideOutcome
   rust: SideOutcome
   rules: ShadowNormalizeRules
 }): CompareResult {
-  const tsRaw = { ok: input.ts.ok, value: input.ts.value }
+  const facadeRaw = { ok: input.facade.ok, value: input.facade.value }
   const rustRaw = { ok: input.rust.ok, value: input.rust.value }
-  const tsNormalized = {
-    ok: input.ts.ok,
-    value: normalizeVolatile(canonicalizeOutcomeValue(input.ts.ok, input.ts.value), input.rules),
+  const facadeNormalized = {
+    ok: input.facade.ok,
+    value: normalizeVolatile(
+      canonicalizeOutcomeValue(input.facade.ok, input.facade.value),
+      input.rules,
+    ),
   }
   const rustNormalized = {
     ok: input.rust.ok,
@@ -167,8 +164,8 @@ export function compareSides(input: {
     ),
   }
 
-  if (deepEqualNormalized(tsNormalized, rustNormalized)) {
-    return { identical: true, tsNormalized, rustNormalized }
+  if (deepEqualNormalized(facadeNormalized, rustNormalized)) {
+    return { identical: true, facadeNormalized, rustNormalized }
   }
 
   return {
@@ -176,13 +173,13 @@ export function compareSides(input: {
     divergence: {
       op: input.op,
       args: input.args,
-      tsNormalized,
+      facadeNormalized,
       rustNormalized,
-      tsRaw,
+      facadeRaw,
       rustRaw,
-      tsWire: input.ts.wire,
+      facadeWire: input.facade.wire,
       rustWire: input.rust.wire,
-      path: firstDiffPath(tsNormalized, rustNormalized),
+      path: firstDiffPath(facadeNormalized, rustNormalized),
     },
   }
 }

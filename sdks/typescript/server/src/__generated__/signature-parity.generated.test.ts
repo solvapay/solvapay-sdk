@@ -5,7 +5,14 @@
 
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 import { SolvaPayError } from '@solvapay/core'
-import { PaywallError } from '../paywall'
+import {
+  ANONYMOUS_CUSTOMER_REF,
+  CUSTOMER_DEDUP_MAX_CACHE_SIZE,
+  CUSTOMER_DEDUP_TTL_MS,
+  PaywallError,
+  REQUEST_ID_FORMAT,
+  USAGE_ACTION_TYPE,
+} from '../paywall'
 import type { SolvaPayClient } from '../types/client'
 import type { SolvaPayClientGenerated } from '../types/client.generated'
 import * as nativeDecisions from '../native-decisions'
@@ -15,6 +22,11 @@ describe('signature-parity (generated)', () => {
   const expectedMaxRetries = 2
   const expectedInitialDelayMs = 500
   const expectedLimitsCacheTTLMs = 10000
+  const expectedCustomerDedupTTLMs = 60000
+  const expectedCustomerDedupMaxCacheSize = 1000
+  const expectedAnonymousCustomerRef = 'anonymous'
+  const expectedRequestIdFormat = 'solvapay_{epochMs}_{random9}'
+  const expectedUsageActionType = 'api_call'
 
   describe('defaults', () => {
 it('withRetry uses frozen retry defaults', async () => {
@@ -53,6 +65,13 @@ const { SolvaPayPaywall } = await import('../paywall')
 const paywall = new SolvaPayPaywall({} as never)
 expect(Reflect.get(paywall, 'limitsCacheTTL')).toBe(expectedLimitsCacheTTLMs)
 })
+it('customer-dedup and usage defaults match the contract', () => {
+expect(CUSTOMER_DEDUP_TTL_MS).toBe(expectedCustomerDedupTTLMs)
+expect(CUSTOMER_DEDUP_MAX_CACHE_SIZE).toBe(expectedCustomerDedupMaxCacheSize)
+expect(ANONYMOUS_CUSTOMER_REF).toBe(expectedAnonymousCustomerRef)
+expect(REQUEST_ID_FORMAT).toBe(expectedRequestIdFormat)
+expect(USAGE_ACTION_TYPE).toBe(expectedUsageActionType)
+})
 })
 
   describe('error mapping', () => {
@@ -67,6 +86,7 @@ kind: 'payment_required',
 product: 'prd_x',
 checkoutUrl: 'https://example.com/checkout',
 message: 'Payment required',
+shortMessage: 'Payment required',
 })
 expect(err.name).toBe('PaywallError')
 expect(err.structuredContent.kind).toBe('payment_required')

@@ -4,8 +4,6 @@
 
 use serde_json::Value;
 use solvapay_core::PaywallGate;
-use solvapay_dto::CreateUsageRequestOutcome;
-
 use crate::client::Client;
 
 /// Options for [`Client::gate`].
@@ -65,6 +63,8 @@ pub struct Allow {
     pub(crate) product: String,
     pub(crate) meter_name: String,
     pub(crate) limits: Value,
+    pub(crate) customer: CustomerSnapshot,
+    pub(crate) driver_state: Value,
 }
 
 /// Options for usage tracking after an allowed request.
@@ -79,47 +79,31 @@ pub struct TrackOpts {
 impl Allow {
     /// Customer snapshot used by payable MCP `ResponseContext`.
     pub fn customer(&self) -> CustomerSnapshot {
-        let limits = if self.limits.is_null() {
-            Value::Object(serde_json::Map::new())
-        } else {
-            self.limits.clone()
-        };
-        let obj = limits.as_object();
-        let balance = obj
-            .and_then(|o| o.get("creditBalance"))
-            .cloned()
-            .unwrap_or(Value::from(0));
-        let remaining = obj
-            .and_then(|o| o.get("remaining"))
-            .cloned()
-            .unwrap_or(Value::Null);
-        let within_limits = obj
-            .and_then(|o| o.get("withinLimits"))
-            .cloned()
-            .unwrap_or(Value::Bool(true));
-        let plan = obj
-            .and_then(|o| o.get("plan"))
-            .cloned()
-            .unwrap_or(Value::Null);
+        self.customer.clone()
+    }
+
+    /// Copy the core driver snapshot onto the host `CustomerSnapshot`.
+    pub(crate) fn from_core_customer(customer: solvapay_core::CustomerSnapshot) -> CustomerSnapshot {
         CustomerSnapshot {
-            customer_ref: self.backend_ref.clone(),
-            balance,
-            remaining,
-            within_limits,
-            plan,
+            customer_ref: customer.customer_ref,
+            balance: serde_json::json!(customer.balance),
+            remaining: customer.remaining,
+            within_limits: serde_json::json!(customer.within_limits),
+            plan: customer.plan,
         }
     }
 
     /// Records a successful usage event (`trackUsage`).
     pub async fn track_success(&self, opts: TrackOpts) -> Result<(), solvapay_core::SdkError> {
         self.client
-            .track_usage_event(
-                &self.backend_ref,
-                &self.product,
-                &self.meter_name,
-                CreateUsageRequestOutcome::Success,
-                opts.duration.unwrap_or(0.0),
-                opts.metadata,
+            .emit_handler_usage(
+                &self.driver_state,
+                serde_json::json!({
+                    "kind": "handlerSucceeded",
+                    "durationMs": opts.duration.unwrap_or(0.0),
+                    "nowMs": crate::client::now_ms(),
+                    "randomUnit": self.client.random_unit(),
+                }),
             )
             .await
     }
@@ -130,19 +114,17 @@ impl Allow {
         error: impl std::fmt::Display,
         opts: TrackOpts,
     ) -> Result<(), solvapay_core::SdkError> {
-        let mut merged = opts.metadata.unwrap_or_default();
-        merged.insert(
-            "error".to_owned(),
-            serde_json::Value::String(error.to_string()),
-        );
         self.client
-            .track_usage_event(
-                &self.backend_ref,
-                &self.product,
-                &self.meter_name,
-                CreateUsageRequestOutcome::Fail,
-                opts.duration.unwrap_or(0.0),
-                Some(merged),
+            .emit_handler_usage(
+                &self.driver_state,
+                serde_json::json!({
+                    "kind": "handlerFailed",
+                    "durationMs": opts.duration.unwrap_or(0.0),
+                    "nowMs": crate::client::now_ms(),
+                    "randomUnit": self.client.random_unit(),
+                    "errorMessage": error.to_string(),
+                    "isPaywallError": false,
+                }),
             )
             .await
     }

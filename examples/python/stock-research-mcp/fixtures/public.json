@@ -34,13 +34,7 @@
   "data": {
     "ranking_type": "screener_candidates",
     "official_selection": false,
-    "official_final_symbols": [
-      "BMY",
-      "AMGN",
-      "TRGP",
-      "SNDK",
-      "MA"
-    ],
+    "official_final_symbols": ["BMY", "AMGN", "TRGP", "SNDK", "MA"],
     "stocks": [
       {
         "rank": 1,

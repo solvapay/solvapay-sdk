@@ -13,7 +13,7 @@ import { spawnSync, type SpawnSyncReturns } from 'node:child_process'
 import { formatReleaseDryrunReport, runReleaseDryrunCheck } from './lib/release-dryrun.js'
 import { REPO_ROOT } from '../shared/paths.js'
 
-const issues = runReleaseDryrunCheck(REPO_ROOT)
+const issues = await runReleaseDryrunCheck(REPO_ROOT)
 if (issues.length > 0) {
   console.error(formatReleaseDryrunReport(issues))
   process.exit(1)

@@ -76,6 +76,7 @@ map.
 - [SDK error handling](./docs/contributing/error-handling.md)
 - [SDK performance](./docs/contributing/performance.md)
 - [Dependency deprecations](./docs/contributing/dependency-deprecations.md)
+- [Publishing and releasing](./docs/publishing.mdx)
 
 ### Running Examples
 
@@ -98,25 +99,25 @@ pnpm dev
 
 Each package has specific constraints:
 
-| Package                    | Constraints                                                             |
-| -------------------------- | ----------------------------------------------------------------------- |
-| `@solvapay/core`           | Runtime-agnostic; helpers delegate to the Rust core (no Node/browser globals) |
+| Package                    | Constraints                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `@solvapay/core`           | Runtime-agnostic; helpers delegate to the Rust core (no Node/browser globals)  |
 | `@solvapay/server`         | Node + Edge runtime support (napi native / wasm-bindgen via export conditions) |
-| `@solvapay/react`          | Browser-only, no secrets, peer deps on React                            |
-| `@solvapay/react-supabase` | Browser-only, peer deps on React and Supabase                           |
-| `@solvapay/auth`           | Server-side auth adapters, Edge-compatible                              |
-| `@solvapay/next`           | Next.js-specific, peer dep on Next.js                                   |
+| `@solvapay/react`          | Browser-only, no secrets, peer deps on React                                   |
+| `@solvapay/react-supabase` | Browser-only, peer deps on React and Supabase                                  |
+| `@solvapay/auth`           | Server-side auth adapters, Edge-compatible                                     |
+| `@solvapay/next`           | Next.js-specific, peer dep on Next.js                                          |
 
 The Cargo workspace at the repo root holds the shared semantic core the facades
 delegate to:
 
-| Path                             | Constraints                                                                         |
-| -------------------------------- | ---------------------------------------------------------------------------------- |
-| `core/solvapay-core`      | Pure logic; `serde`/`hmac` only — **no** `reqwest`, `tokio`, or `wasm-bindgen`; no env reads, no timers |
-| `core/solvapay-dto`       | Generated wire models + overlays — **never hand-edited** (produced by `pnpm gen`)   |
-| `core/solvapay-transport` | `Transport` trait + reqwest/fetch impls + client shell; runtime-agnostic async     |
-| `sdks/rust`               | Public crates.io facade — ergonomics only, no new semantic logic                   |
-| `sdks/{node-native,wasm,python,ruby,go,capi}` | Per-language bindings; thin type-conversion shims over the core          |
+| Path                                          | Constraints                                                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `core/solvapay-core`                          | Pure logic; `serde`/`hmac` only — **no** `reqwest`, `tokio`, or `wasm-bindgen`; no env reads, no timers |
+| `core/solvapay-dto`                           | Generated wire models + overlays — **never hand-edited** (produced by `pnpm gen`)                       |
+| `core/solvapay-transport`                     | `Transport` trait + reqwest/fetch impls + client shell; runtime-agnostic async                          |
+| `sdks/rust`                                   | Public crates.io facade — ergonomics only, no new semantic logic                                        |
+| `sdks/{node-native,wasm,python,ruby,go,capi}` | Per-language bindings; thin type-conversion shims over the core                                         |
 
 **Generated-file gate:** files carrying an `@generated` header (Rust DTOs, TS
 overlays/marshalling, binding shims, parity suites) are produced by `pnpm gen` and

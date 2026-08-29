@@ -116,7 +116,11 @@ describe('useAutoActivateFreePlan', () => {
   })
 
   it('prefers the auto-assigned free plan when more than one is free', async () => {
-    const fallbackFree: Plan = { reference: 'plan_other_free', name: 'Hobby', requiresPayment: false }
+    const fallbackFree: Plan = {
+      reference: 'plan_other_free',
+      name: 'Hobby',
+      requiresPayment: false,
+    }
     const assignedFree: Plan = {
       reference: 'plan_assigned',
       name: 'Free',

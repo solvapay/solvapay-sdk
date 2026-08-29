@@ -84,10 +84,11 @@ func (rc *ResponseContext) Gate(reason string) error {
 		message = "Payment required"
 	}
 	gate, err := json.Marshal(map[string]any{
-		"kind":        "payment_required",
-		"product":     rc.productRef,
-		"checkoutUrl": "",
-		"message":     message,
+		"kind":         "payment_required",
+		"product":      rc.productRef,
+		"checkoutUrl":  "",
+		"message":      message,
+		"shortMessage": "Payment required",
 	})
 	if err != nil {
 		return err

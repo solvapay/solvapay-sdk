@@ -94,6 +94,24 @@ export function generatedEntry(
   return entry
 }
 
+export function externalGeneratedEntries(
+  manifest: RepoPathsManifest = loadRepoPathsManifest(),
+): RepoPathsManifest['externalGenerated'] {
+  return manifest.externalGenerated
+}
+
+export function externalGeneratedEntry(
+  id: string,
+  manifest: RepoPathsManifest = loadRepoPathsManifest(),
+): RepoPathsManifest['externalGenerated'][number] {
+  const entry = manifest.externalGenerated.find(item => item.id === id)
+  if (entry === undefined) {
+    const valid = manifest.externalGenerated.map(item => item.id).join(', ')
+    throw new Error(`unknown externalGenerated artifact id: ${id} (valid: ${valid})`)
+  }
+  return entry
+}
+
 export function lookupPath(
   key: string,
   manifest: RepoPathsManifest = loadRepoPathsManifest(),

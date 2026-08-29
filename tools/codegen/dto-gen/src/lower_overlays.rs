@@ -347,7 +347,7 @@ pub(crate) fn lower_type_ref(
     }
     if let Some(lit) = &field.literal {
         return Ok(match lit {
-            serde_json::Value::Bool(_) => IrTypeRef::Bool,
+            serde_json::Value::Bool(flag) => IrTypeRef::LiteralBool(*flag),
             serde_json::Value::Number(n) if n.is_i64() => IrTypeRef::I64,
             serde_json::Value::Number(_) => IrTypeRef::F64,
             serde_json::Value::String(s) => IrTypeRef::LiteralString(s.clone()),
@@ -438,6 +438,7 @@ mod tests {
             top_level: BTreeMap::new(),
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
+            mcp: BTreeMap::new(),
             boundary_types_ts: Default::default(),
             defaults: Default::default(),
         };
@@ -534,6 +535,7 @@ mod tests {
             top_level: BTreeMap::new(),
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
+            mcp: BTreeMap::new(),
             boundary_types_ts: Default::default(),
             defaults: Default::default(),
         };

@@ -101,6 +101,7 @@ module SolvaPay
       validate_purchase_ref
       project_usage_snapshot
       resolve_check_limits_params
+      should_retry_usage_error
       validate_list_plans_params
       is_error_result
       map_route_error
@@ -120,6 +121,7 @@ module SolvaPay
       gate_next
       retry_next_delay_ms
       assert_valid_product_ref
+      ensure_customer_next
       invoke_payable_next
       charges
       resolve_authenticated_user

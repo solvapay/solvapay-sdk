@@ -18,14 +18,14 @@ and ignored in V1.
 
 ## Tools
 
-| Tool | Upstream calls | What it returns |
-| --- | --- | --- |
-| `top_ranked_assets` | 1 | Five rows sorted by `selection_score`, plus regime, timestamp, disclaimer |
-| `company_brief` | 1 | Verbatim 10-K extract (with a thin/substantive hint), earnings, key filings |
-| `research_top_assets` | 6 | Ranked rows each merged with a company brief |
-| `verify_catalyst_claims` | 6 | Catalyst text vs four-quarter EPS beats (`corroborated` / `partially_corroborated` / `contradicted`) |
-| `detect_stale_rankings` | 6 | Symbols with SEC filings newer than the ranking `last_updated` |
-| `compare_symbols` | 1 + N | Side-by-side briefs for arbitrary tickers; ranked-row fields when the symbol is on the list |
+| Tool                     | Upstream calls | What it returns                                                                                      |
+| ------------------------ | -------------- | ---------------------------------------------------------------------------------------------------- |
+| `top_ranked_assets`      | 1              | Five rows sorted by `selection_score`, plus regime, timestamp, disclaimer                            |
+| `company_brief`          | 1              | Verbatim 10-K extract (with a thin/substantive hint), earnings, key filings                          |
+| `research_top_assets`    | 6              | Ranked rows each merged with a company brief                                                         |
+| `verify_catalyst_claims` | 6              | Catalyst text vs four-quarter EPS beats (`corroborated` / `partially_corroborated` / `contradicted`) |
+| `detect_stale_rankings`  | 6              | Symbols with SEC filings newer than the ranking `last_updated`                                       |
+| `compare_symbols`        | 1 + N          | Side-by-side briefs for arbitrary tickers; ranked-row fields when the symbol is on the list          |
 
 `official_final_symbols` is not a separate tool. Pass those five tickers to
 `compare_symbols`. A dedicated `official_picks_brief` tool is a reasonable

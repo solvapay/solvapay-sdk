@@ -7,7 +7,7 @@
  * build its own layout on top of `useCheckoutFlow`.
  */
 
-import type { BalancePegLike, PricingOptionLike } from '@solvapay/core'
+import type { BalancePegLike, BillingInterval, PricingOptionLike } from '@solvapay/core'
 import type { Plan } from '../../types'
 import { formatPrice } from '../../utils/format'
 import { isPaygPlan } from '../../utils/isPayg'
@@ -155,7 +155,7 @@ export function formatContinueLabel(
  * usage-based plans. Sourced from the `billingCycle` option — a plan on
  * the wire has no scalar `billingCycle`.
  */
-export function planBillingInterval(plan: BootstrapPlanLike): string | null {
+export function planBillingInterval(plan: BootstrapPlanLike): BillingInterval | null {
   return planBillingCycleInterval(plan)
 }
 

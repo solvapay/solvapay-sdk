@@ -10,6 +10,13 @@ from pathlib import Path
 import pytest
 
 from solvapay.errors import PaywallError, SolvaPayError
+from solvapay.defaults import (
+_ANONYMOUS_CUSTOMER_REF,
+_CUSTOMER_DEDUP_MAX_CACHE_SIZE,
+_CUSTOMER_DEDUP_TTL_MS,
+_REQUEST_ID_FORMAT,
+_USAGE_ACTION_TYPE,
+)
 from solvapay.facade import create_solvapay
 
 OPERATION_NAMES = (
@@ -63,6 +70,11 @@ CLIENT_EXTRA_ATTRS = frozenset({
 def test_frozen_defaults() -> None:
     default = inspect.signature(create_solvapay).parameters['limits_cache_ttl'].default
     assert default == 10000  # limitsCacheTTLMs
+    assert _CUSTOMER_DEDUP_TTL_MS == 60000  # customerDedupTTLMs
+    assert _CUSTOMER_DEDUP_MAX_CACHE_SIZE == 1000  # customerDedupMaxCacheSize
+    assert _ANONYMOUS_CUSTOMER_REF == 'anonymous'  # anonymousCustomerRef
+    assert _REQUEST_ID_FORMAT == 'solvapay_{epochMs}_{random9}'  # requestIdFormat
+    assert _USAGE_ACTION_TYPE == 'api_call'  # usageActionType
 
 def test_error_mapping() -> None:
     err = SolvaPayError('boom')

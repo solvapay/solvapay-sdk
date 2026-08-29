@@ -50,6 +50,7 @@ class ResponseContextTest < Minitest::Test
         "product" => "prd_demo",
         "checkoutUrl" => "",
         "message" => "Payment required",
+        "shortMessage" => "Payment required",
       },
       error.structured_content,
     )

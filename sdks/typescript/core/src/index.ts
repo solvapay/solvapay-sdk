@@ -77,7 +77,11 @@ export type {
   AuthResolutionInput,
   AuthenticatedUser,
   BillingCycle,
+  BillingInterval,
   Charge,
+  ChargePer,
+  GateAction,
+  GateCacheOp,
   GateNextOutput,
 } from './types/boundary.generated'
 
@@ -134,6 +138,7 @@ export {
   coerceCustomerOptions,
   extractBackendCustomerRef,
   isEmailConflict,
+  shouldRetryUsageError,
   validateActivatePlanParams,
   attachBusinessDetailsValidationError,
   projectPaymentIntentResult,
@@ -169,6 +174,7 @@ export {
   mapRouteError,
   validateGetProductParams,
   decidePaywallOutcome,
+  ensureCustomerNext,
   evaluateBalanceObservation,
   evaluateCachedLimits,
   evaluateFreshLimits,

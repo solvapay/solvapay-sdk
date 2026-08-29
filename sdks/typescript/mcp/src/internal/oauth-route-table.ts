@@ -58,8 +58,7 @@ export function oauthProxyRoutes(options: {
   oauthPaths?: OAuthBridgePaths
 }): OauthProxyRoute[] {
   const paths = resolveOAuthPaths(options.oauthPaths)
-  const protectedResourcePath =
-    options.protectedResourcePath ?? DEFAULT_PROTECTED_RESOURCE_PATH
+  const protectedResourcePath = options.protectedResourcePath ?? DEFAULT_PROTECTED_RESOURCE_PATH
   const authorizationServerPath =
     options.authorizationServerPath ?? DEFAULT_AUTHORIZATION_SERVER_PATH
   const metadataPath = options.mcpPath
@@ -78,8 +77,7 @@ export function oauthProxyRoutes(options: {
       methods: ['GET'],
       corsPreflight: false,
       defaultFormContentType: false,
-      match: pathname =>
-        matchesProtectedResource(pathname, protectedResourcePath, metadataPath),
+      match: pathname => matchesProtectedResource(pathname, protectedResourcePath, metadataPath),
       dispatchPath: pathname => pathname,
     },
     {

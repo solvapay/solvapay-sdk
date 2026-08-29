@@ -258,4 +258,3 @@ describe('createSolvaPayMcpServer — hideToolsByAudience ChatGPT auto-bypass', 
     }
   })
 })
-

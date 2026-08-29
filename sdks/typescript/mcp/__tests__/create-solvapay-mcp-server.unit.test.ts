@@ -77,12 +77,16 @@ async function listedTools(server: ReturnType<typeof createSolvaPayMcpServer>) {
       name: string
       description?: string
       annotations?: unknown
-      _meta?: Record<string, unknown> & { ui?: { resourceUri?: string; visibility?: unknown; icons?: Array<{ src: string }> } }
+      _meta?: Record<string, unknown> & {
+        ui?: { resourceUri?: string; visibility?: unknown; icons?: Array<{ src: string }> }
+      }
     }>
   }
 }
 
-async function listedToolNames(server: ReturnType<typeof createSolvaPayMcpServer>): Promise<string[]> {
+async function listedToolNames(
+  server: ReturnType<typeof createSolvaPayMcpServer>,
+): Promise<string[]> {
   const listed = await listedTools(server)
   return listed.tools.map(t => t.name)
 }
@@ -93,7 +97,11 @@ async function listedPrompts(server: ReturnType<typeof createSolvaPayMcpServer>)
 
 async function listedResources(server: ReturnType<typeof createSolvaPayMcpServer>) {
   return (await invokeHandler(server, 'resources/list')) as {
-    resources: Array<{ uri: string; metadata?: { _meta?: { ui?: { prefersBorder?: boolean } } }; _meta?: { ui?: { prefersBorder?: boolean } } }>
+    resources: Array<{
+      uri: string
+      metadata?: { _meta?: { ui?: { prefersBorder?: boolean } } }
+      _meta?: { ui?: { prefersBorder?: boolean } }
+    }>
   }
 }
 

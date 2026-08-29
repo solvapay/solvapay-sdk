@@ -20,6 +20,10 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
         "module SolvaPay\n\
          \x20 VERSION: String\n\
          \x20 CUSTOMER_CACHE_TTL_MS: Integer\n\
+         \x20 CUSTOMER_DEDUP_MAX_CACHE_SIZE: Integer\n\
+         \x20 ANONYMOUS_CUSTOMER_REF: String\n\
+         \x20 REQUEST_ID_FORMAT: String\n\
+         \x20 USAGE_ACTION_TYPE: String\n\
          \x20 DEFAULT_LIMITS_CACHE_TTL_MS: Integer\n\
          \x20 TOPUP_BALANCE_POLL_DELAYS_MS: Array[Integer]\n\
          \x20 BALANCE_RECONCILE_DELAYS_MS: Array[Integer]\n\
@@ -114,17 +118,16 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def initialize: (?api_key: String?, ?api_base_url: String?, ?limits_cache_ttl: Integer, ?api_client: Client?, ?clock: ^() -> Integer) -> void\n\
          \x20   def gate: (String customer_ref, product: String, ?usage_type: String) -> gate_result\n\
          \x20   def payable: (product: String, ?usage_type: String) -> Payable\n\
+         \x20   private\n\
          \x20   def evaluate_limits: (String key, customer_ref: String, product: String, usage_type: String) -> [bool, Numeric, Hash[String, untyped]?]\n\
          \x20   def ensure_customer: (String customer_ref) -> String\n\
          \x20   def acquire_customer_lookup: (String customer_ref) -> [Hash[Symbol, untyped], bool]\n\
          \x20   def await_customer_lookup: (Hash[Symbol, untyped] state) -> String\n\
          \x20   def publish_customer_lookup: (String customer_ref, Hash[Symbol, untyped] state, ?result: String?, ?error: Exception?) -> void\n\
-         \x20   def find_or_create_customer: (String customer_ref) -> String\n\
-         \x20   def build_allow_result: (backend_ref: String, product: String, usage_type: String, decision: Hash[String, untyped], meter_name: String) -> PayableAllowResult\n\
-         \x20   def resolved_meter_name: (String product, String usage_type) -> String\n\
-         \x20   def generate_request_id: () -> String\n\
-         \x20   def iso8601_timestamp: () -> String\n\
-         \x20   def track_usage_call: (customer_ref: String, product_ref: String, action: String, outcome: String, duration_ms: Numeric) -> untyped\n\
+         \x20   def run_ensure_customer: (String customer_ref) -> String\n\
+         \x20   def write_customer_cache: (String key, String backend_ref, untyped timestamp_ms) -> void\n\
+         \x20   def paywall_short_message: (untyped content) -> String\n\
+         \x20   def build_allow_result: (backend_ref: String, decision: Hash[String, untyped], driver_state: untyped) -> PayableAllowResult\n\
          \x20   def apply_gate_cache: (untyped cache) -> void\n\
          \x20 end\n\n\
          \x20 class Payable\n\
@@ -180,6 +183,70 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
     }
     output.push_str("end\n");
     Ok(output)
+}
+
+/// Emits `sdks/ruby-mcp/sig/layer2.generated.rbs` (`SolvaPay::Mcp::Layer2`).
+///
+/// MCP types live in the ruby-mcp gem, not the core `solvapay` RBS.
+///
+/// # Errors
+///
+/// Returns formatting failures as [`crate::error::GenError`].
+pub fn emit_mcp_rbs_rb(ir: &Ir) -> GenResult<String> {
+    let mut output = format!(
+        "{}\n",
+        generated_header(CommentStyle::Hash, "rb-mcp-rbs-out")
+    );
+    output.push_str(
+        "module SolvaPay\n\
+         \x20 module Mcp\n\
+         \x20   module Layer2\n",
+    );
+    let helper_bindings = helper_bindings(ir);
+    let mut entries: Vec<_> = ir
+        .entry_points
+        .values()
+        .filter(|entry| entry.ruby_target.receiver == IrRubyReceiver::McpNative)
+        .filter(|entry| entry.emission.rb.is_generated())
+        .collect();
+    entries.sort_by(|left, right| left.ruby_target.name.cmp(&right.ruby_target.name));
+    for entry in entries {
+        let params = mcp_rbs_params(entry, helper_bindings.get(entry.id.as_str()).copied());
+        let _ = writeln!(
+            output,
+            "    def self.{}: {params} -> untyped",
+            entry.ruby_target.name
+        );
+    }
+    output.push_str(
+        "    def self.as_object_map: (untyped value) -> Hash[String, untyped]\n\
+         \x20   end\n\
+         \x20 end\n\
+         end\n",
+    );
+    Ok(output)
+}
+
+fn mcp_rbs_params(entry: &IrEntryPoint, binding: Option<&IrBindingSymbol>) -> String {
+    if !entry.params.is_empty() {
+        return rbs_params(entry, false);
+    }
+    let Some(binding) = binding else {
+        return "()".into();
+    };
+    let args: Vec<&IrBindingArg> = binding
+        .args
+        .iter()
+        .filter(|arg| !arg.host_injected)
+        .collect();
+    if args.is_empty() {
+        return "()".into();
+    }
+    let params = args
+        .iter()
+        .map(|arg| format!("{} {}", rbs_boundary_type(&arg.ty), snake(&arg.name)))
+        .collect::<Vec<_>>();
+    format!("({})", params.join(", "))
 }
 
 fn helper_bindings(ir: &Ir) -> std::collections::BTreeMap<String, &IrBindingSymbol> {
@@ -252,7 +319,7 @@ fn rbs_type(ty: &IrTypeRef) -> String {
         IrTypeRef::String | IrTypeRef::LiteralString(_) => "String".into(),
         IrTypeRef::I64 => "Integer".into(),
         IrTypeRef::F64 => "Float".into(),
-        IrTypeRef::Bool => "bool".into(),
+        IrTypeRef::Bool | IrTypeRef::LiteralBool(_) => "bool".into(),
         IrTypeRef::Vec(item) => format!("Array[{}]", rbs_type(item)),
         IrTypeRef::Map(item) => format!("Hash[String, {}]", rbs_type(item)),
         IrTypeRef::Value | IrTypeRef::Named(_) => "Hash[String, untyped]".into(),
@@ -318,8 +385,8 @@ mod tests {
     fn helper_params_come_from_binding_args_when_catalog_params_empty() {
         use crate::ir::{
             IrAvailability, IrBindingArg, IrBindingArtifact, IrBindingCall, IrDefaults, IrDocModel,
-            IrEntrySection, IrEnvelopeMode, IrErrorKind, IrExtractKind, IrLangNames, IrRubyTarget,
-            IrSerializeKind, IrSyncKind, IrTypedStyle,
+            IrEmissionMatrix, IrEntrySection, IrEnvelopeMode, IrErrorKind, IrExtractKind,
+            IrLangNames, IrRubyTarget, IrSerializeKind, IrSyncKind, IrTypedStyle,
         };
 
         let mut ir = Ir {
@@ -361,6 +428,9 @@ mod tests {
                     rust: vec![IrSyncKind::Sync],
                 },
                 sync_ts: IrSyncKind::Sync,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: None,
+                feature: None,
                 ruby_target: IrRubyTarget {
                     owner: "SolvaPay".into(),
                     name: "derive_tax_id_type".into(),
@@ -423,5 +493,97 @@ mod tests {
         );
         let output = emit_rbs_rb(&ir).unwrap();
         assert!(output.contains("def self.derive_tax_id_type: (country: String) -> untyped"));
+        assert!(!output.contains("module Layer2"));
+    }
+
+    #[test]
+    fn mcp_rbs_emits_layer2_on_ruby_mcp_not_the_core_gem() {
+        use crate::ir::{
+            IrAvailability, IrDefaults, IrDocModel, IrEmissionMatrix, IrEntrySection, IrErrorKind,
+            IrLangNames, IrParam, IrRubyTarget, IrSyncKind, IrTypeRef,
+        };
+
+        let mut ir = Ir {
+            types: BTreeMap::new(),
+            overlay_helpers: BTreeMap::new(),
+            overlays: BTreeMap::new(),
+            routes: vec![],
+            error_templates: crate::ir::IrErrorTemplates::default(),
+            entry_points: BTreeMap::new(),
+            binding_symbols: BTreeMap::new(),
+            core_types: BTreeMap::new(),
+            core_types_ts: Default::default(),
+            core_fns: Default::default(),
+            transport_fns: Default::default(),
+        };
+        ir.entry_points.insert(
+            "mcpHideToolsByAudience".into(),
+            IrEntryPoint {
+                id: "mcpHideToolsByAudience".into(),
+                section: IrEntrySection::Mcp,
+                names: IrLangNames {
+                    ts: "mcpHideToolsByAudience".into(),
+                    py: "mcp_hide_tools_by_audience".into(),
+                    rb: "mcp_hide_tools_by_audience".into(),
+                    go: "McpHideToolsByAudience".into(),
+                    rust: "mcp_hide_tools_by_audience".into(),
+                    c: "mcpHideToolsByAudience".into(),
+                },
+                optional_on_client: false,
+                params: vec![IrParam {
+                    name: "tools".into(),
+                    names: IrLangNames {
+                        ts: "tools".into(),
+                        py: "tools".into(),
+                        rb: "tools".into(),
+                        go: "tools".into(),
+                        rust: "tools".into(),
+                        c: "tools".into(),
+                    },
+                    ty: IrTypeRef::Value,
+                    required: true,
+                    default_value: None,
+                    doc: String::new(),
+                }],
+                type_params: vec![],
+                request: None,
+                response: None,
+                availability: IrAvailability {
+                    ts: vec![IrSyncKind::Sync],
+                    py: vec![IrSyncKind::Sync],
+                    rb: vec![IrSyncKind::Sync],
+                    go: vec![IrSyncKind::Sync],
+                    rust: vec![IrSyncKind::Sync],
+                },
+                sync_ts: IrSyncKind::Sync,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: Some(crate::ir::IrMcpSurface::Layer2),
+                feature: None,
+                ruby_target: IrRubyTarget {
+                    owner: "SolvaPay::Mcp::Layer2".into(),
+                    name: "mcp_hide_tools_by_audience".into(),
+                    receiver: IrRubyReceiver::McpNative,
+                    takes_block: false,
+                },
+                defaults: IrDefaults::default(),
+                errors: vec![IrErrorKind::Api],
+                docs: IrDocModel {
+                    summary: "Hide tools by audience.".into(),
+                    returns: None,
+                },
+            },
+        );
+
+        let core = emit_rbs_rb(&ir).unwrap();
+        assert!(!core.contains("module Layer2"));
+        assert!(!core.contains("mcp_hide_tools_by_audience"));
+
+        let mcp = emit_mcp_rbs_rb(&ir).unwrap();
+        assert!(mcp.contains("--rb-mcp-rbs-out"));
+        assert!(mcp.contains("module Layer2"));
+        assert!(mcp.contains(
+            "def self.mcp_hide_tools_by_audience: (Hash[String, untyped] tools) -> untyped"
+        ));
+        assert!(mcp.contains("def self.as_object_map: (untyped value) -> Hash[String, untyped]"));
     }
 }

@@ -8,14 +8,24 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { SdkContractManifestSchema, type SdkContractManifest } from '../shared/manifest-schema.js'
-import { checkParity, formatParityReport } from './lib/parity.js'
+import { checkHelperParity, checkMcpParity, checkParity, formatParityReport } from './lib/parity.js'
 import {
   checkGeneratedClientMethods,
   readCClientMethods,
+  readCMcpSymbols,
   readGoClientMethods,
+  readGoHelpers,
+  readGoMcpSymbols,
   readPyClientMethods,
+  readPyHelpers,
+  readPyMcpSymbols,
   readRbClientMethods,
+  readRbHelpers,
+  readRbMcpSymbols,
   readRustClientMethods,
+  readRustHelpers,
+  readRustMcpSymbols,
+  readTsMcpSymbols,
 } from './lib/generated-client-surfaces.js'
 import { REPO_ROOT } from '../shared/paths.js'
 import { contractInputPath, generatedEntry } from '../shared/repo-paths.js'
@@ -38,7 +48,7 @@ function main(): number {
   const surface = readTsSurface(REPO_ROOT)
   const snapshotPath = path.join(REPO_ROOT, ...generatedEntry('bindingSymbols').path.split('/'))
   const snapshot = JSON.parse(readFileSync(snapshotPath, 'utf8')) as {
-    bindings: Record<string, { names: { ts: string } }>
+    bindings: Record<string, { names: { ts: string }; section?: string }>
   }
   const issues = checkParity({
     manifest,
@@ -53,6 +63,25 @@ function main(): number {
     ...checkGeneratedClientMethods(manifest, readGoClientMethods(REPO_ROOT), 'go'),
     ...checkGeneratedClientMethods(manifest, readRustClientMethods(REPO_ROOT), 'rust'),
     ...checkGeneratedClientMethods(manifest, readCClientMethods(REPO_ROOT), 'c'),
+    ...checkHelperParity(manifest, {
+      ts: surface.portableExports,
+      py: readPyHelpers(REPO_ROOT),
+      rb: readRbHelpers(REPO_ROOT),
+      go: readGoHelpers(REPO_ROOT),
+      rust: readRustHelpers(REPO_ROOT),
+    }),
+    ...checkMcpParity(
+      manifest,
+      {
+        ts: readTsMcpSymbols(REPO_ROOT),
+        py: readPyMcpSymbols(REPO_ROOT),
+        rb: readRbMcpSymbols(REPO_ROOT),
+        go: readGoMcpSymbols(REPO_ROOT),
+        rust: readRustMcpSymbols(REPO_ROOT),
+        c: readCMcpSymbols(REPO_ROOT),
+      },
+      snapshot.bindings,
+    ),
   )
   const report = formatParityReport(issues)
   if (issues.length > 0) {

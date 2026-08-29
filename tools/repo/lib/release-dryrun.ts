@@ -53,6 +53,7 @@ function workspacePackageRels(): string[] {
 export type ReleaseDryrunIssueKind =
   | 'prerelease-version'
   | 'unresolved-workspace-dep'
+  | 'unpublished-workspace-dep'
   | 'missing-dry-run-default'
 
 export type ReleaseDryrunIssue = {
@@ -62,7 +63,32 @@ export type ReleaseDryrunIssue = {
   version?: string
   dependencyName?: string
   workflowFile?: string
+  allowlistReason?: string
 }
+
+export type UnpublishedDepAllowlistEntry = {
+  name: string
+  reason: string
+}
+
+export type RegistryProbeResult = {
+  present: boolean
+}
+
+export type RegistryProbe = (packageName: string) => Promise<RegistryProbeResult>
+
+/**
+ * Reviewed exceptions for workspace deps that are not yet on the npm registry.
+ * Each entry must name a package and a non-empty reason. Empty reasons fail the
+ * unpublished-workspace-dep check — this is an explicit deferral, not a severity fudge.
+ */
+export const UNPUBLISHED_DEP_ALLOWLIST: readonly UnpublishedDepAllowlistEntry[] = [
+  {
+    name: '@solvapay/server-native',
+    reason:
+      'Nine platform packages (@solvapay/server-native-*) are unwired for npm publish; deferred at docs/contributing/rust-migration-map.md Step 39',
+  },
+]
 
 export type WorkspacePackage = {
   name: string
@@ -83,6 +109,8 @@ export type ReleaseDryrunInput = {
   packages: readonly WorkspacePackage[]
   changesetIgnore: readonly string[]
   workflows: readonly PublishWorkflowDoc[]
+  registryProbe?: RegistryProbe
+  unpublishedDepAllowlist?: readonly UnpublishedDepAllowlistEntry[]
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -148,10 +176,27 @@ export function workflowHasDryRunDefault(yamlText: string): boolean {
   return false
 }
 
-export function checkReleaseDryrun(input: ReleaseDryrunInput): ReleaseDryrunIssue[] {
+export function failingReleaseDryrunIssues(
+  issues: readonly ReleaseDryrunIssue[],
+): ReleaseDryrunIssue[] {
+  return issues.filter(i => !(i.kind === 'unpublished-workspace-dep' && i.allowlistReason))
+}
+
+function allowlistReasonFor(
+  depName: string,
+  allowlist: readonly UnpublishedDepAllowlistEntry[],
+): string | undefined {
+  const entry = allowlist.find(e => e.name === depName)
+  if (!entry) return undefined
+  const reason = entry.reason.trim()
+  return reason.length > 0 ? reason : undefined
+}
+
+export async function checkReleaseDryrun(input: ReleaseDryrunInput): Promise<ReleaseDryrunIssue[]> {
   const issues: ReleaseDryrunIssue[] = []
   const publishable = input.packages.filter(pkg => isPublishablePackage(pkg, input.changesetIgnore))
   const batchNames = new Set(publishable.map(pkg => pkg.name))
+  const allowlist = input.unpublishedDepAllowlist ?? UNPUBLISHED_DEP_ALLOWLIST
 
   for (const pkg of publishable) {
     if (isPrereleaseVersion(pkg.version)) {
@@ -173,6 +218,29 @@ export function checkReleaseDryrun(input: ReleaseDryrunInput): ReleaseDryrunIssu
     }
   }
 
+  if (input.registryProbe) {
+    const seen = new Set<string>()
+    for (const pkg of publishable) {
+      for (const dep of productionWorkspaceDeps(pkg)) {
+        const key = `${pkg.name}\0${dep.name}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        const { present } = await input.registryProbe(dep.name)
+        if (present) continue
+        const reason = allowlistReasonFor(dep.name, allowlist)
+        issues.push({
+          kind: 'unpublished-workspace-dep',
+          packageName: pkg.name,
+          dependencyName: dep.name,
+          allowlistReason: reason,
+          message: reason
+            ? `${pkg.name} depends on unpublished ${dep.name} via ${dep.spec} (allowlisted: ${reason})`
+            : `${pkg.name} depends on ${dep.name} via ${dep.spec}, which is not on the npm registry`,
+        })
+      }
+    }
+  }
+
   for (const workflow of input.workflows) {
     if (workflowHasDryRunDefault(workflow.yaml)) continue
     issues.push({
@@ -187,11 +255,15 @@ export function checkReleaseDryrun(input: ReleaseDryrunInput): ReleaseDryrunIssu
 
 export function formatReleaseDryrunReport(issues: readonly ReleaseDryrunIssue[]): string {
   if (issues.length === 0) return 'release-dryrun: OK'
+  const failing = failingReleaseDryrunIssues(issues)
   const lines = issues.map(i => {
     const who = i.packageName ?? i.workflowFile ?? i.dependencyName ?? '?'
     return `  [${i.kind}] ${who}: ${i.message}`
   })
-  return `release-dryrun: ${issues.length} issue(s)\n${lines.join('\n')}`
+  if (failing.length === 0) {
+    return `release-dryrun: OK\n${lines.join('\n')}`
+  }
+  return `release-dryrun: ${failing.length} issue(s)\n${lines.join('\n')}`
 }
 
 function readJson(filePath: string): unknown {
@@ -254,11 +326,27 @@ export function loadPublishWorkflows(repoRoot: string): PublishWorkflowDoc[] {
   }))
 }
 
-export function runReleaseDryrunCheck(repoRoot: string): ReleaseDryrunIssue[] {
+export function npmRegistryProbe(fetchImpl: typeof fetch = fetch): RegistryProbe {
+  return async packageName => {
+    const url = `https://registry.npmjs.org/${encodeURIComponent(packageName)}`
+    const response = await fetchImpl(url, { method: 'GET' })
+    if (response.status === 404) return { present: false }
+    if (!response.ok) {
+      throw new Error(`npm registry probe for ${packageName} failed: HTTP ${response.status}`)
+    }
+    return { present: true }
+  }
+}
+
+export async function runReleaseDryrunCheck(
+  repoRoot: string,
+  registryProbe?: RegistryProbe,
+): Promise<ReleaseDryrunIssue[]> {
   return checkReleaseDryrun({
     packages: loadWorkspacePackages(repoRoot),
     changesetIgnore: loadChangesetIgnore(repoRoot),
     workflows: loadPublishWorkflows(repoRoot),
+    registryProbe,
   })
 }
 

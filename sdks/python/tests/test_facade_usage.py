@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from solvapay.errors import SolvaPayError
 from solvapay.facade import create_solvapay
 from solvapay.results import PayableAllowResult, PayablePaywallResult
 from test_facade import StubClient, _fake_decision
@@ -75,3 +76,29 @@ async def test_pre_check_gate_tracks_paywall_outcome() -> None:
     assert payload["customerRef"] == "cus_abc"
     assert payload["metadata"]["action"] == "requests"
     _assert_volatile_fields(payload)
+
+
+@pytest.mark.asyncio
+async def test_track_usage_retries_customer_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = StubClient(within_limits=True, remaining=3)
+    attempts = {"n": 0}
+    original = client.track_usage_blocking
+
+    def flaky(args_json: str) -> str:
+        attempts["n"] += 1
+        if attempts["n"] == 1:
+            raise SolvaPayError("404 - Customer not found")
+        return original(args_json)
+
+    client.track_usage_blocking = flaky  # type: ignore[method-assign]
+    monkeypatch.setattr("solvapay.retry.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        "solvapay.retry._next_delay_ms",
+        lambda attempt, **_kwargs: 0 if attempt < 2 else None,
+    )
+    sp = create_solvapay(api_client=client)
+    result = await sp.gate("cus_abc", product="prd_demo")
+    assert isinstance(result, PayableAllowResult)
+    result.track_success(duration=12)
+    assert attempts["n"] == 2
+    assert len(client.tracked) == 1

@@ -25,6 +25,9 @@ pub struct Manifest {
     /// Facade factory / payable surface.
     #[serde(default)]
     pub facade: BTreeMap<String, NamedEntry>,
+    /// MCP sync ops and layer-2 native symbols.
+    #[serde(default)]
+    pub mcp: BTreeMap<String, McpEntry>,
     /// TS-only residue for the core boundary-type emitter (Phase 3a).
     #[serde(default, rename = "boundaryTypesTs")]
     pub boundary_types_ts: BoundaryTypesTsDef,
@@ -75,6 +78,24 @@ pub struct DefaultsDef {
     /// Limits cache TTL in milliseconds.
     #[serde(default = "default_limits_cache_ttl", rename = "limitsCacheTTLMs")]
     pub limits_cache_ttl_ms: u64,
+    /// Customer-dedup cache TTL in milliseconds.
+    #[serde(default = "default_customer_dedup_ttl", rename = "customerDedupTTLMs")]
+    pub customer_dedup_ttl_ms: u64,
+    /// Customer-dedup cache max entries.
+    #[serde(
+        default = "default_customer_dedup_max_cache_size",
+        rename = "customerDedupMaxCacheSize"
+    )]
+    pub customer_dedup_max_cache_size: u32,
+    /// Sentinel customer ref that skips ensure/lookup.
+    #[serde(default = "default_anonymous_customer_ref", rename = "anonymousCustomerRef")]
+    pub anonymous_customer_ref: String,
+    /// `trackUsage` request-id template (`{epochMs}` / `{random9}`).
+    #[serde(default = "default_request_id_format", rename = "requestIdFormat")]
+    pub request_id_format: String,
+    /// Frozen `trackUsage.actionType`.
+    #[serde(default = "default_usage_action_type", rename = "usageActionType")]
+    pub usage_action_type: String,
 }
 
 impl Default for DefaultsDef {
@@ -83,6 +104,11 @@ impl Default for DefaultsDef {
             retry: RetryDefaultsDef::default(),
             webhook_tolerance_sec: default_webhook_tolerance(),
             limits_cache_ttl_ms: default_limits_cache_ttl(),
+            customer_dedup_ttl_ms: default_customer_dedup_ttl(),
+            customer_dedup_max_cache_size: default_customer_dedup_max_cache_size(),
+            anonymous_customer_ref: default_anonymous_customer_ref(),
+            request_id_format: default_request_id_format(),
+            usage_action_type: default_usage_action_type(),
         }
     }
 }
@@ -121,6 +147,26 @@ const fn default_webhook_tolerance() -> i64 {
 
 const fn default_limits_cache_ttl() -> u64 {
     10_000
+}
+
+const fn default_customer_dedup_ttl() -> u64 {
+    60_000
+}
+
+const fn default_customer_dedup_max_cache_size() -> u32 {
+    1_000
+}
+
+fn default_anonymous_customer_ref() -> String {
+    "anonymous".to_owned()
+}
+
+fn default_request_id_format() -> String {
+    "solvapay_{epochMs}_{random9}".to_owned()
+}
+
+fn default_usage_action_type() -> String {
+    "api_call".to_owned()
 }
 
 /// `tsWrapper:` residue on a binding symbol (Phase 3c).
@@ -355,6 +401,47 @@ pub struct NamedEntry {
     /// Shared doc model for this entry point.
     #[serde(default)]
     pub docs: DocsDef,
+    /// Justified per-language emission skip (`omitted` | `handWritten`).
+    #[serde(default)]
+    pub availability: BTreeMap<String, EntryAvailability>,
+}
+
+/// Declared skip: dto-gen must not emit this symbol for the language.
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum EntryAvailability {
+    /// Language has no symbol (and never will, or not yet exported).
+    Omitted {
+        /// Must be `true`.
+        omitted: bool,
+        /// Non-empty justification.
+        reason: String,
+    },
+    /// Language exposes a hand-written symbol dto-gen must not overwrite.
+    HandWritten {
+        /// Must be `true`.
+        #[serde(rename = "handWritten")]
+        hand_written: bool,
+        /// Non-empty justification.
+        reason: String,
+        /// Host wraps a `#[solvapay_export]` native; still requires a linker.
+        #[serde(default, rename = "nativeExport")]
+        native_export: bool,
+    },
+}
+
+/// MCP catalog entry: a [`NamedEntry`] plus surface / feature.
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct McpEntry {
+    /// Shared named-entry fields (`names`, `sync`, `params`, `docs`, `availability`).
+    #[serde(flatten)]
+    pub named: NamedEntry,
+    /// `syncOp` (solvapay_call envelope) or `layer2` (native payload builders).
+    #[serde(default)]
+    pub surface: String,
+    /// Optional feature gate (`engine` for handle/resume).
+    #[serde(default)]
+    pub feature: Option<String>,
 }
 
 /// Per-operation manifest entry.
@@ -632,6 +719,38 @@ operations:
         assert_eq!(op.params.len(), 2);
         assert_eq!(op.params[0].name, "customerRef");
         assert_eq!(op.params[1].name, "params");
+    }
+
+    #[test]
+    fn deserializes_mcp_catalog_entries() {
+        let yaml = r#"
+mcp:
+  mcpNarrate:
+    names:
+      ts: mcpNarrate
+      py: mcp_narrate
+      rb: mcp_narrate
+      go: McpNarrate
+      rust: mcp_narrate
+      c: mcpNarrate
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+    params:
+      - name: input
+        ref: McpNarrateInput
+        required: true
+"#;
+        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+        let entry = manifest.mcp.get("mcpNarrate").unwrap();
+        assert_eq!(entry.named.names.ts, "mcpNarrate");
+        assert_eq!(entry.named.params.len(), 1);
+        assert_eq!(entry.surface, "syncOp");
     }
 
     #[test]

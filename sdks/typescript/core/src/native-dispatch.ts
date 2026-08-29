@@ -54,6 +54,7 @@ export type NativeCoreSyncMethod =
   | 'normalizeReactivateResponse'
   | 'validatePurchaseRef'
   | 'projectUsageSnapshot'
+  | 'shouldRetryUsageError'
   | 'resolveCheckLimitsParams'
   | 'validateListPlansParams'
   | 'charges'
@@ -78,6 +79,7 @@ export type NativeCoreSyncMethod =
   | 'decidePaywallOutcome'
   | 'resolveFallbackGateLimits'
   | 'evaluateBalanceObservation'
+  | 'ensureCustomerNext'
   | 'gateNext'
   | 'resolveAuthenticatedUser'
 

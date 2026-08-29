@@ -109,9 +109,7 @@ export function createProtectedResourceHandler(options: {
   oauthClient?: McpOauthRequestClient | null
 }): FetchHandler {
   const path = options.protectedResourcePath ?? DEFAULT_PROTECTED_RESOURCE_PATH
-  const metadataPath = options.mcpPath
-    ? pathAwareProtectedResourcePath(options.mcpPath)
-    : path
+  const metadataPath = options.mcpPath ? pathAwareProtectedResourcePath(options.mcpPath) : path
   const config = oauthConfig({
     publicBaseUrl: options.publicBaseUrl,
     apiBaseUrl: '',
@@ -194,13 +192,7 @@ export function createOAuthAuthorizeHandler(options: {
     if (pathOf(req) !== path) return null
     if (req.method === 'OPTIONS') return corsPreflight(req)
     if (req.method !== 'GET') return null
-    return dispatchOauth(
-      req,
-      `/oauth/authorize${queryOf(req)}`,
-      '',
-      config,
-      options.oauthClient,
-    )
+    return dispatchOauth(req, `/oauth/authorize${queryOf(req)}`, '', config, options.oauthClient)
   }
 }
 

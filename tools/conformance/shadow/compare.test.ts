@@ -34,13 +34,13 @@ describe('compareSides', () => {
     const result = compareSides({
       op: 'createProduct',
       args: { name: 'W' },
-      ts: ok({ name: 'W', reference: 'prd_AAA', createdAt: 't1' }),
+      facade: ok({ name: 'W', reference: 'prd_AAA', createdAt: 't1' }),
       rust: ok({ name: 'W', reference: 'prd_BBB', createdAt: 't2' }),
       rules: RULES,
     })
     expect(result.identical).toBe(true)
     if (result.identical) {
-      expect(result.tsNormalized).toEqual({
+      expect(result.facadeNormalized).toEqual({
         ok: true,
         value: {
           name: 'W',
@@ -50,7 +50,7 @@ describe('compareSides', () => {
   })
 
   it('produces a Divergence with both wire exchanges on mismatch', () => {
-    const tsWire = [
+    const facadeWire = [
       {
         method: 'POST',
         url: 'http://localhost/v1/sdk/products',
@@ -69,14 +69,14 @@ describe('compareSides', () => {
     const result = compareSides({
       op: 'createProduct',
       args: { name: 'W' },
-      ts: ok({ name: 'W', price: 1 }, tsWire),
+      facade: ok({ name: 'W', price: 1 }, facadeWire),
       rust: ok({ name: 'W', price: 2 }, rustWire),
       rules: RULES,
     })
     expect(result.identical).toBe(false)
     if (!result.identical) {
       expect(result.divergence.op).toBe('createProduct')
-      expect(result.divergence.tsWire).toEqual(tsWire)
+      expect(result.divergence.facadeWire).toEqual(facadeWire)
       expect(result.divergence.rustWire).toEqual(rustWire)
       expect(result.divergence.path).toBe('/value/price')
     }
@@ -103,11 +103,11 @@ describe('shadow report', () => {
           divergence: {
             op: 'createProduct',
             args: {},
-            tsNormalized: { ok: true, value: { price: 1 } },
+            facadeNormalized: { ok: true, value: { price: 1 } },
             rustNormalized: { ok: true, value: { price: 2 } },
-            tsRaw: { ok: true, value: { price: 1 } },
+            facadeRaw: { ok: true, value: { price: 1 } },
             rustRaw: { ok: true, value: { price: 2 } },
-            tsWire: [{ method: 'POST', url: '/p', status: 200 }],
+            facadeWire: [{ method: 'POST', url: '/p', status: 200 }],
             rustWire: [{ method: 'POST', url: '/p', status: 200 }],
             path: '/value/price',
           },
@@ -117,6 +117,12 @@ describe('shadow report', () => {
     const path = writeShadowReport(report, dir)
     const parsed = JSON.parse(readFileSync(path, 'utf8')) as ShadowReport
     expect(parsed.results).toHaveLength(3)
+    const diverged = parsed.results.find(r => r.status === 'DIVERGED')
+    const divergence = diverged?.divergence
+    expect(divergence).toBeDefined()
+    for (const key of Object.keys(divergence ?? {})) {
+      expect(key.startsWith('ts'), `divergence key ${key} must not start with ts`).toBe(false)
+    }
     const summary = formatHumanSummary(report)
     expect(summary).toContain('IDENTICAL: 1')
     expect(summary).toContain('SKIPPED: 1')

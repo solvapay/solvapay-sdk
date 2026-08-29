@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SolvaPayError } from '@solvapay/core'
-import { resetWebhookBindingCache, setWebhookBindingForTests } from '../src/webhook-native'
+import { resetNativeCache, setNativeBindingForTests } from '../src/native'
 import { verifyWebhook } from '../src/index'
 
 const mockVerifyWebhook = vi.fn()
@@ -26,15 +26,15 @@ const eventBody = JSON.stringify({
 describe('verifyWebhook native dispatch', () => {
   beforeEach(() => {
     mockVerifyWebhook.mockReset()
-    resetWebhookBindingCache()
+    resetNativeCache()
   })
 
   afterEach(() => {
-    resetWebhookBindingCache()
+    resetNativeCache()
   })
 
   it('dispatches to the native binding, injecting the host clock', () => {
-    setWebhookBindingForTests(fakeBinding)
+    setNativeBindingForTests(fakeBinding)
     mockVerifyWebhook.mockReturnValue(eventBody)
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_782_864_000_500)
 
@@ -56,7 +56,7 @@ describe('verifyWebhook native dispatch', () => {
   })
 
   it('rewraps a native Error as SolvaPayError and preserves its code', () => {
-    setWebhookBindingForTests(fakeBinding)
+    setNativeBindingForTests(fakeBinding)
     const message = 'Invalid webhook signature'
     const nativeErr = new Error(message) as Error & { code?: string }
     nativeErr.code = 'invalid_signature'
@@ -75,7 +75,7 @@ describe('verifyWebhook native dispatch', () => {
   })
 
   it('throws when the native binding is missing', () => {
-    setWebhookBindingForTests(null)
+    setNativeBindingForTests(null)
 
     expect(() =>
       verifyWebhook({ body: eventBody, signature: 't=1,v1=deadbeef', secret: 'whsec_test' }),

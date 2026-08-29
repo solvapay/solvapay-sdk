@@ -9,12 +9,47 @@ use serde_json::Value;
 
 use crate::serde_util::{serialize_opt_whole_f64, serialize_whole_f64};
 
+/// Which quantity the amount is charged against.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChargePer {
+    /// A single amount for the whole plan.
+    Flat,
+    /// Amount per metered unit.
+    Unit,
+    /// Amount per seat.
+    Seat,
+}
+
+/// Recurring cadence of a billing cycle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BillingInterval {
+    /// Weekly.
+    Week,
+    /// Monthly.
+    Month,
+    /// Yearly.
+    Year,
+}
+
+impl std::fmt::Display for BillingInterval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = match self {
+            Self::Week => "week",
+            Self::Month => "month",
+            Self::Year => "year",
+        };
+        f.write_str(label)
+    }
+}
+
 /// A charge option. `amount_minor` is in `currency`'s minor units.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Charge {
-    /// `flat`, `unit`, or `seat`.
-    pub per: String,
+    /// Which quantity the amount is charged against.
+    pub per: ChargePer,
     /// Amount in the charge currency's minor units.
     #[serde(serialize_with = "serialize_whole_f64")]
     pub amount_minor: f64,
@@ -32,8 +67,8 @@ pub struct Charge {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BillingCycle {
-    /// `week`, `month`, or `year`.
-    pub interval: String,
+    /// Recurring cadence of this cycle.
+    pub interval: BillingInterval,
     /// Interval count when greater than 1; omitted for the default of 1.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(serialize_with = "serialize_opt_whole_f64")]
@@ -59,10 +94,7 @@ fn as_charge(option: &Value) -> Option<Charge> {
     if option.get("kind").and_then(Value::as_str) != Some("charge") {
         return None;
     }
-    let per = option.get("per").and_then(Value::as_str)?;
-    if per != "flat" && per != "unit" && per != "seat" {
-        return None;
-    }
+    let per: ChargePer = serde_json::from_value(option.get("per")?.clone()).ok()?;
     let amount_minor = option.get("amountMinor").and_then(Value::as_f64)?;
     let currency = option.get("currency").and_then(Value::as_str)?;
     let meter = option
@@ -75,7 +107,7 @@ fn as_charge(option: &Value) -> Option<Charge> {
         .filter(|flag| *flag)
         .map(|_| true);
     Some(Charge {
-        per: per.to_owned(),
+        per,
         amount_minor,
         currency: currency.to_owned(),
         meter,
@@ -109,7 +141,7 @@ pub fn charges(priced: Option<&Value>) -> Vec<Charge> {
 pub fn headline_charges(priced: Option<&Value>) -> Vec<Charge> {
     let flat: Vec<Charge> = charges(priced)
         .into_iter()
-        .filter(|charge| charge.per == "flat")
+        .filter(|charge| charge.per == ChargePer::Flat)
         .collect();
     let base: Vec<Charge> = flat
         .iter()
@@ -134,7 +166,7 @@ pub fn headline_charges(priced: Option<&Value>) -> Vec<Charge> {
 pub fn per_unit_charge(priced: Option<&Value>, meter: Option<&str>) -> Option<Charge> {
     let unit: Vec<Charge> = charges(priced)
         .into_iter()
-        .filter(|charge| charge.per == "unit")
+        .filter(|charge| charge.per == ChargePer::Unit)
         .collect();
     if let Some(meter_name) = meter.filter(|name| !name.is_empty()) {
         return unit
@@ -156,18 +188,16 @@ pub fn billing_cycle(priced: Option<&Value>) -> Option<BillingCycle> {
         if option.get("kind").and_then(Value::as_str) != Some("billingCycle") {
             continue;
         }
-        let interval = match option.get("interval").and_then(Value::as_str) {
-            Some(value) if value == "week" || value == "month" || value == "year" => value,
-            _ => continue,
-        };
+        let interval: BillingInterval =
+            match serde_json::from_value(option.get("interval")?.clone()) {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
         let count = option
             .get("count")
             .and_then(Value::as_f64)
             .filter(|n| *n > 1.0);
-        return Some(BillingCycle {
-            interval: interval.to_owned(),
-            count,
-        });
+        return Some(BillingCycle { interval, count });
     }
     None
 }
@@ -346,6 +376,49 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    #[test]
+    fn charge_per_round_trips_lowercase_wire_strings() {
+        for (value, json) in [
+            (ChargePer::Flat, "\"flat\""),
+            (ChargePer::Unit, "\"unit\""),
+            (ChargePer::Seat, "\"seat\""),
+        ] {
+            assert_eq!(serde_json::to_string(&value).expect("serialize"), json);
+            assert_eq!(
+                serde_json::from_str::<ChargePer>(json).expect("deserialize"),
+                value
+            );
+        }
+    }
+
+    #[test]
+    fn billing_interval_round_trips_lowercase_wire_strings() {
+        for (value, json) in [
+            (BillingInterval::Week, "\"week\""),
+            (BillingInterval::Month, "\"month\""),
+            (BillingInterval::Year, "\"year\""),
+        ] {
+            assert_eq!(serde_json::to_string(&value).expect("serialize"), json);
+            assert_eq!(
+                serde_json::from_str::<BillingInterval>(json).expect("deserialize"),
+                value
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_per_yields_no_charge() {
+        let priced = json!({
+            "options": [
+                { "kind": "charge", "per": "bogus", "amountMinor": 100, "currency": "usd" },
+                { "kind": "charge", "per": "flat", "amountMinor": 50, "currency": "usd" }
+            ]
+        });
+        let rows = charges(Some(&priced));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].amount_minor, 50.0);
+    }
+
     fn free_plan() -> Value {
         json!({
             "type": "recurring",
@@ -388,7 +461,7 @@ mod tests {
         assert_eq!(
             billing_cycle(Some(&pro_plan())),
             Some(BillingCycle {
-                interval: "month".into(),
+                interval: BillingInterval::Month,
                 count: None
             })
         );
@@ -406,7 +479,7 @@ mod tests {
         assert_eq!(
             billing_cycle(Some(&priced)),
             Some(BillingCycle {
-                interval: "month".into(),
+                interval: BillingInterval::Month,
                 count: Some(3.0)
             })
         );
@@ -419,7 +492,7 @@ mod tests {
         assert_eq!(
             billing_cycle(Some(&priced)),
             Some(BillingCycle {
-                interval: "year".into(),
+                interval: BillingInterval::Year,
                 count: None
             })
         );

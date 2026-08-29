@@ -69,6 +69,17 @@ pub enum PaywallGateKind {
     ActivationRequired,
 }
 
+impl PaywallGateKind {
+    /// Frozen throw text for this kind (`"Activation required"` / `"Payment required"`).
+    #[must_use]
+    pub const fn short_message(self) -> &'static str {
+        match self {
+            Self::ActivationRequired => "Activation required",
+            Self::PaymentRequired => "Payment required",
+        }
+    }
+}
+
 /// Ready-to-serialize paywall gate (`PaywallStructuredContent` parity).
 ///
 /// `checkout_url` and `message` are always present (`checkout_url` may be `""`).
@@ -85,6 +96,8 @@ pub struct PaywallGate {
     pub checkout_url: String,
     /// Frozen gate copy from [`build_gate_message`].
     pub message: String,
+    /// Kind-derived throw text (`"Activation required"` / `"Payment required"`).
+    pub short_message: String,
     /// Confirmation URL echoed on the activation branch when present in the input.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub confirmation_url: Option<String>,
@@ -241,11 +254,13 @@ pub fn build_paywall_gate(product_ref: &str, limits: &PaywallGateLimits) -> Payw
     );
 
     if activation_branch {
+        let kind = PaywallGateKind::ActivationRequired;
         PaywallGate {
-            kind: PaywallGateKind::ActivationRequired,
+            kind,
             product: product_ref.to_owned(),
             checkout_url,
             message,
+            short_message: kind.short_message().to_owned(),
             // TS emits `confirmationUrl` on presence (`!== undefined`); `null`
             // already collapses to `None`, so `Some` marks a present value.
             confirmation_url: limits.confirmation_url.clone(),
@@ -259,11 +274,13 @@ pub fn build_paywall_gate(product_ref: &str, limits: &PaywallGateLimits) -> Payw
     } else {
         // Payment branch never emits `plans` / `confirmation_url`, even when the
         // input carries them.
+        let kind = PaywallGateKind::PaymentRequired;
         PaywallGate {
-            kind: PaywallGateKind::PaymentRequired,
+            kind,
             product: product_ref.to_owned(),
             checkout_url,
             message,
+            short_message: kind.short_message().to_owned(),
             confirmation_url: None,
             plans: None,
             balance: balance.cloned(),
@@ -358,6 +375,7 @@ mod tests {
             json!({
                 "kind": "payment_required",
                 "product": "prd_demo",
+                "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
                 "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
             })
@@ -372,6 +390,7 @@ mod tests {
             json!({
                 "kind": "payment_required",
                 "product": "prd_demo",
+                "shortMessage": "Payment required",
                 "checkoutUrl": "",
                 "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan."
             })
@@ -389,6 +408,7 @@ mod tests {
             json!({
                 "kind": "payment_required",
                 "product": "prd_demo",
+                "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
                 "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
             })
@@ -413,6 +433,7 @@ mod tests {
             json!({
                 "kind": "activation_required",
                 "product": "prd_demo",
+                "shortMessage": "Activation required",
                 "message": "Your plan needs activation before you can use this tool. Call the `activate_plan` tool to activate it, or open https://pay.test/confirm in a browser.",
                 "checkoutUrl": "https://pay.test/confirm",
                 "confirmationUrl": "https://pay.test/confirm",
@@ -441,6 +462,7 @@ mod tests {
             json!({
                 "kind": "activation_required",
                 "product": "prd_demo",
+                "shortMessage": "Activation required",
                 "message": "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
                 "checkoutUrl": "https://pay.test/x",
                 "plans": [
@@ -472,6 +494,7 @@ mod tests {
             json!({
                 "kind": "payment_required",
                 "product": "prd_demo",
+                "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
                 "message": "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
                 "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
@@ -496,6 +519,7 @@ mod tests {
             json!({
                 "kind": "payment_required",
                 "product": "prd_demo",
+                "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
                 "message": "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
                 "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
@@ -523,6 +547,7 @@ mod tests {
             json!({
                 "kind": "payment_required",
                 "product": "prd_demo",
+                "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
                 "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
             })

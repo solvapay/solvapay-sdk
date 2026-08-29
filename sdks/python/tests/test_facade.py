@@ -14,6 +14,19 @@ from solvapay.facade import create_solvapay
 from solvapay.results import PayableAllowResult, PayablePaywallResult
 
 
+def _fake_usage_request(state: dict[str, Any], outcome: str, duration: object = 0) -> dict[str, Any]:
+    return {
+        "customerRef": state.get("backendRef"),
+        "actionType": "api_call",
+        "units": 1,
+        "outcome": outcome,
+        "productRef": state.get("product"),
+        "duration": duration,
+        "metadata": {"action": state.get("meterName"), "requestId": "solvapay_test"},
+        "timestamp": "1970-01-01T00:00:00.000Z",
+    }
+
+
 def _fake_decision(name: str, args: dict[str, Any]) -> Any:
     if name == "gate_next":
         event = args.get("event") if isinstance(args.get("event"), dict) else {}
@@ -34,8 +47,9 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
                         "backendRef": ref,
                         "startedMs": started,
                         "limitsKey": key,
+                        "limitsCacheTTLMs": event.get("limitsCacheTTLMs") or 10_000,
                     },
-                    "action": {"kind": "lookupCache", "key": key},
+                    "action": {"kind": "readLimitsCache", "key": key},
                 }
             return {
                 "state": {
@@ -52,8 +66,14 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
             meter = state.get("meterName")
             key = f"{backend}:{product}:{meter}"
             new_state = {**state, "backendRef": backend, "limitsKey": key}
-            return {"state": new_state, "action": {"kind": "lookupCache", "key": key}}
-        if kind == "cacheMiss":
+            if "limitsCacheTTLMs" not in new_state:
+                new_state["limitsCacheTTLMs"] = 10_000
+            return {"state": new_state, "action": {"kind": "readLimitsCache", "key": key}}
+        ttl = int(state.get("limitsCacheTTLMs") or 10_000)
+        now = int(event.get("nowMs") or 0)
+        ts = int(event.get("timestampMs") or 0)
+        stale = bool(event.get("found")) and now - ts >= ttl
+        if kind == "limitsCacheEntry" and (not event.get("found") or stale):
             return {
                 "state": state,
                 "action": {
@@ -65,7 +85,7 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
                     "cacheDeleteKey": state.get("limitsKey"),
                 },
             }
-        if kind == "cacheHit":
+        if kind == "limitsCacheEntry" and event.get("found"):
             remaining = event.get("remaining") or 0
             limits = event.get("limits") or {}
             within = remaining > 0
@@ -74,8 +94,7 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
                 return {
                     "state": state,
                     "action": {
-                        "kind": "done",
-                        "outcome": "allow",
+                        "kind": "allow",
                         "customerRef": backend,
                         "product": state.get("product"),
                         "meterName": state.get("meterName"),
@@ -90,8 +109,7 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
             return {
                 "state": state,
                 "action": {
-                    "kind": "done",
-                    "outcome": "gate",
+                    "kind": "gate",
                     "customerRef": backend,
                     "product": state.get("product"),
                     "meterName": state.get("meterName"),
@@ -101,6 +119,7 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
                         "product": state.get("product"),
                         "checkoutUrl": "https://pay.example/x",
                         "message": "Payment required",
+                        "shortMessage": "Payment required",
                     },
                 },
             }
@@ -113,8 +132,7 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
                 return {
                     "state": state,
                     "action": {
-                        "kind": "done",
-                        "outcome": "allow",
+                        "kind": "allow",
                         "customerRef": backend,
                         "product": state.get("product"),
                         "meterName": state.get("meterName"),
@@ -131,8 +149,7 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
             return {
                 "state": state,
                 "action": {
-                    "kind": "done",
-                    "outcome": "gate",
+                    "kind": "gate",
                     "customerRef": backend,
                     "product": state.get("product"),
                     "meterName": state.get("meterName"),
@@ -142,14 +159,31 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
                         "product": state.get("product"),
                         "checkoutUrl": limits.get("checkoutUrl") or "https://pay.example/x",
                         "message": "Payment required",
+                        "shortMessage": "Payment required",
                     },
-                    "track": {
-                        "customerRef": backend,
-                        "productRef": state.get("product"),
-                        "action": state.get("meterName"),
-                        "outcome": "paywall",
-                        "durationMs": 0,
-                    },
+                    "request": _fake_usage_request(state, "paywall"),
+                },
+            }
+        if kind == "handlerSucceeded":
+            return {
+                "state": state,
+                "action": {
+                    "kind": "emitUsage",
+                    "request": _fake_usage_request(
+                        state, "success", event.get("durationMs") or 0
+                    ),
+                },
+            }
+        if kind == "handlerFailed":
+            if event.get("isPaywallError"):
+                return {"state": state, "action": {"kind": "skipUsage"}}
+            return {
+                "state": state,
+                "action": {
+                    "kind": "emitUsage",
+                    "request": _fake_usage_request(
+                        state, "fail", event.get("durationMs") or 0
+                    ),
                 },
             }
         raise AssertionError(f"unexpected gate_next event {kind}")
@@ -185,6 +219,7 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
             "kind": "payment_required",
             "product": args.get("productRef"),
             "message": "Payment required",
+            "shortMessage": "Payment required",
         }
     if name == "resolve_check_limits_params":
         usage = args.get("usageType") or args.get("meterName") or "requests"
@@ -205,6 +240,8 @@ def _fake_decision(name: str, args: dict[str, Any]) -> Any:
             or args.get("fallback")
             or "cus_fallback"
         )
+    if name == "should_retry_usage_error":
+        return "Customer not found" in str(args.get("message") or "")
     raise AssertionError(f"unexpected decision {name}")
 
 
@@ -379,3 +416,31 @@ async def test_payable_decorator_raises_paywall() -> None:
     with pytest.raises(PaywallError) as exc_info:
         await create_task({"auth": {"customer_ref": "cus_abc"}})
     assert isinstance(exc_info.value.structured_content, dict)
+
+
+@pytest.mark.asyncio
+async def test_payable_activation_required_uses_short_message() -> None:
+    client = StubClient(within_limits=False, remaining=0)
+    sp = create_solvapay(api_client=client)
+
+    async def activation_gate(*_args: object, **_kwargs: object) -> PayablePaywallResult:
+        return PayablePaywallResult(
+            kind="paywall",
+            content={
+                "kind": "activation_required",
+                "product": "prd_demo",
+                "message": "Activate a plan",
+                "shortMessage": "Activation required",
+                "checkoutUrl": "https://pay.example/x",
+            },
+        )
+
+    sp.gate = activation_gate  # type: ignore[method-assign]
+
+    @sp.payable(product="prd_demo")
+    async def create_task(args: dict[str, Any]) -> str:
+        return "ok"
+
+    with pytest.raises(PaywallError) as exc_info:
+        await create_task({"auth": {"customer_ref": "cus_abc"}})
+    assert str(exc_info.value) == "Activation required"

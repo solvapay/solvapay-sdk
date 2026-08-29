@@ -21,10 +21,11 @@
         "originalCustomerRef": "anonymous",
         "backendRef": "anonymous",
         "startedMs": 1000,
-        "limitsKey": "anonymous:prd_1:requests"
+        "limitsKey": "anonymous:prd_1:requests",
+        "limitsCacheTTLMs": 10000
       },
       "action": {
-        "kind": "lookupCache",
+        "kind": "readLimitsCache",
         "key": "anonymous:prd_1:requests"
       }
     }

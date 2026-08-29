@@ -4,6 +4,7 @@
 # Generated portable helper forwarding.
 
 module SolvaPay
+  # Map of seller tax identifier types to display labels.
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = NativeDispatch.call_sync("SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE", {}).freeze
   # Reject empty, placeholder, or non-prd_ product refs at construction time.
   # @return Throws when the ref is not a real prd_ identifier.

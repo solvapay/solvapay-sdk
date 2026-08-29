@@ -1,1 +1,144 @@
-{"ticker":"DELL","cik":"0001571996","company":"Dell Technologies","summary":{"status":"ok","text":"Dell Technologies is a leader in the global technology industry focused on providing broad and innovative technology solutions for the data and artificial intelligence (“AI”) era. These solutions range from client devices and peripherals to infrastructure solutions across servers, networking, and storage to meet the evolving needs of our customers and drive better business outcomes. With our extensive portfolio and commitment to innovation, we design, deploy, and support secure, integrated solutions that extend from the edge to the core to the cloud. We deliver AI-optimized, software-defined, and cloud native infrastructure solutions across a broad partner ecosystem to help customers address evolving information technology (“IT”) needs, drive outcomes, and capture growth as customer spending priorities evolve.\n\nDell Technologies operates globally in over 170 countries, supported by a world-class organization across key functional areas, including technology and product development, marketing, sales, services, and financing. We have a number of operational advantages that provide a critical foundation for our success. We provide leading end-to-end solutions across our portfolio of products and services. Our go-to-market operations include an extensive direct sales force, with the ability to build deep customer relationships, and a global network of channel partners. Our global services footprint consists of service and support professionals and vendor-managed service centers that support customers across the world. Our world-class supply chain operates at a significant scale with the ability to remain agile in a variety of environments."},"earnings":{"status":"ok","latest":{"period":"2026-06-30","actualEPS":4.86,"estimateEPS":2.9985,"surprise":1.8615,"surprisePercent":62.081,"result":"beat"},"history":[{"period":"2026-06-30","actualEPS":4.86,"estimateEPS":2.9985,"surprise":1.8615,"surprisePercent":62.081,"result":"beat"},{"period":"2026-03-31","actualEPS":3.89,"estimateEPS":3.5982,"surprise":0.2918,"surprisePercent":8.1096,"result":"beat"},{"period":"2025-12-31","actualEPS":2.59,"estimateEPS":2.5215,"surprise":0.0685,"surprisePercent":2.7166,"result":"beat"},{"period":"2025-09-30","actualEPS":2.32,"estimateEPS":2.3476,"surprise":-0.0276,"surprisePercent":-1.1757,"result":"miss"}]},"filings":{"status":"ok","key":[{"form":"10-K","filingDate":"2026-03-16","accessionNumber":"0001571996-26-000008","url":"https://www.sec.gov/Archives/edgar/data/1571996/000157199626000008/dell-20260130.htm"},{"form":"10-Q","filingDate":"2026-06-09","accessionNumber":"0001571996-26-000030","url":"https://www.sec.gov/Archives/edgar/data/1571996/000157199626000030/dell-20260501.htm"},{"form":"8-K","filingDate":"2026-07-06","accessionNumber":"0001193125-26-296224","url":"https://www.sec.gov/Archives/edgar/data/1571996/000119312526296224/d32716d8k.htm"}],"recent":[{"form":"144","filingDate":"2026-08-24","accessionNumber":"0001959173-26-006358","url":"https://www.sec.gov/Archives/edgar/data/1571996/000195917326006358/xsl144X01/primary_doc.xml"},{"form":"4","filingDate":"2026-07-24","accessionNumber":"0001662205-26-000009","url":"https://www.sec.gov/Archives/edgar/data/1571996/000166220526000009/xslF345X06/wk-form4_1784923775.xml"},{"form":"144","filingDate":"2026-07-22","accessionNumber":"0001959173-26-005310","url":"https://www.sec.gov/Archives/edgar/data/1571996/000195917326005310/xsl144X01/primary_doc.xml"},{"form":"4","filingDate":"2026-07-14","accessionNumber":"0001193125-26-303270","url":"https://www.sec.gov/Archives/edgar/data/1571996/000119312526303270/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-07-14","accessionNumber":"0001193125-26-303248","url":"https://www.sec.gov/Archives/edgar/data/1571996/000119312526303248/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-07-13","accessionNumber":"0001193125-26-302204","url":"https://www.sec.gov/Archives/edgar/data/1571996/000119312526302204/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-07-13","accessionNumber":"0001193125-26-302200","url":"https://www.sec.gov/Archives/edgar/data/1571996/000119312526302200/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-07-13","accessionNumber":"0001193125-26-302197","url":"https://www.sec.gov/Archives/edgar/data/1571996/000119312526302197/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-07-13","accessionNumber":"0001193125-26-302194","url":"https://www.sec.gov/Archives/edgar/data/1571996/000119312526302194/xslF345X06/ownership.xml"},{"form":"4","filingDate":"2026-07-13","accessionNumber":"0001193125-26-302192","url":"https://www.sec.gov/Archives/edgar/data/1571996/000119312526302192/xslF345X06/ownership.xml"}]},"links":{"secEdgar":"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001571996&type=&dateb=&owner=include&count=40","companyPage":"https://zelothorn.com/company/DELL"},"generatedAt":"2026-08-25T22:23:25.989Z"}
+{
+  "ticker": "DELL",
+  "cik": "0001571996",
+  "company": "Dell Technologies",
+  "summary": {
+    "status": "ok",
+    "text": "Dell Technologies is a leader in the global technology industry focused on providing broad and innovative technology solutions for the data and artificial intelligence (“AI”) era. These solutions range from client devices and peripherals to infrastructure solutions across servers, networking, and storage to meet the evolving needs of our customers and drive better business outcomes. With our extensive portfolio and commitment to innovation, we design, deploy, and support secure, integrated solutions that extend from the edge to the core to the cloud. We deliver AI-optimized, software-defined, and cloud native infrastructure solutions across a broad partner ecosystem to help customers address evolving information technology (“IT”) needs, drive outcomes, and capture growth as customer spending priorities evolve.\n\nDell Technologies operates globally in over 170 countries, supported by a world-class organization across key functional areas, including technology and product development, marketing, sales, services, and financing. We have a number of operational advantages that provide a critical foundation for our success. We provide leading end-to-end solutions across our portfolio of products and services. Our go-to-market operations include an extensive direct sales force, with the ability to build deep customer relationships, and a global network of channel partners. Our global services footprint consists of service and support professionals and vendor-managed service centers that support customers across the world. Our world-class supply chain operates at a significant scale with the ability to remain agile in a variety of environments."
+  },
+  "earnings": {
+    "status": "ok",
+    "latest": {
+      "period": "2026-06-30",
+      "actualEPS": 4.86,
+      "estimateEPS": 2.9985,
+      "surprise": 1.8615,
+      "surprisePercent": 62.081,
+      "result": "beat"
+    },
+    "history": [
+      {
+        "period": "2026-06-30",
+        "actualEPS": 4.86,
+        "estimateEPS": 2.9985,
+        "surprise": 1.8615,
+        "surprisePercent": 62.081,
+        "result": "beat"
+      },
+      {
+        "period": "2026-03-31",
+        "actualEPS": 3.89,
+        "estimateEPS": 3.5982,
+        "surprise": 0.2918,
+        "surprisePercent": 8.1096,
+        "result": "beat"
+      },
+      {
+        "period": "2025-12-31",
+        "actualEPS": 2.59,
+        "estimateEPS": 2.5215,
+        "surprise": 0.0685,
+        "surprisePercent": 2.7166,
+        "result": "beat"
+      },
+      {
+        "period": "2025-09-30",
+        "actualEPS": 2.32,
+        "estimateEPS": 2.3476,
+        "surprise": -0.0276,
+        "surprisePercent": -1.1757,
+        "result": "miss"
+      }
+    ]
+  },
+  "filings": {
+    "status": "ok",
+    "key": [
+      {
+        "form": "10-K",
+        "filingDate": "2026-03-16",
+        "accessionNumber": "0001571996-26-000008",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000157199626000008/dell-20260130.htm"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-06-09",
+        "accessionNumber": "0001571996-26-000030",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000157199626000030/dell-20260501.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-07-06",
+        "accessionNumber": "0001193125-26-296224",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000119312526296224/d32716d8k.htm"
+      }
+    ],
+    "recent": [
+      {
+        "form": "144",
+        "filingDate": "2026-08-24",
+        "accessionNumber": "0001959173-26-006358",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000195917326006358/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-24",
+        "accessionNumber": "0001662205-26-000009",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000166220526000009/xslF345X06/wk-form4_1784923775.xml"
+      },
+      {
+        "form": "144",
+        "filingDate": "2026-07-22",
+        "accessionNumber": "0001959173-26-005310",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000195917326005310/xsl144X01/primary_doc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-14",
+        "accessionNumber": "0001193125-26-303270",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000119312526303270/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-14",
+        "accessionNumber": "0001193125-26-303248",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000119312526303248/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-13",
+        "accessionNumber": "0001193125-26-302204",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000119312526302204/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-13",
+        "accessionNumber": "0001193125-26-302200",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000119312526302200/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-13",
+        "accessionNumber": "0001193125-26-302197",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000119312526302197/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-13",
+        "accessionNumber": "0001193125-26-302194",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000119312526302194/xslF345X06/ownership.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-13",
+        "accessionNumber": "0001193125-26-302192",
+        "url": "https://www.sec.gov/Archives/edgar/data/1571996/000119312526302192/xslF345X06/ownership.xml"
+      }
+    ]
+  },
+  "links": {
+    "secEdgar": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001571996&type=&dateb=&owner=include&count=40",
+    "companyPage": "https://zelothorn.com/company/DELL"
+  },
+  "generatedAt": "2026-08-25T22:23:25.989Z"
+}

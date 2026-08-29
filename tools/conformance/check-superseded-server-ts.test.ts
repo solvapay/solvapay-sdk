@@ -26,6 +26,16 @@ function makeRepo(files: Record<string, string>): string {
 }
 
 describe('superseded-server-ts-check fixtures', () => {
+  it('fails when webhook-native.ts still exists', () => {
+    const root = makeRepo({
+      'webhook-native.ts': 'export function verifyWebhookNative() {}\n',
+    })
+    const issues = runSupersededServerTsCheck(root)
+    expect(issues.some(i => i.token === 'webhook-native.ts')).toBe(true)
+    expect(formatSupersededReport(issues)).toMatch(/webhook-native/)
+    expect(formatSupersededReport(issues)).toMatch(/\.\/native/)
+  })
+
   it('fails when paywall-*-ts files still exist', () => {
     const root = makeRepo({
       'paywall-state-ts.ts': 'export type PaywallState = never\n',

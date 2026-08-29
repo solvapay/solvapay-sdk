@@ -1829,8 +1829,8 @@ operations:
       c: disableAutoRecharge
     optionalOnClient: true
     request: DisableAutoRechargeParams
-    response: DisableAutoRechargeResponse
-    overlays: [DisableAutoRechargeParams]
+    response: DisableAutoRechargeSdkResponse
+    overlays: [DisableAutoRechargeParams, DisableAutoRechargeSdkResponse]
     normalization: []
     shadow:
       volatile: []
@@ -2224,6 +2224,13 @@ overlays:
     fields:
       customerRef:
         type: string
+        required: true
+  DisableAutoRechargeSdkResponse:
+    kind: synthetic
+    doc: Disable-auto-recharge result. The endpoint only returns on success.
+    fields:
+      success:
+        literal: true
         required: true
   EnrichedPurchaseInfo:
     kind: extendDto
@@ -2661,6 +2668,26 @@ topLevel:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; TS impl: sdks/typescript/server/src/index.ts'
+      py:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; Python impl: sdks/python/src/lib.rs'
+      rb:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; Ruby impl: sdks/ruby/lib/solvapay/helpers.rb'
+      go:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; Go impl: sdks/go/solvapay.go'
+      rust:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; Rust impl: sdks/rust/src'
+        nativeExport: true
+      c:
+        omitted: true
+        reason: 'Webhook verification is host-injected; no generated C helper.'
   withRetry:
     names:
       ts: withRetry
@@ -2692,6 +2719,25 @@ topLevel:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts:
+        handWritten: true
+        reason: 'Retry driving is host-side; the policy lives in core via retry_next_delay_ms. TS impl: sdks/typescript/server/src/retry.ts'
+      py:
+        handWritten: true
+        reason: 'sdks/python/python/solvapay/retry.py'
+      rb:
+        handWritten: true
+        reason: 'sdks/ruby/lib/solvapay/helpers.rb'
+      go:
+        handWritten: true
+        reason: 'sdks/go/retry.go — generics + ctx-aware sleep are not derivable'
+      rust:
+        handWritten: true
+        reason: 'sdks/rust/src/retry.rs'
+      c:
+        omitted: true
+        reason: 'No retry driver on the C ABI.'
   buildPaywallGate:
     names:
       ts: buildPaywallGate
@@ -2842,6 +2888,25 @@ topLevel:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts:
+        handWritten: true
+        reason: 'Exception class; TS impl: sdks/typescript/core/src/solvapay-error.ts'
+      py:
+        handWritten: true
+        reason: 'Exception class; Python impl: sdks/python/python/solvapay/errors.py'
+      rb:
+        handWritten: true
+        reason: 'Exception class; Ruby impl: sdks/ruby/lib/solvapay/errors.rb'
+      go:
+        handWritten: true
+        reason: 'Error type is host-defined, not a generated helper forwarder.'
+      rust:
+        handWritten: true
+        reason: 'Error type is host-defined, not a generated helper re-export.'
+      c:
+        omitted: true
+        reason: 'No generated C exception class.'
   PaywallError:
     names:
       ts: PaywallError
@@ -2866,6 +2931,25 @@ topLevel:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts:
+        handWritten: true
+        reason: 'Exception class; TS impl: sdks/typescript/server/src/paywall.ts'
+      py:
+        handWritten: true
+        reason: 'Exception class; Python impl: sdks/python/python/solvapay/errors.py'
+      rb:
+        handWritten: true
+        reason: 'Exception class; Ruby impl: sdks/ruby/lib/solvapay/errors.rb'
+      go:
+        handWritten: true
+        reason: 'Error type is host-defined, not a generated helper forwarder.'
+      rust:
+        handWritten: true
+        reason: 'Error type is host-defined, not a generated helper re-export.'
+      c:
+        omitted: true
+        reason: 'No generated C exception class.'
 
 coreHelpers:
   validateBusinessDetails:
@@ -3011,6 +3095,13 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
   BUSINESS_COUNTRY_OPTIONS:
     names:
       ts: BUSINESS_COUNTRY_OPTIONS
@@ -3028,6 +3119,13 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
   COUNTRY_TO_TAX_ID_TYPE:
     names:
       ts: COUNTRY_TO_TAX_ID_TYPE
@@ -3045,6 +3143,13 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
   SUPPORTED_BUSINESS_COUNTRIES:
     names:
       ts: SUPPORTED_BUSINESS_COUNTRIES
@@ -3062,6 +3167,13 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
   TAX_BEHAVIORS:
     names:
       ts: TAX_BEHAVIORS
@@ -3079,6 +3191,13 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
   TAX_EXCLUSIVE_CURRENCIES:
     names:
       ts: TAX_EXCLUSIVE_CURRENCIES
@@ -3096,6 +3215,13 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
   TAX_ID_EXAMPLE_BY_COUNTRY:
     names:
       ts: TAX_ID_EXAMPLE_BY_COUNTRY
@@ -3113,6 +3239,13 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
   TAX_ID_TYPES:
     names:
       ts: TAX_ID_TYPES
@@ -3130,6 +3263,13 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+    availability:
+      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
   creditsToDisplayMinorUnits:
     names:
       ts: creditsToDisplayMinorUnits
@@ -3648,6 +3788,929 @@ facade:
       rust: [async, blocking]
       c: blocking
 
+mcp:
+  mcpDescriptors:
+    names:
+      ts: mcpDescriptors
+      py: mcp_descriptors
+      rb: mcp_descriptors
+      go: McpDescriptors
+      rust: mcp_descriptors
+      c: mcpDescriptors
+    params:
+      - name: resourceUri
+        type: string
+        required: true
+      - name: publicBaseUrl
+        type: string
+        required: true
+      - name: productRef
+        type: string
+        required: true
+      - name: views
+        array:
+          type: string
+        required: false
+      - name: csp
+        type: unknown
+        required: false
+      - name: apiBaseUrl
+        type: string
+        required: false
+      - name: branding
+        type: unknown
+        required: false
+    docs:
+      summary: 'Build MCP tool, prompt, and resource descriptors for a product.'
+      params:
+        resourceUri: 'UI resource URI stamped onto tool metadata.'
+        publicBaseUrl: 'Public http(s) origin of the MCP server.'
+        productRef: 'Default product reference for checkout tools.'
+        views: 'Enabled views; defaults to checkout, account, and topup.'
+        csp: 'Optional CSP overrides merged with the Stripe baseline.'
+        apiBaseUrl: 'Optional API origin auto-included in CSP connect-src.'
+        branding: 'Optional merchant branding for tool icons.'
+      returns: 'Descriptor bundle with tools, prompts, and resources.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpMergeCsp:
+    names:
+      ts: mcpMergeCsp
+      py: mcp_merge_csp
+      rb: mcp_merge_csp
+      go: McpMergeCsp
+      rust: mcp_merge_csp
+      c: mcpMergeCsp
+    params:
+      - name: overrides
+        type: unknown
+        required: false
+      - name: apiBaseUrl
+        type: string
+        required: false
+    docs:
+      summary: 'Merge integrator CSP overrides with the Stripe baseline allow-lists.'
+      params:
+        overrides: 'Optional resource/connect/frame domain overrides.'
+        apiBaseUrl: 'Optional API origin added to connect-src.'
+      returns: 'Merged CSP directive lists.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpOverviewResource:
+    names:
+      ts: mcpOverviewResource
+      py: mcp_overview_resource
+      rb: mcp_overview_resource
+      go: McpOverviewResource
+      rust: mcp_overview_resource
+      c: mcpOverviewResource
+    params: []
+    docs:
+      summary: 'Return the frozen MCP overview resource document.'
+      returns: 'Overview markdown and metadata for the overview resource.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpOauthDiscovery:
+    names:
+      ts: mcpOauthDiscovery
+      py: mcp_oauth_discovery
+      rb: mcp_oauth_discovery
+      go: McpOauthDiscovery
+      rust: mcp_oauth_discovery
+      c: mcpOauthDiscovery
+    params:
+      - name: kind
+        type: string
+        required: true
+      - name: publicBaseUrl
+        type: string
+        required: true
+      - name: mcpPath
+        type: string
+        required: false
+      - name: paths
+        type: unknown
+        required: false
+    docs:
+      summary: 'Build an OAuth protected-resource or authorization-server discovery document.'
+      params:
+        kind: 'protected-resource or authorization-server.'
+        publicBaseUrl: 'Public origin with trailing slash stripped.'
+        mcpPath: 'Optional MCP mount path.'
+        paths: 'Optional OAuth route path overrides.'
+      returns: 'RFC 9728 or RFC 8414 discovery JSON.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpOauthPath:
+    names:
+      ts: mcpOauthPath
+      py: mcp_oauth_path
+      rb: mcp_oauth_path
+      go: McpOauthPath
+      rust: mcp_oauth_path
+      c: mcpOauthPath
+    params:
+      - name: kind
+        type: string
+        required: true
+      - name: value
+        type: string
+        required: false
+      - name: publicBaseUrl
+        type: string
+        required: false
+      - name: mcpPath
+        type: string
+        required: false
+      - name: paths
+        type: unknown
+        required: false
+    docs:
+      summary: 'Run one OAuth path helper (slash, resource identifier, or resolve-paths).'
+      params:
+        kind: 'Which path helper to run.'
+        value: 'String argument for slash helpers.'
+        publicBaseUrl: 'Public origin for resource identifiers.'
+        mcpPath: 'Optional MCP mount path.'
+        paths: 'Optional path overrides for resolve-paths.'
+      returns: 'Normalized path string or resolved path map.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpOauthErrorInspect:
+    names:
+      ts: mcpOauthErrorInspect
+      py: mcp_oauth_error_inspect
+      rb: mcp_oauth_error_inspect
+      go: McpOauthErrorInspect
+      rust: mcp_oauth_error_inspect
+      c: mcpOauthErrorInspect
+    params:
+      - name: kind
+        type: string
+        required: true
+      - name: body
+        type: unknown
+        required: false
+      - name: status
+        type: integer
+        required: false
+    docs:
+      summary: 'Inspect an upstream OAuth error body without building a full RFC error.'
+      params:
+        kind: 'has-shape, derive-code, or build-description.'
+        body: 'Upstream error body.'
+        status: 'HTTP status used by derive-code.'
+      returns: 'Boolean, error code, or description string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpNormalizeOauthError:
+    names:
+      ts: mcpNormalizeOauthError
+      py: mcp_normalize_oauth_error
+      rb: mcp_normalize_oauth_error
+      go: McpNormalizeOauthError
+      rust: mcp_normalize_oauth_error
+      c: mcpNormalizeOauthError
+    params:
+      - name: body
+        type: unknown
+        required: false
+      - name: text
+        type: string
+        required: false
+      - name: status
+        type: integer
+        required: false
+    docs:
+      summary: 'Normalize an upstream OAuth error into the frozen RFC error body.'
+      params:
+        body: 'Parsed upstream JSON body.'
+        text: 'Raw upstream body text.'
+        status: 'HTTP status; defaults to 400.'
+      returns: 'Normalized OAuth error object.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpAuthGate:
+    names:
+      ts: mcpAuthGate
+      py: mcp_auth_gate
+      rb: mcp_auth_gate
+      go: McpAuthGate
+      rust: mcp_auth_gate
+      c: mcpAuthGate
+    params:
+      - name: publicBaseUrl
+        type: string
+        required: true
+      - name: rpcMethod
+        type: string
+        required: false
+      - name: authHeader
+        type: string
+        required: false
+      - name: authMode
+        type: string
+        required: false
+      - name: mcpPath
+        type: string
+        required: false
+      - name: jsonRpcId
+        type: unknown
+        required: false
+    docs:
+      summary: 'Decide allow versus 401 WWW-Authenticate challenge for an MCP request.'
+      params:
+        publicBaseUrl: 'Public origin for the WWW-Authenticate resource.'
+        rpcMethod: 'JSON-RPC method; may be absent.'
+        authHeader: 'Authorization header; any value allows.'
+        authMode: 'tools-call or all; defaults to tools-call.'
+        mcpPath: 'Optional MCP mount path.'
+        jsonRpcId: 'JSON-RPC id echoed on the challenge body.'
+      returns: 'Allow decision or HTTP challenge payload.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpIsFreeMethod:
+    names:
+      ts: mcpIsFreeMethod
+      py: mcp_is_free_method
+      rb: mcp_is_free_method
+      go: McpIsFreeMethod
+      rust: mcp_is_free_method
+      c: mcpIsFreeMethod
+    params:
+      - name: mcpMethod
+        type: string
+        required: false
+    docs:
+      summary: 'Return whether an MCP JSON-RPC method is free (no bearer) in tools-call mode.'
+      params:
+        mcpMethod: 'JSON-RPC method name; tools/call is gated.'
+      returns: 'True when the method does not require a bearer in tools-call mode.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpRequiresBearerAuth:
+    names:
+      ts: mcpRequiresBearerAuth
+      py: mcp_requires_bearer_auth
+      rb: mcp_requires_bearer_auth
+      go: McpRequiresBearerAuth
+      rust: mcp_requires_bearer_auth
+      c: mcpRequiresBearerAuth
+    params:
+      - name: mcpMethod
+        type: string
+        required: false
+      - name: authMode
+        type: string
+        required: false
+    docs:
+      summary: 'Return whether a bearer is required for a method under the given auth mode.'
+      params:
+        mcpMethod: 'JSON-RPC method name.'
+        authMode: 'tools-call or all; defaults to tools-call.'
+      returns: 'True when a bearer token is required.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpDcrDiagnostics:
+    names:
+      ts: mcpDcrDiagnostics
+      py: mcp_dcr_diagnostics
+      rb: mcp_dcr_diagnostics
+      go: McpDcrDiagnostics
+      rust: mcp_dcr_diagnostics
+      c: mcpDcrDiagnostics
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: apiBaseUrl
+        type: string
+        required: true
+      - name: status
+        type: integer
+        required: true
+      - name: bodyText
+        type: string
+        required: false
+    docs:
+      summary: 'Build the OAuth DCR failure diagnostic log line.'
+      params:
+        productRef: 'Configured product reference.'
+        apiBaseUrl: 'Configured API origin.'
+        status: 'Upstream HTTP status.'
+        bodyText: 'Upstream body text used to pick the hint.'
+      returns: 'Diagnostic message object.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpConfigLog:
+    names:
+      ts: mcpConfigLog
+      py: mcp_config_log
+      rb: mcp_config_log
+      go: McpConfigLog
+      rust: mcp_config_log
+      c: mcpConfigLog
+    params:
+      - name: apiBaseUrl
+        type: string
+        required: true
+      - name: productRef
+        type: string
+        required: true
+      - name: publicBaseUrl
+        type: string
+        required: true
+    docs:
+      summary: 'Build the one-line MCP config log payload (once-per-process is host-side).'
+      params:
+        apiBaseUrl: 'API origin.'
+        productRef: 'Product reference.'
+        publicBaseUrl: 'Public MCP origin.'
+      returns: 'Config log message object.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpHideToolsByAudience:
+    names:
+      ts: mcpHideToolsByAudience
+      py: mcp_hide_tools_by_audience
+      rb: mcp_hide_tools_by_audience
+      go: McpHideToolsByAudience
+      rust: mcp_hide_tools_by_audience
+      c: mcpHideToolsByAudience
+    params:
+      - name: tools
+        array:
+          type: unknown
+        required: true
+      - name: audiences
+        array:
+          type: string
+        required: true
+      - name: userAgent
+        type: string
+        required: false
+    docs:
+      summary: 'Filter tools/list descriptors by _meta.audience, with a ChatGPT UA bypass.'
+      params:
+        tools: 'Tool descriptors; hidden tools include _meta.audience.'
+        audiences: 'Audiences to hide (for example ui).'
+        userAgent: 'Optional User-Agent; openai-mcp bypasses the filter.'
+      returns: 'Filtered tools list, optionally marked bypassed.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpNarrate:
+    names:
+      ts: mcpNarrate
+      py: mcp_narrate
+      rb: mcp_narrate
+      go: McpNarrate
+      rust: mcp_narrate
+      c: mcpNarrate
+    params:
+      - name: tool
+        type: string
+        required: true
+      - name: payload
+        type: unknown
+        required: true
+      - name: kind
+        type: string
+        required: false
+      - name: mode
+        type: string
+        required: false
+      - name: meta
+        type: unknown
+        required: false
+    docs:
+      summary: 'Narrate an intent-tool bootstrap payload as markdown or a tool-result envelope.'
+      params:
+        tool: 'Intent tool name.'
+        payload: 'Bootstrap payload to narrate.'
+        kind: 'placeholder selects a one-line UI placeholder.'
+        mode: 'When set, emit a narrated tool-result envelope.'
+        meta: 'Base _meta stamped onto narrated envelopes.'
+      returns: 'Narration markdown or a narrated MCP tool result.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpHandleRequest:
+    names:
+      ts: mcpHandleRequest
+      py: mcp_handle_request
+      rb: mcp_handle_request
+      go: McpHandleRequest
+      rust: mcp_handle_request
+      c: mcpHandleRequest
+    params:
+      - name: rpc
+        type: unknown
+        required: true
+      - name: config
+        type: unknown
+        required: true
+      - name: authHeader
+        type: string
+        required: false
+    docs:
+      summary: 'Run one MCP JSON-RPC request through the engine (requires the engine feature).'
+      params:
+        rpc: 'JSON-RPC request object.'
+        config: 'Engine config including product and public origin.'
+        authHeader: 'Optional Authorization header.'
+      returns: 'Engine response or invokeHandler continuation.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+    feature: engine
+  mcpResume:
+    names:
+      ts: mcpResume
+      py: mcp_resume
+      rb: mcp_resume
+      go: McpResume
+      rust: mcp_resume
+      c: mcpResume
+    params:
+      - name: token
+        type: string
+        required: true
+      - name: handlerEnvelope
+        type: unknown
+        required: true
+    docs:
+      summary: 'Resume an engine continuation after a host payable handler returns.'
+      params:
+        token: 'Continuation token from invokeHandler.'
+        handlerEnvelope: 'Host handler outcome envelope.'
+      returns: 'Completed JSON-RPC response.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+    feature: engine
+  paywallToolResult:
+    names:
+      ts: paywallToolResult
+      py: paywall_tool_result
+      rb: paywall_tool_result
+      go: PaywallToolResult
+      rust: paywall_tool_result
+      c: paywallToolResult
+    params:
+      - name: message
+        type: string
+        required: true
+      - name: structuredContent
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build a text-only MCP paywall tool result (isError false) from narration and a gate.'
+      params:
+        message: 'Narration text for content[0].'
+        structuredContent: 'Machine-readable PaywallGate payload.'
+      returns: 'MCP tool result with isError false and structuredContent.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  makeResponseResult:
+    names:
+      ts: makeResponseResult
+      py: make_response_result
+      rb: make_response_result
+      go: MakeResponseResult
+      rust: make_response_result
+      c: makeResponseResult
+    params:
+      - name: data
+        type: unknown
+        required: true
+      - name: options
+        type: unknown
+        required: false
+      - name: emittedBlocks
+        array:
+          type: unknown
+        required: false
+    docs:
+      summary: 'Construct a branded handler response envelope (__solvapayResponse).'
+      params:
+        data: 'Merchant handler data payload.'
+        options: 'Optional response options object.'
+        emittedBlocks: 'Content blocks queued via ctx.emit before respond.'
+      returns: 'Branded ResponseEnvelope.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  assertResponseResult:
+    names:
+      ts: assertResponseResult
+      py: assert_response_result
+      rb: assert_response_result
+      go: AssertResponseResult
+      rust: assert_response_result
+      c: assertResponseResult
+    params:
+      - name: value
+        type: unknown
+        required: true
+    docs:
+      summary: 'Assert a value is a branded response envelope; brand failures are Transport errors.'
+      params:
+        value: 'Candidate handler return value.'
+      returns: 'The branded envelope, or a Transport error.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  buildPayableToolResult:
+    names:
+      ts: buildPayableToolResult
+      py: build_payable_tool_result
+      rb: build_payable_tool_result
+      go: BuildPayableToolResult
+      rust: build_payable_tool_result
+      c: buildPayableToolResult
+    params:
+      - name: envelope
+        type: unknown
+        required: true
+    docs:
+      summary: 'Unwrap a branded response envelope into an allow-path MCP tool result.'
+      params:
+        envelope: 'Branded handler return from makeResponseResult.'
+      returns: 'MCP allow-path tool result with structuredContent.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  invokePayableNext:
+    names:
+      ts: invokePayableNext
+      py: invoke_payable_next
+      rb: invoke_payable_next
+      go: InvokePayableNext
+      rust: invoke_payable_next
+      c: invokePayableNext
+    params:
+      - name: state
+        type: unknown
+        required: false
+      - name: event
+        type: unknown
+        required: false
+    docs:
+      summary: 'Advance the payable-tool state machine by one event.'
+      params:
+        state: 'Opaque machine state from the previous step.'
+        event: 'Next event (start, gatePaywall, gateAllow, handler*).'
+      returns: 'Next state plus optional MCP result or host callback.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature.'
+  MCP_TOOL_NAMES:
+    names:
+      ts: MCP_TOOL_NAMES
+      py: MCP_TOOL_NAMES
+      rb: MCP_TOOL_NAMES
+      go: MCP_TOOL_NAMES
+      rust: MCP_TOOL_NAMES
+      c: MCP_TOOL_NAMES
+    params: []
+    docs:
+      summary: 'Frozen map of SolvaPay MCP intent and UI tool names.'
+      returns: 'JSON object of canonical tool names.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  mcpViewMaps:
+    names:
+      ts: mcpViewMaps
+      py: mcp_view_maps
+      rb: mcp_view_maps
+      go: McpViewMaps
+      rust: mcp_view_maps
+      c: mcpViewMaps
+    params: []
+    docs:
+      summary: 'Return the frozen view-to-tool and view-to-prompt maps.'
+      returns: 'View maps used by descriptor builders.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  deriveIcons:
+    names:
+      ts: deriveIcons
+      py: derive_icons
+      rb: derive_icons
+      go: DeriveIcons
+      rust: derive_icons
+      c: deriveIcons
+    params:
+      - name: branding
+        type: unknown
+        required: false
+    docs:
+      summary: 'Project merchant branding into MCP tool icons; absent branding yields null.'
+      params:
+        branding: 'Optional merchant branding with iconUrl or logoUrl.'
+      returns: 'Icon list, or null when branding has neither icon nor logo.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  buildToolDescriptorMetadata:
+    names:
+      ts: buildToolDescriptorMetadata
+      py: build_tool_descriptor_metadata
+      rb: build_tool_descriptor_metadata
+      go: BuildToolDescriptorMetadata
+      rust: build_tool_descriptor_metadata
+      c: buildToolDescriptorMetadata
+    params:
+      - name: resourceUri
+        type: string
+        required: true
+      - name: views
+        array:
+          type: string
+        required: false
+      - name: branding
+        type: unknown
+        required: false
+    docs:
+      summary: 'Build ordered tool descriptor metadata for enabled views.'
+      params:
+        resourceUri: 'UI resource URI stamped onto metadata.'
+        views: 'Enabled views; defaults to checkout, account, and topup.'
+        branding: 'Optional merchant branding for icons.'
+      returns: 'Ordered tool descriptor metadata list.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  buildPromptDescriptorMetadata:
+    names:
+      ts: buildPromptDescriptorMetadata
+      py: build_prompt_descriptor_metadata
+      rb: build_prompt_descriptor_metadata
+      go: BuildPromptDescriptorMetadata
+      rust: build_prompt_descriptor_metadata
+      c: buildPromptDescriptorMetadata
+    params:
+      - name: views
+        array:
+          type: string
+        required: false
+    docs:
+      summary: 'Build ordered prompt descriptor metadata for enabled views.'
+      params:
+        views: 'Enabled views; defaults to checkout, account, and topup.'
+      returns: 'Ordered prompt descriptor metadata list.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  buildPromptUserMessage:
+    names:
+      ts: buildPromptUserMessage
+      py: build_prompt_user_message
+      rb: build_prompt_user_message
+      go: BuildPromptUserMessage
+      rust: build_prompt_user_message
+      c: buildPromptUserMessage
+    params:
+      - name: promptName
+        type: string
+        required: true
+      - name: args
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build the user-role prompt message for a SolvaPay slash-command prompt.'
+      params:
+        promptName: 'Prompt name (upgrade, manage_account, topup).'
+        args: 'Prompt argument object.'
+      returns: 'Prompt user message with text content.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  validatePublicBaseUrl:
+    names:
+      ts: validatePublicBaseUrl
+      py: validate_public_base_url
+      rb: validate_public_base_url
+      go: ValidatePublicBaseUrl
+      rust: validate_public_base_url
+      c: validatePublicBaseUrl
+    params:
+      - name: publicBaseUrl
+        type: string
+        required: true
+    docs:
+      summary: 'Validate publicBaseUrl is http(s); returns a frozen error message or null.'
+      params:
+        publicBaseUrl: 'Candidate public origin.'
+      returns: 'Error message string when invalid; null when valid.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+
 errors:
   webhook:
     codes:
@@ -3682,6 +4745,11 @@ defaults:
     backoff: fixed
   webhookToleranceSec: 300
   limitsCacheTTLMs: 10000
+  customerDedupTTLMs: 60000
+  customerDedupMaxCacheSize: 1000
+  anonymousCustomerRef: anonymous
+  requestIdFormat: 'solvapay_{epochMs}_{random9}'
+  usageActionType: api_call
   idempotencyKeyFormats:
     payment: 'payment-{planRef}-{epochMs}-{random9}'
     topup: 'topup-{epochMs}-{random9}'
@@ -3770,6 +4838,13 @@ nameOverrides:
     go: TAX_ID_TYPES
     rust: TAX_ID_TYPES
     c: TAX_ID_TYPES
+  MCP_TOOL_NAMES:
+    ts: MCP_TOOL_NAMES
+    py: MCP_TOOL_NAMES
+    rb: MCP_TOOL_NAMES
+    go: MCP_TOOL_NAMES
+    rust: MCP_TOOL_NAMES
+    c: MCP_TOOL_NAMES
   SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE:
     ts: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
     py: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE

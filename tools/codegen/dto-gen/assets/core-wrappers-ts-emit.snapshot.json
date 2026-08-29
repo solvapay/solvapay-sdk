@@ -47,6 +47,7 @@
         "normalizeReactivateResponse",
         "validatePurchaseRef",
         "projectUsageSnapshot",
+        "shouldRetryUsageError",
         "resolveCheckLimitsParams",
         "validateListPlansParams",
         "charges",
@@ -71,6 +72,7 @@
         "decidePaywallOutcome",
         "resolveFallbackGateLimits",
         "evaluateBalanceObservation",
+        "ensureCustomerNext",
         "gateNext",
         "resolveAuthenticatedUser"
       ],
@@ -128,6 +130,7 @@
         "classifyCancelError",
         "classifyReactivateError",
         "projectUsageSnapshot",
+        "shouldRetryUsageError",
         "resolveCheckLimitsParams",
         "validateListPlansParams",
         "charges",
@@ -150,6 +153,7 @@
         "resolveFallbackGateLimits",
         "decidePaywallOutcome",
         "evaluateBalanceObservation",
+        "ensureCustomerNext",
         "gateNext",
         "resolveAuthenticatedUser"
       ],
@@ -197,6 +201,7 @@
         "normalizeReactivateResponse",
         "validatePurchaseRef",
         "projectUsageSnapshot",
+        "shouldRetryUsageError",
         "resolveCheckLimitsParams",
         "validateListPlansParams",
         "charges",
@@ -221,6 +226,7 @@
         "decidePaywallOutcome",
         "resolveFallbackGateLimits",
         "evaluateBalanceObservation",
+        "ensureCustomerNext",
         "gateNext",
         "resolveAuthenticatedUser"
       ],

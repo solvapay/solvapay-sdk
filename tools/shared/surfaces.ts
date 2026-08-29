@@ -336,14 +336,7 @@ export const SURFACES: readonly Surface[] = [
         rubyCwd,
         rubyRequires,
       ),
-      task(
-        'ruby-mcp.bundle',
-        'Ruby MCP bundle',
-        'bundle',
-        ['install'],
-        rubyMcpCwd,
-        rubyRequires,
-      ),
+      task('ruby-mcp.bundle', 'Ruby MCP bundle', 'bundle', ['install'], rubyMcpCwd, rubyRequires),
     ],
     test: [
       task(
@@ -389,9 +382,7 @@ export function nativeSurfaces(): Surface[] {
 export function nativePrepareTasks(): Task[] {
   return nativeSurfaces()
     .filter(surface => surface.livePrepare !== false)
-    .flatMap(surface =>
-      surface.prepare !== undefined ? [...surface.prepare] : [...surface.build],
-    )
+    .flatMap(surface => (surface.prepare !== undefined ? [...surface.prepare] : [...surface.build]))
 }
 
 export interface SelectFlags {

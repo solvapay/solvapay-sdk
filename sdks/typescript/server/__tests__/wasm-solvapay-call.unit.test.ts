@@ -41,10 +41,7 @@ describe('WASM solvapayCall', () => {
       },
     })
     publishWasmSyncApi()
-    const value = callWasmSync(
-      'solvapayCall',
-      JSON.stringify({ op: 'mcpMergeCsp', args: {} }),
-    )
+    const value = callWasmSync('solvapayCall', JSON.stringify({ op: 'mcpMergeCsp', args: {} }))
     expect(value).toEqual({
       resourceDomains: ['https://js.stripe.com'],
       connectDomains: ['https://api.stripe.com'],

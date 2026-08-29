@@ -66,7 +66,9 @@ function mockPurchase(
 }
 
 function mockFreeUser() {
-  vi.mocked(usePurchase).mockReturnValue(mockPurchase({ activePurchase: null, hasPaidPurchase: false }))
+  vi.mocked(usePurchase).mockReturnValue(
+    mockPurchase({ activePurchase: null, hasPaidPurchase: false }),
+  )
 }
 
 function mockPaidUser() {

@@ -41,8 +41,8 @@ pub fn render_entry_doc_lines(
 mod tests {
     use super::*;
     use crate::ir::{
-        IrAvailability, IrDefaults, IrDocModel, IrEntrySection, IrErrorKind, IrLangNames,
-        IrRubyReceiver, IrRubyTarget, IrSyncKind, IrTypeRef,
+        IrAvailability, IrDefaults, IrDocModel, IrEmissionMatrix, IrEntrySection, IrErrorKind,
+        IrLangNames, IrRubyReceiver, IrRubyTarget, IrSyncKind, IrTypeRef,
     };
 
     #[test]
@@ -85,6 +85,9 @@ mod tests {
                 rust: vec![IrSyncKind::Async],
             },
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: "check_limits".into(),

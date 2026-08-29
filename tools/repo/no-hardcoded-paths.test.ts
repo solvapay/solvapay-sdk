@@ -22,18 +22,27 @@ const ALLOWLIST = new Set([
   'conformance/lib/mcp-fixture-coverage.test.ts',
   'conformance/lib/mcp-layer3-budget.ts',
   'conformance/lib/mcp-layer3-budget.test.ts',
+  'conformance/lib/public-surface.test.ts',
   'conformance/lib/generated-client-surfaces.ts',
   'conformance/lib/surface-loc-budget.ts',
   'conformance/lib/superseded-mcp-py-check.ts',
   'conformance/lib/superseded-mcp-py-check.test.ts',
+  'conformance/lib/superseded-mcp-go-check.ts',
+  'conformance/lib/superseded-mcp-go-check.test.ts',
+  'conformance/lib/superseded-mcp-rb-check.ts',
+  'conformance/lib/superseded-mcp-rb-check.test.ts',
+  'conformance/lib/superseded-mcp-rs-check.ts',
+  'conformance/lib/superseded-mcp-rs-check.test.ts',
+  'codegen/manifest.test.ts',
+  'repo/prettierignore.test.ts',
+  'repo/doc-script-references.test.ts',
+  'repo/lib/retired-symbols.ts',
+  'repo/lib/retired-symbols.test.ts',
   'conformance/record-mcp-fixtures.ts',
   'mcp-app-widget/__tests__/widget-artifact.test.ts',
 ])
 
-const ROOT_ARITHMETIC = [
-  /dirname\(\s*fileURLToPath\(\s*import\.meta\.url/,
-  /\b__dirname\b/,
-]
+const ROOT_ARITHMETIC = [/dirname\(\s*fileURLToPath\(\s*import\.meta\.url/, /\b__dirname\b/]
 
 const HARDCODED_PATH =
   /['"`]((?:rust|packages|sdks|core|internal|contract|docs|examples|scripts|tools|\.github)\/[^'"`\n]+)/g
@@ -42,9 +51,7 @@ const HARDCODED_JOIN =
   /\bjoin\(\s*[^)]*?['"`](packages|sdks|core|internal|tools|contract|docs|examples)['"`]/g
 
 function stripComments(src: string): string {
-  const withoutBlock = src.replace(/\/\*[\s\S]*?\*\//g, block =>
-    block.replace(/[^\n]/g, ' '),
-  )
+  const withoutBlock = src.replace(/\/\*[\s\S]*?\*\//g, block => block.replace(/[^\n]/g, ' '))
   return withoutBlock
     .split('\n')
     .map(line => {

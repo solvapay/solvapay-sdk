@@ -113,6 +113,10 @@ fn split_payload(entry: &IrEntryPoint, binding: &IrBindingSymbol) -> String {
 fn is_scalar(ty: &IrTypeRef) -> bool {
     matches!(
         ty,
-        IrTypeRef::String | IrTypeRef::I64 | IrTypeRef::F64 | IrTypeRef::Bool
+        IrTypeRef::String
+            | IrTypeRef::I64
+            | IrTypeRef::F64
+            | IrTypeRef::Bool
+            | IrTypeRef::LiteralBool(_)
     )
 }

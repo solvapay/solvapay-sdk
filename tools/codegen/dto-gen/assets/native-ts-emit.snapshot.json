@@ -28,7 +28,7 @@
       "syncType": "NativeSyncMethod"
     },
     "wasm": {
-      "clientMembers": 36,
+      "clientMembers": 41,
       "syncMembers": 65,
       "clientType": "WasmClientMethod",
       "syncType": "WasmSyncMethod"

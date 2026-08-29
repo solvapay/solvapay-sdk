@@ -585,6 +585,8 @@ pub enum IrEntrySection {
     CoreHelper,
     /// Facade factory / payable surface.
     Facade,
+    /// MCP sync op or layer-2 native symbol.
+    Mcp,
 }
 
 /// Sync availability for TypeScript (step 18 emitters).
@@ -594,6 +596,75 @@ pub enum IrSyncKind {
     Async,
     /// Synchronous function.
     Sync,
+}
+
+/// How dto-gen should treat one language for a catalogued entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IrEmissionMode {
+    /// Emit a generated forwarder / wrapper.
+    Generated,
+    /// Host language already owns a hand-written implementation.
+    HandWritten {
+        /// Non-empty justification from the contract.
+        reason: String,
+    },
+    /// Language has no symbol.
+    Omitted {
+        /// Non-empty justification from the contract.
+        reason: String,
+    },
+}
+
+impl IrEmissionMode {
+    /// True when dto-gen must emit this language.
+    pub fn is_generated(&self) -> bool {
+        matches!(self, Self::Generated)
+    }
+}
+
+impl Default for IrEmissionMode {
+    fn default() -> Self {
+        Self::Generated
+    }
+}
+
+/// Per-language emission matrix (distinct from [`IrAvailability`] sync modes).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IrEmissionMatrix {
+    /// TypeScript.
+    pub ts: IrEmissionMode,
+    /// Python.
+    pub py: IrEmissionMode,
+    /// Ruby.
+    pub rb: IrEmissionMode,
+    /// Go.
+    pub go: IrEmissionMode,
+    /// Rust.
+    pub rust: IrEmissionMode,
+    /// C ABI.
+    pub c: IrEmissionMode,
+}
+
+impl Default for IrEmissionMatrix {
+    fn default() -> Self {
+        Self {
+            ts: IrEmissionMode::Generated,
+            py: IrEmissionMode::Generated,
+            rb: IrEmissionMode::Generated,
+            go: IrEmissionMode::Generated,
+            rust: IrEmissionMode::Generated,
+            c: IrEmissionMode::Generated,
+        }
+    }
+}
+
+/// MCP catalog surface (`syncOp` envelope vs layer-2 payload builders).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrMcpSurface {
+    /// Named wrapper over the `solvapay_call` envelope.
+    SyncOp,
+    /// Layer-2 native payload / descriptor helper.
+    Layer2,
 }
 
 /// Per-language callable availability for a catalog entry.
@@ -624,6 +695,8 @@ pub enum IrRubyReceiver {
     ErrorClass,
     /// Public Ruby constant.
     Constant,
+    /// Catalogued-but-not-emitted MCP native (`SolvaPay::Mcp::Layer2`); Phase 3 owns emission.
+    McpNative,
 }
 
 /// Normalized Ruby target consumed by Ruby emitters.
@@ -650,6 +723,16 @@ pub struct IrDefaults {
     pub webhook_tolerance_sec: i64,
     /// Limits-cache TTL in milliseconds.
     pub limits_cache_ttl_ms: u64,
+    /// Customer-dedup cache TTL in milliseconds.
+    pub customer_dedup_ttl_ms: u64,
+    /// Customer-dedup cache max entries.
+    pub customer_dedup_max_cache_size: u32,
+    /// Sentinel customer ref that skips ensure/lookup.
+    pub anonymous_customer_ref: String,
+    /// `trackUsage` request-id template (`{epochMs}` / `{random9}`).
+    pub request_id_format: String,
+    /// Frozen `trackUsage.actionType`.
+    pub usage_action_type: String,
 }
 
 impl Default for IrDefaults {
@@ -659,6 +742,11 @@ impl Default for IrDefaults {
             initial_delay_ms: 500,
             webhook_tolerance_sec: 300,
             limits_cache_ttl_ms: 10_000,
+            customer_dedup_ttl_ms: 60_000,
+            customer_dedup_max_cache_size: 1_000,
+            anonymous_customer_ref: "anonymous".to_owned(),
+            request_id_format: "solvapay_{epochMs}_{random9}".to_owned(),
+            usage_action_type: "api_call".to_owned(),
         }
     }
 }
@@ -708,6 +796,12 @@ pub struct IrEntryPoint {
     pub response: Option<String>,
     /// Typed per-language sync/async availability.
     pub availability: IrAvailability,
+    /// Declared emission mode per language (generated vs skip).
+    pub emission: IrEmissionMatrix,
+    /// MCP surface when [`IrEntrySection::Mcp`].
+    pub mcp_surface: Option<IrMcpSurface>,
+    /// Optional feature gate (e.g. `engine`) when [`IrEntrySection::Mcp`].
+    pub feature: Option<String>,
     /// TypeScript primary mode retained for existing TypeScript emitters.
     pub sync_ts: IrSyncKind,
     /// Normalized Ruby owner/receiver/signature target.
@@ -953,6 +1047,8 @@ pub enum IrTypeRef {
     Named(String),
     /// String literal type (e.g. `'balance'`).
     LiteralString(String),
+    /// Boolean literal type (e.g. `true`).
+    LiteralBool(bool),
 }
 
 /// One HTTP operation's wire contract.

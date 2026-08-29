@@ -325,6 +325,13 @@ export type DisableAutoRechargeParams = {
 }
 
 /**
+ * Disable-auto-recharge result. The endpoint only returns on success.
+ */
+export type DisableAutoRechargeSdkResponse = {
+  success: true
+}
+
+/**
  * SDK overlay extending `PurchaseInfo`.
  */
 export type EnrichedPurchaseInfo = components['schemas']['PurchaseInfo'] & {

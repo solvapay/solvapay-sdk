@@ -77,6 +77,7 @@ import {
   coerceCustomerOptions,
   createSolvaPayClient,
   decidePaywallOutcome,
+  ensureCustomerNext,
   evaluateBalanceObservation,
   evaluateCachedLimits,
   gateNext,
@@ -86,6 +87,7 @@ import {
   isCachedCustomerRefValid,
   isEmailConflict,
   isErrorResult,
+  shouldRetryUsageError,
   mapRouteError,
   McpAdapter,
   normalizeCancelResponse,
@@ -1632,6 +1634,16 @@ export function createDefaultRegistry(): FixtureRegistry {
     },
   })
 
+  registry.register('shouldRetryUsageError', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.message !== 'string') {
+        throw new Error('shouldRetryUsageError args.message must be a string')
+      }
+      return shouldRetryUsageError(args.message)
+    },
+  })
+
   registry.register('validateActivatePlanParams', {
     id: 'core',
     invoke: args => {
@@ -2133,6 +2145,11 @@ export function createDefaultRegistry(): FixtureRegistry {
       }
       return evaluateBalanceObservation(args.baseline, args.credits)
     },
+  })
+
+  registry.register('ensureCustomerNext', {
+    id: 'core',
+    invoke: args => ensureCustomerNext(args.state, args.event),
   })
 
   registry.register('gateNext', {

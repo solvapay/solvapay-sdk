@@ -56,18 +56,18 @@ cd examples/typescript/express-basic && pnpm dev   # stub mode — no API key ne
 
 The SDK ships **10 published npm packages**:
 
-| Package                                                 | Purpose                                      |
-| ------------------------------------------------------- | -------------------------------------------- |
-| [`solvapay`](./tools/cli)                                | CLI — `npx solvapay init` for existing repos |
-| [`create-solvapay`](./tools/create-solvapay)             | Scaffold new MCP apps                        |
-| [`@solvapay/server`](./sdks/typescript/server)          | Paywall, API client, webhooks (Node + Edge)  |
-| [`@solvapay/react`](./sdks/typescript/react)            | Headless checkout UI and hooks               |
-| [`@solvapay/next`](./sdks/typescript/next)              | Next.js API route helpers                    |
-| [`@solvapay/mcp`](./sdks/typescript/mcp)                | Official MCP SDK adapter                     |
-| [`@solvapay/mcp-core`](./sdks/typescript/mcp-core)      | Framework-neutral MCP contracts              |
-| [`@solvapay/auth`](./sdks/typescript/auth)              | Auth adapters                                |
-| [`@solvapay/react-supabase`](./sdks/typescript/react-supabase) | Supabase auth for React               |
-| [`@solvapay/core`](./sdks/typescript/core)              | Shared types and utilities                   |
+| Package                                                        | Purpose                                      |
+| -------------------------------------------------------------- | -------------------------------------------- |
+| [`solvapay`](./tools/cli)                                      | CLI — `npx solvapay init` for existing repos |
+| [`create-solvapay`](./tools/create-solvapay)                   | Scaffold new MCP apps                        |
+| [`@solvapay/server`](./sdks/typescript/server)                 | Paywall, API client, webhooks (Node + Edge)  |
+| [`@solvapay/react`](./sdks/typescript/react)                   | Headless checkout UI and hooks               |
+| [`@solvapay/next`](./sdks/typescript/next)                     | Next.js API route helpers                    |
+| [`@solvapay/mcp`](./sdks/typescript/mcp)                       | Official MCP SDK adapter                     |
+| [`@solvapay/mcp-core`](./sdks/typescript/mcp-core)             | Framework-neutral MCP contracts              |
+| [`@solvapay/auth`](./sdks/typescript/auth)                     | Auth adapters                                |
+| [`@solvapay/react-supabase`](./sdks/typescript/react-supabase) | Supabase auth for React                      |
+| [`@solvapay/core`](./sdks/typescript/core)                     | Shared types and utilities                   |
 
 Each package README is the npm landing page for that surface. Under the hood, shared SDK behavior lives in a Rust semantic core (in the `core/` crates) that every language surface delegates to; see [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) for the as-built architecture (Rust core + five language surfaces).
 
@@ -124,7 +124,7 @@ pnpm build
 pnpm test
 ```
 
-The monorepo uses [Changesets](https://github.com/changesets/changesets) for per-package versioning. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for branching, preview publishes, and release workflow.
+The monorepo uses [Changesets](https://github.com/changesets/changesets) for per-package versioning. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`docs/publishing.mdx`](./docs/publishing.mdx) for branching, preview publishes, and release workflow.
 
 ## Security
 

@@ -11,7 +11,8 @@
         "kind": "payment_required",
         "product": "prd_demo",
         "checkoutUrl": "",
-        "message": ""
+        "message": "",
+        "shortMessage": "Payment required"
       }
     }
   },

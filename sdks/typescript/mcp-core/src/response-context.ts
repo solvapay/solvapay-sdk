@@ -179,6 +179,7 @@ export function buildResponseContext(
       product,
       checkoutUrl: '',
       message,
+      shortMessage: 'Payment required',
     }
     throw new PaywallError(message, structuredContent)
   }

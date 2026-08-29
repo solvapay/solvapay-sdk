@@ -9,7 +9,8 @@
         "kind": "activation_required",
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/confirm",
-        "message": "activate"
+        "message": "activate",
+        "shortMessage": "Activation required"
       }
     }
   },
@@ -20,7 +21,8 @@
       "product": "prd_demo",
       "checkoutUrl": "https://pay.test/confirm",
       "message": "activate",
-      "kind": "activation_required"
+      "kind": "activation_required",
+      "shortMessage": "Activation required"
     }
   }
 }

@@ -43,5 +43,6 @@ class ResponseContext:
                 "product": self._product_ref,
                 "checkoutUrl": "",
                 "message": message,
+                "shortMessage": "Payment required",
             },
         )

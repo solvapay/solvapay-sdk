@@ -117,7 +117,11 @@ describe('snapshot-openapi CLI', () => {
     const snapshotPath = path.join(dir, 'custom.snapshot.json')
     writeFileSync(
       snapshotPath,
-      JSON.stringify({ openapi: '3.0.0', info: { title: 't', version: '1' }, paths: { '/only-custom': {} } }),
+      JSON.stringify({
+        openapi: '3.0.0',
+        info: { title: 't', version: '1' },
+        paths: { '/only-custom': {} },
+      }),
     )
     const report = pathDiffReport(
       { openapi: '3.0.0', info: { title: 't', version: '1' }, paths: { '/from-spec': {} } },

@@ -71,7 +71,7 @@ describe('shadow selftest (stub backend)', () => {
     expect(diverged.length).toBe(1)
     const d = diverged[0]?.divergence
     expect(d).toBeDefined()
-    expect(d?.tsWire.length).toBeGreaterThan(0)
+    expect(d?.facadeWire.length).toBeGreaterThan(0)
     expect(d?.rustWire.length).toBeGreaterThan(0)
     expect(d?.path).toBeTruthy()
   }, 120_000)

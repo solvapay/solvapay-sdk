@@ -22,7 +22,15 @@ const FORBIDDEN_FILES = [
   'paywall-state-ts.ts',
   'paywall-gate-ts.ts',
   'paywall-payload-ts.ts',
+  'webhook-native.ts',
 ] as const
+
+function forbiddenFileRemediation(basename: string): string {
+  if (basename === 'webhook-native.ts') {
+    return 'Delete webhook-native.ts; import verifyWebhookNative from ./native.'
+  }
+  return `Delete ${basename}; paywall semantics live in Rust after Step 53.`
+}
 
 type ContentRule = {
   token: string
@@ -140,7 +148,7 @@ export function runSupersededServerTsCheck(repoRoot: string): SupersededIssue[] 
       issues.push({
         file: path.relative(repoRoot, full),
         token: basename,
-        remediation: `Delete ${basename}; paywall semantics live in Rust after Step 53.`,
+        remediation: forbiddenFileRemediation(basename),
       })
     }
   }

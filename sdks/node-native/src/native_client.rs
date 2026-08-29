@@ -594,7 +594,12 @@ pub fn dispatch_envelope_for_fn(fn_name: &str, _args_json: &str) -> Option<Strin
         | "getPaymentMethod"
         | "getAutoRecharge"
         | "saveAutoRecharge"
-        | "disableAutoRecharge" => None,
+        | "disableAutoRecharge"
+        | "mcpBootstrap"
+        | "mcpCallBuiltinTool"
+        | "mcpReadResource"
+        | "mcpOauthRequest"
+        | "mcpDispatch" => None,
         other => Some(internal_error_envelope(format!(
             "unknown NativeClient fn: {other}"
         ))),

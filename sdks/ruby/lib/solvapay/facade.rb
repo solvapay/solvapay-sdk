@@ -1,14 +1,10 @@
 # frozen_string_literal: true
 
 require "time"
+require_relative "defaults"
 
 module SolvaPay
-  CUSTOMER_CACHE_TTL_MS = 60_000
-  DEFAULT_LIMITS_CACHE_TTL_MS = 10_000
-
   class Facade
-    BASE36 = "0123456789abcdefghijklmnopqrstuvwxyz"
-
     def initialize(
       api_key: nil,
       api_base_url: nil,
@@ -39,6 +35,7 @@ module SolvaPay
         "product" => product,
         "usageType" => usage_type,
         "startedMs" => started_ms,
+        "limitsCacheTTLMs" => @limits_cache_ttl,
       }
       action = {} #: Hash[String, untyped]
       loop do
@@ -58,25 +55,26 @@ module SolvaPay
         when "ensureCustomer"
           backend = ensure_customer(action["customerRef"])
           event = { "kind" => "customerResolved", "backendRef" => backend, "nowMs" => @clock.call }
-        when "lookupCache"
+        when "readLimitsCache"
           key = action["key"]
           now = @clock.call
-          cached = @mutex.synchronize do
-            value = @limits_cache[key]
-            if value && now - value.fetch(:timestamp) < @limits_cache_ttl
-              value.dup
-            else
-              @limits_cache.delete(key)
-              nil
-            end
-          end
-          event = { "kind" => "cacheMiss", "nowMs" => now }
+          cached = @mutex.synchronize { @limits_cache[key] }
           if cached.is_a?(Hash)
             event = {
-              "kind" => "cacheHit",
+              "kind" => "limitsCacheEntry",
+              "found" => true,
               "remaining" => cached.fetch(:remaining),
               "limits" => cached[:limits],
+              "timestampMs" => cached.fetch(:timestamp),
               "nowMs" => now,
+              "randomUnit" => random_unit,
+            }
+          else
+            event = {
+              "kind" => "limitsCacheEntry",
+              "found" => false,
+              "nowMs" => now,
+              "randomUnit" => random_unit,
             }
           end
         when "checkLimits"
@@ -94,8 +92,13 @@ module SolvaPay
           unless limits.is_a?(Hash)
             limits = {} #: Hash[String, untyped]
           end
-          event = { "kind" => "limitsResult", "limits" => limits, "nowMs" => @clock.call }
-        when "done"
+          event = {
+            "kind" => "limitsResult",
+            "limits" => limits,
+            "nowMs" => @clock.call,
+            "randomUnit" => random_unit,
+          }
+        when "allow", "gate"
           apply_gate_cache(action["cache"])
           break
         else
@@ -108,27 +111,16 @@ module SolvaPay
       end
 
       backend_ref = action["customerRef"]
-      meter_name = action["meterName"] || usage_type
-      if action["track"].is_a?(Hash)
-        track_usage_call(
-          customer_ref: backend_ref,
-          product_ref: product,
-          action: meter_name,
-          outcome: "paywall",
-          duration_ms: action["track"]["durationMs"] || 0,
-        )
-      end
-      if action["outcome"] == "gate"
+      post_usage_request(action["request"]) if action["request"].is_a?(Hash)
+      if action["kind"] == "gate"
         gate = action["gate"]
         return PayablePaywallResult.new(content: gate)
       end
 
       build_allow_result(
         backend_ref: backend_ref,
-        product: product,
-        usage_type: usage_type,
         decision: { "outcome" => "allow", "limits" => action["limits"] },
-        meter_name: meter_name,
+        driver_state: state,
       )
     end
 
@@ -156,27 +148,26 @@ module SolvaPay
           entry = @limits_cache[key]
           entry[:remaining] = cache["remaining"] if entry.is_a?(Hash)
         when "set"
+          unless cache["timestamp"].is_a?(Numeric)
+            raise SolvaPay::SolvaPayError.new("gate_next cache set missing timestamp", code: "internal_error")
+          end
           @limits_cache[key] = {
-            timestamp: cache["timestamp"] || @clock.call,
+            timestamp: cache["timestamp"],
             remaining: cache["remaining"],
             limits: cache["limits"],
+            checkoutUrl: cache["checkoutUrl"],
+            meterName: cache["meterName"],
           }
         end
       end
     end
 
     def ensure_customer(customer_ref)
-      classification = NativeDispatch.call_sync(
-        "classify_customer_ref",
-        { "customerRef" => customer_ref },
-      )
-      return customer_ref if %w[backend anonymous].include?(classification) || customer_ref.start_with?("cus_")
-
       state, leader = acquire_customer_lookup(customer_ref)
       return await_customer_lookup(state) unless leader
 
       begin
-        result = find_or_create_customer(customer_ref)
+        result = run_ensure_customer(customer_ref)
         publish_customer_lookup(customer_ref, state, result: result)
         result
       rescue StandardError => e
@@ -187,13 +178,6 @@ module SolvaPay
 
     def acquire_customer_lookup(customer_ref)
       @mutex.synchronize do
-        cached = @customer_cache[customer_ref]
-        if cached && @clock.call < cached.fetch(:expires_at)
-          state = { done: true, result: cached.fetch(:value) }
-          return [state, false]
-        end
-        @customer_cache.delete(customer_ref)
-
         inflight = @customer_inflight[customer_ref]
         return [inflight, false] if inflight
 
@@ -217,109 +201,205 @@ module SolvaPay
         state[:result] = result
         state[:error] = error
         state[:done] = true
-        if error.nil?
-          @customer_cache[customer_ref] = {
-            value: result,
-            expires_at: @clock.call + CUSTOMER_CACHE_TTL_MS,
-          }
-        end
         @customer_inflight.delete(customer_ref)
         state.fetch(:condition).broadcast
       end
     end
 
-    def find_or_create_customer(customer_ref)
-      existing = begin
-        @client.get_customer(params: { "externalRef" => customer_ref })
-      rescue SolvaPayError
-        nil
+    def run_ensure_customer(customer_ref)
+      state = nil
+      event = {
+        "kind" => "start",
+        "customerRef" => customer_ref,
+        "canCreateCustomer" => true,
+        "canUpdateCustomer" => true,
+        "nowMs" => @clock.call,
+      }
+      loop do
+        out = NativeDispatch.call_sync("ensure_customer_next", { "state" => state, "event" => event })
+        unless out.is_a?(Hash)
+          raise SolvaPay::SolvaPayError.new("ensure_customer_next returned unexpected value", code: "internal_error")
+        end
+        unless out["action"].is_a?(Hash)
+          details = out["details"]
+          details = out["error"] unless details.is_a?(String) && !details.empty?
+          raise SolvaPay::SolvaPayError.new(details.to_s, code: "internal_error")
+        end
+        state = out["state"]
+        action = out["action"]
+        case action["kind"]
+        when "readCustomerCache"
+          key = action["key"].to_s
+          cached = @mutex.synchronize { @customer_cache[key] }
+          event = if cached.is_a?(Hash)
+            {
+              "kind" => "customerCacheEntry",
+              "found" => true,
+              "backendRef" => cached[:value],
+              "timestampMs" => cached[:timestamp_ms],
+              "nowMs" => @clock.call,
+            }
+          else
+            { "kind" => "customerCacheEntry", "found" => false, "nowMs" => @clock.call }
+          end
+        when "getCustomer"
+          params = if action["byExternalRef"]
+            { "externalRef" => action["byExternalRef"] }
+          else
+            { "email" => action["byEmail"] }
+          end
+          begin
+            existing = @client.get_customer(params: params)
+            if existing.is_a?(Hash) && existing["customerRef"]
+              event = {
+                "kind" => "customerLookupResult",
+                "found" => true,
+                "customer" => existing,
+                "nowMs" => @clock.call,
+              }
+            else
+              event = { "kind" => "customerLookupResult", "found" => false, "nowMs" => @clock.call }
+            end
+          rescue SolvaPayError => e
+            event = {
+              "kind" => "customerLookupResult",
+              "found" => false,
+              "errorMessage" => e.message,
+              "nowMs" => @clock.call,
+            }
+          end
+        when "createCustomer"
+          begin
+            created = @client.create_customer(params: action["params"])
+            event = {
+              "kind" => "customerCreateResult",
+              "ok" => true,
+              "customer" => created,
+              "nowMs" => @clock.call,
+            }
+          rescue SolvaPayError => e
+            event = {
+              "kind" => "customerCreateResult",
+              "ok" => false,
+              "errorMessage" => e.message,
+              "nowMs" => @clock.call,
+            }
+          end
+        when "updateCustomer"
+          begin
+            @client.update_customer(customer_ref: action["customerRef"], params: action["patch"])
+            event = { "kind" => "customerUpdateResult", "ok" => true, "nowMs" => @clock.call }
+          rescue SolvaPayError => e
+            event = {
+              "kind" => "customerUpdateResult",
+              "ok" => false,
+              "errorMessage" => e.message,
+              "nowMs" => @clock.call,
+            }
+          end
+        when "resolved"
+          backend = action["backendRef"]
+          unless backend.is_a?(String) && !backend.empty?
+            raise SolvaPayError.new("ensure_customer_next resolved without backendRef", code: "internal_error")
+          end
+          cache = action["cache"]
+          if cache.is_a?(Hash) && cache["key"].is_a?(String)
+            write_customer_cache(cache["key"], backend, cache["timestampMs"])
+          end
+          return backend
+        else
+          raise SolvaPay::SolvaPayError.new("ensure_customer_next unknown action kind", code: "internal_error")
+        end
       end
-      return existing["customerRef"].to_s if existing.is_a?(Hash) && existing["customerRef"]
+    end
 
-      params = NativeDispatch.call_sync(
-        "build_create_customer_params",
-        {
-          "customerRef" => customer_ref,
-          "externalRef" => customer_ref,
-          "email" => customer_ref.include?("@") ? customer_ref : nil,
-          "nowMs" => @clock.call,
+    def paywall_short_message(content)
+      unless content.is_a?(Hash)
+        raise SolvaPayError.new("paywall result missing gate content", code: "internal_error")
+      end
+
+      message = content["shortMessage"]
+      unless message.is_a?(String) && !message.empty?
+        raise SolvaPayError.new("paywall gate missing shortMessage", code: "internal_error")
+      end
+
+      message
+    end
+
+    def write_customer_cache(key, backend_ref, timestamp_ms)
+      @mutex.synchronize do
+        @customer_cache[key] = {
+          value: backend_ref,
+          timestamp_ms: timestamp_ms,
+        }
+        overflow = @customer_cache.size - CUSTOMER_DEDUP_MAX_CACHE_SIZE
+        next if overflow <= 0
+
+        oldest = @customer_cache.min_by(overflow) { |_cache_key, entry| entry[:timestamp_ms].to_i }
+        oldest.each { |cache_key, _entry| @customer_cache.delete(cache_key) }
+      end
+    end
+
+    def random_unit
+      Random.rand
+    end
+
+    def post_usage_request(request)
+      SolvaPay.with_retry(
+        should_retry: lambda { |error, _attempt|
+          SolvaPay::NativeDispatch.call_sync(
+            "should_retry_usage_error",
+            { "message" => error.message },
+          )
         },
-      )
-      created = @client.create_customer(params: params)
-      ref = NativeDispatch.call_sync(
-        "extract_backend_customer_ref",
-        { "response" => created, "fallback" => customer_ref },
-      )
-      unless ref.is_a?(String) && !ref.empty?
-        raise SolvaPayError.new("create_customer did not return customerRef", code: "invalid_customer")
+      ) { @client.track_usage(params: request) }
+    end
+
+    def emit_handler_usage(state, event)
+      out = NativeDispatch.call_sync("gate_next", { "state" => state, "event" => event })
+      unless out.is_a?(Hash)
+        raise SolvaPay::SolvaPayError.new("gate_next returned unexpected value", code: "internal_error")
       end
 
-      ref
-    end
-
-    def resolved_meter_name(product, usage_type)
-      resolved = NativeDispatch.call_sync(
-        "resolve_check_limits_params",
-        { "productRef" => product, "usageType" => usage_type },
-      )
-      meter = resolved.is_a?(Hash) ? resolved["meterName"] : nil
-      return meter if meter.is_a?(String)
-
-      raise SolvaPayError, "resolve_check_limits_params returned unexpected value"
-    end
-
-    def generate_request_id
-      suffix = +""
-      9.times do
-        char = BASE36[Random.rand(36)]
-        raise SolvaPayError, "request id generation failed" if char.nil?
-
-        suffix << char
+      action = out["action"]
+      unless action.is_a?(Hash)
+        raise SolvaPay::SolvaPayError.new("gate_next returned unexpected action", code: "internal_error")
       end
-      "solvapay_#{@clock.call}_#{suffix}"
+
+      return if action["kind"] == "skipUsage"
+      unless action["kind"] == "emitUsage" && action["request"].is_a?(Hash)
+        raise SolvaPay::SolvaPayError.new("gate_next handler event returned unexpected action", code: "internal_error")
+      end
+
+      post_usage_request(action["request"])
     end
 
-    def iso8601_timestamp
-      Time.now.utc.iso8601(3).sub("+00:00", "Z")
-    end
-
-    def track_usage_call(customer_ref:, product_ref:, action:, outcome:, duration_ms:)
-      @client.track_usage(
-        params: {
-          "customerRef" => customer_ref,
-          "actionType" => "api_call",
-          "units" => 1,
-          "outcome" => outcome,
-          "productRef" => product_ref,
-          "duration" => duration_ms,
-          "metadata" => { "action" => action, "requestId" => generate_request_id },
-          "timestamp" => iso8601_timestamp,
-        },
-      )
-    end
-
-    def build_allow_result(backend_ref:, product:, usage_type:, decision:, meter_name:)
-      _ = usage_type
+    def build_allow_result(backend_ref:, decision:, driver_state:)
       track_success = lambda do |duration: nil, metadata: nil|
         _ = metadata
-        track_usage_call(
-          customer_ref: backend_ref,
-          product_ref: product,
-          action: meter_name,
-          outcome: "success",
-          duration_ms: duration.nil? ? 0 : duration,
+        emit_handler_usage(
+          driver_state,
+          {
+            "kind" => "handlerSucceeded",
+            "durationMs" => duration.nil? ? 0 : duration,
+            "nowMs" => @clock.call,
+            "randomUnit" => random_unit,
+          },
         )
         nil
       end
       track_fail = lambda do |error, duration: nil, metadata: nil|
-        _ = error
         _ = metadata
-        track_usage_call(
-          customer_ref: backend_ref,
-          product_ref: product,
-          action: meter_name,
-          outcome: "fail",
-          duration_ms: duration.nil? ? 0 : duration,
+        emit_handler_usage(
+          driver_state,
+          {
+            "kind" => "handlerFailed",
+            "durationMs" => duration.nil? ? 0 : duration,
+            "nowMs" => @clock.call,
+            "randomUnit" => random_unit,
+            "errorMessage" => error.to_s,
+            "isPaywallError" => error.is_a?(PaywallError),
+          },
         )
       end
       PayableAllowResult.new(
@@ -349,7 +429,7 @@ module SolvaPay
         result = @facade.gate(customer_ref, product: @product, usage_type: @usage_type)
         case result
         when PayablePaywallResult
-          raise PaywallError.new("Payment required", result.content)
+          raise PaywallError.new(@facade.send(:paywall_short_message, result.content), result.content)
         when PayableAllowResult
           begin
             value = operation.call(*args, **kwargs, &block)

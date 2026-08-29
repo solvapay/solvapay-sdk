@@ -25,7 +25,6 @@ pub mod http;
 pub mod shell;
 pub mod transport;
 
-#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub mod mcp;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -39,7 +38,6 @@ pub mod fetch_transport;
 
 pub use client::{encode_path_segment, SolvaPayClient};
 pub use http::{HeaderName, HttpRequest, HttpResponse, Method};
-#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 pub use mcp::{
     McpBootstrapParams, McpCallBuiltinToolParams, McpDispatchParams, McpOauthConfig,
     McpOauthRequestParams, McpReadResourceParams, McpToolConfig,

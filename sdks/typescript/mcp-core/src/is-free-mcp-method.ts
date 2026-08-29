@@ -14,10 +14,7 @@ export function isFreeMcpMethod(mcpMethod?: string): boolean {
   return callMcpSyncOp('mcpIsFreeMethod', { mcpMethod: mcpMethod ?? null })
 }
 
-export function requiresBearerAuth(
-  mcpMethod: string | undefined,
-  authMode: McpAuthMode,
-): boolean {
+export function requiresBearerAuth(mcpMethod: string | undefined, authMode: McpAuthMode): boolean {
   return callMcpSyncOp('mcpRequiresBearerAuth', {
     mcpMethod: mcpMethod ?? null,
     authMode,

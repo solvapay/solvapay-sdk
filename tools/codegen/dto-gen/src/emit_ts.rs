@@ -144,6 +144,7 @@ pub(crate) fn ts_type_ref(ir: &Ir, ty: &IrTypeRef) -> String {
         IrTypeRef::String => "string".into(),
         IrTypeRef::I64 | IrTypeRef::F64 => "number".into(),
         IrTypeRef::Bool => "boolean".into(),
+        IrTypeRef::LiteralBool(flag) => flag.to_string(),
         IrTypeRef::Value => "unknown".into(),
         IrTypeRef::Vec(inner) => format!("Array<{}>", ts_type_ref(ir, inner)),
         IrTypeRef::Map(inner) => format!("Record<string, {}>", ts_type_ref(ir, inner)),

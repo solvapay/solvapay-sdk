@@ -10,10 +10,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { joinRel, tsPackageRel, REPO_ROOT } from '../../shared/paths.js'
-import {
-  formatMcpSupersededReport,
-  runMcpSupersededTsCheck,
-} from './superseded-mcp-ts-check.js'
+import { formatMcpSupersededReport, runMcpSupersededTsCheck } from './superseded-mcp-ts-check.js'
 
 function makeRepo(files: Record<string, string>): string {
   const root = mkdtempSync(path.join(tmpdir(), 'superseded-mcp-ts-'))

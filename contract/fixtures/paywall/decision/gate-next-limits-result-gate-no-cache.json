@@ -1,0 +1,76 @@
+{
+  "suite": "paywall",
+  "case": "gate-next-limits-result-gate-no-cache",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "event": {
+        "kind": "limitsResult",
+        "limits": {
+          "withinLimits": false,
+          "remaining": 0
+        },
+        "nowMs": 1000,
+        "randomUnit": 0.5
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "action": {
+        "kind": "gate",
+        "customerRef": "cus_abc",
+        "product": "prd_1",
+        "meterName": "requests",
+        "limits": {
+          "withinLimits": false,
+          "remaining": 0
+        },
+        "customer": {
+          "ref": "cus_abc",
+          "balance": 0,
+          "remaining": 0,
+          "withinLimits": false
+        },
+        "gate": {
+          "kind": "payment_required",
+          "product": "prd_1",
+          "checkoutUrl": "",
+          "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan.",
+          "shortMessage": "Payment required"
+        },
+        "request": {
+          "customerRef": "cus_abc",
+          "actionType": "api_call",
+          "units": 1,
+          "outcome": "paywall",
+          "productRef": "prd_1",
+          "duration": 0,
+          "metadata": {
+            "action": "requests",
+            "requestId": "solvapay_1000_i"
+          },
+          "timestamp": "1970-01-01T00:00:01.000Z"
+        }
+      }
+    }
+  }
+}

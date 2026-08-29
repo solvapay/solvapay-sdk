@@ -5,7 +5,6 @@ This directory holds OpenAPI-derived and dto-gen-derived TypeScript artifacts.
 For the full five-surface SDK codegen runbook (manifest, bindings, CI gates), see
 [`docs/contributing/sdk-codegen.md`](../../../../docs/contributing/sdk-codegen.md).
 
-
 **Note:** Only routes starting with `/v1/sdk/` are included in the generated types.
 
 Wire types come from the committed OpenAPI snapshot
@@ -15,13 +14,13 @@ and product schemas.
 
 ## Files
 
-| File                                                  | Producer                                                                            | Edit? |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------- | ----- |
-| `generated.ts`                                        | `pnpm gen` (openapi-typescript from committed snapshot)                             | No    |
-| `overlays.generated.d.ts`                             | `pnpm gen` (dto-gen)                                                                | No    |
-| `client.generated.d.ts`                               | `pnpm gen` (dto-gen)                                                                | No    |
-| `../native.ts` / `../wasm.ts`                         | `pnpm gen` (dto-gen)                                                                | No    |
-| `../__generated__/signature-parity.generated.test.ts` | `pnpm gen` (dto-gen)                                                                | No    |
+| File                                                  | Producer                                                | Edit? |
+| ----------------------------------------------------- | ------------------------------------------------------- | ----- |
+| `generated.ts`                                        | `pnpm gen` (openapi-typescript from committed snapshot) | No    |
+| `overlays.generated.d.ts`                             | `pnpm gen` (dto-gen)                                    | No    |
+| `client.generated.d.ts`                               | `pnpm gen` (dto-gen)                                    | No    |
+| `../native.ts` / `../wasm.ts`                         | `pnpm gen` (dto-gen)                                    | No    |
+| `../__generated__/signature-parity.generated.test.ts` | `pnpm gen` (dto-gen)                                    | No    |
 
 Only `/v1/sdk/*` paths are included (agents routes excluded). See
 `tools/codegen/lib/openapi-pipeline.ts`.
@@ -73,4 +72,3 @@ Hand-written bridges that adapt wire shapes to SDK ergonomics live in nearby
 non-generated modules (e.g. mapped customer/plan helpers). Prefer extending the
 manifest `overlays:` catalog + `pnpm gen` when the shape should be
 cross-language.
-

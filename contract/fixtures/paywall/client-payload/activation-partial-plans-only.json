@@ -10,7 +10,14 @@
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/confirm",
         "message": "activate",
-        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+        "plans": [
+          {
+            "reference": "pl_pro",
+            "type": "usage-based",
+            "requiresPayment": true
+          }
+        ],
+        "shortMessage": "Activation required"
       }
     }
   },
@@ -22,7 +29,14 @@
       "checkoutUrl": "https://pay.test/confirm",
       "message": "activate",
       "kind": "activation_required",
-      "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+      "plans": [
+        {
+          "reference": "pl_pro",
+          "type": "usage-based",
+          "requiresPayment": true
+        }
+      ],
+      "shortMessage": "Activation required"
     }
   }
 }

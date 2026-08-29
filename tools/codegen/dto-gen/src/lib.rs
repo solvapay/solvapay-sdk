@@ -3,6 +3,7 @@
 pub mod chrome;
 pub mod derive_bindings;
 pub mod doc_coverage;
+pub mod doc_parity;
 pub mod doc_render;
 pub mod emit;
 pub mod emit_bindings_rs;
@@ -20,6 +21,11 @@ pub mod emit_conformance_rb;
 pub mod emit_core_types_ts;
 pub mod emit_core_wrappers_ts;
 pub mod emit_fixture_runner_rs;
+pub mod emit_helpers;
+pub mod emit_helpers_go;
+pub mod emit_helpers_py;
+pub mod emit_helpers_rs;
+pub mod emit_mcp;
 pub mod emit_native_py;
 pub mod emit_native_rb;
 pub mod emit_parity_suite_c;
@@ -46,6 +52,7 @@ pub mod scan_core_types;
 
 pub use derive_bindings::{derive_export_bindings, install_derived_bindings};
 pub use doc_coverage::check_doc_coverage;
+pub use doc_parity::{check_doc_parity, EmittedSurface};
 pub use emit::{emit_crate, EmittedCrate};
 pub use emit_bindings_rs::{emit_bindings, EmittedBindings, Toolchain};
 pub use emit_bindings_ts::emit_native_ts;
@@ -61,6 +68,10 @@ pub use emit_conformance_rb::emit_conformance_rb;
 pub use emit_core_types_ts::emit_core_types_ts;
 pub use emit_core_wrappers_ts::{emit_core_wrappers_ts, CoreWrapperKind};
 pub use emit_fixture_runner_rs::emit_fixture_runner;
+pub use emit_helpers_go::emit_helpers_go;
+pub use emit_helpers_py::emit_helpers_py;
+pub use emit_helpers_rs::emit_helpers_rs;
+pub use emit_mcp::{emit_mcp_go, emit_mcp_py, emit_mcp_rb, emit_mcp_rs, emit_mcp_ts};
 pub use emit_native_py::emit_native_py;
 pub use emit_native_rb::emit_native_rb;
 pub use emit_parity_suite_c::emit_parity_suite_c;
@@ -70,7 +81,7 @@ pub use emit_parity_suite_rb::emit_parity_suite_rb;
 pub use emit_parity_suite_rs::emit_parity_suite_rs;
 pub use emit_parity_suite_ts::emit_parity_suite_ts;
 pub use emit_pyi_py::emit_pyi_py;
-pub use emit_rbs_rb::emit_rbs_rb;
+pub use emit_rbs_rb::{emit_mcp_rbs_rb, emit_rbs_rb};
 pub use emit_ts::emit_overlays_ts;
 pub use error::{GenError, GenResult};
 pub use ir::Ir;
@@ -166,6 +177,8 @@ pub struct GenOutputs<'a> {
     pub native_py_out: Option<&'a Path>,
     /// `--py-stub-out`
     pub py_stub_out: Option<&'a Path>,
+    /// `--py-helpers-out`
+    pub py_helpers_out: Option<&'a Path>,
     /// `--py-parity-out`
     pub py_parity_out: Option<&'a Path>,
     /// `--py-conformance-out`
@@ -176,6 +189,8 @@ pub struct GenOutputs<'a> {
     pub rb_client_out: Option<&'a Path>,
     /// `--rb-rbs-out`
     pub rb_rbs_out: Option<&'a Path>,
+    /// `--rb-mcp-rbs-out`
+    pub rb_mcp_rbs_out: Option<&'a Path>,
     /// `--rb-parity-out`
     pub rb_parity_out: Option<&'a Path>,
     /// `--rb-conformance-out`
@@ -184,10 +199,14 @@ pub struct GenOutputs<'a> {
     pub go_conformance_out: Option<&'a Path>,
     /// `--rs-client-out`
     pub rs_client_out: Option<&'a Path>,
+    /// `--rs-helpers-out`
+    pub rs_helpers_out: Option<&'a Path>,
     /// `--rs-parity-out`
     pub rs_parity_out: Option<&'a Path>,
     /// `--go-client-out`
     pub go_client_out: Option<&'a Path>,
+    /// `--go-helpers-out`
+    pub go_helpers_out: Option<&'a Path>,
     /// `--go-parity-out`
     pub go_parity_out: Option<&'a Path>,
     /// `--c-bindings-out`
@@ -198,6 +217,16 @@ pub struct GenOutputs<'a> {
     pub c_parity_out: Option<&'a Path>,
     /// `--fixture-runner-out`
     pub fixture_runner_out: Option<&'a Path>,
+    /// `--rb-mcp-layer2-out`
+    pub rb_mcp_layer2_out: Option<&'a Path>,
+    /// `--py-mcp-layer2-out`
+    pub py_mcp_layer2_out: Option<&'a Path>,
+    /// `--go-mcp-layer2-out`
+    pub go_mcp_layer2_out: Option<&'a Path>,
+    /// `--ts-mcp-native-out`
+    pub ts_mcp_native_out: Option<&'a Path>,
+    /// `--rs-mcp-layer2-out`
+    pub rs_mcp_layer2_out: Option<&'a Path>,
 }
 
 /// Reads an OpenAPI snapshot (+ optional manifest), builds IR, and writes generated sources.
@@ -348,6 +377,12 @@ pub fn generate_from_snapshot(
             ),
             ("--py-stub-out", outputs.py_stub_out, emit_pyi_py, false),
             (
+                "--py-helpers-out",
+                outputs.py_helpers_out,
+                emit_helpers_py,
+                false,
+            ),
+            (
                 "--py-parity-out",
                 outputs.py_parity_out,
                 emit_parity_suite_py,
@@ -360,6 +395,12 @@ pub fn generate_from_snapshot(
                 false,
             ),
             ("--rb-rbs-out", outputs.rb_rbs_out, emit_rbs_rb, false),
+            (
+                "--rb-mcp-rbs-out",
+                outputs.rb_mcp_rbs_out,
+                emit_mcp_rbs_rb,
+                false,
+            ),
             (
                 "--rb-parity-out",
                 outputs.rb_parity_out,
@@ -379,10 +420,52 @@ pub fn generate_from_snapshot(
                 false,
             ),
             (
+                "--go-helpers-out",
+                outputs.go_helpers_out,
+                emit_helpers_go,
+                false,
+            ),
+            (
                 "--go-parity-out",
                 outputs.go_parity_out,
                 emit_parity_suite_go,
                 false,
+            ),
+            (
+                "--rs-helpers-out",
+                outputs.rs_helpers_out,
+                emit_helpers_rs,
+                true,
+            ),
+            (
+                "--rb-mcp-layer2-out",
+                outputs.rb_mcp_layer2_out,
+                emit_mcp_rb,
+                false,
+            ),
+            (
+                "--py-mcp-layer2-out",
+                outputs.py_mcp_layer2_out,
+                emit_mcp_py,
+                false,
+            ),
+            (
+                "--go-mcp-layer2-out",
+                outputs.go_mcp_layer2_out,
+                emit_mcp_go,
+                false,
+            ),
+            (
+                "--ts-mcp-native-out",
+                outputs.ts_mcp_native_out,
+                emit_mcp_ts,
+                false,
+            ),
+            (
+                "--rs-mcp-layer2-out",
+                outputs.rs_mcp_layer2_out,
+                emit_mcp_rs,
+                true,
             ),
         ],
     )?;
@@ -705,12 +788,21 @@ mod output_dispatch_tests {
             "--wasm-ts-out",
             "--native-py-out",
             "--py-stub-out",
+            "--py-helpers-out",
             "--py-parity-out",
             "--native-rb-out",
             "--rb-rbs-out",
+            "--rb-mcp-rbs-out",
             "--rb-parity-out",
             "--go-client-out",
+            "--go-helpers-out",
             "--go-parity-out",
+            "--rs-helpers-out",
+            "--rb-mcp-layer2-out",
+            "--py-mcp-layer2-out",
+            "--go-mcp-layer2-out",
+            "--ts-mcp-native-out",
+            "--rs-mcp-layer2-out",
         ];
         let paths: Vec<PathBuf> = flags
             .iter()

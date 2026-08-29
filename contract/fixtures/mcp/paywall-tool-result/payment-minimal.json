@@ -9,19 +9,26 @@
         "kind": "payment_required",
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/x",
-        "message": "pay"
+        "message": "pay",
+        "shortMessage": "Payment required"
       }
     }
   },
   "expect": {
     "result": {
       "isError": false,
-      "content": [{ "type": "text", "text": "pay" }],
+      "content": [
+        {
+          "type": "text",
+          "text": "pay"
+        }
+      ],
       "structuredContent": {
         "kind": "payment_required",
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/x",
-        "message": "pay"
+        "message": "pay",
+        "shortMessage": "Payment required"
       }
     }
   }

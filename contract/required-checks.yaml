@@ -200,4 +200,4 @@ checks:
     gate: Platform build matrices
   - name: Documentation Validation
     jobId: documentation
-    gate: Documentation validation
+    gate: Documentation validation + retired-symbols:check

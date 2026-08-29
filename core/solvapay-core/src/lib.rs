@@ -16,6 +16,7 @@ pub mod checkout;
 pub mod credit_display;
 pub mod customer_sync;
 pub mod envelope;
+pub mod ensure_customer;
 pub mod error;
 #[cfg(feature = "server")]
 pub mod fixture_host;
@@ -37,6 +38,7 @@ pub mod pricing_options;
 pub mod product;
 pub mod product_readiness;
 pub mod purchase;
+pub mod random;
 pub mod renewal;
 pub mod retry;
 pub mod route_error;
@@ -77,9 +79,13 @@ pub use envelope::{
     envelope_from_panic_payload, err_envelope, internal_error_envelope, ok_envelope,
     parse_args_json, run_envelope_result, run_envelope_sync,
 };
+pub use ensure_customer::{
+    ensure_customer_next, EnsureCustomerAction, EnsureCustomerCacheWrite, EnsureCustomerNextOutput,
+    EnsureCustomerState, EnsurePending,
+};
 pub use error::{render_template, SdkError};
 pub use gate_driver::{
-    gate_next, GateAction, GateCacheOp, GateDriverState, GateNextOutput, GateTrackOp,
+    gate_next, CustomerSnapshot, GateAction, GateCacheOp, GateDriverState, GateNextOutput,
 };
 pub use helper_error::HelperErrorResult;
 pub use invoke_payable::{
@@ -119,7 +125,7 @@ pub use plans::validate_list_plans_params;
 pub use pricing_options::{
     billing_cycle, charges, counts_usage, credits_per_unit_from_balance, headline_charges,
     included_units, meter_name, pegged_credits_per_unit, per_unit_charge, trial_days, BillingCycle,
-    Charge,
+    BillingInterval, Charge, ChargePer,
 };
 pub use product::validate_get_product_params;
 pub use product_readiness::{
@@ -129,6 +135,7 @@ pub use product_readiness::{
 pub use purchase::{
     is_cached_customer_ref_valid, resolve_purchase_customer_ref, select_active_purchases,
 };
+pub use random::{iso8601_millis, random9_from_f64};
 pub use renewal::{
     classify_cancel_error, classify_reactivate_error, normalize_cancel_response,
     normalize_reactivate_response, validate_purchase_ref,
@@ -140,7 +147,7 @@ pub use seller_identity::{
     seller_tax_identifier_display_label_by_type, SellerIdentityDisplay, SellerIdentityInput,
     SellerIdentityRow, SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE,
 };
-pub use usage::{project_usage_snapshot, UsageSnapshot};
+pub use usage::{project_usage_snapshot, should_retry_usage_error, UsageSnapshot};
 #[cfg(feature = "webhook-verify")]
 pub use webhook::{verify_webhook, verify_webhook_json, WebhookError, WebhookErrorCode};
 

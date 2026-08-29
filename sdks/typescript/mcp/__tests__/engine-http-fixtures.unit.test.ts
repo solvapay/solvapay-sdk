@@ -11,7 +11,10 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { createSolvaPay } from '@solvapay/server'
 import { createSolvaPayMcpFetch } from '../src/fetch/createSolvaPayMcpFetch'
 
-const ROOT = path.join(fileURLToPath(new URL('.', import.meta.url)), '../../../../contract/mcp-fixtures')
+const ROOT = path.join(
+  fileURLToPath(new URL('.', import.meta.url)),
+  '../../../../contract/mcp-fixtures',
+)
 
 const HTTP_ENGINE_FIXTURES = [
   'dispatch/challenge.json',

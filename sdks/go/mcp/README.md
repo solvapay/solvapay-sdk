@@ -37,6 +37,7 @@ unauthenticated payable mode on `Server`.
 `github.com/modelcontextprotocol/go-sdk/mcp` server. It does not read HTTP
 headers. Identity comes from a `GetCustomerRef` hook or a `customer_ref`
 argument.
+
 ## Host-model caveats
 
 - `CallToolResult.IsError` uses `json:"isError,omitempty"`, so `false` is omitted on

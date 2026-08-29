@@ -515,3 +515,153 @@ def verify_webhook(body: str, signature: str, secret: str) -> str:
 def _verify_webhook_at(
     body: str, signature: str, secret: str, now_unix_secs: int
 ) -> str: ...
+
+from typing import Any
+
+SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: Any
+"""Map of seller tax identifier types to display labels."""
+def assert_valid_product_ref(product_ref: str, context: str) -> Any:
+    """Reject empty, placeholder, or non-prd_ product refs at construction time.
+    @returns Throws when the ref is not a real prd_ identifier.
+    """
+    ...
+def billing_cycle(priced: Any | None = None) -> Any:
+    """Read the billing-cycle option from a plan.
+    @returns Interval (and count when greater than 1), or null.
+    """
+    ...
+def build_gate_message(state: Any, gate: Any) -> Any:
+    """Build the human-readable paywall gate message from state and gate content.
+    @returns Gate message string.
+    """
+    ...
+def build_nudge_message(state: Any, limits: Any | None = None) -> Any:
+    """Build a soft nudge message when usage approaches plan limits.
+    @returns Nudge message string.
+    """
+    ...
+def build_paywall_gate(product_ref: str, limits: Any) -> Any:
+    """Build the structured paywall gate payload for a product and limits snapshot.
+    @returns Structured gate content for paywall responses.
+    """
+    ...
+def charges(priced: Any | None = None) -> Any:
+    """Return every charge option on a plan, in wire order.
+    @returns Charge objects (flat, unit, or seat).
+    """
+    ...
+def classify_paywall_state(limits: Any | None = None) -> Any:
+    """Classify paywall state from limits and product context.
+    @returns Canonical paywall state label.
+    """
+    ...
+def counts_usage(priced: Any | None = None) -> Any:
+    """True when the plan counts usage via a per-unit charge, limit, or tier.
+    @returns Whether the plan has a usage counter even without a per-unit rate.
+    """
+    ...
+def credits_per_unit_from_balance(priced: Any | None = None, balance: Any | None = None, meter: str | None = None) -> Any:
+    """Credits per metered call when the charge currency matches the balance peg.
+    @returns Credits per unit, or null when the rate cannot be established honestly.
+    """
+    ...
+def credits_to_display_minor_units(credits: float, credits_per_minor_unit: float, display_exchange_rate: float, display_currency: str) -> Any:
+    """Convert credit units into display minor units for a currency.
+    @returns Display amount in minor units.
+    """
+    ...
+def derive_tax_id_type(country: str) -> Any:
+    """Derive the tax ID type for a business country.
+    @returns Tax ID type string when known.
+    """
+    ...
+def evaluate_product_readiness() -> Any:
+    """Evaluate whether a product can be sold (active status plus an active plan).
+    @returns Readiness result with issues and plan counts.
+    """
+    ...
+def get_seller_tax_identifier_display_label(country: str | None = None) -> Any:
+    """Return the display label for a seller tax identifier type.
+    @returns Display label string.
+    """
+    ...
+def get_tax_id_example(country: str) -> Any:
+    """Return an example tax ID string for a country.
+    @returns Example tax ID string.
+    """
+    ...
+def get_tax_id_field_label(country: str) -> Any:
+    """Return the localized field label for a country tax ID.
+    @returns Field label string.
+    """
+    ...
+def get_tax_id_helper_text(country: str) -> Any:
+    """Return helper text describing the tax ID format for a country.
+    @returns Helper text string.
+    """
+    ...
+def headline_charges(priced: Any | None = None) -> Any:
+    """Return the headline flat charge in each currency, excluding setup fees.
+    @returns One flat charge per currency, in first-seen order.
+    """
+    ...
+def included_units(priced: Any | None = None, meter: str | None = None) -> Any:
+    """Read the included-unit cap for a meter from the limit option.
+    @returns Cap (0 means unlimited), or null when no limit is configured.
+    """
+    ...
+def is_zero_decimal_currency(currency: str) -> Any:
+    """Return whether a currency uses zero decimal places.
+    @returns True when the currency has zero decimal places.
+    """
+    ...
+def meter_name(priced: Any | None = None) -> Any:
+    """Read the meter a plan counts against from a per-unit charge or limit option.
+    @returns Meter name, or null when neither a per-unit charge nor a limit names one.
+    """
+    ...
+def minor_units_per_major(currency: str) -> Any:
+    """Return how many minor units make one major unit for a currency.
+    @returns Minor units per major unit.
+    """
+    ...
+def paywall_error_to_client_payload(message: str, structured_content: Any) -> Any:
+    """Project a PaywallError into the client-facing payload shape.
+    @returns Client payload object for paywall responses.
+    """
+    ...
+def pegged_credits_per_unit(charge_minor: float, credits_per_minor_unit: float, usd_to_charge_rate: float | None = None) -> Any:
+    """Convert a per-unit charge in minor units to credits via the USD peg.
+    @returns Credits per metered unit (0 for a free meter).
+    """
+    ...
+def per_unit_charge(priced: Any | None = None, meter: str | None = None) -> Any:
+    """Return the first per-unit charge, optionally scoped to one meter.
+    @returns The metered charge, or null when the plan does not meter usage.
+    """
+    ...
+def require_product_ref(metadata_product: str | None = None, env_product: str | None = None) -> Any:
+    """Resolve a product ref from metadata or env, or throw a named missing-ref error.
+    @returns A product ref string, or throws when neither is set.
+    """
+    ...
+def resolve_seller_identity_display(country: str | None = None, vat_number: str | None = None, tax_id: str | None = None, company_number: str | None = None) -> Any:
+    """Resolve seller identity fields into a display projection.
+    @returns Display projection for seller identity.
+    """
+    ...
+def resolve_tax_behavior(behavior: str, currency: str) -> Any:
+    """Resolve inclusive vs exclusive tax behavior for a currency/country pair.
+    @returns Resolved tax behavior.
+    """
+    ...
+def trial_days(priced: Any | None = None) -> Any:
+    """Read the free-trial length in days from a plan.
+    @returns Trial length in days, or null when the plan has no trial.
+    """
+    ...
+def validate_business_details() -> Any:
+    """Validate seller business-details fields before submission.
+    @returns Validation issues when present.
+    """
+    ...

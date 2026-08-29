@@ -10,7 +10,10 @@
  */
 
 import React, { forwardRef, useContext } from 'react'
-import { creditsToDisplayMinorUnits, minorUnitsPerMajor as minorUnitsPerMajorFn } from '@solvapay/core'
+import {
+  creditsToDisplayMinorUnits,
+  minorUnitsPerMajor as minorUnitsPerMajorFn,
+} from '@solvapay/core'
 import { Slot } from './slot'
 import { useBalance } from '../hooks/useBalance'
 import { useCopy, useLocale } from '../hooks/useCopy'
@@ -35,8 +38,15 @@ export const BalanceBadge = forwardRef<HTMLSpanElement, BalanceBadgeProps>(funct
   const solva = useContext(SolvaPayContext)
   if (!solva) throw new MissingProviderError('BalanceBadge')
 
-  const { credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate, displayMinorUnits, minorUnitsPerMajor, loading } =
-    useBalance()
+  const {
+    credits,
+    displayCurrency,
+    creditsPerMinorUnit,
+    displayExchangeRate,
+    displayMinorUnits,
+    minorUnitsPerMajor,
+    loading,
+  } = useBalance()
   const copy = useCopy()
   const locale = useLocale()
 

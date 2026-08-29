@@ -168,6 +168,7 @@ describe('paywall bindings', () => {
           product: 'prd_demo',
           checkoutUrl: 'https://pay.test/confirm',
           message: 'activate please',
+          shortMessage: 'Activation required',
         },
       }),
     ).toEqual({
@@ -177,6 +178,7 @@ describe('paywall bindings', () => {
       checkoutUrl: 'https://pay.test/confirm',
       message: 'activate please',
       kind: 'activation_required',
+      shortMessage: 'Activation required',
     })
   })
 })

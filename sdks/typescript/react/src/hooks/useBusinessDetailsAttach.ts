@@ -94,7 +94,9 @@ export function useBusinessDetailsAttach(
           isBusiness: input.isBusiness,
           ...(input.businessName !== undefined ? { businessName: input.businessName } : {}),
           ...(input.country !== undefined ? { country: input.country } : {}),
-          ...(input.customerCountry !== undefined ? { customerCountry: input.customerCountry } : {}),
+          ...(input.customerCountry !== undefined
+            ? { customerCountry: input.customerCountry }
+            : {}),
           ...(input.customerName !== undefined ? { customerName: input.customerName } : {}),
           ...(input.taxId !== undefined ? { taxId: input.taxId } : {}),
           ...(taxIdType !== undefined ? { taxIdType } : {}),

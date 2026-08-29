@@ -128,6 +128,27 @@ pub fn project_usage_snapshot(
     }
 }
 
+/// Whether a `trackUsage` failure should be retried.
+///
+/// Matches the TypeScript host predicate `error.message.includes('Customer not found')`.
+///
+/// # Arguments
+///
+/// * `message` - Error message string from the failed `trackUsage` call.
+///
+/// # Returns
+///
+/// `true` when the message contains `Customer not found`.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "none",
+    section = "usage",
+    emit_order = 26
+)]
+pub fn should_retry_usage_error(message: &str) -> bool {
+    message.contains("Customer not found")
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(
@@ -256,6 +277,14 @@ mod tests {
         let value = serde_json::to_value(&snap).unwrap();
         assert_eq!(value["percentUsed"], json!(50));
         assert!(value["percentUsed"].as_i64().is_some());
+    }
+
+    #[test]
+    fn retries_customer_not_found() {
+        assert!(should_retry_usage_error("404 - Customer not found"));
+        assert!(should_retry_usage_error("Customer not found"));
+        assert!(!should_retry_usage_error("customer not found"));
+        assert!(!should_retry_usage_error("timeout"));
     }
 
     #[test]

@@ -9,7 +9,8 @@
         "kind": "payment_required",
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/x",
-        "message": "Call solvapay_upgrade to continue — checkout at https://pay.test/x"
+        "message": "Call solvapay_upgrade to continue — checkout at https://pay.test/x",
+        "shortMessage": "Payment required"
       }
     }
   },
@@ -26,7 +27,8 @@
         "kind": "payment_required",
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/x",
-        "message": "Call solvapay_upgrade to continue — checkout at https://pay.test/x"
+        "message": "Call solvapay_upgrade to continue — checkout at https://pay.test/x",
+        "shortMessage": "Payment required"
       }
     }
   }

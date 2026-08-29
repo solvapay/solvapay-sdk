@@ -8,10 +8,9 @@
 import { installNativeCoreApi } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
 import { installMcpAdapterNative } from './adapters/mcp'
-import { callNativeSync } from './native'
+import { callNativeSync, verifyWebhookNative } from './native'
 import { installNativeDecisionApi } from './native-decisions'
 import { publishNativeSyncApi } from './native-registry'
-import { verifyWebhookNative } from './webhook-native'
 import type { PaywallStructuredContent, PaywallToolResult } from './types'
 
 // Install sync decision + core dispatch for Node.
@@ -221,6 +220,7 @@ export {
   classifyReactivateError,
   coerceCustomerOptions,
   decidePaywallOutcome,
+  ensureCustomerNext,
   evaluateBalanceObservation,
   evaluateCachedLimits,
   evaluateFreshLimits,
@@ -242,6 +242,7 @@ export {
   resolveReturnUrl,
   retryNextDelayMs,
   selectActivePurchases,
+  shouldRetryUsageError,
   validateActivatePlanParams,
   validateAttachBusinessDetailsParams,
   validateCheckoutSessionParams,

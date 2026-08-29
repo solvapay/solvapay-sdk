@@ -379,6 +379,61 @@ export class WasmClient {
         return ret;
     }
     /**
+     * `mcpBootstrap`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    mcpBootstrap(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_mcpBootstrap(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `mcpCallBuiltinTool`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    mcpCallBuiltinTool(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_mcpCallBuiltinTool(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `mcpDispatch`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    mcpDispatch(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_mcpDispatch(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `mcpOauthRequest`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    mcpOauthRequest(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_mcpOauthRequest(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * `mcpReadResource`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    mcpReadResource(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_mcpReadResource(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
      * Constructs a client over `FetchTransport` + `ClientShell`.
      *
      * # Arguments
@@ -1008,6 +1063,26 @@ export function deriveTaxIdType(args_json) {
         const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.deriveTaxIdType(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * Binding for `ensureCustomerNext`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function ensureCustomerNext(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.ensureCustomerNext(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -1877,6 +1952,26 @@ export function selectActivePurchases(args_json) {
 }
 
 /**
+ * Binding for `shouldRetryUsageError`.
+ * @param {string} args_json
+ * @returns {string}
+ */
+export function shouldRetryUsageError(args_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.shouldRetryUsageError(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
  * @param {string} args_json
  * @returns {string}
@@ -2379,7 +2474,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 541, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 576, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf82478b34f74c087);
             return ret;
         },

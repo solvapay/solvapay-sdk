@@ -61,14 +61,19 @@ export type AuthenticatedUser = {
  */
 export type BillingCycle = {
   /**
-   * `week`, `month`, or `year`.
+   * Recurring cadence of this cycle.
    */
-  interval: string
+  interval: BillingInterval
   /**
    * Interval count when greater than 1; omitted for the default of 1.
    */
   count?: number
 }
+
+/**
+ * Recurring cadence of a billing cycle.
+ */
+export type BillingInterval = 'week' | 'month' | 'year'
 
 /**
  * Input shape for [`validate_business_details`] (parity with `BusinessDetailsInput` in TS).
@@ -137,9 +142,9 @@ export type CachedLimitsEvaluation = {
  */
 export type Charge = {
   /**
-   * `flat`, `unit`, or `seat`.
+   * Which quantity the amount is charged against.
    */
-  per: string
+  per: ChargePer
   /**
    * Amount in the charge currency's minor units.
    */
@@ -157,6 +162,11 @@ export type Charge = {
    */
   oneTime?: boolean
 }
+
+/**
+ * Which quantity the amount is charged against.
+ */
+export type ChargePer = 'flat' | 'unit' | 'seat'
 
 /**
  * Resolved check-limits query params.
@@ -219,6 +229,140 @@ export type CreateErrorKind = 'conflict' | 'other'
 export type CustomerRefKind = 'anonymous' | 'backend' | 'needsEnsure'
 
 /**
+ * Merchant-facing customer projection from the last limits check.
+ * 
+ * Rust applies `creditBalance ?? 0` and `withinLimits ?? true` so hosts do not
+ * re-derive those defaults.
+ */
+export type CustomerSnapshot = {
+  /**
+   * Backend customer ref.
+   */
+  ref: string
+  /**
+   * `creditBalance` from limits, or `0` when absent.
+   */
+  balance: number
+  /**
+   * Remaining allowance from limits (JSON `null` when absent).
+   */
+  remaining: unknown
+  /**
+   * `withinLimits` from limits, or `true` when absent.
+   */
+  withinLimits: boolean
+  /**
+   * Plan field from limits; omitted when absent / JSON `null`.
+   */
+  plan: unknown
+}
+
+/**
+ * Next host action or a terminal resolve.
+ */
+export type EnsureCustomerAction =
+  | { kind: 'readCustomerCache'; key: string }
+  | { kind: 'getCustomer'; byExternalRef?: string; byEmail?: string }
+  | { kind: 'createCustomer'; params: CreateCustomerParams }
+  | { kind: 'updateCustomer'; customerRef: string; patch: Record<string, unknown> }
+  | { kind: 'resolved'; backendRef: string; cache?: EnsureCustomerCacheWrite }
+
+/**
+ * Cache write bundled onto [`EnsureCustomerAction::Resolved`].
+ */
+export type EnsureCustomerCacheWrite = {
+  /**
+   * Cache key.
+   */
+  key: string
+  /**
+   * Backend customer ref to store.
+   */
+  backendRef: string
+  /**
+   * Host `nowMs` — authoritative; hosts must not restamp.
+   */
+  timestampMs: number
+}
+
+/**
+ * Driver output.
+ */
+export type EnsureCustomerNextOutput = {
+  /**
+   * State to pass into the next call.
+   */
+  state: EnsureCustomerState
+  /**
+   * Host action or terminal result.
+   */
+  action: EnsureCustomerAction
+}
+
+/**
+ * Driver state between ensure-customer steps.
+ */
+export type EnsureCustomerState = {
+  /**
+   * App customer ref from `start`.
+   */
+  customerRef: string
+  /**
+   * Optional explicit external ref (lookup/create key when set).
+   */
+  externalRef?: string
+  /**
+   * Optional explicit email.
+   */
+  email?: string
+  /**
+   * Optional display name.
+   */
+  name?: string
+  /**
+   * Host can call `createCustomer`.
+   */
+  canCreateCustomer: boolean
+  /**
+   * Host can call `updateCustomer`.
+   */
+  canUpdateCustomer: boolean
+  /**
+   * Dedup TTL in ms.
+   */
+  dedupTTLMs: number
+  /**
+   * Cache map key (`externalRef` or `customerRef`).
+   */
+  cacheKey: string
+  /**
+   * Which result event the driver is waiting for.
+   */
+  pending: EnsurePending
+  /**
+   * Last create/lookup error message (409 ladder).
+   */
+  lastError?: string
+  /**
+   * Backend ref held across `updateCustomer`.
+   */
+  pendingBackendRef?: string
+  /**
+   * First `createCustomer` already issued in this session.
+   */
+  createAttempted: boolean
+  /**
+   * Generated-email retry already issued.
+   */
+  generatedEmailAttempted: boolean
+}
+
+/**
+ * In-flight step the next host event must complete.
+ */
+export type EnsurePending = 'none' | 'cache' | 'lookupInitial' | 'create' | 'lookupConflictExternal' | 'lookupConflictEmail' | 'updateBackfill' | 'createGeneratedEmail'
+
+/**
  * Cache-miss path evaluation after `checkLimits` returns.
  */
 export type FreshLimitsEvaluation = {
@@ -241,15 +385,18 @@ export type FreshLimitsEvaluation = {
  */
 export type GateAction =
   | { kind: 'ensureCustomer'; customerRef: string }
-  | { kind: 'lookupCache'; key: string }
+  | { kind: 'readLimitsCache'; key: string }
   | { kind: 'checkLimits'; customerRef: string; productRef: string; meterName: string; includeCheckoutSession: boolean; cacheDeleteKey?: string }
-  | { kind: 'done'; outcome: string; customerRef: string; product: string; meterName: string; limits: unknown; gate?: unknown; cache?: GateCacheOp; track?: GateTrackOp }
+  | { kind: 'allow'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; cache?: GateCacheOp }
+  | { kind: 'gate'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; gate: unknown; cache?: GateCacheOp; request: unknown }
+  | { kind: 'emitUsage'; request: unknown }
+  | { kind: 'skipUsage' }
 
 /**
  * Cache mutation the host must apply before continuing / returning.
  */
 export type GateCacheOp =
-  | { op: 'set'; key: string; remaining: number; limits: unknown; timestamp: number }
+  | { op: 'set'; key: string; remaining: number; limits: unknown; timestamp: number; checkoutUrl?: string; meterName?: string }
   | { op: 'updateRemaining'; key: string; remaining: number }
   | { op: 'delete'; key: string }
 
@@ -281,6 +428,10 @@ export type GateDriverState = {
    * `backendRef:product:meterName` once the backend ref is known.
    */
   limitsKey?: string
+  /**
+   * Limits-cache TTL in ms (`limitsCacheTTLMs`, default 10000).
+   */
+  limitsCacheTTLMs: number
 }
 
 /**
@@ -295,32 +446,6 @@ export type GateNextOutput = {
    * Host action or terminal result.
    */
   action: GateAction
-}
-
-/**
- * Paywall usage track the host must fire on a gate outcome.
- */
-export type GateTrackOp = {
-  /**
-   * Backend customer ref.
-   */
-  customerRef: string
-  /**
-   * Product reference.
-   */
-  productRef: string
-  /**
-   * Meter / action name.
-   */
-  action: string
-  /**
-   * Always `"paywall"` for this driver.
-   */
-  outcome: string
-  /**
-   * Elapsed ms from `start` (`max(0, nowMs - startedMs)`).
-   */
-  durationMs: number
 }
 
 /**

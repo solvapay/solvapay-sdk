@@ -7,10 +7,7 @@
 import type { LimitResponseWithPlan, PaywallArgs, SolvaPay } from '@solvapay/server'
 import { isPaywallStructuredContent, PaywallError } from '@solvapay/server'
 import { defaultGetCustomerRef } from './helpers'
-import {
-  assertResponseResult,
-  invokePayableNext,
-} from './native-mcp'
+import { assertResponseResult, invokePayableNext } from './native-mcp'
 import { buildResponseContext } from './response-context'
 import type {
   BootstrapPayload,
@@ -110,7 +107,10 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
     for (;;) {
       const out = invokePayableNext(state, event)
       state = out.state
-      const action = out.action as InvokeAction
+      const action = out.action as InvokeAction | undefined
+      if (action == null || typeof action.kind !== 'string') {
+        throw new Error('invokePayableNext returned no action')
+      }
       const kind = action.kind
       if (kind === 'runGate') {
         const decision = await solvaPay.paywall.decide(
@@ -119,7 +119,9 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
         )
         if (decision.outcome === 'gate') {
           const message =
-            decision.gate.kind === 'activation_required' ? 'Activation required' : 'Payment required'
+            decision.gate.kind === 'activation_required'
+              ? 'Activation required'
+              : 'Payment required'
           event = {
             kind: 'gatePaywall',
             gate: decision.gate,

@@ -3,7 +3,9 @@
  *
  * Modes:
  *   (default)  Regenerate Rust DTOs, TS/Python/Ruby/Go/Rust clients, binding shims.
- *   --check    Regenerate then fail if any generated path drifts from git HEAD.
+ *   --check    Snapshot generated paths, regenerate, fail if those bytes changed.
+ *              Compares working tree to itself (idempotence), not to git HEAD, so
+ *              already-regenerated uncommitted files stay green.
  *
  * This is the single source of truth for dto-gen flags — CI and humans share it.
  * Flags and drift paths are derived from `contract/manifest/repo-paths.yaml`.
@@ -13,6 +15,9 @@
  */
 
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import path from 'node:path'
 import { REPO_ROOT } from '../shared/paths.js'
 import { dtoGenArgs, generatedDriftPaths, lookupPath } from '../shared/repo-paths.js'
 import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
@@ -101,19 +106,53 @@ function runGenerateTypes(): CliResult {
   }
 }
 
-function checkDrift(): CliResult {
-  const result = spawnSync('git', ['diff', '--exit-code', '--', ...GENERATED_PATHS], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  })
-  if (result.error) {
-    return {
-      exitCode: 1,
-      stdout: '',
-      stderr: `Failed to run git diff: ${result.error.message}\n`,
-    }
+const SKIP_DIR_NAMES = new Set(['target', 'node_modules'])
+
+function collectGeneratedFiles(root: string, rel: string, acc: string[]): void {
+  const abs = path.join(root, ...rel.split('/'))
+  if (!existsSync(abs)) {
+    return
   }
-  if (result.status === 0) {
+  const st = statSync(abs)
+  if (st.isDirectory()) {
+    for (const name of readdirSync(abs)) {
+      if (SKIP_DIR_NAMES.has(name)) {
+        continue
+      }
+      collectGeneratedFiles(root, `${rel}/${name}`, acc)
+    }
+    return
+  }
+  acc.push(rel)
+}
+
+/** SHA-256 of every file under the declared generated paths (working tree). */
+export function hashGeneratedTree(root: string, rels: readonly string[]): Map<string, string> {
+  const files: string[] = []
+  for (const rel of rels) {
+    collectGeneratedFiles(root, rel, files)
+  }
+  const hashes = new Map<string, string>()
+  for (const rel of files) {
+    const abs = path.join(root, ...rel.split('/'))
+    const digest = createHash('sha256').update(readFileSync(abs)).digest('hex')
+    hashes.set(rel, digest)
+  }
+  return hashes
+}
+
+export function diffGeneratedHashes(
+  before: ReadonlyMap<string, string>,
+  after: ReadonlyMap<string, string>,
+): string[] {
+  const keys = new Set([...before.keys(), ...after.keys()])
+  return [...keys]
+    .filter(rel => before.get(rel) !== after.get(rel))
+    .sort()
+}
+
+export function formatIdempotenceResult(changed: readonly string[]): CliResult {
+  if (changed.length === 0) {
     return {
       exitCode: 0,
       stdout: 'Generated artifacts are up to date\n',
@@ -122,7 +161,7 @@ function checkDrift(): CliResult {
   }
   return {
     exitCode: 1,
-    stdout: result.stdout ?? '',
+    stdout: `${changed.join('\n')}\n`,
     stderr:
       'solvapay-dto / generated client artifacts / binding shims are out of date — run:\n' +
       '  pnpm gen\n',
@@ -130,6 +169,7 @@ function checkDrift(): CliResult {
 }
 
 export function runGen(options: CliOptions): CliResult {
+  const before = options.check ? hashGeneratedTree(REPO_ROOT, GENERATED_PATHS) : undefined
   const gen = runDtoGen()
   if (gen.exitCode !== 0) {
     return gen
@@ -149,7 +189,8 @@ export function runGen(options: CliOptions): CliResult {
       stderr: `${gen.stderr}${types.stderr}`,
     }
   }
-  const drift = checkDrift()
+  const after = hashGeneratedTree(REPO_ROOT, GENERATED_PATHS)
+  const drift = formatIdempotenceResult(diffGeneratedHashes(before ?? new Map(), after))
   return {
     exitCode: drift.exitCode,
     stdout: `${gen.stdout}${types.stdout}${drift.stdout}`,

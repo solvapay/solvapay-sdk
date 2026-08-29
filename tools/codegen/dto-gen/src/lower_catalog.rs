@@ -1,14 +1,17 @@
-//! Lower catalog entry points (operations / topLevel / facade / coreHelpers) into IR.
+//! Lower catalog entry points (operations / topLevel / facade / coreHelpers / mcp) into IR.
 
 use std::collections::BTreeSet;
 
 use crate::error::{GenError, GenResult};
 use crate::ir::{
-    Ir, IrAvailability, IrDefaults, IrDocModel, IrEntryPoint, IrEntrySection, IrErrorKind,
-    IrLangNames, IrParam, IrRubyReceiver, IrRubyTarget, IrSyncKind,
+    Ir, IrAvailability, IrDefaults, IrDocModel, IrEmissionMatrix, IrEmissionMode, IrEntryPoint,
+    IrEntrySection, IrErrorKind, IrLangNames, IrMcpSurface, IrParam, IrRubyReceiver, IrRubyTarget,
+    IrSyncKind,
 };
 use crate::lower_overlays::lower_type_ref;
-use crate::manifest::{DocsDef, LangNames, Manifest, NamedEntry, OperationDef, ParamDef};
+use crate::manifest::{
+    DocsDef, EntryAvailability, LangNames, Manifest, NamedEntry, OperationDef, ParamDef,
+};
 
 /// Populates `ir.entry_points` from the contract manifest catalog.
 ///
@@ -21,7 +24,14 @@ pub fn lower_catalog(ir: &mut Ir, manifest: &Manifest) -> GenResult<()> {
         ir.entry_points.insert(id.clone(), entry);
     }
     for (id, entry) in &manifest.top_level {
-        let ep = lower_named(ir, id, entry, IrEntrySection::TopLevel, &manifest.defaults)?;
+        let ep = lower_named(
+            ir,
+            id,
+            entry,
+            IrEntrySection::TopLevel,
+            &manifest.defaults,
+            None,
+        )?;
         ir.entry_points.insert(id.clone(), ep);
     }
     for (id, entry) in &manifest.core_helpers {
@@ -31,11 +41,30 @@ pub fn lower_catalog(ir: &mut Ir, manifest: &Manifest) -> GenResult<()> {
             entry,
             IrEntrySection::CoreHelper,
             &manifest.defaults,
+            None,
         )?;
         ir.entry_points.insert(id.clone(), ep);
     }
     for (id, entry) in &manifest.facade {
-        let ep = lower_named(ir, id, entry, IrEntrySection::Facade, &manifest.defaults)?;
+        let ep = lower_named(
+            ir,
+            id,
+            entry,
+            IrEntrySection::Facade,
+            &manifest.defaults,
+            None,
+        )?;
+        ir.entry_points.insert(id.clone(), ep);
+    }
+    for (id, entry) in &manifest.mcp {
+        let ep = lower_named(
+            ir,
+            id,
+            &entry.named,
+            IrEntrySection::Mcp,
+            &manifest.defaults,
+            Some((entry.surface.as_str(), entry.feature.as_deref())),
+        )?;
         ir.entry_points.insert(id.clone(), ep);
     }
     validate_ruby_catalog(&ir.entry_points)?;
@@ -68,6 +97,9 @@ fn lower_operation(
         request: op.request.clone(),
         response: op.response.clone(),
         availability,
+        emission: IrEmissionMatrix::default(),
+        mcp_surface: None,
+        feature: None,
         sync_ts,
         defaults: defaults_from_manifest(defaults),
         errors: all_error_kinds(),
@@ -108,6 +140,7 @@ fn lower_named(
     entry: &NamedEntry,
     section: IrEntrySection,
     defaults: &crate::manifest::DefaultsDef,
+    mcp: Option<(&str, Option<&str>)>,
 ) -> GenResult<IrEntryPoint> {
     let params = lower_params(ir, id, &entry.params, &entry.docs)?;
     let names = to_ir_names(entry.names.clone());
@@ -117,6 +150,18 @@ fn lower_named(
         .first()
         .copied()
         .unwrap_or(IrSyncKind::Async);
+    let (mcp_surface, feature) = match (section, mcp) {
+        (IrEntrySection::Mcp, Some((surface, feature))) => (
+            Some(parse_mcp_surface(id, surface)?),
+            feature.map(str::to_string),
+        ),
+        (IrEntrySection::Mcp, None) => {
+            return Err(GenError::Parse(format!(
+                "{id}: MCP entry is missing surface/feature when lowering"
+            )))
+        }
+        _ => (None, None),
+    };
     Ok(IrEntryPoint {
         id: id.to_string(),
         section,
@@ -128,11 +173,88 @@ fn lower_named(
         request: None,
         response: None,
         availability,
+        emission: lower_emission(id, &entry.availability)?,
+        mcp_surface,
+        feature,
         sync_ts,
         defaults: defaults_from_manifest(defaults),
         errors: all_error_kinds(),
         docs: lower_docs(&entry.docs),
     })
+}
+
+fn parse_mcp_surface(id: &str, surface: &str) -> GenResult<IrMcpSurface> {
+    match surface {
+        "syncOp" => Ok(IrMcpSurface::SyncOp),
+        "layer2" => Ok(IrMcpSurface::Layer2),
+        other => Err(GenError::Parse(format!(
+            "{id}: unsupported MCP surface {other}"
+        ))),
+    }
+}
+
+fn lower_emission(
+    id: &str,
+    availability: &std::collections::BTreeMap<String, EntryAvailability>,
+) -> GenResult<IrEmissionMatrix> {
+    let mut matrix = IrEmissionMatrix::default();
+    for (lang, avail) in availability {
+        let mode = emission_mode(id, lang, avail)?;
+        match lang.as_str() {
+            "ts" => matrix.ts = mode,
+            "py" => matrix.py = mode,
+            "rb" => matrix.rb = mode,
+            "go" => matrix.go = mode,
+            "rust" => matrix.rust = mode,
+            "c" => matrix.c = mode,
+            other => {
+                return Err(GenError::Parse(format!(
+                    "{id}: unknown availability language {other}"
+                )))
+            }
+        }
+    }
+    Ok(matrix)
+}
+
+fn emission_mode(id: &str, lang: &str, avail: &EntryAvailability) -> GenResult<IrEmissionMode> {
+    match avail {
+        EntryAvailability::Omitted { omitted, reason } => {
+            if !*omitted {
+                return Err(GenError::Parse(format!(
+                    "{id}: {lang} availability.omitted must be true"
+                )));
+            }
+            require_reason(id, lang, "omitted", reason)?;
+            Ok(IrEmissionMode::Omitted {
+                reason: reason.clone(),
+            })
+        }
+        EntryAvailability::HandWritten {
+            hand_written,
+            reason,
+            ..
+        } => {
+            if !*hand_written {
+                return Err(GenError::Parse(format!(
+                    "{id}: {lang} availability.handWritten must be true"
+                )));
+            }
+            require_reason(id, lang, "handWritten", reason)?;
+            Ok(IrEmissionMode::HandWritten {
+                reason: reason.clone(),
+            })
+        }
+    }
+}
+
+fn require_reason(id: &str, lang: &str, kind: &str, reason: &str) -> GenResult<()> {
+    if reason.trim().is_empty() {
+        return Err(GenError::Parse(format!(
+            "{id}: {lang} availability.{kind} requires a non-empty reason"
+        )));
+    }
+    Ok(())
 }
 
 /// Maps manifest `docs:` into the IR doc model (shared by operations + named entries).
@@ -303,6 +425,14 @@ fn ruby_target(id: &str, section: IrEntrySection, ruby_name: &str) -> GenResult<
         IrEntrySection::TopLevel | IrEntrySection::CoreHelper if !ruby_name.contains('.') => {
             ("SolvaPay", ruby_name, IrRubyReceiver::ModuleFunction)
         }
+        // MCP entries are catalogued but not emitted; a dedicated receiver keeps
+        // Ruby emitters (ClientInstance / Constant / ModuleFunction) from
+        // generating forwarders that do not exist. Phase 3 owns emission.
+        IrEntrySection::Mcp => (
+            "SolvaPay::Mcp::Layer2",
+            ruby_name,
+            IrRubyReceiver::McpNative,
+        ),
         _ => {
             return Err(GenError::Parse(format!(
                 "{id}: unsupported Ruby receiver syntax {ruby_name}"
@@ -323,6 +453,11 @@ fn defaults_from_manifest(defaults: &crate::manifest::DefaultsDef) -> IrDefaults
         initial_delay_ms: defaults.retry.initial_delay_ms,
         webhook_tolerance_sec: defaults.webhook_tolerance_sec,
         limits_cache_ttl_ms: defaults.limits_cache_ttl_ms,
+        customer_dedup_ttl_ms: defaults.customer_dedup_ttl_ms,
+        customer_dedup_max_cache_size: defaults.customer_dedup_max_cache_size,
+        anonymous_customer_ref: defaults.anonymous_customer_ref.clone(),
+        request_id_format: defaults.request_id_format.clone(),
+        usage_action_type: defaults.usage_action_type.clone(),
     }
 }
 
@@ -601,6 +736,39 @@ topLevel:
     }
 
     #[test]
+    fn lowers_hand_written_emission_on_top_level() {
+        let yaml = r#"
+topLevel:
+  withRetry:
+    names:
+      ts: withRetry
+      py: with_retry
+      rb: with_retry
+      go: WithRetry
+      rust: with_retry
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+    availability:
+      rust:
+        handWritten: true
+        reason: x
+"#;
+        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+        let mut ir = empty_ir();
+        lower_catalog(&mut ir, &manifest).unwrap();
+        let ep = ir.entry_points.get("withRetry").unwrap();
+        assert_eq!(
+            ep.emission.rust,
+            IrEmissionMode::HandWritten { reason: "x".into() }
+        );
+        assert_eq!(ep.emission.ts, IrEmissionMode::Generated);
+    }
+
+    #[test]
     fn default_names_helper_covers_missing_names_block() {
         let mut ir = empty_ir();
         let mut ops = BTreeMap::new();
@@ -636,6 +804,7 @@ topLevel:
             top_level: BTreeMap::new(),
             core_helpers: BTreeMap::new(),
             facade: BTreeMap::new(),
+            mcp: BTreeMap::new(),
             boundary_types_ts: Default::default(),
             defaults: Default::default(),
         };
@@ -689,5 +858,66 @@ topLevel:
         let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
         let err = lower_catalog(&mut empty_ir(), &manifest).expect_err("keyword ordering");
         assert!(err.to_string().contains("required Ruby keyword"));
+    }
+
+    #[test]
+    fn lowers_mcp_entries_into_entry_points() {
+        let yaml = r#"
+mcp:
+  mcpNarrate:
+    names: { ts: mcpNarrate, py: mcp_narrate, rb: narrate, go: McpNarrate, rust: mcp_narrate, c: mcpNarrate }
+    sync: { ts: sync, py: sync, rb: sync, go: sync, rust: sync, c: sync }
+    surface: syncOp
+    params:
+      - { name: tool, type: string, required: true }
+    docs:
+      summary: "Narrate an intent-tool payload."
+"#;
+        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+        let mut ir = empty_ir();
+        lower_catalog(&mut ir, &manifest).unwrap();
+        let ep = ir.entry_points.get("mcpNarrate").unwrap();
+        assert_eq!(ep.section, IrEntrySection::Mcp);
+        assert_eq!(ep.mcp_surface, Some(IrMcpSurface::SyncOp));
+        assert_eq!(ep.ruby_target.receiver, IrRubyReceiver::McpNative);
+        assert_eq!(ep.ruby_target.owner, "SolvaPay::Mcp::Layer2");
+    }
+
+    #[test]
+    fn mcp_entries_do_not_collide_with_ruby_catalog() {
+        let yaml = r#"
+coreHelpers:
+  narrate:
+    names: { ts: narrate, py: narrate, rb: narrate, go: Narrate, rust: narrate, c: narrate }
+    sync: { ts: sync, py: sync, rb: sync, go: sync, rust: sync, c: sync }
+    docs:
+      summary: "Core helper narrate."
+mcp:
+  mcpNarrate:
+    names: { ts: mcpNarrate, py: mcp_narrate, rb: narrate, go: McpNarrate, rust: mcp_narrate, c: mcpNarrate }
+    sync: { ts: sync, py: sync, rb: sync, go: sync, rust: sync, c: sync }
+    surface: syncOp
+    docs:
+      summary: "MCP narrate."
+"#;
+        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+        lower_catalog(&mut empty_ir(), &manifest)
+            .expect("MCP Ruby owner is distinct from SolvaPay");
+    }
+
+    #[test]
+    fn mcp_entry_without_summary_fails_doc_coverage() {
+        let yaml = r#"
+mcp:
+  mcpNarrate:
+    names: { ts: mcpNarrate, py: mcp_narrate, rb: narrate, go: McpNarrate, rust: mcp_narrate, c: mcpNarrate }
+    sync: { ts: sync, py: sync, rb: sync, go: sync, rust: sync, c: sync }
+    surface: syncOp
+"#;
+        let manifest: Manifest = serde_norway::from_str(yaml).unwrap();
+        let mut ir = empty_ir();
+        lower_catalog(&mut ir, &manifest).unwrap();
+        let err = crate::doc_coverage::check_doc_coverage(&ir).expect_err("missing summary");
+        assert!(err.to_string().contains("mcpNarrate"));
     }
 }

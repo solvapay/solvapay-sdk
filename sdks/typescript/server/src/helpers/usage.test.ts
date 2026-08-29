@@ -111,7 +111,13 @@ describe('getUsageCore', () => {
           planSnapshot: {
             isMetered: false,
             options: [
-              { kind: 'limit', cap: 3, scope: 'billing_period', meter: 'tokens', onExceed: 'block' },
+              {
+                kind: 'limit',
+                cap: 3,
+                scope: 'billing_period',
+                meter: 'tokens',
+                onExceed: 'block',
+              },
             ],
           },
           usage: { used: 1 },

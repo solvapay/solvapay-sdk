@@ -13,9 +13,27 @@ coverage/
 # Generated files
 generated/
 docs/api/
+docs/api.json
+**/*.generated.d.ts
+**/*.generated.ts
+**/*.generated.test.ts
+sdks/typescript/server/src/types/generated.ts
+**/next-env.d.ts
+sdks/wasm/pkg/
+sdks/node-native/index.d.ts
+sdks/node-native/index.js
+sdks/node-native/server-native.wasi.cjs
+sdks/node-native/server-native.wasi-browser.js
+sdks/node-native/wasi-worker.mjs
+sdks/node-native/wasi-worker-browser.mjs
+tools/codegen/dto-gen/assets/
 
-# Canonical OpenAPI contract artifacts (key order is load-bearing)
+# Contract snapshots / byte-gated fixtures (key order is load-bearing)
 contract/openapi/*.json
+contract/mcp-fixtures/
+contract/manifest/binding-symbols.snapshot.json
+contract/manifest/boundary-types.snapshot.json
+contract/manifest/binding-residue.yaml
 
 # Lock files
 pnpm-lock.yaml
@@ -48,3 +66,18 @@ Thumbs.db
 # Cache
 .cache/
 
+# Rust build artifacts (JSON fingerprints match Prettier's **/*.json glob)
+target/
+**/target/
+
+# Language tooling caches
+.mypy_cache/
+**/.mypy_cache/
+.pytest_cache/
+**/.pytest_cache/
+.ruff_cache/
+**/.ruff_cache/
+
+# Binary / local native build trees
+internal/fuzz/
+sdks/ruby/tmp/

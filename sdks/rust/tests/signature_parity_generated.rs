@@ -7,7 +7,10 @@
 use serde_json::Value;
 #[cfg(feature = "blocking")]
 use solvapay::blocking::BlockingClient;
-use solvapay::{Client, Config, RetryPolicy, SdkError, DEFAULT_LIMITS_CACHE_TTL_MS};
+use solvapay::{
+    Client, Config, RetryPolicy, SdkError, ANONYMOUS_CUSTOMER_REF, CUSTOMER_DEDUP_MAX_CACHE_SIZE,
+    CUSTOMER_DEDUP_TTL_MS, DEFAULT_LIMITS_CACHE_TTL_MS, REQUEST_ID_FORMAT, USAGE_ACTION_TYPE,
+};
 use solvapay_dto::{
     ActivatePlanDto, ActivatePlanResponseDto, AssignCreditsRequest, AttachBusinessDetailsParams,
     CancelPurchaseParams, CheckLimitsRequest, CloneProductOverrides, CloneProductResult,
@@ -87,6 +90,16 @@ const EXPECTED_LIMITS_CACHE_TTL_MS: u64 = 10000;
 const EXPECTED_MAX_RETRIES: u32 = 2;
 /// Frozen initial retry delay from the contract manifest `defaults:`.
 const EXPECTED_INITIAL_DELAY_MS: u64 = 500;
+/// Frozen customer-dedup TTL from the contract manifest `defaults:`.
+const EXPECTED_CUSTOMER_DEDUP_TTL_MS: u64 = 60000;
+/// Frozen customer-dedup max cache size from the contract manifest `defaults:`.
+const EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE: usize = 1000;
+/// Frozen anonymous customer ref from the contract manifest `defaults:`.
+const EXPECTED_ANONYMOUS_CUSTOMER_REF: &str = "anonymous";
+/// Frozen trackUsage request-id format from the contract manifest `defaults:`.
+const EXPECTED_REQUEST_ID_FORMAT: &str = "solvapay_{epochMs}_{random9}";
+/// Frozen trackUsage actionType from the contract manifest `defaults:`.
+const EXPECTED_USAGE_ACTION_TYPE: &str = "api_call";
 
 fn _parity_sink<T>() -> T {
     unreachable!("signature-parity typed surface; never executed")
@@ -321,4 +334,12 @@ fn runtime_defaults_match_config_and_retry_policy() {
     let retry = RetryPolicy::default();
     assert_eq!(EXPECTED_MAX_RETRIES, retry.max_retries);
     assert_eq!(EXPECTED_INITIAL_DELAY_MS, retry.initial_delay_ms);
+    assert_eq!(EXPECTED_CUSTOMER_DEDUP_TTL_MS, CUSTOMER_DEDUP_TTL_MS);
+    assert_eq!(
+        EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE,
+        CUSTOMER_DEDUP_MAX_CACHE_SIZE
+    );
+    assert_eq!(EXPECTED_ANONYMOUS_CUSTOMER_REF, ANONYMOUS_CUSTOMER_REF);
+    assert_eq!(EXPECTED_REQUEST_ID_FORMAT, REQUEST_ID_FORMAT);
+    assert_eq!(EXPECTED_USAGE_ACTION_TYPE, USAGE_ACTION_TYPE);
 }

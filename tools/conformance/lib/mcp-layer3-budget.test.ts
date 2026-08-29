@@ -20,7 +20,10 @@ describe('mcp-layer3-budget', () => {
     mkdirSync(path.join(root, 'sdks/go/mcp'), { recursive: true })
     writeFileSync(path.join(root, 'sdks/go/mcp/handler.go'), 'package mcp\n')
     mkdirSync(path.join(root, 'sdks/ruby-mcp/lib/solvapay/mcp'), { recursive: true })
-    writeFileSync(path.join(root, 'sdks/ruby-mcp/lib/solvapay/mcp/engine.rb'), "class Engine\nend\n")
+    writeFileSync(
+      path.join(root, 'sdks/ruby-mcp/lib/solvapay/mcp/engine.rb'),
+      'class Engine\nend\n',
+    )
     mkdirSync(path.join(root, 'sdks/capi/ctest'), { recursive: true })
     writeFileSync(path.join(root, 'sdks/capi/ctest/mcp_engine.c'), 'int main() { return 0; }\n')
     mkdirSync(path.join(root, 'sdks/typescript/mcp-core/src'), { recursive: true })
@@ -45,9 +48,7 @@ describe('mcp-layer3-budget', () => {
   })
 
   it('counts only code lines', () => {
-    expect(
-      countCodeLines('// comment\n\nfn handle() {\n  dispatch();\n}\n'),
-    ).toBe(3)
+    expect(countCodeLines('// comment\n\nfn handle() {\n  dispatch();\n}\n')).toBe(3)
   })
 
   it('covers the Python ASGI engine adapter', () => {

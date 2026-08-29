@@ -23,11 +23,7 @@ export {
 } from './env'
 export type { EnvWriteResult, GitignoreEnvResult } from './env'
 
-export {
-  getInstallCommand,
-  getSolvaPayBasePackages,
-  installSolvaPaySdk,
-} from './install'
+export { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from './install'
 export type { InstallResult } from './install'
 
 export {

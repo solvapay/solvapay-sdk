@@ -26,9 +26,9 @@ cited metric.
 
 Tolerances:
 
-| Metric | Threshold (`*RegressionThresholdPct`) |
-| --- | --- |
-| gzip / raw bytes | 10% (`byteRegressionThresholdPct`) |
+| Metric           | Threshold (`*RegressionThresholdPct`)   |
+| ---------------- | --------------------------------------- |
+| gzip / raw bytes | 10% (`byteRegressionThresholdPct`)      |
 | cold start (p20) | 50% (`coldStartRegressionThresholdPct`) |
 
 A regression beyond the recorded threshold requires approval and a documented

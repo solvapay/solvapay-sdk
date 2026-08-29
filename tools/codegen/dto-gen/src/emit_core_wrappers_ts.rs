@@ -7,11 +7,12 @@
 
 use serde_json::Value;
 
+use crate::doc_render::render_entry_doc_lines;
 use crate::error::{GenError, GenResult};
 use crate::header::{generated_header, CommentStyle};
 use crate::ir::{
-    Ir, IrBindingArg, IrBindingArtifact, IrBindingSymbol, IrCoreFieldTy, IrCoreFn, IrCoreParam,
-    IrCoreParamTy, IrTsWrapper,
+    Ir, IrBindingArg, IrBindingArtifact, IrBindingCatalogLink, IrBindingSymbol, IrCoreFieldTy,
+    IrCoreFn, IrCoreParam, IrCoreParamTy, IrTsWrapper,
 };
 use crate::lower_core_types::core_fn_for;
 
@@ -205,7 +206,7 @@ fn emit_functions_file(
         if !out.ends_with('\n') {
             out.push('\n');
         }
-        out.push_str(postamble);
+        out.push_str(&inject_catalog_jsdoc(ir, postamble));
     }
     if !out.ends_with('\n') {
         out.push('\n');
@@ -260,10 +261,20 @@ fn emit_wrapper(
     let method = &sym.names.ts;
 
     let mut out = String::new();
-    if let Some(doc) = wrap.doc.as_deref().filter(|d| !d.is_empty()) {
-        if !server {
-            out.push_str(&format_jsdoc(doc));
+    let catalog_id = match &sym.catalog {
+        IrBindingCatalogLink::TopLevel(id) | IrBindingCatalogLink::CoreHelper(id) => {
+            Some(id.as_str())
         }
+        _ => None,
+    };
+    let catalog_doc = catalog_id
+        .and_then(|id| ir.entry_points.get(id))
+        .map(|entry| render_entry_doc_lines(entry, |p| p.names.ts.as_str()).join("\n"))
+        .filter(|body| !body.trim().is_empty());
+    if let Some(body) = catalog_doc {
+        out.push_str(&format_jsdoc(&body));
+    } else if let Some(doc) = wrap.doc.as_deref().filter(|d| !d.is_empty()) {
+        out.push_str(&format_jsdoc(doc));
     }
 
     let (params_src, ret_src) = signature_parts(ir, sym, func, &wrap, export_name, &generics)?;
@@ -724,6 +735,49 @@ fn camel(snake: &str) -> String {
         }
     }
     out
+}
+
+fn inject_catalog_jsdoc(ir: &Ir, source: &str) -> String {
+    let mut out = String::new();
+    for line in source.lines() {
+        if let Some(name) = export_function_name(line) {
+            if !out.trim_end().ends_with("*/") {
+                if let Some(doc) = catalog_jsdoc(ir, name) {
+                    out.push_str(&doc);
+                }
+            }
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out
+}
+
+fn export_function_name(line: &str) -> Option<&str> {
+    let rest = line.trim().strip_prefix("export function ")?;
+    let name = rest.split('(').next()?.trim();
+    if name.is_empty() {
+        return None;
+    }
+    Some(name)
+}
+
+fn catalog_jsdoc(ir: &Ir, id: &str) -> Option<String> {
+    let entry = ir.entry_points.get(id)?;
+    if !entry.emission.ts.is_generated() {
+        return None;
+    }
+    if !matches!(
+        entry.section,
+        crate::ir::IrEntrySection::TopLevel | crate::ir::IrEntrySection::CoreHelper
+    ) {
+        return None;
+    }
+    let body = render_entry_doc_lines(entry, |p| p.names.ts.as_str()).join("\n");
+    if body.trim().is_empty() {
+        return None;
+    }
+    Some(format_jsdoc(&body))
 }
 
 fn format_jsdoc(body: &str) -> String {

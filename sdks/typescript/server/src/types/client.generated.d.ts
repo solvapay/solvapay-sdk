@@ -141,7 +141,7 @@ export interface SolvaPayClientGenerated {
  * @param params Disable request identifying the customer.
  * @returns Updated auto-recharge status after disable.
  */
-  disableAutoRecharge?(params: overlays.DisableAutoRechargeParams): Promise<components['schemas']['DisableAutoRechargeResponse']>
+  disableAutoRecharge?(params: overlays.DisableAutoRechargeParams): Promise<overlays.DisableAutoRechargeSdkResponse>
 /**
  * Fetch auto-recharge configuration for a customer.
  * @param params Auto-recharge lookup options.

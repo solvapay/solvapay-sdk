@@ -44,6 +44,7 @@
           "kind": "activation_required",
           "product": "prd_demo",
           "message": "Your plan needs activation before you can use this tool. Call the `activate_plan` tool to activate it, or open https://pay.test/confirm in a browser.",
+          "shortMessage": "Activation required",
           "checkoutUrl": "https://pay.test/confirm",
           "confirmationUrl": "https://pay.test/confirm",
           "plans": [

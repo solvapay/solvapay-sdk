@@ -69,4 +69,21 @@ class FacadeUsageTest < Minitest::Test
     assert_equal "requests", payload["metadata"]["action"]
     assert_volatile_fields(payload)
   end
+
+  def test_track_usage_retries_customer_not_found
+    client = FacadeTest::StubClient.new
+    attempts = 0
+    client.define_singleton_method(:track_usage) do |params:|
+      attempts += 1
+      raise SolvaPay::SolvaPayError.new("404 - Customer not found") if attempts == 1
+
+      @tracked << params
+      { "ok" => true }
+    end
+    facade = SolvaPay.create(api_client: client)
+    result = facade.gate("cus_abc", product: "prd_demo")
+    result.track_success(duration: 12)
+    assert_equal 2, attempts
+    assert_equal 1, client.tracked.length
+  end
 end

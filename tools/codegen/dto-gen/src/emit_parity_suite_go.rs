@@ -109,6 +109,36 @@ pub fn emit_parity_suite_go(ir: &Ir) -> GenResult<String> {
          const expectedInitialDelayMs = {}\n",
         defaults.initial_delay_ms
     );
+    let _ = writeln!(
+        output,
+        "// Frozen customer-dedup TTL from the contract manifest `defaults:`.\n\
+         const expectedCustomerDedupTTLMs = {}\n",
+        defaults.customer_dedup_ttl_ms
+    );
+    let _ = writeln!(
+        output,
+        "// Frozen customer-dedup max cache size from the contract manifest `defaults:`.\n\
+         const expectedCustomerDedupMaxCacheSize = {}\n",
+        defaults.customer_dedup_max_cache_size
+    );
+    let _ = writeln!(
+        output,
+        "// Frozen anonymous customer ref from the contract manifest `defaults:`.\n\
+         const expectedAnonymousCustomerRef = \"{}\"\n",
+        defaults.anonymous_customer_ref
+    );
+    let _ = writeln!(
+        output,
+        "// Frozen trackUsage request-id format from the contract manifest `defaults:`.\n\
+         const expectedRequestIdFormat = \"{}\"\n",
+        defaults.request_id_format
+    );
+    let _ = writeln!(
+        output,
+        "// Frozen trackUsage actionType from the contract manifest `defaults:`.\n\
+         const expectedUsageActionType = \"{}\"\n",
+        defaults.usage_action_type
+    );
 
     // Compile-time presence refs — never executed; ensure each method exists.
     output.push_str("// Compile-time surface refs: each catalogued method is addressable.\n");
@@ -194,14 +224,29 @@ pub fn emit_parity_suite_go(ir: &Ir) -> GenResult<String> {
          }\n\n\
          func TestRuntimeDefaultsMatchManifest(t *testing.T) {\n\
          \tt.Helper()\n\
-         \tif expectedLimitsCacheTTLMs != 10000 {\n\
-         \t\tt.Fatalf(\"limits cache TTL = %d, want 10000\", expectedLimitsCacheTTLMs)\n\
+         \tif expectedLimitsCacheTTLMs != solvapay.DefaultLimitsCacheTTLMs {\n\
+         \t\tt.Fatalf(\"limits cache TTL = %d, want %d\", expectedLimitsCacheTTLMs, solvapay.DefaultLimitsCacheTTLMs)\n\
          \t}\n\
-         \tif expectedMaxRetries != 2 {\n\
-         \t\tt.Fatalf(\"max retries = %d, want 2\", expectedMaxRetries)\n\
+         \tif expectedMaxRetries != solvapay.DefaultMaxRetries {\n\
+         \t\tt.Fatalf(\"max retries = %d, want %d\", expectedMaxRetries, solvapay.DefaultMaxRetries)\n\
          \t}\n\
-         \tif expectedInitialDelayMs != 500 {\n\
-         \t\tt.Fatalf(\"initial delay = %d, want 500\", expectedInitialDelayMs)\n\
+         \tif expectedInitialDelayMs != solvapay.DefaultInitialDelayMs {\n\
+         \t\tt.Fatalf(\"initial delay = %d, want %d\", expectedInitialDelayMs, solvapay.DefaultInitialDelayMs)\n\
+         \t}\n\
+         \tif expectedCustomerDedupTTLMs != solvapay.CustomerDedupTTLMs {\n\
+         \t\tt.Fatalf(\"customer dedup TTL = %d, want %d\", expectedCustomerDedupTTLMs, solvapay.CustomerDedupTTLMs)\n\
+         \t}\n\
+         \tif expectedCustomerDedupMaxCacheSize != solvapay.CustomerDedupMaxCacheSize {\n\
+         \t\tt.Fatalf(\"customer dedup max = %d, want %d\", expectedCustomerDedupMaxCacheSize, solvapay.CustomerDedupMaxCacheSize)\n\
+         \t}\n\
+         \tif expectedAnonymousCustomerRef != solvapay.AnonymousCustomerRef {\n\
+         \t\tt.Fatalf(\"anonymous ref = %q, want %q\", expectedAnonymousCustomerRef, solvapay.AnonymousCustomerRef)\n\
+         \t}\n\
+         \tif expectedRequestIdFormat != solvapay.RequestIDFormat {\n\
+         \t\tt.Fatalf(\"request id format = %q, want %q\", expectedRequestIdFormat, solvapay.RequestIDFormat)\n\
+         \t}\n\
+         \tif expectedUsageActionType != solvapay.UsageActionType {\n\
+         \t\tt.Fatalf(\"usage action type = %q, want %q\", expectedUsageActionType, solvapay.UsageActionType)\n\
          \t}\n\
          }\n\n\
          func TestSyncOnlyMatrix(t *testing.T) {\n\
@@ -237,8 +282,9 @@ mod tests {
     use super::*;
     use crate::ir::{
         IrAvailability, IrBindingArtifact, IrBindingCall, IrBindingCatalogLink, IrBindingSymbol,
-        IrDefaults, IrDocModel, IrEntryPoint, IrEntrySection, IrEnvelopeMode, IrErrorKind,
-        IrLangNames, IrParam, IrRubyReceiver, IrRubyTarget, IrSerializeKind, IrSyncKind, IrTypeRef,
+        IrDefaults, IrDocModel, IrEmissionMatrix, IrEntryPoint, IrEntrySection, IrEnvelopeMode,
+        IrErrorKind, IrLangNames, IrParam, IrRubyReceiver, IrRubyTarget, IrSerializeKind,
+        IrSyncKind, IrTypeRef,
     };
     use std::collections::BTreeMap;
 
@@ -293,6 +339,9 @@ mod tests {
                 rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
             },
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: rust.into(),
@@ -366,6 +415,8 @@ mod tests {
         assert!(output.contains("expectedLimitsCacheTTLMs"));
         assert!(output.contains("expectedMaxRetries"));
         assert!(output.contains("expectedInitialDelayMs"));
+        assert!(output.contains("expectedCustomerDedupTTLMs"));
+        assert!(output.contains("expectedUsageActionType"));
         assert!(output.contains("TestSyncOnlyMatrix"));
         assert!(!output.contains("2 == 2"));
         assert!(!output.contains("|| true"));

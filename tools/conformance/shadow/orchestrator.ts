@@ -1,10 +1,8 @@
 /**
  * Shadow-mode orchestrator: run the two client sides side by side.
  *
- * Step 53: side A is the npm `@solvapay/server` facade binding driven through
- * the WASM `FetchTransport`; side B is the Rust CLI (shadow-invoker). Report
- * fields still use the legacy `ts*` / side-label `"ts"` keys for persisted
- * report compatibility — they mean the facade side, not a TypeScript body.
+ * Side A is the npm `@solvapay/server` facade over the WASM `FetchTransport`.
+ * Side B is the Rust CLI (shadow-invoker).
  */
 
 import path from 'node:path'
@@ -58,7 +56,7 @@ function extractRef(value: unknown, keys: string[]): string | undefined {
 }
 
 async function setupSide(
-  label: 'ts' | 'rust',
+  label: 'facade' | 'rust',
   invoke: (fn: string, args: Record<string, unknown>) => Promise<SideOutcome>,
   runId: string,
 ): Promise<SideRefs> {
@@ -126,8 +124,7 @@ export async function runShadowSuite(options: OrchestratorOptions): Promise<Shad
   })
   const facadeDriver: FacadeDriver = session.driver
 
-  // Legacy name `invokeTs` = facade side (report side label remains `"ts"`).
-  const invokeTs = (fn: string, args: Record<string, unknown>) => facadeDriver.invoke(fn, args)
+  const invokeFacade = (fn: string, args: Record<string, unknown>) => facadeDriver.invoke(fn, args)
   const invokeRust = (fn: string, args: Record<string, unknown>) =>
     invokeRustShadow(
       {
@@ -141,7 +138,7 @@ export async function runShadowSuite(options: OrchestratorOptions): Promise<Shad
 
   try {
     const runId = `${Date.now()}`
-    const tsRefs = await setupSide('ts', invokeTs, runId)
+    const facadeRefs = await setupSide('facade', invokeFacade, runId)
     const rustRefs = await setupSide('rust', invokeRust, runId)
 
     for (const scenario of scenarios) {
@@ -159,35 +156,35 @@ export async function runShadowSuite(options: OrchestratorOptions): Promise<Shad
       // Skip catalog setup duplicates that already ran in setupSide when they
       // would re-create resources with unresolved placeholders — still run them
       // with resolved refs so coverage is exercised.
-      const tsArgs = resolveArgs(scenario.args, tsRefs)
+      const facadeArgs = resolveArgs(scenario.args, facadeRefs)
       const rustArgs = resolveArgs(scenario.args, rustRefs)
 
       try {
-        const [tsOutcome, rustOutcome] = await Promise.all([
-          invokeTs(scenario.op, tsArgs),
+        const [facadeOutcome, rustOutcome] = await Promise.all([
+          invokeFacade(scenario.op, facadeArgs),
           invokeRust(scenario.op, rustArgs),
         ])
 
         // Refresh refs when create* scenarios mint new resources
-        if (scenario.op === 'createProduct' && tsOutcome.ok) {
-          const ref = extractRef(tsOutcome.value, ['reference', 'productRef'])
-          if (ref) tsRefs.productRef = ref
+        if (scenario.op === 'createProduct' && facadeOutcome.ok) {
+          const ref = extractRef(facadeOutcome.value, ['reference', 'productRef'])
+          if (ref) facadeRefs.productRef = ref
         }
         if (scenario.op === 'createProduct' && rustOutcome.ok) {
           const ref = extractRef(rustOutcome.value, ['reference', 'productRef'])
           if (ref) rustRefs.productRef = ref
         }
-        if (scenario.op === 'createPlan' && tsOutcome.ok) {
-          const ref = extractRef(tsOutcome.value, ['reference', 'planRef'])
-          if (ref) tsRefs.planRef = ref
+        if (scenario.op === 'createPlan' && facadeOutcome.ok) {
+          const ref = extractRef(facadeOutcome.value, ['reference', 'planRef'])
+          if (ref) facadeRefs.planRef = ref
         }
         if (scenario.op === 'createPlan' && rustOutcome.ok) {
           const ref = extractRef(rustOutcome.value, ['reference', 'planRef'])
           if (ref) rustRefs.planRef = ref
         }
-        if (scenario.op === 'createCustomer' && tsOutcome.ok) {
-          const ref = extractRef(tsOutcome.value, ['customerRef', 'reference'])
-          if (ref) tsRefs.customerRef = ref
+        if (scenario.op === 'createCustomer' && facadeOutcome.ok) {
+          const ref = extractRef(facadeOutcome.value, ['customerRef', 'reference'])
+          if (ref) facadeRefs.customerRef = ref
         }
         if (scenario.op === 'createCustomer' && rustOutcome.ok) {
           const ref = extractRef(rustOutcome.value, ['customerRef', 'reference'])
@@ -197,8 +194,8 @@ export async function runShadowSuite(options: OrchestratorOptions): Promise<Shad
         const rules = shadowRulesForOperation(manifest, scenario.op)
         const compared = compareSides({
           op: scenario.op,
-          args: { ts: tsArgs, rust: rustArgs },
-          ts: tsOutcome,
+          args: { facade: facadeArgs, rust: rustArgs },
+          facade: facadeOutcome,
           rust: rustOutcome,
           rules,
         })

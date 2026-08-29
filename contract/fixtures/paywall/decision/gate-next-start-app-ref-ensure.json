@@ -19,7 +19,8 @@
         "product": "prd_1",
         "meterName": "requests",
         "originalCustomerRef": "user-1",
-        "startedMs": 1000
+        "startedMs": 1000,
+        "limitsCacheTTLMs": 10000
       },
       "action": {
         "kind": "ensureCustomer",

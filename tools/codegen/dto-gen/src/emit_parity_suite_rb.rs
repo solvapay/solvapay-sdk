@@ -89,8 +89,33 @@ pub fn emit_parity_suite_rb(ir: &Ir) -> GenResult<String> {
     let _ = writeln!(output, "  EXPECTED_MAX_RETRIES = {}", defaults.max_retries);
     let _ = writeln!(
         output,
-        "  EXPECTED_INITIAL_DELAY_MS = {}\n",
+        "  EXPECTED_INITIAL_DELAY_MS = {}",
         defaults.initial_delay_ms
+    );
+    let _ = writeln!(
+        output,
+        "  EXPECTED_CUSTOMER_DEDUP_TTL_MS = {}",
+        defaults.customer_dedup_ttl_ms
+    );
+    let _ = writeln!(
+        output,
+        "  EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE = {}",
+        defaults.customer_dedup_max_cache_size
+    );
+    let _ = writeln!(
+        output,
+        "  EXPECTED_ANONYMOUS_CUSTOMER_REF = \"{}\"",
+        defaults.anonymous_customer_ref
+    );
+    let _ = writeln!(
+        output,
+        "  EXPECTED_REQUEST_ID_FORMAT = \"{}\"",
+        defaults.request_id_format
+    );
+    let _ = writeln!(
+        output,
+        "  EXPECTED_USAGE_ACTION_TYPE = \"{}\"\n",
+        defaults.usage_action_type
     );
 
     let n = operations.len();
@@ -113,6 +138,11 @@ pub fn emit_parity_suite_rb(ir: &Ir) -> GenResult<String> {
          \x20 end\n\n\
          \x20 def test_runtime_defaults_are_exercised_through_host_bridge\n\
          \x20   assert_equal EXPECTED_LIMITS_CACHE_TTL_MS, SolvaPay::DEFAULT_LIMITS_CACHE_TTL_MS\n\
+         \x20   assert_equal EXPECTED_CUSTOMER_DEDUP_TTL_MS, SolvaPay::CUSTOMER_CACHE_TTL_MS\n\
+         \x20   assert_equal EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE, SolvaPay::CUSTOMER_DEDUP_MAX_CACHE_SIZE\n\
+         \x20   assert_equal EXPECTED_ANONYMOUS_CUSTOMER_REF, SolvaPay::ANONYMOUS_CUSTOMER_REF\n\
+         \x20   assert_equal EXPECTED_REQUEST_ID_FORMAT, SolvaPay::REQUEST_ID_FORMAT\n\
+         \x20   assert_equal EXPECTED_USAGE_ACTION_TYPE, SolvaPay::USAGE_ACTION_TYPE\n\
          \x20   original = SolvaPay::NativeDispatch.method(:call_sync)\n\
          \x20   captured = nil\n\
          \x20   SolvaPay::NativeDispatch.define_singleton_method(:call_sync) do |_name, args|\n\

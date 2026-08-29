@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { callNativeSync } from '@solvapay/server'
-import {
-  callMcpSyncOp,
-  installNativeMcpApi,
-  resetNativeMcpApiForTests,
-} from '../src/native-mcp'
+import { callMcpSyncOp, installNativeMcpApi, resetNativeMcpApiForTests } from '../src/native-mcp'
 
 describe('callMcpSyncOp without native API', () => {
   beforeEach(() => {

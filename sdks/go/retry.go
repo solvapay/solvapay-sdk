@@ -21,8 +21,8 @@ type RetryOptions struct {
 
 func DefaultRetryOptions() RetryOptions {
 	return RetryOptions{
-		MaxRetries:      2,
-		InitialDelay:    500 * time.Millisecond,
+		MaxRetries:      DefaultMaxRetries,
+		InitialDelay:    time.Duration(DefaultInitialDelayMs) * time.Millisecond,
 		BackoffStrategy: "fixed",
 	}
 }

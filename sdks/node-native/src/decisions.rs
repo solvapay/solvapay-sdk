@@ -13,15 +13,16 @@ use solvapay_core::{
     charges, classify_cancel_error, classify_create_error, classify_customer_ref,
     classify_lookup_error, classify_paywall_state, classify_reactivate_error,
     coerce_customer_options, counts_usage, credits_per_unit_from_balance, decide_paywall_outcome,
-    evaluate_balance_observation, evaluate_cached_limits, evaluate_fresh_limits,
-    evaluate_product_readiness, extract_backend_customer_ref, gate_next, headline_charges,
-    included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
-    map_route_error, meter_name, normalize_cancel_response, normalize_reactivate_response,
-    paywall_client_payload, pegged_credits_per_unit, per_unit_charge,
-    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
-    require_product_ref, resolve_authenticated_user, resolve_check_limits_params,
-    resolve_fallback_gate_limits, resolve_product_ref, resolve_purchase_customer_ref,
-    resolve_return_url, select_active_purchases, trial_days, validate_activate_plan_params,
+    ensure_customer_next, evaluate_balance_observation, evaluate_cached_limits,
+    evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref, gate_next,
+    headline_charges, included_units, is_cached_customer_ref_valid, is_email_conflict,
+    is_error_result, map_route_error, meter_name, normalize_cancel_response,
+    normalize_reactivate_response, paywall_client_payload, pegged_credits_per_unit,
+    per_unit_charge, project_payment_intent_result, project_topup_process_outcome,
+    project_usage_snapshot, require_product_ref, resolve_authenticated_user,
+    resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
+    resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
+    should_retry_usage_error, trial_days, validate_activate_plan_params,
     validate_attach_business_details_params, validate_checkout_session_params,
     validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
@@ -413,6 +414,18 @@ pub fn resolve_check_limits_params_binding(args_json: String) -> String {
     })
 }
 
+// --- usage ---
+
+/// Binding for `shouldRetryUsageError`.
+#[napi(js_name = "shouldRetryUsageError")]
+pub fn should_retry_usage_error_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let message = require_string(&args, "message")?;
+        Ok(Value::Bool(should_retry_usage_error(&message)))
+    })
+}
+
 // --- plans ---
 
 /// Binding for `validateListPlansParams`.
@@ -703,6 +716,19 @@ pub fn assert_valid_product_ref_binding(args_json: String) -> String {
         let context = require_string(&args, "context")?;
         assert_valid_product_ref(&product_ref, &context)?;
         Ok(Value::Null)
+    })
+}
+
+// --- paywall-decision ---
+
+/// Binding for `ensureCustomerNext`.
+#[napi(js_name = "ensureCustomerNext")]
+pub fn ensure_customer_next_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = optional_value(&args, "state");
+        let event = optional_value(&args, "event");
+        result_as_value(ensure_customer_next(state.as_ref(), event.as_ref()))
     })
 }
 

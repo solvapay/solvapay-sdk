@@ -45,6 +45,7 @@ const LEGACY_GENERATED_PATHS = [
   'sdks/python/src/register.rs',
   'sdks/python/python/solvapay/_native.py',
   'sdks/python/python/solvapay/__init__.pyi',
+  'sdks/python/python/solvapay/helpers.generated.py',
   'sdks/python/tests/signature_parity_generated_test.py',
   'sdks/python/tests/contract/__init__.py',
   'sdks/python/tests/contract/clock.py',
@@ -63,6 +64,7 @@ const LEGACY_GENERATED_PATHS = [
   'sdks/ruby/lib/solvapay/client.rb',
   'sdks/ruby/lib/solvapay/helpers.generated.rb',
   'sdks/ruby/sig/solvapay.rbs',
+  'sdks/ruby-mcp/sig/layer2.generated.rbs',
   'sdks/ruby/test/signature_parity_generated_test.rb',
   'sdks/ruby/test/contract/clock.rb',
   'sdks/ruby/test/contract/names.rb',
@@ -72,6 +74,7 @@ const LEGACY_GENERATED_PATHS = [
   'sdks/ruby/test/contract/host_adapters.rb',
   'sdks/ruby/test/contract/dispatch.rb',
   'sdks/rust/src/client_generated.rs',
+  'sdks/rust/src/helpers_generated.rs',
   'sdks/rust/src/blocking_generated.rs',
   'sdks/rust/tests/signature_parity_generated.rs',
   'sdks/go/wasm/src/args.rs',
@@ -80,6 +83,7 @@ const LEGACY_GENERATED_PATHS = [
   'sdks/go/wasm/src/client.rs',
   'sdks/go/wasm/src/webhook.rs',
   'sdks/go/client_generated.go',
+  'sdks/go/helpers_generated.go',
   'sdks/go/signature_parity_generated_test.go',
   'sdks/go/internal/contract/clock.go',
   'sdks/go/internal/contract/names.go',
@@ -95,6 +99,11 @@ const LEGACY_GENERATED_PATHS = [
   'sdks/capi/ctest/contract/harness.h',
   'sdks/capi/ctest/signature_parity_generated.c',
   'tools/conformance/fixture-runner/src/registry.rs',
+  'sdks/ruby-mcp/lib/solvapay/mcp/layer2.generated.rb',
+  'sdks/python-mcp/python/solvapay_mcp/_layer2.generated.py',
+  'sdks/go/mcp/layer2_generated.go',
+  'sdks/typescript/mcp-core/src/native-mcp.generated.ts',
+  'sdks/rust-mcp/src/layer2_generated.rs',
 ] as const
 
 /** Frozen copy of `DTO_GEN_ARGS` in tools/codegen/gen.ts before this tier. */
@@ -149,6 +158,8 @@ const LEGACY_DTO_GEN_ARGS = [
   'sdks/python/python/solvapay/_native.py',
   '--py-stub-out',
   'sdks/python/python/solvapay/__init__.pyi',
+  '--py-helpers-out',
+  'sdks/python/python/solvapay/helpers.generated.py',
   '--py-parity-out',
   'sdks/python/tests/signature_parity_generated_test.py',
   '--py-conformance-out',
@@ -159,18 +170,24 @@ const LEGACY_DTO_GEN_ARGS = [
   'sdks/ruby/lib/solvapay/client.rb',
   '--rb-rbs-out',
   'sdks/ruby/sig/solvapay.rbs',
+  '--rb-mcp-rbs-out',
+  'sdks/ruby-mcp/sig/layer2.generated.rbs',
   '--rb-parity-out',
   'sdks/ruby/test/signature_parity_generated_test.rb',
   '--rb-conformance-out',
   'sdks/ruby/test/contract',
   '--rs-client-out',
   'sdks/rust/src/client_generated.rs',
+  '--rs-helpers-out',
+  'sdks/rust/src/helpers_generated.rs',
   '--rs-parity-out',
   'sdks/rust/tests/signature_parity_generated.rs',
   '--go-bindings-out',
   'sdks/go/wasm/src',
   '--go-client-out',
   'sdks/go/client_generated.go',
+  '--go-helpers-out',
+  'sdks/go/helpers_generated.go',
   '--go-parity-out',
   'sdks/go/signature_parity_generated_test.go',
   '--go-conformance-out',
@@ -183,6 +200,16 @@ const LEGACY_DTO_GEN_ARGS = [
   'sdks/capi/ctest/signature_parity_generated.c',
   '--fixture-runner-out',
   'tools/conformance/fixture-runner/src/registry.rs',
+  '--rb-mcp-layer2-out',
+  'sdks/ruby-mcp/lib/solvapay/mcp/layer2.generated.rb',
+  '--py-mcp-layer2-out',
+  'sdks/python-mcp/python/solvapay_mcp/_layer2.generated.py',
+  '--go-mcp-layer2-out',
+  'sdks/go/mcp/layer2_generated.go',
+  '--ts-mcp-native-out',
+  'sdks/typescript/mcp-core/src/native-mcp.generated.ts',
+  '--rs-mcp-layer2-out',
+  'sdks/rust-mcp/src/layer2_generated.rs',
 ] as const
 
 describe('repo-paths manifest', () => {
@@ -195,6 +222,11 @@ describe('repo-paths manifest', () => {
   })
 
   it("derives a generated-path set equal to today's GENERATED_PATHS", () => {
+    expect(generatedDriftPaths()).toEqual([...LEGACY_GENERATED_PATHS])
+  })
+
+  it('keeps generatedDriftPaths on the legacy 89-path list after externalGenerated', () => {
+    expect(generatedDriftPaths()).toHaveLength(LEGACY_GENERATED_PATHS.length)
     expect(generatedDriftPaths()).toEqual([...LEGACY_GENERATED_PATHS])
   })
 

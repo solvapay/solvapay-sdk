@@ -31,9 +31,7 @@ export function parseErrorResult(error: unknown, usage: string): CliResult {
   }
 }
 
-export async function runScriptMain(
-  runCli: (argv: string[]) => Promise<CliResult>,
-): Promise<void> {
+export async function runScriptMain(runCli: (argv: string[]) => Promise<CliResult>): Promise<void> {
   const result = await runCli(process.argv.slice(2))
   if (result.stdout) {
     process.stdout.write(result.stdout)

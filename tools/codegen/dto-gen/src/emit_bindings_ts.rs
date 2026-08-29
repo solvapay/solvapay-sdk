@@ -62,12 +62,7 @@ pub fn emit_native_ts(ir: &Ir, toolchain: Toolchain) -> GenResult<String> {
     let mcp_comment = chrome_str(file, &["syncGroupComments", "mcp"], "native-ts")?;
     let postamble = chrome_str(file, &["postamble"], "native-ts")?;
 
-    let client_symbols: Vec<&IrBindingSymbol> = symbols_for(ir, IrBindingArtifact::Client)
-        .into_iter()
-        .filter(|sym| {
-            toolchain != Toolchain::Wasm || sym.section.as_deref() != Some("MCP composite")
-        })
-        .collect();
+    let client_symbols: Vec<&IrBindingSymbol> = symbols_for(ir, IrBindingArtifact::Client);
     let client_union = render_union_members(client_symbols);
     let mut sync_union = render_sync_union(ir, core_comment, mcp_comment);
     if toolchain == Toolchain::Wasm {

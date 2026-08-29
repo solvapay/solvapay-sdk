@@ -9,18 +9,22 @@
     "esModuleInterop": true,
     "types": ["node", "vitest/globals"],
     "paths": {
-      "@solvapay/core": ["../../core/src/index.ts"]
+      "@solvapay/core": ["../../../../core/src/index.ts"]
     },
     "baseUrl": "."
   },
   "include": [
     "./api-diff.test-d.ts",
+    "./boundary-literals.test-d.ts",
+    "./public-surface.test-d.ts",
+    "../../../../core/src/pricing-options-types.ts",
     "../../__generated__/signature-parity.generated.test.ts",
     "../client.ts",
     "../client.generated.d.ts",
     "../generated.ts",
     "../overlays.generated.d.ts",
     "../../paywall.ts",
+    "../../factory.ts",
     "../paywall.ts"
   ]
 }

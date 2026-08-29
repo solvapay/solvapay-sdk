@@ -492,7 +492,8 @@ mod tests {
                 "kind":"payment_required",
                 "product":"prod_1",
                 "checkoutUrl":"https://pay.example/x",
-                "message":"Please upgrade"
+                "message":"Please upgrade",
+                "shortMessage":"Payment required"
               }
             }"#
             .to_owned(),

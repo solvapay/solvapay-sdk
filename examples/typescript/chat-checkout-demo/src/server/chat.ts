@@ -199,8 +199,8 @@ async function buildSystemInstruction(solvaPay: SolvaPay, productRef: string): P
  */
 function billingCycleSuffix(options: Array<{ [key: string]: unknown }>): string {
   const cycle = options.find(option => option.kind === 'billingCycle')
-  const interval = typeof cycle?.interval === 'string' ? cycle.interval : null
-  if (!interval) return ''
+  const interval = cycle?.interval
+  if (interval !== 'week' && interval !== 'month' && interval !== 'year') return ''
   const count = typeof cycle?.count === 'number' ? cycle.count : 1
   return count > 1 ? `/${count} ${interval}s` : `/${interval}`
 }

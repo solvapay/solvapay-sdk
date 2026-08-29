@@ -6,9 +6,12 @@
 use std::fmt::Write as _;
 
 use crate::doc_render::render_entry_doc_lines;
+use crate::emit_helpers::{catalog_helper_bindings, is_constant_entry, snake};
 use crate::error::GenResult;
 use crate::header::{generated_header, CommentStyle};
-use crate::ir::{Ir, IrEntryPoint, IrEntrySection, IrSyncKind, IrTypeRef};
+use crate::ir::{
+    Ir, IrBindingArg, IrBoundaryType, IrEntryPoint, IrEntrySection, IrSyncKind, IrTypeRef,
+};
 
 const PREAMBLE: &str = r#""""Portable Python surface stubs (generated from the SDK contract IR)."""
 
@@ -90,6 +93,46 @@ pub fn emit_pyi_py(ir: &Ir) -> GenResult<String> {
          ) -> str: ...\n",
     );
 
+    out.push('\n');
+    let helpers: Vec<_> = catalog_helper_bindings(ir)
+        .into_iter()
+        .filter(|(_, entry)| entry.emission.py.is_generated())
+        .collect();
+    if !helpers.is_empty() {
+        out.push_str("from typing import Any\n\n");
+    }
+    for (binding, entry) in helpers {
+        let doc = render_pydoc(entry);
+        if is_constant_entry(entry) {
+            let _ = writeln!(out, "{}: Any", entry.names.py);
+            write_pydoc_block(&mut out, &doc, "");
+            continue;
+        }
+        let public_args: Vec<&IrBindingArg> =
+            binding.args.iter().filter(|a| !a.host_injected).collect();
+        let params = public_args
+            .iter()
+            .map(|arg| {
+                let name = snake(&arg.name);
+                let ty = match arg.ty {
+                    IrBoundaryType::String | IrBoundaryType::StringOpt => "str",
+                    IrBoundaryType::Bool => "bool",
+                    IrBoundaryType::F64 | IrBoundaryType::F64Opt => "float",
+                    IrBoundaryType::I64 => "int",
+                    _ => "Any",
+                };
+                if arg.required {
+                    format!("{name}: {ty}")
+                } else {
+                    format!("{name}: {ty} | None = None")
+                }
+            })
+            .collect::<Vec<_>>();
+        let _ = writeln!(out, "def {}({}) -> Any:", entry.names.py, params.join(", "));
+        write_pydoc_block(&mut out, &doc, "    ");
+        out.push_str("    ...\n");
+    }
+
     Ok(out)
 }
 
@@ -113,11 +156,11 @@ fn emit_client_operation(out: &mut String, ep: &IrEntryPoint) {
 }
 
 /// Builds a Python docstring body from the shared IR doc model.
-fn render_pydoc(ep: &IrEntryPoint) -> String {
+pub(crate) fn render_pydoc(ep: &IrEntryPoint) -> String {
     render_entry_doc_lines(ep, |p| p.names.py.as_str()).join("\n")
 }
 
-fn write_pydoc_block(out: &mut String, doc: &str, indent: &str) {
+pub(crate) fn write_pydoc_block(out: &mut String, doc: &str, indent: &str) {
     let trimmed = doc.trim();
     if trimmed.is_empty() {
         return;
@@ -145,7 +188,7 @@ fn py_type_ref(ty: &IrTypeRef) -> String {
         IrTypeRef::String | IrTypeRef::LiteralString(_) => "str".into(),
         IrTypeRef::I64 => "int".into(),
         IrTypeRef::F64 => "float".into(),
-        IrTypeRef::Bool => "bool".into(),
+        IrTypeRef::Bool | IrTypeRef::LiteralBool(_) => "bool".into(),
         IrTypeRef::Vec(item) => format!("list[{}]", py_type_ref(item)),
         IrTypeRef::Map(item) => format!("dict[str, {}]", py_type_ref(item)),
         // JSON-string boundary: named DTOs / free-form values stay opaque strings
@@ -159,8 +202,8 @@ fn py_type_ref(ty: &IrTypeRef) -> String {
 mod tests {
     use super::*;
     use crate::ir::{
-        IrAvailability, IrDefaults, IrDocModel, IrErrorKind, IrLangNames, IrParam, IrRubyReceiver,
-        IrRubyTarget,
+        IrAvailability, IrDefaults, IrDocModel, IrEmissionMatrix, IrErrorKind, IrLangNames,
+        IrParam, IrRubyReceiver, IrRubyTarget,
     };
     use std::collections::BTreeMap;
 
@@ -219,6 +262,9 @@ mod tests {
                 rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
             },
             sync_ts: IrSyncKind::Async,
+            emission: IrEmissionMatrix::default(),
+            mcp_surface: None,
+            feature: None,
             ruby_target: IrRubyTarget {
                 owner: "SolvaPay::Client".into(),
                 name: "check_limits".into(),

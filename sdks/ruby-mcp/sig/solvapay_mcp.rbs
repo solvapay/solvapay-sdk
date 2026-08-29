@@ -74,14 +74,6 @@ module SolvaPay
       def symbolize: (untyped hash) -> Hash[Symbol, untyped]
     end
 
-    module Layer2
-      def self.paywall_tool_result: (String message, untyped gate) -> Hash[String, untyped]
-      def self.make_response_result: (untyped data, untyped options, Array[untyped] emitted_blocks) -> Hash[String, untyped]
-      def self.assert_response_result: (untyped value) -> Hash[String, untyped]
-      def self.build_payable_tool_result: (untyped envelope) -> Hash[String, untyped]
-      def self.as_object_map: (untyped value) -> Hash[String, untyped]
-    end
-
     class ResponseContext
       @customer: Hash[String, untyped]
       @product: Hash[String, untyped]

@@ -14,16 +14,20 @@ export type { ProductReadinessInput, ProductReadinessResult } from './types/boun
 import type { ProductReadinessInput, ProductReadinessResult } from './types/boundary.generated'
 
 /**
- * Whether a resolved product can be sold end-to-end: active status with
- * at least one active plan.
+ * Evaluate whether a product can be sold (active status plus an active plan).
+ *
+ * Typed facade over the native `evaluateProductReadiness` dispatch. The
+ * scaffolder placeholder constant lives here because it is host-side, not core.
  */
 export function evaluateProductReadiness(product: ProductReadinessInput): ProductReadinessResult {
   return dispatchSync('evaluateProductReadiness', product)
 }
 
 /**
- * Synchronous shape check for a product ref. Throws with a message that
- * names `context` so construction-time failures point at the call site.
+ * Reject empty, placeholder, or non-prd_ product refs at construction time.
+ *
+ * Throws with a message that names `context` so construction-time failures
+ * point at the call site.
  */
 export function assertValidProductRef(productRef: string, context: string): void {
   dispatchSync('assertValidProductRef', { productRef, context })

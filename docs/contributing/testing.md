@@ -42,8 +42,9 @@ pnpm shadow:selftest   # offline: IDENTICAL + intentional-divergence self-check
 pnpm shadow:run        # live comparison (SOLVAPAY_SHADOW_* env, manual/dispatch)
 ```
 
-The Rust side is `tools/conformance/shadow-invoker`; the TS driver is
-`tools/conformance/shadow/`.
+The Rust side is `tools/conformance/shadow-invoker`; the facade side is
+`tools/conformance/shadow/` (report keys `facadeNormalized` / `facadeRaw` /
+`facadeWire`, `args.facade`, side label `facade`).
 
 ### Cross-language signature parity
 
@@ -146,7 +147,7 @@ Contract / codegen gates (when touching the manifest, OpenAPI snapshot, fixtures
 or emitters):
 
 ```bash
-pnpm gen:check                  # regen + git-diff drift gate
+pnpm gen:check                  # regen + working-tree idempotence drift gate
 pnpm manifest:check
 pnpm parity:check
 pnpm test:contract

@@ -27,28 +27,25 @@ func paywallToolResult(ctx context.Context, message string, gate json.RawMessage
 	if len(gate) == 0 {
 		gate = json.RawMessage(`{}`)
 	}
-	type args struct {
-		Message           string          `json:"message"`
-		StructuredContent json.RawMessage `json:"structuredContent"`
-	}
-	return callLayer2(ctx, "sv_paywall_tool_result_binding", args{Message: message, StructuredContent: gate})
+	return PaywallToolResult(ctx, message, gate)
 }
 
 func makeResponseResult(ctx context.Context, data json.RawMessage, options map[string]any, emitted []json.RawMessage) (json.RawMessage, error) {
-	payload := map[string]any{"data": data}
+	var optionsArg any
 	if options != nil {
-		payload["options"] = options
+		optionsArg = options
 	}
+	var emittedArg any
 	if len(emitted) > 0 {
-		payload["emittedBlocks"] = emitted
+		emittedArg = emitted
 	}
-	return callLayer2(ctx, "sv_make_response_result_binding", payload)
+	return MakeResponseResult(ctx, data, optionsArg, emittedArg)
 }
 
 func assertResponseResult(ctx context.Context, value json.RawMessage) (json.RawMessage, error) {
-	return callLayer2(ctx, "sv_assert_response_result_binding", map[string]any{"value": value})
+	return AssertResponseResult(ctx, value)
 }
 
 func buildPayableToolResult(ctx context.Context, envelope json.RawMessage) (json.RawMessage, error) {
-	return callLayer2(ctx, "sv_build_payable_tool_result_binding", map[string]any{"envelope": envelope})
+	return BuildPayableToolResult(ctx, envelope)
 }

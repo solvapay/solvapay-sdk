@@ -5,9 +5,14 @@
  * so Python/Ruby/Go/Rust checks can reuse the same core later.
  */
 
-import type { SdkContractManifest } from '../../shared/manifest-schema.js'
+import type {
+  EntryAvailability,
+  Language,
+  SdkContractManifest,
+} from '../../shared/manifest-schema.js'
+import { LANGUAGES } from '../../shared/manifest-schema.js'
 
-export type CatalogSection = 'operations' | 'topLevel' | 'coreHelpers' | 'facade'
+export type CatalogSection = 'operations' | 'topLevel' | 'coreHelpers' | 'facade' | 'mcp'
 
 export interface CataloguedEntry {
   section: CatalogSection
@@ -180,6 +185,184 @@ export interface CheckParityInput {
   facadeMethods?: Set<string>
   /** Extra binding `names.ts` from `binding-symbols.snapshot.json`. */
   derivedBindings?: Record<string, { names: { ts: string } }>
+  /** Override the §2.5 TS-only allowlist (tests). */
+  allowlist?: readonly string[]
+}
+
+export interface CataloguedMcpEntry {
+  section: 'mcp'
+  id: string
+  lang: Language
+  name: string
+  surface: 'syncOp' | 'layer2'
+}
+
+export interface McpLanguageSurface {
+  symbols: Set<string>
+  hasCallEnvelope: boolean
+}
+
+/** True when the language is a declared skip (`omitted` or `handWritten`). */
+export function isDeclaredLanguageSkip(
+  availability: Partial<Record<Language, EntryAvailability>> | undefined,
+  lang: Language,
+): { skip: boolean; emptyReason: boolean } {
+  const declared = availability?.[lang]
+  if (declared === undefined) {
+    return { skip: false, emptyReason: false }
+  }
+  const emptyReason = declared.reason.trim() === ''
+  if ('omitted' in declared && declared.omitted === true) {
+    return { skip: true, emptyReason }
+  }
+  if ('handWritten' in declared && declared.handWritten === true) {
+    return { skip: true, emptyReason }
+  }
+  return { skip: false, emptyReason: false }
+}
+
+/** One expected MCP name per language, skipping declared availability exclusions. */
+export function cataloguedMcpEntries(manifest: SdkContractManifest): CataloguedMcpEntry[] {
+  const out: CataloguedMcpEntry[] = []
+  for (const [id, entry] of Object.entries(manifest.mcp ?? {})) {
+    for (const lang of LANGUAGES) {
+      if (isDeclaredLanguageSkip(entry.availability, lang).skip) {
+        continue
+      }
+      out.push({
+        section: 'mcp',
+        id,
+        lang,
+        name: entry.names[lang],
+        surface: entry.surface,
+      })
+    }
+  }
+  return out
+}
+
+export interface CataloguedHelperEntry {
+  section: 'topLevel' | 'coreHelpers'
+  id: string
+  lang: Language
+  name: string
+}
+
+/** One expected helper name per language, skipping declared availability exclusions. */
+export function cataloguedHelperEntries(manifest: SdkContractManifest): CataloguedHelperEntry[] {
+  const out: CataloguedHelperEntry[] = []
+  const sections = [
+    ['topLevel', manifest.topLevel] as const,
+    ['coreHelpers', manifest.coreHelpers] as const,
+  ]
+  for (const [section, entries] of sections) {
+    for (const [id, entry] of Object.entries(entries)) {
+      for (const lang of LANGUAGES) {
+        if (lang === 'c') {
+          continue
+        }
+        if (isDeclaredLanguageSkip(entry.availability, lang).skip) {
+          continue
+        }
+        out.push({
+          section,
+          id,
+          lang,
+          name: entry.names[lang],
+        })
+      }
+    }
+  }
+  return out
+}
+
+export function checkHelperParity(
+  manifest: SdkContractManifest,
+  surfaces: Partial<Record<Exclude<Language, 'c'>, Set<string>>>,
+): ParityIssue[] {
+  const issues: ParityIssue[] = []
+  for (const entry of cataloguedHelperEntries(manifest)) {
+    const symbols = surfaces[entry.lang] ?? new Set<string>()
+    if (symbols.has(entry.name)) {
+      continue
+    }
+    const lower = entry.name.toLowerCase()
+    const found = [...symbols].find(name => name.toLowerCase() === lower)
+    if (found !== undefined) {
+      issues.push({
+        kind: 'casing',
+        message: `Casing: ${entry.section}.${entry.id} expected ${entry.lang} name "${entry.name}", found "${found}"`,
+      })
+    } else {
+      issues.push({
+        kind: 'missing',
+        message: `Missing: ${entry.section}.${entry.id} ${entry.lang} helper "${entry.name}" not on the ${entry.lang} helper surface`,
+      })
+    }
+  }
+  return issues
+}
+
+export function checkMcpParity(
+  manifest: SdkContractManifest,
+  surfaces: Partial<Record<Language, McpLanguageSurface>>,
+  bindings?: Record<string, { section?: string }>,
+): ParityIssue[] {
+  const issues: ParityIssue[] = []
+
+  for (const [id, entry] of Object.entries(manifest.mcp ?? {})) {
+    for (const lang of LANGUAGES) {
+      const exclusion = isDeclaredLanguageSkip(entry.availability, lang)
+      if (exclusion.skip) {
+        if (exclusion.emptyReason) {
+          issues.push({
+            kind: 'missing',
+            message: `Omission: mcp.${id}.${lang} is omitted without a reason`,
+          })
+        }
+        continue
+      }
+      const surface = surfaces[lang]
+      const expected = entry.names[lang]
+      if (entry.surface === 'syncOp' && surface?.hasCallEnvelope === true) {
+        continue
+      }
+      const symbols = surface?.symbols ?? new Set<string>()
+      if (symbols.has(expected)) {
+        continue
+      }
+      const lower = expected.toLowerCase()
+      const found = [...symbols].find(name => name.toLowerCase() === lower)
+      if (found !== undefined) {
+        issues.push({
+          kind: 'casing',
+          message: `Casing: mcp.${id} expected ${lang} name "${expected}", found "${found}"`,
+        })
+      } else {
+        issues.push({
+          kind: 'missing',
+          message: `Missing: mcp.${id} ${lang} symbol "${expected}" not on the ${lang} MCP surface`,
+        })
+      }
+    }
+  }
+
+  if (bindings !== undefined) {
+    const catalogued = new Set(Object.keys(manifest.mcp ?? {}))
+    for (const [id, symbol] of Object.entries(bindings)) {
+      if (symbol.section !== 'MCP payload / descriptors') {
+        continue
+      }
+      if (!catalogued.has(id)) {
+        issues.push({
+          kind: 'extra',
+          message: `Missing: layer-2 binding "${id}" is not in the mcp catalog section`,
+        })
+      }
+    }
+  }
+
+  return issues
 }
 
 /**

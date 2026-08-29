@@ -68,9 +68,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       productRef,
       oauthClient,
     })
-    const res = await handler(
-      new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`),
-    )
+    const res = await handler(new Request(`${publicBaseUrl}/.well-known/oauth-protected-resource`))
     expect(res.status).toBe(200)
     const body = (await res.json()) as { resource: string }
     expect(body.resource).toBe(`${publicBaseUrl}/mcp`)
@@ -128,7 +126,6 @@ describe('createSolvaPayMcpFetchHandler', () => {
       `resource_metadata="${publicBaseUrl}/.well-known/oauth-protected-resource${mcpPath}"`,
     )
   })
-
 
   it('forwards authenticated requests to createMcpHandler.fetch', async () => {
     const factory = mockFactory()

@@ -207,11 +207,11 @@ They match the never-moves list in [`architecture.md`](./architecture.md).
 request into `{ rpc, config, authHeader }`, call `mcpDispatch`, and
 branch three ways:
 
-| `kind`           | Host work                                              |
-| ---------------- | ------------------------------------------------------ |
-| `rpc`            | Write the JSON-RPC body (usually HTTP 200)             |
-| `challenge`      | Write `status` + `WWW-Authenticate` + body             |
-| `invokeHandler`  | Run the merchant handler, then `mcpResume` with the token |
+| `kind`          | Host work                                                 |
+| --------------- | --------------------------------------------------------- |
+| `rpc`           | Write the JSON-RPC body (usually HTTP 200)                |
+| `challenge`     | Write `status` + `WWW-Authenticate` + body                |
+| `invokeHandler` | Run the merchant handler, then `mcpResume` with the token |
 
 OAuth and discovery HTTP go through `mcpOauthRequest`. Builtin tools and
 resources are serviced **inside** `mcpDispatch`; hosts never handle
@@ -223,14 +223,14 @@ to `authHeader` / `customerRef`, and invoking the merchant handler.
 
 Production layer-3 HTTP engines:
 
-| Language   | Adapter | Payables |
-| ---------- | ------- | -------- |
-| Rust       | `sdks/rust-mcp/src/server.rs` | `mcpDispatch` → `invokeHandler` → `mcpResume` |
-| Go         | `sdks/go/mcp/handler.go` + `server.go` | `mcpDispatch` → `invokeHandler` → `mcpResume` (same as Rust/Ruby) |
-| Ruby       | `sdks/ruby-mcp/lib/solvapay/mcp/engine.rb` | `mcpDispatch` → `invokeHandler` → `mcpResume` |
-| C          | `sdks/capi/ctest/mcp_engine.c` | `mcpDispatch` → `invokeHandler` → `mcpResume` |
-| TypeScript | `sdks/typescript/mcp-core/src/engine-dispatch.ts` + fetch JSON `POST /mcp` | `mcpDispatch` |
-| Python     | `sdks/python-mcp/python/solvapay_mcp/server/engine.py` + Starlette `create_mcp_engine_starlette` | `mcpDispatch` |
+| Language   | Adapter                                                                                          | Payables                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Rust       | `sdks/rust-mcp/src/server.rs`                                                                    | `mcpDispatch` → `invokeHandler` → `mcpResume`                     |
+| Go         | `sdks/go/mcp/handler.go` + `server.go`                                                           | `mcpDispatch` → `invokeHandler` → `mcpResume` (same as Rust/Ruby) |
+| Ruby       | `sdks/ruby-mcp/lib/solvapay/mcp/engine.rb`                                                       | `mcpDispatch` → `invokeHandler` → `mcpResume`                     |
+| C          | `sdks/capi/ctest/mcp_engine.c`                                                                   | `mcpDispatch` → `invokeHandler` → `mcpResume`                     |
+| TypeScript | `sdks/typescript/mcp-core/src/engine-dispatch.ts` + fetch JSON `POST /mcp`                       | `mcpDispatch`                                                     |
+| Python     | `sdks/python-mcp/python/solvapay_mcp/server/engine.py` + Starlette `create_mcp_engine_starlette` | `mcpDispatch`                                                     |
 
 Characterization fixtures under `contract/mcp-fixtures/` are immutable
 expectations. Replay must assert equality (or the documented

@@ -236,7 +236,12 @@ describe('CurrentPlanCard', () => {
       planRef: 'plan_sek_monthly',
       billingCycle: 'monthly',
       isRecurring: true,
-      planSnapshot: { reference: 'plan_sek_monthly', currency: 'SEK', price: 50000, isMetered: false },
+      planSnapshot: {
+        reference: 'plan_sek_monthly',
+        currency: 'SEK',
+        price: 50000,
+        isMetered: false,
+      },
     }
     const ctx = buildCtx(sekPurchase, { config: { transport: makeTransport() } })
     render(<Renderer ctx={ctx} />)

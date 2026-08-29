@@ -13,6 +13,7 @@ import { loadRepoPathsManifest } from '../shared/repo-paths.js'
 import type { RepoPathsManifest } from '../shared/repo-paths-schema.js'
 import { runGen } from './gen.js'
 import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
+import { hasMarker } from './lib/generated-marker.js'
 
 export interface CleanTarget {
   id: string
@@ -68,7 +69,7 @@ export function planClean(manifest: RepoPathsManifest = loadRepoPathsManifest())
 }
 
 export function hasGeneratedMarker(contents: string): boolean {
-  return contents.includes('@generated') || contents.includes('_comment')
+  return hasMarker(contents)
 }
 
 export function realCleanFs(root: string): CleanFs {
@@ -216,6 +217,11 @@ function formatCleanReport(result: CleanResult, plan: CleanPlan): string {
     for (const item of result.handwritten) {
       lines.push(`  ${item.rel}`)
     }
+  }
+  const external = loadRepoPathsManifest().externalGenerated
+  lines.push('external generators (not covered by gen:clean):')
+  for (const entry of external) {
+    lines.push(`  ${entry.id}: ${entry.generator}`)
   }
   return `${lines.join('\n')}\n`
 }

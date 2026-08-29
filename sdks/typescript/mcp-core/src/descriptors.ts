@@ -8,15 +8,8 @@ import { mcpDescriptors } from './mcp-descriptors'
 import { type SolvaPay } from '@solvapay/server'
 import { z } from 'zod'
 import { logMcpConfigOnce } from './config-log'
-import {
-  buildPromptUserMessage,
-  deriveIcons,
-  validatePublicBaseUrl,
-} from './native-mcp'
-import {
-  SOLVAPAY_BOOTSTRAP_MIME_TYPE,
-  SOLVAPAY_BOOTSTRAP_URI,
-} from './resources/bootstrap'
+import { buildPromptUserMessage, deriveIcons, validatePublicBaseUrl } from './native-mcp'
+import { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resources/bootstrap'
 import {
   solvapayOverviewBody,
   SOLVAPAY_OVERVIEW_MIME_TYPE,

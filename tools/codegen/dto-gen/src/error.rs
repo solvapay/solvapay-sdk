@@ -29,15 +29,19 @@ pub enum GenError {
          [--ts-client-runtime-out <client.runtime.generated.ts>] \
          [--ts-parity-out <signature-parity.generated.test.ts>] \
          [--native-py-out <_native.py>] [--py-stub-out <__init__.pyi>] \
+         [--py-helpers-out <helpers.generated.py>] \
          [--py-parity-out <signature_parity_generated_test.py>] \
          [--py-conformance-out <tests/contract>] \
          [--native-rb-out <_native.rb>] [--rb-client-out <client.rb>] \
-         [--rb-rbs-out <solvapay.rbs>] [--rb-parity-out <signature-parity.rb>] \
+         [--rb-rbs-out <solvapay.rbs>] [--rb-mcp-rbs-out <layer2.generated.rbs>] \
+         [--rb-parity-out <signature-parity.rb>] \
          [--rb-conformance-out <test/contract>] \
          [--go-conformance-out <internal/contract>] \
-         [--rs-client-out <client_generated.rs>] [--rs-parity-out <signature_parity_generated.rs>] \
+         [--rs-client-out <client_generated.rs>] [--rs-helpers-out <helpers_generated.rs>] \
+         [--rs-parity-out <signature_parity_generated.rs>] \
          [--go-bindings-out <bindings/go/wasm/src>] \
-         [--go-client-out <client_generated.go>] [--go-parity-out <signature_parity_generated_test.go>] \
+         [--go-client-out <client_generated.go>] [--go-helpers-out <helpers_generated.go>] \
+         [--go-parity-out <signature_parity_generated_test.go>] \
          [--c-bindings-out <sdks/capi/src>] [--c-conformance-out <ctest/contract>] \
          [--c-parity-out <signature_parity_generated.c>]"
     )]
@@ -63,6 +67,13 @@ pub enum GenError {
     )]
     DocCoverage {
         /// Sorted catalog ids missing a usable summary.
+        missing: Vec<String>,
+    },
+
+    /// Emitted language sources do not contain the contract `docs.summary`.
+    #[error("doc parity: missing rendered summary for:\n{}", missing.join("\n"))]
+    DocParity {
+        /// One `{id}.{lang}` or `mcp.{id}.{lang}` key per failure.
         missing: Vec<String>,
     },
 }

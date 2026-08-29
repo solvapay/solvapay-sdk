@@ -34,7 +34,8 @@
           "kind": "payment_required",
           "product": "prd_gated",
           "checkoutUrl": "",
-          "message": "custom reason"
+          "message": "custom reason",
+          "shortMessage": "Payment required"
         }
       },
       "usage": []

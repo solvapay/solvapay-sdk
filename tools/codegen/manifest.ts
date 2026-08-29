@@ -19,7 +19,13 @@ import {
 } from '../shared/manifest-schema.js'
 import { REPO_ROOT } from '../shared/paths.js'
 import { contractInputPath, generatedEntry } from '../shared/repo-paths.js'
-import { isDirectRun, formatZodIssues, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
+import {
+  isDirectRun,
+  formatZodIssues,
+  parseErrorResult,
+  runScriptMain,
+  type CliResult,
+} from './lib/cli.js'
 
 const DEFAULT_MANIFEST = contractInputPath('sdkManifest')
 const DEFAULT_SNAPSHOT = contractInputPath('openapiSnapshot')

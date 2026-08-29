@@ -15,12 +15,12 @@ Backend OpenAPI ──► snapshot (committed) ──┐
 SDK contract manifest (reviewed) ──────────┘
 ```
 
-| Artifact                                | Role                                                          | Who edits                               |
-| --------------------------------------- | ------------------------------------------------------------- | --------------------------------------- |
-| `contract/openapi/sdk-v1.snapshot.json` | Filtered `/v1/sdk/*` wire contract                            | Regenerated from live backend or source |
-| `contract/manifest/sdk-contract.yaml`   | Public API catalog, overlays, bindings, docs, defaults        | Humans (reviewed diff)                  |
-| Generated outputs                       | DTOs, facades, shims, parity suites, native marshalling       | **Only** `pnpm gen`                     |
-| `contract/manifest/repo-paths.yaml`     | On-disk layout (dirs, SDK surfaces, dto-gen flags, drift set) | Humans, when a directory moves          |
+| Artifact                                | Role                                                                               | Who edits                               |
+| --------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------- |
+| `contract/openapi/sdk-v1.snapshot.json` | Filtered `/v1/sdk/*` wire contract                                                 | Regenerated from live backend or source |
+| `contract/manifest/sdk-contract.yaml`   | Public API catalog, overlays, bindings, docs, defaults                             | Humans (reviewed diff)                  |
+| Generated outputs                       | DTOs, facades, shims, parity suites, native marshalling                            | **Only** `pnpm gen`                     |
+| `contract/manifest/repo-paths.yaml`     | On-disk layout (dirs, SDK surfaces, dto-gen flags, drift set, external toolchains) | Humans, when a directory moves          |
 
 **Principle:** automate mechanical toil; keep curated decisions (names, prose docs,
 behavioral fixtures, sync/async intent) human-owned in the manifest.
@@ -40,6 +40,15 @@ Two guard tests fail the build if a new hardcoded layout path appears:
 `tools/shared/repo-paths/tests/no_hardcoded_paths.rs`. Moving a generated file or
 binding crate is a one-file YAML edit plus regenerating via `pnpm gen`.
 
+`repo-paths.yaml` has two generated-file registries:
+
+| Section              | Owner                                                   | Clean / verify                                               | Drift gate                                 |
+| -------------------- | ------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------ |
+| `generated:`         | dto-gen                                                 | `pnpm gen:clean` / `pnpm gen:verify`                         | `pnpm gen:check` (idempotent regen)        |
+| `externalGenerated:` | NAPI-RS, wasm-bindgen, cbindgen, Go WASI, widget vendor | not deleted by `gen:clean`; each entry names its `generator` | `pnpm generated:external --rebuild --id …` |
+
+Binary blobs in `externalGenerated` are hashed in [`contract/manifest/generated-binaries.sha256`](../../contract/manifest/generated-binaries.sha256). `goCoreWasm` is `nonDeterministic` (wasm32-wasip1 is not bit-stable across hosts), so a mismatch warns instead of failing CI.
+
 ## Commands (cheat sheet)
 
 Run from the repo root (`solvapay-sdk/`).
@@ -50,11 +59,12 @@ Run from the repo root (`solvapay-sdk/`).
 | `pnpm snapshot:openapi --from-url`                         | Fetch a single OpenAPI URL → rewrite source + snapshot                                                                                  |
 | `pnpm snapshot:openapi:check`                              | Offline: re-derive snapshot from source, fail on drift                                                                                  |
 | `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert `operations:` (+ optional `bindings:`) stub from OpenAPI DTOs                                                                    |
-| `pnpm gen:bindings`                          | Suggest missing `bindings:` / `#[solvapay_export]` targets for orphan operations          |
+| `pnpm gen:bindings`                                        | Suggest missing `bindings:` / `#[solvapay_export]` targets for orphan operations                                                        |
 | `pnpm gen`                                                 | Regenerate **all** dto-gen outputs (canonical flag set in `tools/codegen/gen.ts`)                                                       |
-| `pnpm gen:check`                                           | Same as `gen`, then `git diff` against HEAD — CI drift gate                                                                             |
-| `pnpm gen:clean`                                           | Delete generated artifacts (refuses files without a generated marker)                                                                   |
+| `pnpm gen:check`                                           | Same as `gen`, then fail if regeneration rewrote any generated path (working-tree idempotence; not a git-HEAD diff)                      |
+| `pnpm gen:clean`                                           | Delete dto-gen artifacts (refuses files without a generated marker). Prints external generator commands it does not cover.              |
 | `pnpm gen:verify`                                          | `gen:clean` → `gen` → fail if any cleaned path was not regenerated                                                                      |
+| `pnpm generated:external`                                  | Rebuild/verify artifacts owned by external toolchains (`externalGenerated:`). `--markers-only` is toolchain-free.                       |
 | `pnpm gen:all`                                             | Live snapshot (if local stack up) → `gen` → `manifest:check` → `parity:check`                                                           |
 | `pnpm manifest:check`                                      | Schema + semantics + OpenAPI cross-check + binding reconciliation                                                                       |
 | `pnpm parity:check`                                        | Cross-language signature parity                                                                                                         |
@@ -64,6 +74,7 @@ Run from the repo root (`solvapay-sdk/`).
 | `pnpm test:live`                                           | Live-contract drivers + `@solvapay/server` integration against a running stack                                                          |
 | `pnpm test:fixtures`                                       | Rust fixture-runner over `contract/fixtures`                                                                                            |
 | `pnpm docs:coverage`                                       | dto-gen `doc_coverage` lib test                                                                                                         |
+| `pnpm docs:parity`                                         | dto-gen `doc_parity` integration test (emitted TSDoc/pydoc/YARD/godoc/rustdoc vs contract summaries)                                      |
 
 There is **no** need to copy a 30-flag `cargo run -p dto-gen -- …` line. CI and
 humans both call `pnpm gen` / `pnpm gen:check`.
@@ -212,7 +223,7 @@ High-level groups:
 | Group                | Examples                                                                                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rust DTOs            | `core/solvapay-dto/src/{schemas,routes,overlays,error_templates,lib}.rs`                                                                                      |
-| TS overlays + client | `sdks/typescript/server/src/types/{generated.ts,overlays,client}.generated.d.ts`                                                                  |
+| TS overlays + client | `sdks/typescript/server/src/types/{generated.ts,overlays,client}.generated.d.ts`                                                                              |
 | TS marshalling       | `sdks/typescript/server/src/{native,wasm}.ts`, `sdks/typescript/core/src/native-{dispatch,core,helpers}.ts`, `sdks/typescript/server/src/native-decisions.ts` |
 | TS parity            | `sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts`                                                                                 |
 | Binding dump         | `contract/manifest/binding-symbols.snapshot.json`                                                                                                             |
@@ -242,23 +253,37 @@ fixtures via a test-only fixture-host feature. Signature parity is
 | Routed `operations:`                  | Manifest `docs:` if present; else OpenAPI operation `description` / `summary` |
 | `topLevel` / `coreHelpers` / `facade` | Manifest `docs:` only (required for coverage)                                 |
 
-Coverage gate: every catalogued entry point must end up with a non-empty
-`docs.summary` in the IR (`cargo test -p dto-gen --lib doc_coverage` and the
-named CI step). Emitters render that one model into TSDoc / docstring / YARD /
-godoc / rustdoc.
+Coverage is two-layer:
+
+1. **IR presence** — every catalogued entry point must end up with a non-empty
+   `docs.summary` in the IR (`pnpm docs:coverage`).
+2. **Emitted parity** — every language whose `availability` is generated (the
+   default) must render that summary into source (`pnpm docs:parity`). The
+   comparator strips comment markers, collapses whitespace, and lowercases, so
+   godoc's `Name summary…` prefix still matches.
+
+The only sanctioned way to exclude a language is a contract
+`availability: { <lang>: { omitted: true, reason: '…' } }` or
+`{ handWritten: true, reason: '…' }` block. Empty reasons fail the gate.
+
+New generated helper / MCP wrapper paths (dto-gen, listed in
+`contract/manifest/repo-paths.yaml`): `helpers.generated.py`,
+`helpers_generated.go`, `helpers_generated.rs`, `layer2.generated.rb`,
+`_layer2.generated.py`, `layer2_generated.go`, `native-mcp.generated.ts`,
+`layer2_generated.rs`.
 
 ---
 
 ## Gates and failure modes
 
-| Symptom                                                | Fix                                                                        |
-| ------------------------------------------------------ | -------------------------------------------------------------------------- |
-| CI `solvapay-dto regen drift` / `pnpm gen:check` fails | `pnpm gen` and commit outputs                                              |
+| Symptom                                                | Fix                                                                             |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| CI `solvapay-dto regen drift` / `pnpm gen:check` fails | `pnpm gen` and commit outputs                                                   |
 | `orphan catalog entry … no binding linker`             | Add `#[solvapay_export]` (see `pnpm gen:bindings` suggestions), then `pnpm gen` |
-| `doc-comment coverage: missing … docs.summary`         | Add manifest `docs:` or ensure OpenAPI has a description for routed ops    |
-| `OpenAPI cross-check failed`                           | Align `route` / `request` / `response` / overlays with the snapshot        |
-| Snapshot check fails offline                           | `pnpm snapshot:openapi:check` — re-derive from committed source            |
-| Pre-push hook too slow                                 | Hooks are convenience; you can skip locally, but CI still runs `gen:check` |
+| `doc-comment coverage: missing … docs.summary`         | Add manifest `docs:` or ensure OpenAPI has a description for routed ops         |
+| `OpenAPI cross-check failed`                           | Align `route` / `request` / `response` / overlays with the snapshot             |
+| Snapshot check fails offline                           | `pnpm snapshot:openapi:check` — re-derive from committed source                 |
+| Pre-push hook too slow                                 | Hooks are convenience; you can skip locally, but CI still runs `gen:check`      |
 
 ---
 

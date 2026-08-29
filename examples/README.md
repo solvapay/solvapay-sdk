@@ -54,10 +54,10 @@ collide with platform services. Convenience scripts from the repo root:
 
 ## Python
 
-| Example                                           | Description                                                              |
-| ------------------------------------------------- | ------------------------------------------------------------------------ |
-| [get-merchant](./python/get-merchant)             | `SolvaPayClient.get_merchant_blocking` + offline `http.server` test      |
-| [paid-mcp](./python/paid-mcp)                     | Paywalled MCP echo (`solvapay-mcp`) against a mock backend               |
+| Example                                           | Description                                                                                                      |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [get-merchant](./python/get-merchant)             | `SolvaPayClient.get_merchant_blocking` + offline `http.server` test                                              |
+| [paid-mcp](./python/paid-mcp)                     | Paywalled MCP echo (`solvapay-mcp`) against a mock backend                                                       |
 | [stock-research-mcp](./python/stock-research-mcp) | Paywalled MCP tools joining a ranked watchlist with SEC company data. Ngrok via `pnpm mcp:stock-research:tunnel` |
 
 ```bash
@@ -78,11 +78,11 @@ ruby -I../../../sdks/ruby/lib test/get_merchant_test.rb
 
 ## Go
 
-| Example                           | Description                                                                 |
-| --------------------------------- | --------------------------------------------------------------------------- |
-| [get-merchant](./go/get-merchant) | `Client.GetMerchant` + `httptest` test                                      |
-| [paid-mcp](./go/paid-mcp)         | Paywalled MCP echo (`solvapay-go/mcp`) against a mock backend               |
-| [weather-mcp](./go/weather-mcp)   | Paywalled wttr.in weather tools; HTTP OAuth for MCPJam (`go test ./...`)    |
+| Example                           | Description                                                              |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| [get-merchant](./go/get-merchant) | `Client.GetMerchant` + `httptest` test                                   |
+| [paid-mcp](./go/paid-mcp)         | Paywalled MCP echo (`solvapay-go/mcp`) against a mock backend            |
+| [weather-mcp](./go/weather-mcp)   | Paywalled wttr.in weather tools; HTTP OAuth for MCPJam (`go test ./...`) |
 
 ```bash
 cd examples/go/get-merchant && go test ./...

@@ -28,10 +28,11 @@ import type {
 } from './types'
 import { createSolvaPayClient } from './client'
 import { PaywallError, SolvaPayPaywall, paywallErrorToClientPayload } from './paywall'
-import { resolveCheckLimitsParams } from './native-decisions'
+import { mergeUsageRequest } from './utils'
+import { gateNext } from './native-decisions'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
 import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
-import { requireProductRef, resolveProductRef } from './resolve-product-ref'
+import { resolveProductRef } from './resolve-product-ref'
 import { createVirtualTools } from './virtual-tools'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
 import type { PaywallStructuredContent } from './types'
@@ -1141,11 +1142,9 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           )
 
           if (decision.outcome === 'gate') {
-            const errorMessage =
-              decision.gate.kind === 'activation_required'
-                ? 'Activation required'
-                : 'Payment required'
-            const body = paywallErrorToClientPayload(new PaywallError(errorMessage, decision.gate))
+            const body = paywallErrorToClientPayload(
+              new PaywallError(decision.gate.shortMessage, decision.gate),
+            )
             const response = new Response(JSON.stringify(body), {
               status: 402,
               headers: { 'content-type': 'application/json' },
@@ -1153,18 +1152,6 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             return { kind: 'paywall', response, content: decision.gate }
           }
 
-          const productRef = requireProductRef(
-            decideMetadata.product || metadata.product || product,
-          )
-          const resolvedMeter = resolveCheckLimitsParams(
-            productRef,
-            decision.limits.meterName ?? decideMetadata.meterName,
-            decideMetadata.usageType,
-          )
-          if ('error' in resolvedMeter) {
-            throw new SolvaPayError(resolvedMeter.error)
-          }
-          const meterName = resolvedMeter.meterName
           const customerRef = decision.customerRef
           const ctx = gateOptions.ctx
 
@@ -1181,29 +1168,35 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             outcome: 'success' | 'fail',
             opts?: { duration?: number; metadata?: Record<string, unknown>; error?: unknown },
           ) => {
-            const requestId = `gate_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-            const errMeta =
-              opts?.error !== undefined
+            const event =
+              outcome === 'success'
                 ? {
-                    error: opts.error instanceof Error ? opts.error.message : String(opts.error),
+                    kind: 'handlerSucceeded',
+                    durationMs: opts?.duration ?? 0,
+                    nowMs: Date.now(),
+                    randomUnit: Math.random(),
                   }
-                : {}
-            const trackPromise = apiClient.trackUsage({
-              customerRef,
-              productRef,
-              actionType: 'api_call',
-              units: 1,
-              outcome,
-              ...(opts?.duration !== undefined ? { duration: opts.duration } : {}),
-              metadata: {
-                action: meterName,
-                requestId,
-                ...errMeta,
-                ...(opts?.metadata ?? {}),
-              },
-              timestamp: new Date().toISOString(),
-            })
-            keepAlive(trackPromise)
+                : {
+                    kind: 'handlerFailed',
+                    durationMs: opts?.duration ?? 0,
+                    nowMs: Date.now(),
+                    randomUnit: Math.random(),
+                    errorMessage:
+                      opts?.error instanceof Error ? opts.error.message : String(opts?.error ?? ''),
+                    isPaywallError: opts?.error instanceof PaywallError,
+                  }
+            const out = gateNext(decision.driverState, event) as {
+              action: { kind: string; request?: TrackUsageRequest }
+            }
+            if (out.action.kind === 'skipUsage') {
+              return
+            }
+            if (out.action.kind !== 'emitUsage' || out.action.request == null) {
+              throw new SolvaPayError(
+                `gate_next handler event returned unexpected action: ${out.action.kind}`,
+              )
+            }
+            keepAlive(apiClient.trackUsage(mergeUsageRequest(out.action.request, opts?.metadata)))
           }
 
           return {

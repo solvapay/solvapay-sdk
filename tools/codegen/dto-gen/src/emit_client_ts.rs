@@ -198,8 +198,8 @@ fn ts_response_type(ir: &Ir, name: &str) -> String {
 mod tests {
     use super::*;
     use crate::ir::{
-        IrAvailability, IrDefaults, IrErrorKind, IrLangNames, IrParam, IrRubyReceiver,
-        IrRubyTarget, IrSyncKind, IrTypeRef,
+        IrAvailability, IrDefaults, IrEmissionMatrix, IrErrorKind, IrLangNames, IrParam,
+        IrRubyReceiver, IrRubyTarget, IrSyncKind, IrTypeRef,
     };
     use crate::lower_catalog::lower_catalog;
     use crate::manifest::Manifest;
@@ -278,6 +278,9 @@ mod tests {
                     rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
                 },
                 sync_ts: IrSyncKind::Async,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: None,
+                feature: None,
                 ruby_target: IrRubyTarget {
                     owner: "SolvaPay::Client".into(),
                     name: "check_limits".into(),
@@ -355,6 +358,9 @@ mod tests {
                     rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
                 },
                 sync_ts: IrSyncKind::Async,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: None,
+                feature: None,
                 ruby_target: IrRubyTarget {
                     owner: "SolvaPay::Client".into(),
                     name: "update_customer".into(),
@@ -491,6 +497,9 @@ topLevel:
                     rust: vec![IrSyncKind::Async, IrSyncKind::Sync],
                 },
                 sync_ts: IrSyncKind::Async,
+                emission: IrEmissionMatrix::default(),
+                mcp_surface: None,
+                feature: None,
                 ruby_target: IrRubyTarget {
                     owner: "SolvaPay::Client".into(),
                     name: "check_limits".into(),

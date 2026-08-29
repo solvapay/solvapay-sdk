@@ -55,7 +55,9 @@ describe('SolvaPayClient ↔ SolvaPayClientGenerated API-diff', () => {
   })
 
   it('product schemas expose isManagedMcp', () => {
-    expectTypeOf<components['schemas']['SdkProductResponse']['isManagedMcp']>().toEqualTypeOf<boolean>()
+    expectTypeOf<
+      components['schemas']['SdkProductResponse']['isManagedMcp']
+    >().toEqualTypeOf<boolean>()
   })
 
   it('listPurchases accepts includeFree', () => {

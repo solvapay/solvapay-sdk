@@ -118,6 +118,7 @@ impl ResponseContext {
                 product: self.product_ref.clone(),
                 checkout_url: String::new(),
                 message,
+                short_message: "Payment required".to_owned(),
                 confirmation_url: None,
                 plans: None,
                 balance: None,

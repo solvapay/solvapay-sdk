@@ -203,7 +203,8 @@ export function createSolvaPayMcpFetchHandler(
       return new Response(null, { status: 405, headers })
     }
 
-    const useEngine = engine !== undefined && (responseMode === undefined || responseMode === 'json')
+    const useEngine =
+      engine !== undefined && (responseMode === undefined || responseMode === 'json')
     if (useEngine && engine !== undefined && req.method === 'POST') {
       let rpc: unknown
       try {
@@ -212,7 +213,11 @@ export function createSolvaPayMcpFetchHandler(
         const headers = new Headers({ 'content-type': 'application/json' })
         applyNativeCors(req.headers, headers)
         return new Response(
-          JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }),
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: null,
+            error: { code: -32700, message: 'Parse error' },
+          }),
           { status: 400, headers },
         )
       }

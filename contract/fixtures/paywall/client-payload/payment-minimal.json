@@ -9,7 +9,8 @@
         "kind": "payment_required",
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/x",
-        "message": "pay"
+        "message": "pay",
+        "shortMessage": "Payment required"
       }
     }
   },
@@ -20,7 +21,8 @@
       "product": "prd_demo",
       "checkoutUrl": "https://pay.test/x",
       "message": "pay",
-      "kind": "payment_required"
+      "kind": "payment_required",
+      "shortMessage": "Payment required"
     }
   }
 }

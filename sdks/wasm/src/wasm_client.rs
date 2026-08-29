@@ -495,6 +495,63 @@ impl WasmClient {
         })
         .await
     }
+
+    // --- MCP composite -------------------------------------------------------
+
+    /// `mcpBootstrap`
+    #[wasm_bindgen(js_name = "mcpBootstrap")]
+    pub async fn mcp_bootstrap(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::McpBootstrapParams = parse_args_json(&args_json)?;
+            client.mcp_bootstrap(params).await
+        })
+        .await
+    }
+
+    /// `mcpCallBuiltinTool`
+    #[wasm_bindgen(js_name = "mcpCallBuiltinTool")]
+    pub async fn mcp_call_builtin_tool(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::McpCallBuiltinToolParams = parse_args_json(&args_json)?;
+            client.mcp_call_builtin_tool(params).await
+        })
+        .await
+    }
+
+    /// `mcpReadResource`
+    #[wasm_bindgen(js_name = "mcpReadResource")]
+    pub async fn mcp_read_resource(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::McpReadResourceParams = parse_args_json(&args_json)?;
+            client.mcp_read_resource(params).await
+        })
+        .await
+    }
+
+    /// `mcpOauthRequest`
+    #[wasm_bindgen(js_name = "mcpOauthRequest")]
+    pub async fn mcp_oauth_request(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::McpOauthRequestParams = parse_args_json(&args_json)?;
+            client.mcp_oauth_request(params).await
+        })
+        .await
+    }
+
+    /// `mcpDispatch`
+    #[wasm_bindgen(js_name = "mcpDispatch")]
+    pub async fn mcp_dispatch(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::McpDispatchParams = parse_args_json(&args_json)?;
+            client.mcp_dispatch(params).await
+        })
+        .await
+    }
 }
 
 /// Offline dispatch helper: unknown fn names return an internal-error envelope
@@ -538,7 +595,12 @@ pub fn dispatch_envelope_for_fn(fn_name: &str, _args_json: &str) -> Option<Strin
         | "getPaymentMethod"
         | "getAutoRecharge"
         | "saveAutoRecharge"
-        | "disableAutoRecharge" => None,
+        | "disableAutoRecharge"
+        | "mcpBootstrap"
+        | "mcpCallBuiltinTool"
+        | "mcpReadResource"
+        | "mcpOauthRequest"
+        | "mcpDispatch" => None,
         other => Some(internal_error_envelope(format!(
             "unknown WasmClient fn: {other}"
         ))),

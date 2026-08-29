@@ -1,8 +1,5 @@
 import chalk from 'chalk'
-import {
-  evaluateProductReadiness,
-  SOLVAPAY_PRODUCT_REF_PLACEHOLDER,
-} from '@solvapay/core'
+import { evaluateProductReadiness, SOLVAPAY_PRODUCT_REF_PLACEHOLDER } from '@solvapay/core'
 import { verifyProductRef, verifySecretKey } from './browser-auth'
 import {
   readSolvaPayApiBaseUrlFromEnv,
@@ -48,10 +45,7 @@ const preferEnv = (
   return undefined
 }
 
-const resolveApiBaseUrl = async (
-  cwd: string,
-  opts: DoctorCommandOptions,
-): Promise<string> => {
+const resolveApiBaseUrl = async (cwd: string, opts: DoctorCommandOptions): Promise<string> => {
   if (opts.dev) return DEV_API_BASE_URL
   const fromFile = await readSolvaPayApiBaseUrlFromEnv(cwd)
   const resolved = preferEnv(process.env.SOLVAPAY_API_BASE_URL, fromFile)
@@ -91,9 +85,7 @@ export const runDoctorInDirectory = async ({
     checks.push({
       name: 'SOLVAPAY_SECRET_KEY',
       ok: verified.ok,
-      detail: verified.ok
-        ? 'accepted by the API'
-        : (verified.warning ?? 'rejected by the API'),
+      detail: verified.ok ? 'accepted by the API' : (verified.warning ?? 'rejected by the API'),
     })
   }
 

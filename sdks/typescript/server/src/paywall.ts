@@ -7,7 +7,7 @@
  * - Class-based and functional programming
  */
 
-import { SolvaPayError } from '@solvapay/core'
+import { SolvaPayError, type GateAction, type GateCacheOp } from '@solvapay/core'
 import type {
   LimitResponseWithPlan,
   PaywallArgs,
@@ -16,20 +16,21 @@ import type {
   PaywallStructuredContent,
   PaywallToolResult,
   SolvaPayClient,
+  TrackUsageRequest,
 } from './types'
 import {
-  buildCreateCustomerParams,
-  classifyCreateError,
-  classifyCustomerRef,
-  classifyLookupError,
-  extractBackendCustomerRef,
+  ensureCustomerNext,
   gateNext,
-  isEmailConflict,
+  isErrorResult,
   paywallErrorToClientPayload as paywallErrorToClientPayloadDispatch,
   requireProductRef,
   resolveCheckLimitsParams,
+  shouldRetryUsageError,
 } from './native-decisions'
+import { CUSTOMER_DEDUP_MAX_CACHE_SIZE } from './defaults'
 import { withRetry, createRequestDeduplicator } from './utils'
+
+export * from './defaults'
 
 // Re-export types for convenience
 export type {
@@ -128,9 +129,9 @@ export function paywallErrorToClientPayload(error: PaywallError): Record<string,
  * - Memory-safe with max cache size
  */
 const sharedCustomerLookupDeduplicator = createRequestDeduplicator<string>({
-  cacheTTL: 60000, // Cache results for 60 seconds (reduces API calls significantly)
-  maxCacheSize: 1000, // Maximum cache entries
-  cacheErrors: false, // Don't cache errors - retry on next request
+  cacheTTL: 0,
+  maxCacheSize: CUSTOMER_DEDUP_MAX_CACHE_SIZE,
+  cacheErrors: false,
 })
 
 interface LimitsCacheEntry {
@@ -186,8 +187,7 @@ const EXTRA_FORWARD_KEY = '__solvapayExtra' as const
  * Universal SolvaPay Protection - One API for everything
  */
 export class SolvaPayPaywall {
-  private customerCreationAttempts = new Set<string>()
-  private customerRefMapping = new Map<string, string>()
+  private customerCache = new Map<string, { backendRef: string; timestampMs: number }>()
   private debug: boolean
   private limitsCache = new Map<string, LimitsCacheEntry>()
   private limitsCacheTTL: number
@@ -219,23 +219,7 @@ export class SolvaPayPaywall {
     return resolved.meterName
   }
 
-  private generateRequestId(): string {
-    const timestamp = Date.now()
-    const random = Math.random().toString(36).substring(2, 11)
-    return `solvapay_${timestamp}_${random}`
-  }
-
-  private applyGateCache(
-    cache:
-      | {
-          op: string
-          key: string
-          remaining?: number
-          limits?: LimitResponseWithPlan
-          timestamp?: number
-        }
-      | undefined,
-  ): void {
+  private applyGateCache(cache: GateCacheOp | undefined): void {
     if (cache == null) {
       return
     }
@@ -251,13 +235,16 @@ export class SolvaPayPaywall {
       return
     }
     if (cache.op === 'set' && cache.remaining !== undefined && cache.limits != null) {
+      if (typeof cache.timestamp !== 'number') {
+        throw new SolvaPayError('gate_next cache set missing timestamp')
+      }
       this.limitsCache.set(cache.key, {
         remaining: cache.remaining,
-        checkoutUrl:
-          typeof cache.limits.checkoutUrl === 'string' ? cache.limits.checkoutUrl : undefined,
-        meterName: typeof cache.limits.meterName === 'string' ? cache.limits.meterName : undefined,
-        timestamp: cache.timestamp ?? Date.now(),
-        limits: cache.limits,
+        checkoutUrl: cache.checkoutUrl,
+        meterName: cache.meterName,
+        timestamp: cache.timestamp,
+        // Generated GateCacheOp.limits is `unknown`; the driver copies the checkLimits body.
+        limits: cache.limits as LimitResponseWithPlan,
       })
     }
   }
@@ -285,39 +272,11 @@ export class SolvaPayPaywall {
   ): Promise<PaywallDecision<TArgs>> {
     const product = this.resolveProduct(metadata)
     const usageType = this.resolveMeterName(product, metadata)
-    const requestId = this.generateRequestId()
     const startTime = Date.now()
 
     const inputCustomerRef = getCustomerRef
       ? getCustomerRef(args)
       : args.auth?.customer_ref || 'anonymous'
-
-    type GateAction = {
-      kind: string
-      outcome?: string
-      customerRef?: string
-      productRef?: string
-      meterName?: string
-      product?: string
-      key?: string
-      includeCheckoutSession?: boolean
-      cacheDeleteKey?: string
-      limits?: LimitResponseWithPlan
-      gate?: PaywallStructuredContent
-      cache?: {
-        op: string
-        key: string
-        remaining?: number
-        limits?: LimitResponseWithPlan
-        timestamp?: number
-      }
-      track?: {
-        customerRef: string
-        productRef: string
-        action: string
-        durationMs: number
-      }
-    }
 
     let state: unknown = null
     let event: Record<string, unknown> = {
@@ -326,6 +285,7 @@ export class SolvaPayPaywall {
       product,
       usageType,
       startedMs: startTime,
+      limitsCacheTTLMs: this.limitsCacheTTL,
     }
 
     for (;;) {
@@ -342,23 +302,21 @@ export class SolvaPayPaywall {
         continue
       }
 
-      if (action.kind === 'lookupCache') {
+      if (action.kind === 'readLimitsCache') {
         const key = String(action.key)
         const cached = this.limitsCache.get(key)
         const now = Date.now()
-        if (cached && now - cached.timestamp < this.limitsCacheTTL) {
-          event = {
-            kind: 'cacheHit',
-            remaining: cached.remaining,
-            limits: cached.limits,
-            nowMs: now,
-          }
-        } else {
-          if (cached) {
-            this.limitsCache.delete(key)
-          }
-          event = { kind: 'cacheMiss', nowMs: now }
-        }
+        event = cached
+          ? {
+              kind: 'limitsCacheEntry',
+              found: true,
+              remaining: cached.remaining,
+              limits: cached.limits,
+              timestampMs: cached.timestamp,
+              nowMs: now,
+              randomUnit: Math.random(),
+            }
+          : { kind: 'limitsCacheEntry', found: false, nowMs: now, randomUnit: Math.random() }
         continue
       }
 
@@ -372,46 +330,49 @@ export class SolvaPayPaywall {
           meterName: String(action.meterName),
           includeCheckoutSession: action.includeCheckoutSession === true,
         })
-        event = { kind: 'limitsResult', limits: limitsCheck, nowMs: Date.now() }
+        event = {
+          kind: 'limitsResult',
+          limits: limitsCheck,
+          nowMs: Date.now(),
+          randomUnit: Math.random(),
+        }
         continue
       }
 
-      if (action.kind === 'done') {
+      if (action.kind === 'gate') {
         this.applyGateCache(action.cache)
-        if (action.track) {
-          await this.trackUsage(
-            action.track.customerRef,
-            action.track.productRef,
-            action.track.action,
-            'paywall',
-            requestId,
-            action.track.durationMs,
-          ).catch(() => undefined)
-        }
-        const lastLimits = action.limits ?? null
-        if (action.outcome === 'gate') {
-          if (action.gate == null) {
-            throw new SolvaPayError('gate_next done/gate missing gate payload')
-          }
-          return {
-            outcome: 'gate',
-            gate: action.gate,
-            limits: lastLimits,
-            customerRef: String(action.customerRef),
-          }
-        }
-        if (lastLimits == null) {
-          throw new SolvaPayError('gate_next done/allow missing limits payload')
+        await this.postUsageRequest(action.request)
+        if (action.gate == null) {
+          throw new SolvaPayError('gate_next gate action missing gate payload')
         }
         return {
-          outcome: 'allow',
-          args,
-          limits: lastLimits,
+          outcome: 'gate',
+          // Driver emits PaywallGate; boundary types it as unknown.
+          gate: action.gate as PaywallStructuredContent,
+          limits: action.limits as LimitResponseWithPlan,
           customerRef: String(action.customerRef),
         }
       }
 
-      throw new SolvaPayError(`gate_next returned unknown action kind: ${action.kind}`)
+      if (action.kind === 'allow') {
+        this.applyGateCache(action.cache)
+        return {
+          outcome: 'allow',
+          args,
+          limits: action.limits as LimitResponseWithPlan,
+          customerRef: String(action.customerRef),
+          driverState: state,
+        }
+      }
+
+      if (action.kind === 'emitUsage' || action.kind === 'skipUsage') {
+        throw new SolvaPayError(
+          `gate_next returned ${action.kind} during decide; usage actions belong on handler events`,
+        )
+      }
+
+      const unexpected: never = action
+      throw new SolvaPayError(`gate_next returned unknown action: ${JSON.stringify(unexpected)}`)
     }
   }
 
@@ -437,9 +398,6 @@ export class SolvaPayPaywall {
     metadata: PaywallMetadata,
     args: TArgs,
   ): Promise<TResult> {
-    const product = this.resolveProduct(metadata)
-    const usageType = this.resolveMeterName(product, metadata)
-    const requestId = this.generateRequestId()
     const startTime = Date.now()
 
     const forwardedExtra = (args as unknown as Record<string, unknown>)[EXTRA_FORWARD_KEY]
@@ -452,18 +410,12 @@ export class SolvaPayPaywall {
     try {
       const result = await handler(args, handlerContext)
       const latencyMs = Date.now() - startTime
-      // See note on the `paywall` outcome above — awaited so the
-      // usage event survives request-scoped runtimes (Workers /
-      // Edge), where a floated fetch is killed when the response
-      // returns and `sumForMeter` never sees the event.
-      await this.trackUsage(
-        decision.customerRef,
-        product,
-        decision.limits.meterName || usageType,
-        'success',
-        requestId,
-        latencyMs,
-      ).catch(() => undefined)
+      await this.emitHandlerUsage(decision.driverState, {
+        kind: 'handlerSucceeded',
+        durationMs: latencyMs,
+        nowMs: Date.now(),
+        randomUnit: Math.random(),
+      })
       return result
     } catch (error) {
       if (error instanceof Error) {
@@ -472,17 +424,15 @@ export class SolvaPayPaywall {
       } else {
         this.log(`❌ Error in paywall:`, error)
       }
-      if (!(error instanceof PaywallError)) {
-        const latencyMs = Date.now() - startTime
-        await this.trackUsage(
-          decision.customerRef,
-          product,
-          decision.limits.meterName || usageType,
-          'fail',
-          requestId,
-          latencyMs,
-        ).catch(() => undefined)
-      }
+      const latencyMs = Date.now() - startTime
+      await this.emitHandlerUsage(decision.driverState, {
+        kind: 'handlerFailed',
+        durationMs: latencyMs,
+        nowMs: Date.now(),
+        randomUnit: Math.random(),
+        errorMessage: error instanceof Error ? error.message : String(error),
+        isPaywallError: error instanceof PaywallError,
+      })
       throw error
     }
   }
@@ -519,8 +469,7 @@ export class SolvaPayPaywall {
       const decision = await this.decide(args, metadata, getCustomerRef)
 
       if (decision.outcome === 'gate') {
-        const message =
-          decision.gate.kind === 'activation_required' ? 'Activation required' : 'Payment required'
+        const message = decision.gate.shortMessage
         this.log(`❌ Error in paywall [PaywallError]: ${message}`)
         throw new PaywallError(message, decision.gate)
       }
@@ -546,242 +495,186 @@ export class SolvaPayPaywall {
     externalRef?: string,
     options?: { email?: string; name?: string },
   ): Promise<string> {
-    // Return cached mapping if exists (per-instance cache)
-    if (this.customerRefMapping.has(customerRef)) {
-      return this.customerRefMapping.get(customerRef)!
-    }
-
-    const refKind = classifyCustomerRef(customerRef)
-    // Skip for anonymous users / already-backend refs (cus_ prefix).
-    // We cannot "ensure" (create) a customer with a specific backend ID,
-    // and using it as an externalRef causes issues.
-    if (refKind === 'anonymous' || refKind === 'backend') {
-      return customerRef
-    }
-
-    // Use shared deduplicator to prevent duplicate lookups across all instances
-    // This is especially important when multiple routes call ensureCustomer concurrently
     const cacheKey = externalRef || customerRef
+    return sharedCustomerLookupDeduplicator.deduplicate(cacheKey, () =>
+      this.runEnsureCustomerDriver(customerRef, externalRef, options),
+    )
+  }
 
-    // Check if we have a cached result in per-instance cache first (fast path)
-    if (this.customerRefMapping.has(customerRef)) {
-      const cached = this.customerRefMapping.get(customerRef)!
-      return cached
+  private async runEnsureCustomerDriver(
+    customerRef: string,
+    externalRef?: string,
+    options?: { email?: string; name?: string },
+  ): Promise<string> {
+    let state: unknown = null
+    let event: Record<string, unknown> = {
+      kind: 'start',
+      customerRef,
+      canCreateCustomer: typeof this.apiClient.createCustomer === 'function',
+      canUpdateCustomer: typeof this.apiClient.updateCustomer === 'function',
+      nowMs: Date.now(),
+    }
+    if (externalRef) {
+      event.externalRef = externalRef
+    }
+    if (options?.email) {
+      event.email = options.email
+    }
+    if (options?.name) {
+      event.name = options.name
     }
 
-    // Use shared deduplicator (handles both concurrent requests and cache)
-    const backendRef = await sharedCustomerLookupDeduplicator.deduplicate(cacheKey, async () => {
-      // If externalRef is provided, try to lookup existing customer first
-      if (externalRef) {
-        try {
-          const existingCustomer = await this.apiClient.getCustomer({ externalRef })
-
-          if (existingCustomer && existingCustomer.customerRef) {
-            const ref = existingCustomer.customerRef
-
-            // Store the mapping for future use (per-instance cache)
-            this.customerRefMapping.set(customerRef, ref)
-
-            // Also track that we've attempted creation for this externalRef to prevent duplicates
-            this.customerCreationAttempts.add(customerRef)
-            if (externalRef !== customerRef) {
-              this.customerCreationAttempts.add(externalRef)
-            }
-
-            return ref
-          }
-        } catch (error) {
-          // 404 means customer doesn't exist yet - this is expected, continue to creation
-          const errorMessage = error instanceof Error ? error.message : String(error)
-          if (classifyLookupError(errorMessage) === 'unexpected') {
-            // Unexpected error - log but continue to fallback behavior
-            this.log(`⚠️  Error looking up customer by externalRef: ${errorMessage}`)
-          }
+    for (;;) {
+      const out = ensureCustomerNext(state, event)
+      if (isErrorResult(out)) {
+        const details = (out as { details?: unknown }).details
+        throw new SolvaPayError(typeof details === 'string' && details ? details : out.error)
+      }
+      if (typeof out !== 'object' || out === null || !('action' in out) || !('state' in out)) {
+        throw new SolvaPayError('ensure_customer_next returned unexpected value')
+      }
+      const result = out as {
+        state: unknown
+        action: {
+          kind: string
+          key?: string
+          byExternalRef?: string
+          byEmail?: string
+          params?: Record<string, unknown>
+          customerRef?: string
+          patch?: Record<string, unknown>
+          backendRef?: string
+          cache?: { key: string; backendRef: string; timestampMs: number }
         }
       }
-
-      // If already attempted but no mapping, use original ref
-      // Check both customerRef and externalRef to prevent duplicates
-      if (
-        this.customerCreationAttempts.has(customerRef) ||
-        (externalRef && this.customerCreationAttempts.has(externalRef))
-      ) {
-        // If we have a mapping, use it; otherwise return the original ref
-        const mappedRef = this.customerRefMapping.get(customerRef)
-        return mappedRef || customerRef
+      state = result.state
+      const action = result.action
+      if (action.kind === 'readCustomerCache') {
+        const cached = this.customerCache.get(String(action.key))
+        const nowMs = Date.now()
+        event = cached
+          ? {
+              kind: 'customerCacheEntry',
+              found: true,
+              backendRef: cached.backendRef,
+              timestampMs: cached.timestampMs,
+              nowMs,
+            }
+          : { kind: 'customerCacheEntry', found: false, nowMs }
+        continue
       }
-
-      // Skip if createCustomer is not available
-      if (!this.apiClient.createCustomer) {
-        console.warn(
-          `⚠️  Cannot auto-create customer ${customerRef}: createCustomer method not available on API client`,
-        )
-        return customerRef
+      if (action.kind === 'getCustomer') {
+        const params = action.byExternalRef
+          ? { externalRef: String(action.byExternalRef) }
+          : { email: String(action.byEmail) }
+        try {
+          const customer = await this.apiClient.getCustomer(params)
+          const found = Boolean(customer?.customerRef)
+          event = found
+            ? { kind: 'customerLookupResult', found: true, customer, nowMs: Date.now() }
+            : { kind: 'customerLookupResult', found: false, nowMs: Date.now() }
+        } catch (error) {
+          event = {
+            kind: 'customerLookupResult',
+            found: false,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            nowMs: Date.now(),
+          }
+        }
+        continue
       }
-
-      this.customerCreationAttempts.add(customerRef)
-
-      try {
-        // Prepare customer creation params
-        // Use provided email/name, or fallback to auto-generated values
-        // Use a timestamp-based email to avoid conflicts with old orphaned records
-        const createParams = buildCreateCustomerParams(
-          customerRef,
-          externalRef,
-          options?.email,
-          options?.name,
-          Date.now(),
-        )
-
-        const result = await this.apiClient.createCustomer(createParams)
-
-        // Extract the backend reference from the response
-        const resultObj = result as unknown as Record<string, unknown>
-        const ref = extractBackendCustomerRef(resultObj, customerRef)
-
-        // Store the mapping (per-instance cache)
-        this.customerRefMapping.set(customerRef, ref)
-
-        return ref
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        if (classifyCreateError(errorMessage) === 'conflict') {
-          // Try to lookup by externalRef first if available
-          if (externalRef) {
-            try {
-              const searchResult = await this.apiClient.getCustomer({ externalRef })
-              if (searchResult && searchResult.customerRef) {
-                this.customerRefMapping.set(customerRef, searchResult.customerRef)
-                return searchResult.customerRef
-              }
-            } catch (lookupError: unknown) {
-              this.log(
-                `⚠️ Failed to lookup existing customer by externalRef after 409:`,
-                lookupError instanceof Error ? lookupError.message : lookupError,
-              )
-            }
-          }
-
-          // If conflict is due to email uniqueness but externalRef lookup failed,
-          // retry creation with a generated email while preserving externalRef.
-          // This allows resolving stale customers created before externalRef was set.
-          if (externalRef && isEmailConflict(errorMessage) && options?.email) {
-            try {
-              const byEmail = await this.apiClient.getCustomer({ email: options.email })
-              if (byEmail && byEmail.customerRef) {
-                this.customerRefMapping.set(customerRef, byEmail.customerRef)
-                this.log(
-                  `⚠️ Resolved customer ${customerRef} by email after conflict; using existing customer ${byEmail.customerRef}`,
-                )
-
-                // Best-effort: backfill externalRef so the next lookup takes the
-                // fast getCustomer({externalRef}) path and we don't trip the
-                // email-conflict branch again. Swallow errors — the resolved
-                // customerRef is already cached and usable.
-                if (!byEmail.externalRef && this.apiClient.updateCustomer) {
-                  try {
-                    await this.apiClient.updateCustomer(byEmail.customerRef, { externalRef })
-                  } catch (backfillError: unknown) {
-                    this.log(
-                      `⚠️ Failed to backfill externalRef on ${byEmail.customerRef}:`,
-                      backfillError instanceof Error ? backfillError.message : backfillError,
-                    )
-                  }
-                }
-
-                return byEmail.customerRef
-              }
-            } catch (emailLookupError: unknown) {
-              this.log(
-                `⚠️ Email lookup failed after customer conflict for ${customerRef}:`,
-                emailLookupError instanceof Error ? emailLookupError.message : emailLookupError,
-              )
-            }
-
-            try {
-              const retryParams = buildCreateCustomerParams(
-                customerRef,
-                externalRef,
-                undefined,
-                options?.name,
-                Date.now(),
-              )
-
-              const retryResult = await this.apiClient.createCustomer(retryParams)
-              const retryObj = retryResult as unknown as Record<string, unknown>
-              const retryRef = extractBackendCustomerRef(retryObj, customerRef)
-
-              this.customerRefMapping.set(customerRef, retryRef)
-              this.log(
-                `⚠️ Retried customer creation for ${customerRef} with generated email after email conflict`,
-              )
-              return retryRef
-            } catch (retryError: unknown) {
-              this.log(
-                `⚠️ Retry create customer with generated email failed for ${customerRef}:`,
-                retryError instanceof Error ? retryError.message : retryError,
-              )
-            }
-          }
-
-          // We have a known conflict but could not resolve the existing customer reference.
-          // Returning the original app user ID here causes downstream 404s in payment APIs.
-          const unresolvedMessage =
-            errorMessage || 'Customer already exists but could not be resolved'
-          throw new Error(
-            `Failed to resolve existing customer for ${customerRef} after conflict: ${unresolvedMessage}. ` +
-              'Ensure the existing customer is linked to this externalRef.',
+      if (action.kind === 'createCustomer') {
+        if (!this.apiClient.createCustomer) {
+          throw new SolvaPayError(
+            `ensure_customer_next createCustomer is not available for ${customerRef}`,
           )
         }
-
-        this.log(
-          `❌ Failed to auto-create customer ${customerRef}:`,
-          error instanceof Error ? error.message : error,
-        )
-        throw error
+        try {
+          const customer = await this.apiClient.createCustomer(
+            // Driver-built CreateCustomerParams matches the public request body.
+            action.params as Parameters<NonNullable<SolvaPayClient['createCustomer']>>[0],
+          )
+          event = { kind: 'customerCreateResult', ok: true, customer, nowMs: Date.now() }
+        } catch (error) {
+          event = {
+            kind: 'customerCreateResult',
+            ok: false,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            nowMs: Date.now(),
+          }
+        }
+        continue
       }
-    })
-
-    // Store the mapping in per-instance cache for faster subsequent lookups
-    if (backendRef !== customerRef) {
-      this.customerRefMapping.set(customerRef, backendRef)
+      if (action.kind === 'updateCustomer') {
+        try {
+          if (!this.apiClient.updateCustomer) {
+            throw new Error('updateCustomer is not available')
+          }
+          await this.apiClient.updateCustomer(String(action.customerRef), action.patch ?? {})
+          event = { kind: 'customerUpdateResult', ok: true, nowMs: Date.now() }
+        } catch (error) {
+          event = {
+            kind: 'customerUpdateResult',
+            ok: false,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            nowMs: Date.now(),
+          }
+        }
+        continue
+      }
+      if (action.kind === 'resolved') {
+        if (action.cache) {
+          this.customerCache.set(action.cache.key, {
+            backendRef: action.cache.backendRef,
+            timestampMs: action.cache.timestampMs,
+          })
+        }
+        if (typeof action.backendRef !== 'string' || action.backendRef.length === 0) {
+          throw new SolvaPayError('ensure_customer_next resolved without backendRef')
+        }
+        return action.backendRef
+      }
+      throw new SolvaPayError(`ensure_customer_next unknown action: ${action.kind}`)
     }
-
-    return backendRef
   }
 
-  async trackUsage(
-    customerRef: string,
-    productRef: string,
-    action: string,
-    outcome: 'success' | 'paywall' | 'fail',
-    requestId: string,
-    actionDuration: number,
+  private async emitHandlerUsage(
+    driverState: unknown,
+    event: Record<string, unknown>,
   ): Promise<void> {
-    await withRetry(
-      () =>
-        this.apiClient.trackUsage({
-          customerRef,
-          actionType: 'api_call',
-          units: 1,
-          outcome,
-          productRef,
-          duration: actionDuration,
-          metadata: { action: action || 'api_requests', requestId },
-          timestamp: new Date().toISOString(),
-        }),
-      {
-        maxRetries: 2,
-        initialDelay: 500,
-        shouldRetry: error => error.message.includes('Customer not found'),
-        onRetry: (_error, attempt) => {
-          console.warn(`⚠️  Customer not found (attempt ${attempt + 1}/3), retrying in 500ms...`)
-        },
+    const out = gateNext(driverState, event) as { action: GateAction }
+    if (out.action.kind === 'skipUsage') {
+      return
+    }
+    if (out.action.kind !== 'emitUsage') {
+      throw new SolvaPayError(
+        `gate_next handler event returned unexpected action: ${out.action.kind}`,
+      )
+    }
+    await this.postUsageRequest(out.action.request)
+  }
+
+  private async postUsageRequest(request: unknown): Promise<void> {
+    if (!isTrackUsageRequest(request)) {
+      throw new SolvaPayError('gate_next usage request is missing customerRef')
+    }
+    await withRetry(() => this.apiClient.trackUsage(request), {
+      maxRetries: 2,
+      initialDelay: 500,
+      shouldRetry: error => shouldRetryUsageError(error.message),
+      onRetry: (_error, attempt) => {
+        console.warn(`⚠️  Customer not found (attempt ${attempt + 1}/3), retrying in 500ms...`)
       },
-    ).catch(error => {
-      console.error('Usage tracking failed:', error)
     })
   }
+}
+
+function isTrackUsageRequest(value: unknown): value is TrackUsageRequest {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { customerRef?: unknown }).customerRef === 'string'
+  )
 }
 
 /**

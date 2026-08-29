@@ -10,10 +10,24 @@
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/x",
         "message": "pay",
-        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }],
+        "plans": [
+          {
+            "reference": "pl_pro",
+            "type": "usage-based",
+            "requiresPayment": true
+          }
+        ],
         "confirmationUrl": "https://pay.test/confirm",
-        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
-        "productDetails": { "name": "Demo", "reference": "prd_demo" }
+        "balance": {
+          "creditBalance": 0,
+          "creditsPerUnit": 1,
+          "currency": "usd"
+        },
+        "productDetails": {
+          "name": "Demo",
+          "reference": "prd_demo"
+        },
+        "shortMessage": "Payment required"
       }
     }
   },
@@ -25,8 +39,16 @@
       "checkoutUrl": "https://pay.test/x",
       "message": "pay",
       "kind": "payment_required",
-      "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
-      "productDetails": { "name": "Demo", "reference": "prd_demo" }
+      "balance": {
+        "creditBalance": 0,
+        "creditsPerUnit": 1,
+        "currency": "usd"
+      },
+      "productDetails": {
+        "name": "Demo",
+        "reference": "prd_demo"
+      },
+      "shortMessage": "Payment required"
     }
   }
 }

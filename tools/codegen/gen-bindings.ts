@@ -17,12 +17,13 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { renderYamlFragment } from './lib/manifest-edit.js'
-import { bindingStubFields, clientBindingsFromYaml, nextClientEmitOrder } from './lib/binding-stub.js'
-import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 import {
-  SdkContractManifestSchema,
-  type SdkContractManifest,
-} from '../shared/manifest-schema.js'
+  bindingStubFields,
+  clientBindingsFromYaml,
+  nextClientEmitOrder,
+} from './lib/binding-stub.js'
+import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
+import { SdkContractManifestSchema, type SdkContractManifest } from '../shared/manifest-schema.js'
 import { REPO_ROOT } from '../shared/paths.js'
 import { contractInputPath, generatedEntry, lookupPath } from '../shared/repo-paths.js'
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   EXPECTED_MCP_COMPOSITE_OPERATION_COUNT,
+  EXPECTED_MCP_LAYER2_COUNT,
+  EXPECTED_MCP_SYNC_OP_COUNT,
   EXPECTED_OPERATION_COUNT,
   EXPECTED_ROUTED_OPERATION_COUNT,
   EXPECTED_TOP_LEVEL_IDS,
@@ -12,6 +14,8 @@ import {
   assertOperationCount,
   assertParamsCoverage,
   assertTopLevelSet,
+  bindingCatalogBoundaryIds,
+  crossesBindingBoundary,
   crossCheckOpenApi,
   deriveNames,
   type BindingReconcileEntry,
@@ -99,6 +103,22 @@ function minimalManifest(overrides: Partial<SdkContractManifest> = {}): SdkContr
     coreHelpers: {
       validateBusinessDetails: { names: deriveNames('validateBusinessDetails'), sync: PURE_SYNC },
     },
+    mcp: Object.fromEntries([
+      ...Array.from({ length: EXPECTED_MCP_SYNC_OP_COUNT }, (_, i) => {
+        const id = i === 0 ? 'mcpNarrate' : `mcpSync${String(i).padStart(2, '0')}`
+        return [
+          id,
+          { names: deriveNames(id), sync: PURE_SYNC, surface: 'syncOp' as const },
+        ]
+      }),
+      ...Array.from({ length: EXPECTED_MCP_LAYER2_COUNT }, (_, i) => {
+        const id = i === 0 ? 'paywallToolResult' : `mcpLayer${String(i).padStart(2, '0')}`
+        return [
+          id,
+          { names: deriveNames(id), sync: PURE_SYNC, surface: 'layer2' as const },
+        ]
+      }),
+    ]),
     facade: {
       createSolvaPay: {
         names: deriveNames('createSolvaPay'),
@@ -162,6 +182,11 @@ function minimalManifest(overrides: Partial<SdkContractManifest> = {}): SdkContr
       retry: { maxRetries: 2, initialDelayMs: 500, backoff: 'fixed' },
       webhookToleranceSec: 300,
       limitsCacheTTLMs: 10000,
+      customerDedupTTLMs: 60000,
+      customerDedupMaxCacheSize: 1000,
+      anonymousCustomerRef: 'anonymous',
+      requestIdFormat: 'solvapay_{epochMs}_{random9}',
+      usageActionType: 'api_call',
       idempotencyKeyFormats: {
         payment: 'payment-{planRef}-{epochMs}-{random9}',
         topup: 'topup-{epochMs}-{random9}',
@@ -190,6 +215,7 @@ function minimalManifest(overrides: Partial<SdkContractManifest> = {}): SdkContr
     topLevel: overrides.topLevel ?? base.topLevel,
     coreHelpers: overrides.coreHelpers ?? base.coreHelpers,
     facade: overrides.facade ?? base.facade,
+    mcp: overrides.mcp ?? base.mcp,
     nameOverrides: overrides.nameOverrides ?? base.nameOverrides,
     bindings: overrides.bindings ?? base.bindings,
   }
@@ -231,6 +257,15 @@ describe('SdkContractManifestSchema', () => {
   it('accepts a valid minimal manifest', () => {
     const result = SdkContractManifestSchema.safeParse(minimalManifest())
     expect(result.success).toBe(true)
+  })
+
+  it('freezes customer-dedup and usage defaults', () => {
+    const parsed = SdkContractManifestSchema.parse(minimalManifest())
+    expect(parsed.defaults.customerDedupTTLMs).toBe(60000)
+    expect(parsed.defaults.customerDedupMaxCacheSize).toBe(1000)
+    expect(parsed.defaults.anonymousCustomerRef).toBe('anonymous')
+    expect(parsed.defaults.requestIdFormat).toBe('solvapay_{epochMs}_{random9}')
+    expect(parsed.defaults.usageActionType).toBe('api_call')
   })
 
   it('rejects an operation missing a language name', () => {
@@ -281,6 +316,131 @@ describe('SdkContractManifestSchema', () => {
         }),
       ).success,
     ).toBe(false)
+  })
+
+  it('rejects a manifest with no mcp section', () => {
+    const { mcp: _removed, ...rest } = minimalManifest()
+    const result = SdkContractManifestSchema.safeParse(rest)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an mcp entry missing a language name', () => {
+    const manifest = minimalManifest()
+    manifest.mcp.mcpNarrate = {
+      ...manifest.mcp.mcpNarrate,
+      names: {
+        ts: 'mcpNarrate',
+        py: 'mcp_narrate',
+        rb: 'mcp_narrate',
+        go: '',
+        rust: 'mcp_narrate',
+        c: 'mcpNarrate',
+      },
+    }
+    const result = SdkContractManifestSchema.safeParse(manifest)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an mcp entry with an unknown surface', () => {
+    const manifest = minimalManifest()
+    const result = SdkContractManifestSchema.safeParse({
+      ...manifest,
+      mcp: {
+        ...manifest.mcp,
+        mcpNarrate: { ...manifest.mcp.mcpNarrate, surface: 'nonsense' },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts an mcp entry gated on the engine feature', () => {
+    const manifest = minimalManifest()
+    manifest.mcp.mcpHandleRequest = {
+      names: deriveNames('mcpHandleRequest'),
+      sync: PURE_SYNC,
+      surface: 'syncOp',
+      feature: 'engine',
+    }
+    const result = SdkContractManifestSchema.safeParse(manifest)
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts a topLevel handWritten availability with a reason', () => {
+    const manifest = minimalManifest()
+    manifest.topLevel.withRetry = {
+      ...manifest.topLevel.withRetry,
+      availability: { rust: { handWritten: true, reason: 'x' } },
+    }
+    const result = SdkContractManifestSchema.safeParse(manifest)
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects a handWritten availability without a reason', () => {
+    const manifest = minimalManifest()
+    const result = SdkContractManifestSchema.safeParse({
+      ...manifest,
+      topLevel: {
+        ...manifest.topLevel,
+        withRetry: {
+          ...manifest.topLevel.withRetry,
+          availability: { rust: { handWritten: true } },
+        },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an availability omission without a reason', () => {
+    const manifest = minimalManifest()
+    const result = SdkContractManifestSchema.safeParse({
+      ...manifest,
+      mcp: {
+        ...manifest.mcp,
+        paywallToolResult: {
+          names: deriveNames('paywallToolResult'),
+          sync: PURE_SYNC,
+          surface: 'layer2',
+          availability: { c: { omitted: true, reason: '' } },
+        },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('bindingCatalogBoundaryIds', () => {
+  const names = deriveNames('example')
+
+  it('includes rust-generated catalog ids and nativeExport hand-written rust', () => {
+    const ids = bindingCatalogBoundaryIds({
+      generatedHelper: { names, sync: PURE_SYNC },
+      omittedConst: {
+        names,
+        sync: PURE_SYNC,
+        availability: {
+          rust: { omitted: true, reason: 'not exported' },
+        },
+      },
+      hostRetry: {
+        names,
+        sync: PURE_SYNC,
+        availability: {
+          rust: { handWritten: true, reason: 'host retry' },
+        },
+      },
+      verifyWebhook: {
+        names,
+        sync: PURE_SYNC,
+        availability: {
+          rust: { handWritten: true, reason: 'host wrap', nativeExport: true },
+        },
+      },
+    })
+    expect(ids).toEqual(['generatedHelper', 'verifyWebhook'])
+  })
+
+  it('treats missing rust availability as generated (crosses the boundary)', () => {
+    expect(crossesBindingBoundary({ names, sync: PURE_SYNC })).toBe(true)
   })
 })
 
@@ -363,9 +523,7 @@ describe('coverage and collisions', () => {
     const issues = assertOperationCount(manifest)
     expect(
       issues.some(
-        i =>
-          /composite/i.test(i) &&
-          i.includes(String(EXPECTED_MCP_COMPOSITE_OPERATION_COUNT)),
+        i => /composite/i.test(i) && i.includes(String(EXPECTED_MCP_COMPOSITE_OPERATION_COUNT)),
       ),
     ).toBe(true)
   })
@@ -629,12 +787,7 @@ describe('crossCheckOpenApi', () => {
         Object.values(manifest.operations).flatMap(operation =>
           operation.route == null
             ? []
-            : [
-                [
-                  operation.route.path,
-                  { [operation.route.method.toLowerCase()]: {} },
-                ],
-              ],
+            : [[operation.route.path, { [operation.route.method.toLowerCase()]: {} }]],
         ),
       ),
       components: { schemas: { LimitResponse: {} } },

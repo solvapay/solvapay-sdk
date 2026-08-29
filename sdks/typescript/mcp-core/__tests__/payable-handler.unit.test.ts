@@ -334,6 +334,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
           product: 'prd_throw',
           checkoutUrl: '',
           message: 'manual',
+          shortMessage: 'Payment required',
         })
       })
 

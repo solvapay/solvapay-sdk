@@ -7,12 +7,13 @@ import {
   perUnitCharge,
   trialDays,
   type BalancePegLike,
+  type BillingInterval,
   type Charge,
   type PricedLike,
 } from '@solvapay/core'
 
 export type PlanDisplayBlock = {
-  billingCycle?: { interval: string; count?: number } | null
+  billingCycle?: { interval: BillingInterval; count?: number } | null
   countsUsage?: boolean
   includedUnits?: number | null
   meterName?: string | null
@@ -45,7 +46,9 @@ export function planTrialDays(plan: PlanWithDisplay | null | undefined): number 
   return trialDays(plan) ?? 0
 }
 
-export function planBillingCycleInterval(plan: PlanWithDisplay | null | undefined): string | null {
+export function planBillingCycleInterval(
+  plan: PlanWithDisplay | null | undefined,
+): BillingInterval | null {
   if (planHasDisplay(plan)) return plan?.display?.billingCycle?.interval ?? null
   return readBillingCycle(plan)?.interval ?? null
 }

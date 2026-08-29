@@ -452,6 +452,14 @@ pub struct DisableAutoRechargeParams {
     pub customer_ref: String,
 }
 
+/// Disable-auto-recharge result. The endpoint only returns on success.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DisableAutoRechargeSdkResponse {
+    /// Overlay field.
+    #[serde(rename = "success")]
+    pub success: bool,
+}
+
 /// SDK overlay extending `PurchaseInfo`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EnrichedPurchaseInfo {

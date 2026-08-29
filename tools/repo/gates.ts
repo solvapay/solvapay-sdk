@@ -14,18 +14,32 @@ export const GATE_SCRIPTS = [
   'test:fixtures',
   'snapshot:openapi:check',
   'docs:coverage',
+  'docs:parity',
   'delegation:check',
   'checks:required',
+  'generated:external',
+  'retired-symbols:check',
 ] as const
 
 export function gateTasks(): Task[] {
-  return GATE_SCRIPTS.map(script => ({
-    id: script.replaceAll(':', '.'),
-    label: script,
-    command: 'pnpm',
-    args: [script],
-    cwd: REPO_ROOT,
-  }))
+  return GATE_SCRIPTS.map(script => {
+    if (script === 'generated:external') {
+      return {
+        id: 'generated.external',
+        label: 'generated:external --markers-only',
+        command: 'pnpm',
+        args: [script, '--markers-only'],
+        cwd: REPO_ROOT,
+      }
+    }
+    return {
+      id: script.replaceAll(':', '.'),
+      label: script,
+      command: 'pnpm',
+      args: [script],
+      cwd: REPO_ROOT,
+    }
+  })
 }
 
 export interface CliResult {

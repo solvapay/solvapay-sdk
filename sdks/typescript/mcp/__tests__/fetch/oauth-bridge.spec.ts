@@ -261,9 +261,9 @@ describe('createOAuthFetchRouter', () => {
         productRef: '__SOLVAPAY_PRODUCT_REF__',
       }),
     ).toThrow(/scaffolder placeholder/)
-    expect(() =>
-      createOAuthFetchRouter({ publicBaseUrl, apiBaseUrl, productRef: '' }),
-    ).toThrow(/productRef is required/)
+    expect(() => createOAuthFetchRouter({ publicBaseUrl, apiBaseUrl, productRef: '' })).toThrow(
+      /productRef is required/,
+    )
   })
 
   it('routes each well-known + /oauth path, returns null otherwise', async () => {

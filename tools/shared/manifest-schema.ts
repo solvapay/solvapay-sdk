@@ -15,6 +15,9 @@ export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 5
 export const EXPECTED_OPERATION_COUNT =
   EXPECTED_ROUTED_OPERATION_COUNT + EXPECTED_MCP_COMPOSITE_OPERATION_COUNT
 
+export const EXPECTED_MCP_SYNC_OP_COUNT = 16
+export const EXPECTED_MCP_LAYER2_COUNT = 12
+
 export const EXPECTED_TOP_LEVEL_IDS = [
   'verifyWebhook',
   'withRetry',
@@ -346,6 +349,28 @@ const Operation = z.object({
   docs: DocsDefSchema,
 })
 
+const Omitted = z.object({ omitted: z.literal(true), reason: z.string().min(1) })
+const HandWritten = z.object({
+  handWritten: z.literal(true),
+  reason: z.string().min(1),
+  /** Host wraps a `#[solvapay_export]` native; still requires a binding linker. */
+  nativeExport: z.boolean().optional(),
+})
+/** Declared skip: dto-gen must not emit this symbol for the language. */
+export const EntryAvailability = z.union([Omitted, HandWritten])
+export type EntryAvailability = z.infer<typeof EntryAvailability>
+
+const LanguageAvailability = z
+  .object({
+    ts: EntryAvailability.optional(),
+    py: EntryAvailability.optional(),
+    rb: EntryAvailability.optional(),
+    go: EntryAvailability.optional(),
+    rust: EntryAvailability.optional(),
+    c: EntryAvailability.optional(),
+  })
+  .optional()
+
 const NamedEntry = z.object({
   names: LangNames,
   sync: SyncMatrix,
@@ -355,6 +380,13 @@ const NamedEntry = z.object({
   typeParams: z.array(TypeParamSchema).optional(),
   /** Language-neutral docs for TSDoc / docstring / YARD / godoc / rustdoc emitters. */
   docs: DocsDefSchema,
+  /** Justified per-language emission skip (`omitted` | `handWritten`). */
+  availability: LanguageAvailability,
+})
+
+const McpEntry = NamedEntry.extend({
+  surface: z.enum(['syncOp', 'layer2']),
+  feature: z.enum(['engine']).optional(),
 })
 
 /** Boundary type vocabulary for §5.7 JSON-arg extractors. */
@@ -434,6 +466,7 @@ export type BindingCatalogLink =
   | { kind: 'topLevel'; id: string }
   | { kind: 'coreHelper'; id: string }
   | { kind: 'facade'; id: string }
+  | { kind: 'mcp'; id: string }
 
 /** Shim-emission residue keyed by binding id (`binding-residue.yaml`). */
 export const BindingResidueSchema = z.object({
@@ -514,6 +547,7 @@ export const SHIM_JS_NAMES = [
   'classifyReactivateError',
   'coerceCustomerOptions',
   'decidePaywallOutcome',
+  'ensureCustomerNext',
   'evaluateBalanceObservation',
   'gateNext',
   'invokePayableNext',
@@ -541,6 +575,7 @@ export const SHIM_JS_NAMES = [
   'resolveReturnUrl',
   'retryNextDelayMs',
   'selectActivePurchases',
+  'shouldRetryUsageError',
   'validateActivatePlanParams',
   'validateAttachBusinessDetailsParams',
   'validateCheckoutSessionParams',
@@ -598,46 +633,30 @@ export const BINDING_INFRA_ALLOWLIST = [
 ] as const
 
 /**
- * Catalog ids that cross the binding boundary and must have exactly one linker.
- * §8 facades, error classes, `withRetry` host orchestration, and TS-only const
- * tables are intentionally excluded.
+ * Catalog entries that must have exactly one `#[solvapay_export]` linker:
+ * rust-generated (no rust `availability`), or rust `handWritten` with
+ * `nativeExport: true`. Omitted rust, host-only types, and `withRetry` stay off.
  */
-export const BINDING_CATALOG_BOUNDARY_TOP_LEVEL = [
-  'verifyWebhook',
-  'buildPaywallGate',
-  'buildGateMessage',
-  'buildNudgeMessage',
-  'classifyPaywallState',
-  'paywallErrorToClientPayload',
-] as const
+export function crossesBindingBoundary(
+  entry: Pick<z.infer<typeof NamedEntry>, 'availability'>,
+): boolean {
+  const rust = entry.availability?.rust
+  if (rust === undefined) {
+    return true
+  }
+  if ('omitted' in rust) {
+    return false
+  }
+  return rust.nativeExport === true
+}
 
-export const BINDING_CATALOG_BOUNDARY_CORE_HELPERS = [
-  'validateBusinessDetails',
-  'deriveTaxIdType',
-  'resolveTaxBehavior',
-  'getTaxIdExample',
-  'getTaxIdFieldLabel',
-  'getTaxIdHelperText',
-  'minorUnitsPerMajor',
-  'isZeroDecimalCurrency',
-  'creditsToDisplayMinorUnits',
-  'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE',
-  'getSellerTaxIdentifierDisplayLabel',
-  'resolveSellerIdentityDisplay',
-  'evaluateProductReadiness',
-  'assertValidProductRef',
-  'requireProductRef',
-  'charges',
-  'headlineCharges',
-  'perUnitCharge',
-  'billingCycle',
-  'trialDays',
-  'includedUnits',
-  'meterName',
-  'countsUsage',
-  'peggedCreditsPerUnit',
-  'creditsPerUnitFromBalance',
-] as const
+export function bindingCatalogBoundaryIds(
+  entries: Record<string, Pick<z.infer<typeof NamedEntry>, 'availability'>>,
+): string[] {
+  return Object.keys(entries)
+    .filter(id => crossesBindingBoundary(entries[id]))
+    .sort()
+}
 
 export const SdkContractManifestSchema = z.object({
   operations: z.record(z.string(), Operation),
@@ -646,6 +665,8 @@ export const SdkContractManifestSchema = z.object({
   topLevel: z.record(z.string(), NamedEntry),
   coreHelpers: z.record(z.string(), NamedEntry),
   facade: z.record(z.string(), NamedEntry),
+  /** MCP sync ops (`surface: syncOp`) and layer-2 native symbols (`surface: layer2`). */
+  mcp: z.record(z.string(), McpEntry),
   /**
    * Retired YAML binding descriptors. Must be absent or empty; symbols come
    * from `#[solvapay_export]`.
@@ -749,6 +770,11 @@ export const SdkContractManifestSchema = z.object({
     }),
     webhookToleranceSec: z.literal(300),
     limitsCacheTTLMs: z.literal(10000),
+    customerDedupTTLMs: z.literal(60000),
+    customerDedupMaxCacheSize: z.literal(1000),
+    anonymousCustomerRef: z.literal('anonymous'),
+    requestIdFormat: z.literal('solvapay_{epochMs}_{random9}'),
+    usageActionType: z.literal('api_call'),
     idempotencyKeyFormats: z.object({
       payment: z.literal('payment-{planRef}-{epochMs}-{random9}'),
       topup: z.literal('topup-{epochMs}-{random9}'),
@@ -772,6 +798,7 @@ export type SdkContractManifest = z.infer<typeof SdkContractManifestSchema>
 export type LangNames = z.infer<typeof LangNames>
 export type OperationEntry = z.infer<typeof Operation>
 export type NamedEntry = z.infer<typeof NamedEntry>
+export type McpEntry = z.infer<typeof McpEntry>
 
 /** Top-level ids that are callables (not error classes) and must declare params. */
 export const TOP_LEVEL_CALLABLE_IDS = [
@@ -831,7 +858,7 @@ export function deriveNames(operationId: string): LangNames {
   }
 }
 
-type NamedSection = 'operations' | 'topLevel' | 'coreHelpers' | 'facade'
+type NamedSection = 'operations' | 'topLevel' | 'coreHelpers' | 'facade' | 'mcp'
 
 function allNamedEntries(
   manifest: SdkContractManifest,
@@ -848,6 +875,9 @@ function allNamedEntries(
   }
   for (const [id, entry] of Object.entries(manifest.facade)) {
     out.push({ section: 'facade', id, names: entry.names })
+  }
+  for (const [id, entry] of Object.entries(manifest.mcp)) {
+    out.push({ section: 'mcp', id, names: entry.names })
   }
   return out
 }
@@ -913,6 +943,24 @@ export function assertOperationCount(manifest: SdkContractManifest): string[] {
   if (compositeCount !== EXPECTED_MCP_COMPOSITE_OPERATION_COUNT) {
     issues.push(
       `MCP composite operation count: expected ${EXPECTED_MCP_COMPOSITE_OPERATION_COUNT}, found ${compositeCount}`,
+    )
+  }
+  return issues
+}
+
+export function assertMcpCounts(manifest: SdkContractManifest): string[] {
+  const entries = Object.values(manifest.mcp)
+  const syncOpCount = entries.filter(entry => entry.surface === 'syncOp').length
+  const layer2Count = entries.filter(entry => entry.surface === 'layer2').length
+  const issues: string[] = []
+  if (syncOpCount !== EXPECTED_MCP_SYNC_OP_COUNT) {
+    issues.push(
+      `MCP syncOp count: expected ${EXPECTED_MCP_SYNC_OP_COUNT}, found ${syncOpCount}`,
+    )
+  }
+  if (layer2Count !== EXPECTED_MCP_LAYER2_COUNT) {
+    issues.push(
+      `MCP layer2 count: expected ${EXPECTED_MCP_LAYER2_COUNT}, found ${layer2Count}`,
     )
   }
   return issues
@@ -1228,7 +1276,9 @@ export function assertBindingReconciliation(
           ? manifest.topLevel
           : section === 'coreHelper'
             ? manifest.coreHelpers
-            : manifest.facade
+            : section === 'facade'
+              ? manifest.facade
+              : manifest.mcp
     if (!(catalogId in sectionMap)) {
       issues.push(`Bindings: ${id} catalog link ${catalogKey} does not resolve to a catalog entry`)
       continue
@@ -1250,19 +1300,13 @@ export function assertBindingReconciliation(
       )
     }
   }
-  for (const id of BINDING_CATALOG_BOUNDARY_TOP_LEVEL) {
-    if (!(id in manifest.topLevel)) {
-      continue
-    }
+  for (const id of bindingCatalogBoundaryIds(manifest.topLevel)) {
     const key = `topLevel.${id}`
     if (!linkers.has(key)) {
       issues.push(`Bindings: orphan catalog entry ${key} has no binding linker`)
     }
   }
-  for (const id of BINDING_CATALOG_BOUNDARY_CORE_HELPERS) {
-    if (!(id in manifest.coreHelpers)) {
-      continue
-    }
+  for (const id of bindingCatalogBoundaryIds(manifest.coreHelpers)) {
     const key = `coreHelper.${id}`
     if (!linkers.has(key)) {
       issues.push(`Bindings: orphan catalog entry ${key} has no binding linker`)
@@ -1300,6 +1344,7 @@ export function validateManifestSemantics(
 ): string[] {
   return [
     ...assertOperationCount(manifest),
+    ...assertMcpCounts(manifest),
     ...assertTopLevelSet(manifest),
     ...assertNameCoverage(manifest),
     ...assertNameCorrectness(manifest),

@@ -11,7 +11,13 @@
         "activationRequired": true,
         "confirmationUrl": "https://pay.test/confirm",
         "checkoutUrl": "https://pay.test/x",
-        "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+        "plans": [
+          {
+            "reference": "pl_pro",
+            "type": "usage-based",
+            "requiresPayment": true
+          }
+        ]
       }
     }
   },
@@ -22,7 +28,14 @@
       "message": "Your plan needs activation before you can use this tool. Call the `activate_plan` tool to activate it, or open https://pay.test/confirm in a browser.",
       "checkoutUrl": "https://pay.test/confirm",
       "confirmationUrl": "https://pay.test/confirm",
-      "plans": [{ "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }]
+      "plans": [
+        {
+          "reference": "pl_pro",
+          "type": "usage-based",
+          "requiresPayment": true
+        }
+      ],
+      "shortMessage": "Activation required"
     }
   }
 }

@@ -16,7 +16,7 @@ export default defineConfig([
     tsconfig: 'tsconfig.build.json',
     clean: true,
     // Shim import.meta.url in the CJS bundle so createRequire(import.meta.url)
-    // in webhook-native resolves correctly under require().
+    // in native.ts resolves correctly under require().
     shims: true,
     // Native binding stays external so the Node bundle does not embed it;
     // `node:module` is needed for the sync createRequire loader in native.ts.
@@ -48,7 +48,6 @@ export default defineConfig([
       '@solvapay/server-wasm',
       '@solvapay/server-native',
       './native',
-      './webhook-native',
       'node:module',
       'zod',
       'jose',

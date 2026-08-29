@@ -1,4 +1,8 @@
-//! Composite MCP ops on [`crate::SolvaPayClient`] (server/edge; not browser WASM).
+//! Composite MCP ops on [`crate::SolvaPayClient`].
+//!
+//! Available on native and `wasm32-unknown` (edge `WasmClient`). The browser
+//! wasm crate does not depend on this transport crate, so these stay off the
+//! public-safe browser surface.
 
 #![allow(clippy::missing_docs_in_private_items)]
 

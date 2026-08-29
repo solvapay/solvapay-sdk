@@ -3,6 +3,10 @@
 module SolvaPay
   VERSION: String
   CUSTOMER_CACHE_TTL_MS: Integer
+  CUSTOMER_DEDUP_MAX_CACHE_SIZE: Integer
+  ANONYMOUS_CUSTOMER_REF: String
+  REQUEST_ID_FORMAT: String
+  USAGE_ACTION_TYPE: String
   DEFAULT_LIMITS_CACHE_TTL_MS: Integer
   TOPUP_BALANCE_POLL_DELAYS_MS: Array[Integer]
   BALANCE_RECONCILE_DELAYS_MS: Array[Integer]
@@ -133,17 +137,16 @@ module SolvaPay
     def initialize: (?api_key: String?, ?api_base_url: String?, ?limits_cache_ttl: Integer, ?api_client: Client?, ?clock: ^() -> Integer) -> void
     def gate: (String customer_ref, product: String, ?usage_type: String) -> gate_result
     def payable: (product: String, ?usage_type: String) -> Payable
+    private
     def evaluate_limits: (String key, customer_ref: String, product: String, usage_type: String) -> [bool, Numeric, Hash[String, untyped]?]
     def ensure_customer: (String customer_ref) -> String
     def acquire_customer_lookup: (String customer_ref) -> [Hash[Symbol, untyped], bool]
     def await_customer_lookup: (Hash[Symbol, untyped] state) -> String
     def publish_customer_lookup: (String customer_ref, Hash[Symbol, untyped] state, ?result: String?, ?error: Exception?) -> void
-    def find_or_create_customer: (String customer_ref) -> String
-    def build_allow_result: (backend_ref: String, product: String, usage_type: String, decision: Hash[String, untyped], meter_name: String) -> PayableAllowResult
-    def resolved_meter_name: (String product, String usage_type) -> String
-    def generate_request_id: () -> String
-    def iso8601_timestamp: () -> String
-    def track_usage_call: (customer_ref: String, product_ref: String, action: String, outcome: String, duration_ms: Numeric) -> untyped
+    def run_ensure_customer: (String customer_ref) -> String
+    def write_customer_cache: (String key, String backend_ref, untyped timestamp_ms) -> void
+    def paywall_short_message: (untyped content) -> String
+    def build_allow_result: (backend_ref: String, decision: Hash[String, untyped], driver_state: untyped) -> PayableAllowResult
     def apply_gate_cache: (untyped cache) -> void
   end
 

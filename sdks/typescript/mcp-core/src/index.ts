@@ -126,11 +126,7 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 export { assertResponseResult, makeResponseResult } from './native-mcp'
 export { callMcpSyncOp, getMcpToolNamesTable, mcpViewMaps, installNativeMcpApi } from './native-mcp'
 export { runMcpEngineRequest } from './engine-dispatch'
-export type {
-  McpEngineConfig,
-  McpEngineHttpResult,
-  McpEnginePayable,
-} from './engine-dispatch'
+export type { McpEngineConfig, McpEngineHttpResult, McpEnginePayable } from './engine-dispatch'
 
 // ---- CSP baseline ----
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
@@ -138,7 +134,11 @@ export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'
 // ---- Descriptor + payable builders ----
 export { hideToolsByAudience } from './hideToolsByAudience'
 export { mcpDescriptors } from './mcp-descriptors'
-export type { McpDescriptorTool, McpDescriptorsBundle, McpDescriptorsInput } from './mcp-descriptors'
+export type {
+  McpDescriptorTool,
+  McpDescriptorsBundle,
+  McpDescriptorsInput,
+} from './mcp-descriptors'
 export { buildSolvaPayDescriptors, buildSolvaPayPrompts } from './descriptors'
 export type { BuildSolvaPayDescriptorsOptions, SolvaPayDescriptorBundle } from './descriptors'
 export {
@@ -196,11 +196,7 @@ export {
 export type { OAuthErrorBody, OAuthTokenErrorCode } from './oauth-error-normalize'
 
 export { mcpAuthGate } from './auth-gate'
-export type {
-  McpAuthGateChallenge,
-  McpAuthGateInput,
-  McpAuthGateResult,
-} from './auth-gate'
+export type { McpAuthGateChallenge, McpAuthGateInput, McpAuthGateResult } from './auth-gate'
 
 // ---- Auth info + bearer helpers ----
 export { buildAuthInfoFromBearer } from './auth-bridge'

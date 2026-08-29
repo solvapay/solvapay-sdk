@@ -7,23 +7,48 @@ come from the generated decision-core envelopes so outcomes match TypeScript.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import random
+import threading
 import time
 from collections.abc import Awaitable, Callable, Mapping
-from datetime import datetime, timezone
 from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar
 
+from solvapay.defaults import _CUSTOMER_DEDUP_MAX_CACHE_SIZE, _DEFAULT_LIMITS_CACHE_TTL_MS
 from solvapay.errors import PaywallError, SolvaPayError
 from solvapay.results import PayableAllowResult, PayableGateResult, PayablePaywallResult
+from solvapay.retry import with_retry_blocking
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
-_CUSTOMER_DEDUP_TTL_MS = 60_000
-_DEFAULT_LIMITS_CACHE_TTL_MS = 10_000
+
+class _InflightWaiter:
+    """Thread-safe leader/follower cell for one customer-ref lookup."""
+
+    def __init__(self) -> None:
+        self._event = threading.Event()
+        self._result: str | None = None
+        self._error: BaseException | None = None
+
+    def set_result(self, value: str) -> None:
+        self._result = value
+        self._event.set()
+
+    def set_error(self, error: BaseException) -> None:
+        self._error = error
+        self._event.set()
+
+    def wait(self) -> str:
+        self._event.wait()
+        if self._error is not None:
+            raise self._error
+        if self._result is None:
+            raise SolvaPayError("customer lookup failed")
+        return self._result
 
 
 class ApiClient(Protocol):
@@ -41,29 +66,6 @@ class ApiClient(Protocol):
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
-
-
-_BASE36 = "0123456789abcdefghijklmnopqrstuvwxyz"
-
-
-def _generate_request_id() -> str:
-    """Match the TypeScript ``solvapay_{epoch_ms}_{9-char base36}`` format."""
-    suffix = "".join(random.choice(_BASE36) for _ in range(9))
-    return f"solvapay_{_now_ms()}_{suffix}"
-
-
-def _iso8601_timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def _resolved_meter_name(product: str, usage_type: str) -> str:
-    resolved = _call_sync_decision(
-        "resolve_check_limits_params",
-        {"productRef": product, "usageType": usage_type},
-    )
-    if isinstance(resolved, dict) and isinstance(resolved.get("meterName"), str):
-        return resolved["meterName"]
-    raise SolvaPayError("resolve_check_limits_params returned unexpected value")
 
 
 def _raise_solvapay_error(
@@ -107,63 +109,103 @@ def _unwrap_envelope(envelope_json: str) -> Any:
 
 def _call_sync_decision(name: str, args: dict[str, Any]) -> Any:
     """Invoke a generated sync decision / payload-builder and unwrap."""
-    try:
-        from solvapay import _native as native
+    from solvapay import _native as native
 
-        return native.call_native_sync(name, json.dumps(args))
-    except ImportError:
-        pass
-
-    import solvapay._solvapay as binding
-
-    fn = getattr(binding, name, None)
-    if fn is None:
-        raise SolvaPayError(f"SolvaPay native binding missing sync method: {name}")
-    return _unwrap_envelope(fn(json.dumps(args)))
+    return native.call_native_sync(name, json.dumps(args))
 
 
-def _track_usage(
+def _should_retry_usage(error: Exception, _attempt: int) -> bool:
+    return bool(
+        _call_sync_decision("should_retry_usage_error", {"message": str(error)})
+    )
+
+
+def _post_usage(client: ApiClient, request: dict[str, Any]) -> None:
+    with_retry_blocking(
+        lambda: _unwrap_envelope(client.track_usage_blocking(json.dumps(request))),
+        should_retry=_should_retry_usage,
+    )
+
+
+def _emit_handler_usage(
     client: ApiClient,
-    *,
-    customer_ref: str,
-    product_ref: str,
-    action: str,
-    outcome: str,
-    request_id: str,
-    duration_ms: float,
+    state: dict[str, Any] | None,
+    event: dict[str, Any],
 ) -> None:
-    payload: dict[str, Any] = {
-        "customerRef": customer_ref,
-        "actionType": "api_call",
-        "units": 1,
-        "outcome": outcome,
-        "productRef": product_ref,
-        "duration": duration_ms,
-        "metadata": {"action": action, "requestId": request_id},
-        "timestamp": _iso8601_timestamp(),
-    }
-    _unwrap_envelope(client.track_usage_blocking(json.dumps(payload)))
+    out = _call_sync_decision("gate_next", {"state": state, "event": event})
+    if not isinstance(out, dict):
+        raise SolvaPayError("gate_next returned unexpected value")
+    action = out.get("action")
+    if not isinstance(action, dict):
+        raise SolvaPayError("gate_next returned unexpected action")
+    kind = action.get("kind")
+    if kind == "skipUsage":
+        return
+    if kind != "emitUsage":
+        raise SolvaPayError(f"gate_next handler event returned unexpected action kind: {kind}")
+    request = action.get("request")
+    if not isinstance(request, dict):
+        raise SolvaPayError("gate_next emitUsage missing request")
+    _post_usage(client, request)
 
 
 class _CustomerDeduplicator:
     """Process-wide customer-lookup dedup (60s TTL; errors uncached)."""
 
-    def __init__(self) -> None:
-        self._inflight: dict[str, Any] = {}
+    def __init__(self, *, max_cache_size: int = _CUSTOMER_DEDUP_MAX_CACHE_SIZE) -> None:
+        self._max_cache_size = max_cache_size
+        self._lock = threading.Lock()
+        self._inflight: dict[str, _InflightWaiter] = {}
         self._cache: dict[str, tuple[str, int]] = {}
 
-    def get_cached(self, key: str) -> str | None:
-        hit = self._cache.get(key)
-        if hit is None:
-            return None
-        value, expires_at = hit
-        if _now_ms() >= expires_at:
-            self._cache.pop(key, None)
-            return None
-        return value
+    def acquire(self, key: str) -> tuple[_InflightWaiter, bool]:
+        with self._lock:
+            existing = self._inflight.get(key)
+            if existing is not None:
+                return existing, False
+            waiter = _InflightWaiter()
+            self._inflight[key] = waiter
+            return waiter, True
 
-    def put(self, key: str, value: str) -> None:
-        self._cache[key] = (value, _now_ms() + _CUSTOMER_DEDUP_TTL_MS)
+    def publish(
+        self,
+        key: str,
+        waiter: _InflightWaiter,
+        result: str | None,
+        error: BaseException | None,
+    ) -> None:
+        with self._lock:
+            if error is not None:
+                waiter.set_error(error)
+            elif result is not None:
+                waiter.set_result(result)
+            else:
+                waiter.set_error(SolvaPayError("customer lookup failed"))
+            if self._inflight.get(key) is waiter:
+                del self._inflight[key]
+
+    def get_entry(self, key: str) -> tuple[str, int] | None:
+        with self._lock:
+            return self._cache.get(key)
+
+    def put(self, key: str, value: str, timestamp_ms: int) -> None:
+        with self._lock:
+            self._cache[key] = (value, timestamp_ms)
+            overflow = len(self._cache) - self._max_cache_size
+            if overflow <= 0:
+                return
+            oldest = sorted(self._cache.items(), key=lambda item: item[1][1])[:overflow]
+            for evict_key, _ in oldest:
+                del self._cache[evict_key]
+
+    def size(self) -> int:
+        with self._lock:
+            return len(self._cache)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._inflight.clear()
+            self._cache.clear()
 
 
 _shared_customer_dedup = _CustomerDeduplicator()
@@ -226,7 +268,7 @@ class SolvaPay:
                     customer_ref = _extract_customer_ref(args, kwargs)
                     result = await self.gate(customer_ref, product=product, usage_type=usage_type)
                     if result.kind == "paywall":
-                        raise PaywallError("Payment required", result.content)
+                        raise PaywallError(_paywall_short_message(result.content), result.content)
                     try:
                         out = await fn(*args, **kwargs)  # type: ignore[misc]
                     except Exception as err:
@@ -244,7 +286,7 @@ class SolvaPay:
                     customer_ref, product=product, usage_type=usage_type
                 )
                 if result.kind == "paywall":
-                    raise PaywallError("Payment required", result.content)
+                    raise PaywallError(_paywall_short_message(result.content), result.content)
                 try:
                     out = fn(*args, **kwargs)
                 except Exception as err:
@@ -307,6 +349,7 @@ class SolvaPay:
             "product": product,
             "usageType": usage_type,
             "startedMs": started_ms,
+            "limitsCacheTTLMs": self._limits_cache_ttl,
         }
         action: dict[str, Any]
         while True:
@@ -327,21 +370,27 @@ class SolvaPay:
                 )
                 event = {"kind": "customerResolved", "backendRef": backend, "nowMs": _now_ms()}
                 continue
-            if kind == "lookupCache":
+            if kind == "readLimitsCache":
                 key = str(action.get("key"))
                 cached = self._limits_cache.get(key)
                 now = _now_ms()
-                if cached is not None and now - cached["timestamp"] < self._limits_cache_ttl:
+                if cached is not None:
                     event = {
-                        "kind": "cacheHit",
+                        "kind": "limitsCacheEntry",
+                        "found": True,
                         "remaining": cached["remaining"],
                         "limits": cached.get("limits"),
+                        "timestampMs": cached["timestamp"],
                         "nowMs": now,
+                        "randomUnit": random.random(),
                     }
                 else:
-                    if cached is not None:
-                        self._limits_cache.pop(key, None)
-                    event = {"kind": "cacheMiss", "nowMs": now}
+                    event = {
+                        "kind": "limitsCacheEntry",
+                        "found": False,
+                        "nowMs": now,
+                        "randomUnit": random.random(),
+                    }
                 continue
             if kind == "checkLimits":
                 delete_key = action.get("cacheDeleteKey")
@@ -362,34 +411,31 @@ class SolvaPay:
                     limits_value = _unwrap_envelope(await client.check_limits(args_json))
                 if not isinstance(limits_value, dict):
                     limits_value = {}
-                event = {"kind": "limitsResult", "limits": limits_value, "nowMs": _now_ms()}
+                event = {
+                    "kind": "limitsResult",
+                    "limits": limits_value,
+                    "nowMs": _now_ms(),
+                    "randomUnit": random.random(),
+                }
                 continue
-            if kind == "done":
+            if kind in ("allow", "gate"):
                 break
             raise SolvaPayError(f"gate_next returned unknown action kind: {kind}")
 
         self._apply_gate_cache(action.get("cache"))
         backend_ref = str(action.get("customerRef"))
-        meter_name = str(action.get("meterName") or usage_type)
         last_limits = action.get("limits") if isinstance(action.get("limits"), dict) else {}
-        track = action.get("track") if isinstance(action.get("track"), dict) else None
-        if track is not None:
-            _track_usage(
-                self.get_api_client(),
-                customer_ref=str(track.get("customerRef") or backend_ref),
-                product_ref=str(track.get("productRef") or product),
-                action=str(track.get("action") or meter_name),
-                outcome="paywall",
-                request_id=_generate_request_id(),
-                duration_ms=float(track.get("durationMs") or 0),
-            )
-        if action.get("outcome") == "gate":
+        request = action.get("request") if isinstance(action.get("request"), dict) else None
+        if request is not None:
+            _post_usage(self.get_api_client(), request)
+        if kind == "gate":
             gate = action.get("gate")
             if not isinstance(gate, dict):
-                raise SolvaPayError("gate_next done/gate missing gate payload")
+                raise SolvaPayError("gate_next gate action missing gate payload")
             return PayablePaywallResult(kind="paywall", content=gate)
 
         decision = {"outcome": "allow", "limits": last_limits}
+        driver_state = state if isinstance(state, dict) else None
 
         def track_success(
             *,
@@ -397,14 +443,15 @@ class SolvaPay:
             metadata: dict[str, Any] | None = None,
         ) -> None:
             _ = metadata
-            _track_usage(
+            _emit_handler_usage(
                 self.get_api_client(),
-                customer_ref=backend_ref,
-                product_ref=product,
-                action=meter_name,
-                outcome="success",
-                request_id=_generate_request_id(),
-                duration_ms=0 if duration is None else duration,
+                driver_state,
+                {
+                    "kind": "handlerSucceeded",
+                    "durationMs": 0 if duration is None else duration,
+                    "nowMs": _now_ms(),
+                    "randomUnit": random.random(),
+                },
             )
 
         def track_fail(
@@ -413,16 +460,18 @@ class SolvaPay:
             duration: float | None = None,
             metadata: dict[str, Any] | None = None,
         ) -> None:
-            _ = err
             _ = metadata
-            _track_usage(
+            _emit_handler_usage(
                 self.get_api_client(),
-                customer_ref=backend_ref,
-                product_ref=product,
-                action=meter_name,
-                outcome="fail",
-                request_id=_generate_request_id(),
-                duration_ms=0 if duration is None else duration,
+                driver_state,
+                {
+                    "kind": "handlerFailed",
+                    "durationMs": 0 if duration is None else duration,
+                    "nowMs": _now_ms(),
+                    "randomUnit": random.random(),
+                    "errorMessage": str(err),
+                    "isPaywallError": isinstance(err, PaywallError),
+                },
             )
 
         return PayableAllowResult(
@@ -449,11 +498,16 @@ class SolvaPay:
                 entry["remaining"] = cache.get("remaining")
             return
         if op == "set":
+            timestamp = cache.get("timestamp")
+            if not isinstance(timestamp, (int, float)):
+                raise SolvaPayError("gate_next cache set missing timestamp")
             limits = cache.get("limits") if isinstance(cache.get("limits"), dict) else {}
             self._limits_cache[key] = {
-                "timestamp": cache.get("timestamp") or _now_ms(),
+                "timestamp": timestamp,
                 "remaining": cache.get("remaining"),
                 "limits": limits,
+                "checkoutUrl": cache.get("checkoutUrl"),
+                "meterName": cache.get("meterName"),
             }
 
     async def _lookup_customer(self, args: dict[str, str], *, blocking: bool) -> Any:
@@ -463,62 +517,154 @@ class SolvaPay:
         return _unwrap_envelope(await self.get_api_client().get_customer(args_json))
 
     async def _ensure_customer(self, customer_ref: str, *, blocking: bool) -> str:
-        kind = _call_sync_decision("classify_customer_ref", {"customerRef": customer_ref})
-        is_backend = kind == "backend" or (
-            isinstance(customer_ref, str) and customer_ref.startswith("cus_")
-        )
-        if kind == "anonymous":
-            return customer_ref
-        if is_backend:
-            return customer_ref
-
-        cached = _shared_customer_dedup.get_cached(customer_ref)
-        if cached is not None:
-            return cached
-
-        args_json = json.dumps({"externalRef": customer_ref})
-        try:
+        waiter, leader = _shared_customer_dedup.acquire(customer_ref)
+        if not leader:
             if blocking:
-                existing = _unwrap_envelope(self.get_api_client().get_customer_blocking(args_json))
-            else:
-                existing = _unwrap_envelope(await self.get_api_client().get_customer(args_json))
-            if isinstance(existing, dict) and existing.get("customerRef"):
-                ref = str(existing["customerRef"])
-                _shared_customer_dedup.put(customer_ref, ref)
-                return ref
-        except SolvaPayError:
-            pass
+                return waiter.wait()
+            return await asyncio.to_thread(waiter.wait)
+        try:
+            result = await self._run_ensure_customer(customer_ref, blocking=blocking)
+            _shared_customer_dedup.publish(customer_ref, waiter, result, None)
+            return result
+        except BaseException as err:
+            _shared_customer_dedup.publish(customer_ref, waiter, None, err)
+            raise
 
-        # Mirror TS paywall.ensureCustomer: generate email via core helper.
-        # If the app ref is already an email, pass it through — otherwise the
-        # fallback template (`{ref}-{now}@auto-created.local`) becomes invalid.
-        email = customer_ref if "@" in customer_ref else None
-        params = _call_sync_decision(
-            "build_create_customer_params",
-            {
-                "customerRef": customer_ref,
-                "externalRef": customer_ref,
-                "email": email,
-                "nowMs": _now_ms(),
-            },
+    async def _run_ensure_customer(self, customer_ref: str, *, blocking: bool) -> str:
+        client = self.get_api_client()
+        can_update = hasattr(client, "update_customer") and hasattr(
+            client, "update_customer_blocking"
         )
-        if not isinstance(params, dict):
-            raise SolvaPayError("build_create_customer_params returned unexpected value")
-        create_args = json.dumps(params)
-        if blocking:
-            created = _unwrap_envelope(self.get_api_client().create_customer_blocking(create_args))
-        else:
-            created = _unwrap_envelope(await self.get_api_client().create_customer(create_args))
-        if not isinstance(created, dict):
-            raise SolvaPayError("create_customer did not return an object")
-        ref = _call_sync_decision(
-            "extract_backend_customer_ref",
-            {"response": created, "fallback": customer_ref},
-        )
-        if not isinstance(ref, str) or not ref:
-            raise SolvaPayError("create_customer did not return customerRef")
-        _shared_customer_dedup.put(customer_ref, ref)
-        return ref
+        state: Any = None
+        event: dict[str, Any] = {
+            "kind": "start",
+            "customerRef": customer_ref,
+            "canCreateCustomer": True,
+            "canUpdateCustomer": can_update,
+            "nowMs": _now_ms(),
+        }
+        while True:
+            out = _call_sync_decision(
+                "ensure_customer_next", {"state": state, "event": event}
+            )
+            if (
+                isinstance(out, dict)
+                and "action" not in out
+                and "error" in out
+                and "status" in out
+            ):
+                details = out.get("details")
+                raise SolvaPayError(
+                    details if isinstance(details, str) and details else str(out["error"])
+                )
+            if not isinstance(out, dict):
+                raise SolvaPayError("ensure_customer_next returned unexpected value")
+            action = out.get("action")
+            if not isinstance(action, dict):
+                raise SolvaPayError("ensure_customer_next returned unexpected action")
+            state = out.get("state")
+            kind = action.get("kind")
+            if kind == "readCustomerCache":
+                key = str(action.get("key") or "")
+                hit = _shared_customer_dedup.get_entry(key)
+                if hit is None:
+                    event = {"kind": "customerCacheEntry", "found": False, "nowMs": _now_ms()}
+                else:
+                    backend_ref, timestamp_ms = hit
+                    event = {
+                        "kind": "customerCacheEntry",
+                        "found": True,
+                        "backendRef": backend_ref,
+                        "timestampMs": timestamp_ms,
+                        "nowMs": _now_ms(),
+                    }
+                continue
+            if kind == "getCustomer":
+                params: dict[str, str] = {}
+                if action.get("byExternalRef"):
+                    params["externalRef"] = str(action["byExternalRef"])
+                elif action.get("byEmail"):
+                    params["email"] = str(action["byEmail"])
+                try:
+                    existing = await self._lookup_customer(params, blocking=blocking)
+                    if isinstance(existing, dict) and existing.get("customerRef"):
+                        event = {
+                            "kind": "customerLookupResult",
+                            "found": True,
+                            "customer": existing,
+                            "nowMs": _now_ms(),
+                        }
+                    else:
+                        event = {
+                            "kind": "customerLookupResult",
+                            "found": False,
+                            "nowMs": _now_ms(),
+                        }
+                except SolvaPayError as err:
+                    event = {
+                        "kind": "customerLookupResult",
+                        "found": False,
+                        "errorMessage": str(err),
+                        "nowMs": _now_ms(),
+                    }
+                continue
+            if kind == "createCustomer":
+                params_obj = action.get("params")
+                if not isinstance(params_obj, dict):
+                    raise SolvaPayError("ensure_customer_next createCustomer missing params")
+                create_args = json.dumps(params_obj)
+                try:
+                    if blocking:
+                        created = _unwrap_envelope(client.create_customer_blocking(create_args))
+                    else:
+                        created = _unwrap_envelope(await client.create_customer(create_args))
+                    event = {
+                        "kind": "customerCreateResult",
+                        "ok": True,
+                        "customer": created if isinstance(created, dict) else {},
+                        "nowMs": _now_ms(),
+                    }
+                except SolvaPayError as err:
+                    event = {
+                        "kind": "customerCreateResult",
+                        "ok": False,
+                        "errorMessage": str(err),
+                        "nowMs": _now_ms(),
+                    }
+                continue
+            if kind == "updateCustomer":
+                payload: dict[str, Any] = {"customerRef": action.get("customerRef")}
+                patch = action.get("patch")
+                if isinstance(patch, dict):
+                    payload.update(patch)
+                try:
+                    if blocking:
+                        _unwrap_envelope(client.update_customer_blocking(json.dumps(payload)))
+                    else:
+                        _unwrap_envelope(await client.update_customer(json.dumps(payload)))
+                    event = {"kind": "customerUpdateResult", "ok": True, "nowMs": _now_ms()}
+                except SolvaPayError as err:
+                    event = {
+                        "kind": "customerUpdateResult",
+                        "ok": False,
+                        "errorMessage": str(err),
+                        "nowMs": _now_ms(),
+                    }
+                continue
+            if kind == "resolved":
+                backend = action.get("backendRef")
+                if not isinstance(backend, str) or not backend:
+                    raise SolvaPayError("ensure_customer_next resolved without backendRef")
+                cache = action.get("cache")
+                if isinstance(cache, dict) and isinstance(cache.get("key"), str):
+                    ts = cache.get("timestampMs")
+                    _shared_customer_dedup.put(
+                        str(cache["key"]),
+                        backend,
+                        int(ts) if isinstance(ts, (int, float)) else _now_ms(),
+                    )
+                return backend
+            raise SolvaPayError(f"ensure_customer_next unknown action kind: {kind}")
 
 
 def create_solvapay(
@@ -541,6 +687,15 @@ def _is_coroutine_fn(fn: Callable[..., object]) -> bool:
     import inspect
 
     return inspect.iscoroutinefunction(fn)
+
+
+def _paywall_short_message(content: Any) -> str:
+    if not isinstance(content, dict):
+        raise SolvaPayError("paywall result missing gate content")
+    message = content.get("shortMessage")
+    if not isinstance(message, str) or not message:
+        raise SolvaPayError("paywall gate missing shortMessage")
+    return message
 
 
 def _extract_customer_ref(args: tuple[object, ...], kwargs: Mapping[str, object]) -> str:

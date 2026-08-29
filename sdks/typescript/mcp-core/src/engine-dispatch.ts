@@ -31,10 +31,7 @@ export type McpEngineHttpResult = {
 }
 
 export type McpEnginePayable = {
-  invoke: (
-    args: Record<string, unknown>,
-    customerRef: string | undefined,
-  ) => Promise<unknown>
+  invoke: (args: Record<string, unknown>, customerRef: string | undefined) => Promise<unknown>
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -113,8 +110,7 @@ export async function runMcpEngineRequest(options: {
     const payable = payables.get(tool)
     if (payable === undefined) throw new Error(`unknown payable tool: ${tool}`)
     const args = isRecord(envelope.args) ? { ...envelope.args } : {}
-    const customerRef =
-      typeof envelope.customerRef === 'string' ? envelope.customerRef : undefined
+    const customerRef = typeof envelope.customerRef === 'string' ? envelope.customerRef : undefined
     if (customerRef !== undefined && args.customer_ref === undefined) {
       args.customer_ref = customerRef
     }

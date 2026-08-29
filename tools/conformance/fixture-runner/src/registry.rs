@@ -10,16 +10,17 @@ use solvapay_core::{
     charges, classify_cancel_error, classify_create_error, classify_customer_ref,
     classify_lookup_error, classify_paywall_state, classify_reactivate_error,
     coerce_customer_options, counts_usage, credits_per_unit_from_balance, decide_paywall_outcome,
-    evaluate_balance_observation, evaluate_cached_limits, evaluate_fresh_limits,
-    extract_backend_customer_ref, gate_next, get_business_country_options,
+    ensure_customer_next, evaluate_balance_observation, evaluate_cached_limits,
+    evaluate_fresh_limits, extract_backend_customer_ref, gate_next, get_business_country_options,
     get_seller_tax_identifier_display_label, headline_charges, included_units, invoke_payable_next,
     is_cached_customer_ref_valid, is_email_conflict, is_error_result, is_zero_decimal_currency,
     mcp_view_maps, meter_name, normalize_cancel_response, normalize_reactivate_response,
     paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
     project_topup_process_outcome, resolve_check_limits_params, resolve_fallback_gate_limits,
-    resolve_product_ref, resolve_purchase_customer_ref, trial_days, validate_activate_plan_params,
-    validate_attach_business_details_params, validate_checkout_session_params,
-    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
+    resolve_product_ref, resolve_purchase_customer_ref, should_retry_usage_error, trial_days,
+    validate_activate_plan_params, validate_attach_business_details_params,
+    validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, GateContent, PaywallGate, PaywallGateLimits,
     PaywallLimits, PaywallState, ResponseEnvelope,
@@ -168,6 +169,13 @@ fn invoke_decide_paywall_outcome(input: &FixtureInput) -> Result<Value, BindingE
         limits.as_ref(),
         checkout_url.as_deref(),
     ))
+}
+
+fn invoke_ensure_customer_next(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let state = optional_value(&args, "state");
+    let event = optional_value(&args, "event");
+    result_as_value(ensure_customer_next(state.as_ref(), event.as_ref()))
 }
 
 fn invoke_evaluate_balance_observation(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -373,6 +381,12 @@ fn invoke_resolve_purchase_customer_ref(input: &FixtureInput) -> Result<Value, B
         customer_ref.as_deref(),
         &user_id,
     )))
+}
+
+fn invoke_should_retry_usage_error(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let message = require_string(&args, "message")?;
+    Ok(Value::Bool(should_retry_usage_error(&message)))
 }
 
 fn invoke_trial_days(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1058,6 +1072,13 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "ensureCustomerNext",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_ensure_customer_next),
+        },
+    );
+    registry.register(
         "evaluateBalanceObservation",
         Binding {
             id: "core",
@@ -1083,6 +1104,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_resolve_fallback_gate_limits),
+        },
+    );
+    registry.register(
+        "shouldRetryUsageError",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_should_retry_usage_error),
         },
     );
 

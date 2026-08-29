@@ -57,10 +57,11 @@ function discoverFixtureFiles(dir: string): string[] {
 }
 
 export function discoverMcpFixtureRels(repoRoot?: string): string[] {
-  const root = repoRoot === undefined ? lookupPath('mcpFixtures') : path.join(repoRoot, 'contract/mcp-fixtures')
-  return discoverFixtureFiles(root).map(file =>
-    path.relative(root, file).split(path.sep).join('/'),
-  )
+  const root =
+    repoRoot === undefined
+      ? lookupPath('mcpFixtures')
+      : path.join(repoRoot, 'contract/mcp-fixtures')
+  return discoverFixtureFiles(root).map(file => path.relative(root, file).split(path.sep).join('/'))
 }
 
 export function extractFixtureRels(source: string): string[] {

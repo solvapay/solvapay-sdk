@@ -309,9 +309,6 @@ fn emit_client(ir: &Ir, toolchain: Toolchain, art: &Value) -> GenResult<String> 
     let mut chunks: Vec<String> = Vec::new();
     let mut prev_section: Option<&str> = None;
     for sym in &symbols {
-        if toolchain == Toolchain::Wasm && is_mcp_composite(sym) {
-            continue;
-        }
         let is_first = prev_section.is_none();
         if sym.section.as_deref() != prev_section {
             prev_section = sym.section.as_deref();
@@ -906,7 +903,7 @@ use solvapay_core::{
     classify_paywall_state, classify_reactivate_error, coerce_customer_options,
     decide_paywall_outcome, evaluate_balance_observation, evaluate_cached_limits,
     evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref,
-    gate_next, is_cached_customer_ref_valid, resolve_authenticated_user,
+    ensure_customer_next, gate_next, should_retry_usage_error, is_cached_customer_ref_valid, resolve_authenticated_user,
     is_email_conflict, is_error_result, map_route_error, normalize_cancel_response,
     normalize_reactivate_response, paywall_client_payload, project_payment_intent_result,
     billing_cycle, charges, credits_per_unit_from_balance, headline_charges,
@@ -1618,10 +1615,6 @@ fn chrome_str<'a>(art: &'a Value, path: &[&str]) -> GenResult<&'a str> {
     })
 }
 
-fn is_mcp_composite(sym: &IrBindingSymbol) -> bool {
-    sym.section.as_deref() == Some("MCP composite")
-}
-
 fn solvapay_dto_import_ident(dto: &str) -> Option<&str> {
     if dto.contains("::") {
         None
@@ -1957,5 +1950,25 @@ mod tests {
         );
         assert!(emitted.register_rs.contains("\"create_customer\""));
         assert!(emitted.args_rs.contains("fn args_map"));
+    }
+
+    #[test]
+    fn wasm_client_emits_mcp_composite_js_names() {
+        let mut symbol = client_op(
+            "mcpDispatch",
+            "mcp_dispatch",
+            99,
+            IrSerializeKind::ClientAwait,
+            &[],
+            Some("solvapay_transport::McpDispatchParams"),
+            &[],
+        );
+        symbol.section = Some("MCP composite".into());
+        let ir = ir_with(vec![symbol]);
+        let emitted = emit_bindings(&ir, Toolchain::Wasm).unwrap();
+        assert!(
+            emitted.client_rs.contains("js_name = \"mcpDispatch\""),
+            "wasm WasmClient must emit MCP composites"
+        );
     }
 }

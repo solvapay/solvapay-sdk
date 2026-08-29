@@ -1,7 +1,7 @@
 # Dependency deprecations (contributors)
 
 This page records npm deprecations that still appear in the lockfile after
-version bumps that *can* clear a warning. Do not add pnpm overrides to paper
+version bumps that _can_ clear a warning. Do not add pnpm overrides to paper
 over these — an override would hide the real pin or peer mismatch.
 
 ## Cleared by version bumps

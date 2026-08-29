@@ -1,1 +1,144 @@
-{"ticker":"SNDK","cik":"0002023554","company":"Sandisk","summary":{"status":"ok","text":"Sandisk is a leading global semiconductor memory company with more than 30 years of innovation in NAND flash technology. We are a vertically integrated solutions provider with ownership of chip-level design and IP, front and back-end manufacturing, as well as systems engineering and design. With a differentiated innovation engine driving advancements in storage and semiconductor technologies, our broad and ever-expanding portfolio delivers powerful flash storage solutions for artificial intelligence (“AI”) workloads in datacenters, edge devices, and consumer applications. Our technologies enable everyone from students, gamers, and home offices to the largest enterprises and public clouds to produce, analyze, and store data. Our solutions include a broad range of solid-state drives (“SSDs”), embedded products, removable cards, universal serial bus drives and wafers and components. Our broad portfolio of technology and products addresses multiple end markets of “Datacenter”(formerly referred to as “Cloud”), “Edge” (formerly referred to as “Client”), and “Consumer.”\n\nThe Datacenter end market is comprised primarily of products for datacenters, cloud service providers, and private cloud customers. Through the Edge end market, we provide our original equipment manufacturer (“OEM”) and channel customers a broad array of high-performance flash solutions across personal computer, mobile, gaming, automotive, physical AI, at-home entertainment, and industrial spaces. The Consumer end market is highlighted by our broad range of retail and other end-user products, which capitalize on the strength of our product brand recognition and vast presence around the world."},"earnings":{"status":"ok","latest":{"period":"2026-06-30","actualEPS":39.25,"estimateEPS":35.1395,"surprise":4.1105,"surprisePercent":11.6977,"result":"beat"},"history":[{"period":"2026-06-30","actualEPS":39.25,"estimateEPS":35.1395,"surprise":4.1105,"surprisePercent":11.6977,"result":"beat"},{"period":"2026-03-31","actualEPS":23.41,"estimateEPS":14.8274,"surprise":8.5826,"surprisePercent":57.8834,"result":"beat"},{"period":"2025-12-31","actualEPS":6.2,"estimateEPS":3.5172,"surprise":2.6828,"surprisePercent":76.2766,"result":"beat"},{"period":"2025-09-30","actualEPS":1.22,"estimateEPS":0.9543,"surprise":0.2657,"surprisePercent":27.8424,"result":"beat"}]},"filings":{"status":"ok","key":[{"form":"10-K","filingDate":"2026-08-17","accessionNumber":"0001628280-26-057406","url":"https://www.sec.gov/Archives/edgar/data/2023554/000162828026057406/sndk-20260703.htm"},{"form":"10-Q","filingDate":"2026-05-01","accessionNumber":"0001628280-26-029401","url":"https://www.sec.gov/Archives/edgar/data/2023554/000162828026029401/sndk-20260403.htm"},{"form":"8-K","filingDate":"2026-08-05","accessionNumber":"0001628280-26-053346","url":"https://www.sec.gov/Archives/edgar/data/2023554/000162828026053346/sndk-20260805.htm"}],"recent":[{"form":"4","filingDate":"2026-08-24","accessionNumber":"0001363249-26-000066","url":"https://www.sec.gov/Archives/edgar/data/2023554/000136324926000066/xslF345X06/edgardoc.xml"},{"form":"4","filingDate":"2026-08-24","accessionNumber":"0001363249-26-000065","url":"https://www.sec.gov/Archives/edgar/data/2023554/000136324926000065/xslF345X06/edgardoc.xml"},{"form":"4","filingDate":"2026-08-24","accessionNumber":"0001363249-26-000064","url":"https://www.sec.gov/Archives/edgar/data/2023554/000136324926000064/xslF345X06/edgardoc.xml"},{"form":"4","filingDate":"2026-08-24","accessionNumber":"0001363249-26-000063","url":"https://www.sec.gov/Archives/edgar/data/2023554/000136324926000063/xslF345X06/edgardoc.xml"},{"form":"10-K","filingDate":"2026-08-17","accessionNumber":"0001628280-26-057406","url":"https://www.sec.gov/Archives/edgar/data/2023554/000162828026057406/sndk-20260703.htm"},{"form":"SCHEDULE 13G/A","filingDate":"2026-08-06","accessionNumber":"0000315066-26-002110","url":"https://www.sec.gov/Archives/edgar/data/2023554/000031506626002110/xslSCHEDULE_13G_X02/primary_doc.xml"},{"form":"SCHEDULE 13G","filingDate":"2026-08-05","accessionNumber":"0001595888-26-000078","url":"https://www.sec.gov/Archives/edgar/data/2023554/000159588826000078/xslSCHEDULE_13G_X02/primary_doc.xml"},{"form":"8-K","filingDate":"2026-08-05","accessionNumber":"0001628280-26-053346","url":"https://www.sec.gov/Archives/edgar/data/2023554/000162828026053346/sndk-20260805.htm"},{"form":"4","filingDate":"2026-08-04","accessionNumber":"0001363249-26-000058","url":"https://www.sec.gov/Archives/edgar/data/2023554/000136324926000058/xslF345X06/edgardoc.xml"},{"form":"4","filingDate":"2026-07-02","accessionNumber":"0001363249-26-000056","url":"https://www.sec.gov/Archives/edgar/data/2023554/000136324926000056/xslF345X06/edgardoc.xml"}]},"links":{"secEdgar":"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0002023554&type=&dateb=&owner=include&count=40","companyPage":"https://zelothorn.com/company/SNDK"},"generatedAt":"2026-08-25T22:23:27.085Z"}
+{
+  "ticker": "SNDK",
+  "cik": "0002023554",
+  "company": "Sandisk",
+  "summary": {
+    "status": "ok",
+    "text": "Sandisk is a leading global semiconductor memory company with more than 30 years of innovation in NAND flash technology. We are a vertically integrated solutions provider with ownership of chip-level design and IP, front and back-end manufacturing, as well as systems engineering and design. With a differentiated innovation engine driving advancements in storage and semiconductor technologies, our broad and ever-expanding portfolio delivers powerful flash storage solutions for artificial intelligence (“AI”) workloads in datacenters, edge devices, and consumer applications. Our technologies enable everyone from students, gamers, and home offices to the largest enterprises and public clouds to produce, analyze, and store data. Our solutions include a broad range of solid-state drives (“SSDs”), embedded products, removable cards, universal serial bus drives and wafers and components. Our broad portfolio of technology and products addresses multiple end markets of “Datacenter”(formerly referred to as “Cloud”), “Edge” (formerly referred to as “Client”), and “Consumer.”\n\nThe Datacenter end market is comprised primarily of products for datacenters, cloud service providers, and private cloud customers. Through the Edge end market, we provide our original equipment manufacturer (“OEM”) and channel customers a broad array of high-performance flash solutions across personal computer, mobile, gaming, automotive, physical AI, at-home entertainment, and industrial spaces. The Consumer end market is highlighted by our broad range of retail and other end-user products, which capitalize on the strength of our product brand recognition and vast presence around the world."
+  },
+  "earnings": {
+    "status": "ok",
+    "latest": {
+      "period": "2026-06-30",
+      "actualEPS": 39.25,
+      "estimateEPS": 35.1395,
+      "surprise": 4.1105,
+      "surprisePercent": 11.6977,
+      "result": "beat"
+    },
+    "history": [
+      {
+        "period": "2026-06-30",
+        "actualEPS": 39.25,
+        "estimateEPS": 35.1395,
+        "surprise": 4.1105,
+        "surprisePercent": 11.6977,
+        "result": "beat"
+      },
+      {
+        "period": "2026-03-31",
+        "actualEPS": 23.41,
+        "estimateEPS": 14.8274,
+        "surprise": 8.5826,
+        "surprisePercent": 57.8834,
+        "result": "beat"
+      },
+      {
+        "period": "2025-12-31",
+        "actualEPS": 6.2,
+        "estimateEPS": 3.5172,
+        "surprise": 2.6828,
+        "surprisePercent": 76.2766,
+        "result": "beat"
+      },
+      {
+        "period": "2025-09-30",
+        "actualEPS": 1.22,
+        "estimateEPS": 0.9543,
+        "surprise": 0.2657,
+        "surprisePercent": 27.8424,
+        "result": "beat"
+      }
+    ]
+  },
+  "filings": {
+    "status": "ok",
+    "key": [
+      {
+        "form": "10-K",
+        "filingDate": "2026-08-17",
+        "accessionNumber": "0001628280-26-057406",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000162828026057406/sndk-20260703.htm"
+      },
+      {
+        "form": "10-Q",
+        "filingDate": "2026-05-01",
+        "accessionNumber": "0001628280-26-029401",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000162828026029401/sndk-20260403.htm"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-08-05",
+        "accessionNumber": "0001628280-26-053346",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000162828026053346/sndk-20260805.htm"
+      }
+    ],
+    "recent": [
+      {
+        "form": "4",
+        "filingDate": "2026-08-24",
+        "accessionNumber": "0001363249-26-000066",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000136324926000066/xslF345X06/edgardoc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-24",
+        "accessionNumber": "0001363249-26-000065",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000136324926000065/xslF345X06/edgardoc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-24",
+        "accessionNumber": "0001363249-26-000064",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000136324926000064/xslF345X06/edgardoc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-24",
+        "accessionNumber": "0001363249-26-000063",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000136324926000063/xslF345X06/edgardoc.xml"
+      },
+      {
+        "form": "10-K",
+        "filingDate": "2026-08-17",
+        "accessionNumber": "0001628280-26-057406",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000162828026057406/sndk-20260703.htm"
+      },
+      {
+        "form": "SCHEDULE 13G/A",
+        "filingDate": "2026-08-06",
+        "accessionNumber": "0000315066-26-002110",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000031506626002110/xslSCHEDULE_13G_X02/primary_doc.xml"
+      },
+      {
+        "form": "SCHEDULE 13G",
+        "filingDate": "2026-08-05",
+        "accessionNumber": "0001595888-26-000078",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000159588826000078/xslSCHEDULE_13G_X02/primary_doc.xml"
+      },
+      {
+        "form": "8-K",
+        "filingDate": "2026-08-05",
+        "accessionNumber": "0001628280-26-053346",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000162828026053346/sndk-20260805.htm"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-08-04",
+        "accessionNumber": "0001363249-26-000058",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000136324926000058/xslF345X06/edgardoc.xml"
+      },
+      {
+        "form": "4",
+        "filingDate": "2026-07-02",
+        "accessionNumber": "0001363249-26-000056",
+        "url": "https://www.sec.gov/Archives/edgar/data/2023554/000136324926000056/xslF345X06/edgardoc.xml"
+      }
+    ]
+  },
+  "links": {
+    "secEdgar": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0002023554&type=&dateb=&owner=include&count=40",
+    "companyPage": "https://zelothorn.com/company/SNDK"
+  },
+  "generatedAt": "2026-08-25T22:23:27.085Z"
+}

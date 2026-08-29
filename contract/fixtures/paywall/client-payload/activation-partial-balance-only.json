@@ -10,7 +10,12 @@
         "product": "prd_demo",
         "checkoutUrl": "https://pay.test/confirm",
         "message": "activate",
-        "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+        "balance": {
+          "creditBalance": 0,
+          "creditsPerUnit": 1,
+          "currency": "usd"
+        },
+        "shortMessage": "Activation required"
       }
     }
   },
@@ -22,7 +27,12 @@
       "checkoutUrl": "https://pay.test/confirm",
       "message": "activate",
       "kind": "activation_required",
-      "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
+      "balance": {
+        "creditBalance": 0,
+        "creditsPerUnit": 1,
+        "currency": "usd"
+      },
+      "shortMessage": "Activation required"
     }
   }
 }

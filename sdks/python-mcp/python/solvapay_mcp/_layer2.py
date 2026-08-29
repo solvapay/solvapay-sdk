@@ -1,48 +1,22 @@
 from __future__ import annotations
 
-import json
-from collections.abc import Mapping
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 
-from solvapay._native import call_native_sync
+_path = Path(__file__).resolve().parent / "_layer2.generated.py"
+_spec = spec_from_file_location("solvapay_mcp._layer2_generated", _path)
+if _spec is None or _spec.loader is None:
+    raise ImportError(f"cannot load generated MCP wrappers from {_path}")
+_generated = module_from_spec(_spec)
+_spec.loader.exec_module(_generated)
 
+for _name in dir(_generated):
+    if _name.startswith("_"):
+        continue
+    globals()[_name] = getattr(_generated, _name)
 
-def _as_object_map(value: object) -> dict[str, object]:
-    if not isinstance(value, dict):
-        raise TypeError("native call returned unexpected value")
-    return {str(k): v for k, v in value.items()}
-
-
-def _call(name: str, args: Mapping[str, object]) -> object:
-    return call_native_sync(name, json.dumps(dict(args)))
-
-
-def paywall_tool_result(message: str, gate: Mapping[str, object]) -> dict[str, object]:
-    return _as_object_map(
-        _call(
-            "paywall_tool_result",
-            {"message": message, "structuredContent": dict(gate)},
-        )
-    )
-
-
-def make_response_result(
-    data: object,
-    options: Mapping[str, object] | None,
-    emitted_blocks: list[dict[str, object]],
-) -> dict[str, object]:
-    args: dict[str, object] = {"data": data}
-    if options is not None:
-        args["options"] = dict(options)
-    if emitted_blocks:
-        args["emittedBlocks"] = emitted_blocks
-    return _as_object_map(_call("make_response_result", args))
-
-
-def assert_response_result(value: object) -> dict[str, object]:
-    return _as_object_map(_call("assert_response_result", {"value": value}))
-
-
-def build_payable_tool_result(envelope: Mapping[str, object]) -> dict[str, object]:
-    return _as_object_map(
-        _call("build_payable_tool_result", {"envelope": dict(envelope)})
-    )
+# Hand-written names kept for existing call sites.
+paywall_tool_result = _generated.paywall_tool_result
+make_response_result = _generated.make_response_result
+assert_response_result = _generated.assert_response_result
+build_payable_tool_result = _generated.build_payable_tool_result

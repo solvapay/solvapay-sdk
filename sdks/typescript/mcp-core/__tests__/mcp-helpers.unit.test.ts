@@ -54,6 +54,7 @@ describe('paywallToolResult', () => {
       product: 'prd_foo',
       checkoutUrl: 'https://example.com/checkout',
       message: 'Purchase required',
+      shortMessage: 'Payment required',
     })
     const result = await paywallToolResult(err)
     // Paywall is a user-actionable gate, not a tool failure. The
@@ -74,6 +75,7 @@ describe('paywallToolResult', () => {
       product: 'prd_foo',
       checkoutUrl: 'https://example.com/checkout',
       message: 'Purchase required',
+      shortMessage: 'Payment required',
     }
     const result = await paywallToolResult(gate)
     expect(result.isError).toBe(false)
@@ -88,6 +90,7 @@ describe('paywallToolResult', () => {
       product: 'prd_bar',
       checkoutUrl: '',
       message: 'Activate',
+      shortMessage: 'Activation required',
     })
     const buildBootstrap = vi.fn()
     const result = await paywallToolResult(err, {

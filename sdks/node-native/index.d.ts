@@ -221,6 +221,9 @@ export declare function deriveIcons(argsJson: string): string
 /** Binding for `deriveTaxIdType`. */
 export declare function deriveTaxIdType(argsJson: string): string
 
+/** Binding for `ensureCustomerNext`. */
+export declare function ensureCustomerNext(argsJson: string): string
+
 /** Binding for `evaluateBalanceObservation`. */
 export declare function evaluateBalanceObservation(argsJson: string): string
 
@@ -384,6 +387,9 @@ export declare function selectActivePurchases(argsJson: string): string
 
 /** Binding for `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`. */
 export declare function SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE(argsJson: string): string
+
+/** Binding for `shouldRetryUsageError`. */
+export declare function shouldRetryUsageError(argsJson: string): string
 
 /** Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`. */
 export declare function solvapayCall(argsJson: string): string

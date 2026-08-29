@@ -49,7 +49,10 @@ export interface McpBootstrap {
   plans: BootstrapPlan[]
   /** Per-customer snapshot — null when the bootstrap call was unauthenticated. */
   customer: BootstrapCustomer | null
-  taxIdFields?: Record<string, { label?: string | null; example?: string | null; helperText?: string | null }>
+  taxIdFields?: Record<
+    string,
+    { label?: string | null; example?: string | null; helperText?: string | null }
+  >
 }
 
 /**

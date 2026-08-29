@@ -470,7 +470,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     const method = getRequestJsonRpcMethod(req.body)
 
     const gate = requireAuth
-        ? mcpAuthGate({
+      ? mcpAuthGate({
           rpcMethod: method,
           authHeader,
           authMode,

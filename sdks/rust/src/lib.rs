@@ -15,13 +15,17 @@
 mod client;
 mod config;
 mod gate;
+mod helpers_generated;
 mod retry;
 
 #[cfg(all(feature = "blocking", not(target_arch = "wasm32")))]
 pub mod blocking;
 
 pub use client::Client;
-pub use config::{Config, DEFAULT_LIMITS_CACHE_TTL_MS};
+pub use config::{
+    Config, ANONYMOUS_CUSTOMER_REF, CUSTOMER_DEDUP_MAX_CACHE_SIZE, CUSTOMER_DEDUP_TTL_MS,
+    DEFAULT_LIMITS_CACHE_TTL_MS, REQUEST_ID_FORMAT, USAGE_ACTION_TYPE,
+};
 pub use gate::{Allow, CustomerSnapshot, GateOpts, GateOutcome, Payable, TrackOpts};
 
 // --- Transport re-exports (public surface for integrators) ---
@@ -38,13 +42,12 @@ pub use solvapay_transport::ReqwestTransport;
 #[cfg(target_arch = "wasm32")]
 pub use solvapay_transport::FetchTransport;
 
+pub use helpers_generated::*;
 pub use retry::{with_retry, with_retry_if};
 
 // --- Core re-exports ---
 pub use solvapay_core::{
-    decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits, resolve_product_ref,
-    verify_webhook, PaywallGate, PaywallOutcome, RetryPolicy, SdkError, WebhookError,
-    WebhookErrorCode,
+    verify_webhook, PaywallOutcome, RetryPolicy, SdkError, WebhookError, WebhookErrorCode,
 };
 pub use solvapay_dto::SdkMerchantResponseDto;
 

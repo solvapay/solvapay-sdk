@@ -12,7 +12,7 @@ sequence; numbered migration steps stay in
 > Sequences **after** step 55. Steps 1–54 are Done; step 55 is in progress
 > (55-a/b/c in-repo done; maintainer branch-protection apply remain).
 > `parity:check` is green. Fixture-runner `parsed=550 executed=446 passed=446
-> failed=0 skipped-unbound=104`.
+failed=0 skipped-unbound=104`.
 
 Companion docs:
 
@@ -30,24 +30,24 @@ phases are measured against — the first four axes are closed as of Phase 4, so
 read it as history rather than as the current tree. The fifth axis (replay
 harnesses) is still open and is what Phase 5 addresses.
 
-| Axis | Where | Size |
-| --- | --- | --- |
-| Binding descriptors | `bindings:` in `contract/manifest/sdk-contract.yaml` (lines 2899–6473) | **3,574 of 6,595 lines (54%)** |
-| Boundary types | `sdks/typescript/core/src/*.ts` (`customer-sync.ts`, `paywall-decision.ts`, `product-readiness.ts`, `business-details-public.ts`, `renewal.ts`, `usage.ts`, `payment.ts`, `seller-identity.ts`, …) | ~300 lines of TS mirroring Rust structs/enums. **None carry `@generated`.** |
-| Dispatch wrappers | `sdks/typescript/server/src/native-decisions.ts` (454), `sdks/typescript/core/src/native-helpers.ts` (365), `native-core.ts` (109), `native-dispatch.ts` (92) | ~1,020 lines |
-| Fixture-runner registry | `tools/conformance/fixture-runner/src/registry.rs` (`@generated`) + hand-written residue in `bindings.rs` / `bindings/*.rs` | Generated 73-entry table + 41 wrap bodies; 32 verbatim/extra bodies stay hand-written |
-| Per-language replay harnesses | See table below | **4,171 lines** |
+| Axis                          | Where                                                                                                                                                                                              | Size                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Binding descriptors           | `bindings:` in `contract/manifest/sdk-contract.yaml` (lines 2899–6473)                                                                                                                             | **3,574 of 6,595 lines (54%)**                                                        |
+| Boundary types                | `sdks/typescript/core/src/*.ts` (`customer-sync.ts`, `paywall-decision.ts`, `product-readiness.ts`, `business-details-public.ts`, `renewal.ts`, `usage.ts`, `payment.ts`, `seller-identity.ts`, …) | ~300 lines of TS mirroring Rust structs/enums. **None carry `@generated`.**           |
+| Dispatch wrappers             | `sdks/typescript/server/src/native-decisions.ts` (454), `sdks/typescript/core/src/native-helpers.ts` (365), `native-core.ts` (109), `native-dispatch.ts` (92)                                      | ~1,020 lines                                                                          |
+| Fixture-runner registry       | `tools/conformance/fixture-runner/src/registry.rs` (`@generated`) + hand-written residue in `bindings.rs` / `bindings/*.rs`                                                                        | Generated 73-entry table + 41 wrap bodies; 32 verbatim/extra bodies stay hand-written |
+| Per-language replay harnesses | See table below                                                                                                                                                                                    | **4,171 lines**                                                                       |
 
 The last two together are **4,926 lines of hand-written replay plumbing** for one
 550-file corpus.
 
-| Surface | Files | Lines |
-| --- | --- | --- |
-| TypeScript | `tools/conformance/lib/fixture-harness.ts` | 2,201 |
-| Python | `sdks/python/tests/contract/*.py` (8 files) | 895 |
-| Ruby | `sdks/ruby/test/{contract.rb,contract/*.rb}` (8 files) | 552 |
-| Go | `sdks/go/fixture_conformance_test.go` | 277 |
-| Rust facade | `sdks/rust/tests/fixture_conformance.rs` | 246 |
+| Surface     | Files                                                  | Lines |
+| ----------- | ------------------------------------------------------ | ----- |
+| TypeScript  | `tools/conformance/lib/fixture-harness.ts`             | 2,201 |
+| Python      | `sdks/python/tests/contract/*.py` (8 files)            | 895   |
+| Ruby        | `sdks/ruby/test/{contract.rb,contract/*.rb}` (8 files) | 552   |
+| Go          | `sdks/go/fixture_conformance_test.go`                  | 277   |
+| Rust facade | `sdks/rust/tests/fixture_conformance.rs`               | 246   |
 
 Two clearest symptoms:
 
@@ -123,23 +123,23 @@ Golden-fixture **outputs** are derivable later (see [Fixture derivation](#future
 they are not listed here as never-derivable. Case selection and inputs stay
 human.
 
-| `IrBindingSymbol` / adjacent field | Source after extraction | Notes |
-| --- | --- | --- |
-| `id`, `rust_fn_name`, `core`, `core_call` | Rust path + `#[solvapay_export]` | Scanner |
-| `names` (`IrLangNames`) | Existing casing rules | Identity `nameOverrides` for `SCREAMING_SNAKE` constants are a casing rule, not data. `reservedWords` is empty for all five languages. |
-| `catalog` | Attribute or catalog reconciliation | Keep the existing 1:1 gate |
-| `args[].name`, `ty`, `required`, `extract` | Fn signature + `syn` | `extract` already defaults from `(type, required)` |
-| `args[].doc` / `IrDocModel` params | rustdoc `/// # Arguments` + `` * `name` - desc `` | Already used in ~120 places across 27 `solvapay-core` files (e.g. `customer_sync.rs`). Closes the “per-param docs are YAML-only” gap. |
-| `doc` / returns | rustdoc + `/// # Returns` | Same convention |
-| `sync`, `envelope`, `artifact`, `emit_order`, `section` | Attribute args + stable sort | Defaults from fn kind; deviations are residue |
-| `call` (`wrap` vs `verbatim`) | Default `wrap` from signature | Verbatim is the escape hatch |
-| `return_shape` | Always `"value"` today | Typed returns wait on Phase 2 IR |
-| `split_path_refs` | Attribute or catalog | Keep reconciliation |
-| `dto_type` | Signature / catalog | |
-| `host_injected` | Attribute | 2 uses today |
-| `typed_as` / `typed_style` | Attribute | 8 `typedAs` uses |
-| `client_call_args` | Attribute | 9 uses |
-| `verbatim_body` / `verbatim_body_wasm` | Attribute / stay in overlay | **27 + 1** uses — the residue to shrink, not grow |
+| `IrBindingSymbol` / adjacent field                      | Source after extraction                         | Notes                                                                                                                                  |
+| ------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`, `rust_fn_name`, `core`, `core_call`               | Rust path + `#[solvapay_export]`                | Scanner                                                                                                                                |
+| `names` (`IrLangNames`)                                 | Existing casing rules                           | Identity `nameOverrides` for `SCREAMING_SNAKE` constants are a casing rule, not data. `reservedWords` is empty for all five languages. |
+| `catalog`                                               | Attribute or catalog reconciliation             | Keep the existing 1:1 gate                                                                                                             |
+| `args[].name`, `ty`, `required`, `extract`              | Fn signature + `syn`                            | `extract` already defaults from `(type, required)`                                                                                     |
+| `args[].doc` / `IrDocModel` params                      | rustdoc `/// # Arguments` + ``* `name` - desc`` | Already used in ~120 places across 27 `solvapay-core` files (e.g. `customer_sync.rs`). Closes the “per-param docs are YAML-only” gap.  |
+| `doc` / returns                                         | rustdoc + `/// # Returns`                       | Same convention                                                                                                                        |
+| `sync`, `envelope`, `artifact`, `emit_order`, `section` | Attribute args + stable sort                    | Defaults from fn kind; deviations are residue                                                                                          |
+| `call` (`wrap` vs `verbatim`)                           | Default `wrap` from signature                   | Verbatim is the escape hatch                                                                                                           |
+| `return_shape`                                          | Always `"value"` today                          | Typed returns wait on Phase 2 IR                                                                                                       |
+| `split_path_refs`                                       | Attribute or catalog                            | Keep reconciliation                                                                                                                    |
+| `dto_type`                                              | Signature / catalog                             |                                                                                                                                        |
+| `host_injected`                                         | Attribute                                       | 2 uses today                                                                                                                           |
+| `typed_as` / `typed_style`                              | Attribute                                       | 8 `typedAs` uses                                                                                                                       |
+| `client_call_args`                                      | Attribute                                       | 9 uses                                                                                                                                 |
+| `verbatim_body` / `verbatim_body_wasm`                  | Attribute / stay in overlay                     | **27 + 1** uses — the residue to shrink, not grow                                                                                      |
 
 **Never derivable** (stay human, in the manifest or in fixtures):
 
@@ -280,14 +280,14 @@ default for every surface.
 
 The corpus is 550 fixtures. What each surface actually replays today:
 
-| Surface | Fixtures replayed | Signature-parity suite | Notable gap |
-| --- | --- | --- | --- |
-| Python | 550 (full) | `emit_parity_suite_py.rs` — exact method census + `(self, args_json)` signature + awaitable vs blocking-str matrix + `__init__.pyi` AST cross-check. Per-op param names do not exist at the JSON envelope, so argument order cannot be asserted at runtime. | — |
-| Ruby | 550 (full) | `emit_parity_suite_rb.rs` — presence + exact `Method#parameters` keyword arity (ceiling) | — |
-| TypeScript | 550 via the JS harness | `emit_parity_suite_ts.rs` — `expectTypeOf` full method types (ceiling); runtime defaults compared to `withRetry` / `retryNextDelayMs` / paywall TTL | napi/WASM binaries are not fixture-replayed for client ops in CI (webhook-only smoke) |
-| Go | **550** (full) | `emit_parity_suite_go.rs` — reflect arity + per-slot `In(i)`/`Out(i)` types + exact exported-method census (`Close` allow-listed). Reflect never yields param names. | Client wire asserts method/path only (`ClientConfig` has no `clockMs`/`rngSeed`) |
-| Rust facade | 104 (`client/`) | `emit_parity_suite_rs.rs` — compile-time typed call assertions (`_assert_typed_surface` / blocking twin) using the same `rust_params` / `rust_ok_type` as the client emitter | Non-client suites go through `fixture-runner`, not the facade |
-| C ABI | **550** (full) | `emit_parity_suite_c.rs` — link-time ABI refs + per-op dispatch presence + sequential probe of every `split_path_refs` key. The envelope reports only the first missing key, so the suite fills prior keys and asserts the next name; it does not change the production error path. C has no signatures, so argument order is observable only as that missing-key sequence. | Client wire asserts method/path/query/body, not headers (`ClientConfig` has no `clockMs`/`rngSeed`, same caveat as Go) |
+| Surface     | Fixtures replayed      | Signature-parity suite                                                                                                                                                                                                                                                                                                                                                      | Notable gap                                                                                                            |
+| ----------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Python      | 550 (full)             | `emit_parity_suite_py.rs` — exact method census + `(self, args_json)` signature + awaitable vs blocking-str matrix + `__init__.pyi` AST cross-check. Per-op param names do not exist at the JSON envelope, so argument order cannot be asserted at runtime.                                                                                                                 | —                                                                                                                      |
+| Ruby        | 550 (full)             | `emit_parity_suite_rb.rs` — presence + exact `Method#parameters` keyword arity (ceiling)                                                                                                                                                                                                                                                                                    | —                                                                                                                      |
+| TypeScript  | 550 via the JS harness | `emit_parity_suite_ts.rs` — `expectTypeOf` full method types (ceiling); runtime defaults compared to `withRetry` / `retryNextDelayMs` / paywall TTL                                                                                                                                                                                                                         | napi/WASM binaries are not fixture-replayed for client ops in CI (webhook-only smoke)                                  |
+| Go          | **550** (full)         | `emit_parity_suite_go.rs` — reflect arity + per-slot `In(i)`/`Out(i)` types + exact exported-method census (`Close` allow-listed). Reflect never yields param names.                                                                                                                                                                                                        | Client wire asserts method/path only (`ClientConfig` has no `clockMs`/`rngSeed`)                                       |
+| Rust facade | 104 (`client/`)        | `emit_parity_suite_rs.rs` — compile-time typed call assertions (`_assert_typed_surface` / blocking twin) using the same `rust_params` / `rust_ok_type` as the client emitter                                                                                                                                                                                                | Non-client suites go through `fixture-runner`, not the facade                                                          |
+| C ABI       | **550** (full)         | `emit_parity_suite_c.rs` — link-time ABI refs + per-op dispatch presence + sequential probe of every `split_path_refs` key. The envelope reports only the first missing key, so the suite fills prior keys and asserts the next name; it does not change the production error path. C has no signatures, so argument order is observable only as that missing-key sequence. | Client wire asserts method/path/query/body, not headers (`ClientConfig` has no `clockMs`/`rngSeed`, same caveat as Go) |
 
 Two conclusions. First, “add native-language facade tests” is mostly
 **gap-closing**, not greenfield — Python and Ruby already do the thing. Second,
@@ -297,17 +297,17 @@ started. Generating the harness makes full coverage the cheap default.
 
 The six components each harness hand-rolls map onto emitter output:
 
-| Component | Derivation |
-| --- | --- |
-| Dispatch table | `IrBindingSymbol` (`core`, `args`, sync/async, per-language name) — same data Phase 1’s registry emitter consumes |
-| Name casing | `names.py` / `names.rb` / `dispatch.ToPascal` are the manifest’s casing rules restated per language |
-| Fixture loader, comparison/normalization, stub backend, clock patch | Structurally identical across languages; one template per surface |
+| Component                                                           | Derivation                                                                                                        |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Dispatch table                                                      | `IrBindingSymbol` (`core`, `args`, sync/async, per-language name) — same data Phase 1’s registry emitter consumes |
+| Name casing                                                         | `names.py` / `names.rb` / `dispatch.ToPascal` are the manifest’s casing rules restated per language               |
+| Fixture loader, comparison/normalization, stub backend, clock patch | Structurally identical across languages; one template per surface                                                 |
 
 Order so each step is independently shippable:
 
 1. **Python first.** Generate the harness for a surface that already has full
    coverage, and require all 550 fixtures to stay green. Validates the emitter
-   against a known-good baseline before it is used to *add* coverage.
+   against a known-good baseline before it is used to _add_ coverage.
    **Landed:** `emit_conformance_py.rs` + `assets/conformance-py-emit.snapshot.json`
    (`--py-conformance-out`); header-only ratchet vs the hand-written
    `sdks/python/tests/contract/*.py`.
@@ -401,7 +401,7 @@ survives as the language-neutral interchange every other runner consumes.
   executing the implementation against a human-written input can only ever
   confirm that the core does what the core does.
 - **proptest cross-binding replay — orthogonal, not an alternative.** Generated
-  inputs plus recorded outputs replayed across bindings test *marshalling*
+  inputs plus recorded outputs replayed across bindings test _marshalling_
   parity (unicode, big numbers, absent-vs-null), never semantics. Can land
   independently.
 
@@ -410,10 +410,9 @@ survives as the language-neutral interchange every other runner consumes.
 1. **The fixtures are now the only executable record of the behavior they
    captured.** Steps 52 and 53 deleted every superseded TS semantic
    implementation (`verifyWebhookTs`, `timingSafeEqual`, `calculateDelayTs`,
-   the `paywall-*-ts` modules, `tsFallback`, `SOLVAPAY_IMPL`, and all client
+   the `paywall-*-ts` modules, `tsFallback`, the deleted `SOLVAPAY_IMPL` flag, and all client
    `fetch` bodies). `tools/conformance/lib/superseded-server-ts-check.ts` currently
    reports `OK`. There is no TypeScript oracle left:
-
    - `sdks/typescript/server/src/edge.ts` calls `verifyWebhookWasm`, which loads the
      binding, injects `Math.floor(Date.now()/1000)`, calls the **sync** Rust
      `verifyWebhook` export, and `JSON.parse`s the result. Zero `crypto.subtle`
@@ -448,7 +447,7 @@ having.
 
 ## The review gate
 
-The attribute is a *better* forcing function than YAML: it lives next to the
+The attribute is a _better_ forcing function than YAML: it lives next to the
 fn, in the same PR as the implementation. `binding-symbols.snapshot.json` stays
 the drift-gated dump reviewers already know how to read.
 

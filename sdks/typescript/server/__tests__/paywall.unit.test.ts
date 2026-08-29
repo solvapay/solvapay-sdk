@@ -301,7 +301,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls).toHaveLength(1)
     })
 
-    it('swallows trackUsage errors so tool calls never fail on tracking outages', async () => {
+    it('surfaces trackUsage errors instead of swallowing them', async () => {
       mockApiClient.trackUsage = (async () => {
         throw new Error('backend 503')
       }) as unknown as typeof mockApiClient.trackUsage
@@ -310,9 +310,9 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
-      await expect(protectedHandler({ auth: { customer_ref: 'test_user' } })).resolves.toEqual({
-        success: true,
-      })
+      await expect(protectedHandler({ auth: { customer_ref: 'test_user' } })).rejects.toThrow(
+        'backend 503',
+      )
     })
   })
 
@@ -680,7 +680,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls[0].metadata?.action).toBe('requests')
     })
 
-    it('should use meterName from checkLimits response as action', async () => {
+    it('should use the start-event meter name as action', async () => {
       const originalCheckLimits = mockApiClient.checkLimits.bind(mockApiClient)
       mockApiClient.checkLimits = async (params: any) => {
         const result = await originalCheckLimits(params)
@@ -693,7 +693,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
 
       await protectedHandler({ auth: { customer_ref: 'test_user' } })
 
-      expect(mockApiClient.trackUsageCalls[0].metadata?.action).toBe('api_calls')
+      expect(mockApiClient.trackUsageCalls[0].metadata?.action).toBe('tokens')
     })
 
     it('should include outcome and requestId in usage tracking', async () => {
@@ -960,6 +960,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         product: 'test-product',
         checkoutUrl: 'https://example.com/checkout',
         message: 'Upgrade required',
+        shortMessage: 'Payment required',
       })
 
       expect(error.name).toBe('PaywallError')
@@ -969,6 +970,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         product: 'test-product',
         checkoutUrl: 'https://example.com/checkout',
         message: 'Upgrade required',
+        shortMessage: 'Payment required',
       })
     })
 
@@ -977,6 +979,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
         kind: 'activation_required',
         product: 'prd_a',
         message: 'Activate first',
+        shortMessage: 'Activation required',
         checkoutUrl: 'https://example.com/confirm',
         plans: [{ reference: 'pln_1' }],
         productDetails: { name: 'P', ref: 'prd_a', provider: 'pv' },
@@ -988,6 +991,10 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
 
     it('should propagate API client errors without swallowing them', async () => {
       const faultyApiClient = {
+        getCustomer: vi.fn().mockResolvedValue({
+          customerRef: 'cus_test_user',
+          email: 'test_user@example.com',
+        }),
         checkLimits: vi.fn().mockRejectedValue(new Error('API Error')),
         trackUsage: vi.fn().mockResolvedValue(undefined),
       }
@@ -1005,25 +1012,16 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       )
     })
 
-    it('should log but not throw when usage tracking fails', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
+    it('should propagate usage tracking failures', async () => {
       mockApiClient.trackUsage = vi.fn().mockRejectedValue(new Error('Tracking failed'))
 
       const handler = vi.fn().mockResolvedValue({ success: true })
       const payable = solvaPay.payable({ product: 'test' })
       const protectedHandler = await payable.function(handler)
 
-      const result = await protectedHandler({ auth: { customer_ref: 'test_user' } })
-
-      expect(result).toEqual({ success: true })
-
-      // trackUsage is fire-and-forget; flush the microtask queue for the error log
-      await vi.waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith('Usage tracking failed:', expect.any(Error))
-      })
-
-      consoleErrorSpy.mockRestore()
+      await expect(protectedHandler({ auth: { customer_ref: 'test_user' } })).rejects.toThrow(
+        'Tracking failed',
+      )
     })
   })
 

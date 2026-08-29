@@ -12,7 +12,8 @@
         "checkoutUrl": "https://checkout.example/activate",
         "message": "Activate a plan to continue",
         "confirmationUrl": "https://checkout.example/confirm",
-        "plans": []
+        "plans": [],
+        "shortMessage": "Activation required"
       }
     }
   },

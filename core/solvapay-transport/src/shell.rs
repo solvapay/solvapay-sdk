@@ -10,6 +10,8 @@ use std::time::Duration;
 use serde_json::Value;
 use solvapay_core::{RetryPolicy, SdkError};
 
+pub use solvapay_core::random9_from_f64;
+
 use crate::http::{HeaderName, HttpRequest, Method};
 use crate::transport::{BoxFuture, Transport};
 
@@ -386,20 +388,6 @@ pub fn mulberry32(seed: u32) -> impl Fn() -> f64 + Send + Sync {
     }
 }
 
-/// JS `Math.random().toString(36).substr(2, 9)` fragment from a unit-interval float.
-///
-/// # Arguments
-///
-/// * `n` - Float in `[0, 1)` (typically from [`mulberry32`]).
-///
-/// # Returns
-///
-/// Nine base-36 characters.
-pub fn random9_from_f64(n: f64) -> String {
-    let full = js_number_to_string_36(n);
-    full.chars().skip(2).take(9).collect()
-}
-
 /// Renders an auto idempotency key from a manifest format.
 ///
 /// # Arguments
@@ -497,32 +485,6 @@ fn default_random() -> f64 {
 /// JS `Math.imul` — signed 32-bit multiply, result as `u32` bits.
 fn js_imul(a: u32, b: u32) -> u32 {
     (a as i32).wrapping_mul(b as i32) as u32
-}
-
-/// Approximate JS `Number.prototype.toString(36)` for values in `[0, 1)`.
-fn js_number_to_string_36(n: f64) -> String {
-    // Integer part is always 0 for unit-interval floats used by Math.random.
-    let mut out = String::from("0.");
-    let mut x = n.fract().abs();
-    for _ in 0..20 {
-        x *= 36.0;
-        let digit = x.floor() as u32;
-        out.push(base36_digit(digit.min(35)));
-        x -= f64::from(digit);
-        if x <= 0.0 {
-            break;
-        }
-    }
-    out
-}
-
-/// Maps `0..=35` to a base-36 digit character (`0-9a-z`).
-fn base36_digit(n: u32) -> char {
-    match n {
-        0..=9 => char::from(b'0' + n as u8),
-        10..=35 => char::from(b'a' + (n as u8 - 10)),
-        _ => '0',
-    }
 }
 
 /// Joins origin + path + sorted form-urlencoded query string.

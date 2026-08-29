@@ -91,6 +91,60 @@ pub fn try_repo_root() -> Result<PathBuf> {
     try_repo_root_from(Path::new(env!("CARGO_MANIFEST_DIR")))
 }
 
+/// One substring that must not appear in an external-generated path.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ForbidPattern {
+    /// Repo-root-relative file to scan.
+    pub path: String,
+    /// Substring that must not appear.
+    pub pattern: String,
+    /// Human-readable reason printed on hit.
+    pub reason: String,
+}
+
+/// Marker-carrying file that is not a generated artifact.
+#[derive(Debug, Clone, Deserialize)]
+pub struct MarkerExemption {
+    /// Glob relative to the repo root.
+    pub pattern: String,
+    /// Why this file may mention the marker without being generated output.
+    pub reason: String,
+}
+
+/// Artifact owned by an external toolchain (not dto-gen).
+#[derive(Debug, Clone, Deserialize)]
+pub struct ExternalGeneratedEntry {
+    /// Stable id used by tests and the runner.
+    pub id: String,
+    /// Repo-root-relative paths this toolchain writes.
+    pub paths: Vec<String>,
+    /// Shell command that reproduces `paths`.
+    pub generator: String,
+    /// Directory the generator runs in, repo-root-relative.
+    pub cwd: Option<String>,
+    /// Marker substring required in every text path; `None` when unmarkable.
+    pub marker: Option<String>,
+    /// `gitDiff` (in-place) or `command` (self-check).
+    #[serde(default = "default_verify")]
+    pub verify: String,
+    /// Self-check command, required when `verify` is `command`.
+    #[serde(rename = "verifyCommand")]
+    pub verify_command: Option<String>,
+    /// Binary: skip marker, use the sha256 registry.
+    #[serde(default)]
+    pub binary: bool,
+    /// Output is not bit-stable across hosts — drift warns instead of failing.
+    #[serde(rename = "nonDeterministic", default)]
+    pub non_deterministic: bool,
+    /// Substrings that must not appear.
+    #[serde(rename = "forbidPatterns", default)]
+    pub forbid_patterns: Vec<ForbidPattern>,
+}
+
+fn default_verify() -> String {
+    "gitDiff".to_string()
+}
+
 /// One dto-gen / drift artifact from the `generated:` list.
 #[derive(Debug, Clone, Deserialize)]
 pub struct GeneratedEntry {
@@ -142,6 +196,15 @@ pub struct Manifest {
     pub generated: Vec<GeneratedEntry>,
     /// Ordered generated ids matching today's `GENERATED_PATHS`.
     pub drift: Vec<String>,
+    /// Artifacts owned by external toolchains, not dto-gen.
+    #[serde(rename = "externalGenerated", default)]
+    pub external_generated: Vec<ExternalGeneratedEntry>,
+    /// `shasum -a 256` registry for binary artifacts.
+    #[serde(rename = "sha256Registry", default)]
+    pub sha256_registry: Option<String>,
+    /// Marker-carrying files that are not generated artifacts.
+    #[serde(rename = "markerExemptions", default)]
+    pub marker_exemptions: Vec<MarkerExemption>,
     /// Extra named paths (live report, fuzz corpus, allowlists).
     #[serde(default)]
     pub lookups: BTreeMap<String, String>,

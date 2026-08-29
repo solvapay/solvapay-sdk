@@ -363,7 +363,15 @@ export function useCheckoutFlow(opts: UseCheckoutFlowOptions): UseCheckoutFlowRe
     }
     setError(null)
     setStep('payment')
-  }, [balance, branch, locale, planCtx.currentPlanRef, runActivate, selectedPlanRef, selectedPlanShape])
+  }, [
+    balance,
+    branch,
+    locale,
+    planCtx.currentPlanRef,
+    runActivate,
+    selectedPlanRef,
+    selectedPlanShape,
+  ])
 
   const recordPaygSuccess = useCallback(
     (creditsAddedFromBackend?: number) => {

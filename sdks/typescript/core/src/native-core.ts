@@ -34,16 +34,28 @@ export { installNativeCoreApi, resetNativeCoreApiForTests }
 
 // --- business-details ---
 
+/**
+ * Validate seller business-details fields before submission.
+ * @returns Validation issues when present.
+ */
 export function validateBusinessDetails(
   input: BusinessDetailsInput,
 ): ValidateBusinessDetailsResult {
   return dispatchSync('validateBusinessDetails', input)
 }
 
+/**
+ * Derive the tax ID type for a business country.
+ * @returns Tax ID type string when known.
+ */
 export function deriveTaxIdType(country: SupportedBusinessCountry): TaxIdType {
   return dispatchSync('deriveTaxIdType', { country })
 }
 
+/**
+ * Resolve inclusive vs exclusive tax behavior for a currency/country pair.
+ * @returns Resolved tax behavior.
+ */
 export function resolveTaxBehavior(
   behavior: TaxBehavior,
   currency: string,
@@ -51,14 +63,26 @@ export function resolveTaxBehavior(
   return dispatchSync('resolveTaxBehavior', { behavior, currency })
 }
 
+/**
+ * Return an example tax ID string for a country.
+ * @returns Example tax ID string.
+ */
 export function getTaxIdExample(country: SupportedBusinessCountry): string {
   return dispatchSync('getTaxIdExample', { country })
 }
 
+/**
+ * Return the localized field label for a country tax ID.
+ * @returns Field label string.
+ */
 export function getTaxIdFieldLabel(country: SupportedBusinessCountry): string {
   return dispatchSync('getTaxIdFieldLabel', { country })
 }
 
+/**
+ * Return helper text describing the tax ID format for a country.
+ * @returns Helper text string.
+ */
 export function getTaxIdHelperText(country: SupportedBusinessCountry): string {
   return dispatchSync('getTaxIdHelperText', { country })
 }
@@ -70,14 +94,26 @@ export function getBusinessCountryOptions(): BusinessCountryOption[] {
 
 // --- credit-display ---
 
+/**
+ * Return how many minor units make one major unit for a currency.
+ * @returns Minor units per major unit.
+ */
 export function minorUnitsPerMajor(currency: string): number {
   return dispatchSync('minorUnitsPerMajor', { currency })
 }
 
+/**
+ * Return whether a currency uses zero decimal places.
+ * @returns True when the currency has zero decimal places.
+ */
 export function isZeroDecimalCurrency(currency: string): boolean {
   return dispatchSync('isZeroDecimalCurrency', { currency })
 }
 
+/**
+ * Convert credit units into display minor units for a currency.
+ * @returns Display amount in minor units.
+ */
 export function creditsToDisplayMinorUnits(input: {
   credits: number
   creditsPerMinorUnit: number
@@ -89,15 +125,23 @@ export function creditsToDisplayMinorUnits(input: {
 
 // --- seller-identity ---
 
-/** Fixture-visible accessor; const export keeps `as const` identity for types. */
+/** Map of seller tax identifier types to display labels. */
 export function getSellerTaxIdentifierDisplayLabelByType(): Record<TaxIdType, string> {
   return dispatchSync('SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE', {})
 }
 
+/**
+ * Return the display label for a seller tax identifier type.
+ * @returns Display label string.
+ */
 export function getSellerTaxIdentifierDisplayLabel(country: string | null | undefined): string {
   return dispatchSync('getSellerTaxIdentifierDisplayLabel', { country: country ?? null })
 }
 
+/**
+ * Resolve seller identity fields into a display projection.
+ * @returns Display projection for seller identity.
+ */
 export function resolveSellerIdentityDisplay(input: {
   country?: string | null
   vatNumber?: string | null

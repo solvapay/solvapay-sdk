@@ -86,6 +86,11 @@ class SignatureParityGeneratedTest < Minitest::Test
   EXPECTED_LIMITS_CACHE_TTL_MS = 10000
   EXPECTED_MAX_RETRIES = 2
   EXPECTED_INITIAL_DELAY_MS = 500
+  EXPECTED_CUSTOMER_DEDUP_TTL_MS = 60000
+  EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE = 1000
+  EXPECTED_ANONYMOUS_CUSTOMER_REF = "anonymous"
+  EXPECTED_REQUEST_ID_FORMAT = "solvapay_{epochMs}_{random9}"
+  EXPECTED_USAGE_ACTION_TYPE = "api_call"
 
   def test_all_41_client_operations_have_exact_keyword_signatures
     assert_equal 41, OPERATION_SIGNATURES.length
@@ -105,6 +110,11 @@ class SignatureParityGeneratedTest < Minitest::Test
 
   def test_runtime_defaults_are_exercised_through_host_bridge
     assert_equal EXPECTED_LIMITS_CACHE_TTL_MS, SolvaPay::DEFAULT_LIMITS_CACHE_TTL_MS
+    assert_equal EXPECTED_CUSTOMER_DEDUP_TTL_MS, SolvaPay::CUSTOMER_CACHE_TTL_MS
+    assert_equal EXPECTED_CUSTOMER_DEDUP_MAX_CACHE_SIZE, SolvaPay::CUSTOMER_DEDUP_MAX_CACHE_SIZE
+    assert_equal EXPECTED_ANONYMOUS_CUSTOMER_REF, SolvaPay::ANONYMOUS_CUSTOMER_REF
+    assert_equal EXPECTED_REQUEST_ID_FORMAT, SolvaPay::REQUEST_ID_FORMAT
+    assert_equal EXPECTED_USAGE_ACTION_TYPE, SolvaPay::USAGE_ACTION_TYPE
     original = SolvaPay::NativeDispatch.method(:call_sync)
     captured = nil
     SolvaPay::NativeDispatch.define_singleton_method(:call_sync) do |_name, args|

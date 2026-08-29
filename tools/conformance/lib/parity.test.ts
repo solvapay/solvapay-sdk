@@ -5,7 +5,13 @@ import {
   deriveNames,
   type SdkContractManifest,
 } from '../../shared/manifest-schema.js'
-import { checkParity, formatParityReport } from './parity.js'
+import {
+  cataloguedHelperEntries,
+  checkHelperParity,
+  checkMcpParity,
+  checkParity,
+  formatParityReport,
+} from './parity.js'
 
 const PURE_SYNC = {
   ts: 'sync' as const,
@@ -110,6 +116,11 @@ function stubManifest(): SdkContractManifest {
       retry: { maxRetries: 2, initialDelayMs: 500, backoff: 'fixed' },
       webhookToleranceSec: 300,
       limitsCacheTTLMs: 10000,
+      customerDedupTTLMs: 60000,
+      customerDedupMaxCacheSize: 1000,
+      anonymousCustomerRef: 'anonymous',
+      requestIdFormat: 'solvapay_{epochMs}_{random9}',
+      usageActionType: 'api_call',
       idempotencyKeyFormats: {
         payment: 'payment-{planRef}-{epochMs}-{random9}',
         topup: 'topup-{epochMs}-{random9}',
@@ -127,6 +138,13 @@ function stubManifest(): SdkContractManifest {
       },
     },
     reservedWords: { go: [], py: [], rb: [], rust: [], ts: [], c: [] },
+    mcp: {
+      mcpNarrate: {
+        names: deriveNames('mcpNarrate'),
+        sync: PURE_SYNC,
+        surface: 'syncOp',
+      },
+    },
   }
 }
 
@@ -233,6 +251,120 @@ describe('checkParity', () => {
       facadeMethods: completeFacadeMethods(),
     })
     expect(issues.some(i => i.kind === 'casing' && /checkLimits/.test(i.message))).toBe(true)
+  })
+
+  it('flags a catalogued mcp sync op missing from a language surface', () => {
+    const issues = checkMcpParity(stubManifest(), {
+      py: { symbols: new Set(), hasCallEnvelope: false },
+    })
+    expect(issues.some(i => i.kind === 'missing' && /mcpNarrate/.test(i.message))).toBe(true)
+  })
+
+  it('accepts snake_case python and ruby names for a camelCase mcp id', () => {
+    const issues = checkMcpParity(stubManifest(), {
+      py: { symbols: new Set(['mcp_narrate']), hasCallEnvelope: false },
+      rb: { symbols: new Set(['mcp_narrate']), hasCallEnvelope: false },
+    })
+    expect(issues.filter(i => / py | rb /.test(i.message))).toEqual([])
+  })
+
+  it('accepts a declared availability omission with a reason', () => {
+    const manifest = stubManifest()
+    manifest.mcp.paywallToolResult = {
+      names: deriveNames('paywallToolResult'),
+      sync: PURE_SYNC,
+      surface: 'layer2',
+      availability: {
+        c: {
+          omitted: true,
+          reason: 'Layer-2 payload builders are not on the production solvapay_call ABI.',
+        },
+      },
+    }
+    const issues = checkMcpParity(manifest, {
+      c: { symbols: new Set(), hasCallEnvelope: false },
+    })
+    expect(issues.some(i => /paywallToolResult/.test(i.message) && /c /.test(i.message))).toBe(
+      false,
+    )
+  })
+
+  it('accepts a declared handWritten availability with a reason', () => {
+    const manifest = stubManifest()
+    manifest.mcp.paywallToolResult = {
+      names: deriveNames('paywallToolResult'),
+      sync: PURE_SYNC,
+      surface: 'layer2',
+      availability: {
+        ts: {
+          handWritten: true,
+          reason: 'Install/dispatch stays in native-mcp.ts',
+        },
+      },
+    }
+    const issues = checkMcpParity(manifest, {
+      ts: { symbols: new Set(), hasCallEnvelope: false },
+    })
+    expect(issues.some(i => /paywallToolResult/.test(i.message) && /ts /.test(i.message))).toBe(
+      false,
+    )
+  })
+
+  it('flags an omission declared without a reason', () => {
+    const manifest = stubManifest()
+    manifest.mcp.paywallToolResult = {
+      names: deriveNames('paywallToolResult'),
+      sync: PURE_SYNC,
+      surface: 'layer2',
+      availability: {
+        c: { omitted: true, reason: '' },
+      },
+    }
+    const issues = checkMcpParity(manifest, {
+      c: { symbols: new Set(), hasCallEnvelope: false },
+    })
+    expect(issues.some(i => /omitted without a reason/.test(i.message))).toBe(true)
+  })
+
+  it('flags a layer-2 symbol present in bindings but absent from the mcp section', () => {
+    const issues = checkMcpParity(stubManifest(), {}, {
+      paywallToolResult: { section: 'MCP payload / descriptors' },
+    })
+    expect(issues.some(i => i.kind === 'extra' && /paywallToolResult/.test(i.message))).toBe(true)
+  })
+
+  it('cataloguedHelperEntries skips omitted and handWritten languages', () => {
+    const manifest = stubManifest()
+    manifest.coreHelpers.deriveTaxIdType = {
+      names: deriveNames('deriveTaxIdType'),
+      sync: PURE_SYNC,
+      params: [],
+      availability: {
+        c: { omitted: true, reason: 'not on the C ABI' },
+        rust: { handWritten: true, reason: 'host owned' },
+      },
+    }
+    const rows = cataloguedHelperEntries(manifest).filter(row => row.id === 'deriveTaxIdType')
+    expect(rows.some(row => row.lang === 'c')).toBe(false)
+    expect(rows.some(row => row.lang === 'rust')).toBe(false)
+    expect(rows.some(row => row.lang === 'ts')).toBe(true)
+  })
+
+  it('checkHelperParity reports missing helper names', () => {
+    const manifest = stubManifest()
+    manifest.coreHelpers.deriveTaxIdType = {
+      names: deriveNames('deriveTaxIdType'),
+      sync: PURE_SYNC,
+      params: [],
+    }
+    const issues = checkHelperParity(manifest, {
+      ts: new Set(),
+      py: new Set(),
+      rb: new Set(),
+      go: new Set(),
+      rust: new Set(),
+    })
+    expect(issues.some(i => i.kind === 'missing' && /deriveTaxIdType/.test(i.message))).toBe(true)
   })
 
   it('formatParityReport is actionable', () => {

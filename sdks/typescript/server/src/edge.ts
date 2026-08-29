@@ -12,12 +12,7 @@ import type { WebhookEvent } from './types/webhook'
 import { installMcpAdapterNative } from './adapters/mcp'
 import { installNativeDecisionApi } from './native-decisions'
 import type { PaywallStructuredContent, PaywallToolResult } from './types'
-import {
-  callWasmSync,
-  publishWasmSyncApi,
-  verifyWebhookWasm,
-  warmWasm,
-} from './wasm'
+import { callWasmSync, publishWasmSyncApi, verifyWebhookWasm, warmWasm } from './wasm'
 
 // Install WASM sync dispatch for the edge graph (Deno / Workers / edge-light).
 // The install is the gate — missing WASM fails fast. Node never loads this

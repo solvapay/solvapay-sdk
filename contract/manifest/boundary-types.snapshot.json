@@ -167,14 +167,15 @@
           {
             "rustName": "interval",
             "wireName": "interval",
-            "rustdoc": "`week`, `month`, or `year`.",
+            "rustdoc": "Recurring cadence of this cycle.",
             "optional": false,
             "skipSerializingIf": null,
             "serdeDefault": false,
             "serializeWith": null,
             "cfgFeature": null,
             "ty": {
-              "kind": "string"
+              "kind": "named",
+              "name": "BillingInterval"
             }
           },
           {
@@ -189,6 +190,39 @@
             "ty": {
               "kind": "f64"
             }
+          }
+        ]
+      }
+    },
+    "BillingInterval": {
+      "module": "pricing_options",
+      "rustdoc": "Recurring cadence of a billing cycle.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "snake_case",
+        "variants": [
+          {
+            "rustName": "Week",
+            "wireName": "week",
+            "rustdoc": "Weekly.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Month",
+            "wireName": "month",
+            "rustdoc": "Monthly.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Year",
+            "wireName": "year",
+            "rustdoc": "Yearly.",
+            "cfgFeature": null,
+            "fields": []
           }
         ]
       }
@@ -655,14 +689,15 @@
           {
             "rustName": "per",
             "wireName": "per",
-            "rustdoc": "`flat`, `unit`, or `seat`.",
+            "rustdoc": "Which quantity the amount is charged against.",
             "optional": false,
             "skipSerializingIf": null,
             "serdeDefault": false,
             "serializeWith": null,
             "cfgFeature": null,
             "ty": {
-              "kind": "string"
+              "kind": "named",
+              "name": "ChargePer"
             }
           },
           {
@@ -716,6 +751,39 @@
             "ty": {
               "kind": "bool"
             }
+          }
+        ]
+      }
+    },
+    "ChargePer": {
+      "module": "pricing_options",
+      "rustdoc": "Which quantity the amount is charged against.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "snake_case",
+        "variants": [
+          {
+            "rustName": "Flat",
+            "wireName": "flat",
+            "rustdoc": "A single amount for the whole plan.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Unit",
+            "wireName": "unit",
+            "rustdoc": "Amount per metered unit.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Seat",
+            "wireName": "seat",
+            "rustdoc": "Amount per seat.",
+            "cfgFeature": null,
+            "fields": []
           }
         ]
       }
@@ -986,6 +1054,586 @@
         ]
       }
     },
+    "CustomerSnapshot": {
+      "module": "gate_driver",
+      "rustdoc": "Merchant-facing customer projection from the last limits check.\n\nRust applies `creditBalance ?? 0` and `withinLimits ?? true` so hosts do not\nre-derive those defaults.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "customer_ref",
+            "wireName": "ref",
+            "rustdoc": "Backend customer ref.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "balance",
+            "wireName": "balance",
+            "rustdoc": "`creditBalance` from limits, or `0` when absent.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "remaining",
+            "wireName": "remaining",
+            "rustdoc": "Remaining allowance from limits (JSON `null` when absent).",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "value"
+            }
+          },
+          {
+            "rustName": "within_limits",
+            "wireName": "withinLimits",
+            "rustdoc": "`withinLimits` from limits, or `true` when absent.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "plan",
+            "wireName": "plan",
+            "rustdoc": "Plan field from limits; omitted when absent / JSON `null`.",
+            "optional": false,
+            "skipSerializingIf": "Value::is_null",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "value"
+            }
+          }
+        ]
+      }
+    },
+    "EnsureCustomerAction": {
+      "module": "ensure_customer",
+      "rustdoc": "Next host action or a terminal resolve.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "taggedEnum",
+        "tag": "kind",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "ReadCustomerCache",
+            "wireName": "readCustomerCache",
+            "rustdoc": "Host reads the customer cache map (no TTL compare).",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "key",
+                "wireName": "key",
+                "rustdoc": "Cache key.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "GetCustomer",
+            "wireName": "getCustomer",
+            "rustdoc": "Host calls `getCustomer`.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "by_external_ref",
+                "wireName": "byExternalRef",
+                "rustdoc": "Lookup by `externalRef`.",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "by_email",
+                "wireName": "byEmail",
+                "rustdoc": "Lookup by email.",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "CreateCustomer",
+            "wireName": "createCustomer",
+            "rustdoc": "Host calls `createCustomer` with this body.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "params",
+                "wireName": "params",
+                "rustdoc": "Complete create params.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "CreateCustomerParams"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "UpdateCustomer",
+            "wireName": "updateCustomer",
+            "rustdoc": "Host calls `updateCustomer`.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "customer_ref",
+                "wireName": "customerRef",
+                "rustdoc": "Backend customer ref to patch.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "patch",
+                "wireName": "patch",
+                "rustdoc": "Patch body.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "map",
+                  "value": {
+                    "kind": "value"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "Resolved",
+            "wireName": "resolved",
+            "rustdoc": "Terminal success. Host applies `cache` then returns `backendRef`.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "backend_ref",
+                "wireName": "backendRef",
+                "rustdoc": "Backend customer ref.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "cache",
+                "wireName": "cache",
+                "rustdoc": "Optional cache write (successes only; errors are never cached).",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "EnsureCustomerCacheWrite"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "EnsureCustomerCacheWrite": {
+      "module": "ensure_customer",
+      "rustdoc": "Cache write bundled onto [`EnsureCustomerAction::Resolved`].",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "key",
+            "wireName": "key",
+            "rustdoc": "Cache key.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "backend_ref",
+            "wireName": "backendRef",
+            "rustdoc": "Backend customer ref to store.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "timestamp_ms",
+            "wireName": "timestampMs",
+            "rustdoc": "Host `nowMs` — authoritative; hosts must not restamp.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "i64"
+            }
+          }
+        ]
+      }
+    },
+    "EnsureCustomerNextOutput": {
+      "module": "ensure_customer",
+      "rustdoc": "Driver output.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "state",
+            "wireName": "state",
+            "rustdoc": "State to pass into the next call.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "EnsureCustomerState"
+            }
+          },
+          {
+            "rustName": "action",
+            "wireName": "action",
+            "rustdoc": "Host action or terminal result.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "EnsureCustomerAction"
+            }
+          }
+        ]
+      }
+    },
+    "EnsureCustomerState": {
+      "module": "ensure_customer",
+      "rustdoc": "Driver state between ensure-customer steps.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "customer_ref",
+            "wireName": "customerRef",
+            "rustdoc": "App customer ref from `start`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "external_ref",
+            "wireName": "externalRef",
+            "rustdoc": "Optional explicit external ref (lookup/create key when set).",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "email",
+            "wireName": "email",
+            "rustdoc": "Optional explicit email.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "name",
+            "wireName": "name",
+            "rustdoc": "Optional display name.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "can_create_customer",
+            "wireName": "canCreateCustomer",
+            "rustdoc": "Host can call `createCustomer`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "can_update_customer",
+            "wireName": "canUpdateCustomer",
+            "rustdoc": "Host can call `updateCustomer`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "dedup_ttl_ms",
+            "wireName": "dedupTTLMs",
+            "rustdoc": "Dedup TTL in ms.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "i64"
+            }
+          },
+          {
+            "rustName": "cache_key",
+            "wireName": "cacheKey",
+            "rustdoc": "Cache map key (`externalRef` or `customerRef`).",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "pending",
+            "wireName": "pending",
+            "rustdoc": "Which result event the driver is waiting for.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "EnsurePending"
+            }
+          },
+          {
+            "rustName": "last_error",
+            "wireName": "lastError",
+            "rustdoc": "Last create/lookup error message (409 ladder).",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "pending_backend_ref",
+            "wireName": "pendingBackendRef",
+            "rustdoc": "Backend ref held across `updateCustomer`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "create_attempted",
+            "wireName": "createAttempted",
+            "rustdoc": "First `createCustomer` already issued in this session.",
+            "optional": false,
+            "skipSerializingIf": "std::ops::Not::not",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "generated_email_attempted",
+            "wireName": "generatedEmailAttempted",
+            "rustdoc": "Generated-email retry already issued.",
+            "optional": false,
+            "skipSerializingIf": "std::ops::Not::not",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          }
+        ]
+      }
+    },
+    "EnsurePending": {
+      "module": "ensure_customer",
+      "rustdoc": "In-flight step the next host event must complete.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "None",
+            "wireName": "none",
+            "rustdoc": "Terminal or short-circuit.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Cache",
+            "wireName": "cache",
+            "rustdoc": "Waiting for `customerCacheEntry`.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "LookupInitial",
+            "wireName": "lookupInitial",
+            "rustdoc": "Waiting for the initial `getCustomer` result.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Create",
+            "wireName": "create",
+            "rustdoc": "Waiting for the first `createCustomer` result.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "LookupConflictExternal",
+            "wireName": "lookupConflictExternal",
+            "rustdoc": "Waiting for post-409 lookup by external ref.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "LookupConflictEmail",
+            "wireName": "lookupConflictEmail",
+            "rustdoc": "Waiting for post-409 lookup by email.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "UpdateBackfill",
+            "wireName": "updateBackfill",
+            "rustdoc": "Waiting for `updateCustomer` backfill.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "CreateGeneratedEmail",
+            "wireName": "createGeneratedEmail",
+            "rustdoc": "Waiting for generated-email `createCustomer`.",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
     "FreshLimitsEvaluation": {
       "module": "paywall_decision",
       "rustdoc": "Cache-miss path evaluation after `checkLimits` returns.",
@@ -1069,9 +1717,9 @@
             ]
           },
           {
-            "rustName": "LookupCache",
-            "wireName": "lookupCache",
-            "rustdoc": "Host looks up the limits cache (applying TTL itself) and sends\n`cacheHit` or `cacheMiss`.",
+            "rustName": "ReadLimitsCache",
+            "wireName": "readLimitsCache",
+            "rustdoc": "Host reads the limits cache map (no TTL compare) and sends `limitsCacheEntry`.",
             "cfgFeature": null,
             "fields": [
               {
@@ -1163,24 +1811,11 @@
             ]
           },
           {
-            "rustName": "Done",
-            "wireName": "done",
-            "rustdoc": "Terminal allow or gate. Host applies `cache` / `track` then returns.",
+            "rustName": "Allow",
+            "wireName": "allow",
+            "rustdoc": "Terminal allow. Host applies `cache` then proceeds.",
             "cfgFeature": null,
             "fields": [
-              {
-                "rustName": "outcome",
-                "wireName": "outcome",
-                "rustdoc": "`\"allow\"` or `\"gate\"`.",
-                "optional": false,
-                "skipSerializingIf": null,
-                "serdeDefault": false,
-                "serializeWith": null,
-                "cfgFeature": null,
-                "ty": {
-                  "kind": "string"
-                }
-              },
               {
                 "rustName": "customer_ref",
                 "wireName": "customerRef",
@@ -1234,11 +1869,113 @@
                 }
               },
               {
-                "rustName": "gate",
-                "wireName": "gate",
-                "rustdoc": "Assembled gate when `outcome` is `\"gate\"`.",
+                "rustName": "customer",
+                "wireName": "customer",
+                "rustdoc": "Defaults already applied (`creditBalance ?? 0`, `withinLimits ?? true`).",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "CustomerSnapshot"
+                }
+              },
+              {
+                "rustName": "cache",
+                "wireName": "cache",
+                "rustdoc": "Optional cache mutation.",
                 "optional": true,
                 "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "GateCacheOp"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "Gate",
+            "wireName": "gate",
+            "rustdoc": "Terminal gate. Host applies `cache` / `track` then returns the gate.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "customer_ref",
+                "wireName": "customerRef",
+                "rustdoc": "Backend customer ref.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "product",
+                "wireName": "product",
+                "rustdoc": "Product reference.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "meter_name",
+                "wireName": "meterName",
+                "rustdoc": "Meter name.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "limits",
+                "wireName": "limits",
+                "rustdoc": "Last `checkLimits` body (or cached copy). Empty object when absent.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "value"
+                }
+              },
+              {
+                "rustName": "customer",
+                "wireName": "customer",
+                "rustdoc": "Defaults already applied (`creditBalance ?? 0`, `withinLimits ?? true`).",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "CustomerSnapshot"
+                }
+              },
+              {
+                "rustName": "gate",
+                "wireName": "gate",
+                "rustdoc": "Assembled paywall gate.",
+                "optional": false,
+                "skipSerializingIf": null,
                 "serdeDefault": false,
                 "serializeWith": null,
                 "cfgFeature": null,
@@ -1262,20 +1999,47 @@
                 }
               },
               {
-                "rustName": "track",
-                "wireName": "track",
-                "rustdoc": "Optional paywall usage track.",
-                "optional": true,
-                "skipSerializingIf": "Option::is_none",
+                "rustName": "request",
+                "wireName": "request",
+                "rustdoc": "Complete `trackUsage` body (`outcome: \"paywall\"`). Host POSTs this.",
+                "optional": false,
+                "skipSerializingIf": null,
                 "serdeDefault": false,
                 "serializeWith": null,
                 "cfgFeature": null,
                 "ty": {
-                  "kind": "named",
-                  "name": "GateTrackOp"
+                  "kind": "value"
                 }
               }
             ]
+          },
+          {
+            "rustName": "EmitUsage",
+            "wireName": "emitUsage",
+            "rustdoc": "Host POSTs `request` as `trackUsage` (success / fail / paywall).",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "request",
+                "wireName": "request",
+                "rustdoc": "Complete `trackUsage` body.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "value"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "SkipUsage",
+            "wireName": "skipUsage",
+            "rustdoc": "Handler failed with a paywall error — do not emit `outcome: \"fail\"`.",
+            "cfgFeature": null,
+            "fields": []
           }
         ]
       }
@@ -1338,7 +2102,7 @@
               {
                 "rustName": "timestamp",
                 "wireName": "timestamp",
-                "rustdoc": "Host `nowMs` at the miss.",
+                "rustdoc": "Host `nowMs` at the miss — authoritative; hosts must not restamp.",
                 "optional": false,
                 "skipSerializingIf": null,
                 "serdeDefault": false,
@@ -1346,6 +2110,32 @@
                 "cfgFeature": null,
                 "ty": {
                   "kind": "i64"
+                }
+              },
+              {
+                "rustName": "checkout_url",
+                "wireName": "checkoutUrl",
+                "rustdoc": "Projected from `limits.checkoutUrl` so hosts do not re-read it.",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "meter_name",
+                "wireName": "meterName",
+                "rustdoc": "Projected meter name for the cache entry.",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
                 }
               }
             ]
@@ -1519,6 +2309,19 @@
             "ty": {
               "kind": "string"
             }
+          },
+          {
+            "rustName": "limits_cache_ttl_ms",
+            "wireName": "limitsCacheTTLMs",
+            "rustdoc": "Limits-cache TTL in ms (`limitsCacheTTLMs`, default 10000).",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "i64"
+            }
           }
         ]
       }
@@ -1558,83 +2361,6 @@
             "ty": {
               "kind": "named",
               "name": "GateAction"
-            }
-          }
-        ]
-      }
-    },
-    "GateTrackOp": {
-      "module": "gate_driver",
-      "rustdoc": "Paywall usage track the host must fire on a gate outcome.",
-      "serde": "both",
-      "cfgFeature": null,
-      "shape": {
-        "kind": "struct",
-        "renameAll": "camelCase",
-        "fields": [
-          {
-            "rustName": "customer_ref",
-            "wireName": "customerRef",
-            "rustdoc": "Backend customer ref.",
-            "optional": false,
-            "skipSerializingIf": null,
-            "serdeDefault": false,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "string"
-            }
-          },
-          {
-            "rustName": "product_ref",
-            "wireName": "productRef",
-            "rustdoc": "Product reference.",
-            "optional": false,
-            "skipSerializingIf": null,
-            "serdeDefault": false,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "string"
-            }
-          },
-          {
-            "rustName": "action",
-            "wireName": "action",
-            "rustdoc": "Meter / action name.",
-            "optional": false,
-            "skipSerializingIf": null,
-            "serdeDefault": false,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "string"
-            }
-          },
-          {
-            "rustName": "outcome",
-            "wireName": "outcome",
-            "rustdoc": "Always `\"paywall\"` for this driver.",
-            "optional": false,
-            "skipSerializingIf": null,
-            "serdeDefault": false,
-            "serializeWith": null,
-            "cfgFeature": null,
-            "ty": {
-              "kind": "string"
-            }
-          },
-          {
-            "rustName": "duration_ms",
-            "wireName": "durationMs",
-            "rustdoc": "Elapsed ms from `start` (`max(0, nowMs - startedMs)`).",
-            "optional": false,
-            "skipSerializingIf": null,
-            "serdeDefault": false,
-            "serializeWith": "serialize_whole_f64",
-            "cfgFeature": null,
-            "ty": {
-              "kind": "f64"
             }
           }
         ]
@@ -2486,6 +3212,19 @@
             }
           },
           {
+            "rustName": "short_message",
+            "wireName": "shortMessage",
+            "rustdoc": "Kind-derived short label, echoed from the gate.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
             "rustName": "plans",
             "wireName": "plans",
             "rustdoc": "Activation-only: plans when present on the gate.",
@@ -2593,6 +3332,19 @@
             "rustName": "message",
             "wireName": "message",
             "rustdoc": "Frozen gate copy from [`build_gate_message`].",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "short_message",
+            "wireName": "shortMessage",
+            "rustdoc": "Kind-derived throw text (`\"Activation required\"` / `\"Payment required\"`).",
             "optional": false,
             "skipSerializingIf": null,
             "serdeDefault": false,
@@ -5087,6 +5839,44 @@
         }
       }
     },
+    "solvapay_core::ensure_customer::ensure_customer_next": {
+      "name": "ensure_customer_next",
+      "module": "ensure_customer",
+      "implTy": null,
+      "rustdoc": "Advance ensure-customer by one step.\n\n# Arguments\n\n* `state` - Previous [`EnsureCustomerNextOutput::state`], or `None` on `start`.\n* `event` - Host event tagged with `kind`.\n\n# Errors\n\n[`HelperErrorResult`] on malformed events, unexpected lookup/create\nfailures, missing create capability, or an unresolvable 409.",
+      "params": [
+        {
+          "rustName": "state",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "event",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "named",
+            "name": "EnsureCustomerNextOutput"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
     "solvapay_core::envelope::err_envelope": {
       "name": "err_envelope",
       "module": "envelope",
@@ -6332,6 +7122,19 @@
         }
       }
     },
+    "solvapay_core::paywall_gate::PaywallGateKind::short_message": {
+      "name": "short_message",
+      "module": "paywall_gate",
+      "implTy": "PaywallGateKind",
+      "rustdoc": "Frozen throw text for this kind (`\"Activation required\"` / `\"Payment required\"`).",
+      "params": [],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
     "solvapay_core::paywall_gate::build_paywall_gate": {
       "name": "build_paywall_gate",
       "module": "paywall_gate",
@@ -6957,6 +7760,50 @@
         }
       }
     },
+    "solvapay_core::random::iso8601_millis": {
+      "name": "iso8601_millis",
+      "module": "random",
+      "implTy": null,
+      "rustdoc": "RFC 3339 UTC with millisecond precision (`2026-08-25T15:04:05.123Z`).\n\n# Arguments\n\n* `epoch_ms` - Unix epoch milliseconds (negative values saturate to `0`).",
+      "params": [
+        {
+          "rustName": "epoch_ms",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "i64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
+    "solvapay_core::random::random9_from_f64": {
+      "name": "random9_from_f64",
+      "module": "random",
+      "implTy": null,
+      "rustdoc": "JS `Math.random().toString(36).substr(2, 9)` fragment from a unit-interval float.\n\n# Arguments\n\n* `n` - Float in `[0, 1)` (typically from a host `Math.random` / mulberry32).\n\n# Returns\n\nUp to nine base-36 characters.",
+      "params": [
+        {
+          "rustName": "n",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
     "solvapay_core::renewal::classify_cancel_error": {
       "name": "classify_cancel_error",
       "module": "renewal",
@@ -7251,6 +8098,28 @@
         "ty": {
           "kind": "named",
           "name": "UsageSnapshot"
+        }
+      }
+    },
+    "solvapay_core::usage::should_retry_usage_error": {
+      "name": "should_retry_usage_error",
+      "module": "usage",
+      "implTy": null,
+      "rustdoc": "Whether a `trackUsage` failure should be retried.\n\nMatches the TypeScript host predicate `error.message.includes('Customer not found')`.\n\n# Arguments\n\n* `message` - Error message string from the failed `trackUsage` call.\n\n# Returns\n\n`true` when the message contains `Customer not found`.",
+      "params": [
+        {
+          "rustName": "message",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
         }
       }
     },
