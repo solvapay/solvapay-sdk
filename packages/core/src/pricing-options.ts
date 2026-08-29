@@ -44,6 +44,24 @@ export interface BillingCycleLike {
   count?: number
 }
 
+/**
+ * One band of a tiered price. `[from, to)` in metered units, with `to:
+ * null` marking the unbounded top band. The rate rides an embedded
+ * per-unit `charge`, so a tier-priced meter carries NO standalone
+ * `per: 'unit'` charge — every reader that only looks at `charges()`
+ * sees a tiered plan as unpriced.
+ *
+ * A plan may price several meters, one band stack each; `tierBands`
+ * groups them, because the wire is a flat list of `tier` options with no
+ * grouping and no ordering guarantee.
+ */
+export interface TierLike {
+  from: number
+  to: number | null
+  mode: 'graduated' | 'volume'
+  charge: ChargeLike
+}
+
 function isRecord(value: unknown): value is PricingOptionLike {
   return typeof value === 'object' && value !== null
 }
@@ -120,6 +138,93 @@ export function billingCycle(priced: PricedLike | null | undefined): BillingCycl
   return null
 }
 
+function asTier(option: PricingOptionLike): TierLike | null {
+  if (option.kind !== 'tier') return null
+  const { from, to, mode } = option
+  if (typeof from !== 'number') return null
+  if (to !== null && typeof to !== 'number') return null
+  if (mode !== 'graduated' && mode !== 'volume') return null
+  if (!isRecord(option.charge)) return null
+  const charge = asCharge({ ...option.charge, kind: 'charge' })
+  if (!charge) return null
+  return { from, to: to as number | null, mode, charge }
+}
+
+/**
+ * The tier bands a plan prices `meter` with, ordered by band floor.
+ *
+ * Without a `meter` this returns the first tiered meter's stack — the
+ * common single-meter case. It never mixes two meters' bands: on the
+ * wire they interleave, and reading them as one stack prices usage from
+ * whichever meter happens to sort first.
+ *
+ * Empty when the plan has no bands (for that meter).
+ */
+export function tierBands(
+  priced: PricedLike | null | undefined,
+  meter?: string,
+): TierLike[] {
+  const all = optionsOf(priced)
+    .map(asTier)
+    .filter((tier): tier is TierLike => tier !== null)
+  if (all.length === 0) return []
+  const target = meter ?? all[0].charge.meter
+  return all
+    .filter(tier => (target == null ? true : tier.charge.meter === target))
+    .sort((a, b) => a.from - b.from)
+}
+
+/** Every meter the plan prices with tier bands, in first-seen order. */
+export function tierMeters(priced: PricedLike | null | undefined): string[] {
+  const seen: string[] = []
+  for (const option of optionsOf(priced)) {
+    const tier = asTier(option)
+    const meter = tier?.charge.meter
+    if (meter && !seen.includes(meter)) seen.push(meter)
+  }
+  return seen
+}
+
+/** What one metered unit costs, and whether that rate is the first of several bands. */
+export interface UsageRate extends ChargeLike {
+  /**
+   * True when the plan prices this meter in bands, so `amountMinor` is
+   * the ENTRY rate and later units may cost more or less. Surfaces
+   * should present it as a floor ("from $0.02 / call"), never as the
+   * price of every unit.
+   */
+  tiered: boolean
+}
+
+/**
+ * The rate a plan charges for one metered unit — a standalone per-unit
+ * charge, else the entry band of the meter's tier stack. `null` when the
+ * plan prices no usage.
+ *
+ * This is the reader every "what does a call cost" surface wants.
+ * `perUnitCharge` alone answers `null` for a tiered plan, which is why
+ * tiered plans rendered no price at all.
+ */
+export function usageRate(
+  priced: PricedLike | null | undefined,
+  meter?: string,
+): UsageRate | null {
+  // A ZERO-rate per-unit charge does not price the meter — it exists to anchor
+  // an allowance to one — so it must not short-circuit the bands. A plan
+  // carrying both (authorable through the API, though the builder now blocks
+  // it) would otherwise report a rate of 0 and render no price at all.
+  const charge = perUnitCharge(priced, meter)
+  if (charge && charge.amountMinor > 0) return { ...charge, tiered: false }
+
+  // Lead with the first band that actually charges: a stack opening with a free
+  // band is still a paid plan, and "from $0.00" is not its price.
+  const priced_ = tierBands(priced, meter).filter(band => band.charge.amountMinor > 0)
+  if (priced_.length > 0) {
+    return { ...priced_[0].charge, tiered: priced_.length > 1 }
+  }
+  return charge ? { ...charge, tiered: false } : null
+}
+
 /** Free trial length in days, or `null` when the plan has no trial. */
 export function trialDays(priced: PricedLike | null | undefined): number | null {
   for (const option of optionsOf(priced)) {
@@ -149,6 +254,11 @@ export function includedUnits(
 export function meterName(priced: PricedLike | null | undefined): string | null {
   const fromCharge = perUnitCharge(priced)?.meter
   if (fromCharge) return fromCharge
+  // A tier-priced meter has no standalone per-unit charge, and a pure
+  // pay-as-you-go tier plan carries no limit either, so without this a
+  // tiered plan reported no meter at all.
+  const fromTier = tierMeters(priced)[0]
+  if (fromTier) return fromTier
   const fromLimit = firstLimit(priced)?.meter
   return fromLimit ?? null
 }
@@ -161,7 +271,7 @@ export function meterName(priced: PricedLike | null | undefined): string | null 
 export function countsUsage(priced: PricedLike | null | undefined): boolean {
   if (perUnitCharge(priced) != null) return true
   if (includedUnits(priced) != null) return true
-  return optionsOf(priced).some(option => option.kind === 'tier')
+  return tierBands(priced).length > 0
 }
 
 function firstLimit(
@@ -227,7 +337,11 @@ export function creditsPerUnitFromBalance(
   balance: BalancePegLike | null | undefined,
   meter?: string,
 ): number | null {
-  const charge = perUnitCharge(priced, meter)
+  // `usageRate` falls back to the entry band, so a tiered plan reports the
+  // credits its FIRST unit costs instead of nothing. On a graduated stack
+  // later units cost their own bands' rates — callers presenting this
+  // figure should frame it as a floor (see `tiered` on the rate).
+  const charge = usageRate(priced, meter)
   if (!charge || !(charge.amountMinor > 0)) return null
 
   const displayCurrency = balance?.displayCurrency

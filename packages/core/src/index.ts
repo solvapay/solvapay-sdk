@@ -125,12 +125,17 @@ export {
   meterName,
   peggedCreditsPerUnit,
   perUnitCharge,
+  tierBands,
+  tierMeters,
   trialDays,
+  usageRate,
   type BalancePegLike,
   type BillingCycleLike,
   type ChargeLike,
   type PricedLike,
   type PricingOptionLike,
+  type TierLike,
+  type UsageRate,
 } from './pricing-options'
 
 export {
