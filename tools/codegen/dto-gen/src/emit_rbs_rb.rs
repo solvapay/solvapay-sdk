@@ -276,13 +276,17 @@ fn helper_rbs_params(entry: &IrEntryPoint, binding: Option<&IrBindingSymbol>) ->
     if args.is_empty() {
         return "()".into();
     }
+    let required: Vec<bool> = args.iter().map(|arg| arg.required).collect();
     let params = args
         .iter()
-        .map(|arg| {
+        .enumerate()
+        .map(|(i, arg)| {
             let name = snake(&arg.name);
             let ty = rbs_boundary_type(&arg.ty);
             if arg.required {
                 format!("{name}: {ty}")
+            } else if crate::emit_helpers::trailing_has_required(&required, i) {
+                format!("{name}: {ty}?")
             } else {
                 format!("?{name}: {ty}")
             }
@@ -295,14 +299,18 @@ fn rbs_params(entry: &IrEntryPoint, keywords: bool) -> String {
     if entry.params.is_empty() {
         return "()".into();
     }
+    let required: Vec<bool> = entry.params.iter().map(|param| param.required).collect();
     let params = entry
         .params
         .iter()
-        .map(|param| {
+        .enumerate()
+        .map(|(i, param)| {
             let ty = rbs_type(&param.ty);
             if keywords {
                 if param.required {
                     format!("{}: {ty}", param.names.rb)
+                } else if crate::emit_helpers::trailing_has_required(&required, i) {
+                    format!("{}: {ty}?", param.names.rb)
                 } else {
                     format!("?{}: {ty}", param.names.rb)
                 }

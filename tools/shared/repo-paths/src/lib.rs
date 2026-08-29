@@ -141,6 +141,7 @@ pub struct ExternalGeneratedEntry {
     pub forbid_patterns: Vec<ForbidPattern>,
 }
 
+/// Default `verify` mode when the YAML omits it (`gitDiff`).
 fn default_verify() -> String {
     "gitDiff".to_string()
 }

@@ -110,9 +110,11 @@ pub fn emit_pyi_py(ir: &Ir) -> GenResult<String> {
         }
         let public_args: Vec<&IrBindingArg> =
             binding.args.iter().filter(|a| !a.host_injected).collect();
+        let required: Vec<bool> = public_args.iter().map(|arg| arg.required).collect();
         let params = public_args
             .iter()
-            .map(|arg| {
+            .enumerate()
+            .map(|(i, arg)| {
                 let name = snake(&arg.name);
                 let ty = match arg.ty {
                     IrBoundaryType::String | IrBoundaryType::StringOpt => "str",
@@ -123,6 +125,8 @@ pub fn emit_pyi_py(ir: &Ir) -> GenResult<String> {
                 };
                 if arg.required {
                     format!("{name}: {ty}")
+                } else if crate::emit_helpers::trailing_has_required(&required, i) {
+                    format!("{name}: {ty} | None")
                 } else {
                     format!("{name}: {ty} | None = None")
                 }

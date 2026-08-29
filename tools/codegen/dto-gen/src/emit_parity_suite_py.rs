@@ -33,13 +33,15 @@ pub fn emit_parity_suite_py(ir: &Ir) -> GenResult<String> {
     out.push_str("from pathlib import Path\n\n");
     out.push_str("import pytest\n\n");
     out.push_str("from solvapay.errors import PaywallError, SolvaPayError\n");
-    out.push_str("from solvapay.defaults import (\n\
+    out.push_str(
+        "from solvapay.defaults import (\n\
     _ANONYMOUS_CUSTOMER_REF,\n\
     _CUSTOMER_DEDUP_MAX_CACHE_SIZE,\n\
     _CUSTOMER_DEDUP_TTL_MS,\n\
     _REQUEST_ID_FORMAT,\n\
     _USAGE_ACTION_TYPE,\n\
-)\n");
+)\n",
+    );
     out.push_str("from solvapay.facade import create_solvapay\n\n");
 
     out.push_str("OPERATION_NAMES = (\n");

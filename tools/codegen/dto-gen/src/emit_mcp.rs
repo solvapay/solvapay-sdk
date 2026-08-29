@@ -191,7 +191,11 @@ pub fn emit_mcp_go(ir: &Ir) -> GenResult<String> {
             let export = layer2_wasm_export(ir, entry)?;
             let _ = writeln!(out, "\treturn callLayer2(ctx, {export:?}, call_args)\n}}\n");
         } else {
-            let _ = writeln!(out, "\treturn CallSync(ctx, {:?}, call_args)\n}}\n", entry.id);
+            let _ = writeln!(
+                out,
+                "\treturn CallSync(ctx, {:?}, call_args)\n}}\n",
+                entry.id
+            );
         }
     }
     Ok(out)
@@ -261,7 +265,11 @@ pub fn emit_mcp_ts(ir: &Ir) -> GenResult<String> {
                 entry.names.ts
             );
         } else {
-            let _ = writeln!(out, "  return callMcpSyncOp('{}', call_args)\n}}\n", entry.id);
+            let _ = writeln!(
+                out,
+                "  return callMcpSyncOp('{}', call_args)\n}}\n",
+                entry.id
+            );
         }
     }
     Ok(out)

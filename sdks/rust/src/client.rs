@@ -242,9 +242,8 @@ impl Client {
     }
 
     pub(crate) async fn post_usage_request(&self, request: Value) -> Result<(), SdkError> {
-        let params: TrackUsageRequest = serde_json::from_value(request).map_err(|err| {
-            SdkError::transport(format!("gate_next usage request: {err}"), false)
-        })?;
+        let params: TrackUsageRequest = serde_json::from_value(request)
+            .map_err(|err| SdkError::transport(format!("gate_next usage request: {err}"), false))?;
         with_retry_if(
             || self.inner.api.track_usage(params.clone()),
             RetryPolicy::default(),
@@ -489,10 +488,7 @@ impl Client {
                         }
                     }
                 }
-                EnsureCustomerAction::Resolved {
-                    backend_ref,
-                    cache,
-                } => {
+                EnsureCustomerAction::Resolved { backend_ref, cache } => {
                     if let Some(write) = cache {
                         let mut gate = self.inner.gate.lock().await;
                         insert_customer_cache(
@@ -547,9 +543,9 @@ pub(crate) fn now_ms() -> u64 {
 
 fn sdk_error_message(err: &SdkError) -> String {
     match err {
-        SdkError::Api { message, .. } | SdkError::Paywall { message, .. } | SdkError::Transport { message, .. } => {
-            message.clone()
-        }
+        SdkError::Api { message, .. }
+        | SdkError::Paywall { message, .. }
+        | SdkError::Transport { message, .. } => message.clone(),
         other => format!("{other:?}"),
     }
 }

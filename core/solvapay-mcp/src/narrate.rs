@@ -3,8 +3,9 @@
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use solvapay_core::{
-    billing_cycle, credits_per_unit_from_balance, credits_to_display_minor_units, format_major_fixed,
-    headline_charges, is_zero_decimal_currency, to_major_units, trial_days, CreditsToDisplayInput,
+    billing_cycle, credits_per_unit_from_balance, credits_to_display_minor_units,
+    format_major_fixed, headline_charges, is_zero_decimal_currency, to_major_units, trial_days,
+    CreditsToDisplayInput,
 };
 
 /// Input for [`mcp_narrate`].

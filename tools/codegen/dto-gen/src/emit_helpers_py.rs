@@ -56,13 +56,17 @@ pub fn emit_helpers_py(ir: &Ir) -> GenResult<String> {
 
 fn emit_py_fn(out: &mut String, entry: &IrEntryPoint, args: &[IrBindingArg], native_name: &str) {
     let public_args: Vec<&IrBindingArg> = args.iter().filter(|a| !a.host_injected).collect();
+    let required: Vec<bool> = public_args.iter().map(|arg| arg.required).collect();
     let params = public_args
         .iter()
-        .map(|arg| {
+        .enumerate()
+        .map(|(i, arg)| {
             let name = snake(&arg.name);
             let ty = py_arg_type(arg);
             if arg.required {
                 format!("{name}: {ty}")
+            } else if crate::emit_helpers::trailing_has_required(&required, i) {
+                format!("{name}: {ty} | None")
             } else {
                 format!("{name}: {ty} | None = None")
             }

@@ -193,7 +193,7 @@ module SolvaPay
   def self.evaluate_product_readiness: () -> untyped
   def self.format_price: (amount_minor: Float, currency: String, ?interval: String, ?interval_count: Float, ?free: String, ?currency_display: String) -> untyped
   def self.format_subtotal_label: (?treatment: String) -> untyped
-  def self.format_vat_summary_label: (?treatment: String, tax_rate: Float) -> untyped
+  def self.format_vat_summary_label: (treatment: String?, tax_rate: Float) -> untyped
   def self.get_seller_tax_identifier_display_label: (?country: String) -> untyped
   def self.get_tax_id_example: (country: String) -> untyped
   def self.get_tax_id_field_label: (country: String) -> untyped

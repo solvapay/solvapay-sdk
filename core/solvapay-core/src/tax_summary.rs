@@ -44,6 +44,7 @@ pub fn tax_not_collected_note() -> String {
     TAX_NOT_COLLECTED_NOTE.to_owned()
 }
 
+/// Trim and drop empty treatment strings so missing and blank match.
 fn treatment_key(treatment: Option<&str>) -> Option<&str> {
     treatment.map(str::trim).filter(|value| !value.is_empty())
 }

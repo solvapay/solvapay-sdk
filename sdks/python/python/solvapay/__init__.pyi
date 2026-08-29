@@ -594,7 +594,7 @@ def format_subtotal_label(treatment: str | None = None) -> Any:
     @returns Subtotal or Subtotal (excl. VAT).
     """
     ...
-def format_vat_summary_label(treatment: str | None = None, tax_rate: float) -> Any:
+def format_vat_summary_label(treatment: str | None, tax_rate: float) -> Any:
     """Return the VAT row label for a treatment and rate.
     @returns VAT label string.
     """

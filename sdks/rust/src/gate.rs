@@ -2,9 +2,9 @@
 
 #![allow(clippy::missing_docs_in_private_items)]
 
+use crate::client::Client;
 use serde_json::Value;
 use solvapay_core::PaywallGate;
-use crate::client::Client;
 
 /// Options for [`Client::gate`].
 #[derive(Debug, Clone)]
@@ -83,7 +83,9 @@ impl Allow {
     }
 
     /// Copy the core driver snapshot onto the host `CustomerSnapshot`.
-    pub(crate) fn from_core_customer(customer: solvapay_core::CustomerSnapshot) -> CustomerSnapshot {
+    pub(crate) fn from_core_customer(
+        customer: solvapay_core::CustomerSnapshot,
+    ) -> CustomerSnapshot {
         CustomerSnapshot {
             customer_ref: customer.customer_ref,
             balance: serde_json::json!(customer.balance),

@@ -54,5 +54,7 @@ fn mcp_layer2_rbs_matches_committed_ruby_mcp_sig() {
         .expect("MCP RBS")
     );
     assert!(rbs.contains("module Layer2"));
-    assert!(!emit_rbs_rb(&ir).expect("core RBS").contains("module Layer2"));
+    assert!(!emit_rbs_rb(&ir)
+        .expect("core RBS")
+        .contains("module Layer2"));
 }

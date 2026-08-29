@@ -29,6 +29,11 @@ pub(crate) fn is_constant_entry(entry: &IrEntryPoint) -> bool {
             .all(|c| c.is_ascii_uppercase() || c == '_')
 }
 
+/// True when any argument after `index` is required.
+pub(crate) fn trailing_has_required(required: &[bool], index: usize) -> bool {
+    required.iter().skip(index + 1).any(|flag| *flag)
+}
+
 /// Snake-case a camelCase binding arg name.
 pub(crate) fn snake(name: &str) -> String {
     let mut out = String::new();

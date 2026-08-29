@@ -18,8 +18,11 @@ enum CurrencyDisplay {
 
 /// Symbol table entry. `prefix` is ignored when `symbol` equals `code`.
 struct CurrencySymbol {
+    /// ISO 4217 alphabetic code.
     code: &'static str,
+    /// Buyer-facing symbol or code used next to the amount.
     symbol: &'static str,
+    /// When true, the symbol is written before the digits.
     prefix: bool,
 }
 
@@ -302,6 +305,7 @@ const CURRENCY_SYMBOLS: &[CurrencySymbol] = &[
     },
 ];
 
+/// Look up a currency table row by ISO code, case-insensitively.
 fn lookup_symbol(code: &str) -> Option<&'static CurrencySymbol> {
     CURRENCY_SYMBOLS
         .iter()
@@ -388,6 +392,7 @@ pub fn to_major_units(amount_minor: f64, currency: &str) -> f64 {
     }
 }
 
+/// Parse `currencyDisplay`: only `"code"` selects ISO-code mode.
 fn resolve_display(currency_display: Option<&str>) -> CurrencyDisplay {
     match currency_display.map(str::trim) {
         Some(value) if value.eq_ignore_ascii_case("code") => CurrencyDisplay::Code,
@@ -395,6 +400,7 @@ fn resolve_display(currency_display: Option<&str>) -> CurrencyDisplay {
     }
 }
 
+/// Attach a symbol or ISO code to an already-grouped major-unit string.
 fn apply_symbol(formatted: &str, currency: &str, display: CurrencyDisplay) -> String {
     let code = currency.to_ascii_uppercase();
     if display == CurrencyDisplay::Code {

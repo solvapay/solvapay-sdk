@@ -284,6 +284,7 @@ const USAGE_ACTION_TYPE: &str = "api_call";
 /// Frozen `trackUsage` request-id template (`defaults.requestIdFormat`).
 const REQUEST_ID_FORMAT: &str = "solvapay_{epochMs}_{random9}";
 
+/// Expand the frozen `solvapay_{epochMs}_{random9}` request-id template.
 fn render_request_id(now_ms: i64, random_unit: f64) -> String {
     REQUEST_ID_FORMAT
         .replace("{epochMs}", &now_ms.to_string())
@@ -329,14 +330,7 @@ fn on_limits_cache_entry(
     } else {
         None
     };
-    Ok(finish(
-        state,
-        eval.within_limits,
-        limits,
-        cache,
-        now_ms,
-        event,
-    )?)
+    finish(state, eval.within_limits, limits, cache, now_ms, event)
 }
 
 /// Ask the host to call `checkLimits`, optionally deleting a stale cache key first.
@@ -392,14 +386,7 @@ fn on_limits_result(
     } else {
         None
     };
-    Ok(finish(
-        state,
-        eval.within_limits,
-        limits,
-        cache,
-        now_ms,
-        event,
-    )?)
+    finish(state, eval.within_limits, limits, cache, now_ms, event)
 }
 
 /// Handle a successful handler run: emit a complete `trackUsage` body.
@@ -735,7 +722,7 @@ mod tests {
                 ..
             } => {
                 assert_eq!(gate.product, "prd_1");
-                assert_eq!(customer.within_limits, false);
+                assert!(!customer.within_limits);
                 assert!(matches!(cache, Some(GateCacheOp::Delete { .. })));
                 assert_eq!(request["outcome"], "paywall");
                 assert_eq!(request["duration"], 250);

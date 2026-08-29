@@ -88,7 +88,10 @@ pub struct DefaultsDef {
     )]
     pub customer_dedup_max_cache_size: u32,
     /// Sentinel customer ref that skips ensure/lookup.
-    #[serde(default = "default_anonymous_customer_ref", rename = "anonymousCustomerRef")]
+    #[serde(
+        default = "default_anonymous_customer_ref",
+        rename = "anonymousCustomerRef"
+    )]
     pub anonymous_customer_ref: String,
     /// `trackUsage` request-id template (`{epochMs}` / `{random9}`).
     #[serde(default = "default_request_id_format", rename = "requestIdFormat")]
