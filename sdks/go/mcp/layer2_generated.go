@@ -421,4 +421,3 @@ func ValidatePublicBaseUrl(ctx context.Context, publicBaseUrl any) (json.RawMess
 	call_args["publicBaseUrl"] = publicBaseUrl
 	return callLayer2(ctx, "sv_validate_public_base_url_binding", call_args)
 }
-

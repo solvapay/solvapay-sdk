@@ -587,7 +587,6 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
-module.exports.NativeClient = nativeBinding.NativeClient
 module.exports.assertResponseResult = nativeBinding.assertResponseResult
 module.exports.assertValidProductRef = nativeBinding.assertValidProductRef
 module.exports.attachBusinessDetailsValidationError = nativeBinding.attachBusinessDetailsValidationError
@@ -668,7 +667,6 @@ module.exports.selectActivePurchases = nativeBinding.selectActivePurchases
 module.exports.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = nativeBinding.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
 module.exports.shouldRetryUsageError = nativeBinding.shouldRetryUsageError
 module.exports.shouldShowTaxRow = nativeBinding.shouldShowTaxRow
-module.exports.solvapayCall = nativeBinding.solvapayCall
 module.exports.TAX_NOT_COLLECTED_NOTE = nativeBinding.TAX_NOT_COLLECTED_NOTE
 module.exports.toMajorUnits = nativeBinding.toMajorUnits
 module.exports.trialDays = nativeBinding.trialDays

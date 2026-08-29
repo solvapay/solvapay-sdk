@@ -129,6 +129,9 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def paywall_short_message: (untyped content) -> String\n\
          \x20   def build_allow_result: (backend_ref: String, decision: Hash[String, untyped], driver_state: untyped) -> PayableAllowResult\n\
          \x20   def apply_gate_cache: (untyped cache) -> void\n\
+         \x20   def random_unit: () -> Numeric\n\
+         \x20   def post_usage_request: (Hash[String, untyped] request) -> untyped\n\
+         \x20   def emit_handler_usage: (untyped state, Hash[String, untyped] event) -> void\n\
          \x20 end\n\n\
          \x20 class Payable\n\
          \x20   @facade: Facade\n\

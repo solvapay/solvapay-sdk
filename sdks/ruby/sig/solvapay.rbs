@@ -148,6 +148,9 @@ module SolvaPay
     def paywall_short_message: (untyped content) -> String
     def build_allow_result: (backend_ref: String, decision: Hash[String, untyped], driver_state: untyped) -> PayableAllowResult
     def apply_gate_cache: (untyped cache) -> void
+    def random_unit: () -> Numeric
+    def post_usage_request: (Hash[String, untyped] request) -> untyped
+    def emit_handler_usage: (untyped state, Hash[String, untyped] event) -> void
   end
 
   class Payable

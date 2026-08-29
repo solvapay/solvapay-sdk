@@ -300,12 +300,16 @@ fn compare_outcome(
 ) -> Result<(), String> {
     match (expect, outcome) {
         (FixtureExpect::Result(expected), Ok(actual)) => {
-            if &actual == expected {
+            let mut expected = expected.clone();
+            let mut actual = actual;
+            canonicalize_json_numbers(&mut expected);
+            canonicalize_json_numbers(&mut actual);
+            if actual == expected {
                 Ok(())
             } else {
                 Err(format!(
                     "result mismatch for binding {binding_id}\n  expected: {}\n  actual:   {}",
-                    compact_json(expected),
+                    compact_json(&expected),
                     compact_json(&actual)
                 ))
             }
@@ -447,6 +451,38 @@ fn format_error_observation(error: &ErrorObservation) -> String {
 /// # Returns
 ///
 /// Compact single-line JSON string, or `"<unserializable>"` when serialization fails.
+/// Treat whole-number JSON floats (`1000.0`) as integers so serde's integer
+/// and float encodings of the same magnitude compare equal.
+#[allow(clippy::cast_possible_truncation, clippy::float_cmp)]
+fn canonicalize_json_numbers(value: &mut Value) {
+    match value {
+        Value::Number(number) => {
+            if number.as_i64().is_some() || number.as_u64().is_some() {
+                return;
+            }
+            if let Some(float) = number.as_f64() {
+                if float.is_finite() && float.fract() == 0.0 {
+                    let int = float as i64;
+                    if int as f64 == float {
+                        *value = Value::from(int);
+                    }
+                }
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                canonicalize_json_numbers(item);
+            }
+        }
+        Value::Object(map) => {
+            for item in map.values_mut() {
+                canonicalize_json_numbers(item);
+            }
+        }
+        Value::Null | Value::Bool(_) | Value::String(_) => {}
+    }
+}
+
 fn compact_json(value: &Value) -> String {
     match serde_json::to_string(value) {
         Ok(s) => s,

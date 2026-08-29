@@ -57,7 +57,6 @@ const {
   },
 })
 export default __napiModule.exports
-export const NativeClient = __napiModule.exports.NativeClient
 export const assertResponseResult = __napiModule.exports.assertResponseResult
 export const assertValidProductRef = __napiModule.exports.assertValidProductRef
 export const attachBusinessDetailsValidationError = __napiModule.exports.attachBusinessDetailsValidationError
@@ -138,7 +137,6 @@ export const selectActivePurchases = __napiModule.exports.selectActivePurchases
 export const SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = __napiModule.exports.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
 export const shouldRetryUsageError = __napiModule.exports.shouldRetryUsageError
 export const shouldShowTaxRow = __napiModule.exports.shouldShowTaxRow
-export const solvapayCall = __napiModule.exports.solvapayCall
 export const TAX_NOT_COLLECTED_NOTE = __napiModule.exports.TAX_NOT_COLLECTED_NOTE
 export const toMajorUnits = __napiModule.exports.toMajorUnits
 export const trialDays = __napiModule.exports.trialDays

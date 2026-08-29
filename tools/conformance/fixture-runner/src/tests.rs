@@ -354,6 +354,13 @@ fn public_assert_expect_matches_success_and_reports_mismatch() {
 }
 
 #[test]
+fn public_assert_expect_equates_whole_number_float_and_int() {
+    let expect = FixtureExpect::Result(json!(1000.0));
+    assert_expect(&expect, Ok(json!(1000))).expect("1000.0 should match 1000");
+    assert_expect(&expect, Ok(json!(1000.0))).expect("1000.0 should match 1000.0");
+}
+
+#[test]
 fn error_expect_fails_on_unexpected_success() {
     let binding = Binding {
         id: "core",

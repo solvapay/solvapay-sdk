@@ -29,7 +29,7 @@ func TAX_NOT_COLLECTED_NOTE(ctx context.Context) (any, error) {
 func AssertValidProductRef(ctx context.Context, productRef any, context any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_assert_valid_product_ref_binding", mustJSON(map[string]any{
 		"productRef": productRef,
-		"context": context,
+		"context":    context,
 	}))
 }
 
@@ -46,7 +46,7 @@ func BillingCycle(ctx context.Context, priced any) (any, error) {
 func BuildGateMessage(ctx context.Context, state any, gate any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_build_gate_message_binding", mustJSON(map[string]any{
 		"state": state,
-		"gate": gate,
+		"gate":  gate,
 	}))
 }
 
@@ -54,7 +54,7 @@ func BuildGateMessage(ctx context.Context, state any, gate any) (any, error) {
 // Returns Nudge message string.
 func BuildNudgeMessage(ctx context.Context, state any, limits any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_build_nudge_message_binding", mustJSON(map[string]any{
-		"state": state,
+		"state":  state,
 		"limits": limits,
 	}))
 }
@@ -64,7 +64,7 @@ func BuildNudgeMessage(ctx context.Context, state any, limits any) (any, error) 
 func BuildPaywallGate(ctx context.Context, productRef any, limits any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_build_paywall_gate_binding", mustJSON(map[string]any{
 		"productRef": productRef,
-		"limits": limits,
+		"limits":     limits,
 	}))
 }
 
@@ -96,9 +96,9 @@ func CountsUsage(ctx context.Context, priced any) (any, error) {
 // Returns Credits per unit, or null when the rate cannot be established honestly.
 func CreditsPerUnitFromBalance(ctx context.Context, priced any, balance any, meter any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_credits_per_unit_from_balance_binding", mustJSON(map[string]any{
-		"priced": priced,
+		"priced":  priced,
 		"balance": balance,
-		"meter": meter,
+		"meter":   meter,
 	}))
 }
 
@@ -106,10 +106,10 @@ func CreditsPerUnitFromBalance(ctx context.Context, priced any, balance any, met
 // Returns Display amount in minor units.
 func CreditsToDisplayMinorUnits(ctx context.Context, credits any, creditsPerMinorUnit any, displayExchangeRate any, displayCurrency any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_credits_to_display_minor_units_binding", mustJSON(map[string]any{
-		"credits": credits,
+		"credits":             credits,
 		"creditsPerMinorUnit": creditsPerMinorUnit,
 		"displayExchangeRate": displayExchangeRate,
-		"displayCurrency": displayCurrency,
+		"displayCurrency":     displayCurrency,
 	}))
 }
 
@@ -131,11 +131,11 @@ func EvaluateProductReadiness(ctx context.Context) (any, error) {
 // Returns Formatted price string.
 func FormatPrice(ctx context.Context, amountMinor any, currency any, interval any, intervalCount any, free any, currencyDisplay any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_format_price_binding", mustJSON(map[string]any{
-		"amountMinor": amountMinor,
-		"currency": currency,
-		"interval": interval,
-		"intervalCount": intervalCount,
-		"free": free,
+		"amountMinor":     amountMinor,
+		"currency":        currency,
+		"interval":        interval,
+		"intervalCount":   intervalCount,
+		"free":            free,
 		"currencyDisplay": currencyDisplay,
 	}))
 }
@@ -153,7 +153,7 @@ func FormatSubtotalLabel(ctx context.Context, treatment any) (any, error) {
 func FormatVatSummaryLabel(ctx context.Context, treatment any, taxRate any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_format_vat_summary_label_binding", mustJSON(map[string]any{
 		"treatment": treatment,
-		"taxRate": taxRate,
+		"taxRate":   taxRate,
 	}))
 }
 
@@ -202,7 +202,7 @@ func HeadlineCharges(ctx context.Context, priced any) (any, error) {
 func IncludedUnits(ctx context.Context, priced any, meter any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_included_units_binding", mustJSON(map[string]any{
 		"priced": priced,
-		"meter": meter,
+		"meter":  meter,
 	}))
 }
 
@@ -234,7 +234,7 @@ func MinorUnitsPerMajor(ctx context.Context, currency any) (any, error) {
 // Returns Client payload object for paywall responses.
 func PaywallErrorToClientPayload(ctx context.Context, message any, structuredContent any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_paywall_error_to_client_payload_binding", mustJSON(map[string]any{
-		"message": message,
+		"message":           message,
 		"structuredContent": structuredContent,
 	}))
 }
@@ -243,9 +243,9 @@ func PaywallErrorToClientPayload(ctx context.Context, message any, structuredCon
 // Returns Credits per metered unit (0 for a free meter).
 func PeggedCreditsPerUnit(ctx context.Context, chargeMinor any, creditsPerMinorUnit any, usdToChargeRate any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_pegged_credits_per_unit_binding", mustJSON(map[string]any{
-		"chargeMinor": chargeMinor,
+		"chargeMinor":         chargeMinor,
 		"creditsPerMinorUnit": creditsPerMinorUnit,
-		"usdToChargeRate": usdToChargeRate,
+		"usdToChargeRate":     usdToChargeRate,
 	}))
 }
 
@@ -254,7 +254,7 @@ func PeggedCreditsPerUnit(ctx context.Context, chargeMinor any, creditsPerMinorU
 func PerUnitCharge(ctx context.Context, priced any, meter any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_per_unit_charge_binding", mustJSON(map[string]any{
 		"priced": priced,
-		"meter": meter,
+		"meter":  meter,
 	}))
 }
 
@@ -263,7 +263,7 @@ func PerUnitCharge(ctx context.Context, priced any, meter any) (any, error) {
 func RequireProductRef(ctx context.Context, metadataProduct any, envProduct any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_require_product_ref_binding", mustJSON(map[string]any{
 		"metadataProduct": metadataProduct,
-		"envProduct": envProduct,
+		"envProduct":      envProduct,
 	}))
 }
 
@@ -271,9 +271,9 @@ func RequireProductRef(ctx context.Context, metadataProduct any, envProduct any)
 // Returns Display projection for seller identity.
 func ResolveSellerIdentityDisplay(ctx context.Context, country any, vatNumber any, taxId any, companyNumber any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_resolve_seller_identity_display_binding", mustJSON(map[string]any{
-		"country": country,
-		"vatNumber": vatNumber,
-		"taxId": taxId,
+		"country":       country,
+		"vatNumber":     vatNumber,
+		"taxId":         taxId,
 		"companyNumber": companyNumber,
 	}))
 }
@@ -308,7 +308,7 @@ func ShouldShowTaxRow(ctx context.Context, treatment any) (any, error) {
 func ToMajorUnits(ctx context.Context, amountMinor any, currency any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_to_major_units_binding", mustJSON(map[string]any{
 		"amountMinor": amountMinor,
-		"currency": currency,
+		"currency":    currency,
 	}))
 }
 
@@ -325,4 +325,3 @@ func TrialDays(ctx context.Context, priced any) (any, error) {
 func ValidateBusinessDetails(ctx context.Context) (any, error) {
 	return nativecall.CallSync(ctx, "sv_validate_business_details_binding", mustJSON(map[string]any{}))
 }
-

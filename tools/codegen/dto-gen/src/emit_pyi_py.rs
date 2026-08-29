@@ -10,7 +10,8 @@ use crate::emit_helpers::{catalog_helper_bindings, is_constant_entry, snake};
 use crate::error::GenResult;
 use crate::header::{generated_header, CommentStyle};
 use crate::ir::{
-    Ir, IrBindingArg, IrBoundaryType, IrEntryPoint, IrEntrySection, IrSyncKind, IrTypeRef,
+    Ir, IrBindingArg, IrBindingSymbol, IrBoundaryType, IrCoreFieldTy, IrCoreParamTy, IrEntryPoint,
+    IrEntrySection, IrSyncKind, IrTypeRef,
 };
 
 const PREAMBLE: &str = r#""""Portable Python surface stubs (generated from the SDK contract IR)."""
@@ -98,13 +99,10 @@ pub fn emit_pyi_py(ir: &Ir) -> GenResult<String> {
         .into_iter()
         .filter(|(_, entry)| entry.emission.py.is_generated())
         .collect();
-    if !helpers.is_empty() {
-        out.push_str("from typing import Any\n\n");
-    }
     for (binding, entry) in helpers {
         let doc = render_pydoc(entry);
         if is_constant_entry(entry) {
-            let _ = writeln!(out, "{}: Any", entry.names.py);
+            let _ = writeln!(out, "{}: {}", entry.names.py, py_helper_return(ir, binding));
             write_pydoc_block(&mut out, &doc, "");
             continue;
         }
@@ -116,13 +114,7 @@ pub fn emit_pyi_py(ir: &Ir) -> GenResult<String> {
             .enumerate()
             .map(|(i, arg)| {
                 let name = snake(&arg.name);
-                let ty = match arg.ty {
-                    IrBoundaryType::String | IrBoundaryType::StringOpt => "str",
-                    IrBoundaryType::Bool => "bool",
-                    IrBoundaryType::F64 | IrBoundaryType::F64Opt => "float",
-                    IrBoundaryType::I64 => "int",
-                    _ => "Any",
-                };
+                let ty = py_arg_type(arg);
                 if arg.required {
                     format!("{name}: {ty}")
                 } else if crate::emit_helpers::trailing_has_required(&required, i) {
@@ -132,7 +124,13 @@ pub fn emit_pyi_py(ir: &Ir) -> GenResult<String> {
                 }
             })
             .collect::<Vec<_>>();
-        let _ = writeln!(out, "def {}({}) -> Any:", entry.names.py, params.join(", "));
+        let _ = writeln!(
+            out,
+            "def {}({}) -> {}:",
+            entry.names.py,
+            params.join(", "),
+            py_helper_return(ir, binding)
+        );
         write_pydoc_block(&mut out, &doc, "    ");
         out.push_str("    ...\n");
     }
@@ -183,6 +181,64 @@ pub(crate) fn write_pydoc_block(out: &mut String, doc: &str, indent: &str) {
         }
     }
     let _ = writeln!(out, "{indent}\"\"\"");
+}
+
+fn py_arg_type(arg: &IrBindingArg) -> &'static str {
+    match arg.ty {
+        IrBoundaryType::String | IrBoundaryType::StringOpt => "str",
+        IrBoundaryType::Bool => "bool",
+        IrBoundaryType::F64 | IrBoundaryType::F64Opt => "float",
+        IrBoundaryType::I64 => "int",
+        IrBoundaryType::Value => "object",
+    }
+}
+
+fn lookup_core_fn<'a>(ir: &'a Ir, binding: &IrBindingSymbol) -> Option<&'a crate::ir::IrCoreFn> {
+    ir.core_fns.get(&binding.core).or_else(|| {
+        ir.core_fns
+            .values()
+            .find(|func| func.core_path() == binding.core || func.binding_core() == binding.core)
+    })
+}
+
+fn py_helper_return(ir: &Ir, binding: &IrBindingSymbol) -> String {
+    lookup_core_fn(ir, binding).map_or_else(
+        || "object".to_owned(),
+        |func| py_from_core_ty(&func.return_ty),
+    )
+}
+
+fn py_from_core_ty(ty: &IrCoreParamTy) -> String {
+    let base = py_from_field_ty(&ty.ty);
+    if ty.optional {
+        format!("{base} | None")
+    } else {
+        base
+    }
+}
+
+fn py_from_field_ty(ty: &IrCoreFieldTy) -> String {
+    match ty {
+        IrCoreFieldTy::String => "str".into(),
+        IrCoreFieldTy::Bool => "bool".into(),
+        IrCoreFieldTy::U16 | IrCoreFieldTy::U32 | IrCoreFieldTy::U64 | IrCoreFieldTy::I64 => {
+            "int".into()
+        }
+        IrCoreFieldTy::F64 => "float".into(),
+        IrCoreFieldTy::Unit => "None".into(),
+        IrCoreFieldTy::Vec(item) => format!("list[{}]", py_from_field_ty(item)),
+        IrCoreFieldTy::Map(item) => format!("dict[str, {}]", py_from_field_ty(item)),
+        IrCoreFieldTy::Result { ok, .. } => py_from_field_ty(ok),
+        IrCoreFieldTy::Tuple(items) => {
+            let inner = items
+                .iter()
+                .map(py_from_field_ty)
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("tuple[{inner}]")
+        }
+        IrCoreFieldTy::Value | IrCoreFieldTy::Named(_) => "object".into(),
+    }
 }
 
 /// Maps an IR boundary / wire type to a Python annotation (§5.6 type-mapping).

@@ -841,8 +841,8 @@ export interface InitOutput {
     readonly wasmclient_updateCustomer: (a: number, b: number, c: number) => any;
     readonly wasmclient_updatePlan: (a: number, b: number, c: number) => any;
     readonly wasmclient_updateProduct: (a: number, b: number, c: number) => any;
-    readonly wasm_bindgen__convert__closures_____invoke__hf82478b34f74c087: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h23bdb694a7765c71: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h83695bada2fdd54b: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h31b9e86b54b22c8c: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

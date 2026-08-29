@@ -516,185 +516,183 @@ def _verify_webhook_at(
     body: str, signature: str, secret: str, now_unix_secs: int
 ) -> str: ...
 
-from typing import Any
-
-REVERSE_CHARGE_NOTE: Any
+REVERSE_CHARGE_NOTE: str
 """Buyer-facing note when VAT reverse charge applies."""
-SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: Any
+SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE: list[tuple[str, str]]
 """Map of seller tax identifier types to display labels."""
-TAX_NOT_COLLECTED_NOTE: Any
+TAX_NOT_COLLECTED_NOTE: str
 """Buyer-facing note when tax is not collected on the purchase."""
-def assert_valid_product_ref(product_ref: str, context: str) -> Any:
+def assert_valid_product_ref(product_ref: str, context: str) -> None:
     """Reject empty, placeholder, or non-prd_ product refs at construction time.
     @returns Throws when the ref is not a real prd_ identifier.
     """
     ...
-def billing_cycle(priced: Any | None = None) -> Any:
+def billing_cycle(priced: object | None = None) -> object | None:
     """Read the billing-cycle option from a plan.
     @returns Interval (and count when greater than 1), or null.
     """
     ...
-def build_gate_message(state: Any, gate: Any) -> Any:
+def build_gate_message(state: object, gate: object) -> str:
     """Build the human-readable paywall gate message from state and gate content.
     @returns Gate message string.
     """
     ...
-def build_nudge_message(state: Any, limits: Any | None = None) -> Any:
+def build_nudge_message(state: object, limits: object | None = None) -> str:
     """Build a soft nudge message when usage approaches plan limits.
     @returns Nudge message string.
     """
     ...
-def build_paywall_gate(product_ref: str, limits: Any) -> Any:
+def build_paywall_gate(product_ref: str, limits: object) -> object:
     """Build the structured paywall gate payload for a product and limits snapshot.
     @returns Structured gate content for paywall responses.
     """
     ...
-def charges(priced: Any | None = None) -> Any:
+def charges(priced: object | None = None) -> list[object]:
     """Return every charge option on a plan, in wire order.
     @returns Charge objects (flat, unit, or seat).
     """
     ...
-def classify_paywall_state(limits: Any | None = None) -> Any:
+def classify_paywall_state(limits: object | None = None) -> object:
     """Classify paywall state from limits and product context.
     @returns Canonical paywall state label.
     """
     ...
-def counts_usage(priced: Any | None = None) -> Any:
+def counts_usage(priced: object | None = None) -> bool:
     """True when the plan counts usage via a per-unit charge, limit, or tier.
     @returns Whether the plan has a usage counter even without a per-unit rate.
     """
     ...
-def credits_per_unit_from_balance(priced: Any | None = None, balance: Any | None = None, meter: str | None = None) -> Any:
+def credits_per_unit_from_balance(priced: object | None = None, balance: object | None = None, meter: str | None = None) -> int | None:
     """Credits per metered call when the charge currency matches the balance peg.
     @returns Credits per unit, or null when the rate cannot be established honestly.
     """
     ...
-def credits_to_display_minor_units(credits: float, credits_per_minor_unit: float, display_exchange_rate: float, display_currency: str) -> Any:
+def credits_to_display_minor_units(credits: float, credits_per_minor_unit: float, display_exchange_rate: float, display_currency: str) -> int | None:
     """Convert credit units into display minor units for a currency.
     @returns Display amount in minor units.
     """
     ...
-def derive_tax_id_type(country: str) -> Any:
+def derive_tax_id_type(country: str) -> object | None:
     """Derive the tax ID type for a business country.
     @returns Tax ID type string when known.
     """
     ...
-def evaluate_product_readiness() -> Any:
+def evaluate_product_readiness() -> object:
     """Evaluate whether a product can be sold (active status plus an active plan).
     @returns Readiness result with issues and plan counts.
     """
     ...
-def format_price(amount_minor: float, currency: str, interval: str | None = None, interval_count: float | None = None, free: str | None = None, currency_display: str | None = None) -> Any:
+def format_price(amount_minor: float, currency: str, interval: str | None = None, interval_count: float | None = None, free: str | None = None, currency_display: str | None = None) -> str:
     """Format a minor-unit amount as buyer-facing money.
     @returns Formatted price string.
     """
     ...
-def format_subtotal_label(treatment: str | None = None) -> Any:
+def format_subtotal_label(treatment: str | None = None) -> str:
     """Return the checkout subtotal label for a tax treatment.
     @returns Subtotal or Subtotal (excl. VAT).
     """
     ...
-def format_vat_summary_label(treatment: str | None, tax_rate: float) -> Any:
+def format_vat_summary_label(treatment: str | None, tax_rate: float) -> str:
     """Return the VAT row label for a treatment and rate.
     @returns VAT label string.
     """
     ...
-def get_seller_tax_identifier_display_label(country: str | None = None) -> Any:
+def get_seller_tax_identifier_display_label(country: str | None = None) -> str:
     """Return the display label for a seller tax identifier type.
     @returns Display label string.
     """
     ...
-def get_tax_id_example(country: str) -> Any:
+def get_tax_id_example(country: str) -> str | None:
     """Return an example tax ID string for a country.
     @returns Example tax ID string.
     """
     ...
-def get_tax_id_field_label(country: str) -> Any:
+def get_tax_id_field_label(country: str) -> str | None:
     """Return the localized field label for a country tax ID.
     @returns Field label string.
     """
     ...
-def get_tax_id_helper_text(country: str) -> Any:
+def get_tax_id_helper_text(country: str) -> str | None:
     """Return helper text describing the tax ID format for a country.
     @returns Helper text string.
     """
     ...
-def headline_charges(priced: Any | None = None) -> Any:
+def headline_charges(priced: object | None = None) -> list[object]:
     """Return the headline flat charge in each currency, excluding setup fees.
     @returns One flat charge per currency, in first-seen order.
     """
     ...
-def included_units(priced: Any | None = None, meter: str | None = None) -> Any:
+def included_units(priced: object | None = None, meter: str | None = None) -> int | None:
     """Read the included-unit cap for a meter from the limit option.
     @returns Cap (0 means unlimited), or null when no limit is configured.
     """
     ...
-def is_zero_decimal_currency(currency: str) -> Any:
+def is_zero_decimal_currency(currency: str) -> bool:
     """Return whether a currency uses zero decimal places.
     @returns True when the currency has zero decimal places.
     """
     ...
-def meter_name(priced: Any | None = None) -> Any:
+def meter_name(priced: object | None = None) -> str | None:
     """Read the meter a plan counts against from a per-unit charge or limit option.
     @returns Meter name, or null when neither a per-unit charge nor a limit names one.
     """
     ...
-def minor_units_per_major(currency: str) -> Any:
+def minor_units_per_major(currency: str) -> int:
     """Return how many minor units make one major unit for a currency.
     @returns Minor units per major unit.
     """
     ...
-def paywall_error_to_client_payload(message: str, structured_content: Any) -> Any:
+def paywall_error_to_client_payload(message: str, structured_content: object) -> object:
     """Project a PaywallError into the client-facing payload shape.
     @returns Client payload object for paywall responses.
     """
     ...
-def pegged_credits_per_unit(charge_minor: float, credits_per_minor_unit: float, usd_to_charge_rate: float | None = None) -> Any:
+def pegged_credits_per_unit(charge_minor: float, credits_per_minor_unit: float, usd_to_charge_rate: float | None = None) -> int:
     """Convert a per-unit charge in minor units to credits via the USD peg.
     @returns Credits per metered unit (0 for a free meter).
     """
     ...
-def per_unit_charge(priced: Any | None = None, meter: str | None = None) -> Any:
+def per_unit_charge(priced: object | None = None, meter: str | None = None) -> object | None:
     """Return the first per-unit charge, optionally scoped to one meter.
     @returns The metered charge, or null when the plan does not meter usage.
     """
     ...
-def require_product_ref(metadata_product: str | None = None, env_product: str | None = None) -> Any:
+def require_product_ref(metadata_product: str | None = None, env_product: str | None = None) -> str:
     """Resolve a product ref from metadata or env, or throw a named missing-ref error.
     @returns A product ref string, or throws when neither is set.
     """
     ...
-def resolve_seller_identity_display(country: str | None = None, vat_number: str | None = None, tax_id: str | None = None, company_number: str | None = None) -> Any:
+def resolve_seller_identity_display(country: str | None = None, vat_number: str | None = None, tax_id: str | None = None, company_number: str | None = None) -> object:
     """Resolve seller identity fields into a display projection.
     @returns Display projection for seller identity.
     """
     ...
-def resolve_tax_behavior(behavior: str, currency: str) -> Any:
+def resolve_tax_behavior(behavior: str, currency: str) -> str | None:
     """Resolve inclusive vs exclusive tax behavior for a currency/country pair.
     @returns Resolved tax behavior.
     """
     ...
-def resolve_tax_treatment_note(treatment: str | None = None) -> Any:
+def resolve_tax_treatment_note(treatment: str | None = None) -> str | None:
     """Return the buyer-facing note for a non-standard tax treatment.
     @returns Note string, or null when no note applies.
     """
     ...
-def should_show_tax_row(treatment: str | None = None) -> Any:
+def should_show_tax_row(treatment: str | None = None) -> bool:
     """Return whether a VAT amount row should render for a tax treatment.
     @returns True when a VAT row should be shown.
     """
     ...
-def to_major_units(amount_minor: float, currency: str) -> Any:
+def to_major_units(amount_minor: float, currency: str) -> float:
     """Convert a minor-unit amount to its major-unit equivalent.
     @returns Major-unit amount.
     """
     ...
-def trial_days(priced: Any | None = None) -> Any:
+def trial_days(priced: object | None = None) -> int | None:
     """Read the free-trial length in days from a plan.
     @returns Trial length in days, or null when the plan has no trial.
     """
     ...
-def validate_business_details() -> Any:
+def validate_business_details() -> object:
     """Validate seller business-details fields before submission.
     @returns Validation issues when present.
     """

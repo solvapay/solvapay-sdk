@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
 use crate::emit_client_rs::render_rustdoc;
-use crate::emit_helpers::{catalog_helper_bindings, is_constant_entry};
+use crate::emit_helpers::catalog_helper_bindings;
 use crate::error::{GenError, GenResult};
 use crate::header::{generated_header, CommentStyle};
 use crate::ir::{Ir, IrCoreFieldTy, IrCoreFn, IrCoreParamTy};

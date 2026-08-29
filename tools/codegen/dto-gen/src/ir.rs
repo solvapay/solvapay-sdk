@@ -599,9 +599,10 @@ pub enum IrSyncKind {
 }
 
 /// How dto-gen should treat one language for a catalogued entry.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum IrEmissionMode {
     /// Emit a generated forwarder / wrapper.
+    #[default]
     Generated,
     /// Host language already owns a hand-written implementation.
     HandWritten {
@@ -619,12 +620,6 @@ impl IrEmissionMode {
     /// True when dto-gen must emit this language.
     pub fn is_generated(&self) -> bool {
         matches!(self, Self::Generated)
-    }
-}
-
-impl Default for IrEmissionMode {
-    fn default() -> Self {
-        Self::Generated
     }
 }
 

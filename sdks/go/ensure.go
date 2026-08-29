@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-
 func (c *Client) ensureCustomer(ctx context.Context, customerRef string) (string, error) {
 	c.gate.mu.Lock()
 	if inf, ok := c.gate.customerInflight[customerRef]; ok {
