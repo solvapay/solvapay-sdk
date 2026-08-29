@@ -8,7 +8,10 @@ import {
   meterName,
   peggedCreditsPerUnit,
   perUnitCharge,
+  tierBands,
+  tierMeters,
   trialDays,
+  usageRate,
 } from './pricing-options'
 
 /**
@@ -266,5 +269,130 @@ describe('creditsPerUnitFromBalance', () => {
 
   it('returns null for an unmetered plan', () => {
     expect(creditsPerUnitFromBalance(proPlan, usdBalance)).toBeNull()
+  })
+})
+
+describe('tier readers (DEV-816)', () => {
+  const band = (
+    from: number,
+    to: number | null,
+    amountMinor: number,
+    meter: string,
+    mode: 'graduated' | 'volume' = 'graduated',
+  ) => ({
+    kind: 'tier',
+    from,
+    to,
+    mode,
+    charge: { per: 'unit', amountMinor, currency: 'USD', meter },
+  })
+
+  // Two stacks, interleaved and out of order — the shape the wire actually
+  // sends, since `options[]` is a flat list with no grouping or ordering.
+  const twoMeterPlan = {
+    type: 'usage-based',
+    price: 0,
+    currency: 'USD',
+    options: [
+      band(1000, null, 1, 'requests'),
+      band(0, 500, 9, 'tokens', 'volume'),
+      band(0, 1000, 2, 'requests'),
+      band(500, null, 7, 'tokens', 'volume'),
+    ],
+  }
+
+  const singleBandPlan = { options: [band(0, null, 3, 'requests')] }
+
+  it('groups bands by meter and orders them by floor', () => {
+    expect(tierBands(twoMeterPlan, 'requests').map(t => [t.from, t.to, t.charge.amountMinor])).toEqual([
+      [0, 1000, 2],
+      [1000, null, 1],
+    ])
+    expect(tierBands(twoMeterPlan, 'tokens').map(t => [t.from, t.to, t.charge.amountMinor])).toEqual([
+      [0, 500, 9],
+      [500, null, 7],
+    ])
+  })
+
+  it('defaults to the first tiered meter rather than mixing stacks', () => {
+    // Without a meter the reader must still return ONE coherent stack.
+    const bands = tierBands(twoMeterPlan)
+    expect(new Set(bands.map(t => t.charge.meter)).size).toBe(1)
+  })
+
+  it('returns nothing for a meter the plan does not band', () => {
+    expect(tierBands(twoMeterPlan, 'storage')).toEqual([])
+    expect(tierBands(proPlan)).toEqual([])
+  })
+
+  it('lists each tiered meter once', () => {
+    expect(tierMeters(twoMeterPlan)).toEqual(['requests', 'tokens'])
+    expect(tierMeters(proPlan)).toEqual([])
+  })
+
+  it('ignores a malformed band rather than inventing a rate', () => {
+    const broken = {
+      options: [
+        { kind: 'tier', from: 0, to: null, mode: 'sideways', charge: { per: 'unit', amountMinor: 5, currency: 'USD' } },
+        { kind: 'tier', from: 0, to: null, mode: 'graduated' },
+      ],
+    }
+    expect(tierBands(broken)).toEqual([])
+  })
+
+  it('reads the meter off a tier-only plan, which carries no per-unit charge', () => {
+    expect(perUnitCharge(twoMeterPlan)).toBeNull()
+    expect(meterName(twoMeterPlan)).toBe('requests')
+  })
+
+  it('counts usage for a tiered plan', () => {
+    expect(countsUsage(twoMeterPlan)).toBe(true)
+    expect(countsUsage(proPlan)).toBe(false)
+  })
+
+  it('usageRate reports the entry band and flags it as a floor', () => {
+    expect(usageRate(twoMeterPlan)).toMatchObject({ amountMinor: 2, meter: 'requests', tiered: true })
+    expect(usageRate(twoMeterPlan, 'tokens')).toMatchObject({ amountMinor: 9, tiered: true })
+  })
+
+  it('usageRate does not flag a single band as tiered — it is just a rate', () => {
+    expect(usageRate(singleBandPlan)).toMatchObject({ amountMinor: 3, tiered: false })
+  })
+
+  it('usageRate prefers a standalone per-unit charge over bands', () => {
+    expect(usageRate(paygPlan)).toMatchObject({ tiered: false })
+  })
+
+  it('usageRate ignores a zero-rate charge and reads the bands behind it', () => {
+    // A 0-rate per-unit charge anchors an allowance to a meter; it prices
+    // nothing. Short-circuiting on it made a tiered plan report rate 0, which
+    // every display surface renders as no price at all.
+    const both = {
+      options: [
+        { kind: 'charge', per: 'unit', amountMinor: 0, currency: 'USD', meter: 'requests' },
+        band(0, null, 4, 'requests'),
+      ],
+    }
+    expect(usageRate(both)).toMatchObject({ amountMinor: 4, tiered: false })
+  })
+
+  it('usageRate leads with the first PRICED band', () => {
+    const freeOpening = { options: [band(0, 1000, 0, 'requests'), band(1000, null, 3, 'requests')] }
+    expect(usageRate(freeOpening)).toMatchObject({ amountMinor: 3, tiered: false })
+  })
+
+  it('usageRate is null when the plan prices no usage', () => {
+    expect(usageRate(proPlan)).toBeNull()
+  })
+
+  it('prices a tiered plan in credits off the entry band', () => {
+    // 2 minor units at 100 credits per minor unit, USD balance, rate 1.
+    expect(
+      creditsPerUnitFromBalance(twoMeterPlan, {
+        displayCurrency: 'USD',
+        displayExchangeRate: 1,
+        creditsPerMinorUnit: 100,
+      }),
+    ).toBe(200)
   })
 })
