@@ -610,6 +610,16 @@ export function shouldShowTaxRow(args_json: string): string;
 export function solvapayCall(args_json: string): string;
 
 /**
+ * Binding for `tierBands`.
+ */
+export function tierBands(args_json: string): string;
+
+/**
+ * Binding for `tierMeters`.
+ */
+export function tierMeters(args_json: string): string;
+
+/**
  * Binding for `toMajorUnits`.
  */
 export function toMajorUnits(args_json: string): string;
@@ -618,6 +628,11 @@ export function toMajorUnits(args_json: string): string;
  * Binding for `trialDays`.
  */
 export function trialDays(args_json: string): string;
+
+/**
+ * Binding for `usageRate`.
+ */
+export function usageRate(args_json: string): string;
 
 /**
  * Binding for `validateActivatePlanParams`.
@@ -784,8 +799,11 @@ export interface InitOutput {
     readonly shouldRetryUsageError: (a: number, b: number) => [number, number];
     readonly shouldShowTaxRow: (a: number, b: number) => [number, number];
     readonly solvapayCall: (a: number, b: number) => [number, number];
+    readonly tierBands: (a: number, b: number) => [number, number];
+    readonly tierMeters: (a: number, b: number) => [number, number];
     readonly toMajorUnits: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
+    readonly usageRate: (a: number, b: number) => [number, number];
     readonly validateActivatePlanParams: (a: number, b: number) => [number, number];
     readonly validateAttachBusinessDetailsParams: (a: number, b: number) => [number, number];
     readonly validateBusinessDetails: (a: number, b: number) => [number, number];
@@ -841,8 +859,8 @@ export interface InitOutput {
     readonly wasmclient_updateCustomer: (a: number, b: number, c: number) => any;
     readonly wasmclient_updatePlan: (a: number, b: number, c: number) => any;
     readonly wasmclient_updateProduct: (a: number, b: number, c: number) => any;
-    readonly wasm_bindgen__convert__closures_____invoke__h83695bada2fdd54b: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h31b9e86b54b22c8c: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__hf82478b34f74c087: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h23bdb694a7765c71: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

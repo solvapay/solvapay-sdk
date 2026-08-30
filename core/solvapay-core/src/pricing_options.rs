@@ -168,6 +168,16 @@ pub struct UsageRate {
 }
 
 impl UsageRate {
+    /// Copy a charge into the usage-rate shape, marking whether it is tiered.
+    ///
+    /// # Arguments
+    ///
+    /// * `charge` - Source amount, currency, and meter.
+    /// * `tiered` - True when `amount_minor` is the entry rate of a multi-band stack.
+    ///
+    /// # Returns
+    ///
+    /// A [`UsageRate`] with the same fields as `charge`.
     fn from_charge(charge: Charge, tiered: bool) -> Self {
         Self {
             per: charge.per,

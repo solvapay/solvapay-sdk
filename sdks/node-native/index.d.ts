@@ -272,11 +272,20 @@ export declare function shouldShowTaxRow(argsJson: string): string
 /** Binding for `TAX_NOT_COLLECTED_NOTE`. */
 export declare function TAX_NOT_COLLECTED_NOTE(argsJson: string): string
 
+/** Binding for `tierBands`. */
+export declare function tierBands(argsJson: string): string
+
+/** Binding for `tierMeters`. */
+export declare function tierMeters(argsJson: string): string
+
 /** Binding for `toMajorUnits`. */
 export declare function toMajorUnits(argsJson: string): string
 
 /** Binding for `trialDays`. */
 export declare function trialDays(argsJson: string): string
+
+/** Binding for `usageRate`. */
+export declare function usageRate(argsJson: string): string
 
 /** Binding for `validateActivatePlanParams`. */
 export declare function validateActivatePlanParams(argsJson: string): string

@@ -53,6 +53,10 @@ export default defineConfig({
         replacement: `${packagesDir}/core/src/browser-wasm.ts`,
       },
       {
+        find: /^@solvapay\/server-wasm$/,
+        replacement: `${packagesDir}/../wasm/runtime/web.js`,
+      },
+      {
         find: /^@solvapay\/server-wasm\/browser$/,
         replacement: `${packagesDir}/../wasm/runtime/browser-web.js`,
       },
