@@ -89,11 +89,8 @@ fn is_strictly_positive(n: f64) -> bool {
     n.partial_cmp(&0.0) == Some(std::cmp::Ordering::Greater)
 }
 
-/// Parse a `kind: charge` option; unknown `per` values are skipped.
-fn as_charge(option: &Value) -> Option<Charge> {
-    if option.get("kind").and_then(Value::as_str) != Some("charge") {
-        return None;
-    }
+/// Parse charge fields (`per`, `amountMinor`, `currency`, …) without requiring `kind`.
+fn as_charge_fields(option: &Value) -> Option<Charge> {
     let per: ChargePer = serde_json::from_value(option.get("per")?.clone()).ok()?;
     let amount_minor = option.get("amountMinor").and_then(Value::as_f64)?;
     let currency = option.get("currency").and_then(Value::as_str)?;
@@ -112,6 +109,95 @@ fn as_charge(option: &Value) -> Option<Charge> {
         currency: currency.to_owned(),
         meter,
         one_time,
+    })
+}
+
+/// Parse a `kind: charge` option; unknown `per` values are skipped.
+fn as_charge(option: &Value) -> Option<Charge> {
+    if option.get("kind").and_then(Value::as_str) != Some("charge") {
+        return None;
+    }
+    as_charge_fields(option)
+}
+
+/// How a tier stack prices successive bands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TierMode {
+    /// Each band is charged independently as usage crosses it.
+    Graduated,
+    /// The matching band's rate applies to every unit.
+    Volume,
+}
+
+/// One band of a tiered price. `[from, to)` in metered units; `to: null` is unbounded.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Tier {
+    /// Inclusive floor of this band, in metered units.
+    #[serde(serialize_with = "serialize_whole_f64")]
+    pub from: f64,
+    /// Exclusive ceiling, or `None` for the unbounded top band.
+    #[serde(serialize_with = "serialize_opt_whole_f64")]
+    pub to: Option<f64>,
+    /// Graduated vs volume pricing of this stack.
+    pub mode: TierMode,
+    /// Per-unit charge that prices units in this band.
+    pub charge: Charge,
+}
+
+/// What one metered unit costs, and whether that rate is the first of several bands.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UsageRate {
+    /// Which quantity the amount is charged against.
+    pub per: ChargePer,
+    /// Amount in the charge currency's minor units.
+    #[serde(serialize_with = "serialize_whole_f64")]
+    pub amount_minor: f64,
+    /// ISO currency code as shipped on the wire (not normalised).
+    pub currency: String,
+    /// Meter name when `per` is `unit`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub meter: Option<String>,
+    /// Setup-fee flag; omitted unless `true`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub one_time: Option<bool>,
+    /// True when `amount_minor` is the entry rate of a multi-band stack.
+    pub tiered: bool,
+}
+
+impl UsageRate {
+    fn from_charge(charge: Charge, tiered: bool) -> Self {
+        Self {
+            per: charge.per,
+            amount_minor: charge.amount_minor,
+            currency: charge.currency,
+            meter: charge.meter,
+            one_time: charge.one_time,
+            tiered,
+        }
+    }
+}
+
+/// Parse a `kind: tier` option; malformed bands are skipped.
+fn as_tier(option: &Value) -> Option<Tier> {
+    if option.get("kind").and_then(Value::as_str) != Some("tier") {
+        return None;
+    }
+    let from = option.get("from").and_then(Value::as_f64)?;
+    let to = match option.get("to") {
+        Some(Value::Null) => None,
+        Some(value) => Some(value.as_f64()?),
+        None => return None,
+    };
+    let mode: TierMode = serde_json::from_value(option.get("mode")?.clone()).ok()?;
+    let charge = option.get("charge").filter(|value| value.is_object())?;
+    Some(Tier {
+        from,
+        to,
+        mode,
+        charge: as_charge_fields(charge)?,
     })
 }
 
@@ -174,6 +260,97 @@ pub fn per_unit_charge(priced: Option<&Value>, meter: Option<&str>) -> Option<Ch
             .find(|charge| charge.meter.as_deref() == Some(meter_name));
     }
     unit.into_iter().next()
+}
+
+/// The tier bands a plan prices `meter` with, ordered by band floor.
+///
+/// Without a `meter` this returns the first tiered meter's stack — never a mix
+/// of two meters' bands. The wire is a flat list of `tier` options with no
+/// grouping or ordering guarantee.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "plans",
+    emit_order = 53
+)]
+pub fn tier_bands(priced: Option<&Value>, meter: Option<&str>) -> Vec<Tier> {
+    let all: Vec<Tier> = options_of(priced).into_iter().filter_map(as_tier).collect();
+    let Some(first) = all.first() else {
+        return Vec::new();
+    };
+    let owned_target = meter
+        .filter(|name| !name.is_empty())
+        .map(str::to_owned)
+        .or_else(|| first.charge.meter.clone());
+    let mut bands: Vec<Tier> = all
+        .into_iter()
+        .filter(|tier| match owned_target.as_deref() {
+            None => true,
+            Some(name) => tier.charge.meter.as_deref() == Some(name),
+        })
+        .collect();
+    bands.sort_by(|a, b| {
+        a.from
+            .partial_cmp(&b.from)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    bands
+}
+
+/// Every meter the plan prices with tier bands, in first-seen order.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "plans",
+    emit_order = 54
+)]
+pub fn tier_meters(priced: Option<&Value>) -> Vec<String> {
+    let mut seen = Vec::new();
+    for option in options_of(priced) {
+        if let Some(meter) = as_tier(option)
+            .and_then(|tier| tier.charge.meter)
+            .filter(|name| !name.is_empty())
+        {
+            if !seen.contains(&meter) {
+                seen.push(meter);
+            }
+        }
+    }
+    seen
+}
+
+/// The rate a plan charges for one metered unit — a standalone per-unit
+/// charge, else the first priced band of the meter's tier stack.
+///
+/// A zero-rate per-unit charge does not price the meter (it anchors an
+/// allowance), so it does not short-circuit the bands. A stack that opens
+/// with a free band still leads with the first band that charges.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "coreHelper",
+    section = "plans",
+    emit_order = 55
+)]
+pub fn usage_rate(priced: Option<&Value>, meter: Option<&str>) -> Option<UsageRate> {
+    let charge = per_unit_charge(priced, meter);
+    if let Some(charge) = charge
+        .as_ref()
+        .filter(|row| is_strictly_positive(row.amount_minor))
+    {
+        return Some(UsageRate::from_charge(charge.clone(), false));
+    }
+
+    let priced_bands: Vec<Tier> = tier_bands(priced, meter)
+        .into_iter()
+        .filter(|band| is_strictly_positive(band.charge.amount_minor))
+        .collect();
+    if let Some(band) = priced_bands.first() {
+        return Some(UsageRate::from_charge(
+            band.charge.clone(),
+            priced_bands.len() > 1,
+        ));
+    }
+    charge.map(|row| UsageRate::from_charge(row, false))
 }
 
 /// The plan's billing cycle, or `None` for a one-time or pure usage-based plan.
@@ -239,7 +416,7 @@ pub fn included_units(priced: Option<&Value>, meter: Option<&str>) -> Option<i64
     first_limit(priced, meter).map(|limit| limit.cap)
 }
 
-/// The meter a plan counts against: per-unit charge meter, else first limit meter.
+/// The meter a plan counts against: per-unit charge, else first tier, else first limit.
 #[crate::solvapay_export(
     artifact = "decisions",
     catalog = "coreHelper",
@@ -251,6 +428,9 @@ pub fn meter_name(priced: Option<&Value>) -> Option<String> {
         .and_then(|charge| charge.meter)
         .filter(|name| !name.is_empty())
     {
+        return Some(meter);
+    }
+    if let Some(meter) = tier_meters(priced).into_iter().next() {
         return Some(meter);
     }
     first_limit(priced, None).and_then(|limit| limit.meter)
@@ -270,9 +450,7 @@ pub fn counts_usage(priced: Option<&Value>) -> bool {
     if included_units(priced, None).is_some() {
         return true;
     }
-    options_of(priced)
-        .into_iter()
-        .any(|option| option.get("kind").and_then(Value::as_str) == Some("tier"))
+    !tier_bands(priced, None).is_empty()
 }
 
 /// Credits consumed per metered unit for `charge_minor` in the charge currency.
@@ -308,7 +486,7 @@ pub fn credits_per_unit_from_balance(
     balance: Option<&Value>,
     meter: Option<&str>,
 ) -> Option<i64> {
-    let charge = per_unit_charge(priced, meter)?;
+    let charge = usage_rate(priced, meter)?;
     if !is_strictly_positive(charge.amount_minor) {
         return None;
     }
@@ -688,6 +866,159 @@ mod tests {
         assert_eq!(
             credits_per_unit_from_balance(Some(&free_plan()), Some(&usd_balance()), None),
             None
+        );
+    }
+
+    fn band(from: f64, to: Option<f64>, amount_minor: f64, meter: &str, mode: &str) -> Value {
+        json!({
+            "kind": "tier",
+            "from": from,
+            "to": to,
+            "mode": mode,
+            "charge": { "per": "unit", "amountMinor": amount_minor, "currency": "USD", "meter": meter }
+        })
+    }
+
+    fn two_meter_plan() -> Value {
+        json!({
+            "type": "usage-based",
+            "price": 0,
+            "currency": "USD",
+            "options": [
+                band(1000.0, None, 1.0, "requests", "graduated"),
+                band(0.0, Some(500.0), 9.0, "tokens", "volume"),
+                band(0.0, Some(1000.0), 2.0, "requests", "graduated"),
+                band(500.0, None, 7.0, "tokens", "volume")
+            ]
+        })
+    }
+
+    #[test]
+    fn tier_bands_group_by_meter_and_order_by_floor() {
+        let requests: Vec<(f64, Option<f64>, f64)> =
+            tier_bands(Some(&two_meter_plan()), Some("requests"))
+                .into_iter()
+                .map(|t| (t.from, t.to, t.charge.amount_minor))
+                .collect();
+        assert_eq!(
+            requests,
+            vec![(0.0, Some(1000.0), 2.0), (1000.0, None, 1.0)]
+        );
+        let tokens: Vec<(f64, Option<f64>, f64)> =
+            tier_bands(Some(&two_meter_plan()), Some("tokens"))
+                .into_iter()
+                .map(|t| (t.from, t.to, t.charge.amount_minor))
+                .collect();
+        assert_eq!(tokens, vec![(0.0, Some(500.0), 9.0), (500.0, None, 7.0)]);
+    }
+
+    #[test]
+    fn tier_bands_default_to_first_meter_without_mixing() {
+        let meters: std::collections::HashSet<Option<String>> =
+            tier_bands(Some(&two_meter_plan()), None)
+                .into_iter()
+                .map(|t| t.charge.meter)
+                .collect();
+        assert_eq!(meters.len(), 1);
+    }
+
+    #[test]
+    fn tier_bands_empty_for_unknown_meter_or_flat_plan() {
+        assert!(tier_bands(Some(&two_meter_plan()), Some("storage")).is_empty());
+        assert!(tier_bands(Some(&pro_plan()), None).is_empty());
+    }
+
+    #[test]
+    fn tier_meters_lists_each_meter_once() {
+        assert_eq!(
+            tier_meters(Some(&two_meter_plan())),
+            vec!["requests".to_owned(), "tokens".to_owned()]
+        );
+        assert!(tier_meters(Some(&pro_plan())).is_empty());
+    }
+
+    #[test]
+    fn tier_bands_ignore_malformed_bands() {
+        let broken = json!({
+            "options": [
+                { "kind": "tier", "from": 0, "to": null, "mode": "sideways", "charge": { "per": "unit", "amountMinor": 5, "currency": "USD" } },
+                { "kind": "tier", "from": 0, "to": null, "mode": "graduated" }
+            ]
+        });
+        assert!(tier_bands(Some(&broken), None).is_empty());
+    }
+
+    #[test]
+    fn meter_name_and_counts_usage_from_tier_only_plan() {
+        assert!(per_unit_charge(Some(&two_meter_plan()), None).is_none());
+        assert_eq!(
+            meter_name(Some(&two_meter_plan())).as_deref(),
+            Some("requests")
+        );
+        assert!(counts_usage(Some(&two_meter_plan())));
+        assert!(!counts_usage(Some(&pro_plan())));
+    }
+
+    #[test]
+    fn usage_rate_entry_band_and_floor_flag() {
+        let rate = usage_rate(Some(&two_meter_plan()), None).unwrap();
+        assert_eq!(rate.amount_minor, 2.0);
+        assert_eq!(rate.meter.as_deref(), Some("requests"));
+        assert!(rate.tiered);
+        let tokens = usage_rate(Some(&two_meter_plan()), Some("tokens")).unwrap();
+        assert_eq!(tokens.amount_minor, 9.0);
+        assert!(tokens.tiered);
+    }
+
+    #[test]
+    fn usage_rate_single_band_is_not_tiered() {
+        let plan = json!({ "options": [band(0.0, None, 3.0, "requests", "graduated")] });
+        let rate = usage_rate(Some(&plan), None).unwrap();
+        assert_eq!(rate.amount_minor, 3.0);
+        assert!(!rate.tiered);
+    }
+
+    #[test]
+    fn usage_rate_prefers_standalone_per_unit() {
+        assert!(!usage_rate(Some(&payg_plan()), None).unwrap().tiered);
+    }
+
+    #[test]
+    fn usage_rate_ignores_zero_rate_charge() {
+        let both = json!({
+            "options": [
+                { "kind": "charge", "per": "unit", "amountMinor": 0, "currency": "USD", "meter": "requests" },
+                band(0.0, None, 4.0, "requests", "graduated")
+            ]
+        });
+        let rate = usage_rate(Some(&both), None).unwrap();
+        assert_eq!(rate.amount_minor, 4.0);
+        assert!(!rate.tiered);
+    }
+
+    #[test]
+    fn usage_rate_leads_with_first_priced_band() {
+        let free_opening = json!({
+            "options": [
+                band(0.0, Some(1000.0), 0.0, "requests", "graduated"),
+                band(1000.0, None, 3.0, "requests", "graduated")
+            ]
+        });
+        let rate = usage_rate(Some(&free_opening), None).unwrap();
+        assert_eq!(rate.amount_minor, 3.0);
+        assert!(!rate.tiered);
+    }
+
+    #[test]
+    fn usage_rate_null_when_unpriced() {
+        assert!(usage_rate(Some(&pro_plan()), None).is_none());
+    }
+
+    #[test]
+    fn credits_from_tiered_entry_band() {
+        assert_eq!(
+            credits_per_unit_from_balance(Some(&two_meter_plan()), Some(&usd_balance()), None),
+            Some(200)
         );
     }
 }

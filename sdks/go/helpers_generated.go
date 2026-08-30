@@ -214,8 +214,8 @@ func IsZeroDecimalCurrency(ctx context.Context, currency any) (any, error) {
 	}))
 }
 
-// MeterName read the meter a plan counts against from a per-unit charge or limit option.
-// Returns Meter name, or null when neither a per-unit charge nor a limit names one.
+// MeterName read the meter a plan counts against from a per-unit charge, tier, or limit option.
+// Returns Meter name, or null when no charge, tier, or limit names one.
 func MeterName(ctx context.Context, priced any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_meter_name_binding", mustJSON(map[string]any{
 		"priced": priced,
@@ -303,6 +303,23 @@ func ShouldShowTaxRow(ctx context.Context, treatment any) (any, error) {
 	}))
 }
 
+// TierBands return the tier bands a plan prices a meter with, ordered by floor.
+// Returns One meter's band stack; empty when the plan has no bands for that meter.
+func TierBands(ctx context.Context, priced any, meter any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_tier_bands_binding", mustJSON(map[string]any{
+		"priced": priced,
+		"meter":  meter,
+	}))
+}
+
+// TierMeters list every meter the plan prices with tier bands, in first-seen order.
+// Returns Meter names; empty when the plan has no tier bands.
+func TierMeters(ctx context.Context, priced any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_tier_meters_binding", mustJSON(map[string]any{
+		"priced": priced,
+	}))
+}
+
 // ToMajorUnits convert a minor-unit amount to its major-unit equivalent.
 // Returns Major-unit amount.
 func ToMajorUnits(ctx context.Context, amountMinor any, currency any) (any, error) {
@@ -317,6 +334,15 @@ func ToMajorUnits(ctx context.Context, amountMinor any, currency any) (any, erro
 func TrialDays(ctx context.Context, priced any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_trial_days_binding", mustJSON(map[string]any{
 		"priced": priced,
+	}))
+}
+
+// UsageRate return what one metered unit costs, from a per-unit charge or the first priced band.
+// Returns The entry rate, with tiered true when that rate is the floor of a stack.
+func UsageRate(ctx context.Context, priced any, meter any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_usage_rate_binding", mustJSON(map[string]any{
+		"priced": priced,
+		"meter":  meter,
 	}))
 }
 

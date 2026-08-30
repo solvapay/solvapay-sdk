@@ -61,6 +61,9 @@
         "charges",
         "headlineCharges",
         "perUnitCharge",
+        "tierBands",
+        "tierMeters",
+        "usageRate",
         "billingCycle",
         "trialDays",
         "includedUnits",
@@ -120,7 +123,7 @@
       }
     },
     "nativeHelpers": {
-      "preamble": "/**\n * Sync helper pure-logic facade (Step 52).\n *\n * Phase-4/5 decision helpers dispatch to napi / WASM via the shared\n * {@link dispatchSync} install. No TypeScript fallback — uninstalled throws.\n */\n\nimport { dispatchSync } from './native-dispatch'\nimport type { ActivatePlanValidationError } from './activation'\nimport type { CheckoutHelperError } from './checkout'\nimport type {\n  CoercedCustomerOptions,\n  CreateCustomerParams,\n  CreateErrorKind,\n  CustomerRefKind,\n  LookupErrorKind,\n} from './customer-sync'\nimport type { RouteErrorInput, RouteErrorResult } from './error'\nimport type { CheckLimitsParams, LimitsHelperError } from './limits'\nimport type {\n  CachedLimitsEvaluation,\n  FreshLimitsEvaluation,\n  PaywallDecisionLimits,\n  PaywallOutcome,\n} from './paywall-decision'\nimport type {\n  PaymentHelperError,\n  PaymentIntentProjection,\n  PaymentIntentSource,\n  TopupProcessOutcome,\n} from './payment'\nimport type { PlansHelperError } from './plans'\nimport type { ProductHelperError } from './product'\nimport type { RenewalHelperError } from './renewal'\nimport type { UsageSnapshot, UsageSnapshotPurchase } from './usage'\nimport type { AuthResolutionInput, BillingCycle, Charge } from './types/boundary.generated'\nimport type { BalancePegLike, PricedLike } from './pricing-options-types'\n\n",
+      "preamble": "/**\n * Sync helper pure-logic facade (Step 52).\n *\n * Phase-4/5 decision helpers dispatch to napi / WASM via the shared\n * {@link dispatchSync} install. No TypeScript fallback — uninstalled throws.\n */\n\nimport { dispatchSync } from './native-dispatch'\nimport type { ActivatePlanValidationError } from './activation'\nimport type { CheckoutHelperError } from './checkout'\nimport type {\n  CoercedCustomerOptions,\n  CreateCustomerParams,\n  CreateErrorKind,\n  CustomerRefKind,\n  LookupErrorKind,\n} from './customer-sync'\nimport type { RouteErrorInput, RouteErrorResult } from './error'\nimport type { CheckLimitsParams, LimitsHelperError } from './limits'\nimport type {\n  CachedLimitsEvaluation,\n  FreshLimitsEvaluation,\n  PaywallDecisionLimits,\n  PaywallOutcome,\n} from './paywall-decision'\nimport type {\n  PaymentHelperError,\n  PaymentIntentProjection,\n  PaymentIntentSource,\n  TopupProcessOutcome,\n} from './payment'\nimport type { PlansHelperError } from './plans'\nimport type { ProductHelperError } from './product'\nimport type { RenewalHelperError } from './renewal'\nimport type { UsageSnapshot, UsageSnapshotPurchase } from './usage'\nimport type { AuthResolutionInput, BillingCycle, Charge, Tier, UsageRate } from './types/boundary.generated'\nimport type { BalancePegLike, PricedLike } from './pricing-options-types'\n\n",
       "symbolOrder": [
         "classifyCustomerRef",
         "coerceCustomerOptions",
@@ -154,6 +157,9 @@
         "charges",
         "headlineCharges",
         "perUnitCharge",
+        "tierBands",
+        "tierMeters",
+        "usageRate",
         "billingCycle",
         "trialDays",
         "includedUnits",
@@ -225,6 +231,9 @@
         "charges",
         "headlineCharges",
         "perUnitCharge",
+        "tierBands",
+        "tierMeters",
+        "usageRate",
         "billingCycle",
         "trialDays",
         "includedUnits",

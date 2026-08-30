@@ -214,7 +214,10 @@ module SolvaPay
   def self.resolve_tax_behavior: (behavior: String, currency: String) -> untyped
   def self.resolve_tax_treatment_note: (?treatment: String) -> untyped
   def self.should_show_tax_row: (?treatment: String) -> untyped
+  def self.tier_bands: (?priced: untyped, ?meter: String) -> untyped
+  def self.tier_meters: (?priced: untyped) -> untyped
   def self.to_major_units: (amount_minor: Float, currency: String) -> untyped
   def self.trial_days: (?priced: untyped) -> untyped
+  def self.usage_rate: (?priced: untyped, ?meter: String) -> untyped
   def self.validate_business_details: () -> untyped
 end

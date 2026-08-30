@@ -127,6 +127,9 @@ export type WasmSyncMethod =
   | 'creditsPerUnitFromBalance'
   | 'meterName'
   | 'countsUsage'
+  | 'tierBands'
+  | 'tierMeters'
+  | 'usageRate'
   // @solvapay/core pure logic
   | 'formatPrice'
   | 'shouldShowTaxRow'

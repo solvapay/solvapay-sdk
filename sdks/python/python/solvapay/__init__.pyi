@@ -649,8 +649,8 @@ def is_zero_decimal_currency(currency: str) -> bool:
     """
     ...
 def meter_name(priced: object | None = None) -> str | None:
-    """Read the meter a plan counts against from a per-unit charge or limit option.
-    @returns Meter name, or null when neither a per-unit charge nor a limit names one.
+    """Read the meter a plan counts against from a per-unit charge, tier, or limit option.
+    @returns Meter name, or null when no charge, tier, or limit names one.
     """
     ...
 def minor_units_per_major(currency: str) -> int:
@@ -707,6 +707,16 @@ def should_show_tax_row(treatment: str | None = None) -> bool:
     @returns True when a VAT row should be shown.
     """
     ...
+def tier_bands(priced: object | None = None, meter: str | None = None) -> list[object]:
+    """Return the tier bands a plan prices a meter with, ordered by floor.
+    @returns One meter's band stack; empty when the plan has no bands for that meter.
+    """
+    ...
+def tier_meters(priced: object | None = None) -> list[str]:
+    """List every meter the plan prices with tier bands, in first-seen order.
+    @returns Meter names; empty when the plan has no tier bands.
+    """
+    ...
 def to_major_units(amount_minor: float, currency: str) -> float:
     """Convert a minor-unit amount to its major-unit equivalent.
     @returns Major-unit amount.
@@ -715,6 +725,11 @@ def to_major_units(amount_minor: float, currency: str) -> float:
 def trial_days(priced: object | None = None) -> int | None:
     """Read the free-trial length in days from a plan.
     @returns Trial length in days, or null when the plan has no trial.
+    """
+    ...
+def usage_rate(priced: object | None = None, meter: str | None = None) -> object | None:
+    """Return what one metered unit costs, from a per-unit charge or the first priced band.
+    @returns The entry rate, with tiered true when that rate is the floor of a stack.
     """
     ...
 def validate_business_details() -> object:

@@ -89,6 +89,9 @@ export type {
   GateAction,
   GateCacheOp,
   GateNextOutput,
+  Tier,
+  TierMode,
+  UsageRate,
 } from './types/boundary.generated'
 
 export type {
@@ -97,6 +100,7 @@ export type {
   ChargeLike,
   PricedLike,
   PricingOptionLike,
+  TierLike,
 } from './pricing-options-types'
 
 export {
@@ -171,6 +175,9 @@ export {
   charges,
   headlineCharges,
   perUnitCharge,
+  tierBands,
+  tierMeters,
+  usageRate,
   billingCycle,
   trialDays,
   includedUnits,

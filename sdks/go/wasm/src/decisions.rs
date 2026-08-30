@@ -17,9 +17,10 @@ use solvapay_core::{
     project_usage_snapshot, require_product_ref, resolve_authenticated_user,
     resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
     resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
-    should_retry_usage_error, trial_days, validate_activate_plan_params,
-    validate_attach_business_details_params, validate_checkout_session_params,
-    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
+    should_retry_usage_error, tier_bands, tier_meters, trial_days, usage_rate,
+    validate_activate_plan_params, validate_attach_business_details_params,
+    validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, AuthResolutionInput, Backoff, GateContent,
     PaymentIntentSource, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
@@ -1290,5 +1291,52 @@ pub unsafe extern "C" fn sv_counts_usage_binding(args_ptr: *mut u8, args_len: us
         let args = args_map(&args_json)?;
         let priced = optional_value(&args, "priced");
         Ok(Value::Bool(counts_usage(priced.as_ref())))
+    }))
+}
+
+/// Binding for `tierBands`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_tier_bands_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        let meter = optional_string(&args, "meter")?;
+        to_value(&tier_bands(priced.as_ref(), meter.as_deref()))
+    }))
+}
+
+/// Binding for `tierMeters`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_tier_meters_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        to_value(&tier_meters(priced.as_ref()))
+    }))
+}
+
+/// Binding for `usageRate`.
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_usage_rate_binding(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let priced = optional_value(&args, "priced");
+        let meter = optional_string(&args, "meter")?;
+        to_value(&usage_rate(priced.as_ref(), meter.as_deref()))
     }))
 }

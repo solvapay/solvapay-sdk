@@ -7,7 +7,12 @@
  * build its own layout on top of `useCheckoutFlow`.
  */
 
-import type { BalancePegLike, BillingInterval, PricingOptionLike } from '@solvapay/core'
+import {
+  usageRate,
+  type BalancePegLike,
+  type BillingInterval,
+  type PricingOptionLike,
+} from '@solvapay/core'
 import type { Plan } from '../../types'
 import { formatPrice } from '../../utils/format'
 import { isPaygPlan } from '../../utils/isPayg'
@@ -17,7 +22,6 @@ import {
   planCreditsPerUnit,
   planIncludedUnits,
   planMeterNameValue,
-  planPerUnitCharge,
   type PlanDisplayBlock,
 } from '../../utils/planDisplay'
 
@@ -166,23 +170,28 @@ export function planBillingInterval(plan: BootstrapPlanLike): BillingInterval | 
  * so without one — or when the plan is priced in a different currency
  * than the balance — this falls back to the charge itself (`$0.02 / call`)
  * rather than inventing a credit figure.
+ *
+ * A tier-priced plan is read through `usageRate`, so it labels its ENTRY
+ * band and says so ("from $0.02 / call"): later units are priced by their
+ * own bands, and presenting the first band's rate bare would understate
+ * a rising stack. Reading `perUnitCharge` alone — as this did — found
+ * nothing on a tiered plan and rendered no rate at all.
  */
 export function formatPaygRate(
   plan: BootstrapPlanLike,
   locale?: string,
   balance?: BalancePegLike | null,
 ): string | null {
+  const rate = usageRate(plan)
+  if (!rate || !(rate.amountMinor > 0)) return null
+  const prefix = rate.tiered ? 'from ' : ''
+
   const credits = planCreditsPerUnit(plan, balance)
   if (credits != null) {
-    return `${credits.toLocaleString(locale)} ${credits === 1 ? 'credit' : 'credits'} / call`
+    return `${prefix}${credits.toLocaleString(locale)} ${credits === 1 ? 'credit' : 'credits'} / call`
   }
 
-  const charge = planPerUnitCharge(plan)
-  if (charge && charge.amountMinor > 0) {
-    return `${formatPrice(charge.amountMinor, charge.currency.toUpperCase(), { locale })} / call`
-  }
-
-  return null
+  return `${prefix}${formatPrice(rate.amountMinor, rate.currency.toUpperCase(), { locale })} / call`
 }
 
 /**

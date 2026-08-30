@@ -608,6 +608,63 @@ export type SellerIdentityRow = {
 }
 
 /**
+ * One band of a tiered price. `[from, to)` in metered units; `to: null` is unbounded.
+ */
+export type Tier = {
+  /**
+   * Inclusive floor of this band, in metered units.
+   */
+  from: number
+  /**
+   * Exclusive ceiling, or `None` for the unbounded top band.
+   */
+  to: number | null
+  /**
+   * Graduated vs volume pricing of this stack.
+   */
+  mode: TierMode
+  /**
+   * Per-unit charge that prices units in this band.
+   */
+  charge: Charge
+}
+
+/**
+ * How a tier stack prices successive bands.
+ */
+export type TierMode = 'graduated' | 'volume'
+
+/**
+ * What one metered unit costs, and whether that rate is the first of several bands.
+ */
+export type UsageRate = {
+  /**
+   * Which quantity the amount is charged against.
+   */
+  per: ChargePer
+  /**
+   * Amount in the charge currency's minor units.
+   */
+  amountMinor: number
+  /**
+   * ISO currency code as shipped on the wire (not normalised).
+   */
+  currency: string
+  /**
+   * Meter name when `per` is `unit`.
+   */
+  meter?: string
+  /**
+   * Setup-fee flag; omitted unless `true`.
+   */
+  oneTime?: boolean
+  /**
+   * True when `amount_minor` is the entry rate of a multi-band stack.
+   */
+  tiered: boolean
+}
+
+/**
  * Usage snapshot projected from an active purchase (or none).
  */
 export type UsageSnapshot = {

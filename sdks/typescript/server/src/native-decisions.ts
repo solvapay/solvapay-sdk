@@ -357,6 +357,33 @@ export function perUnitCharge(
 }
 
 /**
+ * Return the tier bands a plan prices a meter with, ordered by floor.
+ * @returns One meter's band stack; empty when the plan has no bands for that meter.
+ */
+export function tierBands(priced: PricedLike | null | undefined, meter?: string | null): Tier[] {
+  return dispatchSync('tierBands', { priced: priced ?? null, meter: meter ?? null })
+}
+
+/**
+ * List every meter the plan prices with tier bands, in first-seen order.
+ * @returns Meter names; empty when the plan has no tier bands.
+ */
+export function tierMeters(priced: PricedLike | null | undefined): string[] {
+  return dispatchSync('tierMeters', { priced: priced ?? null })
+}
+
+/**
+ * Return what one metered unit costs, from a per-unit charge or the first priced band.
+ * @returns The entry rate, with tiered true when that rate is the floor of a stack.
+ */
+export function usageRate(
+  priced: PricedLike | null | undefined,
+  meter?: string | null,
+): UsageRate | null {
+  return dispatchSync('usageRate', { priced: priced ?? null, meter: meter ?? null })
+}
+
+/**
  * Read the billing-cycle option from a plan.
  * @returns Interval (and count when greater than 1), or null.
  */
@@ -384,8 +411,8 @@ export function includedUnits(
 }
 
 /**
- * Read the meter a plan counts against from a per-unit charge or limit option.
- * @returns Meter name, or null when neither a per-unit charge nor a limit names one.
+ * Read the meter a plan counts against from a per-unit charge, tier, or limit option.
+ * @returns Meter name, or null when no charge, tier, or limit names one.
  */
 export function meterName(priced: PricedLike | null | undefined): string | null {
   return dispatchSync('meterName', { priced: priced ?? null })

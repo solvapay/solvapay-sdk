@@ -6,7 +6,7 @@ pub use solvapay_core::{
     BillingCycle, BusinessDetailsInput, Charge, CreditsToDisplayInput, GateContent,
     PaywallClientPayload, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
     ProductReadinessInput, ProductReadinessResult, SellerIdentityDisplay, SellerIdentityInput,
-    TaxIdType, ValidateBusinessDetailsResult,
+    TaxIdType, UsageRate, ValidateBusinessDetailsResult,
 };
 
 /// Buyer-facing note when VAT reverse charge applies.
@@ -172,11 +172,11 @@ pub use solvapay_core::pricing_options::included_units;
 /// True when the currency has zero decimal places.
 pub use solvapay_core::credit_display::is_zero_decimal_currency;
 
-/// Read the meter a plan counts against from a per-unit charge or limit option.
+/// Read the meter a plan counts against from a per-unit charge, tier, or limit option.
 ///
 /// # Returns
 ///
-/// Meter name, or null when neither a per-unit charge nor a limit names one.
+/// Meter name, or null when no charge, tier, or limit names one.
 pub use solvapay_core::pricing_options::meter_name;
 
 /// Return how many minor units make one major unit for a currency.
@@ -242,6 +242,20 @@ pub use solvapay_core::tax_summary::resolve_tax_treatment_note;
 /// True when a VAT row should be shown.
 pub use solvapay_core::tax_summary::should_show_tax_row;
 
+/// Return the tier bands a plan prices a meter with, ordered by floor.
+///
+/// # Returns
+///
+/// One meter's band stack; empty when the plan has no bands for that meter.
+pub use solvapay_core::pricing_options::tier_bands;
+
+/// List every meter the plan prices with tier bands, in first-seen order.
+///
+/// # Returns
+///
+/// Meter names; empty when the plan has no tier bands.
+pub use solvapay_core::pricing_options::tier_meters;
+
 /// Convert a minor-unit amount to its major-unit equivalent.
 ///
 /// # Returns
@@ -255,6 +269,13 @@ pub use solvapay_core::money_format::to_major_units;
 ///
 /// Trial length in days, or null when the plan has no trial.
 pub use solvapay_core::pricing_options::trial_days;
+
+/// Return what one metered unit costs, from a per-unit charge or the first priced band.
+///
+/// # Returns
+///
+/// The entry rate, with tiered true when that rate is the floor of a stack.
+pub use solvapay_core::pricing_options::usage_rate;
 
 /// Validate seller business-details fields before submission.
 ///

@@ -117,6 +117,9 @@ SyncMethod = Literal[
     "credits_per_unit_from_balance",
     "meter_name",
     "counts_usage",
+    "tier_bands",
+    "tier_meters",
+    "usage_rate",
     # --- @solvapay/core pure logic ---
     "format_price",
     "should_show_tax_row",

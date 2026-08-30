@@ -55,7 +55,10 @@ use crate::decisions::resolve_return_url_binding;
 use crate::decisions::retry_next_delay_ms;
 use crate::decisions::select_active_purchases_binding;
 use crate::decisions::should_retry_usage_error_binding;
+use crate::decisions::tier_bands_binding;
+use crate::decisions::tier_meters_binding;
 use crate::decisions::trial_days_binding;
+use crate::decisions::usage_rate_binding;
 use crate::decisions::validate_activate_plan_params_binding;
 use crate::decisions::validate_attach_business_details_params_binding;
 use crate::decisions::validate_checkout_session_params_binding;
@@ -302,6 +305,9 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     )?;
     native.define_singleton_method("meter_name", function!(meter_name_binding, 1))?;
     native.define_singleton_method("counts_usage", function!(counts_usage_binding, 1))?;
+    native.define_singleton_method("tier_bands", function!(tier_bands_binding, 1))?;
+    native.define_singleton_method("tier_meters", function!(tier_meters_binding, 1))?;
+    native.define_singleton_method("usage_rate", function!(usage_rate_binding, 1))?;
     native.define_singleton_method("format_price", function!(format_price_binding, 1))?;
     native.define_singleton_method(
         "should_show_tax_row",

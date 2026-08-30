@@ -6,7 +6,7 @@
  * generated DTO for every unknown option kind.
  */
 
-import type { BillingCycle, Charge } from './types/boundary.generated'
+import type { BillingCycle, Charge, Tier, UsageRate } from './types/boundary.generated'
 
 /** One entry of a plan's `options[]`. Narrowed by the readers. */
 export type PricingOptionLike = Record<string, unknown>
@@ -21,6 +21,12 @@ export type ChargeLike = Charge
 
 /** Billing-cycle option as returned by the Rust readers. */
 export type BillingCycleLike = BillingCycle
+
+/** One band of a tiered price as returned by the Rust readers. */
+export type TierLike = Tier
+
+/** Metered unit rate, including whether it is the floor of a band stack. */
+export type { UsageRate }
 
 /** FX-bearing fields of a customer balance, as shipped on bootstrap. */
 export interface BalancePegLike {

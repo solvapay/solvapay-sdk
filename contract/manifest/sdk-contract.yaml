@@ -3678,6 +3678,69 @@ coreHelpers:
       go: sync
       rust: sync
       c: sync
+  tierBands:
+    names:
+      ts: tierBands
+      py: tier_bands
+      rb: tier_bands
+      go: TierBands
+      rust: tier_bands
+      c: tierBands
+    params: []
+    docs:
+      summary: 'Return the tier bands a plan prices a meter with, ordered by floor.'
+      params:
+        options: 'A priced plan and optional meter name.'
+      returns: 'One meter''s band stack; empty when the plan has no bands for that meter.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  tierMeters:
+    names:
+      ts: tierMeters
+      py: tier_meters
+      rb: tier_meters
+      go: TierMeters
+      rust: tier_meters
+      c: tierMeters
+    params: []
+    docs:
+      summary: 'List every meter the plan prices with tier bands, in first-seen order.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Meter names; empty when the plan has no tier bands.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  usageRate:
+    names:
+      ts: usageRate
+      py: usage_rate
+      rb: usage_rate
+      go: UsageRate
+      rust: usage_rate
+      c: usageRate
+    params: []
+    docs:
+      summary: 'Return what one metered unit costs, from a per-unit charge or the first priced band.'
+      params:
+        options: 'A priced plan and optional meter name.'
+      returns: 'The entry rate, with tiered true when that rate is the floor of a stack.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
   billingCycle:
     names:
       ts: billingCycle
@@ -3751,10 +3814,10 @@ coreHelpers:
       c: meterName
     params: []
     docs:
-      summary: 'Read the meter a plan counts against from a per-unit charge or limit option.'
+      summary: 'Read the meter a plan counts against from a per-unit charge, tier, or limit option.'
       params:
         options: 'A catalog plan or frozen planSnapshot carrying options[].'
-      returns: 'Meter name, or null when neither a per-unit charge nor a limit names one.'
+      returns: 'Meter name, or null when no charge, tier, or limit names one.'
     sync:
       ts: sync
       py: sync

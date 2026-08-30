@@ -30,6 +30,20 @@ const perUnit = (amountMinor: number, currency = 'usd', meter = 'requests') => (
   meter,
 })
 
+const band = (
+  from: number,
+  to: number | null,
+  amountMinor: number,
+  currency = 'usd',
+  meter = 'requests',
+) => ({
+  kind: 'tier' as const,
+  from,
+  to,
+  mode: 'graduated' as const,
+  charge: { per: 'unit' as const, amountMinor, currency, meter },
+})
+
 const usdBalance = { displayCurrency: 'USD', displayExchangeRate: 1, creditsPerMinorUnit: 100 }
 
 const free: Plan = {
@@ -138,6 +152,30 @@ describe('formatPaygRate', () => {
 
   it('returns null for a plan with no per-unit charge', () => {
     expect(formatPaygRate(recurring, 'en-US', usdBalance)).toBeNull()
+  })
+
+  // DEV-816: a tier-priced meter carries no standalone per-unit charge, so
+  // reading `perUnitCharge` alone returned null and a tiered plan showed no
+  // rate at all. The entry band is the rate to lead with — marked as a floor,
+  // because later units are priced by their own bands.
+  it('labels a tiered plan from its entry band', () => {
+    const tiered: Plan = { ...payg, options: [band(0, 1000, 2), band(1000, null, 1)] }
+    expect(formatPaygRate(tiered, 'en-US')).toBe('from $0.02 / call')
+  })
+
+  it('prices a tiered plan in credits when the balance supplies the peg', () => {
+    const tiered: Plan = { ...payg, options: [band(0, 1000, 10), band(1000, null, 5)] }
+    expect(formatPaygRate(tiered, 'en-US', usdBalance)).toBe('from 1,000 credits / call')
+  })
+
+  it('drops the floor marker for a single-band plan, which is just a rate', () => {
+    const oneBand: Plan = { ...payg, options: [band(0, null, 2)] }
+    expect(formatPaygRate(oneBand, 'en-US')).toBe('$0.02 / call')
+  })
+
+  it('returns null for a zero-rate band, which costs nothing per call', () => {
+    const freeBand: Plan = { ...payg, options: [band(0, null, 0)] }
+    expect(formatPaygRate(freeBand, 'en-US')).toBeNull()
   })
 })
 

@@ -127,8 +127,9 @@ pub use paywall_state::{
 pub use plans::validate_list_plans_params;
 pub use pricing_options::{
     billing_cycle, charges, counts_usage, credits_per_unit_from_balance, headline_charges,
-    included_units, meter_name, pegged_credits_per_unit, per_unit_charge, trial_days, BillingCycle,
-    BillingInterval, Charge, ChargePer,
+    included_units, meter_name, pegged_credits_per_unit, per_unit_charge, tier_bands, tier_meters,
+    trial_days, usage_rate, BillingCycle, BillingInterval, Charge, ChargePer, Tier, TierMode,
+    UsageRate,
 };
 pub use product::validate_get_product_params;
 pub use product_readiness::{

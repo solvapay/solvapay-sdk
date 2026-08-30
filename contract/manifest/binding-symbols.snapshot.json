@@ -5712,6 +5712,115 @@
       "coreCall": "should_show_tax_row",
       "clientCallArgs": []
     },
+    "tierBands": {
+      "core": "solvapay_core::pricing_options::tier_bands",
+      "names": {
+        "ts": "tierBands",
+        "py": "tier_bands",
+        "rb": "tier_bands",
+        "go": "TierBands",
+        "rust": "tier_bands",
+        "c": "tierBands"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "tierBands"
+      },
+      "args": [
+        {
+          "name": "priced",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "meter",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 53,
+      "section": "plans",
+      "doc": "Binding for `tierBands`.",
+      "docWasm": null,
+      "rustFnName": "tier_bands_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "priced.as_ref()",
+          "meter.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "tier_bands",
+      "clientCallArgs": []
+    },
+    "tierMeters": {
+      "core": "solvapay_core::pricing_options::tier_meters",
+      "names": {
+        "ts": "tierMeters",
+        "py": "tier_meters",
+        "rb": "tier_meters",
+        "go": "TierMeters",
+        "rust": "tier_meters",
+        "c": "tierMeters"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "tierMeters"
+      },
+      "args": [
+        {
+          "name": "priced",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 54,
+      "section": "plans",
+      "doc": "Binding for `tierMeters`.",
+      "docWasm": null,
+      "rustFnName": "tier_meters_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "priced.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "tier_meters",
+      "clientCallArgs": []
+    },
     "toMajorUnits": {
       "core": "solvapay_core::money_format::to_major_units",
       "names": {
@@ -6017,6 +6126,66 @@
         "&refs[0]",
         "params"
       ]
+    },
+    "usageRate": {
+      "core": "solvapay_core::pricing_options::usage_rate",
+      "names": {
+        "ts": "usageRate",
+        "py": "usage_rate",
+        "rb": "usage_rate",
+        "go": "UsageRate",
+        "rust": "usage_rate",
+        "c": "usageRate"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "usageRate"
+      },
+      "args": [
+        {
+          "name": "priced",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "meter",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 55,
+      "section": "plans",
+      "doc": "Binding for `usageRate`.",
+      "docWasm": null,
+      "rustFnName": "usage_rate_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "priced.as_ref()",
+          "meter.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "usage_rate",
+      "clientCallArgs": []
     },
     "validateActivatePlanParams": {
       "core": "solvapay_core::activation::validate_activate_plan_params",

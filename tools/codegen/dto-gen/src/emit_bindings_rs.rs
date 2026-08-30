@@ -908,6 +908,7 @@ use solvapay_core::{
     normalize_reactivate_response, paywall_client_payload, project_payment_intent_result,
     billing_cycle, charges, credits_per_unit_from_balance, headline_charges,
     counts_usage, included_units, meter_name, pegged_credits_per_unit, per_unit_charge,
+    tier_bands, tier_meters, usage_rate,
     project_topup_process_outcome, project_usage_snapshot, require_product_ref,
     trial_days,
     resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,

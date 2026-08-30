@@ -198,8 +198,8 @@ module SolvaPay
     NativeDispatch.call_sync("is_zero_decimal_currency", args)
   end
 
-  # Read the meter a plan counts against from a per-unit charge or limit option.
-  # @return Meter name, or null when neither a per-unit charge nor a limit names one.
+  # Read the meter a plan counts against from a per-unit charge, tier, or limit option.
+  # @return Meter name, or null when no charge, tier, or limit names one.
   def self.meter_name(priced: nil)
     args = {} #: Hash[String, untyped]
     args["priced"] = priced unless priced.nil?
@@ -286,6 +286,23 @@ module SolvaPay
     NativeDispatch.call_sync("should_show_tax_row", args)
   end
 
+  # Return the tier bands a plan prices a meter with, ordered by floor.
+  # @return One meter's band stack; empty when the plan has no bands for that meter.
+  def self.tier_bands(priced: nil, meter: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    args["meter"] = meter unless meter.nil?
+    NativeDispatch.call_sync("tier_bands", args)
+  end
+
+  # List every meter the plan prices with tier bands, in first-seen order.
+  # @return Meter names; empty when the plan has no tier bands.
+  def self.tier_meters(priced: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    NativeDispatch.call_sync("tier_meters", args)
+  end
+
   # Convert a minor-unit amount to its major-unit equivalent.
   # @return Major-unit amount.
   def self.to_major_units(amount_minor:, currency:)
@@ -301,6 +318,15 @@ module SolvaPay
     args = {} #: Hash[String, untyped]
     args["priced"] = priced unless priced.nil?
     NativeDispatch.call_sync("trial_days", args)
+  end
+
+  # Return what one metered unit costs, from a per-unit charge or the first priced band.
+  # @return The entry rate, with tiered true when that rate is the floor of a stack.
+  def self.usage_rate(priced: nil, meter: nil)
+    args = {} #: Hash[String, untyped]
+    args["priced"] = priced unless priced.nil?
+    args["meter"] = meter unless meter.nil?
+    NativeDispatch.call_sync("usage_rate", args)
   end
 
   # Validate seller business-details fields before submission.

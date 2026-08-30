@@ -4624,6 +4624,98 @@
         ]
       }
     },
+    "Tier": {
+      "module": "pricing_options",
+      "rustdoc": "One band of a tiered price. `[from, to)` in metered units; `to: null` is unbounded.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "from",
+            "wireName": "from",
+            "rustdoc": "Inclusive floor of this band, in metered units.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "to",
+            "wireName": "to",
+            "rustdoc": "Exclusive ceiling, or `None` for the unbounded top band.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": "serialize_opt_whole_f64",
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "mode",
+            "wireName": "mode",
+            "rustdoc": "Graduated vs volume pricing of this stack.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "TierMode"
+            }
+          },
+          {
+            "rustName": "charge",
+            "wireName": "charge",
+            "rustdoc": "Per-unit charge that prices units in this band.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "Charge"
+            }
+          }
+        ]
+      }
+    },
+    "TierMode": {
+      "module": "pricing_options",
+      "rustdoc": "How a tier stack prices successive bands.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "snake_case",
+        "variants": [
+          {
+            "rustName": "Graduated",
+            "wireName": "graduated",
+            "rustdoc": "Each band is charged independently as usage crosses it.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Volume",
+            "wireName": "volume",
+            "rustdoc": "The matching band's rate applies to every unit.",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
     "ToolAnnotations": {
       "module": "mcp::descriptors",
       "rustdoc": "Portable MCP tool annotations (only set flags are serialized).",
@@ -4857,6 +4949,97 @@
             "cfgFeature": null,
             "ty": {
               "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "UsageRate": {
+      "module": "pricing_options",
+      "rustdoc": "What one metered unit costs, and whether that rate is the first of several bands.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "per",
+            "wireName": "per",
+            "rustdoc": "Which quantity the amount is charged against.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "ChargePer"
+            }
+          },
+          {
+            "rustName": "amount_minor",
+            "wireName": "amountMinor",
+            "rustdoc": "Amount in the charge currency's minor units.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": "serialize_whole_f64",
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "currency",
+            "wireName": "currency",
+            "rustdoc": "ISO currency code as shipped on the wire (not normalised).",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "meter",
+            "wireName": "meter",
+            "rustdoc": "Meter name when `per` is `unit`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "one_time",
+            "wireName": "oneTime",
+            "rustdoc": "Setup-fee flag; omitted unless `true`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "tiered",
+            "wireName": "tiered",
+            "rustdoc": "True when `amount_minor` is the entry rate of a multi-band stack.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
             }
           }
         ]
@@ -7633,7 +7816,7 @@
       "name": "meter_name",
       "module": "pricing_options",
       "implTy": null,
-      "rustdoc": "The meter a plan counts against: per-unit charge meter, else first limit meter.",
+      "rustdoc": "The meter a plan counts against: per-unit charge, else first tier, else first limit.",
       "params": [
         {
           "rustName": "priced",
@@ -7720,6 +7903,65 @@
         }
       }
     },
+    "solvapay_core::pricing_options::tier_bands": {
+      "name": "tier_bands",
+      "module": "pricing_options",
+      "implTy": null,
+      "rustdoc": "The tier bands a plan prices `meter` with, ordered by band floor.\n\nWithout a `meter` this returns the first tiered meter's stack — never a mix\nof two meters' bands. The wire is a flat list of `tier` options with no\ngrouping or ordering guarantee.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "meter",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "named",
+            "name": "Tier"
+          }
+        }
+      }
+    },
+    "solvapay_core::pricing_options::tier_meters": {
+      "name": "tier_meters",
+      "module": "pricing_options",
+      "implTy": null,
+      "rustdoc": "Every meter the plan prices with tier bands, in first-seen order.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "vec",
+          "item": {
+            "kind": "string"
+          }
+        }
+      }
+    },
     "solvapay_core::pricing_options::trial_days": {
       "name": "trial_days",
       "module": "pricing_options",
@@ -7739,6 +7981,37 @@
         "optional": true,
         "ty": {
           "kind": "i64"
+        }
+      }
+    },
+    "solvapay_core::pricing_options::usage_rate": {
+      "name": "usage_rate",
+      "module": "pricing_options",
+      "implTy": null,
+      "rustdoc": "The rate a plan charges for one metered unit — a standalone per-unit\ncharge, else the first priced band of the meter's tier stack.\n\nA zero-rate per-unit charge does not price the meter (it anchors an\nallowance), so it does not short-circuit the bands. A stack that opens\nwith a free band still leads with the first band that charges.",
+      "params": [
+        {
+          "rustName": "priced",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "meter",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": true,
+        "ty": {
+          "kind": "named",
+          "name": "UsageRate"
         }
       }
     },

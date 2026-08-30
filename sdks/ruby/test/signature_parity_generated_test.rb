@@ -84,8 +84,11 @@ class SignatureParityGeneratedTest < Minitest::Test
     resolve_tax_behavior
     resolve_tax_treatment_note
     should_show_tax_row
+    tier_bands
+    tier_meters
     to_major_units
     trial_days
+    usage_rate
     validate_business_details
   ].freeze
 

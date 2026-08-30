@@ -236,8 +236,8 @@ def is_zero_decimal_currency(currency: str) -> Any:
     return call_native_sync("is_zero_decimal_currency", json.dumps(payload))
 
 def meter_name(priced: Any | None = None) -> Any:
-    """Read the meter a plan counts against from a per-unit charge or limit option.
-    @returns Meter name, or null when neither a per-unit charge nor a limit names one.
+    """Read the meter a plan counts against from a per-unit charge, tier, or limit option.
+    @returns Meter name, or null when no charge, tier, or limit names one.
     """
     payload: dict[str, Any] = {}
     if priced is not None:
@@ -345,6 +345,26 @@ def should_show_tax_row(treatment: str | None = None) -> Any:
         payload["treatment"] = treatment
     return call_native_sync("should_show_tax_row", json.dumps(payload))
 
+def tier_bands(priced: Any | None = None, meter: str | None = None) -> Any:
+    """Return the tier bands a plan prices a meter with, ordered by floor.
+    @returns One meter's band stack; empty when the plan has no bands for that meter.
+    """
+    payload: dict[str, Any] = {}
+    if priced is not None:
+        payload["priced"] = priced
+    if meter is not None:
+        payload["meter"] = meter
+    return call_native_sync("tier_bands", json.dumps(payload))
+
+def tier_meters(priced: Any | None = None) -> Any:
+    """List every meter the plan prices with tier bands, in first-seen order.
+    @returns Meter names; empty when the plan has no tier bands.
+    """
+    payload: dict[str, Any] = {}
+    if priced is not None:
+        payload["priced"] = priced
+    return call_native_sync("tier_meters", json.dumps(payload))
+
 def to_major_units(amount_minor: float, currency: str) -> Any:
     """Convert a minor-unit amount to its major-unit equivalent.
     @returns Major-unit amount.
@@ -362,6 +382,17 @@ def trial_days(priced: Any | None = None) -> Any:
     if priced is not None:
         payload["priced"] = priced
     return call_native_sync("trial_days", json.dumps(payload))
+
+def usage_rate(priced: Any | None = None, meter: str | None = None) -> Any:
+    """Return what one metered unit costs, from a per-unit charge or the first priced band.
+    @returns The entry rate, with tiered true when that rate is the floor of a stack.
+    """
+    payload: dict[str, Any] = {}
+    if priced is not None:
+        payload["priced"] = priced
+    if meter is not None:
+        payload["meter"] = meter
+    return call_native_sync("usage_rate", json.dumps(payload))
 
 def validate_business_details() -> Any:
     """Validate seller business-details fields before submission.

@@ -133,6 +133,9 @@ export type NativeSyncMethod =
   | 'creditsPerUnitFromBalance'
   | 'meterName'
   | 'countsUsage'
+  | 'tierBands'
+  | 'tierMeters'
+  | 'usageRate'
   // Step 37R-d — @solvapay/core pure logic
   | 'formatPrice'
   | 'shouldShowTaxRow'

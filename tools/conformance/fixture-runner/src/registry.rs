@@ -20,7 +20,7 @@ use solvapay_core::{
     project_topup_process_outcome, resolve_check_limits_params, resolve_fallback_gate_limits,
     resolve_product_ref, resolve_purchase_customer_ref, resolve_tax_treatment_note,
     reverse_charge_note, should_retry_usage_error, should_show_tax_row, tax_not_collected_note,
-    to_major_units, trial_days, validate_activate_plan_params,
+    tier_bands, tier_meters, to_major_units, trial_days, usage_rate, validate_activate_plan_params,
     validate_attach_business_details_params, validate_checkout_session_params,
     validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
@@ -447,6 +447,19 @@ fn invoke_should_show_tax_row(input: &FixtureInput) -> Result<Value, BindingErro
     Ok(Value::Bool(should_show_tax_row(treatment.as_deref())))
 }
 
+fn invoke_tier_bands(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    let meter = optional_string(&args, "meter")?;
+    to_value(&tier_bands(priced.as_ref(), meter.as_deref()))
+}
+
+fn invoke_tier_meters(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    to_value(&tier_meters(priced.as_ref()))
+}
+
 fn invoke_to_major_units(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let amount_minor = require_f64(&args, "amountMinor")?;
@@ -458,6 +471,13 @@ fn invoke_trial_days(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let priced = optional_value(&args, "priced");
     to_value(&trial_days(priced.as_ref()))
+}
+
+fn invoke_usage_rate(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let priced = optional_value(&args, "priced");
+    let meter = optional_string(&args, "meter")?;
+    to_value(&usage_rate(priced.as_ref(), meter.as_deref()))
 }
 
 fn invoke_validate_activate_plan_params(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1008,6 +1028,27 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_per_unit_charge),
+        },
+    );
+    registry.register(
+        "tierBands",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_tier_bands),
+        },
+    );
+    registry.register(
+        "tierMeters",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_tier_meters),
+        },
+    );
+    registry.register(
+        "usageRate",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_usage_rate),
         },
     );
     registry.register(

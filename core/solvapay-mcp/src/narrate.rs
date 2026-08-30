@@ -4,8 +4,8 @@ use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use solvapay_core::{
     billing_cycle, credits_per_unit_from_balance, credits_to_display_minor_units,
-    format_major_fixed, headline_charges, is_zero_decimal_currency, to_major_units, trial_days,
-    CreditsToDisplayInput,
+    format_major_fixed, headline_charges, is_zero_decimal_currency, meter_name, to_major_units,
+    trial_days, usage_rate, CreditsToDisplayInput,
 };
 
 /// Input for [`mcp_narrate`].
@@ -168,20 +168,40 @@ fn format_cycle(plan: &Value) -> String {
 
 fn format_plan_prices(plan: &Value) -> String {
     let charges = headline_charges(Some(plan));
-    let priced: Vec<String> = if charges.is_empty() {
-        format_money(
-            plan.get("price").and_then(Value::as_f64),
-            plan.get("currency").and_then(Value::as_str),
-        )
-        .into_iter()
-        .collect()
-    } else {
-        charges
+    if !charges.is_empty() {
+        return charges
             .into_iter()
             .filter_map(|charge| format_money(Some(charge.amount_minor), Some(&charge.currency)))
-            .collect()
-    };
-    priced.join(" · ")
+            .collect::<Vec<_>>()
+            .join(" · ");
+    }
+
+    // No flat charge: a pay-as-you-go plan, priced per unit or in bands. Its
+    // derived top-level `price` is 0, so falling straight through to it
+    // announced a paid plan as free. Lead with the rate instead, marked as a
+    // floor when the plan prices in bands.
+    if let Some(rate) = usage_rate(Some(plan), None) {
+        if rate.amount_minor > 0.0 {
+            if let Some(money) = format_money(Some(rate.amount_minor), Some(&rate.currency)) {
+                let fallback = meter_name(Some(plan));
+                let unit = rate
+                    .meter
+                    .as_deref()
+                    .or(fallback.as_deref())
+                    .unwrap_or("unit");
+                let prefix = if rate.tiered { "from " } else { "" };
+                return format!("{prefix}{money} / {unit}");
+            }
+        }
+    }
+
+    format_money(
+        plan.get("price").and_then(Value::as_f64),
+        plan.get("currency").and_then(Value::as_str),
+    )
+    .into_iter()
+    .collect::<Vec<_>>()
+    .join(" · ")
 }
 
 fn plans_list_lines(plans: &[Value]) -> Vec<String> {
@@ -584,4 +604,88 @@ pub fn mcp_narrate(input: &NarrateInput) -> Value {
         );
     }
     narrator_for(&input.tool, &input.payload).unwrap_or_else(|| json!({ "text": "", "links": [] }))
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::missing_docs_in_private_items
+    )]
+
+    use super::*;
+    use serde_json::json;
+
+    fn band(from: f64, to: Option<f64>, amount_minor: f64, meter: &str) -> Value {
+        json!({
+            "kind": "tier",
+            "from": from,
+            "to": to,
+            "mode": "graduated",
+            "charge": { "per": "unit", "amountMinor": amount_minor, "currency": "USD", "meter": meter }
+        })
+    }
+
+    fn payload(options: Vec<Value>) -> Value {
+        json!({
+            "product": { "name": "Wiki" },
+            "plans": [{
+                "reference": "pln_1",
+                "name": "Scale",
+                "type": "usage-based",
+                "requiresPayment": true,
+                "price": 0,
+                "currency": "USD",
+                "options": options
+            }]
+        })
+    }
+
+    fn upgrade_text(options: Vec<Value>) -> String {
+        narrate_upgrade(&payload(options))
+            .get("text")
+            .and_then(Value::as_str)
+            .unwrap()
+            .to_owned()
+    }
+
+    #[test]
+    fn upgrade_leads_tiered_plan_with_floor() {
+        let text = upgrade_text(vec![
+            band(0.0, Some(1000.0), 2.0, "requests"),
+            band(1000.0, None, 1.0, "requests"),
+        ]);
+        assert!(text.contains("from $0.02 / requests"), "{text}");
+        assert!(!text.contains("$0.00"), "{text}");
+    }
+
+    #[test]
+    fn upgrade_states_single_band_plainly() {
+        let text = upgrade_text(vec![band(0.0, None, 5.0, "requests")]);
+        assert!(text.contains("$0.05 / requests"), "{text}");
+        assert!(!text.contains("from "), "{text}");
+    }
+
+    #[test]
+    fn upgrade_states_flat_per_unit_rate() {
+        let text = upgrade_text(vec![json!({
+            "kind": "charge",
+            "per": "unit",
+            "amountMinor": 3,
+            "currency": "USD",
+            "meter": "tokens"
+        })]);
+        assert!(text.contains("$0.03 / tokens"), "{text}");
+    }
+
+    #[test]
+    fn upgrade_still_leads_recurring_with_flat_charge() {
+        let text = upgrade_text(vec![
+            json!({ "kind": "billingCycle", "interval": "month" }),
+            json!({ "kind": "charge", "per": "flat", "amountMinor": 1900, "currency": "USD" }),
+        ]);
+        assert!(text.contains("$19"), "{text}");
+    }
 }

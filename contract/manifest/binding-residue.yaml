@@ -852,6 +852,22 @@ perUnitCharge:
       priced: PricedLike | null | undefined
     paramStyle:
       meter: optionalNull
+tierBands:
+  tsWrapper:
+    paramTypes:
+      priced: PricedLike | null | undefined
+    paramStyle:
+      meter: optionalNull
+tierMeters:
+  tsWrapper:
+    paramTypes:
+      priced: PricedLike | null | undefined
+usageRate:
+  tsWrapper:
+    paramTypes:
+      priced: PricedLike | null | undefined
+    paramStyle:
+      meter: optionalNull
 billingCycle:
   tsWrapper:
     paramTypes:

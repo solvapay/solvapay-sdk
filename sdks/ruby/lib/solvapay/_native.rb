@@ -143,6 +143,9 @@ module SolvaPay
       credits_per_unit_from_balance
       meter_name
       counts_usage
+      tier_bands
+      tier_meters
+      usage_rate
     ].freeze
 
     RAW_VERIFY_WEBHOOK = SolvaPay.method(:verify_webhook)
