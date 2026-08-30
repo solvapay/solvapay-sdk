@@ -17,13 +17,15 @@ function limits(partial: Partial<LimitResponseWithPlan> = {}): LimitResponseWith
 }
 
 function gate(overrides: Partial<PaywallStructuredContent> = {}): PaywallStructuredContent {
+  const kind = overrides.kind ?? 'payment_required'
   return {
     kind: 'payment_required',
     product: 'prd_test',
     checkoutUrl: 'https://example.test/checkout',
     message: '',
+    shortMessage: kind === 'activation_required' ? 'Activation required' : 'Payment required',
     ...overrides,
-  } as PaywallStructuredContent
+  }
 }
 
 describe('classifyPaywallState', () => {

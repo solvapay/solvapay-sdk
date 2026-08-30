@@ -22,8 +22,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
-import type { PaywallStructuredContent } from '@solvapay/server'
 import type { Plan } from '../types'
+import { mockPaywallContent } from '../test-helpers/mockPaywallContent'
 
 // Mock `usePaywallResolver` up front so the `Root` doesn't try to
 // subscribe to live provider state. The state is module-level so
@@ -283,12 +283,12 @@ describe('PaywallNotice.Message', () => {
   //   unknown future kind                      → content.message (forward-compat)
 
   it('uses paymentRequiredMessageNoBalance for payment_required without a balance block — never the MCP-flavored server message', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'payment_required',
       product: baseProduct,
       checkoutUrl: 'https://example.test/c',
       message: 'Call the `upgrade` tool to keep going.',
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Message data-testid="message" />
@@ -300,14 +300,14 @@ describe('PaywallNotice.Message', () => {
   })
 
   it('prefers client-side copy when the payment_required content carries balance', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'payment_required',
       product: baseProduct,
       checkoutUrl: '',
       message: 'Purchase required. Remaining: 0',
       balance: { remainingUnits: 0, creditBalance: 0, creditsPerUnit: 1, currency: 'usd' },
       productDetails: { name: 'Knowledge API', reference: baseProduct },
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Message data-testid="message" />
@@ -320,13 +320,13 @@ describe('PaywallNotice.Message', () => {
   })
 
   it('uses the remaining-count copy (with plural) when some quota is left', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'payment_required',
       product: baseProduct,
       checkoutUrl: '',
       message: 'Purchase required. Remaining: 3',
       balance: { remainingUnits: 3, creditBalance: 3, creditsPerUnit: 1, currency: 'usd' },
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Message data-testid="message" />
@@ -337,13 +337,13 @@ describe('PaywallNotice.Message', () => {
   })
 
   it('uses activationRequiredMessage for activation_required — never the MCP-flavored server message', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'activation_required',
       product: baseProduct,
       checkoutUrl: '',
       message: 'Call the `activate_plan` tool to continue.',
       productDetails: { name: 'Knowledge API', reference: baseProduct },
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Message data-testid="message" />
@@ -359,7 +359,7 @@ describe('PaywallNotice.Message', () => {
   })
 
   it('uses topupRequiredMessage when activation_required carries only PAYG plans', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'activation_required',
       product: baseProduct,
       checkoutUrl: '',
@@ -374,7 +374,7 @@ describe('PaywallNotice.Message', () => {
         },
       ],
       productDetails: { name: 'Chat API', reference: baseProduct },
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Message data-testid="message" />
@@ -387,7 +387,7 @@ describe('PaywallNotice.Message', () => {
   })
 
   it('uses activationRequiredMessage when activation_required carries a non-PAYG plan', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'activation_required',
       product: baseProduct,
       checkoutUrl: '',
@@ -402,7 +402,7 @@ describe('PaywallNotice.Message', () => {
           billingCycle: 'monthly',
         },
       ],
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Message data-testid="message" />
@@ -417,7 +417,7 @@ describe('PaywallNotice.Message', () => {
 
 describe('PaywallNotice.Heading', () => {
   it('renders activationRequiredHeading for non-PAYG activation gates', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'activation_required',
       product: baseProduct,
       checkoutUrl: '',
@@ -432,7 +432,7 @@ describe('PaywallNotice.Heading', () => {
           billingCycle: 'monthly',
         },
       ],
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Heading data-testid="heading" />
@@ -443,7 +443,7 @@ describe('PaywallNotice.Heading', () => {
   })
 
   it('renders topupRequiredHeading when every gate plan is PAYG', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'activation_required',
       product: baseProduct,
       checkoutUrl: '',
@@ -457,7 +457,7 @@ describe('PaywallNotice.Heading', () => {
           requiresPayment: true,
         },
       ],
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Heading data-testid="heading" />
@@ -468,12 +468,12 @@ describe('PaywallNotice.Heading', () => {
   })
 
   it('renders paymentRequiredHeading for payment_required gates', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'payment_required',
       product: baseProduct,
       checkoutUrl: '',
       message: 'Upgrade.',
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Heading data-testid="heading" />
@@ -486,12 +486,12 @@ describe('PaywallNotice.Heading', () => {
 
 describe('PaywallNotice.Plans', () => {
   it('passes a Free-hiding filter to PlanSelector', () => {
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'activation_required',
       product: baseProduct,
       checkoutUrl: '',
       message: 'activate',
-    }
+    })
     render(
       <PaywallNotice.Root content={content}>
         <PaywallNotice.Plans />
@@ -505,12 +505,12 @@ describe('PaywallNotice.Plans', () => {
 })
 
 describe('PaywallNotice.EmbeddedCheckout', () => {
-  const content: PaywallStructuredContent = {
+  const content = mockPaywallContent({
     kind: 'payment_required',
     product: baseProduct,
     checkoutUrl: '',
     message: 'Purchase required',
-  }
+  })
 
   it('renders the stepped checkout with a Free-hiding filter', () => {
     currentSelectedPlan = null
@@ -563,12 +563,12 @@ describe('PaywallNotice.EmbeddedCheckout', () => {
 // `<EmbeddedCheckout>`'s `onPurchaseSuccess` through a dedupe so the
 // parent dismisses on the earlier of the two signals.
 describe('PaywallNotice auto-dismiss / onResolved', () => {
-  const content: PaywallStructuredContent = {
+  const content = mockPaywallContent({
     kind: 'payment_required',
     product: baseProduct,
     checkoutUrl: '',
     message: 'Purchase required',
-  }
+  })
 
   it('fires onResolved when usePaywallResolver flips to resolved=true', () => {
     resolverState = { resolved: true, refetch: vi.fn(async () => {}) }

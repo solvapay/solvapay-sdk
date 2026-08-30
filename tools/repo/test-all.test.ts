@@ -72,6 +72,7 @@ describe('selectTestTasks', () => {
       throw new Error(selected.error)
     }
     expect(selected.map(task => task.id)).toEqual([
+      'ruby.bundle',
       'ruby-mcp.compile',
       'ruby-mcp.bundle',
       'ruby-mcp.test',
@@ -79,5 +80,27 @@ describe('selectTestTasks', () => {
     ])
     const suite = selected.find(task => task.id === 'ruby-mcp.test')
     expect(suite?.env?.RUBYLIB).toMatch(/sdks\/ruby\/lib$/)
+  })
+
+  it('should run bundle install before every rake compile', () => {
+    const selected = selectTestTasks(['--native-only'])
+    if ('error' in selected) {
+      throw new Error(selected.error)
+    }
+    const compileIndexes = selected.flatMap((task, index) =>
+      task.command === 'bundle' && task.args.includes('compile') ? [index] : [],
+    )
+    expect(compileIndexes.length).toBeGreaterThan(0)
+    for (const compileIndex of compileIndexes) {
+      const preceding = selected.slice(0, compileIndex)
+      const bundled = preceding.some(
+        task =>
+          task.command === 'bundle' &&
+          task.args.length === 1 &&
+          task.args[0] === 'install' &&
+          task.cwd === selected[compileIndex]?.cwd,
+      )
+      expect(bundled, selected[compileIndex]?.id).toBe(true)
+    }
   })
 })

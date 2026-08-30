@@ -37,6 +37,18 @@ export default defineConfig(({ mode }) => {
       },
       dedupe: ['react', 'react-dom', '@stripe/react-stripe-js'],
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/react-markdown')) return 'react-markdown'
+            if (id.includes('node_modules/@stripe/')) return 'stripe'
+            if (id.includes('node_modules/@google/genai')) return 'genai'
+            return undefined
+          },
+        },
+      },
+    },
     // Forward SOLVAPAY_PRODUCT_REF as a fallback for each scenario's
     // VITE_*_PRODUCT_REF so a minimal .env (as written by `solvapay init`)
     // works out of the box. Explicit VITE_*_PRODUCT_REF values in .env

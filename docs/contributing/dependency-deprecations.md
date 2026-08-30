@@ -60,16 +60,8 @@ cleanup when the ESLint 10 ticket starts.
 
 ### `packageManager` / pnpm 10+
 
-Homebrew pnpm 11 prints `[WARN] The "pnpm" field in package.json is no longer
-read by pnpm` before delegating to `packageManager: pnpm@9.6.0`. Under 9.6.0
-the override **is** active (`overrides: next: 16.2.7` in `pnpm-lock.yaml`).
-
-The warning becomes a real breakage the moment `packageManager` moves to pnpm
-10 or higher. In **the same commit** as that bump:
-
-1. Move `pnpm.overrides` from `package.json` into `pnpm-workspace.yaml` as
-   `overrides:`.
-2. Move `link-workspace-packages=true` from `.npmrc` into
-   `pnpm-workspace.yaml` as `linkWorkspacePackages: true`.
-
-If those two moves are skipped, the `next` pin silently stops applying.
+The repo is on `packageManager: pnpm@11.15.0`. `overrides` (including
+`next: 16.2.7`), `linkWorkspacePackages`, and `allowBuilds` live in
+`pnpm-workspace.yaml`. Do not put those keys back on the `pnpm` block in
+`package.json` — pnpm 10+ ignores that field. pnpm 11 replaced
+`onlyBuiltDependencies` with `allowBuilds`.

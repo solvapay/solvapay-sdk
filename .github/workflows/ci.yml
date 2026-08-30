@@ -31,12 +31,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Setup Deno
         run: |
@@ -108,12 +106,15 @@ jobs:
       - name: overlays.generated.d.ts tsc gate
         working-directory: sdks/typescript/server
         run: |
-          npx tsc --noEmit --strict --moduleResolution bundler --module esnext --target es2022 \
+          pnpm exec tsc --noEmit --strict --moduleResolution bundler --module esnext --target es2022 \
             src/types/overlays.generated.d.ts
 
       - name: client.generated.d.ts + signature-parity typecheck
         working-directory: sdks/typescript/server
         run: pnpm test:types
+
+      - name: Typecheck all packages
+        run: pnpm typecheck
 
       # Deno gate — type-checks examples/typescript/supabase-edge-mcp against
       # the workspace source of the `@solvapay/*` packages it imports (see
@@ -186,13 +187,11 @@ jobs:
 
       - name: Setup pnpm (shadow selftest)
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Setup Node.js (shadow selftest)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install JS deps + build packages (shadow selftest)
         working-directory: .
@@ -231,7 +230,7 @@ jobs:
       - name: Setup Node.js (wasm Fetch harness)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Cache wasm-bindgen-cli
         id: cache-wasm-bindgen-cli
@@ -799,8 +798,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Install repo JS deps
         working-directory: .
@@ -859,8 +856,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Install npm deps (binding)
         run: npm ci
@@ -1052,12 +1047,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Install Rust toolchain (host)
         run: rustup show
@@ -1122,12 +1115,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Get pnpm store directory
         id: pnpm-cache
@@ -1184,12 +1175,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Install Rust toolchain
         run: rustup show
@@ -1322,12 +1311,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Install JS deps
         run: pnpm install --frozen-lockfile
@@ -1431,12 +1418,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Install JS deps
         run: pnpm install --frozen-lockfile
@@ -1525,12 +1510,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Get pnpm store directory
         id: pnpm-cache

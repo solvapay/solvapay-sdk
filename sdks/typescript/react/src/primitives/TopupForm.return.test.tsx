@@ -10,6 +10,7 @@ import React from 'react'
 import { TopupForm } from './TopupForm'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue } from '../types'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
 import type { PaymentIntent } from '@stripe/stripe-js'
 
 const retrievePaymentIntent = vi.fn()
@@ -49,20 +50,6 @@ vi.mock('@stripe/stripe-js', () => ({
   loadStripe: vi.fn(() => Promise.resolve({})),
 }))
 
-function mockBalance(): SolvaPayContextValue['balance'] {
-  return {
-    loading: false,
-    credits: null,
-    displayCurrency: null,
-    creditsPerMinorUnit: null,
-    displayExchangeRate: null,
-    display: null,
-    refetch: vi.fn(),
-    adjustBalance: vi.fn(),
-    reconcileAfterUsageDebit: vi.fn(),
-  }
-}
-
 function ReturnHarness({
   onSuccess,
 }: {
@@ -94,7 +81,7 @@ function ReturnHarness({
       cancelRenewal: vi.fn(),
       reactivateRenewal: vi.fn(),
       activatePlan: vi.fn(),
-      balance: mockBalance(),
+      balance: mockBalanceStatus(),
     }),
     [processTopupPayment],
   )

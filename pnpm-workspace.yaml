@@ -4,3 +4,17 @@ packages:
   - 'tools/*'
   - 'internal/*'
   - 'examples/typescript/*'
+
+overrides:
+  next: 16.2.7
+
+# pnpm 10 flipped the default to false; the repo relies on true.
+linkWorkspacePackages: true
+
+# pnpm 11 replaced onlyBuiltDependencies with this allow-list.
+allowBuilds:
+  '@google/genai': true
+  esbuild: true
+  protobufjs: true
+  sharp: true
+  workerd: true

@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { PaywallStructuredContent } from '@solvapay/server'
+import { mockPaywallContent } from '../../test-helpers/mockPaywallContent'
 import { usePaywallResolver } from '../usePaywallResolver'
 import { usePurchase } from '../usePurchase'
 import { useBalance } from '../useBalance'
@@ -58,12 +58,12 @@ describe('usePaywallResolver', () => {
       } as any,
     })
     setUseBalance()
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'payment_required',
       product: 'prd_widgets',
       checkoutUrl: 'https://example.com/checkout',
       message: 'pay up',
-    }
+    })
     const { result } = renderHook(() => usePaywallResolver(content))
     expect(result.current.resolved).toBe(true)
   })
@@ -71,12 +71,12 @@ describe('usePaywallResolver', () => {
   it('does not resolve payment_required when no paid purchase exists', () => {
     setUsePurchase({ hasPaidPurchase: false })
     setUseBalance()
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'payment_required',
       product: 'prd_widgets',
       checkoutUrl: 'https://example.com/checkout',
       message: 'pay up',
-    }
+    })
     const { result } = renderHook(() => usePaywallResolver(content))
     expect(result.current.resolved).toBe(false)
   })
@@ -93,12 +93,12 @@ describe('usePaywallResolver', () => {
       } as any,
     })
     setUseBalance()
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'activation_required',
       product: 'prd_widgets',
       checkoutUrl: '',
       message: 'activate',
-    }
+    })
     const { result } = renderHook(() => usePaywallResolver(content))
     expect(result.current.resolved).toBe(true)
   })
@@ -111,7 +111,7 @@ describe('usePaywallResolver', () => {
   it('resolves payment_required when the gate carries a balance with positive remainingUnits', () => {
     setUsePurchase({ hasPaidPurchase: false })
     setUseBalance({ credits: 0 })
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'payment_required',
       product: 'prd_widgets',
       checkoutUrl: '',
@@ -122,7 +122,7 @@ describe('usePaywallResolver', () => {
         currency: 'USD',
         remainingUnits: 5,
       },
-    }
+    })
     const { result } = renderHook(() => usePaywallResolver(content))
     expect(result.current.resolved).toBe(true)
   })
@@ -130,7 +130,7 @@ describe('usePaywallResolver', () => {
   it('resolves payment_required when live credits cover the next unit (post-topup)', () => {
     setUsePurchase({ hasPaidPurchase: false })
     setUseBalance({ credits: 500_000 })
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'payment_required',
       product: 'prd_widgets',
       checkoutUrl: '',
@@ -141,7 +141,7 @@ describe('usePaywallResolver', () => {
         currency: 'USD',
         remainingUnits: 0,
       },
-    }
+    })
     const { result } = renderHook(() => usePaywallResolver(content))
     expect(result.current.resolved).toBe(true)
   })
@@ -149,7 +149,7 @@ describe('usePaywallResolver', () => {
   it('does not resolve payment_required with a balance when credits do not cover the next unit', () => {
     setUsePurchase({ hasPaidPurchase: false })
     setUseBalance({ credits: 5 })
-    const content: PaywallStructuredContent = {
+    const content = mockPaywallContent({
       kind: 'payment_required',
       product: 'prd_widgets',
       checkoutUrl: '',
@@ -160,7 +160,7 @@ describe('usePaywallResolver', () => {
         currency: 'USD',
         remainingUnits: 0,
       },
-    }
+    })
     const { result } = renderHook(() => usePaywallResolver(content))
     expect(result.current.resolved).toBe(false)
   })

@@ -14,7 +14,7 @@ async function main(): Promise<void> {
     readFileSync(SNAPSHOT_PATH, 'utf8')
 
     console.log('Generating TypeScript types...')
-    execSync(`npx openapi-typescript ${SNAPSHOT_PATH} -o ${OUTPUT_FILE}`, {
+    execSync(`pnpm exec openapi-typescript ${SNAPSHOT_PATH} -o ${OUTPUT_FILE}`, {
       stdio: 'inherit',
       cwd: path.join(SCRIPT_DIR, '..'),
     })

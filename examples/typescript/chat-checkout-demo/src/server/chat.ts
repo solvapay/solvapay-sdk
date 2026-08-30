@@ -1,5 +1,5 @@
 import type { ExecutionContext } from '@cloudflare/workers-types'
-import { GoogleGenAI, type Content } from '@google/genai'
+import type { Content } from '@google/genai'
 import type { SolvaPay } from '@solvapay/server'
 
 const SYSTEM_INSTRUCTION_BASE =
@@ -101,6 +101,7 @@ export async function handleChat(
     return gate.response
   }
 
+  const { GoogleGenAI } = await import('@google/genai')
   const ai = new GoogleGenAI({ apiKey: deps.geminiApiKey })
   const history: Content[] = body.messages.slice(0, -1).map(m => ({
     role: m.role === 'bot' ? 'model' : 'user',

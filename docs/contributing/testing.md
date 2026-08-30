@@ -122,6 +122,22 @@ pnpm gates                      # local contract gates (also the pre-push hook)
 pnpm build:all                  # core builds (add --native for bindings)
 ```
 
+`pnpm test:live` is opt-in. It is not part of `pnpm test`, `pnpm gates`, pre-push, or CI.
+Without `SOLVAPAY_SHADOW_BASE_URL` and `SOLVAPAY_SHADOW_API_KEY` it fails fast with that
+requirement named — that message is correct, not a broken script.
+
+`pnpm build:native` and `pnpm test:native` rebuild host-target Node bindings and can
+overwrite tracked WASI artifacts under `sdks/node-native/` plus non-deterministic
+`sdks/wasm/pkg/` and `sdks/go/solvapay_core.wasm` blobs. Restore those paths before
+pushing (`git checkout -- sdks/node-native/index.d.ts sdks/node-native/index.js
+sdks/node-native/server-native.wasi-browser.js sdks/node-native/server-native.wasi.cjs
+sdks/wasm/pkg/ sdks/go/solvapay_core.wasm`). Committing the local host output breaks
+the `node-binding-wasi` CI drift gate.
+
+The Go WASI guest build copies the cargo artifact when `wasm-opt` is missing. That
+fallback is intentional; CI omits Binaryen so linux/amd64 bytes stay canonical.
+`brew install binaryen` shrinks a local artifact only — do not record that blob.
+
 ### `test:live` against the local platform
 
 The SDK routes are served by five backend services. The provider-app proxy at

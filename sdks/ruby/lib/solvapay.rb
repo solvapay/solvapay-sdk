@@ -13,24 +13,39 @@ require_relative "solvapay/defaults"
 require_relative "solvapay/errors"
 require_relative "solvapay/results"
 require_relative "solvapay/_native"
-require_relative "solvapay/client"
-require_relative "solvapay/helpers.generated"
-require_relative "solvapay/helpers"
-require_relative "solvapay/facade"
 
 module SolvaPay
   # §7.7 load-time facade ↔ native version skew guard.
   def self._check_version_skew
-    return unless respond_to?(:version)
+    if respond_to?(:version)
+      native = version
+      if !native.nil? && native != VERSION
+        raise SolvaPayError.new(
+          "solvapay version skew: gem=#{VERSION.inspect} native=#{native.inspect}",
+          code: "version_skew",
+        )
+      end
+    end
 
-    native = version
-    return if native.nil? || native == VERSION
+    return unless defined?(Native) && defined?(NativeDispatch::SYNC_METHODS)
 
+    available = Native.singleton_methods.map(&:to_s)
+    missing = NativeDispatch::SYNC_METHODS.reject { |name| available.include?(name) }
+    return if missing.empty?
+
+    binary = $LOADED_FEATURES.find { |path| path.match?(/solvapay\.(bundle|so)\z/) }
+    binary_note = binary ? " binary=#{binary}" : ""
     raise SolvaPayError.new(
-      "solvapay version skew: gem=#{VERSION.inspect} native=#{native.inspect}",
+      "solvapay native extension is stale: missing #{missing.join(', ')}.#{binary_note} " \
+      "Recompile with: bundle exec rake compile",
       code: "version_skew",
     )
   end
 end
 
 SolvaPay._check_version_skew
+
+require_relative "solvapay/client"
+require_relative "solvapay/helpers.generated"
+require_relative "solvapay/helpers"
+require_relative "solvapay/facade"

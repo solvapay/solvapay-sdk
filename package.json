@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A modern TypeScript SDK for monetizing APIs, AI agents, and MCP servers with paywall protection and subscription management",
   "private": true,
-  "packageManager": "pnpm@9.6.0",
+  "packageManager": "pnpm@11.15.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/solvapay/solvapay-sdk.git"
@@ -28,11 +28,6 @@
   ],
   "author": "SolvaPay Inc.",
   "license": "MIT",
-  "pnpm": {
-    "overrides": {
-      "next": "16.2.7"
-    }
-  },
   "scripts": {
     "build": "turbo build --concurrency 16",
     "build:examples": "pnpm --filter './examples/typescript/*' -r --if-present build",

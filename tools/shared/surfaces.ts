@@ -304,9 +304,11 @@ export const SURFACES: readonly Surface[] = [
     requires: rubyRequires,
     testsRequireBuild: true,
     build: [
+      task('ruby.bundle', 'Ruby bundle', 'bundle', ['install'], rubyCwd, rubyRequires),
       task('ruby.build', 'Ruby', 'bundle', ['exec', 'rake', 'compile'], rubyCwd, rubyRequires),
     ],
     prepare: [
+      task('ruby.bundle', 'Ruby bundle', 'bundle', ['install'], rubyCwd, rubyRequires),
       task(
         'ruby.prepare',
         'Ruby prepare',
@@ -328,6 +330,7 @@ export const SURFACES: readonly Surface[] = [
     livePrepare: false,
     build: [],
     prepare: [
+      task('ruby.bundle', 'Ruby bundle', 'bundle', ['install'], rubyCwd, rubyRequires),
       task(
         'ruby-mcp.compile',
         'Ruby MCP compile binding',

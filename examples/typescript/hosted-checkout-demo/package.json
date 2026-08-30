@@ -2,11 +2,12 @@
   "name": "hosted-checkout-demo",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --webpack",
     "build": "[ -e '.env' ] || cp env.example .env && next build --webpack",
     "start": "next start",
-    "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.js",
+    "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

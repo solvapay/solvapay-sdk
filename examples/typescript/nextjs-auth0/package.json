@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --webpack --port 3013",
-    "build": "next build --webpack",
+    "build": "[ -e '.env.local' ] || cp .env.example .env.local && next build --webpack",
     "start": "next start --port 3013",
     "test": "pnpm exec vitest run proxy.test.ts",
     "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs --ignore-pattern .agents --ignore-pattern .claude"

@@ -62,6 +62,7 @@ vi.mock('../../../primitives/TopupForm', () => {
 vi.mock('../../../primitives/MandateText', () => ({ MandateText: () => null }))
 vi.mock('../../useStripeProbe', () => ({ useStripeProbe: () => 'ready' }))
 
+import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 import { McpTopupView } from '../McpTopupView'
 import { McpBridgeProvider, type McpBridgeAppLike } from '../../bridge'
 import { merchantCache } from '../../../hooks/useMerchant'
@@ -109,17 +110,12 @@ function buildCtx(config: SolvaPayConfig, displayCurrency = 'USD'): SolvaPayCont
     cancelRenewal: vi.fn(),
     reactivateRenewal: vi.fn(),
     activatePlan: vi.fn(),
-    balance: {
-      loading: false,
+    balance: mockBalanceStatus({
       credits: 1000,
       displayCurrency,
       creditsPerMinorUnit: 100,
       displayExchangeRate: 1,
-      display: null,
-      refetch: vi.fn(),
-      adjustBalance: vi.fn(),
-      reconcileAfterUsageDebit: vi.fn(),
-    },
+    }),
     _config: config,
   }
 }

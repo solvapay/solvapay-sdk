@@ -131,7 +131,7 @@ vi.mock('../../hooks/usePaywallResolver', () => ({
 
 import { CheckoutSteps } from './index'
 import { PaywallNotice } from '../PaywallNotice'
-import type { PaywallStructuredContent } from '@solvapay/server'
+import { mockPaywallContent } from '../../test-helpers/mockPaywallContent'
 import { plansCache } from '../../hooks/usePlans'
 import { merchantCache } from '../../hooks/useMerchant'
 import { SolvaPayContext } from '../../SolvaPayProvider'
@@ -820,12 +820,13 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
   })
 
   it('uses paywall gate-reason heading at the plan step inside payment_required paywall', async () => {
-    const paywallContent: PaywallStructuredContent = {
+    const paywallContent = mockPaywallContent({
       kind: 'payment_required',
       message: 'server-flavored copy',
       product: productRef,
-      productDetails: { name: 'Acme API' },
-    } as PaywallStructuredContent
+      checkoutUrl: '',
+      productDetails: { name: 'Acme API', reference: productRef },
+    })
     renderWithProvider(
       <PaywallNotice.Root content={paywallContent}>
         <CheckoutSteps.Root
@@ -850,15 +851,23 @@ describe('<CheckoutSteps.StepHeading> / <StepMessage>', () => {
   })
 
   it('uses topup gate-reason heading when every paywall plan is PAYG (activation_required)', async () => {
-    const paywallContent: PaywallStructuredContent = {
+    const paywallContent = mockPaywallContent({
       kind: 'activation_required',
       message: 'server-flavored copy',
       product: productRef,
+      checkoutUrl: '',
       plans: [
         // PAYG-only — every plan has a usage-based / hybrid type.
-        { reference: 'pln_payg', type: 'usage-based', name: 'PAYG', price: 0, currency: 'usd' },
+        {
+          reference: 'pln_payg',
+          type: 'usage-based',
+          name: 'PAYG',
+          price: 0,
+          currency: 'usd',
+          requiresPayment: true,
+        },
       ],
-    } as unknown as PaywallStructuredContent
+    })
     renderWithProvider(
       <PaywallNotice.Root content={paywallContent}>
         <CheckoutSteps.Root

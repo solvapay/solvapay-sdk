@@ -26,4 +26,21 @@ class VersionSkewTest < Minitest::Test
   def test_matching_versions_pass
     SolvaPay._check_version_skew
   end
+
+  def test_stale_binary_names_missing_sync_methods
+    native = SolvaPay.const_get(:Native)
+    original = native.method(:singleton_methods)
+    native.define_singleton_method(:singleton_methods) { [] }
+    begin
+      err = assert_raises(SolvaPay::SolvaPayError) { SolvaPay._check_version_skew }
+      assert_equal "version_skew", err.code
+      assert_match(/stale/, err.message)
+      assert_match(/REVERSE_CHARGE_NOTE/, err.message)
+      assert_match(/bundle exec rake compile/, err.message)
+    ensure
+      native.define_singleton_method(:singleton_methods) do |*args|
+        original.call(*args)
+      end
+    end
+  end
 end

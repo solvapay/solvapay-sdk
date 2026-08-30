@@ -49,9 +49,10 @@ export default defineConfig({
   // depend on their built `dist/` output. Mirrors `mcp-checkout-app`'s
   // config — the bundled iframe source is runtime-agnostic.
   resolve: {
+    conditions: ['worker', 'browser', 'import'],
     alias: [
       { find: /^@solvapay\/core$/, replacement: `${packagesDir}/core/src/index.ts` },
-      { find: /^@solvapay\/server$/, replacement: `${packagesDir}/server/src/index.ts` },
+      { find: /^@solvapay\/server$/, replacement: `${packagesDir}/server/src/edge.ts` },
       { find: /^@solvapay\/mcp$/, replacement: `${packagesDir}/mcp/src/index.ts` },
       { find: /^@solvapay\/mcp-core$/, replacement: `${packagesDir}/mcp-core/src/index.ts` },
       { find: /^@solvapay\/react$/, replacement: `${packagesDir}/react/src/index.tsx` },

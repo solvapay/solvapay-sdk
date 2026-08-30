@@ -18,7 +18,7 @@ import {
   type SolvaPayDescriptorBundle,
 } from '@solvapay/mcp-core'
 import { registerAppResource, RESOURCE_MIME_TYPE } from './extAppsServer'
-import { defaultMcpAppHtml } from '../defaultMcpAppHtml'
+import { defaultMcpAppHtml } from '#mcp-app-html'
 
 export interface BuildSolvaPayMcpServerOptions extends BuildSolvaPayDescriptorsOptions {
   registerPrompts?: boolean

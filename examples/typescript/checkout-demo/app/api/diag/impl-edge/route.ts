@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { ready, wasmVersion } from '@solvapay/server-wasm'
 
+// Next warns that edge runtime disables static generation; expected for this WASM diagnostic.
 export const runtime = 'edge'
 
 /** Positive confirmation that the edge (WASM) Rust core is loaded under workerd. */

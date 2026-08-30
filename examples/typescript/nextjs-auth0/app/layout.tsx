@@ -4,6 +4,8 @@ import './globals.css'
 import { SiteHeader } from '@/components/site-header'
 import { SolvaPayClientProvider } from '@/components/solvapay-provider'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Next.js Auth0 Task Board',
   description: 'Auth0 login with a per-user task board built with shadcn/ui and Tailwind.',
