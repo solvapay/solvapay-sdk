@@ -45,6 +45,8 @@ import type {
   BillingCycle,
   Charge,
   PricedLike,
+  Tier,
+  UsageRate,
   UsageSnapshot,
   UsageSnapshotPurchase,
 } from '@solvapay/core'

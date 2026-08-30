@@ -51,7 +51,7 @@
   },
   "expect": {
     "result": {
-      "text": "**Activate a plan — Acme Knowledge Base**\n\nPlans available:\nFree · no payment required\nStarter · pay as you go\n\nCommands: `/manage_account` `/topup`"
+      "text": "**Activate a plan — Acme Knowledge Base**\n\nPlans available:\nFree · no payment required\nStarter · pay as you go · $0.01 / requests\n\nCommands: `/manage_account` `/topup`"
     }
   }
 }

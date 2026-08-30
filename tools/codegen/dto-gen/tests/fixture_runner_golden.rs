@@ -50,7 +50,7 @@ fn fixture_runner_emits_wrap_invoke_bodies_and_committed_ids() {
         })
         .map(|s| s.id.as_str())
         .collect();
-    assert_eq!(wrap_ids.len(), 66, "expected 66 derivable wrap symbols");
+    assert_eq!(wrap_ids.len(), 69, "expected 69 derivable wrap symbols");
     for id in wrap_ids {
         assert!(
             emitted.contains(&format!("registry.register(\n        \"{id}\"")),

@@ -533,7 +533,7 @@ export const SHIM_JS_NAMES = [
   'updateCustomer',
   'updatePlan',
   'updateProduct',
-  // Decision cores (42)
+  // Decision cores (45)
   'attachBusinessDetailsValidationError',
   'buildCreateCustomerParams',
   'buildGateMessage',
@@ -585,6 +585,9 @@ export const SHIM_JS_NAMES = [
   'charges',
   'headlineCharges',
   'perUnitCharge',
+  'tierBands',
+  'tierMeters',
+  'usageRate',
   'billingCycle',
   'trialDays',
   'includedUnits',

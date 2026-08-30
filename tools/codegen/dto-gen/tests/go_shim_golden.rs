@@ -131,7 +131,7 @@ fn go_client_exports_full_36_op_surface() {
             )
         })
         .collect();
-    assert_eq!(sync.len(), 93, "expected 93 sync helper binding symbols");
+    assert_eq!(sync.len(), 96, "expected 96 sync helper binding symbols");
     sync.sort_by(|a, b| a.emit_order.cmp(&b.emit_order).then(a.id.cmp(&b.id)));
     for sym in &sync {
         let export = format!("sv_{}(", sym.rust_fn_name);

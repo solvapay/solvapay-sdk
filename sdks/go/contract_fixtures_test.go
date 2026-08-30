@@ -9,7 +9,7 @@ import (
 	"github.com/solvapay/solvapay-go/internal/contract"
 )
 
-const wantParsed, wantReplayed = 651, 651
+const wantParsed, wantReplayed = 655, 655
 
 var unsupportedFns = map[string]struct{}{}
 

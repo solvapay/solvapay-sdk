@@ -47,15 +47,16 @@ describe('liveTasks', () => {
 
   it('should prepend native prepare tasks and a shadow-invoker build', () => {
     const ids = liveTasks({}).map(task => task.id)
-    expect(ids.slice(0, 6)).toEqual([
+    expect(ids.slice(0, 7)).toEqual([
       'node-native.prepare',
       'wasm.prepare',
       'python.prepare',
+      'ruby.bundle',
       'ruby.prepare',
       'go-guest.build',
       'live.build.shadow-invoker',
     ])
-    expect(ids[6]).toBe('live.ts')
+    expect(ids[7]).toBe('live.ts')
     expect(ids).not.toContain('python.build')
   })
 

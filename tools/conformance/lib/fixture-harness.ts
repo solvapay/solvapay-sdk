@@ -41,6 +41,9 @@ import {
   charges,
   headlineCharges,
   perUnitCharge,
+  tierBands,
+  tierMeters,
+  usageRate,
   billingCycle,
   trialDays,
   includedUnits,
@@ -2061,6 +2064,26 @@ export function createDefaultRegistry(): FixtureRegistry {
     id: 'core',
     invoke: args =>
       perUnitCharge(
+        (args.priced ?? null) as Record<string, unknown> | null,
+        typeof args.meter === 'string' ? args.meter : undefined,
+      ),
+  })
+  registry.register('tierBands', {
+    id: 'core',
+    invoke: args =>
+      tierBands(
+        (args.priced ?? null) as Record<string, unknown> | null,
+        typeof args.meter === 'string' ? args.meter : undefined,
+      ),
+  })
+  registry.register('tierMeters', {
+    id: 'core',
+    invoke: args => tierMeters((args.priced ?? null) as Record<string, unknown> | null),
+  })
+  registry.register('usageRate', {
+    id: 'core',
+    invoke: args =>
+      usageRate(
         (args.priced ?? null) as Record<string, unknown> | null,
         typeof args.meter === 'string' ? args.meter : undefined,
       ),
