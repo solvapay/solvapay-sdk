@@ -1,3 +1,5 @@
+//! Status, header, and JSON body helpers for [`crate::McpHttpServer`].
+
 use std::collections::BTreeMap;
 
 use serde_json::{json, Value};
@@ -27,6 +29,7 @@ pub struct McpHttpResponse {
     pub body: Vec<u8>,
 }
 
+/// Read `status` from a JSON envelope, falling back to `default`.
 pub fn envelope_status(envelope: &Value, default: u16) -> u16 {
     envelope
         .get("status")
@@ -34,6 +37,7 @@ pub fn envelope_status(envelope: &Value, default: u16) -> u16 {
         .unwrap_or(u64::from(default)) as u16
 }
 
+/// Lowercase string headers from a JSON object; non-string values are skipped.
 pub fn string_headers(value: Option<&Value>) -> BTreeMap<String, String> {
     let mut headers = BTreeMap::new();
     let Some(Value::Object(map)) = value else {
@@ -47,6 +51,7 @@ pub fn string_headers(value: Option<&Value>) -> BTreeMap<String, String> {
     headers
 }
 
+/// Build an HTTP response from an `mcpOauthRequest` JSON envelope.
 pub fn http_from_oauth_envelope(envelope: &Value) -> Result<McpHttpResponse, SdkError> {
     Ok(McpHttpResponse {
         status: envelope_status(envelope, 500),
@@ -55,6 +60,7 @@ pub fn http_from_oauth_envelope(envelope: &Value) -> Result<McpHttpResponse, Sdk
     })
 }
 
+/// JSON-RPC error body with the given code, message, and HTTP status.
 pub fn jsonrpc_error(
     id: Value,
     code: i32,
@@ -71,6 +77,7 @@ pub fn jsonrpc_error(
     )
 }
 
+/// JSON HTTP response with `content-type: application/json`.
 pub fn json_response(status: u16, body: Value) -> Result<McpHttpResponse, SdkError> {
     let mut headers = BTreeMap::new();
     headers.insert("content-type".to_owned(), "application/json".to_owned());
@@ -81,6 +88,7 @@ pub fn json_response(status: u16, body: Value) -> Result<McpHttpResponse, SdkErr
     })
 }
 
+/// Encode a JSON value as bytes; `null` becomes an empty body, strings are raw.
 pub fn encode_json_body(body: Value) -> Result<Vec<u8>, SdkError> {
     if body.is_null() {
         return Ok(Vec::new());

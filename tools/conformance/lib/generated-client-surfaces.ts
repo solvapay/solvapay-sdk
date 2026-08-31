@@ -98,10 +98,7 @@ export function readGoHelpers(repoRoot: string): Set<string> {
 
 export function readRustHelpers(repoRoot: string): Set<string> {
   const source = readFileSync(path.join(repoRoot, 'sdks/rust/src/helpers_generated.rs'), 'utf8')
-  const names = quotedStrings(
-    source,
-    /pub use solvapay_core::(?:[a-z0-9_:]+::)?([A-Za-z0-9_]+);/g,
-  )
+  const names = quotedStrings(source, /pub use solvapay_core::(?:[a-z0-9_:]+::)?([A-Za-z0-9_]+);/g)
   for (const match of source.matchAll(/ as ([A-Za-z0-9_]+);/g)) {
     if (match[1] !== undefined) names.add(match[1])
   }
@@ -149,10 +146,7 @@ export function readTsMcpSymbols(repoRoot: string): McpSurfaceRead {
 }
 
 export function readPyMcpSymbols(repoRoot: string): McpSurfaceRead {
-  const builders = readFileSync(
-    path.join(repoRoot, 'sdks/python/src/payload_builders.rs'),
-    'utf8',
-  )
+  const builders = readFileSync(path.join(repoRoot, 'sdks/python/src/payload_builders.rs'), 'utf8')
   const lib = readFileSync(path.join(repoRoot, 'sdks/python/src/lib.rs'), 'utf8')
   const symbols = quotedStrings(builders, /#\[pyfunction\(name = "([^"]+)"\)\]/g)
   return { symbols, hasCallEnvelope: lib.includes('fn solvapay_call') }
@@ -201,10 +195,7 @@ export function readRustMcpSymbols(repoRoot: string): McpSurfaceRead {
 }
 
 export function readCMcpSymbols(repoRoot: string): McpSurfaceRead {
-  const source = readFileSync(
-    path.join(repoRoot, 'core/solvapay-mcp/src/sync_dispatch.rs'),
-    'utf8',
-  )
+  const source = readFileSync(path.join(repoRoot, 'core/solvapay-mcp/src/sync_dispatch.rs'), 'utf8')
   return {
     symbols: quotedStrings(source, /"([A-Za-z][A-Za-z0-9]+)"\s*=>/g),
     hasCallEnvelope: false,

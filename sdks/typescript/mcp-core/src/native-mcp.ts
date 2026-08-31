@@ -38,11 +38,7 @@ import {
   resetNativeMcpApiForTests,
 } from './native-mcp-dispatch'
 
-export {
-  callMcpSyncOp,
-  installNativeMcpApi,
-  resetNativeMcpApiForTests,
-}
+export { callMcpSyncOp, installNativeMcpApi, resetNativeMcpApiForTests }
 export type { NativeMcpSyncMethod } from './native-mcp-dispatch'
 
 /**

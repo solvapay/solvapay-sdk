@@ -32,9 +32,8 @@ describe('default MCP App widget', () => {
 
 describe('edge default MCP App widget', () => {
   it('throws and names readHtml or htmlPath', async () => {
-    const { defaultMcpAppHtml: edgeHtml, defaultMcpAppHtmlPath } = await import(
-      '../src/defaultMcpAppHtml.edge'
-    )
+    const { defaultMcpAppHtml: edgeHtml, defaultMcpAppHtmlPath } =
+      await import('../src/defaultMcpAppHtml.edge')
     expect(() => defaultMcpAppHtmlPath()).toThrow(/readHtml|htmlPath/)
     await expect(edgeHtml()).rejects.toThrow(/readHtml|htmlPath/)
   })

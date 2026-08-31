@@ -12,13 +12,13 @@ Paywalled tools go through `solvapay::Client` and
 
 ## Tools
 
-| Tool | Upstream | Returns |
-| --- | --- | --- |
-| `inbox_open` | `get_email_address` or `set_email_user` when `email_user` is set | `address`, `expiresInSeconds` |
-| `inbox_list` | `check_email` (optional `seq`) or `get_email_list` when `offset` is set | decoded subjects/excerpts; truncation note when `count` > 20 |
-| `message_read` | `fetch_email` | body with `res.php` image URLs unwrapped |
-| `message_delete` | `del_email` | `deletedIds`; encodes `email_ids[]` |
-| `inbox_extend` | `extend` | remaining seconds, or an explicit note when `affected` is `0` |
+| Tool             | Upstream                                                                | Returns                                                       |
+| ---------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `inbox_open`     | `get_email_address` or `set_email_user` when `email_user` is set        | `address`, `expiresInSeconds`                                 |
+| `inbox_list`     | `check_email` (optional `seq`) or `get_email_list` when `offset` is set | decoded subjects/excerpts; truncation note when `count` > 20  |
+| `message_read`   | `fetch_email`                                                           | body with `res.php` image URLs unwrapped                      |
+| `message_delete` | `del_email`                                                             | `deletedIds`; encodes `email_ids[]`                           |
+| `inbox_extend`   | `extend`                                                                | remaining seconds, or an explicit note when `affected` is `0` |
 
 All advertised arguments are `{"type":"string"}` with **no `required` array**.
 That is the HTTP facade shape (`McpHttpServer::register_payable`), not the
@@ -72,12 +72,12 @@ A disposable inbox is public. Do not put secrets in mail you send to it.
 
 ## Modes
 
-| Mode | Command | SolvaPay | Upstream |
-| --- | --- | --- | --- |
-| Demo allow | `cargo run --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml -- --mode demo` | Mock (`withinLimits: true`) | fixtures |
-| Demo paywall | `--mode demo --gate` | Mock paywall | fixtures |
-| HTTP | `scripts/http.sh` or `pnpm mcp:guerrillamail` | Real `Client::new` | `MCP_SOURCE` |
-| HTTP + ngrok | `pnpm mcp:guerrillamail:tunnel` | Real `Client::new` | live |
+| Mode         | Command                                                                               | SolvaPay                    | Upstream     |
+| ------------ | ------------------------------------------------------------------------------------- | --------------------------- | ------------ |
+| Demo allow   | `cargo run --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml -- --mode demo` | Mock (`withinLimits: true`) | fixtures     |
+| Demo paywall | `--mode demo --gate`                                                                  | Mock paywall                | fixtures     |
+| HTTP         | `scripts/http.sh` or `pnpm mcp:guerrillamail`                                         | Real `Client::new`          | `MCP_SOURCE` |
+| HTTP + ngrok | `pnpm mcp:guerrillamail:tunnel`                                                       | Real `Client::new`          | live         |
 
 Streamable HTTP on `/mcp` (default `MCP_HOST=127.0.0.1`, `MCP_PORT=3030`) plus
 OAuth discovery at `/.well-known/oauth-protected-resource` and `/oauth/*`.
@@ -107,15 +107,15 @@ or `http://127.0.0.1:3030/mcp` (local-only). Discovery documents still use
 whatever the client will fetch. `tools/call` needs
 `Authorization: Bearer <JWT>`; the engine takes `customer_ref` from `sub`.
 
-| Variable | Required | Notes |
-| --- | --- | --- |
-| `SOLVAPAY_SECRET_KEY` | yes for HTTP | Sandbox secret |
-| `SOLVAPAY_PRODUCT` | yes for HTTP | `prd_*` billed per tool call |
-| `MCP_PUBLIC_BASE_URL` | yes for HTTP | Defaults to `https://appmcp.jack-local.ngrok.app` in the scripts |
-| `SOLVAPAY_API_BASE_URL` | no | Local stack: `http://localhost:3010` |
-| `MCP_HOST` / `MCP_PORT` | no | Default `127.0.0.1` / `3030` |
-| `MCP_SOURCE` | no | `live` or `fixture` |
-| `GUERRILLAMAIL_NGROK_URL` | no | Same reserved origin as the other MCP examples |
+| Variable                  | Required     | Notes                                                            |
+| ------------------------- | ------------ | ---------------------------------------------------------------- |
+| `SOLVAPAY_SECRET_KEY`     | yes for HTTP | Sandbox secret                                                   |
+| `SOLVAPAY_PRODUCT`        | yes for HTTP | `prd_*` billed per tool call                                     |
+| `MCP_PUBLIC_BASE_URL`     | yes for HTTP | Defaults to `https://appmcp.jack-local.ngrok.app` in the scripts |
+| `SOLVAPAY_API_BASE_URL`   | no           | Local stack: `http://localhost:3010`                             |
+| `MCP_HOST` / `MCP_PORT`   | no           | Default `127.0.0.1` / `3030`                                     |
+| `MCP_SOURCE`              | no           | `live` or `fixture`                                              |
+| `GUERRILLAMAIL_NGROK_URL` | no           | Same reserved origin as the other MCP examples                   |
 
 ## Tests
 

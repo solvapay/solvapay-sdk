@@ -77,7 +77,7 @@ pub enum PayableToolConfig {
     /// Name-only: route `tools/call`, do not advertise.
     Name(String),
     /// Full descriptor: route and advertise.
-    Spec(PayableToolSpec),
+    Spec(Box<PayableToolSpec>),
 }
 
 impl PayableToolConfig {
@@ -638,6 +638,7 @@ pub fn mcp_resume(input: &ResumeInput) -> Result<Value, String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
 

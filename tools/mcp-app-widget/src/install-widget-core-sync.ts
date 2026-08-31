@@ -6,10 +6,7 @@
  * call `formatPrice` / pricing readers through `dispatchSync`.
  */
 
-import {
-  installNativeCoreApi,
-  type NativeCoreSyncMethod,
-} from '@solvapay/core'
+import { installNativeCoreApi, type NativeCoreSyncMethod } from '@solvapay/core'
 
 const ZERO_DECIMAL = new Set([
   'bif',
@@ -203,7 +200,9 @@ type Charge = {
 
 function optionsOf(priced: unknown): Record<string, unknown>[] {
   const options = asRecord(priced).options
-  return Array.isArray(options) ? options.filter(item => item !== null && typeof item === 'object') : []
+  return Array.isArray(options)
+    ? options.filter(item => item !== null && typeof item === 'object')
+    : []
 }
 
 function asCharge(option: Record<string, unknown>): Charge | null {
@@ -214,11 +213,19 @@ function asCharge(option: Record<string, unknown>): Charge | null {
   if (!per || amountMinor === undefined || !currency) return null
   const meter = asString(option.meter)
   const oneTime = option.oneTime === true ? true : undefined
-  return { per, amountMinor, currency, ...(meter ? { meter } : {}), ...(oneTime ? { oneTime } : {}) }
+  return {
+    per,
+    amountMinor,
+    currency,
+    ...(meter ? { meter } : {}),
+    ...(oneTime ? { oneTime } : {}),
+  }
 }
 
 function charges(priced: unknown): Charge[] {
-  return optionsOf(priced).map(asCharge).filter((charge): charge is Charge => charge !== null)
+  return optionsOf(priced)
+    .map(asCharge)
+    .filter((charge): charge is Charge => charge !== null)
 }
 
 function headlineCharges(priced: unknown): Charge[] {
@@ -248,18 +255,20 @@ function countsUsage(priced: unknown): boolean {
   })
 }
 
-const handlers: Partial<Record<NativeCoreSyncMethod, (args: Record<string, unknown>) => unknown>> = {
-  formatPrice,
-  toMajorUnits: args => toMajorUnits(asNumber(args.amountMinor) ?? 0, asString(args.currency) ?? 'USD'),
-  minorUnitsPerMajor: args => minorUnitsPerMajor(asString(args.currency) ?? 'USD'),
-  isZeroDecimalCurrency: args => isZeroDecimalCurrency(asString(args.currency) ?? 'USD'),
-  creditsToDisplayMinorUnits,
-  resolveSellerIdentityDisplay,
-  charges: args => charges(args.priced),
-  headlineCharges: args => headlineCharges(args.priced),
-  perUnitCharge: args => perUnitCharge(args.priced, asString(args.meter) ?? null),
-  countsUsage: args => countsUsage(args.priced),
-}
+const handlers: Partial<Record<NativeCoreSyncMethod, (args: Record<string, unknown>) => unknown>> =
+  {
+    formatPrice,
+    toMajorUnits: args =>
+      toMajorUnits(asNumber(args.amountMinor) ?? 0, asString(args.currency) ?? 'USD'),
+    minorUnitsPerMajor: args => minorUnitsPerMajor(asString(args.currency) ?? 'USD'),
+    isZeroDecimalCurrency: args => isZeroDecimalCurrency(asString(args.currency) ?? 'USD'),
+    creditsToDisplayMinorUnits,
+    resolveSellerIdentityDisplay,
+    charges: args => charges(args.priced),
+    headlineCharges: args => headlineCharges(args.priced),
+    perUnitCharge: args => perUnitCharge(args.priced, asString(args.meter) ?? null),
+    countsUsage: args => countsUsage(args.priced),
+  }
 
 export function installWidgetCoreSync(): void {
   installNativeCoreApi({

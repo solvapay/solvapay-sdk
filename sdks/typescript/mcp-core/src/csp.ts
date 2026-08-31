@@ -37,8 +37,5 @@ export function mergeCsp(
   overrides: SolvaPayMcpCsp | undefined,
   apiBaseUrl?: string,
 ): Required<SolvaPayMcpCsp> {
-  return mcpMergeCsp(
-    overrides,
-    apiBaseUrl,
-  ) as Required<SolvaPayMcpCsp>
+  return mcpMergeCsp(overrides, apiBaseUrl) as Required<SolvaPayMcpCsp>
 }

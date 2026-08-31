@@ -172,9 +172,7 @@ export function diffGeneratedHashes(
   after: ReadonlyMap<string, string>,
 ): string[] {
   const keys = new Set([...before.keys(), ...after.keys()])
-  return [...keys]
-    .filter(rel => before.get(rel) !== after.get(rel))
-    .sort()
+  return [...keys].filter(rel => before.get(rel) !== after.get(rel)).sort()
 }
 
 export function formatIdempotenceResult(changed: readonly string[]): CliResult {

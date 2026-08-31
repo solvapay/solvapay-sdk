@@ -196,7 +196,7 @@ They match the never-moves list in [`architecture.md`](./architecture.md).
    - **Legacy:** `initialize` → `notifications/initialized` → `tools/call`
    - **Modern (2026-07-28):** `server/discover` (per-request `_meta` claim) →
      `tools/list` / `tools/call` with no session handshake
-   Assert `toolResult` plus the usage projection.
+     Assert `toolResult` plus the usage projection.
 7. Install the language's native layer-2 dispatch so gate copy comes from
    Rust (`paywallToolResult`), not a hand-written fallback.
 8. Mirror `pnpm test:mcp-contract` as the focused command. C skips only
@@ -209,11 +209,11 @@ They match the never-moves list in [`architecture.md`](./architecture.md).
 request into `{ rpc, config, authHeader, mcpProtocolVersionHeader? }`,
 call `mcpDispatch`, and branch three ways:
 
-| `kind`          | Host work                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------- |
+| `kind`          | Host work                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------ |
 | `rpc`           | Write the JSON-RPC body. Honour optional envelope `status` (default 200; 400/404 for era errors) |
-| `challenge`     | Write `status` + `WWW-Authenticate` + body                                                     |
-| `invokeHandler` | Run the merchant handler, then `mcpResume` with the token                                      |
+| `challenge`     | Write `status` + `WWW-Authenticate` + body                                                       |
+| `invokeHandler` | Run the merchant handler, then `mcpResume` with the token                                        |
 
 OAuth and discovery HTTP go through `mcpOauthRequest`. Builtin tools are
 serviced **inside** `mcpDispatch`. The one host exception is the widget
@@ -244,10 +244,10 @@ Production layer-3 HTTP engines:
 
 The Rust engine is a **dual-era** server:
 
-| Era | Selection | Methods | Response envelope |
-| --- | --------- | ------- | ----------------- |
+| Era    | Selection                                                         | Methods                                                             | Response envelope                                                                                        |
+| ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Modern | Request `_meta` carries `io.modelcontextprotocol/protocolVersion` | `server/discover` (mandatory), catalog RPCs, `subscriptions/listen` | SEP-2549 `resultType` / `_meta.serverInfo`; catalog calls also get `ttlMs: 60000` + `cacheScope: public` |
-| Legacy | Claim-less `initialize` | `initialize`, `ping`, `notifications/initialized`, catalog RPCs | Byte-stable 2025-06-18 shape (`initialize.json`) |
+| Legacy | Claim-less `initialize`                                           | `initialize`, `ping`, `notifications/initialized`, catalog RPCs     | Byte-stable 2025-06-18 shape (`initialize.json`)                                                         |
 
 Supported versions: `2026-07-28`, `2025-06-18`. Unsupported `_meta` versions
 return JSON-RPC `-32022` at HTTP 400. Unknown methods return `-32601`

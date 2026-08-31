@@ -15,6 +15,6 @@ class WidgetTest < Minitest::Test
 
   def test_vendored_widget_matches_canonical
     canonical = File.expand_path("../../../tools/mcp-app-widget/mcp-app.html", __dir__)
-    assert_equal File.read(canonical), SolvaPay::Mcp.default_mcp_app_html
+    assert_equal File.read(canonical, encoding: "UTF-8"), SolvaPay::Mcp.default_mcp_app_html
   end
 end

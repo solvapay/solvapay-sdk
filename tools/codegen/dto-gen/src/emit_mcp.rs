@@ -289,7 +289,7 @@ pub fn emit_mcp_rs(ir: &Ir) -> GenResult<String> {
     );
     out.push_str(
         "//! Generated MCP named wrappers over `call_sync`.\n\
-         #![allow(dead_code, unused_mut)]\n\n\
+         #![allow(dead_code, unused_mut, clippy::too_many_arguments)]\n\n\
          use serde_json::Value;\n\n\
          use crate::core::call_sync;\n\n",
     );

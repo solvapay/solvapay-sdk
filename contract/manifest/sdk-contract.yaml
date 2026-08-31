@@ -3096,12 +3096,36 @@ coreHelpers:
       rust: sync
       c: sync
     availability:
-      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
   BUSINESS_COUNTRY_OPTIONS:
     names:
       ts: BUSINESS_COUNTRY_OPTIONS
@@ -3120,12 +3144,36 @@ coreHelpers:
       rust: sync
       c: sync
     availability:
-      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
   COUNTRY_TO_TAX_ID_TYPE:
     names:
       ts: COUNTRY_TO_TAX_ID_TYPE
@@ -3144,12 +3192,36 @@ coreHelpers:
       rust: sync
       c: sync
     availability:
-      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
   SUPPORTED_BUSINESS_COUNTRIES:
     names:
       ts: SUPPORTED_BUSINESS_COUNTRIES
@@ -3168,12 +3240,36 @@ coreHelpers:
       rust: sync
       c: sync
     availability:
-      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
   TAX_BEHAVIORS:
     names:
       ts: TAX_BEHAVIORS
@@ -3192,12 +3288,36 @@ coreHelpers:
       rust: sync
       c: sync
     availability:
-      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
   TAX_EXCLUSIVE_CURRENCIES:
     names:
       ts: TAX_EXCLUSIVE_CURRENCIES
@@ -3216,12 +3336,36 @@ coreHelpers:
       rust: sync
       c: sync
     availability:
-      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
   TAX_ID_EXAMPLE_BY_COUNTRY:
     names:
       ts: TAX_ID_EXAMPLE_BY_COUNTRY
@@ -3240,12 +3384,36 @@ coreHelpers:
       rust: sync
       c: sync
     availability:
-      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
   TAX_ID_TYPES:
     names:
       ts: TAX_ID_TYPES
@@ -3264,12 +3432,36 @@ coreHelpers:
       rust: sync
       c: sync
     availability:
-      ts: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      py: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rb: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      go: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      rust: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
-      c: { omitted: true, reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.' }
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
   creditsToDisplayMinorUnits:
     names:
       ts: creditsToDisplayMinorUnits
@@ -3691,7 +3883,7 @@ coreHelpers:
       summary: 'Return the tier bands a plan prices a meter with, ordered by floor.'
       params:
         options: 'A priced plan and optional meter name.'
-      returns: 'One meter''s band stack; empty when the plan has no bands for that meter.'
+      returns: "One meter's band stack; empty when the plan has no bands for that meter."
     sync:
       ts: sync
       py: sync

@@ -895,6 +895,16 @@ name = "solvapay-export"
 version = "0.1.0"
 
 [[package]]
+name = "solvapay-mcp-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "solvapay-core",
+ "uuid",
+]
+
+[[package]]
 name = "solvapay-rust-examples-env"
 version = "0.1.0"
 
@@ -908,6 +918,7 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
+ "solvapay-mcp-core",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -1153,6 +1164,17 @@ name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
+
+[[package]]
+name = "uuid"
+version = "1.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5772d71c9be8a8a6ac2117d949c5b224c1b72241bb611d9a3012edcf8af7812"
+dependencies = [
+ "getrandom 0.4.3",
+ "js-sys",
+ "wasm-bindgen",
+]
 
 [[package]]
 name = "want"

@@ -76,16 +76,14 @@ export const RETIRED_SYMBOLS: readonly RetiredSymbol[] = [
     pattern: /\b_resolved_meter_name\b/,
     scopes: ['sdks/python'],
     extensions: ['.py', '.pyi'],
-    remediation:
-      'Delete _resolved_meter_name; meter names are resolved in Rust after Phase 4.',
+    remediation: 'Delete _resolved_meter_name; meter names are resolved in Rust after Phase 4.',
   },
   {
     token: 'resolved_meter_name',
     pattern: /\bresolved_meter_name\b/,
     scopes: ['sdks/ruby'],
     extensions: ['.rb', '.rbs'],
-    remediation:
-      'Delete resolved_meter_name; meter names are resolved in Rust after Phase 4.',
+    remediation: 'Delete resolved_meter_name; meter names are resolved in Rust after Phase 4.',
   },
   {
     token: 'SOLVAPAY_IMPL',

@@ -186,7 +186,7 @@ impl McpHttpServer {
             .payables
             .iter()
             .map(|(name, spec)| {
-                PayableToolConfig::Spec(PayableToolSpec {
+                PayableToolConfig::Spec(Box::new(PayableToolSpec {
                     name: name.clone(),
                     title: spec.title.clone(),
                     description: spec.description.clone(),
@@ -196,7 +196,7 @@ impl McpHttpServer {
                     })),
                     annotations: None,
                     meta: None,
-                })
+                }))
             })
             .collect();
         payable_tools.sort_by(|a, b| a.name().cmp(b.name()));

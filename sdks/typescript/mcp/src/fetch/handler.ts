@@ -304,7 +304,7 @@ export function createSolvaPayMcpFetchHandler(
           ...(engine.onDispatched !== undefined ? { onDispatched: engine.onDispatched } : {}),
         })
         return engineHttpResponse(req, result)
-      } catch (error) {
+      } catch {
         const headers = new Headers({ 'content-type': 'application/json' })
         applyNativeCors(req.headers, headers)
         return new Response(
@@ -367,7 +367,7 @@ export function createSolvaPayMcpFetchHandler(
       const merged = new Headers(response.headers)
       applyNativeCors(req.headers, merged)
       return new Response(response.body, { status: response.status, headers: merged })
-    } catch (error) {
+    } catch {
       const headers = new Headers({ 'content-type': 'application/json' })
       applyNativeCors(req.headers, headers)
       const jsonRpcId = (await readJsonRpcEnvelope(req)).id
@@ -375,11 +375,11 @@ export function createSolvaPayMcpFetchHandler(
         JSON.stringify({
           jsonrpc: '2.0',
           id: jsonRpcId,
-            error: {
-              code: -32603,
-              message: 'Internal error',
-            },
-          }),
+          error: {
+            code: -32603,
+            message: 'Internal error',
+          },
+        }),
         { status: 200, headers },
       )
     }

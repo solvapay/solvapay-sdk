@@ -53,14 +53,7 @@ export function formatPrice(
   opts: FormatPriceOptions = {},
 ): string {
   const { interval, intervalCount, free, currencyDisplay } = opts
-  return formatPriceCore(
-    amountMinor,
-    currency,
-    interval,
-    intervalCount,
-    free,
-    currencyDisplay,
-  )
+  return formatPriceCore(amountMinor, currency, interval, intervalCount, free, currencyDisplay)
 }
 
 /**

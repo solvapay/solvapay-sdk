@@ -1121,8 +1121,19 @@ dependencies = [
  "serde_json",
  "solvapay",
  "solvapay-core",
+ "solvapay-mcp-core",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "solvapay-mcp-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "solvapay-core",
+ "uuid",
 ]
 
 [[package]]
@@ -1135,6 +1146,7 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
+ "solvapay-mcp-core",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

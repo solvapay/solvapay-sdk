@@ -68,6 +68,8 @@ module SolvaPay
       def handle_oauth: (Hash[String, untyped] env, String method, String path) -> [Integer, Hash[String, String], Array[String]]
       def handle_mcp: (Hash[String, untyped] env) -> [Integer, Hash[String, String], Array[String]]
       def resume_payable: (untyped envelope) -> [Integer, Hash[String, String], Array[String]]
+      def payable_tool_specs: () -> Array[Hash[String, untyped]]
+      def json_rpc_error: (Integer status, untyped id, Integer code, String message) -> [Integer, Hash[String, String], Array[String]]
       def oauth_config: () -> Hash[String, untyped]
       def oauth_response: (untyped envelope) -> [Integer, Hash[String, String], Array[String]]
       def json_response: (Integer status, untyped body) -> [Integer, Hash[String, String], Array[String]]

@@ -14,6 +14,8 @@ const ALLOWLIST: &[&str] = &[
     "sdks/capi/build.rs",
     "sdks/capi/tests/header_golden.rs",
     "examples/rust/env/src/lib.rs",
+    "examples/rust/guerrillamail-mcp/src/main.rs",
+    "examples/rust/guerrillamail-mcp/src/sources.rs",
 ];
 
 fn rust_roots(repo: &Path) -> Vec<PathBuf> {

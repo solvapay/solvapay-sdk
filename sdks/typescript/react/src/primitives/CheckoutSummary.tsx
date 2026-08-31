@@ -22,11 +22,7 @@ import { useCopy, useLocale } from '../hooks/useCopy'
 import { formatPrice } from '../utils/format'
 import { interpolate } from '../i18n/interpolate'
 import { usePlanSelection } from '../components/PlanSelectionContext'
-import {
-  formatVatSummaryLabel,
-  shouldShowTaxRow,
-  resolveTaxTreatmentNote,
-} from '@solvapay/core'
+import { formatVatSummaryLabel, shouldShowTaxRow, resolveTaxTreatmentNote } from '@solvapay/core'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import type { Plan, Product } from '../types'

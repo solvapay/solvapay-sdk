@@ -327,9 +327,13 @@ describe('checkParity', () => {
   })
 
   it('flags a layer-2 symbol present in bindings but absent from the mcp section', () => {
-    const issues = checkMcpParity(stubManifest(), {}, {
-      paywallToolResult: { section: 'MCP payload / descriptors' },
-    })
+    const issues = checkMcpParity(
+      stubManifest(),
+      {},
+      {
+        paywallToolResult: { section: 'MCP payload / descriptors' },
+      },
+    )
     expect(issues.some(i => i.kind === 'extra' && /paywallToolResult/.test(i.message))).toBe(true)
   })
 

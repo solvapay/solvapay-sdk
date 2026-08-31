@@ -13,7 +13,14 @@ module SolvaPay
     end
 
     def self.widget_html_rpc(rpc, resource_uri, public_base_url, product_ref, views = nil)
-      envelope = Layer2.mcp_widget_resource(rpc, resource_uri, public_base_url, product_ref, views)
+      args = {
+        "rpc" => rpc,
+        "resourceUri" => resource_uri,
+        "publicBaseUrl" => public_base_url,
+        "productRef" => product_ref,
+      } #: Hash[String, untyped]
+      args["views"] = views unless views.nil?
+      envelope = SolvaPay::Mcp::Core.call("mcpWidgetResource", args)
       return nil if envelope.nil?
 
       unless envelope.is_a?(Hash)
@@ -26,7 +33,8 @@ module SolvaPay
         raise SolvaPay::SolvaPayError.new("mcpWidgetResource omitted contents[0]", code: "invalid_widget")
       end
 
-      first["text"] = default_mcp_app_html
+      item = first #: Hash[String, untyped]
+      item["text"] = default_mcp_app_html
       envelope
     end
   end

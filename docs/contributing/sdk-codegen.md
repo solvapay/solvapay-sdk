@@ -61,7 +61,7 @@ Run from the repo root (`solvapay-sdk/`).
 | `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert `operations:` (+ optional `bindings:`) stub from OpenAPI DTOs                                                                    |
 | `pnpm gen:bindings`                                        | Suggest missing `bindings:` / `#[solvapay_export]` targets for orphan operations                                                        |
 | `pnpm gen`                                                 | Regenerate **all** dto-gen outputs (canonical flag set in `tools/codegen/gen.ts`)                                                       |
-| `pnpm gen:check`                                           | Same as `gen`, then fail if regeneration rewrote any generated path (working-tree idempotence; not a git-HEAD diff)                      |
+| `pnpm gen:check`                                           | Same as `gen`, then fail if regeneration rewrote any generated path (working-tree idempotence; not a git-HEAD diff)                     |
 | `pnpm gen:clean`                                           | Delete dto-gen artifacts (refuses files without a generated marker). Prints external generator commands it does not cover.              |
 | `pnpm gen:verify`                                          | `gen:clean` → `gen` → fail if any cleaned path was not regenerated                                                                      |
 | `pnpm generated:external`                                  | Rebuild/verify artifacts owned by external toolchains (`externalGenerated:`). `--markers-only` is toolchain-free.                       |
@@ -74,7 +74,7 @@ Run from the repo root (`solvapay-sdk/`).
 | `pnpm test:live`                                           | Live-contract drivers + `@solvapay/server` integration against a running stack                                                          |
 | `pnpm test:fixtures`                                       | Rust fixture-runner over `contract/fixtures`                                                                                            |
 | `pnpm docs:coverage`                                       | dto-gen `doc_coverage` lib test                                                                                                         |
-| `pnpm docs:parity`                                         | dto-gen `doc_parity` integration test (emitted TSDoc/pydoc/YARD/godoc/rustdoc vs contract summaries)                                      |
+| `pnpm docs:parity`                                         | dto-gen `doc_parity` integration test (emitted TSDoc/pydoc/YARD/godoc/rustdoc vs contract summaries)                                    |
 
 There is **no** need to copy a 30-flag `cargo run -p dto-gen -- …` line. CI and
 humans both call `pnpm gen` / `pnpm gen:check`.

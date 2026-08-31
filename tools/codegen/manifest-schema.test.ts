@@ -106,17 +106,11 @@ function minimalManifest(overrides: Partial<SdkContractManifest> = {}): SdkContr
     mcp: Object.fromEntries([
       ...Array.from({ length: EXPECTED_MCP_SYNC_OP_COUNT }, (_, i) => {
         const id = i === 0 ? 'mcpNarrate' : `mcpSync${String(i).padStart(2, '0')}`
-        return [
-          id,
-          { names: deriveNames(id), sync: PURE_SYNC, surface: 'syncOp' as const },
-        ]
+        return [id, { names: deriveNames(id), sync: PURE_SYNC, surface: 'syncOp' as const }]
       }),
       ...Array.from({ length: EXPECTED_MCP_LAYER2_COUNT }, (_, i) => {
         const id = i === 0 ? 'paywallToolResult' : `mcpLayer${String(i).padStart(2, '0')}`
-        return [
-          id,
-          { names: deriveNames(id), sync: PURE_SYNC, surface: 'layer2' as const },
-        ]
+        return [id, { names: deriveNames(id), sync: PURE_SYNC, surface: 'layer2' as const }]
       }),
     ]),
     facade: {

@@ -1,9 +1,9 @@
 # Rust SDK examples
 
-| Example                                       | Description                                                                          |
-| --------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [`get-merchant`](./get-merchant/)             | Async `Client::get_merchant` with local `.env` (offline mock-transport test covered) |
-| [`guerrillamail-mcp`](./guerrillamail-mcp/)   | Paywalled disposable-inbox MCP over the Guerrilla Mail JSON API                      |
+| Example                                     | Description                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [`get-merchant`](./get-merchant/)           | Async `Client::get_merchant` with local `.env` (offline mock-transport test covered) |
+| [`guerrillamail-mcp`](./guerrillamail-mcp/) | Paywalled disposable-inbox MCP over the Guerrilla Mail JSON API                      |
 
 Shared dotenv paths live in [`env/`](./env/) (`solvapay-rust-examples-env`).
 

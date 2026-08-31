@@ -10,6 +10,9 @@ build/
 coverage/
 *.tsbuildinfo
 
+# Markdown that uses `+` continuation lines (Prettier treats `+` as a list marker)
+core/solvapay-mcp/src/overview.md
+
 # Generated files
 generated/
 docs/api/
@@ -18,6 +21,10 @@ docs/api.json
 **/*.generated.ts
 **/*.generated.test.ts
 sdks/typescript/server/src/types/generated.ts
+sdks/typescript/core/src/native-core.ts
+sdks/typescript/core/src/native-helpers.ts
+sdks/typescript/core/src/native-dispatch.ts
+sdks/typescript/server/src/native-decisions.ts
 **/next-env.d.ts
 sdks/wasm/pkg/
 sdks/node-native/index.d.ts

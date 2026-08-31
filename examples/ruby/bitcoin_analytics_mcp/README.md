@@ -14,15 +14,15 @@ mempool, address/tx) with source attribution.
 Each call bills 1 unit of the `requests` meter on `SOLVAPAY_PRODUCT`. Upstream
 fan-out is not extra-billed.
 
-| Tool | Sources | Returns |
-| --- | --- | --- |
-| `network_snapshot` | btcnode `/api/info`, mempool tip height/hash + difficulty-adjustment, why21million `/api/halving/{tip}` | Tip from both nodes, signed `heightDelta`, SI-scaled difficulty, retarget ETA, era and subsidy |
-| `halving_outlook` | mempool tip (or optional `height`), why21million | Era, `rewardBtc`, blocks until next halving, era progress / 210,000, estimate labelled "at 10 min/block" |
-| `fee_outlook` | mempool recommended + precise + mempool-blocks, btcnode `/api/fees` + `/api/fees/predict` | Unified sat/vB bands; sub-1 rates via `precise`; next-block projection |
-| `mempool_health` | mempool `/api/mempool` + `/recent`, btcnode `/api/mempool` | Both backlogs with distinct units, signed `pendingTxDelta`, recent tx sample. `fee_histogram` dropped |
-| `address_brief` | mempool `/api/address/:addr` only | Confirmed balance, mempool delta, UTXO count. Notes that btcnode addr is unavailable |
-| `tx_brief` | mempool tx + status + tip, btcnode `/api/tx/:hash`, optional `/api/trace/:txid` | Derived vsize/fee rate, confirmations cross-check, capped 2-hop trace in sats |
-| `miner_revenue_split` | why21million + mempool-blocks + tip | Next-block subsidy vs fees and fee share of miner revenue |
+| Tool                  | Sources                                                                                                 | Returns                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `network_snapshot`    | btcnode `/api/info`, mempool tip height/hash + difficulty-adjustment, why21million `/api/halving/{tip}` | Tip from both nodes, signed `heightDelta`, SI-scaled difficulty, retarget ETA, era and subsidy           |
+| `halving_outlook`     | mempool tip (or optional `height`), why21million                                                        | Era, `rewardBtc`, blocks until next halving, era progress / 210,000, estimate labelled "at 10 min/block" |
+| `fee_outlook`         | mempool recommended + precise + mempool-blocks, btcnode `/api/fees` + `/api/fees/predict`               | Unified sat/vB bands; sub-1 rates via `precise`; next-block projection                                   |
+| `mempool_health`      | mempool `/api/mempool` + `/recent`, btcnode `/api/mempool`                                              | Both backlogs with distinct units, signed `pendingTxDelta`, recent tx sample. `fee_histogram` dropped    |
+| `address_brief`       | mempool `/api/address/:addr` only                                                                       | Confirmed balance, mempool delta, UTXO count. Notes that btcnode addr is unavailable                     |
+| `tx_brief`            | mempool tx + status + tip, btcnode `/api/tx/:hash`, optional `/api/trace/:txid`                         | Derived vsize/fee rate, confirmations cross-check, capped 2-hop trace in sats                            |
+| `miner_revenue_split` | why21million + mempool-blocks + tip                                                                     | Next-block subsidy vs fees and fee share of miner revenue                                                |
 
 Optional `height` on `halving_outlook` only. Optional `trace` on `tx_brief`.
 
@@ -126,13 +126,13 @@ reached. Live HTTP uses a 5s connect timeout and an 8s read timeout.
 
 ## Modes
 
-| Mode | Command | SolvaPay | Upstream |
-| --- | --- | --- | --- |
-| Demo allow | `ruby main.rb --mode demo` | Mock client (`withinLimits: true`) | fixtures |
-| Demo paywall | `ruby main.rb --mode demo --gate` | Mock paywall | fixtures |
-| Demo live | `--mode demo --source live` | Mock | real HTTP |
-| HTTP | `scripts/http.sh` or `pnpm mcp:bitcoin-analytics` | Real `SolvaPay.create` | live |
-| HTTP + ngrok | `pnpm mcp:bitcoin-analytics:tunnel` | Real `SolvaPay.create` | live |
+| Mode         | Command                                           | SolvaPay                           | Upstream  |
+| ------------ | ------------------------------------------------- | ---------------------------------- | --------- |
+| Demo allow   | `ruby main.rb --mode demo`                        | Mock client (`withinLimits: true`) | fixtures  |
+| Demo paywall | `ruby main.rb --mode demo --gate`                 | Mock paywall                       | fixtures  |
+| Demo live    | `--mode demo --source live`                       | Mock                               | real HTTP |
+| HTTP         | `scripts/http.sh` or `pnpm mcp:bitcoin-analytics` | Real `SolvaPay.create`             | live      |
+| HTTP + ngrok | `pnpm mcp:bitcoin-analytics:tunnel`               | Real `SolvaPay.create`             | live      |
 
 ```bash
 # monorepo load path (do not Bundler-path the Ruby gem — that compiles Magnus)
@@ -157,15 +157,15 @@ pnpm mcp:bitcoin-analytics:tunnel   # https://appmcp.jack-local.ngrok.app/mcp
 In MCPJam, connect to **`https://appmcp.jack-local.ngrok.app/mcp`** (tunnel)
 or `http://127.0.0.1:3030/mcp` (local-only).
 
-| Variable | Required | Notes |
-| --- | --- | --- |
-| `SOLVAPAY_SECRET_KEY` | yes | Copied from the other MCP examples' `.env` |
-| `SOLVAPAY_PRODUCT` | yes | Same `prd_*` as weather / stock-research |
-| `MCP_PUBLIC_BASE_URL` | yes for HTTP | Defaults to `https://appmcp.jack-local.ngrok.app` |
-| `BITCOIN_ANALYTICS_NGROK_URL` | no | Same reserved origin; do not use the mcp-proxy wildcard |
-| `SOLVAPAY_API_BASE_URL` | no | Local stack: `http://localhost:3010` |
-| `MCP_HOST` / `MCP_PORT` | no | Default `127.0.0.1` / `3030` |
-| `MCP_SOURCE` | no | `live` for real upstreams |
+| Variable                      | Required     | Notes                                                   |
+| ----------------------------- | ------------ | ------------------------------------------------------- |
+| `SOLVAPAY_SECRET_KEY`         | yes          | Copied from the other MCP examples' `.env`              |
+| `SOLVAPAY_PRODUCT`            | yes          | Same `prd_*` as weather / stock-research                |
+| `MCP_PUBLIC_BASE_URL`         | yes for HTTP | Defaults to `https://appmcp.jack-local.ngrok.app`       |
+| `BITCOIN_ANALYTICS_NGROK_URL` | no           | Same reserved origin; do not use the mcp-proxy wildcard |
+| `SOLVAPAY_API_BASE_URL`       | no           | Local stack: `http://localhost:3010`                    |
+| `MCP_HOST` / `MCP_PORT`       | no           | Default `127.0.0.1` / `3030`                            |
+| `MCP_SOURCE`                  | no           | `live` for real upstreams                               |
 
 ## Tests
 

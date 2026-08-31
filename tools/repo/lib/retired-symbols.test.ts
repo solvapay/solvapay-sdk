@@ -37,7 +37,7 @@ describe('retired-symbols-check fixtures', () => {
 
   it('reports resolved_meter_name under sdks/ruby', () => {
     const root = makeRepo({
-      'sdks/ruby/lib/solvapay/facade.rb': "def resolved_meter_name\n  nil\nend\n",
+      'sdks/ruby/lib/solvapay/facade.rb': 'def resolved_meter_name\n  nil\nend\n',
     })
     const issues = runRetiredSymbolsCheck(root)
     expect(issues.some(i => i.token === 'resolved_meter_name')).toBe(true)

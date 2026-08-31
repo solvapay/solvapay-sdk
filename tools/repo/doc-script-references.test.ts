@@ -95,7 +95,15 @@ function rootScripts(): Record<string, string> {
 
 function walkPackageJson(dir: string, acc: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
-    if (name === 'node_modules' || name === 'dist' || name === 'target' || name === '.git') {
+    if (
+      name === 'node_modules' ||
+      name === 'dist' ||
+      name === 'target' ||
+      name === '.git' ||
+      name === '.venv' ||
+      name === '.ci-venv' ||
+      name === 'vendor'
+    ) {
       continue
     }
     const full = path.join(dir, name)
@@ -109,27 +117,31 @@ function walkPackageJson(dir: string, acc: string[] = []): string[] {
   return acc
 }
 
-function workspaceScripts(filter: string): Record<string, string> | undefined {
+function loadWorkspaceScripts(): Map<string, Record<string, string>> {
+  const map = new Map<string, Record<string, string>>()
   for (const pkgPath of walkPackageJson(REPO_ROOT)) {
     const raw = JSON.parse(readFileSync(pkgPath, 'utf8')) as {
       name?: string
       scripts?: Record<string, string>
     }
-    if (raw.name === filter) return raw.scripts ?? {}
+    if (raw.name !== undefined) {
+      map.set(raw.name, raw.scripts ?? {})
+    }
   }
-  return undefined
+  return map
 }
 
 describe('doc script references', () => {
   it('every pnpm <script> in docs exists in package.json', () => {
     const scripts = rootScripts()
+    const workspaceScripts = loadWorkspaceScripts()
     const docsRoot = path.join(REPO_ROOT, 'docs')
     const missing: string[] = []
     for (const file of walkDocs(docsRoot)) {
       for (const hit of extractHits(file, readFileSync(file, 'utf8'))) {
         if (PNPM_BUILTINS.has(hit.script) || ALLOWLIST.has(hit.script)) continue
         if (hit.filter !== undefined) {
-          const ws = workspaceScripts(hit.filter)
+          const ws = workspaceScripts.get(hit.filter)
           if (ws !== undefined && hit.script in ws) continue
           if (hit.script in scripts) continue
           missing.push(`${hit.file}:${hit.line} pnpm --filter ${hit.filter} ${hit.script}`)

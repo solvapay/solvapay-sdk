@@ -108,9 +108,7 @@ export async function runMcpEngineRequest(options: {
       ...(config.branding !== undefined ? { branding: config.branding } : {}),
     },
     ...(authHeader !== undefined ? { authHeader } : {}),
-    ...(mcpProtocolVersionHeader !== undefined
-      ? { mcpProtocolVersionHeader }
-      : {}),
+    ...(mcpProtocolVersionHeader !== undefined ? { mcpProtocolVersionHeader } : {}),
   })
   if (!isRecord(envelope)) {
     throw new Error('mcpDispatch returned a non-object envelope')
