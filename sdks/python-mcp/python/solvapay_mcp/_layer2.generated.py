@@ -433,6 +433,42 @@ def mcp_view_maps() -> dict[str, object]:
     call_args: dict[str, object] = {}
     return _as_object_map(call_native_sync("mcp_view_maps", json.dumps(call_args)))
 
+def mcp_widget_resource(
+    rpc: object,
+    resource_uri: object,
+    public_base_url: object,
+    product_ref: object,
+    views: object | None = None,
+    csp: object | None = None,
+    api_base_url: object | None = None,
+    branding: object | None = None,
+) -> object:
+    """Build a widget resources/read JSON-RPC envelope with HTML text omitted for the host to splice.
+    @param rpc JSON-RPC request object.
+    @param resource_uri UI resource URI this host serves.
+    @param public_base_url Public http(s) origin of the MCP server.
+    @param product_ref Default product reference for checkout tools.
+    @param views Enabled views; defaults to checkout, account, and topup.
+    @param csp Optional CSP overrides merged with the Stripe baseline.
+    @param api_base_url Optional API origin auto-included in CSP connect-src.
+    @param branding Optional merchant branding for tool icons.
+    @returns Stamped JSON-RPC response without contents[0].text, or null when the request is not a widget read.
+    """
+    call_args: dict[str, object] = {}
+    call_args["rpc"] = rpc
+    call_args["resourceUri"] = resource_uri
+    call_args["publicBaseUrl"] = public_base_url
+    call_args["productRef"] = product_ref
+    if views is not None:
+        call_args["views"] = views
+    if csp is not None:
+        call_args["csp"] = csp
+    if api_base_url is not None:
+        call_args["apiBaseUrl"] = api_base_url
+    if branding is not None:
+        call_args["branding"] = branding
+    return call_sync_op("mcpWidgetResource", call_args)
+
 def paywall_tool_result(message: object, structured_content: object) -> dict[str, object]:
     """Build a text-only MCP paywall tool result (isError false) from narration and a gate.
     @param message Narration text for content[0].

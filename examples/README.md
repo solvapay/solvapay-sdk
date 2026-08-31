@@ -49,8 +49,10 @@ the vars you need into the target example's own `.env` — each package loads
 dotenv from its directory. Use `SOLVAPAY_API_BASE_URL=http://localhost:3010`
 (provider-app proxy) and remap MCP/example ports to `3030+` so they don't
 collide with platform services. Convenience scripts from the repo root:
-`pnpm mcp:checkout` / `pnpm mcp:checkout:tunnel` and
-`pnpm mcp:stock-research` / `pnpm mcp:stock-research:tunnel`.
+`pnpm mcp:checkout` / `pnpm mcp:checkout:tunnel`,
+`pnpm mcp:stock-research` / `pnpm mcp:stock-research:tunnel`,
+`pnpm mcp:bitcoin-analytics` / `pnpm mcp:bitcoin-analytics:tunnel`, and
+`pnpm mcp:guerrillamail` / `pnpm mcp:guerrillamail:tunnel`.
 
 ## Python
 
@@ -67,9 +69,11 @@ python -m pytest -q
 
 ## Ruby
 
-| Example                             | Description                                             |
-| ----------------------------------- | ------------------------------------------------------- |
-| [get_merchant](./ruby/get_merchant) | `SolvaPay::Client#get_merchant` + offline TCP stub test |
+| Example                                                 | Description                                                                        |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [get_merchant](./ruby/get_merchant)                     | `SolvaPay::Client#get_merchant` + offline TCP stub test                            |
+| [paid_mcp](./ruby/paid_mcp)                             | Paywalled MCP echo (`solvapay/mcp`) against a mock backend                         |
+| [bitcoin_analytics_mcp](./ruby/bitcoin_analytics_mcp)   | Paywalled MCP tools composing Bitcoin halving, mempool.space, and btcnode data. Ngrok via `pnpm mcp:bitcoin-analytics:tunnel` |
 
 ```bash
 cd examples/ruby/get_merchant
@@ -95,7 +99,9 @@ cd examples/go/weather-mcp && go test ./...
 | Example                             | Description                                           |
 | ----------------------------------- | ----------------------------------------------------- |
 | [get-merchant](./rust/get-merchant) | Facade `get_merchant` + injected `MockTransport` test |
+| [guerrillamail-mcp](./rust/guerrillamail-mcp) | Paywalled disposable-inbox MCP over Guerrilla Mail. Ngrok via `pnpm mcp:guerrillamail:tunnel` |
 
 ```bash
 cargo test --manifest-path examples/rust/get-merchant/Cargo.toml
+cargo test --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml
 ```

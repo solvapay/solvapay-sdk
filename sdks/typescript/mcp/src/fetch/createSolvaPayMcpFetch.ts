@@ -21,6 +21,7 @@ import {
   type McpRequestContext,
 } from './handler'
 import type { McpOauthRequestClient } from '../internal/mcp-oauth-request'
+import { defaultMcpAppHtml } from '#mcp-app-html'
 
 export type { AdditionalToolsContext } from '../server'
 
@@ -210,6 +211,8 @@ export function createSolvaPayMcpFetch(
               resourceUri: resourceUri ?? 'ui://widget.html',
               ...(apiBaseUrl !== undefined ? { apiBaseUrl } : {}),
               ...(views !== undefined ? { views: [...views] } : {}),
+              ...(csp !== undefined ? { csp } : {}),
+              ...(branding !== undefined ? { branding } : {}),
               ...(hideAudiences !== undefined ? { hideAudiences } : {}),
             },
             payables,
@@ -220,6 +223,7 @@ export function createSolvaPayMcpFetch(
                   },
                 }
               : {}),
+            readHtml: readHtml ?? defaultMcpAppHtml,
             ...(onToolResult !== undefined
               ? {
                   onDispatched: (result: { body: unknown }, durationMs: number) => {

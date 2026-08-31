@@ -11,6 +11,7 @@ import {
   McpBearerAuthError,
   mcpAuthGate,
   pathAwareProtectedResourcePath,
+  mcpWidgetResource,
   runMcpEngineRequest,
   type BuildAuthInfoFromBearerOptions,
   type McpAuthMode,
@@ -58,11 +59,13 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
       rpc: unknown
       config: Record<string, unknown>
       authHeader?: string
+      mcpProtocolVersionHeader?: string
     }) => Promise<unknown>
     config: Omit<McpEngineConfig, 'userAgent' | 'payableTools'>
     payables: Map<string, McpEnginePayable>
     onDispatch?: (rpc: unknown) => void
     onDispatched?: (result: McpEngineHttpResult, durationMs: number) => void
+    readHtml?: () => Promise<string>
   }
   /**
    * Response shaping for modern (2026-07-28) traffic. Edge runtimes that
@@ -96,6 +99,20 @@ function engineHttpResponse(
         ? result.body
         : JSON.stringify(result.body)
   return new Response(body, { status: result.status, headers })
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object'
+}
+
+function isWidgetRpcEnvelope(value: unknown): value is {
+  jsonrpc: string
+  id: unknown
+  result: { contents: Array<Record<string, unknown>> }
+} {
+  if (!isRecord(value) || !isRecord(value.result)) return false
+  const contents = value.result.contents
+  return Array.isArray(contents) && isRecord(contents[0])
 }
 
 function getJsonRpcId(body: unknown): string | number | null {
@@ -221,8 +238,51 @@ export function createSolvaPayMcpFetchHandler(
           { status: 400, headers },
         )
       }
-      const payableTools = [...engine.payables.keys()].sort()
+      const payableTools = [...engine.payables.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([name, payable]) => {
+          if (
+            payable.title !== undefined ||
+            payable.description !== undefined ||
+            payable.inputSchema !== undefined ||
+            payable.annotations !== undefined
+          ) {
+            return {
+              name,
+              ...(payable.title !== undefined ? { title: payable.title } : {}),
+              ...(payable.description !== undefined ? { description: payable.description } : {}),
+              ...(payable.inputSchema !== undefined ? { inputSchema: payable.inputSchema } : {}),
+              ...(payable.annotations !== undefined ? { annotations: payable.annotations } : {}),
+            }
+          }
+          return name
+        })
       try {
+        const widget = mcpWidgetResource(
+          rpc,
+          engine.config.resourceUri,
+          engine.config.publicBaseUrl,
+          engine.config.productRef,
+          engine.config.views,
+          engine.config.csp,
+          engine.config.apiBaseUrl,
+          engine.config.branding,
+        )
+        if (widget !== null && widget !== undefined) {
+          if (!isWidgetRpcEnvelope(widget)) {
+            throw new Error('mcpWidgetResource returned an invalid envelope')
+          }
+          const readHtml = engine.readHtml
+          if (readHtml === undefined) {
+            throw new Error('mcpWidgetResource requires engine.readHtml to splice widget HTML')
+          }
+          widget.result.contents[0].text = await readHtml()
+          return engineHttpResponse(req, {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+            body: widget,
+          })
+        }
         const result = await runMcpEngineRequest({
           mcpDispatch: engine.mcpDispatch,
           rpc,
@@ -235,6 +295,9 @@ export function createSolvaPayMcpFetchHandler(
           },
           ...(req.headers.get('authorization')
             ? { authHeader: req.headers.get('authorization') ?? undefined }
+            : {}),
+          ...(req.headers.get('mcp-protocol-version')
+            ? { mcpProtocolVersionHeader: req.headers.get('mcp-protocol-version') ?? undefined }
             : {}),
           payables: engine.payables,
           ...(engine.onDispatch !== undefined ? { onDispatch: engine.onDispatch } : {}),
@@ -250,10 +313,10 @@ export function createSolvaPayMcpFetchHandler(
             id: getJsonRpcId(rpc),
             error: {
               code: -32603,
-              message: error instanceof Error ? error.message : 'internal_error',
+              message: 'Internal error',
             },
           }),
-          { status: 500, headers },
+          { status: 200, headers },
         )
       }
     }
@@ -312,12 +375,12 @@ export function createSolvaPayMcpFetchHandler(
         JSON.stringify({
           jsonrpc: '2.0',
           id: jsonRpcId,
-          error: {
-            code: -32603,
-            message: error instanceof Error ? error.message : 'internal_error',
-          },
-        }),
-        { status: 500, headers },
+            error: {
+              code: -32603,
+              message: 'Internal error',
+            },
+          }),
+        { status: 200, headers },
       )
     }
   }

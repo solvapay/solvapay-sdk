@@ -63,12 +63,28 @@ def create_mcp_engine_route(
         from solvapay_mcp.server.request_log import log_mcp_rpc
 
         log_mcp_rpc(rpc)
-        envelope = await dispatch_rpc(
-            server,
-            rpc,
-            auth_header=request.headers.get("authorization"),
-            user_agent=request.headers.get("user-agent"),
-        )
+        try:
+            envelope = await dispatch_rpc(
+                server,
+                rpc,
+                auth_header=request.headers.get("authorization"),
+                user_agent=request.headers.get("user-agent"),
+                protocol_version_header=request.headers.get("mcp-protocol-version"),
+            )
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception("mcp dispatch failed")
+            response = JSONResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "id": rpc.get("id"),
+                    "error": {"code": -32603, "message": "Internal error"},
+                },
+                status_code=200,
+            )
+            apply_native_cors(request, response)
+            return response
         kind = envelope.get("kind")
         if kind == "challenge":
             status = envelope.get("status")
@@ -80,7 +96,11 @@ def create_mcp_engine_route(
             apply_native_cors(request, response)
             return response
         rpc_body = envelope.get("rpc") if kind == "rpc" else envelope
-        response = JSONResponse(rpc_body)
+        status = envelope.get("status") if kind == "rpc" else None
+        response = JSONResponse(
+            rpc_body,
+            status_code=int(status) if isinstance(status, int) else 200,
+        )
         apply_native_cors(request, response)
         return response
 

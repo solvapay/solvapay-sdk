@@ -59,7 +59,18 @@ MCP_AUTHORING_FIXTURES = [
     "engine/gate-denied.json",
     "engine/initialize.json",
     "engine/invoke-handler.json",
+    "engine/modern-missing-capabilities.json",
+    "engine/ping-modern.json",
+    "engine/server-discover.json",
+    "engine/subscriptions-listen.json",
+    "engine/tools-list-modern.json",
+    "engine/tools-list-payable.json",
     "engine/tools-list.json",
+    "engine/unsupported-method-modern.json",
+    "engine/unsupported-method.json",
+    "engine/unsupported-version.json",
+    "engine/widget-resource-legacy.json",
+    "engine/widget-resource-modern.json",
     "error/handler-throws.json",
     "gate/activation-required.json",
     "gate/handler-invoked.json",
@@ -218,10 +229,25 @@ def test_replays_core_op(rel: str) -> None:
     args = raw["input"].get("args") or {}
     expect = raw["expect"]["result"]
     got = call(str(fn), args if isinstance(args, dict) else {})
-    if fn == "mcpHandleRequest" and str(rel).endswith("tools-list.json"):
+    if fn == "mcpHandleRequest" and "tools-list" in str(rel):
         assert isinstance(got, dict)
         assert got["kind"] == "rpc"
         assert len(got["rpc"]["result"]["tools"]) >= 8
+        for tool in got["rpc"]["result"]["tools"]:
+            title = tool.get("title")
+            assert title is None or isinstance(title, str), f"{rel} tool {tool.get('name')} title"
+        if str(rel).endswith("tools-list-modern.json"):
+            assert got["rpc"]["result"]["resultType"] == "complete"
+            assert got["rpc"]["result"]["ttlMs"] == 60_000
+            assert got["rpc"]["result"]["cacheScope"] == "public"
+        if str(rel).endswith("tools-list-payable.json"):
+            echo = next(t for t in got["rpc"]["result"]["tools"] if t["name"] == "echo_paid")
+            assert echo["title"] == "Echo paid"
+            assert echo["description"] == "Echo arguments after a paid gate"
+            assert echo["inputSchema"] == {
+                "type": "object",
+                "properties": {"n": {"type": "number"}},
+            }
         return
     if fn == "mcpHandleRequest" and str(rel).endswith("invoke-handler.json"):
         assert isinstance(got, dict) and isinstance(expect, dict)

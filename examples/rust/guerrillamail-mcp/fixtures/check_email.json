@@ -1,0 +1,26 @@
+{
+  "list": [
+    {
+      "mail_from": "no-reply@guerrillamail.com",
+      "mail_timestamp": 0,
+      "mail_read": 0,
+      "mail_date": "11:56:05",
+      "reply_to": "",
+      "mail_subject": "Hello &amp; Welcome",
+      "mail_excerpt": "fighter&#039;s ally",
+      "mail_id": 1,
+      "att": 0,
+      "content_type": "text",
+      "mail_recipient": "solvatestinbox",
+      "source_id": 0,
+      "source_mail_id": 0,
+      "size": 1040
+    }
+  ],
+  "count": "3",
+  "email": "solvatestinbox@guerrillamailblock.com",
+  "alias": "solva-alias",
+  "ts": 1700000000,
+  "sid_token": "sid_alpha",
+  "auth": { "success": true, "error_codes": [] }
+}

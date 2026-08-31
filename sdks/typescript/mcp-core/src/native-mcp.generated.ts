@@ -371,6 +371,31 @@ export function mcpViewMaps(): unknown {
 }
 
 /**
+ * Build a widget resources/read JSON-RPC envelope with HTML text omitted for the host to splice.
+ * @param rpc JSON-RPC request object.
+ * @param resourceUri UI resource URI this host serves.
+ * @param publicBaseUrl Public http(s) origin of the MCP server.
+ * @param productRef Default product reference for checkout tools.
+ * @param views Enabled views; defaults to checkout, account, and topup.
+ * @param csp Optional CSP overrides merged with the Stripe baseline.
+ * @param apiBaseUrl Optional API origin auto-included in CSP connect-src.
+ * @param branding Optional merchant branding for tool icons.
+ * @returns Stamped JSON-RPC response without contents[0].text, or null when the request is not a widget read.
+ */
+export function mcpWidgetResource(rpc: unknown, resourceUri: unknown, publicBaseUrl: unknown, productRef: unknown, views?: unknown, csp?: unknown, apiBaseUrl?: unknown, branding?: unknown): unknown {
+  const call_args: Record<string, unknown> = {}
+  call_args['rpc'] = rpc
+  call_args['resourceUri'] = resourceUri
+  call_args['publicBaseUrl'] = publicBaseUrl
+  call_args['productRef'] = productRef
+  if (views !== undefined) call_args['views'] = views
+  if (csp !== undefined) call_args['csp'] = csp
+  if (apiBaseUrl !== undefined) call_args['apiBaseUrl'] = apiBaseUrl
+  if (branding !== undefined) call_args['branding'] = branding
+  return callMcpSyncOp('mcpWidgetResource', call_args)
+}
+
+/**
  * Build a text-only MCP paywall tool result (isError false) from narration and a gate.
  * @param message Narration text for content[0].
  * @param structuredContent Machine-readable PaywallGate payload.

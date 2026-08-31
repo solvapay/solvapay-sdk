@@ -29,9 +29,9 @@ use solvapay_dto::{
     GetPaymentMethodParams, ProcessPaymentIntentParams, ReactivatePurchaseParams,
 };
 use solvapay_mcp_core::{
-    mcp_descriptors, mcp_handle_request, mcp_overview_resource, narrated_tool_result,
-    new_widget_session_id, parse_mode, tool_error_result, tool_result, HandleRequestInput,
-    McpDescriptorsInput,
+    is_modern_era, mcp_descriptors, mcp_handle_request, mcp_overview_resource,
+    narrated_tool_result, new_widget_session_id, parse_mode, stamp_catalog_result,
+    stamp_complete_result, tool_error_result, tool_result, HandleRequestInput, McpDescriptorsInput,
 };
 
 use crate::client::SolvaPayClient;
@@ -116,6 +116,9 @@ pub struct McpDispatchParams {
     /// Optional Authorization header.
     #[serde(default)]
     pub auth_header: Option<String>,
+    /// Optional `MCP-Protocol-Version` HTTP header forwarded by the host.
+    #[serde(default)]
+    pub mcp_protocol_version_header: Option<String>,
 }
 
 /// Arguments for [`SolvaPayClient::mcp_oauth_request`].
@@ -943,10 +946,12 @@ impl SolvaPayClient {
         dto_type = "solvapay_transport::McpDispatchParams"
     )]
     pub async fn mcp_dispatch(&self, params: McpDispatchParams) -> Result<Value, SdkError> {
+        let modern = is_modern_era(&params.rpc);
         let handled = mcp_handle_request(&HandleRequestInput {
             rpc: params.rpc,
             config: params.config.clone(),
             auth_header: params.auth_header.clone(),
+            mcp_protocol_version_header: params.mcp_protocol_version_header.clone(),
         })
         .map_err(|message| SdkError::transport(message, false))?;
         match handled.get("kind").and_then(Value::as_str) {
@@ -974,6 +979,10 @@ impl SolvaPayClient {
                     })
                     .await?;
                 let id = handled.get("rpcId").cloned().unwrap_or(Value::Null);
+                let mut result = result;
+                if modern {
+                    stamp_complete_result(&mut result);
+                }
                 Ok(json!({
                     "kind": "rpc",
                     "rpc": { "jsonrpc": "2.0", "id": id, "result": result }
@@ -985,6 +994,14 @@ impl SolvaPayClient {
                     .and_then(Value::as_str)
                     .unwrap_or("")
                     .to_owned();
+                if uri == params.config.resource_uri {
+                    return Err(SdkError::transport(
+                        format!(
+                            "resources/read for widget URI {uri} must be served by the MCP host via mcpWidgetResource; mcpDispatch has no widget HTML"
+                        ),
+                        false,
+                    ));
+                }
                 let contents = self
                     .mcp_read_resource(McpReadResourceParams {
                         uri: uri.clone(),
@@ -1004,18 +1021,22 @@ impl SolvaPayClient {
                 } else {
                     Value::String(contents.to_string())
                 };
+                let mut result = json!({
+                    "contents": [{
+                        "uri": contents.get("uri").cloned().unwrap_or(Value::String(uri)),
+                        "mimeType": contents.get("mimeType").cloned().unwrap_or(Value::String("application/json".to_owned())),
+                        "text": text
+                    }]
+                });
+                if modern {
+                    stamp_catalog_result(&mut result);
+                }
                 Ok(json!({
                     "kind": "rpc",
                     "rpc": {
                         "jsonrpc": "2.0",
                         "id": id,
-                        "result": {
-                            "contents": [{
-                                "uri": contents.get("uri").cloned().unwrap_or(Value::String(uri)),
-                                "mimeType": contents.get("mimeType").cloned().unwrap_or(Value::String("application/json".to_owned())),
-                                "text": text
-                            }]
-                        }
+                        "result": result
                     }
                 }))
             }

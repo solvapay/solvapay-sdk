@@ -402,6 +402,37 @@ func McpViewMaps(ctx context.Context) (json.RawMessage, error) {
 	return callLayer2(ctx, "sv_mcp_view_maps_binding", call_args)
 }
 
+// McpWidgetResource build a widget resources/read JSON-RPC envelope with HTML text omitted for the host to splice.
+// The rpc parameter is JSON-RPC request object.
+// The resourceUri parameter is UI resource URI this host serves.
+// The publicBaseUrl parameter is Public http(s) origin of the MCP server.
+// The productRef parameter is Default product reference for checkout tools.
+// The views parameter is Enabled views; defaults to checkout, account, and topup.
+// The csp parameter is Optional CSP overrides merged with the Stripe baseline.
+// The apiBaseUrl parameter is Optional API origin auto-included in CSP connect-src.
+// The branding parameter is Optional merchant branding for tool icons.
+// Returns Stamped JSON-RPC response without contents[0].text, or null when the request is not a widget read.
+func McpWidgetResource(ctx context.Context, rpc any, resourceUri any, publicBaseUrl any, productRef any, views any, csp any, apiBaseUrl any, branding any) (json.RawMessage, error) {
+	call_args := map[string]any{}
+	call_args["rpc"] = rpc
+	call_args["resourceUri"] = resourceUri
+	call_args["publicBaseUrl"] = publicBaseUrl
+	call_args["productRef"] = productRef
+	if views != nil {
+		call_args["views"] = views
+	}
+	if csp != nil {
+		call_args["csp"] = csp
+	}
+	if apiBaseUrl != nil {
+		call_args["apiBaseUrl"] = apiBaseUrl
+	}
+	if branding != nil {
+		call_args["branding"] = branding
+	}
+	return CallSync(ctx, "mcpWidgetResource", call_args)
+}
+
 // PaywallToolResult build a text-only MCP paywall tool result (isError false) from narration and a gate.
 // The message parameter is Narration text for content[0].
 // The structuredContent parameter is Machine-readable PaywallGate payload.

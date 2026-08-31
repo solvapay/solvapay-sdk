@@ -108,6 +108,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
   },
 })
 module.exports = __napiModule.exports
+module.exports.NativeClient = __napiModule.exports.NativeClient
 module.exports.assertResponseResult = __napiModule.exports.assertResponseResult
 module.exports.assertValidProductRef = __napiModule.exports.assertValidProductRef
 module.exports.attachBusinessDetailsValidationError = __napiModule.exports.attachBusinessDetailsValidationError
@@ -188,6 +189,7 @@ module.exports.selectActivePurchases = __napiModule.exports.selectActivePurchase
 module.exports.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE = __napiModule.exports.SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
 module.exports.shouldRetryUsageError = __napiModule.exports.shouldRetryUsageError
 module.exports.shouldShowTaxRow = __napiModule.exports.shouldShowTaxRow
+module.exports.solvapayCall = __napiModule.exports.solvapayCall
 module.exports.TAX_NOT_COLLECTED_NOTE = __napiModule.exports.TAX_NOT_COLLECTED_NOTE
 module.exports.tierBands = __napiModule.exports.tierBands
 module.exports.tierMeters = __napiModule.exports.tierMeters

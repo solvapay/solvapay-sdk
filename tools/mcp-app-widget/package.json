@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@solvapay/core": "workspace:*",
     "@solvapay/react": "workspace:*",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

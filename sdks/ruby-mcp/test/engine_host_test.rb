@@ -53,6 +53,142 @@ class EngineHostTest < Minitest::Test
     stub&.shutdown
   end
 
+  def test_tools_list_includes_registered_payable_descriptor
+    client = SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: "http://127.0.0.1:1")
+    engine = SolvaPay::Mcp::Engine.new(
+      client: client,
+      product_ref: "prd_demo",
+      public_base_url: "https://app.example.com",
+      resource_uri: "ui://test/view.html",
+    )
+    engine.register_payable(
+      "echo_paid",
+      product: "prd_demo",
+      title: "Echo paid",
+      description: "Echo arguments after a paid gate",
+      input_schema: { "type" => "object", "properties" => { "n" => { "type" => "number" } } },
+      handler: lambda { |_args, ctx| ctx.respond({ "ok" => true }) },
+    )
+    status, _headers, body = engine.call(
+      rack_env(
+        "POST",
+        "/mcp",
+        JSON.generate({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
+      ),
+    )
+    assert_equal 200, status
+    parsed = JSON.parse(body.join)
+    echo = parsed.dig("result", "tools").find { |tool| tool["name"] == "echo_paid" }
+    refute_nil echo, "payable echo_paid missing from tools/list"
+    assert_equal "Echo paid", echo["title"]
+    assert_equal "Echo arguments after a paid gate", echo["description"]
+    assert_equal({ "type" => "object", "properties" => { "n" => { "type" => "number" } } }, echo["inputSchema"])
+  end
+
+  def test_dispatch_failure_returns_jsonrpc_error_without_path
+    client = Object.new
+    def client.mcp_dispatch(params:)
+      raise SolvaPay::SolvaPayError.new("/Users/jacksmith/secret/engine.rs:1 exploded", code: "boom")
+    end
+    engine = SolvaPay::Mcp::Engine.new(
+      client: client,
+      product_ref: "prd_demo",
+      public_base_url: "https://app.example.com",
+    )
+    status, headers, body = engine.call(
+      rack_env("POST", "/mcp", JSON.generate({ jsonrpc: "2.0", id: 1, method: "tools/list" })),
+    )
+    assert_equal 200, status
+    assert_equal "application/json", headers["content-type"]
+    parsed = JSON.parse(body.join)
+    assert_equal(-32_603, parsed.dig("error", "code"))
+    refute_includes body.join, "/Users/"
+  end
+
+  def test_resources_read_returns_widget_html
+    client = SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: "http://127.0.0.1:1")
+    engine = SolvaPay::Mcp::Engine.new(
+      client: client,
+      product_ref: "prd_demo",
+      public_base_url: "https://app.example.com",
+      resource_uri: "ui://widget.html",
+    )
+    status, _headers, body = engine.call(
+      rack_env(
+        "POST",
+        "/mcp",
+        JSON.generate(
+          {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "resources/read",
+            params: { uri: "ui://widget.html" },
+          },
+        ),
+      ),
+    )
+    assert_equal 200, status
+    parsed = JSON.parse(body.join)
+    text = parsed.dig("result", "contents", 0, "text")
+    assert text.is_a?(String)
+    assert text.strip.start_with?("<"), text[0, 80]
+    assert_equal SolvaPay::Mcp.default_mcp_app_html, text
+    csp = parsed.dig("result", "contents", 0, "_meta", "ui", "csp")
+    assert csp.is_a?(Hash)
+    assert csp.key?("resourceDomains")
+  end
+
+  def test_resources_read_stamps_modern_catalog_envelope
+    client = SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: "http://127.0.0.1:1")
+    engine = SolvaPay::Mcp::Engine.new(
+      client: client,
+      product_ref: "prd_demo",
+      public_base_url: "https://app.example.com",
+      resource_uri: "ui://widget.html",
+    )
+    status, _headers, body = engine.call(
+      rack_env(
+        "POST",
+        "/mcp",
+        JSON.generate(
+          {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "resources/read",
+            params: {
+              uri: "ui://widget.html",
+              _meta: {
+                "io.modelcontextprotocol/protocolVersion" => "2026-07-28",
+                "io.modelcontextprotocol/clientCapabilities" => {},
+              },
+            },
+          },
+        ),
+      ),
+    )
+    assert_equal 200, status
+    parsed = JSON.parse(body.join)
+    assert_equal "complete", parsed.dig("result", "resultType")
+    assert_equal 60_000, parsed.dig("result", "ttlMs")
+    assert_equal "public", parsed.dig("result", "cacheScope")
+    assert_equal SolvaPay::Mcp.default_mcp_app_html, parsed.dig("result", "contents", 0, "text")
+  end
+
+  def test_unparseable_json_returns_parse_error
+    client = SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: "http://127.0.0.1:1")
+    engine = SolvaPay::Mcp::Engine.new(
+      client: client,
+      product_ref: "prd_demo",
+      public_base_url: "https://app.example.com",
+    )
+    status, headers, body = engine.call(rack_env("POST", "/mcp", "{not-json"))
+    assert_equal 400, status
+    assert_equal "application/json", headers["content-type"]
+    parsed = JSON.parse(body.join)
+    assert_equal(-32_700, parsed.dig("error", "code"))
+    refute_includes body.join, "/Users/"
+  end
+
   def test_replays_dispatch_rpc_through_engine
     rel = "dispatch/rpc.json"
     raw = JSON.parse((McpAuthoring::RepoPaths.lookup_mcp_fixtures / rel).read(encoding: "UTF-8"))

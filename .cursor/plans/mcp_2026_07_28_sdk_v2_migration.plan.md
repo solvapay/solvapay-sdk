@@ -57,6 +57,11 @@ dependency. That boundary (an existing rule in
 `.cursor/rules/mcp-apps-sdk.mdc`) is the single biggest reason this migration is
 tractable.
 
+**Engine-side follow-up:** TypeScript/Go adapters already speak 2026-07-28 via the
+official SDKs. Shared-engine hosts (Ruby / Python / Rust / TypeScript engine mode)
+are covered by `~/.cursor/plans/mcp_2026-07-28_engine_parity_9ea70341.plan.md`
+(`server/discover`, per-request `_meta`, SEP-2549 cache fields, `-3202x` codes).
+
 **Recommendation: cut straight to v2, do not dual-target v1.** Supporting both means
 maintaining two transport implementations behind a build-time flag, because v1 and v2
 objects cannot cross (`instanceof` and nominal types do not survive the boundary — the

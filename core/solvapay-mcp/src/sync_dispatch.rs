@@ -118,6 +118,23 @@ fn dispatch_inner(op: &str, args_json: &str) -> String {
             let input: NarrateInput = parse_args_json(args_json)?;
             Ok(mcp_narrate(&input))
         }
+        "mcpWidgetResource" => {
+            #[cfg(feature = "engine")]
+            {
+                let input: crate::widget_resource::McpWidgetResourceInput =
+                    parse_args_json(args_json)?;
+                crate::widget_resource::mcp_widget_resource(&input)
+                    .map(|value| value.unwrap_or(Value::Null))
+                    .map_err(|message| SdkError::transport(message, false))
+            }
+            #[cfg(not(feature = "engine"))]
+            {
+                Err(SdkError::transport(
+                    "mcpWidgetResource requires engine feature",
+                    false,
+                ))
+            }
+        }
         "mcpHandleRequest" => {
             #[cfg(feature = "engine")]
             {

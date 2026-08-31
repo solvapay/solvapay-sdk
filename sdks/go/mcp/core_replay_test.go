@@ -54,7 +54,7 @@ func TestReplaysCoreOps(t *testing.T) {
 			if err := json.Unmarshal(env.Expect.Result, &want); err != nil {
 				t.Fatal(err)
 			}
-			if env.Input.Fn == "mcpHandleRequest" && strings.HasSuffix(rel, "tools-list.json") {
+			if env.Input.Fn == "mcpHandleRequest" && strings.Contains(rel, "tools-list") {
 				gotMap, _ := got.(map[string]any)
 				if gotMap["kind"] != "rpc" {
 					t.Fatalf("kind = %v", gotMap["kind"])
@@ -64,6 +64,38 @@ func TestReplaysCoreOps(t *testing.T) {
 				tools, _ := result["tools"].([]any)
 				if len(tools) < 8 {
 					t.Fatalf("tools len = %d", len(tools))
+				}
+				for _, raw := range tools {
+					tool, _ := raw.(map[string]any)
+					if title, ok := tool["title"]; ok && title != nil {
+						if _, isStr := title.(string); !isStr {
+							t.Fatalf("%s tool %v title must be a string or omitted, got %#v", rel, tool["name"], title)
+						}
+					}
+				}
+				if strings.HasSuffix(rel, "tools-list-modern.json") {
+					if result["resultType"] != "complete" || result["ttlMs"] != float64(60000) || result["cacheScope"] != "public" {
+						t.Fatalf("modern catalog envelope missing: %#v", result)
+					}
+				}
+				if strings.HasSuffix(rel, "tools-list-payable.json") {
+					var echo map[string]any
+					for _, raw := range tools {
+						tool, _ := raw.(map[string]any)
+						if tool["name"] == "echo_paid" {
+							echo = tool
+							break
+						}
+					}
+					if echo == nil {
+						t.Fatalf("payable echo_paid missing from tools/list")
+					}
+					if echo["title"] != "Echo paid" {
+						t.Fatalf("title = %#v", echo["title"])
+					}
+					if echo["description"] != "Echo arguments after a paid gate" {
+						t.Fatalf("description = %#v", echo["description"])
+					}
 				}
 				return
 			}

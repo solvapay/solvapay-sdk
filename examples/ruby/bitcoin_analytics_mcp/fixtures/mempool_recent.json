@@ -1,0 +1,12 @@
+[
+  { "txid": "aa01", "fee": 250, "vsize": 200, "value": 50000 },
+  { "txid": "aa02", "fee": 180, "vsize": 190, "value": 42000 },
+  { "txid": "aa03", "fee": 140, "vsize": 180, "value": 38000 },
+  { "txid": "aa04", "fee": 120, "vsize": 170, "value": 36000 },
+  { "txid": "aa05", "fee": 110, "vsize": 160, "value": 34000 },
+  { "txid": "aa06", "fee": 100, "vsize": 155, "value": 32000 },
+  { "txid": "aa07", "fee": 90, "vsize": 150, "value": 30000 },
+  { "txid": "aa08", "fee": 80, "vsize": 145, "value": 28000 },
+  { "txid": "aa09", "fee": 70, "vsize": 140, "value": 26000 },
+  { "txid": "aa10", "fee": 60, "vsize": 135, "value": 24000 }
+]

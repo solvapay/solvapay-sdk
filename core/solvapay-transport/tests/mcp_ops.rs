@@ -11,9 +11,10 @@
 use std::sync::Arc;
 
 use serde_json::{json, Value};
+use solvapay_mcp_core::EngineConfig;
 use solvapay_transport::{
-    ClientShell, McpBootstrapParams, McpOauthConfig, McpOauthRequestParams, McpReadResourceParams,
-    McpToolConfig, ReqwestTransport, SharedTransport, SolvaPayClient,
+    ClientShell, McpBootstrapParams, McpDispatchParams, McpOauthConfig, McpOauthRequestParams,
+    McpReadResourceParams, McpToolConfig, ReqwestTransport, SharedTransport, SolvaPayClient,
 };
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -95,6 +96,43 @@ async fn mcp_read_resource_overview() {
     assert_eq!(got["uri"], "docs://solvapay/overview.md");
     assert_eq!(got["mimeType"], "text/markdown");
     assert!(got["body"].as_str().unwrap().contains("SolvaPay"));
+}
+
+#[tokio::test]
+async fn mcp_dispatch_errors_on_widget_resource_read() {
+    let server = MockServer::start().await;
+    let err = client(&server)
+        .mcp_dispatch(McpDispatchParams {
+            rpc: json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "resources/read",
+                "params": { "uri": "ui://widget.html" }
+            }),
+            config: EngineConfig {
+                product_ref: "prd_demo".to_owned(),
+                public_base_url: "https://app.example.com".to_owned(),
+                resource_uri: "ui://widget.html".to_owned(),
+                views: None,
+                payable_tools: Vec::new(),
+                auth_mode: None,
+                mcp_path: None,
+                hide_audiences: None,
+                user_agent: None,
+                csp: None,
+                api_base_url: None,
+                branding: None,
+            },
+            auth_header: None,
+            mcp_protocol_version_header: None,
+        })
+        .await
+        .expect_err("widget URI must fail in mcpDispatch");
+    let message = err.message();
+    assert!(
+        message.contains("ui://widget.html") && message.contains("host"),
+        "{message}"
+    );
 }
 
 #[tokio::test]

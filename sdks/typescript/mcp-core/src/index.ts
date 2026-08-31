@@ -125,8 +125,14 @@ export type { PaywallToolResultContext } from './paywallToolResult'
 // contract harness and adapters can share the same constructors.
 export { assertResponseResult, makeResponseResult } from './native-mcp'
 export { callMcpSyncOp, getMcpToolNamesTable, mcpViewMaps, installNativeMcpApi } from './native-mcp'
+export { mcpWidgetResource } from './native-mcp.generated'
 export { runMcpEngineRequest } from './engine-dispatch'
-export type { McpEngineConfig, McpEngineHttpResult, McpEnginePayable } from './engine-dispatch'
+export type {
+  McpEngineConfig,
+  McpEngineHttpResult,
+  McpEnginePayable,
+  McpPayableToolSpec,
+} from './engine-dispatch'
 
 // ---- CSP baseline ----
 export { SOLVAPAY_DEFAULT_CSP, mergeCsp } from './csp'

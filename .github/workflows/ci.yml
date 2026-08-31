@@ -307,6 +307,12 @@ jobs:
           cargo build --manifest-path examples/rust/paid-mcp/Cargo.toml
           cargo test --manifest-path examples/rust/paid-mcp/Cargo.toml
 
+      - name: guerrillamail-mcp example
+        run: |
+          cargo build --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml
+          cargo test --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml
+          cargo clippy --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml --all-targets -- -D warnings
+
   # Step 40 — PyO3/maturin Python binding abi3 wheel matrix (§7.7) + artifact gate.
   python-binding:
     name: python-binding (${{ matrix.platform }})
@@ -648,6 +654,7 @@ jobs:
           bundle exec steep check
           bundle exec rbs validate
           bundle exec ruby -Ilib ../../examples/ruby/paid_mcp/test/paid_mcp_test.rb
+          bundle exec ruby -Ilib ../../examples/ruby/bitcoin_analytics_mcp/test/run.rb
 
   ruby-binding-artifacts:
     name: ruby-binding artifact gate

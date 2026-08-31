@@ -77,12 +77,42 @@ mod replay {
                     let input: HandleRequestInput =
                         serde_json::from_value(args.clone()).expect(&rel);
                     let got = mcp_handle_request(&input).expect(&rel);
-                    if rel.ends_with("tools-list.json") {
+                    if rel.contains("tools-list") {
                         assert_eq!(got["kind"], "rpc", "{rel}");
-                        assert!(
-                            got["rpc"]["result"]["tools"].as_array().unwrap().len() >= 8,
-                            "{rel}"
-                        );
+                        let tools = got["rpc"]["result"]["tools"].as_array().unwrap();
+                        assert!(tools.len() >= 8, "{rel}");
+                        for tool in tools {
+                            let title = tool.get("title");
+                            assert!(
+                                title.is_none() || title.is_some_and(Value::is_string),
+                                "{rel} tool {} title must be a string or omitted, got {title:?}",
+                                tool["name"]
+                            );
+                        }
+                        if rel.ends_with("tools-list-modern.json") {
+                            assert_eq!(got["rpc"]["result"]["resultType"], "complete", "{rel}");
+                            assert_eq!(got["rpc"]["result"]["ttlMs"], 60_000, "{rel}");
+                            assert_eq!(got["rpc"]["result"]["cacheScope"], "public", "{rel}");
+                        }
+                        if rel.ends_with("tools-list-payable.json") {
+                            let echo = tools
+                                .iter()
+                                .find(|t| t["name"] == "echo_paid")
+                                .expect("payable advertised");
+                            assert_eq!(echo["title"], "Echo paid", "{rel}");
+                            assert_eq!(
+                                echo["description"], "Echo arguments after a paid gate",
+                                "{rel}"
+                            );
+                            assert_eq!(
+                                echo["inputSchema"],
+                                serde_json::json!({
+                                    "type": "object",
+                                    "properties": { "n": { "type": "number" } }
+                                }),
+                                "{rel}"
+                            );
+                        }
                         continue;
                     }
                     if rel.ends_with("invoke-handler.json") {

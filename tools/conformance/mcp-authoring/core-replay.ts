@@ -87,13 +87,39 @@ function assertCoreResult(rel: string, fn: string, got: unknown, expectResult: u
     expect(stripToken(got)).toMatchObject(stripToken(expectResult) as object)
     return
   }
-  if (fn === 'mcpHandleRequest' && rel.endsWith('tools-list.json')) {
+  if (fn === 'mcpHandleRequest' && rel.includes('tools-list')) {
     expect(isRecord(got)).toBe(true)
     if (!isRecord(got)) return
     expect(got.kind).toBe('rpc')
     const rpc = isRecord(got.rpc) ? got.rpc : {}
     const result = isRecord(rpc.result) ? rpc.result : {}
     expect(Array.isArray(result.tools) && result.tools.length >= 8).toBe(true)
+    if (Array.isArray(result.tools)) {
+      for (const tool of result.tools) {
+        if (!isRecord(tool)) continue
+        expect(
+          tool.title === undefined || typeof tool.title === 'string',
+          `${rel} tool ${String(tool.name)} title must be a string or omitted`,
+        ).toBe(true)
+      }
+    }
+    if (rel.endsWith('tools-list-modern.json')) {
+      expect(result.resultType).toBe('complete')
+      expect(result.ttlMs).toBe(60_000)
+      expect(result.cacheScope).toBe('public')
+    }
+    if (rel.endsWith('tools-list-payable.json') && Array.isArray(result.tools)) {
+      const echo = result.tools.find(tool => isRecord(tool) && tool.name === 'echo_paid')
+      expect(echo, 'payable echo_paid missing from tools/list').toBeTruthy()
+      if (isRecord(echo)) {
+        expect(echo.title).toBe('Echo paid')
+        expect(echo.description).toBe('Echo arguments after a paid gate')
+        expect(echo.inputSchema).toEqual({
+          type: 'object',
+          properties: { n: { type: 'number' } },
+        })
+      }
+    }
     return
   }
   expect(got).toEqual(expectResult)
@@ -216,6 +242,7 @@ export async function replayMcpCoreFixture(
     case 'mcpOauthPath':
     case 'mcpOauthErrorInspect':
     case 'mcpOverviewResource':
+    case 'mcpWidgetResource':
       got = callMcpSyncOp(fn, args)
       break
     default:

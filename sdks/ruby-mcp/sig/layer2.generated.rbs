@@ -29,6 +29,7 @@ module SolvaPay
     def self.mcp_requires_bearer_auth: (String mcp_method, String auth_mode) -> untyped
     def self.mcp_resume: (String token, Hash[String, untyped] handler_envelope) -> untyped
     def self.mcp_view_maps: () -> untyped
+    def self.mcp_widget_resource: (Hash[String, untyped] rpc, String resource_uri, String public_base_url, String product_ref, Array[String] views, Hash[String, untyped] csp, String api_base_url, Hash[String, untyped] branding) -> untyped
     def self.paywall_tool_result: (String message, Hash[String, untyped] structured_content) -> untyped
     def self.validate_public_base_url: (String public_base_url) -> untyped
     def self.as_object_map: (untyped value) -> Hash[String, untyped]

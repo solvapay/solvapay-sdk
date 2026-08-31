@@ -22,10 +22,17 @@ def discover(root: Path) -> list[Path]:
 
 
 def compare_op(rel: str, fn: str, got: object, expect: object) -> None:
-    if fn == "mcpHandleRequest" and rel.endswith("tools-list.json"):
+    if fn == "mcpHandleRequest" and "tools-list" in rel:
         assert isinstance(got, dict) and got.get("kind") == "rpc", rel
         tools = got["rpc"]["result"]["tools"]
         assert isinstance(tools, list) and len(tools) >= 8, rel
+        for tool in tools:
+            title = tool.get("title") if isinstance(tool, dict) else None
+            assert title is None or isinstance(title, str), rel
+        if rel.endswith("tools-list-modern.json"):
+            assert got["rpc"]["result"]["resultType"] == "complete", rel
+            assert got["rpc"]["result"]["ttlMs"] == 60_000, rel
+            assert got["rpc"]["result"]["cacheScope"] == "public", rel
         return
     if fn in {"mcpHandleRequest", "mcpDispatch"} and rel.endswith("invoke-handler.json"):
         assert isinstance(got, dict) and got.get("kind") == "invokeHandler", rel

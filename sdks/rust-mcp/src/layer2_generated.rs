@@ -621,6 +621,53 @@ pub fn mcp_view_maps() -> Result<Value, String> {
     call_sync("mcpViewMaps", &Value::Object(call_args))
 }
 
+#[cfg(feature = "engine")]
+/// Build a widget resources/read JSON-RPC envelope with HTML text omitted for the host to splice.
+///
+/// # Arguments
+///
+/// * `rpc` — JSON-RPC request object.
+/// * `resource_uri` — UI resource URI this host serves.
+/// * `public_base_url` — Public http(s) origin of the MCP server.
+/// * `product_ref` — Default product reference for checkout tools.
+/// * `views` — Enabled views; defaults to checkout, account, and topup.
+/// * `csp` — Optional CSP overrides merged with the Stripe baseline.
+/// * `api_base_url` — Optional API origin auto-included in CSP connect-src.
+/// * `branding` — Optional merchant branding for tool icons.
+///
+/// # Returns
+///
+/// Stamped JSON-RPC response without contents[0].text, or null when the request is not a widget read.
+pub fn mcp_widget_resource(
+    rpc: Value,
+    resource_uri: Value,
+    public_base_url: Value,
+    product_ref: Value,
+    views: Option<Value>,
+    csp: Option<Value>,
+    api_base_url: Option<Value>,
+    branding: Option<Value>,
+) -> Result<Value, String> {
+    let mut call_args = serde_json::Map::new();
+    call_args.insert("rpc".to_owned(), rpc);
+    call_args.insert("resourceUri".to_owned(), resource_uri);
+    call_args.insert("publicBaseUrl".to_owned(), public_base_url);
+    call_args.insert("productRef".to_owned(), product_ref);
+    if let Some(value) = views {
+        call_args.insert("views".to_owned(), value);
+    }
+    if let Some(value) = csp {
+        call_args.insert("csp".to_owned(), value);
+    }
+    if let Some(value) = api_base_url {
+        call_args.insert("apiBaseUrl".to_owned(), value);
+    }
+    if let Some(value) = branding {
+        call_args.insert("branding".to_owned(), value);
+    }
+    call_sync("mcpWidgetResource", &Value::Object(call_args))
+}
+
 /// Build a text-only MCP paywall tool result (isError false) from narration and a gate.
 ///
 /// # Arguments

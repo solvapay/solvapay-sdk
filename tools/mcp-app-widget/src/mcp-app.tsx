@@ -8,7 +8,10 @@
  * `<McpApp>` from `@solvapay/react/mcp`.
  */
 
+import { installWidgetCoreSync } from './install-widget-core-sync'
 import { createRoot } from 'react-dom/client'
+
+installWidgetCoreSync()
 import {
   App,
   applyDocumentTheme,

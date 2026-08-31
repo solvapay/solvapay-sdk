@@ -7,6 +7,7 @@ module SolvaPay
     MCP_APP_HTML_PATH: String
 
     def self.default_mcp_app_html: () -> String
+    def self.widget_html_rpc: (untyped rpc, String resource_uri, String public_base_url, String product_ref, ?Array[String]? views) -> Hash[String, untyped]?
 
     module Core
       def self.call: (String opcode, untyped args) -> untyped
@@ -57,7 +58,11 @@ module SolvaPay
         product: String,
         handler: ^(untyped, ResponseContext) -> untyped,
         ?get_customer_ref: (^(untyped) -> String)?,
-        ?usage_type: String
+        ?usage_type: String,
+        ?title: String?,
+        ?description: String?,
+        ?input_schema: untyped,
+        ?annotations: untyped
       ) -> Engine
       def call: (Hash[String, untyped] env) -> [Integer, Hash[String, String], Array[String]]
       def handle_oauth: (Hash[String, untyped] env, String method, String path) -> [Integer, Hash[String, String], Array[String]]

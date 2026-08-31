@@ -57,7 +57,18 @@ MCP_AUTHORING_FIXTURES = [
   "engine/gate-denied.json",
   "engine/initialize.json",
   "engine/invoke-handler.json",
+  "engine/modern-missing-capabilities.json",
+  "engine/ping-modern.json",
+  "engine/server-discover.json",
+  "engine/subscriptions-listen.json",
+  "engine/tools-list-modern.json",
+  "engine/tools-list-payable.json",
   "engine/tools-list.json",
+  "engine/unsupported-method-modern.json",
+  "engine/unsupported-method.json",
+  "engine/unsupported-version.json",
+  "engine/widget-resource-legacy.json",
+  "engine/widget-resource-modern.json",
   "error/handler-throws.json",
   "gate/activation-required.json",
   "gate/handler-invoked.json",
@@ -179,9 +190,25 @@ class McpAuthoringFixturesTest < Minitest::Test
       args = raw.dig("input", "args") || {}
       expect = raw.dig("expect", "result")
       got = SolvaPay::Mcp::Core.call(fn, args)
-      if fn == "mcpHandleRequest" && rel.end_with?("tools-list.json")
+      if fn == "mcpHandleRequest" && rel.include?("tools-list")
         assert_equal "rpc", got["kind"]
         assert got.dig("rpc", "result", "tools").length >= 8
+        got.dig("rpc", "result", "tools").each do |tool|
+          title = tool["title"]
+          assert title.nil? || title.is_a?(String), "#{rel} tool #{tool["name"]} title"
+        end
+        if rel.end_with?("tools-list-modern.json")
+          assert_equal "complete", got.dig("rpc", "result", "resultType")
+          assert_equal 60_000, got.dig("rpc", "result", "ttlMs")
+          assert_equal "public", got.dig("rpc", "result", "cacheScope")
+        end
+        if rel.end_with?("tools-list-payable.json")
+          echo = got.dig("rpc", "result", "tools").find { |tool| tool["name"] == "echo_paid" }
+          refute_nil echo, "payable echo_paid missing from tools/list"
+          assert_equal "Echo paid", echo["title"]
+          assert_equal "Echo arguments after a paid gate", echo["description"]
+          assert_equal({ "type" => "object", "properties" => { "n" => { "type" => "number" } } }, echo["inputSchema"])
+        end
       elsif fn == "mcpHandleRequest" && rel.end_with?("invoke-handler.json")
         assert_equal "invokeHandler", got["kind"]
         assert_equal expect["tool"], got["tool"]

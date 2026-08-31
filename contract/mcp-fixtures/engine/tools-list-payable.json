@@ -1,0 +1,40 @@
+{
+  "suite": "engine",
+  "case": "tools-list-payable",
+  "input": {
+    "fn": "mcpHandleRequest",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/list",
+        "params": {}
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html",
+        "payableTools": [
+          {
+            "name": "echo_paid",
+            "title": "Echo paid",
+            "description": "Echo arguments after a paid gate",
+            "inputSchema": {
+              "type": "object",
+              "properties": {
+                "n": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc"
+    }
+  }
+}

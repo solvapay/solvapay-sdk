@@ -192,9 +192,11 @@ They match the never-moves list in [`architecture.md`](./architecture.md).
    Do not list a suite and early-return without asserting.
 5. Validate `registerPayable` `input.args` as the scenario documented next
    to the corpus (`contract/mcp-fixtures/README.md`) — no silent defaults.
-6. Register the tool on a real host MCP server, drive `initialize` →
-   `notifications/initialized` → `tools/call`, and assert `toolResult` plus
-   the usage projection.
+6. Register the tool on a real host MCP server. Drive both eras:
+   - **Legacy:** `initialize` → `notifications/initialized` → `tools/call`
+   - **Modern (2026-07-28):** `server/discover` (per-request `_meta` claim) →
+     `tools/list` / `tools/call` with no session handshake
+   Assert `toolResult` plus the usage projection.
 7. Install the language's native layer-2 dispatch so gate copy comes from
    Rust (`paywallToolResult`), not a hand-written fallback.
 8. Mirror `pnpm test:mcp-contract` as the focused command. C skips only
@@ -204,18 +206,24 @@ They match the never-moves list in [`architecture.md`](./architecture.md).
 ## Host / core boundary
 
 `mcpDispatch` is the single JSON-RPC entry point. Hosts convert the HTTP
-request into `{ rpc, config, authHeader }`, call `mcpDispatch`, and
-branch three ways:
+request into `{ rpc, config, authHeader, mcpProtocolVersionHeader? }`,
+call `mcpDispatch`, and branch three ways:
 
-| `kind`          | Host work                                                 |
-| --------------- | --------------------------------------------------------- |
-| `rpc`           | Write the JSON-RPC body (usually HTTP 200)                |
-| `challenge`     | Write `status` + `WWW-Authenticate` + body                |
-| `invokeHandler` | Run the merchant handler, then `mcpResume` with the token |
+| `kind`          | Host work                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| `rpc`           | Write the JSON-RPC body. Honour optional envelope `status` (default 200; 400/404 for era errors) |
+| `challenge`     | Write `status` + `WWW-Authenticate` + body                                                     |
+| `invokeHandler` | Run the merchant handler, then `mcpResume` with the token                                      |
 
-OAuth and discovery HTTP go through `mcpOauthRequest`. Builtin tools and
-resources are serviced **inside** `mcpDispatch`; hosts never handle
-`callBuiltin` / `readResource` envelopes.
+OAuth and discovery HTTP go through `mcpOauthRequest`. Builtin tools are
+serviced **inside** `mcpDispatch`. The one host exception is the widget
+`resources/read`: `mcpDispatch` has no access to the vendored HTML bundle
+and errors if asked for that URI. Hosts call `mcpWidgetResource` on every
+POST (it returns `null` for non-widget requests), splice
+`result.contents[0].text` with the vendored HTML, and only then fall
+through to `mcpDispatch`. The op owns era detection (`is_modern_era`) and
+stamps `resultType` / `ttlMs` / `cacheScope` in the 2026-07-28 era so
+the widget path cannot disagree with the engine.
 
 What stays per language: MCP protocol transport, request/response body
 conversion, framework routing, host-SDK tool registration, bearer parse
@@ -232,9 +240,24 @@ Production layer-3 HTTP engines:
 | TypeScript | `sdks/typescript/mcp-core/src/engine-dispatch.ts` + fetch JSON `POST /mcp`                       | `mcpDispatch`                                                     |
 | Python     | `sdks/python-mcp/python/solvapay_mcp/server/engine.py` + Starlette `create_mcp_engine_starlette` | `mcpDispatch`                                                     |
 
+## Protocol versions (shared engine)
+
+The Rust engine is a **dual-era** server:
+
+| Era | Selection | Methods | Response envelope |
+| --- | --------- | ------- | ----------------- |
+| Modern | Request `_meta` carries `io.modelcontextprotocol/protocolVersion` | `server/discover` (mandatory), catalog RPCs, `subscriptions/listen` | SEP-2549 `resultType` / `_meta.serverInfo`; catalog calls also get `ttlMs: 60000` + `cacheScope: public` |
+| Legacy | Claim-less `initialize` | `initialize`, `ping`, `notifications/initialized`, catalog RPCs | Byte-stable 2025-06-18 shape (`initialize.json`) |
+
+Supported versions: `2026-07-28`, `2025-06-18`. Unsupported `_meta` versions
+return JSON-RPC `-32022` at HTTP 400. Unknown methods return `-32601`
+(HTTP 404 when modern, 200 when legacy). Hosts must never map engine
+failures to HTTP 500 + a stack trace; honour envelope `status` and reply
+`-32603` / `-32700` as JSON-RPC bodies.
+
 Characterization fixtures under `contract/mcp-fixtures/` are immutable
 expectations. Replay must assert equality (or the documented
-`invoke-handler.json` / `tools-list.json` partials); do not early-return a
+`invoke-handler.json` / `tools-list.json` / `tools-list-modern.json` partials); do not early-return a
 suite without asserting.
 
 Layer-3 non-transport glue (the dispatch loop + OAuth router) is gated

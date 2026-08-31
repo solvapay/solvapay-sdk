@@ -9,6 +9,7 @@ from solvapay._native import unwrap_envelope
 from solvapay.facade import SolvaPay
 
 from solvapay_mcp.core import call
+from solvapay_mcp.widget import widget_html_rpc
 
 _ENGINE: WeakKeyDictionary[Server[object], _EngineBinding] = WeakKeyDictionary()
 
@@ -74,13 +75,34 @@ async def dispatch_rpc(
     *,
     auth_header: str | None = None,
     user_agent: str | None = None,
+    protocol_version_header: str | None = None,
 ) -> dict[str, object]:
     from solvapay_mcp.register import _REGISTRIES, _invoke_payable
 
     binding = _ENGINE.get(server)
     if binding is None:
         raise RuntimeError("mcp engine is not bound on this server")
-    payable_tools = sorted((_REGISTRIES.get(server) or {}).keys())
+    html = widget_html_rpc(
+        rpc,
+        resource_uri=binding.resource_uri,
+        public_base_url=binding.public_base_url,
+        product_ref=binding.product_ref,
+        csp=binding.csp,
+        api_base_url=binding.api_base_url,
+        views=binding.views,
+    )
+    if html is not None:
+        return {"kind": "rpc", "rpc": html}
+    registry = _REGISTRIES.get(server) or {}
+    payable_tools = [
+        {
+            "name": name,
+            **({"title": spec.title} if spec.title is not None else {}),
+            **({"description": spec.description} if spec.description is not None else {}),
+            "inputSchema": spec.input_schema,
+        }
+        for name, spec in sorted(registry.items(), key=lambda item: item[0])
+    ]
     config: dict[str, object] = {
         "productRef": binding.product_ref,
         "publicBaseUrl": binding.public_base_url,
@@ -101,6 +123,8 @@ async def dispatch_rpc(
     payload: dict[str, object] = {"rpc": dict(rpc), "config": config}
     if auth_header:
         payload["authHeader"] = auth_header
+    if protocol_version_header:
+        payload["mcpProtocolVersionHeader"] = protocol_version_header
     raw = await binding.solvapay.get_api_client().mcp_dispatch(json.dumps(payload))  # type: ignore[attr-defined]
     envelope = unwrap_envelope(raw)
     if not isinstance(envelope, dict):

@@ -97,6 +97,10 @@
     "mcp:checkout:tunnel": "pnpm --filter @example/mcp-checkout-app tunnel",
     "mcp:stock-research": "bash examples/python/stock-research-mcp/scripts/http.sh",
     "mcp:stock-research:tunnel": "bash examples/python/stock-research-mcp/scripts/tunnel.sh",
+    "mcp:bitcoin-analytics": "bash examples/ruby/bitcoin_analytics_mcp/scripts/http.sh",
+    "mcp:bitcoin-analytics:tunnel": "bash examples/ruby/bitcoin_analytics_mcp/scripts/tunnel.sh",
+    "mcp:guerrillamail": "bash examples/rust/guerrillamail-mcp/scripts/http.sh",
+    "mcp:guerrillamail:tunnel": "bash examples/rust/guerrillamail-mcp/scripts/tunnel.sh",
     "prepare": "husky || true"
   },
   "devDependencies": {

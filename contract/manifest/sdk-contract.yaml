@@ -4564,6 +4564,61 @@ mcp:
       c: sync
     surface: syncOp
     feature: engine
+  mcpWidgetResource:
+    names:
+      ts: mcpWidgetResource
+      py: mcp_widget_resource
+      rb: mcp_widget_resource
+      go: McpWidgetResource
+      rust: mcp_widget_resource
+      c: mcpWidgetResource
+    params:
+      - name: rpc
+        type: unknown
+        required: true
+      - name: resourceUri
+        type: string
+        required: true
+      - name: publicBaseUrl
+        type: string
+        required: true
+      - name: productRef
+        type: string
+        required: true
+      - name: views
+        array:
+          type: string
+        required: false
+      - name: csp
+        type: unknown
+        required: false
+      - name: apiBaseUrl
+        type: string
+        required: false
+      - name: branding
+        type: unknown
+        required: false
+    docs:
+      summary: 'Build a widget resources/read JSON-RPC envelope with HTML text omitted for the host to splice.'
+      params:
+        rpc: 'JSON-RPC request object.'
+        resourceUri: 'UI resource URI this host serves.'
+        publicBaseUrl: 'Public http(s) origin of the MCP server.'
+        productRef: 'Default product reference for checkout tools.'
+        views: 'Enabled views; defaults to checkout, account, and topup.'
+        csp: 'Optional CSP overrides merged with the Stripe baseline.'
+        apiBaseUrl: 'Optional API origin auto-included in CSP connect-src.'
+        branding: 'Optional merchant branding for tool icons.'
+      returns: 'Stamped JSON-RPC response without contents[0].text, or null when the request is not a widget read.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+    feature: engine
   paywallToolResult:
     names:
       ts: paywallToolResult

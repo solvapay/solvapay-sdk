@@ -326,6 +326,29 @@ module SolvaPay
           as_object_map(SolvaPay::NativeDispatch.call_sync("mcp_view_maps", call_args))
         end
 
+        # Build a widget resources/read JSON-RPC envelope with HTML text omitted for the host to splice.
+        # @param rpc JSON-RPC request object.
+        # @param resource_uri UI resource URI this host serves.
+        # @param public_base_url Public http(s) origin of the MCP server.
+        # @param product_ref Default product reference for checkout tools.
+        # @param views Enabled views; defaults to checkout, account, and topup.
+        # @param csp Optional CSP overrides merged with the Stripe baseline.
+        # @param api_base_url Optional API origin auto-included in CSP connect-src.
+        # @param branding Optional merchant branding for tool icons.
+        # @return Stamped JSON-RPC response without contents[0].text, or null when the request is not a widget read.
+        def mcp_widget_resource(rpc, resource_uri, public_base_url, product_ref, views = nil, csp = nil, api_base_url = nil, branding = nil)
+          call_args = {} #: Hash[String, untyped]
+          call_args["rpc"] = rpc
+          call_args["resourceUri"] = resource_uri
+          call_args["publicBaseUrl"] = public_base_url
+          call_args["productRef"] = product_ref
+          call_args["views"] = views unless views.nil?
+          call_args["csp"] = csp unless csp.nil?
+          call_args["apiBaseUrl"] = api_base_url unless api_base_url.nil?
+          call_args["branding"] = branding unless branding.nil?
+          SolvaPay::Mcp::Core.call("mcpWidgetResource", call_args)
+        end
+
         # Build a text-only MCP paywall tool result (isError false) from narration and a gate.
         # @param message Narration text for content[0].
         # @param structured_content Machine-readable PaywallGate payload.

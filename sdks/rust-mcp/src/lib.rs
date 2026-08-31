@@ -3,6 +3,7 @@
 #![allow(clippy::result_large_err)]
 
 mod core;
+mod http_util;
 mod layer2;
 mod layer2_generated;
 mod register;

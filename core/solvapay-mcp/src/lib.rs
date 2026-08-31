@@ -23,6 +23,8 @@ mod sync_dispatch;
 
 #[cfg(feature = "engine")]
 mod engine;
+#[cfg(feature = "engine")]
+mod widget_resource;
 
 pub use auth_gate::{
     is_free_mcp_method, mcp_auth_gate, requires_bearer_auth, AuthGateInput, AuthGateResult,
@@ -47,7 +49,13 @@ pub use overview::mcp_overview_resource;
 pub use sync_dispatch::{dispatch_sync, solvapay_call};
 
 #[cfg(feature = "engine")]
-pub use engine::{mcp_handle_request, mcp_resume, EngineConfig, HandleRequestInput, ResumeInput};
+pub use engine::{
+    envelope_version, is_modern_era, mcp_handle_request, mcp_resume, stamp_catalog_result,
+    stamp_complete_result, EngineConfig, HandleRequestInput, PayableToolConfig, PayableToolSpec,
+    ResumeInput, CATALOG_TTL_MS, SUPPORTED_VERSIONS,
+};
+#[cfg(feature = "engine")]
+pub use widget_resource::{mcp_widget_resource, McpWidgetResourceInput, MCP_APP_MIME_TYPE};
 
 #[cfg(test)]
 mod fixture_replay;

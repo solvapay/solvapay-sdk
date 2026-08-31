@@ -190,6 +190,102 @@ describe('createSolvaPayMcpFetchHandler', () => {
     expect(res.headers.get('allow')).toBe('POST, OPTIONS')
   })
 
+  it('engine payables with descriptors appear in tools/list', async () => {
+    const mcpDispatch = vi.fn(async (params: { config: { payableTools: unknown } }) => {
+      const payableTools = params.config.payableTools
+      expect(payableTools).toEqual([
+        {
+          name: 'echo_paid',
+          title: 'Echo paid',
+          description: 'Echo arguments after a paid gate',
+          inputSchema: { type: 'object', properties: { n: { type: 'number' } } },
+        },
+      ])
+      return {
+        kind: 'rpc',
+        rpc: {
+          jsonrpc: '2.0',
+          id: 1,
+          result: {
+            tools: Array.isArray(payableTools) ? payableTools : [],
+          },
+        },
+      }
+    })
+    const handler = createSolvaPayMcpFetchHandler({
+      factory: mockFactory(),
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
+      responseMode: 'json',
+      engine: {
+        mcpDispatch,
+        config: {
+          productRef,
+          publicBaseUrl,
+          resourceUri: 'ui://widget.html',
+        },
+        payables: new Map([
+          [
+            'echo_paid',
+            {
+              title: 'Echo paid',
+              description: 'Echo arguments after a paid gate',
+              inputSchema: { type: 'object', properties: { n: { type: 'number' } } },
+              invoke: async () => ({}),
+            },
+          ],
+        ]),
+      },
+    })
+    const res = await handler(
+      new Request(`${publicBaseUrl}/mcp`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }),
+      }),
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { result?: { tools?: Array<{ name?: string }> } }
+    expect(body.result?.tools?.some(tool => tool.name === 'echo_paid')).toBe(true)
+    expect(mcpDispatch).toHaveBeenCalled()
+  })
+
+  it('engine dispatch failure returns JSON-RPC error without a filesystem path', async () => {
+    const handler = createSolvaPayMcpFetchHandler({
+      factory: mockFactory(),
+      publicBaseUrl,
+      apiBaseUrl,
+      productRef,
+      oauthClient,
+      responseMode: 'json',
+      engine: {
+        mcpDispatch: async () => {
+          throw new Error('/Users/jacksmith/secret/engine.ts:1 exploded')
+        },
+        config: {
+          productRef,
+          publicBaseUrl,
+          resourceUri: 'ui://widget.html',
+        },
+        payables: new Map(),
+      },
+    })
+    const res = await handler(
+      new Request(`${publicBaseUrl}/mcp`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+      }),
+    )
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toMatch(/application\/json/)
+    const body = (await res.json()) as { error?: { code: number; message: string } }
+    expect(body.error?.code).toBe(-32603)
+    expect(JSON.stringify(body)).not.toMatch(/\/Users\//)
+  })
+
   it('returns 404 for unknown paths', async () => {
     const handler = createSolvaPayMcpFetchHandler({
       factory: mockFactory(),

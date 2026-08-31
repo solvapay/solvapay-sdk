@@ -5,11 +5,20 @@
 
 import { callMcpSyncOp } from './native-mcp'
 
+export type McpPayableToolSpec = {
+  name: string
+  title?: string
+  description?: string
+  inputSchema?: unknown
+  annotations?: unknown
+  _meta?: unknown
+}
+
 export type McpEngineConfig = {
   productRef: string
   publicBaseUrl: string
   resourceUri: string
-  payableTools: string[]
+  payableTools: Array<string | McpPayableToolSpec>
   mcpPath?: string
   views?: string[]
   authMode?: 'tools-call' | 'all'
@@ -32,6 +41,10 @@ export type McpEngineHttpResult = {
 
 export type McpEnginePayable = {
   invoke: (args: Record<string, unknown>, customerRef: string | undefined) => Promise<unknown>
+  title?: string
+  description?: string
+  inputSchema?: unknown
+  annotations?: unknown
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -56,15 +69,26 @@ export async function runMcpEngineRequest(options: {
     rpc: unknown
     config: Record<string, unknown>
     authHeader?: string
+    mcpProtocolVersionHeader?: string
   }) => Promise<unknown>
   rpc: unknown
   config: McpEngineConfig
   authHeader?: string
+  mcpProtocolVersionHeader?: string
   payables: ReadonlyMap<string, McpEnginePayable>
   onDispatch?: (rpc: unknown) => void
   onDispatched?: (result: McpEngineHttpResult, durationMs: number) => void
 }): Promise<McpEngineHttpResult> {
-  const { mcpDispatch, rpc, config, authHeader, payables, onDispatch, onDispatched } = options
+  const {
+    mcpDispatch,
+    rpc,
+    config,
+    authHeader,
+    mcpProtocolVersionHeader,
+    payables,
+    onDispatch,
+    onDispatched,
+  } = options
   const started = Date.now()
   onDispatch?.(rpc)
   const envelope = await mcpDispatch({
@@ -84,13 +108,17 @@ export async function runMcpEngineRequest(options: {
       ...(config.branding !== undefined ? { branding: config.branding } : {}),
     },
     ...(authHeader !== undefined ? { authHeader } : {}),
+    ...(mcpProtocolVersionHeader !== undefined
+      ? { mcpProtocolVersionHeader }
+      : {}),
   })
   if (!isRecord(envelope)) {
     throw new Error('mcpDispatch returned a non-object envelope')
   }
   const kind = envelope.kind
   if (kind === 'rpc') {
-    const result = { status: 200, headers: jsonHeaders(), body: envelope.rpc ?? null }
+    const status = typeof envelope.status === 'number' ? envelope.status : 200
+    const result = { status, headers: jsonHeaders(), body: envelope.rpc ?? null }
     onDispatched?.(result, Date.now() - started)
     return result
   }

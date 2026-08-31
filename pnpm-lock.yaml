@@ -1480,6 +1480,9 @@ importers:
       '@modelcontextprotocol/ext-apps':
         specifier: ^1.7.5
         version: 1.7.5(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zod@4.3.6)
+      '@solvapay/core':
+        specifier: workspace:*
+        version: link:../../sdks/typescript/core
       '@solvapay/react':
         specifier: workspace:*
         version: link:../../sdks/typescript/react

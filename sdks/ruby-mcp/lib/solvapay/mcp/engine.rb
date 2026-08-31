@@ -25,7 +25,8 @@ module SolvaPay
         @mutex = Mutex.new
       end
 
-      def register_payable(name, product:, handler:, get_customer_ref: nil, usage_type: "requests")
+      def register_payable(name, product:, handler:, get_customer_ref: nil, usage_type: "requests",
+                           title: nil, description: nil, input_schema: nil, annotations: nil)
         raise ArgumentError, "tool name is required" if name.nil? || name.empty?
         raise ArgumentError, "product is required" if product.nil? || product.empty?
         raise ArgumentError, "handler is required" if handler.nil?
@@ -36,6 +37,10 @@ module SolvaPay
             handler: handler,
             get_customer_ref: get_customer_ref,
             usage_type: usage_type.nil? || usage_type.empty? ? "requests" : usage_type,
+            title: title,
+            description: description,
+            input_schema: input_schema,
+            annotations: annotations,
           }
         end
         self
@@ -68,34 +73,49 @@ module SolvaPay
       end
 
       def handle_mcp(env)
-        rpc = JSON.parse(read_body(env))
-        names = @mutex.synchronize { @payables.keys.sort }
-        params = {
-          "rpc" => rpc,
-          "config" => {
-            "productRef" => @product_ref,
-            "publicBaseUrl" => @public_base_url,
-            "resourceUri" => @resource_uri,
-            "payableTools" => names,
-            "mcpPath" => @mcp_path,
-            "views" => @views,
-            "userAgent" => env["HTTP_USER_AGENT"],
-          },
-        }
-        auth = env["HTTP_AUTHORIZATION"]
-        params["authHeader"] = auth unless auth.nil? || auth.empty?
-        envelope = stringify(@client.mcp_dispatch(params: params))
-        case envelope["kind"]
-        when "rpc"
-          json_response(200, envelope["rpc"])
-        when "challenge"
-          headers = stringify_headers(envelope["headers"])
-          [Integer(envelope["status"] || 401), headers, [encode_body(envelope["body"])]]
-        when "invokeHandler"
-          resume_payable(envelope)
-        else
-          raise SolvaPay::SolvaPayError.new("unexpected mcpDispatch kind: #{envelope['kind'].inspect}",
-                                            code: "invalid_dispatch",)
+        rpc = nil
+        begin
+          rpc = JSON.parse(read_body(env))
+          html = SolvaPay::Mcp.widget_html_rpc(rpc, @resource_uri, @public_base_url, @product_ref, @views)
+          return json_response(200, html) unless html.nil?
+
+          payable_tools = @mutex.synchronize { payable_tool_specs }
+          params = {
+            "rpc" => rpc,
+            "config" => {
+              "productRef" => @product_ref,
+              "publicBaseUrl" => @public_base_url,
+              "resourceUri" => @resource_uri,
+              "payableTools" => payable_tools,
+              "mcpPath" => @mcp_path,
+              "views" => @views,
+              "userAgent" => env["HTTP_USER_AGENT"],
+            },
+          }
+          auth = env["HTTP_AUTHORIZATION"]
+          params["authHeader"] = auth unless auth.nil? || auth.empty?
+          proto = env["HTTP_MCP_PROTOCOL_VERSION"]
+          params["mcpProtocolVersionHeader"] = proto unless proto.nil? || proto.empty?
+          envelope = stringify(@client.mcp_dispatch(params: params))
+          case envelope["kind"]
+          when "rpc"
+            status = envelope["status"]
+            json_response(status.is_a?(Integer) ? status : 200, envelope["rpc"])
+          when "challenge"
+            headers = stringify_headers(envelope["headers"])
+            [Integer(envelope["status"] || 401), headers, [encode_body(envelope["body"])]]
+          when "invokeHandler"
+            resume_payable(envelope)
+          else
+            raise SolvaPay::SolvaPayError.new("unexpected mcpDispatch kind: #{envelope['kind'].inspect}",
+                                              code: "invalid_dispatch",)
+          end
+        rescue JSON::ParserError
+          json_rpc_error(400, nil, -32_700, "Parse error")
+        rescue StandardError => e
+          warn e.full_message
+          id = rpc.is_a?(Hash) ? rpc["id"] : nil
+          json_rpc_error(200, id, -32_603, "Internal error")
         end
       end
 
@@ -127,6 +147,18 @@ module SolvaPay
         json_response(200, resumed["rpc"] || resumed)
       end
 
+      def payable_tool_specs
+        @payables.keys.sort.map do |name|
+          spec = @payables.fetch(name)
+          entry = { "name" => name }
+          entry["title"] = spec[:title] unless spec[:title].nil?
+          entry["description"] = spec[:description] unless spec[:description].nil?
+          entry["inputSchema"] = spec[:input_schema] unless spec[:input_schema].nil?
+          entry["annotations"] = spec[:annotations] unless spec[:annotations].nil?
+          entry
+        end
+      end
+
       def oauth_config
         config = {
           "publicBaseUrl" => @public_base_url,
@@ -142,6 +174,10 @@ module SolvaPay
         status = Integer(envelope["status"] || 500)
         headers = stringify_headers(envelope["headers"])
         [status, headers, [encode_body(envelope["body"])]]
+      end
+
+      def json_rpc_error(status, id, code, message)
+        json_response(status, { "jsonrpc" => "2.0", "id" => id, "error" => { "code" => code, "message" => message } })
       end
 
       def json_response(status, body)

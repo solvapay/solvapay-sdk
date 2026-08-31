@@ -70,7 +70,18 @@ const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "engine/gate-denied.json",
     "engine/initialize.json",
     "engine/invoke-handler.json",
+    "engine/modern-missing-capabilities.json",
+    "engine/ping-modern.json",
+    "engine/server-discover.json",
+    "engine/subscriptions-listen.json",
+    "engine/tools-list-modern.json",
+    "engine/tools-list-payable.json",
     "engine/tools-list.json",
+    "engine/unsupported-method-modern.json",
+    "engine/unsupported-method.json",
+    "engine/unsupported-version.json",
+    "engine/widget-resource-legacy.json",
+    "engine/widget-resource-modern.json",
     "error/handler-throws.json",
     "gate/activation-required.json",
     "gate/handler-invoked.json",
@@ -242,12 +253,39 @@ fn replays_core_ops() {
         let args = raw["input"]["args"].clone();
         let expect = raw["expect"]["result"].clone();
         let got = call_sync(fn_name, &args).unwrap_or_else(|e| panic!("{rel}: {e}"));
-        if fn_name == "mcpHandleRequest" && rel.ends_with("tools-list.json") {
+        if fn_name == "mcpHandleRequest" && rel.contains("tools-list") {
             assert_eq!(got["kind"], "rpc", "{rel}");
-            assert!(
-                got["rpc"]["result"]["tools"].as_array().unwrap().len() >= 8,
-                "{rel}"
-            );
+            let tools = got["rpc"]["result"]["tools"].as_array().unwrap();
+            assert!(tools.len() >= 8, "{rel}");
+            for tool in tools {
+                let title = tool.get("title");
+                assert!(
+                    title.is_none() || title.is_some_and(Value::is_string),
+                    "{rel} tool {} title must be a string or omitted, got {title:?}",
+                    tool["name"]
+                );
+            }
+            if rel.ends_with("tools-list-modern.json") {
+                assert_eq!(got["rpc"]["result"]["resultType"], "complete", "{rel}");
+                assert_eq!(got["rpc"]["result"]["ttlMs"], 60_000, "{rel}");
+                assert_eq!(got["rpc"]["result"]["cacheScope"], "public", "{rel}");
+            }
+            if rel.ends_with("tools-list-payable.json") {
+                let echo = tools
+                    .iter()
+                    .find(|t| t["name"] == "echo_paid")
+                    .expect("payable advertised");
+                assert_eq!(echo["title"], "Echo paid", "{rel}");
+                assert_eq!(
+                    echo["description"], "Echo arguments after a paid gate",
+                    "{rel}"
+                );
+                assert_eq!(
+                    echo["inputSchema"],
+                    json!({ "type": "object", "properties": { "n": { "type": "number" } } }),
+                    "{rel}"
+                );
+            }
             continue;
         }
         if fn_name == "mcpHandleRequest" && rel.ends_with("invoke-handler.json") {

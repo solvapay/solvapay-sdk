@@ -8,34 +8,16 @@ use rmcp::model::JsonObject;
 use serde_json::{json, Map, Value};
 use solvapay::transport::{McpDispatchParams, McpOauthConfig, McpOauthRequestParams};
 use solvapay::{Client, SdkError};
-use solvapay_mcp_core::EngineConfig;
+use solvapay_mcp_core::{EngineConfig, PayableToolConfig, PayableToolSpec};
 
 use crate::call_sync;
+use crate::http_util::{
+    encode_json_body, envelope_status, http_from_oauth_envelope, json_response, jsonrpc_error,
+    string_headers,
+};
 use crate::register::{invoke_payable, GetCustomerRef, PayableError, PayableHandler, PayableTool};
 
-/// Incoming HTTP request for [`McpHttpServer::handle`].
-#[derive(Debug, Clone)]
-pub struct McpHttpRequest {
-    /// HTTP method (`GET`, `POST`, …).
-    pub method: String,
-    /// Path including optional query string.
-    pub path: String,
-    /// Headers keyed in lowercase.
-    pub headers: BTreeMap<String, String>,
-    /// Raw body.
-    pub body: Vec<u8>,
-}
-
-/// Outgoing HTTP response from [`McpHttpServer::handle`].
-#[derive(Debug, Clone)]
-pub struct McpHttpResponse {
-    /// Status code.
-    pub status: u16,
-    /// Response headers.
-    pub headers: BTreeMap<String, String>,
-    /// Response body.
-    pub body: Vec<u8>,
-}
+pub use crate::http_util::{McpHttpRequest, McpHttpResponse};
 
 /// Public origin / product settings for the engine.
 #[derive(Debug, Clone)]
@@ -57,6 +39,9 @@ pub struct McpHttpConfig {
 struct RegisteredPayable {
     product: String,
     usage_type: String,
+    title: Option<String>,
+    description: Option<String>,
+    input_schema: Option<Map<String, Value>>,
     handler: PayableHandler,
     get_customer_ref: Option<GetCustomerRef>,
 }
@@ -123,6 +108,9 @@ impl McpHttpServer {
             RegisteredPayable {
                 product: tool.product,
                 usage_type,
+                title: tool.title,
+                description: tool.description,
+                input_schema: tool.input_schema,
                 handler,
                 get_customer_ref,
             },
@@ -132,9 +120,14 @@ impl McpHttpServer {
 
     /// Route one HTTP request.
     ///
+    /// JSON-RPC parse and dispatch failures become JSON-RPC error bodies
+    /// (`-32700` / `-32603`) rather than [`SdkError`]. `Err` is reserved for
+    /// request-construction failures the embedder cannot map (OAuth transport
+    /// errors, body serialization).
+    ///
     /// # Errors
     ///
-    /// Transport / SDK failures from dispatch, OAuth, or the payable gate.
+    /// Transport / SDK failures from OAuth or payable resume serialization.
     pub async fn handle(&self, req: McpHttpRequest) -> Result<McpHttpResponse, SdkError> {
         let path_only = req.path.split('?').next().unwrap_or(req.path.as_str());
         if path_only != self.mcp_path {
@@ -173,17 +166,44 @@ impl McpHttpServer {
     }
 
     async fn handle_mcp(&self, req: &McpHttpRequest) -> Result<McpHttpResponse, SdkError> {
-        let rpc: Value = serde_json::from_slice(&req.body)
-            .map_err(|err| SdkError::transport(format!("invalid JSON-RPC body: {err}"), false))?;
-        if let Some(html) = crate::widget::widget_html_rpc(&rpc, &self.resource_uri) {
+        let rpc: Value = match serde_json::from_slice(&req.body) {
+            Ok(value) => value,
+            Err(_) => {
+                return jsonrpc_error(Value::Null, -32700, "Parse error", 400);
+            }
+        };
+        if let Some(html) = crate::widget::widget_html_rpc(
+            &rpc,
+            &self.resource_uri,
+            &self.public_base_url,
+            &self.product_ref,
+        )
+        .map_err(|err| SdkError::transport(err, false))?
+        {
             return json_response(200, html);
         }
-        let mut payable_tools: Vec<String> = self.payables.keys().cloned().collect();
-        payable_tools.sort();
-        let envelope = self
+        let mut payable_tools: Vec<PayableToolConfig> = self
+            .payables
+            .iter()
+            .map(|(name, spec)| {
+                PayableToolConfig::Spec(PayableToolSpec {
+                    name: name.clone(),
+                    title: spec.title.clone(),
+                    description: spec.description.clone(),
+                    input_schema: Some(json!({
+                        "type": "object",
+                        "properties": spec.input_schema.clone().unwrap_or_default(),
+                    })),
+                    annotations: None,
+                    meta: None,
+                })
+            })
+            .collect();
+        payable_tools.sort_by(|a, b| a.name().cmp(b.name()));
+        let envelope = match self
             .client
             .mcp_dispatch(McpDispatchParams {
-                rpc,
+                rpc: rpc.clone(),
                 config: EngineConfig {
                     product_ref: self.product_ref.clone(),
                     public_base_url: self.public_base_url.clone(),
@@ -199,26 +219,41 @@ impl McpHttpServer {
                     branding: None,
                 },
                 auth_header: req.headers.get("authorization").cloned(),
+                mcp_protocol_version_header: req.headers.get("mcp-protocol-version").cloned(),
             })
-            .await?;
-        match envelope.get("kind").and_then(Value::as_str) {
-            Some("rpc") => json_response(200, envelope.get("rpc").cloned().unwrap_or(Value::Null)),
-            Some("challenge") => {
-                let status = envelope
-                    .get("status")
-                    .and_then(Value::as_u64)
-                    .unwrap_or(401) as u16;
-                Ok(McpHttpResponse {
-                    status,
-                    headers: string_headers(envelope.get("headers")),
-                    body: encode_json_body(envelope.get("body").cloned().unwrap_or(Value::Null))?,
-                })
+            .await
+        {
+            Ok(envelope) => envelope,
+            Err(err) => {
+                eprintln!("mcp_dispatch: {err:?}");
+                return jsonrpc_error(
+                    rpc.get("id").cloned().unwrap_or(Value::Null),
+                    -32603,
+                    "Internal error",
+                    200,
+                );
             }
+        };
+        match envelope.get("kind").and_then(Value::as_str) {
+            Some("rpc") => json_response(
+                envelope_status(&envelope, 200),
+                envelope.get("rpc").cloned().unwrap_or(Value::Null),
+            ),
+            Some("challenge") => Ok(McpHttpResponse {
+                status: envelope_status(&envelope, 401),
+                headers: string_headers(envelope.get("headers")),
+                body: encode_json_body(envelope.get("body").cloned().unwrap_or(Value::Null))?,
+            }),
             Some("invokeHandler") => self.resume_payable(&envelope).await,
-            other => Err(SdkError::transport(
-                format!("unexpected mcpDispatch kind: {other:?}"),
-                false,
-            )),
+            other => {
+                eprintln!("unexpected mcpDispatch kind: {other:?}");
+                jsonrpc_error(
+                    rpc.get("id").cloned().unwrap_or(Value::Null),
+                    -32603,
+                    "Internal error",
+                    200,
+                )
+            }
         }
     }
 
@@ -273,50 +308,4 @@ fn payable_to_sdk(err: PayableError) -> SdkError {
         PayableError::Sdk(err) => *err,
         other => SdkError::transport(other.to_string(), false),
     }
-}
-
-fn http_from_oauth_envelope(envelope: &Value) -> Result<McpHttpResponse, SdkError> {
-    let status = envelope
-        .get("status")
-        .and_then(Value::as_u64)
-        .unwrap_or(500) as u16;
-    Ok(McpHttpResponse {
-        status,
-        headers: string_headers(envelope.get("headers")),
-        body: encode_json_body(envelope.get("body").cloned().unwrap_or(Value::Null))?,
-    })
-}
-
-fn string_headers(value: Option<&Value>) -> BTreeMap<String, String> {
-    let mut headers = BTreeMap::new();
-    let Some(Value::Object(map)) = value else {
-        return headers;
-    };
-    for (key, val) in map {
-        if let Some(text) = val.as_str() {
-            headers.insert(key.to_ascii_lowercase(), text.to_owned());
-        }
-    }
-    headers
-}
-
-fn json_response(status: u16, body: Value) -> Result<McpHttpResponse, SdkError> {
-    let mut headers = BTreeMap::new();
-    headers.insert("content-type".to_owned(), "application/json".to_owned());
-    Ok(McpHttpResponse {
-        status,
-        headers,
-        body: encode_json_body(body)?,
-    })
-}
-
-fn encode_json_body(body: Value) -> Result<Vec<u8>, SdkError> {
-    if body.is_null() {
-        return Ok(Vec::new());
-    }
-    if let Some(text) = body.as_str() {
-        return Ok(text.as_bytes().to_vec());
-    }
-    serde_json::to_vec(&body)
-        .map_err(|err| SdkError::transport(format!("serialize response body: {err}"), false))
 }
