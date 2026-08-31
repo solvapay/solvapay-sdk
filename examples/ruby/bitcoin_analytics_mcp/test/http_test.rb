@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "json"
 require "minitest/autorun"
 require "stringio"
 require_relative "../bitcoin_analytics"
@@ -12,6 +13,37 @@ class HttpTest < Minitest::Test
     assert_equal "https://jam.example", header(headers, "Access-Control-Allow-Origin")
     assert_includes header(headers, "Access-Control-Expose-Headers"), "WWW-Authenticate"
     assert_includes header(headers, "Access-Control-Expose-Headers"), "Mcp-Session-Id"
+  end
+
+  def test_unauthenticated_initialize_returns_200
+    status, headers, body = call_app(
+      "POST",
+      "/mcp",
+      {
+        "CONTENT_TYPE" => "application/json",
+        "HTTP_ACCEPT" => "application/json, text/event-stream",
+        "rack.input" => StringIO.new(
+          JSON.generate(
+            {
+              jsonrpc: "2.0",
+              id: 1,
+              method: "initialize",
+              params: {
+                protocolVersion: "2025-03-26",
+                capabilities: {},
+                clientInfo: { name: "probe", version: "0" },
+              },
+            },
+          ),
+        ),
+      },
+      SolvaPay::Client.new(api_key: "sk_test_fixture", api_base_url: "http://127.0.0.1:1"),
+    )
+    assert_equal 200, status
+    assert_equal "application/json", headers["content-type"]
+    parsed = JSON.parse(body.join)
+    refute parsed.key?("error"), parsed.inspect
+    assert parsed.dig("result", "serverInfo") || parsed.dig("result", "protocolVersion")
   end
 
   def test_get_mcp_returns_405
@@ -35,9 +67,9 @@ class HttpTest < Minitest::Test
 
   private
 
-  def call_app(method, path, extra = {})
+  def call_app(method, path, extra = {}, client = nil)
     app = BitcoinAnalytics.build_http_app(
-      client: BitcoinAnalytics::MockClient.new(within_limits: true),
+      client: client || BitcoinAnalytics::MockClient.new(within_limits: true),
       product_ref: "prd_demo",
       public_base_url: "https://example.test",
       source: BitcoinAnalytics.default_fixture_source,

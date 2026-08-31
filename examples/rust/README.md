@@ -4,6 +4,7 @@
 | ------------------------------------------- | ------------------------------------------------------------------------------------ |
 | [`get-merchant`](./get-merchant/)           | Async `Client::get_merchant` with local `.env` (offline mock-transport test covered) |
 | [`guerrillamail-mcp`](./guerrillamail-mcp/) | Paywalled disposable-inbox MCP over the Guerrilla Mail JSON API                      |
+| [`paid-mcp`](./paid-mcp/)                   | Offline single-tool paywall round-trip against a mock backend                        |
 
 Shared dotenv paths live in [`env/`](./env/) (`solvapay-rust-examples-env`).
 

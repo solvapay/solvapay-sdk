@@ -201,7 +201,7 @@ Because the workspace gate reads the branch rather than a dist-tag, a feature br
 
 ## What the function does on each request
 
-`createSolvaPayMcpFetchHandler` is a single `(req: Request) => Promise<Response>` function that internally routes on `new URL(req.url).pathname`:
+`createSolvaPayMcpFetch` is a single `(req: Request) => Promise<Response>` function that internally routes on `new URL(req.url).pathname`:
 
 | Path prefix                                                                                                             | Behaviour                                                                                                                                                         |
 | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------- | ----------------------------------------------- |

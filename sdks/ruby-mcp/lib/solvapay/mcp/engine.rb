@@ -115,7 +115,7 @@ module SolvaPay
         rescue StandardError => e
           warn e.full_message
           id = rpc.is_a?(Hash) ? rpc["id"] : nil
-          json_rpc_error(200, id, -32_603, "Internal error")
+          json_rpc_error(200, id, -32_603, e.message)
         end
       end
 

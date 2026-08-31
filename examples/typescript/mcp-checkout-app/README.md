@@ -16,19 +16,20 @@ Four MCP examples ship in this repo. Start here if your product has a
 full self-serve surface (plans, credit balance, top-up, usage); hop to
 a sibling if you need less:
 
-| Example                                 | Runtime         | What it shows                                                        | Use when                                                                                     |
-| --------------------------------------- | --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `examples/typescript/mcp-checkout-app`  | Node + Express  | Full 5-intent UI shell + embedded Stripe + paywalled demo data tools | You want the complete story — plan picker, checkout, top-up, usage meter, paywall            |
-| `examples/typescript/supabase-edge-mcp` | Deno (Supabase) | Same full toolbox as `mcp-checkout-app`, deployed to Supabase Edge   | You want the complete story running at the network edge with `createSolvaPayMcpFetchHandler` |
-| `examples/typescript/mcp-oauth-bridge`  | Node + Express  | Paywall-only, no UI, virtual tools only                              | You just need to gate a text-only tool behind SolvaPay usage limits                          |
-| `examples/typescript/mcp-time-app`      | Node + Express  | Virtual tools + minimal UI, showcases the gate response              | You want the smallest possible paywalled MCP server                                          |
+| Example                                 | Runtime         | What it shows                                                                | Use when                                                                                 |
+| --------------------------------------- | --------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `examples/typescript/mcp-checkout-app`  | Node + Express  | Full 5-intent UI shell + embedded Stripe + paywalled demo data tools         | You want the complete story — plan picker, checkout, top-up, usage meter, paywall        |
+| `examples/typescript/supabase-edge-mcp` | Deno (Supabase) | Paywalled Oracle demo tools + SolvaPay intent/UI transport, on Supabase Edge | You want the edge story with `createSolvaPayMcpFetch` (trimmed demo toolbox vs this app) |
+| `examples/typescript/mcp-oauth-bridge`  | Node + Express  | Paywall-only, no UI, virtual tools only                                      | You just need to gate a text-only tool behind SolvaPay usage limits                      |
+| `examples/typescript/mcp-time-app`      | Node + Express  | Virtual tools + minimal UI, showcases the gate response                      | You want the smallest possible paywalled MCP server                                      |
 
 The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the trimmed
-12-tool surface: 5 intent tools (`upgrade`, `manage_account`, `topup`,
-`check_usage`, `activate_plan`) plus 7 UI-only state-change tools
+12-tool surface: 4 intent tools (`upgrade`, `manage_account`, `topup`,
+`activate_plan`) plus 8 UI-only state-change tools
 (`create_checkout_session`, `create_customer_session`,
 `create_payment_intent`, `process_payment`,
-`create_topup_payment_intent`, `cancel_renewal`, `reactivate_renewal`).
+`create_topup_payment_intent`, `attach_business_details`,
+`cancel_renewal`, `reactivate_renewal`).
 Product-scoped data (merchant, product, plans) and the customer
 snapshot (purchase, payment method, balance, usage) ride on the
 `BootstrapPayload` every intent tool returns, so the embedded form
@@ -138,12 +139,12 @@ sequenceDiagram
 2. The bundle renders `<McpApp app={app} />` from
    [`@solvapay/react/mcp`](../../../sdks/typescript/react/src/mcp). `McpApp` runs
    `app.connect()`, calls the matching intent tool (`upgrade`,
-   `manage_account`, `topup`, `check_usage`, or `activate_plan`), seeds
+   `manage_account`, `topup`, or `activate_plan`), seeds
    the provider's module caches via `seedMcpCaches(initial, config)`,
    and mounts `<SolvaPayProvider config={{ transport, initial }}>` so
    every hook reads from the snapshot without a first-mount fetch.
-   `transport = createMcpAppAdapter(app)` only tunnels the 7 UI-only
-   state-change tools — read tools (`check_purchase`, `get_merchant`,
+   `transport = createMcpAppAdapter(app)` only tunnels the 8 UI-only
+   state-change tools — read tools (`get_merchant`,
    etc.) no longer exist; their data arrives on the `BootstrapPayload`.
 3. On mount the UI calls `upgrade`. The intent tool parallel-loads
    merchant, product, plans, and (when authenticated) the full
@@ -176,7 +177,6 @@ sequenceDiagram
 | `upgrade`        | Returns the `BootstrapPayload` (merchant, product, plans, customer snapshot, stripePublishableKey) so the UI can probe Stripe Elements and render the checkout view |
 | `manage_account` | Returns the bootstrap for the account dashboard (current plan, balance, payment method, cancel/reactivate controls, portal launcher)                                |
 | `topup`          | Returns the bootstrap for the top-up flow                                                                                                                           |
-| `check_usage`    | Returns the bootstrap for the usage dashboard (used / remaining / reset date)                                                                                       |
 | `activate_plan`  | With `planRef`: activates a free/usage-based plan or returns a checkout URL for paid plans. Without `planRef`: returns the picker bootstrap                         |
 
 **UI-only state-change tools (tagged `_meta.audience: 'ui'`):**
@@ -188,6 +188,7 @@ sequenceDiagram
 | `create_payment_intent`       | Creates the PaymentIntent consumed by the embedded branch's `<PaymentForm>`                         |
 | `process_payment`             | Records the Stripe-side confirmation after `confirmPayment` resolves                                |
 | `create_topup_payment_intent` | Creates the PaymentIntent consumed by the top-up flow                                               |
+| `attach_business_details`     | Attaches tax / business details so the Payment step can compute the breakdown                       |
 | `cancel_renewal`              | Cancels auto-renewal on an active purchase                                                          |
 | `reactivate_renewal`          | Undoes a pending cancellation                                                                       |
 
@@ -225,7 +226,7 @@ retry — without hand-rolling a gated tool.
 
 | Tool                  | Purpose                                                                                                                                                                                                                                                                                                           |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search_knowledge`    | Returns 3 deterministic stub snippets for a query. Wrapped with `solvaPay.payable().mcp()` so each call consumes 1 credit.                                                                                                                                                                                        |
+| `search_knowledge`    | Returns 3 deterministic stub snippets for a query. Wrapped with `registerPayable` so each call consumes 1 credit.                                                                                                                                                                                                 |
 | `get_market_quote`    | Returns a deterministic fake price for a ticker. Same paywall semantics as `search_knowledge`.                                                                                                                                                                                                                    |
 | `query_sales_trends`  | Returns deterministic sales rows for a date range. When the customer is low on credits, appends a **plain-text `low-balance` nudge** to `content[0].text` that names the `topup` intent tool — the data still rides on `structuredContent`. Exercises the text-only nudge suffix on `ctx.respond(options.nudge)`. |
 | `predict_price_chart` | Oracle demo — returns history + forecast numeric arrays with an 80% confidence band for a ticker. Renders as a **host-drawn line-chart artifact** (no widget).                                                                                                                                                    |

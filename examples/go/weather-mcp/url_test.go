@@ -2,6 +2,33 @@ package main
 
 import "testing"
 
+func TestRequirePublicBaseURLRejectsMissing(t *testing.T) {
+	t.Setenv("MCP_PUBLIC_BASE_URL", "")
+	_, err := requirePublicBaseURL()
+	if err == nil {
+		t.Fatal("expected error for missing MCP_PUBLIC_BASE_URL")
+	}
+}
+
+func TestRequirePublicBaseURLRejectsMalformed(t *testing.T) {
+	t.Setenv("MCP_PUBLIC_BASE_URL", "http://weathermcp.example.test")
+	_, err := requirePublicBaseURL()
+	if err == nil {
+		t.Fatal("expected error for non-https MCP_PUBLIC_BASE_URL")
+	}
+}
+
+func TestRequirePublicBaseURLAcceptsHTTPSOrigin(t *testing.T) {
+	t.Setenv("MCP_PUBLIC_BASE_URL", "https://weathermcp.example.test")
+	got, err := requirePublicBaseURL()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "https://weathermcp.example.test" {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestValidatePublicBaseURL(t *testing.T) {
 	cases := []struct {
 		url     string

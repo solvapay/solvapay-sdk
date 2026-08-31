@@ -210,14 +210,35 @@ type RegisteredToolLike = {
   annotations?: unknown
   icons?: unknown
   _meta?: unknown
+  outputSchemaJson?: Record<string, unknown>
   handler?: (args: unknown, extra: unknown) => Promise<unknown>
   executor?: (args: unknown, extra: unknown) => Promise<unknown>
+}
+
+type McpServerWithToolSchemaJson = McpServer & {
+  toolInputSchemaJson: (name: string) => Record<string, unknown> | undefined
+}
+
+type RegisteredPromptLike = {
+  enabled?: boolean
+  title?: string
+  description?: string
+  icons?: unknown
+  _meta?: unknown
+  handler?: (args: unknown, extra: unknown) => Promise<unknown>
 }
 
 function registeredTools(server: McpServer): Record<string, RegisteredToolLike> {
   return (
     (server as unknown as { _registeredTools?: Record<string, RegisteredToolLike> })
       ._registeredTools ?? {}
+  )
+}
+
+function registeredPrompts(server: McpServer): Record<string, RegisteredPromptLike> {
+  return (
+    (server as unknown as { _registeredPrompts?: Record<string, RegisteredPromptLike> })
+      ._registeredPrompts ?? {}
   )
 }
 
@@ -350,10 +371,16 @@ export function installEngineHandlers(
     })
     for (const [name, tool] of Object.entries(registeredTools(server))) {
       if (tool.enabled === false || names.has(name)) continue
+      const inputSchema = (server as McpServerWithToolSchemaJson).toolInputSchemaJson(name)
+      if (inputSchema === undefined) {
+        throw new Error(`tools/list: cannot convert inputSchema for tool '${name}'`)
+      }
       projected.push({
         name,
         ...(tool.title !== undefined ? { title: tool.title } : {}),
         ...(tool.description !== undefined ? { description: tool.description } : {}),
+        inputSchema,
+        ...(tool.outputSchemaJson !== undefined ? { outputSchema: tool.outputSchemaJson } : {}),
         ...(tool.annotations !== undefined ? { annotations: tool.annotations } : {}),
         ...(tool.icons !== undefined ? { icons: tool.icons } : {}),
         ...(tool._meta !== undefined ? { _meta: tool._meta } : {}),
@@ -445,11 +472,37 @@ export function installEngineHandlers(
   })
   setHandler('prompts/list', async (request, extra) => {
     if (options.registerPrompts === false) return { prompts: [] }
-    return run('prompts/list', request, extra)
+    const listed = await run('prompts/list', request, extra)
+    const prompts = isRecord(listed) && Array.isArray(listed.prompts) ? [...listed.prompts] : []
+    const names = new Set(
+      prompts
+        .map(prompt => (isRecord(prompt) && typeof prompt.name === 'string' ? prompt.name : ''))
+        .filter(name => name.length > 0),
+    )
+    for (const [name, prompt] of Object.entries(registeredPrompts(server))) {
+      if (prompt.enabled === false || names.has(name)) continue
+      prompts.push({
+        name,
+        ...(prompt.title !== undefined ? { title: prompt.title } : {}),
+        ...(prompt.description !== undefined ? { description: prompt.description } : {}),
+        ...(prompt.icons !== undefined ? { icons: prompt.icons } : {}),
+        ...(prompt._meta !== undefined ? { _meta: prompt._meta } : {}),
+      })
+    }
+    return { ...(isRecord(listed) ? listed : {}), prompts }
   })
-  setHandler('prompts/get', (request, extra) => {
+  setHandler('prompts/get', async (request, extra) => {
     if (options.registerPrompts === false) {
       throw new Error('prompts are not registered')
+    }
+    const req = isRecord(request) ? request : {}
+    const params = isRecord(req.params) ? req.params : {}
+    const name = typeof params.name === 'string' ? params.name : ''
+    const local = registeredPrompts(server)[name]
+    if (local !== undefined && local.enabled !== false && local.handler !== undefined) {
+      return (await local.handler(params.arguments ?? {}, extra)) as {
+        messages: unknown
+      }
     }
     return run('prompts/get', request, extra)
   })

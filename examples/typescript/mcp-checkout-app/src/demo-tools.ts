@@ -57,7 +57,7 @@ export function demoToolsEnabled(env: NodeJS.ProcessEnv = process.env): boolean 
  * `examples/typescript/checkout-demo/app/components/UsageSimulator.tsx`: each call
  * consumes one unit of usage; when the customer runs out, the tool
  * returns a paywall bootstrap instead of results (handled entirely by
- * `solvaPay.payable().mcp()` inside `registerPayable`).
+ * `registerPayable` → `buildPayableHandler`).
  */
 export function registerDemoTools(ctx: AdditionalToolsContext): void {
   const { registerPayable, server } = ctx
@@ -65,7 +65,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   registerPayable('search_knowledge', {
     title: 'Search knowledge base (demo)',
     description:
-      'Demo data tool — returns deterministic fake snippets for a query. Wrapped with `solvaPay.payable.mcp()` so each call consumes 1 unit of usage; when the customer runs out, the tool returns a paywall bootstrap instead of results. Pair with `/search_knowledge` for a one-keystroke exercise of the paywall.',
+      'Demo data tool — returns deterministic fake snippets for a query. Wrapped with `registerPayable` so each call consumes 1 unit of usage; when the customer runs out, the tool returns a paywall bootstrap instead of results. Pair with `/search_knowledge` for a one-keystroke exercise of the paywall.',
     schema: { query: z.string().min(1) },
     // Explicit for docs clarity; `registerPayable` would otherwise
     // default to `{ readOnlyHint: true, openWorldHint: true }` — the

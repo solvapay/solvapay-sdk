@@ -3,7 +3,7 @@ import express from 'express'
 import { createMcpHandler } from '@modelcontextprotocol/server'
 import { toNodeHandler } from '@modelcontextprotocol/node'
 import { createMcpOAuthBridge, type McpOAuthBridgeOptions } from '@solvapay/mcp/express'
-import type { SolvaPayMerchantBranding } from '@solvapay/mcp-core'
+import { MCP_TOOL_NAMES, type SolvaPayMerchantBranding } from '@solvapay/mcp-core'
 import { verifyProductConfiguration } from '@solvapay/server'
 import { createServer, fetchBranding } from './server'
 import {
@@ -17,7 +17,83 @@ import {
 
 let cachedBranding: SolvaPayMerchantBranding | undefined
 
-const mcpHandler = createMcpHandler(() => createServer(cachedBranding))
+const REQUIRED_TRANSPORT_TOOLS = [
+  MCP_TOOL_NAMES.createPayment,
+  MCP_TOOL_NAMES.processPayment,
+  MCP_TOOL_NAMES.createTopupPayment,
+  MCP_TOOL_NAMES.attachBusinessDetails,
+] as const
+
+const mcpHandler = createMcpHandler(() => createServer(cachedBranding), {
+  onerror: error => {
+    console.error('[mcp-checkout-app] MCP handler error', error)
+  },
+})
+
+function parseSseJsonRpc(body: string): unknown {
+  const dataLine = body.split('\n').find(line => line.startsWith('data:'))
+  if (dataLine === undefined) {
+    throw new Error(
+      `[mcp-checkout-app] tools/list boot check expected SSE data: frame, got: ${body}`,
+    )
+  }
+  return JSON.parse(dataLine.slice(dataLine.indexOf(':') + 1).trim()) as unknown
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object'
+}
+
+async function assertTransportToolsListed(): Promise<void> {
+  const response = await mcpHandler.fetch(
+    new Request('http://127.0.0.1/mcp', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/event-stream',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+        params: {},
+      }),
+    }),
+  )
+  const body = await response.text()
+  if (!response.ok) {
+    throw new Error(
+      `[mcp-checkout-app] tools/list boot check failed: HTTP ${response.status} ${body}`,
+    )
+  }
+  const rpc = parseSseJsonRpc(body)
+  const result = isRecord(rpc) && isRecord(rpc.result) ? rpc.result : undefined
+  const tools = result !== undefined && Array.isArray(result.tools) ? result.tools : []
+  const names = new Set(
+    tools
+      .map(tool => (isRecord(tool) && typeof tool.name === 'string' ? tool.name : ''))
+      .filter(name => name.length > 0),
+  )
+  const missing = REQUIRED_TRANSPORT_TOOLS.filter(name => !names.has(name))
+  if (missing.length > 0) {
+    throw new Error(
+      `[mcp-checkout-app] SolvaPay MCP server is missing required UI transport tool(s): ${missing.join(', ')}. ` +
+        'The checkout UI calls these on every checkout, so a stale or skewed @solvapay/* build blocks the ' +
+        'Payment step with "MCP error -32602: Tool <name> not found" (DEV-650). Rebuild the workspace packages ' +
+        '(`pnpm build:packages`) or run the server from source (`NODE_OPTIONS=--conditions=development`) so it ' +
+        'matches the Vite-built UI bundle.',
+    )
+  }
+  if (process.env.SOLVAPAY_DEBUG === 'true') {
+    for (const tool of tools) {
+      if (!isRecord(tool) || typeof tool.name !== 'string') continue
+      console.error(`[mcp-checkout-app] descriptor ${tool.name}`, {
+        _meta: tool._meta,
+        annotations: tool.annotations,
+      })
+    }
+  }
+}
 
 const app = express()
 app.use(express.json())
@@ -89,6 +165,8 @@ async function start(): Promise<void> {
         'checkout and upgrades will fail. Fix this in SolvaPay Console → Products.',
     )
   }
+
+  await assertTransportToolsListed()
 
   app.listen(port, host, () => {
     console.error(`MCP checkout app listening on http://${host}:${port}`)

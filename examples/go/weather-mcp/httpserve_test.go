@@ -16,63 +16,25 @@ import (
 const testBearer = "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9."
 const testPublicOrigin = "https://weather.example.test"
 
-func withProtocolMeta(params any) map[string]any {
-	out := map[string]any{}
-	if m, ok := params.(map[string]any); ok {
-		for k, v := range m {
-			out[k] = v
-		}
-	}
-	meta, _ := out["_meta"].(map[string]any)
-	if meta == nil {
-		meta = map[string]any{}
-	}
-	meta["io.modelcontextprotocol/protocolVersion"] = "2026-07-28"
-	meta["io.modelcontextprotocol/clientInfo"] = map[string]any{"name": "weather-test", "version": "v0.0.1"}
-	meta["io.modelcontextprotocol/clientCapabilities"] = map[string]any{}
-	out["_meta"] = meta
-	return out
-}
-
-func postMCP(handler http.Handler, method string, params any, headers map[string]string) *httptest.ResponseRecorder {
-	body, _ := json.Marshal(map[string]any{
-		"jsonrpc": "2.0",
-		"id":      1,
-		"method":  method,
-		"params":  withProtocolMeta(params),
-	})
-	req := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json, text/event-stream")
-	req.Header.Set("MCP-Protocol-Version", "2026-07-28")
-	req.Header.Set("Mcp-Method", method)
-	if method == "tools/call" {
-		if m, ok := params.(map[string]any); ok {
-			if name, _ := m["name"].(string); name != "" {
-				req.Header.Set("Mcp-Name", name)
-			}
-		}
-	}
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	return rec
-}
-
 func newTestHandler(t *testing.T) http.Handler {
+	t.Helper()
+	return newTestHandlerWithLimits(t, func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"withinLimits":  true,
+			"remaining":     42,
+			"plan":          "pl_pro",
+			"creditBalance": 5000,
+		})
+	})
+}
+
+func newTestHandlerWithLimits(t *testing.T, onLimits func(http.ResponseWriter, *http.Request)) http.Handler {
 	t.Helper()
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/limits":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"withinLimits":  true,
-				"remaining":     42,
-				"plan":          "pl_pro",
-				"creditBalance": 5000,
-			})
+			onLimits(w, r)
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/usages":
 			_, _ = io.Copy(io.Discard, r.Body)
 			_, _ = w.Write([]byte(`{"reference":"usg_test","outcome":"success"}`))
@@ -93,7 +55,7 @@ func newTestHandler(t *testing.T) http.Handler {
 	handler, err := newHTTPHandler(client, httpServeConfig{
 		ProductRef:    "prd_demo",
 		PublicBaseURL: testPublicOrigin,
-		Source:        newFixtureSource("fixtures/wttr-london.json"),
+		Source:        newFixtureSource(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -115,54 +77,27 @@ func TestPostMcpToolsCallReturnsJSONRPCResult(t *testing.T) {
 	}
 	result, _ := parsed["result"].(map[string]any)
 	sc, _ := result["structuredContent"].(map[string]any)
-	if sc["temperatureC"] != float64(12) {
+	if sc["temperatureC"] != 21.1 {
 		t.Fatalf("structuredContent = %#v", sc)
 	}
 }
 
 func TestGetCurrentWeatherGatesAgainstBearerCustomer(t *testing.T) {
 	var limitsRefs []string
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/limits":
-			body, _ := io.ReadAll(r.Body)
-			var payload map[string]any
-			_ = json.Unmarshal(body, &payload)
-			if ref, _ := payload["customerRef"].(string); ref != "" {
-				limitsRefs = append(limitsRefs, ref)
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"withinLimits":  true,
-				"remaining":     42,
-				"plan":          "pl_pro",
-				"creditBalance": 5000,
-			})
-		case r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/usages":
-			_, _ = io.Copy(io.Discard, r.Body)
-			_, _ = w.Write([]byte(`{"reference":"usg_test","outcome":"success"}`))
-		case r.Method == http.MethodGet && r.URL.Path == "/v1/sdk/customers":
-			_, _ = w.Write([]byte(`{"reference":"cus_1","email":"a@example.com"}`))
-		default:
-			http.NotFound(w, r)
+	handler := newTestHandlerWithLimits(t, func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]any
+		_ = json.Unmarshal(body, &payload)
+		if ref, _ := payload["customerRef"].(string); ref != "" {
+			limitsRefs = append(limitsRefs, ref)
 		}
-	}))
-	t.Cleanup(backend.Close)
-
-	client, err := solvapay.NewClient(context.Background(), "sk_test", solvapay.WithBaseURL(backend.URL))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = client.Close(context.Background()) })
-
-	handler, err := newHTTPHandler(client, httpServeConfig{
-		ProductRef:    "prd_demo",
-		PublicBaseURL: testPublicOrigin,
-		Source:        newFixtureSource("fixtures/wttr-london.json"),
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"withinLimits":  true,
+			"remaining":     42,
+			"plan":          "pl_pro",
+			"creditBalance": 5000,
+		})
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	rec := postMCP(handler, "tools/call", map[string]any{
 		"name":      toolCurrentWeather,
@@ -269,6 +204,41 @@ func TestHealthAndRootRoutes(t *testing.T) {
 	}
 }
 
+func TestUnauthenticatedInitializeReturns200(t *testing.T) {
+	body, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "initialize",
+		"params": map[string]any{
+			"protocolVersion": "2025-03-26",
+			"capabilities":    map[string]any{},
+			"clientInfo":      map[string]any{"name": "probe", "version": "0"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	rec := httptest.NewRecorder()
+	newTestHandler(t).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if parsed["error"] != nil {
+		t.Fatalf("initialize error: %s", rec.Body.String())
+	}
+	result, _ := parsed["result"].(map[string]any)
+	if result["serverInfo"] == nil && result["protocolVersion"] == nil {
+		t.Fatalf("expected initialize result, got %s", rec.Body.String())
+	}
+}
+
 func TestToolsListIncludesWeatherTools(t *testing.T) {
 	rec := postMCP(newTestHandler(t), "tools/list", map[string]any{}, nil)
 	if rec.Code != http.StatusOK {
@@ -286,8 +256,10 @@ func TestToolsListIncludesWeatherTools(t *testing.T) {
 		name, _ := tool["name"].(string)
 		have[name] = true
 	}
-	if !have[toolCurrentWeather] || !have[toolForecast] {
-		t.Fatalf("weather tools missing from tools/list: %v", have)
+	for _, name := range []string{toolCurrentWeather, toolForecast, toolHourly, toolAirQuality, toolCompare, toolHistorical} {
+		if !have[name] {
+			t.Fatalf("weather tools missing from tools/list: %v", have)
+		}
 	}
 	if result["resultType"] != "complete" {
 		t.Fatalf("tools/list missing resultType=complete: %s", rec.Body.String())
@@ -307,33 +279,10 @@ func TestToolsListIncludesWeatherTools(t *testing.T) {
 }
 
 func TestPayableGateFailureStaysJSONRPC(t *testing.T) {
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/limits" {
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte(`{"message":"Customer not found: cus_1","statusCode":404}`))
-			return
-		}
-		if r.Method == http.MethodGet && r.URL.Path == "/v1/sdk/customers" {
-			_, _ = w.Write([]byte(`{"customerRef":"cus_1"}`))
-			return
-		}
-		http.NotFound(w, r)
-	}))
-	t.Cleanup(backend.Close)
-	client, err := solvapay.NewClient(context.Background(), "sk_test", solvapay.WithBaseURL(backend.URL))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = client.Close(context.Background()) })
-	handler, err := newHTTPHandler(client, httpServeConfig{
-		ProductRef:    "prd_demo",
-		PublicBaseURL: testPublicOrigin,
-		Source:        newFixtureSource("fixtures/wttr-london.json"),
+	handler := newTestHandlerWithLimits(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"message":"Customer not found: cus_1","statusCode":404}`))
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	rec := postMCP(handler, "tools/call", map[string]any{
 		"name":      toolCurrentWeather,

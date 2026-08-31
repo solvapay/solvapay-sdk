@@ -32,17 +32,8 @@ func newHTTPHandler(client *solvapay.Client, cfg httpServeConfig) (http.Handler,
 	if cfg.Source == nil {
 		return nil, fmt.Errorf("weather source is required")
 	}
-	srv, err := solvapaymcp.NewServer(context.Background(), client, solvapaymcp.ServerConfig{
-		ProductRef:    cfg.ProductRef,
-		PublicBaseURL: cfg.PublicBaseURL,
-		MCPPath:       "/mcp",
-		ServerName:    "weather-mcp",
-		ServerVersion: "v0.0.1",
-	})
+	srv, err := newSolvaPayServer(context.Background(), client, cfg.ProductRef, cfg.PublicBaseURL, cfg.Source, nil)
 	if err != nil {
-		return nil, err
-	}
-	if err := registerTools(srv, cfg.Source, cfg.ProductRef, nil); err != nil {
 		return nil, err
 	}
 	mcpHandler := solvapaymcp.NewStreamableHandler(srv)
@@ -88,6 +79,17 @@ func withCORS(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func requirePublicBaseURL() (string, error) {
+	public, err := requireEnv("MCP_PUBLIC_BASE_URL")
+	if err != nil {
+		return "", err
+	}
+	if err := validatePublicBaseURL(public); err != nil {
+		return "", err
+	}
+	return public, nil
 }
 
 func validatePublicBaseURL(raw string) error {

@@ -229,7 +229,7 @@ impl McpHttpServer {
                 return jsonrpc_error(
                     rpc.get("id").cloned().unwrap_or(Value::Null),
                     -32603,
-                    "Internal error",
+                    err.message(),
                     200,
                 );
             }
@@ -250,7 +250,7 @@ impl McpHttpServer {
                 jsonrpc_error(
                     rpc.get("id").cloned().unwrap_or(Value::Null),
                     -32603,
-                    "Internal error",
+                    &format!("unexpected mcpDispatch kind: {other:?}"),
                     200,
                 )
             }

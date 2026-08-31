@@ -36,6 +36,7 @@ function registerVirtualAppTools(server: McpServer) {
       return typeof fromExtra === 'string' && fromExtra.trim() ? fromExtra.trim() : 'anonymous'
     },
   })
+  const intentTools = new Set(['upgrade', 'manage_account', 'topup'])
 
   for (const tool of virtualTools) {
     const inputSchema = z.object(
@@ -51,11 +52,7 @@ function registerVirtualAppTools(server: McpServer) {
       {
         description: tool.description,
         inputSchema,
-        _meta: {
-          ui: {
-            resourceUri,
-          },
-        },
+        ...(intentTools.has(tool.name) ? { _meta: { ui: { resourceUri } } } : {}),
       },
       async (args: Record<string, unknown>, extra?: McpToolExtra): Promise<CallToolResult> =>
         (await tool.handler(args, extra)) as CallToolResult,

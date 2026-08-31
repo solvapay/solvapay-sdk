@@ -102,7 +102,7 @@ interface InitializeResult {
 }
 
 interface ToolsListResult {
-  tools: Array<{ name: string; description?: string }>
+  tools: Array<{ name: string; description?: string; inputSchema?: unknown }>
 }
 
 interface ToolsCallResult {
@@ -141,6 +141,9 @@ describe('createSolvaPayMcpFetchHandler — responseMode: json (legacy era)', ()
     })
     expect(list.status).toBe(200)
     expect(list.json.result?.tools?.map(t => t.name)).toContain('echo')
+    for (const tool of list.json.result?.tools ?? []) {
+      expect(tool.inputSchema, tool.name).toEqual(expect.objectContaining({ type: 'object' }))
+    }
 
     const call = await callRpc<ToolsCallResult>(handler, {
       jsonrpc: '2.0',

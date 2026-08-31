@@ -94,7 +94,10 @@ impl ServerHandler for ExampleServer {
 /// # Errors
 ///
 /// Returns a transport or MCP service error.
-pub async fn run(within_limits: bool, message: &str) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn run(
+    within_limits: bool,
+    message: &str,
+) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
     let client = Client::with_transport(
         Arc::new(MockTransport { within_limits }),
         Config {

@@ -7,7 +7,7 @@ use std::sync::{Mutex, OnceLock};
 
 use serde::Deserialize;
 use serde_json::{json, Value};
-use solvapay_core::{paywall_tool_result, PaywallGate};
+use solvapay_core::{build_prompt_user_message, paywall_tool_result, PaywallGate};
 use uuid::Uuid;
 
 use crate::auth_gate::{mcp_auth_gate, AuthGateInput, AuthGateResult, McpAuthMode};
@@ -594,15 +594,23 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
                 .and_then(Value::as_str)
                 .unwrap_or("");
             let desc = descriptors_for(&input.config)?;
-            let prompt = desc.prompts.iter().find(|p| p.name == name);
-            Ok(rpc_result(
-                id,
-                json!({
-                    "messages": prompt
-                }),
-                modern,
-                false,
-            ))
+            if !desc.prompts.iter().any(|p| p.name == name) {
+                return Ok(rpc_err(
+                    id,
+                    -32602,
+                    &format!("Unknown prompt: {name}"),
+                    None,
+                    200,
+                ));
+            }
+            let args = input
+                .rpc
+                .pointer("/params/arguments")
+                .cloned()
+                .unwrap_or_else(|| json!({}));
+            let messages = serde_json::to_value(build_prompt_user_message(name, &args))
+                .map_err(|err| err.to_string())?;
+            Ok(rpc_result(id, messages, modern, false))
         }
         other => Ok(method_not_found(&input.rpc, other, modern)),
     }
@@ -744,6 +752,64 @@ mod tests {
         let name_call = call_rpc(json!(["echo_paid"]));
         assert_eq!(name_call["kind"], "invokeHandler");
         assert_eq!(name_call["tool"], "echo_paid");
+    }
+
+    #[test]
+    fn prompts_get_returns_user_messages_for_known_name() {
+        let got = handle_from_json(json!({
+            "rpc": {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "prompts/get",
+                "params": { "name": "upgrade", "arguments": {} }
+            },
+            "config": {
+                "productRef": "prd_demo",
+                "publicBaseUrl": "https://app.example.com",
+                "resourceUri": "ui://test/view.html"
+            }
+        }));
+        assert_eq!(got["kind"], "rpc");
+        assert!(got.get("rpc").and_then(|rpc| rpc.get("error")).is_none());
+        let messages = got["rpc"]["result"]["messages"]
+            .as_array()
+            .expect("messages array");
+        assert_eq!(messages[0]["role"], "user");
+        assert_eq!(messages[0]["content"]["type"], "text");
+        assert!(
+            messages[0]["content"]["text"]
+                .as_str()
+                .unwrap()
+                .contains("upgrade"),
+            "{got}"
+        );
+    }
+
+    #[test]
+    fn prompts_get_unknown_name_is_jsonrpc_error() {
+        let got = handle_from_json(json!({
+            "rpc": {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "prompts/get",
+                "params": { "name": "search_knowledge" }
+            },
+            "config": {
+                "productRef": "prd_demo",
+                "publicBaseUrl": "https://app.example.com",
+                "resourceUri": "ui://test/view.html"
+            }
+        }));
+        assert_eq!(got["kind"], "rpc");
+        assert_eq!(got["rpc"]["error"]["code"], -32602);
+        assert!(
+            got["rpc"]["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("search_knowledge"),
+            "{got}"
+        );
+        assert!(got["rpc"]["result"].is_null(), "{got}");
     }
 
     #[test]

@@ -8,8 +8,8 @@
  * constructs the `App`, and renders `<McpApp>`.
  *
  * All of these components (shell, views, plan-actions helpers,
- * narrator) live in the SDK so the hosted MCP Pay solution can mount
- * the same surface on an HTTP page instead of inside the iframe.
+ * narrator) live in the SDK so a hosted HTTP page can mount the same
+ * surface instead of running only inside the iframe.
  */
 
 import { createRoot } from 'react-dom/client'

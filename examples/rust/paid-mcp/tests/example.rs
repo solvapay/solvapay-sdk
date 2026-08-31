@@ -8,7 +8,10 @@ use solvapay_example_paid_mcp::run;
 async fn allow_round_trip() {
     let result = run(true, "hello").await.expect("run");
     assert_eq!(result["content"][0]["text"], "{\"echo\":\"hello\"}");
-    assert_eq!(result["structuredContent"], serde_json::json!({ "echo": "hello" }));
+    assert_eq!(
+        result["structuredContent"],
+        serde_json::json!({ "echo": "hello" })
+    );
 }
 
 #[tokio::test]

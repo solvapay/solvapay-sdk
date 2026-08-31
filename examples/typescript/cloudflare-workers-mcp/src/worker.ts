@@ -100,6 +100,9 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
     // `create_payment_intent` / `create_topup_payment_intent` calls
     // pass ChatGPT's gateway catalogue check.
     hideToolsByAudience: ['ui'],
+    onerror: error => {
+      console.error('[cloudflare-workers-mcp] MCP handler error', error)
+    },
     ...(demoToolsEnabled(env as unknown as Record<string, string | undefined>)
       ? { additionalTools: registerDemoTools }
       : {}),

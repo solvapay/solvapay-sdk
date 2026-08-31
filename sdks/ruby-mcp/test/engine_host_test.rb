@@ -88,7 +88,7 @@ class EngineHostTest < Minitest::Test
   def test_dispatch_failure_returns_jsonrpc_error_without_path
     client = Object.new
     def client.mcp_dispatch(params:)
-      raise SolvaPay::SolvaPayError.new("/Users/jacksmith/secret/engine.rs:1 exploded", code: "boom")
+      raise SolvaPay::SolvaPayError.new("engine dispatch failed: boom", code: "boom")
     end
     engine = SolvaPay::Mcp::Engine.new(
       client: client,
@@ -102,6 +102,7 @@ class EngineHostTest < Minitest::Test
     assert_equal "application/json", headers["content-type"]
     parsed = JSON.parse(body.join)
     assert_equal(-32_603, parsed.dig("error", "code"))
+    assert_equal "engine dispatch failed: boom", parsed.dig("error", "message")
     refute_includes body.join, "/Users/"
   end
 

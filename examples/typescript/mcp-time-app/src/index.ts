@@ -14,7 +14,11 @@ import {
 
 // SDK v2 is stateless: no session map, no `initialize` routing. The factory
 // runs per request and `createMcpHandler` owns the transport lifecycle.
-const mcpHandler = createMcpHandler(() => createServer())
+const mcpHandler = createMcpHandler(() => createServer(), {
+  onerror: error => {
+    console.error('[mcp-time-app] MCP handler error', error)
+  },
+})
 
 const app = express()
 app.use(express.json())

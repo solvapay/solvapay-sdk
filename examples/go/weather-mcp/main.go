@@ -53,7 +53,12 @@ func main() {
 			os.Exit(1)
 		}
 		defer func() { _ = client.Close(ctx) }()
-		if err := runStdio(ctx, client, product, source); err != nil {
+		public, err := requirePublicBaseURL()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		if err := runStdio(ctx, client, product, public, source); err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
@@ -64,12 +69,8 @@ func main() {
 			os.Exit(1)
 		}
 		defer func() { _ = client.Close(ctx) }()
-		public, err := requireEnv("MCP_PUBLIC_BASE_URL")
+		public, err := requirePublicBaseURL()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
-		}
-		if err := validatePublicBaseURL(public); err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
@@ -141,7 +142,7 @@ func listenAddr() string {
 func resolveSource(kind string) (Source, error) {
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case "", "fixture":
-		return newFixtureSource("fixtures/wttr-london.json"), nil
+		return newFixtureSource(), nil
 	case "live":
 		return newLiveSource(""), nil
 	default:

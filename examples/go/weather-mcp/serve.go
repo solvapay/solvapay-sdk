@@ -5,12 +5,45 @@ import (
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	solvapay "github.com/solvapay/solvapay-go"
+	solvapaymcp "github.com/solvapay/solvapay-go/mcp"
 )
 
-func runStdio(ctx context.Context, client *solvapay.Client, product string, source Source) error {
-	server := mcpsdk.NewServer(&mcpsdk.Implementation{Name: "weather-mcp", Version: "v0.0.1"}, nil)
-	if err := registerTools(mcpServerRegistry{server: server, client: client}, source, product, nil); err != nil {
+func runStdio(ctx context.Context, client *solvapay.Client, product, publicBaseURL string, source Source) error {
+	server, err := buildStdioServer(ctx, client, product, publicBaseURL, source)
+	if err != nil {
 		return err
 	}
 	return server.Run(ctx, &mcpsdk.StdioTransport{})
+}
+
+func buildStdioServer(ctx context.Context, client *solvapay.Client, product, publicBaseURL string, source Source) (*mcpsdk.Server, error) {
+	srv, err := newSolvaPayServer(ctx, client, product, publicBaseURL, source, nil)
+	if err != nil {
+		return nil, err
+	}
+	return srv.MCP, nil
+}
+
+func newSolvaPayServer(
+	ctx context.Context,
+	client *solvapay.Client,
+	product string,
+	publicBaseURL string,
+	source Source,
+	getCustomerRef solvapaymcp.GetCustomerRef,
+) (*solvapaymcp.Server, error) {
+	srv, err := solvapaymcp.NewServer(ctx, client, solvapaymcp.ServerConfig{
+		ProductRef:    product,
+		PublicBaseURL: publicBaseURL,
+		MCPPath:       "/mcp",
+		ServerName:    "weather-mcp",
+		ServerVersion: "v0.0.1",
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := registerTools(srv, source, product, getCustomerRef); err != nil {
+		return nil, err
+	}
+	return srv, nil
 }

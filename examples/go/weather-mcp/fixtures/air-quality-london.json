@@ -1,0 +1,29 @@
+{
+  "latitude": 51.5,
+  "longitude": -0.10000038,
+  "generationtime_ms": 0.4063844680786133,
+  "utc_offset_seconds": 3600,
+  "timezone": "Europe/London",
+  "timezone_abbreviation": "GMT+1",
+  "elevation": 23.0,
+  "current_units": {
+    "time": "iso8601",
+    "interval": "seconds",
+    "european_aqi": "EAQI",
+    "us_aqi": "USAQI",
+    "pm10": "\u03bcg/m\u00b3",
+    "pm2_5": "\u03bcg/m\u00b3",
+    "ozone": "\u03bcg/m\u00b3",
+    "nitrogen_dioxide": "\u03bcg/m\u00b3"
+  },
+  "current": {
+    "time": "2026-08-31T17:00",
+    "interval": 3600,
+    "european_aqi": 31,
+    "us_aqi": 26,
+    "pm10": 5.1,
+    "pm2_5": 3.6,
+    "ozone": 78.0,
+    "nitrogen_dioxide": 7.3
+  }
+}

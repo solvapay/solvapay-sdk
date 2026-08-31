@@ -82,7 +82,7 @@ function readEnv(): Record<string, string | undefined> {
  * `examples/typescript/checkout-demo/app/components/UsageSimulator.tsx`: each
  * call consumes one unit of usage; when the customer runs out, the
  * tool returns a paywall bootstrap instead of results (handled
- * entirely by `solvaPay.payable().mcp()` inside `registerPayable`).
+ * entirely by `registerPayable` → `buildPayableHandler`).
  *
  * Oracle tools return pure numeric data via `ctx.respond(payload)` so
  * capable MCP hosts (Claude artifacts) render a line chart / verdict

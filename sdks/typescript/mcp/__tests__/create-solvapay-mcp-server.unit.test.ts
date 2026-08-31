@@ -76,6 +76,7 @@ async function listedTools(server: ReturnType<typeof createSolvaPayMcpServer>) {
     tools: Array<{
       name: string
       description?: string
+      inputSchema?: unknown
       annotations?: unknown
       _meta?: Record<string, unknown> & {
         ui?: { resourceUri?: string; visibility?: unknown; icons?: Array<{ src: string }> }
@@ -172,6 +173,56 @@ describe('createSolvaPayMcpServer', () => {
     expect(typeof ctx.registerPayable).toBe('function')
   })
 
+  it('advertises an object inputSchema on every listed tool', async () => {
+    const { server } = buildTestServer({
+      additionalTools: ({ registerPayable }) => {
+        registerPayable('search_knowledge', {
+          title: 'Search knowledge',
+          schema: { query: z.string() },
+          handler: async () => ({ ok: true }),
+        })
+      },
+    })
+    const { tools } = await listedTools(server)
+    expect(tools.length).toBeGreaterThan(0)
+    for (const tool of tools) {
+      expect(tool.inputSchema, tool.name).toEqual(expect.objectContaining({ type: 'object' }))
+    }
+  })
+
+  it('round-trips a registerPayable zod schema into tools/list', async () => {
+    const { server } = buildTestServer({
+      additionalTools: ({ registerPayable }) => {
+        registerPayable('search_knowledge', {
+          title: 'Search knowledge',
+          schema: { query: z.string() },
+          handler: async () => ({ ok: true }),
+        })
+      },
+    })
+    const { tools } = await listedTools(server)
+    const payable = tools.find(t => t.name === 'search_knowledge')
+    const schema = payable?.inputSchema as
+      | { type?: string; properties?: Record<string, unknown> }
+      | undefined
+    expect(schema?.type).toBe('object')
+    expect(schema?.properties?.query).toBeDefined()
+  })
+
+  it('advertises the empty object schema when registerPayable has no schema', async () => {
+    const { server } = buildTestServer({
+      additionalTools: ({ registerPayable }) => {
+        registerPayable('ping_status', {
+          title: 'Ping status',
+          handler: async () => ({ ok: true }),
+        })
+      },
+    })
+    const { tools } = await listedTools(server)
+    const payable = tools.find(t => t.name === 'ping_status')
+    expect(payable?.inputSchema).toEqual(expect.objectContaining({ type: 'object', properties: {} }))
+  })
+
   it('registers the slash-command prompts by default', async () => {
     const { server } = buildTestServer()
     const { prompts } = await listedPrompts(server)
@@ -189,6 +240,47 @@ describe('createSolvaPayMcpServer', () => {
     const { server } = buildTestServer({ registerPrompts: false })
     const { prompts } = await listedPrompts(server)
     expect(prompts).toEqual([])
+  })
+
+  it('merges locally registered prompts into prompts/list', async () => {
+    const { server } = buildTestServer({
+      additionalTools: ({ server: mcp }) => {
+        mcp.registerPrompt(
+          'search_knowledge',
+          { title: 'Search knowledge (demo)', description: 'Call the demo tool.' },
+          async () => ({
+            messages: [
+              { role: 'user' as const, content: { type: 'text' as const, text: 'Search it.' } },
+            ],
+          }),
+        )
+      },
+    })
+    const { prompts } = await listedPrompts(server)
+    const names = prompts.map(p => p.name)
+    expect(names).toContain(MCP_TOOL_NAMES.upgrade)
+    expect(names).toContain('search_knowledge')
+  })
+
+  it('routes prompts/get to a locally registered prompt', async () => {
+    const { server } = buildTestServer({
+      additionalTools: ({ server: mcp }) => {
+        mcp.registerPrompt(
+          'search_knowledge',
+          { title: 'Search knowledge (demo)', description: 'Call the demo tool.' },
+          async () => ({
+            messages: [
+              { role: 'user' as const, content: { type: 'text' as const, text: 'Search it.' } },
+            ],
+          }),
+        )
+      },
+    })
+    const result = (await invokeHandler(server, 'prompts/get', {
+      name: 'search_knowledge',
+      arguments: {},
+    })) as { messages: Array<{ content: { text: string } }> }
+    expect(result.messages[0]?.content.text).toBe('Search it.')
   })
 
   it('only registers prompts for enabled views', async () => {

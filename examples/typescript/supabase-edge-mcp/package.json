@@ -2,7 +2,7 @@
   "name": "@example/supabase-edge-mcp",
   "private": true,
   "type": "module",
-  "description": "Full SolvaPay MCP server running on Supabase Edge Functions — `createSolvaPayMcpFetchHandler` over Deno. Ships the same paywalled demo toolbox as `mcp-checkout-app`, deployed at the network edge.",
+  "description": "SolvaPay MCP server on Supabase Edge Functions — `createSolvaPayMcpFetch` over Deno. Ships the paywalled Oracle demo tools plus the SolvaPay intent/UI transport surface.",
   "scripts": {
     "build": "cross-env INPUT=mcp-app.html vite build && cp dist/mcp-app.html supabase/functions/mcp/mcp-app.html",
     "dev": "cross-env INPUT=mcp-app.html vite build --watch",

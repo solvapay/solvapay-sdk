@@ -13,7 +13,13 @@ import {
   userAgentFromRequestInfo,
   type HideToolsByAudienceConfig,
 } from '../internal/buildMcpServer'
-import { registerPayableTool, type RegisterPayableToolOptions } from '../registerPayableTool'
+import { z } from 'zod'
+import {
+  payableToolAnnotations,
+  registerPayableTool,
+  wrapInputSchema,
+  type RegisterPayableToolOptions,
+} from '../registerPayableTool'
 import type { AdditionalToolsContext } from '../server'
 import {
   createSolvaPayMcpFetchHandler,
@@ -61,12 +67,17 @@ function bindEnginePayables(
         },
         opts.handler as never,
       )
+      const wrappedSchema = wrapInputSchema(opts.schema)
       payables.set(name, {
         invoke: (args, customerRef) =>
           protectedHandler(
             args,
             customerRef ? { authInfo: { extra: { customer_ref: customerRef } } } : undefined,
           ),
+        ...(opts.title !== undefined ? { title: opts.title } : {}),
+        ...(opts.description !== undefined ? { description: opts.description } : {}),
+        ...(wrappedSchema !== undefined ? { inputSchema: z.toJSONSchema(wrappedSchema) } : {}),
+        annotations: payableToolAnnotations(opts.annotations),
       })
     },
   })

@@ -36,12 +36,22 @@ export type InferHandlerArgs<InputSchema> = [InputSchema] extends [undefined]
       ? z.infer<z.ZodObject<InputSchema>>
       : Record<string, unknown>
 
-function wrapInputSchema(schema: InputSchemaOption): ZodObjectSchema | undefined {
+export function wrapInputSchema(schema: InputSchemaOption): ZodObjectSchema | undefined {
   if (schema === undefined) return undefined
   if (typeof schema === 'object' && schema !== null && 'safeParse' in schema) {
     return schema as ZodObjectSchema
   }
   return z.object(schema)
+}
+
+export function payableToolAnnotations(
+  annotations?: SolvaPayToolAnnotations,
+): SolvaPayToolAnnotations {
+  return {
+    readOnlyHint: true,
+    openWorldHint: true,
+    ...annotations,
+  }
 }
 
 export interface RegisterPayableToolOptions<
@@ -98,11 +108,7 @@ export function registerPayableTool<
   const hasUi = Object.keys(mergedUi).length > 0
   const toolMeta: Record<string, unknown> = hasUi ? { ...baseMeta, ui: mergedUi } : { ...baseMeta }
 
-  const effectiveAnnotations: SolvaPayToolAnnotations = {
-    readOnlyHint: true,
-    openWorldHint: true,
-    ...annotations,
-  }
+  const effectiveAnnotations = payableToolAnnotations(annotations)
 
   const hasUiResource =
     hasUi && typeof (mergedUi as { resourceUri?: unknown }).resourceUri === 'string'

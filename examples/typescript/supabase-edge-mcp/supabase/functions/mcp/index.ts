@@ -100,6 +100,9 @@ const handler = createSolvaPayMcpFetch({
   // (Claude Desktop, MCPJam, Cursor); the SDK auto-bypasses for
   // ChatGPT so the iframe's transport tools stay callable.
   hideToolsByAudience: ['ui'],
+  onerror: error => {
+    console.error('[supabase-edge-mcp] MCP handler error', error)
+  },
   ...(demoToolsEnabled() ? { additionalTools: registerDemoTools } : {}),
 })
 

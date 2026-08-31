@@ -106,6 +106,37 @@ async fn get_mcp_returns_405() {
 }
 
 #[tokio::test]
+async fn unauthenticated_initialize_returns_200() {
+    let (addr, client) = spawn_app().await;
+    let response = client
+        .post(format!("http://{addr}/mcp"))
+        .header("content-type", "application/json")
+        .header("accept", "application/json, text/event-stream")
+        .body(
+            serde_json::to_vec(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-03-26",
+                    "capabilities": {},
+                    "clientInfo": { "name": "probe", "version": "0" }
+                }
+            }))
+            .unwrap(),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    let body: serde_json::Value = serde_json::from_str(&response.text().await.unwrap()).unwrap();
+    assert!(body.get("error").is_none(), "{body}");
+    assert!(
+        body["result"]["serverInfo"].is_object() || body["result"]["protocolVersion"].is_string()
+    );
+}
+
+#[tokio::test]
 async fn post_mcp_returns_200() {
     let (addr, client) = spawn_app().await;
     let response = client

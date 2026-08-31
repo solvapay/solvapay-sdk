@@ -12,15 +12,13 @@ async fn main() {
         .map(|w| w[1].as_str())
         .unwrap_or("hello");
     match run(!gate, message).await {
-        Ok(result) => {
-            match serde_json::to_string_pretty(&result) {
-                Ok(text) => println!("{text}"),
-                Err(err) => {
-                    eprintln!("{err}");
-                    std::process::exit(1);
-                }
+        Ok(result) => match serde_json::to_string_pretty(&result) {
+            Ok(text) => println!("{text}"),
+            Err(err) => {
+                eprintln!("{err}");
+                std::process::exit(1);
             }
-        }
+        },
         Err(err) => {
             eprintln!("{err}");
             std::process::exit(1);

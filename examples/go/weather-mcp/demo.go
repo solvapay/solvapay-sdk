@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 
-	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	solvapay "github.com/solvapay/solvapay-go"
 	solvapaymcp "github.com/solvapay/solvapay-go/mcp"
 )
@@ -17,18 +17,7 @@ type demoOptions struct {
 	city         string
 	tool         string
 	source       Source
-}
-
-type mcpServerRegistry struct {
-	server *mcpsdk.Server
-	client *solvapay.Client
-}
-
-func (r mcpServerRegistry) RegisterPayable(name string, opts solvapaymcp.Options) error {
-	if opts.Client == nil {
-		opts.Client = r.client
-	}
-	return solvapaymcp.RegisterPayableTool(r.server, name, opts)
+	args         map[string]any
 }
 
 func runDemo(ctx context.Context, opts demoOptions) (map[string]any, error) {
@@ -40,7 +29,7 @@ func runDemo(ctx context.Context, opts demoOptions) (map[string]any, error) {
 	if opts.withinLimits {
 		remaining = 5
 	}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/limits":
@@ -59,69 +48,87 @@ func runDemo(ctx context.Context, opts demoOptions) (map[string]any, error) {
 			http.NotFound(w, r)
 		}
 	}))
-	defer srv.Close()
+	defer backend.Close()
 
-	client, err := solvapay.NewClient(ctx, "sk_test", solvapay.WithBaseURL(srv.URL))
+	client, err := solvapay.NewClient(ctx, "sk_test", solvapay.WithBaseURL(backend.URL))
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = client.Close(ctx) }()
 
-	server := mcpsdk.NewServer(&mcpsdk.Implementation{Name: "weather-mcp", Version: "v0.0.1"}, nil)
 	src := opts.source
 	if src == nil {
-		src = newFixtureSource("fixtures/wttr-london.json")
+		src = newFixtureSource()
 	}
-	if err := registerTools(mcpServerRegistry{server: server, client: client}, src, "prd_demo",
+	server, err := newSolvaPayServer(ctx, client, "prd_demo", backend.URL, src,
 		func(context.Context, map[string]any) (string, error) {
 			return "cus_demo", nil
 		},
-	); err != nil {
-		return nil, err
-	}
-
-	t1, t2 := mcpsdk.NewInMemoryTransports()
-	if _, err := server.Connect(ctx, t1, nil); err != nil {
-		return nil, err
-	}
-	mcpClient := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "example-client", Version: "v0.0.1"}, nil)
-	session, err := mcpClient.Connect(ctx, t2, nil)
+	)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = session.Close() }()
+	handler := solvapaymcp.NewStreamableHandler(server)
 
-	result, err := session.CallTool(ctx, &mcpsdk.CallToolParams{
-		Name:      tool,
-		Arguments: map[string]any{"city": opts.city},
-	})
+	listedRec := postMCP(handler, "tools/list", map[string]any{}, nil)
+	listed, err := decodeJSONRPCResult(listedRec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tools/list: %w", err)
 	}
-	return projectCallToolResult(result)
+	tools, _ := listed["tools"].([]any)
+	names := make([]string, 0, len(tools))
+	for _, item := range tools {
+		toolItem, _ := item.(map[string]any)
+		if name, _ := toolItem["name"].(string); name != "" {
+			names = append(names, name)
+		}
+	}
+
+	arguments := opts.args
+	if arguments == nil {
+		arguments = map[string]any{"city": opts.city}
+	}
+	callRec := postMCP(handler, "tools/call", map[string]any{
+		"name":      tool,
+		"arguments": arguments,
+	}, map[string]string{"Authorization": demoBearer})
+	call, err := decodeJSONRPCResult(callRec)
+	if err != nil {
+		return nil, fmt.Errorf("tools/call: %w", err)
+	}
+	projected := projectCallToolMap(call)
+	projected["tools"] = names
+	return projected, nil
 }
 
-func projectCallToolResult(result *mcpsdk.CallToolResult) (map[string]any, error) {
-	raw, err := json.Marshal(result)
-	if err != nil {
-		return nil, err
+func decodeJSONRPCResult(rec *httptest.ResponseRecorder) (map[string]any, error) {
+	var parsed map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &parsed); err != nil {
+		return nil, fmt.Errorf("HTTP %d: %s", rec.Code, rec.Body.String())
 	}
-	var dumped map[string]any
-	if err := json.Unmarshal(raw, &dumped); err != nil {
-		return nil, err
+	if rpcErr, ok := parsed["error"].(map[string]any); ok {
+		return nil, fmt.Errorf("%v", rpcErr["message"])
 	}
-	projected := map[string]any{"content": dumped["content"]}
-	if sc, ok := dumped["structuredContent"]; ok {
+	result, _ := parsed["result"].(map[string]any)
+	if result == nil {
+		return nil, fmt.Errorf("HTTP %d missing result: %s", rec.Code, rec.Body.String())
+	}
+	return result, nil
+}
+
+func projectCallToolMap(result map[string]any) map[string]any {
+	projected := map[string]any{"content": result["content"]}
+	if sc, ok := result["structuredContent"]; ok {
 		projected["structuredContent"] = sc
 	}
-	if dumped["isError"] == true {
+	if result["isError"] == true {
 		projected["isError"] = true
-	} else if dumped["isError"] == false {
+	} else if result["isError"] == false {
 		projected["isError"] = false
-	} else if sc, ok := dumped["structuredContent"].(map[string]any); ok {
+	} else if sc, ok := result["structuredContent"].(map[string]any); ok {
 		if kind, _ := sc["kind"].(string); kind == "payment_required" || kind == "activation_required" {
 			projected["isError"] = false
 		}
 	}
-	return projected, nil
+	return projected
 }

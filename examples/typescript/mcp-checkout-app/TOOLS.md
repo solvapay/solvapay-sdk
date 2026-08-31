@@ -51,30 +51,22 @@ the full shape.
 
 ## Shell surface (what the UI renders)
 
-Four tabs render by default (About / Plan / Top up / Account). The
-legacy "Credits" and "Activate" tabs are folded away — Credits lives
-inside Account; the Activate picker is contextual inside Plan (free /
-trial / usage-based cards activate inline, paid cards mount Stripe
-Elements).
+The four-tab shell is deprecated. Each intent (`upgrade`,
+`manage_account`, `topup`) opens a single-purpose surface and returns
+to chat when done. `activate_plan` is text / picker bootstrap, not a
+fourth iframe tab.
 
-- **About** — product description (`product.name`, `product.description`,
-  `product.imageUrl`), a "Your activity" strip for returning customers
-  (four variants: PAYG balance, recurring-unlimited renew date,
-  recurring-metered usage bar, free usage bar), two contextual CTA
-  cards ("Choose a plan" / "Start free" / "Try without subscribing"),
-  and the slash-command hint list.
-- **Plan** — picker for cold-start customers; Current plan summary
-  with per-variant affordances for returning customers (resolved via
-  `resolvePlanActions`).
-- **Top up** — three-step flow with shared `BackLink` primitive
-  (Amount → Payment → Success; `← Back to my account` on each step).
-- **Account** — balance card, usage meter (when present), Current
-  plan + Manage account ↗ + seller details.
+- **Checkout (`upgrade`)** — plan picker for cold-start customers;
+  current-plan summary with per-variant actions for returning
+  customers (`resolvePlanActions`). Paid cards mount Stripe Elements.
+- **Account (`manage_account`)** — current plan, balance, usage meter
+  when present, payment method, cancel / reactivate, seller details.
+- **Top up (`topup`)** — amount → payment → success, with `BackLink`
+  to account.
 
-A dismissible first-run tour (gated by
-`localStorage['solvapay-mcp-tour-seen']`) anchors popovers to the
-three core tabs on first launch; a `?` button in the header replays
-it.
+Product description lives in tool descriptions, the assistant's text
+response, and `docs://solvapay/overview.md` — not in a dedicated About
+surface. There is no first-run tour.
 
 ## Host capability matrix
 
@@ -101,8 +93,8 @@ Enabled when `DEMO_TOOLS !== 'false'` — see
 | `get_market_quote`   | Returns a deterministic fake market quote                                                          | Second tool so you can show the paywall firing on something other than `search_knowledge` |
 | `query_sales_trends` | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low | Exercise the `ctx.respond()` nudge flow — inline upsell strip on the success response     |
 
-All three are wrapped with `solvaPay.payable().mcp()` via
-`registerPayable` so the credit balance decrements per call, and the
+All three are wrapped with `registerPayable` (which builds
+`buildPayableHandler`) so the credit balance decrements per call, and the
 paywall bootstrap auto-opens when credits hit zero.
 
 All three use the `(args, ctx) => ctx.respond(data, options?)` handler

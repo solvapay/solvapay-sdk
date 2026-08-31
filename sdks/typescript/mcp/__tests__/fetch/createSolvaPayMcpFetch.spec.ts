@@ -16,6 +16,7 @@
 import { readFile } from 'node:fs/promises'
 import * as path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import { MCP_TOOL_NAMES, SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
@@ -374,6 +375,72 @@ describe('createSolvaPayMcpFetch', () => {
     expect(call.json.jsonrpc).toBe('2.0')
     expect(call.json.id).toBe(4)
     expect(call.json.result ?? call.json.error).toBeDefined()
+  })
+
+  it('advertises registerPayable descriptors on the engine payableTools path', async () => {
+    const mcpDispatch = vi.fn(async () => ({
+      kind: 'rpc',
+      rpc: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: { tools: [] },
+      },
+    }))
+    const solvaPay = createSolvaPay({
+      apiClient: {
+        checkLimits: vi.fn().mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' }),
+        trackUsage: vi.fn().mockResolvedValue(undefined),
+        mcpDispatch,
+      } as unknown as SolvaPayClient,
+    })
+    const handler = createSolvaPayMcpFetch({
+      solvaPay,
+      productRef,
+      resourceUri,
+      readHtml: async () => '<html></html>',
+      publicBaseUrl,
+      apiBaseUrl,
+      requireAuth: false,
+      additionalTools: ({ registerPayable }) => {
+        registerPayable('search_knowledge', {
+          title: 'Search knowledge',
+          description: 'Find docs',
+          schema: { query: z.string() },
+          handler: async () => ({ ok: true }),
+        })
+      },
+    })
+
+    const list = await callRpc<{ tools: Array<{ name: string }> }>(handler, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/list',
+      params: {},
+    })
+    expect(list.status).toBe(200)
+    expect(mcpDispatch).toHaveBeenCalled()
+    const payableTools = (mcpDispatch.mock.calls[0]?.[0] as { config: { payableTools: unknown } })
+      .config.payableTools
+    expect(Array.isArray(payableTools)).toBe(true)
+    const search = (payableTools as unknown[]).find(tool => {
+      return (
+        typeof tool === 'object' &&
+        tool !== null &&
+        (tool as { name?: string }).name === 'search_knowledge'
+      )
+    })
+    expect(typeof search).not.toBe('string')
+    expect(search).toEqual(
+      expect.objectContaining({
+        name: 'search_knowledge',
+        title: 'Search knowledge',
+        description: 'Find docs',
+        inputSchema: expect.objectContaining({
+          type: 'object',
+          properties: expect.objectContaining({ query: expect.anything() }),
+        }),
+      }),
+    )
   })
 
   it('invokes the additionalTools hook with { server, solvaPay, resourceUri, productRef }', async () => {

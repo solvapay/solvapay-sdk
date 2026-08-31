@@ -18,7 +18,11 @@ import {
 
 // SDK v2 is stateless: no session map, no `initialize` routing. The factory
 // runs per request and `createMcpHandler` owns the transport lifecycle.
-const mcpHandler = createMcpHandler(() => createMCPServer())
+const mcpHandler = createMcpHandler(() => createMCPServer(), {
+  onerror: error => {
+    console.error('[mcp-oauth-bridge] MCP handler error', error)
+  },
+})
 
 const app = express()
 // Use raw body for signature verification before JSON middleware transforms it.
