@@ -11,7 +11,7 @@
     "lint": "pnpm exec eslint . --ignore-pattern .next --ignore-pattern next-env.d.ts --ignore-pattern postcss.config.mjs --ignore-pattern .agents --ignore-pattern .claude"
   },
   "dependencies": {
-    "@auth0/nextjs-auth0": "^4.22.0",
+    "@auth0/nextjs-auth0": "^4.28.0",
     "@radix-ui/react-slot": "^1.1.2",
     "@solvapay/auth": "workspace:^",
     "@solvapay/core": "workspace:^",
