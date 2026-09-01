@@ -6,12 +6,8 @@
 
 import type { components, operations } from './generated'
 
-/** SDK purchase row. Generated from OpenAPI `SdkPurchaseResponse`, plus
- * fields the wire sends that the local snapshot DTO has not listed yet. */
-export type PurchaseInfo = Omit<components['schemas']['SdkPurchaseResponse'], 'planSnapshot'> & {
-  planRef?: string
-  planSnapshot?: (components['schemas']['SdkPlanSnapshotDto'] & { isMetered?: boolean }) | null
-}
+/** SDK purchase row. Generated from the OpenAPI `SdkPurchaseResponse` schema. */
+export type PurchaseInfo = components['schemas']['SdkPurchaseResponse']
 
 export type AttachBusinessDetailsParams = {
   paymentIntentId: string

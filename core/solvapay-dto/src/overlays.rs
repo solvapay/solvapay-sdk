@@ -454,12 +454,12 @@ pub struct DisableAutoRechargeSdkResponse {
     pub success: bool,
 }
 
-/// SDK overlay extending `PurchaseInfo`.
+/// SDK overlay extending `SdkPurchaseResponse`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EnrichedPurchaseInfo {
     /// Flattened base DTO fields.
     #[serde(flatten)]
-    pub base: schemas::PurchaseInfo,
+    pub base: schemas::SdkPurchaseResponse,
     /// Overlay field.
     #[serde(rename = "nextBillingDate")]
     #[serde(default, skip_serializing_if = "Option::is_none")]

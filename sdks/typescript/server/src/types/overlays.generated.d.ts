@@ -327,9 +327,9 @@ export type DisableAutoRechargeSdkResponse = {
 }
 
 /**
- * SDK overlay extending `PurchaseInfo`.
+ * SDK overlay extending `SdkPurchaseResponse`.
  */
-export type EnrichedPurchaseInfo = components['schemas']['PurchaseInfo'] & {
+export type EnrichedPurchaseInfo = components['schemas']['SdkPurchaseResponse'] & {
   nextBillingDate?: string
   paidAt?: string
 }

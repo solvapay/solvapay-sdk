@@ -581,9 +581,9 @@ async def _resolve_customer_ref(
             "argsCustomerRef": raw if isinstance(raw, str) else None,
         },
     )
-    if isinstance(result, str) and result:
-        return result
-    return "anonymous"
+    if isinstance(result, str) and result.strip() and result.strip() != "anonymous":
+        return result.strip()
+    raise MissingCustomerRefError()
 
 
 def _format_gate(message: str, gate: dict[str, object]) -> dict[str, object]:

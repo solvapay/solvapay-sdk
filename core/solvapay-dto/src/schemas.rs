@@ -2603,6 +2603,9 @@ pub enum CreditDebitSkippedResponseReason {
     /// Wire value `no_product_ref`.
     #[serde(rename = "no_product_ref")]
     NoProductRef,
+    /// Wire value `plan_billed_at_period_end`.
+    #[serde(rename = "plan_billed_at_period_end")]
+    PlanBilledAtPeriodEnd,
     /// Wire value `plan_not_credit_based`.
     #[serde(rename = "plan_not_credit_based")]
     PlanNotCreditBased,
@@ -2667,6 +2670,9 @@ pub enum CustomerBalanceDisplayDtoRateSource {
     /// Wire value `fallback`.
     #[serde(rename = "fallback")]
     Fallback,
+    /// Wire value `funding`.
+    #[serde(rename = "funding")]
+    Funding,
     /// Wire value `parity`.
     #[serde(rename = "parity")]
     Parity,
@@ -2719,7 +2725,7 @@ pub struct CustomerResponse {
     /// Active purchases
     #[serde(rename = "purchases")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub purchases: Option<Vec<PurchaseInfo>>,
+    pub purchases: Option<Vec<SdkPurchaseResponse>>,
     /// Customer reference identifier
     #[serde(rename = "reference")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3869,10 +3875,18 @@ pub struct OneTimePurchaseInfo {
     #[serde(rename = "completedAt")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub completed_at: Option<String>,
+    /// Created at
+    #[serde(rename = "createdAt")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
     /// ISO 4217 currency code of the customer-facing charge
     #[serde(rename = "currency")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
+    /// Customer reference
+    #[serde(rename = "customerRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub customer_ref: Option<String>,
     /// Product reference
     #[serde(rename = "productRef")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4223,7 +4237,7 @@ pub struct ProcessPaymentSucceededRecurring {
     /// Generated wire DTO.
     #[serde(rename = "purchase")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub purchase: Option<PurchaseInfo>,
+    pub purchase: Option<SdkPurchaseResponse>,
     /// Generated wire DTO.
     #[serde(rename = "status")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4286,67 +4300,6 @@ pub struct ProductConfigDto {
     #[serde(rename = "validityPeriod")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub validity_period: Option<f64>,
-}
-
-/// Generated wire DTO.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PurchaseInfo {
-    /// Amount in USD cents (normalised for aggregation)
-    #[serde(rename = "amount")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount: Option<f64>,
-    /// Reason for cancellation
-    #[serde(rename = "cancellationReason")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cancellation_reason: Option<String>,
-    /// When purchase was cancelled
-    #[serde(rename = "cancelledAt")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub cancelled_at: Option<String>,
-    /// ISO 4217 currency code of the customer-facing charge
-    #[serde(rename = "currency")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub currency: Option<String>,
-    /// End date of purchase
-    #[serde(rename = "endDate")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub end_date: Option<String>,
-    /// Exchange rate from original currency to USD
-    #[serde(rename = "exchangeRate")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub exchange_rate: Option<f64>,
-    /// Original amount in the payment currency (minor units)
-    #[serde(rename = "originalAmount")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub original_amount: Option<f64>,
-    /// Plan reference from the plan snapshot, for reliable plan matching
-    #[serde(rename = "planRef")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub plan_ref: Option<String>,
-    /// Snapshot of the plan at time of purchase
-    #[serde(rename = "planSnapshot")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub plan_snapshot: Option<BTreeMap<String, Value>>,
-    /// Product name
-    #[serde(rename = "productName")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub product_name: Option<String>,
-    /// Product reference
-    #[serde(rename = "productRef")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub product_ref: Option<String>,
-    /// Purchase reference
-    #[serde(rename = "reference")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub reference: Option<String>,
-    /// Start date
-    #[serde(rename = "startDate")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub start_date: Option<String>,
-    /// Purchase status
-    #[serde(rename = "status")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
 }
 
 /// Generated wire DTO.
@@ -4813,6 +4766,10 @@ pub struct SdkPlanSnapshotDto {
     #[serde(rename = "features")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub features: Option<BTreeMap<String, Value>>,
+    /// Whether the frozen plan counts usage (prices per unit, or has a limit). Shipped clients read this to show an allowance.
+    #[serde(rename = "isMetered")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_metered: Option<bool>,
     /// Plan name captured at purchase time
     #[serde(rename = "name")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4924,11 +4881,11 @@ pub struct SdkPurchaseResponse {
     #[serde(rename = "billingCycle")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub billing_cycle: Option<SdkPurchaseResponseBillingCycle>,
-    /// Cancellation reason
+    /// Reason for cancellation
     #[serde(rename = "cancellationReason")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cancellation_reason: Option<String>,
-    /// Cancelled at
+    /// When purchase was cancelled
     #[serde(rename = "cancelledAt")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cancelled_at: Option<String>,
@@ -4936,7 +4893,7 @@ pub struct SdkPurchaseResponse {
     #[serde(rename = "createdAt")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
-    /// Original payment currency code
+    /// ISO 4217 currency code of the customer-facing charge
     #[serde(rename = "currency")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
@@ -4948,7 +4905,7 @@ pub struct SdkPurchaseResponse {
     #[serde(rename = "customerRef")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub customer_ref: Option<String>,
-    /// End date
+    /// End date of purchase
     #[serde(rename = "endDate")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub end_date: Option<String>,
@@ -4956,7 +4913,7 @@ pub struct SdkPurchaseResponse {
     #[serde(rename = "exchangeRate")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exchange_rate: Option<f64>,
-    /// Is recurring
+    /// Whether the purchase is recurring
     #[serde(rename = "isRecurring")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_recurring: Option<bool>,
@@ -4972,7 +4929,7 @@ pub struct SdkPurchaseResponse {
     #[serde(rename = "origin")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub origin: Option<SdkPurchaseResponseOrigin>,
-    /// Original amount in the payment currency (cents/pence)
+    /// Original amount in the payment currency (minor units)
     #[serde(rename = "originalAmount")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub original_amount: Option<f64>,
@@ -4980,7 +4937,11 @@ pub struct SdkPurchaseResponse {
     #[serde(rename = "paidAt")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub paid_at: Option<String>,
-    /// Plan snapshot at time of purchase (null for credit topups)
+    /// Plan reference from the plan snapshot, for reliable plan matching
+    #[serde(rename = "planRef")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_ref: Option<String>,
+    /// Snapshot of the plan at time of purchase
     #[serde(rename = "planSnapshot")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plan_snapshot: Option<SdkPlanSnapshotDto>,
@@ -5975,7 +5936,7 @@ pub struct UsageBillingDto {
     #[serde(rename = "overageCost")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub overage_cost: Option<f64>,
-    /// Units exceeding the plan limit
+    /// Units exceeding the plan included amount
     #[serde(rename = "overageUnits")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub overage_units: Option<f64>,

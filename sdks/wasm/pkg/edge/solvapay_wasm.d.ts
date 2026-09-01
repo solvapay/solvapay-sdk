@@ -474,7 +474,7 @@ export function isZeroDecimalCurrency(args_json: string): string;
 export function makeResponseResult(args_json: string): string;
 
 /**
- * Binding for `mapRouteError` (`kind`: `"solvapay"` | `"error"` | `"unknown"`).
+ * Binding for `mapRouteError` (`kind`: `"solvapay"` | `"paywall"` | `"error"` | `"unknown"`).
  */
 export function mapRouteError(args_json: string): string;
 
@@ -554,6 +554,11 @@ export function resolveAuthenticatedUser(args_json: string): string;
 export function resolveCheckLimitsParams(args_json: string): string;
 
 /**
+ * Binding for `resolveCustomerRef`.
+ */
+export function resolveCustomerRef(args_json: string): string;
+
+/**
  * Binding for `resolveFallbackGateLimits`.
  */
 export function resolveFallbackGateLimits(args_json: string): string;
@@ -627,6 +632,11 @@ export function tierMeters(args_json: string): string;
  * Binding for `toMajorUnits`.
  */
 export function toMajorUnits(args_json: string): string;
+
+/**
+ * Binding for `topupProcessNext`.
+ */
+export function topupProcessNext(args_json: string): string;
 
 /**
  * Binding for `trialDays`.
@@ -791,6 +801,7 @@ export interface InitOutput {
     readonly requireProductRef: (a: number, b: number) => [number, number];
     readonly resolveAuthenticatedUser: (a: number, b: number) => [number, number];
     readonly resolveCheckLimitsParams: (a: number, b: number) => [number, number];
+    readonly resolveCustomerRef: (a: number, b: number) => [number, number];
     readonly resolveFallbackGateLimits: (a: number, b: number) => [number, number];
     readonly resolveProductRef: (a: number, b: number) => [number, number];
     readonly resolvePurchaseCustomerRef: (a: number, b: number) => [number, number];
@@ -806,6 +817,7 @@ export interface InitOutput {
     readonly tierBands: (a: number, b: number) => [number, number];
     readonly tierMeters: (a: number, b: number) => [number, number];
     readonly toMajorUnits: (a: number, b: number) => [number, number];
+    readonly topupProcessNext: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
     readonly usageRate: (a: number, b: number) => [number, number];
     readonly validateActivatePlanParams: (a: number, b: number) => [number, number];

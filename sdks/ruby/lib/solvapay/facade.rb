@@ -132,6 +132,12 @@ module SolvaPay
       Payable.new(self, product: product, usage_type: usage_type)
     end
 
+    # Record a usage event through the same retry path as `payable` handlers.
+    # @param params [Hash] Track-usage request body.
+    def track_usage(params:)
+      post_usage_request(params)
+    end
+
     private
 
     def apply_gate_cache(cache)

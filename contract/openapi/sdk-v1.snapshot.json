@@ -2100,7 +2100,8 @@
               "no_product_ref",
               "customer_not_found",
               "no_active_purchase",
-              "plan_not_credit_based"
+              "plan_not_credit_based",
+              "plan_billed_at_period_end"
             ],
             "example": "duplicate",
             "type": "string"
@@ -2175,7 +2176,8 @@
             "enum": [
               "parity",
               "db",
-              "fallback"
+              "fallback",
+              "funding"
             ],
             "example": "parity",
             "type": "string"
@@ -2256,7 +2258,7 @@
           "purchases": {
             "description": "Active purchases",
             "items": {
-              "$ref": "#/components/schemas/PurchaseInfo"
+              "$ref": "#/components/schemas/SdkPurchaseResponse"
             },
             "type": "array"
           },
@@ -2591,6 +2593,9 @@
             "type": "string"
           },
           "authHeaderName": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9!#$%&'*+\\-.^_`|~]+$",
             "type": "string"
           },
           "description": {
@@ -3215,9 +3220,18 @@
             "example": "2025-10-27T10:00:00Z",
             "type": "string"
           },
+          "createdAt": {
+            "description": "Created at",
+            "type": "string"
+          },
           "currency": {
             "description": "ISO 4217 currency code of the customer-facing charge",
             "example": "USD",
+            "type": "string"
+          },
+          "customerRef": {
+            "description": "Customer reference",
+            "example": "cus_3C4D5E6F",
             "type": "string"
           },
           "productRef": {
@@ -3233,9 +3247,11 @@
         },
         "required": [
           "reference",
+          "customerRef",
           "amount",
           "currency",
-          "completedAt"
+          "completedAt",
+          "createdAt"
         ],
         "type": "object"
       },
@@ -3450,7 +3466,7 @@
       "ProcessPaymentSucceededRecurring": {
         "properties": {
           "purchase": {
-            "$ref": "#/components/schemas/PurchaseInfo"
+            "$ref": "#/components/schemas/SdkPurchaseResponse"
           },
           "status": {
             "enum": [
@@ -3511,88 +3527,6 @@
             "type": "number"
           }
         },
-        "type": "object"
-      },
-      "PurchaseInfo": {
-        "properties": {
-          "amount": {
-            "description": "Amount in USD cents (normalised for aggregation)",
-            "example": 9900,
-            "type": "number"
-          },
-          "cancellationReason": {
-            "description": "Reason for cancellation",
-            "example": "Customer request",
-            "type": "string"
-          },
-          "cancelledAt": {
-            "description": "When purchase was cancelled",
-            "example": "2025-10-28T10:00:00Z",
-            "type": "string"
-          },
-          "currency": {
-            "description": "ISO 4217 currency code of the customer-facing charge",
-            "example": "GBP",
-            "type": "string"
-          },
-          "endDate": {
-            "description": "End date of purchase",
-            "example": "2025-11-27T10:00:00Z",
-            "type": "string"
-          },
-          "exchangeRate": {
-            "description": "Exchange rate from original currency to USD",
-            "example": 1.32,
-            "type": "number"
-          },
-          "originalAmount": {
-            "description": "Original amount in the payment currency (minor units)",
-            "example": 7500,
-            "type": "number"
-          },
-          "planRef": {
-            "description": "Plan reference from the plan snapshot, for reliable plan matching",
-            "example": "pln_abc123",
-            "type": "string"
-          },
-          "planSnapshot": {
-            "description": "Snapshot of the plan at time of purchase",
-            "type": "object"
-          },
-          "productName": {
-            "description": "Product name",
-            "example": "API Gateway Manager",
-            "type": "string"
-          },
-          "productRef": {
-            "description": "Product reference",
-            "example": "prd_abc123",
-            "type": "string"
-          },
-          "reference": {
-            "description": "Purchase reference",
-            "example": "pur_1A2B3C4D",
-            "type": "string"
-          },
-          "startDate": {
-            "description": "Start date",
-            "example": "2025-10-27T10:00:00Z",
-            "type": "string"
-          },
-          "status": {
-            "description": "Purchase status",
-            "example": "active",
-            "type": "string"
-          }
-        },
-        "required": [
-          "reference",
-          "productName",
-          "status",
-          "startDate",
-          "amount",
-          "currency"
-        ],
         "type": "object"
       },
       "PutAutoRechargeSdkDto": {
@@ -4117,6 +4051,11 @@
             "nullable": true,
             "type": "object"
           },
+          "isMetered": {
+            "description": "Whether the frozen plan counts usage (prices per unit, or has a limit). Shipped clients read this to show an allowance.",
+            "example": true,
+            "type": "boolean"
+          },
           "name": {
             "description": "Plan name captured at purchase time",
             "example": "Pro Monthly",
@@ -4283,11 +4222,13 @@
             "type": "string"
           },
           "cancellationReason": {
-            "description": "Cancellation reason",
+            "description": "Reason for cancellation",
+            "example": "Customer request",
             "type": "string"
           },
           "cancelledAt": {
-            "description": "Cancelled at",
+            "description": "When purchase was cancelled",
+            "example": "2025-10-28T10:00:00Z",
             "type": "string"
           },
           "createdAt": {
@@ -4295,7 +4236,7 @@
             "type": "string"
           },
           "currency": {
-            "description": "Original payment currency code",
+            "description": "ISO 4217 currency code of the customer-facing charge",
             "example": "GBP",
             "type": "string"
           },
@@ -4310,16 +4251,17 @@
             "type": "string"
           },
           "endDate": {
-            "description": "End date",
+            "description": "End date of purchase",
+            "example": "2025-11-27T10:00:00Z",
             "type": "string"
           },
           "exchangeRate": {
             "description": "Exchange rate from original currency to USD",
-            "example": 1.3082,
+            "example": 1.32,
             "type": "number"
           },
           "isRecurring": {
-            "description": "Is recurring",
+            "description": "Whether the purchase is recurring",
             "example": true,
             "type": "boolean"
           },
@@ -4346,12 +4288,17 @@
             "type": "string"
           },
           "originalAmount": {
-            "description": "Original amount in the payment currency (cents/pence)",
-            "example": 10000,
+            "description": "Original amount in the payment currency (minor units)",
+            "example": 7500,
             "type": "number"
           },
           "paidAt": {
             "description": "Paid at timestamp",
+            "type": "string"
+          },
+          "planRef": {
+            "description": "Plan reference from the plan snapshot, for reliable plan matching",
+            "example": "pln_abc123",
             "type": "string"
           },
           "planSnapshot": {
@@ -4360,7 +4307,7 @@
                 "$ref": "#/components/schemas/SdkPlanSnapshotDto"
               }
             ],
-            "description": "Plan snapshot at time of purchase (null for credit topups)"
+            "description": "Snapshot of the plan at time of purchase"
           },
           "productName": {
             "description": "Product name",
@@ -4369,7 +4316,7 @@
           },
           "productRef": {
             "description": "Product reference",
-            "example": "prd_1A2B3C4D",
+            "example": "prd_abc123",
             "type": "string"
           },
           "reference": {
@@ -4384,6 +4331,7 @@
           },
           "startDate": {
             "description": "Start date",
+            "example": "2025-10-27T10:00:00Z",
             "type": "string"
           },
           "status": {
@@ -4404,9 +4352,9 @@
           "reference",
           "customerRef",
           "status",
+          "startDate",
           "amount",
           "currency",
-          "startDate",
           "isRecurring",
           "createdAt"
         ],
@@ -5099,7 +5047,7 @@
             "type": "number"
           },
           "overageUnits": {
-            "description": "Units exceeding the plan limit",
+            "description": "Units exceeding the plan included amount",
             "example": 0,
             "type": "number"
           },

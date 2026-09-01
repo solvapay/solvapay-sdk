@@ -104,7 +104,7 @@ pub use schemas::{
     ProcessPaymentSucceededOneTimeStatus, ProcessPaymentSucceededOneTimeType_,
     ProcessPaymentSucceededRecurring, ProcessPaymentSucceededRecurringStatus,
     ProcessPaymentSucceededRecurringType_, ProcessPaymentTimeout, ProcessPaymentTimeoutStatus,
-    ProductConfigDto, PurchaseInfo, PutAutoRechargeSdkDto, PutAutoRechargeSdkDtoTriggerType,
+    ProductConfigDto, PutAutoRechargeSdkDto, PutAutoRechargeSdkDtoTriggerType,
     RecordBulkMeterEventsZodDto, RecordBulkMeterEventsZodDtoEventsItem, RecordMeterEventZodDto,
     SaveAutoRechargeResponse, SdkMerchantResponseDto, SdkPaymentIntentListItem,
     SdkPaymentIntentListItemStatus, SdkPaymentIntentListResponse, SdkPaymentIntentResponse,

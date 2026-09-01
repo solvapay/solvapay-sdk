@@ -118,7 +118,9 @@ describe('<McpApp> with no native core binding', () => {
     render(<McpApp app={app} />)
 
     expect(await screen.findByText('Unable to load SolvaPay')).toBeTruthy()
-    expect(screen.getByText('core sync API not installed (formatPrice)')).toBeTruthy()
+    expect(
+      screen.getByText('core sync API not installed (creditsToDisplayMinorUnits)'),
+    ).toBeTruthy()
   })
 
   it('should surface a core-binding error when checkout view needs formatPrice', async () => {

@@ -67,7 +67,7 @@ export interface SolvaPayClientGenerated {
  * @param params Cancel request identifying the purchase.
  * @returns Updated purchase info after cancellation.
  */
-  cancelPurchase?(params: overlays.CancelPurchaseParams): Promise<PurchaseInfo>
+  cancelPurchase?(params: overlays.CancelPurchaseParams): Promise<components['schemas']['SdkPurchaseResponse']>
 /**
  * Check remaining usage/spend limits for a customer against a product's plan.
  * @param params Limits request including customer and product refs.
@@ -244,7 +244,7 @@ export interface SolvaPayClientGenerated {
  * @param params Reactivate request identifying the purchase.
  * @returns Updated purchase info after reactivation.
  */
-  reactivatePurchase?(params: overlays.ReactivatePurchaseParams): Promise<PurchaseInfo>
+  reactivatePurchase?(params: overlays.ReactivatePurchaseParams): Promise<components['schemas']['SdkPurchaseResponse']>
 /**
  * Create or update auto-recharge configuration for a customer.
  * @param params Auto-recharge settings to persist.

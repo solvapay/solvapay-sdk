@@ -1426,7 +1426,7 @@ export interface components {
              * @example duplicate
              * @enum {string}
              */
-            reason: "duplicate" | "no_product_ref" | "customer_not_found" | "no_active_purchase" | "plan_not_credit_based";
+            reason: "duplicate" | "no_product_ref" | "customer_not_found" | "no_active_purchase" | "plan_not_credit_based" | "plan_billed_at_period_end";
         };
         CreditDebitSuccessResponse: {
             /**
@@ -1475,7 +1475,7 @@ export interface components {
              * @example parity
              * @enum {string}
              */
-            rateSource: "parity" | "db" | "fallback";
+            rateSource: "parity" | "db" | "fallback" | "funding";
         };
         CustomerBalanceResponse: {
             /**
@@ -1523,7 +1523,7 @@ export interface components {
              */
             name: string;
             /** @description Active purchases */
-            purchases?: components["schemas"]["PurchaseInfo"][];
+            purchases?: components["schemas"]["SdkPurchaseResponse"][];
             /**
              * Customer reference identifier
              * @example cus_3c4d5e6f7g8h
@@ -1860,11 +1860,18 @@ export interface components {
              * @example 2025-10-27T10:00:00Z
              */
             completedAt: string;
+            /** @description Created at */
+            createdAt: string;
             /**
              * ISO 4217 currency code of the customer-facing charge
              * @example USD
              */
             currency: string;
+            /**
+             * Customer reference
+             * @example cus_3C4D5E6F
+             */
+            customerRef: string;
             /**
              * Product reference
              * @example prd_abc123
@@ -1992,7 +1999,7 @@ export interface components {
             type: "one-time";
         };
         ProcessPaymentSucceededRecurring: {
-            purchase: components["schemas"]["PurchaseInfo"];
+            purchase: components["schemas"]["SdkPurchaseResponse"];
             /**
              * discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -2029,75 +2036,6 @@ export interface components {
              * @example 30
              */
             validityPeriod?: number;
-        };
-        PurchaseInfo: {
-            /**
-             * Amount in USD cents (normalised for aggregation)
-             * @example 9900
-             */
-            amount: number;
-            /**
-             * Reason for cancellation
-             * @example Customer request
-             */
-            cancellationReason?: string;
-            /**
-             * When purchase was cancelled
-             * @example 2025-10-28T10:00:00Z
-             */
-            cancelledAt?: string;
-            /**
-             * ISO 4217 currency code of the customer-facing charge
-             * @example GBP
-             */
-            currency: string;
-            /**
-             * End date of purchase
-             * @example 2025-11-27T10:00:00Z
-             */
-            endDate?: string;
-            /**
-             * Exchange rate from original currency to USD
-             * @example 1.32
-             */
-            exchangeRate?: number;
-            /**
-             * Original amount in the payment currency (minor units)
-             * @example 7500
-             */
-            originalAmount?: number;
-            /**
-             * Plan reference from the plan snapshot, for reliable plan matching
-             * @example pln_abc123
-             */
-            planRef?: string;
-            /** @description Snapshot of the plan at time of purchase */
-            planSnapshot?: Record<string, never>;
-            /**
-             * Product name
-             * @example API Gateway Manager
-             */
-            productName: string;
-            /**
-             * Product reference
-             * @example prd_abc123
-             */
-            productRef?: string;
-            /**
-             * Purchase reference
-             * @example pur_1A2B3C4D
-             */
-            reference: string;
-            /**
-             * Start date
-             * @example 2025-10-27T10:00:00Z
-             */
-            startDate: string;
-            /**
-             * Purchase status
-             * @example active
-             */
-            status: string;
         };
         PutAutoRechargeSdkDto: {
             currency: string;
@@ -2409,6 +2347,11 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /**
+             * Whether the frozen plan counts usage (prices per unit, or has a limit). Shipped clients read this to show an allowance.
+             * @example true
+             */
+            isMetered?: boolean;
+            /**
              * Plan name captured at purchase time
              * @example Pro Monthly
              */
@@ -2517,14 +2460,20 @@ export interface components {
              * @enum {string}
              */
             billingCycle?: "weekly" | "monthly" | "quarterly" | "yearly";
-            /** @description Cancellation reason */
+            /**
+             * Reason for cancellation
+             * @example Customer request
+             */
             cancellationReason?: string;
-            /** @description Cancelled at */
+            /**
+             * When purchase was cancelled
+             * @example 2025-10-28T10:00:00Z
+             */
             cancelledAt?: string;
             /** @description Created at */
             createdAt: string;
             /**
-             * Original payment currency code
+             * ISO 4217 currency code of the customer-facing charge
              * @example GBP
              */
             currency: string;
@@ -2538,15 +2487,18 @@ export interface components {
              * @example cus_3C4D5E6F
              */
             customerRef: string;
-            /** @description End date */
+            /**
+             * End date of purchase
+             * @example 2025-11-27T10:00:00Z
+             */
             endDate?: string;
             /**
              * Exchange rate from original currency to USD
-             * @example 1.3082
+             * @example 1.32
              */
             exchangeRate?: number;
             /**
-             * Is recurring
+             * Whether the purchase is recurring
              * @example true
              */
             isRecurring: boolean;
@@ -2563,13 +2515,18 @@ export interface components {
              */
             origin?: "paid" | "free_default" | "manual" | "one_time" | "credit_topup" | "admin_assignment";
             /**
-             * Original amount in the payment currency (cents/pence)
-             * @example 10000
+             * Original amount in the payment currency (minor units)
+             * @example 7500
              */
             originalAmount?: number;
             /** @description Paid at timestamp */
             paidAt?: string;
-            /** @description Plan snapshot at time of purchase (null for credit topups) */
+            /**
+             * Plan reference from the plan snapshot, for reliable plan matching
+             * @example pln_abc123
+             */
+            planRef?: string;
+            /** @description Snapshot of the plan at time of purchase */
             planSnapshot?: components["schemas"]["SdkPlanSnapshotDto"];
             /**
              * Product name
@@ -2578,7 +2535,7 @@ export interface components {
             productName?: string;
             /**
              * Product reference
-             * @example prd_1A2B3C4D
+             * @example prd_abc123
              */
             productRef?: string;
             /**
@@ -2591,7 +2548,10 @@ export interface components {
              * @example false
              */
             requiresPayment?: boolean;
-            /** @description Start date */
+            /**
+             * Start date
+             * @example 2025-10-27T10:00:00Z
+             */
             startDate: string;
             /**
              * Purchase status
@@ -2776,7 +2736,7 @@ export interface components {
              */
             overageCost: number;
             /**
-             * Units exceeding the plan limit
+             * Units exceeding the plan included amount
              * @example 0
              */
             overageUnits: number;

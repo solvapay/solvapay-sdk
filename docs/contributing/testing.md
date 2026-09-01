@@ -204,14 +204,14 @@ Do not also run `stripe listen` — that duplicates every event.
 pnpm run dev
 
 # from sdks/typescript/server
-ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
+ENABLE_WEBHOOK_TESTS=true pnpm --filter @solvapay/server test:integration:payment
 ```
 
 **Fallback (no tunnels):** forward with the Stripe CLI to payment-service.
 
 ```bash
 stripe listen --forward-to localhost:3003/v1/webhooks/stripe
-ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
+ENABLE_WEBHOOK_TESTS=true pnpm --filter @solvapay/server test:integration:payment
 ```
 
 ## CI expectations

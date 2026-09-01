@@ -1136,7 +1136,7 @@ operations:
       c: cancelPurchase
     optionalOnClient: true
     request: CancelPurchaseRequest
-    response: PurchaseInfo
+    response: SdkPurchaseResponse
     overlays: [CancelPurchaseParams]
     normalization:
       - 'extract nested { purchase } when present; else top-level object with
@@ -1186,7 +1186,7 @@ operations:
       rust: reactivate_purchase
       c: reactivatePurchase
     optionalOnClient: true
-    response: PurchaseInfo
+    response: SdkPurchaseResponse
     overlays: [ReactivatePurchaseParams]
     normalization:
       - 'extract nested { purchase } when present; else top-level object with
@@ -2266,7 +2266,7 @@ overlays:
         required: true
   EnrichedPurchaseInfo:
     kind: extendDto
-    base: PurchaseInfo
+    base: SdkPurchaseResponse
     fields:
       paidAt:
         type: string

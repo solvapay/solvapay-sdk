@@ -638,9 +638,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
         console.log('\n⏭️  Skipping E2E webhook test (webhook delivery required)')
         console.log('   Stripe must deliver events to the local platform.')
         console.log('   Preferred: platform `pnpm run dev` with ngrok.yml (no stripe listen).')
-        console.log(
-          '   Fallback: stripe listen --forward-to localhost:3003/v1/webhooks/stripe',
-        )
+        console.log('   Fallback: stripe listen --forward-to localhost:3003/v1/webhooks/stripe')
         console.log('   Then: ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment')
         console.log('   See docs/contributing/testing.md.\n')
         return
