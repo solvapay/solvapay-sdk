@@ -292,7 +292,7 @@ Hand-written and never moved to Rust:
 - `@solvapay/auth`, `@solvapay/next`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init`
 - MCP SDK registration glue and transport (OAuth bridge, bearer, SSE/session).
   Descriptor text, CSP merge, narration (including virtual-tool markdown),
-  and the default `ctx.gate()` stub are Rust ops. Virtual-tool *registration*
+  and the default `ctx.gate()` stub are Rust ops. Virtual-tool _registration_
   remains TypeScript-only by design — the other languages would still need
   host glue even with shared text.
   The hand-written `registerPayable` / `ctx` surface is pinned by

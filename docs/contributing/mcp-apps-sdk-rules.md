@@ -73,6 +73,7 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 ### Demo
 
 - **Demo is not the SDK.** The hero demo uses the Vite-build path because "I built this UI" is a stronger engineering story. Merchants use the bundled-HTML path because it's the 60-second onboarding.
+- **Widget copies are deliberate.** The four TypeScript `mcp-app.html` / `src/mcp-app.tsx` copies (Cloudflare Workers, Supabase Edge, `mcp-checkout-app`, and `tools/create-solvapay/templates/mcp/_base`) are duplicated on purpose, not leftover. Each copy is a standalone project — a `workspace:*` shared package would make the examples uncopyable. The two edge examples cannot use the SDK default at all: the edge `defaultMcpAppHtml` throws by design, so they must build and ship their own HTML. The scaffold template is the canonical integrator shape; the examples add a monorepo-only Vite `@solvapay/*` alias block because they build SDK packages from source rather than `node_modules`. Do **not** extract a shared package. `tools/repo/example-widget-parity.test.ts` gates HTML byte-identity and TSX identity from the first `import` onward; if it fails, update every copy (or the gate).
 - **Pre-render chart PNGs for the demo.** Do not rely on live chart generation during a live demo. Bulletproof > impressive.
 - **First-run tour is disabled in the demo bootstrap.** Presenter talks over the UI, not against it.
 

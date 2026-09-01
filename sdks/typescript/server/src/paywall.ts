@@ -918,8 +918,7 @@ function defaultExtractArgs(req: any): PaywallArgs {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handleHttpError(error: unknown, reply: any) {
   const classified = classifyPaywallHttpError(error)
-  const body =
-    error instanceof PaywallError ? paywallErrorToClientPayload(error) : classified.body
+  const body = error instanceof PaywallError ? paywallErrorToClientPayload(error) : classified.body
 
   if (reply && reply.status && typeof reply.json === 'function') {
     reply.status(classified.status).json(body)
@@ -1050,8 +1049,7 @@ function classifyPaywallHttpError(error: unknown): {
 
 function handleNextError(error: unknown): Response {
   const classified = classifyPaywallHttpError(error)
-  const body =
-    error instanceof PaywallError ? paywallErrorToClientPayload(error) : classified.body
+  const body = error instanceof PaywallError ? paywallErrorToClientPayload(error) : classified.body
   return new Response(JSON.stringify(body), {
     status: classified.status,
     headers: { 'Content-Type': 'application/json' },

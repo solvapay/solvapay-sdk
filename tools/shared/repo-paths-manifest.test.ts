@@ -248,9 +248,7 @@ describe('repo-paths manifest', () => {
         flags.add(item.flag)
       }
     }
-    const expected = new Set(
-      LEGACY_DTO_GEN_ARGS.filter((entry, index) => index % 2 === 0),
-    )
+    const expected = new Set(LEGACY_DTO_GEN_ARGS.filter((entry, index) => index % 2 === 0))
     expect([...flags].sort()).toEqual([...expected].sort())
   })
 
@@ -280,6 +278,26 @@ describe('repo-paths manifest', () => {
     }
     for (const rel of [layout.canonicalRel, ...layout.copiesRel]) {
       expect(existsSync(path.join(REPO_ROOT, rel)), rel).toBe(true)
+    }
+  })
+
+  it('catalogues the example widget copies used by the parity gate', () => {
+    const keys = [
+      'exampleWidgetHtmlCloudflare',
+      'exampleWidgetHtmlSupabase',
+      'exampleWidgetHtmlCheckout',
+      'exampleWidgetHtmlScaffold',
+      'exampleWidgetTsxCloudflare',
+      'exampleWidgetTsxSupabase',
+      'exampleWidgetTsxCheckout',
+      'exampleWidgetTsxScaffold',
+      'exampleDemoToolsCloudflare',
+      'exampleDemoToolsSupabase',
+    ]
+    for (const key of keys) {
+      const resolved = lookupPath(key)
+      expect(resolved.startsWith(REPO_ROOT)).toBe(true)
+      expect(existsSync(resolved), key).toBe(true)
     }
   })
 

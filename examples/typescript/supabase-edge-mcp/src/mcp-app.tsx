@@ -6,9 +6,11 @@
  * `readHtml` callback can read it straight off the function's own
  * filesystem via `Deno.readTextFile(new URL('./mcp-app.html', import.meta.url))`.
  *
- * Byte-for-byte identical to `mcp-checkout-app/src/mcp-app.tsx` — the
- * whole point of `@solvapay/mcp/fetch` is that the iframe payload
- * doesn't need to know which runtime serves it.
+ * The iframe payload is runtime-agnostic (`@solvapay/mcp/fetch`).
+ * Header comments differ per runtime; the body (from the first
+ * `import` onward) is deliberately duplicated across the four
+ * integrator-facing copies. See `docs/contributing/mcp-apps-sdk-rules.md`
+ * ("Demo is not the SDK") and `tools/repo/example-widget-parity.test.ts`.
  */
 
 import { createRoot } from 'react-dom/client'

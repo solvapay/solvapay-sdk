@@ -17,12 +17,43 @@ type CapturedRequest struct {
 	Path   string
 }
 
-// StubBackend serves one programmed response and records method/path.
+// StubRoute is one programmed method+path → response mapping.
+type StubRoute struct {
+	Method string
+	Path   string
+	Status int
+	Body   any
+}
+
+// StubBackend serves programmed responses and records method/path.
 type StubBackend struct {
 	Status   int
 	Body     any
+	Routes   []StubRoute
 	Captured []CapturedRequest
 	server   *httptest.Server
+}
+
+// StubFromWire builds a backend from a fixture wire block.
+func StubFromWire(wire *Wire) *StubBackend {
+	stub := &StubBackend{Status: 200}
+	if wire == nil {
+		return stub
+	}
+	if len(wire.Exchanges) > 0 {
+		for _, ex := range wire.Exchanges {
+			stub.Routes = append(stub.Routes, StubRoute{
+				Method: ex.Request.Method,
+				Path:   ex.Request.Path,
+				Status: ex.Response.Status,
+				Body:   ex.Response.Body,
+			})
+		}
+		return stub
+	}
+	stub.Status = wire.Response.Status
+	stub.Body = wire.Response.Body
+	return stub
 }
 
 // Start launches the stub server.
@@ -35,7 +66,23 @@ func (s *StubBackend) Start() {
 			// fixtures match the bytes the client sent (SEC-003).
 			Path: r.URL.EscapedPath(),
 		})
+		status := backend.Status
 		payload := backend.Body
+		if len(backend.Routes) > 0 {
+			matched := false
+			for _, route := range backend.Routes {
+				if route.Method == r.Method && route.Path == r.URL.EscapedPath() {
+					status = route.Status
+					payload = route.Body
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				http.NotFound(w, r)
+				return
+			}
+		}
 		var data []byte
 		contentType := "application/json"
 		switch v := payload.(type) {
@@ -60,7 +107,7 @@ func (s *StubBackend) Start() {
 			}
 		}
 		w.Header().Set("Content-Type", contentType)
-		w.WriteHeader(backend.Status)
+		w.WriteHeader(status)
 		if r.Method != http.MethodHead && len(data) > 0 {
 			_, _ = io.WriteString(w, string(data))
 		}

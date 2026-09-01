@@ -35,10 +35,13 @@ const SKIP_RELATIVE: &[&str] = &[
     // cancel/reactivate flat vs nested + invalid JSON string bodies.
     "cancel-purchase/success-flat.json",
     "cancel-purchase/success-nested.json",
+    "cancel-purchase/encoded-path.json",
     "cancel-purchase/error-invalid-json.json",
     "reactivate-purchase/success-flat.json",
     "reactivate-purchase/success-nested.json",
+    "reactivate-purchase/encoded-path.json",
     "reactivate-purchase/error-invalid-json.json",
+    "list-plans/encoded-path.json",
     // getProduct data-merge alt-shape.
     "get-product/success-data-merge.json",
     // Null bodies that do not match the documented JSON object schemas.

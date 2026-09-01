@@ -18,7 +18,7 @@ module Contract
               elsif name == "constructSdkError"
                 return construct_error(fixture)
               elsif HostAdapters::HOST_FUNCTIONS.include?(name)
-                HostAdapters.invoke(name, args, clock: fixture["input"]["clock"])
+                HostAdapters.invoke(name, args, clock: fixture["input"]["clock"], wire: fixture["wire"])
               else
                 snake = Names.camel_to_snake(name)
                 if SolvaPay::NativeDispatch::CLIENT_METHODS.include?(snake)

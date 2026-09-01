@@ -6,9 +6,12 @@
  * can inline it into the worker bundle (`import mcpAppHtml from
  * './assets/mcp-app.html'` in `worker.ts`).
  *
- * Runtime-agnostic: the whole point of `@solvapay/mcp/fetch` is that
- * the iframe payload doesn't need to know which runtime serves it.
- * Mirrored byte-for-byte from `solvapay-sdk/examples/typescript/cloudflare-workers-mcp/src/mcp-app.tsx`.
+ * Runtime-agnostic: the iframe payload does not need to know which
+ * runtime serves it. Header comments differ per copy; the body (from
+ * the first `import` onward) is deliberately duplicated across the
+ * four integrator-facing copies. See
+ * `docs/contributing/mcp-apps-sdk-rules.md` ("Demo is not the SDK")
+ * and `tools/repo/example-widget-parity.test.ts`.
  */
 
 import { createRoot } from 'react-dom/client'

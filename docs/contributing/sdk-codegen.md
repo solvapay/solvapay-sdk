@@ -203,6 +203,14 @@ No new route:
 2. `pnpm gen`
 3. `pnpm manifest:check`
 
+`CheckLimitsRequest` is an `aliasOf: CheckLimitRequest` so the public type
+name stays stable after the `includeCheckoutSession` field landed in the
+OpenAPI snapshot. `LimitResponseWithPlan` and the process-payment untagged
+enum in `dto-gen` `parse.rs` stay as recorded SDK-side workarounds for
+upstream schema defects (`LimitResponse` has no `plan`; three succeeded
+payment branches share `status: "succeeded"`). Do not drop either without a
+backend republish.
+
 ---
 
 ## Workflow D — OpenAPI-only type refresh (TS `generated.ts`)
@@ -236,7 +244,7 @@ High-level groups:
 | Ruby                 | Magnus shims, `_native.rb`, `client.rb`, RBS, parity test, fixture-conformance harness (`--rb-conformance-out`)                                               |
 | Rust facade          | `client_generated.rs`, `blocking_generated.rs`, parity test                                                                                                   |
 | Go                   | WASI guest shims (client + decisions + payload builders), `client_generated.go`, parity test, fixture-conformance harness (`--go-conformance-out`)            |
-| C ABI                | Generated 36-op dispatch (`--c-bindings-out`), fixture-conformance harness (`--c-conformance-out`), signature parity (`--c-parity-out`)                       |
+| C ABI                | Generated 42-op dispatch (`--c-bindings-out`), fixture-conformance harness (`--c-conformance-out`), signature parity (`--c-parity-out`)                       |
 
 Hand-editing any of these fails CI (`@generated` header gate + `pnpm gen:check`).
 

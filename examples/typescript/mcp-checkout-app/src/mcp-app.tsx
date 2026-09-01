@@ -10,6 +10,11 @@
  * All of these components (shell, views, plan-actions helpers,
  * narrator) live in the SDK so a hosted HTTP page can mount the same
  * surface instead of running only inside the iframe.
+ *
+ * Header comments differ per runtime; the body (from the first
+ * `import` onward) is deliberately duplicated across the four
+ * integrator-facing copies. See `docs/contributing/mcp-apps-sdk-rules.md`
+ * ("Demo is not the SDK") and `tools/repo/example-widget-parity.test.ts`.
  */
 
 import { createRoot } from 'react-dom/client'

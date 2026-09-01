@@ -16,6 +16,8 @@ pub const HOST_FNS: &[&str] = &[
     "TOPUP_BALANCE_POLL_DELAYS_MS",
     "BALANCE_RECONCILE_DELAYS_MS",
     "resolveAuthenticatedUser",
+    "driveGate",
+    "drivePayable",
 ];
 
 /// Require `snapshot.hostFns` to equal [`HOST_FNS`] (order-sensitive).

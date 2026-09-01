@@ -1,9 +1,11 @@
-//! `solvapay-c`: optional native C ABI for SolvaPay (Step 54 scaffold).
+//! `solvapay-c`: optional in-repo native C ABI for SolvaPay (`publish = false`).
 //!
 //! Surface: opaque generation-counted client handles + generic JSON-envelope
 //! dispatch (`solvapay_client_call`) + sync `solvapay_verify_webhook` /
 //! `solvapay_version` / `solvapay_abi_version`. Every FFI edge uses
-//! `catch_unwind` (§7.6). Full 36-op dispatch is generated (`Toolchain::C`).
+//! `catch_unwind` (§7.6). Full 42-op client dispatch is generated
+//! (`Toolchain::C`). `ctest/smoke.c` stays single-op; full fixture replay is
+//! `ctest/contract.sh`.
 
 #![allow(clippy::result_large_err)]
 

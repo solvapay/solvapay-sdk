@@ -139,11 +139,8 @@ fn dispatch_inner(op: &str, args_json: &str) -> String {
         }
         "mcpDefaultGate" => {
             let input: DefaultGateInput = parse_args_json(args_json)?;
-            serde_json::to_value(mcp_default_gate(
-                &input.product,
-                input.reason.as_deref(),
-            ))
-            .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))
+            serde_json::to_value(mcp_default_gate(&input.product, input.reason.as_deref()))
+                .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))
         }
         "mcpConfigLog" => {
             let input: ConfigLogInput = parse_args_json(args_json)?;

@@ -100,18 +100,15 @@ export async function trackUsageCore(
       name: name || undefined,
     })
 
-    const result = await trackUsageWithRetry(
-      params => solvaPay.trackUsage(params),
-      {
-        customerRef,
-        actionType: body.actionType,
-        units: body.units,
-        productRef: body.productRef,
-        description: body.description,
-        metadata: body.metadata,
-        idempotencyKey: body.idempotencyKey,
-      },
-    )
+    const result = await trackUsageWithRetry(params => solvaPay.trackUsage(params), {
+      customerRef,
+      actionType: body.actionType,
+      units: body.units,
+      productRef: body.productRef,
+      description: body.description,
+      metadata: body.metadata,
+      idempotencyKey: body.idempotencyKey,
+    })
 
     return result
   } catch (error) {

@@ -480,3 +480,13 @@ lookups:
   mcpAppWidgetGo: sdks/go/mcp/mcp-app.html
   mcpAppWidgetRust: sdks/rust-mcp/mcp-app.html
   mcpAppWidgetTypescript: sdks/typescript/mcp/mcp-app.html
+  exampleWidgetHtmlCloudflare: examples/typescript/cloudflare-workers-mcp/mcp-app.html
+  exampleWidgetHtmlSupabase: examples/typescript/supabase-edge-mcp/mcp-app.html
+  exampleWidgetHtmlCheckout: examples/typescript/mcp-checkout-app/mcp-app.html
+  exampleWidgetHtmlScaffold: tools/create-solvapay/templates/mcp/_base/mcp-app.html
+  exampleWidgetTsxCloudflare: examples/typescript/cloudflare-workers-mcp/src/mcp-app.tsx
+  exampleWidgetTsxSupabase: examples/typescript/supabase-edge-mcp/src/mcp-app.tsx
+  exampleWidgetTsxCheckout: examples/typescript/mcp-checkout-app/src/mcp-app.tsx
+  exampleWidgetTsxScaffold: tools/create-solvapay/templates/mcp/_base/src/mcp-app.tsx
+  exampleDemoToolsCloudflare: examples/typescript/cloudflare-workers-mcp/src/demo-tools.ts
+  exampleDemoToolsSupabase: examples/typescript/supabase-edge-mcp/supabase/functions/mcp/demo-tools.ts

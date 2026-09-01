@@ -12,16 +12,20 @@ module Contract
       TOPUP_BALANCE_POLL_DELAYS_MS
       BALANCE_RECONCILE_DELAYS_MS
       resolveAuthenticatedUser
+      driveGate
+      drivePayable
     ].freeze
 
     module_function
 
-    def invoke(name, args, clock: nil)
+    def invoke(name, args, clock: nil, wire: nil)
       case name
       when "withRetry" then with_retry(args)
       when "pollBalanceUntilIncreased" then poll_balance(args)
       when "TOPUP_BALANCE_POLL_DELAYS_MS" then SolvaPay::TOPUP_BALANCE_POLL_DELAYS_MS.dup
       when "BALANCE_RECONCILE_DELAYS_MS" then SolvaPay::BALANCE_RECONCILE_DELAYS_MS.dup
+      when "driveGate" then drive_gate(args, wire)
+      when "drivePayable" then drive_payable(args, wire)
       when "resolveAuthenticatedUser"
         payload = args.dup
         payload["nowUnixSecs"] = clock ? Clock.unix_secs(clock) : payload.fetch("nowUnixSecs", 1_700_000_000)
@@ -127,6 +131,95 @@ module Contract
         return { "delays" => recorded, "result" => { "creditsAdded" => value } }
       end
       { "delays" => recorded, "result" => nil }
+    end
+
+    def drive_gate(args, wire)
+      customer_ref, product, usage_type = drive_ids(args)
+      handler = args["handler"] || "success"
+      stub = start_drive_stub(wire)
+      begin
+        facade = SolvaPay.create(api_key: "sk_test_fixture", api_base_url: stub.base_url)
+        if args["primeCache"]
+          facade.gate(customer_ref, product: product, usage_type: usage_type)
+          stub.clear_captured
+          result = facade.gate(customer_ref, product: product, usage_type: usage_type)
+          kind = result.is_a?(SolvaPay::PayablePaywallResult) ? "gate" : "allow"
+          return { "requests" => captured_trace(stub), "outcome" => { "type" => "resolved", "kind" => kind } }
+        end
+
+        result = facade.gate(customer_ref, product: product, usage_type: usage_type)
+        unless result.is_a?(SolvaPay::PayableAllowResult)
+          return { "requests" => captured_trace(stub), "outcome" => { "type" => "resolved", "kind" => "gate" } }
+        end
+        case handler
+        when "throwPaywall"
+          result.track_fail(SolvaPay::PaywallError.new("Payment required"))
+          { "requests" => captured_trace(stub), "outcome" => { "type" => "rejected", "name" => "PaywallError" } }
+        when "throwGeneric"
+          result.track_fail(StandardError.new("boom"))
+          { "requests" => captured_trace(stub), "outcome" => { "type" => "rejected", "name" => "Error", "message" => "boom" } }
+        else
+          result.track_success
+          { "requests" => captured_trace(stub), "outcome" => { "type" => "resolved", "kind" => "allow" } }
+        end
+      ensure
+        stub.stop
+      end
+    end
+
+    def drive_payable(args, wire)
+      customer_ref, product, usage_type = drive_ids(args)
+      stub = start_drive_stub(wire)
+      begin
+        facade = SolvaPay.create(api_key: "sk_test_fixture", api_base_url: stub.base_url)
+        wrapped = facade.payable(product: product, usage_type: usage_type).protect { "ok" }
+        wrapped.call(customer_ref: customer_ref)
+        { "requests" => captured_trace(stub), "outcome" => { "type" => "resolved", "kind" => "done" } }
+      ensure
+        stub.stop
+      end
+    end
+
+    def drive_ids(args)
+      customer_ref = args["customerRef"].to_s
+      product = args["product"].to_s
+      usage_type = args["usageType"].to_s
+      usage_type = "requests" if usage_type.empty?
+      raise ArgumentError, "drive adapter requires customerRef and product" if customer_ref.empty? || product.empty?
+
+      [customer_ref, product, usage_type]
+    end
+
+    def start_drive_stub(wire)
+      exchanges = wire_exchanges(wire)
+      StubBackend.new(status: 200, body: {}, exchanges: exchanges).start
+    end
+
+    def wire_exchanges(wire)
+      return nil unless wire.is_a?(Hash)
+
+      if wire["exchanges"].is_a?(Array) && !wire["exchanges"].empty?
+        return wire["exchanges"].map do |row|
+          {
+            "method" => row.fetch("request").fetch("method"),
+            "path" => row.fetch("request").fetch("path"),
+            "status" => row.fetch("response").fetch("status"),
+            "body" => row.fetch("response").fetch("body"),
+          }
+        end
+      end
+      return nil unless wire["request"] && wire["response"]
+
+      [{
+        "method" => wire["request"].fetch("method"),
+        "path" => wire["request"].fetch("path"),
+        "status" => wire["response"].fetch("status"),
+        "body" => wire["response"].fetch("body"),
+      }]
+    end
+
+    def captured_trace(stub)
+      stub.captured.map { |item| { "method" => item.fetch("method"), "path" => item.fetch("path") } }
     end
   end
 end

@@ -20,9 +20,9 @@
  *     publicBaseUrl,
  *     apiBaseUrl,
  *     responseMode: 'json',
-     *     // Trim the LLM-facing catalogue to the four intent tools.
-     *     // Hidden tools are also rejected on tools/call.
-     *     hideToolsByAudience: ['ui'],
+ *     // Trim the LLM-facing catalogue to the four intent tools.
+ *     // Hidden tools are also rejected on tools/call.
+ *     hideToolsByAudience: ['ui'],
  *   }),
  * )
  * ```

@@ -24,24 +24,7 @@ export type AttachBusinessDetailsResult = {
 }
 
 export type UsageMeterType = 'requests' | 'tokens'
-export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
-  /**
-   * When `true`, the backend mints a checkout session (or customer
-   * portal session for activation flows) and returns its URL / id on
-   * the response. Default `false` so read-only callers like
-   * `useLimits` / `checkLimitsCore` stop creating orphan
-   * `CheckoutSession` documents and firing spurious
-   * `checkout_session.created` webhooks on every refetch.
-   *
-   * `paywall.decide()` opts in because it bakes the URL into the
-   * 402 `PaywallStructuredContent`.
-   *
-   * NOTE: this intersection is a temporary stand-in until the
-   * backend OpenAPI spec is republished and `generated.ts` is
-   * regenerated to include the field natively.
-   */
-  includeCheckoutSession?: boolean
-}
+export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
 
 /**
  * Extended LimitResponse with SDK-added plan field.

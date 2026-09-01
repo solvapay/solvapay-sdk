@@ -54,6 +54,7 @@ import {
 } from '@solvapay/core'
 import {
   assertResponseResult,
+  buildPayableHandler,
   buildPromptDescriptorMetadata,
   buildPromptUserMessage,
   buildToolDescriptorMetadata,
@@ -86,6 +87,7 @@ import {
   classifyPaywallState,
   classifyReactivateError,
   coerceCustomerOptions,
+  createSolvaPay,
   createSolvaPayClient,
   decidePaywallOutcome,
   ensureCustomerNext,
@@ -138,17 +140,12 @@ import {
 } from '@solvapay/server'
 import { verifyWebhook as verifyWebhookEdge } from '@solvapay/server/edge'
 import type { Fixture, FixtureErrorExpect, FixtureWire } from './fixture-schema.js'
+import { wireExchanges } from './fixture-schema.js'
 
 // Server index installs core + formatGate; mcp-core needs an explicit install
 // (avoids a hard server↔mcp-core production cycle).
 installNativeCoreApi({ callNativeSync })
 installNativeMcpApi({ callNativeSync })
-
-export type FixtureBinding = {
-  /** Distinguishes multiple bindings for the same `input.fn` (e.g. node vs edge). */
-  id: string
-  invoke: (args: Record<string, unknown>) => unknown | Promise<unknown>
-}
 
 export class FixtureRegistry {
   private readonly bindings = new Map<string, FixtureBinding[]>()
@@ -190,6 +187,16 @@ type CapturedRequest = {
   query: Record<string, string>
   headers: Record<string, string>
   body: unknown
+}
+
+export type DriveReplayContext = {
+  captured: CapturedRequest[]
+}
+
+export type FixtureBinding = {
+  /** Distinguishes multiple bindings for the same `input.fn` (e.g. node vs edge). */
+  id: string
+  invoke: (args: Record<string, unknown>, ctx?: DriveReplayContext) => unknown | Promise<unknown>
 }
 
 type GlobalSnapshot = {
@@ -348,10 +355,24 @@ async function captureRequest(
 }
 
 function installMockFetch(wire: FixtureWire, onCapture: (request: CapturedRequest) => void): void {
+  const routes = wireExchanges(wire)
+  const singlePair = wire.exchanges === undefined
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    onCapture(await captureRequest(input, init))
-    return new Response(wireResponseBody(wire.response.body), {
-      status: wire.response.status,
+    const captured = await captureRequest(input, init)
+    onCapture(captured)
+    const match = routes.find(
+      route => route.request.method === captured.method && route.request.path === captured.path,
+    )
+    const response =
+      match?.response ?? (singlePair && wire.response !== undefined ? wire.response : undefined)
+    if (response === undefined) {
+      return new Response(JSON.stringify({ error: 'no programmed exchange' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    return new Response(wireResponseBody(response.body), {
+      status: response.status,
       headers: { 'Content-Type': 'application/json' },
     })
   }) as typeof fetch
@@ -948,6 +969,128 @@ function constructSdkErrorFromArgs(args: Record<string, unknown>): never {
   )
 }
 
+const SCRIPT_PAYWALL: PaywallStructuredContent = {
+  kind: 'payment_required',
+  product: 'prd_demo',
+  checkoutUrl: 'https://pay.example/x',
+  message: 'Payment required',
+  shortMessage: 'Payment required',
+}
+
+function driveIds(args: Record<string, unknown>): {
+  customerRef: string
+  product: string
+  usageType: string
+  handler: string
+  primeCache: boolean
+} {
+  const customerRef = typeof args.customerRef === 'string' ? args.customerRef : ''
+  const product = typeof args.product === 'string' ? args.product : ''
+  if (customerRef === '' || product === '') {
+    throw new Error('drive adapter requires customerRef and product')
+  }
+  return {
+    customerRef,
+    product,
+    usageType: typeof args.usageType === 'string' ? args.usageType : 'requests',
+    handler: typeof args.handler === 'string' ? args.handler : 'success',
+    primeCache: args.primeCache === true,
+  }
+}
+
+function requestTrace(captured: CapturedRequest[]): Array<{ method: string; path: string }> {
+  return captured.map(item => ({ method: item.method, path: item.path }))
+}
+
+async function driveGate(
+  args: Record<string, unknown>,
+  ctx: DriveReplayContext | undefined,
+): Promise<unknown> {
+  const captured = ctx?.captured
+  if (captured === undefined) {
+    throw new Error('driveGate requires replay capture context')
+  }
+  const ids = driveIds(args)
+  const solvaPay = createSolvaPay({
+    apiKey: 'sk_test_fixture',
+    apiBaseUrl: 'https://fixture.local',
+  })
+  const paywallArgs = { auth: { customer_ref: ids.customerRef } }
+
+  if (ids.primeCache) {
+    await solvaPay.paywall.decide(paywallArgs, { product: ids.product, usageType: ids.usageType })
+    captured.splice(0, captured.length)
+    const decision = await solvaPay.paywall.decide(paywallArgs, {
+      product: ids.product,
+      usageType: ids.usageType,
+    })
+    return {
+      requests: requestTrace(captured),
+      outcome: { type: 'resolved', kind: decision.outcome === 'gate' ? 'gate' : 'allow' },
+    }
+  }
+
+  const wrapped = await solvaPay
+    .payable({
+      product: ids.product,
+      usageType: ids.usageType,
+      getCustomerRef: () => ids.customerRef,
+    })
+    .function(async () => {
+      if (ids.handler === 'throwPaywall') {
+        throw new PaywallError('Payment required', SCRIPT_PAYWALL)
+      }
+      if (ids.handler === 'throwGeneric') {
+        throw new Error('boom')
+      }
+      return 'ok'
+    })
+
+  try {
+    await wrapped(paywallArgs)
+    return {
+      requests: requestTrace(captured),
+      outcome: { type: 'resolved', kind: 'allow' },
+    }
+  } catch (error) {
+    const name = error instanceof PaywallError ? 'PaywallError' : 'Error'
+    const message = error instanceof Error ? error.message : String(error)
+    return {
+      requests: requestTrace(captured),
+      outcome:
+        name === 'PaywallError' ? { type: 'rejected', name } : { type: 'rejected', name, message },
+    }
+  }
+}
+
+async function drivePayable(
+  args: Record<string, unknown>,
+  ctx: DriveReplayContext | undefined,
+): Promise<unknown> {
+  const captured = ctx?.captured
+  if (captured === undefined) {
+    throw new Error('drivePayable requires replay capture context')
+  }
+  const ids = driveIds(args)
+  const solvaPay = createSolvaPay({
+    apiKey: 'sk_test_fixture',
+    apiBaseUrl: 'https://fixture.local',
+  })
+  const handler = buildPayableHandler(
+    solvaPay,
+    {
+      product: ids.product,
+      getCustomerRef: () => ids.customerRef,
+    },
+    async () => assertResponseResult(makeResponseResult({ ok: true })),
+  )
+  await handler({})
+  return {
+    requests: requestTrace(captured),
+    outcome: { type: 'resolved', kind: 'done' },
+  }
+}
+
 /**
  * Loads the real `@solvapay/server-wasm` binding once and installs its
  * `WasmClient` as the override so `createSolvaPayClient` dispatches client
@@ -1300,6 +1443,16 @@ export function createDefaultRegistry(): FixtureRegistry {
   registry.register('BALANCE_RECONCILE_DELAYS_MS', {
     id: 'server',
     invoke: () => [...BALANCE_RECONCILE_DELAYS_MS],
+  })
+
+  registry.register('driveGate', {
+    id: 'server',
+    invoke: (args, ctx) => driveGate(args, ctx),
+  })
+
+  registry.register('drivePayable', {
+    id: 'server',
+    invoke: (args, ctx) => drivePayable(args, ctx),
   })
 
   registry.register('classifyPaywallState', {
@@ -2462,12 +2615,17 @@ async function replayAgainstBinding(fixture: Fixture, binding: FixtureBinding): 
     let result: unknown
     let threw: unknown
     try {
-      result = await binding.invoke(fixture.input.args)
+      result = await binding.invoke(fixture.input.args, { captured })
     } catch (error) {
       threw = error
     }
 
-    if (fixture.wire) {
+    if (
+      fixture.wire?.request !== undefined &&
+      fixture.wire.exchanges === undefined &&
+      fixture.input.fn !== 'driveGate' &&
+      fixture.input.fn !== 'drivePayable'
+    ) {
       assert.equal(captured.length, 1, 'wire fixture expected exactly one fetch call')
       const request = captured[0]
       assert.ok(request, 'wire fixture captured no request')

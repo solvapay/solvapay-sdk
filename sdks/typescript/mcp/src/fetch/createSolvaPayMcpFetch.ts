@@ -98,8 +98,7 @@ function buildServerForRequest(
     hs256Secret?: string
   },
 ) {
-  const { descriptorOptions, additionalTools, hideToolsByAudience, payables, hs256Secret } =
-    options
+  const { descriptorOptions, additionalTools, hideToolsByAudience, payables, hs256Secret } = options
 
   const { server, descriptors } = buildSolvaPayMcpServer(descriptorOptions)
 
@@ -207,9 +206,7 @@ export function createSolvaPayMcpFetch(
         payables,
         ...(additionalTools !== undefined ? { additionalTools } : {}),
         ...(hideToolsByAudience !== undefined ? { hideToolsByAudience } : {}),
-        ...(handlerRest.hs256Secret !== undefined
-          ? { hs256Secret: handlerRest.hs256Secret }
-          : {}),
+        ...(handlerRest.hs256Secret !== undefined ? { hs256Secret: handlerRest.hs256Secret } : {}),
       }),
     publicBaseUrl,
     productRef,
@@ -218,8 +215,7 @@ export function createSolvaPayMcpFetch(
     ...(handlerRest.oauthClient === undefined && nativeOauth !== undefined
       ? { oauthClient: nativeOauth }
       : {}),
-    ...(handlerRest.fetchJwks === undefined &&
-    typeof solvaPay.apiClient.fetchJwks === 'function'
+    ...(handlerRest.fetchJwks === undefined && typeof solvaPay.apiClient.fetchJwks === 'function'
       ? {
           fetchJwks: (jwksUrl: string) => solvaPay.apiClient.fetchJwks!({ jwksUrl }),
         }

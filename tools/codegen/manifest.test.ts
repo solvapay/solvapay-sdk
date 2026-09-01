@@ -1,6 +1,6 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, describe, expect, it } from 'vitest'
 import { parse as parseYaml } from 'yaml'
 import {
   bindingCatalogBoundaryIds,
@@ -25,6 +25,14 @@ const tempDirs: string[] = []
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+afterAll(() => {
+  try {
+    rmdirSync(TEMP_ROOT)
+  } catch {
+    // Sibling files still have subdirs, or another suite already removed it.
   }
 })
 
@@ -367,13 +375,12 @@ describe('manifest CLI', () => {
     const raw = readFileSync(REAL_MANIFEST, 'utf8')
     const manifest = parseYaml(raw) as SdkContractManifest
     const mcpKeys = new Set(Object.keys(manifest.mcp ?? {}))
+    const helperKeys = new Set(Object.keys(manifest.coreHelpers ?? {}))
+    const shimNames = new Set<string>(SHIM_JS_NAMES)
 
     for (const op of opNames) {
-      const catalogued =
-        op === 'validateBusinessDetails'
-          ? manifest.coreHelpers?.validateBusinessDetails != null
-          : mcpKeys.has(op)
-      expect(catalogued, `${op} must be in mcp: or coreHelpers.validateBusinessDetails`).toBe(true)
+      const catalogued = mcpKeys.has(op) || helperKeys.has(op) || shimNames.has(op)
+      expect(catalogued, `${op} must be in mcp:, coreHelpers, or SHIM_JS_NAMES`).toBe(true)
     }
   })
 

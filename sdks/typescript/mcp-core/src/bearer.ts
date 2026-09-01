@@ -55,8 +55,7 @@ export function defaultMcpBearerExpectations(
   const issuer = publicBaseUrl.replace(/\/+$/, '')
   const raw = mcpPath?.trim() ?? ''
   const path = raw.replace(/\/+$/, '')
-  const audience =
-    path.length > 0 ? `${issuer}${path.startsWith('/') ? path : `/${path}`}` : issuer
+  const audience = path.length > 0 ? `${issuer}${path.startsWith('/') ? path : `/${path}`}` : issuer
   return { expectedIssuer: issuer, expectedAudience: audience, nowUnixSecs }
 }
 
@@ -100,7 +99,10 @@ export function getCustomerRefFromJwtPayload(
   )
 }
 
-export function verifyBearer(token: string, options: McpVerifyBearerOptions): McpVerifyBearerResult {
+export function verifyBearer(
+  token: string,
+  options: McpVerifyBearerOptions,
+): McpVerifyBearerResult {
   return callMcpSyncOp('mcpVerifyBearer', {
     token,
     expectedIssuer: options.expectedIssuer,

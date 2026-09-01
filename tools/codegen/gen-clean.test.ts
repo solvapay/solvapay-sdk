@@ -1,6 +1,14 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, describe, expect, it } from 'vitest'
 import { generatedEntry, loadRepoPathsManifest, lookupPath } from '../shared/repo-paths.js'
 import { executeClean, interpretVerifyStatus, planClean, realCleanFs, runCli } from './gen-clean.js'
 
@@ -10,6 +18,14 @@ const tempDirs: string[] = []
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+afterAll(() => {
+  try {
+    rmdirSync(TEMP_ROOT)
+  } catch {
+    // Sibling files still have subdirs, or another suite already removed it.
   }
 })
 

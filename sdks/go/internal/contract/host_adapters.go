@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"errors"
+
+	solvapay "github.com/solvapay/solvapay-go"
 	"github.com/solvapay/solvapay-go/internal/nativecall"
 )
 
@@ -21,10 +24,12 @@ var HostFns = map[string]struct{}{
 	"TOPUP_BALANCE_POLL_DELAYS_MS": {},
 	"BALANCE_RECONCILE_DELAYS_MS":  {},
 	"resolveAuthenticatedUser":     {},
+	"driveGate":                    {},
+	"drivePayable":                 {},
 }
 
 // InvokeHost runs a host-side adapter for orchestration fixtures.
-func InvokeHost(ctx context.Context, fn string, args map[string]any, clock string) (any, error) {
+func InvokeHost(ctx context.Context, fn string, args map[string]any, clock string, wire *Wire) (any, error) {
 	switch fn {
 	case "withRetry":
 		return invokeWithRetry(ctx, args)
@@ -34,6 +39,10 @@ func InvokeHost(ctx context.Context, fn string, args map[string]any, clock strin
 		return append([]int(nil), TopupBalancePollDelaysMS...), nil
 	case "BALANCE_RECONCILE_DELAYS_MS":
 		return append([]int(nil), BalanceReconcileDelaysMS...), nil
+	case "driveGate":
+		return invokeDriveGate(ctx, args, wire)
+	case "drivePayable":
+		return invokeDrivePayable(ctx, args, wire)
 	case "resolveAuthenticatedUser":
 		payload := copyMap(args)
 		if clock != "" {
@@ -301,6 +310,133 @@ func asFloatPtr(v any) (float64, bool) {
 		return asFloat(v), true
 	}
 	return 0, false
+}
+
+func capturedTrace(stub *StubBackend) []any {
+	out := make([]any, 0, len(stub.Captured))
+	for _, item := range stub.Captured {
+		out = append(out, map[string]any{"method": item.Method, "path": item.Path})
+	}
+	return out
+}
+
+func driveCustomerProduct(args map[string]any) (customerRef, product, usageType string, err error) {
+	customerRef, _ = args["customerRef"].(string)
+	product, _ = args["product"].(string)
+	usageType, _ = args["usageType"].(string)
+	if usageType == "" {
+		usageType = "requests"
+	}
+	if customerRef == "" || product == "" {
+		return "", "", "", fmt.Errorf("drive adapter requires customerRef and product")
+	}
+	return customerRef, product, usageType, nil
+}
+
+func invokeDriveGate(ctx context.Context, args map[string]any, wire *Wire) (map[string]any, error) {
+	customerRef, product, usageType, err := driveCustomerProduct(args)
+	if err != nil {
+		return nil, err
+	}
+	handler, _ := args["handler"].(string)
+	primeCache, _ := args["primeCache"].(bool)
+	stub := StubFromWire(wire)
+	stub.Start()
+	defer stub.Close()
+	client, err := solvapay.NewClient(ctx, apiKey, solvapay.WithBaseURL(stub.BaseURL()))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = client.Close(ctx) }()
+
+	runGate := func() (solvapay.GateOutcome, error) {
+		return client.Gate(ctx, customerRef, solvapay.GateOpts{Product: product, UsageType: usageType})
+	}
+
+	if primeCache {
+		if _, err := runGate(); err != nil {
+			return nil, err
+		}
+		stub.Captured = nil
+		out, err := runGate()
+		if err != nil {
+			return nil, err
+		}
+		kind := "allow"
+		if _, ok := out.(*solvapay.Paywall); ok {
+			kind = "gate"
+		}
+		return map[string]any{
+			"requests": capturedTrace(stub),
+			"outcome":  map[string]any{"type": "resolved", "kind": kind},
+		}, nil
+	}
+
+	out, err := runGate()
+	if err != nil {
+		return nil, err
+	}
+	allow, ok := out.(*solvapay.Allow)
+	if !ok {
+		return map[string]any{
+			"requests": capturedTrace(stub),
+			"outcome":  map[string]any{"type": "resolved", "kind": "gate"},
+		}, nil
+	}
+	switch handler {
+	case "throwPaywall":
+		_ = allow.TrackFail(ctx, &solvapay.PaywallError{Message: "Payment required"}, solvapay.TrackOpts{})
+		return map[string]any{
+			"requests": capturedTrace(stub),
+			"outcome":  map[string]any{"type": "rejected", "name": "PaywallError"},
+		}, nil
+	case "throwGeneric":
+		_ = allow.TrackFail(ctx, errors.New("boom"), solvapay.TrackOpts{})
+		return map[string]any{
+			"requests": capturedTrace(stub),
+			"outcome":  map[string]any{"type": "rejected", "name": "Error", "message": "boom"},
+		}, nil
+	default:
+		if err := allow.TrackSuccess(ctx, solvapay.TrackOpts{}); err != nil {
+			return nil, err
+		}
+		return map[string]any{
+			"requests": capturedTrace(stub),
+			"outcome":  map[string]any{"type": "resolved", "kind": "allow"},
+		}, nil
+	}
+}
+
+func invokeDrivePayable(ctx context.Context, args map[string]any, wire *Wire) (map[string]any, error) {
+	customerRef, product, usageType, err := driveCustomerProduct(args)
+	if err != nil {
+		return nil, err
+	}
+	stub := StubFromWire(wire)
+	stub.Start()
+	defer stub.Close()
+	client, err := solvapay.NewClient(ctx, apiKey, solvapay.WithBaseURL(stub.BaseURL()))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = client.Close(ctx) }()
+
+	payable := client.Payable(product, usageType)
+	out, err := payable.Gate(ctx, customerRef)
+	if err != nil {
+		return nil, err
+	}
+	allow, ok := out.(*solvapay.Allow)
+	if !ok {
+		return nil, fmt.Errorf("drivePayable expected allow")
+	}
+	if err := allow.TrackSuccess(ctx, solvapay.TrackOpts{}); err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"requests": capturedTrace(stub),
+		"outcome":  map[string]any{"type": "resolved", "kind": "done"},
+	}, nil
 }
 
 func copyMap(in map[string]any) map[string]any {

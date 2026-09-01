@@ -10,9 +10,14 @@ module Contract
   class StubBackend
     attr_reader :base_url, :captured
 
-    def initialize(status:, body:)
+    def initialize(status:, body:, exchanges: nil)
       @status = status
       @body = body
+      @exchanges = exchanges
+      @captured = []
+    end
+
+    def clear_captured
       @captured = []
     end
 
@@ -32,7 +37,15 @@ module Contract
     private
 
     def serve
-      socket = @server.accept
+      loop do
+        socket = @server.accept
+        handle_one(socket)
+      end
+    rescue IOError, Errno::EBADF
+      nil
+    end
+
+    def handle_one(socket)
       request_line = socket.gets&.strip
       return unless request_line
 
@@ -56,32 +69,41 @@ module Contract
         "body" => parsed_body,
       }
 
-      response = response_body
+      status, body = resolve_response(method, uri.path)
+      payload = encode_body(body)
       socket.write(
-        "HTTP/1.1 #{@status} #{reason}\r\n" \
+        "HTTP/1.1 #{status} #{reason_for(status)}\r\n" \
         "Content-Type: application/json\r\n" \
-        "Content-Length: #{response.bytesize}\r\n" \
-        "Connection: close\r\n\r\n#{response}",
+        "Content-Length: #{payload.bytesize}\r\n" \
+        "Connection: close\r\n\r\n#{payload}",
       )
-      socket.close
-    rescue IOError, Errno::EBADF
-      nil
     ensure
       socket&.close
     end
 
-    def response_body
-      case @body
+    def resolve_response(method, path)
+      if @exchanges.is_a?(Array) && !@exchanges.empty?
+        match = @exchanges.find { |row| row.fetch("method") == method && row.fetch("path") == path }
+        return [404, {}] unless match
+
+        return [match.fetch("status"), match.fetch("body")]
+      end
+      [@status, @body]
+    end
+
+    def encode_body(body)
+      case body
       when Hash, Array, Numeric, TrueClass, FalseClass, NilClass
-        JSON.generate(@body)
+        JSON.generate(body)
       else
-        @body.to_s
+        body.to_s
       end
     end
 
-    def reason
-      @status.between?(200, 299) ? "OK" : "Error"
+    def reason_for(status)
+      status.between?(200, 299) ? "OK" : "Error"
     end
+
   end
 
   module StubAssertions

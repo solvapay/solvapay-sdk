@@ -15,7 +15,7 @@ pub use discover::{discover_fixtures, DiscoveredFixture};
 pub use error::{RunnerError, RunnerResult};
 pub use model::{
     parse_fixture, Fixture, FixtureErrorExpect, FixtureExpect, FixtureInput, HttpMethod, Wire,
-    WireRequest, WireResponse,
+    WireExchange, WireRequest, WireResponse,
 };
 pub use registry::create_default_registry;
 pub use runner::{

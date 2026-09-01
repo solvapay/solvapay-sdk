@@ -15,9 +15,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use fixture_runner::{parse_fixture, Fixture, HttpMethod};
-use serde_json::Value;
+use serde_json::{json, Value};
 use solvapay::transport::{mulberry32, ClientShell, ReqwestTransport, SharedTransport};
-use solvapay::{Client, Config};
+use solvapay::{Allow, Client, Config, GateOpts, GateOutcome, TrackOpts};
+use solvapay_core::{PaywallGate, PaywallGateKind, SdkError};
 use support::{
     assert_expect, clock_ms_from_iso, dispatch_group_a, dispatch_group_b, dispatch_group_c,
     is_group_a_fixture, is_group_b_fixture, is_group_c_fixture, GROUP_A_FNS, GROUP_B_FNS,
@@ -219,6 +220,254 @@ fn client_fixtures_root() -> PathBuf {
         .expect("repo-paths")
         .client_fixtures()
         .expect("client fixtures")
+}
+
+#[tokio::test]
+async fn facade_replays_driver_loop_fixtures() {
+    let fixtures = load_driver_loop_fixtures();
+    assert_eq!(fixtures.len(), 5, "expected five driver-loop fixtures");
+    let transport = ReqwestTransport::new().expect("build ReqwestTransport");
+    let shared: SharedTransport = Arc::new(transport);
+    let mut failures: Vec<String> = Vec::new();
+    for (path, fixture) in &fixtures {
+        if let Err(err) = run_driver_loop(Arc::clone(&shared), fixture).await {
+            failures.push(format!("{} ({}): {err}", path.display(), fixture.case));
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "driver-loop fixture failures ({}):\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
+
+async fn run_driver_loop(transport: SharedTransport, fixture: &Fixture) -> Result<(), String> {
+    let wire = fixture
+        .wire
+        .as_ref()
+        .ok_or("driver-loop fixture needs wire")?;
+    let server = MockServer::start().await;
+    for exchange in wire.routes() {
+        mount_exchange(&server, exchange).await?;
+    }
+    let mut shell = ClientShell::new(transport, "sk_test_fixture").with_base_url(server.uri());
+    if let Some(clock) = &fixture.input.clock {
+        let ms = clock_ms_from_iso(clock)?;
+        shell = shell.with_clock(Arc::new(move || ms));
+    }
+    let client = Client::with_shell(
+        shell,
+        Config {
+            api_key: "sk_test_fixture".to_owned(),
+            ..Config::default()
+        },
+    );
+    let args = &fixture.input.args;
+    let customer_ref = args
+        .get("customerRef")
+        .and_then(Value::as_str)
+        .ok_or("customerRef")?;
+    let product = args
+        .get("product")
+        .and_then(Value::as_str)
+        .ok_or("product")?;
+    let usage_type = args
+        .get("usageType")
+        .and_then(Value::as_str)
+        .unwrap_or("requests");
+    let handler = args
+        .get("handler")
+        .and_then(Value::as_str)
+        .unwrap_or("success");
+    let prime = args
+        .get("primeCache")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let opts = GateOpts {
+        product: product.to_owned(),
+        usage_type: usage_type.to_owned(),
+    };
+
+    let outcome = match fixture.input.fn_name.as_str() {
+        "driveGate" if prime => {
+            client
+                .gate(customer_ref, opts.clone())
+                .await
+                .map_err(|e| format!("{e:?}"))?;
+            let primed = server.received_requests().await.unwrap_or_default().len();
+            let gate = client
+                .gate(customer_ref, opts)
+                .await
+                .map_err(|e| format!("{e:?}"))?;
+            let kind = match gate {
+                GateOutcome::Allow(_) => "allow",
+                GateOutcome::Paywall(_) => "gate",
+            };
+            let received = server.received_requests().await.unwrap_or_default();
+            json!({
+                "requests": request_trace(&received[primed..]),
+                "outcome": { "type": "resolved", "kind": kind }
+            })
+        }
+        "driveGate" => {
+            let gate = client
+                .gate(customer_ref, opts)
+                .await
+                .map_err(|e| format!("{e:?}"))?;
+            let GateOutcome::Allow(allow) = gate else {
+                return Err("expected allow".to_owned());
+            };
+            apply_handler(&allow, handler).await?;
+            let received = server.received_requests().await.unwrap_or_default();
+            handler_observation(handler, request_trace(&received))
+        }
+        "drivePayable" => {
+            let payable = client.payable(product, usage_type);
+            let gate = payable
+                .gate(customer_ref)
+                .await
+                .map_err(|e| format!("{e:?}"))?;
+            let GateOutcome::Allow(allow) = gate else {
+                return Err("expected allow".to_owned());
+            };
+            allow
+                .track_success(TrackOpts::default())
+                .await
+                .map_err(|e| format!("{e:?}"))?;
+            let received = server.received_requests().await.unwrap_or_default();
+            json!({
+                "requests": request_trace(&received),
+                "outcome": { "type": "resolved", "kind": "done" }
+            })
+        }
+        other => return Err(format!("unsupported driver fn {other}")),
+    };
+
+    match &fixture.expect {
+        fixture_runner::FixtureExpect::Result(expected) => {
+            if outcome != *expected {
+                return Err(format!(
+                    "result mismatch:\n  got: {outcome}\n  expected: {expected}"
+                ));
+            }
+            Ok(())
+        }
+        fixture_runner::FixtureExpect::Error(_) => {
+            Err("driver-loop fixtures use expect.result".to_owned())
+        }
+    }
+}
+
+async fn apply_handler(allow: &Allow, handler: &str) -> Result<(), String> {
+    match handler {
+        "throwPaywall" => allow
+            .track_fail(scripted_paywall(), TrackOpts::default())
+            .await
+            .map_err(|e| format!("{e:?}")),
+        "throwGeneric" => allow
+            .track_fail("boom", TrackOpts::default())
+            .await
+            .map_err(|e| format!("{e:?}")),
+        _ => allow
+            .track_success(TrackOpts::default())
+            .await
+            .map_err(|e| format!("{e:?}")),
+    }
+}
+
+fn scripted_paywall() -> SdkError {
+    SdkError::paywall(
+        "Payment required",
+        PaywallGate {
+            kind: PaywallGateKind::PaymentRequired,
+            product: "prd_demo".to_owned(),
+            checkout_url: String::new(),
+            message: "Payment required".to_owned(),
+            short_message: "Payment required".to_owned(),
+            confirmation_url: None,
+            plans: None,
+            balance: None,
+            product_details: None,
+        },
+    )
+}
+
+fn handler_observation(handler: &str, requests: Value) -> Value {
+    match handler {
+        "throwPaywall" => json!({
+            "requests": requests,
+            "outcome": { "type": "rejected", "name": "PaywallError" }
+        }),
+        "throwGeneric" => json!({
+            "requests": requests,
+            "outcome": { "type": "rejected", "name": "Error", "message": "boom" }
+        }),
+        _ => json!({
+            "requests": requests,
+            "outcome": { "type": "resolved", "kind": "allow" }
+        }),
+    }
+}
+
+fn request_trace(received: &[wiremock::Request]) -> Value {
+    Value::Array(
+        received
+            .iter()
+            .map(|req| {
+                json!({
+                    "method": req.method.to_string(),
+                    "path": req.url.path()
+                })
+            })
+            .collect(),
+    )
+}
+
+async fn mount_exchange(
+    server: &MockServer,
+    exchange: &fixture_runner::WireExchange,
+) -> Result<(), String> {
+    let status = u16::try_from(exchange.response.status)
+        .map_err(|_| format!("status out of u16 range: {}", exchange.response.status))?;
+    let body_bytes = response_body_bytes(&exchange.response.body)?;
+    Mock::given(method(fixture_method_str(&exchange.request.method)))
+        .and(path(&exchange.request.path))
+        .respond_with(ResponseTemplate::new(status).set_body_bytes(body_bytes))
+        .mount(server)
+        .await;
+    Ok(())
+}
+
+fn driver_loop_root() -> PathBuf {
+    repo_paths::load()
+        .expect("repo-paths")
+        .contract_fixtures()
+        .expect("fixtures")
+        .join("driver-loop")
+}
+
+fn load_driver_loop_fixtures() -> Vec<(PathBuf, Fixture)> {
+    let root = driver_loop_root();
+    let mut out = Vec::new();
+    for entry in WalkDir::new(&root).into_iter().filter_map(Result::ok) {
+        let path = entry.path();
+        if !path.is_file() || path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        let text = std::fs::read_to_string(path).unwrap_or_else(|err| {
+            panic!("read {}: {err}", path.display());
+        });
+        let value: Value = serde_json::from_str(&text).unwrap_or_else(|err| {
+            panic!("parse JSON {}: {err}", path.display());
+        });
+        let fixture = parse_fixture(&value).unwrap_or_else(|err| {
+            panic!("parse fixture {}: {err}", path.display());
+        });
+        out.push((path.to_path_buf(), fixture));
+    }
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    out
 }
 
 fn load_all_client_fixtures(root: &Path) -> Vec<(PathBuf, Fixture)> {

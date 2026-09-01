@@ -188,14 +188,9 @@ export type CancelPurchaseParams = {
 }
 
 /**
- * SDK overlay extending `CheckLimitRequest`.
+ * Public alias of OpenAPI CheckLimitRequest. Kept so dropping the former extendDto overlay does not rename the exported type.
  */
-export type CheckLimitsRequest = components['schemas']['CheckLimitRequest'] & {
-/**
- * When true, the backend mints a checkout session (or customer portal session for activation flows) and returns its URL / id on the response.
- */
-  includeCheckoutSession?: boolean
-}
+export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
 
 /**
  * SDK-only type `CloneProductOverrides`.

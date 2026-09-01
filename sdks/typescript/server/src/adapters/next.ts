@@ -126,7 +126,12 @@ export class NextAdapter implements Adapter<NextContext, Response> {
 
   formatError(error: Error, _context: NextContext): Response {
     const mapped = mapRouteError({
-      kind: error instanceof PaywallError ? 'paywall' : error instanceof SolvaPayError ? 'solvapay' : 'error',
+      kind:
+        error instanceof PaywallError
+          ? 'paywall'
+          : error instanceof SolvaPayError
+            ? 'solvapay'
+            : 'error',
       message: error.message,
       status: error instanceof SolvaPayError ? (error.status ?? null) : null,
       operationName: 'paywall',

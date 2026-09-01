@@ -187,7 +187,7 @@ operations:
     optionalOnClient: false
     request: CheckLimitsRequest
     response: LimitResponseWithPlan
-    overlays: [includeCheckoutSession, CheckLimitsRequest, LimitResponseWithPlan]
+    overlays: [CheckLimitsRequest, LimitResponseWithPlan]
     normalization: []
     shadow:
       volatile: []
@@ -2084,15 +2084,10 @@ overlays:
         type: number
         required: true
   CheckLimitsRequest:
-    kind: extendDto
-    base: CheckLimitRequest
-    fields:
-      includeCheckoutSession:
-        type: boolean
-        required: false
-        doc: 'When true, the backend mints a checkout session (or customer portal
-          session for activation flows) and returns its URL / id on the
-          response.'
+    kind: synthetic
+    aliasOf: CheckLimitRequest
+    doc: 'Public alias of OpenAPI CheckLimitRequest. Kept so dropping the
+      former extendDto overlay does not rename the exported type.'
   CloneProductResult:
     kind: synthetic
     fields:
@@ -2661,10 +2656,6 @@ overlays:
       customerRef:
         type: string
         required: true
-  includeCheckoutSession:
-    kind: synthetic
-    marker: true
-    doc: 'Field extension tag for CheckLimitsRequest'
   topupProjection:
     kind: synthetic
     marker: true

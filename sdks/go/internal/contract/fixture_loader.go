@@ -36,10 +36,17 @@ type WireResponse struct {
 	Body   any
 }
 
-// Wire is the programmed HTTP exchange for a client fixture.
-type Wire struct {
+// WireExchange is one programmed HTTP pair.
+type WireExchange struct {
 	Request  WireRequest
 	Response WireResponse
+}
+
+// Wire is the programmed HTTP exchange for a client fixture.
+type Wire struct {
+	Request   WireRequest
+	Response  WireResponse
+	Exchanges []WireExchange
 }
 
 // FixtureInput is `input`.
@@ -230,29 +237,69 @@ func parseWire(raw any) (Wire, error) {
 	if !ok {
 		return Wire{}, fmt.Errorf("wire must be an object")
 	}
+	var exchanges []WireExchange
+	if rawEx, exists := obj["exchanges"]; exists && rawEx != nil {
+		list, ok := rawEx.([]any)
+		if !ok || len(list) == 0 {
+			return Wire{}, fmt.Errorf("wire.exchanges must be a non-empty array when present")
+		}
+		for i, item := range list {
+			row, ok := item.(map[string]any)
+			if !ok {
+				return Wire{}, fmt.Errorf("wire.exchanges[%d] must be an object", i)
+			}
+			ex, err := parseWirePair(row)
+			if err != nil {
+				return Wire{}, err
+			}
+			exchanges = append(exchanges, ex)
+		}
+	}
+	_, hasReq := obj["request"]
+	_, hasResp := obj["response"]
+	if hasReq != hasResp {
+		return Wire{}, fmt.Errorf("wire.request and wire.response must be paired")
+	}
+	if hasReq {
+		pair, err := parseWirePair(obj)
+		if err != nil {
+			return Wire{}, err
+		}
+		if len(exchanges) == 0 {
+			exchanges = []WireExchange{pair}
+		}
+		return Wire{Request: pair.Request, Response: pair.Response, Exchanges: exchanges}, nil
+	}
+	if len(exchanges) == 0 {
+		return Wire{}, fmt.Errorf("wire must include request/response or exchanges[]")
+	}
+	return Wire{Request: exchanges[0].Request, Response: exchanges[0].Response, Exchanges: exchanges}, nil
+}
+
+func parseWirePair(obj map[string]any) (WireExchange, error) {
 	req, ok := obj["request"].(map[string]any)
 	if !ok {
-		return Wire{}, fmt.Errorf("wire.request and wire.response are required objects")
+		return WireExchange{}, fmt.Errorf("wire.request and wire.response are required objects")
 	}
 	resp, ok := obj["response"].(map[string]any)
 	if !ok {
-		return Wire{}, fmt.Errorf("wire.request and wire.response are required objects")
+		return WireExchange{}, fmt.Errorf("wire.request and wire.response are required objects")
 	}
 	method, _ := req["method"].(string)
 	switch method {
 	case "GET", "POST", "PUT", "PATCH", "DELETE":
 	default:
-		return Wire{}, fmt.Errorf("wire.request.method must be an HTTP verb")
+		return WireExchange{}, fmt.Errorf("wire.request.method must be an HTTP verb")
 	}
 	path, err := requireString(req, "path")
 	if err != nil {
-		return Wire{}, err
+		return WireExchange{}, err
 	}
 	var query map[string]string
 	if q, exists := req["query"]; exists && q != nil {
 		qm, ok := q.(map[string]any)
 		if !ok {
-			return Wire{}, fmt.Errorf("wire.request.query must be an object when present")
+			return WireExchange{}, fmt.Errorf("wire.request.query must be an object when present")
 		}
 		query = stringMap(qm)
 	}
@@ -260,18 +307,18 @@ func parseWire(raw any) (Wire, error) {
 	if h, exists := req["headers"]; exists && h != nil {
 		hm, ok := h.(map[string]any)
 		if !ok {
-			return Wire{}, fmt.Errorf("wire.request.headers must be an object when present")
+			return WireExchange{}, fmt.Errorf("wire.request.headers must be an object when present")
 		}
 		headers = stringMap(hm)
 	}
 	status, ok := asInt(resp["status"])
 	if !ok {
-		return Wire{}, fmt.Errorf("wire.response.status must be an int")
+		return WireExchange{}, fmt.Errorf("wire.response.status must be an int")
 	}
 	if _, ok := resp["body"]; !ok {
-		return Wire{}, fmt.Errorf("wire.response.body is required")
+		return WireExchange{}, fmt.Errorf("wire.response.body is required")
 	}
-	return Wire{
+	return WireExchange{
 		Request: WireRequest{
 			Method:  method,
 			Path:    path,

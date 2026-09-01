@@ -50,9 +50,7 @@ describe('referenced tool paths', () => {
   })
 
   it('collects at least 70 references from ci.yml', { timeout: 30_000 }, () => {
-    const fromCi = referenced.filter(ref =>
-      ref.source.includes('.github/workflows/ci.yml'),
-    )
+    const fromCi = referenced.filter(ref => ref.source.includes('.github/workflows/ci.yml'))
     expect(fromCi.length).toBeGreaterThanOrEqual(70)
   })
 })

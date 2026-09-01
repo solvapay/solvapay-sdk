@@ -173,9 +173,9 @@ Two emitters, no scanner.
 
 1. **`Toolchain::C` column** on the `Toolchain` enum in `emit_bindings_rs.rs`,
    replacing the hand-written **one-op** (`getMerchant`) scaffold in
-   `sdks/capi/src/dispatch.rs` with a generated 36-op table. Closes the
+   `sdks/capi/src/dispatch.rs` with a generated 42-op table. Closes the
    deferred half of step 54. Prerequisite for C full parity in Phase 5: fixture
-   replay needs all 36 ops reachable; `ctest/smoke.c` still exercises one op.
+   replay needs all 42 ops reachable; `ctest/smoke.c` still exercises one op.
 2. **Fixture-runner registry emitter.** `IrBindingSymbol` already carries
    `core`, `core_call`, `args`, and `call.serialize` — everything a wrap invoke
    fn needs. Generating `tools/conformance/fixture-runner/src/registry.rs` emits the
@@ -411,8 +411,9 @@ survives as the language-neutral interchange every other runner consumes.
    captured.** Steps 52 and 53 deleted every superseded TS semantic
    implementation (`verifyWebhookTs`, `timingSafeEqual`, `calculateDelayTs`,
    the `paywall-*-ts` modules, `tsFallback`, the deleted `SOLVAPAY_IMPL` flag, and all client
-   `fetch` bodies). `tools/conformance/lib/superseded-server-ts-check.ts` currently
-   reports `OK`. There is no TypeScript oracle left:
+   `fetch` bodies). There is no TypeScript oracle left — the
+   `superseded-server-ts-check` gate was retired with the migration-guard
+   family:
    - `sdks/typescript/server/src/edge.ts` calls `verifyWebhookWasm`, which loads the
      binding, injects `Math.floor(Date.now()/1000)`, calls the **sync** Rust
      `verifyWebhook` export, and `JSON.parse`s the result. Zero `crypto.subtle`

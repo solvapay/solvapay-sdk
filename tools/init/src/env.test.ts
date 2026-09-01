@@ -10,7 +10,8 @@ import {
   writeSolvaPaySecretToEnv,
 } from './env'
 
-const envMode = async (cwd: string): Promise<number> => (await stat(path.join(cwd, '.env'))).mode & 0o777
+const envMode = async (cwd: string): Promise<number> =>
+  (await stat(path.join(cwd, '.env'))).mode & 0o777
 
 describe('writeSolvaPaySecretToEnv', () => {
   const makeTempDir = async () => mkdtemp(path.join(os.tmpdir(), 'solvapay-init-'))

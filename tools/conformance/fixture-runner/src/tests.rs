@@ -101,6 +101,37 @@ fn parses_error_fixture_with_wire() {
         }
         FixtureExpect::Result(_) => panic!("expected error branch"),
     }
+    assert_eq!(wire.exchanges.len(), 1);
+}
+
+#[test]
+fn parses_wire_exchanges_without_single_pair() {
+    let raw = json!({
+        "suite": "driver-loop",
+        "case": "gate-handler-success-emits-usage",
+        "input": {
+            "fn": "driveGate",
+            "args": { "customerRef": "cus_abc", "product": "prd_demo", "handler": "success" }
+        },
+        "wire": {
+            "exchanges": [
+                {
+                    "request": { "method": "POST", "path": "/v1/sdk/limits" },
+                    "response": { "status": 200, "body": { "withinLimits": true } }
+                },
+                {
+                    "request": { "method": "POST", "path": "/v1/sdk/usages" },
+                    "response": { "status": 200, "body": { "reference": "usg" } }
+                }
+            ]
+        },
+        "expect": { "result": { "requests": [] } }
+    });
+    let fixture = parse_fixture(&raw).expect("exchanges-only wire");
+    let wire = fixture.wire.expect("wire");
+    assert_eq!(wire.request.path, "/v1/sdk/limits");
+    assert_eq!(wire.exchanges.len(), 2);
+    assert_eq!(wire.exchanges[1].request.path, "/v1/sdk/usages");
 }
 
 #[test]

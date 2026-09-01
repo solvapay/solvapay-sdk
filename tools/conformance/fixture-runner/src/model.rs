@@ -109,13 +109,32 @@ pub struct WireResponse {
     pub body: Value,
 }
 
-/// Optional captured HTTP exchange for client-fixture suites (`wire`).
+/// One programmed HTTP exchange (`wire.request`/`wire.response` or an `exchanges[]` row).
 #[derive(Debug, Clone, PartialEq)]
-pub struct Wire {
+pub struct WireExchange {
     /// Outbound request the SDK should have made.
     pub request: WireRequest,
     /// Inbound response the mock transport returned.
     pub response: WireResponse,
+}
+
+/// Optional captured HTTP exchange for client-fixture suites (`wire`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Wire {
+    /// Outbound request the SDK should have made (first exchange when only `exchanges` is set).
+    pub request: WireRequest,
+    /// Inbound response the mock transport returned (first exchange when only `exchanges` is set).
+    pub response: WireResponse,
+    /// Optional route table for multi-call driver loops.
+    pub exchanges: Vec<WireExchange>,
+}
+
+impl Wire {
+    /// Route table. Always at least one row after a successful parse.
+    #[must_use]
+    pub fn routes(&self) -> &[WireExchange] {
+        &self.exchanges
+    }
 }
 
 /// Callable input block (`input`) naming the bound function and its arguments.
@@ -278,7 +297,7 @@ fn parse_fixture_error(obj: &Map<String, Value>) -> RunnerResult<FixtureErrorExp
     })
 }
 
-/// Parses a `wire` block with required `request` and `response` sub-objects.
+/// Parses a `wire` block: a single `request`/`response` pair, `exchanges[]`, or both.
 ///
 /// # Arguments
 ///
@@ -286,11 +305,57 @@ fn parse_fixture_error(obj: &Map<String, Value>) -> RunnerResult<FixtureErrorExp
 ///
 /// # Returns
 ///
-/// A [`Wire`] pairing parsed request and response, or [`RunnerError::Parse`] when sub-objects are missing or invalid.
+/// A [`Wire`] whose `exchanges` is always non-empty, or [`RunnerError::Parse`] when neither form is valid.
 fn parse_wire(obj: &Map<String, Value>) -> RunnerResult<Wire> {
+    let mut exchanges = Vec::new();
+    if let Some(raw) = obj.get("exchanges") {
+        let list = raw.as_array().ok_or_else(|| {
+            RunnerError::Parse("wire.exchanges must be an array when present".to_owned())
+        })?;
+        if list.is_empty() {
+            return Err(RunnerError::Parse(
+                "wire.exchanges must be non-empty when present".to_owned(),
+            ));
+        }
+        for (i, item) in list.iter().enumerate() {
+            let row = as_object(item, &format!("wire.exchanges[{i}]"))?;
+            exchanges.push(WireExchange {
+                request: parse_wire_request(require_object(row, "request")?)?,
+                response: parse_wire_response(require_object(row, "response")?)?,
+            });
+        }
+    }
+
+    let has_request = obj.contains_key("request");
+    let has_response = obj.contains_key("response");
+    if has_request != has_response {
+        return Err(RunnerError::Parse(
+            "wire.request and wire.response must be paired".to_owned(),
+        ));
+    }
+    if has_request {
+        let pair = WireExchange {
+            request: parse_wire_request(require_object(obj, "request")?)?,
+            response: parse_wire_response(require_object(obj, "response")?)?,
+        };
+        if exchanges.is_empty() {
+            exchanges.push(pair.clone());
+        }
+        return Ok(Wire {
+            request: pair.request,
+            response: pair.response,
+            exchanges,
+        });
+    }
+    if exchanges.is_empty() {
+        return Err(RunnerError::Parse(
+            "wire must include request/response or exchanges[]".to_owned(),
+        ));
+    }
     Ok(Wire {
-        request: parse_wire_request(require_object(obj, "request")?)?,
-        response: parse_wire_response(require_object(obj, "response")?)?,
+        request: exchanges[0].request.clone(),
+        response: exchanges[0].response.clone(),
+        exchanges,
     })
 }
 

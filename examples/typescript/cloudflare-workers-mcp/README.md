@@ -202,9 +202,9 @@ const handler = createSolvaPayMcpFetch({
 
 The demo tools live entirely in `src/demo-tools.ts` and are not part of any `@solvapay/*` package. Replace the body of `registerDemoTools` with your own `registerPayable(...)` calls, or gate them off entirely by setting `DEMO_TOOLS=false` in `wrangler.jsonc` or `.env`.
 
-## Widget source sync
+## Widget source copies
 
-The widget iframe payload (`mcp-app.html`, `src/mcp-app.tsx`, `vite.config.ts`) is byte-for-byte copied from [`examples/typescript/supabase-edge-mcp/`](../supabase-edge-mcp/). If you change the widget, apply the same edit to both examples until we extract a shared package. A TODO in both READMEs tracks this.
+The widget iframe payload (`mcp-app.html` and the body of `src/mcp-app.tsx`) is deliberately duplicated across this example, [`../supabase-edge-mcp/`](../supabase-edge-mcp/), [`../mcp-checkout-app/`](../mcp-checkout-app/), and the `create-solvapay` MCP scaffold. A shared workspace package would make the examples uncopyable. `vite.config.ts` is **not** identical — examples carry a monorepo-only `@solvapay/*` alias block. If you change the HTML or the TSX body, update every copy; `tools/repo/example-widget-parity.test.ts` gates that. Policy: `docs/contributing/mcp-apps-sdk-rules.md` ("Demo is not the SDK").
 
 ## Known limits
 

@@ -7,11 +7,11 @@ environment — facades read, core decides.
 
 **Explicit constructor option > environment variable > default (base URL only).**
 
-| Field | Option | Environment | Default |
-| --- | --- | --- | --- |
-| Secret key | `apiKey` / `api_key` | `SOLVAPAY_SECRET_KEY` | none — required |
-| API origin | `apiBaseUrl` / `api_base_url` | `SOLVAPAY_API_BASE_URL` | transport `DEFAULT_BASE_URL` |
-| Debug logs | `debug` | `SOLVAPAY_DEBUG` | off unless the value is exactly `true` |
+| Field      | Option                        | Environment             | Default                                |
+| ---------- | ----------------------------- | ----------------------- | -------------------------------------- |
+| Secret key | `apiKey` / `api_key`          | `SOLVAPAY_SECRET_KEY`   | none — required                        |
+| API origin | `apiBaseUrl` / `api_base_url` | `SOLVAPAY_API_BASE_URL` | transport `DEFAULT_BASE_URL`           |
+| Debug logs | `debug`                       | `SOLVAPAY_DEBUG`        | off unless the value is exactly `true` |
 
 Merge is **per field**. Passing `{ apiKey }` must still pick up
 `SOLVAPAY_API_BASE_URL`. An all-or-nothing env read when the options object is

@@ -329,6 +329,7 @@ fn require_f64(value: &Value, key: &str) -> Result<f64, HelperErrorResult> {
     })
 }
 
+/// Read a required non-empty string field from a JSON object.
 fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
     value
         .get(key)

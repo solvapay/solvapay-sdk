@@ -35,7 +35,12 @@ def replay_fixture(fixture: Fixture) -> Outcome:
             return _dispatch_construct_sdk_error(fixture)
         if fn in HOST_FNS:
             return outcome_from_value(
-                invoke_host(fn, fixture.input.args, clock=fixture.input.clock)
+                invoke_host(
+                    fn,
+                    fixture.input.args,
+                    clock=fixture.input.clock,
+                    wire=fixture.wire,
+                )
             )
         snake = camel_to_snake(fn)
         if snake in CLIENT_METHODS:

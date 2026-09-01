@@ -9,13 +9,19 @@ use crate::http_util::json_response;
 use crate::register::{invoke_payable, GetCustomerRef, PayableError, PayableHandler};
 use crate::McpHttpResponse;
 
+/// Registered payable tool used to resume an `invokeHandler` wait.
 pub(crate) struct PayableSpec {
+    /// Product reference billed for this tool.
     pub product: String,
+    /// Usage meter name (`usageType`).
     pub usage_type: String,
+    /// Integrator handler invoked after the gate allows.
     pub handler: PayableHandler,
+    /// Optional customer-ref resolver for this tool.
     pub get_customer_ref: Option<GetCustomerRef>,
 }
 
+/// Resume an `invokeHandler` envelope by running the registered payable.
 pub(crate) async fn resume_envelope(
     client: Client,
     lookup: impl FnOnce(&str) -> Option<PayableSpec>,
@@ -36,6 +42,7 @@ pub(crate) async fn resume_envelope(
     resume_payable(client, &spec, envelope, token).await
 }
 
+/// Invoke the payable and complete `mcpResume` with the handler envelope.
 async fn resume_payable(
     client: Client,
     spec: &PayableSpec,
@@ -71,6 +78,7 @@ async fn resume_payable(
     json_response(200, resumed.get("rpc").cloned().unwrap_or(resumed))
 }
 
+/// Map a payable-layer error onto `SdkError` for the HTTP adapter.
 fn payable_to_sdk(err: PayableError) -> SdkError {
     match err {
         PayableError::Sdk(err) => *err,

@@ -415,14 +415,11 @@ fn format_major_intl(major: f64, currency: &str, fraction: usize) -> String {
 
 fn check_limits_request(customer_ref: &str, product_ref: &str) -> CheckLimitsRequest {
     CheckLimitsRequest {
-        base: solvapay_dto::schemas::CheckLimitRequest {
-            customer_ref: Some(customer_ref.to_owned()),
-            include_checkout_session: None,
-            meter_name: Some("requests".to_owned()),
-            product_ref: Some(product_ref.to_owned()),
-            usage_type: None,
-        },
+        customer_ref: Some(customer_ref.to_owned()),
         include_checkout_session: None,
+        meter_name: Some("requests".to_owned()),
+        product_ref: Some(product_ref.to_owned()),
+        usage_type: None,
     }
 }
 

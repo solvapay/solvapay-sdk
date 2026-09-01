@@ -25,7 +25,6 @@ import type { TopupProcessResult } from '../types/client'
 import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { syncCustomerCore } from './customer'
-import { TOPUP_BALANCE_POLL_DELAYS_MS } from './balance-poll'
 
 /**
  * Create a payment intent for a customer to purchase a plan.
@@ -365,7 +364,7 @@ export async function attachBusinessDetailsCore(
  *      `processPaymentIntent` (this is the customer's wallet state
  *      immediately before the topup lands).
  *   2. After `/process` returns `succeeded`, polls `getCustomerBalance`
- *      on a {@link TOPUP_BALANCE_POLL_DELAYS_MS} backoff until
+ *      on a `TOPUP_BALANCE_POLL_DELAYS_MS` backoff until
  *      `credits > preCredits`, then returns `creditsAdded = post - pre`.
  *
  * The React side uses `creditsAdded` to bump the in-memory balance

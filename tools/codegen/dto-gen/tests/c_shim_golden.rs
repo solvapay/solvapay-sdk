@@ -95,7 +95,7 @@ fn live_contract_ops() -> Vec<String> {
 }
 
 #[test]
-fn c_column_emits_full_36_op_surface() {
+fn c_column_emits_full_42_op_surface() {
     let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::C).expect("emit C");
     let symbols = client_symbols(&ir);

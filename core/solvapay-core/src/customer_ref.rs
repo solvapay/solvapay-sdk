@@ -3,6 +3,7 @@
 /// Frozen no-identity ref. Never fabricate `demo_user`.
 pub const ANONYMOUS_CUSTOMER_REF: &str = "anonymous";
 
+/// Return the first non-empty trimmed candidate, if any.
 fn first_nonempty(candidates: &[Option<&str>]) -> Option<String> {
     for candidate in candidates {
         if let Some(value) = candidate.map(str::trim).filter(|s| !s.is_empty()) {

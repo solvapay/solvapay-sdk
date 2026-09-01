@@ -20,6 +20,13 @@ int contract_run_census(size_t want_parsed, size_t want_replayed) {
   size_t replayed = 0;
   size_t issues = 0;
   for (size_t i = 0; i < parsed; i++) {
+    char *fn = solvapay_fh_fixture_fn(i);
+    int skip_driver = fn != NULL &&
+                      (strcmp(fn, "driveGate") == 0 || strcmp(fn, "drivePayable") == 0);
+    solvapay_free_string(fn);
+    if (skip_driver) {
+      continue;
+    }
     char *label = solvapay_fh_fixture_label(i);
     char *env = contract_replay(i);
     if (env == NULL) {

@@ -18,7 +18,13 @@ Each fixture is replayed by the TypeScript harness in `tools/conformance/lib/fix
   },
   "wire": {
     "request": { "method": "POST", "path": "/v1/sdk/...", "headers": {}, "body": {} },
-    "response": { "status": 200, "body": {} }
+    "response": { "status": 200, "body": {} },
+    "exchanges": [
+      {
+        "request": { "method": "POST", "path": "/v1/sdk/limits" },
+        "response": { "status": 200, "body": {} }
+      }
+    ]
   },
   "expect": {
     "result": {}
@@ -26,15 +32,16 @@ Each fixture is replayed by the TypeScript harness in `tools/conformance/lib/fix
 }
 ```
 
-| Field                            | Role                                                                           |
-| -------------------------------- | ------------------------------------------------------------------------------ |
-| `suite` / `case`                 | Identity; directory layout mirrors suite names                                 |
-| `input.fn`                       | Registry key → SDK binding(s)                                                  |
-| `input.args`                     | Arguments passed to the binding                                                |
-| `input.clock`                    | ISO-8601 UTC; harness patches `Date.now`                                       |
-| `input.rngSeed`                  | Seed for deterministic `Math.random` (idempotency keys)                        |
-| `wire`                           | Optional mock-transport block for client methods                               |
-| `expect.result` / `expect.error` | Exactly one; error asserts `name` + byte-exact `message` (+ `status` when set) |
+| Field                            | Role                                                                                                                                                                                |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `suite` / `case`                 | Identity; directory layout mirrors suite names                                                                                                                                      |
+| `input.fn`                       | Registry key → SDK binding(s)                                                                                                                                                       |
+| `input.args`                     | Arguments passed to the binding                                                                                                                                                     |
+| `input.clock`                    | ISO-8601 UTC; harness patches `Date.now`                                                                                                                                            |
+| `input.rngSeed`                  | Seed for deterministic `Math.random` (idempotency keys)                                                                                                                             |
+| `wire`                           | Optional mock-transport block for client methods                                                                                                                                    |
+| `wire.exchanges`                 | Optional route table `[{ request, response }, …]` for multi-call driver loops. Single-pair `request`/`response` still works; when both are present, `exchanges` is the match table. |
+| `expect.result` / `expect.error` | Exactly one; error asserts `name` + byte-exact `message` (+ `status` when set)                                                                                                      |
 
 `expect.error.kind` / `expect.error.code` are Rust-era taxonomy fields carried for later runners; the TS harness does not invent or assert them.
 
@@ -179,6 +186,20 @@ Captures `@solvapay/core` helpers: `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE`
 | `seller-identity/label-map/by-type.json` | `SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE` | Full `eu_vat` / `gb_vat` / `us_ein` map                                                   |
 | `seller-identity/labels/*.json`          | `getSellerTaxIdentifierDisplayLabel`          | VAT / EIN / Tax ID fallback; lowercase country; null country                              |
 | `seller-identity/resolve/*.json`         | `resolveSellerIdentityDisplay`                | EU/GB/US/CA value selection, company dedupe, whitespace-only → absent, explicit null rows |
+
+## Driver loop (PR 9)
+
+Cross-language conformance for the **shipped** `Gate` / `Payable` facade loops (`paywall.protect` / `Client.Gate` / `gate()` / `invoke_payable`). Fixtures use `input.fn` `driveGate` or `drivePayable` and assert `{ requests, outcome }` — not a harness re-implementation of `gate_next`.
+
+`input.args.handler` is `success` | `throwPaywall` | `throwGeneric`. `primeCache: true` runs the gate once, clears the capture log, then runs it again (cache-hit cases expect zero HTTP on the second pass).
+
+| Path                                                      | Axis                                                       |
+| --------------------------------------------------------- | ---------------------------------------------------------- |
+| `driver-loop/gate-handler-paywall-error-skips-usage.json` | Handler `PaywallError` must not emit `POST /v1/sdk/usages` |
+| `driver-loop/gate-handler-success-emits-usage.json`       | Allow + success tracks usage                               |
+| `driver-loop/gate-handler-generic-error-emits-usage.json` | Generic handler failures are still billed                  |
+| `driver-loop/gate-limits-cache-hit-allow.json`            | Second gate after a warm cache performs zero HTTP          |
+| `driver-loop/payable-run-gate-invoke-done.json`           | MCP `invoke_payable_next` runGate → invokeHandler → done   |
 
 ## Paywall (Step 6 / §6.3)
 

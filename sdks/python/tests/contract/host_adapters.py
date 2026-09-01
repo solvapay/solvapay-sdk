@@ -13,9 +13,16 @@ import json
 from typing import Any, Mapping
 
 from solvapay._native import call_native_sync, unwrap_envelope
-from solvapay._solvapay import _resolve_authenticated_user  # type: ignore[attr-defined]
+from solvapay._solvapay import (  # type: ignore[attr-defined]
+    SolvaPayClient,
+    _resolve_authenticated_user,
+)
+from solvapay.errors import PaywallError
+from solvapay.facade import create_solvapay
 
 from .clock import parse_iso8601_utc_to_unix_secs
+from .fixture_loader import Wire
+from .stub_backend import StubBackend
 
 TOPUP_BALANCE_POLL_DELAYS_MS = [500, 1000, 2000, 4000]
 BALANCE_RECONCILE_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 16000]
@@ -27,11 +34,19 @@ HOST_FNS = frozenset(
         "TOPUP_BALANCE_POLL_DELAYS_MS",
         "BALANCE_RECONCILE_DELAYS_MS",
         "resolveAuthenticatedUser",
+        "driveGate",
+        "drivePayable",
     }
 )
 
 
-def invoke_host(fn: str, args: Mapping[str, Any], *, clock: str | None) -> Any:
+def invoke_host(
+    fn: str,
+    args: Mapping[str, Any],
+    *,
+    clock: str | None,
+    wire: Any | None = None,
+) -> Any:
     if fn == "withRetry":
         return _invoke_with_retry(args)
     if fn == "pollBalanceUntilIncreased":
@@ -40,6 +55,10 @@ def invoke_host(fn: str, args: Mapping[str, Any], *, clock: str | None) -> Any:
         return list(TOPUP_BALANCE_POLL_DELAYS_MS)
     if fn == "BALANCE_RECONCILE_DELAYS_MS":
         return list(BALANCE_RECONCILE_DELAYS_MS)
+    if fn == "driveGate":
+        return _invoke_drive_gate(args, wire)
+    if fn == "drivePayable":
+        return _invoke_drive_payable(args, wire)
     if fn == "resolveAuthenticatedUser":
         payload = dict(args)
         if clock is not None:
@@ -204,3 +223,98 @@ def _parse_poll_delays(raw: Any) -> list[int]:
     if isinstance(raw, list):
         return [int(x) for x in raw]
     raise ValueError(f"unsupported poll delays: {raw!r}")
+
+
+def _wire_routes(wire: Wire | None) -> tuple[tuple[str, str, int, Any], ...]:
+    if wire is None:
+        return ()
+    if wire.exchanges:
+        return tuple(
+            (req.method, req.path, resp.status, resp.body) for req, resp in wire.exchanges
+        )
+    return ((wire.request.method, wire.request.path, wire.response.status, wire.response.body),)
+
+
+def _captured_trace(stub: StubBackend) -> list[dict[str, str]]:
+    return [{"method": item.method, "path": item.path} for item in stub.captured]
+
+
+def _drive_ids(args: Mapping[str, Any]) -> tuple[str, str, str]:
+    customer_ref = str(args.get("customerRef") or "")
+    product = str(args.get("product") or "")
+    usage_type = str(args.get("usageType") or "requests")
+    if not customer_ref or not product:
+        raise ValueError("drive adapter requires customerRef and product")
+    return customer_ref, product, usage_type
+
+
+def _invoke_drive_gate(args: Mapping[str, Any], wire: Any | None) -> dict[str, Any]:
+    customer_ref, product, usage_type = _drive_ids(args)
+    handler = str(args.get("handler") or "success")
+    prime = args.get("primeCache") is True
+    typed_wire = wire if isinstance(wire, Wire) else None
+    with StubBackend(exchanges=_wire_routes(typed_wire)) as stub:
+        client = SolvaPayClient._for_fixtures(  # type: ignore[attr-defined]
+            "sk_test_fixture",
+            stub.base_url,
+            None,
+            None,
+        )
+        facade = create_solvapay(api_client=client)
+
+        if prime:
+            facade.gate_blocking(customer_ref, product=product, usage_type=usage_type)
+            stub.captured.clear()
+            result = facade.gate_blocking(customer_ref, product=product, usage_type=usage_type)
+            kind = "gate" if result.kind == "paywall" else "allow"
+            return {
+                "requests": _captured_trace(stub),
+                "outcome": {"type": "resolved", "kind": kind},
+            }
+
+        result = facade.gate_blocking(customer_ref, product=product, usage_type=usage_type)
+        if result.kind != "allow":
+            return {
+                "requests": _captured_trace(stub),
+                "outcome": {"type": "resolved", "kind": "gate"},
+            }
+        if handler == "throwPaywall":
+            result.track_fail(PaywallError("Payment required"))
+            return {
+                "requests": _captured_trace(stub),
+                "outcome": {"type": "rejected", "name": "PaywallError"},
+            }
+        if handler == "throwGeneric":
+            result.track_fail(RuntimeError("boom"))
+            return {
+                "requests": _captured_trace(stub),
+                "outcome": {"type": "rejected", "name": "Error", "message": "boom"},
+            }
+        result.track_success()
+        return {
+            "requests": _captured_trace(stub),
+            "outcome": {"type": "resolved", "kind": "allow"},
+        }
+
+
+def _invoke_drive_payable(args: Mapping[str, Any], wire: Any | None) -> dict[str, Any]:
+    customer_ref, product, usage_type = _drive_ids(args)
+    typed_wire = wire if isinstance(wire, Wire) else None
+    with StubBackend(exchanges=_wire_routes(typed_wire)) as stub:
+        client = SolvaPayClient._for_fixtures(  # type: ignore[attr-defined]
+            "sk_test_fixture",
+            stub.base_url,
+            None,
+            None,
+        )
+        facade = create_solvapay(api_client=client)
+
+        @facade.payable(product=product, usage_type=usage_type)
+        def _run(*, customer_ref: str) -> str:
+            return "ok"
+
+        _run(customer_ref=customer_ref)
+        return {
+            "requests": _captured_trace(stub),
+            "outcome": {"type": "resolved", "kind": "done"},
+        }

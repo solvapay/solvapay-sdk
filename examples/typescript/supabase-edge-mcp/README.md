@@ -7,7 +7,7 @@ Full SolvaPay MCP server running on [**Supabase Edge Functions**](https://supaba
 - OAuth bridge — the fetch-first `/oauth/{register,authorize,token,revoke}` routes composed into the unified factory by [`createOAuthFetchRouter`](../../../sdks/typescript/mcp/src/fetch/oauth-bridge.ts)
 - Paywalled tools — [`demo-tools.ts`](./supabase/functions/mcp/demo-tools.ts), the two Goldberg stock-predictor Oracle tools (trimmed from `mcp-checkout-app`'s full toolbox)
 
-> **Sibling example:** [`../cloudflare-workers-mcp/`](../cloudflare-workers-mcp/) is the same paywalled toolbox on the Cloudflare Workers runtime. The widget iframe source (`mcp-app.html`, `src/mcp-app.tsx`, `vite.config.ts`, `demo-tools.ts` tool handlers) is byte-for-byte duplicated between the two until we extract a shared package. **Sync edits in both places** if you change the widget or the demo tools.
+> **Sibling example:** [`../cloudflare-workers-mcp/`](../cloudflare-workers-mcp/) is the same paywalled toolbox on the Cloudflare Workers runtime. The widget HTML and the TSX / `demo-tools.ts` bodies (from the first `import`) are deliberately duplicated — not a shared package. `vite.config.ts` differs (monorepo aliases). Update both copies together; `tools/repo/example-widget-parity.test.ts` gates that. Policy: `docs/contributing/mcp-apps-sdk-rules.md` ("Demo is not the SDK").
 
 ## Why this example exists
 
@@ -24,7 +24,7 @@ examples/typescript/supabase-edge-mcp/
 ├── mcp-app.html                           iframe chrome (bundled)
 ├── deno.workspace.json                    TYPE-CHECK GATE import map → workspace source
 ├── src/
-│   └── mcp-app.tsx                        iframe entrypoint (copied from mcp-checkout-app)
+│   └── mcp-app.tsx                        iframe entrypoint (deliberate copy; body gated)
 └── supabase/
     └── functions/
         └── mcp/

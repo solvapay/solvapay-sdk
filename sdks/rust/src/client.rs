@@ -12,8 +12,8 @@ use solvapay_core::{
     GateCacheOp, HelperErrorResult, RetryPolicy, SdkError,
 };
 use solvapay_dto::{
-    CheckLimitRequest, CheckLimitsRequest, CreateCustomerRequest, GetCustomerParams,
-    TrackUsageRequest, UpdateCustomerParams,
+    CheckLimitsRequest, CreateCustomerRequest, GetCustomerParams, TrackUsageRequest,
+    UpdateCustomerParams,
 };
 use solvapay_transport::{ClientShell, SharedTransport, SolvaPayClient};
 use tokio::sync::{Mutex, Notify};
@@ -308,14 +308,11 @@ impl Client {
     ) -> Result<Value, SdkError> {
         let include = include_checkout_session.then_some(true);
         let params = CheckLimitsRequest {
-            base: CheckLimitRequest {
-                customer_ref: Some(customer_ref.to_owned()),
-                product_ref: Some(product.to_owned()),
-                meter_name: Some(usage_type.to_owned()),
-                include_checkout_session: include,
-                usage_type: None,
-            },
+            customer_ref: Some(customer_ref.to_owned()),
+            product_ref: Some(product.to_owned()),
+            meter_name: Some(usage_type.to_owned()),
             include_checkout_session: include,
+            usage_type: None,
         };
         self.inner.api.check_limits(params).await
     }

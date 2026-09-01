@@ -109,7 +109,12 @@ export class HttpAdapter implements Adapter<HttpContext, unknown> {
 
   formatError(error: Error, [_req, reply]: HttpContext): unknown {
     const mapped = mapRouteError({
-      kind: error instanceof PaywallError ? 'paywall' : error instanceof SolvaPayError ? 'solvapay' : 'error',
+      kind:
+        error instanceof PaywallError
+          ? 'paywall'
+          : error instanceof SolvaPayError
+            ? 'solvapay'
+            : 'error',
       message: error.message,
       status: error instanceof SolvaPayError ? (error.status ?? null) : null,
       operationName: 'paywall',

@@ -137,7 +137,6 @@ func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcp
 		"usageType":   opts.UsageType,
 		"startedMs":   time.Now().UnixMilli(),
 	}
-	var allow *solvapay.Allow
 	for {
 		outRaw, err := callLayer2(ctx, "sv_invoke_payable_next_binding", map[string]any{
 			"state": state,
@@ -198,7 +197,6 @@ func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcp
 						"message": message,
 					}
 				case *solvapay.Allow:
-					allow = typed
 					snap := typed.Customer()
 					event = map[string]any{
 						"kind":        "gateAllow",

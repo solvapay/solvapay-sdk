@@ -146,6 +146,48 @@ describe('FixtureSchema', () => {
     ).toThrow()
   })
 
+  it('accepts wire.exchanges without a single request/response pair', () => {
+    const multi = {
+      suite: 'driver-loop',
+      case: 'gate-handler-success-emits-usage',
+      input: {
+        fn: 'driveGate',
+        args: { customerRef: 'cus_abc', product: 'prd_demo', handler: 'success' },
+      },
+      wire: {
+        exchanges: [
+          {
+            request: { method: 'POST', path: '/v1/sdk/limits' },
+            response: { status: 200, body: { withinLimits: true, remaining: 3 } },
+          },
+          {
+            request: { method: 'POST', path: '/v1/sdk/usages' },
+            response: { status: 200, body: { reference: 'usg_fixture' } },
+          },
+        ],
+      },
+      expect: {
+        result: {
+          requests: [
+            { method: 'POST', path: '/v1/sdk/limits' },
+            { method: 'POST', path: '/v1/sdk/usages' },
+          ],
+          outcome: { type: 'resolved', kind: 'allow' },
+        },
+      },
+    }
+    expect(FixtureSchema.parse(multi)).toEqual(multi)
+  })
+
+  it('rejects wire with neither a pair nor exchanges', () => {
+    expect(() =>
+      FixtureSchema.parse({
+        ...clientWire,
+        wire: {},
+      }),
+    ).toThrow()
+  })
+
   it('parseFixture returns the typed fixture', () => {
     const fixture = parseFixture(webhookAccept)
     expect(fixture.suite).toBe('webhook-verification')

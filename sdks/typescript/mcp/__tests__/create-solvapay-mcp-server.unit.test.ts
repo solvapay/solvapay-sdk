@@ -220,7 +220,9 @@ describe('createSolvaPayMcpServer', () => {
     })
     const { tools } = await listedTools(server)
     const payable = tools.find(t => t.name === 'ping_status')
-    expect(payable?.inputSchema).toEqual(expect.objectContaining({ type: 'object', properties: {} }))
+    expect(payable?.inputSchema).toEqual(
+      expect.objectContaining({ type: 'object', properties: {} }),
+    )
   })
 
   it('registers the slash-command prompts by default', async () => {

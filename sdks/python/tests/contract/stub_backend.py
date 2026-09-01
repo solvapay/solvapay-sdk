@@ -8,7 +8,7 @@ import json
 import threading
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 from urllib.parse import parse_qs, urlparse
 
 
@@ -29,6 +29,7 @@ class StubBackend:
     port: int = 0
     response_status: int = 200
     response_body: Any = None
+    exchanges: Sequence[tuple[str, str, int, Any]] = field(default_factory=tuple)
     captured: list[CapturedRequest] = field(default_factory=list)
     _server: ThreadingHTTPServer | None = field(default=None, init=False, repr=False)
     _thread: threading.Thread | None = field(default=None, init=False, repr=False)
@@ -88,7 +89,23 @@ class StubBackend:
                     )
                 )
 
+                status = backend.response_status
                 payload = backend.response_body
+                if backend.exchanges:
+                    matched = None
+                    for method, path, route_status, route_body in backend.exchanges:
+                        if method == self.command and path == parsed.path:
+                            matched = (route_status, route_body)
+                            break
+                    if matched is None:
+                        self.send_response(404)
+                        self.send_header("Content-Type", "application/json")
+                        self.send_header("Content-Length", "2")
+                        self.end_headers()
+                        if self.command != "HEAD":
+                            self.wfile.write(b"{}")
+                        return
+                    status, payload = matched
                 if isinstance(payload, (dict, list)):
                     data = json.dumps(payload).encode("utf-8")
                     content_type = "application/json"
@@ -102,7 +119,7 @@ class StubBackend:
                     data = json.dumps(payload).encode("utf-8")
                     content_type = "application/json"
 
-                self.send_response(backend.response_status)
+                self.send_response(status)
                 self.send_header("Content-Type", content_type)
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()

@@ -79,7 +79,7 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 
 ### Demo
 
-- **Demo is not the SDK.** The hero demo uses the Vite-build path because "I built this UI" is a stronger engineering story. Merchants use the bundled-HTML path because it's the 60-second onboarding.
+- **Demo is not the SDK.** The hero demo uses the Vite-build path because "I built this UI" is a stronger engineering story. Merchants use the bundled-HTML path because it's the 60-second onboarding. The four TypeScript widget copies (Cloudflare, Supabase, `mcp-checkout-app`, scaffold `_base`) are deliberately duplicated so each example stays liftable. Do not extract a shared package. See `docs/contributing/mcp-apps-sdk-rules.md` and `tools/repo/example-widget-parity.test.ts`.
 - **Pre-render chart PNGs for the demo.** Do not rely on live chart generation during a live demo. Bulletproof > impressive.
 - **First-run tour is disabled in the demo bootstrap.** Presenter talks over the UI, not against it.
 

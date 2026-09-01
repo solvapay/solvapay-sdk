@@ -41,6 +41,7 @@ class WireResponse:
 class Wire:
     request: WireRequest
     response: WireResponse
+    exchanges: tuple[tuple[WireRequest, WireResponse], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -158,6 +159,36 @@ def load_fixture(path: Path) -> Fixture:
 def _parse_wire(raw: object) -> Wire:
     if not isinstance(raw, dict):
         raise ValueError("wire must be an object")
+    exchanges: list[tuple[WireRequest, WireResponse]] = []
+    raw_ex = raw.get("exchanges")
+    if raw_ex is not None:
+        if not isinstance(raw_ex, list) or not raw_ex:
+            raise ValueError("wire.exchanges must be a non-empty array when present")
+        for item in raw_ex:
+            if not isinstance(item, dict):
+                raise ValueError("wire.exchanges entries must be objects")
+            pair = _parse_wire_pair(item)
+            exchanges.append((pair.request, pair.response))
+    has_req = "request" in raw
+    has_resp = "response" in raw
+    if has_req != has_resp:
+        raise ValueError("wire.request and wire.response must be paired")
+    if has_req:
+        pair = _parse_wire_pair(raw)
+        if not exchanges:
+            exchanges.append((pair.request, pair.response))
+        return Wire(
+            request=pair.request,
+            response=pair.response,
+            exchanges=tuple(exchanges),
+        )
+    if not exchanges:
+        raise ValueError("wire must include request/response or exchanges[]")
+    request, response = exchanges[0]
+    return Wire(request=request, response=response, exchanges=tuple(exchanges))
+
+
+def _parse_wire_pair(raw: dict[str, Any]) -> Wire:
     req = raw.get("request")
     resp = raw.get("response")
     if not isinstance(req, dict) or not isinstance(resp, dict):

@@ -7,14 +7,20 @@ use serde_json::Value;
 use solvapay::transport::FetchJwksParams;
 use solvapay::{Client, SdkError};
 
+/// 10-minute JWKS cache with optional preloaded JSON and fetch skip.
 pub(crate) struct JwksCache {
+    /// Injected JWKS document; when present, fetch is skipped.
     preloaded: Option<Value>,
+    /// When true, never fetch JWKS from the issuer.
     skip_fetch: bool,
+    /// Issuer origin used to build `/.well-known/jwks.json`.
     issuer: String,
+    /// Cached document plus expiry instant.
     cache: Mutex<Option<(Value, Instant)>>,
 }
 
 impl JwksCache {
+    /// Build a cache for `public_base_url` with optional preload / skip flags.
     pub(crate) fn new(preloaded: Option<Value>, skip_fetch: bool, public_base_url: String) -> Self {
         Self {
             preloaded,
@@ -24,6 +30,7 @@ impl JwksCache {
         }
     }
 
+    /// Return preloaded, cached, or freshly fetched JWKS for this request.
     pub(crate) async fn resolve(
         &self,
         client: &Client,

@@ -13,7 +13,6 @@ import {
   mcpAuthGate,
   mcpNativeCors,
   McpBearerAuthError,
-  pathAwareProtectedResourcePath,
   withoutTrailingSlash,
   defaultMcpBearerExpectations,
   cachedJwks,
@@ -137,7 +136,14 @@ function getRequestJsonRpcMethod(body: unknown): string | undefined {
   return undefined
 }
 
-function writeChallenge(res: ResponseLike, req: RequestLike, publicBaseUrl: string, mcpPath: string, id: JsonRpcId, rpcMethod?: string) {
+function writeChallenge(
+  res: ResponseLike,
+  req: RequestLike,
+  publicBaseUrl: string,
+  mcpPath: string,
+  id: JsonRpcId,
+  rpcMethod?: string,
+) {
   const gate = mcpAuthGate({
     publicBaseUrl,
     mcpPath,
@@ -393,7 +399,6 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     mcpPath,
     ...(oauthPaths !== undefined ? { oauthPaths } : {}),
   })
-  const metadataPath = pathAwareProtectedResourcePath(mcpPath)
   const routes = oauthProxyRoutes({
     mcpPath,
     protectedResourcePath,

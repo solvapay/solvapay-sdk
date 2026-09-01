@@ -134,7 +134,7 @@ func Replay(ctx context.Context, fixture Fixture) (Outcome, error) {
 		return dispatchConstructSdkError(ctx, fixture)
 	}
 	if _, ok := HostFns[fn]; ok {
-		value, err := InvokeHost(ctx, fn, fixture.Input.Args, fixture.Input.Clock)
+		value, err := InvokeHost(ctx, fn, fixture.Input.Args, fixture.Input.Clock, fixture.Wire)
 		if err != nil {
 			return OutcomeFromError(err), nil
 		}

@@ -254,9 +254,7 @@ fn verify_compact(
     if !payload.is_object() {
         return None;
     }
-    let Some(exp) = payload.get("exp").and_then(claim_as_i64) else {
-        return None;
-    };
+    let exp = payload.get("exp").and_then(claim_as_i64)?;
     if exp <= now_unix_secs {
         return None;
     }

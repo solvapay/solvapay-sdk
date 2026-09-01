@@ -29,6 +29,7 @@ fn render_request_id(now_ms: i64, random_unit: f64) -> String {
 /// * `random_unit` - Host `Math.random()` unit interval for the request id.
 /// * `error_message` - Optional fail-path message.
 #[must_use]
+#[allow(clippy::too_many_arguments)]
 pub fn build_usage_request(
     customer_ref: &str,
     product: &str,

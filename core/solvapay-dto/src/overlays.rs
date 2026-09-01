@@ -282,17 +282,8 @@ pub struct CancelPurchaseParams {
     pub reason: Option<String>,
 }
 
-/// SDK overlay extending `CheckLimitRequest`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CheckLimitsRequest {
-    /// Flattened base DTO fields.
-    #[serde(flatten)]
-    pub base: schemas::CheckLimitRequest,
-    /// When true, the backend mints a checkout session (or customer portal session for activation flows) and returns its URL / id on the response.
-    #[serde(rename = "includeCheckoutSession")]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub include_checkout_session: Option<bool>,
-}
+/// Public alias of OpenAPI CheckLimitRequest. Kept so dropping the former extendDto overlay does not rename the exported type.
+pub type CheckLimitsRequest = schemas::CheckLimitRequest;
 
 /// SDK-only type `CloneProductOverrides`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

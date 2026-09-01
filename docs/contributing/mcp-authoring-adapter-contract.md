@@ -209,11 +209,11 @@ They match the never-moves list in [`architecture.md`](./architecture.md).
 request into `{ rpc, config, authHeader, mcpProtocolVersionHeader? }`,
 call `mcpDispatch`, and branch three ways:
 
-| `kind`          | Host work                                                                                        |
-| --------------- | ------------------------------------------------------------------------------------------------ |
+| `kind`          | Host work                                                                                                                                                             |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `rpc`           | Write the JSON-RPC body. Envelope `status` is authoritative (default 200; 400 for `-32022`, 404 for modern `-32601`). Facade-local catches emit `-32603` at HTTP 200. |
-| `challenge`     | Write `status` + `WWW-Authenticate` + body                                                       |
-| `invokeHandler` | Run the merchant handler, then `mcpResume` with the token                                        |
+| `challenge`     | Write `status` + `WWW-Authenticate` + body                                                                                                                            |
+| `invokeHandler` | Run the merchant handler, then `mcpResume` with the token                                                                                                             |
 
 OAuth and discovery HTTP go through `mcpOauthRequest`. Builtin tools are
 serviced **inside** `mcpDispatch`. The one host exception is the widget

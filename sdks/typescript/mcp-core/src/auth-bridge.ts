@@ -4,11 +4,7 @@
  * `getCustomerRef` extractors can read the caller identity.
  */
 
-import {
-  extractBearerToken,
-  verifyBearer,
-  type McpVerifyBearerOptions,
-} from './bearer'
+import { extractBearerToken, verifyBearer, type McpVerifyBearerOptions } from './bearer'
 import type { McpToolExtra } from './types'
 
 type JwtPayload = Record<string, unknown>

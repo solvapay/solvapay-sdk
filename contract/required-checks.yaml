@@ -2,6 +2,8 @@
 # One entry per expanded `.github/workflows/ci.yml` check name.
 # `gate` is the redesign §10.3 / §13 compatibility gate the job enforces.
 # `deferred` records a known gap with an allowed reason (the job stays required).
+# `c-abi-smoke-only` on c-binding: smoke.c is single-op; 42-op dispatch + contract
+# replay live in-tree (`publish = false` — optional ABI, not a released crate).
 # `required: false` + `reason` catalogues a check that must not be branch-protected.
 schemaVersion: 1
 branch: main
@@ -168,6 +170,7 @@ checks:
   - name: c-binding (native C ABI)
     jobId: c-binding
     gate: Shared fixture conformance; Fuzzing (C ABI corpus replay); No-unwrap / no-expect deny
+    deferred: c-abi-smoke-only
   - name: go-crosscompile (linux/amd64)
     jobId: go-crosscompile
     gate: Platform build matrices

@@ -137,6 +137,7 @@ pub fn topup_process_next(
     }
 }
 
+/// Begin the top-up sequence: validate the PI id and request customer sync.
 fn start(event: &Value) -> Result<TopupProcessNextOutput, HelperErrorResult> {
     let payment_intent_id = event
         .get("paymentIntentId")
@@ -158,6 +159,7 @@ fn start(event: &Value) -> Result<TopupProcessNextOutput, HelperErrorResult> {
     })
 }
 
+/// Apply the customer-sync result and either capture a baseline balance or process.
 fn on_sync_customer(
     mut state: TopupProcessState,
     event: &Value,
@@ -182,6 +184,7 @@ fn on_sync_customer(
     }
 }
 
+/// Apply a baseline or poll balance observation.
 fn on_balance_result(
     mut state: TopupProcessState,
     event: &Value,
@@ -210,6 +213,7 @@ fn on_balance_result(
     }
 }
 
+/// Apply `/process` outcome and either resolve or start balance polling.
 fn on_process_payment(
     state: TopupProcessState,
     event: &Value,
@@ -227,6 +231,7 @@ fn on_process_payment(
     next_poll_or_soft_success(state)
 }
 
+/// After a poll delay, request the next balance observation.
 fn on_sleep_done(state: TopupProcessState) -> Result<TopupProcessNextOutput, HelperErrorResult> {
     require_pending(&state, TopupPending::Sleep)?;
     let customer_ref = state.customer_ref.clone().ok_or_else(|| {
@@ -240,6 +245,7 @@ fn on_sleep_done(state: TopupProcessState) -> Result<TopupProcessNextOutput, Hel
     })
 }
 
+/// Sleep for the next top-up delay, or soft-succeed when the table is exhausted.
 fn next_poll_or_soft_success(
     mut state: TopupProcessState,
 ) -> Result<TopupProcessNextOutput, HelperErrorResult> {
@@ -255,6 +261,7 @@ fn next_poll_or_soft_success(
     }
 }
 
+/// Ask the host to call `processPaymentIntent` for the current PI.
 fn process_action(state: TopupProcessState) -> Result<TopupProcessNextOutput, HelperErrorResult> {
     let customer_ref = state.customer_ref.clone().ok_or_else(|| {
         HelperErrorResult::transport("topup_process_next process missing customerRef")
@@ -269,6 +276,7 @@ fn process_action(state: TopupProcessState) -> Result<TopupProcessNextOutput, He
     })
 }
 
+/// Terminal output: keep state and return the projected process outcome.
 fn resolved(
     mut state: TopupProcessState,
     status: String,
@@ -286,6 +294,7 @@ fn resolved(
     }
 }
 
+/// Deserialize driver state from the host payload.
 fn require_state(state: Option<&Value>) -> Result<TopupProcessState, HelperErrorResult> {
     let value = state
         .ok_or_else(|| HelperErrorResult::transport("topup_process_next state is required"))?;
@@ -294,6 +303,7 @@ fn require_state(state: Option<&Value>) -> Result<TopupProcessState, HelperError
     })
 }
 
+/// Fail if the driver is not waiting for the expected host step.
 fn require_pending(
     state: &TopupProcessState,
     expected: TopupPending,
@@ -308,6 +318,7 @@ fn require_pending(
     }
 }
 
+/// Read a required non-empty string field from a JSON object.
 fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
     value
         .get(key)
