@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from solvapay.errors import SolvaPayError
+from solvapay.errors import PaywallError, SolvaPayError
 from solvapay.facade import create_solvapay
 from solvapay.results import PayableAllowResult, PayablePaywallResult
 from test_facade import StubClient, _fake_decision
@@ -59,6 +59,16 @@ async def test_handler_failure_track_usage_outcome_fail() -> None:
     assert payload["units"] == 1
     assert payload["metadata"]["action"] == "requests"
     _assert_volatile_fields(payload)
+
+
+@pytest.mark.asyncio
+async def test_handler_paywall_error_skips_usage() -> None:
+    client = StubClient(within_limits=True, remaining=3)
+    sp = create_solvapay(api_client=client)
+    result = await sp.gate("cus_abc", product="prd_demo")
+    assert isinstance(result, PayableAllowResult)
+    result.track_fail(PaywallError("Payment required"), duration=8)
+    assert client.tracked == []
 
 
 @pytest.mark.asyncio

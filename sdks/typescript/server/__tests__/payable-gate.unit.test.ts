@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { createSolvaPay } from '../src'
+import { createSolvaPay, PaywallError } from '../src'
 import type { SolvaPayClient } from '../src/types'
 
 // Reuse the mock client shape from paywall.unit.test.ts at a smaller
@@ -153,6 +153,30 @@ describe('payable.gate()', () => {
         duration: 123,
         metadata: expect.objectContaining({ inputTokens: 5, outputTokens: 10 }),
       })
+    })
+
+    it('trackFail skips usage when the cause is a PaywallError', async () => {
+      const payable = solvaPay.payable({ productRef: 'prd_chat' })
+      const req = new Request('http://localhost/api/chat', {
+        headers: { 'x-customer-ref': 'anon_xyz' },
+      })
+      const result = await payable.gate(req)
+      if (result.kind !== 'allow') throw new Error('expected allow')
+
+      result.trackFail(
+        new PaywallError('Payment required', {
+          kind: 'payment_required',
+          product: 'prd_chat',
+          checkoutUrl: '',
+          message: 'Payment required',
+          shortMessage: 'Payment required',
+        }),
+        { duration: 50 },
+      )
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(client.trackUsageCalls).toHaveLength(0)
     })
 
     it('trackFail emits a fail usage event', async () => {

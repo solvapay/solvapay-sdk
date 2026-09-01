@@ -107,7 +107,7 @@ func (a *Allow) TrackFail(ctx context.Context, cause error, opts TrackOpts) erro
 		"nowMs":          time.Now().UnixMilli(),
 		"randomUnit":     mustRandomUnit(),
 		"errorMessage":   msg,
-		"isPaywallError": false,
+		"isPaywallError": IsPaywallError(cause),
 	})
 }
 

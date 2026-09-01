@@ -28,6 +28,7 @@ import type {
 } from './types'
 import { createSolvaPayClient } from './client'
 import { PaywallError, SolvaPayPaywall, paywallErrorToClientPayload } from './paywall'
+import { trackUsageWithRetry } from './track-usage-retry'
 import { mergeUsageRequest } from './utils'
 import { gateNext } from './native-decisions'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
@@ -1196,7 +1197,12 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
                 `gate_next handler event returned unexpected action: ${out.action.kind}`,
               )
             }
-            keepAlive(apiClient.trackUsage(mergeUsageRequest(out.action.request, opts?.metadata)))
+            keepAlive(
+              trackUsageWithRetry(
+                req => apiClient.trackUsage(req),
+                mergeUsageRequest(out.action.request, opts?.metadata),
+              ),
+            )
           }
 
           return {

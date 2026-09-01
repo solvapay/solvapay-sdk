@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import * as factory from '../factory'
+import * as nativeDecisions from '../native-decisions'
 import * as auth from './auth'
 import * as purchase from './purchase'
 import { getUsageCore, trackUsageCore } from './usage'
@@ -284,6 +285,49 @@ describe('trackUsageCore', () => {
       reference: 'usage_123',
       creditDebit: { debited: true, amount: 10, unitsRemaining: 99 },
     })
+  })
+
+  it('retries customer-not-found with the same schedule as the gate path', async () => {
+    mockGetAuth.mockResolvedValue({
+      userId: 'user_123',
+      email: null,
+      name: null,
+    })
+    mockTrackUsage
+      .mockRejectedValueOnce(new Error('404 - Customer not found'))
+      .mockResolvedValueOnce({
+        success: true,
+        reference: 'usage_retry',
+      })
+    const delaySpy = vi.spyOn(nativeDecisions, 'retryNextDelayMs').mockReturnValue(0)
+
+    const result = await trackUsageCore(fakeRequest(), { units: 1 })
+
+    expect(mockTrackUsage).toHaveBeenCalledTimes(2)
+    expect(result).toEqual({
+      success: true,
+      reference: 'usage_retry',
+    })
+    delaySpy.mockRestore()
+  })
+
+  it('does not retry non-customer-not-found trackUsage errors', async () => {
+    mockGetAuth.mockResolvedValue({
+      userId: 'user_123',
+      email: null,
+      name: null,
+    })
+    mockTrackUsage.mockRejectedValue(new Error('Insufficient credits'))
+    const delaySpy = vi.spyOn(nativeDecisions, 'retryNextDelayMs').mockReturnValue(0)
+
+    const result = await trackUsageCore(fakeRequest(), { units: 1 })
+
+    expect(mockTrackUsage).toHaveBeenCalledTimes(1)
+    expect(result).toMatchObject({
+      error: expect.any(String),
+      status: 500,
+    })
+    delaySpy.mockRestore()
   })
 
   it('returns error when solvaPay.trackUsage throws', async () => {

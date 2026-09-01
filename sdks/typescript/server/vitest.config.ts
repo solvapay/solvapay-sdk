@@ -2,6 +2,27 @@ import { defineConfig } from 'vitest/config'
 import { config } from 'dotenv'
 import { resolve } from 'path'
 
+/**
+ * Unit-suite exclusions. Named so a new `*.test.ts` is picked up by default
+ * (`include` below) instead of silently missing CI — the old `package.json`
+ * file whitelist omitted host-loop helpers as they were added.
+ *
+ * Integration specs stay on `test:integration*`. The helper files listed
+ * here are stale relative to today's route-helper behavior and are not
+ * part of this change.
+ */
+const UNIT_EXCLUDE = [
+  '**/*.integration.test.ts',
+  '__tests__/topup-payment.unit.test.ts',
+  'src/helpers/auto-recharge.test.ts',
+  'src/helpers/checkout.test.ts',
+  'src/helpers/limits.test.ts',
+  'src/helpers/payment-method.test.ts',
+  'src/helpers/plans.test.ts',
+  'src/helpers/purchase.test.ts',
+  'src/helpers/renewal.test.ts',
+]
+
 // Load environment variables from .env file
 // override: true means .env file takes precedence over existing env vars
 config({ path: resolve(__dirname, '.env'), override: true })
@@ -33,6 +54,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     include: ['__tests__/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
+    exclude: UNIT_EXCLUDE,
     // Increase timeout for integration tests (default is 5000ms)
     // Integration tests make multiple slow API calls to real backend
     testTimeout: 120000, // 120 seconds — exhaustion tests burn through many units

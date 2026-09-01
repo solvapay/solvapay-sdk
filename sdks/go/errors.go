@@ -1,6 +1,9 @@
 package solvapay
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // Error is the structured failure surface returned by every SolvaPay call.
 //
@@ -28,4 +31,33 @@ func (e *Error) Error() string {
 		return fmt.Sprintf("solvapay: %s: %s", e.Code, e.Message)
 	}
 	return fmt.Sprintf("solvapay: %s", e.Message)
+}
+
+// PaywallError is a structured payment-gate failure. TrackFail skips usage
+// when the cause is or wraps a PaywallError (or an [*Error] whose Code is
+// "Paywall"), matching TypeScript / Python / Ruby.
+type PaywallError struct {
+	Message           string
+	StructuredContent any
+}
+
+// Error implements the error interface.
+func (e *PaywallError) Error() string {
+	if e == nil || e.Message == "" {
+		return "solvapay: paywall"
+	}
+	return e.Message
+}
+
+// IsPaywallError reports whether err is a paywall gate failure.
+func IsPaywallError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pe *PaywallError
+	if errors.As(err, &pe) {
+		return true
+	}
+	var se *Error
+	return errors.As(err, &se) && (se.Code == "Paywall" || se.Code == "paywall")
 }

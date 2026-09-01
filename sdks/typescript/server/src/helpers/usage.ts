@@ -1,4 +1,5 @@
 import { countsUsage, projectUsageSnapshot } from '../native-decisions'
+import { trackUsageWithRetry } from '../track-usage-retry'
 import type { SolvaPay } from '../factory'
 import type { TrackUsageResponse } from '../types'
 import type { ErrorResult } from './types'
@@ -99,15 +100,18 @@ export async function trackUsageCore(
       name: name || undefined,
     })
 
-    const result = await solvaPay.trackUsage({
-      customerRef,
-      actionType: body.actionType,
-      units: body.units,
-      productRef: body.productRef,
-      description: body.description,
-      metadata: body.metadata,
-      idempotencyKey: body.idempotencyKey,
-    })
+    const result = await trackUsageWithRetry(
+      params => solvaPay.trackUsage(params),
+      {
+        customerRef,
+        actionType: body.actionType,
+        units: body.units,
+        productRef: body.productRef,
+        description: body.description,
+        metadata: body.metadata,
+        idempotencyKey: body.idempotencyKey,
+      },
+    )
 
     return result
   } catch (error) {

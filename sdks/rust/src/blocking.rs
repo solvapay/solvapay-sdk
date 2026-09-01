@@ -9,7 +9,7 @@ use solvapay_transport::{ClientShell, SharedTransport};
 
 use crate::client::Client;
 use crate::config::Config;
-use crate::gate::{Allow, GateOpts, GateOutcome, Payable, TrackOpts};
+use crate::gate::{Allow, GateOpts, GateOutcome, Payable, TrackFailCause, TrackOpts};
 
 static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 
@@ -81,7 +81,7 @@ impl Allow {
     /// Records failed usage (blocking).
     pub fn track_fail_blocking(
         &self,
-        error: impl std::fmt::Display,
+        error: impl TrackFailCause,
         opts: TrackOpts,
     ) -> Result<(), SdkError> {
         runtime().block_on(self.track_fail(error, opts))

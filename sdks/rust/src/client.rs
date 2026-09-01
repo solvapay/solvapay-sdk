@@ -813,4 +813,54 @@ mod tests {
         assert!(body.get("duration").is_some());
         assert!(body.get("timestamp").and_then(Value::as_str).is_some());
     }
+
+    #[tokio::test]
+    async fn allow_track_fail_paywall_error_skips_usage() {
+        use solvapay_core::{PaywallGate, PaywallGateKind};
+
+        let limits_body = br#"{"withinLimits":true,"remaining":1,"plan":"pro"}"#;
+        let mock = MockTransport::new(vec![Ok(HttpResponse {
+            status: 200,
+            body: limits_body.to_vec(),
+        })]);
+        let client = Client::with_transport(
+            mock.clone(),
+            Config {
+                api_key: "sk_test".to_owned(),
+                ..Config::default()
+            },
+        );
+        let outcome = client
+            .gate(
+                "cus_test",
+                GateOpts {
+                    product: "prd_x".to_owned(),
+                    usage_type: "requests".to_owned(),
+                },
+            )
+            .await
+            .expect("gate");
+        let GateOutcome::Allow(allow) = outcome else {
+            panic!("expected allow");
+        };
+        let err = SdkError::paywall(
+            "Payment required",
+            PaywallGate {
+                kind: PaywallGateKind::PaymentRequired,
+                product: "prd_x".to_owned(),
+                checkout_url: String::new(),
+                message: "Payment required".to_owned(),
+                short_message: "Payment required".to_owned(),
+                confirmation_url: None,
+                plans: None,
+                balance: None,
+                product_details: None,
+            },
+        );
+        allow
+            .track_fail(err, TrackOpts::default())
+            .await
+            .expect("track_fail");
+        assert_eq!(mock.recorded().len(), 1);
+    }
 }

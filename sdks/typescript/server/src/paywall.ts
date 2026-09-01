@@ -25,10 +25,10 @@ import {
   paywallErrorToClientPayload as paywallErrorToClientPayloadDispatch,
   requireProductRef,
   resolveCheckLimitsParams,
-  shouldRetryUsageError,
 } from './native-decisions'
 import { CUSTOMER_DEDUP_MAX_CACHE_SIZE } from './defaults'
-import { withRetry, createRequestDeduplicator } from './utils'
+import { trackUsageWithRetry } from './track-usage-retry'
+import { createRequestDeduplicator } from './utils'
 
 export * from './defaults'
 
@@ -658,14 +658,7 @@ export class SolvaPayPaywall {
     if (!isTrackUsageRequest(request)) {
       throw new SolvaPayError('gate_next usage request is missing customerRef')
     }
-    await withRetry(() => this.apiClient.trackUsage(request), {
-      maxRetries: 2,
-      initialDelay: 500,
-      shouldRetry: error => shouldRetryUsageError(error.message),
-      onRetry: (_error, attempt) => {
-        console.warn(`⚠️  Customer not found (attempt ${attempt + 1}/3), retrying in 500ms...`)
-      },
-    })
+    await trackUsageWithRetry(req => this.apiClient.trackUsage(req), request)
   }
 }
 

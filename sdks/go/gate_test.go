@@ -170,6 +170,23 @@ func TestGateTrackFailOutcome(t *testing.T) {
 	assertVolatile(t, payload)
 }
 
+func TestGateTrackFailPaywallErrorSkipsUsage(t *testing.T) {
+	mock := &gateMock{limits: map[string]any{"withinLimits": true, "remaining": 3}}
+	client := newGateClient(t, mock)
+	ctx := context.Background()
+	out, err := client.Gate(ctx, "cus_abc", solvapay.GateOpts{Product: "prd_demo"})
+	if err != nil {
+		t.Fatalf("Gate: %v", err)
+	}
+	allow := out.(*solvapay.Allow)
+	if err := allow.TrackFail(ctx, &solvapay.PaywallError{Message: "Payment required"}, solvapay.TrackOpts{}); err != nil {
+		t.Fatalf("TrackFail: %v", err)
+	}
+	if got := len(mock.trackedCopy()); got != 0 {
+		t.Fatalf("tracked = %d, want 0 (skipUsage)", got)
+	}
+}
+
 func TestGatePaywallTracksUsage(t *testing.T) {
 	mock := &gateMock{limits: map[string]any{
 		"withinLimits": false,

@@ -26,7 +26,9 @@ pub use config::{
     Config, ANONYMOUS_CUSTOMER_REF, CUSTOMER_DEDUP_MAX_CACHE_SIZE, CUSTOMER_DEDUP_TTL_MS,
     DEFAULT_LIMITS_CACHE_TTL_MS, REQUEST_ID_FORMAT, USAGE_ACTION_TYPE,
 };
-pub use gate::{Allow, CustomerSnapshot, GateOpts, GateOutcome, Payable, TrackOpts};
+pub use gate::{
+    Allow, CustomerSnapshot, GateOpts, GateOutcome, Payable, TrackFailCause, TrackOpts,
+};
 
 // --- Transport re-exports (public surface for integrators) ---
 pub use solvapay_transport::{

@@ -54,6 +54,15 @@ class FacadeUsageTest < Minitest::Test
     assert_volatile_fields(payload)
   end
 
+  def test_handler_paywall_error_skips_usage
+    client = FacadeTest::StubClient.new
+    facade = SolvaPay.create(api_client: client)
+    result = facade.gate("cus_abc", product: "prd_demo")
+    assert_instance_of SolvaPay::PayableAllowResult, result
+    result.track_fail(SolvaPay::PaywallError.new("Payment required"), duration: 8)
+    assert_empty client.tracked
+  end
+
   def test_pre_check_gate_tracks_paywall_outcome
     client = FacadeTest::StubClient.new(within_limits: false, remaining: 0)
     facade = SolvaPay.create(api_client: client)

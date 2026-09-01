@@ -4,7 +4,7 @@
 
 use crate::client::Client;
 use serde_json::Value;
-use solvapay_core::PaywallGate;
+use solvapay_core::{PaywallGate, SdkError};
 
 /// Options for [`Client::gate`].
 #[derive(Debug, Clone)]
@@ -65,6 +65,54 @@ pub struct Allow {
     pub(crate) limits: Value,
     pub(crate) customer: CustomerSnapshot,
     pub(crate) driver_state: Value,
+}
+
+/// Classifies a [`Allow::track_fail`] cause for `gate_next` (`isPaywallError`).
+pub trait TrackFailCause {
+    /// Human-readable fail message forwarded to `gate_next`.
+    fn track_fail_message(&self) -> String;
+
+    /// Whether this cause is a paywall gate error (usage must be skipped).
+    fn is_paywall_error(&self) -> bool {
+        false
+    }
+}
+
+impl TrackFailCause for str {
+    fn track_fail_message(&self) -> String {
+        self.to_owned()
+    }
+}
+
+impl TrackFailCause for String {
+    fn track_fail_message(&self) -> String {
+        self.clone()
+    }
+}
+
+impl TrackFailCause for SdkError {
+    fn track_fail_message(&self) -> String {
+        match self {
+            SdkError::Api { message, .. }
+            | SdkError::Paywall { message, .. }
+            | SdkError::Transport { message, .. } => message.clone(),
+            other => format!("{other:?}"),
+        }
+    }
+
+    fn is_paywall_error(&self) -> bool {
+        matches!(self, SdkError::Paywall { .. })
+    }
+}
+
+impl<T: TrackFailCause + ?Sized> TrackFailCause for &T {
+    fn track_fail_message(&self) -> String {
+        (**self).track_fail_message()
+    }
+
+    fn is_paywall_error(&self) -> bool {
+        (**self).is_paywall_error()
+    }
 }
 
 /// Options for usage tracking after an allowed request.
@@ -133,7 +181,7 @@ impl Allow {
     /// Records a failed usage event (same API call with error metadata).
     pub async fn track_fail(
         &self,
-        error: impl std::fmt::Display,
+        error: impl TrackFailCause,
         opts: TrackOpts,
     ) -> Result<(), solvapay_core::SdkError> {
         self.client
@@ -144,8 +192,8 @@ impl Allow {
                     "durationMs": opts.duration.unwrap_or(0.0),
                     "nowMs": crate::client::now_ms(),
                     "randomUnit": self.client.random_unit(),
-                    "errorMessage": error.to_string(),
-                    "isPaywallError": false,
+                    "errorMessage": error.track_fail_message(),
+                    "isPaywallError": error.is_paywall_error(),
                 }),
             )
             .await
