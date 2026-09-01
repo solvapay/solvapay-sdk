@@ -1157,7 +1157,12 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
           const ctx = gateOptions.ctx
 
           const keepAlive = (p: Promise<unknown>) => {
-            const guarded = p.catch(() => undefined)
+            const guarded = p.catch((error: unknown) => {
+              console.error(
+                'SolvaPay: trackUsage failed after retries; usage was not recorded',
+                error,
+              )
+            })
             if (ctx) {
               ctx.waitUntil(guarded)
             } else {

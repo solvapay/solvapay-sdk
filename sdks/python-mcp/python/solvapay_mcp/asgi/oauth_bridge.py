@@ -219,7 +219,7 @@ class McpAuthMiddleware:
                     token = set_request_customer_ref(ref.strip())
                 scope["solvapay_auth"] = auth
                 await self.app(scope, replay_receive, send)
-            except (McpBearerAuthError, ValueError, json.JSONDecodeError):
+            except McpBearerAuthError:
                 gate = mcp_auth_gate(
                     public_base_url=self._options.public_base_url,
                     rpc_method=rpc_method or "tools/call",

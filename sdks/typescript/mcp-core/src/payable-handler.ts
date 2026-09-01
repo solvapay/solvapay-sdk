@@ -34,6 +34,11 @@ export interface BuildPayableHandlerContext {
    * back to the SDK v1 flat `extra.authInfo`).
    */
   getCustomerRef?: (args: Record<string, unknown>, extra?: McpToolExtra) => string | Promise<string>
+  /**
+   * Usage meter name forwarded to `trackUsage.metadata.action`.
+   * Defaults to `'requests'`.
+   */
+  usageType?: string
 }
 
 type MerchantHandler<TArgs, TResult> = (
@@ -55,6 +60,10 @@ type InvokeAction = {
 
 function nowMs(): number {
   return Date.now()
+}
+
+function resolveUsageType(usageType: string | undefined): string {
+  return typeof usageType === 'string' && usageType.trim() !== '' ? usageType.trim() : 'requests'
 }
 
 async function resolvePayableCustomerRef(
@@ -93,6 +102,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
   handler: MerchantHandler<TArgs, TResult>,
 ): (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult> {
   const { product, getCustomerRef } = ctx
+  const usageType = resolveUsageType(ctx.usageType)
 
   return async (
     args: Record<string, unknown>,
@@ -104,7 +114,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
       kind: 'start',
       customerRef,
       product,
-      usageType: 'requests',
+      usageType,
       startedMs: nowMs(),
     }
     let allowCustomerRef: string | null = null

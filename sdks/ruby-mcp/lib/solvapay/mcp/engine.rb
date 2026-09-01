@@ -145,6 +145,7 @@ module SolvaPay
           product: spec[:product],
           handler: spec[:handler],
           get_customer_ref: spec[:get_customer_ref],
+          usage_type: spec[:usage_type],
           args: args,
         )
         resumed = stringify(

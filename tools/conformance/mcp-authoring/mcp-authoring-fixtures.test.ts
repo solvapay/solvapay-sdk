@@ -26,6 +26,7 @@ function discoverFixtureFiles(dir: string): string[] {
 }
 
 const MCP_AUTHORING_FIXTURES = [
+  'allow/custom-usage-type.json',
   'allow/respond-emitted-blocks.json',
   'allow/respond-key-order.json',
   'allow/respond-minimal.json',

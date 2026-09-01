@@ -76,6 +76,7 @@ async def call_registered_payable(backend: MockBackend, scenario: Scenario) -> d
         input_schema=_input_schema(scenario),
         handler=_compile_handler(scenario),
         get_customer_ref=get_customer_ref,
+        usage_type=scenario.usageType,
     )
 
     async with Client(server) as client:

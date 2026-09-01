@@ -255,9 +255,13 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 			if err != nil {
 				return nil, err
 			}
+			limits, ok := raw.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("solvapay: checkLimits returned a non-object body")
+			}
 			event = map[string]any{
 				"kind":       "limitsResult",
-				"limits":     asObject(raw),
+				"limits":     limits,
 				"nowMs":      time.Now().UnixMilli(),
 				"randomUnit": mustRandomUnit(),
 			}

@@ -33,6 +33,7 @@ pub struct Scenario {
     pub product: String,
     pub customer_ref: String,
     pub customer_ref_source: String,
+    pub usage_type: Option<String>,
     pub limits: Value,
     pub handler: HandlerSpec,
 }

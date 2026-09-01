@@ -410,7 +410,7 @@ class SolvaPay:
                 else:
                     limits_value = _unwrap_envelope(await client.check_limits(args_json))
                 if not isinstance(limits_value, dict):
-                    limits_value = {}
+                    raise SolvaPayError("checkLimits returned a non-object body")
                 event = {
                     "kind": "limitsResult",
                     "limits": limits_value,

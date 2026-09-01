@@ -218,6 +218,25 @@ describe('payable.gate()', () => {
       expect(client.trackUsageCalls[1]).toMatchObject({ outcome: 'success' })
     })
 
+    it('logs a terminal trackUsage failure without failing the allow path', async () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      client.trackUsage = vi.fn().mockRejectedValue(new Error('usage down'))
+      const payable = solvaPay.payable({ productRef: 'prd_chat' })
+      const req = new Request('http://localhost/api/chat', {
+        headers: { 'x-customer-ref': 'anon_xyz' },
+      })
+      const result = await payable.gate(req)
+      if (result.kind !== 'allow') throw new Error('expected allow')
+
+      result.trackSuccess()
+      await vi.waitFor(() => {
+        expect(spy).toHaveBeenCalled()
+      })
+      const [message] = spy.mock.calls[0] ?? []
+      expect(String(message)).toMatch(/trackUsage failed after retries/)
+      spy.mockRestore()
+    })
+
     it('routes track promises through ctx.waitUntil when ctx is provided', async () => {
       const waitUntil = vi.fn()
       const payable = solvaPay.payable({ productRef: 'prd_chat' })

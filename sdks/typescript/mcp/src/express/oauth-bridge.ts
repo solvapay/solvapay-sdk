@@ -54,7 +54,7 @@ type ResponseLike = {
   send?: (body?: string | Buffer) => void
 }
 
-type NextLike = () => void
+type NextLike = (err?: unknown) => void
 type Middleware = (req: RequestLike, res: ResponseLike, next: NextLike) => void | Promise<void>
 
 export interface OAuthRegisterHandlerOptions {
@@ -511,8 +511,12 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
 
       req.auth = auth
       next()
-    } catch {
-      writeChallenge(res, req, publicBaseUrl, mcpPath, id, method)
+    } catch (error) {
+      if (error instanceof McpBearerAuthError) {
+        writeChallenge(res, req, publicBaseUrl, mcpPath, id, method)
+        return
+      }
+      next(error)
     }
   }
 

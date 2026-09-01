@@ -64,6 +64,7 @@ function bindEnginePayables(
         {
           product,
           getCustomerRef: opts.getCustomerRef,
+          usageType: opts.usageType,
         },
         opts.handler as never,
       )

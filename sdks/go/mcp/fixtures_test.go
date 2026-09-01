@@ -9,6 +9,7 @@ import (
 )
 
 var mcpAuthoringFixtures = []string{
+	"allow/custom-usage-type.json",
 	"allow/respond-emitted-blocks.json",
 	"allow/respond-key-order.json",
 	"allow/respond-minimal.json",

@@ -14,6 +14,7 @@ from tests.mcp_authoring.repo_paths import lookup_mcp_fixtures
 from tests.mcp_authoring.scenario import parse_observation, parse_scenario
 
 MCP_AUTHORING_FIXTURES = [
+    "allow/custom-usage-type.json",
     "allow/respond-emitted-blocks.json",
     "allow/respond-key-order.json",
     "allow/respond-minimal.json",

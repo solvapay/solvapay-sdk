@@ -441,5 +441,20 @@ class FacadeTest < Minitest::Test
     callable = allowed.payable(product: "prd_x").protect { |value:, **| value * 2 }
     assert_equal 6, callable.call(value: 3, customer_ref: "cus_123")
     assert_equal 1, client.tracked.length
+
+    positional = allowed.payable(product: "prd_x").protect { |*_args, **| true }
+    positional.call({ "auth" => { "customer_ref" => "cus_123" } })
+    assert_equal 2, client.tracked.length
+  end
+
+  def test_gate_rejects_non_object_limits_body
+    client = StubClient.new
+    def client.check_limits(params:)
+      @checks += 1
+      []
+    end
+    facade = SolvaPay.create(api_client: client)
+    error = assert_raises(SolvaPay::SolvaPayError) { facade.gate("cus_123", product: "prd_x") }
+    assert_match(/non-object/, error.message)
   end
 end

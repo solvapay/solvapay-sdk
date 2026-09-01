@@ -1081,6 +1081,7 @@ async function drivePayable(
     {
       product: ids.product,
       getCustomerRef: () => ids.customerRef,
+      usageType: ids.usageType,
     },
     async () => assertResponseResult(makeResponseResult({ ok: true })),
   )

@@ -61,8 +61,6 @@ export async function cancelPurchaseCore(
       return normalized
     }
 
-    await new Promise(resolve => setTimeout(resolve, 500))
-
     return normalized
   } catch (error: unknown) {
     if (error instanceof SolvaPayError) {
@@ -116,8 +114,6 @@ export async function reactivatePurchaseCore(
     if (isRenewalError(normalized)) {
       return normalized
     }
-
-    await new Promise(resolve => setTimeout(resolve, 500))
 
     return normalized
   } catch (error: unknown) {

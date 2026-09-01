@@ -30,6 +30,7 @@ module McpAuthoring
         input_schema: input_schema(scenario),
         handler: compile_handler(scenario),
         get_customer_ref: get_customer_ref,
+        usage_type: scenario.usage_type,
       )
 
       initialize_server(server)

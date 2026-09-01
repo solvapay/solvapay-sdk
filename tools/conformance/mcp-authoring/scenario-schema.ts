@@ -106,6 +106,7 @@ export const ScenarioSchema = z
     product: z.string().min(1),
     customerRef: z.string().min(1),
     customerRefSource: z.enum(['hook', 'toolArgs']),
+    usageType: z.string().min(1).optional(),
     limits: LimitsSchema,
     handler: HandlerSchema,
   })

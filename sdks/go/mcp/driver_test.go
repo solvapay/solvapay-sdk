@@ -53,6 +53,7 @@ func callRegisteredPayable(t *testing.T, backend *mockBackend, sc scenario) (map
 		Title:       sc.Tool.Title,
 		Description: sc.Tool.Description,
 		InputSchema: sc.Tool.InputSchema,
+		UsageType:   sc.UsageType,
 	}
 	if sc.CustomerRefSource == "hook" {
 		ref := sc.CustomerRef

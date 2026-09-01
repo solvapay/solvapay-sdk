@@ -210,6 +210,25 @@ describe('buildPayableHandler — ctx.respond V1', () => {
     })
   })
 
+  describe('usageType', () => {
+    it('forwards a custom meter name onto trackUsage.metadata.action', async () => {
+      const client = makeMockClient()
+      const solvaPay = makeSolvaPay(client)
+
+      const handler = buildPayableHandler(
+        solvaPay,
+        { product: 'prd_test', usageType: 'tokens' },
+        async (_args, ctx: ResponseContext) => ctx.respond({ ok: true }),
+      )
+
+      await handler({}, mcpExtra())
+
+      expect(client.__trackUsageCalls).toHaveLength(1)
+      const metadata = client.__trackUsageCalls[0].metadata as { action?: unknown }
+      expect(metadata.action).toBe('tokens')
+    })
+  })
+
   describe('ctx.customer', () => {
     it('populates ref, balance, remaining, withinLimits, plan from LimitResponseWithPlan', async () => {
       const client = makeMockClient({

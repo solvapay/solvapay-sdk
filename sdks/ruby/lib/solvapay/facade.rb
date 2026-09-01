@@ -90,7 +90,7 @@ module SolvaPay
             },
           )
           unless limits.is_a?(Hash)
-            limits = {} #: Hash[String, untyped]
+            raise SolvaPay::SolvaPayError.new("checkLimits returned a non-object body", code: "invalid_limits")
           end
           event = {
             "kind" => "limitsResult",
@@ -426,7 +426,7 @@ module SolvaPay
       raise ArgumentError, "protect requires a block" unless operation
 
       lambda do |*args, **kwargs, &block|
-        customer_ref = kwargs[:customer_ref] || "anonymous"
+        customer_ref = extract_customer_ref(args, kwargs)
         result = @facade.gate(customer_ref, product: @product, usage_type: @usage_type)
         case result
         when PayablePaywallResult
@@ -444,6 +444,26 @@ module SolvaPay
           raise SolvaPayError.new("unexpected gate result", code: "invalid_gate_result")
         end
       end
+    end
+
+    private
+
+    def extract_customer_ref(args, kwargs)
+      kw = kwargs[:customer_ref]
+      return kw if kw.is_a?(String) && !kw.empty?
+
+      first = args[0]
+      return "anonymous" unless first.is_a?(Hash)
+
+      auth = first[:auth] || first["auth"]
+      if auth.is_a?(Hash)
+        from_auth = auth[:customer_ref] || auth["customer_ref"]
+        return from_auth if from_auth.is_a?(String) && !from_auth.empty?
+      end
+      from_first = first[:customer_ref] || first["customer_ref"]
+      return from_first if from_first.is_a?(String) && !from_first.empty?
+
+      "anonymous"
     end
   end
 

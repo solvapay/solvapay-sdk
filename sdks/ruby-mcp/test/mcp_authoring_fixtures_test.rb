@@ -12,6 +12,7 @@ require_relative "mcp_authoring/repo_paths"
 require_relative "mcp_authoring/scenario"
 
 MCP_AUTHORING_FIXTURES = [
+  "allow/custom-usage-type.json",
   "allow/respond-emitted-blocks.json",
   "allow/respond-key-order.json",
   "allow/respond-minimal.json",

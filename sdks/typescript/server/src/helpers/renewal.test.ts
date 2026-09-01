@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { SolvaPayError } from '@solvapay/core'
 
 vi.mock('../factory', () => ({
@@ -17,23 +17,14 @@ import { cancelPurchaseCore, reactivatePurchaseCore } from './renewal'
 
 const mockCreateSolvaPay = vi.mocked(createSolvaPay)
 
-async function flushSettleDelay(): Promise<void> {
-  await vi.advanceTimersByTimeAsync(500)
-}
-
 describe('cancelPurchaseCore', () => {
   const mockCancelPurchase = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
     mockCreateSolvaPay.mockReturnValue({
       apiClient: { cancelPurchase: mockCancelPurchase },
     } as never)
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   it('rejects missing purchaseRef with status 400', async () => {
@@ -79,13 +70,13 @@ describe('cancelPurchaseCore', () => {
         status: 'cancelled',
       },
     })
-    const resultPromise = cancelPurchaseCore(
-      new Request('http://localhost'),
-      { purchaseRef: 'pur_1' },
-      { solvaPay: { apiClient: { cancelPurchase: mockCancelPurchase } } as never },
-    )
-    await flushSettleDelay()
-    await expect(resultPromise).resolves.toEqual({
+    await expect(
+      cancelPurchaseCore(
+        new Request('http://localhost'),
+        { purchaseRef: 'pur_1' },
+        { solvaPay: { apiClient: { cancelPurchase: mockCancelPurchase } } as never },
+      ),
+    ).resolves.toEqual({
       reference: 'pur_1',
       status: 'cancelled',
     })
@@ -97,13 +88,13 @@ describe('cancelPurchaseCore', () => {
       status: 'active',
       cancelledAt: '2026-07-01T00:00:00Z',
     })
-    const resultPromise = cancelPurchaseCore(
-      new Request('http://localhost'),
-      { purchaseRef: 'pur_1' },
-      { solvaPay: { apiClient: { cancelPurchase: mockCancelPurchase } } as never },
-    )
-    await flushSettleDelay()
-    await expect(resultPromise).resolves.toMatchObject({
+    await expect(
+      cancelPurchaseCore(
+        new Request('http://localhost'),
+        { purchaseRef: 'pur_1' },
+        { solvaPay: { apiClient: { cancelPurchase: mockCancelPurchase } } as never },
+      ),
+    ).resolves.toMatchObject({
       reference: 'pur_1',
       cancelledAt: '2026-07-01T00:00:00Z',
     })
@@ -216,14 +207,9 @@ describe('reactivatePurchaseCore', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
     mockCreateSolvaPay.mockReturnValue({
       apiClient: { reactivatePurchase: mockReactivatePurchase },
     } as never)
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   it('rejects missing purchaseRef with status 400', async () => {
@@ -269,13 +255,13 @@ describe('reactivatePurchaseCore', () => {
         status: 'active',
       },
     })
-    const resultPromise = reactivatePurchaseCore(
-      new Request('http://localhost'),
-      { purchaseRef: 'pur_1' },
-      { solvaPay: { apiClient: { reactivatePurchase: mockReactivatePurchase } } as never },
-    )
-    await flushSettleDelay()
-    await expect(resultPromise).resolves.toEqual({
+    await expect(
+      reactivatePurchaseCore(
+        new Request('http://localhost'),
+        { purchaseRef: 'pur_1' },
+        { solvaPay: { apiClient: { reactivatePurchase: mockReactivatePurchase } } as never },
+      ),
+    ).resolves.toEqual({
       reference: 'pur_1',
       status: 'active',
     })

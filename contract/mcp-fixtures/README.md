@@ -29,6 +29,7 @@ a composite observation.
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tool`              | `{ name, title?, description?, inputSchema?, args }` — MCP `tools/call` name, optional JSON Schema-ish field map (`{ "customer_ref": { "type": "string" } }`), and arguments |
 | `product`           | Product ref passed to the adapter                                                                                                                                            |
+| `usageType`         | Optional meter name forwarded to `trackUsage.metadata.action` (omit to default `requests`)                                                                                   |
 | `customerRef`       | Identity string                                                                                                                                                              |
 | `customerRefSource` | `"hook"` (`getCustomerRef`) or `"toolArgs"` (`args.customer_ref`)                                                                                                            |
 | `limits`            | Exact `checkLimits` payload the mock backend returns (no defaults)                                                                                                           |
@@ -66,6 +67,7 @@ Gate `content[0].text` and `structuredContent` are layer-2 output
 
 | Path                                | Axis                                    |
 | ----------------------------------- | --------------------------------------- |
+| `allow/custom-usage-type.json`      | custom `usageType` reaches `metadata.action` |
 | `allow/respond-minimal.json`        | `ctx.respond(data)`                     |
 | `allow/respond-text-option.json`    | `options.text`                          |
 | `allow/respond-nudge.json`          | nudge suffix; structured data unchanged |

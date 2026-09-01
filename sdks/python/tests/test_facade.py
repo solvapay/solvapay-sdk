@@ -405,6 +405,18 @@ async def test_gate_missing_backend_customer_ref_is_actionable() -> None:
 
 
 @pytest.mark.asyncio
+async def test_gate_rejects_non_object_limits_body() -> None:
+    class ListLimitsClient(StubClient):
+        def check_limits_blocking(self, args_json: str) -> str:
+            _ = json.loads(args_json)
+            return json.dumps({"ok": True, "value": []})
+
+    sp = create_solvapay(api_client=ListLimitsClient())
+    with pytest.raises(SolvaPayError, match="non-object"):
+        await sp.gate("cus_abc", product="prd_demo")
+
+
+@pytest.mark.asyncio
 async def test_payable_decorator_raises_paywall() -> None:
     client = StubClient(within_limits=False, remaining=0)
     sp = create_solvapay(api_client=client)

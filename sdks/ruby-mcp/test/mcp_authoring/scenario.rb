@@ -12,6 +12,7 @@ module McpAuthoring
     :product,
     :customer_ref,
     :customer_ref_source,
+    :usage_type,
     :limits,
     :handler,
     keyword_init: true,
@@ -23,7 +24,7 @@ module McpAuthoring
     confirmationUrl plans balance product meterName
   ].freeze
   TOOL_KEYS = %w[name title description inputSchema args].freeze
-  SCENARIO_KEYS = %w[tool product customerRef customerRefSource limits handler].freeze
+  SCENARIO_KEYS = %w[tool product customerRef customerRefSource usageType limits handler].freeze
   RESPOND_KEYS = %w[kind data options emit].freeze
   GATE_KEYS = %w[kind reason].freeze
   THROW_KEYS = %w[kind message].freeze
@@ -57,6 +58,7 @@ module McpAuthoring
         product: product,
         customer_ref: customer_ref,
         customer_ref_source: source,
+        usage_type: optional_string(args["usageType"], "usageType"),
         limits: parse_limits(args["limits"]),
         handler: parse_handler(args["handler"]),
       )

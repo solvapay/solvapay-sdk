@@ -86,6 +86,7 @@ class Scenario(StrictModel):
     product: str = Field(min_length=1)
     customerRef: str = Field(min_length=1)
     customerRefSource: Literal["hook", "toolArgs"]
+    usageType: str | None = None
     limits: Limits
     handler: Handler
 

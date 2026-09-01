@@ -66,6 +66,8 @@ export interface RegisterPayableToolOptions<
   handler: PayableHandler<InferHandlerArgs<InputSchema>, TData>
   buildBootstrap?: BuildBootstrapPayloadFn
   getCustomerRef?: (args: Record<string, unknown>, extra?: McpToolExtra) => string | Promise<string>
+  /** Usage meter name (`trackUsage.metadata.action`). Defaults to `'requests'`. */
+  usageType?: string
   meta?: Record<string, unknown>
   annotations?: SolvaPayToolAnnotations
   icons?: SolvaPayToolIcon[]
@@ -87,6 +89,7 @@ export function registerPayableTool<
     description,
     handler,
     getCustomerRef,
+    usageType,
     meta,
     annotations,
     icons,
@@ -94,7 +97,7 @@ export function registerPayableTool<
 
   const protectedHandler = buildPayableHandler(
     solvaPay,
-    { product, getCustomerRef },
+    { product, getCustomerRef, usageType },
     handler as unknown as Parameters<typeof buildPayableHandler>[2],
   )
 

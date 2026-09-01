@@ -83,6 +83,7 @@ async fn unresolvable_customer_ref_falls_back_to_anonymous() {
         product: "prd_demo".to_owned(),
         customer_ref: "unused".to_owned(),
         customer_ref_source: "toolArgs".to_owned(),
+        usage_type: None,
         limits: json!({ "withinLimits": true, "remaining": 5, "meterName": "requests" }),
         handler: HandlerSpec::Respond {
             data: json!({ "ok": true }),

@@ -79,6 +79,7 @@ class _PayableTool:
     description: str | None
     input_schema: dict[str, object]
     get_customer_ref: GetCustomerRef | None
+    usage_type: str = "requests"
 
 
 @dataclass
@@ -510,6 +511,7 @@ def register_payable_tool(
     description: str | None = None,
     input_schema: dict[str, object] | None = None,
     get_customer_ref: GetCustomerRef | None = None,
+    usage_type: str | None = None,
 ) -> None:
     registry = _tools(server)
     schema: dict[str, object] = (
@@ -523,6 +525,11 @@ def register_payable_tool(
         description=description,
         input_schema=schema,
         get_customer_ref=get_customer_ref,
+        usage_type=(
+            usage_type.strip()
+            if isinstance(usage_type, str) and usage_type.strip()
+            else "requests"
+        ),
     )
 
 
@@ -694,7 +701,7 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
         "kind": "start",
         "customerRef": customer_ref,
         "product": spec.product,
-        "usageType": "requests",
+        "usageType": spec.usage_type,
         "startedMs": _now_ms(),
     }
     allow: PayableAllowResult | None = None

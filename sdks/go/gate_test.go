@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -228,6 +229,28 @@ func TestGateLimitsCacheHitSkipsSecondCheck(t *testing.T) {
 	}
 	if got := mock.limitsCalls.Load(); got != 1 {
 		t.Fatalf("checkLimits calls = %d, want 1 (cache hit)", got)
+	}
+}
+
+func TestGateRejectsNonObjectLimits(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && r.URL.Path == "/v1/sdk/limits" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`[]`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	ctx := context.Background()
+	client, err := solvapay.NewClient(ctx, "sk_test", solvapay.WithBaseURL(srv.URL))
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	t.Cleanup(func() { _ = client.Close(ctx) })
+	_, err = client.Gate(ctx, "cus_abc", solvapay.GateOpts{Product: "prd_demo"})
+	if err == nil || !strings.Contains(err.Error(), "non-object") {
+		t.Fatalf("err = %v, want non-object body", err)
 	}
 }
 

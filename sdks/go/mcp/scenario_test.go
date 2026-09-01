@@ -30,6 +30,7 @@ type scenario struct {
 	Product           string         `json:"product"`
 	CustomerRef       string         `json:"customerRef"`
 	CustomerRefSource string         `json:"customerRefSource"`
+	UsageType         string         `json:"usageType"`
 	Limits            map[string]any `json:"limits"`
 	Handler           handlerSpec    `json:"handler"`
 }

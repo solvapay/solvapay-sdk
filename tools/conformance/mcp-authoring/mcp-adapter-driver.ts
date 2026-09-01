@@ -103,6 +103,7 @@ export async function callRegisteredPayable(
     ...(schema !== undefined ? { schema } : {}),
     handler: compileHandler(scenario),
     ...(getCustomerRef !== undefined ? { getCustomerRef } : {}),
+    ...(scenario.usageType !== undefined ? { usageType: scenario.usageType } : {}),
   })
 
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()

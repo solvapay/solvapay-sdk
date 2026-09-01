@@ -27,7 +27,8 @@ module SolvaPay
         title: nil,
         description: nil,
         input_schema: nil,
-        get_customer_ref: nil
+        get_customer_ref: nil,
+        usage_type: "requests"
       )
         empty_properties = {} #: Hash[Symbol, untyped]
         schema = input_schema.nil? ? { type: "object", properties: empty_properties } : input_schema
@@ -46,20 +47,21 @@ module SolvaPay
               product: product,
               handler: handler,
               get_customer_ref: get_customer_ref,
+              usage_type: usage_type,
               args: args,
             ),
           )
         end
       end
 
-      def invoke_payable(solvapay:, product:, handler:, get_customer_ref:, args:)
+      def invoke_payable(solvapay:, product:, handler:, get_customer_ref:, args:, usage_type: "requests")
         customer_ref = resolve_customer_ref(args, get_customer_ref)
         state = nil
         event = {
           "kind" => "start",
           "customerRef" => customer_ref,
           "product" => product,
-          "usageType" => "requests",
+          "usageType" => usage_type.nil? || usage_type.to_s.empty? ? "requests" : usage_type.to_s,
           "startedMs" => (Time.now.to_f * 1_000).to_i,
         }
         allow = nil

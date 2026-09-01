@@ -51,6 +51,7 @@ Each language exposes a `registerPayable` equivalent that takes:
 - the host MCP server object
 - a tool `name`
 - `product` (product ref)
+- optional `usageType` / `usage_type` (meter name; default `"requests"`)
 - optional `title`, `description`, input schema
 - `handler: (args, ctx) => ctx.respond(...)`
 - optional `getCustomerRef(args) => string` (layer-3 `"hook"` source; resolved
@@ -158,7 +159,7 @@ Volatile fields `duration`, `timestamp`, and `metadata.requestId` must be
 | `ctx.gate()`   | **no** `fail` entry (and no `success`)                               |
 | Handler throw  | one call, `outcome: "fail"`                                          |
 
-`metadata.action` is the resolved meter name, defaulting to `requests`.
+`metadata.action` is the resolved meter name from `usageType`, defaulting to `requests`.
 `customerRef` is the **backend** ref after ensure-customer.
 
 ## Explicit non-requirements

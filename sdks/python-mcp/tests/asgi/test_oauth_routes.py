@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -198,6 +199,26 @@ async def test_unauthenticated_tools_call_returns_401_challenge(client: httpx.As
         "id": 7,
         "error": {"code": -32001, "message": "Unauthorized"},
     }
+
+
+@pytest.mark.asyncio
+async def test_unexpected_bearer_build_failure_is_not_a_401(
+    client: httpx.AsyncClient,
+) -> None:
+    with patch(
+        "solvapay_mcp.asgi.oauth_bridge.build_auth_info_from_bearer",
+        side_effect=RuntimeError("jwks exploded"),
+    ):
+        try:
+            response = await client.post(
+                "/mcp",
+                json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+                headers={"authorization": "Bearer not-a-token"},
+            )
+        except RuntimeError as err:
+            assert "jwks exploded" in str(err)
+            return
+        assert response.status_code != 401
 
 
 @pytest.mark.asyncio
