@@ -15,6 +15,7 @@ import type {
   McpAdapterOptions,
   McpToolExtra,
   CustomerResponseMapped,
+  LimitResponseWithPlan,
   McpBootstrapRequest,
   McpBootstrapResponse,
   ConfigureMcpPlansRequest,
@@ -509,7 +510,9 @@ export interface SolvaPay {
    * @param params - Limit check parameters
    * @param params.customerRef - Customer reference
    * @param params.productRef - Product reference
-   * @returns Limit check result with remaining usage and checkout URL if needed
+   * @returns Full `LimitResponseWithPlan`, including the `onExceed` outcome
+   *   flags (`throttled` / `overage` / `needsTopUp` / `needsUpgrade` /
+   *   `upgraded`) the backend already sends on `/v1/sdk/limits`
    *
    * @example
    * ```typescript
@@ -531,16 +534,7 @@ export interface SolvaPay {
     meterName?: string
     /** @deprecated Use `meterName`. */
     usageType?: string
-  }): Promise<{
-    withinLimits: boolean
-    remaining: number
-    plan: string
-    checkoutUrl?: string
-    meterName?: string
-    creditBalance?: number
-    creditsPerUnit?: number
-    currency?: string
-  }>
+  }): Promise<LimitResponseWithPlan>
 
   /**
    * Track usage for a customer action.

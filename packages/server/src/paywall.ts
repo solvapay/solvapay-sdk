@@ -381,11 +381,18 @@ export class SolvaPayPaywall {
     // cache-miss branch assigns `limitsCheck` directly. The non-null
     // assertion keeps the `allow` payload's `limits` field strictly
     // typed.
+    const consequence = lastLimitsCheck!.throttled
+      ? 'throttled'
+      : lastLimitsCheck!.overage
+        ? 'overage'
+        : undefined
+
     return {
       outcome: 'allow',
       args,
       limits: lastLimitsCheck!,
       customerRef: backendCustomerRef,
+      ...(consequence ? { consequence } : {}),
     }
   }
 

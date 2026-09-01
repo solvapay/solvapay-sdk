@@ -82,6 +82,8 @@ function snapshotFromLimits(params: {
     balance: limits?.creditBalance ?? 0,
     remaining: limits?.remaining ?? null,
     withinLimits: limits?.withinLimits ?? true,
+    throttled: limits?.throttled ?? false,
+    overage: limits?.overage ?? false,
     plan,
     fresh: refresh,
   }
@@ -128,13 +130,9 @@ export function buildResponseContext(
       productRef: product,
       meterName: 'requests',
     })
-    // `solvaPay.checkLimits` returns a narrower shape than
-    // `LimitResponseWithPlan` (no `plan` object, no `product` block).
-    // Cast is safe: `CustomerSnapshot` only reads `creditBalance`,
-    // `remaining`, `withinLimits` — all present on the narrower shape.
     return snapshotFromLimits({
       customerRef,
-      limits: freshLimits as unknown as LimitResponseWithPlan,
+      limits: freshLimits,
       plan: bootstrapPlan,
       refresh: freshSnapshot,
     })

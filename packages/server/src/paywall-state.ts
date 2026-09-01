@@ -32,14 +32,18 @@ export type PaywallState =
  * Precedence:
  *  1. `activationRequired === true` — trumps everything else; the
  *     backend explicitly flagged that no plan is live yet.
- *  2. Usage-based plan out of credits — the customer has a plan but
+ *  2. Authoritative `needsTopUp` / `needsUpgrade` flags from
+ *     `decideLimit`, when the backend sent them. Prefer these over
+ *     the credit-balance heuristic so a top-up deny and an
+ *     auto-upgrade deny are not re-derived from plan type.
+ *  3. Usage-based plan out of credits — the customer has a plan but
  *     ran out, so a topup is the right action. "Out of credits" is
  *     determined from (in order): the nested
  *     `balance.creditBalance === 0` block, the top-level
  *     `creditBalance === 0` field, or `remaining === 0` as a
  *     fallback for older backend responses that omit both credit
  *     fields on usage-based plans.
- *  3. Everything else → `upgrade_required`, including:
+ *  4. Everything else → `upgrade_required`, including:
  *     - `limits === null` (defensive),
  *     - no active plan on the product,
  *     - recurring plan at period cap (`remaining <= 0`).
@@ -57,6 +61,14 @@ export function classifyPaywallState(
 
   if (limits.activationRequired === true) {
     return { kind: 'activation_required' }
+  }
+
+  if (limits.needsTopUp === true) {
+    return { kind: 'topup_required' }
+  }
+
+  if (limits.needsUpgrade === true) {
+    return { kind: 'upgrade_required' }
   }
 
   const activePlan = limits.plans?.find(p => p.reference === limits.plan)
