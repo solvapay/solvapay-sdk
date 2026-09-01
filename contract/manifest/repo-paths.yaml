@@ -448,6 +448,7 @@ markerExemptions:
     reason: prose about generated fixtures
 
 lookups:
+  rustToolchain: rust-toolchain.toml
   prettierIgnore: .prettierignore
   mcpFixtures: contract/mcp-fixtures
   rustLiveReport: contract/shadow/output/rust-live-report.json

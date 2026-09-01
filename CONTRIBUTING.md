@@ -19,6 +19,8 @@ The channel, components, and the `wasm32-unknown-unknown` target are pinned by
 TypeScript-only changes do **not** need Rust — committed generated/WASM artifacts
 let `pnpm build:packages` run without it.
 
+Run `pnpm preflight` to see which of those tiers this machine can support.
+
 Optional, per language surface you actually build/test locally:
 
 - **Python** binding — `maturin`
@@ -32,6 +34,9 @@ Optional, per language surface you actually build/test locally:
 # Clone the repository
 git clone https://github.com/solvapay/solvapay-sdk
 cd solvapay-sdk
+
+# 1. Check which work tiers this machine can run
+pnpm preflight
 
 # Install dependencies
 pnpm install

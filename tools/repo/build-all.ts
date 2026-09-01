@@ -6,6 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseSelectFlags, selectBuildTasks } from '../shared/surfaces.js'
 import { renderRun, runTasks, type RunnerDeps } from '../shared/task-runner.js'
+import { nativeOnlyBlobWarning, type BlobWarningDeps } from './lib/external-blob-warning.js'
 
 export interface CliResult {
   exitCode: number
@@ -19,19 +20,40 @@ function printUsage(): string {
 `
 }
 
-export async function runCli(argv: string[], deps?: Partial<RunnerDeps>): Promise<CliResult> {
+export async function runCli(
+  argv: string[],
+  deps?: Partial<RunnerDeps> & BlobWarningDeps & { skipBlobWarning?: boolean },
+): Promise<CliResult> {
   const selected = selectBuildTasks(argv)
   if ('error' in selected) {
     return { exitCode: 1, stdout: '', stderr: `${selected.error}\n${printUsage()}` }
   }
   const flags = parseSelectFlags(argv.filter(arg => arg === '--json' || arg === '--bail'))
+  const { skipBlobWarning, digest, registryText, manifest, root, stagedPaths, ...runnerDeps } =
+    deps ?? {}
   const summary = await runTasks(
     selected,
     { command: 'build:all', json: flags.json, bail: flags.bail },
-    deps,
+    runnerDeps,
   )
   const rendered = renderRun(summary, flags.json)
-  return { exitCode: summary.exitCode, stdout: rendered.stdout, stderr: rendered.stderr }
+  let stderr = rendered.stderr
+  if (!skipBlobWarning && summary.exitCode === 0) {
+    const warning = nativeOnlyBlobWarning(argv, {
+      digest,
+      registryText,
+      manifest,
+      root,
+      stagedPaths,
+    })
+    if (warning !== undefined) {
+      stderr =
+        stderr.length > 0 && !stderr.endsWith('\n')
+          ? `${stderr}\n${warning}\n`
+          : `${stderr}${warning}\n`
+    }
+  }
+  return { exitCode: summary.exitCode, stdout: rendered.stdout, stderr }
 }
 
 async function main(): Promise<void> {

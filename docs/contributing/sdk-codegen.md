@@ -68,6 +68,7 @@ Run from the repo root (`solvapay-sdk/`).
 | `pnpm gen:all`                                             | Live snapshot (if local stack up) → `gen` → `manifest:check` → `parity:check`                                                           |
 | `pnpm manifest:check`                                      | Schema + semantics + OpenAPI cross-check + binding reconciliation                                                                       |
 | `pnpm parity:check`                                        | Cross-language signature parity                                                                                                         |
+| `pnpm preflight`                                           | Toolchain report: which work tiers are ready (TS-only / codegen / full multi-language parity)                                           |
 | `pnpm gates`                                               | Local contract gate set (`gen:check`, `manifest:check`, `parity:check`, `test:fixtures`, plus snapshot/docs/delegation/required-checks) |
 | `pnpm build:all` / `pnpm build:native`                     | Build core surfaces, or native bindings only (`--native` on `build:all` for both)                                                       |
 | `pnpm test:all` / `pnpm test:native`                       | Test core surfaces, or native bindings only                                                                                             |
@@ -109,8 +110,8 @@ SDK clients.
 ### 1. Refresh the OpenAPI snapshot
 
 ```bash
-# Backend must be serving OpenAPI locally
-pnpm snapshot:openapi --from-url http://localhost:3001/v1/openapi.json
+# Backend must be serving OpenAPI locally (identity :3001 owns no SDK routes)
+pnpm snapshot:openapi --from-stack
 ```
 
 Confirm the new path exists under `contract/openapi/sdk-v1.snapshot.json`.

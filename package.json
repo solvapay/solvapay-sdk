@@ -77,6 +77,7 @@
     "docs:coverage": "cargo test -q -p dto-gen --lib doc_coverage -- --nocapture",
     "docs:parity": "cargo test -q -p dto-gen --test doc_parity -- --nocapture",
     "gates": "tsx tools/repo/gates.ts",
+    "preflight": "tsx tools/repo/doctor.ts",
     "manifest:validate": "tsx tools/codegen/manifest.ts",
     "manifest:check": "tsx tools/codegen/manifest.ts --check",
     "parity:check": "tsx tools/conformance/parity-check.ts",

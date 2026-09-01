@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { selectBuildTasks } from '../shared/surfaces.js'
+import { runCli } from './build-all.js'
+import { binaryArtifactPaths, EXTERNAL_BLOB_DRIFT_BANNER } from './lib/external-blob-warning.js'
 
 function ids(argv: string[]): string[] {
   const selected = selectBuildTasks(argv)
@@ -51,5 +53,36 @@ describe('selectBuildTasks', () => {
       expect(selected.error).toMatch(/rust/)
       expect(selected.error).toMatch(/python/)
     }
+  })
+})
+
+describe('native-only blob warning', () => {
+  const quietDeps = {
+    spawn: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    now: () => 0,
+    which: () => true,
+    write: () => undefined,
+  }
+
+  it('warns after a successful --native-only build when hashes drift', async () => {
+    const result = await runCli(['--native-only'], {
+      ...quietDeps,
+      digest: () => '0'.repeat(64),
+      registryText: binaryArtifactPaths()
+        .map(rel => `${'a'.repeat(64)}  ${rel}`)
+        .join('\n'),
+    })
+    expect(result.exitCode).toBe(0)
+    expect(result.stderr).toContain(EXTERNAL_BLOB_DRIFT_BANNER)
+    expect(result.stderr).toContain('pnpm generated:external --rebuild')
+  })
+
+  it('does not warn for a core-only build', async () => {
+    const result = await runCli([], {
+      ...quietDeps,
+      digest: () => '0'.repeat(64),
+      registryText: `${'a'.repeat(64)}  ignored.wasm\n`,
+    })
+    expect(result.stderr).not.toContain(EXTERNAL_BLOB_DRIFT_BANNER)
   })
 })
