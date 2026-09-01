@@ -11,11 +11,15 @@ and best practices — see the central [Webhooks documentation](/webhooks).
 ```typescript
 import { verifyWebhook } from '@solvapay/server'
 
+const seen = new Set<string>() // replace with Redis / your DB
+
 const event = verifyWebhook({
   body: rawBodyString,
   signature: request.headers.get('sv-signature')!,
   secret: process.env.SOLVAPAY_WEBHOOK_SECRET!,
+  seenEventId: id => seen.has(id),
 })
+seen.add(event.id)
 
 switch (event.type) {
   case 'payment.succeeded':
@@ -58,6 +62,11 @@ Deno.serve(solvapayWebhook({
 ```
 
 The factory reads `SOLVAPAY_WEBHOOK_SECRET` from the environment automatically. Use `verifyWebhook` from `@solvapay/server/edge` if you need manual control over the request lifecycle.
+
+Signature verification is not replay protection. Dedupe on `event.id` (or pass
+`seenEventId` to `verifyWebhook` / `solvapayWebhook`). Return HTTP 2xx for a
+duplicate so SolvaPay stops retrying. `SV-Delivery` identifies the attempt, not
+the event.
 
 See the [Supabase Edge Functions guide](/sdks/typescript/guides/supabase-edge) for the complete setup.
 

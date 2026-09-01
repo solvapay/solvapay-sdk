@@ -111,6 +111,7 @@ module SolvaPay
             json_response(status.is_a?(Integer) ? status : 200, envelope["rpc"])
           when "challenge"
             headers = stringify_headers(envelope["headers"])
+            merge_native_cors(env, headers)
             [Integer(envelope["status"] || 401), headers, [encode_body(envelope["body"])]]
           when "invokeHandler"
             resume_payable(envelope)
@@ -201,6 +202,17 @@ module SolvaPay
         return body if body.is_a?(String)
 
         JSON.generate(body)
+      end
+
+      def merge_native_cors(env, headers)
+        origin = env["HTTP_ORIGIN"]
+        result = stringify(SolvaPay::Mcp::Core.call("mcpNativeCors", { "origin" => origin }))
+        cors = result["headers"]
+        return unless cors.is_a?(Hash)
+
+        cors.each do |key, value|
+          headers[key.to_s.downcase] = value.to_s if value.is_a?(String)
+        end
       end
 
       def stringify_headers(headers)

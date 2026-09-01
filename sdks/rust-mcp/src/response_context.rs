@@ -3,7 +3,7 @@
 use serde_json::Value;
 use solvapay::CustomerSnapshot;
 use solvapay_core::mcp::ResponseEnvelope;
-use solvapay_core::{PaywallGate, PaywallGateKind};
+use solvapay_mcp_core::mcp_default_gate;
 
 use crate::layer2::{assert_response_result, make_response_result};
 use crate::register::PayableError;
@@ -107,23 +107,10 @@ impl ResponseContext {
 
     /// Stop the handler and format a paywall result. Default reason is `Payment required`.
     pub fn gate(&self, reason: Option<&str>) -> PayableError {
-        let message = match reason {
-            Some(r) if !r.is_empty() => r.to_owned(),
-            _ => "Payment required".to_owned(),
-        };
+        let gate = mcp_default_gate(&self.product_ref, reason);
         PayableError::Gate {
-            message: message.clone(),
-            gate: Box::new(PaywallGate {
-                kind: PaywallGateKind::PaymentRequired,
-                product: self.product_ref.clone(),
-                checkout_url: String::new(),
-                message,
-                short_message: "Payment required".to_owned(),
-                confirmation_url: None,
-                plans: None,
-                balance: None,
-                product_details: None,
-            }),
+            message: gate.message.clone(),
+            gate: Box::new(gate),
         }
     }
 }

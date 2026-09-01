@@ -30,7 +30,8 @@ Two boundary rules the core must never break (redesign-v2 §4.2):
 
 - **No env-var reads in core.** Env resolution stays in the facades; core
   receives explicit config. This is what makes browser-WASM capability
-  separation verifiable.
+  separation verifiable. The written contract is
+  [`configuration.md`](./configuration.md).
 - **No timers in core.** The retry engine computes _schedules_ (pure); the
   binding owns the actual sleep. Deduplication and cache intervals stay
   host-side entirely.
@@ -52,7 +53,7 @@ flowchart TB
   end
 
   subgraph bindings ["Specialized bindings"]
-    NAPI["napi-rs<br/>Node native + WASI fallback"]
+    NAPI["napi-rs<br/>Node native"]
     WASM["wasm-bindgen<br/>browser / Workers / Deno"]
     PYO3["PyO3 + maturin"]
     MAG["Magnus + rb-sys"]
@@ -103,7 +104,7 @@ solvapay-sdk/
 │  │  ├─ auth/
 │  │  └─ next/
 │  ├─ rust/             # public crates.io facade crate (`solvapay`)
-│  ├─ node-native/      # napi-rs (Node native + WASI fallback)
+│  ├─ node-native/      # napi-rs (Node native)
 │  ├─ wasm/             # wasm-bindgen (edge + browser profiles)
 │  ├─ python/           # PyO3 + maturin
 │  ├─ ruby/             # Magnus + rb-sys
@@ -203,7 +204,7 @@ capabilities; only syntax differs (cross-surface parity is enforced in CI).
 
 The TypeScript surface further splits by runtime:
 
-- **Node** → napi-rs native package (with a napi-rs WASI fallback)
+- **Node** → napi-rs native package (unsupported platforms fail to load)
 - **Edge / Workers / Deno** → the `edge` wasm-bindgen profile (`@solvapay/server-wasm`)
 - **Browser** → the `browser` wasm-bindgen profile — a public-safe pure-logic
   subset only (no webhook / no secret-key symbols)
@@ -213,8 +214,8 @@ The TypeScript surface further splits by runtime:
 `@solvapay/server` picks the right binding per runtime, so consumers keep one
 import style:
 
-- **Node** loads the napi-rs native addon; if no prebuild matches the platform,
-  the napi-rs WASI fallback loads automatically.
+- **Node** loads the napi-rs native addon. If no prebuild matches the platform,
+  load fails — there is no WASI fallback. Edge/browser use `@solvapay/server-wasm`.
 - **Edge/browser** load the wasm-bindgen build via export conditions
   (`deno`/`workerd`/`worker`/`edge-light`/`browser` before generic
   `import`/`default`).
@@ -275,25 +276,34 @@ files fails CI (`@generated` header gate + `pnpm gen:check`). The **full runbook
 
 ## What stays in the facades
 
-Some surfaces are deliberately hand-written and never move to Rust (redesign-v2
-§8 — the exhaustive list lives there):
+The operative test: **any decision expressible as JSON-in → JSON-out belongs
+in core.** Facades own host I/O, timers, caches, and registration glue.
+
+Hand-written and never moved to Rust:
 
 - The entire `@solvapay/react` package (components, hooks, Stripe.js glue, i18n)
 - Framework adapters (`http.ts`, `next.ts`, `mcp.ts`) and `fetch` handlers —
   thin shells that delegate to the Rust decision/client cores. Payable
   `gate` / `invoke` sequencing is `gate_next` / `invoke_payable_next` in
-  `solvapay-core` (`gate_driver.rs`, `invoke_payable.rs`), not duplicated
-  HTTP state machines in each language facade.
+  `solvapay-core` (`gate_driver.rs`, `invoke_payable.rs`). Top-up process
+  sequencing is `topup_process_next`. Hosts run the driver loops.
 - `createSolvaPay` factory ergonomics
 - `createRequestDeduplicator` + limits-cache plumbing (host timers/maps)
 - `@solvapay/auth`, `@solvapay/next`, `@solvapay/cli`, `create-solvapay`, `@solvapay/init`
-- MCP SDK registration glue and the `@solvapay/mcp-core` / `solvapay-mcp`
-  (Python, Ruby, Go `sdks/go/mcp`, and Rust `sdks/rust-mcp`) transport parts (OAuth bridge, bearer,
-  CSP, narration) — only the MCP _payload builders_ moved (including allow-path
-  `build_payable_tool_result`).
+- MCP SDK registration glue and transport (OAuth bridge, bearer, SSE/session).
+  Descriptor text, CSP merge, narration (including virtual-tool markdown),
+  and the default `ctx.gate()` stub are Rust ops. Virtual-tool *registration*
+  remains TypeScript-only by design — the other languages would still need
+  host glue even with shared text.
   The hand-written `registerPayable` / `ctx` surface is pinned by
   [`mcp-authoring-adapter-contract.md`](./mcp-authoring-adapter-contract.md).
 - Per-language examples under `examples/<language>/`
+
+**Nil-core helper deviation.** `payment-method`, `auto-recharge`, `merchant`,
+and the HTTP `trackUsage` helper deliberately have no Rust decision core.
+Do not grow new semantic logic there — that is where facade copies quietly
+drifted (the payable-path `metadata.action` bug). New decisions go through
+a JSON-in / JSON-out core function.
 
 ## Design principles
 

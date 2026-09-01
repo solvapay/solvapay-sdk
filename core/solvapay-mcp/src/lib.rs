@@ -13,8 +13,10 @@
 mod auth_gate;
 mod bearer_verify;
 mod config_log;
+mod cors;
 mod csp;
 mod dcr;
+mod default_gate;
 mod descriptors;
 mod hide_tools;
 mod narrate;
@@ -36,8 +38,13 @@ pub use bearer_verify::{
     VerifyBearerResult,
 };
 pub use config_log::mcp_config_log;
+pub use cors::{
+    is_native_client_origin, mcp_native_cors, native_cors_header_pairs, NativeCorsInput,
+    NativeCorsResult,
+};
 pub use csp::{mcp_merge_csp, SolvaPayMcpCsp};
 pub use dcr::{mcp_dcr_diagnostics, DcrDiagnosticsInput};
+pub use default_gate::{mcp_default_gate, DefaultGateInput};
 pub use descriptors::{mcp_descriptors, McpDescriptors, McpDescriptorsInput, McpToolDescriptor};
 pub use hide_tools::{is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput};
 pub use narrate::{

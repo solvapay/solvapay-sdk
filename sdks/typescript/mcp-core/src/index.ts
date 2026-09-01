@@ -204,6 +204,9 @@ export type { OAuthErrorBody, OAuthTokenErrorCode } from './oauth-error-normaliz
 export { mcpAuthGate } from './auth-gate'
 export type { McpAuthGateChallenge, McpAuthGateInput, McpAuthGateResult } from './auth-gate'
 
+export { isNativeClientOrigin, mcpNativeCors } from './native-cors'
+export type { McpNativeCorsInput, McpNativeCorsResult } from './native-cors'
+
 // ---- Auth info + bearer helpers ----
 export { buildAuthInfoFromBearer } from './auth-bridge'
 export type { BuildAuthInfoFromBearerOptions, McpAuthInfoExtras } from './auth-bridge'

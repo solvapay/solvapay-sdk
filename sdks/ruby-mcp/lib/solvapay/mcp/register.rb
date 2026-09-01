@@ -130,6 +130,7 @@ module SolvaPay
                 "kind" => "handlerErr",
                 "message" => e.message,
                 "nowMs" => (Time.now.to_f * 1_000).to_i,
+                "randomUnit" => rand,
               }
             else
               envelope = Layer2.assert_response_result(returned)
@@ -137,18 +138,13 @@ module SolvaPay
                 "kind" => "handlerOk",
                 "envelope" => envelope,
                 "nowMs" => (Time.now.to_f * 1_000).to_i,
+                "randomUnit" => rand,
               }
             end
           when "done"
-            tracker = allow
             track = action["track"]
-            if tracker.is_a?(SolvaPay::PayableAllowResult) && track.is_a?(Hash)
-              duration = track["durationMs"].to_f
-              if track["outcome"] == "success"
-                tracker.track_success(duration: duration)
-              else
-                tracker.track_fail(track["outcome"], duration: duration)
-              end
+            if track.is_a?(Hash) && track["request"].is_a?(Hash)
+              solvapay.track_usage(params: track["request"])
             end
             result = action["result"]
             unless result.is_a?(Hash)
@@ -171,10 +167,17 @@ module SolvaPay
       private
 
       def resolve_customer_ref(args, get_customer_ref)
-        return get_customer_ref.call(args) unless get_customer_ref.nil?
-
+        hook_ref = nil
+        unless get_customer_ref.nil?
+          resolved = get_customer_ref.call(args)
+          hook_ref = resolved if resolved.is_a?(String) && !resolved.strip.empty?
+        end
         raw = args[:customer_ref]
-        return raw if raw.is_a?(String) && !raw.empty?
+        result = SolvaPay::Mcp::Core.call(
+          "resolveCustomerRef",
+          { "hookRef" => hook_ref, "argsCustomerRef" => raw },
+        )
+        return result if result.is_a?(String) && !result.empty?
 
         "anonymous"
       end

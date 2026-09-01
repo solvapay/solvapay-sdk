@@ -153,6 +153,9 @@ describe('runInitInDirectory', () => {
     expect(detectPackageManager).toHaveBeenCalledWith(TEST_CWD)
     expect(writeSolvaPaySecretToEnv).toHaveBeenCalledWith('sk_test_123', { cwd: TEST_CWD })
     expect(ensureEnvInGitignore).toHaveBeenCalledWith(TEST_CWD)
+    expect(vi.mocked(ensureEnvInGitignore).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(writeSolvaPaySecretToEnv).mock.invocationCallOrder[0],
+    )
   })
 
   it('prints manual URL when browser fails to open', async () => {

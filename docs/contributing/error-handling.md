@@ -61,6 +61,23 @@ guarantee.
 - return actionable details without leaking secrets
 - preserve root-cause context in logs while keeping external messages concise
 
+## Webhook verification vs replay
+
+`verify_webhook` in `core/solvapay-core/src/webhook.rs` is signature + clock
+only. It has no replay/nonce store (core purity: no HTTP, no env, no timers,
+no caches). The ±300 s `timestamp_too_old` window rejects stale `SV-Signature`
+headers; a retry of the same event inside that window still verifies.
+
+Integrators must dedupe on **`event.id`** (also the `SV-Event-Id` header).
+`SV-Delivery` is unique **per attempt**, so it does not prevent processing the
+same event twice when SolvaPay retries.
+
+TypeScript facades accept an optional `seenEventId` callback on
+`verifyWebhook` / `solvapayWebhook`. Return `true` when the id is already
+processed. The hook throws `SolvaPayError` with `code: 'duplicate_event'`;
+HTTP handlers should answer **2xx** for that code so the sender stops retrying.
+Do not add this store to core — keep it host-side.
+
 ## Contributor checklist
 
 - change error behavior in the Rust core (or the manifest templates), not in a

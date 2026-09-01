@@ -10,6 +10,7 @@ readme = "README.md"
 solvapay = { path = "../rust" }
 solvapay-core = { path = "../../core/solvapay-core" }
 solvapay-mcp-core = { path = "../../core/solvapay-mcp" }
+solvapay-dto = { path = "../../core/solvapay-dto" }
 rmcp = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

@@ -504,6 +504,10 @@ export type InvokePayableTrack = {
    * Elapsed ms from start.
    */
   durationMs: number
+  /**
+   * Complete `trackUsage` body rendered by core. Host POSTs this verbatim.
+   */
+  request: unknown
 }
 
 /**
@@ -635,6 +639,65 @@ export type Tier = {
 export type TierMode = 'graduated' | 'volume'
 
 /**
+ * In-flight step the next host event must complete.
+ */
+export type TopupPending = 'none' | 'syncCustomer' | 'baselineBalance' | 'processPayment' | 'sleep' | 'pollBalance'
+
+/**
+ * Next host action or a terminal resolve.
+ */
+export type TopupProcessAction =
+  | { kind: 'syncCustomer' }
+  | { kind: 'getCustomerBalance'; customerRef: string }
+  | { kind: 'processPaymentIntent'; paymentIntentId: string; customerRef: string }
+  | { kind: 'sleep'; ms: number }
+  | { kind: 'resolved'; status: string; message?: string; creditsAdded?: number }
+
+/**
+ * Driver output.
+ */
+export type TopupProcessNextOutput = {
+  /**
+   * State to pass into the next call.
+   */
+  state: TopupProcessState
+  /**
+   * Host action or terminal result.
+   */
+  action: TopupProcessAction
+}
+
+/**
+ * Driver state between top-up process steps.
+ */
+export type TopupProcessState = {
+  /**
+   * Processor payment intent id.
+   */
+  paymentIntentId: string
+  /**
+   * Synced customer ref, once known.
+   */
+  customerRef?: string
+  /**
+   * Host can call `getCustomerBalance`.
+   */
+  canGetBalance: boolean
+  /**
+   * Baseline credits captured before `/process`. Absent means skip polling.
+   */
+  baselineCredits?: number
+  /**
+   * Zero-based poll attempt index into [`BalancePollPolicy::topup`].
+   */
+  pollAttempt: number
+  /**
+   * Which result event the driver is waiting for.
+   */
+  pending: TopupPending
+}
+
+/**
  * What one metered unit costs, and whether that rate is the first of several bands.
  */
 export type UsageRate = {
@@ -755,7 +818,7 @@ export type RouteErrorInput = {
   defaultMessage?: string | null
 }
 
-export type RouteErrorKind = 'solvapay' | 'error' | 'unknown'
+export type RouteErrorKind = 'solvapay' | 'paywall' | 'error' | 'unknown'
 
 export type TopupProcessOutcome =
   | { status: 'timeout'; message?: string }

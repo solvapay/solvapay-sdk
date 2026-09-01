@@ -194,6 +194,19 @@ func McpDcrDiagnostics(ctx context.Context, productRef any, apiBaseUrl any, stat
 	return CallSync(ctx, "mcpDcrDiagnostics", call_args)
 }
 
+// McpDefaultGate build the default ctx.gate() paywall structured-content stub.
+// The product parameter is Product reference stamped onto the gate.
+// The reason parameter is Optional merchant message; empty or omitted becomes Payment required.
+// Returns Paywall structured content with kind payment_required.
+func McpDefaultGate(ctx context.Context, product any, reason any) (json.RawMessage, error) {
+	call_args := map[string]any{}
+	call_args["product"] = product
+	if reason != nil {
+		call_args["reason"] = reason
+	}
+	return CallSync(ctx, "mcpDefaultGate", call_args)
+}
+
 // McpDescriptors build MCP tool, prompt, and resource descriptors for a product.
 // The resourceUri parameter is UI resource URI stamped onto tool metadata.
 // The publicBaseUrl parameter is Public http(s) origin of the MCP server.
@@ -300,6 +313,29 @@ func McpNarrate(ctx context.Context, tool any, payload any, kind any, mode any, 
 		call_args["meta"] = meta
 	}
 	return CallSync(ctx, "mcpNarrate", call_args)
+}
+
+// McpNativeCors decide native-scheme CORS mirroring for MCP client origins.
+// The origin parameter is Request Origin header.
+// The requestedMethod parameter is Access-Control-Request-Method for preflight.
+// The requestedHeaders parameter is Access-Control-Request-Headers for preflight.
+// The preflight parameter is When true, emit Allow-Methods, Allow-Headers, and Max-Age.
+// Returns allowed flag plus response headers to merge.
+func McpNativeCors(ctx context.Context, origin any, requestedMethod any, requestedHeaders any, preflight any) (json.RawMessage, error) {
+	call_args := map[string]any{}
+	if origin != nil {
+		call_args["origin"] = origin
+	}
+	if requestedMethod != nil {
+		call_args["requestedMethod"] = requestedMethod
+	}
+	if requestedHeaders != nil {
+		call_args["requestedHeaders"] = requestedHeaders
+	}
+	if preflight != nil {
+		call_args["preflight"] = preflight
+	}
+	return CallSync(ctx, "mcpNativeCors", call_args)
 }
 
 // McpNormalizeOauthError normalize an upstream OAuth error into the frozen RFC error body.

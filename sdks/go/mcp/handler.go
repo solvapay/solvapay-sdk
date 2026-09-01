@@ -108,6 +108,7 @@ func withAuthGate(s *Server, next http.Handler) http.Handler {
 			return
 		}
 		if gate["kind"] == "challenge" {
+			applyNativeCors(w, r)
 			status := asInt(gate["status"], 401)
 			for k, v := range asStringMap(gate["headers"]) {
 				w.Header().Set(k, v)
@@ -148,4 +149,22 @@ func (s *Server) handleOAuth(w http.ResponseWriter, r *http.Request, path string
 		return
 	}
 	writeOAuth(w, envelope)
+}
+
+func applyNativeCors(w http.ResponseWriter, r *http.Request) {
+	args := map[string]any{}
+	if origin := r.Header.Get("Origin"); origin != "" {
+		args["origin"] = origin
+	}
+	raw, err := CallSync(r.Context(), "mcpNativeCors", args)
+	if err != nil {
+		return
+	}
+	var result map[string]any
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return
+	}
+	for k, v := range asStringMap(result["headers"]) {
+		w.Header().Set(k, v)
+	}
 }

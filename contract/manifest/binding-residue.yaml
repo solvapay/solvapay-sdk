@@ -624,11 +624,12 @@ mapRouteError:
     let args = args_map(&args_json)?;
             let kind = match require_string(&args, "kind")?.as_str() {
                 "solvapay" => RouteErrorKind::SolvaPay,
+                "paywall" => RouteErrorKind::Paywall,
                 "error" => RouteErrorKind::Error,
                 "unknown" => RouteErrorKind::Unknown,
                 other => {
                     return Err(SdkError::transport(
-                        format!("args.kind must be 'solvapay' | 'error' | 'unknown', got {other:?}"),
+                        format!("args.kind must be 'solvapay' | 'paywall' | 'error' | 'unknown', got {other:?}"),
                         false,
                     ));
                 }
@@ -644,7 +645,7 @@ mapRouteError:
                 operation_name,
                 default_message,
             }))
-  doc: 'Binding for `mapRouteError` (`kind`: `"solvapay"` | `"error"` | `"unknown"`).'
+  doc: 'Binding for `mapRouteError` (`kind`: `"solvapay"` | `"paywall"` | `"error"` | `"unknown"`).'
   args:
     - name: kind
       type: string

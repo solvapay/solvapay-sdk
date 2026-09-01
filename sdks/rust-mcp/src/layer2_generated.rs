@@ -291,6 +291,25 @@ pub fn mcp_dcr_diagnostics(
     call_sync("mcpDcrDiagnostics", &Value::Object(call_args))
 }
 
+/// Build the default ctx.gate() paywall structured-content stub.
+///
+/// # Arguments
+///
+/// * `product` — Product reference stamped onto the gate.
+/// * `reason` — Optional merchant message; empty or omitted becomes Payment required.
+///
+/// # Returns
+///
+/// Paywall structured content with kind payment_required.
+pub fn mcp_default_gate(product: Value, reason: Option<Value>) -> Result<Value, String> {
+    let mut call_args = serde_json::Map::new();
+    call_args.insert("product".to_owned(), product);
+    if let Some(value) = reason {
+        call_args.insert("reason".to_owned(), value);
+    }
+    call_sync("mcpDefaultGate", &Value::Object(call_args))
+}
+
 /// Build MCP tool, prompt, and resource descriptors for a product.
 ///
 /// # Arguments
@@ -459,6 +478,40 @@ pub fn mcp_narrate(
         call_args.insert("meta".to_owned(), value);
     }
     call_sync("mcpNarrate", &Value::Object(call_args))
+}
+
+/// Decide native-scheme CORS mirroring for MCP client origins.
+///
+/// # Arguments
+///
+/// * `origin` — Request Origin header.
+/// * `requested_method` — Access-Control-Request-Method for preflight.
+/// * `requested_headers` — Access-Control-Request-Headers for preflight.
+/// * `preflight` — When true, emit Allow-Methods, Allow-Headers, and Max-Age.
+///
+/// # Returns
+///
+/// allowed flag plus response headers to merge.
+pub fn mcp_native_cors(
+    origin: Option<Value>,
+    requested_method: Option<Value>,
+    requested_headers: Option<Value>,
+    preflight: Option<Value>,
+) -> Result<Value, String> {
+    let mut call_args = serde_json::Map::new();
+    if let Some(value) = origin {
+        call_args.insert("origin".to_owned(), value);
+    }
+    if let Some(value) = requested_method {
+        call_args.insert("requestedMethod".to_owned(), value);
+    }
+    if let Some(value) = requested_headers {
+        call_args.insert("requestedHeaders".to_owned(), value);
+    }
+    if let Some(value) = preflight {
+        call_args.insert("preflight".to_owned(), value);
+    }
+    call_sync("mcpNativeCors", &Value::Object(call_args))
 }
 
 /// Normalize an upstream OAuth error into the frozen RFC error body.

@@ -30,9 +30,9 @@ import { createSolvaPayClient } from './client'
 import { PaywallError, SolvaPayPaywall, paywallErrorToClientPayload } from './paywall'
 import { trackUsageWithRetry } from './track-usage-retry'
 import { mergeUsageRequest } from './utils'
-import { gateNext } from './native-decisions'
+import { gateNext, mapRouteError, resolveCustomerRef } from './native-decisions'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
-import { SolvaPayError, getSolvaPayConfig } from '@solvapay/core'
+import { SolvaPayError } from '@solvapay/core'
 import { resolveProductRef } from './resolve-product-ref'
 import { createVirtualTools } from './virtual-tools'
 import type { VirtualToolsOptions, VirtualToolDefinition } from './virtual-tools'
@@ -47,8 +47,9 @@ import {
  * Configuration for creating a SolvaPay instance.
  *
  * You can provide either an `apiKey` (for production) or an `apiClient` (for testing).
- * If neither is provided, the SDK will attempt to read `SOLVAPAY_SECRET_KEY` from
- * environment variables. If no API key is found, the SDK runs in stub mode.
+ * If neither is provided, the SDK reads `SOLVAPAY_SECRET_KEY` from the
+ * environment. A missing required key fails at construction with
+ * `missing_api_key`. Explicit options win per field; env fills the rest.
  *
  * @example
  * ```typescript
@@ -889,19 +890,14 @@ export interface SolvaPay {
  * @since 1.0.0
  */
 export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
-  // If no config provided, read from environment variables
-  let resolvedConfig: CreateSolvaPayConfig
-  if (!config) {
-    const envConfig = getSolvaPayConfig()
-    resolvedConfig = {
-      apiKey: envConfig.apiKey,
-      apiBaseUrl: envConfig.apiBaseUrl,
-    }
-  } else {
-    resolvedConfig = config
+  const envKey = process.env.SOLVAPAY_SECRET_KEY
+  const envBase = process.env.SOLVAPAY_API_BASE_URL
+  const resolvedConfig: CreateSolvaPayConfig = {
+    ...config,
+    apiKey: config?.apiKey ?? envKey,
+    apiBaseUrl: config?.apiBaseUrl ?? envBase,
   }
 
-  // Create or use provided API client
   const apiClient =
     resolvedConfig.apiClient ||
     createSolvaPayClient({
@@ -909,9 +905,8 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       apiBaseUrl: resolvedConfig.apiBaseUrl,
     })
 
-  // Create paywall instance with debug flag controlled by environment variable
   const paywall = new SolvaPayPaywall(apiClient, {
-    debug: process.env.SOLVAPAY_DEBUG !== 'false',
+    debug: process.env.SOLVAPAY_DEBUG === 'true',
     limitsCacheTTL: resolvedConfig.limitsCacheTTL,
   })
 
@@ -1146,8 +1141,13 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             const body = paywallErrorToClientPayload(
               new PaywallError(decision.gate.shortMessage, decision.gate),
             )
+            const mapped = mapRouteError({
+              kind: 'paywall',
+              message: decision.gate.shortMessage,
+              operationName: 'paywall',
+            })
             const response = new Response(JSON.stringify(body), {
-              status: 402,
+              status: mapped.status,
               headers: { 'content-type': 'application/json' },
             })
             return { kind: 'paywall', response, content: decision.gate }
@@ -1228,13 +1228,20 @@ async function resolveCustomerRefFromRequest(
   req: Request,
   options: PayableGateOptions,
 ): Promise<string> {
+  let hookRef: string | undefined
   if (options.getCustomerRef) {
     const resolved = await options.getCustomerRef(req)
     if (typeof resolved === 'string' && resolved.trim().length > 0) {
-      return resolved.trim()
+      hookRef = resolved.trim()
     }
   }
-  const header = req.headers.get('x-customer-ref')
-  if (header && header.trim().length > 0) return header.trim()
-  return 'anonymous'
+  return resolveCustomerRef(
+    hookRef,
+    undefined,
+    undefined,
+    req.headers.get('x-customer-ref') ?? undefined,
+    undefined,
+    undefined,
+    undefined,
+  )
 }

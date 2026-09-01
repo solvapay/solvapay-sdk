@@ -15,23 +15,18 @@ The authoritative list of expanded check names (including every matrix cell) and
 
 ### Node binding / clean-install (Steps 36–39)
 
-Local entry points (from repo root, after building host + WASI bindings and placing via `napi artifacts`):
+Local entry points (from repo root, after building the host native binding and placing via `napi artifacts`):
 
 ```bash
-# Pack (partial local bundle — CI requires all 9 targets)
+# Pack (partial local bundle — CI requires all 8 native targets)
 node sdks/node-native/scripts/prepare-clean-install-packages.mjs \
   --out-dir sdks/node-native/clean-install-bundle \
-  --targets darwin-arm64,wasm32-wasi --allow-partial
+  --targets darwin-arm64 --allow-partial
 
 # Host-native clean install
 node sdks/node-native/scripts/clean-install-smoke.mjs \
   --bundle-dir sdks/node-native/clean-install-bundle \
   --mode native --target darwin-arm64
-
-# WASI-only clean install
-node sdks/node-native/scripts/clean-install-smoke.mjs \
-  --bundle-dir sdks/node-native/clean-install-bundle \
-  --mode wasi --target wasm32-wasi
 ```
 
 Success evidence line: `CLEAN_INSTALL_OK mode=… node=… os=… arch=… libc=… target=… event=evt_fixture_1`.

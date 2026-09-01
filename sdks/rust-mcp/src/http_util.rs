@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use serde_json::{json, Value};
 use solvapay::SdkError;
+use solvapay_mcp_core::{mcp_native_cors, native_cors_header_pairs, NativeCorsInput};
 
 /// Incoming HTTP request for [`crate::McpHttpServer::handle`].
 #[derive(Debug, Clone)]
@@ -35,6 +36,22 @@ pub fn envelope_status(envelope: &Value, default: u16) -> u16 {
         .get("status")
         .and_then(Value::as_u64)
         .unwrap_or(u64::from(default)) as u16
+}
+
+/// Merge native-scheme CORS headers from the request origin.
+pub fn merge_native_cors(
+    req_headers: &BTreeMap<String, String>,
+    headers: &mut BTreeMap<String, String>,
+) {
+    let cors = mcp_native_cors(&NativeCorsInput {
+        origin: req_headers.get("origin").cloned(),
+        requested_method: None,
+        requested_headers: None,
+        preflight: false,
+    });
+    for (key, value) in native_cors_header_pairs(&cors) {
+        headers.insert(key.to_ascii_lowercase(), value);
+    }
 }
 
 /// Lowercase string headers from a JSON object; non-string values are skipped.

@@ -11,6 +11,7 @@ import type { SdkMerchantResponse } from '../types/client'
 import type { SolvaPay } from '../factory'
 import { createSolvaPayClient } from '../client'
 import { handleRouteError } from './error'
+import { mapRouteError } from '../native-decisions'
 import { getSolvaPayConfig } from '@solvapay/core'
 
 export async function getMerchantCore(
@@ -32,17 +33,19 @@ export async function getMerchantCore(
       })()
 
     if (!apiClient) {
-      return {
-        error: 'Server configuration error: SolvaPay secret key not configured',
-        status: 500,
-      }
+      return mapRouteError({
+        kind: 'solvapay',
+        message: 'Server configuration error: SolvaPay secret key not configured',
+        operationName: 'Get merchant',
+      })
     }
 
     if (!apiClient.getMerchant) {
-      return {
-        error: 'Get merchant method not available',
-        status: 500,
-      }
+      return mapRouteError({
+        kind: 'solvapay',
+        message: 'Get merchant method not available',
+        operationName: 'Get merchant',
+      })
     }
 
     const merchant = await apiClient.getMerchant()

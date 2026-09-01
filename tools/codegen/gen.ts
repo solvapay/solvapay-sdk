@@ -7,8 +7,8 @@
  *              Compares working tree to itself (idempotence), not to git HEAD, so
  *              already-regenerated uncommitted files stay green.
  *
- * This is the single source of truth for dto-gen flags — CI and humans share it.
- * Flags and drift paths are derived from `contract/manifest/repo-paths.yaml`.
+ * This is the single source of truth for dto-gen invocation — CI and humans share it.
+ * dto-gen reads `contract/manifest/repo-paths.yaml` via `--config`.
  *
  * Runbook: docs/contributing/sdk-codegen.md
  *   pnpm gen | pnpm gen:check | pnpm gen:all

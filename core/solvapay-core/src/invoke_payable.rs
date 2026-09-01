@@ -13,6 +13,7 @@ use crate::mcp::{
 };
 use crate::paywall_gate::PaywallGate;
 use crate::serde_util::serialize_whole_f64;
+use crate::usage_request::build_usage_request;
 
 /// Driver state between payable steps.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -72,6 +73,8 @@ pub struct InvokePayableTrack {
     /// Elapsed ms from start.
     #[serde(serialize_with = "serialize_whole_f64")]
     pub duration_ms: f64,
+    /// Complete `trackUsage` body rendered by core. Host POSTs this verbatim.
+    pub request: Value,
 }
 
 /// Driver output.
@@ -207,13 +210,25 @@ fn on_handler_ok(
         .get("nowMs")
         .and_then(Value::as_i64)
         .unwrap_or(state.started_ms);
+    let random_unit = require_f64(event, "randomUnit")?;
     let duration_ms = (now_ms - state.started_ms).max(0) as f64;
+    let request = build_usage_request(
+        &state.customer_ref,
+        &state.product,
+        &state.usage_type,
+        "success",
+        duration_ms,
+        now_ms,
+        random_unit,
+        None,
+    );
     Ok(done(
         state,
         result,
         Some(InvokePayableTrack {
             outcome: "success".to_owned(),
             duration_ms,
+            request,
         }),
     ))
 }
@@ -239,13 +254,25 @@ fn on_handler_err(
         .get("nowMs")
         .and_then(Value::as_i64)
         .unwrap_or(state.started_ms);
+    let random_unit = require_f64(event, "randomUnit")?;
     let duration_ms = (now_ms - state.started_ms).max(0) as f64;
+    let request = build_usage_request(
+        &state.customer_ref,
+        &state.product,
+        &state.usage_type,
+        "fail",
+        duration_ms,
+        now_ms,
+        random_unit,
+        Some(message.to_owned()),
+    );
     Ok(done(
         state,
         result,
         Some(InvokePayableTrack {
             outcome: "fail".to_owned(),
             duration_ms,
+            request,
         }),
     ))
 }
@@ -296,6 +323,12 @@ fn require_state(state: Option<&Value>) -> Result<InvokePayableState, HelperErro
 }
 
 /// Read a required string field from a JSON object.
+fn require_f64(value: &Value, key: &str) -> Result<f64, HelperErrorResult> {
+    value.get(key).and_then(Value::as_f64).ok_or_else(|| {
+        HelperErrorResult::transport(format!("invoke_payable_next {key} is required"))
+    })
+}
+
 fn require_str(value: &Value, key: &str) -> Result<String, HelperErrorResult> {
     value
         .get(key)
@@ -388,6 +421,7 @@ mod tests {
                 "kind": "handlerOk",
                 "envelope": envelope,
                 "nowMs": 40,
+                "randomUnit": 0.5,
             })),
         )
         .unwrap();
@@ -397,6 +431,8 @@ mod tests {
                 let track = track.as_ref().expect("track");
                 assert_eq!(track.outcome, "success");
                 assert_eq!(track.duration_ms, 30.0);
+                assert_eq!(track.request["metadata"]["action"], "requests");
+                assert_eq!(track.request["outcome"], "success");
             }
             other => panic!("unexpected {other:?}"),
         }

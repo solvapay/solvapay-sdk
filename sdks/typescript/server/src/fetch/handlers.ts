@@ -54,6 +54,7 @@ import {
   trackUsageCore,
 } from '../helpers'
 import { verifyWebhook } from '../edge'
+import { isDuplicateWebhookEvent } from '../webhook-replay'
 import { handleCors } from './cors'
 import { errorResponse, jsonResponseWithCors } from './utils'
 
@@ -284,6 +285,11 @@ export async function getProduct(req: Request): Promise<Response> {
 export interface SolvapayWebhookOptions {
   secret?: string
   onEvent: (event: WebhookEvent) => void | Promise<void>
+  /**
+   * Host-owned replay check. Return `true` when `event.id` was already
+   * processed. Duplicates acknowledge with HTTP 200 and skip `onEvent`.
+   */
+  seenEventId?: (eventId: string) => boolean | Promise<boolean>
 }
 
 export function solvapayWebhook(
@@ -309,8 +315,19 @@ export function solvapayWebhook(
       // (deterministic choice — see module-level comment for why the
       // root entry's sync napi facade would be wrong here even on
       // Node's undici-backed fetch runtime).
-      event = await verifyWebhook({ body, signature, secret })
-    } catch {
+      event = await verifyWebhook({
+        body,
+        signature,
+        secret,
+        seenEventId: options.seenEventId,
+      })
+    } catch (error) {
+      if (isDuplicateWebhookEvent(error)) {
+        return new Response(JSON.stringify({ received: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
       return new Response(JSON.stringify({ error: 'Invalid webhook signature' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },

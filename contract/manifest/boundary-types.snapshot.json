@@ -2684,6 +2684,19 @@
             "ty": {
               "kind": "f64"
             }
+          },
+          {
+            "rustName": "request",
+            "wireName": "request",
+            "rustdoc": "Complete `trackUsage` body rendered by core. Host POSTs this verbatim.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "value"
+            }
           }
         ]
       }
@@ -4262,6 +4275,13 @@
             "fields": []
           },
           {
+            "rustName": "Paywall",
+            "wireName": "Paywall",
+            "rustdoc": "`instanceof PaywallError`.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
             "rustName": "Error",
             "wireName": "Error",
             "rustdoc": "`instanceof Error` (non-SolvaPay).",
@@ -4916,6 +4936,243 @@
         ]
       }
     },
+    "TopupPending": {
+      "module": "topup_process",
+      "rustdoc": "In-flight step the next host event must complete.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "None",
+            "wireName": "none",
+            "rustdoc": "Terminal.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "SyncCustomer",
+            "wireName": "syncCustomer",
+            "rustdoc": "Waiting for `syncCustomerResult`.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "BaselineBalance",
+            "wireName": "baselineBalance",
+            "rustdoc": "Waiting for the baseline `balanceResult`.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "ProcessPayment",
+            "wireName": "processPayment",
+            "rustdoc": "Waiting for `processPaymentResult`.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Sleep",
+            "wireName": "sleep",
+            "rustdoc": "Waiting for `sleepDone` before the next poll.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "PollBalance",
+            "wireName": "pollBalance",
+            "rustdoc": "Waiting for a poll `balanceResult`.",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
+    "TopupProcessAction": {
+      "module": "topup_process",
+      "rustdoc": "Next host action or a terminal resolve.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "taggedEnum",
+        "tag": "kind",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "SyncCustomer",
+            "wireName": "syncCustomer",
+            "rustdoc": "Host calls `syncCustomer`.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "GetCustomerBalance",
+            "wireName": "getCustomerBalance",
+            "rustdoc": "Host calls `getCustomerBalance` (baseline or poll).",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "customer_ref",
+                "wireName": "customerRef",
+                "rustdoc": "Synced customer ref.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "ProcessPaymentIntent",
+            "wireName": "processPaymentIntent",
+            "rustdoc": "Host calls `processPaymentIntent`.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "payment_intent_id",
+                "wireName": "paymentIntentId",
+                "rustdoc": "Processor payment intent id.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "customer_ref",
+                "wireName": "customerRef",
+                "rustdoc": "Synced customer ref.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "Sleep",
+            "wireName": "sleep",
+            "rustdoc": "Host sleeps `ms` then sends `sleepDone`.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "ms",
+                "wireName": "ms",
+                "rustdoc": "Delay in milliseconds.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "u64"
+                }
+              }
+            ]
+          },
+          {
+            "rustName": "Resolved",
+            "wireName": "resolved",
+            "rustdoc": "Terminal outcome. Host returns this to the caller.",
+            "cfgFeature": null,
+            "fields": [
+              {
+                "rustName": "status",
+                "wireName": "status",
+                "rustdoc": "Narrowed process status.",
+                "optional": false,
+                "skipSerializingIf": null,
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "message",
+                "wireName": "message",
+                "rustdoc": "Timeout message (skip-absent).",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "string"
+                }
+              },
+              {
+                "rustName": "credits_added",
+                "wireName": "creditsAdded",
+                "rustdoc": "Observed credit delta (skip-absent).",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "f64"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "TopupProcessNextOutput": {
+      "module": "topup_process",
+      "rustdoc": "Driver output.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "state",
+            "wireName": "state",
+            "rustdoc": "State to pass into the next call.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "TopupProcessState"
+            }
+          },
+          {
+            "rustName": "action",
+            "wireName": "action",
+            "rustdoc": "Host action or terminal result.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "TopupProcessAction"
+            }
+          }
+        ]
+      }
+    },
     "TopupProcessOutcome": {
       "module": "payment",
       "rustdoc": "Topup process outcome (poll / creditsAdded stay host-side).",
@@ -4949,6 +5206,97 @@
             "cfgFeature": null,
             "ty": {
               "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "TopupProcessState": {
+      "module": "topup_process",
+      "rustdoc": "Driver state between top-up process steps.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "payment_intent_id",
+            "wireName": "paymentIntentId",
+            "rustdoc": "Processor payment intent id.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "customer_ref",
+            "wireName": "customerRef",
+            "rustdoc": "Synced customer ref, once known.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "can_get_balance",
+            "wireName": "canGetBalance",
+            "rustdoc": "Host can call `getCustomerBalance`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "baseline_credits",
+            "wireName": "baselineCredits",
+            "rustdoc": "Baseline credits captured before `/process`. Absent means skip polling.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "poll_attempt",
+            "wireName": "pollAttempt",
+            "rustdoc": "Zero-based poll attempt index into [`BalancePollPolicy::topup`].",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "u32"
+            }
+          },
+          {
+            "rustName": "pending",
+            "wireName": "pending",
+            "rustdoc": "Which result event the driver is waiting for.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "TopupPending"
             }
           }
         ]
@@ -5809,6 +6157,76 @@
         "optional": false,
         "ty": {
           "kind": "u32"
+        }
+      }
+    },
+    "solvapay_core::customer_ref::resolve_customer_ref": {
+      "name": "resolve_customer_ref",
+      "module": "customer_ref",
+      "implTy": null,
+      "rustdoc": "Resolve a customer ref from optional identity sources.\n\nPrecedence: hook → verified JWT `sub` → `x-user-id` → `x-customer-ref`\n→ MCP extra → `args.auth.customer_ref` → `args.customer_ref` → `anonymous`.\n\nFacades verify tokens and pass the resulting `sub`; this op does not\nread headers or environment.",
+      "params": [
+        {
+          "rustName": "hook_ref",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "verified_jwt_sub",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "header_user_id",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "header_customer_ref",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "mcp_extra_customer_ref",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "args_auth_customer_ref",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "args_customer_ref",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
         }
       }
     },
@@ -8415,7 +8833,7 @@
       "name": "map_route_error",
       "module": "route_error",
       "implTy": null,
-      "rustdoc": "Map a narrowed route error into the helper [`HelperErrorResult`] shape.\n\n- [`RouteErrorKind::SolvaPay`] → `{ error: message, status: status ?? 500, details: message }`\n- [`RouteErrorKind::Error`] / [`RouteErrorKind::Unknown`] →\n  `{ error: defaultMessage || \"{operationName} failed\", status: 500, details }`\n\n# Arguments\n\n* `input` - Narrowed error fields from the host shim.\n\n# Returns\n\nAlways includes `details` ([`HelperErrorResult::with_details`]).",
+      "rustdoc": "Map a narrowed route error into the helper [`HelperErrorResult`] shape.\n\n- [`RouteErrorKind::SolvaPay`] → `{ error: message, status: status ?? 500, details: message }`\n- [`RouteErrorKind::Paywall`] → `{ error: message, status: 402, details: message }`\n- [`RouteErrorKind::Error`] / [`RouteErrorKind::Unknown`] →\n  `{ error: defaultMessage || \"{operationName} failed\", status: 500, details }`\n\n# Arguments\n\n* `input` - Narrowed error fields from the host shim.\n\n# Returns\n\nAlways includes `details` ([`HelperErrorResult::with_details`]).",
       "params": [
         {
           "rustName": "input",
@@ -8627,6 +9045,44 @@
         }
       }
     },
+    "solvapay_core::topup_process::topup_process_next": {
+      "name": "topup_process_next",
+      "module": "topup_process",
+      "implTy": null,
+      "rustdoc": "Advance top-up processing by one step.\n\n# Arguments\n\n* `state` - Previous state, or `None` on `start`.\n* `event` - Host event tagged with `kind`.\n\n# Errors\n\n[`HelperErrorResult`] on missing payment intent id or malformed events.",
+      "params": [
+        {
+          "rustName": "state",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        },
+        {
+          "rustName": "event",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "result",
+          "ok": {
+            "kind": "named",
+            "name": "TopupProcessNextOutput"
+          },
+          "err": {
+            "kind": "named",
+            "name": "HelperErrorResult"
+          }
+        }
+      }
+    },
     "solvapay_core::usage::project_usage_snapshot": {
       "name": "project_usage_snapshot",
       "module": "usage",
@@ -8677,6 +9133,84 @@
         "optional": false,
         "ty": {
           "kind": "bool"
+        }
+      }
+    },
+    "solvapay_core::usage_request::build_usage_request": {
+      "name": "build_usage_request",
+      "module": "usage_request",
+      "implTy": null,
+      "rustdoc": "Render the complete `trackUsage` body, including request ID and timestamp.\n\n# Arguments\n\n* `customer_ref` - Backend customer ref billed for this event.\n* `product` - Product reference.\n* `meter_name` - Usage meter (`metadata.action`).\n* `outcome` - `success` / `fail` / `paywall`.\n* `duration_ms` - Elapsed milliseconds.\n* `now_ms` - Host clock (authoritative timestamp + request id).\n* `random_unit` - Host `Math.random()` unit interval for the request id.\n* `error_message` - Optional fail-path message.",
+      "params": [
+        {
+          "rustName": "customer_ref",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "product",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "meter_name",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "outcome",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "duration_ms",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "rustName": "now_ms",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "i64"
+          }
+        },
+        {
+          "rustName": "random_unit",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "rustName": "error_message",
+          "byRef": false,
+          "optional": true,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "value"
         }
       }
     },
@@ -8734,7 +9268,7 @@
       "name": "verify_webhook",
       "module": "webhook",
       "implTy": null,
-      "rustdoc": "Verifies a SolvaPay webhook signature and parses the JSON body (§6.1).\n\nSteps: parse `t=`/`v1=` header → ±300 s tolerance → HMAC-SHA256 over\n`\"{timestamp}.{body}\"` → constant-time hex-string compare → `JSON.parse(body)`.\n\n# Arguments\n\n* `body` - Raw request body string (must match the signed bytes).\n* `signature` - `SV-Signature` header value (`t=…,v1=…`).\n* `secret` - Webhook secret including the `whsec_` prefix.\n* `now_unix_secs` - Explicit clock as unix seconds (host-owned; no timers in core).\n\n# Returns\n\nParsed JSON [`serde_json::Value`] on success (typed `WebhookEvent` DTO arrives at step 15).\n\n# Errors\n\nReturns [`WebhookError`] with one of the five [`WebhookErrorCode`] values:\n- [`WebhookErrorCode::MissingSignature`] — empty signature\n- [`WebhookErrorCode::MalformedSignature`] — missing/empty parts or non-numeric `t`\n- [`WebhookErrorCode::TimestampTooOld`] — outside ±300 s\n- [`WebhookErrorCode::InvalidSignature`] — HMAC / length mismatch\n- [`WebhookErrorCode::InvalidPayload`] — body is not valid JSON\n\n# Examples\n\n```\nuse hmac::{Hmac, KeyInit, Mac};\nuse sha2::Sha256;\nuse solvapay_core::verify_webhook;\n\nlet body = r#\"{\"type\":\"purchase.created\"}\"#;\nlet secret = \"whsec_test\";\nlet timestamp = 1_000_000_i64;\nlet Ok(mut mac) = Hmac::<Sha256>::new_from_slice(secret.as_bytes()) else {\n    panic!(\"HMAC-SHA256 accepts any key length\");\n};\nmac.update(format!(\"{timestamp}.{body}\").as_bytes());\nlet hex: String = mac\n    .finalize()\n    .into_bytes()\n    .iter()\n    .map(|b| format!(\"{b:02x}\"))\n    .collect();\nlet signature = format!(\"t={timestamp},v1={hex}\");\nlet value = verify_webhook(body, &signature, secret, timestamp).unwrap();\nassert_eq!(value[\"type\"], \"purchase.created\");\n```",
+      "rustdoc": "Verifies a SolvaPay webhook signature and parses the JSON body (§6.1).\n\nSteps: parse `t=`/`v1=` header → ±300 s tolerance → HMAC-SHA256 over\n`\"{timestamp}.{body}\"` → constant-time hex-string compare → `JSON.parse(body)`.\n\nCore stays stateless: there is no replay/nonce cache here (Stripe's model).\nThe ±300 s window rejects *stale* signatures; it does not dedupe retries of\nthe same event. Integrators must persist `event.id` (also sent as\n`SV-Event-Id`) and skip duplicates. Facades may take an optional\n`seenEventId` hook for that store; do not add timers or caches to this crate.\n\n# Arguments\n\n* `body` - Raw request body string (must match the signed bytes).\n* `signature` - `SV-Signature` header value (`t=…,v1=…`).\n* `secret` - Webhook secret including the `whsec_` prefix.\n* `now_unix_secs` - Explicit clock as unix seconds (host-owned; no timers in core).\n\n# Returns\n\nParsed JSON [`serde_json::Value`] on success (typed `WebhookEvent` DTO arrives at step 15).\n\n# Errors\n\nReturns [`WebhookError`] with one of the five [`WebhookErrorCode`] values:\n- [`WebhookErrorCode::MissingSignature`] — empty signature\n- [`WebhookErrorCode::MalformedSignature`] — missing/empty parts or non-numeric `t`\n- [`WebhookErrorCode::TimestampTooOld`] — outside ±300 s\n- [`WebhookErrorCode::InvalidSignature`] — HMAC / length mismatch\n- [`WebhookErrorCode::InvalidPayload`] — body is not valid JSON\n\n# Examples\n\n```\nuse hmac::{Hmac, KeyInit, Mac};\nuse sha2::Sha256;\nuse solvapay_core::verify_webhook;\n\nlet body = r#\"{\"type\":\"purchase.created\"}\"#;\nlet secret = \"whsec_test\";\nlet timestamp = 1_000_000_i64;\nlet Ok(mut mac) = Hmac::<Sha256>::new_from_slice(secret.as_bytes()) else {\n    panic!(\"HMAC-SHA256 accepts any key length\");\n};\nmac.update(format!(\"{timestamp}.{body}\").as_bytes());\nlet hex: String = mac\n    .finalize()\n    .into_bytes()\n    .iter()\n    .map(|b| format!(\"{b:02x}\"))\n    .collect();\nlet signature = format!(\"t={timestamp},v1={hex}\");\nlet value = verify_webhook(body, &signature, secret, timestamp).unwrap();\nassert_eq!(value[\"type\"], \"purchase.created\");\n```",
       "params": [
         {
           "rustName": "body",

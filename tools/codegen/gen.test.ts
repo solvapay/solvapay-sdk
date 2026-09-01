@@ -10,7 +10,7 @@ import {
   hashGeneratedTree,
   parseArgs,
 } from './gen.js'
-import { generatedEntry } from '../shared/repo-paths.js'
+import { generatedEntry, REPO_PATHS_MANIFEST_REL } from '../shared/repo-paths.js'
 
 describe('gen CLI', () => {
   it('parses --check', () => {
@@ -19,9 +19,7 @@ describe('gen CLI', () => {
   })
 
   it('keeps a non-empty canonical flag set and drift path list', () => {
-    expect(DTO_GEN_ARGS).toContain('--snapshot')
-    expect(DTO_GEN_ARGS).toContain('--manifest')
-    expect(DTO_GEN_ARGS).toContain('--go-parity-out')
+    expect(DTO_GEN_ARGS).toEqual(['--config', REPO_PATHS_MANIFEST_REL])
     expect(GENERATED_PATHS.length).toBeGreaterThan(20)
     expect(GENERATED_PATHS).toContain(generatedEntry('nativeTs').path)
     expect(GENERATED_PATHS).toContain(generatedEntry('tsGenerated').path)

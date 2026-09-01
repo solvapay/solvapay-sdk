@@ -47,6 +47,7 @@ use crate::decisions::project_usage_snapshot_binding;
 use crate::decisions::require_product_ref_binding;
 use crate::decisions::resolve_authenticated_user_binding;
 use crate::decisions::resolve_check_limits_params_binding;
+use crate::decisions::resolve_customer_ref_binding;
 use crate::decisions::resolve_fallback_gate_limits_binding;
 use crate::decisions::resolve_product_ref_binding;
 use crate::decisions::resolve_purchase_customer_ref_binding;
@@ -56,6 +57,7 @@ use crate::decisions::select_active_purchases_binding;
 use crate::decisions::should_retry_usage_error_binding;
 use crate::decisions::tier_bands_binding;
 use crate::decisions::tier_meters_binding;
+use crate::decisions::topup_process_next_binding;
 use crate::decisions::trial_days_binding;
 use crate::decisions::usage_rate_binding;
 use crate::decisions::validate_activate_plan_params_binding;
@@ -138,6 +140,7 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(project_payment_intent_result_binding, m)?)?;
     m.add_function(wrap_pyfunction!(project_topup_process_outcome_binding, m)?)?;
     m.add_function(wrap_pyfunction!(resolve_return_url_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(topup_process_next_binding, m)?)?;
     m.add_function(wrap_pyfunction!(
         validate_checkout_session_params_binding,
         m
@@ -157,6 +160,7 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(is_error_result_binding, m)?)?;
     m.add_function(wrap_pyfunction!(map_route_error_binding, m)?)?;
     m.add_function(wrap_pyfunction!(validate_get_product_params_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(resolve_customer_ref_binding, m)?)?;
     m.add_function(wrap_pyfunction!(resolve_product_ref_binding, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate_cached_limits_binding, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate_fresh_limits_binding, m)?)?;

@@ -18,7 +18,6 @@ export const GATE_SCRIPTS = [
   'delegation:check',
   'checks:required',
   'generated:external',
-  'retired-symbols:check',
 ] as const
 
 export function gateTasks(): Task[] {

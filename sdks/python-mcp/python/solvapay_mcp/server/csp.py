@@ -12,23 +12,6 @@ class SolvaPayMcpCsp(TypedDict, total=False):
     frameDomains: list[str]
 
 
-SOLVAPAY_DEFAULT_CSP: dict[str, list[str]] = {
-    "resourceDomains": [
-        "https://js.stripe.com",
-        "https://*.stripe.com",
-        "https://b.stripecdn.com",
-    ],
-    "connectDomains": [
-        "https://api.stripe.com",
-        "https://m.stripe.com",
-        "https://r.stripe.com",
-        "https://q.stripe.com",
-        "https://errors.stripe.com",
-    ],
-    "frameDomains": ["https://js.stripe.com", "https://hooks.stripe.com"],
-}
-
-
 def merge_csp(
     overrides: Mapping[str, list[str]] | None = None,
     api_base_url: str | None = None,
@@ -46,3 +29,24 @@ def merge_csp(
         "connectDomains": list(value["connectDomains"]),
         "frameDomains": list(value["frameDomains"]),
     }
+
+
+class _LazyDefaultCsp(dict[str, list[str]]):
+    def _load(self) -> None:
+        if not super().__len__():
+            self.update(merge_csp(None, None))
+
+    def __getitem__(self, key: str) -> list[str]:
+        self._load()
+        return super().__getitem__(key)
+
+    def __iter__(self):
+        self._load()
+        return super().__iter__()
+
+    def __len__(self) -> int:
+        self._load()
+        return super().__len__()
+
+
+SOLVAPAY_DEFAULT_CSP: dict[str, list[str]] = _LazyDefaultCsp()

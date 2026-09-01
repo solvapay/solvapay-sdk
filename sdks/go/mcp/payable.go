@@ -5,11 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
+	"strings"
 	"time"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	solvapay "github.com/solvapay/solvapay-go"
 )
+
+func randUnit() float64 {
+	return rand.Float64()
+}
 
 // Handler is the merchant payable tool implementation.
 type Handler func(ctx context.Context, args map[string]any, rc *ResponseContext) (Response, error)
@@ -267,56 +273,54 @@ func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcp
 				}
 				if err != nil {
 					event = map[string]any{
-						"kind":    "handlerErr",
-						"message": err.Error(),
-						"nowMs":   time.Now().UnixMilli(),
+						"kind":       "handlerErr",
+						"message":    err.Error(),
+						"nowMs":      time.Now().UnixMilli(),
+						"randomUnit": randUnit(),
 					}
 					continue
 				}
 				if !returned.valid() {
 					event = map[string]any{
-						"kind":    "handlerErr",
-						"message": "handler must return ctx.Respond(...)",
-						"nowMs":   time.Now().UnixMilli(),
+						"kind":       "handlerErr",
+						"message":    "handler must return ctx.Respond(...)",
+						"nowMs":      time.Now().UnixMilli(),
+						"randomUnit": randUnit(),
 					}
 					continue
 				}
 				envelope, err := assertResponseResult(ctx, returned.payload)
 				if err != nil {
 					event = map[string]any{
-						"kind":    "handlerErr",
-						"message": err.Error(),
-						"nowMs":   time.Now().UnixMilli(),
+						"kind":       "handlerErr",
+						"message":    err.Error(),
+						"nowMs":      time.Now().UnixMilli(),
+						"randomUnit": randUnit(),
 					}
 					continue
 				}
 				event = map[string]any{
-					"kind":     "handlerOk",
-					"envelope": json.RawMessage(envelope),
-					"nowMs":    time.Now().UnixMilli(),
+					"kind":       "handlerOk",
+					"envelope":   json.RawMessage(envelope),
+					"nowMs":      time.Now().UnixMilli(),
+					"randomUnit": randUnit(),
 				}
 			}
 		case "done":
 			var doneAction struct {
 				Result json.RawMessage `json:"result"`
 				Track  *struct {
-					Outcome    string  `json:"outcome"`
-					DurationMs float64 `json:"durationMs"`
+					Outcome    string         `json:"outcome"`
+					DurationMs float64        `json:"durationMs"`
+					Request    map[string]any `json:"request"`
 				} `json:"track"`
 			}
 			if err := json.Unmarshal(out.Action, &doneAction); err != nil {
 				return nil, err
 			}
-			if doneAction.Track != nil && allow != nil {
-				elapsed := doneAction.Track.DurationMs
-				if doneAction.Track.Outcome == "success" {
-					if err := allow.TrackSuccess(ctx, solvapay.TrackOpts{Duration: &elapsed}); err != nil {
-						return nil, err
-					}
-				} else {
-					if err := allow.TrackFail(ctx, errors.New(doneAction.Track.Outcome), solvapay.TrackOpts{Duration: &elapsed}); err != nil {
-						return nil, err
-					}
+			if doneAction.Track != nil && doneAction.Track.Request != nil {
+				if _, err := opts.Client.TrackUsage(ctx, doneAction.Track.Request); err != nil {
+					return nil, err
 				}
 			}
 			return payloadToCallToolResult(doneAction.Result)
@@ -331,13 +335,31 @@ func formatGateOverrideActive() bool {
 }
 
 func resolveCustomerRef(ctx context.Context, args map[string]any, hook GetCustomerRef) (string, error) {
+	callArgs := map[string]any{}
 	if hook != nil {
-		return hook(ctx, args)
+		ref, err := hook(ctx, args)
+		if err != nil {
+			return "", err
+		}
+		if strings.TrimSpace(ref) != "" {
+			callArgs["hookRef"] = strings.TrimSpace(ref)
+		}
 	}
 	if raw, ok := args["customer_ref"].(string); ok && raw != "" {
-		return raw, nil
+		callArgs["argsCustomerRef"] = raw
 	}
-	return "anonymous", nil
+	raw, err := CallSync(ctx, "resolveCustomerRef", callArgs)
+	if err != nil {
+		return "", err
+	}
+	var ref string
+	if err := json.Unmarshal(raw, &ref); err != nil {
+		return "", err
+	}
+	if ref == "" {
+		return "anonymous", nil
+	}
+	return ref, nil
 }
 
 func gateMessage(gate json.RawMessage) string {

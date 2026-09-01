@@ -1,4 +1,4 @@
-import { access, readFile, writeFile } from 'node:fs/promises'
+import { access, chmod, readFile, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline/promises'
@@ -28,7 +28,15 @@ type EnvWriteOptions = {
   confirmOverwrite?: () => Promise<boolean>
 }
 
+/** Owner-only — `.env` holds `SOLVAPAY_SECRET_KEY`. */
+const ENV_FILE_MODE = 0o600
+
 const secretKeyRegex = envValueRegex(SOLVAPAY_SECRET_KEY)
+
+const writeEnvFile = async (envPath: string, contents: string): Promise<void> => {
+  await writeFile(envPath, contents, { encoding: 'utf8', mode: ENV_FILE_MODE })
+  await chmod(envPath, ENV_FILE_MODE)
+}
 
 const parseEnvValue = (raw: string): string => {
   const trimmed = raw.trim()
@@ -98,12 +106,16 @@ export const writeSolvaPaySecretToEnv = async (
   secretKey: string,
   options: EnvWriteOptions = {},
 ): Promise<EnvWriteResult> => {
-  const envPath = path.join(options.cwd || process.cwd(), '.env')
+  const cwd = options.cwd || process.cwd()
+  // Ignore first so a crash after the secret lands cannot leave `.env` trackable.
+  await ensureEnvInGitignore(cwd)
+
+  const envPath = path.join(cwd, '.env')
   const keyLine = `${SOLVAPAY_SECRET_KEY}=${secretKey}`
 
   const exists = await envFileExists(envPath)
   if (!exists) {
-    await writeFile(envPath, `${keyLine}\n`, 'utf8')
+    await writeEnvFile(envPath, `${keyLine}\n`)
     return { filePath: envPath, action: 'created' }
   }
 
@@ -111,7 +123,7 @@ export const writeSolvaPaySecretToEnv = async (
 
   if (!secretKeyRegex.test(currentContent)) {
     const next = `${normalizeTrailingNewline(currentContent)}${keyLine}\n`
-    await writeFile(envPath, next, 'utf8')
+    await writeEnvFile(envPath, next)
     return { filePath: envPath, action: 'appended' }
   }
 
@@ -119,11 +131,12 @@ export const writeSolvaPaySecretToEnv = async (
     ? await options.confirmOverwrite()
     : await askOverwrite()
   if (!shouldOverwrite) {
+    await chmod(envPath, ENV_FILE_MODE)
     return { filePath: envPath, action: 'unchanged' }
   }
 
   const updatedContent = currentContent.replace(/^\s*SOLVAPAY_SECRET_KEY\s*=.*$/m, keyLine)
-  await writeFile(envPath, updatedContent, 'utf8')
+  await writeEnvFile(envPath, updatedContent)
   return { filePath: envPath, action: 'updated' }
 }
 
@@ -165,7 +178,7 @@ export const writeSolvaPayProductRefToEnv = async (
 
   const exists = await envFileExists(envPath)
   if (!exists) {
-    await writeFile(envPath, `${keyLine}\n`, 'utf8')
+    await writeEnvFile(envPath, `${keyLine}\n`)
     return { filePath: envPath, action: 'created' }
   }
 
@@ -174,7 +187,7 @@ export const writeSolvaPayProductRefToEnv = async (
 
   if (!productRefRegex.test(currentContent)) {
     const next = `${normalizeTrailingNewline(currentContent)}${keyLine}\n`
-    await writeFile(envPath, next, 'utf8')
+    await writeEnvFile(envPath, next)
     return { filePath: envPath, action: 'appended' }
   }
 
@@ -185,7 +198,7 @@ export const writeSolvaPayProductRefToEnv = async (
   }
 
   const updatedContent = currentContent.replace(/^\s*SOLVAPAY_PRODUCT_REF\s*=.*$/m, keyLine)
-  await writeFile(envPath, updatedContent, 'utf8')
+  await writeEnvFile(envPath, updatedContent)
   return { filePath: envPath, action: 'updated' }
 }
 
@@ -212,7 +225,7 @@ export const writeSolvaPayApiBaseUrlToEnv = async (
 
   const exists = await envFileExists(envPath)
   if (!exists) {
-    await writeFile(envPath, `${keyLine}\n`, 'utf8')
+    await writeEnvFile(envPath, `${keyLine}\n`)
     return { filePath: envPath, action: 'created' }
   }
 
@@ -227,17 +240,17 @@ export const writeSolvaPayApiBaseUrlToEnv = async (
       return { filePath: envPath, action: 'unchanged' }
     }
     const updatedContent = currentContent.replace(liveRegex, keyLine)
-    await writeFile(envPath, updatedContent, 'utf8')
+    await writeEnvFile(envPath, updatedContent)
     return { filePath: envPath, action: 'updated' }
   }
 
   if (commentedRegex.test(currentContent)) {
     const updatedContent = currentContent.replace(commentedRegex, keyLine)
-    await writeFile(envPath, updatedContent, 'utf8')
+    await writeEnvFile(envPath, updatedContent)
     return { filePath: envPath, action: 'updated' }
   }
 
   const next = `${normalizeTrailingNewline(currentContent)}${keyLine}\n`
-  await writeFile(envPath, next, 'utf8')
+  await writeEnvFile(envPath, next)
   return { filePath: envPath, action: 'appended' }
 }

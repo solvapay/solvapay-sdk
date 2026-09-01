@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
+	solvapay "github.com/solvapay/solvapay-go"
 )
 
 func installCatalogMiddleware(mcpServer *mcpsdk.Server, s *Server) {
@@ -33,23 +34,23 @@ func applyCatalogTTL(res mcpsdk.Result) {
 	switch r := res.(type) {
 	case *mcpsdk.ListToolsResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = defaultCatalogTTLMs
+			r.TTLMs = solvapay.DefaultCatalogTTLMs
 		}
 	case *mcpsdk.ListResourcesResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = defaultCatalogTTLMs
+			r.TTLMs = solvapay.DefaultCatalogTTLMs
 		}
 	case *mcpsdk.ListPromptsResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = defaultCatalogTTLMs
+			r.TTLMs = solvapay.DefaultCatalogTTLMs
 		}
 	case *mcpsdk.ListResourceTemplatesResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = defaultCatalogTTLMs
+			r.TTLMs = solvapay.DefaultCatalogTTLMs
 		}
 	case *mcpsdk.ReadResourceResult:
 		if r.TTLMs == 0 {
-			r.TTLMs = defaultCatalogTTLMs
+			r.TTLMs = solvapay.DefaultCatalogTTLMs
 		}
 	}
 }

@@ -28,12 +28,7 @@ pub mod emit_helpers_rs;
 pub mod emit_mcp;
 pub mod emit_native_py;
 pub mod emit_native_rb;
-pub mod emit_parity_suite_c;
-pub mod emit_parity_suite_go;
-pub mod emit_parity_suite_py;
-pub mod emit_parity_suite_rb;
-pub mod emit_parity_suite_rs;
-pub mod emit_parity_suite_ts;
+pub mod emit_parity_suite;
 pub mod emit_pyi_py;
 pub mod emit_rbs_rb;
 pub mod emit_ts;
@@ -74,12 +69,10 @@ pub use emit_helpers_rs::emit_helpers_rs;
 pub use emit_mcp::{emit_mcp_go, emit_mcp_py, emit_mcp_rb, emit_mcp_rs, emit_mcp_ts};
 pub use emit_native_py::emit_native_py;
 pub use emit_native_rb::emit_native_rb;
-pub use emit_parity_suite_c::emit_parity_suite_c;
-pub use emit_parity_suite_go::emit_parity_suite_go;
-pub use emit_parity_suite_py::emit_parity_suite_py;
-pub use emit_parity_suite_rb::emit_parity_suite_rb;
-pub use emit_parity_suite_rs::emit_parity_suite_rs;
-pub use emit_parity_suite_ts::emit_parity_suite_ts;
+pub use emit_parity_suite::{
+    emit_parity_suite_c, emit_parity_suite_go, emit_parity_suite_py, emit_parity_suite_rb,
+    emit_parity_suite_rs, emit_parity_suite_ts,
+};
 pub use emit_pyi_py::emit_pyi_py;
 pub use emit_rbs_rb::{emit_mcp_rbs_rb, emit_rbs_rb};
 pub use emit_ts::emit_overlays_ts;

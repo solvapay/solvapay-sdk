@@ -7,7 +7,7 @@
 import type { LimitResponseWithPlan, PaywallArgs, SolvaPay } from '@solvapay/server'
 import { isPaywallStructuredContent, PaywallError } from '@solvapay/server'
 import { defaultGetCustomerRef } from './helpers'
-import { assertResponseResult, invokePayableNext } from './native-mcp'
+import { assertResponseResult, callMcpSyncOp, invokePayableNext } from './native-mcp'
 import { buildResponseContext } from './response-context'
 import type {
   BootstrapPayload,
@@ -48,7 +48,7 @@ type InvokeAction = {
   usageType?: unknown
   limits?: unknown
   result?: unknown
-  track?: { outcome?: unknown; durationMs?: unknown } | null
+  track?: { outcome?: unknown; durationMs?: unknown; request?: unknown } | null
   gate?: unknown
   message?: unknown
 }
@@ -57,26 +57,31 @@ function nowMs(): number {
   return Date.now()
 }
 
-async function resolveCustomerRef(
+async function resolvePayableCustomerRef(
   args: Record<string, unknown>,
   extra: McpToolExtra | undefined,
   getCustomerRef: BuildPayableHandlerContext['getCustomerRef'],
 ): Promise<string> {
+  let hookRef: string | undefined
   if (getCustomerRef) {
     const resolved = await getCustomerRef(args, extra)
     if (typeof resolved === 'string' && resolved.trim()) {
-      return resolved.trim()
+      hookRef = resolved.trim()
     }
   }
-  const fromExtra = defaultGetCustomerRef(extra)
-  if (fromExtra) {
-    return fromExtra
-  }
-  const raw = args.customer_ref
-  if (typeof raw === 'string' && raw.trim()) {
-    return raw.trim()
-  }
-  return 'anonymous'
+  const auth = args.auth
+  const argsAuth =
+    auth && typeof auth === 'object' && 'customer_ref' in auth
+      ? (auth as { customer_ref?: unknown }).customer_ref
+      : undefined
+  return callMcpSyncOp('resolveCustomerRef', {
+    ...(hookRef !== undefined ? { hookRef } : {}),
+    ...(defaultGetCustomerRef(extra) !== null
+      ? { mcpExtraCustomerRef: defaultGetCustomerRef(extra) }
+      : {}),
+    ...(typeof argsAuth === 'string' ? { argsAuthCustomerRef: argsAuth } : {}),
+    ...(typeof args.customer_ref === 'string' ? { argsCustomerRef: args.customer_ref } : {}),
+  })
 }
 
 /**
@@ -93,7 +98,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
     args: Record<string, unknown>,
     extra?: McpToolExtra,
   ): Promise<SolvaPayCallToolResult> => {
-    const customerRef = await resolveCustomerRef(args, extra, getCustomerRef)
+    const customerRef = await resolvePayableCustomerRef(args, extra, getCustomerRef)
     let state: unknown = null
     let event: Record<string, unknown> = {
       kind: 'start',
@@ -153,6 +158,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
             kind: 'handlerOk',
             envelope,
             nowMs: nowMs(),
+            randomUnit: Math.random(),
           }
         } catch (err) {
           if (err instanceof PaywallError) {
@@ -171,29 +177,17 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
             kind: 'handlerErr',
             message,
             nowMs: nowMs(),
+            randomUnit: Math.random(),
           }
         }
         continue
       }
       if (kind === 'done') {
         const track = action.track
-        if (track && allowCustomerRef) {
-          const duration =
-            typeof track.durationMs === 'number' ? track.durationMs : Number(track.durationMs ?? 0)
-          const outcome = track.outcome === 'success' ? 'success' : 'fail'
-          await solvaPay.apiClient.trackUsage({
-            customerRef: allowCustomerRef,
-            productRef: product,
-            actionType: 'api_call',
-            units: 1,
-            outcome,
-            duration,
-            metadata: {
-              action: 'requests',
-              requestId: `solvapay_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-            },
-            timestamp: new Date().toISOString(),
-          })
+        if (track?.request && typeof track.request === 'object') {
+          await solvaPay.apiClient.trackUsage(
+            track.request as Parameters<SolvaPay['apiClient']['trackUsage']>[0],
+          )
         }
         const result = action.result as SolvaPayCallToolResult
         if (isPaywallStructuredContent(result.structuredContent)) {

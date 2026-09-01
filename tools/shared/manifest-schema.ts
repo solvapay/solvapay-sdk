@@ -15,7 +15,7 @@ export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 6
 export const EXPECTED_OPERATION_COUNT =
   EXPECTED_ROUTED_OPERATION_COUNT + EXPECTED_MCP_COMPOSITE_OPERATION_COUNT
 
-export const EXPECTED_MCP_SYNC_OP_COUNT = 18
+export const EXPECTED_MCP_SYNC_OP_COUNT = 20
 export const EXPECTED_MCP_LAYER2_COUNT = 12
 
 export const EXPECTED_TOP_LEVEL_IDS = [
@@ -567,11 +567,13 @@ export const SHIM_JS_NAMES = [
   'paywallErrorToClientPayload',
   'projectPaymentIntentResult',
   'projectTopupProcessOutcome',
+  'topupProcessNext',
   'projectUsageSnapshot',
   'resolveCheckLimitsParams',
   'resolveFallbackGateLimits',
   'requireProductRef',
   'resolveProductRef',
+  'resolveCustomerRef',
   'resolvePurchaseCustomerRef',
   'resolveReturnUrl',
   'retryNextDelayMs',

@@ -2,12 +2,13 @@
  * Virtual Tools for MCP Server Monetization
  *
  * Provides the same self-service tools (get_user_info, upgrade, manage_account)
- * that hosted MCP Pay servers get automatically, but for SDK-integrated servers.
+ * that hosted MCP servers get automatically, but for SDK-integrated servers.
  * These tools are NOT usage-tracked and bypass the paywall.
  */
 
 import type { SolvaPayClient } from './types'
 import type { McpToolExtra } from './types'
+import { callNativeSync } from './native'
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ export interface VirtualToolDefinition {
   }>
 }
 
-// ── Tool Definitions (matching hosted MCP Pay) ─────────────────────────
+// ── Tool Definitions (matching hosted MCP servers) ─────────────────────
 
 const TOOL_GET_USER_INFO = {
   name: 'get_user_info',
@@ -94,6 +95,21 @@ function mcpTextResult(text: string) {
   return { content: [{ type: 'text', text }] }
 }
 
+function virtualToolMarkdown(tool: string, payload: Record<string, unknown>): string {
+  const narrated = callNativeSync(
+    'solvapayCall',
+    JSON.stringify({ op: 'mcpNarrate', args: { tool, payload } }),
+  )
+  if (typeof narrated !== 'object' || narrated === null || !('text' in narrated)) {
+    throw new Error('mcpNarrate virtual tool did not return text')
+  }
+  const text = (narrated as { text: unknown }).text
+  if (typeof text !== 'string') {
+    throw new Error('mcpNarrate virtual tool text must be a string')
+  }
+  return text
+}
+
 function mcpErrorResult(message: string) {
   return { content: [{ type: 'text', text: JSON.stringify({ error: message }) }], isError: true }
 }
@@ -139,19 +155,12 @@ function createUpgradeHandler(
 
       const checkoutUrl = result.checkoutUrl
 
-      if (planRef) {
-        const responseText =
-          `## Upgrade\n\n` +
-          `**[Click here to upgrade →](${checkoutUrl})**\n\n` +
-          `After completing the checkout, your purchase will be activated immediately.`
-        return mcpTextResult(responseText)
-      }
-
-      const responseText =
-        `## Upgrade Your Subscription\n\n` +
-        `**[Click here to view pricing options and upgrade →](${checkoutUrl})**\n\n` +
-        `You'll be able to compare options and select the one that's right for you.`
-      return mcpTextResult(responseText)
+      return mcpTextResult(
+        virtualToolMarkdown('virtual_upgrade', {
+          checkoutUrl,
+          ...(planRef !== undefined ? { planRef } : {}),
+        }),
+      )
     } catch (error) {
       return mcpErrorResult(
         `Failed to create checkout session: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -172,16 +181,7 @@ function createManageAccountHandler(
       const session = await apiClient.createCustomerSession({ customerRef, productRef })
       const portalUrl = session.customerUrl
 
-      const responseText =
-        `## Manage Your Account\n\n` +
-        `Access your account management portal to:\n` +
-        `- View your current account status\n` +
-        `- See billing history and invoices\n` +
-        `- Update payment methods\n` +
-        `- Cancel or modify your subscription\n\n` +
-        `**[Open Account Portal →](${portalUrl})**\n\n` +
-        `This link is secure and will expire after a short period.`
-      return mcpTextResult(responseText)
+      return mcpTextResult(virtualToolMarkdown('virtual_manage_account', { portalUrl }))
     } catch (error) {
       return mcpErrorResult(
         `Failed to create customer portal session: ${error instanceof Error ? error.message : 'Unknown error'}`,

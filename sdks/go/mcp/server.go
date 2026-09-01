@@ -12,8 +12,6 @@ import (
 	solvapay "github.com/solvapay/solvapay-go"
 )
 
-const defaultCatalogTTLMs = 60_000
-
 // ServerConfig configures [NewServer].
 type ServerConfig struct {
 	ProductRef    string

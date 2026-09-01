@@ -29,10 +29,6 @@ sdks/typescript/server/src/native-decisions.ts
 sdks/wasm/pkg/
 sdks/node-native/index.d.ts
 sdks/node-native/index.js
-sdks/node-native/server-native.wasi.cjs
-sdks/node-native/server-native.wasi-browser.js
-sdks/node-native/wasi-worker.mjs
-sdks/node-native/wasi-worker-browser.mjs
 tools/codegen/dto-gen/assets/
 
 # Contract snapshots / byte-gated fixtures (key order is load-bearing)

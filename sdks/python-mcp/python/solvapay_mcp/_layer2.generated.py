@@ -210,6 +210,18 @@ def mcp_dcr_diagnostics(
         call_args["bodyText"] = body_text
     return call_sync_op("mcpDcrDiagnostics", call_args)
 
+def mcp_default_gate(product: object, reason: object | None = None) -> object:
+    """Build the default ctx.gate() paywall structured-content stub.
+    @param product Product reference stamped onto the gate.
+    @param reason Optional merchant message; empty or omitted becomes Payment required.
+    @returns Paywall structured content with kind payment_required.
+    """
+    call_args: dict[str, object] = {}
+    call_args["product"] = product
+    if reason is not None:
+        call_args["reason"] = reason
+    return call_sync_op("mcpDefaultGate", call_args)
+
 def mcp_descriptors(
     resource_uri: object,
     public_base_url: object,
@@ -323,6 +335,30 @@ def mcp_narrate(
     if meta is not None:
         call_args["meta"] = meta
     return call_sync_op("mcpNarrate", call_args)
+
+def mcp_native_cors(
+    origin: object | None = None,
+    requested_method: object | None = None,
+    requested_headers: object | None = None,
+    preflight: object | None = None,
+) -> object:
+    """Decide native-scheme CORS mirroring for MCP client origins.
+    @param origin Request Origin header.
+    @param requested_method Access-Control-Request-Method for preflight.
+    @param requested_headers Access-Control-Request-Headers for preflight.
+    @param preflight When true, emit Allow-Methods, Allow-Headers, and Max-Age.
+    @returns allowed flag plus response headers to merge.
+    """
+    call_args: dict[str, object] = {}
+    if origin is not None:
+        call_args["origin"] = origin
+    if requested_method is not None:
+        call_args["requestedMethod"] = requested_method
+    if requested_headers is not None:
+        call_args["requestedHeaders"] = requested_headers
+    if preflight is not None:
+        call_args["preflight"] = preflight
+    return call_sync_op("mcpNativeCors", call_args)
 
 def mcp_normalize_oauth_error(
     body: object | None = None,

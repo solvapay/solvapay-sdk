@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from solvapay.errors import PaywallError
 
 from solvapay_mcp._layer2 import make_response_result
+from solvapay_mcp.core import call
 
 
 class ResponseContext:
@@ -35,14 +36,11 @@ class ResponseContext:
         return make_response_result(data, opts, list(self._emitted))
 
     def gate(self, reason: str | None = None) -> None:
-        message = reason if reason else "Payment required"
-        raise PaywallError(
-            message,
-            {
-                "kind": "payment_required",
-                "product": self._product_ref,
-                "checkoutUrl": "",
-                "message": message,
-                "shortMessage": "Payment required",
-            },
-        )
+        payload: dict[str, object] = {"product": self._product_ref}
+        if reason is not None:
+            payload["reason"] = reason
+        content = call("mcpDefaultGate", payload)
+        if not isinstance(content, Mapping):
+            raise TypeError("mcpDefaultGate did not return an object")
+        message = str(content.get("message") or "Payment required")
+        raise PaywallError(message, dict(content))

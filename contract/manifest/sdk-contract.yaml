@@ -139,7 +139,7 @@ boundaryTypesTs:
         status: string
         plans?: Array<{ isActive: boolean }>
       }
-    RouteErrorKind: "'solvapay' | 'error' | 'unknown'"
+    RouteErrorKind: "'solvapay' | 'paywall' | 'error' | 'unknown'"
     RouteErrorInput: |-
       {
         kind: RouteErrorKind
@@ -4549,6 +4549,43 @@ mcp:
       rust: sync
       c: sync
     surface: syncOp
+  mcpNativeCors:
+    names:
+      ts: mcpNativeCors
+      py: mcp_native_cors
+      rb: mcp_native_cors
+      go: McpNativeCors
+      rust: mcp_native_cors
+      c: mcpNativeCors
+    params:
+      - name: origin
+        type: string
+        required: false
+      - name: requestedMethod
+        type: string
+        required: false
+      - name: requestedHeaders
+        type: string
+        required: false
+      - name: preflight
+        type: boolean
+        required: false
+    docs:
+      summary: 'Decide native-scheme CORS mirroring for MCP client origins.'
+      params:
+        origin: 'Request Origin header.'
+        requestedMethod: 'Access-Control-Request-Method for preflight.'
+        requestedHeaders: 'Access-Control-Request-Headers for preflight.'
+        preflight: 'When true, emit Allow-Methods, Allow-Headers, and Max-Age.'
+      returns: 'allowed flag plus response headers to merge.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
   mcpVerifyBearer:
     names:
       ts: mcpVerifyBearer
@@ -4644,6 +4681,35 @@ mcp:
         mcpMethod: 'JSON-RPC method name.'
         authMode: 'tools-call or all; defaults to tools-call.'
       returns: 'True when a bearer token is required.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpDefaultGate:
+    names:
+      ts: mcpDefaultGate
+      py: mcp_default_gate
+      rb: mcp_default_gate
+      go: McpDefaultGate
+      rust: mcp_default_gate
+      c: mcpDefaultGate
+    params:
+      - name: product
+        type: string
+        required: true
+      - name: reason
+        type: string
+        required: false
+    docs:
+      summary: 'Build the default ctx.gate() paywall structured-content stub.'
+      params:
+        product: 'Product reference stamped onto the gate.'
+        reason: 'Optional merchant message; empty or omitted becomes Payment required.'
+      returns: 'Paywall structured content with kind payment_required.'
     sync:
       ts: sync
       py: sync

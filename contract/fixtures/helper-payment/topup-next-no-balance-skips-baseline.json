@@ -1,0 +1,36 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-next-no-balance-skips-baseline",
+  "input": {
+    "fn": "topupProcessNext",
+    "args": {
+      "state": {
+        "paymentIntentId": "pi_1",
+        "canGetBalance": false,
+        "pollAttempt": 0,
+        "pending": "syncCustomer"
+      },
+      "event": {
+        "kind": "syncCustomerResult",
+        "customerRef": "cus_1",
+        "canGetBalance": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "paymentIntentId": "pi_1",
+        "customerRef": "cus_1",
+        "canGetBalance": false,
+        "pollAttempt": 0,
+        "pending": "processPayment"
+      },
+      "action": {
+        "kind": "processPaymentIntent",
+        "paymentIntentId": "pi_1",
+        "customerRef": "cus_1"
+      }
+    }
+  }
+}

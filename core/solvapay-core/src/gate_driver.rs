@@ -15,8 +15,8 @@ use crate::paywall_decision::{
     decide_paywall_outcome, evaluate_cached_limits, evaluate_fresh_limits,
 };
 use crate::paywall_gate::PaywallGate;
-use crate::random::{iso8601_millis, random9_from_f64};
 use crate::serde_util::serialize_whole_f64;
+use crate::usage_request::build_usage_request;
 
 /// Opaque-enough driver state passed back on every step.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -279,17 +279,6 @@ fn start(event: &Value) -> Result<GateNextOutput, HelperErrorResult> {
 
 /// Default `limitsCacheTTLMs` when `start` omits the override.
 const DEFAULT_LIMITS_CACHE_TTL_MS: i64 = 10_000;
-/// Frozen `trackUsage.actionType` (`defaults.usageActionType`).
-const USAGE_ACTION_TYPE: &str = "api_call";
-/// Frozen `trackUsage` request-id template (`defaults.requestIdFormat`).
-const REQUEST_ID_FORMAT: &str = "solvapay_{epochMs}_{random9}";
-
-/// Expand the frozen `solvapay_{epochMs}_{random9}` request-id template.
-fn render_request_id(now_ms: i64, random_unit: f64) -> String {
-    REQUEST_ID_FORMAT
-        .replace("{epochMs}", &now_ms.to_string())
-        .replace("{random9}", &random9_from_f64(random_unit))
-}
 
 /// Handle a raw cache-map read. Rust owns freshness (`>=` TTL is stale).
 fn on_limits_cache_entry(
@@ -397,7 +386,20 @@ fn on_handler_succeeded(
     let duration_ms = require_f64(event, "durationMs")?;
     let now_ms = event.get("nowMs").and_then(Value::as_i64).unwrap_or(0);
     let random_unit = require_f64(event, "randomUnit")?;
-    let request = build_usage_request(&state, "success", duration_ms, now_ms, random_unit, None);
+    let customer_ref = state
+        .backend_ref
+        .clone()
+        .unwrap_or_else(|| state.original_customer_ref.clone());
+    let request = build_usage_request(
+        &customer_ref,
+        &state.product,
+        &state.meter_name,
+        "success",
+        duration_ms,
+        now_ms,
+        random_unit,
+        None,
+    );
     Ok(GateNextOutput {
         state,
         action: GateAction::EmitUsage { request },
@@ -427,8 +429,14 @@ fn on_handler_failed(
         .and_then(Value::as_str)
         .filter(|s| !s.is_empty())
         .map(str::to_owned);
+    let customer_ref = state
+        .backend_ref
+        .clone()
+        .unwrap_or_else(|| state.original_customer_ref.clone());
     let request = build_usage_request(
-        &state,
+        &customer_ref,
+        &state.product,
+        &state.meter_name,
         "fail",
         duration_ms,
         now_ms,
@@ -481,8 +489,16 @@ fn finish(
         }),
         crate::paywall_decision::PaywallOutcome::Gate { gate } => {
             let random_unit = require_f64(event, "randomUnit")?;
-            let request =
-                build_usage_request(&state, "paywall", duration_ms, now_ms, random_unit, None);
+            let request = build_usage_request(
+                &customer_ref,
+                &state.product,
+                &state.meter_name,
+                "paywall",
+                duration_ms,
+                now_ms,
+                random_unit,
+                None,
+            );
             Ok(GateNextOutput {
                 action: GateAction::Gate {
                     customer_ref,
@@ -498,48 +514,6 @@ fn finish(
             })
         }
     }
-}
-
-/// Render the complete `trackUsage` body, including request ID and timestamp.
-fn build_usage_request(
-    state: &GateDriverState,
-    outcome: &str,
-    duration_ms: f64,
-    now_ms: i64,
-    random_unit: f64,
-    error_message: Option<String>,
-) -> Value {
-    let customer_ref = state
-        .backend_ref
-        .clone()
-        .unwrap_or_else(|| state.original_customer_ref.clone());
-    let request_id = render_request_id(now_ms, random_unit);
-    let duration = if duration_ms.is_finite() && duration_ms.fract() == 0.0 {
-        #[expect(clippy::cast_possible_truncation)]
-        let whole = duration_ms as i64;
-        json!(whole)
-    } else {
-        json!(duration_ms)
-    };
-    let mut request = json!({
-        "customerRef": customer_ref,
-        "actionType": USAGE_ACTION_TYPE,
-        "units": 1,
-        "outcome": outcome,
-        "productRef": state.product,
-        "duration": duration,
-        "metadata": {
-            "action": state.meter_name,
-            "requestId": request_id,
-        },
-        "timestamp": iso8601_millis(now_ms),
-    });
-    if let Some(message) = error_message {
-        if let Some(obj) = request.as_object_mut() {
-            obj.insert("errorMessage".to_owned(), json!(message));
-        }
-    }
-    request
 }
 
 /// Apply host-side snapshot defaults that used to live in five languages.

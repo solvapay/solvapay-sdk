@@ -219,6 +219,13 @@ export function projectTopupProcessOutcome(status?: string, message?: string): T
   })
 }
 
+export function topupProcessNext(
+  state: unknown | null | undefined,
+  event: unknown | null | undefined,
+): unknown {
+  return dispatchSync('topupProcessNext', { state: state ?? null, event: event ?? null })
+}
+
 // --- checkout ---
 
 export function resolveReturnUrl(
@@ -320,6 +327,28 @@ export function resolveCheckLimitsParams(
     productRef: productRef ?? null,
     meterName: meterName ?? null,
     usageType: usageType ?? null,
+  })
+}
+
+// --- customer ---
+
+export function resolveCustomerRef(
+  hookRef: string | null | undefined,
+  verifiedJwtSub: string | null | undefined,
+  headerUserId: string | null | undefined,
+  headerCustomerRef: string | null | undefined,
+  mcpExtraCustomerRef: string | null | undefined,
+  argsAuthCustomerRef: string | null | undefined,
+  argsCustomerRef: string | null | undefined,
+): string {
+  return dispatchSync('resolveCustomerRef', {
+    hookRef: hookRef ?? null,
+    verifiedJwtSub: verifiedJwtSub ?? null,
+    headerUserId: headerUserId ?? null,
+    headerCustomerRef: headerCustomerRef ?? null,
+    mcpExtraCustomerRef: mcpExtraCustomerRef ?? null,
+    argsAuthCustomerRef: argsAuthCustomerRef ?? null,
+    argsCustomerRef: argsCustomerRef ?? null,
   })
 }
 

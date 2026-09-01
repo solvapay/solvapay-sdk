@@ -48,6 +48,7 @@ use crate::decisions::project_usage_snapshot_binding;
 use crate::decisions::require_product_ref_binding;
 use crate::decisions::resolve_authenticated_user_binding;
 use crate::decisions::resolve_check_limits_params_binding;
+use crate::decisions::resolve_customer_ref_binding;
 use crate::decisions::resolve_fallback_gate_limits_binding;
 use crate::decisions::resolve_product_ref_binding;
 use crate::decisions::resolve_purchase_customer_ref_binding;
@@ -57,6 +58,7 @@ use crate::decisions::select_active_purchases_binding;
 use crate::decisions::should_retry_usage_error_binding;
 use crate::decisions::tier_bands_binding;
 use crate::decisions::tier_meters_binding;
+use crate::decisions::topup_process_next_binding;
 use crate::decisions::trial_days_binding;
 use crate::decisions::usage_rate_binding;
 use crate::decisions::validate_activate_plan_params_binding;
@@ -166,6 +168,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         function!(resolve_return_url_binding, 1),
     )?;
     native.define_singleton_method(
+        "topup_process_next",
+        function!(topup_process_next_binding, 1),
+    )?;
+    native.define_singleton_method(
         "validate_checkout_session_params",
         function!(validate_checkout_session_params_binding, 1),
     )?;
@@ -222,6 +228,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "validate_get_product_params",
         function!(validate_get_product_params_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "resolve_customer_ref",
+        function!(resolve_customer_ref_binding, 1),
     )?;
     native.define_singleton_method(
         "resolve_product_ref",

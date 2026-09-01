@@ -9,6 +9,8 @@ use crate::helper_error::HelperErrorResult;
 pub enum RouteErrorKind {
     /// `instanceof SolvaPayError`.
     SolvaPay,
+    /// `instanceof PaywallError`.
+    Paywall,
     /// `instanceof Error` (non-SolvaPay).
     Error,
     /// Non-Error throw.
@@ -33,6 +35,7 @@ pub struct RouteErrorInput {
 /// Map a narrowed route error into the helper [`HelperErrorResult`] shape.
 ///
 /// - [`RouteErrorKind::SolvaPay`] → `{ error: message, status: status ?? 500, details: message }`
+/// - [`RouteErrorKind::Paywall`] → `{ error: message, status: 402, details: message }`
 /// - [`RouteErrorKind::Error`] / [`RouteErrorKind::Unknown`] →
 ///   `{ error: defaultMessage || "{operationName} failed", status: 500, details }`
 ///
@@ -58,6 +61,14 @@ pub fn map_route_error(input: &RouteErrorInput) -> HelperErrorResult {
                 input.status.unwrap_or(500),
                 error_message,
             )
+        }
+        RouteErrorKind::Paywall => {
+            let error_message = input
+                .message
+                .clone()
+                .filter(|m| !m.is_empty())
+                .unwrap_or_else(|| "Payment required".to_owned());
+            HelperErrorResult::with_details(error_message.clone(), 402, error_message)
         }
         RouteErrorKind::Error => {
             let details = input
@@ -190,6 +201,19 @@ mod tests {
         assert_eq!(result.error, "Failed to fetch merchant");
         assert_eq!(result.status, 500);
         assert_eq!(result.details.as_deref(), Some("Unknown error"));
+    }
+
+    #[test]
+    fn paywall_is_402() {
+        let result = map_route_error(&RouteErrorInput {
+            kind: RouteErrorKind::Paywall,
+            message: Some("Payment required".into()),
+            status: None,
+            operation_name: "paywall".into(),
+            default_message: None,
+        });
+        assert_eq!(result.status, 402);
+        assert_eq!(result.error, "Payment required");
     }
 
     #[test]

@@ -207,7 +207,10 @@ fn store() -> &'static Mutex<HashMap<String, Continuation>> {
     STORE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn customer_ref_from_verified_header(auth_header: Option<&str>, config: &EngineConfig) -> Option<String> {
+fn customer_ref_from_verified_header(
+    auth_header: Option<&str>,
+    config: &EngineConfig,
+) -> Option<String> {
     let token = extract_bearer_token(auth_header)?;
     let now_unix_secs = config.now_unix_secs?;
     let origin = config.public_base_url.trim_end_matches('/');
@@ -215,9 +218,10 @@ fn customer_ref_from_verified_header(auth_header: Option<&str>, config: &EngineC
         .expected_issuer
         .clone()
         .unwrap_or_else(|| origin.to_owned());
-    let expected_audience = config.expected_audience.clone().unwrap_or_else(|| {
-        mcp_resource_identifier(origin, config.mcp_path.as_deref())
-    });
+    let expected_audience = config
+        .expected_audience
+        .clone()
+        .unwrap_or_else(|| mcp_resource_identifier(origin, config.mcp_path.as_deref()));
     match mcp_verify_bearer(&VerifyBearerInput {
         token: token.to_owned(),
         jwks_json: config.jwks_json.clone(),
@@ -530,9 +534,7 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
                 .pointer("/params/arguments")
                 .cloned()
                 .unwrap_or(json!({}));
-            if let Some(denied) =
-                hidden_tool_call_error(id.clone(), name, modern, &input.config)?
-            {
+            if let Some(denied) = hidden_tool_call_error(id.clone(), name, modern, &input.config)? {
                 return Ok(denied);
             }
             if input.config.payable_tools.iter().any(|t| t.name() == name) {

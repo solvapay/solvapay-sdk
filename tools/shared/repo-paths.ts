@@ -11,10 +11,6 @@ import { parseRepoPathsManifest, type RepoPathsManifest } from './repo-paths-sch
 /** Bootstrap path of the layout manifest (the one relative path loaders may hardcode). */
 export const REPO_PATHS_MANIFEST_REL = 'contract/manifest/repo-paths.yaml'
 
-function posixRelative(from: string, to: string): string {
-  return path.relative(from, to).split(path.sep).join('/')
-}
-
 function abs(rel: string, root = REPO_ROOT): string {
   return path.join(root, ...rel.split('/'))
 }
@@ -25,28 +21,8 @@ export function loadRepoPathsManifest(root: string = REPO_ROOT): RepoPathsManife
   return parseRepoPathsManifest(raw)
 }
 
-function dtoGenFlagPairs(manifest: RepoPathsManifest, root: string): string[] {
-  const pairs: string[] = []
-  const inputs = [
-    manifest.contractInputs.openapiSnapshot,
-    manifest.contractInputs.sdkManifest,
-    manifest.contractInputs.coreSrc,
-    manifest.contractInputs.bindingResidue,
-    manifest.contractInputs.transportSrc,
-  ]
-  for (const item of inputs) {
-    if (item.flag === undefined) {
-      throw new Error(`contract input ${item.path} is missing a dto-gen flag`)
-    }
-    pairs.push(item.flag, posixRelative(root, abs(item.path, root)))
-  }
-  for (const item of manifest.generated) {
-    if (item.flag === undefined) {
-      continue
-    }
-    pairs.push(item.flag, posixRelative(root, abs(item.path, root)))
-  }
-  return pairs
+function dtoGenConfigArgs(): string[] {
+  return ['--config', REPO_PATHS_MANIFEST_REL]
 }
 
 function driftPathsFor(manifest: RepoPathsManifest): string[] {
@@ -71,10 +47,10 @@ function driftPathsFor(manifest: RepoPathsManifest): string[] {
 }
 
 export function dtoGenArgs(
-  manifest: RepoPathsManifest = loadRepoPathsManifest(),
-  root: string = REPO_ROOT,
+  _manifest: RepoPathsManifest = loadRepoPathsManifest(),
+  _root: string = REPO_ROOT,
 ): string[] {
-  return dtoGenFlagPairs(manifest, root)
+  return dtoGenConfigArgs()
 }
 
 export function generatedDriftPaths(

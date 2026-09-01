@@ -9,12 +9,7 @@ import { type SolvaPay } from '@solvapay/server'
 import { z } from 'zod'
 import { logMcpConfigOnce } from './config-log'
 import { buildPromptUserMessage, deriveIcons, validatePublicBaseUrl } from './native-mcp'
-import { SOLVAPAY_BOOTSTRAP_MIME_TYPE, SOLVAPAY_BOOTSTRAP_URI } from './resources/bootstrap'
-import {
-  solvapayOverviewBody,
-  SOLVAPAY_OVERVIEW_MIME_TYPE,
-  SOLVAPAY_OVERVIEW_URI,
-} from './resources/overview'
+import { solvapayOverviewBody } from './resources/overview'
 import { MCP_TOOL_NAMES } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS } from './types'
 import type {
@@ -124,78 +119,68 @@ export function buildSolvaPayDescriptors(
         },
   }
 
-  const enabledViews = new Set<SolvaPayMcpViewKind>(views)
-  const prompts = buildSolvaPayPrompts({ enabledViews })
+  const prompts = buildSolvaPayPrompts({ prompts: coreDescriptors.prompts })
 
   const docsResources: SolvaPayDocsResourceDescriptor[] = [
     {
-      uri: SOLVAPAY_OVERVIEW_URI,
-      name: 'SolvaPay MCP — overview',
-      title: 'SolvaPay overview',
-      description:
-        'Agent-facing "start here" doc — explains the five intent tools, dual-audience fallback, and auth model before any tool is called.',
-      mimeType: SOLVAPAY_OVERVIEW_MIME_TYPE,
+      uri: requiredDescriptorString(coreDescriptors.docs, 'uri'),
+      name: requiredDescriptorString(coreDescriptors.docs, 'name'),
+      title: requiredDescriptorString(coreDescriptors.docs, 'title'),
+      description: requiredDescriptorString(coreDescriptors.docs, 'description'),
+      mimeType: requiredDescriptorString(coreDescriptors.docs, 'mimeType'),
       readBody: () => solvapayOverviewBody(),
     },
   ]
 
   const bootstrapResource: SolvaPayBootstrapResourceDescriptor = {
-    uri: SOLVAPAY_BOOTSTRAP_URI,
-    name: 'SolvaPay bootstrap',
-    title: 'SolvaPay bootstrap',
-    description:
-      'Current merchant/product/plans/customer snapshot for the embedded UI. Widgets read this idempotently when the host scrubs structuredContent from tool results.',
-    mimeType: SOLVAPAY_BOOTSTRAP_MIME_TYPE,
+    uri: requiredDescriptorString(coreDescriptors.bootstrap, 'uri'),
+    name: requiredDescriptorString(coreDescriptors.bootstrap, 'name'),
+    title: requiredDescriptorString(coreDescriptors.bootstrap, 'title'),
+    description: requiredDescriptorString(coreDescriptors.bootstrap, 'description'),
+    mimeType: requiredDescriptorString(coreDescriptors.bootstrap, 'mimeType'),
   }
 
   return { tools, resource, prompts, docsResources, bootstrapResource }
 }
 
 export function buildSolvaPayPrompts(
-  options: { enabledViews?: Set<SolvaPayMcpViewKind> } = {},
+  options: {
+    enabledViews?: Set<SolvaPayMcpViewKind>
+    prompts?: Array<{ name: string; title: string; description: string }>
+  } = {},
 ): SolvaPayPromptDescriptor[] {
-  const enabled = options.enabledViews ?? new Set<SolvaPayMcpViewKind>(DEFAULT_VIEWS)
-  const prompts: SolvaPayPromptDescriptor[] = []
+  const corePrompts =
+    options.prompts ??
+    mcpDescriptors({
+      resourceUri: 'ui://solvapay/prompt-descriptors',
+      publicBaseUrl: 'https://example.invalid',
+      productRef: 'prd_prompt_descriptors',
+      views: options.enabledViews ? [...options.enabledViews] : [...DEFAULT_VIEWS],
+    }).prompts
 
-  if (enabled.has('checkout')) {
-    prompts.push({
-      name: MCP_TOOL_NAMES.upgrade,
-      title: 'Upgrade plan',
-      description: 'Start or change a paid plan for the current customer.',
-      argsSchema: { planRef: z.string().optional() },
-      handler: args => buildPromptUserMessage(MCP_TOOL_NAMES.upgrade, args),
-    })
+  return corePrompts.map(prompt => ({
+    name: prompt.name,
+    title: prompt.title,
+    description: prompt.description,
+    ...promptArgsSchema(prompt.name),
+    handler: args => buildPromptUserMessage(prompt.name, args),
+  }))
+}
+
+function promptArgsSchema(name: string): { argsSchema?: Record<string, z.ZodTypeAny> } {
+  if (name === MCP_TOOL_NAMES.upgrade || name === MCP_TOOL_NAMES.activatePlan) {
+    return { argsSchema: { planRef: z.string().optional() } }
   }
-
-  if (enabled.has('account')) {
-    prompts.push({
-      name: MCP_TOOL_NAMES.manageAccount,
-      title: 'Manage account',
-      description:
-        'Show the current plan, balance, payment method, and cancel/reactivate controls for the current customer.',
-      handler: args => buildPromptUserMessage(MCP_TOOL_NAMES.manageAccount, args),
-    })
+  if (name === MCP_TOOL_NAMES.topup) {
+    return { argsSchema: { amount: z.string().optional() } }
   }
+  return {}
+}
 
-  if (enabled.has('topup')) {
-    prompts.push({
-      name: MCP_TOOL_NAMES.topup,
-      title: 'Top up credits',
-      description: 'Add SolvaPay credits to the current customer.',
-      argsSchema: { amount: z.string().optional() },
-      handler: args => buildPromptUserMessage(MCP_TOOL_NAMES.topup, args),
-    })
+function requiredDescriptorString(record: Record<string, unknown>, key: string): string {
+  const value = record[key]
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`mcpDescriptors ${key} must be a non-empty string`)
   }
-
-  if (enabled.has('checkout')) {
-    prompts.push({
-      name: MCP_TOOL_NAMES.activatePlan,
-      title: 'Activate plan',
-      description: 'Pick a plan to activate, or activate a specific plan by ref.',
-      argsSchema: { planRef: z.string().optional() },
-      handler: args => buildPromptUserMessage(MCP_TOOL_NAMES.activatePlan, args),
-    })
-  }
-
-  return prompts
+  return value
 }

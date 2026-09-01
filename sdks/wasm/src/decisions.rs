@@ -22,10 +22,10 @@ use solvapay_core::{
     normalize_reactivate_response, paywall_client_payload, pegged_credits_per_unit,
     per_unit_charge, project_payment_intent_result, project_topup_process_outcome,
     project_usage_snapshot, require_product_ref, resolve_authenticated_user,
-    resolve_check_limits_params, resolve_fallback_gate_limits, resolve_product_ref,
-    resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
-    should_retry_usage_error, tier_bands, tier_meters, trial_days, usage_rate,
-    validate_activate_plan_params, validate_attach_business_details_params,
+    resolve_check_limits_params, resolve_customer_ref, resolve_fallback_gate_limits,
+    resolve_product_ref, resolve_purchase_customer_ref, resolve_return_url,
+    select_active_purchases, should_retry_usage_error, tier_bands, tier_meters, topup_process_next,
+    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
@@ -271,6 +271,21 @@ pub fn resolve_return_url_binding(args_json: String) -> String {
     })
 }
 
+// --- payment ---
+
+/// Binding for `topupProcessNext`.
+#[wasm_bindgen(js_name = "topupProcessNext")]
+pub fn topup_process_next_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let state = optional_value(&args, "state");
+        let event = optional_value(&args, "event");
+        result_as_value(topup_process_next(state.as_ref(), event.as_ref()))
+    })
+}
+
+// --- checkout ---
+
 /// Binding for `validateCheckoutSessionParams`.
 #[wasm_bindgen(js_name = "validateCheckoutSessionParams")]
 pub fn validate_checkout_session_params_binding(args_json: String) -> String {
@@ -448,18 +463,19 @@ pub fn is_error_result_binding(args_json: String) -> String {
     })
 }
 
-/// Binding for `mapRouteError` (`kind`: `"solvapay"` | `"error"` | `"unknown"`).
+/// Binding for `mapRouteError` (`kind`: `"solvapay"` | `"paywall"` | `"error"` | `"unknown"`).
 #[wasm_bindgen(js_name = "mapRouteError")]
 pub fn map_route_error_binding(args_json: String) -> String {
     run_envelope_sync(|| {
         let args = args_map(&args_json)?;
         let kind = match require_string(&args, "kind")?.as_str() {
             "solvapay" => RouteErrorKind::SolvaPay,
+            "paywall" => RouteErrorKind::Paywall,
             "error" => RouteErrorKind::Error,
             "unknown" => RouteErrorKind::Unknown,
             other => {
                 return Err(SdkError::transport(
-                    format!("args.kind must be 'solvapay' | 'error' | 'unknown', got {other:?}"),
+                    format!("args.kind must be 'solvapay' | 'paywall' | 'error' | 'unknown', got {other:?}"),
                     false,
                 ));
             }
@@ -487,6 +503,32 @@ pub fn validate_get_product_params_binding(args_json: String) -> String {
         let args = args_map(&args_json)?;
         let product_ref = optional_string(&args, "productRef")?;
         option_helper_err(validate_get_product_params(product_ref.as_deref()))
+    })
+}
+
+// --- customer ---
+
+/// Binding for `resolveCustomerRef`.
+#[wasm_bindgen(js_name = "resolveCustomerRef")]
+pub fn resolve_customer_ref_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let hook_ref = optional_string(&args, "hookRef")?;
+        let verified_jwt_sub = optional_string(&args, "verifiedJwtSub")?;
+        let header_user_id = optional_string(&args, "headerUserId")?;
+        let header_customer_ref = optional_string(&args, "headerCustomerRef")?;
+        let mcp_extra_customer_ref = optional_string(&args, "mcpExtraCustomerRef")?;
+        let args_auth_customer_ref = optional_string(&args, "argsAuthCustomerRef")?;
+        let args_customer_ref = optional_string(&args, "argsCustomerRef")?;
+        Ok(Value::String(resolve_customer_ref(
+            hook_ref.as_deref(),
+            verified_jwt_sub.as_deref(),
+            header_user_id.as_deref(),
+            header_customer_ref.as_deref(),
+            mcp_extra_customer_ref.as_deref(),
+            args_auth_customer_ref.as_deref(),
+            args_customer_ref.as_deref(),
+        )))
     })
 }
 

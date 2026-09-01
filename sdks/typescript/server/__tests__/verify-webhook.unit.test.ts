@@ -72,6 +72,46 @@ describe('verifyWebhook', () => {
     expect(payload.type).toBe('purchase.created')
   })
 
+  it('rejects a replay when seenEventId reports the event id', () => {
+    const signature = createSignature(purchaseCreatedBody, secret)
+    const seen = new Set<string>(['evt_purchase_123'])
+
+    expect(() =>
+      verifyWebhookNode({
+        body: purchaseCreatedBody,
+        signature,
+        secret,
+        seenEventId: id => seen.has(id),
+      }),
+    ).toThrowError(SolvaPayError)
+
+    try {
+      verifyWebhookNode({
+        body: purchaseCreatedBody,
+        signature,
+        secret,
+        seenEventId: id => seen.has(id),
+      })
+    } catch (error) {
+      expect(error).toBeInstanceOf(SolvaPayError)
+      expect((error as SolvaPayError).code).toBe('duplicate_event')
+    }
+  })
+
+  it('accepts a first delivery when seenEventId reports the event unseen', () => {
+    const signature = createSignature(purchaseCreatedBody, secret)
+    const seen = new Set<string>()
+
+    const payload = verifyWebhookNode({
+      body: purchaseCreatedBody,
+      signature,
+      secret,
+      seenEventId: id => seen.has(id),
+    })
+
+    expect(payload.id).toBe('evt_purchase_123')
+  })
+
   it('rejects malformed node signatures without crashing', () => {
     expect(() =>
       verifyWebhookNode({
@@ -102,6 +142,22 @@ describe('verifyWebhook', () => {
     })
 
     expect(payload.type).toBe('purchase.created')
+  })
+
+  it('rejects a replay when seenEventId reports the event id on the edge path', async () => {
+    const signature = createSignature(purchaseCreatedBody, secret)
+
+    await expect(
+      verifyWebhookEdge({
+        body: purchaseCreatedBody,
+        signature,
+        secret,
+        seenEventId: async id => id === 'evt_purchase_123',
+      }),
+    ).rejects.toMatchObject({
+      name: 'SolvaPayError',
+      code: 'duplicate_event',
+    })
   })
 
   it('rejects malformed edge signatures', async () => {

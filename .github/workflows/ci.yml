@@ -771,74 +771,25 @@ jobs:
         if: matrix.settings.smoke
         run: node --test __test__/binding.spec.mjs
 
+      - name: Setup pnpm
+        if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
+        uses: pnpm/action-setup@v6
+
+      - name: Native generated-file drift
+        if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
+        working-directory: .
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm generated:external --rebuild --id nodeNativeNapi
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: bindings-${{ matrix.settings.target }}
           path: |
             sdks/node-native/server-native.*.node
-            sdks/node-native/server-native.*.wasm
-            sdks/node-native/server-native.wasi.cjs
-            sdks/node-native/server-native.wasi-browser.js
-            sdks/node-native/wasi-worker*.mjs
             sdks/node-native/index.js
             sdks/node-native/index.d.ts
-            sdks/node-native/browser.js
-          if-no-files-found: error
-
-  node-binding-wasi:
-    name: node-binding (wasm32-wasip1-threads + FORCE_WASI)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: sdks/node-native
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Install repo JS deps
-        working-directory: .
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Rust toolchain + WASI target
-        run: rustup show && rustup target add wasm32-wasip1-threads
-
-      - name: Install npm deps
-        run: npm ci
-
-      - name: Ensure npm platform dirs
-        run: npx napi create-npm-dirs
-
-      - name: Build WASI fallback
-        run: npx napi build --platform --release --target wasm32-wasip1-threads
-
-      - name: WASI generated-file drift
-        working-directory: .
-        run: pnpm generated:external --rebuild --id nodeNativeNapi
-
-      - name: Smoke test (NAPI_RS_FORCE_WASI=error)
-        # CLI ≥3.7: only `true` / `error` force WASI (`1` is ignored).
-        run: NAPI_RS_FORCE_WASI=error node --test __test__/binding.spec.mjs
-
-      - name: Upload WASI artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bindings-wasm32-wasip1-threads
-          path: |
-            sdks/node-native/server-native.*.wasm
-            sdks/node-native/server-native.wasi.cjs
-            sdks/node-native/server-native.wasi-browser.js
-            sdks/node-native/wasi-worker*.mjs
           if-no-files-found: error
 
   node-binding-artifacts:
@@ -846,7 +797,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - node-binding
-      - node-binding-wasi
     defaults:
       run:
         working-directory: sdks/node-native
@@ -880,10 +830,10 @@ jobs:
       - name: Place artifacts into npm/ via napi artifacts
         run: |
           # napi artifacts reads binaries from ./artifacts (CLI --output-dir default).
-          # WASI glue + loader JS must also sit next to package.json for the move step.
+          # Loader JS must also sit next to package.json for the move step.
           mkdir -p artifacts
-          find ci-artifacts -type f \( -name '*.node' -o -name '*.wasm' \) -exec cp -f {} artifacts/ \;
-          find ci-artifacts -type f \( -name '*.wasi.cjs' -o -name 'wasi-worker*' -o -name '*.wasi-browser.js' -o -name 'index.js' -o -name 'index.d.ts' -o -name 'browser.js' \) -exec cp -f {} . \;
+          find ci-artifacts -type f -name '*.node' -exec cp -f {} artifacts/ \;
+          find ci-artifacts -type f \( -name 'index.js' -o -name 'index.d.ts' \) -exec cp -f {} . \;
           ls -la artifacts/ index.js 2>/dev/null || true
           npx napi artifacts
 
@@ -1005,42 +955,6 @@ jobs:
               --target "${{ matrix.target.id }}" \
               --node-major "${{ matrix.node }}"
 
-  # Step 39 — WASI-only clean install (no .node targets) on Linux x64 × Node 22/24/26.
-  node-clean-install-wasi:
-    name: node clean install (WASI, Node ${{ matrix.node }})
-    needs:
-      - node-binding-artifacts
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        node: ['22', '24', '26']
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download clean-install package bundle
-        uses: actions/download-artifact@v4
-        with:
-          name: server-clean-install-packages
-          path: clean-install-bundle
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-
-      - name: Clean-install smoke (WASI)
-        shell: bash
-        run: |
-          node sdks/node-native/scripts/clean-install-smoke.mjs \
-            --bundle-dir clean-install-bundle \
-            --mode wasi \
-            --target wasm32-wasi \
-            --node-major "${{ matrix.node }}"
-
   # Step 37R-e / 52 / 53 — Rust-only server+core conformance; mcp-core still dual-mode.
   node-binding-conformance:
     name: node-binding conformance (Rust-only server/core)
@@ -1146,24 +1060,6 @@ jobs:
 
       - name: Delegation inventory gate
         run: pnpm delegation:check
-
-      - name: Superseded server TypeScript gate (Step 53 Rust-only)
-        run: pnpm server-superseded-ts:check
-
-      - name: Superseded MCP TypeScript gate (Rust MCP ops)
-        run: pnpm mcp-superseded-ts:check
-
-      - name: Superseded MCP Python gate (Rust MCP ops)
-        run: pnpm mcp-superseded-py:check
-
-      - name: Superseded MCP Go gate (Rust MCP ops)
-        run: pnpm mcp-superseded-go:check
-
-      - name: Superseded MCP Ruby gate (Rust MCP ops)
-        run: pnpm mcp-superseded-rb:check
-
-      - name: Superseded MCP Rust gate (Rust MCP ops)
-        run: pnpm mcp-superseded-rs:check
 
       - name: MCP layer-3 adapter line budget
         run: pnpm mcp-layer3-budget:check
@@ -1553,9 +1449,6 @@ jobs:
         continue-on-error: false
         # Validates non-generated documentation links (skips docs/api/** which are generated by docs repo)
         # Note: Documentation is built by the docs repo, not in this CI workflow
-
-      - name: Check retired symbols
-        run: pnpm retired-symbols:check
 
       - name: Check TypeDoc configuration
         id: check-typedoc

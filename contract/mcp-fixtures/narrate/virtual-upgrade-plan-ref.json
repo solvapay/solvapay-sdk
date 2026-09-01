@@ -1,0 +1,19 @@
+{
+  "suite": "narrate",
+  "case": "virtual-upgrade-plan-ref",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "virtual_upgrade",
+      "payload": {
+        "checkoutUrl": "https://pay.example.test/checkout",
+        "planRef": "pln_pro"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "## Upgrade\n\n**[Click here to upgrade →](https://pay.example.test/checkout)**\n\nAfter completing the checkout, your purchase will be activated immediately."
+    }
+  }
+}

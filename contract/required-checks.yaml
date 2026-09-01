@@ -78,9 +78,6 @@ checks:
   - name: node-binding (aarch64-pc-windows-msvc)
     jobId: node-binding
     gate: Platform build matrices
-  - name: node-binding (wasm32-wasip1-threads + FORCE_WASI)
-    jobId: node-binding-wasi
-    gate: Platform build matrices
   - name: node-binding artifact gate
     jobId: node-binding-artifacts
     gate: Pre-publish artifact gate
@@ -156,21 +153,12 @@ checks:
   - name: node clean install (native, win32-arm64-msvc, Node 26)
     jobId: node-clean-install-native
     gate: Clean-install smoke tests
-  - name: node clean install (WASI, Node 22)
-    jobId: node-clean-install-wasi
-    gate: Clean-install smoke tests
-  - name: node clean install (WASI, Node 24)
-    jobId: node-clean-install-wasi
-    gate: Clean-install smoke tests
-  - name: node clean install (WASI, Node 26)
-    jobId: node-clean-install-wasi
-    gate: Clean-install smoke tests
   - name: node-binding conformance (Rust-only server/core)
     jobId: node-binding-conformance
     gate: Shared fixture conformance; Per-language parity/coverage
   - name: node-binding delegation inventory
     jobId: node-binding-delegation
-    gate: node-binding-delegation; server-superseded-ts; mcp-superseded-ts; mcp-superseded-py; mcp-layer3-budget
+    gate: node-binding-delegation; mcp-layer3-budget
   - name: wasm-binding (Step 38 edge/browser)
     jobId: wasm-binding
     gate: Browser-WASM symbol audit; Performance regression; Shared fixture conformance
@@ -200,4 +188,4 @@ checks:
     gate: Platform build matrices
   - name: Documentation Validation
     jobId: documentation
-    gate: Documentation validation + retired-symbols:check
+    gate: Documentation validation

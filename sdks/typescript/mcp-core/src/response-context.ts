@@ -11,7 +11,7 @@
 
 import type { LimitResponseWithPlan, PaywallStructuredContent, SolvaPay } from '@solvapay/server'
 import { PaywallError } from '@solvapay/server'
-import { makeResponseResult } from './native-mcp'
+import { callMcpSyncOp, makeResponseResult } from './native-mcp'
 import type {
   BootstrapPlan,
   BootstrapProduct,
@@ -173,15 +173,11 @@ export function buildResponseContext(
    * limits are exhausted.
    */
   function gate(reason?: string): never {
-    const message = reason ?? 'Payment required'
-    const structuredContent: PaywallStructuredContent = {
-      kind: 'payment_required',
+    const structuredContent = callMcpSyncOp<PaywallStructuredContent>('mcpDefaultGate', {
       product,
-      checkoutUrl: '',
-      message,
-      shortMessage: 'Payment required',
-    }
-    throw new PaywallError(message, structuredContent)
+      ...(reason !== undefined ? { reason } : {}),
+    })
+    throw new PaywallError(structuredContent.message, structuredContent)
   }
 
   const ctx: ResponseContext = {

@@ -22,7 +22,6 @@ import {
   runCaptured,
   stageConsumerSmoke,
 } from '../scripts/clean-install-lib.mjs'
-import { WASI_TARGET } from '../scripts/targets.mjs'
 
 describe('clean-install orchestrator', () => {
   it('resolves the monorepo root two levels above sdks/node-native', () => {
@@ -73,26 +72,25 @@ describe('clean-install orchestrator', () => {
     )
   })
 
-  it('fails if native mode is given a WASI artifact as expected target', () => {
+  it('fails if native mode is given an unknown target dir', () => {
     assert.throws(
       () =>
-        assertModeArtifactIsolation('native', WASI_TARGET.dir, {
-          packages: { [WASI_TARGET.packageName]: { tarball: 'wasi.tgz' } },
+        assertModeArtifactIsolation('native', 'wasm32-wasi', {
+          packages: { '@solvapay/server-native-wasm32-wasi': { tarball: 'wasi.tgz' } },
         }),
-      /native mode must not use WASI/,
+      /Unknown target dir/,
     )
   })
 
-  it('fails if WASI mode is given a non-WASI expected target', () => {
+  it('fails if mode is not native', () => {
     assert.throws(
       () =>
         assertModeArtifactIsolation('wasi', 'darwin-arm64', {
           packages: {
-            [WASI_TARGET.packageName]: { tarball: 'wasi.tgz' },
             '@solvapay/server-native-darwin-arm64': { tarball: 'native.tgz' },
           },
         }),
-      /wasi mode expected target/,
+      /unknown mode/,
     )
   })
 
@@ -176,7 +174,6 @@ describe('clean-install orchestrator', () => {
         '@solvapay/server-native': { tarball: 'loader.tgz' },
         '@solvapay/server': { tarball: 'server.tgz' },
         '@solvapay/server-native-darwin-arm64': { tarball: 'darwin-arm64.tgz' },
-        '@solvapay/server-native-wasm32-wasi': { tarball: 'wasi.tgz' },
       },
     }
     const pkg = buildConsumerPackageJson({
@@ -186,11 +183,8 @@ describe('clean-install orchestrator', () => {
       manifest,
     })
     assert.ok(pkg.dependencies['@solvapay/server-native-darwin-arm64'])
-    assert.equal(pkg.dependencies['@solvapay/server-native-wasm32-wasi'], undefined)
     for (const name of forbiddenNativeModePackages('darwin-arm64')) {
-      if (name === '@solvapay/server-native-wasm32-wasi') {
-        assert.equal(pkg.dependencies[name], undefined)
-      }
+      assert.equal(pkg.dependencies[name], undefined)
     }
   })
 
@@ -213,32 +207,4 @@ describe('clean-install orchestrator', () => {
     assert.ok(copied.includes('targets.mjs'))
   })
 
-  it('builds WASI consumer package.json without native target packages', () => {
-    const manifest = {
-      packages: {
-        '@solvapay/core': { tarball: 'core.tgz' },
-        '@solvapay/server-wasm': { tarball: 'wasm.tgz' },
-        '@solvapay/server-native': { tarball: 'loader.tgz' },
-        '@solvapay/server': { tarball: 'server.tgz' },
-        '@solvapay/server-native-darwin-arm64': { tarball: 'darwin-arm64.tgz' },
-        '@solvapay/server-native-wasm32-wasi': { tarball: 'wasi.tgz' },
-      },
-    }
-    const pkg = buildConsumerPackageJson({
-      mode: 'wasi',
-      expectedTargetDir: 'wasm32-wasi',
-      bundleDir: '/bundle',
-      manifest,
-    })
-    assert.ok(pkg.dependencies['@solvapay/server-native-wasm32-wasi'])
-    assert.equal(pkg.dependencies['@solvapay/server-native-darwin-arm64'], undefined)
-    const plan = buildNpmInstallPlan(
-      { consumerDir: '/tmp/empty', mode: 'wasi' },
-      { existsSync: () => true, readdirSync: () => [] },
-    )
-    assert.ok(plan.args.includes('--cpu'))
-    assert.ok(plan.args.includes('wasm32'))
-    assert.ok(plan.args.includes('--force'))
-    assert.equal(plan.env?.npm_config_cpu, 'wasm32')
-  })
 })

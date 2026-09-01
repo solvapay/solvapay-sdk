@@ -426,6 +426,24 @@ describe('solvapayWebhook', () => {
     expect(onEvent).toHaveBeenCalledWith(validEvent)
   })
 
+  it('returns 200 and skips onEvent when seenEventId reports a replay', async () => {
+    mockVerifyWebhook.mockRejectedValue(
+      Object.assign(new Error('Webhook event already processed'), { code: 'duplicate_event' }),
+    )
+    const onEvent = vi.fn()
+    const seenEventId = vi.fn()
+
+    const handler = solvapayWebhook({ secret: 'whsec_test', onEvent, seenEventId })
+    const res = await handler(fakeWebhookPost(JSON.stringify(validEvent)))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ received: true })
+    expect(onEvent).not.toHaveBeenCalled()
+    expect(mockVerifyWebhook).toHaveBeenCalledWith(
+      expect.objectContaining({ secret: 'whsec_test', seenEventId }),
+    )
+  })
+
   it('returns 401 when signature verification fails', async () => {
     mockVerifyWebhook.mockRejectedValue(new Error('Invalid webhook signature'))
     const onEvent = vi.fn()

@@ -76,7 +76,7 @@ export function createLegacyJsonStatelessFallback(
           id,
           error: { code: -32603, message: 'Internal error' },
         }),
-        { status: 500, headers: { 'content-type': 'application/json' } },
+        { status: 200, headers: { 'content-type': 'application/json' } },
       )
     }
   }

@@ -1,0 +1,19 @@
+{
+  "suite": "native-cors",
+  "case": "allowed-cursor",
+  "input": {
+    "fn": "mcpNativeCors",
+    "args": {
+      "origin": "cursor://mcp/x"
+    }
+  },
+  "expect": {
+    "result": {
+      "allowed": true,
+      "headers": {
+        "Access-Control-Allow-Origin": "cursor://mcp/x",
+        "Vary": "Origin"
+      }
+    }
+  }
+}

@@ -12,15 +12,13 @@ name = "dto-gen"
 path = "src/main.rs"
 
 [dependencies]
+repo-paths = { path = "../../shared/repo-paths" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_norway = { workspace = true }
 syn = { workspace = true }
 thiserror = { workspace = true }
 walkdir = { workspace = true }
-
-[dev-dependencies]
-repo-paths = { path = "../../shared/repo-paths" }
 
 # Tooling crate: public docs still denied; private helpers may omit docs.
 [lints.rust]

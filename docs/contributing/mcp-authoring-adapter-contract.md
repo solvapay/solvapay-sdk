@@ -211,7 +211,7 @@ call `mcpDispatch`, and branch three ways:
 
 | `kind`          | Host work                                                                                        |
 | --------------- | ------------------------------------------------------------------------------------------------ |
-| `rpc`           | Write the JSON-RPC body. Honour optional envelope `status` (default 200; 400/404 for era errors) |
+| `rpc`           | Write the JSON-RPC body. Envelope `status` is authoritative (default 200; 400 for `-32022`, 404 for modern `-32601`). Facade-local catches emit `-32603` at HTTP 200. |
 | `challenge`     | Write `status` + `WWW-Authenticate` + body                                                       |
 | `invokeHandler` | Run the merchant handler, then `mcpResume` with the token                                        |
 
@@ -253,7 +253,7 @@ Supported versions: `2026-07-28`, `2025-06-18`. Unsupported `_meta` versions
 return JSON-RPC `-32022` at HTTP 400. Unknown methods return `-32601`
 (HTTP 404 when modern, 200 when legacy). Hosts must never map engine
 failures to HTTP 500 + a stack trace; honour envelope `status` and reply
-`-32603` / `-32700` as JSON-RPC bodies.
+`-32603` / `-32700` as JSON-RPC bodies at HTTP 200 (never 500).
 
 Characterization fixtures under `contract/mcp-fixtures/` are immutable
 expectations. Replay must assert equality (or the documented

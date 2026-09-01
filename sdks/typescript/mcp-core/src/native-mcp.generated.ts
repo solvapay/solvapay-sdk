@@ -175,6 +175,19 @@ export function mcpDcrDiagnostics(productRef: unknown, apiBaseUrl: unknown, stat
 }
 
 /**
+ * Build the default ctx.gate() paywall structured-content stub.
+ * @param product Product reference stamped onto the gate.
+ * @param reason Optional merchant message; empty or omitted becomes Payment required.
+ * @returns Paywall structured content with kind payment_required.
+ */
+export function mcpDefaultGate(product: unknown, reason?: unknown): unknown {
+  const call_args: Record<string, unknown> = {}
+  call_args['product'] = product
+  if (reason !== undefined) call_args['reason'] = reason
+  return callMcpSyncOp('mcpDefaultGate', call_args)
+}
+
+/**
  * Build MCP tool, prompt, and resource descriptors for a product.
  * @param resourceUri UI resource URI stamped onto tool metadata.
  * @param publicBaseUrl Public http(s) origin of the MCP server.
@@ -268,6 +281,23 @@ export function mcpNarrate(tool: unknown, payload: unknown, kind?: unknown, mode
   if (mode !== undefined) call_args['mode'] = mode
   if (meta !== undefined) call_args['meta'] = meta
   return callMcpSyncOp('mcpNarrate', call_args)
+}
+
+/**
+ * Decide native-scheme CORS mirroring for MCP client origins.
+ * @param origin Request Origin header.
+ * @param requestedMethod Access-Control-Request-Method for preflight.
+ * @param requestedHeaders Access-Control-Request-Headers for preflight.
+ * @param preflight When true, emit Allow-Methods, Allow-Headers, and Max-Age.
+ * @returns allowed flag plus response headers to merge.
+ */
+export function mcpNativeCors(origin?: unknown, requestedMethod?: unknown, requestedHeaders?: unknown, preflight?: unknown): unknown {
+  const call_args: Record<string, unknown> = {}
+  if (origin !== undefined) call_args['origin'] = origin
+  if (requestedMethod !== undefined) call_args['requestedMethod'] = requestedMethod
+  if (requestedHeaders !== undefined) call_args['requestedHeaders'] = requestedHeaders
+  if (preflight !== undefined) call_args['preflight'] = preflight
+  return callMcpSyncOp('mcpNativeCors', call_args)
 }
 
 /**

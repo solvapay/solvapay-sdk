@@ -10,4 +10,5 @@ const (
 	AnonymousCustomerRef      = "anonymous"
 	RequestIDFormat           = "solvapay_{epochMs}_{random9}"
 	UsageActionType           = "api_call"
+	DefaultCatalogTTLMs       = 60_000
 )

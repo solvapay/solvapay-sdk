@@ -1,3 +1,4 @@
+import { resolveCustomerRef } from './native-decisions'
 import type { SolvaPayClient } from './types'
 import {
   createVirtualTools,
@@ -152,19 +153,27 @@ export function jsonSchemaToZodRawShape(
 }
 
 function defaultGetCustomerRef(_args: Record<string, unknown>, extra?: McpToolExtra): string {
-  // `extra.http.authInfo` is the official SDK v2 location; the flat
-  // `extra.authInfo` is v1 and is still emitted by some third-party
-  // adapters.
   const candidates = [
     extra?.http?.authInfo?.extra?.customer_ref,
     extra?.authInfo?.extra?.customer_ref,
   ]
+  let mcpExtra: string | undefined
   for (const candidate of candidates) {
     if (typeof candidate === 'string' && candidate.trim()) {
-      return candidate.trim()
+      mcpExtra = candidate.trim()
+      break
     }
   }
-  return 'anonymous'
+  const raw = _args.customer_ref
+  return resolveCustomerRef(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    mcpExtra,
+    undefined,
+    typeof raw === 'string' ? raw : undefined,
+  )
 }
 
 export function registerVirtualToolsMcpImpl(

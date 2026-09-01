@@ -8,6 +8,8 @@ import type { Adapter } from './base'
 import { AdapterUtils } from './base'
 import type { NextAdapterOptions, PaywallStructuredContent } from '../types'
 import { PaywallError, paywallErrorToClientPayload } from '../paywall'
+import { SolvaPayError } from '@solvapay/core'
+import { mapRouteError, resolveCustomerRef } from '../native-decisions'
 
 /**
  * Next.js context (Web Request + optional route context)
@@ -62,35 +64,32 @@ export class NextAdapter implements Adapter<NextContext, Response> {
   }
 
   async getCustomerRef([request]: NextContext): Promise<string> {
+    let hookRef: string | undefined
     if (this.options.getCustomerRef) {
       const ref = await this.options.getCustomerRef(request)
-      return AdapterUtils.ensureCustomerRef(ref)
-    }
-
-    // Try to get from JWT token first
-    const authHeader = request.headers.get('authorization')
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7)
-      const jwtSub = await AdapterUtils.extractFromJWT(token)
-      if (jwtSub) {
-        return AdapterUtils.ensureCustomerRef(jwtSub)
+      if (typeof ref === 'string' && ref.trim()) {
+        hookRef = ref.trim()
       }
     }
 
-    // Try x-user-id header (set by middleware, e.g., Supabase auth)
-    const userId = request.headers.get('x-user-id')
-    if (userId) {
-      return AdapterUtils.ensureCustomerRef(userId)
+    let verifiedJwtSub: string | undefined
+    const authHeader = request.headers.get('authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const jwtSub = await AdapterUtils.extractFromJWT(authHeader.substring(7))
+      if (jwtSub) {
+        verifiedJwtSub = jwtSub
+      }
     }
 
-    // Fallback to x-customer-ref header
-    const headerRef = request.headers.get('x-customer-ref')
-    if (headerRef) {
-      return AdapterUtils.ensureCustomerRef(headerRef)
-    }
-
-    // Default to demo_user for Next.js (common in examples)
-    return 'demo_user'
+    return resolveCustomerRef(
+      hookRef,
+      verifiedJwtSub,
+      request.headers.get('x-user-id') ?? undefined,
+      request.headers.get('x-customer-ref') ?? undefined,
+      undefined,
+      undefined,
+      undefined,
+    )
   }
 
   formatResponse(result: unknown, _context: NextContext): Response {
@@ -111,25 +110,31 @@ export class NextAdapter implements Adapter<NextContext, Response> {
    * clients don't have to branch on an SDK version.
    */
   formatGate(gate: PaywallStructuredContent, _context: NextContext): Response {
+    const mapped = mapRouteError({
+      kind: 'paywall',
+      message: gate.message,
+      operationName: 'paywall',
+    })
     return new Response(
       JSON.stringify(paywallErrorToClientPayload(new PaywallError(gate.message, gate))),
       {
-        status: 402,
+        status: mapped.status,
         headers: { 'Content-Type': 'application/json' },
       },
     )
   }
 
   formatError(error: Error, _context: NextContext): Response {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Internal server error',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      },
-    )
+    const mapped = mapRouteError({
+      kind: error instanceof PaywallError ? 'paywall' : error instanceof SolvaPayError ? 'solvapay' : 'error',
+      message: error.message,
+      status: error instanceof SolvaPayError ? (error.status ?? null) : null,
+      operationName: 'paywall',
+      defaultMessage: 'Internal server error',
+    })
+    return new Response(JSON.stringify({ success: false, error: mapped.error }), {
+      status: mapped.status,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }

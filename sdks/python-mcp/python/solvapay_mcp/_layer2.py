@@ -21,3 +21,4 @@ make_response_result = _generated.make_response_result
 assert_response_result = _generated.assert_response_result
 build_payable_tool_result = _generated.build_payable_tool_result
 invoke_payable_next = _generated.invoke_payable_next
+mcp_native_cors = _generated.mcp_native_cors

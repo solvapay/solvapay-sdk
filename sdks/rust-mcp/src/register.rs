@@ -7,8 +7,11 @@ use futures::future::BoxFuture;
 use rmcp::handler::server::router::tool::{ToolRoute, ToolRouter};
 use rmcp::model::{CallToolResult, JsonObject, Tool};
 use serde_json::{json, Map, Value};
-use solvapay::{Allow, Client, GateOpts, GateOutcome, SdkError, TrackOpts};
-use solvapay_core::{invoke_payable_next, HelperErrorResult, InvokePayableAction, PaywallGate};
+use solvapay::{Allow, Client, GateOpts, GateOutcome, SdkError};
+use solvapay_core::{
+    invoke_payable_next, resolve_customer_ref as resolve_customer_ref_op, HelperErrorResult,
+    InvokePayableAction, PaywallGate,
+};
 use thiserror::Error;
 
 use crate::layer2::{assert_response_result, format_gate, json_to_call_tool_result};
@@ -145,7 +148,6 @@ pub async fn invoke_payable(
         "usageType": usage_type,
         "startedMs": started_ms,
     });
-    let mut allow_arm: Option<Allow> = None;
     loop {
         let out = invoke_payable_next(state.as_ref(), Some(&event)).map_err(helper_to_payable)?;
         state = Some(serde_json::to_value(&out.state).map_err(|err| {
@@ -187,7 +189,6 @@ pub async fn invoke_payable(
                             "customerRef": snap.customer_ref,
                             "limits": limits,
                         });
-                        allow_arm = Some(allow);
                     }
                 }
             }
@@ -225,6 +226,7 @@ pub async fn invoke_payable(
                             "kind": "handlerErr",
                             "message": msg,
                             "nowMs": now_ms(),
+                            "randomUnit": random_unit(),
                         });
                     }
                     Err(PayableError::Sdk(err)) => return Err(PayableError::Sdk(err)),
@@ -237,34 +239,18 @@ pub async fn invoke_payable(
                             "kind": "handlerOk",
                             "envelope": envelope_value,
                             "nowMs": now_ms(),
+                            "randomUnit": random_unit(),
                         });
                     }
                 }
             }
             InvokePayableAction::Done { result, track } => {
                 if let Some(track) = track {
-                    let allow = allow_arm.as_ref().ok_or_else(|| {
-                        PayableError::Handler("invoke_payable track without allow arm".to_owned())
-                    })?;
-                    let duration = Some(track.duration_ms.max(0.0));
-                    if track.outcome == "success" {
-                        allow
-                            .track_success(TrackOpts {
-                                duration,
-                                metadata: None,
-                            })
-                            .await?;
-                    } else {
-                        allow
-                            .track_fail(
-                                &track.outcome,
-                                TrackOpts {
-                                    duration,
-                                    metadata: None,
-                                },
-                            )
-                            .await?;
-                    }
+                    let params: solvapay_dto::TrackUsageRequest =
+                        serde_json::from_value(track.request).map_err(|err| {
+                            PayableError::Handler(format!("invoke_payable track.request: {err}"))
+                        })?;
+                    client.track_usage(params).await?;
                 }
                 return json_to_call_tool_result(result);
             }
@@ -277,6 +263,14 @@ fn now_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_millis() as i64)
+}
+
+/// Host `Math.random()` stand-in for usage request ids.
+fn random_unit() -> f64 {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.subsec_nanos());
+    f64::from(nanos % 1_000_000) / 1_000_000.0
 }
 
 /// Map a helper-error result into [`PayableError`].
@@ -323,13 +317,20 @@ fn resolve_customer_ref(
     args: &JsonObject,
     hook: Option<&GetCustomerRef>,
 ) -> Result<String, PayableError> {
-    if let Some(hook) = hook {
-        return hook(args);
-    }
-    match args.get("customer_ref") {
-        Some(Value::String(s)) if !s.is_empty() => Ok(s.clone()),
-        _ => Ok("anonymous".to_owned()),
-    }
+    let hook_ref = match hook {
+        Some(hook) => Some(hook(args)?),
+        None => None,
+    };
+    let args_ref = args.get("customer_ref").and_then(Value::as_str);
+    Ok(resolve_customer_ref_op(
+        hook_ref.as_deref(),
+        None,
+        None,
+        None,
+        None,
+        None,
+        args_ref,
+    ))
 }
 
 /// Compile a string-field map into a JSON Schema object.

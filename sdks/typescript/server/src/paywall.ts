@@ -22,9 +22,11 @@ import {
   ensureCustomerNext,
   gateNext,
   isErrorResult,
+  mapRouteError,
   paywallErrorToClientPayload as paywallErrorToClientPayloadDispatch,
   requireProductRef,
   resolveCheckLimitsParams,
+  resolveCustomerRef,
 } from './native-decisions'
 import { CUSTOMER_DEDUP_MAX_CACHE_SIZE } from './defaults'
 import { trackUsageWithRetry } from './track-usage-retry'
@@ -816,7 +818,7 @@ export function createPaywall(config: { apiClient: SolvaPayClient }) {
         } catch (err) {
           if (err instanceof PaywallError) {
             return {
-              isError: true,
+              isError: false,
               content: [{ type: 'text', text: err.message }],
               structuredContent: err.structuredContent,
             } satisfies PaywallToolResult
@@ -915,38 +917,18 @@ function defaultExtractArgs(req: any): PaywallArgs {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function handleHttpError(error: unknown, reply: any) {
-  if (error instanceof PaywallError) {
-    const errorResponse = paywallErrorToClientPayload(error)
+  const classified = classifyPaywallHttpError(error)
+  const body =
+    error instanceof PaywallError ? paywallErrorToClientPayload(error) : classified.body
 
-    // Express (has reply.status)
-    if (reply && reply.status && typeof reply.json === 'function') {
-      reply.status(402).json(errorResponse)
-      return
-    }
-
-    // Fastify (has reply.code)
-    if (reply && reply.code) {
-      reply.code(402)
-    }
-    return errorResponse
-  }
-
-  const errorResponse = {
-    success: false,
-    error: error instanceof Error ? error.message : 'Internal server error',
-  }
-
-  // Express (has reply.status)
   if (reply && reply.status && typeof reply.json === 'function') {
-    reply.status(500).json(errorResponse)
+    reply.status(classified.status).json(body)
     return
   }
-
-  // Fastify (has reply.code)
   if (reply && reply.code) {
-    reply.code(500)
+    reply.code(classified.status)
   }
-  return errorResponse
+  return body
 }
 
 // Next.js helper functions
@@ -988,11 +970,10 @@ async function defaultExtractNextArgs(
 }
 
 async function defaultGetCustomerRef(request: Request): Promise<string> {
-  // Try to get from JWT token first
+  let verifiedJwtSub: string | undefined
   const authHeader = request.headers.get('authorization')
   if (authHeader && authHeader.startsWith('Bearer ')) {
     try {
-      // Dynamic import to avoid requiring jose if not used
       const { jwtVerify } = await import('jose')
       const token = authHeader.substring(7)
       const jwtSecret = new TextEncoder().encode(process.env.OAUTH_JWKS_SECRET!)
@@ -1000,18 +981,23 @@ async function defaultGetCustomerRef(request: Request): Promise<string> {
         issuer: process.env.OAUTH_ISSUER!,
         audience: process.env.OAUTH_CLIENT_ID || 'test-client-id',
       })
-
-      if (payload.sub) {
-        return ensureCustomerRef(payload.sub as string)
+      if (typeof payload.sub === 'string' && payload.sub.trim()) {
+        verifiedJwtSub = payload.sub
       }
     } catch {
-      // Fall through to use header fallback
+      // Unverified tokens do not contribute a subject.
     }
   }
 
-  // Fallback to x-customer-ref header or default
-  const customerRef = request.headers.get('x-customer-ref') || 'demo_user'
-  return ensureCustomerRef(customerRef)
+  return resolveCustomerRef(
+    undefined,
+    verifiedJwtSub,
+    undefined,
+    request.headers.get('x-customer-ref') ?? undefined,
+    undefined,
+    undefined,
+    undefined,
+  )
 }
 
 export function ensureCustomerRef(customerRef: string): string {
@@ -1023,24 +1009,53 @@ export function ensureCustomerRef(customerRef: string): string {
   return customerRef
 }
 
-function handleNextError(error: unknown): Response {
+function classifyPaywallHttpError(error: unknown): {
+  status: number
+  body: { success: false; error: string }
+} {
   if (error instanceof PaywallError) {
-    return new Response(JSON.stringify(paywallErrorToClientPayload(error)), {
-      status: 402,
-      headers: { 'Content-Type': 'application/json' },
+    const mapped = mapRouteError({
+      kind: 'paywall',
+      message: error.message,
+      operationName: 'paywall',
     })
+    return {
+      status: mapped.status,
+      body: { success: false, error: mapped.error },
+    }
   }
+  if (error instanceof SolvaPayError) {
+    const mapped = mapRouteError({
+      kind: 'solvapay',
+      message: error.message,
+      status: error.status ?? null,
+      operationName: 'paywall',
+    })
+    return {
+      status: mapped.status,
+      body: { success: false, error: mapped.error },
+    }
+  }
+  const mapped = mapRouteError({
+    kind: error instanceof Error ? 'error' : 'unknown',
+    message: error instanceof Error ? error.message : null,
+    operationName: 'paywall',
+    defaultMessage: 'Internal server error',
+  })
+  return {
+    status: mapped.status,
+    body: { success: false, error: mapped.error },
+  }
+}
 
-  return new Response(
-    JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : 'Internal server error',
-    }),
-    {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    },
-  )
+function handleNextError(error: unknown): Response {
+  const classified = classifyPaywallHttpError(error)
+  const body =
+    error instanceof PaywallError ? paywallErrorToClientPayload(error) : classified.body
+  return new Response(JSON.stringify(body), {
+    status: classified.status,
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 // All exports are already defined above where each item is declared

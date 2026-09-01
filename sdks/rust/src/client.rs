@@ -22,6 +22,17 @@ use crate::config::{Config, CUSTOMER_DEDUP_MAX_CACHE_SIZE};
 use crate::gate::{Allow, GateOpts, GateOutcome, Payable};
 use crate::retry::with_retry_if;
 
+fn require_api_key(config: &Config) -> Result<(), SdkError> {
+    if config.api_key.trim().is_empty() {
+        return Err(SdkError::Api {
+            message: "SOLVAPAY_SECRET_KEY is required".to_owned(),
+            status: None,
+            code: Some("missing_api_key".to_owned()),
+        });
+    }
+    Ok(())
+}
+
 /// Public async SolvaPay SDK client.
 #[derive(Clone)]
 pub struct Client {
@@ -66,6 +77,7 @@ impl Client {
     /// Returns [`SdkError::Transport`] when the HTTP client fails to initialize.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn new(config: Config) -> Result<Self, SdkError> {
+        require_api_key(&config)?;
         let transport: SharedTransport = Arc::new(solvapay_transport::ReqwestTransport::new()?);
         Ok(Self::with_transport(transport, config))
     }
@@ -639,11 +651,24 @@ mod tests {
     }
 
     #[test]
-    fn config_default_reads_env_api_key() {
+    fn config_from_env_reads_api_key() {
         // SAFETY: test-only env mutation; single-threaded test harness.
         unsafe { std::env::set_var("SOLVAPAY_SECRET_KEY", "sk_from_env") };
-        assert_eq!(Config::default().api_key, "sk_from_env");
+        let config = Config::from_env().expect("from_env");
+        assert_eq!(config.api_key, "sk_from_env");
         unsafe { std::env::remove_var("SOLVAPAY_SECRET_KEY") };
+    }
+
+    #[test]
+    fn client_new_rejects_empty_api_key() {
+        let err = match Client::new(Config::default()) {
+            Ok(_) => panic!("empty key must fail"),
+            Err(err) => err,
+        };
+        match err {
+            SdkError::Api { code, .. } => assert_eq!(code.as_deref(), Some("missing_api_key")),
+            other => panic!("expected Api missing_api_key, got {other:?}"),
+        }
     }
 
     #[tokio::test]

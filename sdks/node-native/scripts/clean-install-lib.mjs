@@ -27,11 +27,10 @@ import {
   LOADER_PACKAGE_NAME,
   NATIVE_TARGETS,
   SERVER_WASM_PACKAGE_NAME,
-  WASI_TARGET,
   targetByDir,
 } from './targets.mjs'
 
-/** @typedef {'native' | 'wasi'} CleanInstallMode */
+/** @typedef {'native'} CleanInstallMode */
 
 /**
  * @typedef {{
@@ -130,38 +129,15 @@ export function assertRequiredTarballs(bundleDir, manifest, requiredPackageNames
  */
 export function assertModeArtifactIsolation(mode, expectedTargetDir, manifest) {
   const packages = manifest?.packages ?? {}
-  const nativeNames = NATIVE_TARGETS.map(t => t.packageName)
-  const wasiName = WASI_TARGET.packageName
 
-  if (mode === 'native') {
-    if (expectedTargetDir === WASI_TARGET.dir) {
-      throw new Error('clean-install: native mode must not use WASI target')
-    }
-    targetByDir(expectedTargetDir)
-    if (packages[wasiName]) {
-      // Allowed in the immutable full bundle; installer must omit it from consumer deps.
-    }
-    const expectedPkg = targetByDir(expectedTargetDir).packageName
-    if (!packages[expectedPkg]) {
-      throw new Error(`clean-install: native mode missing expected target package: ${expectedPkg}`)
-    }
-    return
+  if (mode !== 'native') {
+    throw new Error(`clean-install: unknown mode ${mode}`)
   }
-
-  if (mode === 'wasi') {
-    if (expectedTargetDir !== WASI_TARGET.dir) {
-      throw new Error(`clean-install: wasi mode expected target ${WASI_TARGET.dir}`)
-    }
-    if (!packages[wasiName]) {
-      throw new Error(`clean-install: wasi mode missing ${wasiName} tarball`)
-    }
-    // Native packages may exist in the full immutable bundle; the installer
-    // must omit them from the consumer package.json (see buildConsumerPackageJson).
-    void nativeNames
-    return
+  targetByDir(expectedTargetDir)
+  const expectedPkg = targetByDir(expectedTargetDir).packageName
+  if (!packages[expectedPkg]) {
+    throw new Error(`clean-install: native mode missing expected target package: ${expectedPkg}`)
   }
-
-  throw new Error(`clean-install: unknown mode ${mode}`)
 }
 
 /**
@@ -186,15 +162,8 @@ export function buildConsumerPackageJson({ mode, expectedTargetDir, bundleDir, m
     [FACADE_PACKAGE_NAME]: tarballFileDep(bundleDir, packages[FACADE_PACKAGE_NAME].tarball),
   }
 
-  if (mode === 'native') {
-    const target = targetByDir(expectedTargetDir)
-    deps[target.packageName] = tarballFileDep(bundleDir, packages[target.packageName].tarball)
-  } else {
-    deps[WASI_TARGET.packageName] = tarballFileDep(
-      bundleDir,
-      packages[WASI_TARGET.packageName].tarball,
-    )
-  }
+  const target = targetByDir(expectedTargetDir)
+  deps[target.packageName] = tarballFileDep(bundleDir, packages[target.packageName].tarball)
 
   return {
     name: 'solvapay-clean-install-consumer',
@@ -237,13 +206,7 @@ export function buildNpmInstallPlan({ consumerDir, mode, npmArgs = [] }, _fs = {
     npm_config_package_lock: 'false',
   }
 
-  // WASI package declares cpu: ["wasm32"]; npm skips it on host CPUs unless forced.
-  // Prefer npm_config_cpu + --force so EBADPLATFORM cannot hide a missing tarball
-  // behind a silent optional skip (the package is a direct dependency here).
-  if (mode === 'wasi') {
-    args.push('--cpu', 'wasm32', '--force')
-    env.npm_config_cpu = 'wasm32'
-  }
+  void mode
 
   // Always the bare binary name. On win32, `spawn('npm.cmd', …)` without
   // `shell: true` is EINVAL under Node ≥ 18.20.2 / 20.12.2 (CVE-2024-27980);
@@ -369,9 +332,7 @@ export async function runCleanInstallSmoke(opts, fs = {}) {
     SERVER_WASM_PACKAGE_NAME,
     LOADER_PACKAGE_NAME,
     FACADE_PACKAGE_NAME,
-    mode === 'native'
-      ? targetByDir(expectedTargetDir).packageName
-      : WASI_TARGET.packageName,
+    targetByDir(expectedTargetDir).packageName,
   ]
   assertRequiredTarballs(bundleDir, manifest, required, fs)
 
@@ -395,25 +356,20 @@ export async function runCleanInstallSmoke(opts, fs = {}) {
 
     const consumerScriptPath = stageConsumerSmoke(consumerDir, fs)
 
-    const target = mode === 'native' ? targetByDir(expectedTargetDir) : WASI_TARGET
+    const target = targetByDir(expectedTargetDir)
     const smokeEnv = {
       ...process.env,
       NAPI_RS_ENFORCE_VERSION_CHECK: '1',
       CLEAN_INSTALL_MODE: mode,
       CLEAN_INSTALL_EXPECTED_TARGET: target.dir,
       CLEAN_INSTALL_EXPECTED_PACKAGE: target.packageName,
-      CLEAN_INSTALL_EXPECTED_PLATFORM: target.platform === 'wasi' ? process.platform : target.platform,
-      CLEAN_INSTALL_EXPECTED_ARCH: target.platform === 'wasi' ? process.arch : target.arch,
+      CLEAN_INSTALL_EXPECTED_PLATFORM: target.platform,
+      CLEAN_INSTALL_EXPECTED_ARCH: target.arch,
       CLEAN_INSTALL_EXPECTED_LIBC: target.libc ?? '',
       CLEAN_INSTALL_EXPECTED_NODE_MAJOR: nodeMajor ?? String(process.versions.node.split('.')[0]),
       CLEAN_INSTALL_CONSUMER_ROOT: consumerDir,
     }
-
-    if (mode === 'native') {
-      delete smokeEnv.NAPI_RS_FORCE_WASI
-    } else {
-      smokeEnv.NAPI_RS_FORCE_WASI = 'error'
-    }
+    delete smokeEnv.NAPI_RS_FORCE_WASI
 
     const smokePlan = {
       command: process.execPath,
@@ -481,4 +437,4 @@ export function forbiddenNativeModePackages(expectedTargetDir) {
   return ALL_TARGETS.filter(t => t.packageName !== expected).map(t => t.packageName)
 }
 
-export { ALL_TARGETS, NATIVE_TARGETS, WASI_TARGET, targetByDir }
+export { ALL_TARGETS, NATIVE_TARGETS, targetByDir }

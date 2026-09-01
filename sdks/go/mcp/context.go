@@ -79,19 +79,23 @@ func (rc *ResponseContext) Respond(data any, options map[string]any) (Response, 
 
 // Gate stops the handler and formats a paywall result. Default reason is Payment required.
 func (rc *ResponseContext) Gate(reason string) error {
-	message := reason
-	if message == "" {
-		message = "Payment required"
+	args := map[string]any{"product": rc.productRef}
+	if reason != "" {
+		args["reason"] = reason
 	}
-	gate, err := json.Marshal(map[string]any{
-		"kind":         "payment_required",
-		"product":      rc.productRef,
-		"checkoutUrl":  "",
-		"message":      message,
-		"shortMessage": "Payment required",
-	})
+	gate, err := CallSync(rc.ctx, "mcpDefaultGate", args)
 	if err != nil {
 		return err
+	}
+	var parsed struct {
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(gate, &parsed); err != nil {
+		return err
+	}
+	message := parsed.Message
+	if message == "" {
+		message = "Payment required"
 	}
 	return &GateSignal{Reason: message, Gate: gate}
 }

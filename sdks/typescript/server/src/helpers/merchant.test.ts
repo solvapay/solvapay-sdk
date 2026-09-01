@@ -45,6 +45,7 @@ describe('getMerchantCore', () => {
     expect(result).toEqual({
       error: 'Get merchant method not available',
       status: 500,
+      details: 'Get merchant method not available',
     })
   })
 
@@ -56,6 +57,7 @@ describe('getMerchantCore', () => {
     expect(result).toEqual({
       error: 'Server configuration error: SolvaPay secret key not configured',
       status: 500,
+      details: 'Server configuration error: SolvaPay secret key not configured',
     })
   })
 

@@ -17,12 +17,13 @@ use solvapay_core::{
     is_cached_customer_ref_valid, is_email_conflict, is_error_result, is_zero_decimal_currency,
     mcp_view_maps, meter_name, normalize_cancel_response, normalize_reactivate_response,
     paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
-    project_topup_process_outcome, resolve_check_limits_params, resolve_fallback_gate_limits,
-    resolve_product_ref, resolve_purchase_customer_ref, resolve_tax_treatment_note,
-    reverse_charge_note, should_retry_usage_error, should_show_tax_row, tax_not_collected_note,
-    tier_bands, tier_meters, to_major_units, trial_days, usage_rate, validate_activate_plan_params,
-    validate_attach_business_details_params, validate_checkout_session_params,
-    validate_create_payment_intent_params, validate_get_product_params, validate_list_plans_params,
+    project_topup_process_outcome, resolve_check_limits_params, resolve_customer_ref,
+    resolve_fallback_gate_limits, resolve_product_ref, resolve_purchase_customer_ref,
+    resolve_tax_treatment_note, reverse_charge_note, should_retry_usage_error, should_show_tax_row,
+    tax_not_collected_note, tier_bands, tier_meters, to_major_units, topup_process_next,
+    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
+    validate_checkout_session_params, validate_create_payment_intent_params,
+    validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
     validate_topup_payment_intent_params, GateContent, PaywallGate, PaywallGateLimits,
     PaywallLimits, PaywallState, ResponseEnvelope,
@@ -403,6 +404,26 @@ fn invoke_resolve_check_limits_params(input: &FixtureInput) -> Result<Value, Bin
     ))
 }
 
+fn invoke_resolve_customer_ref(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let hook_ref = optional_string(&args, "hookRef")?;
+    let verified_jwt_sub = optional_string(&args, "verifiedJwtSub")?;
+    let header_user_id = optional_string(&args, "headerUserId")?;
+    let header_customer_ref = optional_string(&args, "headerCustomerRef")?;
+    let mcp_extra_customer_ref = optional_string(&args, "mcpExtraCustomerRef")?;
+    let args_auth_customer_ref = optional_string(&args, "argsAuthCustomerRef")?;
+    let args_customer_ref = optional_string(&args, "argsCustomerRef")?;
+    Ok(Value::String(resolve_customer_ref(
+        hook_ref.as_deref(),
+        verified_jwt_sub.as_deref(),
+        header_user_id.as_deref(),
+        header_customer_ref.as_deref(),
+        mcp_extra_customer_ref.as_deref(),
+        args_auth_customer_ref.as_deref(),
+        args_customer_ref.as_deref(),
+    )))
+}
+
 fn invoke_resolve_fallback_gate_limits(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let checkout_url = optional_string(&args, "checkoutUrl")?;
@@ -465,6 +486,13 @@ fn invoke_to_major_units(input: &FixtureInput) -> Result<Value, BindingError> {
     let amount_minor = require_f64(&args, "amountMinor")?;
     let currency = require_string(&args, "currency")?;
     to_value(&to_major_units(amount_minor, &currency))
+}
+
+fn invoke_topup_process_next(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let state = optional_value(&args, "state");
+    let event = optional_value(&args, "event");
+    result_as_value(topup_process_next(state.as_ref(), event.as_ref()))
 }
 
 fn invoke_trial_days(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -947,6 +975,13 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "resolveCustomerRef",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_resolve_customer_ref),
+        },
+    );
+    registry.register(
         "resolvePurchaseCustomerRef",
         Binding {
             id: "core",
@@ -1273,6 +1308,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_to_major_units),
+        },
+    );
+    registry.register(
+        "topupProcessNext",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_topup_process_next),
         },
     );
 

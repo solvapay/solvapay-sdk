@@ -9,6 +9,8 @@ import { installNativeCoreApi } from '@solvapay/core'
 import type { WebhookEvent } from './types/webhook'
 import { installMcpAdapterNative } from './adapters/mcp'
 import { callNativeSync, verifyWebhookNative } from './native'
+import { rejectIfSeenEventIdSync } from './webhook-replay'
+import type { VerifyWebhookOptions } from './webhook-replay'
 import { installNativeDecisionApi } from './native-decisions'
 import { publishNativeSyncApi } from './native-registry'
 import type { PaywallStructuredContent, PaywallToolResult } from './types'
@@ -55,15 +57,22 @@ export type {
  *
  * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
  * The HMAC is SHA-256 over `"{timestamp}.{rawBody}"` keyed by the full webhook secret
- * (including the `whsec_` prefix). Signatures older than 5 minutes are rejected to
- * prevent replay attacks.
+ * (including the `whsec_` prefix). Signatures older than 5 minutes are rejected.
+ * That window is not event-id dedupe — pass `seenEventId` (or persist `event.id`)
+ * so a retry inside the window is not processed twice.
  *
  * @param params - Webhook verification parameters
  * @param params.body - Raw request body as string (must be exactly as received)
  * @param params.signature - Value of the `SV-Signature` header
  * @param params.secret - Webhook signing secret from SolvaPay dashboard (`whsec_…`)
+ * @param params.seenEventId - Optional host-owned replay check. Return `true`
+ *   when `event.id` was already processed. The ±300 s signature window is not
+ *   a substitute for event-id dedupe — retried deliveries reuse the same
+ *   `event.id` (and `SV-Event-Id`) with a new `SV-Delivery`.
  * @returns Parsed and typed {@link WebhookEvent} object
- * @throws {SolvaPayError} If signature is missing, malformed, expired, or invalid
+ * @throws {SolvaPayError} If signature is missing, malformed, expired, or invalid,
+ *   or when `seenEventId` reports a duplicate (`code: 'duplicate_event'`). Return
+ *   HTTP 2xx for that code so SolvaPay stops retrying.
  *
  * @example
  * ```typescript
@@ -96,14 +105,13 @@ export function verifyWebhook({
   body,
   signature,
   secret,
-}: {
-  body: string
-  signature: string
-  secret: string
-}): WebhookEvent {
+  seenEventId,
+}: VerifyWebhookOptions): WebhookEvent {
   // Rust-only after Step 53 — loader throws when `@solvapay/server-native`
   // is unavailable instead of silently running a duplicate `node:crypto` path.
-  return verifyWebhookNative({ body, signature, secret })
+  const event = verifyWebhookNative({ body, signature, secret })
+  rejectIfSeenEventIdSync(event, seenEventId)
+  return event
 }
 
 // MCP adapter (formatGate / formatResponse) — used by contract fixtures and
@@ -170,6 +178,8 @@ export type {
   CustomerWebhookObject,
   WebhookProduct,
 } from './types'
+export type { SeenEventIdSync, VerifyWebhookOptions } from './webhook-replay'
+export { WEBHOOK_DUPLICATE_EVENT_CODE } from './webhook-replay'
 
 // Export payment processing types
 export type {
@@ -229,10 +239,12 @@ export {
   isCachedCustomerRefValid,
   isEmailConflict,
   mapRouteError,
+  resolveCustomerRef,
   normalizeCancelResponse,
   normalizeReactivateResponse,
   projectPaymentIntentResult,
   projectTopupProcessOutcome,
+  topupProcessNext,
   projectUsageSnapshot,
   resolveCheckLimitsParams,
   resolveFallbackGateLimits,

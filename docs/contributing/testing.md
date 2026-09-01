@@ -34,15 +34,16 @@ keeps a TypeScript fallback when the binding is not installed (edge/standalone).
 
 ### Shadow harness
 
-The shadow harness compares the WASM client facade against the Rust CLI on the
-same inputs and flags any wire divergence:
+`pnpm shadow:selftest` is a **required CI check** (not migration residue). It
+compares the published npm facade path (WASM `FetchTransport`) against the Rust
+`shadow-invoker` CLI on the same inputs and flags any wire divergence:
 
 ```bash
 pnpm shadow:selftest   # offline: IDENTICAL + intentional-divergence self-check
 pnpm shadow:run        # live comparison (SOLVAPAY_SHADOW_* env, manual/dispatch)
 ```
 
-The Rust side is `tools/conformance/shadow-invoker`; the facade side is
+The Rust side is `tools/conformance/shadow-invoker`; the TS orchestrator is
 `tools/conformance/shadow/` (report keys `facadeNormalized` / `facadeRaw` /
 `facadeWire`, `args.facade`, side label `facade`).
 
@@ -127,12 +128,11 @@ Without `SOLVAPAY_SHADOW_BASE_URL` and `SOLVAPAY_SHADOW_API_KEY` it fails fast w
 requirement named — that message is correct, not a broken script.
 
 `pnpm build:native` and `pnpm test:native` rebuild host-target Node bindings and can
-overwrite tracked WASI artifacts under `sdks/node-native/` plus non-deterministic
+overwrite tracked `sdks/node-native/index.js` / `index.d.ts` plus non-deterministic
 `sdks/wasm/pkg/` and `sdks/go/solvapay_core.wasm` blobs. Restore those paths before
 pushing (`git checkout -- sdks/node-native/index.d.ts sdks/node-native/index.js
-sdks/node-native/server-native.wasi-browser.js sdks/node-native/server-native.wasi.cjs
-sdks/wasm/pkg/ sdks/go/solvapay_core.wasm`). Committing the local host output breaks
-the `node-binding-wasi` CI drift gate.
+sdks/wasm/pkg/ sdks/go/solvapay_core.wasm`) unless you intentionally regenerated
+the napi loader.
 
 The Go WASI guest build copies the cargo artifact when `wasm-opt` is missing. That
 fallback is intentional; CI omits Binaryen so linux/amd64 bytes stay canonical.

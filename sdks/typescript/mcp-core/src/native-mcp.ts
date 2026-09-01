@@ -119,7 +119,7 @@ export function buildPromptDescriptorMetadata(
 }
 
 export function buildPromptUserMessage(
-  promptName: McpToolName,
+  promptName: McpToolName | string,
   args: Record<string, unknown>,
 ): SolvaPayPromptResult {
   return dispatchSync('buildPromptUserMessage', { promptName, args })

@@ -9,6 +9,8 @@ import type { Adapter } from './base'
 import { AdapterUtils } from './base'
 import type { HttpAdapterOptions, PaywallStructuredContent } from '../types'
 import { PaywallError, paywallErrorToClientPayload } from '../paywall'
+import { SolvaPayError } from '@solvapay/core'
+import { mapRouteError, resolveCustomerRef } from '../native-decisions'
 
 /**
  * HTTP context (Express or Fastify)
@@ -36,29 +38,33 @@ export class HttpAdapter implements Adapter<HttpContext, unknown> {
   }
 
   async getCustomerRef([req, _reply]: HttpContext): Promise<string> {
+    let hookRef: string | undefined
     if (this.options.getCustomerRef) {
       const ref = await this.options.getCustomerRef(req)
-      return AdapterUtils.ensureCustomerRef(ref)
-    }
-
-    // Try x-customer-ref header first
-    const headerRef = req.headers?.['x-customer-ref']
-    if (headerRef) {
-      return AdapterUtils.ensureCustomerRef(headerRef)
-    }
-
-    // Try JWT token if available
-    const authHeader = req.headers?.['authorization']
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7)
-      const jwtSub = await AdapterUtils.extractFromJWT(token)
-      if (jwtSub) {
-        return AdapterUtils.ensureCustomerRef(jwtSub)
+      if (typeof ref === 'string' && ref.trim()) {
+        hookRef = ref.trim()
       }
     }
 
-    // Fallback to anonymous
-    return 'anonymous'
+    let verifiedJwtSub: string | undefined
+    const authHeader = req.headers?.['authorization']
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      const jwtSub = await AdapterUtils.extractFromJWT(authHeader.substring(7))
+      if (jwtSub) {
+        verifiedJwtSub = jwtSub
+      }
+    }
+
+    const headerRef = req.headers?.['x-customer-ref']
+    return resolveCustomerRef(
+      hookRef,
+      verifiedJwtSub,
+      undefined,
+      typeof headerRef === 'string' ? headerRef : undefined,
+      undefined,
+      undefined,
+      undefined,
+    )
   }
 
   formatResponse(result: unknown, [_req, reply]: HttpContext): unknown {
@@ -85,35 +91,41 @@ export class HttpAdapter implements Adapter<HttpContext, unknown> {
    */
   formatGate(gate: PaywallStructuredContent, [_req, reply]: HttpContext): unknown {
     const errorResponse = paywallErrorToClientPayload(new PaywallError(gate.message, gate))
+    const mapped = mapRouteError({
+      kind: 'paywall',
+      message: gate.message,
+      operationName: 'paywall',
+    })
 
-    // Express: has reply.status method
     if (reply && reply.status && typeof reply.json === 'function') {
-      reply.status(402).json(errorResponse)
+      reply.status(mapped.status).json(errorResponse)
       return
     }
-
-    // Fastify: use reply.code
     if (reply && reply.code) {
-      reply.code(402)
+      reply.code(mapped.status)
     }
     return errorResponse
   }
 
   formatError(error: Error, [_req, reply]: HttpContext): unknown {
+    const mapped = mapRouteError({
+      kind: error instanceof PaywallError ? 'paywall' : error instanceof SolvaPayError ? 'solvapay' : 'error',
+      message: error.message,
+      status: error instanceof SolvaPayError ? (error.status ?? null) : null,
+      operationName: 'paywall',
+      defaultMessage: 'Internal server error',
+    })
     const errorResponse = {
       success: false,
-      error: error instanceof Error ? error.message : 'Internal server error',
+      error: mapped.error,
     }
 
-    // Express: has reply.status method
     if (reply && reply.status && typeof reply.json === 'function') {
-      reply.status(500).json(errorResponse)
+      reply.status(mapped.status).json(errorResponse)
       return
     }
-
-    // Fastify: use reply.code
     if (reply && reply.code) {
-      reply.code(500)
+      reply.code(mapped.status)
     }
     return errorResponse
   }

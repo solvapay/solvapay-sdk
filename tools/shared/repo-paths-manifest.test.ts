@@ -10,6 +10,7 @@ import {
   loadRepoPathsManifest,
   lookupPath,
   mcpAppWidgetLayout,
+  REPO_PATHS_MANIFEST_REL,
   sdkPath,
 } from './repo-paths.js'
 
@@ -230,8 +231,27 @@ describe('repo-paths manifest', () => {
     expect(generatedDriftPaths()).toEqual([...LEGACY_GENERATED_PATHS])
   })
 
-  it("derives dto-gen argv equal to today's DTO_GEN_ARGS", () => {
-    expect(dtoGenArgs()).toEqual([...LEGACY_DTO_GEN_ARGS])
+  it('invokes dto-gen with --config pointing at the repo-paths manifest', () => {
+    expect(dtoGenArgs()).toEqual(['--config', REPO_PATHS_MANIFEST_REL])
+  })
+
+  it('still resolves every GenOutputs / contract-input flag from the manifest', () => {
+    const manifest = loadRepoPathsManifest()
+    const flags = new Set<string>()
+    for (const item of Object.values(manifest.contractInputs)) {
+      if (item.flag !== undefined) {
+        flags.add(item.flag)
+      }
+    }
+    for (const item of manifest.generated) {
+      if (item.flag !== undefined) {
+        flags.add(item.flag)
+      }
+    }
+    const expected = new Set(
+      LEGACY_DTO_GEN_ARGS.filter((entry, index) => index % 2 === 0),
+    )
+    expect([...flags].sort()).toEqual([...expected].sort())
   })
 
   it('resolves sdkPath under the repo root', () => {

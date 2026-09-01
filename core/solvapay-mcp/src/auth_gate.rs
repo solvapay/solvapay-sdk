@@ -3,7 +3,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::bearer_verify::{extract_bearer_token, mcp_verify_bearer, VerifyBearerInput, VerifyBearerResult};
+use crate::bearer_verify::{
+    extract_bearer_token, mcp_verify_bearer, VerifyBearerInput, VerifyBearerResult,
+};
 use crate::oauth::{mcp_resource_identifier, path_aware_protected_resource_path};
 
 /// MCP auth mode (`isFreeMcpMethod` / `requires_bearer_auth`).
@@ -116,9 +118,10 @@ fn bearer_verified(input: &AuthGateInput) -> bool {
         .expected_issuer
         .clone()
         .unwrap_or_else(|| origin.to_owned());
-    let expected_audience = input.expected_audience.clone().unwrap_or_else(|| {
-        mcp_resource_identifier(origin, input.mcp_path.as_deref())
-    });
+    let expected_audience = input
+        .expected_audience
+        .clone()
+        .unwrap_or_else(|| mcp_resource_identifier(origin, input.mcp_path.as_deref()));
     matches!(
         mcp_verify_bearer(&VerifyBearerInput {
             token: token.to_owned(),

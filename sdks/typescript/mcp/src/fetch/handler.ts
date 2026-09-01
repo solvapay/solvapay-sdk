@@ -9,7 +9,6 @@
 import {
   buildAuthInfoFromBearer,
   mcpAuthGate,
-  pathAwareProtectedResourcePath,
   mcpWidgetResource,
   runMcpEngineRequest,
   defaultMcpBearerExpectations,
@@ -188,8 +187,6 @@ export function createSolvaPayMcpFetchHandler(
     legacy,
     onerror,
   } = options
-
-  const metadataPath = protectedResourcePath ?? pathAwareProtectedResourcePath(mcpPath)
 
   const oauthRouter = createOAuthFetchRouter({
     publicBaseUrl,
@@ -382,7 +379,7 @@ export function createSolvaPayMcpFetchHandler(
       if (!resolvedAuthInfo && requiresBearerAuth(envelope.method, authMode)) {
         return authChallenge(req, {
           publicBaseUrl,
-          protectedResourcePath: metadataPath,
+          mcpPath,
           jsonRpcId: envelope.id,
         })
       }

@@ -11,8 +11,10 @@ use crate::auth_gate::{
 };
 use crate::bearer_verify::{mcp_verify_bearer, VerifyBearerInput};
 use crate::config_log::{mcp_config_log, ConfigLogInput};
+use crate::cors::{mcp_native_cors, NativeCorsInput};
 use crate::csp::{mcp_merge_csp, SolvaPayMcpCsp};
 use crate::dcr::{mcp_dcr_diagnostics, DcrDiagnosticsInput};
+use crate::default_gate::{mcp_default_gate, DefaultGateInput};
 use crate::descriptors::{mcp_descriptors, McpDescriptorsInput};
 use crate::hide_tools::{mcp_hide_tools_by_audience, HideToolsInput};
 use crate::narrate::{mcp_narrate, NarrateInput};
@@ -86,6 +88,29 @@ fn dispatch_inner(op: &str, args_json: &str) -> String {
             serde_json::to_value(mcp_auth_gate(&input))
                 .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))
         }
+        "resolveCustomerRef" => {
+            let args: Value = parse_args_json(args_json)?;
+            let pick = |key: &str| -> Option<String> {
+                args.get(key)
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+                    .filter(|s| !s.is_empty())
+            };
+            Ok(Value::String(solvapay_core::resolve_customer_ref(
+                pick("hookRef").as_deref(),
+                pick("verifiedJwtSub").as_deref(),
+                pick("headerUserId").as_deref(),
+                pick("headerCustomerRef").as_deref(),
+                pick("mcpExtraCustomerRef").as_deref(),
+                pick("argsAuthCustomerRef").as_deref(),
+                pick("argsCustomerRef").as_deref(),
+            )))
+        }
+        "mcpNativeCors" => {
+            let input: NativeCorsInput = parse_args_json(args_json)?;
+            serde_json::to_value(mcp_native_cors(&input))
+                .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))
+        }
         "mcpVerifyBearer" => {
             let input: VerifyBearerInput = parse_args_json(args_json)?;
             serde_json::to_value(mcp_verify_bearer(&input))
@@ -111,6 +136,14 @@ fn dispatch_inner(op: &str, args_json: &str) -> String {
         "mcpDcrDiagnostics" => {
             let input: DcrDiagnosticsInput = parse_args_json(args_json)?;
             Ok(mcp_dcr_diagnostics(&input))
+        }
+        "mcpDefaultGate" => {
+            let input: DefaultGateInput = parse_args_json(args_json)?;
+            serde_json::to_value(mcp_default_gate(
+                &input.product,
+                input.reason.as_deref(),
+            ))
+            .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))
         }
         "mcpConfigLog" => {
             let input: ConfigLogInput = parse_args_json(args_json)?;

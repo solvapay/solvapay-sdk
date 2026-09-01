@@ -91,6 +91,12 @@ const TOLERANCE_SECS: u64 = 300;
 /// Steps: parse `t=`/`v1=` header → ±300 s tolerance → HMAC-SHA256 over
 /// `"{timestamp}.{body}"` → constant-time hex-string compare → `JSON.parse(body)`.
 ///
+/// Core stays stateless: there is no replay/nonce cache here (Stripe's model).
+/// The ±300 s window rejects *stale* signatures; it does not dedupe retries of
+/// the same event. Integrators must persist `event.id` (also sent as
+/// `SV-Event-Id`) and skip duplicates. Facades may take an optional
+/// `seenEventId` hook for that store; do not add timers or caches to this crate.
+///
 /// # Arguments
 ///
 /// * `body` - Raw request body string (must match the signed bytes).

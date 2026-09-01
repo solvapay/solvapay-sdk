@@ -1130,18 +1130,16 @@ async fn check_purchase(client: &SolvaPayClient, customer_ref: &str) -> Value {
 }
 
 pub(crate) fn native_cors_headers(origin: Option<&str>) -> Vec<(String, String)> {
-    let Some(origin) = origin.filter(|o| {
-        o.starts_with("cursor:")
-            || o.starts_with("vscode:")
-            || o.starts_with("vscode-webview:")
-            || o.starts_with("claude:")
-    }) else {
-        return Vec::new();
-    };
-    vec![
-        ("access-control-allow-origin".to_owned(), origin.to_owned()),
-        ("vary".to_owned(), "Origin".to_owned()),
-    ]
+    let result = solvapay_mcp_core::mcp_native_cors(&solvapay_mcp_core::NativeCorsInput {
+        origin: origin.map(str::to_owned),
+        requested_method: None,
+        requested_headers: None,
+        preflight: false,
+    });
+    solvapay_mcp_core::native_cors_header_pairs(&result)
+        .into_iter()
+        .map(|(key, value)| (key.to_ascii_lowercase(), value))
+        .collect()
 }
 
 pub(crate) async fn proxy_customer_auth(

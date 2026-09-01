@@ -415,7 +415,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
           id: '123',
-          auth: { customer_ref: 'cus_demo_user' },
+          auth: { customer_ref: 'anonymous' },
         }),
         expect.anything(),
       )
@@ -639,7 +639,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       )
     })
 
-    it('should default to "demo_user" when no authentication is provided', async () => {
+    it('should default to "anonymous" when no authentication is provided', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
       const payable = solvaPay.payable({ product: 'default-test' })
       const nextHandler = payable.next(handler)
@@ -651,7 +651,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(response.status).toBe(200)
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          auth: { customer_ref: 'cus_demo_user' },
+          auth: { customer_ref: 'anonymous' },
         }),
         expect.anything(),
       )

@@ -8,6 +8,7 @@
 
 import { SolvaPayError, type RouteErrorResult } from '@solvapay/core'
 import { isErrorResult, mapRouteError } from '../native-decisions'
+import { PaywallError } from '../paywall'
 
 export type { RouteErrorResult }
 export { isErrorResult }
@@ -27,6 +28,15 @@ export function handleRouteError(
   // (e.g. 404 from `GET /v1/sdk/merchant`). Configuration errors and
   // other client-side throws have no status — those collapse to 500
   // as before.
+  if (error instanceof PaywallError) {
+    return mapRouteError({
+      kind: 'paywall',
+      message: error.message,
+      operationName,
+      defaultMessage,
+    })
+  }
+
   if (error instanceof SolvaPayError) {
     return mapRouteError({
       kind: 'solvapay',

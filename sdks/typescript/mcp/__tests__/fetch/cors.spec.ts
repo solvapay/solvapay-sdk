@@ -21,6 +21,7 @@ describe('isNativeClientOrigin', () => {
     expect(isNativeClientOrigin('https://example.com')).toBe(false)
     expect(isNativeClientOrigin('http://localhost:3000')).toBe(false)
     expect(isNativeClientOrigin('file:///etc/passwd')).toBe(false)
+    expect(isNativeClientOrigin('cursor:x')).toBe(false)
   })
 })
 

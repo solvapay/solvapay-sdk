@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -9,6 +9,8 @@ import {
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
+
+const envMode = async (cwd: string): Promise<number> => (await stat(path.join(cwd, '.env'))).mode & 0o777
 
 describe('writeSolvaPaySecretToEnv', () => {
   const makeTempDir = async () => mkdtemp(path.join(os.tmpdir(), 'solvapay-init-'))
@@ -21,6 +23,8 @@ describe('writeSolvaPaySecretToEnv', () => {
 
       expect(result.action).toBe('created')
       expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_live_new\n')
+      expect(await envMode(cwd)).toBe(0o600)
+      expect(await readFile(path.join(cwd, '.gitignore'), 'utf8')).toBe('.env\n')
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }
@@ -36,6 +40,7 @@ describe('writeSolvaPaySecretToEnv', () => {
       expect(result.action).toBe('appended')
       expect(content).toContain('FOO=bar\n')
       expect(content).toContain('SOLVAPAY_SECRET_KEY=sk_live_append\n')
+      expect(await envMode(cwd)).toBe(0o600)
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }
@@ -53,6 +58,7 @@ describe('writeSolvaPaySecretToEnv', () => {
 
       expect(result.action).toBe('unchanged')
       expect(content).toBe('SOLVAPAY_SECRET_KEY=sk_live_old\n')
+      expect(await envMode(cwd)).toBe(0o600)
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }
@@ -71,6 +77,34 @@ describe('writeSolvaPaySecretToEnv', () => {
       expect(result.action).toBe('updated')
       expect(content).toContain('SOLVAPAY_SECRET_KEY=sk_live_new')
       expect(content).toContain('OTHER=1')
+      expect(await envMode(cwd)).toBe(0o600)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('tightens a world-readable .env to owner-only on append', async () => {
+    const cwd = await makeTempDir()
+    try {
+      const envPath = path.join(cwd, '.env')
+      await writeFile(envPath, 'FOO=bar\n', { encoding: 'utf8', mode: 0o644 })
+      await chmod(envPath, 0o644)
+      expect((await stat(envPath)).mode & 0o777).toBe(0o644)
+
+      await writeSolvaPaySecretToEnv('sk_live_lockdown', { cwd })
+
+      expect(await envMode(cwd)).toBe(0o600)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('adds .env to .gitignore before writing the secret', async () => {
+    const cwd = await makeTempDir()
+    try {
+      await writeSolvaPaySecretToEnv('sk_live_order', { cwd })
+      const gitignore = await readFile(path.join(cwd, '.gitignore'), 'utf8')
+      expect(gitignore).toContain('.env\n')
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }

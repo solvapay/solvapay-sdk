@@ -14,7 +14,7 @@ use solvapay_rust_examples_env::load_get_merchant_dotenv;
 #[ignore = "live dev API; requires examples/rust/get-merchant/.env"]
 async fn live_dev_get_merchant_from_env() {
     load_get_merchant_dotenv().expect("load examples/rust/get-merchant/.env");
-    let config = Config::default();
+    let config = Config::from_env().expect("SOLVAPAY_SECRET_KEY");
     assert!(
         !config.api_key.is_empty(),
         "SOLVAPAY_SECRET_KEY missing in examples/rust/get-merchant/.env"

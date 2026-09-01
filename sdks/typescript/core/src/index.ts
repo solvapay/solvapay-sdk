@@ -190,6 +190,7 @@ export {
   validateGetProductParams,
   decidePaywallOutcome,
   ensureCustomerNext,
+  topupProcessNext,
   evaluateBalanceObservation,
   evaluateCachedLimits,
   evaluateFreshLimits,

@@ -13,6 +13,8 @@ import { installMcpAdapterNative } from './adapters/mcp'
 import { installNativeDecisionApi } from './native-decisions'
 import type { PaywallStructuredContent, PaywallToolResult } from './types'
 import { callWasmSync, publishWasmSyncApi, verifyWebhookWasm, warmWasm } from './wasm'
+import { rejectIfSeenEventId } from './webhook-replay'
+import type { VerifyWebhookEdgeOptions } from './webhook-replay'
 
 // Install WASM sync dispatch for the edge graph (Deno / Workers / edge-light).
 // The install is the gate — missing WASM fails fast. Node never loads this
@@ -90,6 +92,8 @@ export type {
   CustomerWebhookObject,
   WebhookProduct,
 } from './types'
+export type { SeenEventId, VerifyWebhookEdgeOptions } from './webhook-replay'
+export { WEBHOOK_DUPLICATE_EVENT_CODE } from './webhook-replay'
 
 // Export payment processing types (shared surface with the Node
 // entrypoint — `@solvapay/mcp-core` imports these via its top-level
@@ -162,16 +166,19 @@ export type {
  *
  * The backend sends an `SV-Signature` header in the format `t={timestamp},v1={hmac}`.
  * The HMAC is SHA-256 over `"{timestamp}.{rawBody}"` keyed by the full webhook secret
- * (including the `whsec_` prefix). Signatures older than 5 minutes are rejected to
- * prevent replay attacks.
+ * (including the `whsec_` prefix). Signatures older than 5 minutes are rejected.
+ * That window is not event-id dedupe — pass `seenEventId` (or check `event.id`
+ * yourself) so a retry inside the window is not processed twice.
  *
  * Works in: Vercel Edge Functions, Cloudflare Workers, Deno, Supabase Edge Functions.
  *
  * @param params.body - Raw webhook request body (string)
  * @param params.signature - Value of the `SV-Signature` header
  * @param params.secret - Webhook signing secret (`whsec_…`)
+ * @param params.seenEventId - Optional host-owned replay check
  * @returns Parsed and typed {@link WebhookEvent} object
- * @throws {SolvaPayError} If signature is missing, malformed, expired, or invalid
+ * @throws {SolvaPayError} If signature is missing, malformed, expired, or invalid,
+ *   or when `seenEventId` reports a duplicate (`code: 'duplicate_event'`)
  *
  * @example
  * ```typescript
@@ -187,12 +194,11 @@ export async function verifyWebhook({
   body,
   signature,
   secret,
-}: {
-  body: string
-  signature: string
-  secret: string
-}): Promise<WebhookEvent> {
+  seenEventId,
+}: VerifyWebhookEdgeOptions): Promise<WebhookEvent> {
   // Rust-only after Step 53 — loader throws when WASM is unavailable instead
   // of running a duplicate Web Crypto implementation on the edge.
-  return verifyWebhookWasm({ body, signature, secret })
+  const event = await verifyWebhookWasm({ body, signature, secret })
+  await rejectIfSeenEventId(event, seenEventId)
+  return event
 }

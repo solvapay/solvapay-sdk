@@ -277,6 +277,11 @@
     },
     {
       "package": "@solvapay/server",
+      "symbol": "WEBHOOK_DUPLICATE_EVENT_CODE",
+      "reason": "type-guard-or-const"
+    },
+    {
+      "package": "@solvapay/server",
       "symbol": "withRetry",
       "reason": "host-orchestration-decisions-delegated"
     }

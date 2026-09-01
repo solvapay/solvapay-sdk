@@ -345,6 +345,11 @@ export const runInitInDirectory = async ({
     )
   }
 
+  const gitignoreWrite = await ensureEnvInGitignore(cwd)
+  if (gitignoreWrite.action === 'created' || gitignoreWrite.action === 'appended') {
+    process.stdout.write('🔒 Added .env to .gitignore\n')
+  }
+
   const envWrite = await writeSolvaPaySecretToEnv(exchange.secretKey, { cwd })
   const environmentLabel = exchange.environment ? ` (${exchange.environment})` : ''
   if (
@@ -371,11 +376,6 @@ export const runInitInDirectory = async ({
     if (apiBaseWrite.action !== 'unchanged') {
       process.stdout.write(`📝 SOLVAPAY_API_BASE_URL pinned to ${DEV_API_BASE_URL} in .env\n`)
     }
-  }
-
-  const gitignoreWrite = await ensureEnvInGitignore(cwd)
-  if (gitignoreWrite.action === 'created' || gitignoreWrite.action === 'appended') {
-    process.stdout.write('🔒 Added .env to .gitignore\n')
   }
 
   if (!skipSdkInstall) {

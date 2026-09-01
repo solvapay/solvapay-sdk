@@ -1075,26 +1075,10 @@ importers:
   internal/tsconfig: {}
 
   sdks/node-native:
-    dependencies:
-      '@napi-rs/wasm-runtime':
-        specifier: ^1.1.6
-        version: 1.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
     devDependencies:
-      '@emnapi/core':
-        specifier: 1.11.2
-        version: 1.11.2
-      '@emnapi/runtime':
-        specifier: 1.11.2
-        version: 1.11.2
       '@napi-rs/cli':
         specifier: 3.7.3
         version: 3.7.3(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@25.5.2)(supports-color@10.2.2)
-      '@tybys/wasm-util':
-        specifier: ^0.10.1
-        version: 0.10.3
-      emnapi:
-        specifier: 1.11.2
-        version: 1.11.2
     optionalDependencies:
       '@solvapay/server-native-darwin-arm64':
         specifier: file:npm/darwin-arm64
@@ -1114,9 +1098,6 @@ importers:
       '@solvapay/server-native-linux-x64-musl':
         specifier: file:npm/linux-x64-musl
         version: file:sdks/node-native/npm/linux-x64-musl
-      '@solvapay/server-native-wasm32-wasi':
-        specifier: file:npm/wasm32-wasi
-        version: file:sdks/node-native/npm/wasm32-wasi
       '@solvapay/server-native-win32-arm64-msvc':
         specifier: file:npm/win32-arm64-msvc
         version: file:sdks/node-native/npm/win32-arm64-msvc
@@ -4430,11 +4411,6 @@ packages:
     cpu: [x64]
     os: [linux]
     libc: [musl]
-
-  '@solvapay/server-native-wasm32-wasi@file:sdks/node-native/npm/wasm32-wasi':
-    resolution: {directory: sdks/node-native/npm/wasm32-wasi, type: directory}
-    engines: {node: '>= 18'}
-    cpu: [wasm32]
 
   '@solvapay/server-native-win32-arm64-msvc@file:sdks/node-native/npm/win32-arm64-msvc':
     resolution: {directory: sdks/node-native/npm/win32-arm64-msvc, type: directory}
@@ -9401,6 +9377,7 @@ snapshots:
     dependencies:
       '@emnapi/wasi-threads': 1.2.2
       tslib: 2.8.1
+    optional: true
 
   '@emnapi/core@1.9.1':
     dependencies:
@@ -9411,6 +9388,7 @@ snapshots:
   '@emnapi/runtime@1.11.2':
     dependencies:
       tslib: 2.8.1
+    optional: true
 
   '@emnapi/runtime@1.9.1':
     dependencies:
@@ -9425,6 +9403,7 @@ snapshots:
   '@emnapi/wasi-threads@1.2.2':
     dependencies:
       tslib: 2.8.1
+    optional: true
 
   '@epic-web/invariant@1.0.0': {}
 
@@ -10396,6 +10375,7 @@ snapshots:
       '@emnapi/core': 1.11.2
       '@emnapi/runtime': 1.11.2
       '@tybys/wasm-util': 0.10.3
+    optional: true
 
   '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)':
     dependencies:
@@ -11193,13 +11173,6 @@ snapshots:
   '@solvapay/server-native-linux-x64-musl@file:sdks/node-native/npm/linux-x64-musl':
     optional: true
 
-  '@solvapay/server-native-wasm32-wasi@file:sdks/node-native/npm/wasm32-wasi':
-    dependencies:
-      '@emnapi/core': 1.11.2
-      '@emnapi/runtime': 1.11.2
-      '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
-    optional: true
-
   '@solvapay/server-native-win32-arm64-msvc@file:sdks/node-native/npm/win32-arm64-msvc':
     optional: true
 
@@ -11421,6 +11394,7 @@ snapshots:
   '@tybys/wasm-util@0.10.3':
     dependencies:
       tslib: 2.8.1
+    optional: true
 
   '@types/aria-query@5.0.4': {}
 

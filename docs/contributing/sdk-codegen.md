@@ -77,8 +77,9 @@ Run from the repo root (`solvapay-sdk/`).
 | `pnpm docs:coverage`                                       | dto-gen `doc_coverage` lib test                                                                                                         |
 | `pnpm docs:parity`                                         | dto-gen `doc_parity` integration test (emitted TSDoc/pydoc/YARD/godoc/rustdoc vs contract summaries)                                    |
 
-There is **no** need to copy a 30-flag `cargo run -p dto-gen -- …` line. CI and
-humans both call `pnpm gen` / `pnpm gen:check`.
+There is **no** need to copy a long `cargo run -p dto-gen -- …` line. CI and
+humans both call `pnpm gen` / `pnpm gen:check`, which invoke
+`dto-gen --config contract/manifest/repo-paths.yaml`.
 
 ## Prerequisites
 
@@ -218,7 +219,8 @@ pnpm gen
 
 ## What `pnpm gen` regenerates
 
-Canonical paths are listed in `tools/codegen/gen.ts` (`DTO_GEN_ARGS` + `GENERATED_PATHS`).
+Canonical paths come from `contract/manifest/repo-paths.yaml` (`generated:` +
+`drift:`). `tools/codegen/gen.ts` passes `--config` and checks `GENERATED_PATHS`.
 High-level groups:
 
 | Group                | Examples                                                                                                                                                      |

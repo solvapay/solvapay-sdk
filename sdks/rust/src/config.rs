@@ -1,6 +1,6 @@
 //! Public configuration for [`crate::Client`].
 
-use solvapay_core::RetryPolicy;
+use solvapay_core::{RetryPolicy, SdkError};
 
 /// Default limits-cache TTL (10 seconds), matching TS / Ruby / Python facades.
 pub const DEFAULT_LIMITS_CACHE_TTL_MS: u64 = 10_000;
@@ -31,11 +31,32 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            api_key: std::env::var("SOLVAPAY_SECRET_KEY").unwrap_or_default(),
-            api_base_url: non_empty_env("SOLVAPAY_API_BASE_URL"),
+            api_key: String::new(),
+            api_base_url: None,
             retry_policy: RetryPolicy::default(),
             limits_cache_ttl_ms: DEFAULT_LIMITS_CACHE_TTL_MS,
         }
+    }
+}
+
+impl Config {
+    /// Read `SOLVAPAY_SECRET_KEY` and optional `SOLVAPAY_API_BASE_URL`.
+    ///
+    /// # Errors
+    ///
+    /// [`SdkError::Api`] with code `missing_api_key` when the secret is unset or blank.
+    pub fn from_env() -> Result<Self, SdkError> {
+        let api_key = non_empty_env("SOLVAPAY_SECRET_KEY").ok_or_else(|| SdkError::Api {
+            message: "SOLVAPAY_SECRET_KEY is required".to_owned(),
+            status: None,
+            code: Some("missing_api_key".to_owned()),
+        })?;
+        Ok(Self {
+            api_key,
+            api_base_url: non_empty_env("SOLVAPAY_API_BASE_URL"),
+            retry_policy: RetryPolicy::default(),
+            limits_cache_ttl_ms: DEFAULT_LIMITS_CACHE_TTL_MS,
+        })
     }
 }
 

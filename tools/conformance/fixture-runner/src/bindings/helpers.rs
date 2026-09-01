@@ -126,11 +126,12 @@ pub fn invoke_project_usage_snapshot(input: &FixtureInput) -> Result<Value, Bind
 pub fn invoke_map_route_error(input: &FixtureInput) -> Result<Value, BindingError> {
     let kind = match require_string_arg(input, "kind")?.as_str() {
         "solvapay" => RouteErrorKind::SolvaPay,
+        "paywall" => RouteErrorKind::Paywall,
         "error" => RouteErrorKind::Error,
         "unknown" => RouteErrorKind::Unknown,
         other => {
             return Err(BindingError::Harness(format!(
-                "args.kind must be 'solvapay' | 'error' | 'unknown', got {other:?}"
+                "args.kind must be 'solvapay' | 'paywall' | 'error' | 'unknown', got {other:?}"
             )))
         }
     };

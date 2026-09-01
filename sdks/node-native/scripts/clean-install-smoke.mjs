@@ -4,14 +4,13 @@
  *
  * Usage:
  *   node scripts/clean-install-smoke.mjs --bundle-dir <dir> --mode native --target darwin-arm64
- *   node scripts/clean-install-smoke.mjs --bundle-dir <dir> --mode wasi --target wasm32-wasi
  *   node scripts/clean-install-smoke.mjs --bundle-dir <dir> --mode native --target darwin-arm64 --preserve-on-failure
  */
 
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { runCleanInstallSmoke } from './clean-install-lib.mjs'
-import { detectHostNativeTarget, WASI_TARGET } from './targets.mjs'
+import { detectHostNativeTarget } from './targets.mjs'
 
 /**
  * @param {string[]} argv
@@ -19,7 +18,7 @@ import { detectHostNativeTarget, WASI_TARGET } from './targets.mjs'
 function parseArgs(argv) {
   /** @type {string | null} */
   let bundleDir = null
-  /** @type {'native' | 'wasi' | null} */
+  /** @type {'native' | null} */
   let mode = null
   /** @type {string | null} */
   let target = null
@@ -32,7 +31,7 @@ function parseArgs(argv) {
     if (arg === '--bundle-dir' && argv[i + 1]) {
       bundleDir = resolve(argv[++i])
     } else if (arg === '--mode' && argv[i + 1]) {
-      mode = /** @type {'native' | 'wasi'} */ (argv[++i])
+      mode = /** @type {'native'} */ (argv[++i])
     } else if (arg === '--target' && argv[i + 1]) {
       target = argv[++i]
     } else if (arg === '--preserve-on-failure') {
@@ -45,11 +44,11 @@ function parseArgs(argv) {
   if (!bundleDir) {
     throw new Error('clean-install-smoke: --bundle-dir <dir> is required')
   }
-  if (mode !== 'native' && mode !== 'wasi') {
-    throw new Error('clean-install-smoke: --mode native|wasi is required')
+  if (mode !== 'native') {
+    throw new Error('clean-install-smoke: --mode native is required')
   }
   if (!target) {
-    target = mode === 'wasi' ? WASI_TARGET.dir : detectHostNativeTarget().dir
+    target = detectHostNativeTarget().dir
   }
 
   return { bundleDir, mode, target, preserveOnFailure, nodeMajor }

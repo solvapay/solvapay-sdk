@@ -221,5 +221,9 @@ async fn fetch_jwks_is_unauthenticated_get_and_requires_keys() {
         })
         .await
         .expect_err("missing JWKS must fail");
-    assert!(missing.message().contains("JWKS fetch failed"), "{}", missing.message());
+    assert!(
+        missing.message().contains("JWKS fetch failed"),
+        "{}",
+        missing.message()
+    );
 }

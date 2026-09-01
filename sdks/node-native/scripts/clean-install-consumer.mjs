@@ -9,7 +9,7 @@
 
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -27,11 +27,7 @@ import {
   PAYWALL_GATE_SMOKE_EXPECTED,
   PAYWALL_GATE_SMOKE_INPUT,
 } from './client-smoke-fixture.mjs'
-import {
-  LOADER_PACKAGE_NAME,
-  NATIVE_TARGETS,
-  WASI_TARGET,
-} from './targets.mjs'
+import { LOADER_PACKAGE_NAME, NATIVE_TARGETS } from './targets.mjs'
 
 const consumerRoot = process.env.CLEAN_INSTALL_CONSUMER_ROOT
   ? resolve(process.env.CLEAN_INSTALL_CONSUMER_ROOT)
@@ -89,7 +85,7 @@ assertEnv('CLEAN_INSTALL_EXPECTED_PLATFORM', expectedPlatform)
 assertEnv('CLEAN_INSTALL_EXPECTED_ARCH', expectedArch)
 assertEnv('CLEAN_INSTALL_EXPECTED_NODE_MAJOR', expectedNodeMajor)
 
-if (mode !== 'native' && mode !== 'wasi') {
+if (mode !== 'native') {
   fail(`invalid CLEAN_INSTALL_MODE=${mode}`)
 }
 
@@ -98,26 +94,22 @@ if (nodeMajor !== expectedNodeMajor) {
   fail(`Node major mismatch: expected ${expectedNodeMajor}, got ${process.version}`)
 }
 
-if (mode === 'native') {
-  if (process.platform !== expectedPlatform) {
-    fail(`platform mismatch: expected ${expectedPlatform}, got ${process.platform}`)
+if (process.platform !== expectedPlatform) {
+  fail(`platform mismatch: expected ${expectedPlatform}, got ${process.platform}`)
+}
+if (process.arch !== expectedArch) {
+  fail(`arch mismatch: expected ${expectedArch}, got ${process.arch}`)
+}
+if (expectedLibc) {
+  const report = process.report?.getReport?.()
+  const glibc = report?.header?.glibcVersionRuntime
+  const actualLibc = typeof glibc === 'string' && glibc.length > 0 ? 'glibc' : 'musl'
+  if (actualLibc !== expectedLibc) {
+    fail(`libc mismatch: expected ${expectedLibc}, got ${actualLibc}`)
   }
-  if (process.arch !== expectedArch) {
-    fail(`arch mismatch: expected ${expectedArch}, got ${process.arch}`)
-  }
-  if (expectedLibc) {
-    const report = process.report?.getReport?.()
-    const glibc = report?.header?.glibcVersionRuntime
-    const actualLibc = typeof glibc === 'string' && glibc.length > 0 ? 'glibc' : 'musl'
-    if (actualLibc !== expectedLibc) {
-      fail(`libc mismatch: expected ${expectedLibc}, got ${actualLibc}`)
-    }
-  }
-  if (process.env.NAPI_RS_FORCE_WASI) {
-    fail('native mode must not set NAPI_RS_FORCE_WASI')
-  }
-} else if (process.env.NAPI_RS_FORCE_WASI !== 'error') {
-  fail('wasi mode requires NAPI_RS_FORCE_WASI=error')
+}
+if (process.env.NAPI_RS_FORCE_WASI) {
+  fail('native mode must not set NAPI_RS_FORCE_WASI')
 }
 
 let serverPkgPath
@@ -144,25 +136,10 @@ assert.ok(
   `target package resolved outside consumer tree: ${targetPkgPath}`,
 )
 
-if (mode === 'native') {
-  if (existsSync(join(consumerRoot, 'node_modules', ...WASI_TARGET.packageName.split('/')))) {
-    fail(`${WASI_TARGET.packageName} must be absent in native mode`)
-  }
-  for (const t of NATIVE_TARGETS) {
-    if (t.packageName === expectedPackage) continue
-    if (existsSync(join(consumerRoot, 'node_modules', ...t.packageName.split('/')))) {
-      fail(`unexpected native package installed: ${t.packageName}`)
-    }
-  }
-} else {
-  for (const t of NATIVE_TARGETS) {
-    if (existsSync(join(consumerRoot, 'node_modules', ...t.packageName.split('/')))) {
-      fail(`native package must be absent in wasi mode: ${t.packageName}`)
-    }
-  }
-  const nodeFiles = findFiles(consumerRoot, name => name.endsWith('.node'))
-  if (nodeFiles.length > 0) {
-    fail(`.node files must be absent in wasi mode: ${nodeFiles.join(', ')}`)
+for (const t of NATIVE_TARGETS) {
+  if (t.packageName === expectedPackage) continue
+  if (existsSync(join(consumerRoot, 'node_modules', ...t.packageName.split('/')))) {
+    fail(`unexpected native package installed: ${t.packageName}`)
   }
 }
 
@@ -200,46 +177,42 @@ const gate = buildPaywallGate(
 )
 assert.deepEqual(gate, PAYWALL_GATE_SMOKE_EXPECTED)
 
-// --- async: getCustomer against in-process stub (host-native only) ---
-// WASI builds omit NativeClient (no ReqwestTransport); sync surfaces above
-// still prove the extended 37R-e path on native host bindings.
-let customerLabel = 'skipped-wasi'
-if (mode === 'native') {
-  const stub = createServer((req, res) => {
-    const url = req.url ?? ''
-    if (req.method === 'GET' && url === `/v1/sdk/customers/${CUSTOMER_SMOKE_REF}`) {
-      res.writeHead(200, { 'content-type': 'application/json' })
-      res.end(JSON.stringify(CUSTOMER_SMOKE_UPSTREAM))
-      return
-    }
-    res.writeHead(404, { 'content-type': 'application/json' })
-    res.end(JSON.stringify({ error: `unexpected ${req.method} ${url}` }))
-  })
-
-  await new Promise((resolveListen, rejectListen) => {
-    stub.once('error', rejectListen)
-    stub.listen(0, '127.0.0.1', () => resolveListen(undefined))
-  })
-
-  const address = stub.address()
-  if (address === null || typeof address === 'string') {
-    fail('stub server failed to bind a TCP port')
+// --- async: getCustomer against in-process stub ---
+const stub = createServer((req, res) => {
+  const url = req.url ?? ''
+  if (req.method === 'GET' && url === `/v1/sdk/customers/${CUSTOMER_SMOKE_REF}`) {
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify(CUSTOMER_SMOKE_UPSTREAM))
+    return
   }
-  const apiBaseUrl = `http://127.0.0.1:${address.port}`
+  res.writeHead(404, { 'content-type': 'application/json' })
+  res.end(JSON.stringify({ error: `unexpected ${req.method} ${url}` }))
+})
 
-  try {
-    const client = createSolvaPayClient({
-      apiKey: 'sk_test_clean_install_smoke',
-      apiBaseUrl,
-    })
-    const customer = await client.getCustomer({ customerRef: CUSTOMER_SMOKE_REF })
-    assert.deepEqual(customer, CUSTOMER_SMOKE_EXPECTED)
-    customerLabel = CUSTOMER_SMOKE_REF
-  } finally {
-    await new Promise((resolveClose, rejectClose) => {
-      stub.close(err => (err ? rejectClose(err) : resolveClose(undefined)))
-    })
-  }
+await new Promise((resolveListen, rejectListen) => {
+  stub.once('error', rejectListen)
+  stub.listen(0, '127.0.0.1', () => resolveListen(undefined))
+})
+
+const address = stub.address()
+if (address === null || typeof address === 'string') {
+  fail('stub server failed to bind a TCP port')
+}
+const apiBaseUrl = `http://127.0.0.1:${address.port}`
+
+let customerLabel
+try {
+  const client = createSolvaPayClient({
+    apiKey: 'sk_test_clean_install_smoke',
+    apiBaseUrl,
+  })
+  const customer = await client.getCustomer({ customerRef: CUSTOMER_SMOKE_REF })
+  assert.deepEqual(customer, CUSTOMER_SMOKE_EXPECTED)
+  customerLabel = CUSTOMER_SMOKE_REF
+} finally {
+  await new Promise((resolveClose, rejectClose) => {
+    stub.close(err => (err ? rejectClose(err) : resolveClose(undefined)))
+  })
 }
 
 const libcLabel = expectedLibc ?? 'n/a'
@@ -247,34 +220,3 @@ console.log(
   `CLEAN_INSTALL_OK mode=${mode} node=${nodeMajor} os=${process.platform} arch=${process.arch} libc=${libcLabel} target=${expectedPackage} event=${event.id} gate=${gate.kind} customer=${customerLabel}`,
 )
 
-/**
- * @param {string} root
- * @param {(name: string) => boolean} pred
- * @returns {string[]}
- */
-function findFiles(root, pred) {
-  /** @type {string[]} */
-  const out = []
-  /** @type {string[]} */
-  const stack = [root]
-  while (stack.length > 0) {
-    const dir = stack.pop()
-    if (!dir || !existsSync(dir)) continue
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry)
-      let st
-      try {
-        st = statSync(full)
-      } catch {
-        continue
-      }
-      if (st.isDirectory()) {
-        if (entry === '.git') continue
-        stack.push(full)
-      } else if (pred(entry)) {
-        out.push(full)
-      }
-    }
-  }
-  return out
-}

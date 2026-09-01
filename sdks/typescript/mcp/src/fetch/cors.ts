@@ -2,84 +2,79 @@
  * Native-scheme CORS preflight + 401 `WWW-Authenticate` helpers for MCP
  * clients on Web-standards runtimes.
  *
- * MCP clients like Cursor, VS Code, and Claude Desktop attach native
- * schemes to their DCR / OAuth flows (`cursor://…`, `vscode://…`,
- * `vscode-webview://…`, `claude://…`). These origins don't carry
- * credentials — mirroring them back in `Access-Control-Allow-Origin` is
- * safer than a bare `*`.
+ * Allowlist and challenge bodies come from the Rust `mcpNativeCors` /
+ * `mcpAuthGate` ops. Facades only merge headers onto `Response`.
  */
 
-import { withoutTrailingSlash } from '@solvapay/mcp-core'
+import { mcpAuthGate, mcpNativeCors, isNativeClientOrigin } from '@solvapay/mcp-core'
 
-const NATIVE_CLIENT_ORIGIN_REGEX = /^(cursor|vscode|vscode-webview|claude):\/\/.+$/
+export { isNativeClientOrigin }
 
-/** Returns `true` when `origin` is a native MCP-client scheme we mirror. */
-export function isNativeClientOrigin(origin: string | null | undefined): boolean {
-  if (!origin) return false
-  return NATIVE_CLIENT_ORIGIN_REGEX.test(origin)
+function applyCorsResult(resHeaders: Headers, headers: Record<string, string>): void {
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === 'vary') {
+      resHeaders.append('Vary', value)
+      continue
+    }
+    resHeaders.set(key, value)
+  }
 }
 
 /** Adds CORS mirror headers to `headers` when the request origin is a native client scheme. */
 export function applyNativeCors(reqHeaders: Headers, resHeaders: Headers): void {
-  const origin = reqHeaders.get('origin')
-  if (!origin) return
-  if (isNativeClientOrigin(origin)) {
-    resHeaders.set('Access-Control-Allow-Origin', origin)
-    resHeaders.append('Vary', 'Origin')
-  }
+  const { headers } = mcpNativeCors({ origin: reqHeaders.get('origin') })
+  applyCorsResult(resHeaders, headers)
 }
 
 /** 204 preflight response with CORS mirror for native-scheme origins. */
 export function corsPreflight(req: Request): Response {
   const reqHeaders = req.headers
-  const requestedMethod = reqHeaders.get('access-control-request-method') ?? 'POST'
-  const requestedHeaders =
-    reqHeaders.get('access-control-request-headers') ?? 'authorization, content-type'
-
-  const headers = new Headers()
-  applyNativeCors(reqHeaders, headers)
-  headers.set('Access-Control-Allow-Methods', `${requestedMethod}, OPTIONS`)
-  headers.set('Access-Control-Allow-Headers', requestedHeaders)
-  headers.set('Access-Control-Max-Age', '600')
-
-  return new Response(null, { status: 204, headers })
+  const { headers } = mcpNativeCors({
+    origin: reqHeaders.get('origin'),
+    requestedMethod: reqHeaders.get('access-control-request-method'),
+    requestedHeaders: reqHeaders.get('access-control-request-headers'),
+    preflight: true,
+  })
+  const out = new Headers()
+  applyCorsResult(out, headers)
+  return new Response(null, { status: 204, headers: out })
 }
 
 /**
- * Produce a 401 JSON-RPC response + `WWW-Authenticate: Bearer
- * resource_metadata="…"` pointing at the protected-resource discovery
- * endpoint so MCP clients know where to discover the authorization
- * server.
+ * Produce a 401 JSON-RPC response + `WWW-Authenticate` from `mcpAuthGate`,
+ * with native-scheme CORS layered on top.
  */
 export function authChallenge(
   req: Request,
   options: {
     publicBaseUrl: string
+    mcpPath?: string
     protectedResourcePath?: string
     jsonRpcId?: string | number | null
   },
 ): Response {
-  const {
+  const { publicBaseUrl, mcpPath, protectedResourcePath, jsonRpcId = null } = options
+  const gate = mcpAuthGate({
     publicBaseUrl,
-    protectedResourcePath = '/.well-known/oauth-protected-resource',
-    jsonRpcId = null,
-  } = options
-
+    rpcMethod: 'tools/call',
+    jsonRpcId,
+    ...(mcpPath !== undefined ? { mcpPath } : {}),
+  })
   const headers = new Headers()
   applyNativeCors(req.headers, headers)
-  headers.set('Access-Control-Expose-Headers', 'WWW-Authenticate')
-  headers.set(
-    'WWW-Authenticate',
-    `Bearer resource_metadata="${withoutTrailingSlash(publicBaseUrl)}${protectedResourcePath}"`,
-  )
-  headers.set('Content-Type', 'application/json')
-
-  const body = {
-    jsonrpc: '2.0',
-    id: jsonRpcId,
-    error: { code: -32001, message: 'Unauthorized' },
+  if (gate.kind === 'challenge') {
+    for (const [key, value] of Object.entries(gate.headers)) {
+      headers.set(key, value)
+    }
+    if (protectedResourcePath !== undefined) {
+      headers.set(
+        'WWW-Authenticate',
+        `Bearer resource_metadata="${publicBaseUrl.replace(/\/$/, '')}${protectedResourcePath}"`,
+      )
+    }
+    return new Response(JSON.stringify(gate.body), { status: gate.status, headers })
   }
-  return new Response(JSON.stringify(body), { status: 401, headers })
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers })
 }
 
 /** Extract the raw bearer token from an `Authorization: Bearer <token>` header, or `null`. */

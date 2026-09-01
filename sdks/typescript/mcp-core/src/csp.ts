@@ -9,16 +9,23 @@
 import { mcpMergeCsp } from './native-mcp.generated'
 import type { SolvaPayMcpCsp } from './types'
 
+let cachedDefaultCsp: Required<SolvaPayMcpCsp> | undefined
+
+function defaultCsp(): Required<SolvaPayMcpCsp> {
+  cachedDefaultCsp ??= mcpMergeCsp(undefined, undefined) as Required<SolvaPayMcpCsp>
+  return cachedDefaultCsp
+}
+
 export const SOLVAPAY_DEFAULT_CSP: Required<SolvaPayMcpCsp> = {
-  resourceDomains: ['https://js.stripe.com', 'https://*.stripe.com', 'https://b.stripecdn.com'],
-  connectDomains: [
-    'https://api.stripe.com',
-    'https://m.stripe.com',
-    'https://r.stripe.com',
-    'https://q.stripe.com',
-    'https://errors.stripe.com',
-  ],
-  frameDomains: ['https://js.stripe.com', 'https://hooks.stripe.com'],
+  get resourceDomains() {
+    return defaultCsp().resourceDomains
+  },
+  get connectDomains() {
+    return defaultCsp().connectDomains
+  },
+  get frameDomains() {
+    return defaultCsp().frameDomains
+  },
 }
 
 /**

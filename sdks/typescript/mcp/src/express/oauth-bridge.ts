@@ -11,6 +11,7 @@ import {
   buildAuthInfoFromBearer,
   logMcpConfigOnce,
   mcpAuthGate,
+  mcpNativeCors,
   McpBearerAuthError,
   pathAwareProtectedResourcePath,
   withoutTrailingSlash,
@@ -136,26 +137,22 @@ function getRequestJsonRpcMethod(body: unknown): string | undefined {
   return undefined
 }
 
-function makeUnauthorizedJsonRpc(id: JsonRpcId) {
-  return {
-    jsonrpc: '2.0',
-    id,
-    error: {
-      code: -32001,
-      message: 'Unauthorized',
-    },
+function writeChallenge(res: ResponseLike, req: RequestLike, publicBaseUrl: string, mcpPath: string, id: JsonRpcId, rpcMethod?: string) {
+  const gate = mcpAuthGate({
+    publicBaseUrl,
+    mcpPath,
+    jsonRpcId: id,
+    rpcMethod: rpcMethod ?? 'tools/call',
+  })
+  applyCorsHeaders(req, res)
+  if (gate.kind === 'challenge') {
+    for (const [key, value] of Object.entries(gate.headers)) {
+      res.setHeader(key, value)
+    }
+    res.status(gate.status).json(gate.body)
+    return
   }
-}
-
-function setMcpChallengeHeader(
-  res: ResponseLike,
-  publicBaseUrl: string,
-  protectedResourcePath: string,
-) {
-  res.setHeader(
-    'WWW-Authenticate',
-    `Bearer resource_metadata="${withoutTrailingSlash(publicBaseUrl)}${protectedResourcePath}"`,
-  )
+  res.status(401).json({ error: 'Unauthorized' })
 }
 
 function getRequestQuery(req: RequestLike): string {
@@ -164,25 +161,10 @@ function getRequestQuery(req: RequestLike): string {
   return qIndex === -1 ? '' : raw.slice(qIndex)
 }
 
-const NATIVE_CLIENT_ORIGIN_SCHEMES = ['cursor:', 'vscode:', 'vscode-webview:', 'claude:'] as const
-
-function isNativeClientOrigin(origin: string): boolean {
-  try {
-    const url = new URL(origin)
-    return NATIVE_CLIENT_ORIGIN_SCHEMES.includes(
-      url.protocol as (typeof NATIVE_CLIENT_ORIGIN_SCHEMES)[number],
-    )
-  } catch {
-    return false
-  }
-}
-
 function applyCorsHeaders(req: RequestLike, res: ResponseLike) {
-  const origin = getHeader(req, 'origin')
-  if (!origin) return
-  if (isNativeClientOrigin(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin)
-    res.setHeader('Vary', 'Origin')
+  const { headers } = mcpNativeCors({ origin: getHeader(req, 'origin') })
+  for (const [key, value] of Object.entries(headers)) {
+    res.setHeader(key, value)
   }
 }
 
@@ -525,16 +507,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
       req.auth = auth
       next()
     } catch {
-      applyCorsHeaders(req, res)
-      res.setHeader('Access-Control-Expose-Headers', 'WWW-Authenticate')
-      setMcpChallengeHeader(res, publicBaseUrl, metadataPath)
-
-      if (req.method === 'POST') {
-        res.status(401).json(makeUnauthorizedJsonRpc(id))
-        return
-      }
-
-      res.status(401).json({ error: 'Unauthorized' })
+      writeChallenge(res, req, publicBaseUrl, mcpPath, id, method)
     }
   }
 

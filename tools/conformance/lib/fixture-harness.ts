@@ -100,6 +100,7 @@ import {
   isErrorResult,
   shouldRetryUsageError,
   mapRouteError,
+  resolveCustomerRef,
   McpAdapter,
   normalizeCancelResponse,
   normalizeReactivateResponse,
@@ -109,6 +110,7 @@ import {
   projectPaymentIntentResult,
   projectTopupProcessOutcome,
   projectUsageSnapshot,
+  topupProcessNext,
   resolveCheckLimitsParams,
   resolveProductRef,
   requireProductRef,
@@ -2139,8 +2141,15 @@ export function createDefaultRegistry(): FixtureRegistry {
   registry.register('mapRouteError', {
     id: 'core',
     invoke: args => {
-      if (args.kind !== 'solvapay' && args.kind !== 'error' && args.kind !== 'unknown') {
-        throw new Error("mapRouteError args.kind must be 'solvapay' | 'error' | 'unknown'")
+      if (
+        args.kind !== 'solvapay' &&
+        args.kind !== 'paywall' &&
+        args.kind !== 'error' &&
+        args.kind !== 'unknown'
+      ) {
+        throw new Error(
+          "mapRouteError args.kind must be 'solvapay' | 'paywall' | 'error' | 'unknown'",
+        )
       }
       if (!isNullableString(args.message) || !isNullableString(args.defaultMessage)) {
         throw new Error(
@@ -2166,6 +2175,20 @@ export function createDefaultRegistry(): FixtureRegistry {
         defaultMessage: args.defaultMessage,
       })
     },
+  })
+
+  registry.register('resolveCustomerRef', {
+    id: 'core',
+    invoke: args =>
+      resolveCustomerRef(
+        typeof args.hookRef === 'string' ? args.hookRef : undefined,
+        typeof args.verifiedJwtSub === 'string' ? args.verifiedJwtSub : undefined,
+        typeof args.headerUserId === 'string' ? args.headerUserId : undefined,
+        typeof args.headerCustomerRef === 'string' ? args.headerCustomerRef : undefined,
+        typeof args.mcpExtraCustomerRef === 'string' ? args.mcpExtraCustomerRef : undefined,
+        typeof args.argsAuthCustomerRef === 'string' ? args.argsAuthCustomerRef : undefined,
+        typeof args.argsCustomerRef === 'string' ? args.argsCustomerRef : undefined,
+      ),
   })
 
   registry.register('isErrorResult', {
@@ -2303,6 +2326,11 @@ export function createDefaultRegistry(): FixtureRegistry {
   registry.register('ensureCustomerNext', {
     id: 'core',
     invoke: args => ensureCustomerNext(args.state, args.event),
+  })
+
+  registry.register('topupProcessNext', {
+    id: 'core',
+    invoke: args => topupProcessNext(args.state, args.event),
   })
 
   registry.register('gateNext', {

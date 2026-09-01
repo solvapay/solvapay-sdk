@@ -92,6 +92,7 @@ module SolvaPay
       assert_response_result
       resolve_return_url
       MCP_TOOL_NAMES
+      topup_process_next
       validate_checkout_session_params
       is_cached_customer_ref_valid
       mcp_view_maps
@@ -115,6 +116,7 @@ module SolvaPay
       is_error_result
       map_route_error
       validate_get_product_params
+      resolve_customer_ref
       resolve_product_ref
       evaluate_cached_limits
       evaluate_fresh_limits

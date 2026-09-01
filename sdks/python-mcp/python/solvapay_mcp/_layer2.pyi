@@ -10,4 +10,10 @@ def make_response_result(
     options: Mapping[str, object] | None = None,
     emitted_blocks: list[dict[str, object]] | None = None,
 ) -> dict[str, object]: ...
+def mcp_native_cors(
+    origin: object | None = None,
+    requested_method: object | None = None,
+    requested_headers: object | None = None,
+    preflight: object | None = None,
+) -> object: ...
 def paywall_tool_result(message: object, structured_content: object) -> dict[str, object]: ...

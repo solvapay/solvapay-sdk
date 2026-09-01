@@ -102,7 +102,10 @@ pub fn extract_bearer_token(authorization_header: Option<&str>) -> Option<&str> 
 
 /// Walk `customerRef` → `customer_ref` → `sub` (or `claim_priority`).
 #[must_use]
-pub fn customer_ref_from_claims(claims: &Value, claim_priority: Option<&[String]>) -> Option<String> {
+pub fn customer_ref_from_claims(
+    claims: &Value,
+    claim_priority: Option<&[String]>,
+) -> Option<String> {
     let default = ["customerRef", "customer_ref", "sub"];
     let owned: Vec<String>;
     let names: Vec<&str> = if let Some(priority) = claim_priority.filter(|p| !p.is_empty()) {
@@ -155,7 +158,8 @@ fn verify_inner(input: &VerifyBearerInput) -> VerifyBearerResult {
         return unauthorized(MSG_MISSING_MATERIAL);
     }
 
-    let Some(payload) = verify_compact(token, input.jwks_json.as_ref(), secret, input.now_unix_secs)
+    let Some(payload) =
+        verify_compact(token, input.jwks_json.as_ref(), secret, input.now_unix_secs)
     else {
         return unauthorized(MSG_INVALID);
     };
@@ -227,10 +231,20 @@ fn verify_compact(
             }
         }
         "RS256" => {
-            verify_rs256(jwks?, header.get("kid").and_then(Value::as_str), signing_input.as_bytes(), &sig)?;
+            verify_rs256(
+                jwks?,
+                header.get("kid").and_then(Value::as_str),
+                signing_input.as_bytes(),
+                &sig,
+            )?;
         }
         "ES256" => {
-            verify_es256(jwks?, header.get("kid").and_then(Value::as_str), signing_input.as_bytes(), &sig)?;
+            verify_es256(
+                jwks?,
+                header.get("kid").and_then(Value::as_str),
+                signing_input.as_bytes(),
+                &sig,
+            )?;
         }
         _ => return None,
     }

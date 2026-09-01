@@ -2233,6 +2233,7 @@ dependencies = [
  "serde_json",
  "solvapay",
  "solvapay-core",
+ "solvapay-dto",
  "solvapay-mcp-core",
  "thiserror",
  "tokio",

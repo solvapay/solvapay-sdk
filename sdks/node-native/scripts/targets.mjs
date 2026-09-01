@@ -1,5 +1,5 @@
 /**
- * Canonical §7.7 native + WASI target metadata for artifact check, pack,
+ * Canonical §7.7 native target metadata for artifact check, pack,
  * clean-install smoke, and CI matrix generation (Step 39).
  */
 
@@ -116,22 +116,8 @@ export const NATIVE_TARGETS = Object.freeze([
   },
 ])
 
-/** @type {TargetSpec} */
-export const WASI_TARGET = Object.freeze({
-  dir: 'wasm32-wasi',
-  packageName: '@solvapay/server-native-wasm32-wasi',
-  rustTriple: 'wasm32-wasip1-threads',
-  kind: 'wasm',
-  binary: 'server-native.wasm32-wasi.wasm',
-  platform: 'wasi',
-  arch: 'wasm32',
-  libc: null,
-  ciHost: 'ubuntu-24.04',
-  ciContainer: null,
-})
-
-/** All nine publish targets (8 native + WASI). */
-export const ALL_TARGETS = Object.freeze([...NATIVE_TARGETS, WASI_TARGET])
+/** All eight native publish targets. */
+export const ALL_TARGETS = Object.freeze([...NATIVE_TARGETS])
 
 export const LOADER_PACKAGE_NAME = '@solvapay/server-native'
 export const FACADE_PACKAGE_NAME = '@solvapay/server'

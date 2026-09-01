@@ -12,7 +12,7 @@ use solvapay::{Client, Config};
 
 #[tokio::main]
 async fn main() -> Result<(), solvapay::SdkError> {
-    let client = Client::new(Config::default())?;
+    let client = Client::new(Config::from_env()?)?;
     let merchant = client.get_merchant().await?;
     println!("{:?}", merchant.display_name);
     Ok(())

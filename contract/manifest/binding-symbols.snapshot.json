@@ -3980,13 +3980,13 @@
       "artifact": "decisions",
       "emitOrder": 29,
       "section": "error",
-      "doc": "Binding for `mapRouteError` (`kind`: `\"solvapay\"` | `\"error\"` | `\"unknown\"`).",
+      "doc": "Binding for `mapRouteError` (`kind`: `\"solvapay\"` | `\"paywall\"` | `\"error\"` | `\"unknown\"`).",
       "docWasm": null,
       "rustFnName": "map_route_error_binding",
       "call": {
         "kind": "verbatim"
       },
-      "verbatimBody": "let args = args_map(&args_json)?;\n        let kind = match require_string(&args, \"kind\")?.as_str() {\n            \"solvapay\" => RouteErrorKind::SolvaPay,\n            \"error\" => RouteErrorKind::Error,\n            \"unknown\" => RouteErrorKind::Unknown,\n            other => {\n                return Err(SdkError::transport(\n                    format!(\"args.kind must be 'solvapay' | 'error' | 'unknown', got {other:?}\"),\n                    false,\n                ));\n            }\n        };\n        let message = optional_string(&args, \"message\")?;\n        let default_message = optional_string(&args, \"defaultMessage\")?;\n        let operation_name = require_string(&args, \"operationName\")?;\n        let status = optional_u16(&args, \"status\")?;\n        to_value(&map_route_error(&RouteErrorInput {\n            kind,\n            message,\n            status,\n            operation_name,\n            default_message,\n        }))",
+      "verbatimBody": "let args = args_map(&args_json)?;\n        let kind = match require_string(&args, \"kind\")?.as_str() {\n            \"solvapay\" => RouteErrorKind::SolvaPay,\n            \"paywall\" => RouteErrorKind::Paywall,\n            \"error\" => RouteErrorKind::Error,\n            \"unknown\" => RouteErrorKind::Unknown,\n            other => {\n                return Err(SdkError::transport(\n                    format!(\"args.kind must be 'solvapay' | 'paywall' | 'error' | 'unknown', got {other:?}\"),\n                    false,\n                ));\n            }\n        };\n        let message = optional_string(&args, \"message\")?;\n        let default_message = optional_string(&args, \"defaultMessage\")?;\n        let operation_name = require_string(&args, \"operationName\")?;\n        let status = optional_u16(&args, \"status\")?;\n        to_value(&map_route_error(&RouteErrorInput {\n            kind,\n            message,\n            status,\n            operation_name,\n            default_message,\n        }))",
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": null,
@@ -5088,6 +5088,120 @@
       "coreCall": "resolve_check_limits_params",
       "clientCallArgs": []
     },
+    "resolveCustomerRef": {
+      "core": "solvapay_core::customer_ref::resolve_customer_ref",
+      "names": {
+        "ts": "resolveCustomerRef",
+        "py": "resolve_customer_ref",
+        "rb": "resolve_customer_ref",
+        "go": "ResolveCustomerRef",
+        "rust": "resolve_customer_ref",
+        "c": "resolveCustomerRef"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "hookRef",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "hook_ref"
+        },
+        {
+          "name": "verifiedJwtSub",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "verified_jwt_sub"
+        },
+        {
+          "name": "headerUserId",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "header_user_id"
+        },
+        {
+          "name": "headerCustomerRef",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "header_customer_ref"
+        },
+        {
+          "name": "mcpExtraCustomerRef",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "mcp_extra_customer_ref"
+        },
+        {
+          "name": "argsAuthCustomerRef",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "args_auth_customer_ref"
+        },
+        {
+          "name": "argsCustomerRef",
+          "type": "string?",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "args_customer_ref"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 31,
+      "section": "customer",
+      "doc": "Binding for `resolveCustomerRef`.",
+      "docWasm": null,
+      "rustFnName": "resolve_customer_ref_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueString",
+        "args": [
+          "hook_ref.as_deref()",
+          "verified_jwt_sub.as_deref()",
+          "header_user_id.as_deref()",
+          "header_customer_ref.as_deref()",
+          "mcp_extra_customer_ref.as_deref()",
+          "args_auth_customer_ref.as_deref()",
+          "args_customer_ref.as_deref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "resolve_customer_ref",
+      "clientCallArgs": []
+    },
     "resolveFallbackGateLimits": {
       "core": "solvapay_core::paywall_decision::resolve_fallback_gate_limits",
       "names": {
@@ -5915,6 +6029,65 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "to_major_units",
+      "clientCallArgs": []
+    },
+    "topupProcessNext": {
+      "core": "solvapay_core::topup_process::topup_process_next",
+      "names": {
+        "ts": "topupProcessNext",
+        "py": "topup_process_next",
+        "rb": "topup_process_next",
+        "go": "TopupProcessNext",
+        "rust": "topup_process_next",
+        "c": "topupProcessNext"
+      },
+      "catalog": {
+        "kind": "none"
+      },
+      "args": [
+        {
+          "name": "state",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        },
+        {
+          "name": "event",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": null
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 16,
+      "section": "payment",
+      "doc": "Binding for `topupProcessNext`.",
+      "docWasm": null,
+      "rustFnName": "topup_process_next_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "resultAsValue",
+        "args": [
+          "state.as_ref()",
+          "event.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "topup_process_next",
       "clientCallArgs": []
     },
     "trackUsage": {

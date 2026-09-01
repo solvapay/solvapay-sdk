@@ -56,6 +56,7 @@
     "resolveReturnUrl",
     "selectActivePurchases",
     "isCachedCustomerRefValid",
+    "resolveCustomerRef",
     "resolvePurchaseCustomerRef",
     "validatePurchaseRef",
     "normalizeCancelResponse",

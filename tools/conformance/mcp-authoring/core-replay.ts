@@ -249,6 +249,8 @@ export async function replayMcpCoreFixture(
       )
       break
     case 'mcpNarrate':
+    case 'mcpDefaultGate':
+    case 'mcpNativeCors':
     case 'mcpHandleRequest':
     case 'mcpResume':
     case 'mcpOauthPath':

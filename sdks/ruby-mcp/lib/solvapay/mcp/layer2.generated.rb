@@ -158,6 +158,17 @@ module SolvaPay
           SolvaPay::Mcp::Core.call("mcpDcrDiagnostics", call_args)
         end
 
+        # Build the default ctx.gate() paywall structured-content stub.
+        # @param product Product reference stamped onto the gate.
+        # @param reason Optional merchant message; empty or omitted becomes Payment required.
+        # @return Paywall structured content with kind payment_required.
+        def mcp_default_gate(product, reason = nil)
+          call_args = {} #: Hash[String, untyped]
+          call_args["product"] = product
+          call_args["reason"] = reason unless reason.nil?
+          SolvaPay::Mcp::Core.call("mcpDefaultGate", call_args)
+        end
+
         # Build MCP tool, prompt, and resource descriptors for a product.
         # @param resource_uri UI resource URI stamped onto tool metadata.
         # @param public_base_url Public http(s) origin of the MCP server.
@@ -240,6 +251,21 @@ module SolvaPay
           call_args["mode"] = mode unless mode.nil?
           call_args["meta"] = meta unless meta.nil?
           SolvaPay::Mcp::Core.call("mcpNarrate", call_args)
+        end
+
+        # Decide native-scheme CORS mirroring for MCP client origins.
+        # @param origin Request Origin header.
+        # @param requested_method Access-Control-Request-Method for preflight.
+        # @param requested_headers Access-Control-Request-Headers for preflight.
+        # @param preflight When true, emit Allow-Methods, Allow-Headers, and Max-Age.
+        # @return allowed flag plus response headers to merge.
+        def mcp_native_cors(origin = nil, requested_method = nil, requested_headers = nil, preflight = nil)
+          call_args = {} #: Hash[String, untyped]
+          call_args["origin"] = origin unless origin.nil?
+          call_args["requestedMethod"] = requested_method unless requested_method.nil?
+          call_args["requestedHeaders"] = requested_headers unless requested_headers.nil?
+          call_args["preflight"] = preflight unless preflight.nil?
+          SolvaPay::Mcp::Core.call("mcpNativeCors", call_args)
         end
 
         # Normalize an upstream OAuth error into the frozen RFC error body.

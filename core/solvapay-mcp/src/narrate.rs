@@ -447,8 +447,54 @@ fn narrator_for(tool: &str, data: &Value) -> Option<Value> {
         "manage_account" => Some(narrate_manage_account(data)),
         "topup" => Some(narrate_topup(data)),
         "activate_plan" => Some(narrate_activate_plan(data)),
+        "virtual_upgrade" => Some(narrate_virtual_upgrade(data)),
+        "virtual_manage_account" => Some(narrate_virtual_manage_account(data)),
         _ => None,
     }
+}
+
+fn require_url(data: &Value, key: &str) -> String {
+    data.get(key)
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_owned()
+}
+
+fn narrate_virtual_upgrade(data: &Value) -> Value {
+    let checkout_url = require_url(data, "checkoutUrl");
+    let plan_ref = data
+        .get("planRef")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty());
+    let text = if plan_ref.is_some() {
+        format!(
+            "## Upgrade\n\n\
+             **[Click here to upgrade →]({checkout_url})**\n\n\
+             After completing the checkout, your purchase will be activated immediately."
+        )
+    } else {
+        format!(
+            "## Upgrade Your Subscription\n\n\
+             **[Click here to view pricing options and upgrade →]({checkout_url})**\n\n\
+             You'll be able to compare options and select the one that's right for you."
+        )
+    };
+    narrator_output(text, Vec::new())
+}
+
+fn narrate_virtual_manage_account(data: &Value) -> Value {
+    let portal_url = require_url(data, "portalUrl");
+    let text = format!(
+        "## Manage Your Account\n\n\
+         Access your account management portal to:\n\
+         - View your current account status\n\
+         - See billing history and invoices\n\
+         - Update payment methods\n\
+         - Cancel or modify your subscription\n\n\
+         **[Open Account Portal →]({portal_url})**\n\n\
+         This link is secure and will expire after a short period."
+    );
+    narrator_output(text, Vec::new())
 }
 
 /// Allocate a widget session id (UUID v4).

@@ -50,7 +50,7 @@ describe('createMCPHandler auto-converts PaywallError', () => {
       structuredContent?: unknown
     }
 
-    expect(result.isError).toBe(true)
+    expect(result.isError).toBe(false)
     expect(isPaywallStructuredContent(result.structuredContent)).toBe(true)
   })
 

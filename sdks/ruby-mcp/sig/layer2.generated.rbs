@@ -15,12 +15,14 @@ module SolvaPay
     def self.mcp_auth_gate: (String public_base_url, String rpc_method, String auth_header, String auth_mode, String mcp_path, Hash[String, untyped] json_rpc_id, Hash[String, untyped] jwks_json, String hs256_secret, String expected_issuer, String expected_audience, Integer now_unix_secs) -> untyped
     def self.mcp_config_log: (String api_base_url, String product_ref, String public_base_url) -> untyped
     def self.mcp_dcr_diagnostics: (String product_ref, String api_base_url, Integer status, String body_text) -> untyped
+    def self.mcp_default_gate: (String product, String reason) -> untyped
     def self.mcp_descriptors: (String resource_uri, String public_base_url, String product_ref, Array[String] views, Hash[String, untyped] csp, String api_base_url, Hash[String, untyped] branding) -> untyped
     def self.mcp_handle_request: (Hash[String, untyped] rpc, Hash[String, untyped] config, String auth_header) -> untyped
     def self.mcp_hide_tools_by_audience: (Array[Hash[String, untyped]] tools, Array[String] audiences, String user_agent) -> untyped
     def self.mcp_is_free_method: (String mcp_method) -> untyped
     def self.mcp_merge_csp: (Hash[String, untyped] overrides, String api_base_url) -> untyped
     def self.mcp_narrate: (String tool, Hash[String, untyped] payload, String kind, String mode, Hash[String, untyped] meta) -> untyped
+    def self.mcp_native_cors: (String origin, String requested_method, String requested_headers, bool preflight) -> untyped
     def self.mcp_normalize_oauth_error: (Hash[String, untyped] body, String text, Integer status) -> untyped
     def self.mcp_oauth_discovery: (String kind, String public_base_url, String mcp_path, Hash[String, untyped] paths) -> untyped
     def self.mcp_oauth_error_inspect: (String kind, Hash[String, untyped] body, Integer status) -> untyped

@@ -32,9 +32,9 @@ from solvapay_mcp.register import (
     set_request_customer_ref,
     set_request_user_agent,
 )
+from solvapay_mcp._layer2 import mcp_native_cors
 from solvapay_mcp.server.native import native_call
 
-NATIVE_CLIENT_ORIGIN_SCHEMES = ("cursor:", "vscode:", "vscode-webview:", "claude:")
 PROTECTED_RESOURCE_PATH = "/.well-known/oauth-protected-resource"
 AUTHORIZATION_SERVER_PATH = "/.well-known/oauth-authorization-server"
 OPENID_PATH = "/.well-known/openid-configuration"
@@ -76,15 +76,16 @@ class McpOAuthBridgeOptions:
         )
 
 
-def _is_native_origin(origin: str) -> bool:
-    return any(origin.startswith(scheme) for scheme in NATIVE_CLIENT_ORIGIN_SCHEMES)
-
-
 def apply_native_cors(request: Request, response: Response) -> None:
-    origin = request.headers.get("origin")
-    if origin and _is_native_origin(origin):
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Vary"] = "Origin"
+    result = mcp_native_cors(origin=request.headers.get("origin"))
+    if not isinstance(result, dict):
+        return
+    headers = result.get("headers")
+    if not isinstance(headers, dict):
+        return
+    for key, value in headers.items():
+        if isinstance(value, str):
+            response.headers[str(key)] = value
 
 
 def _jsonrpc_id(body: object) -> str | int | None:
@@ -219,21 +220,24 @@ class McpAuthMiddleware:
                 scope["solvapay_auth"] = auth
                 await self.app(scope, replay_receive, send)
             except (McpBearerAuthError, ValueError, json.JSONDecodeError):
+                gate = mcp_auth_gate(
+                    public_base_url=self._options.public_base_url,
+                    rpc_method=rpc_method or "tools/call",
+                    mcp_path=self._options.mcp_path,
+                    json_rpc_id=_jsonrpc_id(parsed),
+                )
+                body = gate.get("body")
+                status = gate.get("status")
                 response = JSONResponse(
-                    {
-                        "jsonrpc": "2.0",
-                        "id": _jsonrpc_id(parsed),
-                        "error": {"code": -32001, "message": "Unauthorized"},
-                    },
-                    status_code=401,
+                    body if isinstance(body, dict) else {"error": "Unauthorized"},
+                    status_code=status if isinstance(status, int) else 401,
                 )
                 apply_native_cors(request, response)
-                response.headers["Access-Control-Expose-Headers"] = "WWW-Authenticate"
-                public = without_trailing_slash(self._options.public_base_url)
-                metadata_path = path_aware_protected_resource_path(self._options.mcp_path)
-                response.headers["WWW-Authenticate"] = (
-                    f'Bearer resource_metadata="{public}{metadata_path}"'
-                )
+                headers = gate.get("headers")
+                if isinstance(headers, dict):
+                    for key, value in headers.items():
+                        if isinstance(value, str):
+                            response.headers[str(key)] = value
                 await send_response(response)
             finally:
                 reset_request_customer_ref(token)

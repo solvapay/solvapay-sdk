@@ -14,6 +14,7 @@ pub mod balance_poll;
 pub mod business_details;
 pub mod checkout;
 pub mod credit_display;
+pub mod customer_ref;
 pub mod customer_sync;
 pub mod ensure_customer;
 pub mod envelope;
@@ -46,7 +47,9 @@ pub mod route_error;
 pub mod seller_identity;
 mod serde_util;
 pub mod tax_summary;
+pub mod topup_process;
 pub mod usage;
+pub mod usage_request;
 #[cfg(feature = "webhook-verify")]
 pub mod webhook;
 
@@ -71,6 +74,7 @@ pub use credit_display::{
     credits_to_display_minor_units, is_zero_decimal_currency, minor_units_per_major,
     CreditsToDisplayInput,
 };
+pub use customer_ref::{resolve_customer_ref, ANONYMOUS_CUSTOMER_REF};
 pub use customer_sync::{
     build_create_customer_params, classify_create_error, classify_customer_ref,
     classify_lookup_error, coerce_customer_options, extract_backend_customer_ref,
@@ -156,7 +160,11 @@ pub use tax_summary::{
     reverse_charge_note, should_show_tax_row, tax_not_collected_note, REVERSE_CHARGE_NOTE,
     TAX_NOT_COLLECTED_NOTE,
 };
+pub use topup_process::{
+    topup_process_next, TopupPending, TopupProcessAction, TopupProcessNextOutput, TopupProcessState,
+};
 pub use usage::{project_usage_snapshot, should_retry_usage_error, UsageSnapshot};
+pub use usage_request::build_usage_request;
 #[cfg(feature = "webhook-verify")]
 pub use webhook::{verify_webhook, verify_webhook_json, WebhookError, WebhookErrorCode};
 

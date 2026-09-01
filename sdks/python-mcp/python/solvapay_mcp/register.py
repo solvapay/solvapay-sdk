@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import random
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from contextvars import ContextVar, Token
@@ -548,18 +550,33 @@ async def _resolve_customer_ref(
     args: dict[str, object],
     get_customer_ref: GetCustomerRef | None,
 ) -> str:
+    hook_ref = None
     if get_customer_ref is not None:
         resolved = get_customer_ref(args)
-        if isinstance(resolved, str):
-            return resolved
-        return await resolved
+        if not isinstance(resolved, str):
+            resolved = await resolved
+        if isinstance(resolved, str) and resolved.strip():
+            hook_ref = resolved.strip()
     request_ref = get_request_customer_ref()
-    if request_ref is not None:
-        return request_ref
     raw = args.get("customer_ref")
-    if isinstance(raw, str) and raw:
-        return raw
-    raise MissingCustomerRefError()
+    auth = args.get("auth")
+    auth_ref = None
+    if isinstance(auth, dict):
+        candidate = auth.get("customer_ref")
+        if isinstance(candidate, str):
+            auth_ref = candidate
+    result = call(
+        "resolveCustomerRef",
+        {
+            "hookRef": hook_ref,
+            "mcpExtraCustomerRef": request_ref,
+            "argsAuthCustomerRef": auth_ref,
+            "argsCustomerRef": raw if isinstance(raw, str) else None,
+        },
+    )
+    if isinstance(result, str) and result:
+        return result
+    return "anonymous"
 
 
 def _format_gate(message: str, gate: dict[str, object]) -> dict[str, object]:
@@ -740,6 +757,7 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
                     "kind": "handlerErr",
                     "message": str(err),
                     "nowMs": _now_ms(),
+                    "randomUnit": random.random(),
                 }
                 continue
             envelope = assert_response_result(returned)
@@ -747,16 +765,15 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
                 "kind": "handlerOk",
                 "envelope": envelope,
                 "nowMs": _now_ms(),
+                "randomUnit": random.random(),
             }
             continue
         if kind == "done":
             track = action.get("track")
-            if isinstance(track, Mapping) and allow is not None:
-                duration = float(track.get("durationMs") or 0)
-                if str(track.get("outcome")) == "success":
-                    allow.track_success(duration=duration)
-                else:
-                    allow.track_fail(track.get("outcome"), duration=duration)
+            if isinstance(track, Mapping):
+                request = track.get("request")
+                if isinstance(request, Mapping):
+                    spec.solvapay.get_api_client().track_usage_blocking(json.dumps(dict(request)))
             result = action.get("result")
             if not isinstance(result, dict):
                 raise SolvaPayError("invoke_payable_next done missing result")

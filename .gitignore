@@ -55,13 +55,11 @@ target/
 **/*.rs.bk
 *.pdb
 
-# napi-rs Node binding (step 36) — native/WASI binaries (loaders are committed)
+# napi-rs Node binding (step 36) — native binaries (loaders are committed)
 sdks/node-native/*.node
 sdks/node-native/*.wasm
 sdks/node-native/node_modules/
 sdks/node-native/npm/**/*.node
 sdks/node-native/npm/**/*.wasm
-sdks/node-native/npm/wasm32-wasi/server-native.wasi*
-sdks/node-native/npm/wasm32-wasi/wasi-worker*
 sdks/node-native/artifacts/
 sdks/node-native/clean-install-bundle/

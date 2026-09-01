@@ -11,7 +11,7 @@ use solvapay_mcp_core::{EngineConfig, PayableToolConfig, PayableToolSpec};
 
 use crate::http_util::{
     encode_json_body, envelope_status, http_from_oauth_envelope, json_response, jsonrpc_error,
-    string_headers,
+    merge_native_cors, string_headers,
 };
 use crate::jwks::JwksCache;
 use crate::register::{GetCustomerRef, PayableError, PayableHandler, PayableTool};
@@ -243,7 +243,7 @@ impl McpHttpServer {
                                 rpc.get("id").cloned().unwrap_or(Value::Null),
                                 -32603,
                                 &format!("JWKS fetch failed: {}", err.message()),
-                                500,
+                                200,
                             );
                         }
                     },
@@ -278,11 +278,15 @@ impl McpHttpServer {
                 envelope_status(&envelope, 200),
                 envelope.get("rpc").cloned().unwrap_or(Value::Null),
             ),
-            Some("challenge") => Ok(McpHttpResponse {
-                status: envelope_status(&envelope, 401),
-                headers: string_headers(envelope.get("headers")),
-                body: encode_json_body(envelope.get("body").cloned().unwrap_or(Value::Null))?,
-            }),
+            Some("challenge") => {
+                let mut headers = string_headers(envelope.get("headers"));
+                merge_native_cors(&req.headers, &mut headers);
+                Ok(McpHttpResponse {
+                    status: envelope_status(&envelope, 401),
+                    headers,
+                    body: encode_json_body(envelope.get("body").cloned().unwrap_or(Value::Null))?,
+                })
+            }
             Some("invokeHandler") => {
                 resume_envelope(
                     self.client.clone(),
@@ -309,5 +313,4 @@ impl McpHttpServer {
             }
         }
     }
-
 }

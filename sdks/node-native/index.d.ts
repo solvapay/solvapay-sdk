@@ -292,7 +292,7 @@ export declare function isZeroDecimalCurrency(argsJson: string): string
 /** Binding for `makeResponseResult`. */
 export declare function makeResponseResult(argsJson: string): string
 
-/** Binding for `mapRouteError` (`kind`: `"solvapay"` | `"error"` | `"unknown"`). */
+/** Binding for `mapRouteError` (`kind`: `"solvapay"` | `"paywall"` | `"error"` | `"unknown"`). */
 export declare function mapRouteError(argsJson: string): string
 
 /** Binding for `MCP_TOOL_NAMES`. */
@@ -367,6 +367,9 @@ export declare function resolveAuthenticatedUser(argsJson: string): string
  */
 export declare function resolveCheckLimitsParams(argsJson: string): string
 
+/** Binding for `resolveCustomerRef`. */
+export declare function resolveCustomerRef(argsJson: string): string
+
 /** Binding for `resolveFallbackGateLimits`. */
 export declare function resolveFallbackGateLimits(argsJson: string): string
 
@@ -425,6 +428,9 @@ export declare function tierMeters(argsJson: string): string
 
 /** Binding for `toMajorUnits`. */
 export declare function toMajorUnits(argsJson: string): string
+
+/** Binding for `topupProcessNext`. */
+export declare function topupProcessNext(argsJson: string): string
 
 /** Binding for `trialDays`. */
 export declare function trialDays(argsJson: string): string
