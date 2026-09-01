@@ -126,6 +126,14 @@ export type PaywallDecision<T> =
       args: T
       limits: LimitResponseWithPlan
       customerRef: string
+      /**
+       * Set when access is granted with consequences. `throttled` is
+       * `onExceed: throttle` (legacy plans — the builder no longer
+       * offers it). `overage` is `onExceed: charge` past the included
+       * cap. Absent on a plain allow. Derived from `limits`; not new
+       * wire data.
+       */
+      consequence?: 'throttled' | 'overage'
     }
   | {
       outcome: 'gate'

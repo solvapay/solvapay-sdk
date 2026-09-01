@@ -321,7 +321,9 @@ describe('PaymentForm business details + tax summary', () => {
     )
 
     await waitFor(() => expect(screen.getByText('Total')).toBeInTheDocument())
-    expect(screen.getByText('VAT (25%, incl.)')).toBeInTheDocument()
-    expect(screen.getByText('Subtotal')).toBeInTheDocument()
+    // DEV-723: included and excluded VAT read identically — the subtotal row
+    // says which amount is net, so the label carries no incl./excl. marker.
+    expect(screen.getByText('VAT (25%)')).toBeInTheDocument()
+    expect(screen.getByText('Subtotal (excl. VAT)')).toBeInTheDocument()
   })
 })

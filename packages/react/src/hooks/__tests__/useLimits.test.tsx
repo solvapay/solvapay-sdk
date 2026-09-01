@@ -1,10 +1,21 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { useLimits, limitsCache, OPTIMISTIC_GRACE_MS } from '../useLimits'
+import { useLimits, isUnlimited, limitsCache, OPTIMISTIC_GRACE_MS } from '../useLimits'
 import { useCustomer } from '../useCustomer'
 import { useTransport } from '../useTransport'
 import { useSolvaPay } from '../useSolvaPay'
 import type { PurchaseInfo } from '../../types'
+import type { TransportLimitsResult } from '../../transport/types'
+
+function limitsResult(override: Partial<TransportLimitsResult> = {}): TransportLimitsResult {
+  return {
+    withinLimits: true,
+    remaining: 10,
+    meterName: 'requests',
+    activationRequired: false,
+    ...override,
+  }
+}
 
 vi.mock('../useCustomer', () => ({
   useCustomer: vi.fn(),
@@ -96,6 +107,19 @@ describe('useLimits', () => {
       expect(result.current.error).toBeNull()
       expect(getLimits).toHaveBeenCalledWith({ productRef: 'prd_api', meterName: 'requests' })
     })
+
+    it.each(['throttled', 'overage', 'needsTopUp', 'needsUpgrade', 'upgraded'] as const)(
+      'surfaces %s from the transport result',
+      async flag => {
+        const getLimits = vi.fn().mockResolvedValue(limitsResult({ [flag]: true }))
+        setTransport({ getLimits })
+
+        const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+
+        await waitFor(() => expect(result.current.loading).toBe(false))
+        expect(result.current[flag]).toBe(true)
+      },
+    )
 
     it('surfaces `activationRequired: true` from the transport result', async () => {
       const getLimits = vi.fn().mockResolvedValue({
@@ -514,6 +538,24 @@ describe('useLimits', () => {
       // The raw sentinel stays on `remaining` — the wire contract is unchanged.
       expect(result.current.remaining).toBe(-1)
       expect(result.current.withinLimits).toBe(true)
+    })
+
+    it('does not treat an unexpected negative remaining as unlimited', async () => {
+      // The wire contract is exactly `-1`. An unexpected `-2` must
+      // surface as a bug (unlimited: false) rather than silently
+      // reading as unlimited.
+      expect(isUnlimited(-1)).toBe(true)
+      expect(isUnlimited(-2)).toBe(false)
+      expect(isUnlimited(0)).toBe(false)
+
+      const getLimits = vi.fn().mockResolvedValue(limitsResult({ remaining: -2 }))
+      setTransport({ getLimits })
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.unlimited).toBe(false)
+      expect(result.current.remaining).toBe(-2)
     })
 
     it('reports unlimited: false for a finite allowance', async () => {

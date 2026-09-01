@@ -21,7 +21,9 @@ import {
   creditsToDisplayMinorUnits,
   headlineCharges,
   isZeroDecimalCurrency,
+  meterName,
   trialDays,
+  usageRate,
   type PricingOptionLike,
 } from '@solvapay/core'
 import type { BootstrapPayload } from './types'
@@ -202,12 +204,29 @@ function commandsLine(commands: string[]): string {
  */
 function formatPlanPrices(p: PlanShape): string {
   const charges = headlineCharges(p)
-  const priced =
-    charges.length > 0
-      ? charges.map(charge => formatMoney(charge.amountMinor, charge.currency))
-      : [formatMoney(p.price, p.currency)]
+  if (charges.length > 0) {
+    return charges
+      .map(charge => formatMoney(charge.amountMinor, charge.currency))
+      .filter((value): value is string => value != null)
+      .join(' · ')
+  }
 
-  return priced.filter((value): value is string => value != null).join(' · ')
+  // No flat charge: a pay-as-you-go plan, priced per unit or in bands. Its
+  // derived top-level `price` is 0, so falling straight through to it
+  // announced a paid plan as free. Lead with the rate instead, marked as a
+  // floor when the plan prices in bands.
+  const rate = usageRate(p)
+  if (rate && rate.amountMinor > 0) {
+    const money = formatMoney(rate.amountMinor, rate.currency)
+    if (money != null) {
+      const unit = rate.meter ?? meterName(p) ?? 'unit'
+      return `${rate.tiered ? 'from ' : ''}${money} / ${unit}`
+    }
+  }
+
+  return [formatMoney(p.price, p.currency)]
+    .filter((value): value is string => value != null)
+    .join(' · ')
 }
 
 /** A free plan is one that requires no payment — there is no `'free'` plan type. */

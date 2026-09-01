@@ -29,6 +29,8 @@ function makeMockClient(
       creditBalance?: number
       checkoutUrl?: string
       activationRequired?: boolean
+      throttled?: boolean
+      overage?: boolean
     }
   } = {},
 ): MockClient {
@@ -254,6 +256,67 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       // The paywall pre-decrements one unit from `remaining` before
       // handing off to the handler, so the surfaced value is 6 not 7.
       expect((capturedCustomer as { remaining: number }).remaining).toBeGreaterThanOrEqual(0)
+    })
+
+    it('surfaces throttled and overage so a handler can distinguish allow-with-consequences', async () => {
+      const client = makeMockClient({
+        limits: {
+          withinLimits: true,
+          remaining: 0,
+          plan: 'pro',
+          creditBalance: 0,
+          throttled: true,
+          overage: false,
+        },
+      })
+      const solvaPay = makeSolvaPay(client)
+      let captured: { throttled: boolean; overage: boolean } | undefined
+
+      const handler = buildPayableHandler(
+        solvaPay,
+        { product: 'prd_test' },
+        async (_args, ctx: ResponseContext) => {
+          captured = {
+            throttled: ctx.customer.throttled,
+            overage: ctx.customer.overage,
+          }
+          return ctx.respond({ ok: true })
+        },
+      )
+
+      await handler({}, mcpExtra('throttle_user'))
+
+      expect(captured).toEqual({ throttled: true, overage: false })
+    })
+
+    it('surfaces overage on ctx.customer for an allow-with-overage', async () => {
+      const client = makeMockClient({
+        limits: {
+          withinLimits: true,
+          remaining: 0,
+          plan: 'pro',
+          creditBalance: 0,
+          overage: true,
+        },
+      })
+      const solvaPay = makeSolvaPay(client)
+      let captured: { throttled: boolean; overage: boolean } | undefined
+
+      const handler = buildPayableHandler(
+        solvaPay,
+        { product: 'prd_test' },
+        async (_args, ctx: ResponseContext) => {
+          captured = {
+            throttled: ctx.customer.throttled,
+            overage: ctx.customer.overage,
+          }
+          return ctx.respond({ ok: true })
+        },
+      )
+
+      await handler({}, mcpExtra('overage_user'))
+
+      expect(captured).toEqual({ throttled: false, overage: true })
     })
   })
 

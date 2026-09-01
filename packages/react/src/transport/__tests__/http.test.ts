@@ -141,7 +141,8 @@ describe('createHttpTransport — default routes', () => {
 
   it('getLimits projects the wire response down to TransportLimitsResult', async () => {
     // The backend returns the full LimitResponseWithPlan; the transport
-    // strips everything but the projection consumed by useLimits.
+    // keeps the outcome flags useLimits surfaces and still drops
+    // plans / balance / product (those duplicate usePlans / useBalance).
     const fetchFn = makeFetch({
       withinLimits: false,
       remaining: 0,
@@ -149,6 +150,12 @@ describe('createHttpTransport — default routes', () => {
       checkoutUrl: 'https://pay.example.com/co',
       plans: [{ reference: 'pln_pro' }],
       balance: { creditBalance: 0 },
+      product: { name: 'API', reference: 'prd_api' },
+      throttled: true,
+      overage: false,
+      needsTopUp: true,
+      needsUpgrade: false,
+      upgraded: true,
     })
     const transport = createHttpTransport({ fetch: fetchFn as unknown as typeof fetch })
 
@@ -159,7 +166,16 @@ describe('createHttpTransport — default routes', () => {
       remaining: 0,
       meterName: 'requests',
       activationRequired: false,
+      throttled: true,
+      overage: false,
+      needsTopUp: true,
+      needsUpgrade: false,
+      upgraded: true,
     })
+    expect(result).not.toHaveProperty('plans')
+    expect(result).not.toHaveProperty('balance')
+    expect(result).not.toHaveProperty('product')
+    expect(result).not.toHaveProperty('checkoutUrl')
   })
 
   it('getLimits maps an absent meterName on the wire to null', async () => {

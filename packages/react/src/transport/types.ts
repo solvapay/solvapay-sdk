@@ -30,28 +30,12 @@ import type {
   SaveAutoRechargeInput,
   AutoRechargeResponse,
   SaveAutoRechargeResponse,
+  CreditDisplayBlock,
+  AutoRechargeDisplayBlock,
 } from '@solvapay/server'
 import type { TaxBreakdown, TaxIdType } from '@solvapay/core'
 
-export type CreditDisplayBlock = {
-  amountMajor: number
-  currency: string
-  formatted: string
-  exchangeRate: number
-  rateSource: 'parity' | 'db' | 'fallback'
-}
-
-export type AutoRechargeDisplayBlock = {
-  thresholdAmountMajor: number
-  topupAmountMajor: number
-  currency: string
-  formatted: {
-    threshold: string
-    topup: string
-  }
-  exchangeRate: number
-  rateSource: 'parity' | 'db' | 'fallback'
-}
+export type { CreditDisplayBlock, AutoRechargeDisplayBlock }
 
 export interface TransportBalanceResult {
   credits: number
@@ -83,6 +67,16 @@ export interface TransportLimitsResult {
    * auto-allocated.
    */
   activationRequired: boolean
+  /** Access granted under `onExceed: throttle` (legacy plans). */
+  throttled?: boolean
+  /** Access granted and usage past the cap accrues overage. */
+  overage?: boolean
+  /** Access blocked pending a prepaid top-up. */
+  needsTopUp?: boolean
+  /** Access blocked pending an auto-upgrade to the target plan. */
+  needsUpgrade?: boolean
+  /** The customer was auto-upgraded and access was restored. */
+  upgraded?: boolean
 }
 
 /** Re-exported from `@solvapay/server` for transport consumers. */

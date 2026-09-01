@@ -20,9 +20,11 @@ describe('configToAutoRechargeInput', () => {
     enabled: true,
     trigger: { type: 'balance', thresholdAmountMinor: 4500 },
     topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
+    fundingSourceType: 'saved_card',
     status: 'pending_setup',
     failureCount: 0,
     monthlySpendMinor: 0,
+    updatedAt: '2026-01-01T00:00:00.000Z',
   }
 
   it('prefers backend display block when present on config', () => {
@@ -88,9 +90,11 @@ describe('configToForm (DEV-586: reload must not mis-scale or zero when display 
     enabled: true,
     trigger: { type: 'balance', thresholdAmountMinor: 4500 },
     topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
+    fundingSourceType: 'saved_card',
     status: 'active',
     failureCount: 0,
     monthlySpendMinor: 0,
+    updatedAt: '2026-01-01T00:00:00.000Z',
   }
 
   it('prefers the backend display block verbatim when present', () => {
@@ -369,14 +373,9 @@ describe('monthly spend helpers (DEV-635)', () => {
   it('formatMonthlySpendLine renders spent / cap for the current month', () => {
     const line = formatMonthlySpendLine(
       {
-        enabled: true,
-        trigger: { type: 'balance', thresholdAmountMinor: 500 },
-        topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
         maxMonthlySpendMinor: 10_000,
         monthlySpendMinor: 4500,
         monthlySpendPeriod: '2026-07',
-        status: 'active',
-        failureCount: 0,
       },
       'USD',
       july2026,

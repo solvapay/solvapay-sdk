@@ -149,6 +149,64 @@ describe('classifyPaywallState', () => {
     )
     expect(state).toEqual({ kind: 'topup_required' })
   })
+
+  it('prefers authoritative needsTopUp over the zero-balance heuristic', () => {
+    // DEV-824: when the backend sends needsTopUp, that flag is the
+    // source of truth — even if the credit-balance heuristic would
+    // have inferred upgrade (recurring plan, no zero-credit signal).
+    const state = classifyPaywallState(
+      limits({
+        plan: 'pln_rec',
+        plans: [
+          {
+            reference: 'pln_rec',
+            name: 'Pro',
+            type: 'recurring',
+            price: 1000,
+            currency: 'USD',
+            requiresPayment: true,
+          },
+        ],
+        remaining: 5,
+        needsTopUp: true,
+      }),
+    )
+    expect(state).toEqual({ kind: 'topup_required' })
+  })
+
+  it('prefers authoritative needsUpgrade over a usage-based zero-balance heuristic', () => {
+    // DEV-824: needsUpgrade beats the "usage-based + zero credits →
+    // topup" inference so an auto-upgrade deny is not mis-routed to
+    // the topup tool.
+    const state = classifyPaywallState(
+      limits({
+        plan: 'pln_usage',
+        plans: [
+          {
+            reference: 'pln_usage',
+            name: 'Usage',
+            type: 'usage-based',
+            price: 0,
+            currency: 'USD',
+            requiresPayment: true,
+          },
+        ],
+        balance: { creditBalance: 0, creditsPerUnit: 1, currency: 'USD' },
+        needsUpgrade: true,
+      }),
+    )
+    expect(state).toEqual({ kind: 'upgrade_required' })
+  })
+
+  it('still prefers activationRequired over authoritative needsTopUp', () => {
+    const state = classifyPaywallState(
+      limits({
+        activationRequired: true,
+        needsTopUp: true,
+      }),
+    )
+    expect(state).toEqual({ kind: 'activation_required' })
+  })
 })
 
 describe('buildGateMessage', () => {

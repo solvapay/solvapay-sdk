@@ -1213,14 +1213,6 @@ export interface components {
               label?: string
               /** @enum {string} */
               onEnd: 'convert' | 'cancel' | 'downgrade'
-              requireCard?: boolean
-            }
-          | {
-              /** @enum {string} */
-              kind: 'prepaid'
-              label?: string
-              lowBalanceUnits?: number
-              minTopUpMinor?: number
             }
           | {
               /** @enum {string} */
@@ -1428,14 +1420,6 @@ export interface components {
             label?: string
             /** @enum {string} */
             onEnd: 'convert' | 'cancel' | 'downgrade'
-            requireCard?: boolean
-          }
-        | {
-            /** @enum {string} */
-            kind: 'prepaid'
-            label?: string
-            lowBalanceUnits?: number
-            minTopUpMinor?: number
           }
         | {
             /** @enum {string} */
@@ -1537,6 +1521,7 @@ export interface components {
         | 'customer_not_found'
         | 'no_active_purchase'
         | 'plan_not_credit_based'
+        | 'plan_billed_at_period_end'
     }
     CreditDebitSuccessResponse: {
       /**
@@ -1585,7 +1570,7 @@ export interface components {
        * @example parity
        * @enum {string}
        */
-      rateSource: 'parity' | 'db' | 'fallback'
+      rateSource: 'parity' | 'db' | 'fallback' | 'funding'
     }
     CustomerBalanceResponse: {
       /**
@@ -1642,11 +1627,10 @@ export interface components {
     }
     DisableAutoRechargeResponse: {
       /**
-       * Always true on success
+       * Whether auto-recharge was disabled
        * @example true
-       * @enum {number}
        */
-      success: true
+      success: boolean
     }
     GetCustomerSessionResponse: {
       /**
@@ -1877,14 +1861,6 @@ export interface components {
               label?: string
               /** @enum {string} */
               onEnd: 'convert' | 'cancel' | 'downgrade'
-              requireCard?: boolean
-            }
-          | {
-              /** @enum {string} */
-              kind: 'prepaid'
-              label?: string
-              lowBalanceUnits?: number
-              minTopUpMinor?: number
             }
           | {
               /** @enum {string} */
@@ -2486,7 +2462,7 @@ export interface components {
         [key: string]: unknown
       } | null
       /**
-       * Whether the frozen plan meters usage
+       * Whether the frozen plan counts usage (prices per unit, or has a limit). Shipped clients read this to show an allowance.
        * @example true
        */
       isMetered?: boolean
@@ -2827,14 +2803,6 @@ export interface components {
             label?: string
             /** @enum {string} */
             onEnd: 'convert' | 'cancel' | 'downgrade'
-            requireCard?: boolean
-          }
-        | {
-            /** @enum {string} */
-            kind: 'prepaid'
-            label?: string
-            lowBalanceUnits?: number
-            minTopUpMinor?: number
           }
         | {
             /** @enum {string} */

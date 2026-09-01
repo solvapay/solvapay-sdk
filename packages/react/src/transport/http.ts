@@ -265,14 +265,20 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
       if (meterName) params.set('meterName', meterName)
       const url = `${base}?${params.toString()}`
       // The wire format is the full `LimitResponseWithPlan` from
-      // `checkLimitsCore`. The transport contract is the narrower
-      // `TransportLimitsResult`, so project the fields the React
-      // surface actually consumes — the rest stays on the server side.
+      // `checkLimitsCore`. Project the fields `useLimits` consumes,
+      // including the five `onExceed` outcome flags. `plans` /
+      // `balance` / `product` stay off this surface — they duplicate
+      // `usePlans` / `useBalance`.
       const data = await request<{
         withinLimits: boolean
         remaining: number
         meterName?: string | null
         activationRequired?: boolean
+        throttled?: boolean
+        overage?: boolean
+        needsTopUp?: boolean
+        needsUpgrade?: boolean
+        upgraded?: boolean
       }>(config, url, {
         method: 'GET',
         onErrorContext: 'getLimits',
@@ -283,6 +289,11 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         remaining: data.remaining,
         meterName: data.meterName ?? null,
         activationRequired: data.activationRequired ?? false,
+        throttled: data.throttled,
+        overage: data.overage,
+        needsTopUp: data.needsTopUp,
+        needsUpgrade: data.needsUpgrade,
+        upgraded: data.upgraded,
       }
     },
   }

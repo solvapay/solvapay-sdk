@@ -523,22 +523,35 @@ body {
   font-size: 13px;
 }
 
-.solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-subtotal],
-.solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-tax],
-.solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-total],
-.solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-subtotal],
-.solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-tax],
-.solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-total] {
+.solvapay-mcp-tax-summary .solvapay-tax-summary-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.solvapay-mcp-tax-summary .solvapay-tax-summary-row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
 }
 
-.solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-total],
-.solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-total] {
+.solvapay-mcp-tax-summary .solvapay-tax-summary-row dt,
+.solvapay-mcp-tax-summary .solvapay-tax-summary-row dd {
+  margin: 0;
+}
+
+.solvapay-mcp-tax-summary .solvapay-tax-summary-row--total {
   font-weight: 600;
   padding-top: 6px;
   border-top: 1px solid var(--color-border-secondary, #e2e8f0);
+}
+
+.solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-tax-note],
+.solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-tax-note] {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, #475569);
 }
 
 /* Pay-with-card step header: amount being purchased is the hero, the
