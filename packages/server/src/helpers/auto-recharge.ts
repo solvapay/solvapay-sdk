@@ -3,6 +3,7 @@ import type {
   AutoRechargeResponse,
   SaveAutoRechargeResponse,
 } from '../types/client'
+import type { components } from '../types/generated'
 import type { SolvaPay } from '../factory'
 import type { ErrorResult } from './types'
 import { createSolvaPay } from '../factory'
@@ -68,7 +69,7 @@ export async function saveAutoRechargeCore(
 export async function disableAutoRechargeCore(
   request: Request,
   options: HelperOptions = {},
-): Promise<{ success: true } | ErrorResult> {
+): Promise<components['schemas']['DisableAutoRechargeResponse'] | ErrorResult> {
   try {
     const customerRef = await resolveCustomerRef(request, options)
     if (isErrorResult(customerRef)) return customerRef

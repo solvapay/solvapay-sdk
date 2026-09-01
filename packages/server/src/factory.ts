@@ -25,7 +25,10 @@ import type {
   TrackUsageBulkResponse,
   AssignCreditsRequest,
   AssignCreditsResponse,
+  AttachBusinessDetailsParams,
+  AttachBusinessDetailsResult,
 } from './types'
+import type { components } from './types/generated'
 import { createSolvaPayClient } from './client'
 import { PaywallError, SolvaPayPaywall, paywallErrorToClientPayload } from './paywall'
 import { HttpAdapter, NextAdapter, McpAdapter, createAdapterHandler } from './adapters'
@@ -441,18 +444,9 @@ export interface SolvaPay {
    * // Use intent.clientSecret on the client to confirm payment
    * ```
    */
-  createPaymentIntent(params: {
-    productRef: string
-    planRef: string
-    customerRef: string
-    currency?: string
-    idempotencyKey?: string
-  }): Promise<{
-    processorPaymentId: string
-    clientSecret: string
-    publishableKey: string
-    accountId?: string
-  }>
+  createPaymentIntent(
+    params: Parameters<NonNullable<SolvaPayClient['createPaymentIntent']>>[0],
+  ): Promise<components['schemas']['SdkPaymentIntentResponse']>
 
   /**
    * Create a payment intent for a credit top-up.
@@ -461,19 +455,9 @@ export interface SolvaPay {
    * Credits are recorded via webhook after payment confirmation — no
    * `processPaymentIntent` call is needed.
    */
-  createTopupPaymentIntent(params: {
-    customerRef: string
-    amount: number
-    currency: string
-    description?: string
-    idempotencyKey?: string
-    autoRecharge?: import('./types/client').AutoRechargeInput
-  }): Promise<{
-    processorPaymentId: string
-    clientSecret: string
-    publishableKey: string
-    accountId?: string
-  }>
+  createTopupPaymentIntent(
+    params: Parameters<NonNullable<SolvaPayClient['createTopupPaymentIntent']>>[0],
+  ): Promise<components['schemas']['SdkPaymentIntentResponse']>
 
   /**
    * Process a payment intent after client-side payment confirmation.
@@ -514,15 +498,7 @@ export interface SolvaPay {
    * Attach business purchase details to a payment intent
    * and retrieve the computed tax breakdown.
    */
-  attachBusinessDetails(params: {
-    paymentIntentId: string
-    customerRef?: string
-    isBusiness: boolean
-    businessName?: string
-    country?: string
-    taxId?: string
-    taxIdType?: import('@solvapay/core').TaxIdType
-  }): Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
+  attachBusinessDetails(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
 
   /**
    * Check if customer is within usage limits for a product.
@@ -668,13 +644,7 @@ export interface SolvaPay {
    */
   getCustomerBalance(params: {
     customerRef: string
-  }): Promise<{
-    customerRef: string
-    credits: number
-    displayCurrency: string
-    creditsPerMinorUnit: number
-    displayExchangeRate: number
-  }>
+  }): Promise<components['schemas']['CustomerBalanceResponse']>
 
   /**
    * Create a hosted checkout session for a customer.
@@ -963,9 +933,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
 
     attachBusinessDetails(params) {
       if (!apiClient.attachBusinessDetails) {
-        throw new SolvaPayError(
-          'attachBusinessDetails is not available on this API client',
-        )
+        throw new SolvaPayError('attachBusinessDetails is not available on this API client')
       }
       return apiClient.attachBusinessDetails(params)
     },

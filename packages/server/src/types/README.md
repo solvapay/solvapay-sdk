@@ -84,3 +84,5 @@ The `types.ts` file provides mapped types that bridge differences between the ge
 
 - `LimitResponseWithPlan` - Extends `LimitResponse` with a required `plan` field
 - `CustomerResponseMapped` - Maps backend's `reference` field to `customerRef` for consistency
+- `AutoRechargeConfig` - `AutoRechargeConfigDto` plus an optional SDK-merged `display` block
+- `ProcessPaymentResult` - Hand-mapped because openapi-typescript rewrites the `oneOf` discriminator `status` values to schema names
