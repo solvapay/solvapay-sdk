@@ -373,14 +373,9 @@ describe('monthly spend helpers (DEV-635)', () => {
   it('formatMonthlySpendLine renders spent / cap for the current month', () => {
     const line = formatMonthlySpendLine(
       {
-        enabled: true,
-        trigger: { type: 'balance', thresholdAmountMinor: 500 },
-        topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
         maxMonthlySpendMinor: 10_000,
         monthlySpendMinor: 4500,
         monthlySpendPeriod: '2026-07',
-        status: 'active',
-        failureCount: 0,
       },
       'USD',
       july2026,

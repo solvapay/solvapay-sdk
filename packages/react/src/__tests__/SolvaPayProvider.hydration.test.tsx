@@ -54,6 +54,13 @@ function makeInitial(
       displayCurrency: 'USD',
       creditsPerMinorUnit: 1,
       displayExchangeRate: 1,
+      display: {
+        amountMajor: 5,
+        currency: 'USD',
+        exchangeRate: 1,
+        formatted: '$5.00',
+        rateSource: 'parity',
+      },
     },
     usage: null,
     merchant: { displayName: 'Acme', legalName: 'Acme Inc' },
@@ -142,6 +149,13 @@ describe('SolvaPayProvider hydration from config.initial', () => {
         displayCurrency: 'USD',
         creditsPerMinorUnit: 1,
         displayExchangeRate: 1,
+        display: {
+          amountMajor: 9.99,
+          currency: 'USD',
+          exchangeRate: 1,
+          formatted: '$9.99',
+          rateSource: 'parity',
+        },
       },
     })
     const refreshInitial = vi.fn().mockResolvedValue(refreshed)
