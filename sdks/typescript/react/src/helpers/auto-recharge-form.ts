@@ -129,7 +129,10 @@ export function isMonthlySpendCapReached(
 }
 
 export function formatMonthlySpendLine(
-  config: AutoRechargeConfig,
+  config: Pick<
+    AutoRechargeConfig,
+    'maxMonthlySpendMinor' | 'monthlySpendMinor' | 'monthlySpendPeriod'
+  >,
   currency: string,
   now: Date = new Date(),
 ): string | null {

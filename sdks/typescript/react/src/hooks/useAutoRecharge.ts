@@ -23,7 +23,7 @@ export type UseAutoRechargeReturn = {
   error: Error | null
   refresh: (force?: boolean) => Promise<void>
   save: (input: SaveAutoRechargeInput) => Promise<SaveAutoRechargeResponse>
-  disable: () => Promise<{ success: true }>
+  disable: () => Promise<{ success: boolean }>
 }
 
 /** @internal Exported only for tests. */

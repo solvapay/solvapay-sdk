@@ -30,28 +30,12 @@ import type {
   SaveAutoRechargeInput,
   AutoRechargeResponse,
   SaveAutoRechargeResponse,
+  CreditDisplayBlock,
+  AutoRechargeDisplayBlock,
 } from '@solvapay/server'
 import type { TaxBreakdown, TaxIdType } from '@solvapay/core'
 
-export type CreditDisplayBlock = {
-  amountMajor: number
-  currency: string
-  formatted: string
-  exchangeRate: number
-  rateSource: 'parity' | 'db' | 'fallback'
-}
-
-export type AutoRechargeDisplayBlock = {
-  thresholdAmountMajor: number
-  topupAmountMajor: number
-  currency: string
-  formatted: {
-    threshold: string
-    topup: string
-  }
-  exchangeRate: number
-  rateSource: 'parity' | 'db' | 'fallback'
-}
+export type { CreditDisplayBlock, AutoRechargeDisplayBlock }
 
 export interface TransportBalanceResult {
   credits: number

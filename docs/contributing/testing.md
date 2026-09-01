@@ -171,6 +171,49 @@ pnpm test:contract
 
 See [`sdk-codegen.md`](./sdk-codegen.md) for the full regenerate workflow.
 
+## Real-backend integration (`@solvapay/server`)
+
+These suites hit a live platform. Point them at the provider-app proxy on
+`:3010` — not identity-service on `:3001`.
+
+```bash
+# sdks/typescript/server/.env
+USE_REAL_BACKEND=true
+SOLVAPAY_SECRET_KEY=sk_sandbox_...
+SOLVAPAY_API_BASE_URL=http://localhost:3010
+STRIPE_TEST_SECRET_KEY=sk_test_...   # payment suite only
+```
+
+```bash
+pnpm --filter @solvapay/server test:integration
+pnpm --filter @solvapay/server test:integration:payment
+```
+
+### Stripe webhook E2E
+
+`ENABLE_WEBHOOK_TESTS=true` turns on the payment-suite case that confirms a
+test card, waits for the Stripe webhook to book credits, then exercises a
+protected handler.
+
+**Preferred (ngrok, no Stripe CLI):** run the platform with `ngrok.yml` so
+Stripe delivers to `https://api.<subdomain>.ngrok.app/v1/webhooks/stripe`.
+Do not also run `stripe listen` — that duplicates every event.
+
+```bash
+# from ../platform, with ngrok.yml configured
+pnpm run dev
+
+# from sdks/typescript/server
+ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
+```
+
+**Fallback (no tunnels):** forward with the Stripe CLI to payment-service.
+
+```bash
+stripe listen --forward-to localhost:3003/v1/webhooks/stripe
+ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
+```
+
 ## CI expectations
 
 Before opening a PR, make sure:

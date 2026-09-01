@@ -16,9 +16,11 @@ const config: AutoRechargeConfig = {
   enabled: true,
   trigger: { type: 'balance', thresholdAmountMinor: 500 },
   topup: { mode: 'fixed', amountMinor: 1000, currency: 'USD' },
+  fundingSourceType: 'saved_card',
   status: 'active',
   failureCount: 0,
   monthlySpendMinor: 0,
+  updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
 const autoRechargeMocks = vi.hoisted(

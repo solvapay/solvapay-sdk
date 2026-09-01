@@ -185,6 +185,8 @@ export { WEBHOOK_DUPLICATE_EVENT_CODE } from './webhook-replay'
 export type {
   PurchaseInfo,
   OneTimePurchaseInfo,
+  AttachBusinessDetailsParams,
+  AttachBusinessDetailsResult,
   ProcessPaymentResult,
   TopupProcessResult,
   CustomerResponseMapped,

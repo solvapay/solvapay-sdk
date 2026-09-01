@@ -22,9 +22,9 @@ import {
  * ## Prerequisites
  *
  * 1. **Running Backend with Stripe Integration**:
- *    - Backend must be running locally or in test environment
- *    - Stripe webhook endpoint configured at `/webhooks/stripe`
+ *    - Local platform stack (provider-app proxy on `:3010`)
  *    - Stripe test mode keys configured
+ *    - Webhook delivery to `/v1/webhooks/stripe` (see below)
  *
  * 2. **Test Provider with API Key**:
  *    - Valid SolvaPay provider account
@@ -34,21 +34,29 @@ import {
  *    - Stripe test mode secret key
  *    - Webhook secret for signature verification
  *
- * ## Running Tests
+ * ## Webhook delivery (pick one)
+ *
+ * Preferred when the platform is running with ngrok (`ngrok.yml` present):
+ * Stripe delivers events to `https://api.<subdomain>.ngrok.app/v1/webhooks/stripe`.
+ * Do **not** also run `stripe listen` — that duplicates every event.
+ *
+ * Fallback when tunnels are off: forward with the Stripe CLI.
  *
  * ```bash
  * # Set required environment variables
  * export USE_REAL_BACKEND=true
  * export SOLVAPAY_SECRET_KEY="sp_sandbox_your_key_here"
- * export SOLVAPAY_API_BASE_URL="http://localhost:3001"
+ * export SOLVAPAY_API_BASE_URL="http://localhost:3010"
  * export STRIPE_TEST_SECRET_KEY="sk_test_your_key_here"
- * export STRIPE_WEBHOOK_SECRET="whsec_your_secret_here"
  *
- * # Run payment integration tests (without webhook tests)
+ * # Payment tests without the E2E webhook case
  * pnpm test:integration:payment
  *
- * # Run with webhook tests enabled (requires Stripe CLI forwarding)
- * stripe listen --forward-to localhost:3001/webhooks/stripe
+ * # E2E webhook tests — ngrok path (no stripe listen)
+ * ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
+ *
+ * # E2E webhook tests — Stripe CLI fallback (no ngrok)
+ * stripe listen --forward-to localhost:3003/v1/webhooks/stripe
  * ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
  * ```
  *
@@ -56,10 +64,10 @@ import {
  *
  * - `USE_REAL_BACKEND=true` - Enable integration tests
  * - `SOLVAPAY_SECRET_KEY` - SolvaPay secret key
- * - `SOLVAPAY_API_BASE_URL` - Backend URL (required when USE_REAL_BACKEND=true)
+ * - `SOLVAPAY_API_BASE_URL` - Backend URL (local proxy: `http://localhost:3010`)
  * - `STRIPE_TEST_SECRET_KEY` - Stripe test mode secret key
  * - `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret (optional)
- * - `ENABLE_WEBHOOK_TESTS=true` - Enable E2E webhook tests (requires Stripe CLI)
+ * - `ENABLE_WEBHOOK_TESTS=true` - Enable E2E webhook tests (ngrok or Stripe CLI)
  */
 
 function resolveLiveApiBaseUrl(): string {
@@ -75,7 +83,7 @@ const SOLVAPAY_SECRET_KEY = process.env.SOLVAPAY_SECRET_KEY
 const SOLVAPAY_API_BASE_URL = resolveLiveApiBaseUrl()
 const STRIPE_TEST_SECRET_KEY = process.env.STRIPE_TEST_SECRET_KEY
 const _STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
-// Enable webhook tests only when explicitly requested (requires Stripe CLI webhook forwarding)
+// Enable webhook tests only when explicitly requested (ngrok endpoint or Stripe CLI)
 const ENABLE_WEBHOOK_TESTS = process.env.ENABLE_WEBHOOK_TESTS === 'true'
 
 // Skip all tests if not configured for payment integration
@@ -127,7 +135,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       console.log('\n⚠️  Skipping payment integration tests: Missing required configuration')
       console.log('   Required: USE_REAL_BACKEND=true, SOLVAPAY_SECRET_KEY, STRIPE_TEST_SECRET_KEY')
       console.log(
-        '   See packages/server/README.md "Payment Integration Tests" for setup instructions\n',
+        '   See sdks/typescript/server/README.md "Payment Integration Tests" for setup instructions\n',
       )
       return
     }
@@ -338,7 +346,7 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       console.error('   4. Ensure at least one product and plan exist')
       console.error('   5. Ensure provider has Stripe Connect account configured')
       console.error('   6. Check that Stripe webhooks are configured')
-      console.error('   7. See packages/server/README.md "Payment Integration Tests"')
+      console.error('   7. See sdks/typescript/server/README.md "Payment Integration Tests"')
       console.error()
       throw error
     }
@@ -609,14 +617,13 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
 
   describe('E2E Flow - Payment → Webhook → Credits → Usage', () => {
     it('should complete full cycle: payment intent → confirmation → webhook processing → credit grant → protected function access', async () => {
-      // NOTE: This test requires Stripe webhooks to be properly forwarded to the backend.
-      // To run this test:
-      // 1. Ensure backend is running at localhost:3001
-      // 2. Run: stripe listen --forward-to localhost:3001/webhooks/stripe
-      // 3. Set ENABLE_WEBHOOK_TESTS=true
-      // 4. Run the test suite: ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
+      // NOTE: This test requires Stripe to deliver webhooks to the local platform.
+      // Preferred: platform `pnpm run dev` with ngrok.yml so Stripe hits
+      // `https://api.<subdomain>.ngrok.app/v1/webhooks/stripe` (no stripe listen).
+      // Fallback: `stripe listen --forward-to localhost:3003/v1/webhooks/stripe`.
+      // Then: ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
       //
-      // Without webhook forwarding, the test will timeout waiting for credits to be granted.
+      // Without webhook delivery, the test will timeout waiting for credits.
 
       if ((global as any).__SKIP_PAYMENT_TESTS__) {
         console.log('⏭️  Skipping: Stripe not configured')
@@ -628,15 +635,14 @@ describePaymentIntegration('Payment Integration - End-to-End Stripe Checkout Flo
       }
 
       if (!ENABLE_WEBHOOK_TESTS) {
-        console.log('\n⏭️  Skipping E2E webhook test (webhook forwarding required)')
-        console.log('   This test requires Stripe CLI webhook forwarding.')
-        console.log('   To enable this test:')
-        console.log('   1. Start your backend: cd backend && pnpm dev')
+        console.log('\n⏭️  Skipping E2E webhook test (webhook delivery required)')
+        console.log('   Stripe must deliver events to the local platform.')
+        console.log('   Preferred: platform `pnpm run dev` with ngrok.yml (no stripe listen).')
         console.log(
-          '   2. Forward webhooks: stripe listen --forward-to localhost:3001/webhooks/stripe',
+          '   Fallback: stripe listen --forward-to localhost:3003/v1/webhooks/stripe',
         )
-        console.log('   3. Run with: ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment')
-        console.log('   See packages/server/README.md for details.\n')
+        console.log('   Then: ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment')
+        console.log('   See docs/contributing/testing.md.\n')
         return
       }
 

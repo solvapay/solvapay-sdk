@@ -5,7 +5,6 @@
  */
 
 import type { components, operations } from './generated'
-import type { BusinessDetailsInput, TaxBreakdown } from '@solvapay/core'
 
 /** SDK purchase row. Generated from OpenAPI `SdkPurchaseResponse`, plus
  * fields the wire sends that the local snapshot DTO has not listed yet. */
@@ -16,12 +15,9 @@ export type PurchaseInfo = Omit<components['schemas']['SdkPurchaseResponse'], 'p
 
 export type AttachBusinessDetailsParams = {
   paymentIntentId: string
-  customerRef?: string
-} & BusinessDetailsInput
+} & components['schemas']['BusinessDetailsDto']
 
-export type AttachBusinessDetailsResult = {
-  taxBreakdown: TaxBreakdown
-}
+export type AttachBusinessDetailsResult = components['schemas']['AttachBusinessDetailsResponse']
 
 export type UsageMeterType = 'requests' | 'tokens'
 export type CheckLimitsRequest = components['schemas']['CheckLimitRequest']
@@ -54,19 +50,7 @@ export type CustomerResponseMapped = {
   purchases?: PurchaseInfo[]
 }
 
-/**
- * One-time purchase information returned from payment processing
- */
-export interface OneTimePurchaseInfo {
-  reference: string
-  customerRef: string
-  productRef?: string
-  amount: number
-  currency: string
-  creditsAdded?: number
-  completedAt: string
-  createdAt: string
-}
+export type OneTimePurchaseInfo = components['schemas']['OneTimePurchaseInfo']
 
 /**
  * Result from processing a payment intent.
@@ -146,83 +130,38 @@ export type ActivatePlanResult = components['schemas']['ActivatePlanResponseDto'
 export type PaymentMethodInfo =
   operations['PaymentMethodSdkController_getPaymentMethod']['responses']['200']['content']['application/json']
 
-export type AutoRechargeStatus = 'active' | 'disabled' | 'failed' | 'pending_setup'
+export type AutoRechargeStatus = components['schemas']['AutoRechargeConfigDto']['status']
 
-export type AutoRechargeConfig = {
-  enabled: boolean
-  trigger: { type: 'balance'; thresholdAmountMinor: number }
-  topup: { mode: 'fixed'; amountMinor: number; currency: string }
-  fundingSourceType?: 'saved_card' | 'tokenized_card'
-  paymentMethodId?: string
-  status: AutoRechargeStatus
-  failureCount: number
-  maxMonthlySpendMinor?: number
-  monthlySpendMinor: number
-  monthlySpendPeriod?: string
-  lastChargeAt?: string
-  updatedAt?: string
-  /** Backend-computed display values — render verbatim; do not derive from trigger fields. */
-  display?: AutoRechargeDisplayBlock
+/**
+ * Stored auto-recharge config. `display` is an SDK-side merge of the
+ * sibling `AutoRechargeGetResponse.display` block so consumers can read
+ * formatted amounts off the config object.
+ */
+export type AutoRechargeConfig = components['schemas']['AutoRechargeConfigDto'] & {
+  display?: components['schemas']['AutoRechargeDisplayDto']
 }
 
-export type AutoRechargeDisplayBlock = {
-  thresholdAmountMajor: number
-  topupAmountMajor: number
-  currency: string
-  formatted: {
-    threshold: string
-    topup: string
-  }
-  exchangeRate: number
-  rateSource: 'parity' | 'db' | 'fallback'
-}
+export type AutoRechargeDisplayBlock = components['schemas']['AutoRechargeDisplayDto']
 
-export type CreditDisplayBlock = {
-  amountMajor: number
-  currency: string
-  formatted: string
-  exchangeRate: number
-  rateSource: 'parity' | 'db' | 'fallback'
-}
+export type CreditDisplayBlock = components['schemas']['CustomerBalanceDisplayDto']
 
 /** GET /v1/sdk/customers/:customerRef/credits — SDK balance projection. */
-export type GetCustomerBalanceResult = {
-  customerRef: string
-  credits: number
-  displayCurrency: string
-  creditsPerMinorUnit: number
-  displayExchangeRate: number
-  display?: CreditDisplayBlock
-  displayMinorUnits?: number
-  minorUnitsPerMajor?: number
-}
+export type GetCustomerBalanceResult = components['schemas']['CustomerBalanceResponse']
 
-export type AutoRechargeInput = {
-  enabled: boolean
-  triggerType: 'balance'
-  thresholdAmountMajor?: number
-  topupAmountMajor?: number
-  maxMonthlySpendMajor?: number
-  currency: string
-}
+export type AutoRechargeInput = Omit<
+  components['schemas']['PutAutoRechargeSdkDto'],
+  'customerRef' | 'customerEmail' | 'customerName' | 'deferSetupIntent'
+>
 
 /** PUT /sdk/auto-recharge — input plus request-only flags. */
-export type SaveAutoRechargeInput = AutoRechargeInput & {
-  deferSetupIntent?: boolean
-}
+export type SaveAutoRechargeInput = Omit<
+  components['schemas']['PutAutoRechargeSdkDto'],
+  'customerRef' | 'customerEmail' | 'customerName'
+>
 
-export type AutoRechargeResponse = {
-  config: AutoRechargeConfig | null
-  display?: AutoRechargeDisplayBlock
-}
+export type AutoRechargeResponse = components['schemas']['AutoRechargeGetResponse']
 
-export type SaveAutoRechargeResponse = {
-  config: AutoRechargeConfig
-  display?: AutoRechargeDisplayBlock
-  setupClientSecret?: string
-  publishableKey?: string
-  stripeAccountId?: string
-}
+export type SaveAutoRechargeResponse = components['schemas']['SaveAutoRechargeResponse']
 
 /**
  * SDK-facing merchant identity (source: GET /v1/sdk/merchant).
@@ -291,33 +230,11 @@ export type McpToolPlanMappingInput = NonNullable<
   components['schemas']['ConfigureMcpPlansDto']['toolMapping']
 >[number]
 
-export interface McpBootstrapResponse {
-  product: components['schemas']['SdkProductResponse']
-  mcpServer: {
-    reference?: string
-    subdomain?: string
-    mcpProxyUrl?: string
-    url: string
-    defaultPlanRef?: string
-  }
-  planMap: Record<string, { reference: string; name?: string }>
-  toolsAutoMapped?: boolean
-  autoMappedTools?: Array<{ name: string; description?: string }>
-}
+export type McpBootstrapResponse = components['schemas']['McpBootstrapResult']
 
 export type ConfigureMcpPlansRequest = components['schemas']['ConfigureMcpPlansDto']
 
-export interface ConfigureMcpPlansResponse {
-  product: components['schemas']['SdkProductResponse']
-  mcpServer: {
-    reference?: string
-    subdomain?: string
-    mcpProxyUrl?: string
-    url: string
-    defaultPlanRef?: string
-  }
-  planMap: Record<string, { reference: string; name?: string }>
-}
+export type ConfigureMcpPlansResponse = components['schemas']['ConfigureMcpPlansResult']
 
 /**
  * SolvaPay API Client Interface
@@ -349,13 +266,7 @@ export interface SolvaPayClient {
    */
   updateCustomer?(
     customerRef: string,
-    params: {
-      email?: string
-      name?: string
-      telephone?: string
-      metadata?: Record<string, unknown>
-      externalRef?: string
-    },
+    params: components['schemas']['UpdateCustomerRequest'],
   ): Promise<{ customerRef: string }>
 
   // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}
@@ -390,19 +301,12 @@ export interface SolvaPayClient {
   // Management methods
 
   // GET: /v1/sdk/products
-  listProducts?(): Promise<
-    Array<{
-      reference: string
-      name: string
-      description?: string
-    }>
-  >
+  listProducts?(): Promise<components['schemas']['SdkProductResponse'][]>
 
   // POST: /v1/sdk/products
-  createProduct?(params: components['schemas']['CreateProductRequest']): Promise<{
-    reference: string
-    name: string
-  }>
+  createProduct?(
+    params: components['schemas']['CreateProductRequest'],
+  ): Promise<components['schemas']['SdkProductResponse']>
 
   // POST: /v1/sdk/products/mcp/bootstrap
   bootstrapMcpProduct?(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
@@ -425,11 +329,8 @@ export interface SolvaPayClient {
   // POST: /v1/sdk/products/{productRef}/clone
   cloneProduct?(
     productRef: string,
-    overrides?: { name?: string },
-  ): Promise<{
-    reference: string
-    name: string
-  }>
+    overrides?: components['schemas']['CloneProductDto'],
+  ): Promise<components['schemas']['SdkProductResponse']>
 
   // GET: /v1/sdk/products/{productRef}/plans
   listPlans?(productRef: string): Promise<components['schemas']['Plan'][]>
@@ -450,43 +351,32 @@ export interface SolvaPayClient {
   deletePlan?(productRef: string, planRef: string): Promise<void>
 
   // POST: /v1/sdk/payment-intents
-  createPaymentIntent?(params: {
-    productRef: string
-    planRef: string
-    customerRef: string
-    currency?: string
-    idempotencyKey?: string
-  }): Promise<{
-    processorPaymentId: string
-    clientSecret: string
-    publishableKey: string
-    accountId?: string
-    /** USD ledger amount in minor units. */
-    amount: number
-    /** Presentment amount in minor units (matches `currency`). */
-    originalAmount?: number
-    currency?: string
-    exchangeRate?: number
-    status?: string
-  }>
+  createPaymentIntent?(
+    params: Omit<components['schemas']['CreatePaymentIntentDto'], 'purpose'> & {
+      purpose?: components['schemas']['CreatePaymentIntentDto']['purpose']
+      idempotencyKey?: string
+    },
+  ): Promise<components['schemas']['SdkPaymentIntentResponse']>
 
   // POST: /v1/sdk/payment-intents (purpose: credit_topup)
-  createTopupPaymentIntent?(params: {
-    customerRef: string
-    amount: number
-    currency: string
-    description?: string
-    idempotencyKey?: string
-    autoRecharge?: AutoRechargeInput
-  }): Promise<{
-    processorPaymentId: string
-    clientSecret: string
-    publishableKey: string
-    accountId?: string
-  }>
+  createTopupPaymentIntent?(
+    params: Pick<
+      components['schemas']['CreatePaymentIntentDto'],
+      'customerRef' | 'amount' | 'currency' | 'description' | 'autoRecharge'
+    > & {
+      currency: string
+      amount: number
+      idempotencyKey?: string
+      autoRecharge?: AutoRechargeInput
+    },
+  ): Promise<components['schemas']['SdkPaymentIntentResponse']>
 
   // POST: /v1/sdk/purchases/{purchaseRef}/cancel
-  cancelPurchase?(params: { purchaseRef: string; reason?: string }): Promise<PurchaseInfo>
+  cancelPurchase?(
+    params: components['schemas']['CancelPurchaseRequest'] & {
+      purchaseRef: string
+    },
+  ): Promise<PurchaseInfo>
 
   // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
   reactivatePurchase?(params: { purchaseRef: string }): Promise<PurchaseInfo>
@@ -495,12 +385,11 @@ export interface SolvaPayClient {
   // `productRef` is optional because credit-topup PIs (no product) are
   // processed through the same route — the backend controller ignores
   // the body entirely and drives off the PI id + authenticated provider.
-  processPaymentIntent?(params: {
-    paymentIntentId: string
-    productRef?: string
-    customerRef: string
-    planRef?: string
-  }): Promise<ProcessPaymentResult>
+  processPaymentIntent?(
+    params: components['schemas']['ProcessPaymentIntentDto'] & {
+      paymentIntentId: string
+    },
+  ): Promise<ProcessPaymentResult>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
   attachBusinessDetails?(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
@@ -539,7 +428,9 @@ export interface SolvaPayClient {
   ): Promise<SaveAutoRechargeResponse>
 
   // DELETE: /v1/sdk/auto-recharge?customerRef=...
-  disableAutoRecharge?(params: { customerRef: string }): Promise<{ success: true }>
+  disableAutoRecharge?(params: {
+    customerRef: string
+  }): Promise<components['schemas']['DisableAutoRechargeResponse']>
 
   /** Fan out merchant, product, plans, and customer snapshots for the MCP widget. */
   mcpBootstrap?(params: unknown): Promise<unknown>

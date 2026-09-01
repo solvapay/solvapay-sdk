@@ -12,18 +12,9 @@ import { createSolvaPay } from '../factory'
 import { handleRouteError, isErrorResult } from './error'
 import { getAuthenticatedUserCore } from './auth'
 
-import type { CreditDisplayBlock } from '../types/client'
+import type { components } from '../types/generated'
 
-export type CustomerBalanceResult = {
-  customerRef: string
-  credits: number
-  displayCurrency: string
-  creditsPerMinorUnit: number
-  displayExchangeRate: number
-  display?: CreditDisplayBlock
-  displayMinorUnits?: number
-  minorUnitsPerMajor?: number
-}
+export type CustomerBalanceResult = components['schemas']['CustomerBalanceResponse']
 
 /**
  * Sync customer with SolvaPay backend (ensure customer exists).
