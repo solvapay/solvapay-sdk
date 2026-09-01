@@ -27,7 +27,7 @@
     "remark-gfm": "4.0.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20251124.0",
+    "@cloudflare/workers-types": "^5.20260829.1",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

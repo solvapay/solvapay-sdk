@@ -13,7 +13,7 @@
     "serve:local": "wrangler dev"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20251124.0",
+    "@cloudflare/workers-types": "^5.20260829.1",
     "@modelcontextprotocol/ext-apps": "^1.7.1",
     "@modelcontextprotocol/core": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
