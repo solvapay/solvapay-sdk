@@ -174,6 +174,8 @@ export type {
 export type {
   PurchaseInfo,
   OneTimePurchaseInfo,
+  AttachBusinessDetailsParams,
+  AttachBusinessDetailsResult,
   ProcessPaymentResult,
   TopupProcessResult,
   CustomerResponseMapped,

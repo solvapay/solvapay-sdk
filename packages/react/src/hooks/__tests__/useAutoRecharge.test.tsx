@@ -20,6 +20,7 @@ const config: AutoRechargeConfig = {
   status: 'active',
   failureCount: 0,
   monthlySpendMinor: 0,
+  updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
 function makeFetch(payloads: unknown[]) {

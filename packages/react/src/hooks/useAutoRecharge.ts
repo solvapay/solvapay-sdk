@@ -7,7 +7,13 @@ import type {
 import { useSolvaPay } from './useSolvaPay'
 import { createHttpTransport } from '../transport/http'
 import type { SolvaPayConfig } from '../types'
-import { autoRechargeCache, autoRechargeCacheKeyFor, CACHE_DURATION, subscribeAutoRecharge, writeAutoRechargeCache } from './autoRechargeCache'
+import {
+  autoRechargeCache,
+  autoRechargeCacheKeyFor,
+  CACHE_DURATION,
+  subscribeAutoRecharge,
+  writeAutoRechargeCache,
+} from './autoRechargeCache'
 
 export type UseAutoRechargeReturn = {
   config: AutoRechargeConfig | null
@@ -17,7 +23,7 @@ export type UseAutoRechargeReturn = {
   error: Error | null
   refresh: (force?: boolean) => Promise<void>
   save: (input: SaveAutoRechargeInput) => Promise<SaveAutoRechargeResponse>
-  disable: () => Promise<{ success: true }>
+  disable: () => Promise<{ success: boolean }>
 }
 
 /** @internal Exported only for tests. */
