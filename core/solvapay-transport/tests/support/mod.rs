@@ -41,8 +41,8 @@ pub const GROUP_A_FNS: &[&str] = &[
     "getPlatformConfig",
 ];
 
-/// Expected inventory: 28 wire fixtures + `get-customer-missing-params`.
-pub const GROUP_A_FIXTURE_COUNT: usize = 29;
+/// Expected inventory: 32 wire fixtures + `get-customer-missing-params`.
+pub const GROUP_A_FIXTURE_COUNT: usize = 33;
 
 /// Group B `input.fn` names covered by step 23.
 pub const GROUP_B_FNS: &[&str] = &[
@@ -53,8 +53,8 @@ pub const GROUP_B_FNS: &[&str] = &[
     "activatePlan",
 ];
 
-/// Expected inventory: 19 wire fixtures (all Group B fixtures have wire).
-pub const GROUP_B_FIXTURE_COUNT: usize = 19;
+/// Expected inventory: 21 wire fixtures (all Group B fixtures have wire).
+pub const GROUP_B_FIXTURE_COUNT: usize = 21;
 
 /// Group C `input.fn` names covered by step 24.
 pub const GROUP_C_FNS: &[&str] = &[
@@ -81,8 +81,8 @@ pub const GROUP_C_FNS: &[&str] = &[
     "disableAutoRecharge",
 ];
 
-/// Expected inventory: 56 wire fixtures (all Group C fixtures have wire).
-pub const GROUP_C_FIXTURE_COUNT: usize = 56;
+/// Expected inventory: 67 wire fixtures (all Group C fixtures have wire).
+pub const GROUP_C_FIXTURE_COUNT: usize = 67;
 
 pub fn is_group_a_fixture(fixture: &Fixture) -> bool {
     GROUP_A_FNS.contains(&fixture.input.fn_name.as_str())

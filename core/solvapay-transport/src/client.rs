@@ -154,9 +154,8 @@ impl SolvaPayClient {
             query.insert("email".to_owned(), email.to_owned());
             ("/v1/sdk/customers".to_owned(), query, true)
         } else if let Some(reference) = customer_ref {
-            // TS interpolates customerRef without encodeURIComponent.
             (
-                format!("/v1/sdk/customers/{reference}"),
+                format!("/v1/sdk/customers/{}", encode_path_segment(reference)),
                 BTreeMap::new(),
                 false,
             )
@@ -223,7 +222,7 @@ impl SolvaPayClient {
 
     /// `GET /v1/sdk/customers/{customerRef}/balance` — credit balance.
     ///
-    /// Path segment is unencoded (TypeScript parity).
+    /// Path segment uses JavaScript `encodeURIComponent` semantics.
     #[solvapay_core::solvapay_export(
         catalog = "operation",
         section = "Group A",
@@ -234,7 +233,10 @@ impl SolvaPayClient {
         &self,
         params: GetCustomerBalanceParams,
     ) -> Result<GetCustomerBalanceResult, SdkError> {
-        let path = format!("/v1/sdk/customers/{}/balance", params.customer_ref);
+        let path = format!(
+            "/v1/sdk/customers/{}/balance",
+            encode_path_segment(&params.customer_ref)
+        );
         self.execute_typed(
             Method::Get,
             path,
@@ -463,7 +465,8 @@ impl SolvaPayClient {
 
     /// `POST /v1/sdk/payment-intents/{paymentIntentId}/process` — process payment.
     ///
-    /// Path segment is unencoded (TypeScript parity). Body omits `paymentIntentId`.
+    /// Path segment uses JavaScript `encodeURIComponent` semantics. Body omits
+    /// `paymentIntentId`.
     #[solvapay_core::solvapay_export(
         catalog = "operation",
         section = "Group B",
@@ -484,7 +487,7 @@ impl SolvaPayClient {
     ) -> Result<Value, SdkError> {
         let path = format!(
             "/v1/sdk/payment-intents/{}/process",
-            params.payment_intent_id
+            encode_path_segment(&params.payment_intent_id)
         );
         let body = ProcessPaymentIntentBody {
             product_ref: non_empty_opt(params.product_ref.as_deref()),
@@ -518,7 +521,7 @@ impl SolvaPayClient {
     ) -> Result<Value, SdkError> {
         let path = format!(
             "/v1/sdk/payment-intents/{}/business-details",
-            params.payment_intent_id
+            encode_path_segment(&params.payment_intent_id)
         );
         let body = AttachBusinessDetailsBody {
             is_business: params.is_business,
@@ -631,7 +634,7 @@ impl SolvaPayClient {
 
     /// `GET /v1/sdk/products/{productRef}` — fetch one product (data-merge normalization).
     ///
-    /// Path segment uses JavaScript `encodeURIComponent` (TS `getProduct` only).
+    /// Path segment uses JavaScript `encodeURIComponent` semantics.
     #[solvapay_core::solvapay_export(
         catalog = "operation",
         section = "Group C",
@@ -692,7 +695,7 @@ impl SolvaPayClient {
         .await
     }
 
-    /// `PUT /v1/sdk/products/{productRef}` — update a product (path ref unencoded).
+    /// `PUT /v1/sdk/products/{productRef}` — update a product.
     #[solvapay_core::solvapay_export(
         catalog = "operation",
         section = "Group C",
@@ -705,7 +708,7 @@ impl SolvaPayClient {
         product_ref: &str,
         params: UpdateProductRequest,
     ) -> Result<Value, SdkError> {
-        let path = format!("/v1/sdk/products/{product_ref}");
+        let path = format!("/v1/sdk/products/{}", encode_path_segment(product_ref));
         self.execute_json(
             Method::Put,
             path,
@@ -725,7 +728,7 @@ impl SolvaPayClient {
         split_path_refs = "productRef"
     )]
     pub async fn delete_product(&self, product_ref: &str) -> Result<(), SdkError> {
-        let path = format!("/v1/sdk/products/{product_ref}");
+        let path = format!("/v1/sdk/products/{}", encode_path_segment(product_ref));
         let response = self
             .shell
             .execute_raw(ShellRequest {
@@ -760,7 +763,10 @@ impl SolvaPayClient {
         product_ref: &str,
         overrides: Option<CloneProductOverrides>,
     ) -> Result<CloneProductResult, SdkError> {
-        let path = format!("/v1/sdk/products/{product_ref}/clone");
+        let path = format!(
+            "/v1/sdk/products/{}/clone",
+            encode_path_segment(product_ref)
+        );
         let body = overrides.unwrap_or(CloneProductOverrides { name: None });
         self.execute_typed(
             Method::Post,
@@ -805,7 +811,10 @@ impl SolvaPayClient {
         product_ref: &str,
         params: ConfigureMcpPlansDto,
     ) -> Result<Value, SdkError> {
-        let path = format!("/v1/sdk/products/{product_ref}/mcp/plans");
+        let path = format!(
+            "/v1/sdk/products/{}/mcp/plans",
+            encode_path_segment(product_ref)
+        );
         self.execute_json(
             Method::Put,
             path,
@@ -825,7 +834,10 @@ impl SolvaPayClient {
         split_path_refs = "productRef"
     )]
     pub async fn list_plans(&self, product_ref: &str) -> Result<Value, SdkError> {
-        let path = format!("/v1/sdk/products/{product_ref}/plans");
+        let path = format!(
+            "/v1/sdk/products/{}/plans",
+            encode_path_segment(product_ref)
+        );
         let result = self
             .execute_json::<()>(
                 Method::Get,
@@ -847,7 +859,10 @@ impl SolvaPayClient {
         dto_type = "CreatePlanParams"
     )]
     pub async fn create_plan(&self, params: CreatePlanParams) -> Result<Value, SdkError> {
-        let path = format!("/v1/sdk/products/{}/plans", params.product_ref);
+        let path = format!(
+            "/v1/sdk/products/{}/plans",
+            encode_path_segment(&params.product_ref)
+        );
         let body = serialize_body_ts_numbers(&params)?;
         self.execute_value(
             Method::Post,
@@ -874,7 +889,11 @@ impl SolvaPayClient {
         plan_ref: &str,
         params: UpdatePlanRequest,
     ) -> Result<Value, SdkError> {
-        let path = format!("/v1/sdk/products/{product_ref}/plans/{plan_ref}");
+        let path = format!(
+            "/v1/sdk/products/{}/plans/{}",
+            encode_path_segment(product_ref),
+            encode_path_segment(plan_ref)
+        );
         let body = serialize_body_ts_numbers(&params)?;
         self.execute_value(
             Method::Put,
@@ -895,7 +914,11 @@ impl SolvaPayClient {
         split_path_refs = "productRef,planRef"
     )]
     pub async fn delete_plan(&self, product_ref: &str, plan_ref: &str) -> Result<(), SdkError> {
-        let path = format!("/v1/sdk/products/{product_ref}/plans/{plan_ref}");
+        let path = format!(
+            "/v1/sdk/products/{}/plans/{}",
+            encode_path_segment(product_ref),
+            encode_path_segment(plan_ref)
+        );
         let response = self
             .shell
             .execute_raw(ShellRequest {
@@ -925,7 +948,10 @@ impl SolvaPayClient {
         dto_type = "CancelPurchaseParams"
     )]
     pub async fn cancel_purchase(&self, params: CancelPurchaseParams) -> Result<Value, SdkError> {
-        let path = format!("/v1/sdk/purchases/{}/cancel", params.purchase_ref);
+        let path = format!(
+            "/v1/sdk/purchases/{}/cancel",
+            encode_path_segment(&params.purchase_ref)
+        );
         let body = non_empty_opt(params.reason.as_deref()).map(|reason| {
             let mut map = Map::new();
             map.insert("reason".to_owned(), Value::String(reason.to_owned()));
@@ -961,7 +987,10 @@ impl SolvaPayClient {
         &self,
         params: ReactivatePurchaseParams,
     ) -> Result<Value, SdkError> {
-        let path = format!("/v1/sdk/purchases/{}/reactivate", params.purchase_ref);
+        let path = format!(
+            "/v1/sdk/purchases/{}/reactivate",
+            encode_path_segment(&params.purchase_ref)
+        );
         let response = self
             .shell
             .execute_raw(ShellRequest {
@@ -1790,6 +1819,10 @@ mod tests {
         assert_eq!(encode_path_segment("a/b"), "a%2Fb");
         assert_eq!(encode_path_segment("café"), "caf%C3%A9");
         assert_eq!(encode_path_segment("a+b"), "a%2Bb");
+        assert_eq!(
+            encode_path_segment("foo/../purchases"),
+            "foo%2F..%2Fpurchases"
+        );
     }
 
     #[cfg(not(target_arch = "wasm32"))]

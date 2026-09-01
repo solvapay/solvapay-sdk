@@ -1,0 +1,36 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "configureMcpPlans",
+    "args": {
+      "productRef": "foo/../purchases",
+      "plans": []
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "configure-mcp-plans-encoded-path",
+  "wire": {
+    "request": {
+      "method": "PUT",
+      "path": "/v1/sdk/products/foo%2F..%2Fpurchases/mcp/plans",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "plans": []
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "planMap": {}
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "planMap": {}
+    }
+  }
+}

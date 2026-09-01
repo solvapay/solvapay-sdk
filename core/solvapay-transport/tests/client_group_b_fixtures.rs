@@ -38,7 +38,7 @@ const PROCESS_PAYMENT_BRANCH_CASES: &[&str] = &[
 ];
 
 #[tokio::test]
-async fn group_b_inventory_is_nineteen_fixtures() {
+async fn group_b_inventory_is_twenty_one_fixtures() {
     let root = client_fixtures_root();
     let fixtures = load_group_b_fixtures(&root);
     assert_eq!(
@@ -57,8 +57,8 @@ async fn group_b_inventory_is_nineteen_fixtures() {
     let expected_counts: BTreeMap<&str, usize> = [
         ("createPaymentIntent", 4),
         ("createTopupPaymentIntent", 3),
-        ("processPaymentIntent", 8),
-        ("attachBusinessDetails", 2),
+        ("processPaymentIntent", 9),
+        ("attachBusinessDetails", 3),
         ("activatePlan", 2),
     ]
     .into_iter()

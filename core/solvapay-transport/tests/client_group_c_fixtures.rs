@@ -29,7 +29,7 @@ use wiremock::matchers::{body_json, header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 #[tokio::test]
-async fn group_c_inventory_is_fifty_six_fixtures() {
+async fn group_c_inventory_is_sixty_seven_fixtures() {
     let root = client_fixtures_root();
     let fixtures = load_group_c_fixtures(&root);
     assert_eq!(
@@ -49,20 +49,20 @@ async fn group_c_inventory_is_fifty_six_fixtures() {
         ("checkLimits", 2),
         ("trackUsage", 2),
         ("trackUsageBulk", 2),
-        ("getProduct", 2),
+        ("getProduct", 3),
         ("listProducts", 4),
         ("createProduct", 2),
-        ("updateProduct", 2),
-        ("deleteProduct", 3),
-        ("cloneProduct", 2),
+        ("updateProduct", 3),
+        ("deleteProduct", 4),
+        ("cloneProduct", 3),
         ("bootstrapMcpProduct", 2),
-        ("configureMcpPlans", 2),
-        ("listPlans", 4),
-        ("createPlan", 2),
-        ("updatePlan", 2),
-        ("deletePlan", 3),
-        ("cancelPurchase", 6),
-        ("reactivatePurchase", 6),
+        ("configureMcpPlans", 3),
+        ("listPlans", 5),
+        ("createPlan", 3),
+        ("updatePlan", 3),
+        ("deletePlan", 4),
+        ("cancelPurchase", 7),
+        ("reactivatePurchase", 7),
         ("getPaymentMethod", 2),
         ("getAutoRecharge", 2),
         ("saveAutoRecharge", 2),

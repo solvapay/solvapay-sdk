@@ -26,7 +26,7 @@ use wiremock::matchers::{body_json, header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 #[tokio::test]
-async fn group_a_inventory_is_twenty_nine_fixtures() {
+async fn group_a_inventory_is_thirty_three_fixtures() {
     let root = client_fixtures_root();
     let fixtures = load_group_a_fixtures(&root);
     assert_eq!(
@@ -44,8 +44,8 @@ async fn group_a_inventory_is_twenty_nine_fixtures() {
     );
     let wire_count = fixtures.iter().filter(|(_, f)| f.wire.is_some()).count();
     assert_eq!(
-        wire_count, 28,
-        "expected 28 wire fixtures, found {wire_count}"
+        wire_count, 32,
+        "expected 32 wire fixtures, found {wire_count}"
     );
 }
 

@@ -31,7 +31,9 @@ func (s *StubBackend) Start() {
 	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		backend.Captured = append(backend.Captured, CapturedRequest{
 			Method: r.Method,
-			Path:   r.URL.Path,
+			// EscapedPath keeps encodeURIComponent segments (%2F) so wire
+			// fixtures match the bytes the client sent (SEC-003).
+			Path: r.URL.EscapedPath(),
 		})
 		payload := backend.Body
 		var data []byte
