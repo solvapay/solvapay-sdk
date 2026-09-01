@@ -71,7 +71,7 @@
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.5.0",
+    "@types/node": "^26.4.0",
     "@types/react": "^19.2.14",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
