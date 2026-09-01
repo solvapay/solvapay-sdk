@@ -1213,7 +1213,6 @@ export interface components {
               label?: string
               /** @enum {string} */
               onEnd: 'convert' | 'cancel' | 'downgrade'
-              requireCard?: boolean
             }
           | {
               /** @enum {string} */
@@ -1421,7 +1420,6 @@ export interface components {
             label?: string
             /** @enum {string} */
             onEnd: 'convert' | 'cancel' | 'downgrade'
-            requireCard?: boolean
           }
         | {
             /** @enum {string} */
@@ -1863,7 +1861,6 @@ export interface components {
               label?: string
               /** @enum {string} */
               onEnd: 'convert' | 'cancel' | 'downgrade'
-              requireCard?: boolean
             }
           | {
               /** @enum {string} */
@@ -2806,7 +2803,6 @@ export interface components {
             label?: string
             /** @enum {string} */
             onEnd: 'convert' | 'cancel' | 'downgrade'
-            requireCard?: boolean
           }
         | {
             /** @enum {string} */
