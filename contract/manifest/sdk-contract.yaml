@@ -4743,12 +4743,12 @@ mcp:
         type: string
         required: false
     docs:
-      summary: 'Filter tools/list descriptors by _meta.audience, with a ChatGPT UA bypass.'
+      summary: 'Filter tools/list descriptors by _meta.audience. User-Agent is ignored.'
       params:
         tools: 'Tool descriptors; hidden tools include _meta.audience.'
         audiences: 'Audiences to hide (for example ui).'
-        userAgent: 'Optional User-Agent; openai-mcp bypasses the filter.'
-      returns: 'Filtered tools list, optionally marked bypassed.'
+        userAgent: 'Accepted for compatibility; ignored. A User-Agent must not bypass hiding.'
+      returns: 'Filtered tools list.'
     sync:
       ts: sync
       py: sync

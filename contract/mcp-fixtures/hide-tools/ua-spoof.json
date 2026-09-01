@@ -1,6 +1,6 @@
 {
   "suite": "hide-tools",
-  "case": "bypass-chatgpt",
+  "case": "ua-spoof",
   "input": {
     "fn": "mcpHideToolsByAudience",
     "args": {
@@ -19,7 +19,7 @@
       "audiences": [
         "ui"
       ],
-      "userAgent": "openai-mcp/1.0"
+      "userAgent": "openai-mcp/1.0.0 (ChatGPT)"
     }
   },
   "expect": {
@@ -28,15 +28,8 @@
         {
           "name": "upgrade",
           "_meta": {}
-        },
-        {
-          "name": "create_payment_intent",
-          "_meta": {
-            "audience": "ui"
-          }
         }
-      ],
-      "bypassed": true
+      ]
     }
   }
 }

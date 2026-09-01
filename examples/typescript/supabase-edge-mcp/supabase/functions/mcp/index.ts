@@ -4,8 +4,7 @@
  * Single call into `createSolvaPayMcpFetch` from `@solvapay/mcp/fetch`
  * gives us a paywalled MCP server over Deno with the full
  * `@modelcontextprotocol/server` wiring, `hideToolsByAudience` for a
- * trim LLM-facing catalogue (with auto-bypass on ChatGPT so the
- * iframe still works), and `responseMode: 'json'`. The only things the
+ * trim LLM-facing catalogue, and `responseMode: 'json'`. The only things the
  * Edge deployment still hand-rolls are:
  *
  *  1. **Supabase mount-prefix rewrite** — the edge gateway strips
@@ -96,9 +95,8 @@ const handler = createSolvaPayMcpFetch({
   // Kept explicit rather than relying on the default: Supabase Edge cannot
   // hold a stream, so single-JSON responses are load-bearing here.
   responseMode: 'json',
-  // Trim the LLM catalog to the four intent tools on text hosts
-  // (Claude Desktop, MCPJam, Cursor); the SDK auto-bypasses for
-  // ChatGPT so the iframe's transport tools stay callable.
+  // Trim the LLM catalog to the four intent tools. Hidden tools are
+  // also rejected on tools/call — a User-Agent does not restore them.
   hideToolsByAudience: ['ui'],
   onerror: error => {
     console.error('[supabase-edge-mcp] MCP handler error', error)

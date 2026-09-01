@@ -76,35 +76,18 @@ export interface CreateSolvaPayMcpServerOptions extends BuildSolvaPayDescriptors
   /** Overrides the default `McpServer` version. */
   serverVersion?: string
   /**
-   * After registration, wrap the `tools/list` handler to drop any
-   * tool whose `_meta.audience` matches one of these values. The
-   * tools stay `enabled: true` so `tools/call` still reaches their
-   * handlers — this option only affects the `tools/list` response
-   * shape. Pass `['ui']` to keep the LLM-facing catalogue narrow to
-   * the four intent tools (`upgrade` / `manage_account` /
-   * `activate_plan` / `topup`) plus your own merchant-registered
-   * data tools, while leaving the eight UI transport tools
-   * (`create_payment_intent`, etc.) callable for the SolvaPay
-   * iframe.
+   * Hide tools whose `_meta.audience` matches one of these values
+   * from `tools/list`, and reject `tools/call` for those tools with
+   * JSON-RPC `-32601`. Pass `['ui']` to keep the LLM-facing
+   * catalogue to the four intent tools (`upgrade` /
+   * `manage_account` / `activate_plan` / `topup`) plus your own
+   * merchant-registered data tools.
    *
-   * # ChatGPT auto-bypass
-   *
-   * ChatGPT's Custom Connector gateway re-validates iframe-initiated
-   * `tools/call` against the cached `tools/list` catalog, so any
-   * tool hidden by this option becomes uncallable from the embedded
-   * iframe and surfaces in the UI as `MCP error -32000: MCP Resource
-   * not found`. To preserve the cleaner LLM catalog on every other
-   * host while keeping the iframe working on ChatGPT, the SDK
-   * auto-detects ChatGPT-originated `tools/list` requests (matching
-   * `request.headers['user-agent']` and the post-`initialize`
-   * `clientInfo.name` against `/openai-mcp/i`) and returns the full
-   * catalog to them. The detection is verified live against
-   * `openai-mcp/1.0.0 (ChatGPT)` and the broad pattern survives a UA
-   * version bump.
-   *
-   * To extend the bypass, the engine matches `userAgent` against
-   * `/openai-mcp/i`. Custom host predicates are not applied on the
-   * JSON-RPC loop — pass `hideAudiences` through `EngineConfig`.
+   * Hidden tools are not invocable. A spoofable `User-Agent` (or
+   * `clientInfo.name`) does not restore them. MCP Apps hosts that
+   * need iframe-only transport tools should rely on SEP-1865
+   * `_meta.ui.visibility: ["app"]` rather than listing those tools
+   * to every client.
    */
   hideToolsByAudience?: HideToolsByAudienceConfig
 }

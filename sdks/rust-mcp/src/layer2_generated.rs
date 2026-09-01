@@ -360,17 +360,17 @@ pub fn mcp_handle_request(
     call_sync("mcpHandleRequest", &Value::Object(call_args))
 }
 
-/// Filter tools/list descriptors by _meta.audience, with a ChatGPT UA bypass.
+/// Filter tools/list descriptors by _meta.audience. User-Agent is ignored.
 ///
 /// # Arguments
 ///
 /// * `tools` — Tool descriptors; hidden tools include _meta.audience.
 /// * `audiences` — Audiences to hide (for example ui).
-/// * `user_agent` — Optional User-Agent; openai-mcp bypasses the filter.
+/// * `user_agent` — Accepted for compatibility; ignored. A User-Agent must not bypass hiding.
 ///
 /// # Returns
 ///
-/// Filtered tools list, optionally marked bypassed.
+/// Filtered tools list.
 pub fn mcp_hide_tools_by_audience(
     tools: Value,
     audiences: Value,

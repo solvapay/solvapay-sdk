@@ -192,11 +192,11 @@ module SolvaPay
           SolvaPay::Mcp::Core.call("mcpHandleRequest", call_args)
         end
 
-        # Filter tools/list descriptors by _meta.audience, with a ChatGPT UA bypass.
+        # Filter tools/list descriptors by _meta.audience. User-Agent is ignored.
         # @param tools Tool descriptors; hidden tools include _meta.audience.
         # @param audiences Audiences to hide (for example ui).
-        # @param user_agent Optional User-Agent; openai-mcp bypasses the filter.
-        # @return Filtered tools list, optionally marked bypassed.
+        # @param user_agent Accepted for compatibility; ignored. A User-Agent must not bypass hiding.
+        # @return Filtered tools list.
         def mcp_hide_tools_by_audience(tools, audiences, user_agent = nil)
           call_args = {} #: Hash[String, untyped]
           call_args["tools"] = tools

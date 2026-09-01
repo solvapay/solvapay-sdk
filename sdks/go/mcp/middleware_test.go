@@ -14,7 +14,7 @@ func TestHideToolsByAudienceFiltersUIForTextHosts(t *testing.T) {
 		wantUI    bool
 	}{
 		{"text host hides ui audience", "MCPJam/1.0", false},
-		{"openai-mcp bypasses filter", "openai-mcp/1.0", true},
+		{"openai-mcp User-Agent does not bypass filter", "openai-mcp/1.0", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

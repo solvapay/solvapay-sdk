@@ -1,13 +1,8 @@
 /**
  * `hideToolsByAudience` — filters UI-audience tools out of `tools/list`
- * without disabling them. Regression guard for the workaround the
- * Goldberg Supabase Edge example used to do inline via
+ * and rejects `tools/call` for those names. Regression guard for the
+ * workaround the Goldberg Supabase Edge example used to do inline via
  * `(server as any).server._requestHandlers`.
- *
- * Also covers the ChatGPT auto-bypass added after PR #171's first
- * round (the goldberg-demo prod outage where the iframe couldn't call
- * hidden transport tools — see solvapay-frontend
- * /.cursor/plans/investigate_goldberg_topup_failure_ff1187a7.plan.md).
  */
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
@@ -113,7 +108,7 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
     }
   })
 
-  it('leaves the hidden tools callable via tools/call (enabled: true)', async () => {
+  it('does not invoke a hidden tool via tools/call', async () => {
     const server = buildServer({ hideToolsByAudience: ['ui'] })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handlers = (server as any).server._requestHandlers as Map<
@@ -122,20 +117,23 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
     >
     const handler = handlers.get('tools/call')
     if (!handler) throw new Error('tools/call handler not registered')
-    await expect(
-      handler(
-        {
-          method: 'tools/call',
-          params: { name: UI_TOOLS[0], arguments: {} },
-        },
-        {
-          signal: new AbortController().signal,
-          sendNotification: vi.fn(),
-          sendRequest: vi.fn(),
-          mcpReq: { requestState: () => undefined },
-        },
-      ),
-    ).resolves.toBeTruthy()
+    const result = await handler(
+      {
+        method: 'tools/call',
+        params: { name: UI_TOOLS[0], arguments: {} },
+      },
+      {
+        signal: new AbortController().signal,
+        sendNotification: vi.fn(),
+        sendRequest: vi.fn(),
+        mcpReq: { requestState: () => undefined },
+      },
+    )
+    expect(result).toEqual(
+      expect.objectContaining({
+        error: expect.objectContaining({ code: expect.any(Number) }),
+      }),
+    )
   })
 
   it('does not leak audience filter into a second server instance', async () => {
@@ -195,36 +193,11 @@ describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
   })
 })
 
-// Verified live against `openai-mcp/1.0.0 (ChatGPT)` on goldberg-demo
-// (probe captured 2026-05-04). The pattern is liberal so a UA bump
-// like `openai-mcp/2.0.0` keeps working without changes.
-describe('createSolvaPayMcpServer — hideToolsByAudience ChatGPT auto-bypass', () => {
-  it('serves the full catalog when User-Agent matches /openai-mcp/i', async () => {
+describe('createSolvaPayMcpServer — hideToolsByAudience does not trust User-Agent', () => {
+  it('still hides audience=ui tools when User-Agent matches /openai-mcp/i', async () => {
     const server = buildServer({ hideToolsByAudience: ['ui'] })
     const { tools } = await invokeToolsList(server, {
       requestInfo: { headers: { 'user-agent': 'openai-mcp/1.0.0 (ChatGPT)' } },
-    })
-    const names = tools.map(t => t.name)
-    for (const tool of [...INTENT_TOOLS, ...UI_TOOLS]) {
-      expect(names).toContain(tool)
-    }
-  })
-
-  it('matches the pattern liberally — survives a UA version bump (openai-mcp/2.0.0)', async () => {
-    const server = buildServer({ hideToolsByAudience: ['ui'] })
-    const { tools } = await invokeToolsList(server, {
-      requestInfo: { headers: { 'user-agent': 'openai-mcp/2.0.0 (ChatGPT-NextGen)' } },
-    })
-    const names = tools.map(t => t.name)
-    for (const uiTool of UI_TOOLS) {
-      expect(names).toContain(uiTool)
-    }
-  })
-
-  it('still applies the filter when User-Agent is a non-ChatGPT MCP client', async () => {
-    const server = buildServer({ hideToolsByAudience: ['ui'] })
-    const { tools } = await invokeToolsList(server, {
-      requestInfo: { headers: { 'user-agent': 'Claude-Desktop/1.2.3' } },
     })
     const names = tools.map(t => t.name)
     for (const intent of INTENT_TOOLS) {
@@ -235,16 +208,7 @@ describe('createSolvaPayMcpServer — hideToolsByAudience ChatGPT auto-bypass', 
     }
   })
 
-  it('still applies the filter when no requestInfo is present (stdio transport)', async () => {
-    const server = buildServer({ hideToolsByAudience: ['ui'] })
-    const { tools } = await invokeToolsList(server)
-    const names = tools.map(t => t.name)
-    for (const uiTool of UI_TOOLS) {
-      expect(names).not.toContain(uiTool)
-    }
-  })
-
-  it('serves the full catalog when getClientVersion() reports openai-mcp', async () => {
+  it('still hides audience=ui tools when getClientVersion() reports openai-mcp', async () => {
     const server = buildServer({ hideToolsByAudience: ['ui'] })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(server as any).server.getClientVersion = () => ({
@@ -254,7 +218,7 @@ describe('createSolvaPayMcpServer — hideToolsByAudience ChatGPT auto-bypass', 
     const { tools } = await invokeToolsList(server)
     const names = tools.map(t => t.name)
     for (const uiTool of UI_TOOLS) {
-      expect(names).toContain(uiTool)
+      expect(names).not.toContain(uiTool)
     }
   })
 })

@@ -11,36 +11,36 @@ pub struct HideToolsInput {
     pub tools: Vec<Value>,
     /// Audiences to hide (e.g. `["ui"]`).
     pub audiences: Vec<String>,
-    /// Optional User-Agent (ChatGPT bypass).
+    /// Accepted for wire compatibility. Ignored — a User-Agent must not bypass hiding.
     #[serde(default)]
     pub user_agent: Option<String>,
 }
 
-/// Filter tools by `_meta.audience`, bypassing when UA matches `/openai-mcp/i`.
+/// True when `tool._meta.audience` is one of `audiences`.
+#[must_use]
+pub fn is_hidden_by_audience(tool: &Value, audiences: &[String]) -> bool {
+    if audiences.is_empty() {
+        return false;
+    }
+    let audience = tool
+        .get("_meta")
+        .and_then(|m| m.get("audience"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    audiences.iter().any(|hidden| hidden == audience)
+}
+
+/// Filter tools by `_meta.audience`. User-Agent is not a hide signal.
 #[must_use]
 pub fn mcp_hide_tools_by_audience(input: &HideToolsInput) -> Value {
+    let _ = &input.user_agent;
     if input.audiences.is_empty() {
         return json!({ "tools": input.tools });
     }
-    if input
-        .user_agent
-        .as_deref()
-        .is_some_and(|ua| ua.to_ascii_lowercase().contains("openai-mcp"))
-    {
-        return json!({ "tools": input.tools, "bypassed": true });
-    }
-    let hidden: Vec<&str> = input.audiences.iter().map(String::as_str).collect();
     let tools: Vec<Value> = input
         .tools
         .iter()
-        .filter(|tool| {
-            let audience = tool
-                .get("_meta")
-                .and_then(|m| m.get("audience"))
-                .and_then(Value::as_str)
-                .unwrap_or("");
-            !hidden.contains(&audience)
-        })
+        .filter(|tool| !is_hidden_by_audience(tool, &input.audiences))
         .cloned()
         .collect();
     json!({ "tools": tools })

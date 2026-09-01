@@ -24,6 +24,8 @@ export type McpEngineConfig = {
   authMode?: 'tools-call' | 'all'
   hideAudiences?: string[]
   userAgent?: string
+  hs256Secret?: string
+  nowUnixSecs?: number
   csp?: unknown
   apiBaseUrl?: string
   branding?: {
@@ -103,6 +105,8 @@ export async function runMcpEngineRequest(options: {
       ...(config.authMode !== undefined ? { authMode: config.authMode } : {}),
       ...(config.hideAudiences !== undefined ? { hideAudiences: config.hideAudiences } : {}),
       ...(config.userAgent !== undefined ? { userAgent: config.userAgent } : {}),
+      ...(config.hs256Secret !== undefined ? { hs256Secret: config.hs256Secret } : {}),
+      ...(config.nowUnixSecs !== undefined ? { nowUnixSecs: config.nowUnixSecs } : {}),
       ...(config.csp !== undefined ? { csp: config.csp } : {}),
       ...(config.apiBaseUrl !== undefined ? { apiBaseUrl: config.apiBaseUrl } : {}),
       ...(config.branding !== undefined ? { branding: config.branding } : {}),

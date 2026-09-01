@@ -15,7 +15,7 @@ use crate::bearer_verify::{
     extract_bearer_token, mcp_verify_bearer, VerifyBearerInput, VerifyBearerResult,
 };
 use crate::descriptors::{mcp_descriptors, McpDescriptorsInput};
-use crate::hide_tools::{mcp_hide_tools_by_audience, HideToolsInput};
+use crate::hide_tools::{is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput};
 use crate::oauth::mcp_resource_identifier;
 
 /// Catalog TTL matching `defaultCatalogTTLMs` in `sdks/go/mcp/server.go`.
@@ -139,10 +139,10 @@ pub struct EngineConfig {
     /// Optional MCP mount path for OAuth resource identifiers.
     #[serde(default)]
     pub mcp_path: Option<String>,
-    /// Audiences to hide from `tools/list` (e.g. `["ui"]`).
+    /// Audiences hidden from `tools/list` and rejected on `tools/call`.
     #[serde(default)]
     pub hide_audiences: Option<Vec<String>>,
-    /// User-Agent used by audience filtering (ChatGPT bypass).
+    /// Accepted for wire compatibility. Ignored — a User-Agent must not bypass hiding.
     #[serde(default)]
     pub user_agent: Option<String>,
     /// Optional CSP overrides forwarded to [`mcp_descriptors`].
@@ -378,6 +378,43 @@ fn tool_list_item(tool: &crate::descriptors::McpToolDescriptor) -> Value {
     }))
 }
 
+fn catalog_tools(config: &EngineConfig) -> Result<Vec<Value>, String> {
+    let desc = descriptors_for(config)?;
+    let mut tools: Vec<Value> = desc.tools.iter().map(tool_list_item).collect();
+    merge_payable_specs(&mut tools, &config.payable_tools);
+    Ok(tools)
+}
+
+fn hidden_tool_call_error(
+    id: Value,
+    name: &str,
+    modern: bool,
+    config: &EngineConfig,
+) -> Result<Option<Value>, String> {
+    let audiences = config.hide_audiences.clone().unwrap_or_default();
+    if audiences.is_empty() {
+        return Ok(None);
+    }
+    let tools = catalog_tools(config)?;
+    let Some(tool) = tools
+        .iter()
+        .find(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
+    else {
+        return Ok(None);
+    };
+    if is_hidden_by_audience(tool, &audiences) {
+        Ok(Some(rpc_err(
+            id,
+            -32601,
+            &format!("Method not found: {name}"),
+            None,
+            if modern { 404 } else { 200 },
+        )))
+    } else {
+        Ok(None)
+    }
+}
+
 fn with_legacy_ui_meta(mut tool: Value) -> Value {
     if let Some(meta) = tool.get_mut("_meta") {
         let uri = meta
@@ -469,9 +506,7 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
         "notifications/initialized" => Ok(rpc_ok(id, json!({}))),
         "ping" if !modern => Ok(rpc_ok(id, json!({}))),
         "tools/list" => {
-            let desc = descriptors_for(&input.config)?;
-            let mut tools: Vec<Value> = desc.tools.iter().map(tool_list_item).collect();
-            merge_payable_specs(&mut tools, &input.config.payable_tools);
+            let tools = catalog_tools(&input.config)?;
             let filtered = mcp_hide_tools_by_audience(&HideToolsInput {
                 tools,
                 audiences: input.config.hide_audiences.clone().unwrap_or_default(),
@@ -495,6 +530,11 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
                 .pointer("/params/arguments")
                 .cloned()
                 .unwrap_or(json!({}));
+            if let Some(denied) =
+                hidden_tool_call_error(id.clone(), name, modern, &input.config)?
+            {
+                return Ok(denied);
+            }
             if input.config.payable_tools.iter().any(|t| t.name() == name) {
                 let token = Uuid::new_v4().to_string();
                 let customer_ref =

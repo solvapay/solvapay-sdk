@@ -39,7 +39,7 @@ pub use config_log::mcp_config_log;
 pub use csp::{mcp_merge_csp, SolvaPayMcpCsp};
 pub use dcr::{mcp_dcr_diagnostics, DcrDiagnosticsInput};
 pub use descriptors::{mcp_descriptors, McpDescriptors, McpDescriptorsInput, McpToolDescriptor};
-pub use hide_tools::{mcp_hide_tools_by_audience, HideToolsInput};
+pub use hide_tools::{is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput};
 pub use narrate::{
     mcp_narrate, narrated_tool_result, new_widget_session_id, parse_mode, tool_error_result,
     tool_result, ui_placeholder, NarrateInput,

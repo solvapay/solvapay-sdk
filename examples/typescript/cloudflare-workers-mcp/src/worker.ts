@@ -4,8 +4,7 @@
  * Single call into `createSolvaPayMcpFetch` from `@solvapay/mcp/fetch`
  * gives us a paywalled MCP server over the Workers runtime with the
  * full `@modelcontextprotocol/server` wiring, `hideToolsByAudience` for
- * a trim LLM-facing catalogue (with auto-bypass on ChatGPT so the
- * iframe still works), and `responseMode: 'json'` (correct shape for
+ * a trim LLM-facing catalogue, and `responseMode: 'json'` (correct shape for
  * Workers isolates, which don't pin across requests).
  *
  * The only extra plumbing on top of the SDK handler is **browser-origin
@@ -91,14 +90,10 @@ function getHandler(env: Env): (req: Request) => Promise<Response> {
     publicBaseUrl: requireEnv(env, 'MCP_PUBLIC_BASE_URL'),
     apiBaseUrl,
     responseMode: 'json',
-    // Hide UI-only transport tools from the LLM-facing `tools/list`
-    // (text hosts: Claude Desktop, MCPJam, Cursor) — keeps the model's
-    // tool catalogue narrow to the four intent tools (`upgrade`,
-    // `manage_account`, `activate_plan`, `topup`) plus this worker's
-    // demo tools. ChatGPT-originated tools/list requests are
-    // auto-detected and receive the full catalog so the iframe's
-    // `create_payment_intent` / `create_topup_payment_intent` calls
-    // pass ChatGPT's gateway catalogue check.
+    // Hide UI-only transport tools from tools/list and reject them on
+    // tools/call. The LLM catalogue stays the four intent tools plus
+    // this worker's demo tools. MCP Apps hosts hide iframe-only tools
+    // via SEP-1865 `_meta.ui.visibility` rather than a User-Agent sniff.
     hideToolsByAudience: ['ui'],
     onerror: error => {
       console.error('[cloudflare-workers-mcp] MCP handler error', error)

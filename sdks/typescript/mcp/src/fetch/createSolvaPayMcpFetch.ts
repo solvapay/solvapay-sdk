@@ -95,9 +95,11 @@ function buildServerForRequest(
     additionalTools?: (ctx: AdditionalToolsContext) => void
     hideToolsByAudience?: HideToolsByAudienceConfig
     payables: Map<string, McpEnginePayable>
+    hs256Secret?: string
   },
 ) {
-  const { descriptorOptions, additionalTools, hideToolsByAudience, payables } = options
+  const { descriptorOptions, additionalTools, hideToolsByAudience, payables, hs256Secret } =
+    options
 
   const { server, descriptors } = buildSolvaPayMcpServer(descriptorOptions)
 
@@ -128,6 +130,7 @@ function buildServerForRequest(
         : {}),
       ...(descriptorOptions.branding !== undefined ? { branding: descriptorOptions.branding } : {}),
       ...(hideAudiences !== undefined ? { hideAudiences } : {}),
+      ...(hs256Secret !== undefined ? { hs256Secret } : {}),
     },
     payables,
     readHtml: descriptors.resource.readHtml,
@@ -204,6 +207,9 @@ export function createSolvaPayMcpFetch(
         payables,
         ...(additionalTools !== undefined ? { additionalTools } : {}),
         ...(hideToolsByAudience !== undefined ? { hideToolsByAudience } : {}),
+        ...(handlerRest.hs256Secret !== undefined
+          ? { hs256Secret: handlerRest.hs256Secret }
+          : {}),
       }),
     publicBaseUrl,
     productRef,
@@ -231,6 +237,9 @@ export function createSolvaPayMcpFetch(
               ...(csp !== undefined ? { csp } : {}),
               ...(branding !== undefined ? { branding } : {}),
               ...(hideAudiences !== undefined ? { hideAudiences } : {}),
+              ...(handlerRest.hs256Secret !== undefined
+                ? { hs256Secret: handlerRest.hs256Secret }
+                : {}),
             },
             payables,
             ...(onToolCall !== undefined

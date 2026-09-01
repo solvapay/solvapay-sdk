@@ -305,6 +305,7 @@ export function installEngineHandlers(
         ...(userAgentFromExtra(extra, server, options.requestUserAgent) !== undefined
           ? { userAgent: userAgentFromExtra(extra, server, options.requestUserAgent) }
           : {}),
+        nowUnixSecs: options.config.nowUnixSecs ?? Math.floor(Date.now() / 1000),
       },
       ...(authHeaderFromExtra(extra) !== undefined
         ? { authHeader: authHeaderFromExtra(extra) }
@@ -402,7 +403,23 @@ export function installEngineHandlers(
     const req = isRecord(request) ? request : {}
     const params = isRecord(req.params) ? req.params : {}
     const name = typeof params.name === 'string' ? params.name : ''
+    const hideAudiences = options.config.hideAudiences
     const local = registeredTools(server)[name]
+    if (
+      hideAudiences !== undefined &&
+      hideAudiences.length > 0 &&
+      local !== undefined &&
+      hideToolsByAudience(
+        [{ name, ...(isRecord(local._meta) ? { _meta: local._meta } : {}) }],
+        hideAudiences,
+      ).tools.length === 0
+    ) {
+      return {
+        jsonrpc: '2.0',
+        id: req.id ?? 1,
+        error: { code: -32601, message: `Method not found: ${name}` },
+      }
+    }
     if (local !== undefined && local.enabled !== false) {
       const args = params.arguments ?? {}
       const invoke = local.executor ?? local.handler
@@ -411,6 +428,7 @@ export function installEngineHandlers(
       }
     }
     const raw = await run('tools/call', request, extra)
+    if (isRecord(raw) && isRecord(raw.error)) return raw
     return stampWidgetResultMeta(raw, options.config.resourceUri)
   })
 

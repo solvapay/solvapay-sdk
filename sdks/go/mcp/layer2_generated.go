@@ -238,11 +238,11 @@ func McpHandleRequest(ctx context.Context, rpc any, config any, authHeader any) 
 	return CallSync(ctx, "mcpHandleRequest", call_args)
 }
 
-// McpHideToolsByAudience filter tools/list descriptors by _meta.audience, with a ChatGPT UA bypass.
+// McpHideToolsByAudience filter tools/list descriptors by _meta.audience. User-Agent is ignored.
 // The tools parameter is Tool descriptors; hidden tools include _meta.audience.
 // The audiences parameter is Audiences to hide (for example ui).
-// The userAgent parameter is Optional User-Agent; openai-mcp bypasses the filter.
-// Returns Filtered tools list, optionally marked bypassed.
+// The userAgent parameter is Accepted for compatibility; ignored. A User-Agent must not bypass hiding.
+// Returns Filtered tools list.
 func McpHideToolsByAudience(ctx context.Context, tools any, audiences any, userAgent any) (json.RawMessage, error) {
 	call_args := map[string]any{}
 	call_args["tools"] = tools

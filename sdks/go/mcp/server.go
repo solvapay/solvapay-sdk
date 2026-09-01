@@ -343,6 +343,9 @@ func (s *Server) dispatch(ctx context.Context, rpc any, req *mcpsdk.CallToolRequ
 			"authMode":      s.cfg.AuthMode,
 		},
 	}
+	if len(s.cfg.HideAudiences) > 0 {
+		asMap(params["config"])["hideAudiences"] = s.cfg.HideAudiences
+	}
 	if s.cfg.Hs256Secret != "" {
 		asMap(params["config"])["hs256Secret"] = s.cfg.Hs256Secret
 	}

@@ -305,7 +305,7 @@ describe('createSolvaPayMcpFetch', () => {
     }
   })
 
-  it('tools/list bypasses hideToolsByAudience for ChatGPT-originated requests (User-Agent /openai-mcp/i)', async () => {
+  it('tools/list does not restore hidden tools for a spoofed openai-mcp User-Agent', async () => {
     const handler = buildHandler({ hideToolsByAudience: ['ui'] })
     const initRes = await fetch200(handler, {
       jsonrpc: '2.0',
@@ -326,8 +326,11 @@ describe('createSolvaPayMcpFetch', () => {
     )
     expect(list.status).toBe(200)
     const names = list.json.result?.tools?.map(t => t.name) ?? []
-    for (const tool of [...INTENT_TOOLS, ...UI_TOOLS]) {
-      expect(names).toContain(tool)
+    for (const intent of INTENT_TOOLS) {
+      expect(names).toContain(intent)
+    }
+    for (const uiTool of UI_TOOLS) {
+      expect(names).not.toContain(uiTool)
     }
   })
 

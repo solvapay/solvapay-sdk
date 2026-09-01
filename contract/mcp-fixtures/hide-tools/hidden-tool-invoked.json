@@ -1,0 +1,42 @@
+{
+  "suite": "hide-tools",
+  "case": "hidden-tool-invoked",
+  "input": {
+    "fn": "mcpHandleRequest",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+          "name": "create_payment_intent",
+          "arguments": {}
+        }
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html",
+        "hideAudiences": [
+          "ui"
+        ],
+        "hs256Secret": "solvapay-mcp-fixture-hs256-secret-32b!!",
+        "nowUnixSecs": 1700000000
+      },
+      "authHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDB9.eLnto3RR7-xPGkMTusU3H2uVAS7IH4An3Np2-x2g3iU"
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc",
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "error": {
+          "code": -32601,
+          "message": "Method not found: create_payment_intent"
+        }
+      }
+    }
+  }
+}

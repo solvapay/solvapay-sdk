@@ -262,11 +262,11 @@ def mcp_hide_tools_by_audience(
     audiences: object,
     user_agent: object | None = None,
 ) -> object:
-    """Filter tools/list descriptors by _meta.audience, with a ChatGPT UA bypass.
+    """Filter tools/list descriptors by _meta.audience. User-Agent is ignored.
     @param tools Tool descriptors; hidden tools include _meta.audience.
     @param audiences Audiences to hide (for example ui).
-    @param user_agent Optional User-Agent; openai-mcp bypasses the filter.
-    @returns Filtered tools list, optionally marked bypassed.
+    @param user_agent Accepted for compatibility; ignored. A User-Agent must not bypass hiding.
+    @returns Filtered tools list.
     """
     call_args: dict[str, object] = {}
     call_args["tools"] = tools

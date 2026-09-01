@@ -20,11 +20,9 @@
  *     publicBaseUrl,
  *     apiBaseUrl,
  *     responseMode: 'json',
- *     // Trim the LLM-facing catalogue to the four intent tools.
- *     // The eight UI transport tools stay callable from the
- *     // SolvaPay iframe; ChatGPT-originated tools/list requests are
- *     // auto-detected and receive the full catalog.
- *     hideToolsByAudience: ['ui'],
+     *     // Trim the LLM-facing catalogue to the four intent tools.
+     *     // Hidden tools are also rejected on tools/call.
+     *     hideToolsByAudience: ['ui'],
  *   }),
  * )
  * ```

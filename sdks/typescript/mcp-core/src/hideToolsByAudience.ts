@@ -11,7 +11,6 @@ interface ToolDescriptorLike {
 
 export type HideToolsByAudienceResult = {
   tools: ToolDescriptorLike[]
-  bypassed?: boolean
 }
 
 export function hideToolsByAudience(

@@ -213,11 +213,11 @@ export function mcpHandleRequest(rpc: unknown, config: unknown, authHeader?: unk
 }
 
 /**
- * Filter tools/list descriptors by _meta.audience, with a ChatGPT UA bypass.
+ * Filter tools/list descriptors by _meta.audience. User-Agent is ignored.
  * @param tools Tool descriptors; hidden tools include _meta.audience.
  * @param audiences Audiences to hide (for example ui).
- * @param userAgent Optional User-Agent; openai-mcp bypasses the filter.
- * @returns Filtered tools list, optionally marked bypassed.
+ * @param userAgent Accepted for compatibility; ignored. A User-Agent must not bypass hiding.
+ * @returns Filtered tools list.
  */
 export function mcpHideToolsByAudience(tools: unknown, audiences: unknown, userAgent?: unknown): unknown {
   const call_args: Record<string, unknown> = {}
