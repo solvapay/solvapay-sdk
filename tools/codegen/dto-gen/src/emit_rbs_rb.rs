@@ -118,6 +118,7 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   def initialize: (?api_key: String?, ?api_base_url: String?, ?limits_cache_ttl: Integer, ?api_client: Client?, ?clock: ^() -> Integer) -> void\n\
          \x20   def gate: (String customer_ref, product: String, ?usage_type: String) -> gate_result\n\
          \x20   def payable: (product: String, ?usage_type: String) -> Payable\n\
+         \x20   def track_usage: (params: Hash[String, untyped]) -> untyped\n\
          \x20   private\n\
          \x20   def evaluate_limits: (String key, customer_ref: String, product: String, usage_type: String) -> [bool, Numeric, Hash[String, untyped]?]\n\
          \x20   def ensure_customer: (String customer_ref) -> String\n\
