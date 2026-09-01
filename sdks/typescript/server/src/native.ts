@@ -59,6 +59,7 @@ export type NativeClientMethod =
   | 'mcpReadResource'
   | 'mcpOauthRequest'
   | 'mcpDispatch'
+  | 'fetchJwks'
 
 export type NativeClientConfig = {
   apiKey: string

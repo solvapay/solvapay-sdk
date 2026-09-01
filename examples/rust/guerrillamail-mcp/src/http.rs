@@ -98,6 +98,8 @@ pub async fn serve_http(source: SharedSource) -> Result<(), ExampleError> {
             mcp_path: Some("/mcp".to_owned()),
             views: None,
             oauth_paths: None,
+            hs256_secret: std::env::var("SOLVAPAY_MCP_HS256_SECRET").ok(),
+            jwks_json: None,
         },
     );
     register_tools(

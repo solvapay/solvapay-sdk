@@ -51,6 +51,7 @@ static const char *kClientOps[] = {
   "mcpReadResource",
   "mcpOauthRequest",
   "mcpDispatch",
+  "fetchJwks",
 };
 
 static const size_t kClientOpCount = sizeof(kClientOps) / sizeof(kClientOps[0]);

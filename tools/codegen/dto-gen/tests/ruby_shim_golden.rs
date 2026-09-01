@@ -77,7 +77,7 @@ fn ruby_full_surface_matches_committed() {
         .expect("rubyBindings");
 
     let client_names = names_for(&ir, IrBindingArtifact::Client);
-    assert_eq!(client_names.len(), 41);
+    assert_eq!(client_names.len(), 42);
     for name in &client_names {
         assert!(
             emitted.client_rs.contains(&format!("fn {name}")),

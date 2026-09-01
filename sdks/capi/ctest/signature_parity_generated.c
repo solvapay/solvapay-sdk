@@ -58,6 +58,7 @@ static const char *kOps[] = {
   "mcpReadResource",
   "mcpOauthRequest",
   "mcpDispatch",
+  "fetchJwks",
 };
 
 /* Required split-path args per op. The C envelope names the first missing key only,
@@ -106,6 +107,7 @@ static const char *kRequiredArgs[][kMaxRequired] = {
   {NULL, NULL, NULL},
   {NULL, NULL, NULL},
   {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
 };
 
 static int json_with_filled(char *buf, size_t bufsz, const char *const *args, size_t filled) {
@@ -138,8 +140,8 @@ int main(void) {
 		return 1;
 	}
 	size_t nops = sizeof(kOps) / sizeof(kOps[0]);
-	if (nops != 41) {
-		fprintf(stderr, "FAIL: kOps len = %zu, want 41\n", nops);
+	if (nops != 42) {
+		fprintf(stderr, "FAIL: kOps len = %zu, want 42\n", nops);
 		return 1;
 	}
 
@@ -189,6 +191,6 @@ int main(void) {
 		}
 	}
 	solvapay_client_free(client);
-	printf("OK: C signature parity (41 ops)\n");
+	printf("OK: C signature parity (42 ops)\n");
 	return 0;
 }

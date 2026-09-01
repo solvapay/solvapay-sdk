@@ -39,8 +39,8 @@ pub mod fetch_transport;
 pub use client::{encode_path_segment, SolvaPayClient};
 pub use http::{HeaderName, HttpRequest, HttpResponse, Method};
 pub use mcp::{
-    McpBootstrapParams, McpCallBuiltinToolParams, McpDispatchParams, McpOauthConfig,
-    McpOauthRequestParams, McpReadResourceParams, McpToolConfig,
+    FetchJwksParams, McpBootstrapParams, McpCallBuiltinToolParams, McpDispatchParams,
+    McpOauthConfig, McpOauthRequestParams, McpReadResourceParams, McpToolConfig,
 };
 pub use shell::{
     encode_query_component, mulberry32, normalize_base_url, random9_from_f64,

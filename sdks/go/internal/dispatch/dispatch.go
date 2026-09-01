@@ -40,6 +40,7 @@ var Signatures = []Signature{
 	{"DeletePlan", []string{"productRef", "planRef"}},
 	{"DeleteProduct", []string{"productRef"}},
 	{"DisableAutoRecharge", []string{"params"}},
+	{"FetchJwks", []string{"params"}},
 	{"GetAutoRecharge", []string{"params"}},
 	{"GetCustomer", []string{"params"}},
 	{"GetCustomerBalance", []string{"params"}},

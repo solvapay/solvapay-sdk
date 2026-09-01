@@ -11,11 +11,11 @@ export type Language = (typeof LANGUAGES)[number]
 
 /** Wire (OpenAPI-backed) client operations. Routeless MCP composites are extra. */
 export const EXPECTED_ROUTED_OPERATION_COUNT = 36
-export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 5
+export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 6
 export const EXPECTED_OPERATION_COUNT =
   EXPECTED_ROUTED_OPERATION_COUNT + EXPECTED_MCP_COMPOSITE_OPERATION_COUNT
 
-export const EXPECTED_MCP_SYNC_OP_COUNT = 17
+export const EXPECTED_MCP_SYNC_OP_COUNT = 18
 export const EXPECTED_MCP_LAYER2_COUNT = 12
 
 export const EXPECTED_TOP_LEVEL_IDS = [
@@ -491,7 +491,7 @@ export type BindingResidue = z.infer<typeof BindingResidueSchema>
  * this set (wasm adds infra `wasmVersion` / `WasmClient` excluded below).
  */
 export const SHIM_JS_NAMES = [
-  // Client dispatch (36 routed + 5 MCP composite)
+  // Client dispatch (36 routed + 6 MCP composite)
   'activatePlan',
   'assignCredits',
   'attachBusinessDetails',
@@ -510,6 +510,7 @@ export const SHIM_JS_NAMES = [
   'deletePlan',
   'deleteProduct',
   'disableAutoRecharge',
+  'fetchJwks',
   'getAutoRecharge',
   'getCustomer',
   'getCustomerBalance',

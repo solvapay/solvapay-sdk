@@ -119,6 +119,7 @@ export const wasmclient_createTopupPaymentIntent: (a: number, b: number, c: numb
 export const wasmclient_deletePlan: (a: number, b: number, c: number) => any;
 export const wasmclient_deleteProduct: (a: number, b: number, c: number) => any;
 export const wasmclient_disableAutoRecharge: (a: number, b: number, c: number) => any;
+export const wasmclient_fetchJwks: (a: number, b: number, c: number) => any;
 export const wasmclient_getAutoRecharge: (a: number, b: number, c: number) => any;
 export const wasmclient_getCustomer: (a: number, b: number, c: number) => any;
 export const wasmclient_getCustomerBalance: (a: number, b: number, c: number) => any;

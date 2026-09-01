@@ -143,6 +143,12 @@ export interface SolvaPayClientGenerated {
  */
   disableAutoRecharge?(params: overlays.DisableAutoRechargeParams): Promise<overlays.DisableAutoRechargeSdkResponse>
 /**
+ * Fetch an authorization-server JWKS document without attaching merchant credentials.
+ * @param params Absolute jwksUrl (typically {issuer}/.well-known/jwks.json).
+ * @returns Raw JWKS JSON object with a keys array.
+ */
+  fetchJwks?(params: unknown): Promise<unknown>
+/**
  * Fetch auto-recharge configuration for a customer.
  * @param params Auto-recharge lookup options.
  * @returns Auto-recharge configuration projection.

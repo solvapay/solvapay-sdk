@@ -60,10 +60,11 @@ func runDemo(ctx context.Context, opts demoOptions) (map[string]any, error) {
 	if src == nil {
 		src = newFixtureSource()
 	}
-	server, err := newSolvaPayServer(ctx, client, "prd_demo", backend.URL, src,
+	server, err := newSolvaPayServer(ctx, client, "prd_demo", "https://weather.example.test", src,
 		func(context.Context, map[string]any) (string, error) {
 			return "cus_demo", nil
 		},
+		fixtureHs256Secret,
 	)
 	if err != nil {
 		return nil, err

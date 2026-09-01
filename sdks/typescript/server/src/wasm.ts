@@ -64,6 +64,7 @@ export type WasmClientMethod =
   | 'mcpReadResource'
   | 'mcpOauthRequest'
   | 'mcpDispatch'
+  | 'fetchJwks'
 
 /** Sync pure-logic envelope functions on the WASM binding (edge profile). */
 export type WasmSyncMethod =

@@ -20,7 +20,7 @@ path = "src/lib.rs"
 [dependencies]
 solvapay = { path = "../../../sdks/rust" }
 solvapay-mcp = { path = "../../../sdks/rust-mcp" }
-rmcp = { version = "3.1.4", default-features = false, features = ["server", "client", "transport-async-rw"] }
+rmcp = { version = "3.2.0", default-features = false, features = ["server", "client", "transport-async-rw"] }
 serde_json = { version = "1.0.150", features = ["preserve_order"] }
 tokio = { version = "1.52.4", features = ["rt-multi-thread", "io-util", "macros"] }
 futures = "0.3.31"

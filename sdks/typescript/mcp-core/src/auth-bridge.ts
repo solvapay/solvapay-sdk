@@ -1,30 +1,25 @@
 /**
- * Build an MCP `authInfo` envelope from an `Authorization: Bearer <jwt>`
- * header. Populates `authInfo.extra.customer_ref` so downstream
- * `getCustomerRef` extractors (adapter + descriptor handlers) can read
- * the caller identity without re-parsing the token.
- *
- * The transport decides where this envelope lands on the tool-handler
- * context: the official SDK v2 nests it at `extra.http.authInfo`, v1
- * exposed it flat at `extra.authInfo`. `defaultGetCustomerRef` reads
- * both.
+ * Build an MCP `authInfo` envelope from a verified `Authorization: Bearer`
+ * JWT. Populates `authInfo.extra.customer_ref` so downstream
+ * `getCustomerRef` extractors can read the caller identity.
  */
 
 import {
-  decodeJwtPayload,
   extractBearerToken,
-  getCustomerRefFromJwtPayload,
-  type McpBearerCustomerRefOptions,
+  verifyBearer,
+  type McpVerifyBearerOptions,
 } from './bearer'
 import type { McpToolExtra } from './types'
 
 type JwtPayload = Record<string, unknown>
 
-export interface BuildAuthInfoFromBearerOptions extends McpBearerCustomerRefOptions {
+export type McpAuthInfoExtras = {
   clientId?: string
   defaultScopes?: string[]
   includePayload?: boolean
 }
+
+export interface BuildAuthInfoFromBearerOptions extends McpVerifyBearerOptions, McpAuthInfoExtras {}
 
 function getClientId(payload: JwtPayload, explicitClientId?: string): string {
   if (explicitClientId) return explicitClientId
@@ -63,14 +58,17 @@ function getExpiresAt(payload: JwtPayload): number | undefined {
 }
 
 export function buildAuthInfoFromBearer(
-  authorization?: string | null,
-  options: BuildAuthInfoFromBearerOptions = {},
+  authorization: string | null | undefined,
+  options: BuildAuthInfoFromBearerOptions,
 ): McpToolExtra['authInfo'] | null {
   const token = extractBearerToken(authorization)
   if (!token) return null
 
-  const payload = decodeJwtPayload(token)
-  const customerRef = getCustomerRefFromJwtPayload(payload, options)
+  const verified = verifyBearer(token, options)
+  if (verified.kind !== 'ok') {
+    return null
+  }
+  const payload = verified.claims
   const clientId = getClientId(payload, options.clientId)
   const scopes = getScopes(payload, options.defaultScopes || [])
   const expiresAt = getExpiresAt(payload)
@@ -82,7 +80,7 @@ export function buildAuthInfoFromBearer(
     scopes,
     expiresAt,
     extra: {
-      customer_ref: customerRef,
+      customer_ref: verified.customerRef,
       ...(resource ? { resource } : {}),
       ...(options.includePayload ? { payload } : {}),
     },

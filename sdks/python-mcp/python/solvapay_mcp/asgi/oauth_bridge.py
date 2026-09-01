@@ -16,7 +16,7 @@ from solvapay_mcp.asgi.mcp_oauth_request import (
 )
 from solvapay_mcp.oauth.auth_bridge import build_auth_info_from_bearer
 from solvapay_mcp.oauth.auth_gate import mcp_auth_gate
-from solvapay_mcp.oauth.bearer import McpBearerAuthError
+from solvapay_mcp.oauth.bearer import McpBearerAuthError, default_mcp_bearer_expectations
 from solvapay_mcp.oauth.config_log import log_mcp_config_once
 from solvapay_mcp.oauth.discovery import (
     path_aware_protected_resource_path,
@@ -50,6 +50,8 @@ class McpOAuthBridgeOptions:
         mcp_path: str = "/mcp",
         require_auth: bool = True,
         auth_mode: McpAuthMode = "tools-call",
+        hs256_secret: str | None = None,
+        jwks_json: object | None = None,
         oauth_client: object | None = None,
         oauth_paths: Mapping[str, str] | None = None,
     ) -> None:
@@ -59,6 +61,8 @@ class McpOAuthBridgeOptions:
         self.mcp_path = mcp_path
         self.require_auth = require_auth
         self.auth_mode: McpAuthMode = auth_mode
+        self.hs256_secret = hs256_secret
+        self.jwks_json = jwks_json
         self.oauth_client = oauth_client
         self.paths = resolve_oauth_paths(oauth_paths)
         native_call(
@@ -163,6 +167,9 @@ class McpAuthMiddleware:
         user_agent_token = set_request_user_agent(user_agent)
         try:
             rpc_method = _jsonrpc_method(parsed)
+            verify = default_mcp_bearer_expectations(
+                self._options.public_base_url, self._options.mcp_path
+            )
             if self._options.require_auth:
                 gate = mcp_auth_gate(
                     public_base_url=self._options.public_base_url,
@@ -171,6 +178,9 @@ class McpAuthMiddleware:
                     auth_mode=self._options.auth_mode,
                     mcp_path=self._options.mcp_path,
                     json_rpc_id=_jsonrpc_id(parsed),
+                    hs256_secret=self._options.hs256_secret,
+                    jwks_json=self._options.jwks_json,
+                    **verify,
                 )
                 if gate.get("kind") == "challenge":
                     body = gate.get("body")
@@ -193,7 +203,12 @@ class McpAuthMiddleware:
 
             token = set_request_customer_ref(None)
             try:
-                auth = build_auth_info_from_bearer(auth_header)
+                auth = build_auth_info_from_bearer(
+                    auth_header,
+                    hs256_secret=self._options.hs256_secret,
+                    jwks_json=self._options.jwks_json,
+                    **verify,
+                )
                 if auth is None:
                     raise McpBearerAuthError("Missing bearer token")
                 extra = auth.get("extra")

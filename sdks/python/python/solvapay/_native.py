@@ -54,7 +54,8 @@ ClientMethod = Literal[
     "mcp_call_builtin_tool",
     "mcp_read_resource",
     "mcp_oauth_request",
-    "mcp_dispatch",]
+    "mcp_dispatch",
+    "fetch_jwks",]
 
 SyncMethod = Literal[
     "classify_customer_ref",

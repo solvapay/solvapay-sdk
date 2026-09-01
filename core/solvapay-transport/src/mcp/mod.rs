@@ -121,6 +121,14 @@ pub struct McpDispatchParams {
     pub mcp_protocol_version_header: Option<String>,
 }
 
+/// Arguments for [`SolvaPayClient::fetch_jwks`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FetchJwksParams {
+    /// Absolute JWKS URL (`{issuer}/.well-known/jwks.json`).
+    pub jwks_url: String,
+}
+
 /// Arguments for [`SolvaPayClient::mcp_oauth_request`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -936,6 +944,49 @@ impl SolvaPayClient {
         params: McpOauthRequestParams,
     ) -> Result<Value, SdkError> {
         oauth_proxy::handle(self, &params).await
+    }
+
+    /// Fetch an authorization server JWKS document (`fetchJwks`).
+    ///
+    /// Unauthenticated GET — does not attach the merchant secret key.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "MCP composite",
+        emit_order = 41,
+        dto_type = "solvapay_transport::FetchJwksParams"
+    )]
+    pub async fn fetch_jwks(&self, params: FetchJwksParams) -> Result<Value, SdkError> {
+        let url = params.jwks_url.trim();
+        if url.is_empty() {
+            return Err(SdkError::transport("jwksUrl is required", false));
+        }
+        let response = self
+            .shell()
+            .send_http(HttpRequest {
+                method: Method::Get,
+                url: url.to_owned(),
+                headers: Vec::new(),
+                body: None,
+            })
+            .await?;
+        if !(200..300).contains(&response.status) {
+            return Err(SdkError::Api {
+                message: format!("JWKS fetch failed ({})", response.status),
+                status: Some(response.status),
+                code: None,
+            });
+        }
+        let body = std::str::from_utf8(&response.body)
+            .map_err(|err| SdkError::transport(format!("JWKS body is not UTF-8: {err}"), false))?;
+        let value: Value = serde_json::from_str(body)
+            .map_err(|err| SdkError::transport(format!("JWKS body is not JSON: {err}"), false))?;
+        if value.get("keys").and_then(Value::as_array).is_none() {
+            return Err(SdkError::transport(
+                "JWKS document missing keys array",
+                false,
+            ));
+        }
+        Ok(value)
     }
 
     /// Route one MCP JSON-RPC request (`mcpDispatch`).

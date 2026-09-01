@@ -179,10 +179,15 @@ pub fn make_response_result(
 ///
 /// * `public_base_url` — Public origin for the WWW-Authenticate resource.
 /// * `rpc_method` — JSON-RPC method; may be absent.
-/// * `auth_header` — Authorization header; any value allows.
+/// * `auth_header` — Authorization header; a gated method requires a verified bearer.
 /// * `auth_mode` — tools-call or all; defaults to tools-call.
 /// * `mcp_path` — Optional MCP mount path.
 /// * `json_rpc_id` — JSON-RPC id echoed on the challenge body.
+/// * `jwks_json` — JWKS document for RS256 or ES256 verification.
+/// * `hs256_secret` — Explicit HS256 secret for local or stub flows.
+/// * `expected_issuer` — Expected iss; defaults to the public origin.
+/// * `expected_audience` — Expected aud; defaults to the MCP resource identifier.
+/// * `now_unix_secs` — Explicit unix clock for exp and nbf checks.
 ///
 /// # Returns
 ///
@@ -194,6 +199,11 @@ pub fn mcp_auth_gate(
     auth_mode: Option<Value>,
     mcp_path: Option<Value>,
     json_rpc_id: Option<Value>,
+    jwks_json: Option<Value>,
+    hs256_secret: Option<Value>,
+    expected_issuer: Option<Value>,
+    expected_audience: Option<Value>,
+    now_unix_secs: Option<Value>,
 ) -> Result<Value, String> {
     let mut call_args = serde_json::Map::new();
     call_args.insert("publicBaseUrl".to_owned(), public_base_url);
@@ -211,6 +221,21 @@ pub fn mcp_auth_gate(
     }
     if let Some(value) = json_rpc_id {
         call_args.insert("jsonRpcId".to_owned(), value);
+    }
+    if let Some(value) = jwks_json {
+        call_args.insert("jwksJson".to_owned(), value);
+    }
+    if let Some(value) = hs256_secret {
+        call_args.insert("hs256Secret".to_owned(), value);
+    }
+    if let Some(value) = expected_issuer {
+        call_args.insert("expectedIssuer".to_owned(), value);
+    }
+    if let Some(value) = expected_audience {
+        call_args.insert("expectedAudience".to_owned(), value);
+    }
+    if let Some(value) = now_unix_secs {
+        call_args.insert("nowUnixSecs".to_owned(), value);
     }
     call_sync("mcpAuthGate", &Value::Object(call_args))
 }
@@ -609,6 +634,47 @@ pub fn mcp_resume(token: Value, handler_envelope: Value) -> Result<Value, String
     call_args.insert("token".to_owned(), token);
     call_args.insert("handlerEnvelope".to_owned(), handler_envelope);
     call_sync("mcpResume", &Value::Object(call_args))
+}
+
+/// Verify an MCP OAuth bearer JWT against JWKS (RS256/ES256) or an explicit HS256 secret.
+///
+/// # Arguments
+///
+/// * `token` — Compact JWT (not the Authorization header).
+/// * `expected_issuer` — Required iss claim.
+/// * `expected_audience` — Required aud claim (MCP resource identifier).
+/// * `now_unix_secs` — Explicit unix clock for exp and nbf.
+/// * `jwks_json` — JWKS document for asymmetric verification.
+/// * `hs256_secret` — Explicit HS256 secret for local or stub flows.
+/// * `claim_priority` — Optional customer-ref claim names; defaults to customerRef, customer_ref, sub.
+///
+/// # Returns
+///
+/// Verified claims and customerRef, or a typed 401.
+pub fn mcp_verify_bearer(
+    token: Value,
+    expected_issuer: Value,
+    expected_audience: Value,
+    now_unix_secs: Value,
+    jwks_json: Option<Value>,
+    hs256_secret: Option<Value>,
+    claim_priority: Option<Value>,
+) -> Result<Value, String> {
+    let mut call_args = serde_json::Map::new();
+    call_args.insert("token".to_owned(), token);
+    call_args.insert("expectedIssuer".to_owned(), expected_issuer);
+    call_args.insert("expectedAudience".to_owned(), expected_audience);
+    call_args.insert("nowUnixSecs".to_owned(), now_unix_secs);
+    if let Some(value) = jwks_json {
+        call_args.insert("jwksJson".to_owned(), value);
+    }
+    if let Some(value) = hs256_secret {
+        call_args.insert("hs256Secret".to_owned(), value);
+    }
+    if let Some(value) = claim_priority {
+        call_args.insert("claimPriority".to_owned(), value);
+    }
+    call_sync("mcpVerifyBearer", &Value::Object(call_args))
 }
 
 /// Return the frozen view-to-tool and view-to-prompt maps.

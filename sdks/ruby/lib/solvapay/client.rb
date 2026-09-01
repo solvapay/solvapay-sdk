@@ -161,6 +161,14 @@ module SolvaPay
       NativeDispatch.call_client(@native_client, "disable_auto_recharge", args)
     end
 
+    # Fetch an authorization-server JWKS document without attaching merchant credentials.
+    # @param params Absolute jwksUrl (typically {issuer}/.well-known/jwks.json).
+    # @return Raw JWKS JSON object with a keys array.
+    def fetch_jwks(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "fetch_jwks", args)
+    end
+
     # Fetch auto-recharge configuration for a customer.
     # @param params Auto-recharge lookup options.
     # @return Auto-recharge configuration projection.

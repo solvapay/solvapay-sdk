@@ -72,7 +72,7 @@ fn go_client_exports_full_36_op_surface() {
     let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::Go).expect("emit go");
     let symbols = client_symbols(&ir);
-    assert_eq!(symbols.len(), 41, "expected 41 client binding symbols");
+    assert_eq!(symbols.len(), 42, "expected 42 client binding symbols");
 
     for sym in &symbols {
         let export = format!("sv_{}(", sym.rust_fn_name);

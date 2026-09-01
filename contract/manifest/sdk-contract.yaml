@@ -1816,6 +1816,43 @@ operations:
       go: blocking
       rust: [async, blocking]
       c: blocking
+  fetchJwks:
+    names:
+      ts: fetchJwks
+      py: fetch_jwks
+      rb: fetch_jwks
+      go: FetchJwks
+      rust: fetch_jwks
+      c: fetchJwks
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    shadow:
+      volatile: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'JWKS fetch failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Fetch an authorization-server JWKS document without attaching merchant credentials.'
+      params:
+        params: 'Absolute jwksUrl (typically {issuer}/.well-known/jwks.json).'
+      returns: 'Raw JWKS JSON object with a keys array.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
   disableAutoRecharge:
     route:
       method: DELETE
@@ -4474,16 +4511,85 @@ mcp:
       - name: jsonRpcId
         type: unknown
         required: false
+      - name: jwksJson
+        type: unknown
+        required: false
+      - name: hs256Secret
+        type: string
+        required: false
+      - name: expectedIssuer
+        type: string
+        required: false
+      - name: expectedAudience
+        type: string
+        required: false
+      - name: nowUnixSecs
+        type: integer
+        required: false
     docs:
       summary: 'Decide allow versus 401 WWW-Authenticate challenge for an MCP request.'
       params:
         publicBaseUrl: 'Public origin for the WWW-Authenticate resource.'
         rpcMethod: 'JSON-RPC method; may be absent.'
-        authHeader: 'Authorization header; any value allows.'
+        authHeader: 'Authorization header; a gated method requires a verified bearer.'
         authMode: 'tools-call or all; defaults to tools-call.'
         mcpPath: 'Optional MCP mount path.'
         jsonRpcId: 'JSON-RPC id echoed on the challenge body.'
+        jwksJson: 'JWKS document for RS256 or ES256 verification.'
+        hs256Secret: 'Explicit HS256 secret for local or stub flows.'
+        expectedIssuer: 'Expected iss; defaults to the public origin.'
+        expectedAudience: 'Expected aud; defaults to the MCP resource identifier.'
+        nowUnixSecs: 'Explicit unix clock for exp and nbf checks.'
       returns: 'Allow decision or HTTP challenge payload.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpVerifyBearer:
+    names:
+      ts: mcpVerifyBearer
+      py: mcp_verify_bearer
+      rb: mcp_verify_bearer
+      go: McpVerifyBearer
+      rust: mcp_verify_bearer
+      c: mcpVerifyBearer
+    params:
+      - name: token
+        type: string
+        required: true
+      - name: expectedIssuer
+        type: string
+        required: true
+      - name: expectedAudience
+        type: string
+        required: true
+      - name: nowUnixSecs
+        type: integer
+        required: true
+      - name: jwksJson
+        type: unknown
+        required: false
+      - name: hs256Secret
+        type: string
+        required: false
+      - name: claimPriority
+        type: unknown
+        required: false
+    docs:
+      summary: 'Verify an MCP OAuth bearer JWT against JWKS (RS256/ES256) or an explicit HS256 secret.'
+      params:
+        token: 'Compact JWT (not the Authorization header).'
+        expectedIssuer: 'Required iss claim.'
+        expectedAudience: 'Required aud claim (MCP resource identifier).'
+        nowUnixSecs: 'Explicit unix clock for exp and nbf.'
+        jwksJson: 'JWKS document for asymmetric verification.'
+        hs256Secret: 'Explicit HS256 secret for local or stub flows.'
+        claimPriority: 'Optional customer-ref claim names; defaults to customerRef, customer_ref, sub.'
+      returns: 'Verified claims and customerRef, or a typed 401.'
     sync:
       ts: sync
       py: sync

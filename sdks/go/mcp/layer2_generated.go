@@ -118,12 +118,17 @@ func MakeResponseResult(ctx context.Context, data any, options any, emittedBlock
 // McpAuthGate decide allow versus 401 WWW-Authenticate challenge for an MCP request.
 // The publicBaseUrl parameter is Public origin for the WWW-Authenticate resource.
 // The rpcMethod parameter is JSON-RPC method; may be absent.
-// The authHeader parameter is Authorization header; any value allows.
+// The authHeader parameter is Authorization header; a gated method requires a verified bearer.
 // The authMode parameter is tools-call or all; defaults to tools-call.
 // The mcpPath parameter is Optional MCP mount path.
 // The jsonRpcId parameter is JSON-RPC id echoed on the challenge body.
+// The jwksJson parameter is JWKS document for RS256 or ES256 verification.
+// The hs256Secret parameter is Explicit HS256 secret for local or stub flows.
+// The expectedIssuer parameter is Expected iss; defaults to the public origin.
+// The expectedAudience parameter is Expected aud; defaults to the MCP resource identifier.
+// The nowUnixSecs parameter is Explicit unix clock for exp and nbf checks.
 // Returns Allow decision or HTTP challenge payload.
-func McpAuthGate(ctx context.Context, publicBaseUrl any, rpcMethod any, authHeader any, authMode any, mcpPath any, jsonRpcId any) (json.RawMessage, error) {
+func McpAuthGate(ctx context.Context, publicBaseUrl any, rpcMethod any, authHeader any, authMode any, mcpPath any, jsonRpcId any, jwksJson any, hs256Secret any, expectedIssuer any, expectedAudience any, nowUnixSecs any) (json.RawMessage, error) {
 	call_args := map[string]any{}
 	call_args["publicBaseUrl"] = publicBaseUrl
 	if rpcMethod != nil {
@@ -140,6 +145,21 @@ func McpAuthGate(ctx context.Context, publicBaseUrl any, rpcMethod any, authHead
 	}
 	if jsonRpcId != nil {
 		call_args["jsonRpcId"] = jsonRpcId
+	}
+	if jwksJson != nil {
+		call_args["jwksJson"] = jwksJson
+	}
+	if hs256Secret != nil {
+		call_args["hs256Secret"] = hs256Secret
+	}
+	if expectedIssuer != nil {
+		call_args["expectedIssuer"] = expectedIssuer
+	}
+	if expectedAudience != nil {
+		call_args["expectedAudience"] = expectedAudience
+	}
+	if nowUnixSecs != nil {
+		call_args["nowUnixSecs"] = nowUnixSecs
 	}
 	return CallSync(ctx, "mcpAuthGate", call_args)
 }
@@ -393,6 +413,33 @@ func McpResume(ctx context.Context, token any, handlerEnvelope any) (json.RawMes
 	call_args["token"] = token
 	call_args["handlerEnvelope"] = handlerEnvelope
 	return CallSync(ctx, "mcpResume", call_args)
+}
+
+// McpVerifyBearer verify an MCP OAuth bearer JWT against JWKS (RS256/ES256) or an explicit HS256 secret.
+// The token parameter is Compact JWT (not the Authorization header).
+// The expectedIssuer parameter is Required iss claim.
+// The expectedAudience parameter is Required aud claim (MCP resource identifier).
+// The nowUnixSecs parameter is Explicit unix clock for exp and nbf.
+// The jwksJson parameter is JWKS document for asymmetric verification.
+// The hs256Secret parameter is Explicit HS256 secret for local or stub flows.
+// The claimPriority parameter is Optional customer-ref claim names; defaults to customerRef, customer_ref, sub.
+// Returns Verified claims and customerRef, or a typed 401.
+func McpVerifyBearer(ctx context.Context, token any, expectedIssuer any, expectedAudience any, nowUnixSecs any, jwksJson any, hs256Secret any, claimPriority any) (json.RawMessage, error) {
+	call_args := map[string]any{}
+	call_args["token"] = token
+	call_args["expectedIssuer"] = expectedIssuer
+	call_args["expectedAudience"] = expectedAudience
+	call_args["nowUnixSecs"] = nowUnixSecs
+	if jwksJson != nil {
+		call_args["jwksJson"] = jwksJson
+	}
+	if hs256Secret != nil {
+		call_args["hs256Secret"] = hs256Secret
+	}
+	if claimPriority != nil {
+		call_args["claimPriority"] = claimPriority
+	}
+	return CallSync(ctx, "mcpVerifyBearer", call_args)
 }
 
 // McpViewMaps return the frozen view-to-tool and view-to-prompt maps.

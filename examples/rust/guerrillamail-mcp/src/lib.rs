@@ -21,8 +21,8 @@ pub mod session;
 pub mod sources;
 pub mod tools;
 
-/// Unsigned JWT used by demo mode and tests (`sub` = `cus_1`).
-pub const TEST_BEARER: &str = "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9.";
+/// HS256 JWT used by demo mode and tests (`sub` = `cus_1`).
+pub const TEST_BEARER: &str = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjo0MTAyNDQ0ODAwfQ.eb4F_ZV0NAHvVw_MNTAOzvEpZj_0P0rutht4rFEw2aA";
 
 /// Mock SolvaPay HTTP transport (limits + usages).
 pub struct MockTransport {
@@ -108,6 +108,8 @@ pub fn build_host(
             mcp_path: Some("/mcp".to_owned()),
             views: None,
             oauth_paths: None,
+            hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
+            jwks_json: None,
         },
     );
     register_tools(&mut host, product, source, store, now)?;

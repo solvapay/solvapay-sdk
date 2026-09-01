@@ -11,6 +11,9 @@ use solvapay_core::{build_prompt_user_message, paywall_tool_result, PaywallGate}
 use uuid::Uuid;
 
 use crate::auth_gate::{mcp_auth_gate, AuthGateInput, AuthGateResult, McpAuthMode};
+use crate::bearer_verify::{
+    extract_bearer_token, mcp_verify_bearer, VerifyBearerInput, VerifyBearerResult,
+};
 use crate::descriptors::{mcp_descriptors, McpDescriptorsInput};
 use crate::hide_tools::{mcp_hide_tools_by_audience, HideToolsInput};
 use crate::oauth::mcp_resource_identifier;
@@ -151,6 +154,21 @@ pub struct EngineConfig {
     /// Optional branding forwarded to [`mcp_descriptors`].
     #[serde(default)]
     pub branding: Option<crate::descriptors::BrandingIn>,
+    /// JWKS document for bearer verification.
+    #[serde(default)]
+    pub jwks_json: Option<Value>,
+    /// Explicit HS256 secret for local / stub flows.
+    #[serde(default)]
+    pub hs256_secret: Option<String>,
+    /// Expected token `iss`. Defaults to the public origin.
+    #[serde(default)]
+    pub expected_issuer: Option<String>,
+    /// Expected token `aud`. Defaults to the MCP resource identifier.
+    #[serde(default)]
+    pub expected_audience: Option<String>,
+    /// Explicit clock for bearer `exp` / `nbf`.
+    #[serde(default)]
+    pub now_unix_secs: Option<i64>,
 }
 
 /// Input for [`mcp_handle_request`].
@@ -189,54 +207,29 @@ fn store() -> &'static Mutex<HashMap<String, Continuation>> {
     STORE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn customer_ref_from_header(auth_header: Option<&str>) -> Option<String> {
-    let header = auth_header?;
-    let token = header
-        .strip_prefix("Bearer ")
-        .or_else(|| header.strip_prefix("bearer "))?;
-    let mut parts = token.split('.');
-    let _h = parts.next()?;
-    let payload_b64 = parts.next()?;
-    let json = base64url_decode(payload_b64)?;
-    let payload: Value = serde_json::from_str(&json).ok()?;
-    for claim in ["customerRef", "customer_ref", "sub"] {
-        if let Some(s) = payload.get(claim).and_then(Value::as_str) {
-            let trimmed = s.trim();
-            if !trimmed.is_empty() {
-                return Some(trimmed.to_owned());
-            }
-        }
+fn customer_ref_from_verified_header(auth_header: Option<&str>, config: &EngineConfig) -> Option<String> {
+    let token = extract_bearer_token(auth_header)?;
+    let now_unix_secs = config.now_unix_secs?;
+    let origin = config.public_base_url.trim_end_matches('/');
+    let expected_issuer = config
+        .expected_issuer
+        .clone()
+        .unwrap_or_else(|| origin.to_owned());
+    let expected_audience = config.expected_audience.clone().unwrap_or_else(|| {
+        mcp_resource_identifier(origin, config.mcp_path.as_deref())
+    });
+    match mcp_verify_bearer(&VerifyBearerInput {
+        token: token.to_owned(),
+        jwks_json: config.jwks_json.clone(),
+        hs256_secret: config.hs256_secret.clone(),
+        expected_issuer,
+        expected_audience,
+        now_unix_secs,
+        claim_priority: None,
+    }) {
+        VerifyBearerResult::Ok { customer_ref, .. } => Some(customer_ref),
+        VerifyBearerResult::Unauthorized { .. } => None,
     }
-    None
-}
-
-fn base64url_decode(input: &str) -> Option<String> {
-    let mut s = input.replace('-', "+").replace('_', "/");
-    while !s.len().is_multiple_of(4) {
-        s.push('=');
-    }
-    let bytes = base64_decode(&s)?;
-    String::from_utf8(bytes).ok()
-}
-
-fn base64_decode(input: &str) -> Option<Vec<u8>> {
-    const TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = Vec::new();
-    let mut buf = 0u32;
-    let mut n = 0u32;
-    for &c in input.as_bytes() {
-        if c == b'=' {
-            break;
-        }
-        let pos = TABLE.iter().position(|&x| x == c)?;
-        buf = (buf << 6) | pos as u32;
-        n += 6;
-        if n >= 8 {
-            n -= 8;
-            out.push((buf >> n) as u8);
-        }
-    }
-    Some(out)
 }
 
 fn rpc_ok(id: Value, result: Value) -> Value {
@@ -416,6 +409,11 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
         public_base_url: input.config.public_base_url.clone(),
         mcp_path: input.config.mcp_path.clone(),
         json_rpc_id: Some(id.clone()),
+        jwks_json: input.config.jwks_json.clone(),
+        hs256_secret: input.config.hs256_secret.clone(),
+        expected_issuer: input.config.expected_issuer.clone(),
+        expected_audience: input.config.expected_audience.clone(),
+        now_unix_secs: input.config.now_unix_secs,
     });
     if let AuthGateResult::Challenge {
         status,
@@ -499,7 +497,8 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
                 .unwrap_or(json!({}));
             if input.config.payable_tools.iter().any(|t| t.name() == name) {
                 let token = Uuid::new_v4().to_string();
-                let customer_ref = customer_ref_from_header(input.auth_header.as_deref());
+                let customer_ref =
+                    customer_ref_from_verified_header(input.auth_header.as_deref(), &input.config);
                 match store().lock() {
                     Ok(mut map) => {
                         map.insert(
@@ -524,7 +523,10 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
                 "kind": "callBuiltin",
                 "name": name,
                 "args": args,
-                "customerRef": customer_ref_from_header(input.auth_header.as_deref()),
+                "customerRef": customer_ref_from_verified_header(
+                    input.auth_header.as_deref(),
+                    &input.config,
+                ),
                 "rpcId": id,
             }))
         }
@@ -664,6 +666,11 @@ mod tests {
             csp: None,
             api_base_url: None,
             branding: None,
+            jwks_json: None,
+            hs256_secret: None,
+            expected_issuer: None,
+            expected_audience: None,
+            now_unix_secs: None,
         }
     }
 
@@ -702,9 +709,11 @@ mod tests {
                 "productRef": "prd_demo",
                 "publicBaseUrl": "https://app.example.com",
                 "resourceUri": "ui://test/view.html",
-                "payableTools": payable_tools
+                "payableTools": payable_tools,
+                "hs256Secret": "solvapay-mcp-fixture-hs256-secret-32b!!",
+                "nowUnixSecs": 1700000000
             },
-            "authHeader": "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9."
+            "authHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDB9.eLnto3RR7-xPGkMTusU3H2uVAS7IH4An3Np2-x2g3iU"
         }))
     }
 

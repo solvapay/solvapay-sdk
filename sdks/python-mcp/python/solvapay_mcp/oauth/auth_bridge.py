@@ -3,15 +3,19 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from solvapay_mcp.oauth.bearer import (
-    decode_jwt_payload,
     extract_bearer_token,
-    get_customer_ref_from_jwt_payload,
+    verify_bearer,
 )
 
 
 def build_auth_info_from_bearer(
     authorization: str | None,
     *,
+    expected_issuer: str,
+    expected_audience: str,
+    now_unix_secs: int,
+    jwks_json: object | None = None,
+    hs256_secret: str | None = None,
     client_id: str | None = None,
     default_scopes: list[str] | None = None,
     include_payload: bool = False,
@@ -20,14 +24,28 @@ def build_auth_info_from_bearer(
     token = extract_bearer_token(authorization)
     if not token:
         return None
-    payload = decode_jwt_payload(token)
-    customer_ref = get_customer_ref_from_jwt_payload(payload, claim_priority=claim_priority)
-    extra: dict[str, object] = {"customer_ref": customer_ref}
+    result = verify_bearer(
+        token,
+        expected_issuer=expected_issuer,
+        expected_audience=expected_audience,
+        now_unix_secs=now_unix_secs,
+        jwks_json=jwks_json,
+        hs256_secret=hs256_secret,
+        claim_priority=claim_priority,
+    )
+    if result.get("kind") != "ok":
+        return None
+    payload_raw = result.get("claims")
+    payload: Mapping[str, object] = payload_raw if isinstance(payload_raw, dict) else {}
+    customer_ref = result.get("customerRef")
+    extra: dict[str, object] = {}
+    if isinstance(customer_ref, str):
+        extra["customer_ref"] = customer_ref
     resource = _resource(payload)
     if resource is not None:
         extra["resource"] = resource
     if include_payload:
-        extra["payload"] = payload
+        extra["payload"] = dict(payload)
     auth: dict[str, object] = {
         "token": token,
         "clientId": _client_id(payload, client_id),

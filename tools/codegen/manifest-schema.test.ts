@@ -511,7 +511,7 @@ describe('coverage and collisions', () => {
     expect(assertOperationCount(manifest).some(i => /36/.test(i))).toBe(true)
   })
 
-  it('requires exactly 5 routeless MCP composite operations', () => {
+  it('requires exactly 6 routeless MCP composite operations', () => {
     const manifest = minimalManifest()
     delete manifest.operations.mcpOp04
     const issues = assertOperationCount(manifest)

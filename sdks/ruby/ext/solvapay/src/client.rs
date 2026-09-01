@@ -724,6 +724,20 @@ impl SolvaPayClient {
             })
         })
     }
+
+    /// `fetchJwks`
+    pub(crate) fn fetch_jwks(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        without_gvl(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
+                    client.fetch_jwks(params).await
+                })
+                .await
+            })
+        })
+    }
 }
 
 #[allow(dead_code)] // retained for Step 44 clientSplit methods

@@ -17,6 +17,7 @@ type httpServeConfig struct {
 	ProductRef    string
 	PublicBaseURL string
 	Source        Source
+	Hs256Secret   string
 }
 
 func newHTTPHandler(client *solvapay.Client, cfg httpServeConfig) (http.Handler, error) {
@@ -32,7 +33,7 @@ func newHTTPHandler(client *solvapay.Client, cfg httpServeConfig) (http.Handler,
 	if cfg.Source == nil {
 		return nil, fmt.Errorf("weather source is required")
 	}
-	srv, err := newSolvaPayServer(context.Background(), client, cfg.ProductRef, cfg.PublicBaseURL, cfg.Source, nil)
+	srv, err := newSolvaPayServer(context.Background(), client, cfg.ProductRef, cfg.PublicBaseURL, cfg.Source, nil, cfg.Hs256Secret)
 	if err != nil {
 		return nil, err
 	}

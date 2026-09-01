@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::bearer_verify::{extract_bearer_token, mcp_verify_bearer, VerifyBearerInput, VerifyBearerResult};
 use crate::oauth::{mcp_resource_identifier, path_aware_protected_resource_path};
 
 /// MCP auth mode (`isFreeMcpMethod` / `requires_bearer_auth`).
@@ -54,6 +55,21 @@ pub struct AuthGateInput {
     /// JSON-RPC id echoed on the challenge body.
     #[serde(default)]
     pub json_rpc_id: Option<Value>,
+    /// JWKS document for RS256 / ES256 verification.
+    #[serde(default)]
+    pub jwks_json: Option<Value>,
+    /// Explicit HS256 secret (local / stub only — never inferred).
+    #[serde(default)]
+    pub hs256_secret: Option<String>,
+    /// Expected `iss`. Defaults to the public origin.
+    #[serde(default)]
+    pub expected_issuer: Option<String>,
+    /// Expected `aud`. Defaults to the MCP resource identifier.
+    #[serde(default)]
+    pub expected_audience: Option<String>,
+    /// Explicit clock for `exp` / `nbf`. Required when a gated method presents a bearer.
+    #[serde(default)]
+    pub now_unix_secs: Option<i64>,
 }
 
 /// Auth-gate decision.
@@ -73,25 +89,56 @@ pub enum AuthGateResult {
     },
 }
 
-/// Decide allow vs 401 challenge. Presence of any auth header allows;
-/// missing header on a gated method challenges.
+/// Decide allow vs 401 challenge. A gated method requires a *verified* bearer
+/// (JWKS RS256/ES256 or an explicit HS256 secret). Header presence is not enough.
 #[must_use]
 pub fn mcp_auth_gate(input: &AuthGateInput) -> AuthGateResult {
     let mode = input.auth_mode.unwrap_or(McpAuthMode::ToolsCall);
-    let has_header = input
-        .auth_header
-        .as_deref()
-        .is_some_and(|h| !h.trim().is_empty());
     let gated = requires_bearer_auth(input.rpc_method.as_deref(), mode);
-    if has_header || !gated {
+    if !gated {
         return AuthGateResult::Allow;
     }
+    if bearer_verified(input) {
+        return AuthGateResult::Allow;
+    }
+    challenge(input)
+}
+
+fn bearer_verified(input: &AuthGateInput) -> bool {
+    let Some(token) = extract_bearer_token(input.auth_header.as_deref()) else {
+        return false;
+    };
+    let Some(now_unix_secs) = input.now_unix_secs else {
+        return false;
+    };
+    let origin = input.public_base_url.trim_end_matches('/');
+    let expected_issuer = input
+        .expected_issuer
+        .clone()
+        .unwrap_or_else(|| origin.to_owned());
+    let expected_audience = input.expected_audience.clone().unwrap_or_else(|| {
+        mcp_resource_identifier(origin, input.mcp_path.as_deref())
+    });
+    matches!(
+        mcp_verify_bearer(&VerifyBearerInput {
+            token: token.to_owned(),
+            jwks_json: input.jwks_json.clone(),
+            hs256_secret: input.hs256_secret.clone(),
+            expected_issuer,
+            expected_audience,
+            now_unix_secs,
+            claim_priority: None,
+        }),
+        VerifyBearerResult::Ok { .. }
+    )
+}
+
+fn challenge(input: &AuthGateInput) -> AuthGateResult {
     let origin = input.public_base_url.trim_end_matches('/');
     let metadata_path = match input.mcp_path.as_deref() {
         Some(path) if !path.is_empty() => path_aware_protected_resource_path(path),
         _ => "/.well-known/oauth-protected-resource".to_owned(),
     };
-    let _ = mcp_resource_identifier(origin, input.mcp_path.as_deref());
     AuthGateResult::Challenge {
         status: 401,
         headers: json!({

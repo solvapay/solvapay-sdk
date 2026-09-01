@@ -4,18 +4,18 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use rmcp::model::JsonObject;
 use serde_json::{json, Map, Value};
 use solvapay::transport::{McpDispatchParams, McpOauthConfig, McpOauthRequestParams};
 use solvapay::{Client, SdkError};
 use solvapay_mcp_core::{EngineConfig, PayableToolConfig, PayableToolSpec};
 
-use crate::call_sync;
 use crate::http_util::{
     encode_json_body, envelope_status, http_from_oauth_envelope, json_response, jsonrpc_error,
     string_headers,
 };
-use crate::register::{invoke_payable, GetCustomerRef, PayableError, PayableHandler, PayableTool};
+use crate::jwks::JwksCache;
+use crate::register::{GetCustomerRef, PayableError, PayableHandler, PayableTool};
+use crate::resume::{resume_envelope, PayableSpec};
 
 pub use crate::http_util::{McpHttpRequest, McpHttpResponse};
 
@@ -34,6 +34,10 @@ pub struct McpHttpConfig {
     pub views: Option<Vec<String>>,
     /// Optional OAuth path overrides forwarded to `mcpOauthRequest`.
     pub oauth_paths: Option<solvapay_mcp_core::OauthPaths>,
+    /// Explicit HS256 secret for local / stub bearer verification.
+    pub hs256_secret: Option<String>,
+    /// Preloaded JWKS document.
+    pub jwks_json: Option<serde_json::Value>,
 }
 
 struct RegisteredPayable {
@@ -55,6 +59,8 @@ pub struct McpHttpServer {
     mcp_path: String,
     views: Option<Vec<String>>,
     oauth_paths: Option<solvapay_mcp_core::OauthPaths>,
+    hs256_secret: Option<String>,
+    jwks: JwksCache,
     payables: HashMap<String, RegisteredPayable>,
 }
 
@@ -69,7 +75,7 @@ impl McpHttpServer {
         Self {
             client,
             product_ref: config.product_ref,
-            public_base_url: config.public_base_url,
+            public_base_url: config.public_base_url.clone(),
             resource_uri: config
                 .resource_uri
                 .filter(|u| !u.is_empty())
@@ -77,6 +83,12 @@ impl McpHttpServer {
             mcp_path,
             views: config.views,
             oauth_paths: config.oauth_paths,
+            hs256_secret: config.hs256_secret.clone(),
+            jwks: JwksCache::new(
+                config.jwks_json,
+                config.hs256_secret.is_some(),
+                config.public_base_url.clone(),
+            ),
             payables: HashMap::new(),
         }
     }
@@ -217,6 +229,33 @@ impl McpHttpServer {
                     csp: None,
                     api_base_url: None,
                     branding: None,
+                    jwks_json: match self
+                        .jwks
+                        .resolve(
+                            &self.client,
+                            req.headers.get("authorization").map(String::as_str),
+                        )
+                        .await
+                    {
+                        Ok(json) => json,
+                        Err(err) => {
+                            return jsonrpc_error(
+                                rpc.get("id").cloned().unwrap_or(Value::Null),
+                                -32603,
+                                &format!("JWKS fetch failed: {}", err.message()),
+                                500,
+                            );
+                        }
+                    },
+                    hs256_secret: self.hs256_secret.clone(),
+                    expected_issuer: None,
+                    expected_audience: None,
+                    now_unix_secs: Some(
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_secs() as i64)
+                            .unwrap_or(0),
+                    ),
                 },
                 auth_header: req.headers.get("authorization").cloned(),
                 mcp_protocol_version_header: req.headers.get("mcp-protocol-version").cloned(),
@@ -244,7 +283,21 @@ impl McpHttpServer {
                 headers: string_headers(envelope.get("headers")),
                 body: encode_json_body(envelope.get("body").cloned().unwrap_or(Value::Null))?,
             }),
-            Some("invokeHandler") => self.resume_payable(&envelope).await,
+            Some("invokeHandler") => {
+                resume_envelope(
+                    self.client.clone(),
+                    |tool| {
+                        self.payables.get(tool).map(|spec| PayableSpec {
+                            product: spec.product.clone(),
+                            usage_type: spec.usage_type.clone(),
+                            handler: spec.handler.clone(),
+                            get_customer_ref: spec.get_customer_ref.clone(),
+                        })
+                    },
+                    &envelope,
+                )
+                .await
+            }
             other => {
                 eprintln!("unexpected mcpDispatch kind: {other:?}");
                 jsonrpc_error(
@@ -257,55 +310,4 @@ impl McpHttpServer {
         }
     }
 
-    async fn resume_payable(&self, envelope: &Value) -> Result<McpHttpResponse, SdkError> {
-        let tool = envelope
-            .get("tool")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_owned();
-        let token = envelope
-            .get("token")
-            .and_then(Value::as_str)
-            .ok_or_else(|| SdkError::transport("invokeHandler missing token", false))?
-            .to_owned();
-        let spec = self
-            .payables
-            .get(&tool)
-            .ok_or_else(|| SdkError::transport(format!("unknown payable tool: {tool}"), false))?;
-        let mut args: JsonObject = match envelope.get("args") {
-            Some(Value::Object(map)) => map.clone(),
-            _ => Map::new(),
-        };
-        if let Some(customer_ref) = envelope.get("customerRef").and_then(Value::as_str) {
-            if !args.contains_key("customer_ref") {
-                args.insert("customer_ref".to_owned(), json!(customer_ref));
-            }
-        }
-        let result = invoke_payable(
-            self.client.clone(),
-            spec.product.clone(),
-            spec.usage_type.clone(),
-            spec.handler.clone(),
-            spec.get_customer_ref.clone(),
-            args,
-        )
-        .await
-        .map_err(payable_to_sdk)?;
-        let handler_envelope = serde_json::to_value(&result).map_err(|err| {
-            SdkError::transport(format!("serialize handler result: {err}"), false)
-        })?;
-        let resumed = call_sync(
-            "mcpResume",
-            &json!({ "token": token, "handlerEnvelope": handler_envelope }),
-        )
-        .map_err(|err| SdkError::transport(err, false))?;
-        json_response(200, resumed.get("rpc").cloned().unwrap_or(resumed))
-    }
-}
-
-fn payable_to_sdk(err: PayableError) -> SdkError {
-    match err {
-        PayableError::Sdk(err) => *err,
-        other => SdkError::transport(other.to_string(), false),
-    }
 }

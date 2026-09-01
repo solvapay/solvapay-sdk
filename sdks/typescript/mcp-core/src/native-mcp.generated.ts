@@ -115,13 +115,18 @@ export function makeResponseResult(data: unknown, options?: unknown, emittedBloc
  * Decide allow versus 401 WWW-Authenticate challenge for an MCP request.
  * @param publicBaseUrl Public origin for the WWW-Authenticate resource.
  * @param rpcMethod JSON-RPC method; may be absent.
- * @param authHeader Authorization header; any value allows.
+ * @param authHeader Authorization header; a gated method requires a verified bearer.
  * @param authMode tools-call or all; defaults to tools-call.
  * @param mcpPath Optional MCP mount path.
  * @param jsonRpcId JSON-RPC id echoed on the challenge body.
+ * @param jwksJson JWKS document for RS256 or ES256 verification.
+ * @param hs256Secret Explicit HS256 secret for local or stub flows.
+ * @param expectedIssuer Expected iss; defaults to the public origin.
+ * @param expectedAudience Expected aud; defaults to the MCP resource identifier.
+ * @param nowUnixSecs Explicit unix clock for exp and nbf checks.
  * @returns Allow decision or HTTP challenge payload.
  */
-export function mcpAuthGate(publicBaseUrl: unknown, rpcMethod?: unknown, authHeader?: unknown, authMode?: unknown, mcpPath?: unknown, jsonRpcId?: unknown): unknown {
+export function mcpAuthGate(publicBaseUrl: unknown, rpcMethod?: unknown, authHeader?: unknown, authMode?: unknown, mcpPath?: unknown, jsonRpcId?: unknown, jwksJson?: unknown, hs256Secret?: unknown, expectedIssuer?: unknown, expectedAudience?: unknown, nowUnixSecs?: unknown): unknown {
   const call_args: Record<string, unknown> = {}
   call_args['publicBaseUrl'] = publicBaseUrl
   if (rpcMethod !== undefined) call_args['rpcMethod'] = rpcMethod
@@ -129,6 +134,11 @@ export function mcpAuthGate(publicBaseUrl: unknown, rpcMethod?: unknown, authHea
   if (authMode !== undefined) call_args['authMode'] = authMode
   if (mcpPath !== undefined) call_args['mcpPath'] = mcpPath
   if (jsonRpcId !== undefined) call_args['jsonRpcId'] = jsonRpcId
+  if (jwksJson !== undefined) call_args['jwksJson'] = jwksJson
+  if (hs256Secret !== undefined) call_args['hs256Secret'] = hs256Secret
+  if (expectedIssuer !== undefined) call_args['expectedIssuer'] = expectedIssuer
+  if (expectedAudience !== undefined) call_args['expectedAudience'] = expectedAudience
+  if (nowUnixSecs !== undefined) call_args['nowUnixSecs'] = nowUnixSecs
   return callMcpSyncOp('mcpAuthGate', call_args)
 }
 
@@ -359,6 +369,29 @@ export function mcpResume(token: unknown, handlerEnvelope: unknown): unknown {
   call_args['token'] = token
   call_args['handlerEnvelope'] = handlerEnvelope
   return callMcpSyncOp('mcpResume', call_args)
+}
+
+/**
+ * Verify an MCP OAuth bearer JWT against JWKS (RS256/ES256) or an explicit HS256 secret.
+ * @param token Compact JWT (not the Authorization header).
+ * @param expectedIssuer Required iss claim.
+ * @param expectedAudience Required aud claim (MCP resource identifier).
+ * @param nowUnixSecs Explicit unix clock for exp and nbf.
+ * @param jwksJson JWKS document for asymmetric verification.
+ * @param hs256Secret Explicit HS256 secret for local or stub flows.
+ * @param claimPriority Optional customer-ref claim names; defaults to customerRef, customer_ref, sub.
+ * @returns Verified claims and customerRef, or a typed 401.
+ */
+export function mcpVerifyBearer(token: unknown, expectedIssuer: unknown, expectedAudience: unknown, nowUnixSecs: unknown, jwksJson?: unknown, hs256Secret?: unknown, claimPriority?: unknown): unknown {
+  const call_args: Record<string, unknown> = {}
+  call_args['token'] = token
+  call_args['expectedIssuer'] = expectedIssuer
+  call_args['expectedAudience'] = expectedAudience
+  call_args['nowUnixSecs'] = nowUnixSecs
+  if (jwksJson !== undefined) call_args['jwksJson'] = jwksJson
+  if (hs256Secret !== undefined) call_args['hs256Secret'] = hs256Secret
+  if (claimPriority !== undefined) call_args['claimPriority'] = claimPriority
+  return callMcpSyncOp('mcpVerifyBearer', call_args)
 }
 
 /**

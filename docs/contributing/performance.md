@@ -20,7 +20,10 @@ and are the source of truth. It records, per profile (`browser`, `edge`):
 
 The **browser** gzip size + cold start is the §7.8 headline gate (secret-key
 symbols are excluded from the browser profile — see capability separation in
-[architecture.md](./architecture.md)). The **edge** profile is also checked in
+[architecture.md](./architecture.md)). JWT verification (`jwt-verify`: `rsa`,
+`p256`) is server-only; the browser WASM profile builds `solvapay-mcp` with
+`default-features = false` so those crates never enter the graph
+(`check-browser-symbols.mjs`). The **edge** profile is also checked in
 CI with the same script (hard-fail on blowups); it is not the redesign's primary
 cited metric.
 

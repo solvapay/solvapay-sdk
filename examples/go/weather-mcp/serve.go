@@ -17,7 +17,7 @@ func runStdio(ctx context.Context, client *solvapay.Client, product, publicBaseU
 }
 
 func buildStdioServer(ctx context.Context, client *solvapay.Client, product, publicBaseURL string, source Source) (*mcpsdk.Server, error) {
-	srv, err := newSolvaPayServer(ctx, client, product, publicBaseURL, source, nil)
+	srv, err := newSolvaPayServer(ctx, client, product, publicBaseURL, source, nil, "")
 	if err != nil {
 		return nil, err
 	}
@@ -31,6 +31,7 @@ func newSolvaPayServer(
 	publicBaseURL string,
 	source Source,
 	getCustomerRef solvapaymcp.GetCustomerRef,
+	hs256Secret string,
 ) (*solvapaymcp.Server, error) {
 	srv, err := solvapaymcp.NewServer(ctx, client, solvapaymcp.ServerConfig{
 		ProductRef:    product,
@@ -38,6 +39,7 @@ func newSolvaPayServer(
 		MCPPath:       "/mcp",
 		ServerName:    "weather-mcp",
 		ServerVersion: "v0.0.1",
+		Hs256Secret:   hs256Secret,
 	})
 	if err != nil {
 		return nil, err

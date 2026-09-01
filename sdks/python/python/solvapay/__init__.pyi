@@ -233,6 +233,18 @@ class SolvaPayClient:
         @returns Updated auto-recharge status after disable.
         """
         ...
+    async def fetch_jwks(self, args_json: str) -> str:
+        """Fetch an authorization-server JWKS document without attaching merchant credentials.
+        @param params Absolute jwksUrl (typically {issuer}/.well-known/jwks.json).
+        @returns Raw JWKS JSON object with a keys array.
+        """
+        ...
+    def fetch_jwks_blocking(self, args_json: str) -> str:
+        """Fetch an authorization-server JWKS document without attaching merchant credentials.
+        @param params Absolute jwksUrl (typically {issuer}/.well-known/jwks.json).
+        @returns Raw JWKS JSON object with a keys array.
+        """
+        ...
     async def get_auto_recharge(self, args_json: str) -> str:
         """Fetch auto-recharge configuration for a customer.
         @param params Auto-recharge lookup options.

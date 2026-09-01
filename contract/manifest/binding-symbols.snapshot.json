@@ -2566,6 +2566,42 @@
       "coreCall": "extract_backend_customer_ref",
       "clientCallArgs": []
     },
+    "fetchJwks": {
+      "core": "solvapay_transport::SolvaPayClient::fetch_jwks",
+      "names": {
+        "ts": "fetchJwks",
+        "py": "fetch_jwks",
+        "rb": "fetch_jwks",
+        "go": "FetchJwks",
+        "rust": "fetch_jwks",
+        "c": "fetchJwks"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "fetchJwks"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 41,
+      "section": "MCP composite",
+      "doc": "`fetchJwks`",
+      "docWasm": null,
+      "rustFnName": "fetch_jwks",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::FetchJwksParams",
+      "coreCall": "fetch_jwks",
+      "clientCallArgs": []
+    },
     "formatPrice": {
       "core": "solvapay_core::money_format::format_price",
       "names": {

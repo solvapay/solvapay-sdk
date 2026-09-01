@@ -212,6 +212,12 @@ export function createSolvaPayMcpFetch(
     ...(handlerRest.oauthClient === undefined && nativeOauth !== undefined
       ? { oauthClient: nativeOauth }
       : {}),
+    ...(handlerRest.fetchJwks === undefined &&
+    typeof solvaPay.apiClient.fetchJwks === 'function'
+      ? {
+          fetchJwks: (jwksUrl: string) => solvaPay.apiClient.fetchJwks!({ jwksUrl }),
+        }
+      : {}),
     ...(mcpDispatch !== undefined
       ? {
           engine: {

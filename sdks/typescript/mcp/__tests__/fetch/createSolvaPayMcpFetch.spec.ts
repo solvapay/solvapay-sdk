@@ -13,6 +13,7 @@
  * would drag in `registerPayableTool` + its zod-compat wiring, which
  * is exactly what the `./fetch` subpath is meant to avoid).
  */
+import { createHmac } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import * as path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
@@ -52,6 +53,8 @@ function makeSolvaPay() {
   return createSolvaPay({ apiClient: client })
 }
 
+const fixtureHs256Secret = 'solvapay-mcp-fixture-hs256-secret-32b!!'
+
 function buildHandler(
   overrides: Partial<Parameters<typeof createSolvaPayMcpFetch>[0]> = {},
 ): (req: Request) => Promise<Response> {
@@ -64,6 +67,7 @@ function buildHandler(
     apiBaseUrl,
     requireAuth: false,
     responseMode: 'json',
+    hs256Secret: fixtureHs256Secret,
     ...overrides,
   })
 }
@@ -157,11 +161,19 @@ interface ToolCallResult {
 describe('createSolvaPayMcpFetch', () => {
   describe('method-aware auth (requireAuth default)', () => {
     function makeJwt(sub: string) {
-      return (
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-        Buffer.from(JSON.stringify({ sub, exp: 9_999_999_999 })).toString('base64url') +
-        '.sig'
-      )
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url')
+      const body = Buffer.from(
+        JSON.stringify({
+          sub,
+          iss: publicBaseUrl,
+          aud: `${publicBaseUrl}/mcp`,
+          exp: 4_102_444_800,
+        }),
+      ).toString('base64url')
+      const sig = createHmac('sha256', fixtureHs256Secret)
+        .update(`${header}.${body}`)
+        .digest('base64url')
+      return `${header}.${body}.${sig}`
     }
 
     it('allows anonymous initialize when requireAuth defaults to true', async () => {

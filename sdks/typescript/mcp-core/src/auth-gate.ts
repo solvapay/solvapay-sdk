@@ -13,6 +13,11 @@ export type McpAuthGateInput = {
   publicBaseUrl: string
   mcpPath?: string
   jsonRpcId?: string | number | null
+  jwksJson?: unknown
+  hs256Secret?: string
+  expectedIssuer?: string
+  expectedAudience?: string
+  nowUnixSecs?: number
 }
 
 export type McpAuthGateAllow = { kind: 'allow' }
@@ -34,5 +39,10 @@ export function mcpAuthGate(input: McpAuthGateInput): McpAuthGateResult {
     ...(input.authMode !== undefined ? { authMode: input.authMode } : {}),
     ...(input.mcpPath !== undefined ? { mcpPath: input.mcpPath } : {}),
     ...(input.jsonRpcId !== undefined ? { jsonRpcId: input.jsonRpcId } : {}),
+    ...(input.jwksJson !== undefined ? { jwksJson: input.jwksJson } : {}),
+    ...(input.hs256Secret !== undefined ? { hs256Secret: input.hs256Secret } : {}),
+    ...(input.expectedIssuer !== undefined ? { expectedIssuer: input.expectedIssuer } : {}),
+    ...(input.expectedAudience !== undefined ? { expectedAudience: input.expectedAudience } : {}),
+    ...(input.nowUnixSecs !== undefined ? { nowUnixSecs: input.nowUnixSecs } : {}),
   })
 }

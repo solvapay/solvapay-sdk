@@ -104,12 +104,17 @@ module SolvaPay
         # Decide allow versus 401 WWW-Authenticate challenge for an MCP request.
         # @param public_base_url Public origin for the WWW-Authenticate resource.
         # @param rpc_method JSON-RPC method; may be absent.
-        # @param auth_header Authorization header; any value allows.
+        # @param auth_header Authorization header; a gated method requires a verified bearer.
         # @param auth_mode tools-call or all; defaults to tools-call.
         # @param mcp_path Optional MCP mount path.
         # @param json_rpc_id JSON-RPC id echoed on the challenge body.
+        # @param jwks_json JWKS document for RS256 or ES256 verification.
+        # @param hs256_secret Explicit HS256 secret for local or stub flows.
+        # @param expected_issuer Expected iss; defaults to the public origin.
+        # @param expected_audience Expected aud; defaults to the MCP resource identifier.
+        # @param now_unix_secs Explicit unix clock for exp and nbf checks.
         # @return Allow decision or HTTP challenge payload.
-        def mcp_auth_gate(public_base_url, rpc_method = nil, auth_header = nil, auth_mode = nil, mcp_path = nil, json_rpc_id = nil)
+        def mcp_auth_gate(public_base_url, rpc_method = nil, auth_header = nil, auth_mode = nil, mcp_path = nil, json_rpc_id = nil, jwks_json = nil, hs256_secret = nil, expected_issuer = nil, expected_audience = nil, now_unix_secs = nil)
           call_args = {} #: Hash[String, untyped]
           call_args["publicBaseUrl"] = public_base_url
           call_args["rpcMethod"] = rpc_method unless rpc_method.nil?
@@ -117,6 +122,11 @@ module SolvaPay
           call_args["authMode"] = auth_mode unless auth_mode.nil?
           call_args["mcpPath"] = mcp_path unless mcp_path.nil?
           call_args["jsonRpcId"] = json_rpc_id unless json_rpc_id.nil?
+          call_args["jwksJson"] = jwks_json unless jwks_json.nil?
+          call_args["hs256Secret"] = hs256_secret unless hs256_secret.nil?
+          call_args["expectedIssuer"] = expected_issuer unless expected_issuer.nil?
+          call_args["expectedAudience"] = expected_audience unless expected_audience.nil?
+          call_args["nowUnixSecs"] = now_unix_secs unless now_unix_secs.nil?
           SolvaPay::Mcp::Core.call("mcpAuthGate", call_args)
         end
 
@@ -317,6 +327,27 @@ module SolvaPay
           call_args["token"] = token
           call_args["handlerEnvelope"] = handler_envelope
           SolvaPay::Mcp::Core.call("mcpResume", call_args)
+        end
+
+        # Verify an MCP OAuth bearer JWT against JWKS (RS256/ES256) or an explicit HS256 secret.
+        # @param token Compact JWT (not the Authorization header).
+        # @param expected_issuer Required iss claim.
+        # @param expected_audience Required aud claim (MCP resource identifier).
+        # @param now_unix_secs Explicit unix clock for exp and nbf.
+        # @param jwks_json JWKS document for asymmetric verification.
+        # @param hs256_secret Explicit HS256 secret for local or stub flows.
+        # @param claim_priority Optional customer-ref claim names; defaults to customerRef, customer_ref, sub.
+        # @return Verified claims and customerRef, or a typed 401.
+        def mcp_verify_bearer(token, expected_issuer, expected_audience, now_unix_secs, jwks_json = nil, hs256_secret = nil, claim_priority = nil)
+          call_args = {} #: Hash[String, untyped]
+          call_args["token"] = token
+          call_args["expectedIssuer"] = expected_issuer
+          call_args["expectedAudience"] = expected_audience
+          call_args["nowUnixSecs"] = now_unix_secs
+          call_args["jwksJson"] = jwks_json unless jwks_json.nil?
+          call_args["hs256Secret"] = hs256_secret unless hs256_secret.nil?
+          call_args["claimPriority"] = claim_priority unless claim_priority.nil?
+          SolvaPay::Mcp::Core.call("mcpVerifyBearer", call_args)
         end
 
         # Return the frozen view-to-tool and view-to-prompt maps.

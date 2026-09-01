@@ -278,6 +278,22 @@ impl Client {
         self.inner.api.disable_auto_recharge(params).await
     }
 
+    /// Fetch an authorization-server JWKS document without attaching merchant credentials.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Absolute jwksUrl (typically {issuer}/.well-known/jwks.json).
+    ///
+    /// # Returns
+    ///
+    /// Raw JWKS JSON object with a keys array.
+    pub async fn fetch_jwks(
+        &self,
+        params: solvapay_transport::FetchJwksParams,
+    ) -> Result<Value, SdkError> {
+        self.inner.api.fetch_jwks(params).await
+    }
+
     /// Fetch auto-recharge configuration for a customer.
     ///
     /// # Arguments

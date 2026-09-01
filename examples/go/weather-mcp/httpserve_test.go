@@ -13,7 +13,7 @@ import (
 	solvapay "github.com/solvapay/solvapay-go"
 )
 
-const testBearer = "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9."
+const testBearer = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL3dlYXRoZXIuZXhhbXBsZS50ZXN0IiwiYXVkIjoiaHR0cHM6Ly93ZWF0aGVyLmV4YW1wbGUudGVzdC9tY3AiLCJleHAiOjQxMDI0NDQ4MDAsInN1YiI6ImN1c18xIn0.XnsPdqvyrlXUx7j-wqsJxriXawZxLHn9LvvUVNuZzbs"
 const testPublicOrigin = "https://weather.example.test"
 
 func newTestHandler(t *testing.T) http.Handler {
@@ -56,6 +56,7 @@ func newTestHandlerWithLimits(t *testing.T, onLimits func(http.ResponseWriter, *
 		ProductRef:    "prd_demo",
 		PublicBaseURL: testPublicOrigin,
 		Source:        newFixtureSource(),
+		Hs256Secret:   fixtureHs256Secret,
 	})
 	if err != nil {
 		t.Fatal(err)

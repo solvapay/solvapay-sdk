@@ -1484,6 +1484,35 @@ impl SolvaPayClient {
             })
         })
     }
+
+    /// `fetchJwks`
+    fn fetch_jwks<'py>(&self, py: Python<'py>, args_json: String) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
+                    client.fetch_jwks(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::fetch_jwks`] (interpreter detached while awaiting).
+    #[pyo3(name = "fetch_jwks_blocking")]
+    fn fetch_jwks_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
+                    client.fetch_jwks(params).await
+                })
+                .await
+            })
+        })
+    }
 }
 
 /// Extracts path refs from a combined args object, leaving the remaining body.

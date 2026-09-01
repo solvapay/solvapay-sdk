@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-import base64
-import json
-
 import pytest
 
 from solvapay_mcp.oauth.bearer import (
     McpBearerAuthError,
+    decode_jwt_payload,
     get_customer_ref_from_bearer_auth_header,
     get_customer_ref_from_jwt_payload,
 )
 
-
-def _token(payload: dict[str, object]) -> str:
-    body = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
-    return f"e30.{body}.sig"
+VERIFY = {
+    "expected_issuer": "https://mcp.example.com",
+    "expected_audience": "https://mcp.example.com",
+    "now_unix_secs": 1_700_000_000,
+}
 
 
 def test_claim_priority_customer_ref_camel_first() -> None:
@@ -29,9 +28,11 @@ def test_claim_priority_falls_through_to_sub() -> None:
 
 def test_malformed_token_raises() -> None:
     with pytest.raises(McpBearerAuthError, match="Invalid JWT format"):
-        get_customer_ref_from_bearer_auth_header("Bearer not-a-jwt")
+        decode_jwt_payload("not-a-jwt")
+    with pytest.raises(McpBearerAuthError):
+        get_customer_ref_from_bearer_auth_header("Bearer not-a-jwt", **VERIFY)
 
 
 def test_token_without_usable_claim_raises() -> None:
     with pytest.raises(McpBearerAuthError, match="No customer reference claim found"):
-        get_customer_ref_from_bearer_auth_header(f"Bearer {_token({'email': 'a@b.c'})}")
+        get_customer_ref_from_jwt_payload({"email": "a@b.c"})

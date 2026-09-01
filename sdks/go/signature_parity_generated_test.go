@@ -37,6 +37,7 @@ var operationSignatures = []operationSignature{
 	{"DeletePlan", []string{"productRef", "planRef"}, []string{"string", "string"}},
 	{"DeleteProduct", []string{"productRef"}, []string{"string"}},
 	{"DisableAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
+	{"FetchJwks", []string{"params"}, []string{"map[string]interface {}"}},
 	{"GetAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
 	{"GetCustomer", []string{"params"}, []string{"map[string]interface {}"}},
 	{"GetCustomerBalance", []string{"params"}, []string{"map[string]interface {}"}},
@@ -113,6 +114,7 @@ var (
 	_ = (*solvapay.Client).DeletePlan
 	_ = (*solvapay.Client).DeleteProduct
 	_ = (*solvapay.Client).DisableAutoRecharge
+	_ = (*solvapay.Client).FetchJwks
 	_ = (*solvapay.Client).GetAutoRecharge
 	_ = (*solvapay.Client).GetCustomer
 	_ = (*solvapay.Client).GetCustomerBalance
@@ -138,10 +140,10 @@ var (
 	_ = (*solvapay.Client).UpdateProduct
 )
 
-func TestOperationSignaturesCountIs41(t *testing.T) {
+func TestOperationSignaturesCountIs42(t *testing.T) {
 	t.Helper()
-	if got := len(operationSignatures); got != 41 {
-		t.Fatalf("operationSignatures len = %d, want 41", got)
+	if got := len(operationSignatures); got != 42 {
+		t.Fatalf("operationSignatures len = %d, want 42", got)
 	}
 }
 

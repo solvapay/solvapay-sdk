@@ -89,7 +89,7 @@ async fn all_thirty_six_operations_are_dispatchable() {
     let expected: BTreeSet<&str> = OPERATION_NAMES
         .iter()
         .copied()
-        .filter(|name| !name.starts_with("mcp"))
+        .filter(|name| !name.starts_with("mcp") && *name != "fetchJwks")
         .collect();
     assert_eq!(
         covered, expected,

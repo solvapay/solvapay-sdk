@@ -346,6 +346,20 @@ expectTypeOf<AssertArity>().toEqualTypeOf<true>()
       type R = ReturnType<NonNullable<SolvaPayClient['disableAutoRecharge']>>
 expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
 })
+    it('fetchJwks presence / arity / sync', () => {
+expectTypeOf<SolvaPayClient['fetchJwks']>().toEqualTypeOf<
+SolvaPayClientGenerated['fetchJwks']
+>()
+type P = Parameters<NonNullable<SolvaPayClient['fetchJwks']>>
+// IR param count (incl. optional). TS Parameters['length'] is a
+// union when trailing params are optional — require IR arity ∈ that union.
+type ExpectedArity = 1
+type AssertArity = ExpectedArity extends P['length'] ? true : false
+expectTypeOf<AssertArity>().toEqualTypeOf<true>()
+// required param count (IR): 1
+      type R = ReturnType<NonNullable<SolvaPayClient['fetchJwks']>>
+expectTypeOf<R>().toMatchTypeOf<Promise<unknown>>()
+})
     it('getAutoRecharge presence / arity / sync', () => {
 expectTypeOf<SolvaPayClient['getAutoRecharge']>().toEqualTypeOf<
 SolvaPayClientGenerated['getAutoRecharge']

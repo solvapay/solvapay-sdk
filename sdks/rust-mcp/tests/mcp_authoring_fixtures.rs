@@ -33,6 +33,12 @@ const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "auth-gate/allow-initialize.json",
     "auth-gate/allow-tools-call-with-bearer.json",
     "auth-gate/challenge-tools-call.json",
+    "bearer-verify/alg-none.json",
+    "bearer-verify/expired.json",
+    "bearer-verify/valid-rs256.json",
+    "bearer-verify/wrong-audience.json",
+    "bearer-verify/wrong-issuer.json",
+    "bearer-verify/wrong-key.json",
     "bootstrap/unauthenticated.json",
     "builtin-tools/activate-plan-no-ref.json",
     "builtin-tools/activate-plan.json",
@@ -498,6 +504,11 @@ async fn replays_dispatch_and_oauth_through_http_server() {
                     .pointer("/config/oauthPaths")
                     .cloned()
                     .map(|value| serde_json::from_value(value).expect("oauthPaths")),
+                hs256_secret: args
+                    .pointer("/config/hs256Secret")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+                jwks_json: args.pointer("/config/jwksJson").cloned(),
             },
         );
         if fn_name == "mcpDispatch" {

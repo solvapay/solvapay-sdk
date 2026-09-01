@@ -206,16 +206,23 @@ export type { McpAuthGateChallenge, McpAuthGateInput, McpAuthGateResult } from '
 
 // ---- Auth info + bearer helpers ----
 export { buildAuthInfoFromBearer } from './auth-bridge'
-export type { BuildAuthInfoFromBearerOptions } from './auth-bridge'
+export type { BuildAuthInfoFromBearerOptions, McpAuthInfoExtras } from './auth-bridge'
 
 export {
   McpBearerAuthError,
   decodeJwtPayload,
+  defaultMcpBearerExpectations,
   extractBearerToken,
   getCustomerRefFromBearerAuthHeader,
   getCustomerRefFromJwtPayload,
+  verifyBearer,
 } from './bearer'
-export type { McpBearerCustomerRefOptions } from './bearer'
+export type {
+  McpBearerCustomerRefOptions,
+  McpVerifyBearerOptions,
+  McpVerifyBearerResult,
+} from './bearer'
+export { cachedJwks, jwksUrlFromIssuer, resetJwksCacheForTests } from './jwks-cache'
 
 /** True for MCP methods that must not require bearer auth (everything except tools/call). */
 export { isFreeMcpMethod, requiresBearerAuth } from './is-free-mcp-method'

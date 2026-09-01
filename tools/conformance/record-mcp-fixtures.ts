@@ -896,8 +896,14 @@ function recordDispatch(): void {
           method: 'tools/call',
           params: { name: 'echo_paid', arguments: { n: 1 } },
         },
-        config: { ...config, payableTools: ['echo_paid'] },
-        authHeader: 'Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9.',
+        config: {
+          ...config,
+          payableTools: ['echo_paid'],
+          hs256Secret: 'solvapay-mcp-fixture-hs256-secret-32b!!',
+          nowUnixSecs: 1_700_000_000,
+        },
+        authHeader:
+          'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDB9.eLnto3RR7-xPGkMTusU3H2uVAS7IH4An3Np2-x2g3iU',
       },
     },
     expect: {

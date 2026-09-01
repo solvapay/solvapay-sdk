@@ -9,6 +9,7 @@ use solvapay_core::{
 use crate::auth_gate::{
     is_free_mcp_method, mcp_auth_gate, requires_bearer_auth, AuthGateInput, McpAuthMode,
 };
+use crate::bearer_verify::{mcp_verify_bearer, VerifyBearerInput};
 use crate::config_log::{mcp_config_log, ConfigLogInput};
 use crate::csp::{mcp_merge_csp, SolvaPayMcpCsp};
 use crate::dcr::{mcp_dcr_diagnostics, DcrDiagnosticsInput};
@@ -83,6 +84,11 @@ fn dispatch_inner(op: &str, args_json: &str) -> String {
         "mcpAuthGate" => {
             let input: AuthGateInput = parse_args_json(args_json)?;
             serde_json::to_value(mcp_auth_gate(&input))
+                .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))
+        }
+        "mcpVerifyBearer" => {
+            let input: VerifyBearerInput = parse_args_json(args_json)?;
+            serde_json::to_value(mcp_verify_bearer(&input))
                 .map_err(|err| SdkError::transport(format!("serialize: {err}"), false))
         }
         "mcpIsFreeMethod" => {

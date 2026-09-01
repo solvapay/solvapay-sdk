@@ -56,6 +56,7 @@ pub const OPERATION_NAMES: &[&str] = &[
     "deletePlan",
     "deleteProduct",
     "disableAutoRecharge",
+    "fetchJwks",
     "getAutoRecharge",
     "getCustomer",
     "getCustomerBalance",
@@ -180,6 +181,11 @@ pub mod operations {
     pub mod disable_auto_recharge {
         /// Default failure template.
         pub const DEFAULT: &str = "Disable auto-recharge failed ({status}): {body}";
+    }
+    /// Templates for `fetchJwks`.
+    pub mod fetch_jwks {
+        /// Default failure template.
+        pub const DEFAULT: &str = "JWKS fetch failed ({status}): {body}";
     }
     /// Templates for `getAutoRecharge`.
     pub mod get_auto_recharge {

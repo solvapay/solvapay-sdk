@@ -100,6 +100,7 @@ module SolvaPay
     def delete_plan: (product_ref: String, plan_ref: String) -> untyped
     def delete_product: (product_ref: String) -> untyped
     def disable_auto_recharge: (params: Hash[String, untyped]) -> untyped
+    def fetch_jwks: (params: Hash[String, untyped]) -> untyped
     def get_auto_recharge: (params: Hash[String, untyped]) -> untyped
     def get_customer: (params: Hash[String, untyped]) -> untyped
     def get_customer_balance: (params: Hash[String, untyped]) -> untyped

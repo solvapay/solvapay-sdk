@@ -47,6 +47,7 @@ module SolvaPay
       mcp_read_resource
       mcp_oauth_request
       mcp_dispatch
+      fetch_jwks
     ].freeze
 
     SYNC_METHODS = %w[

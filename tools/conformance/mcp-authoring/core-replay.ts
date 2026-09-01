@@ -215,7 +215,19 @@ export async function replayMcpCoreFixture(
         publicBaseUrl: String(args.publicBaseUrl),
         ...(args.mcpPath !== undefined ? { mcpPath: String(args.mcpPath) } : {}),
         jsonRpcId: (args.jsonRpcId as string | number | null | undefined) ?? null,
+        ...(args.jwksJson !== undefined ? { jwksJson: args.jwksJson } : {}),
+        ...(args.hs256Secret !== undefined ? { hs256Secret: String(args.hs256Secret) } : {}),
+        ...(args.expectedIssuer !== undefined
+          ? { expectedIssuer: String(args.expectedIssuer) }
+          : {}),
+        ...(args.expectedAudience !== undefined
+          ? { expectedAudience: String(args.expectedAudience) }
+          : {}),
+        ...(args.nowUnixSecs !== undefined ? { nowUnixSecs: Number(args.nowUnixSecs) } : {}),
       })
+      break
+    case 'mcpVerifyBearer':
+      got = callMcpSyncOp(fn, args)
       break
     case 'mcpDcrDiagnostics':
       got = mcpDcrDiagnostics(args)

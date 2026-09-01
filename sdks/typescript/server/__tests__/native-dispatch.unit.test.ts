@@ -53,6 +53,7 @@ const ALL_METHODS: NativeClientMethod[] = [
   'mcpReadResource',
   'mcpOauthRequest',
   'mcpDispatch',
+  'fetchJwks',
 ]
 
 function fakeClient(overrides: Partial<NativeClientLike> = {}): NativeClientLike {

@@ -11,6 +11,7 @@
 #![allow(clippy::result_large_err, clippy::missing_docs_in_private_items)]
 
 mod auth_gate;
+mod bearer_verify;
 mod config_log;
 mod csp;
 mod dcr;
@@ -29,6 +30,10 @@ mod widget_resource;
 pub use auth_gate::{
     is_free_mcp_method, mcp_auth_gate, requires_bearer_auth, AuthGateInput, AuthGateResult,
     McpAuthMode,
+};
+pub use bearer_verify::{
+    customer_ref_from_claims, extract_bearer_token, mcp_verify_bearer, VerifyBearerInput,
+    VerifyBearerResult,
 };
 pub use config_log::mcp_config_log;
 pub use csp::{mcp_merge_csp, SolvaPayMcpCsp};

@@ -132,14 +132,24 @@ def mcp_auth_gate(
     auth_mode: object | None = None,
     mcp_path: object | None = None,
     json_rpc_id: object | None = None,
+    jwks_json: object | None = None,
+    hs256_secret: object | None = None,
+    expected_issuer: object | None = None,
+    expected_audience: object | None = None,
+    now_unix_secs: object | None = None,
 ) -> object:
     """Decide allow versus 401 WWW-Authenticate challenge for an MCP request.
     @param public_base_url Public origin for the WWW-Authenticate resource.
     @param rpc_method JSON-RPC method; may be absent.
-    @param auth_header Authorization header; any value allows.
+    @param auth_header Authorization header; a gated method requires a verified bearer.
     @param auth_mode tools-call or all; defaults to tools-call.
     @param mcp_path Optional MCP mount path.
     @param json_rpc_id JSON-RPC id echoed on the challenge body.
+    @param jwks_json JWKS document for RS256 or ES256 verification.
+    @param hs256_secret Explicit HS256 secret for local or stub flows.
+    @param expected_issuer Expected iss; defaults to the public origin.
+    @param expected_audience Expected aud; defaults to the MCP resource identifier.
+    @param now_unix_secs Explicit unix clock for exp and nbf checks.
     @returns Allow decision or HTTP challenge payload.
     """
     call_args: dict[str, object] = {}
@@ -154,6 +164,16 @@ def mcp_auth_gate(
         call_args["mcpPath"] = mcp_path
     if json_rpc_id is not None:
         call_args["jsonRpcId"] = json_rpc_id
+    if jwks_json is not None:
+        call_args["jwksJson"] = jwks_json
+    if hs256_secret is not None:
+        call_args["hs256Secret"] = hs256_secret
+    if expected_issuer is not None:
+        call_args["expectedIssuer"] = expected_issuer
+    if expected_audience is not None:
+        call_args["expectedAudience"] = expected_audience
+    if now_unix_secs is not None:
+        call_args["nowUnixSecs"] = now_unix_secs
     return call_sync_op("mcpAuthGate", call_args)
 
 def mcp_config_log(api_base_url: object, product_ref: object, public_base_url: object) -> object:
@@ -425,6 +445,38 @@ def mcp_resume(token: object, handler_envelope: object) -> object:
     call_args["token"] = token
     call_args["handlerEnvelope"] = handler_envelope
     return call_sync_op("mcpResume", call_args)
+
+def mcp_verify_bearer(
+    token: object,
+    expected_issuer: object,
+    expected_audience: object,
+    now_unix_secs: object,
+    jwks_json: object | None = None,
+    hs256_secret: object | None = None,
+    claim_priority: object | None = None,
+) -> object:
+    """Verify an MCP OAuth bearer JWT against JWKS (RS256/ES256) or an explicit HS256 secret.
+    @param token Compact JWT (not the Authorization header).
+    @param expected_issuer Required iss claim.
+    @param expected_audience Required aud claim (MCP resource identifier).
+    @param now_unix_secs Explicit unix clock for exp and nbf.
+    @param jwks_json JWKS document for asymmetric verification.
+    @param hs256_secret Explicit HS256 secret for local or stub flows.
+    @param claim_priority Optional customer-ref claim names; defaults to customerRef, customer_ref, sub.
+    @returns Verified claims and customerRef, or a typed 401.
+    """
+    call_args: dict[str, object] = {}
+    call_args["token"] = token
+    call_args["expectedIssuer"] = expected_issuer
+    call_args["expectedAudience"] = expected_audience
+    call_args["nowUnixSecs"] = now_unix_secs
+    if jwks_json is not None:
+        call_args["jwksJson"] = jwks_json
+    if hs256_secret is not None:
+        call_args["hs256Secret"] = hs256_secret
+    if claim_priority is not None:
+        call_args["claimPriority"] = claim_priority
+    return call_sync_op("mcpVerifyBearer", call_args)
 
 def mcp_view_maps() -> dict[str, object]:
     """Return the frozen view-to-tool and view-to-prompt maps.

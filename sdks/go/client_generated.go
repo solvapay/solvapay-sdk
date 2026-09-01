@@ -363,6 +363,25 @@ func (c *Client) DisableAutoRecharge(ctx context.Context, params map[string]any)
 	return out, nil
 }
 
+// FetchJwks fetch an authorization-server JWKS document without attaching merchant credentials.
+// The params parameter is Absolute jwksUrl (typically {issuer}/.well-known/jwks.json).
+// Returns Raw JWKS JSON object with a keys array.
+func (c *Client) FetchJwks(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_fetch_jwks", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GetAutoRecharge fetch auto-recharge configuration for a customer.
 // The params parameter is Auto-recharge lookup options.
 // Returns Auto-recharge configuration projection.

@@ -552,6 +552,17 @@ impl WasmClient {
         })
         .await
     }
+
+    /// `fetchJwks`
+    #[wasm_bindgen(js_name = "fetchJwks")]
+    pub async fn fetch_jwks(&self, args_json: String) -> String {
+        let client = Rc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
+            client.fetch_jwks(params).await
+        })
+        .await
+    }
 }
 
 /// Offline dispatch helper: unknown fn names return an internal-error envelope

@@ -12,7 +12,7 @@ module SolvaPay
     def self.derive_icons: (Hash[String, untyped] branding) -> untyped
     def self.invoke_payable_next: (Hash[String, untyped] state, Hash[String, untyped] event) -> untyped
     def self.make_response_result: (Hash[String, untyped] data, Hash[String, untyped] options, Array[Hash[String, untyped]] emitted_blocks) -> untyped
-    def self.mcp_auth_gate: (String public_base_url, String rpc_method, String auth_header, String auth_mode, String mcp_path, Hash[String, untyped] json_rpc_id) -> untyped
+    def self.mcp_auth_gate: (String public_base_url, String rpc_method, String auth_header, String auth_mode, String mcp_path, Hash[String, untyped] json_rpc_id, Hash[String, untyped] jwks_json, String hs256_secret, String expected_issuer, String expected_audience, Integer now_unix_secs) -> untyped
     def self.mcp_config_log: (String api_base_url, String product_ref, String public_base_url) -> untyped
     def self.mcp_dcr_diagnostics: (String product_ref, String api_base_url, Integer status, String body_text) -> untyped
     def self.mcp_descriptors: (String resource_uri, String public_base_url, String product_ref, Array[String] views, Hash[String, untyped] csp, String api_base_url, Hash[String, untyped] branding) -> untyped
@@ -28,6 +28,7 @@ module SolvaPay
     def self.mcp_overview_resource: () -> untyped
     def self.mcp_requires_bearer_auth: (String mcp_method, String auth_mode) -> untyped
     def self.mcp_resume: (String token, Hash[String, untyped] handler_envelope) -> untyped
+    def self.mcp_verify_bearer: (String token, String expected_issuer, String expected_audience, Integer now_unix_secs, Hash[String, untyped] jwks_json, String hs256_secret, Hash[String, untyped] claim_priority) -> untyped
     def self.mcp_view_maps: () -> untyped
     def self.mcp_widget_resource: (Hash[String, untyped] rpc, String resource_uri, String public_base_url, String product_ref, Array[String] views, Hash[String, untyped] csp, String api_base_url, Hash[String, untyped] branding) -> untyped
     def self.paywall_tool_result: (String message, Hash[String, untyped] structured_content) -> untyped

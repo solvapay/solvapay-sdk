@@ -741,3 +741,19 @@ pub unsafe extern "C" fn sv_mcp_dispatch(args_ptr: *mut u8, args_len: usize) -> 
         }))
     }))
 }
+
+/// `fetchJwks`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_fetch_jwks(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
+            client.fetch_jwks(params).await
+        }))
+    }))
+}

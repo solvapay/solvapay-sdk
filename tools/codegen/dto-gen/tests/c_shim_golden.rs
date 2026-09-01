@@ -99,7 +99,7 @@ fn c_column_emits_full_36_op_surface() {
     let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::C).expect("emit C");
     let symbols = client_symbols(&ir);
-    assert_eq!(symbols.len(), 41, "expected 41 client binding symbols");
+    assert_eq!(symbols.len(), 42, "expected 42 client binding symbols");
 
     let formatted = support::rustfmt_source(&emitted.client_rs, "dispatch");
     for sym in &symbols {

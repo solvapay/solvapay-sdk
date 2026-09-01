@@ -60,6 +60,7 @@ const GROUP_MCP: NativeClientMethod[] = [
   'mcpReadResource',
   'mcpOauthRequest',
   'mcpDispatch',
+  'fetchJwks',
 ]
 
 const ALL_METHODS: NativeClientMethod[] = [...GROUP_A, ...GROUP_B, ...GROUP_C, ...GROUP_MCP]
@@ -447,6 +448,7 @@ describe('createSolvaPayClient MCP composite native dispatch', () => {
     expect(await client.mcpReadResource!(payload)).toEqual({ fromNative: 'mcpReadResource' })
     expect(await client.mcpOauthRequest!(payload)).toEqual({ fromNative: 'mcpOauthRequest' })
     expect(await client.mcpDispatch!(payload)).toEqual({ fromNative: 'mcpDispatch' })
+    expect(await client.fetchJwks!(payload)).toEqual({ fromNative: 'fetchJwks' })
 
     expect(fetchMock).not.toHaveBeenCalled()
     expect(calls.map(c => c.fn).sort()).toEqual([...GROUP_MCP].sort())

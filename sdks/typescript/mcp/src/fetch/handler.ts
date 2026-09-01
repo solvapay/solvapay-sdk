@@ -8,12 +8,15 @@
 
 import {
   buildAuthInfoFromBearer,
-  McpBearerAuthError,
   mcpAuthGate,
   pathAwareProtectedResourcePath,
   mcpWidgetResource,
   runMcpEngineRequest,
-  type BuildAuthInfoFromBearerOptions,
+  defaultMcpBearerExpectations,
+  cachedJwks,
+  jwksUrlFromIssuer,
+  requiresBearerAuth,
+  type McpAuthInfoExtras,
   type McpAuthMode,
   type McpEngineConfig,
   type McpEngineHttpResult,
@@ -44,7 +47,10 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
   mcpPath?: string
   requireAuth?: boolean
   authMode?: McpAuthMode
-  authInfo?: BuildAuthInfoFromBearerOptions
+  authInfo?: McpAuthInfoExtras
+  hs256Secret?: string
+  jwksJson?: unknown
+  fetchJwks?: (jwksUrl: string) => Promise<unknown>
   protectedResourcePath?: string
   authorizationServerPath?: string
   oauthPaths?: OAuthBridgePaths
@@ -170,6 +176,9 @@ export function createSolvaPayMcpFetchHandler(
     requireAuth = true,
     authMode = 'tools-call',
     authInfo,
+    hs256Secret,
+    jwksJson,
+    fetchJwks,
     protectedResourcePath,
     authorizationServerPath,
     oauthPaths,
@@ -198,6 +207,25 @@ export function createSolvaPayMcpFetchHandler(
     ...(legacy !== undefined ? { legacy } : {}),
     ...(onerror !== undefined ? { onerror } : {}),
   })
+
+  const resolveVerify = async (authHeader?: string | null) => {
+    const expectations = defaultMcpBearerExpectations(publicBaseUrl, mcpPath)
+    if (hs256Secret !== undefined) {
+      return { ...expectations, hs256Secret }
+    }
+    if (jwksJson !== undefined) {
+      return { ...expectations, jwksJson }
+    }
+    if (fetchJwks !== undefined && authHeader) {
+      const json = await cachedJwks(
+        jwksUrlFromIssuer(expectations.expectedIssuer),
+        fetchJwks,
+        Date.now(),
+      )
+      return { ...expectations, jwksJson: json }
+    }
+    return expectations
+  }
 
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url)
@@ -283,6 +311,7 @@ export function createSolvaPayMcpFetchHandler(
             body: widget,
           })
         }
+        const verify = await resolveVerify(req.headers.get('authorization'))
         const result = await runMcpEngineRequest({
           mcpDispatch: engine.mcpDispatch,
           rpc,
@@ -292,6 +321,7 @@ export function createSolvaPayMcpFetchHandler(
             authMode,
             mcpPath,
             userAgent: req.headers.get('user-agent') ?? undefined,
+            ...verify,
           },
           ...(req.headers.get('authorization')
             ? { authHeader: req.headers.get('authorization') ?? undefined }
@@ -323,6 +353,7 @@ export function createSolvaPayMcpFetchHandler(
 
     const authHeader = req.headers.get('authorization')
     const envelope = await readJsonRpcEnvelope(req)
+    const verify = await resolveVerify(authHeader)
     if (requireAuth) {
       const gate = mcpAuthGate({
         publicBaseUrl,
@@ -331,6 +362,7 @@ export function createSolvaPayMcpFetchHandler(
         authMode,
         mcpPath,
         jsonRpcId: envelope.id,
+        ...verify,
       })
       if (gate.kind === 'challenge') {
         return engineHttpResponse(req, {
@@ -343,16 +375,15 @@ export function createSolvaPayMcpFetchHandler(
 
     let resolvedAuthInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
     if (authHeader) {
-      try {
-        resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, authInfo)
-        if (!resolvedAuthInfo) {
-          throw new McpBearerAuthError('Missing bearer token')
-        }
-      } catch {
+      resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, {
+        ...verify,
+        ...authInfo,
+      })
+      if (!resolvedAuthInfo && requiresBearerAuth(envelope.method, authMode)) {
         return authChallenge(req, {
           publicBaseUrl,
           protectedResourcePath: metadataPath,
-          jsonRpcId: (await readJsonRpcEnvelope(req)).id,
+          jsonRpcId: envelope.id,
         })
       }
     }

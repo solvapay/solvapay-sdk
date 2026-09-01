@@ -141,7 +141,7 @@ if (tree.status !== 0) {
   fail(`cargo tree failed:\n${tree.stderr}`)
 }
 const lower = tree.stdout.toLowerCase()
-for (const banned of ['solvapay-transport', 'reqwest', 'tokio']) {
+for (const banned of ['solvapay-transport', 'reqwest', 'tokio', 'rsa', 'p256']) {
   if (lower.includes(banned)) {
     fail(`browser dependency graph must not include ${banned}`)
   }

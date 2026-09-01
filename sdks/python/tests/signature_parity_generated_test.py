@@ -38,6 +38,7 @@ OPERATION_NAMES = (
     'delete_plan',
     'delete_product',
     'disable_auto_recharge',
+    'fetch_jwks',
     'get_auto_recharge',
     'get_customer',
     'get_customer_balance',

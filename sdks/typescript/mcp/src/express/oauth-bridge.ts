@@ -14,7 +14,10 @@ import {
   McpBearerAuthError,
   pathAwareProtectedResourcePath,
   withoutTrailingSlash,
-  type BuildAuthInfoFromBearerOptions,
+  defaultMcpBearerExpectations,
+  cachedJwks,
+  jwksUrlFromIssuer,
+  type McpAuthInfoExtras,
   type McpAuthMode,
   type OAuthBridgePaths,
 } from '@solvapay/mcp-core'
@@ -93,7 +96,10 @@ export interface McpOAuthBridgeOptions {
   mcpPath?: string
   requireAuth?: boolean
   authMode?: McpAuthMode
-  authInfo?: BuildAuthInfoFromBearerOptions
+  authInfo?: McpAuthInfoExtras
+  hs256Secret?: string
+  jwksJson?: unknown
+  fetchJwks?: (jwksUrl: string) => Promise<unknown>
   protectedResourcePath?: string
   authorizationServerPath?: string
   oauthPaths?: OAuthBridgePaths
@@ -382,6 +388,9 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     requireAuth = true,
     authMode = 'tools-call',
     authInfo,
+    hs256Secret,
+    jwksJson,
+    fetchJwks,
     protectedResourcePath = DEFAULT_PROTECTED_RESOURCE_PATH,
     authorizationServerPath = DEFAULT_AUTHORIZATION_SERVER_PATH,
     oauthPaths,
@@ -444,7 +453,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     await dispatchOauth(req, res, dispatchPath, body, config, oauthClient)
   })
 
-  const mcpAuthMiddleware: Middleware = (req, res, next) => {
+  const mcpAuthMiddleware: Middleware = async (req, res, next) => {
     if (req.path !== mcpPath) {
       next()
       return
@@ -469,6 +478,20 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     const id = getRequestJsonRpcId(req.body)
     const method = getRequestJsonRpcMethod(req.body)
 
+    const expectations = defaultMcpBearerExpectations(publicBaseUrl, mcpPath)
+    let resolvedJwks = jwksJson
+    if (hs256Secret === undefined && resolvedJwks === undefined && fetchJwks !== undefined) {
+      resolvedJwks = await cachedJwks(
+        jwksUrlFromIssuer(expectations.expectedIssuer),
+        fetchJwks,
+        Date.now(),
+      )
+    }
+    const verify = {
+      ...expectations,
+      ...(hs256Secret !== undefined ? { hs256Secret } : {}),
+      ...(resolvedJwks !== undefined ? { jwksJson: resolvedJwks } : {}),
+    }
     const gate = requireAuth
       ? mcpAuthGate({
           rpcMethod: method,
@@ -477,6 +500,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
           publicBaseUrl,
           mcpPath,
           jsonRpcId: id,
+          ...verify,
         })
       : { kind: 'allow' as const }
     if (gate.kind === 'challenge') {
@@ -493,7 +517,7 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     }
 
     try {
-      const auth = buildAuthInfoFromBearer(authHeader, authInfo)
+      const auth = buildAuthInfoFromBearer(authHeader, { ...verify, ...authInfo })
       if (!auth) {
         throw new McpBearerAuthError('Missing bearer token')
       }

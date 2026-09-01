@@ -53,6 +53,7 @@ pub const OPERATION_SIGNATURES: &[(&str, &[(&str, bool)])] = &[
     ("delete_plan", &[("product_ref", true), ("plan_ref", true)]),
     ("delete_product", &[("product_ref", true)]),
     ("disable_auto_recharge", &[("params", true)]),
+    ("fetch_jwks", &[("params", true)]),
     ("get_auto_recharge", &[("params", true)]),
     ("get_customer", &[("params", true)]),
     ("get_customer_balance", &[("params", true)]),
@@ -163,6 +164,9 @@ async fn _assert_typed_surface(c: &Client) {
         .disable_auto_recharge(_parity_sink::<DisableAutoRechargeParams>())
         .await;
     let _: Result<Value, SdkError> = c
+        .fetch_jwks(_parity_sink::<solvapay_transport::FetchJwksParams>())
+        .await;
+    let _: Result<Value, SdkError> = c
         .get_auto_recharge(_parity_sink::<GetAutoRechargeParams>())
         .await;
     let _: Result<CustomerResponseMapped, SdkError> =
@@ -265,6 +269,8 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
     let _: Result<(), SdkError> = c.delete_product(_parity_sink::<&str>());
     let _: Result<Value, SdkError> =
         c.disable_auto_recharge(_parity_sink::<DisableAutoRechargeParams>());
+    let _: Result<Value, SdkError> =
+        c.fetch_jwks(_parity_sink::<solvapay_transport::FetchJwksParams>());
     let _: Result<Value, SdkError> = c.get_auto_recharge(_parity_sink::<GetAutoRechargeParams>());
     let _: Result<CustomerResponseMapped, SdkError> =
         c.get_customer(_parity_sink::<GetCustomerParams>());
@@ -311,8 +317,8 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
 }
 
 #[test]
-fn operation_signatures_count_is_41() {
-    assert_eq!(OPERATION_SIGNATURES.len(), 41);
+fn operation_signatures_count_is_42() {
+    assert_eq!(OPERATION_SIGNATURES.len(), 42);
 }
 
 #[test]

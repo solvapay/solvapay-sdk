@@ -19,7 +19,7 @@ fn go_parity_matches_committed_and_has_real_defaults() {
     )
     .expect("committed parity");
     assert_eq!(emitted, committed);
-    assert!(emitted.contains("len(operationSignatures); got != 41"));
+    assert!(emitted.contains("len(operationSignatures); got != 42"));
     assert!(emitted.contains("expectedLimitsCacheTTLMs = 10000"));
     assert!(emitted.contains("expectedMaxRetries = 2"));
     assert!(emitted.contains("expectedInitialDelayMs = 500"));

@@ -76,7 +76,7 @@ import json
 print(json.dumps({
     "method": "POST",
     "path": "/mcp",
-    "headers": {"authorization": "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9."},
+    "headers": {"authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjo0MTAyNDQ0ODAwfQ.eb4F_ZV0NAHvVw_MNTAOzvEpZj_0P0rutht4rFEw2aA"},
     "body": json.dumps({
         "jsonrpc": "2.0",
         "id": 3,
@@ -90,6 +90,8 @@ print(json.dumps({
         "mcpPath": "/mcp",
         "payableTools": ["echo_paid"],
         "apiBaseUrl": "http://127.0.0.1:1",
+        "hs256Secret": "solvapay-mcp-fixture-hs256-secret-32b!!",
+        "nowUnixSecs": 1700000000,
     },
 }))
 PY

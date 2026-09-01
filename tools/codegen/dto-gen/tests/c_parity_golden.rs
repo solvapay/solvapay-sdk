@@ -16,7 +16,7 @@ fn c_parity_matches_committed_and_has_real_checks() {
         fs::read_to_string(support::paths().generated_path("cParity").expect("cParity"))
             .expect("committed parity");
     assert_eq!(emitted, committed);
-    assert!(emitted.contains("nops != 41"));
+    assert!(emitted.contains("nops != 42"));
     assert!(emitted.contains("(void)&solvapay_client_call"));
     assert!(emitted.contains("solvapay_abi_version() != SOLVAPAY_ABI_VERSION"));
     assert!(emitted.contains("unknown op"));

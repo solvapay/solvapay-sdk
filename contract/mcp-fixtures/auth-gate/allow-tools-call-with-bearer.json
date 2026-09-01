@@ -5,9 +5,11 @@
     "fn": "mcpAuthGate",
     "args": {
       "rpcMethod": "tools/call",
-      "authHeader": "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9.",
+      "authHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vbWNwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9tY3AuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDB9.FuGJM6mAh6TgYiVB7tI5y4ctnGYQOqGUozKIuiQztDA",
       "authMode": "tools-call",
-      "publicBaseUrl": "https://mcp.example.com"
+      "publicBaseUrl": "https://mcp.example.com",
+      "hs256Secret": "solvapay-mcp-fixture-hs256-secret-32b!!",
+      "nowUnixSecs": 1700000000
     }
   },
   "expect": {

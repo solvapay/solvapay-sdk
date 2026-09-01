@@ -275,6 +275,22 @@ impl BlockingClient {
         runtime().block_on(self.inner.disable_auto_recharge(params))
     }
 
+    /// Fetch an authorization-server JWKS document without attaching merchant credentials.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — Absolute jwksUrl (typically {issuer}/.well-known/jwks.json).
+    ///
+    /// # Returns
+    ///
+    /// Raw JWKS JSON object with a keys array.
+    pub fn fetch_jwks(
+        &self,
+        params: solvapay_transport::FetchJwksParams,
+    ) -> Result<Value, SdkError> {
+        runtime().block_on(self.inner.fetch_jwks(params))
+    }
+
     /// Fetch auto-recharge configuration for a customer.
     ///
     /// # Arguments

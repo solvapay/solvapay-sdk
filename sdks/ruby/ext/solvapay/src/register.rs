@@ -532,5 +532,6 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         method!(SolvaPayClient::mcp_oauth_request, 1),
     )?;
     client.define_method("mcp_dispatch", method!(SolvaPayClient::mcp_dispatch, 1))?;
+    client.define_method("fetch_jwks", method!(SolvaPayClient::fetch_jwks, 1))?;
     Ok(())
 }

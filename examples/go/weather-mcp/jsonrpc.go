@@ -7,7 +7,8 @@ import (
 	"net/http/httptest"
 )
 
-const demoBearer = "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfZGVtbyJ9."
+const fixtureHs256Secret = "solvapay-mcp-fixture-hs256-secret-32b!!"
+const demoBearer = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL3dlYXRoZXIuZXhhbXBsZS50ZXN0IiwiYXVkIjoiaHR0cHM6Ly93ZWF0aGVyLmV4YW1wbGUudGVzdC9tY3AiLCJleHAiOjQxMDI0NDQ4MDAsInN1YiI6ImN1c19kZW1vIn0.QoVuKIIYOeg12mZSdk7Plgvx7erXzk69uV46BfWmrN8"
 
 func withProtocolMeta(params any) map[string]any {
 	out := map[string]any{}

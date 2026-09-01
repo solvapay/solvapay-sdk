@@ -220,6 +220,10 @@ pub fn dispatch(client: &SolvaPayClient, op: &str, args_json: &str) -> String {
             let params: solvapay_transport::McpDispatchParams = parse_args_json(&args_json)?;
             client.mcp_dispatch(params).await
         })),
+        "fetchJwks" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::FetchJwksParams = parse_args_json(&args_json)?;
+            client.fetch_jwks(params).await
+        })),
         other => err_envelope(&SdkError::transport(format!("unknown op: {other}"), false)),
     }
 }

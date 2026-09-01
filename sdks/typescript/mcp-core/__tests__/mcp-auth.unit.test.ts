@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { buildAuthInfoFromBearer } from '../src/auth-bridge'
 import {
@@ -8,10 +9,32 @@ import {
   getCustomerRefFromJwtPayload,
 } from '../src/bearer'
 
+const HS256_SECRET = 'solvapay-mcp-fixture-hs256-secret-32b!!'
+const VERIFY = {
+  hs256Secret: HS256_SECRET,
+  expectedIssuer: 'https://mcp.example.com',
+  expectedAudience: 'https://mcp.example.com',
+  nowUnixSecs: 1_700_000_000,
+}
+
 function createUnsignedJwt(payload: Record<string, unknown>) {
   const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url')
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
   return `${header}.${body}.`
+}
+
+function createHs256Jwt(payload: Record<string, unknown>) {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url')
+  const body = Buffer.from(
+    JSON.stringify({
+      iss: 'https://mcp.example.com',
+      aud: 'https://mcp.example.com',
+      exp: 4_102_444_800,
+      ...payload,
+    }),
+  ).toString('base64url')
+  const sig = createHmac('sha256', HS256_SECRET).update(`${header}.${body}`).digest('base64url')
+  return `${header}.${body}.${sig}`
 }
 
 describe('mcp-auth helpers', () => {
@@ -42,13 +65,13 @@ describe('mcp-auth helpers', () => {
   })
 
   it('getCustomerRefFromBearerAuthHeader resolves customerRef', () => {
-    const token = createUnsignedJwt({ customer_ref: 'cust_from_snake_case' })
-    const result = getCustomerRefFromBearerAuthHeader(`Bearer ${token}`)
+    const token = createHs256Jwt({ customer_ref: 'cust_from_snake_case' })
+    const result = getCustomerRefFromBearerAuthHeader(`Bearer ${token}`, VERIFY)
     expect(result).toBe('cust_from_snake_case')
   })
 
   it('getCustomerRefFromBearerAuthHeader throws for malformed token', () => {
-    expect(() => getCustomerRefFromBearerAuthHeader('Bearer broken-token')).toThrow(
+    expect(() => getCustomerRefFromBearerAuthHeader('Bearer broken-token', VERIFY)).toThrow(
       McpBearerAuthError,
     )
   })
@@ -60,13 +83,13 @@ describe('mcp-auth helpers', () => {
   })
 
   it('buildAuthInfoFromBearer treats aud as resource metadata, not client identity', () => {
-    const token = createUnsignedJwt({
+    const token = createHs256Jwt({
       customer_ref: 'cust_123',
       aud: 'https://mcp.example.com',
       scope: 'tools:read tools:write',
     })
 
-    const authInfo = buildAuthInfoFromBearer(`Bearer ${token}`)
+    const authInfo = buildAuthInfoFromBearer(`Bearer ${token}`, VERIFY)
 
     expect(authInfo?.clientId).toBe('solvapay-mcp-client')
     expect(authInfo?.scopes).toEqual(['tools:read', 'tools:write'])
@@ -103,9 +126,11 @@ describe('mcp-auth helpers', () => {
     ]
 
     for (const { payload, options, expected } of cases) {
-      const token = createUnsignedJwt(payload)
+      const token = createHs256Jwt(payload)
 
-      expect(buildAuthInfoFromBearer(`Bearer ${token}`, options)?.clientId).toBe(expected)
+      expect(buildAuthInfoFromBearer(`Bearer ${token}`, { ...VERIFY, ...options })?.clientId).toBe(
+        expected,
+      )
     }
   })
 })

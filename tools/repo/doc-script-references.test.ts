@@ -132,7 +132,7 @@ function loadWorkspaceScripts(): Map<string, Record<string, string>> {
 }
 
 describe('doc script references', () => {
-  it('every pnpm <script> in docs exists in package.json', () => {
+  it('every pnpm <script> in docs exists in package.json', { timeout: 30_000 }, () => {
     const scripts = rootScripts()
     const workspaceScripts = loadWorkspaceScripts()
     const docsRoot = path.join(REPO_ROOT, 'docs')

@@ -10,8 +10,9 @@ import (
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const testBearerCus1 = "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9."
-const testBearerNoIdentity = "Bearer eyJhbGciOiJub25lIn0.e30."
+const fixtureHs256Secret = "solvapay-mcp-fixture-hs256-secret-32b!!"
+const testBearerCus1 = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjo0MTAyNDQ0ODAwfQ.eb4F_ZV0NAHvVw_MNTAOzvEpZj_0P0rutht4rFEw2aA"
+const testBearerNoIdentity = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwcC5leGFtcGxlLmNvbSIsImF1ZCI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tL21jcCIsImV4cCI6NDEwMjQ0NDgwMH0.k6TKR7DSyWvHWp6LSNp0qkKXz3AseoCX34ut_q_rqWI"
 
 func newTestServer(t *testing.T) *Server {
 	t.Helper()
@@ -30,6 +31,7 @@ func newTestServer(t *testing.T) *Server {
 		ResourceURI:   "ui://widget.html",
 		ServerName:    "test-mcp",
 		ServerVersion: "v0.0.1",
+		Hs256Secret:   fixtureHs256Secret,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -136,6 +138,7 @@ func TestBuiltinUpgradeToolCall(t *testing.T) {
 		ProductRef:    "prd_demo",
 		PublicBaseURL: "https://app.example.com",
 		ResourceURI:   "ui://test/view.html",
+		Hs256Secret:   fixtureHs256Secret,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -145,7 +148,7 @@ func TestBuiltinUpgradeToolCall(t *testing.T) {
 		"name":      "upgrade",
 		"arguments": map[string]any{"mode": "text"},
 	}, map[string]string{
-		"Authorization": "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9.",
+		"Authorization": testBearerCus1,
 	})
 	result := decodeRPCResult(t, rec)
 	content, _ := result["content"].([]any)
@@ -223,6 +226,7 @@ func newPayableHTTP(t *testing.T) (*mockBackend, http.Handler) {
 		ResourceURI:   "ui://widget.html",
 		ServerName:    "test-mcp",
 		ServerVersion: "v0.0.1",
+		Hs256Secret:   fixtureHs256Secret,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -270,10 +274,13 @@ func TestPayableToolCallRejectsBearerWithoutIdentity(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &parsed); err != nil {
 		t.Fatalf("decode body: %v (%s)", err, rec.Body.String())
 	}
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status %d body %s", rec.Code, rec.Body.String())
+	}
 	rpcErr, _ := parsed["error"].(map[string]any)
 	msg, _ := rpcErr["message"].(string)
-	if !strings.Contains(msg, "echo_paid") || !strings.Contains(msg, "customer identity") {
-		t.Fatalf("expected loud identity error, got %s", rec.Body.String())
+	if msg != "Unauthorized" {
+		t.Fatalf("expected Unauthorized for a bearer with no customer claim, got %s", rec.Body.String())
 	}
 	if calls := backend.limitsCalls(); len(calls) != 0 {
 		t.Fatalf("limits must not run without identity: %#v", calls)

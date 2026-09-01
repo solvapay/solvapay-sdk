@@ -40,6 +40,8 @@ async fn engine_loop_invoke_handler_then_resume() {
             mcp_path: Some("/mcp".to_owned()),
             views: None,
             oauth_paths: None,
+            hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
+            jwks_json: None,
         },
     );
     let handler: PayableHandler = Arc::new(|args, mut ctx: ResponseContext| {
@@ -66,7 +68,7 @@ async fn engine_loop_invoke_handler_then_resume() {
             path: "/mcp".to_owned(),
             headers: [(
                 "authorization".to_owned(),
-                "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9.".to_owned(),
+                "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjo0MTAyNDQ0ODAwfQ.eb4F_ZV0NAHvVw_MNTAOzvEpZj_0P0rutht4rFEw2aA".to_owned(),
             )]
             .into_iter()
             .collect(),
@@ -112,6 +114,8 @@ async fn tools_list_includes_registered_payable_descriptor() {
             mcp_path: Some("/mcp".to_owned()),
             views: None,
             oauth_paths: None,
+            hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
+            jwks_json: None,
         },
     );
     let handler: PayableHandler = Arc::new(|_args, mut ctx: ResponseContext| {
@@ -186,6 +190,8 @@ async fn resources_read_returns_widget_html() {
             mcp_path: Some("/mcp".to_owned()),
             views: None,
             oauth_paths: None,
+            hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
+            jwks_json: None,
         },
     );
     let response = host
@@ -233,6 +239,8 @@ async fn resources_read_stamps_modern_catalog_envelope() {
             mcp_path: Some("/mcp".to_owned()),
             views: None,
             oauth_paths: None,
+            hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
+            jwks_json: None,
         },
     );
     let response = host
@@ -285,6 +293,8 @@ async fn handle_mcp_unparseable_json_is_jsonrpc_not_sdk_error() {
             mcp_path: Some("/mcp".to_owned()),
             views: None,
             oauth_paths: None,
+            hs256_secret: Some("solvapay-mcp-fixture-hs256-secret-32b!!".to_owned()),
+            jwks_json: None,
         },
     );
     let response = host

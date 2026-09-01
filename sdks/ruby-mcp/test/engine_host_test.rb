@@ -10,7 +10,8 @@ require "stringio"
 require_relative "mcp_authoring/repo_paths"
 
 class EngineHostTest < Minitest::Test
-  BEARER = "Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJjdXNfMSJ9."
+  BEARER = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20vbWNwIiwiZXhwIjo0MTAyNDQ0ODAwfQ.eb4F_ZV0NAHvVw_MNTAOzvEpZj_0P0rutht4rFEw2aA"
+  HS256_SECRET = "solvapay-mcp-fixture-hs256-secret-32b!!"
 
   def test_engine_loop_invoke_handler_then_resume
     stub = LimitsStub.new
@@ -19,6 +20,7 @@ class EngineHostTest < Minitest::Test
       client: client,
       product_ref: "prd_demo",
       public_base_url: "https://app.example.com",
+      hs256_secret: HS256_SECRET,
       resource_uri: "ui://test/view.html",
     )
     engine.register_payable(
@@ -59,6 +61,7 @@ class EngineHostTest < Minitest::Test
       client: client,
       product_ref: "prd_demo",
       public_base_url: "https://app.example.com",
+      hs256_secret: HS256_SECRET,
       resource_uri: "ui://test/view.html",
     )
     engine.register_payable(
@@ -94,6 +97,7 @@ class EngineHostTest < Minitest::Test
       client: client,
       product_ref: "prd_demo",
       public_base_url: "https://app.example.com",
+      hs256_secret: HS256_SECRET,
     )
     status, headers, body = engine.call(
       rack_env("POST", "/mcp", JSON.generate({ jsonrpc: "2.0", id: 1, method: "tools/list" })),
@@ -112,6 +116,7 @@ class EngineHostTest < Minitest::Test
       client: client,
       product_ref: "prd_demo",
       public_base_url: "https://app.example.com",
+      hs256_secret: HS256_SECRET,
       resource_uri: "ui://widget.html",
     )
     status, _headers, body = engine.call(
@@ -145,6 +150,7 @@ class EngineHostTest < Minitest::Test
       client: client,
       product_ref: "prd_demo",
       public_base_url: "https://app.example.com",
+      hs256_secret: HS256_SECRET,
       resource_uri: "ui://widget.html",
     )
     status, _headers, body = engine.call(
@@ -181,6 +187,7 @@ class EngineHostTest < Minitest::Test
       client: client,
       product_ref: "prd_demo",
       public_base_url: "https://app.example.com",
+      hs256_secret: HS256_SECRET,
     )
     status, headers, body = engine.call(rack_env("POST", "/mcp", "{not-json"))
     assert_equal 400, status

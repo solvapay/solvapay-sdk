@@ -231,7 +231,7 @@ pub fn dispatch_covers_all_operations() -> bool {
     let expected: std::collections::BTreeSet<&str> = OPERATION_NAMES
         .iter()
         .copied()
-        .filter(|name| !name.starts_with("mcp"))
+        .filter(|name| !name.starts_with("mcp") && *name != "fetchJwks")
         .collect();
     let actual: std::collections::BTreeSet<&str> = DISPATCH_FNS.iter().copied().collect();
     expected == actual
@@ -535,7 +535,7 @@ mod coverage_tests {
         let expected: BTreeSet<&str> = OPERATION_NAMES
             .iter()
             .copied()
-            .filter(|name| !name.starts_with("mcp"))
+            .filter(|name| !name.starts_with("mcp") && *name != "fetchJwks")
             .collect();
         let actual: BTreeSet<&str> = DISPATCH_FNS.iter().copied().collect();
         assert_eq!(

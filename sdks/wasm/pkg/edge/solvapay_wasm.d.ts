@@ -111,6 +111,10 @@ export class WasmClient {
      */
     disableAutoRecharge(args_json: string): Promise<string>;
     /**
+     * `fetchJwks`
+     */
+    fetchJwks(args_json: string): Promise<string>;
+    /**
      * `GET /v1/sdk/auto-recharge`
      */
     getAutoRecharge(args_json: string): Promise<string>;
@@ -835,6 +839,7 @@ export interface InitOutput {
     readonly wasmclient_deletePlan: (a: number, b: number, c: number) => any;
     readonly wasmclient_deleteProduct: (a: number, b: number, c: number) => any;
     readonly wasmclient_disableAutoRecharge: (a: number, b: number, c: number) => any;
+    readonly wasmclient_fetchJwks: (a: number, b: number, c: number) => any;
     readonly wasmclient_getAutoRecharge: (a: number, b: number, c: number) => any;
     readonly wasmclient_getCustomer: (a: number, b: number, c: number) => any;
     readonly wasmclient_getCustomerBalance: (a: number, b: number, c: number) => any;

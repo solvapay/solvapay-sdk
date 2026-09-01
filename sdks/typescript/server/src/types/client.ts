@@ -572,4 +572,7 @@ export interface SolvaPayClient {
 
   /** Route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler. */
   mcpDispatch?(params: unknown): Promise<unknown>
+
+  /** Fetch an authorization-server JWKS document without merchant credentials. */
+  fetchJwks?(params: unknown): Promise<unknown>
 }

@@ -122,6 +122,11 @@ async fn mcp_dispatch_errors_on_widget_resource_read() {
                 csp: None,
                 api_base_url: None,
                 branding: None,
+                jwks_json: None,
+                hs256_secret: None,
+                expected_issuer: None,
+                expected_audience: None,
+                now_unix_secs: None,
             },
             auth_header: None,
             mcp_protocol_version_header: None,
@@ -189,4 +194,32 @@ async fn mcp_oauth_token_normalizes_upstream_error() {
         .expect("token");
     assert_eq!(got["status"], 401);
     assert_eq!(got["body"]["error"], "invalid_client");
+}
+
+#[tokio::test]
+async fn fetch_jwks_is_unauthenticated_get_and_requires_keys() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/.well-known/jwks.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "keys": [{ "kty": "RSA", "kid": "1" }]
+        })))
+        .mount(&server)
+        .await;
+
+    let got = client(&server)
+        .fetch_jwks(solvapay_transport::FetchJwksParams {
+            jwks_url: format!("{}/.well-known/jwks.json", server.uri()),
+        })
+        .await
+        .expect("jwks");
+    assert_eq!(got["keys"][0]["kid"], "1");
+
+    let missing = client(&server)
+        .fetch_jwks(solvapay_transport::FetchJwksParams {
+            jwks_url: format!("{}/missing", server.uri()),
+        })
+        .await
+        .expect_err("missing JWKS must fail");
+    assert!(missing.message().contains("JWKS fetch failed"), "{}", missing.message());
 }

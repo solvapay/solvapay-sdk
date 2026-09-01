@@ -24,6 +24,7 @@ export type NativeClientMethod =
   | 'deletePlan'
   | 'deleteProduct'
   | 'disableAutoRecharge'
+  | 'fetchJwks'
   | 'getAutoRecharge'
   | 'getCustomer'
   | 'getCustomerBalance'
@@ -107,6 +108,9 @@ export function createGeneratedClientOperations(
     },
     async disableAutoRecharge(params) {
       return dispatchClient('disableAutoRecharge', params)
+    },
+    async fetchJwks(params) {
+      return dispatchClient('fetchJwks', params)
     },
     async getAutoRecharge(params) {
       return dispatchClient('getAutoRecharge', params)
