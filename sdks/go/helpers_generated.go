@@ -41,6 +41,15 @@ func BillingCycle(ctx context.Context, priced any) (any, error) {
 	}))
 }
 
+// BuildCustomerSnapshot build the merchant-facing customer snapshot from a limits body.
+// Returns Customer snapshot with defaults applied, including throttled and overage.
+func BuildCustomerSnapshot(ctx context.Context, customerRef any, limits any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_build_customer_snapshot_binding", mustJSON(map[string]any{
+		"customerRef": customerRef,
+		"limits":      limits,
+	}))
+}
+
 // BuildGateMessage build the human-readable paywall gate message from state and gate content.
 // Returns Gate message string.
 func BuildGateMessage(ctx context.Context, state any, gate any) (any, error) {
@@ -203,6 +212,14 @@ func IncludedUnits(ctx context.Context, priced any, meter any) (any, error) {
 	return nativecall.CallSync(ctx, "sv_included_units_binding", mustJSON(map[string]any{
 		"priced": priced,
 		"meter":  meter,
+	}))
+}
+
+// IsUnlimitedRemaining return whether remaining is the backend unlimited sentinel (-1).
+// Returns True only when remaining is exactly -1.
+func IsUnlimitedRemaining(ctx context.Context, remaining any) (any, error) {
+	return nativecall.CallSync(ctx, "sv_is_unlimited_remaining_binding", mustJSON(map[string]any{
+		"remaining": remaining,
 	}))
 }
 

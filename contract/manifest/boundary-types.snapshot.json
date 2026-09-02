@@ -1,6 +1,32 @@
 {
   "_comment": "generated — do not edit; regenerate with dto-gen --dump-boundary-types",
   "types": {
+    "AllowConsequence": {
+      "module": "gate_driver",
+      "rustdoc": "Degraded allow reason. Absent on a plain allow.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "unitEnum",
+        "renameAll": "camelCase",
+        "variants": [
+          {
+            "rustName": "Throttled",
+            "wireName": "throttled",
+            "rustdoc": "Served under `onExceed: throttle`.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "Overage",
+            "wireName": "overage",
+            "rustdoc": "Served under `onExceed: charge` past the included cap.",
+            "cfgFeature": null,
+            "fields": []
+          }
+        ]
+      }
+    },
     "AuthResolutionInput": {
       "module": "auth_resolution",
       "rustdoc": "Inputs for [`resolve_authenticated_user`] (facade resolves env / Request).",
@@ -1127,6 +1153,32 @@
             "ty": {
               "kind": "value"
             }
+          },
+          {
+            "rustName": "throttled",
+            "wireName": "throttled",
+            "rustdoc": "`throttled` from limits, or `false` when absent.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "overage",
+            "wireName": "overage",
+            "rustdoc": "`overage` from limits, or `false` when absent.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
           }
         ]
       }
@@ -1880,6 +1932,20 @@
                 "ty": {
                   "kind": "named",
                   "name": "CustomerSnapshot"
+                }
+              },
+              {
+                "rustName": "consequence",
+                "wireName": "consequence",
+                "rustdoc": "Degraded allow (`throttled` wins over `overage`). Omitted on a plain allow.",
+                "optional": true,
+                "skipSerializingIf": "Option::is_none",
+                "serdeDefault": false,
+                "serializeWith": null,
+                "cfgFeature": null,
+                "ty": {
+                  "kind": "named",
+                  "name": "AllowConsequence"
                 }
               },
               {
@@ -3576,6 +3642,32 @@
             "ty": {
               "kind": "value"
             }
+          },
+          {
+            "rustName": "needs_top_up",
+            "wireName": "needsTopUp",
+            "rustdoc": "Authoritative backend deny reason: prepaid top-up required.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "needs_upgrade",
+            "wireName": "needsUpgrade",
+            "rustdoc": "Authoritative backend deny reason: auto-upgrade required.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
           }
         ]
       }
@@ -3683,6 +3775,32 @@
             "cfgFeature": null,
             "ty": {
               "kind": "string"
+            }
+          },
+          {
+            "rustName": "needs_top_up",
+            "wireName": "needsTopUp",
+            "rustdoc": "Authoritative backend deny reason: prepaid top-up required.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
+            }
+          },
+          {
+            "rustName": "needs_upgrade",
+            "wireName": "needsUpgrade",
+            "rustdoc": "Authoritative backend deny reason: auto-upgrade required.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "bool"
             }
           }
         ]
@@ -6827,6 +6945,37 @@
         }
       }
     },
+    "solvapay_core::gate_driver::build_customer_snapshot": {
+      "name": "build_customer_snapshot",
+      "module": "gate_driver",
+      "implTy": null,
+      "rustdoc": "Shared snapshot builder so MCP `ctx.customer` and `GateAction` use one impl.\n\n# Arguments\n\n* `customer_ref` - Backend customer ref (`cus_...`).\n* `limits` - Last `checkLimits` body, or `None`/`null` on degraded paths.",
+      "params": [
+        {
+          "rustName": "customer_ref",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        },
+        {
+          "rustName": "limits",
+          "byRef": true,
+          "optional": true,
+          "ty": {
+            "kind": "value"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "named",
+          "name": "CustomerSnapshot"
+        }
+      }
+    },
     "solvapay_core::gate_driver::gate_next": {
       "name": "gate_next",
       "module": "gate_driver",
@@ -6994,6 +7143,28 @@
             "kind": "named",
             "name": "HelperErrorResult"
           }
+        }
+      }
+    },
+    "solvapay_core::limits::is_unlimited_remaining": {
+      "name": "is_unlimited_remaining",
+      "module": "limits",
+      "implTy": null,
+      "rustdoc": "True when `remaining` is the backend's unlimited sentinel (`-1`).\n\nAn unexpected negative (for example `-2`) is not treated as unlimited.",
+      "params": [
+        {
+          "rustName": "remaining",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "bool"
         }
       }
     },
@@ -8022,7 +8193,7 @@
       "name": "classify_paywall_state",
       "module": "paywall_state",
       "implTy": null,
-      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` trumps everything.\n2. Usage-based out of credits → `topup_required` (plan type, or balance-block\n   proxy; credit channels then `remaining === 0` fallback).\n3. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
+      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` trumps everything.\n2. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`. Prefer these over the credit-balance heuristic.\n3. Usage-based out of credits → `topup_required` (plan type, or balance-block\n   proxy; credit channels then `remaining === 0` fallback).\n4. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
       "params": [
         {
           "rustName": "limits",

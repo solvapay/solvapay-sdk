@@ -24,6 +24,7 @@ from mcp.types import (
     TextContent,
     Tool,
 )
+from solvapay import build_customer_snapshot
 from solvapay.errors import PaywallError, SolvaPayError
 from solvapay.facade import SolvaPay
 from solvapay.results import PayableAllowResult, PayablePaywallResult
@@ -704,7 +705,6 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
         "usageType": spec.usage_type,
         "startedMs": _now_ms(),
     }
-    allow: PayableAllowResult | None = None
     while True:
         out = _invoke_payable_next(state, event)
         state = out.get("state")
@@ -724,7 +724,6 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
                 continue
             if not isinstance(gate_result, PayableAllowResult):
                 raise TypeError("unexpected gate result")
-            allow = gate_result
             limits: Mapping[str, object] = {}
             decision = gate_result.decision
             maybe_limits = decision.get("limits") if isinstance(decision, Mapping) else None
@@ -739,14 +738,14 @@ async def _invoke_payable(spec: _PayableTool, args: dict[str, object]) -> dict[s
         if kind == "invokeHandler":
             limits_raw = action.get("limits")
             limits = limits_raw if isinstance(limits_raw, Mapping) else {}
+            snapshot = build_customer_snapshot(
+                str(action.get("customerRef") or ""),
+                dict(limits),
+            )
+            if not isinstance(snapshot, Mapping):
+                raise TypeError("buildCustomerSnapshot did not return an object")
             ctx = ResponseContext(
-                customer={
-                    "ref": str(action.get("customerRef") or ""),
-                    "balance": limits.get("creditBalance", 0),
-                    "remaining": limits.get("remaining"),
-                    "withinLimits": limits.get("withinLimits", True),
-                    "plan": limits.get("plan"),
-                },
+                customer=dict(snapshot),
                 product={"reference": spec.product, "name": spec.product},
                 product_ref=spec.product,
             )

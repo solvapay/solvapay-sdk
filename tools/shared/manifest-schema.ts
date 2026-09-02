@@ -25,6 +25,7 @@ export const EXPECTED_TOP_LEVEL_IDS = [
   'buildGateMessage',
   'buildNudgeMessage',
   'classifyPaywallState',
+  'buildCustomerSnapshot',
   'paywallErrorToClientPayload',
   'SolvaPayError',
   'PaywallError',
@@ -534,9 +535,10 @@ export const SHIM_JS_NAMES = [
   'updateCustomer',
   'updatePlan',
   'updateProduct',
-  // Decision cores (45)
+  // Decision cores (46)
   'attachBusinessDetailsValidationError',
   'buildCreateCustomerParams',
+  'buildCustomerSnapshot',
   'buildGateMessage',
   'buildNudgeMessage',
   'buildPaywallGate',
@@ -617,6 +619,7 @@ export const SHIM_JS_NAMES = [
   'getTaxIdExample',
   'getTaxIdFieldLabel',
   'getTaxIdHelperText',
+  'isUnlimitedRemaining',
   'isZeroDecimalCurrency',
   'buildPayableToolResult',
   'makeResponseResult',

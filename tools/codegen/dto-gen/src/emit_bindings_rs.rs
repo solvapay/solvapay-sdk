@@ -898,7 +898,7 @@ const GO_DECISIONS_HEADER: &str = r#"//! WASI guest decision / paywall / retry s
 use serde_json::Value;
 use solvapay_core::{
     assert_valid_product_ref, attach_business_details_validation_error,
-    build_create_customer_params, build_gate_message, build_nudge_message, build_paywall_gate,
+    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message, build_paywall_gate,
     classify_cancel_error, classify_create_error, classify_customer_ref, classify_lookup_error,
     classify_paywall_state, classify_reactivate_error, coerce_customer_options,
     decide_paywall_outcome, evaluate_balance_observation, evaluate_cached_limits,
@@ -941,7 +941,7 @@ use solvapay_core::{
     assert_response_result, build_prompt_descriptor_metadata, build_prompt_user_message,
     build_tool_descriptor_metadata, credits_to_display_minor_units, derive_icons,
     derive_tax_id_type, get_business_country_options, get_seller_tax_identifier_display_label,
-    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, is_zero_decimal_currency,
+    get_tax_id_example, get_tax_id_field_label, get_tax_id_helper_text, is_unlimited_remaining, is_zero_decimal_currency,
     build_payable_tool_result, invoke_payable_next, make_response_result, mcp_tool_names_json,
     mcp_view_maps,
     minor_units_per_major, paywall_tool_result, resolve_seller_identity_display,

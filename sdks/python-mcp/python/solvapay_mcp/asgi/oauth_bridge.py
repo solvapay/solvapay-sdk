@@ -10,6 +10,7 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Mount
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from solvapay_mcp._layer2 import mcp_native_cors
 from solvapay_mcp.asgi.mcp_oauth_request import (
     McpOauthRequestConfig,
     mcp_oauth_request,
@@ -19,7 +20,6 @@ from solvapay_mcp.oauth.auth_gate import mcp_auth_gate
 from solvapay_mcp.oauth.bearer import McpBearerAuthError, default_mcp_bearer_expectations
 from solvapay_mcp.oauth.config_log import log_mcp_config_once
 from solvapay_mcp.oauth.discovery import (
-    path_aware_protected_resource_path,
     resolve_oauth_paths,
     without_trailing_slash,
 )
@@ -32,7 +32,6 @@ from solvapay_mcp.register import (
     set_request_customer_ref,
     set_request_user_agent,
 )
-from solvapay_mcp._layer2 import mcp_native_cors
 from solvapay_mcp.server.native import native_call
 
 PROTECTED_RESOURCE_PATH = "/.well-known/oauth-protected-resource"

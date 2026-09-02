@@ -123,6 +123,7 @@ SyncMethod = Literal[
     "tier_bands",
     "tier_meters",
     "usage_rate",
+    "build_customer_snapshot",
     # --- @solvapay/core pure logic ---
     "format_price",
     "should_show_tax_row",
@@ -145,6 +146,7 @@ SyncMethod = Literal[
     "resolve_seller_identity_display",
     "get_seller_tax_identifier_display_label",
     "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
+    "is_unlimited_remaining",
     # --- MCP payload / descriptors ---
     "paywall_tool_result",
     "make_response_result",

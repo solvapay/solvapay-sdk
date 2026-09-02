@@ -6,4 +6,9 @@
  */
 
 export type { PaywallState } from './types/paywall'
-export { buildGateMessage, buildNudgeMessage, classifyPaywallState } from './native-decisions'
+export {
+  buildCustomerSnapshot,
+  buildGateMessage,
+  buildNudgeMessage,
+  classifyPaywallState,
+} from './native-decisions'

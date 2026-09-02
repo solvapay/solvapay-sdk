@@ -68,6 +68,14 @@ fn compile_handler(spec: HandlerSpec) -> PayableHandler {
                             ctx.emit(block);
                         }
                     }
+                    let data = if data.get("echo").and_then(Value::as_str) == Some("customer") {
+                        json!({
+                            "throttled": ctx.customer().throttled,
+                            "overage": ctx.customer().overage,
+                        })
+                    } else {
+                        data
+                    };
                     ctx.respond(data, options)
                 }
             }

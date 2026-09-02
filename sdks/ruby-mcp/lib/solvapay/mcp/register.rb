@@ -3,6 +3,7 @@
 require "json"
 require "mcp"
 require "solvapay"
+require_relative "core"
 require_relative "layer2"
 require_relative "response_context"
 
@@ -64,7 +65,6 @@ module SolvaPay
           "usageType" => usage_type.nil? || usage_type.to_s.empty? ? "requests" : usage_type.to_s,
           "startedMs" => (Time.now.to_f * 1_000).to_i,
         }
-        allow = nil
         loop do
           out = NativeDispatch.call_sync("invoke_payable_next", { "state" => state, "event" => event })
           unless out.is_a?(Hash)
@@ -96,7 +96,6 @@ module SolvaPay
 
               event = { "kind" => "gatePaywall", "gate" => gate, "message" => message }
             when SolvaPay::PayableAllowResult
-              allow = gate_result
               limits = limits_from_decision(gate_result.decision)
               event = {
                 "kind" => "gateAllow",
@@ -109,14 +108,15 @@ module SolvaPay
           when "invokeHandler"
             empty_limits = {} #: Hash[String, untyped]
             limits = action["limits"].is_a?(Hash) ? stringify_keys(action["limits"]) : empty_limits
+            snapshot_args = {
+              "customerRef" => action["customerRef"],
+              "limits" => limits,
+            }
+            snapshot = NativeDispatch.call_sync("build_customer_snapshot", snapshot_args)
+            raise SolvaPay::SolvaPayError, "buildCustomerSnapshot did not return an object" unless snapshot.is_a?(Hash)
+
             ctx = ResponseContext.new(
-              customer: {
-                "ref" => action["customerRef"],
-                "balance" => limits.fetch("creditBalance", 0),
-                "remaining" => limits["remaining"],
-                "withinLimits" => limits.fetch("withinLimits", true),
-                "plan" => limits["plan"],
-              },
+              customer: snapshot,
               product: { "reference" => product, "name" => product },
               product_ref: product,
             )
@@ -145,9 +145,7 @@ module SolvaPay
             end
           when "done"
             track = action["track"]
-            if track.is_a?(Hash) && track["request"].is_a?(Hash)
-              solvapay.track_usage(params: track["request"])
-            end
+            solvapay.track_usage(params: track["request"]) if track.is_a?(Hash) && track["request"].is_a?(Hash)
             result = action["result"]
             unless result.is_a?(Hash)
               raise SolvaPay::SolvaPayError.new(

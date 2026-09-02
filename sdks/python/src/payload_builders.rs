@@ -13,14 +13,14 @@ use solvapay_core::{
     derive_icons, derive_tax_id_type, format_price, format_subtotal_label,
     format_vat_summary_label, get_business_country_options,
     get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
-    get_tax_id_helper_text, invoke_payable_next, is_zero_decimal_currency, make_response_result,
-    mcp_tool_names_json, mcp_view_maps, minor_units_per_major, paywall_tool_result,
-    resolve_seller_identity_display, resolve_tax_behavior, resolve_tax_treatment_note,
-    reverse_charge_note, seller_tax_identifier_display_label_by_type, should_show_tax_row,
-    tax_not_collected_note, to_major_units, validate_business_details, validate_public_base_url,
-    BuildPromptDescriptorMetadataOptions, BuildToolDescriptorMetadataOptions, BusinessDetailsInput,
-    CreditsToDisplayInput, MerchantBranding, PaywallGate, ResponseEnvelope, SdkError,
-    SellerIdentityInput,
+    get_tax_id_helper_text, invoke_payable_next, is_unlimited_remaining, is_zero_decimal_currency,
+    make_response_result, mcp_tool_names_json, mcp_view_maps, minor_units_per_major,
+    paywall_tool_result, resolve_seller_identity_display, resolve_tax_behavior,
+    resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
+    should_show_tax_row, tax_not_collected_note, to_major_units, validate_business_details,
+    validate_public_base_url, BuildPromptDescriptorMetadataOptions,
+    BuildToolDescriptorMetadataOptions, BusinessDetailsInput, CreditsToDisplayInput,
+    MerchantBranding, PaywallGate, ResponseEnvelope, SdkError, SellerIdentityInput,
 };
 
 use crate::args::{
@@ -326,6 +326,18 @@ pub fn seller_tax_identifier_display_label_by_type_binding(args_json: String) ->
             map.insert((*key).to_owned(), Value::String((*label).to_owned()));
         }
         Ok(Value::Object(map))
+    })
+}
+
+// --- credit-display ---
+
+/// Binding for `isUnlimitedRemaining`.
+#[pyfunction(name = "is_unlimited_remaining")]
+pub fn is_unlimited_remaining_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let remaining = require_f64(&args, "remaining")?;
+        Ok(Value::Bool(is_unlimited_remaining(remaining)))
     })
 }
 

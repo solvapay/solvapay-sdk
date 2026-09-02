@@ -68,7 +68,14 @@ module McpAuthoring
             spec.emit.each { |block| ctx.emit(stringify(block)) }
           end
           options = spec.options.nil? ? nil : stringify(spec.options)
-          ctx.respond(stringify(spec.data), options)
+          data = stringify(spec.data)
+          if data.is_a?(Hash) && data["echo"] == "customer"
+            data = {
+              "throttled" => ctx.customer["throttled"],
+              "overage" => ctx.customer["overage"],
+            }
+          end
+          ctx.respond(data, options)
         else
           raise "unreachable handler kind"
         end

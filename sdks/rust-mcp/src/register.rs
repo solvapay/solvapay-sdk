@@ -9,8 +9,8 @@ use rmcp::model::{CallToolResult, JsonObject, Tool};
 use serde_json::{json, Map, Value};
 use solvapay::{Allow, Client, GateOpts, GateOutcome, SdkError};
 use solvapay_core::{
-    invoke_payable_next, resolve_customer_ref as resolve_customer_ref_op, HelperErrorResult,
-    InvokePayableAction, PaywallGate,
+    build_customer_snapshot, invoke_payable_next, resolve_customer_ref as resolve_customer_ref_op,
+    HelperErrorResult, InvokePayableAction, PaywallGate,
 };
 use thiserror::Error;
 
@@ -197,13 +197,10 @@ pub async fn invoke_payable(
                 limits,
             } => {
                 let ctx = ResponseContext::new(
-                    CustomerView {
-                        customer_ref: handler_ref,
-                        balance: limits.get("creditBalance").cloned().unwrap_or(json!(0)),
-                        remaining: limits.get("remaining").cloned().unwrap_or(Value::Null),
-                        within_limits: limits.get("withinLimits").cloned().unwrap_or(json!(true)),
-                        plan: limits.get("plan").cloned().unwrap_or(Value::Null),
-                    },
+                    CustomerView::from(solvapay::CustomerSnapshot::from(build_customer_snapshot(
+                        &handler_ref,
+                        Some(&limits),
+                    ))),
                     ProductView {
                         reference: product.clone(),
                         name: product.clone(),
@@ -303,13 +300,7 @@ fn paywall_override_active() -> bool {
 
 /// Limits snapshot JSON passed into `invoke_payable_next` on the allow path.
 fn allow_limits_value(allow: &Allow) -> Value {
-    let snap = allow.customer();
-    json!({
-        "creditBalance": snap.balance,
-        "remaining": snap.remaining,
-        "withinLimits": snap.within_limits,
-        "plan": snap.plan,
-    })
+    allow.limits().clone()
 }
 
 /// Resolve customer_ref from the hook, `customer_ref` arg, or `"anonymous"`.

@@ -23,6 +23,8 @@ type CustomerView struct {
 	Remaining    any    `json:"remaining"`
 	WithinLimits any    `json:"withinLimits"`
 	Plan         any    `json:"plan"`
+	Throttled    bool   `json:"throttled"`
+	Overage      bool   `json:"overage"`
 }
 
 // ProductView is the read-only product projection on ResponseContext.

@@ -111,6 +111,14 @@ export function isZeroDecimalCurrency(currency: string): boolean {
 }
 
 /**
+ * Return whether remaining is the backend unlimited sentinel (-1).
+ * @returns True only when remaining is exactly -1.
+ */
+export function isUnlimitedRemaining(remaining: number): boolean {
+  return dispatchSync('isUnlimitedRemaining', { remaining })
+}
+
+/**
  * Convert credit units into display minor units for a currency.
  * @returns Display amount in minor units.
  */

@@ -48,7 +48,9 @@
           "ref": "cus_abc",
           "balance": 0,
           "remaining": 0,
-          "withinLimits": false
+          "withinLimits": false,
+          "throttled": false,
+          "overage": false
         },
         "gate": {
           "kind": "payment_required",

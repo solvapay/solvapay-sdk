@@ -147,6 +147,13 @@ export type PaywallDecision<T> =
       customerRef: string
       /** Opaque `gate_next` state for `handlerSucceeded` / `handlerFailed`. */
       driverState: unknown
+      /**
+       * Set when access is granted with consequences. `throttled` is
+       * `onExceed: throttle` (legacy plans — the builder no longer
+       * offers it). `overage` is `onExceed: charge` past the included
+       * cap. Absent on a plain allow. Derived by the core gate driver.
+       */
+      consequence?: 'throttled' | 'overage'
     }
   | {
       outcome: 'gate'

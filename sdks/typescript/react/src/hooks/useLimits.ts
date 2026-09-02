@@ -24,6 +24,7 @@
  * @since 1.3.0
  */
 
+import { isUnlimitedRemaining } from '@solvapay/core'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTransport } from './useTransport'
 import { useCustomer } from './useCustomer'
@@ -59,12 +60,12 @@ function cacheKey(customerRef: string | undefined, productRef: string, meterName
 
 /**
  * True when a `LimitResponse.remaining` carries the backend's unlimited
- * sentinel. The wire contract is exactly `-1`, but any negative value
- * means "no finite cap" — never a real count — so treat the whole range
- * as unlimited rather than letting an unexpected `-2` read as exhausted.
+ * sentinel. The wire contract is exactly `-1`. An unexpected negative
+ * (e.g. `-2`) is not treated as unlimited — it would hide a backend
+ * bug behind a silent "no cap" reading.
  */
 export function isUnlimited(remaining: number): boolean {
-  return remaining < 0
+  return isUnlimitedRemaining(remaining)
 }
 
 export interface UseLimitsOptions {
@@ -108,6 +109,16 @@ export interface UseLimitsReturn {
    * should treat `true` as "needs the activation flow", not "exhausted".
    */
   activationRequired: boolean | null
+  /** Access granted under `onExceed: throttle` (legacy plans). `null` while loading. */
+  throttled: boolean | null
+  /** Access granted and usage past the cap accrues overage. `null` while loading. */
+  overage: boolean | null
+  /** Access blocked pending a prepaid top-up. `null` while loading. */
+  needsTopUp: boolean | null
+  /** Access blocked pending an auto-upgrade. `null` while loading. */
+  needsUpgrade: boolean | null
+  /** The customer was auto-upgraded and access was restored. `null` while loading. */
+  upgraded: boolean | null
   loading: boolean
   error: Error | null
   refetch: () => Promise<void>
@@ -323,6 +334,11 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
     withinLimits: data?.withinLimits ?? null,
     meterName: data?.meterName ?? null,
     activationRequired: data?.activationRequired ?? null,
+    throttled: data?.throttled ?? null,
+    overage: data?.overage ?? null,
+    needsTopUp: data?.needsTopUp ?? null,
+    needsUpgrade: data?.needsUpgrade ?? null,
+    upgraded: data?.upgraded ?? null,
     loading,
     error,
     refetch,

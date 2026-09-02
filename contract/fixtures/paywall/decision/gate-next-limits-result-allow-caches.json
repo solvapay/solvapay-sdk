@@ -51,7 +51,9 @@
           "ref": "cus_abc",
           "balance": 0,
           "remaining": 3,
-          "withinLimits": true
+          "withinLimits": true,
+          "throttled": false,
+          "overage": false
         },
         "cache": {
           "op": "set",

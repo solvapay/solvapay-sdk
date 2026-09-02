@@ -31,7 +31,13 @@ def _compile_handler(scenario: Scenario):
                 for block in spec.emit:
                     ctx.emit(block.model_dump(by_alias=True))
             options = spec.options.model_dump(exclude_none=True) if spec.options else None
-            return ctx.respond(spec.data, options)
+            data = spec.data
+            if isinstance(data, Mapping) and data.get("echo") == "customer":
+                data = {
+                    "throttled": ctx.customer["throttled"],
+                    "overage": ctx.customer["overage"],
+                }
+            return ctx.respond(data, options)
         raise RuntimeError("unreachable handler kind")
 
     return handler

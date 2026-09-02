@@ -133,6 +133,7 @@ export type WasmSyncMethod =
   | 'tierBands'
   | 'tierMeters'
   | 'usageRate'
+  | 'buildCustomerSnapshot'
   // @solvapay/core pure logic
   | 'formatPrice'
   | 'shouldShowTaxRow'
@@ -155,6 +156,7 @@ export type WasmSyncMethod =
   | 'resolveSellerIdentityDisplay'
   | 'getSellerTaxIdentifierDisplayLabel'
   | 'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE'
+  | 'isUnlimitedRemaining'
   // @solvapay/mcp-core builders (+ formatGate shares paywallToolResult)
   | 'paywallToolResult'
   | 'makeResponseResult'

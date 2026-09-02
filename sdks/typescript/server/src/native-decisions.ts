@@ -636,6 +636,17 @@ export function classifyPaywallState(limits: LimitResponseWithPlan | null): Payw
 }
 
 /**
+ * Build the merchant-facing customer snapshot from a limits body.
+ * @returns Customer snapshot with defaults applied, including throttled and overage.
+ */
+export function buildCustomerSnapshot(
+  customerRef: string,
+  limits: LimitResponseWithPlan | null,
+): import('@solvapay/core').CustomerSnapshot {
+  return dispatchSync('buildCustomerSnapshot', { customerRef, limits })
+}
+
+/**
  * Build the human-readable paywall gate message from state and gate content.
  * @returns Gate message string.
  */

@@ -24,6 +24,7 @@ import init, {
   // credit-display (public-safe)
   creditsToDisplayMinorUnits,
   isZeroDecimalCurrency,
+  isUnlimitedRemaining,
   minorUnitsPerMajor,
   // seller-identity (public-safe)
   resolveSellerIdentityDisplay,
@@ -52,6 +53,7 @@ export {
   getBusinessCountryOptions,
   creditsToDisplayMinorUnits,
   isZeroDecimalCurrency,
+  isUnlimitedRemaining,
   minorUnitsPerMajor,
   resolveSellerIdentityDisplay,
   getSellerTaxIdentifierDisplayLabel,

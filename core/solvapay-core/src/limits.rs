@@ -53,6 +53,19 @@ pub fn resolve_check_limits_params(
     })
 }
 
+/// True when `remaining` is the backend's unlimited sentinel (`-1`).
+///
+/// An unexpected negative (for example `-2`) is not treated as unlimited.
+#[crate::solvapay_export(
+    artifact = "payloadBuilders",
+    catalog = "coreHelper",
+    section = "credit-display",
+    emit_order = 13
+)]
+pub fn is_unlimited_remaining(remaining: f64) -> bool {
+    remaining == -1.0
+}
+
 /// JS `||` string: `None` / empty / whitespace-only → absent.
 fn js_or_str(value: Option<&str>) -> Option<String> {
     value
@@ -115,5 +128,13 @@ mod tests {
         let params =
             resolve_check_limits_params(Some("prd_1"), Some("api_calls"), Some("tokens")).unwrap();
         assert_eq!(params.meter_name, "api_calls");
+    }
+
+    #[test]
+    fn unlimited_sentinel_is_negative_one() {
+        assert!(is_unlimited_remaining(-1.0));
+        assert!(!is_unlimited_remaining(-2.0));
+        assert!(!is_unlimited_remaining(0.0));
+        assert!(!is_unlimited_remaining(5.0));
     }
 }

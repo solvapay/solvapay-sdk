@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import TypedDict
 
 from solvapay_mcp.core import call
+
+
+class McpBearerExpectations(TypedDict):
+    expected_issuer: str
+    expected_audience: str
+    now_unix_secs: int
 
 
 class McpBearerAuthError(Exception):
@@ -118,7 +124,7 @@ def default_mcp_bearer_expectations(
     public_base_url: str,
     mcp_path: str | None = None,
     now_unix_secs: int | None = None,
-) -> dict[str, Any]:
+) -> McpBearerExpectations:
     import time
 
     issuer = public_base_url.rstrip("/")

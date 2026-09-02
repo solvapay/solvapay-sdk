@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from typing import TypedDict
 
 from solvapay_mcp.core import call
@@ -40,7 +40,7 @@ class _LazyDefaultCsp(dict[str, list[str]]):
         self._load()
         return super().__getitem__(key)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         self._load()
         return super().__iter__()
 

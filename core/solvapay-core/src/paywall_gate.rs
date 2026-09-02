@@ -57,6 +57,12 @@ pub struct PaywallGateLimits {
     /// Rich product context; raw pass-through emitted as `productDetails`.
     #[serde(default)]
     pub product: Option<Value>,
+    /// Authoritative backend deny reason: prepaid top-up required.
+    #[serde(default)]
+    pub needs_top_up: Option<bool>,
+    /// Authoritative backend deny reason: auto-upgrade required.
+    #[serde(default)]
+    pub needs_upgrade: Option<bool>,
 }
 
 /// Recovery discriminator emitted on the wire as `kind`.
@@ -196,6 +202,8 @@ fn classifier_view(limits: &PaywallGateLimits, balance: Option<&Value>) -> Paywa
         credit_balance: limits.credit_balance,
         remaining: limits.remaining,
         checkout_url: limits.checkout_url.clone(),
+        needs_top_up: limits.needs_top_up,
+        needs_upgrade: limits.needs_upgrade,
     }
 }
 

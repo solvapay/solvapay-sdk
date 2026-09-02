@@ -2,9 +2,10 @@
 
 //! Generated portable helper re-exports.
 
+#[allow(unused_imports)]
 pub use solvapay_core::{
-    BillingCycle, BusinessDetailsInput, Charge, CreditsToDisplayInput, GateContent,
-    PaywallClientPayload, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
+    BillingCycle, BusinessDetailsInput, Charge, CreditsToDisplayInput, CustomerSnapshot,
+    GateContent, PaywallClientPayload, PaywallGate, PaywallGateLimits, PaywallLimits, PaywallState,
     ProductReadinessInput, ProductReadinessResult, SellerIdentityDisplay, SellerIdentityInput,
     TaxIdType, UsageRate, ValidateBusinessDetailsResult,
 };
@@ -31,6 +32,13 @@ pub use solvapay_core::product_readiness::assert_valid_product_ref;
 ///
 /// Interval (and count when greater than 1), or null.
 pub use solvapay_core::pricing_options::billing_cycle;
+
+/// Build the merchant-facing customer snapshot from a limits body.
+///
+/// # Returns
+///
+/// Customer snapshot with defaults applied, including throttled and overage.
+pub use solvapay_core::gate_driver::build_customer_snapshot;
 
 /// Build the human-readable paywall gate message from state and gate content.
 ///
@@ -164,6 +172,13 @@ pub use solvapay_core::pricing_options::headline_charges;
 ///
 /// Cap (0 means unlimited), or null when no limit is configured.
 pub use solvapay_core::pricing_options::included_units;
+
+/// Return whether remaining is the backend unlimited sentinel (-1).
+///
+/// # Returns
+///
+/// True only when remaining is exactly -1.
+pub use solvapay_core::limits::is_unlimited_remaining;
 
 /// Return whether a currency uses zero decimal places.
 ///

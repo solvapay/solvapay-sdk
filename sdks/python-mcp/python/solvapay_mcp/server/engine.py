@@ -183,6 +183,6 @@ async def _resolved_jwks(binding: _EngineBinding, auth_header: str | None) -> ob
     if hit is not None and hit[1] > now:
         return hit[0]
     raw = await fetch(json.dumps({"jwksUrl": url}))
-    document = unwrap_envelope(raw)
+    document: object = unwrap_envelope(raw)
     _JWKS_CACHE[url] = (document, now + _JWKS_TTL_SECS)
     return document

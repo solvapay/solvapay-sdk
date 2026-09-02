@@ -1,0 +1,17 @@
+{
+  "suite": "paywall",
+  "case": "needs-topup-overrides-usage-heuristic",
+  "input": {
+    "fn": "classifyPaywallState",
+    "args": {
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 5,
+        "needsTopUp": true,
+        "creditBalance": 100,
+        "plans": [{ "reference": "pl_pro", "type": "recurring", "requiresPayment": true }]
+      }
+    }
+  },
+  "expect": { "result": { "kind": "topup_required" } }
+}

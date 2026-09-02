@@ -55,6 +55,7 @@ class SignatureParityGeneratedTest < Minitest::Test
   GENERATED_HELPERS = %w[
     assert_valid_product_ref
     billing_cycle
+    build_customer_snapshot
     build_gate_message
     build_nudge_message
     build_paywall_gate
@@ -74,6 +75,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     get_tax_id_helper_text
     headline_charges
     included_units
+    is_unlimited_remaining
     is_zero_decimal_currency
     meter_name
     minor_units_per_major

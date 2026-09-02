@@ -12,11 +12,11 @@ use solvapay_core::{
     credits_to_display_minor_units, derive_tax_id_type, format_price, format_subtotal_label,
     format_vat_summary_label, get_business_country_options,
     get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
-    get_tax_id_helper_text, invoke_payable_next, is_zero_decimal_currency, minor_units_per_major,
-    resolve_seller_identity_display, resolve_tax_behavior, resolve_tax_treatment_note,
-    reverse_charge_note, seller_tax_identifier_display_label_by_type, should_show_tax_row,
-    tax_not_collected_note, to_major_units, validate_business_details, BusinessDetailsInput,
-    CreditsToDisplayInput, SdkError, SellerIdentityInput,
+    get_tax_id_helper_text, invoke_payable_next, is_unlimited_remaining, is_zero_decimal_currency,
+    minor_units_per_major, resolve_seller_identity_display, resolve_tax_behavior,
+    resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
+    should_show_tax_row, tax_not_collected_note, to_major_units, validate_business_details,
+    BusinessDetailsInput, CreditsToDisplayInput, SdkError, SellerIdentityInput,
 };
 use wasm_bindgen::prelude::*;
 
@@ -323,6 +323,18 @@ pub fn seller_tax_identifier_display_label_by_type_binding(args_json: String) ->
             map.insert((*key).to_owned(), Value::String((*label).to_owned()));
         }
         Ok(Value::Object(map))
+    })
+}
+
+// --- credit-display (public-safe) ---
+
+/// Binding for `isUnlimitedRemaining`.
+#[wasm_bindgen(js_name = "isUnlimitedRemaining")]
+pub fn is_unlimited_remaining_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let remaining = require_f64(&args, "remaining")?;
+        Ok(Value::Bool(is_unlimited_remaining(remaining)))
     })
 }
 

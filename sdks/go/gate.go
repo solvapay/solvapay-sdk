@@ -37,6 +37,7 @@ type Allow struct {
 	meterName   string
 	limits      map[string]any
 	customer    CustomerSnapshot
+	consequence string
 	driverState any
 }
 
@@ -55,6 +56,16 @@ type CustomerSnapshot struct {
 	Remaining    any
 	WithinLimits any
 	Plan         any
+	Throttled    bool
+	Overage      bool
+}
+
+// Limits returns the last checkLimits body used to build this allow.
+func (a *Allow) Limits() map[string]any {
+	if a == nil {
+		return nil
+	}
+	return a.limits
 }
 
 // Customer returns the snapshot used by payable MCP ResponseContext.
@@ -63,6 +74,14 @@ func (a *Allow) Customer() CustomerSnapshot {
 		return CustomerSnapshot{}
 	}
 	return a.customer
+}
+
+// Consequence is the degraded allow reason (`throttled` or `overage`). Empty on a plain allow.
+func (a *Allow) Consequence() string {
+	if a == nil {
+		return ""
+	}
+	return a.consequence
 }
 
 func customerSnapshotFromAction(action map[string]any, backendRef string) (CustomerSnapshot, error) {
@@ -74,7 +93,15 @@ func customerSnapshotFromAction(action map[string]any, backendRef string) (Custo
 	if ref == "" {
 		ref = backendRef
 	}
-	return CustomerSnapshot{Ref: ref, Balance: raw["balance"], Remaining: raw["remaining"], WithinLimits: raw["withinLimits"], Plan: raw["plan"]}, nil
+	return CustomerSnapshot{
+		Ref:          ref,
+		Balance:      raw["balance"],
+		Remaining:    raw["remaining"],
+		WithinLimits: raw["withinLimits"],
+		Plan:         raw["plan"],
+		Throttled:    asBool(raw["throttled"]),
+		Overage:      asBool(raw["overage"]),
+	}, nil
 }
 
 // TrackSuccess records a successful usage event.
@@ -275,6 +302,7 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 			if err != nil {
 				return nil, err
 			}
+			consequence, _ := action["consequence"].(string)
 			return &Allow{
 				client:      c,
 				backendRef:  backendRef,
@@ -282,6 +310,7 @@ func (c *Client) Gate(ctx context.Context, customerRef string, opts GateOpts) (G
 				meterName:   meterName,
 				limits:      asObject(action["limits"]),
 				customer:    customer,
+				consequence: consequence,
 				driverState: state,
 			}, nil
 		case "gate":

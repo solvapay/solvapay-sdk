@@ -160,6 +160,9 @@ export declare function billingCycle(argsJson: string): string
 /** Binding for `buildCreateCustomerParams` (`nowMs` is required; no clock string). */
 export declare function buildCreateCustomerParams(argsJson: string): string
 
+/** Binding for `buildCustomerSnapshot`. */
+export declare function buildCustomerSnapshot(argsJson: string): string
+
 /** Binding for `buildGateMessage`. */
 export declare function buildGateMessage(argsJson: string): string
 
@@ -285,6 +288,9 @@ export declare function isEmailConflict(argsJson: string): string
 
 /** Binding for `isErrorResult`. */
 export declare function isErrorResult(argsJson: string): string
+
+/** Binding for `isUnlimitedRemaining`. */
+export declare function isUnlimitedRemaining(argsJson: string): string
 
 /** Binding for `isZeroDecimalCurrency`. */
 export declare function isZeroDecimalCurrency(argsJson: string): string

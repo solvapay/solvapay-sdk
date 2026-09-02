@@ -6,15 +6,16 @@
 use serde_json::{Map, Value};
 use solvapay_core::{
     attach_business_details_validation_error, billing_cycle, build_create_customer_params,
-    build_gate_message, build_nudge_message, build_payable_tool_result, build_paywall_gate,
-    charges, classify_cancel_error, classify_create_error, classify_customer_ref,
-    classify_lookup_error, classify_paywall_state, classify_reactivate_error,
-    coerce_customer_options, counts_usage, credits_per_unit_from_balance, decide_paywall_outcome,
-    ensure_customer_next, evaluate_balance_observation, evaluate_cached_limits,
-    evaluate_fresh_limits, extract_backend_customer_ref, format_price, format_subtotal_label,
-    format_vat_summary_label, gate_next, get_business_country_options,
-    get_seller_tax_identifier_display_label, headline_charges, included_units, invoke_payable_next,
-    is_cached_customer_ref_valid, is_email_conflict, is_error_result, is_zero_decimal_currency,
+    build_customer_snapshot, build_gate_message, build_nudge_message, build_payable_tool_result,
+    build_paywall_gate, charges, classify_cancel_error, classify_create_error,
+    classify_customer_ref, classify_lookup_error, classify_paywall_state,
+    classify_reactivate_error, coerce_customer_options, counts_usage,
+    credits_per_unit_from_balance, decide_paywall_outcome, ensure_customer_next,
+    evaluate_balance_observation, evaluate_cached_limits, evaluate_fresh_limits,
+    extract_backend_customer_ref, format_price, format_subtotal_label, format_vat_summary_label,
+    gate_next, get_business_country_options, get_seller_tax_identifier_display_label,
+    headline_charges, included_units, invoke_payable_next, is_cached_customer_ref_valid,
+    is_email_conflict, is_error_result, is_unlimited_remaining, is_zero_decimal_currency,
     mcp_view_maps, meter_name, normalize_cancel_response, normalize_reactivate_response,
     paywall_client_payload, paywall_tool_result, pegged_credits_per_unit, per_unit_charge,
     project_topup_process_outcome, resolve_check_limits_params, resolve_customer_ref,
@@ -74,6 +75,13 @@ fn invoke_build_create_customer_params(input: &FixtureInput) -> Result<Value, Bi
         name.as_deref(),
         now_ms,
     ))
+}
+
+fn invoke_build_customer_snapshot(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let customer_ref = require_string(&args, "customerRef")?;
+    let limits = optional_value(&args, "limits");
+    to_value(&build_customer_snapshot(&customer_ref, limits.as_ref()))
 }
 
 fn invoke_build_gate_message(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -318,6 +326,12 @@ fn invoke_is_error_result(input: &FixtureInput) -> Result<Value, BindingError> {
     let args = args_map(input);
     let value = args.get("result").cloned().unwrap_or(Value::Null);
     Ok(Value::Bool(is_error_result(&value)))
+}
+
+fn invoke_is_unlimited_remaining(input: &FixtureInput) -> Result<Value, BindingError> {
+    let args = args_map(input);
+    let remaining = require_f64(&args, "remaining")?;
+    Ok(Value::Bool(is_unlimited_remaining(remaining)))
 }
 
 fn invoke_is_zero_decimal_currency(input: &FixtureInput) -> Result<Value, BindingError> {
@@ -1220,6 +1234,13 @@ pub fn create_default_registry() -> BindingRegistry {
         },
     );
     registry.register(
+        "buildCustomerSnapshot",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_build_customer_snapshot),
+        },
+    );
+    registry.register(
         "buildPayableToolResult",
         Binding {
             id: "core",
@@ -1273,6 +1294,13 @@ pub fn create_default_registry() -> BindingRegistry {
         Binding {
             id: "core",
             invoke: Box::new(invoke_invoke_payable_next),
+        },
+    );
+    registry.register(
+        "isUnlimitedRemaining",
+        Binding {
+            id: "core",
+            invoke: Box::new(invoke_is_unlimited_remaining),
         },
     );
     registry.register(

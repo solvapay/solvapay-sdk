@@ -54,6 +54,7 @@ var SyncExports = map[string]string{
 	"validateAttachBusinessDetailsParams":         "sv_validate_attach_business_details_params_binding",
 	"SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE": "sv_seller_tax_identifier_display_label_by_type_binding",
 	"attachBusinessDetailsValidationError":        "sv_attach_business_details_validation_error_binding",
+	"isUnlimitedRemaining":                        "sv_is_unlimited_remaining_binding",
 	"paywallToolResult":                           "sv_paywall_tool_result_binding",
 	"projectPaymentIntentResult":                  "sv_project_payment_intent_result_binding",
 	"makeResponseResult":                          "sv_make_response_result_binding",
@@ -118,6 +119,7 @@ var SyncExports = map[string]string{
 	"tierBands":                                   "sv_tier_bands_binding",
 	"tierMeters":                                  "sv_tier_meters_binding",
 	"usageRate":                                   "sv_usage_rate_binding",
+	"buildCustomerSnapshot":                       "sv_build_customer_snapshot_binding",
 }
 
 // Replay runs one fixture and returns a normalized outcome (does not assert expect).

@@ -91,14 +91,15 @@ pub use envelope::{
 };
 pub use error::{render_template, SdkError};
 pub use gate_driver::{
-    gate_next, CustomerSnapshot, GateAction, GateCacheOp, GateDriverState, GateNextOutput,
+    build_customer_snapshot, gate_next, AllowConsequence, CustomerSnapshot, GateAction,
+    GateCacheOp, GateDriverState, GateNextOutput,
 };
 pub use helper_error::HelperErrorResult;
 pub use invoke_payable::{
     invoke_payable_next, InvokePayableAction, InvokePayableNextOutput, InvokePayableState,
     InvokePayableTrack,
 };
-pub use limits::{resolve_check_limits_params, CheckLimitsParams};
+pub use limits::{is_unlimited_remaining, resolve_check_limits_params, CheckLimitsParams};
 pub use mcp::{
     assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
     build_prompt_user_message, build_tool_descriptor_metadata, derive_icons, make_response_result,

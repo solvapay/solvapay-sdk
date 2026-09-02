@@ -65,6 +65,7 @@ pub fn emit_helpers_rs(ir: &Ir) -> GenResult<String> {
                 missing.join(", ")
             )));
         }
+        out.push_str("#[allow(unused_imports)]\n");
         out.push_str("pub use solvapay_core::{");
         let mut first = true;
         for name in &type_names {
@@ -143,6 +144,8 @@ fn core_root_reexport_names() -> BTreeSet<&'static str> {
         "CachedLimitsEvaluation",
         "FreshLimitsEvaluation",
         "PaywallOutcome",
+        "CustomerSnapshot",
+        "AllowConsequence",
     ]
     .into_iter()
     .collect()

@@ -2790,6 +2790,30 @@ topLevel:
       go: sync
       rust: sync
       c: sync
+  buildCustomerSnapshot:
+    names:
+      ts: buildCustomerSnapshot
+      py: build_customer_snapshot
+      rb: build_customer_snapshot
+      go: BuildCustomerSnapshot
+      rust: build_customer_snapshot
+      c: buildCustomerSnapshot
+    params:
+      - name: input
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build the merchant-facing customer snapshot from a limits body.'
+      params:
+        options: 'Customer ref and last checkLimits body (or null).'
+      returns: 'Customer snapshot with defaults applied, including throttled and overage.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
   buildGateMessage:
     names:
       ts: buildGateMessage
@@ -3504,6 +3528,27 @@ coreHelpers:
       params:
         options: 'Credits amount and currency for conversion.'
       returns: 'Display amount in minor units.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  isUnlimitedRemaining:
+    names:
+      ts: isUnlimitedRemaining
+      py: is_unlimited_remaining
+      rb: is_unlimited_remaining
+      go: IsUnlimitedRemaining
+      rust: is_unlimited_remaining
+      c: isUnlimitedRemaining
+    params: []
+    docs:
+      summary: 'Return whether remaining is the backend unlimited sentinel (-1).'
+      params:
+        options: 'Remaining allowance from a limits response.'
+      returns: 'True only when remaining is exactly -1.'
     sync:
       ts: sync
       py: sync

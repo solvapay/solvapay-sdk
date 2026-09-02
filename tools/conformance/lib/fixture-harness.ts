@@ -19,6 +19,7 @@ import {
   evaluateProductReadiness,
   assertValidProductRef,
   installNativeCoreApi,
+  isUnlimitedRemaining,
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
   resolveSellerIdentityDisplay,
@@ -77,6 +78,7 @@ import {
   BALANCE_RECONCILE_DELAYS_MS,
   buildCreateCustomerParams,
   buildGateMessage,
+  buildCustomerSnapshot,
   buildNudgeMessage,
   buildPaywallGate,
   callNativeSync,
@@ -1775,6 +1777,16 @@ export function createDefaultRegistry(): FixtureRegistry {
     },
   })
 
+  registry.register('isUnlimitedRemaining', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.remaining !== 'number') {
+        throw new Error('isUnlimitedRemaining args must include number remaining')
+      }
+      return isUnlimitedRemaining(args.remaining)
+    },
+  })
+
   registry.register('isZeroDecimalCurrency', {
     id: 'core',
     invoke: args => {
@@ -2485,6 +2497,16 @@ export function createDefaultRegistry(): FixtureRegistry {
   registry.register('topupProcessNext', {
     id: 'core',
     invoke: args => topupProcessNext(args.state, args.event),
+  })
+
+  registry.register('buildCustomerSnapshot', {
+    id: 'core',
+    invoke: args => {
+      if (typeof args.customerRef !== 'string') {
+        throw new Error('buildCustomerSnapshot args must include string customerRef')
+      }
+      return buildCustomerSnapshot(args.customerRef, args.limits)
+    },
   })
 
   registry.register('gateNext', {

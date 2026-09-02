@@ -66,14 +66,7 @@ export async function checkLimitsCore(
       name: name || undefined,
     })
 
-    // Reach through to `apiClient.checkLimits` (rather than the
-    // factory's narrower `solvaPay.checkLimits`) so the helper returns
-    // the full `LimitResponseWithPlan`. The factory shape doesn't carry
-    // `activationRequired` / `plans` / `balance` / `product` — fields a
-    // future consumer of `checkLimitsCore` may want even though the
-    // initial `useLimits` projection only reads `withinLimits` /
-    // `remaining` / `meterName`.
-    const result = await solvaPay.apiClient.checkLimits({
+    const result = await solvaPay.checkLimits({
       customerRef,
       productRef,
       meterName,

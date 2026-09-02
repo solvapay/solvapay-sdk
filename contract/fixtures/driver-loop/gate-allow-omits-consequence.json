@@ -1,0 +1,75 @@
+{
+  "suite": "driver-loop",
+  "case": "gate-allow-omits-consequence",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "event": {
+        "kind": "limitsResult",
+        "limits": {
+          "withinLimits": true,
+          "remaining": 3,
+          "checkoutUrl": "https://pay",
+          "meterName": "requests"
+        },
+        "nowMs": 1100
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "action": {
+        "kind": "allow",
+        "customerRef": "cus_abc",
+        "product": "prd_1",
+        "meterName": "requests",
+        "limits": {
+          "withinLimits": true,
+          "remaining": 3,
+          "checkoutUrl": "https://pay",
+          "meterName": "requests"
+        },
+        "customer": {
+          "ref": "cus_abc",
+          "balance": 0,
+          "remaining": 3,
+          "withinLimits": true,
+          "throttled": false,
+          "overage": false
+        },
+        "cache": {
+          "op": "set",
+          "key": "cus_abc:prd_1:requests",
+          "remaining": 2,
+          "limits": {
+            "withinLimits": true,
+            "remaining": 3,
+            "checkoutUrl": "https://pay",
+            "meterName": "requests"
+          },
+          "timestamp": 1100,
+          "checkoutUrl": "https://pay",
+          "meterName": "requests"
+        }
+      }
+    }
+  }
+}

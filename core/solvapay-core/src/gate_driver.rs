@@ -61,6 +61,20 @@ pub struct CustomerSnapshot {
     /// Plan field from limits; omitted when absent / JSON `null`.
     #[serde(default, skip_serializing_if = "Value::is_null")]
     pub plan: Value,
+    /// `throttled` from limits, or `false` when absent.
+    pub throttled: bool,
+    /// `overage` from limits, or `false` when absent.
+    pub overage: bool,
+}
+
+/// Degraded allow reason. Absent on a plain allow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AllowConsequence {
+    /// Served under `onExceed: throttle`.
+    Throttled,
+    /// Served under `onExceed: charge` past the included cap.
+    Overage,
 }
 
 /// Cache mutation the host must apply before continuing / returning.
@@ -146,6 +160,9 @@ pub enum GateAction {
         limits: Value,
         /// Defaults already applied (`creditBalance ?? 0`, `withinLimits ?? true`).
         customer: CustomerSnapshot,
+        /// Degraded allow (`throttled` wins over `overage`). Omitted on a plain allow.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        consequence: Option<AllowConsequence>,
         /// Optional cache mutation.
         #[serde(skip_serializing_if = "Option::is_none")]
         cache: Option<GateCacheOp>,
@@ -481,8 +498,9 @@ fn finish(
                 customer_ref,
                 product: state.product.clone(),
                 meter_name: state.meter_name.clone(),
-                limits,
+                limits: limits.clone(),
                 customer,
+                consequence: allow_consequence(&limits),
                 cache,
             },
             state,
@@ -537,7 +555,43 @@ fn customer_snapshot(customer_ref: &str, limits: &Value) -> CustomerSnapshot {
             .and_then(|o| o.get("plan"))
             .cloned()
             .unwrap_or(Value::Null),
+        throttled: obj
+            .and_then(|o| o.get("throttled"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+        overage: obj
+            .and_then(|o| o.get("overage"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
     }
+}
+
+/// Shared snapshot builder so MCP `ctx.customer` and `GateAction` use one impl.
+///
+/// # Arguments
+///
+/// * `customer_ref` - Backend customer ref (`cus_...`).
+/// * `limits` - Last `checkLimits` body, or `None`/`null` on degraded paths.
+#[crate::solvapay_export(
+    artifact = "decisions",
+    catalog = "topLevel",
+    section = "paywall state / gate / payload",
+    emit_order = 57
+)]
+pub fn build_customer_snapshot(customer_ref: &str, limits: Option<&Value>) -> CustomerSnapshot {
+    customer_snapshot(customer_ref, limits.unwrap_or(&Value::Null))
+}
+
+/// `throttled` wins over `overage`, matching the TypeScript allow ternary.
+fn allow_consequence(limits: &Value) -> Option<AllowConsequence> {
+    let obj = limits.as_object()?;
+    if obj.get("throttled").and_then(Value::as_bool) == Some(true) {
+        return Some(AllowConsequence::Throttled);
+    }
+    if obj.get("overage").and_then(Value::as_bool) == Some(true) {
+        return Some(AllowConsequence::Overage);
+    }
+    None
 }
 
 /// Cache key `{backend}:{product}:{meter}` used by the host lookup.
@@ -659,6 +713,8 @@ mod tests {
                 assert_eq!(customer.balance, 0.0);
                 assert!(customer.within_limits);
                 assert_eq!(customer.remaining, json!(5));
+                assert!(!customer.throttled);
+                assert!(!customer.overage);
                 match cache {
                     Some(GateCacheOp::UpdateRemaining { remaining, .. }) => {
                         assert_eq!(*remaining, 4.0);
@@ -925,5 +981,115 @@ mod tests {
             }
             other => panic!("unexpected {other:?}"),
         }
+    }
+
+    #[test]
+    fn allow_throttled_sets_consequence() {
+        let started = gate_next(None, Some(&start_event("cus_abc"))).unwrap();
+        let miss = gate_next(
+            Some(&serde_json::to_value(&started.state).unwrap()),
+            Some(&json!({ "kind": "limitsCacheEntry", "found": false })),
+        )
+        .unwrap();
+        let out = gate_next(
+            Some(&serde_json::to_value(&miss.state).unwrap()),
+            Some(&json!({
+                "kind": "limitsResult",
+                "limits": {
+                    "withinLimits": true,
+                    "remaining": 0,
+                    "throttled": true,
+                    "overage": true
+                },
+                "nowMs": 1_100,
+            })),
+        )
+        .unwrap();
+        match &out.action {
+            GateAction::Allow {
+                consequence,
+                customer,
+                ..
+            } => {
+                assert_eq!(*consequence, Some(AllowConsequence::Throttled));
+                assert!(customer.throttled);
+                assert!(customer.overage);
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
+    fn allow_overage_sets_consequence() {
+        let started = gate_next(None, Some(&start_event("cus_abc"))).unwrap();
+        let miss = gate_next(
+            Some(&serde_json::to_value(&started.state).unwrap()),
+            Some(&json!({ "kind": "limitsCacheEntry", "found": false })),
+        )
+        .unwrap();
+        let out = gate_next(
+            Some(&serde_json::to_value(&miss.state).unwrap()),
+            Some(&json!({
+                "kind": "limitsResult",
+                "limits": { "withinLimits": true, "remaining": 0, "overage": true },
+                "nowMs": 1_100,
+            })),
+        )
+        .unwrap();
+        match &out.action {
+            GateAction::Allow { consequence, .. } => {
+                assert_eq!(*consequence, Some(AllowConsequence::Overage));
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
+    fn plain_allow_omits_consequence() {
+        let started = gate_next(None, Some(&start_event("cus_abc"))).unwrap();
+        let miss = gate_next(
+            Some(&serde_json::to_value(&started.state).unwrap()),
+            Some(&json!({ "kind": "limitsCacheEntry", "found": false })),
+        )
+        .unwrap();
+        let out = gate_next(
+            Some(&serde_json::to_value(&miss.state).unwrap()),
+            Some(&json!({
+                "kind": "limitsResult",
+                "limits": { "withinLimits": true, "remaining": 3 },
+                "nowMs": 1_100,
+            })),
+        )
+        .unwrap();
+        match &out.action {
+            GateAction::Allow { consequence, .. } => {
+                assert_eq!(*consequence, None);
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+        let serialized = serde_json::to_value(&out.action).unwrap();
+        assert!(serialized.get("consequence").is_none());
+    }
+
+    #[test]
+    fn build_customer_snapshot_projects_flags() {
+        let snap = build_customer_snapshot(
+            "cus_abc",
+            Some(&json!({
+                "creditBalance": 12,
+                "remaining": 4,
+                "withinLimits": true,
+                "plan": "pl_pro",
+                "throttled": true,
+                "overage": false
+            })),
+        );
+        assert_eq!(snap.customer_ref, "cus_abc");
+        assert_eq!(snap.balance, 12.0);
+        assert_eq!(snap.remaining, json!(4));
+        assert!(snap.within_limits);
+        assert_eq!(snap.plan, json!("pl_pro"));
+        assert!(snap.throttled);
+        assert!(!snap.overage);
     }
 }

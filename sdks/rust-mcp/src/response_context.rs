@@ -21,6 +21,10 @@ pub struct CustomerView {
     pub within_limits: Value,
     /// Plan field from limits.
     pub plan: Value,
+    /// Served under `onExceed: throttle`.
+    pub throttled: bool,
+    /// Served under `onExceed: charge` past the included cap.
+    pub overage: bool,
 }
 
 impl From<CustomerSnapshot> for CustomerView {
@@ -31,6 +35,8 @@ impl From<CustomerSnapshot> for CustomerView {
             remaining: snap.remaining,
             within_limits: snap.within_limits,
             plan: snap.plan,
+            throttled: snap.throttled,
+            overage: snap.overage,
         }
     }
 }

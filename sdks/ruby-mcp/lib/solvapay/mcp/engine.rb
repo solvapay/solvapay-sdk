@@ -253,9 +253,7 @@ module SolvaPay
         return nil unless @client.respond_to?(:fetch_jwks)
 
         now = Time.now.to_i
-        if !@jwks_cache.nil? && @jwks_cache_expires_at > now
-          return @jwks_cache
-        end
+        return @jwks_cache if !@jwks_cache.nil? && @jwks_cache_expires_at > now
 
         issuer = @public_base_url.sub(%r{/+\z}, "")
         @jwks_cache = @client.fetch_jwks(params: { "jwksUrl" => "#{issuer}/.well-known/jwks.json" })

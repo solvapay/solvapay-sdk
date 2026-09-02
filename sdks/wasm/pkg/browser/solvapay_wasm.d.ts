@@ -97,6 +97,11 @@ export function includedUnits(args_json: string): string;
 export function invokePayableNext(args_json: string): string;
 
 /**
+ * Binding for `isUnlimitedRemaining`.
+ */
+export function isUnlimitedRemaining(args_json: string): string;
+
+/**
  * Binding for `isZeroDecimalCurrency`.
  */
 export function isZeroDecimalCurrency(args_json: string): string;
@@ -187,6 +192,7 @@ export interface InitOutput {
     readonly headlineCharges: (a: number, b: number) => [number, number];
     readonly includedUnits: (a: number, b: number) => [number, number];
     readonly invokePayableNext: (a: number, b: number) => [number, number];
+    readonly isUnlimitedRemaining: (a: number, b: number) => [number, number];
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
     readonly minorUnitsPerMajor: (a: number, b: number) => [number, number];
     readonly peggedCreditsPerUnit: (a: number, b: number) => [number, number];

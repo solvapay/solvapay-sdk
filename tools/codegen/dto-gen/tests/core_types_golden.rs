@@ -12,7 +12,7 @@ use dto_gen::lower_core_types::{
 use dto_gen::manifest::Manifest;
 
 /// Locked closure size. Bump only when a root or nested named type is added/removed.
-const RESOLVED_COUNT: usize = 84;
+const RESOLVED_COUNT: usize = 85;
 
 fn lowered() -> BTreeMap<String, IrCoreType> {
     let core_src = paths().contract_input("coreSrc").expect("coreSrc");

@@ -56,9 +56,14 @@ function compileHandler(scenario: McpAuthoringScenario) {
             await ctx.emit(block as ContentBlock)
           }
         }
-        return spec.options === undefined
-          ? ctx.respond(spec.data)
-          : ctx.respond(spec.data, spec.options)
+        const data =
+          spec.data !== null &&
+          typeof spec.data === 'object' &&
+          !Array.isArray(spec.data) &&
+          (spec.data as { echo?: unknown }).echo === 'customer'
+            ? { throttled: ctx.customer.throttled, overage: ctx.customer.overage }
+            : spec.data
+        return spec.options === undefined ? ctx.respond(data) : ctx.respond(data, spec.options)
       }
     }
   }

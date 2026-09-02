@@ -9,6 +9,7 @@ use crate::decisions::assert_valid_product_ref_binding;
 use crate::decisions::attach_business_details_validation_error_binding;
 use crate::decisions::billing_cycle_binding;
 use crate::decisions::build_create_customer_params_binding;
+use crate::decisions::build_customer_snapshot_binding;
 use crate::decisions::build_gate_message_binding;
 use crate::decisions::build_nudge_message_binding;
 use crate::decisions::build_paywall_gate_binding;
@@ -87,6 +88,7 @@ use crate::payload_builders::get_tax_id_example_binding;
 use crate::payload_builders::get_tax_id_field_label_binding;
 use crate::payload_builders::get_tax_id_helper_text_binding;
 use crate::payload_builders::invoke_payable_next_binding;
+use crate::payload_builders::is_unlimited_remaining_binding;
 use crate::payload_builders::is_zero_decimal_currency_binding;
 use crate::payload_builders::make_response_result_binding;
 use crate::payload_builders::mcp_tool_names_binding;
@@ -318,6 +320,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method("tier_bands", function!(tier_bands_binding, 1))?;
     native.define_singleton_method("tier_meters", function!(tier_meters_binding, 1))?;
     native.define_singleton_method("usage_rate", function!(usage_rate_binding, 1))?;
+    native.define_singleton_method(
+        "build_customer_snapshot",
+        function!(build_customer_snapshot_binding, 1),
+    )?;
     native.define_singleton_method("format_price", function!(format_price_binding, 1))?;
     native.define_singleton_method(
         "should_show_tax_row",
@@ -395,6 +401,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
     native.define_singleton_method(
         "SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE",
         function!(seller_tax_identifier_display_label_by_type_binding, 1),
+    )?;
+    native.define_singleton_method(
+        "is_unlimited_remaining",
+        function!(is_unlimited_remaining_binding, 1),
     )?;
     native.define_singleton_method(
         "paywall_tool_result",

@@ -1,8 +1,8 @@
 //! Paywall state classification and gate/nudge copy (§6.3).
 //!
-//! Pure helpers from `packages/server/src/paywall-state.ts`: classify a limits
-//! response into a recovery-tool-specific [`PaywallState`], then produce the
-//! frozen human-readable gate / nudge message strings.
+//! Pure helpers formerly in the TypeScript paywall-state facade: classify a
+//! limits response into a recovery-tool-specific [`PaywallState`], then produce
+//! the frozen human-readable gate / nudge message strings.
 
 use serde::{Deserialize, Serialize};
 
@@ -48,7 +48,7 @@ pub struct PaywallBalance {
 /// Minimal deserializable limits input for classification and nudge copy.
 ///
 /// Typed DTOs arrive at step 15; this mirrors the fields the TS helpers read.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaywallLimits {
     /// Explicit backend flag that no plan is live yet.
@@ -65,6 +65,12 @@ pub struct PaywallLimits {
     pub remaining: Option<f64>,
     /// Checkout URL inlined into nudge copy when non-empty.
     pub checkout_url: Option<String>,
+    /// Authoritative backend deny reason: prepaid top-up required.
+    #[serde(default)]
+    pub needs_top_up: Option<bool>,
+    /// Authoritative backend deny reason: auto-upgrade required.
+    #[serde(default)]
+    pub needs_upgrade: Option<bool>,
 }
 
 /// Gate structured-content fields read by [`build_gate_message`].
@@ -79,9 +85,11 @@ pub struct GateContent {
 ///
 /// Precedence mirrors TypeScript `classifyPaywallState`:
 /// 1. `activation_required == Some(true)` trumps everything.
-/// 2. Usage-based out of credits → `topup_required` (plan type, or balance-block
+/// 2. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent
+///    `Some(true)`. Prefer these over the credit-balance heuristic.
+/// 3. Usage-based out of credits → `topup_required` (plan type, or balance-block
 ///    proxy; credit channels then `remaining === 0` fallback).
-/// 3. Everything else (including `None` limits) → `upgrade_required`.
+/// 4. Everything else (including `None` limits) → `upgrade_required`.
 ///
 /// # Arguments
 ///
@@ -103,6 +111,14 @@ pub fn classify_paywall_state(limits: Option<&PaywallLimits>) -> PaywallState {
 
     if limits.activation_required == Some(true) {
         return PaywallState::ActivationRequired;
+    }
+
+    if limits.needs_top_up == Some(true) {
+        return PaywallState::TopupRequired;
+    }
+
+    if limits.needs_upgrade == Some(true) {
+        return PaywallState::UpgradeRequired;
     }
 
     let active_plan = limits.plans.as_ref().and_then(|plans| {
@@ -261,6 +277,8 @@ mod tests {
             plans: Some(vec![usage_plan("pl_pro")]),
             credit_balance: None,
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -280,6 +298,8 @@ mod tests {
             }),
             credit_balance: None,
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -297,6 +317,8 @@ mod tests {
             balance: None,
             credit_balance: Some(0.0),
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -314,6 +336,8 @@ mod tests {
             balance: None,
             credit_balance: None,
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -333,6 +357,8 @@ mod tests {
             }),
             credit_balance: None,
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -352,6 +378,8 @@ mod tests {
             }),
             credit_balance: None,
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -369,6 +397,8 @@ mod tests {
             balance: None,
             credit_balance: None,
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -386,6 +416,8 @@ mod tests {
             balance: None,
             credit_balance: None,
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -403,6 +435,8 @@ mod tests {
             balance: None,
             credit_balance: None,
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -444,6 +478,8 @@ mod tests {
             }),
             credit_balance: Some(100.0),
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         assert_eq!(
             classify_paywall_state(Some(&limits)),
@@ -502,9 +538,13 @@ mod tests {
             balance: None,
             credit_balance: None,
             checkout_url: Some("https://pay.test/x".into()),
+            needs_top_up: None,
+            needs_upgrade: None,
         };
         let no_url = PaywallLimits {
             checkout_url: None,
+            needs_top_up: None,
+            needs_upgrade: None,
             ..with_url.clone()
         };
         let empty_url = PaywallLimits {
@@ -543,6 +583,69 @@ mod tests {
         assert_eq!(
             build_nudge_message(&PaywallState::ReactivationRequired, Some(&no_url)),
             "Heads up — your plan is no longer active. Call the `manage_account` tool to reactivate it."
+        );
+    }
+
+    #[test]
+    fn needs_top_up_flag_is_topup() {
+        let limits = PaywallLimits {
+            needs_top_up: Some(true),
+            plan: Some("pl_pro".into()),
+            remaining: Some(5.0),
+            plans: Some(vec![recurring_plan("pl_pro")]),
+            credit_balance: Some(100.0),
+            ..PaywallLimits::default()
+        };
+        assert_eq!(
+            classify_paywall_state(Some(&limits)),
+            PaywallState::TopupRequired
+        );
+    }
+
+    #[test]
+    fn needs_upgrade_flag_is_upgrade() {
+        let limits = PaywallLimits {
+            needs_upgrade: Some(true),
+            plan: Some("pl_pro".into()),
+            remaining: Some(0.0),
+            plans: Some(vec![usage_plan("pl_pro")]),
+            credit_balance: Some(0.0),
+            ..PaywallLimits::default()
+        };
+        assert_eq!(
+            classify_paywall_state(Some(&limits)),
+            PaywallState::UpgradeRequired
+        );
+    }
+
+    #[test]
+    fn activation_trumps_needs_top_up() {
+        let limits = PaywallLimits {
+            activation_required: Some(true),
+            needs_top_up: Some(true),
+            plan: Some("pl_pro".into()),
+            remaining: Some(0.0),
+            ..PaywallLimits::default()
+        };
+        assert_eq!(
+            classify_paywall_state(Some(&limits)),
+            PaywallState::ActivationRequired
+        );
+    }
+
+    #[test]
+    fn needs_top_up_overrides_usage_based_heuristic() {
+        let limits = PaywallLimits {
+            needs_top_up: Some(true),
+            plan: Some("pl_pro".into()),
+            remaining: Some(5.0),
+            plans: Some(vec![recurring_plan("pl_pro")]),
+            credit_balance: Some(100.0),
+            ..PaywallLimits::default()
+        };
+        assert_eq!(
+            classify_paywall_state(Some(&limits)),
+            PaywallState::TopupRequired
         );
     }
 

@@ -572,6 +572,66 @@
       "coreCall": "build_create_customer_params",
       "clientCallArgs": []
     },
+    "buildCustomerSnapshot": {
+      "core": "solvapay_core::gate_driver::build_customer_snapshot",
+      "names": {
+        "ts": "buildCustomerSnapshot",
+        "py": "build_customer_snapshot",
+        "rb": "build_customer_snapshot",
+        "go": "BuildCustomerSnapshot",
+        "rust": "build_customer_snapshot",
+        "c": "buildCustomerSnapshot"
+      },
+      "catalog": {
+        "kind": "topLevel",
+        "id": "buildCustomerSnapshot"
+      },
+      "args": [
+        {
+          "name": "customerRef",
+          "type": "string",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireString",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "customer_ref"
+        },
+        {
+          "name": "limits",
+          "type": "value",
+          "required": false,
+          "hostInjected": false,
+          "extract": "optionalValue",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "limits"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "decisions",
+      "emitOrder": 57,
+      "section": "paywall state / gate / payload",
+      "doc": "Binding for `buildCustomerSnapshot`.",
+      "docWasm": null,
+      "rustFnName": "build_customer_snapshot_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "toValue",
+        "args": [
+          "&customer_ref",
+          "limits.as_ref()"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "build_customer_snapshot",
+      "clientCallArgs": []
+    },
     "buildGateMessage": {
       "core": "solvapay_core::paywall_state::build_gate_message",
       "names": {
@@ -3717,6 +3777,55 @@
       "verbatimBodyWasm": null,
       "dtoType": null,
       "coreCall": "is_error_result",
+      "clientCallArgs": []
+    },
+    "isUnlimitedRemaining": {
+      "core": "solvapay_core::limits::is_unlimited_remaining",
+      "names": {
+        "ts": "isUnlimitedRemaining",
+        "py": "is_unlimited_remaining",
+        "rb": "is_unlimited_remaining",
+        "go": "IsUnlimitedRemaining",
+        "rust": "is_unlimited_remaining",
+        "c": "isUnlimitedRemaining"
+      },
+      "catalog": {
+        "kind": "coreHelper",
+        "id": "isUnlimitedRemaining"
+      },
+      "args": [
+        {
+          "name": "remaining",
+          "type": "f64",
+          "required": true,
+          "hostInjected": false,
+          "extract": "requireF64",
+          "typedAs": null,
+          "typedStyle": "turbofish",
+          "local": "remaining"
+        }
+      ],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "sync",
+      "envelope": "sync",
+      "artifact": "payloadBuilders",
+      "emitOrder": 13,
+      "section": "credit-display",
+      "doc": "Binding for `isUnlimitedRemaining`.",
+      "docWasm": null,
+      "rustFnName": "is_unlimited_remaining_binding",
+      "call": {
+        "kind": "wrap",
+        "serialize": "valueBool",
+        "args": [
+          "remaining"
+        ]
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": null,
+      "coreCall": "is_unlimited_remaining",
       "clientCallArgs": []
     },
     "isZeroDecimalCurrency": {

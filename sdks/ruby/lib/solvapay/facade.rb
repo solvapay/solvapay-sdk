@@ -117,9 +117,12 @@ module SolvaPay
         return PayablePaywallResult.new(content: gate)
       end
 
+      decision = { "outcome" => "allow", "limits" => action["limits"] }
+      consequence = action["consequence"]
+      decision["consequence"] = consequence if consequence == "throttled" || consequence == "overage"
       build_allow_result(
         backend_ref: backend_ref,
-        decision: { "outcome" => "allow", "limits" => action["limits"] },
+        decision: decision,
         driver_state: state,
       )
     end

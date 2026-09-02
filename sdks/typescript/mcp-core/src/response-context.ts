@@ -11,7 +11,7 @@
 
 import type { LimitResponseWithPlan, PaywallStructuredContent, SolvaPay } from '@solvapay/server'
 import { PaywallError } from '@solvapay/server'
-import { callMcpSyncOp, makeResponseResult } from './native-mcp'
+import { callMcpSyncOp, dispatchSync, makeResponseResult } from './native-mcp'
 import type {
   BootstrapPlan,
   BootstrapProduct,
@@ -73,11 +73,21 @@ function snapshotFromLimits(params: {
   refresh: () => Promise<CustomerSnapshot>
 }): CustomerSnapshot {
   const { customerRef, limits, plan, refresh } = params
+  const snapshot = dispatchSync<{
+    ref: string
+    balance: number
+    remaining: number | null
+    withinLimits: boolean
+    throttled: boolean
+    overage: boolean
+  }>('buildCustomerSnapshot', { customerRef, limits })
   return {
-    ref: customerRef,
-    balance: limits?.creditBalance ?? 0,
-    remaining: limits?.remaining ?? null,
-    withinLimits: limits?.withinLimits ?? true,
+    ref: snapshot.ref,
+    balance: snapshot.balance,
+    remaining: snapshot.remaining,
+    withinLimits: snapshot.withinLimits,
+    throttled: snapshot.throttled,
+    overage: snapshot.overage,
     plan,
     fresh: refresh,
   }
@@ -123,13 +133,9 @@ export function buildResponseContext(
       productRef: product,
       meterName: 'requests',
     })
-    // `solvaPay.checkLimits` returns a narrower shape than
-    // `LimitResponseWithPlan` (no `plan` object, no `product` block).
-    // Cast is safe: `CustomerSnapshot` only reads `creditBalance`,
-    // `remaining`, `withinLimits` — all present on the narrower shape.
     return snapshotFromLimits({
       customerRef,
-      limits: freshLimits as unknown as LimitResponseWithPlan,
+      limits: freshLimits,
       plan: bootstrapPlan,
       refresh: freshSnapshot,
     })

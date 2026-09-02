@@ -27,7 +27,17 @@ func compileHandler(sc scenario) Handler {
 					return Response{}, err
 				}
 			}
-			return rc.Respond(sc.Handler.Data, sc.Handler.Options)
+			data := any(sc.Handler.Data)
+			var echo struct {
+				Echo string `json:"echo"`
+			}
+			if json.Unmarshal(sc.Handler.Data, &echo) == nil && echo.Echo == "customer" {
+				data = struct {
+					Throttled bool `json:"throttled"`
+					Overage   bool `json:"overage"`
+				}{Throttled: rc.Customer.Throttled, Overage: rc.Customer.Overage}
+			}
+			return rc.Respond(data, sc.Handler.Options)
 		default:
 			return Response{}, fmt.Errorf("unreachable handler kind")
 		}

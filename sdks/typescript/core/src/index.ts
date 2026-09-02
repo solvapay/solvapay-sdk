@@ -57,6 +57,7 @@ export function getSolvaPayConfig(): SolvaPayConfig {
 
 export {
   creditsToDisplayMinorUnits,
+  isUnlimitedRemaining,
   isZeroDecimalCurrency,
   minorUnitsPerMajor,
   validateBusinessDetails,
@@ -80,12 +81,14 @@ export {
 } from './native-core'
 
 export type {
+  AllowConsequence,
   AuthResolutionInput,
   AuthenticatedUser,
   BillingCycle,
   BillingInterval,
   Charge,
   ChargePer,
+  CustomerSnapshot,
   GateAction,
   GateCacheOp,
   GateNextOutput,

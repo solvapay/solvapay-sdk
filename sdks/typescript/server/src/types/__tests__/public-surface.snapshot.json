@@ -118,6 +118,7 @@
     "assertValidProductRef",
     "attachBusinessDetailsCore",
     "billingCycle",
+    "buildCustomerSnapshot",
     "buildGateMessage",
     "buildNudgeMessage",
     "buildPaywallGate",

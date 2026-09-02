@@ -26,6 +26,7 @@ const BROWSER_SEMANTIC_ALLOWLIST = new Set([
   'creditsToDisplayMinorUnits',
   'isZeroDecimalCurrency',
   'minorUnitsPerMajor',
+  'isUnlimitedRemaining',
   // seller-identity (public-safe)
   'resolveSellerIdentityDisplay',
   'getSellerTaxIdentifierDisplayLabel',

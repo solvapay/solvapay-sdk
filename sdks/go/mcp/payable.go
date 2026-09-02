@@ -201,12 +201,7 @@ func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcp
 					event = map[string]any{
 						"kind":        "gateAllow",
 						"customerRef": snap.Ref,
-						"limits": map[string]any{
-							"creditBalance": snap.Balance,
-							"remaining":     snap.Remaining,
-							"withinLimits":  snap.WithinLimits,
-							"plan":          snap.Plan,
-						},
+						"limits":      typed.Limits(),
 					}
 				default:
 					return nil, fmt.Errorf("unexpected gate result %T", outcome)
@@ -230,23 +225,23 @@ func InvokePayable(ctx context.Context, args map[string]any, opts Options) (*mcp
 				if limits == nil {
 					limits = map[string]any{}
 				}
+				snapVal, err := solvapay.BuildCustomerSnapshot(ctx, action.CustomerRef, limits)
+				if err != nil {
+					return nil, err
+				}
+				snapRaw, err := json.Marshal(snapVal)
+				if err != nil {
+					return nil, err
+				}
+				var customer CustomerView
+				if err := json.Unmarshal(snapRaw, &customer); err != nil {
+					return nil, err
+				}
 				rc := &ResponseContext{
-					ctx: ctx,
-					Customer: CustomerView{
-						Ref:          action.CustomerRef,
-						Balance:      limits["creditBalance"],
-						Remaining:    limits["remaining"],
-						WithinLimits: limits["withinLimits"],
-						Plan:         limits["plan"],
-					},
+					ctx:        ctx,
+					Customer:   customer,
 					Product:    ProductView{Reference: opts.Product, Name: opts.Product},
 					productRef: opts.Product,
-				}
-				if rc.Customer.Balance == nil {
-					rc.Customer.Balance = 0
-				}
-				if rc.Customer.WithinLimits == nil {
-					rc.Customer.WithinLimits = true
 				}
 				returned, err := opts.Handler(ctx, args, rc)
 				var signal *GateSignal

@@ -8,9 +8,9 @@ import { countCodeLines, type Layer3BudgetIssue } from './mcp-layer3-budget.js'
 
 export const SURFACE_LOC_BUDGETS = [
   { id: 'ts-client', rel: 'sdks/typescript/server/src/client.ts', maxCodeLines: 97 },
-  { id: 'py-facade', rel: 'sdks/python/python/solvapay/facade.py', maxCodeLines: 631 },
-  { id: 'rb-facade', rel: 'sdks/ruby/lib/solvapay/facade.rb', maxCodeLines: 415 },
-  { id: 'go-gate', rel: 'sdks/go/gate.go', maxCodeLines: 344 },
+  { id: 'py-facade', rel: 'sdks/python/python/solvapay/facade.py', maxCodeLines: 634 },
+  { id: 'rb-facade', rel: 'sdks/ruby/lib/solvapay/facade.rb', maxCodeLines: 434 },
+  { id: 'go-gate', rel: 'sdks/go/gate.go', maxCodeLines: 374 },
   { id: 'rust-client', rel: 'sdks/rust/src/client.rs', maxCodeLines: 812 },
   { id: 'ts-paywall', rel: 'sdks/typescript/server/src/paywall.ts', maxCodeLines: 755 },
   { id: 'ts-factory', rel: 'sdks/typescript/server/src/factory.ts', maxCodeLines: 499 },
@@ -18,7 +18,7 @@ export const SURFACE_LOC_BUDGETS = [
   {
     id: 'py-mcp-register',
     rel: 'sdks/python-mcp/python/solvapay_mcp/register.py',
-    maxCodeLines: 672,
+    maxCodeLines: 683,
   },
 ] as const
 

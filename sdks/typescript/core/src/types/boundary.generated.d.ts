@@ -5,6 +5,11 @@
 import type { SupportedBusinessCountry, TaxIdType } from '../business-details'
 
 /**
+ * Degraded allow reason. Absent on a plain allow.
+ */
+export type AllowConsequence = 'throttled' | 'overage'
+
+/**
  * Inputs for [`resolve_authenticated_user`] (facade resolves env / Request).
  */
 export type AuthResolutionInput = {
@@ -255,6 +260,14 @@ export type CustomerSnapshot = {
    * Plan field from limits; omitted when absent / JSON `null`.
    */
   plan: unknown
+  /**
+   * `throttled` from limits, or `false` when absent.
+   */
+  throttled: boolean
+  /**
+   * `overage` from limits, or `false` when absent.
+   */
+  overage: boolean
 }
 
 /**
@@ -387,7 +400,7 @@ export type GateAction =
   | { kind: 'ensureCustomer'; customerRef: string }
   | { kind: 'readLimitsCache'; key: string }
   | { kind: 'checkLimits'; customerRef: string; productRef: string; meterName: string; includeCheckoutSession: boolean; cacheDeleteKey?: string }
-  | { kind: 'allow'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; cache?: GateCacheOp }
+  | { kind: 'allow'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; consequence?: AllowConsequence; cache?: GateCacheOp }
   | { kind: 'gate'; customerRef: string; product: string; meterName: string; limits: unknown; customer: CustomerSnapshot; gate: unknown; cache?: GateCacheOp; request: unknown }
   | { kind: 'emitUsage'; request: unknown }
   | { kind: 'skipUsage' }

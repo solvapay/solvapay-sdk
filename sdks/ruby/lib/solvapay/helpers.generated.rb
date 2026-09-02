@@ -27,6 +27,14 @@ module SolvaPay
     NativeDispatch.call_sync("billing_cycle", args)
   end
 
+  # Build the merchant-facing customer snapshot from a limits body.
+  # @return Customer snapshot with defaults applied, including throttled and overage.
+  def self.build_customer_snapshot(input:)
+    args = {} #: Hash[String, untyped]
+    args["input"] = input
+    NativeDispatch.call_sync("build_customer_snapshot", args)
+  end
+
   # Build the human-readable paywall gate message from state and gate content.
   # @return Gate message string.
   def self.build_gate_message(input:)
@@ -188,6 +196,14 @@ module SolvaPay
     args["priced"] = priced unless priced.nil?
     args["meter"] = meter unless meter.nil?
     NativeDispatch.call_sync("included_units", args)
+  end
+
+  # Return whether remaining is the backend unlimited sentinel (-1).
+  # @return True only when remaining is exactly -1.
+  def self.is_unlimited_remaining(remaining:)
+    args = {} #: Hash[String, untyped]
+    args["remaining"] = remaining
+    NativeDispatch.call_sync("is_unlimited_remaining", args)
   end
 
   # Return whether a currency uses zero decimal places.

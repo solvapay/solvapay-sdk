@@ -544,6 +544,11 @@ def billing_cycle(priced: object | None = None) -> object | None:
     @returns Interval (and count when greater than 1), or null.
     """
     ...
+def build_customer_snapshot(customer_ref: str, limits: object | None = None) -> object:
+    """Build the merchant-facing customer snapshot from a limits body.
+    @returns Customer snapshot with defaults applied, including throttled and overage.
+    """
+    ...
 def build_gate_message(state: object, gate: object) -> str:
     """Build the human-readable paywall gate message from state and gate content.
     @returns Gate message string.
@@ -653,6 +658,11 @@ def headline_charges(priced: object | None = None) -> list[object]:
 def included_units(priced: object | None = None, meter: str | None = None) -> int | None:
     """Read the included-unit cap for a meter from the limit option.
     @returns Cap (0 means unlimited), or null when no limit is configured.
+    """
+    ...
+def is_unlimited_remaining(remaining: float) -> bool:
+    """Return whether remaining is the backend unlimited sentinel (-1).
+    @returns True only when remaining is exactly -1.
     """
     ...
 def is_zero_decimal_currency(currency: str) -> bool:

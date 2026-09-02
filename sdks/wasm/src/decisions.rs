@@ -11,21 +11,22 @@
 use serde_json::Value;
 use solvapay_core::{
     assert_valid_product_ref, attach_business_details_validation_error, billing_cycle,
-    build_create_customer_params, build_gate_message, build_nudge_message, build_paywall_gate,
-    charges, classify_cancel_error, classify_create_error, classify_customer_ref,
-    classify_lookup_error, classify_paywall_state, classify_reactivate_error,
-    coerce_customer_options, counts_usage, credits_per_unit_from_balance, decide_paywall_outcome,
-    ensure_customer_next, evaluate_balance_observation, evaluate_cached_limits,
-    evaluate_fresh_limits, evaluate_product_readiness, extract_backend_customer_ref, gate_next,
-    headline_charges, included_units, is_cached_customer_ref_valid, is_email_conflict,
-    is_error_result, map_route_error, meter_name, normalize_cancel_response,
-    normalize_reactivate_response, paywall_client_payload, pegged_credits_per_unit,
-    per_unit_charge, project_payment_intent_result, project_topup_process_outcome,
-    project_usage_snapshot, require_product_ref, resolve_authenticated_user,
-    resolve_check_limits_params, resolve_customer_ref, resolve_fallback_gate_limits,
-    resolve_product_ref, resolve_purchase_customer_ref, resolve_return_url,
-    select_active_purchases, should_retry_usage_error, tier_bands, tier_meters, topup_process_next,
-    trial_days, usage_rate, validate_activate_plan_params, validate_attach_business_details_params,
+    build_create_customer_params, build_customer_snapshot, build_gate_message, build_nudge_message,
+    build_paywall_gate, charges, classify_cancel_error, classify_create_error,
+    classify_customer_ref, classify_lookup_error, classify_paywall_state,
+    classify_reactivate_error, coerce_customer_options, counts_usage,
+    credits_per_unit_from_balance, decide_paywall_outcome, ensure_customer_next,
+    evaluate_balance_observation, evaluate_cached_limits, evaluate_fresh_limits,
+    evaluate_product_readiness, extract_backend_customer_ref, gate_next, headline_charges,
+    included_units, is_cached_customer_ref_valid, is_email_conflict, is_error_result,
+    map_route_error, meter_name, normalize_cancel_response, normalize_reactivate_response,
+    paywall_client_payload, pegged_credits_per_unit, per_unit_charge,
+    project_payment_intent_result, project_topup_process_outcome, project_usage_snapshot,
+    require_product_ref, resolve_authenticated_user, resolve_check_limits_params,
+    resolve_customer_ref, resolve_fallback_gate_limits, resolve_product_ref,
+    resolve_purchase_customer_ref, resolve_return_url, select_active_purchases,
+    should_retry_usage_error, tier_bands, tier_meters, topup_process_next, trial_days, usage_rate,
+    validate_activate_plan_params, validate_attach_business_details_params,
     validate_checkout_session_params, validate_create_payment_intent_params,
     validate_get_product_params, validate_list_plans_params,
     validate_process_payment_intent_params, validate_purchase_ref,
@@ -938,6 +939,19 @@ pub fn usage_rate_binding(args_json: String) -> String {
         let priced = optional_value(&args, "priced");
         let meter = optional_string(&args, "meter")?;
         to_value(&usage_rate(priced.as_ref(), meter.as_deref()))
+    })
+}
+
+// --- paywall state / gate / payload ---
+
+/// Binding for `buildCustomerSnapshot`.
+#[wasm_bindgen(js_name = "buildCustomerSnapshot")]
+pub fn build_customer_snapshot_binding(args_json: String) -> String {
+    run_envelope_sync(|| {
+        let args = args_map(&args_json)?;
+        let customer_ref = require_string(&args, "customerRef")?;
+        let limits = optional_value(&args, "limits");
+        to_value(&build_customer_snapshot(&customer_ref, limits.as_ref()))
     })
 }
 

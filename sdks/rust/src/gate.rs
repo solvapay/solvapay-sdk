@@ -34,11 +34,29 @@ impl GateOpts {
 }
 
 /// Result of a paywall gate check.
+///
+/// `Allow` holds the live client plus last limits/customer snapshot; boxing it
+/// would change the public match shape for no integrator benefit.
+#[allow(clippy::large_enum_variant)]
 pub enum GateOutcome {
     /// Request is gated; render 402 from structured gate content.
     Paywall(PaywallGate),
     /// Request may proceed; call [`Allow::track_success`] / [`Allow::track_fail`] after work.
     Allow(Allow),
+}
+
+impl From<solvapay_core::CustomerSnapshot> for CustomerSnapshot {
+    fn from(customer: solvapay_core::CustomerSnapshot) -> Self {
+        Self {
+            customer_ref: customer.customer_ref,
+            balance: serde_json::json!(customer.balance),
+            remaining: customer.remaining,
+            within_limits: serde_json::json!(customer.within_limits),
+            plan: customer.plan,
+            throttled: customer.throttled,
+            overage: customer.overage,
+        }
+    }
 }
 
 /// Merchant-facing customer projection from the last limits check.
@@ -54,6 +72,10 @@ pub struct CustomerSnapshot {
     pub within_limits: Value,
     /// Plan field from limits (may be JSON `null`).
     pub plan: Value,
+    /// `throttled` from limits, or `false` when absent.
+    pub throttled: bool,
+    /// `overage` from limits, or `false` when absent.
+    pub overage: bool,
 }
 
 /// Allow arm returned from [`Client::gate`]; usage tracking delegates to the typed client.
@@ -64,6 +86,7 @@ pub struct Allow {
     pub(crate) meter_name: String,
     pub(crate) limits: Value,
     pub(crate) customer: CustomerSnapshot,
+    pub(crate) consequence: Option<solvapay_core::AllowConsequence>,
     pub(crate) driver_state: Value,
 }
 
@@ -130,6 +153,11 @@ impl Allow {
         self.customer.clone()
     }
 
+    /// Degraded allow reason from the core driver. `None` on a plain allow.
+    pub fn consequence(&self) -> Option<solvapay_core::AllowConsequence> {
+        self.consequence
+    }
+
     /// Backend customer reference used for usage tracking.
     pub fn backend_ref(&self) -> &str {
         &self.backend_ref
@@ -151,16 +179,8 @@ impl Allow {
     }
 
     /// Copy the core driver snapshot onto the host `CustomerSnapshot`.
-    pub(crate) fn from_core_customer(
-        customer: solvapay_core::CustomerSnapshot,
-    ) -> CustomerSnapshot {
-        CustomerSnapshot {
-            customer_ref: customer.customer_ref,
-            balance: serde_json::json!(customer.balance),
-            remaining: customer.remaining,
-            within_limits: serde_json::json!(customer.within_limits),
-            plan: customer.plan,
-        }
+    pub fn from_core_customer(customer: solvapay_core::CustomerSnapshot) -> CustomerSnapshot {
+        CustomerSnapshot::from(customer)
     }
 
     /// Records a successful usage event (`trackUsage`).

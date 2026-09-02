@@ -1,0 +1,62 @@
+{
+  "suite": "driver-loop",
+  "case": "gate-allow-throttled-consequence",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "event": {
+        "kind": "limitsResult",
+        "limits": {
+          "withinLimits": true,
+          "remaining": 0,
+          "throttled": true,
+          "overage": true
+        },
+        "nowMs": 1100
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "action": {
+        "kind": "allow",
+        "customerRef": "cus_abc",
+        "product": "prd_1",
+        "meterName": "requests",
+        "limits": {
+          "withinLimits": true,
+          "remaining": 0,
+          "throttled": true,
+          "overage": true
+        },
+        "customer": {
+          "ref": "cus_abc",
+          "balance": 0,
+          "remaining": 0,
+          "withinLimits": true,
+          "throttled": true,
+          "overage": true
+        },
+        "consequence": "throttled"
+      }
+    }
+  }
+}

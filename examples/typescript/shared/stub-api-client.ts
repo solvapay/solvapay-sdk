@@ -590,8 +590,8 @@ export class StubSolvaPayClient implements SolvaPayClient {
    */
   async processPaymentIntent(params: {
     paymentIntentId: string
-    productRef: string
     customerRef: string
+    productRef?: string
     planRef?: string
   }): Promise<ProcessPaymentResult> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
@@ -615,7 +615,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       reference: `pur_stub_${Math.random().toString(36).slice(2, 10)}`,
       customerRef: params.customerRef,
       productName: 'Demo Product',
-      productRef: params.productRef,
+      productRef: params.productRef ?? 'prd_demo',
       status: 'active',
       startDate: now.toISOString(),
       createdAt: now.toISOString(),
@@ -696,12 +696,20 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
     const credits = await this.getCredits(params.customerRef)
 
+    const amountMajor = credits / 100
     return {
       customerRef: params.customerRef,
       credits,
       displayCurrency: 'USD',
       creditsPerMinorUnit: 100,
       displayExchangeRate: 1,
+      display: {
+        amountMajor,
+        currency: 'USD',
+        exchangeRate: 1,
+        formatted: `$${amountMajor.toFixed(2)}`,
+        rateSource: 'parity',
+      },
     }
   }
 

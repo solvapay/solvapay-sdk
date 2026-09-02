@@ -68,6 +68,7 @@ Gate `content[0].text` and `structuredContent` are layer-2 output
 | Path                                | Axis                                    |
 | ----------------------------------- | --------------------------------------- |
 | `allow/custom-usage-type.json`      | custom `usageType` reaches `metadata.action` |
+| `allow/customer-outcome-flags.json` | `ctx.customer` carries `throttled` / `overage` |
 | `allow/respond-minimal.json`        | `ctx.respond(data)`                     |
 | `allow/respond-text-option.json`    | `options.text`                          |
 | `allow/respond-nudge.json`          | nudge suffix; structured data unchanged |

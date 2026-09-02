@@ -139,6 +139,7 @@ export type NativeSyncMethod =
   | 'tierBands'
   | 'tierMeters'
   | 'usageRate'
+  | 'buildCustomerSnapshot'
   // Step 37R-d — @solvapay/core pure logic
   | 'formatPrice'
   | 'shouldShowTaxRow'
@@ -161,6 +162,7 @@ export type NativeSyncMethod =
   | 'resolveSellerIdentityDisplay'
   | 'getSellerTaxIdentifierDisplayLabel'
   | 'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE'
+  | 'isUnlimitedRemaining'
   // Step 37R-d — @solvapay/mcp-core builders (+ formatGate shares paywallToolResult)
   | 'paywallToolResult'
   | 'makeResponseResult'

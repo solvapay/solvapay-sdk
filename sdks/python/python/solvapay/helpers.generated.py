@@ -28,6 +28,16 @@ def billing_cycle(priced: Any | None = None) -> Any:
         payload["priced"] = priced
     return call_native_sync("billing_cycle", json.dumps(payload))
 
+def build_customer_snapshot(customer_ref: str, limits: Any | None = None) -> Any:
+    """Build the merchant-facing customer snapshot from a limits body.
+    @returns Customer snapshot with defaults applied, including throttled and overage.
+    """
+    payload: dict[str, Any] = {}
+    payload["customerRef"] = customer_ref
+    if limits is not None:
+        payload["limits"] = limits
+    return call_native_sync("build_customer_snapshot", json.dumps(payload))
+
 def build_gate_message(state: Any, gate: Any) -> Any:
     """Build the human-readable paywall gate message from state and gate content.
     @returns Gate message string.
@@ -226,6 +236,14 @@ def included_units(priced: Any | None = None, meter: str | None = None) -> Any:
     if meter is not None:
         payload["meter"] = meter
     return call_native_sync("included_units", json.dumps(payload))
+
+def is_unlimited_remaining(remaining: float) -> Any:
+    """Return whether remaining is the backend unlimited sentinel (-1).
+    @returns True only when remaining is exactly -1.
+    """
+    payload: dict[str, Any] = {}
+    payload["remaining"] = remaining
+    return call_native_sync("is_unlimited_remaining", json.dumps(payload))
 
 def is_zero_decimal_currency(currency: str) -> Any:
     """Return whether a currency uses zero decimal places.

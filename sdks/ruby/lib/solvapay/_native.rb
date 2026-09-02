@@ -85,6 +85,7 @@ module SolvaPay
       validate_attach_business_details_params
       SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
       attach_business_details_validation_error
+      is_unlimited_remaining
       paywall_tool_result
       project_payment_intent_result
       make_response_result
@@ -149,6 +150,7 @@ module SolvaPay
       tier_bands
       tier_meters
       usage_rate
+      build_customer_snapshot
     ].freeze
 
     RAW_VERIFY_WEBHOOK = SolvaPay.method(:verify_webhook)

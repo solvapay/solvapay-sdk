@@ -8,6 +8,7 @@ use crate::decisions::assert_valid_product_ref_binding;
 use crate::decisions::attach_business_details_validation_error_binding;
 use crate::decisions::billing_cycle_binding;
 use crate::decisions::build_create_customer_params_binding;
+use crate::decisions::build_customer_snapshot_binding;
 use crate::decisions::build_gate_message_binding;
 use crate::decisions::build_nudge_message_binding;
 use crate::decisions::build_paywall_gate_binding;
@@ -86,6 +87,7 @@ use crate::payload_builders::get_tax_id_example_binding;
 use crate::payload_builders::get_tax_id_field_label_binding;
 use crate::payload_builders::get_tax_id_helper_text_binding;
 use crate::payload_builders::invoke_payable_next_binding;
+use crate::payload_builders::is_unlimited_remaining_binding;
 use crate::payload_builders::is_zero_decimal_currency_binding;
 use crate::payload_builders::make_response_result_binding;
 use crate::payload_builders::mcp_tool_names_binding;
@@ -195,6 +197,7 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tier_bands_binding, m)?)?;
     m.add_function(wrap_pyfunction!(tier_meters_binding, m)?)?;
     m.add_function(wrap_pyfunction!(usage_rate_binding, m)?)?;
+    m.add_function(wrap_pyfunction!(build_customer_snapshot_binding, m)?)?;
     m.add_function(wrap_pyfunction!(format_price_binding, m)?)?;
     m.add_function(wrap_pyfunction!(should_show_tax_row_binding, m)?)?;
     m.add_function(wrap_pyfunction!(validate_business_details_binding, m)?)?;
@@ -225,6 +228,7 @@ pub(crate) fn register_generated(m: &Bound<'_, PyModule>) -> PyResult<()> {
         seller_tax_identifier_display_label_by_type_binding,
         m
     )?)?;
+    m.add_function(wrap_pyfunction!(is_unlimited_remaining_binding, m)?)?;
     m.add_function(wrap_pyfunction!(paywall_tool_result_binding, m)?)?;
     m.add_function(wrap_pyfunction!(make_response_result_binding, m)?)?;
     m.add_function(wrap_pyfunction!(assert_response_result_binding, m)?)?;

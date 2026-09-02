@@ -254,6 +254,11 @@ export function billingCycle(args_json: string): string;
 export function buildCreateCustomerParams(args_json: string): string;
 
 /**
+ * Binding for `buildCustomerSnapshot`.
+ */
+export function buildCustomerSnapshot(args_json: string): string;
+
+/**
  * Binding for `buildGateMessage`.
  */
 export function buildGateMessage(args_json: string): string;
@@ -462,6 +467,11 @@ export function isEmailConflict(args_json: string): string;
  * Binding for `isErrorResult`.
  */
 export function isErrorResult(args_json: string): string;
+
+/**
+ * Binding for `isUnlimitedRemaining`.
+ */
+export function isUnlimitedRemaining(args_json: string): string;
 
 /**
  * Binding for `isZeroDecimalCurrency`.
@@ -741,6 +751,7 @@ export interface InitOutput {
     readonly attachBusinessDetailsValidationError: (a: number, b: number) => [number, number];
     readonly billingCycle: (a: number, b: number) => [number, number];
     readonly buildCreateCustomerParams: (a: number, b: number) => [number, number];
+    readonly buildCustomerSnapshot: (a: number, b: number) => [number, number];
     readonly buildGateMessage: (a: number, b: number) => [number, number];
     readonly buildNudgeMessage: (a: number, b: number) => [number, number];
     readonly buildPayableToolResult: (a: number, b: number) => [number, number];
@@ -783,6 +794,7 @@ export interface InitOutput {
     readonly isCachedCustomerRefValid: (a: number, b: number) => [number, number];
     readonly isEmailConflict: (a: number, b: number) => [number, number];
     readonly isErrorResult: (a: number, b: number) => [number, number];
+    readonly isUnlimitedRemaining: (a: number, b: number) => [number, number];
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
     readonly makeResponseResult: (a: number, b: number) => [number, number];
     readonly mapRouteError: (a: number, b: number) => [number, number];

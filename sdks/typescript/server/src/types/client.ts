@@ -5,6 +5,44 @@
  */
 
 import type { components, operations } from './generated'
+import type {
+  CancelPurchaseParams,
+  CloneProductOverrides,
+  CloneProductResult,
+  CreateCustomerResult,
+  CreatePaymentIntentParams,
+  CreatePaymentIntentResult,
+  CreateProductResult,
+  CreateTopupPaymentIntentParams,
+  CreateTopupPaymentIntentResult,
+  DisableAutoRechargeParams,
+  DisableAutoRechargeSdkResponse,
+  ListProductsResult,
+  ProcessPaymentIntentParams,
+  ReactivatePurchaseParams,
+  SaveAutoRechargeParams,
+  UpdateCustomerParams,
+  UpdateCustomerResult,
+} from './overlays.generated'
+
+export type {
+  CancelPurchaseParams,
+  CloneProductOverrides,
+  CloneProductResult,
+  CreateCustomerResult,
+  CreatePaymentIntentParams,
+  CreatePaymentIntentResult,
+  CreateProductResult,
+  CreateTopupPaymentIntentParams,
+  CreateTopupPaymentIntentResult,
+  DisableAutoRechargeParams,
+  DisableAutoRechargeSdkResponse,
+  ListProductsResult,
+  ProcessPaymentIntentParams,
+  ReactivatePurchaseParams,
+  UpdateCustomerParams,
+  UpdateCustomerResult,
+} from './overlays.generated'
 
 /** SDK purchase row. Generated from the OpenAPI `SdkPurchaseResponse` schema. */
 export type PurchaseInfo = components['schemas']['SdkPurchaseResponse']
@@ -252,7 +290,7 @@ export interface SolvaPayClient {
   // POST: /v1/sdk/customers
   createCustomer?(
     params: components['schemas']['CreateCustomerRequest'],
-  ): Promise<{ customerRef: string }>
+  ): Promise<CreateCustomerResult>
 
   /**
    * PATCH: /v1/sdk/customers/{customerRef}
@@ -260,10 +298,7 @@ export interface SolvaPayClient {
    * `externalRef` on an existing email-matched customer, and exposed
    * directly for integrators who need it.
    */
-  updateCustomer?(
-    customerRef: string,
-    params: components['schemas']['UpdateCustomerRequest'],
-  ): Promise<{ customerRef: string }>
+  updateCustomer?(customerRef: string, params: UpdateCustomerParams): Promise<UpdateCustomerResult>
 
   // GET: /v1/sdk/customers/{reference} or /v1/sdk/customers?externalRef={externalRef}
   getCustomer(params: {
@@ -297,12 +332,12 @@ export interface SolvaPayClient {
   // Management methods
 
   // GET: /v1/sdk/products
-  listProducts?(): Promise<components['schemas']['SdkProductResponse'][]>
+  listProducts?(): Promise<ListProductsResult>
 
   // POST: /v1/sdk/products
   createProduct?(
     params: components['schemas']['CreateProductRequest'],
-  ): Promise<components['schemas']['SdkProductResponse']>
+  ): Promise<CreateProductResult>
 
   // POST: /v1/sdk/products/mcp/bootstrap
   bootstrapMcpProduct?(params: McpBootstrapRequest): Promise<McpBootstrapResponse>
@@ -323,10 +358,7 @@ export interface SolvaPayClient {
   deleteProduct?(productRef: string): Promise<void>
 
   // POST: /v1/sdk/products/{productRef}/clone
-  cloneProduct?(
-    productRef: string,
-    overrides?: components['schemas']['CloneProductDto'],
-  ): Promise<components['schemas']['SdkProductResponse']>
+  cloneProduct?(productRef: string, overrides?: CloneProductOverrides): Promise<CloneProductResult>
 
   // GET: /v1/sdk/products/{productRef}/plans
   listPlans?(productRef: string): Promise<components['schemas']['Plan'][]>
@@ -347,45 +379,24 @@ export interface SolvaPayClient {
   deletePlan?(productRef: string, planRef: string): Promise<void>
 
   // POST: /v1/sdk/payment-intents
-  createPaymentIntent?(
-    params: Omit<components['schemas']['CreatePaymentIntentDto'], 'purpose'> & {
-      purpose?: components['schemas']['CreatePaymentIntentDto']['purpose']
-      idempotencyKey?: string
-    },
-  ): Promise<components['schemas']['SdkPaymentIntentResponse']>
+  createPaymentIntent?(params: CreatePaymentIntentParams): Promise<CreatePaymentIntentResult>
 
   // POST: /v1/sdk/payment-intents (purpose: credit_topup)
   createTopupPaymentIntent?(
-    params: Pick<
-      components['schemas']['CreatePaymentIntentDto'],
-      'customerRef' | 'amount' | 'currency' | 'description' | 'autoRecharge'
-    > & {
-      currency: string
-      amount: number
-      idempotencyKey?: string
-      autoRecharge?: AutoRechargeInput
-    },
-  ): Promise<components['schemas']['SdkPaymentIntentResponse']>
+    params: CreateTopupPaymentIntentParams,
+  ): Promise<CreateTopupPaymentIntentResult>
 
   // POST: /v1/sdk/purchases/{purchaseRef}/cancel
-  cancelPurchase?(
-    params: components['schemas']['CancelPurchaseRequest'] & {
-      purchaseRef: string
-    },
-  ): Promise<PurchaseInfo>
+  cancelPurchase?(params: CancelPurchaseParams): Promise<PurchaseInfo>
 
   // POST: /v1/sdk/purchases/{purchaseRef}/reactivate
-  reactivatePurchase?(params: { purchaseRef: string }): Promise<PurchaseInfo>
+  reactivatePurchase?(params: ReactivatePurchaseParams): Promise<PurchaseInfo>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/process
   // `productRef` is optional because credit-topup PIs (no product) are
   // processed through the same route — the backend controller ignores
   // the body entirely and drives off the PI id + authenticated provider.
-  processPaymentIntent?(
-    params: components['schemas']['ProcessPaymentIntentDto'] & {
-      paymentIntentId: string
-    },
-  ): Promise<ProcessPaymentResult>
+  processPaymentIntent?(params: ProcessPaymentIntentParams): Promise<ProcessPaymentResult>
 
   // POST: /v1/sdk/payment-intents/{paymentIntentId}/business-details
   attachBusinessDetails?(params: AttachBusinessDetailsParams): Promise<AttachBusinessDetailsResult>
@@ -419,14 +430,10 @@ export interface SolvaPayClient {
   getAutoRecharge?(params: { customerRef: string }): Promise<AutoRechargeResponse>
 
   // PUT: /v1/sdk/auto-recharge
-  saveAutoRecharge?(
-    params: SaveAutoRechargeInput & { customerRef: string },
-  ): Promise<SaveAutoRechargeResponse>
+  saveAutoRecharge?(params: SaveAutoRechargeParams): Promise<SaveAutoRechargeResponse>
 
   // DELETE: /v1/sdk/auto-recharge?customerRef=...
-  disableAutoRecharge?(params: {
-    customerRef: string
-  }): Promise<components['schemas']['DisableAutoRechargeResponse']>
+  disableAutoRecharge?(params: DisableAutoRechargeParams): Promise<DisableAutoRechargeSdkResponse>
 
   /** Fan out merchant, product, plans, and customer snapshots for the MCP widget. */
   mcpBootstrap?(params: unknown): Promise<unknown>

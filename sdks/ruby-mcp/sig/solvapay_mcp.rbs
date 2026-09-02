@@ -26,7 +26,8 @@ module SolvaPay
       ?title: String?,
       ?description: String?,
       ?input_schema: untyped,
-      ?get_customer_ref: (^(untyped) -> String)?
+      ?get_customer_ref: (^(untyped) -> String)?,
+      ?usage_type: String
     ) -> void
 
     def self.invoke_payable: (
@@ -34,7 +35,8 @@ module SolvaPay
       product: String,
       handler: ^(untyped, ResponseContext) -> untyped,
       get_customer_ref: (^(untyped) -> String)?,
-      args: untyped
+      args: untyped,
+      ?usage_type: String
     ) -> Hash[String, untyped]
 
     def self.resolve_customer_ref: (untyped args, (^(untyped) -> String)? get_customer_ref) -> String
@@ -78,6 +80,8 @@ module SolvaPay
       def rack_headers: (Hash[String, untyped] env) -> Hash[String, String]
       def read_body: (Hash[String, untyped] env) -> String
       def stringify: (untyped value) -> untyped
+      def merge_native_cors: (Hash[String, untyped] env, Hash[String, String] headers) -> Hash[String, String]?
+      def resolved_jwks: (untyped auth) -> untyped
       def symbolize: (untyped hash) -> Hash[Symbol, untyped]
     end
 

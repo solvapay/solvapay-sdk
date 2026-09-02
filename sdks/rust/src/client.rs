@@ -191,6 +191,7 @@ impl Client {
                     meter_name,
                     limits,
                     customer,
+                    consequence,
                     cache,
                 } => {
                     self.apply_gate_cache(cache).await;
@@ -201,6 +202,7 @@ impl Client {
                         meter_name,
                         limits,
                         customer: Allow::from_core_customer(customer),
+                        consequence,
                         driver_state: state.clone().unwrap_or(Value::Null),
                     }));
                 }

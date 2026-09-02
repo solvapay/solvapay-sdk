@@ -15,6 +15,7 @@ from tests.mcp_authoring.scenario import parse_observation, parse_scenario
 
 MCP_AUTHORING_FIXTURES = [
     "allow/custom-usage-type.json",
+    "allow/customer-outcome-flags.json",
     "allow/respond-emitted-blocks.json",
     "allow/respond-key-order.json",
     "allow/respond-minimal.json",

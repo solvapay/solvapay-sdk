@@ -364,6 +364,7 @@ export class SolvaPayPaywall {
           limits: action.limits as LimitResponseWithPlan,
           customerRef: String(action.customerRef),
           driverState: state,
+          ...(action.consequence !== undefined ? { consequence: action.consequence } : {}),
         }
       }
 

@@ -434,7 +434,10 @@ class SolvaPay:
                 raise SolvaPayError("gate_next gate action missing gate payload")
             return PayablePaywallResult(kind="paywall", content=gate)
 
-        decision = {"outcome": "allow", "limits": last_limits}
+        decision: dict[str, Any] = {"outcome": "allow", "limits": last_limits}
+        consequence = action.get("consequence")
+        if consequence in ("throttled", "overage"):
+            decision["consequence"] = consequence
         driver_state = state if isinstance(state, dict) else None
 
         def track_success(

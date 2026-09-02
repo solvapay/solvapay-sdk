@@ -87,6 +87,8 @@ export const LimitsSchema = z
     balance: z.unknown().optional(),
     product: z.unknown().optional(),
     meterName: z.string().optional(),
+    throttled: z.boolean().optional(),
+    overage: z.boolean().optional(),
   })
   .strict()
 

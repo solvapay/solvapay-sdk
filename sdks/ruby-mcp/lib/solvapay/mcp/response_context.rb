@@ -28,9 +28,7 @@ module SolvaPay
         args = { "product" => @product_ref }
         args["reason"] = reason unless reason.nil?
         content = Core.call("mcpDefaultGate", args)
-        unless content.is_a?(Hash)
-          raise SolvaPay::SolvaPayError, "mcpDefaultGate did not return an object"
-        end
+        raise SolvaPay::SolvaPayError, "mcpDefaultGate did not return an object" unless content.is_a?(Hash)
 
         message = content["message"]
         message = "Payment required" if message.nil? || message.to_s.empty?

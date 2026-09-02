@@ -40,7 +40,14 @@
         "product": "prd_1",
         "meterName": "requests",
         "limits": { "withinLimits": true, "remaining": 5, "checkoutUrl": "https://pay" },
-        "customer": { "ref": "cus_abc", "balance": 0, "remaining": 5, "withinLimits": true },
+        "customer": {
+          "ref": "cus_abc",
+          "balance": 0,
+          "remaining": 5,
+          "withinLimits": true,
+          "throttled": false,
+          "overage": false
+        },
         "cache": {
           "op": "updateRemaining",
           "key": "cus_abc:prd_1:requests",

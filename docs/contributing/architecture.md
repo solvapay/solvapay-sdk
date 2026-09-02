@@ -160,10 +160,13 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 - **Retry policy** (schedules, not sleeps) → `.../src/retry.rs`
 - **Paywall** → `paywall_state.rs`, `paywall_gate.rs`, `paywall_decision.rs`,
   `paywall_payload.rs`, plus the host-callback sequencers `gate_driver.rs`
-  (`gate_next`) and `invoke_payable.rs` (`invoke_payable_next`) so every
-  language facade runs the same ten-step gate and payable invocation
+  (`gate_next`, `build_customer_snapshot`) and `invoke_payable.rs`
+  (`invoke_payable_next`) so every language facade runs the same ten-step gate
+  and payable invocation. MCP `ctx.customer` is the core snapshot — there is no
+  hand-written TypeScript copy.
 - **Helper decision cores** → `customer_sync.rs`, `payment.rs`, `checkout.rs`,
-  `purchase.rs`, `renewal.rs`, `usage.rs`, `limits.rs`, `plans.rs`, `product.rs`,
+  `purchase.rs`, `renewal.rs`, `usage.rs`, `limits.rs` (`is_unlimited_remaining`),
+  `plans.rs`, `product.rs`,
   `route_error.rs`, `activation.rs`, `auth_resolution.rs`, `balance_poll.rs`
   (shared shape in `helper_error.rs`)
 - **Core value helpers** → `business_details.rs`, `credit_display.rs`,

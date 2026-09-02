@@ -4,6 +4,7 @@
  */
 
 export type NativeMcpSyncMethod =
+  | 'buildCustomerSnapshot'
   | 'paywallToolResult'
   | 'makeResponseResult'
   | 'assertResponseResult'

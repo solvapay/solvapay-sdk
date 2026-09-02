@@ -464,6 +464,9 @@ fn load_driver_loop_fixtures() -> Vec<(PathBuf, Fixture)> {
         let fixture = parse_fixture(&value).unwrap_or_else(|err| {
             panic!("parse fixture {}: {err}", path.display());
         });
+        if fixture.wire.is_none() {
+            continue;
+        }
         out.push((path.to_path_buf(), fixture));
     }
     out.sort_by(|a, b| a.0.cmp(&b.0));

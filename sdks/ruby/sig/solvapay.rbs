@@ -186,6 +186,7 @@ module SolvaPay
   TAX_NOT_COLLECTED_NOTE: untyped
   def self.assert_valid_product_ref: (product_ref: String, context: String) -> untyped
   def self.billing_cycle: (?priced: untyped) -> untyped
+  def self.build_customer_snapshot: (input: Hash[String, untyped]) -> untyped
   def self.build_gate_message: (input: Hash[String, untyped]) -> untyped
   def self.build_nudge_message: (input: Hash[String, untyped]) -> untyped
   def self.build_paywall_gate: (input: Hash[String, untyped]) -> untyped
@@ -205,6 +206,7 @@ module SolvaPay
   def self.get_tax_id_helper_text: (country: String) -> untyped
   def self.headline_charges: (?priced: untyped) -> untyped
   def self.included_units: (?priced: untyped, ?meter: String) -> untyped
+  def self.is_unlimited_remaining: (remaining: Float) -> untyped
   def self.is_zero_decimal_currency: (currency: String) -> untyped
   def self.meter_name: (?priced: untyped) -> untyped
   def self.minor_units_per_major: (currency: String) -> untyped
