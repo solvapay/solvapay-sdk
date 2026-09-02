@@ -1,6 +1,6 @@
 ---
-title: "MCP Server Integration Guide"
-description: "Protect Model Context Protocol (MCP) tools with SolvaPay using createSolvaPayMcpServer and registerPayable — the recommended factory that wires the transport, intent tools, paywall, and UI resource for you."
+title: 'MCP Server Integration Guide'
+description: 'Protect Model Context Protocol (MCP) tools with SolvaPay using createSolvaPayMcpServer and registerPayable — the recommended factory that wires the transport, intent tools, paywall, and UI resource for you.'
 ---
 
 ## Table of Contents
@@ -28,6 +28,8 @@ yarn add @solvapay/mcp @solvapay/server @modelcontextprotocol/server @modelconte
 ```
 
 `@solvapay/mcp` is the only package that imports `@modelcontextprotocol/*`. The framework-neutral contracts (bearer helpers, paywall envelope) live in `@solvapay/mcp-core`, which is installed transitively.
+
+On Node with Express, also install `@modelcontextprotocol/node` for `toNodeHandler` — see the [complete example](#complete-example). Fetch-native runtimes (Workers, Deno, Supabase Edge) don't need it; use `@solvapay/mcp/fetch` instead.
 
 ## Basic Setup
 
@@ -89,7 +91,7 @@ The `schema` shape flows through to the handler's `args`, so `query` is typed as
 
 ### Annotations are required
 
-Every tool advertises MCP annotations. `registerPayable` defaults to `{ readOnlyHint: true, openWorldHint: true }` — the right shape for a paywalled *data* tool that reads from your backend. Override for state-mutating tools:
+Every tool advertises MCP annotations. `registerPayable` defaults to `{ readOnlyHint: true, openWorldHint: true }` — the right shape for a paywalled _data_ tool that reads from your backend. Override for state-mutating tools:
 
 ```typescript
 registerPayable('submit_order', {
@@ -178,7 +180,7 @@ registerPayable('search_knowledge', {
 Handlers return the `ctx.respond(data, options?)` envelope — never a raw object and never a hand-built `content: [{ type: 'text', ... }]`. The envelope drives the three SolvaPay response modes:
 
 - **Silent** — `ctx.respond(data)`. The merchant's data is the hero. No iframe, no upsell. This is the 90% path for a paying customer.
-- **Nudge** — `ctx.respond(data, { nudge })`. Data is returned *and* something is worth flagging (low balance, cycle ending). The nudge message is appended to `content[0].text` as a plain-text suffix that names the recovery intent tool. Never blocks.
+- **Nudge** — `ctx.respond(data, { nudge })`. Data is returned _and_ something is worth flagging (low balance, cycle ending). The nudge message is appended to `content[0].text` as a plain-text suffix that names the recovery intent tool. Never blocks.
 - **Gate** — fired automatically by the paywall pre-check when the customer can't be served. The transport emits a text-only narration naming the recovery intent tool (`upgrade` / `topup` / `activate_plan`) with the machine-readable gate on `structuredContent`. No iframe opens for a gate — the model reads the narration and calls the recovery tool, which mounts the UI.
 
 ```typescript
@@ -244,15 +246,14 @@ handler: async ({ query }, ctx) => {
 
 ## Complete Example
 
-A compact, copy-paste-safe Express server mirroring [`examples/typescript/mcp-checkout-app`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-checkout-app): the OAuth bridge, one `registerPayable` tool, and the streamable HTTP transport.
+A compact, copy-paste-safe Express server mirroring [`examples/typescript/mcp-checkout-app`](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-checkout-app): the OAuth bridge, one `registerPayable` tool, and the SDK v2 HTTP handler.
 
 ```typescript
 import 'dotenv/config'
 import path from 'node:path'
-import { randomUUID } from 'node:crypto'
-import express, { type Request, type Response } from 'express'
+import express from 'express'
 import { createMcpHandler } from '@modelcontextprotocol/server'
-import { isLegacyRequest } from '@modelcontextprotocol/server'
+import { toNodeHandler } from '@modelcontextprotocol/node'
 import { createSolvaPayMcpServer } from '@solvapay/mcp'
 import { createMcpOAuthBridge } from '@solvapay/mcp/express'
 import { createSolvaPay } from '@solvapay/server'
@@ -276,14 +277,17 @@ function createServer() {
         description: 'Search the knowledge base.',
         schema: { query: z.string().min(1) },
         annotations: { readOnlyHint: true, idempotentHint: true },
-        handler: async ({ query }, ctx) =>
-          ctx.respond({ query, results: await search(query) }),
+        handler: async ({ query }, ctx) => ctx.respond({ query, results: await search(query) }),
       })
     },
   })
 }
 
-const sessions: Record<string, StreamableHTTPServerTransport> = {}
+// SDK v2 is stateless: `createMcpHandler` builds a fresh server per request,
+// so there is no session map, no `Mcp-Session-Id`, and no transport to hold.
+// 2025-era clients are still served through the SDK's default
+// `legacy: 'stateless'` leg.
+const mcpHandler = createMcpHandler(() => createServer())
 
 const app = express()
 app.use(express.json())
@@ -298,34 +302,13 @@ app.use(
   }),
 )
 
-app.post('/mcp', async (req: Request, res: Response) => {
-  const sessionId = req.headers['mcp-session-id'] as string | undefined
-  let transport = sessionId ? sessions[sessionId] : undefined
-
-  if (!transport && isInitializeRequest(req.body)) {
-    transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-      onsessioninitialized: sid => {
-        sessions[sid] = transport!
-      },
-    })
-    transport.onclose = () => {
-      const sid = transport?.sessionId
-      if (sid) delete sessions[sid]
-    }
-    await createServer().connect(transport)
-  }
-
-  if (!transport) {
-    res.status(400).json({
-      jsonrpc: '2.0',
-      id: (req.body as { id?: string | number | null })?.id ?? null,
-      error: { code: -32000, message: 'No valid session ID provided' },
-    })
-    return
-  }
-
-  await transport.handleRequest(req, res, req.body)
+// `toNodeHandler` streams SSE through and forwards `req.auth` (set by the OAuth
+// bridge) as the handler's `authInfo`. Pass `req.body` explicitly — Express calls
+// middleware as `(req, res, next)`, and without the third argument the handler
+// would try to re-read the already-consumed stream.
+const handleMcp = toNodeHandler(mcpHandler)
+app.all('/mcp', (req, res) => {
+  void handleMcp(req, res, req.body)
 })
 
 app.listen(3006, () => {
@@ -350,18 +333,27 @@ import { paywallToolResult } from '@solvapay/mcp-core'
 
 const server = new McpServer({ name: 'my-server', version: '1.0.0' })
 
-server.registerTool('create_task', { /* ... */ }, async args => {
-  const decision = await solvaPay.paywall.decide(args, { product: 'prd_myapi' })
+server.registerTool(
+  'create_task',
+  {
+    /* ... */
+  },
+  async args => {
+    const decision = await solvaPay.paywall.decide(args, { product: 'prd_myapi' })
 
-  if (decision.outcome === 'gate') {
-    return paywallToolResult(decision.gate, {
-      resourceUri: 'ui://my-app/mcp-app.html',
-    })
-  }
+    if (decision.outcome === 'gate') {
+      return await paywallToolResult(decision.gate)
+    }
 
-  return await createTask(args)
-})
+    return await createTask(args)
+  },
+)
 ```
+
+`paywallToolResult` takes only the gate. Under the text-only paywall it returns a plain
+narration on `content[0].text` plus the structured gate on `structuredContent` — it never
+stamps UI meta, so there is no `resourceUri` to pass. Only the three intent tools
+(`upgrade` / `manage_account` / `topup`) advertise a UI resource.
 
 Legacy consumers that still `try/catch` a `PaywallError` keep working — it is exported from `@solvapay/server` as a compat shim:
 
@@ -372,7 +364,7 @@ try {
   return await payable.mcp(createTask)(args)
 } catch (error) {
   if (error instanceof PaywallError) {
-    return paywallToolResult(error, { resourceUri: 'ui://my-app/mcp-app.html' })
+    return await paywallToolResult(error)
   }
   throw error
 }

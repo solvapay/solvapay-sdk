@@ -80,19 +80,24 @@ the core.
 - **Integration tests:** end-to-end flows across adapters and HTTP handlers.
 - **Example validation:** verify runnable examples stay in sync with facades.
 
-### Stub mode
+### Stub clients
 
-Use stub mode for deterministic local/CI testing without real API credentials:
+For deterministic local/CI testing without real API credentials, inject an
+`apiClient`. A missing key is **not** a stub trigger — `createSolvaPay()` throws
+`Missing apiKey` when neither `config.apiKey` nor `SOLVAPAY_SECRET_KEY` is set.
 
 ```ts
 import { createSolvaPay } from '@solvapay/server'
+import { createStubClient } from '../shared/stub-api-client'
 
-// No API key => stub mode
-const solvaPay = createSolvaPay()
+const solvaPay = createSolvaPay({
+  apiClient: createStubClient({ freeTierLimit: 5 }),
+})
 ```
 
-You can also inject a custom stub client for tighter control over limits,
-storage, or artificial delay.
+`createStubClient` lives in `examples/typescript/shared/stub-api-client.ts` and
+takes options for free-tier limits, storage, artificial delay, and debug logging.
+Any object implementing `SolvaPayClient` works if you want a narrower fake.
 
 ### Recommended patterns
 

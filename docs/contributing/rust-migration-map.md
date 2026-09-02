@@ -1,6 +1,13 @@
 # Rust Core SDK migration map
 
-Living **state / progress / handoff** layer for the Rust core SDK redesign. Companion to the architecture/spec doc:
+**Historical record.** This is the step-by-step handoff log of the Rust core migration,
+preserved as written. Paths in the step notes below reflect the layout at the time each
+step landed — most notably `packages/<name>/`, which became `sdks/typescript/<name>/`
+in the Tier 3 hoist, and the pre-hoist `rust/` and `scripts/` trees. Do not treat any
+path, version, or file reference here as current. For the SDK as it exists today read
+[`architecture.md`](./architecture.md).
+
+Companion to the architecture/spec doc:
 
 > **Status:** migration complete except step 55 (promote all compatibility gates); steps 1–54 done. For the current as-built architecture, read [`architecture.md`](./architecture.md).
 

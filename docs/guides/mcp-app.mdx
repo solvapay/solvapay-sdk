@@ -1,11 +1,11 @@
 ---
-title: "MCP App integration guide"
-description: "Render SolvaPay checkout and account management inside an MCP host iframe using @solvapay/react and the MCP App adapter."
+title: 'MCP App integration guide'
+description: 'Render SolvaPay checkout and account management inside an MCP host iframe using @solvapay/react and the MCP App adapter.'
 ---
 
 An **MCP App** is a UI resource that an MCP host loads inside a sandboxed iframe. Host sandboxes typically block direct HTTP calls to arbitrary backends, so the UI cannot hit your API the way a normal React app would.
 
-The TypeScript SDK ships a dedicated adapter for this environment. `createMcpAppAdapter` returns a `SolvaPayTransport` that tunnels every data call through `app.callServerTool` instead of HTTP. Mount it on `SolvaPayProvider` and every hook (`usePurchase`, `useMerchant`, `<CurrentPlanCard>`, `<LaunchCustomerPortalButton>`, etc.) works unchanged.
+The TypeScript SDK ships a dedicated surface for this environment. `<McpApp>` from `@solvapay/react/mcp` mounts the whole thing; under the hood `createMcpAppAdapter` returns a `SolvaPayTransport` that tunnels every write through `app.callServerTool` instead of HTTP, and reads come off the bootstrap payload the server sends with each intent-tool result. Every hook (`usePurchase`, `useMerchant`, `<CurrentPlanCard>`, `<LaunchCustomerPortalButton>`, etc.) works unchanged.
 
 ## Prerequisites
 
@@ -22,90 +22,100 @@ pnpm add @solvapay/react @modelcontextprotocol/ext-apps
 
 ## Quick start
 
-Wire the adapter into `SolvaPayProvider` and you're done — every SDK hook routes through the MCP transport.
+Render `<McpApp>` and you're done. It runs `app.connect()`, applies host theme / fonts / safe-area insets, fetches the bootstrap payload, mounts `SolvaPayProvider` with the MCP transport, and routes the payload's `view` to the matching surface.
 
 ```tsx
+import { createRoot } from 'react-dom/client'
 import { App } from '@modelcontextprotocol/ext-apps'
-import { SolvaPayProvider, CurrentPlanCard } from '@solvapay/react'
-import { createMcpAppAdapter } from '@solvapay/react/mcp'
+import { McpApp } from '@solvapay/react/mcp'
 import '@solvapay/react/styles.css'
+import '@solvapay/react/mcp/styles.css'
 
 const app = new App({ name: 'my-app', version: '1.0.0' })
-const transport = createMcpAppAdapter(app)
 
-export function Root() {
-  return (
-    <SolvaPayProvider config={{ transport }}>
-      <CurrentPlanCard />
-    </SolvaPayProvider>
-  )
-}
+createRoot(document.getElementById('root')!).render(<McpApp app={app} />)
 ```
 
-`app.connect()` still has to run once before the provider mounts — do it in a top-level bootstrap effect alongside whatever host-context handling you need.
+Pass `applyContext` if you want to handle host theme and insets yourself, and `views` to override an individual surface. See [`examples/typescript/mcp-checkout-app/src/mcp-app.tsx`](https://github.com/solvapay/solvapay-sdk/blob/main/examples/typescript/mcp-checkout-app/src/mcp-app.tsx) for the full wiring.
+
+### Customizing the surface
+
+Two escape hatches, in increasing order of control:
+
+- **Override one surface.** Pass `views={{ checkout: MyCheckout }}` to `<McpApp>`. The other surfaces keep the SDK implementation.
+- **Own the layout.** Render `<McpAppShell bootstrap={…}>` or `<McpViewRouter>` plus the per-view primitives (`<McpCheckoutView>`, `<McpAccountView>`, `<McpTopupView>`) inside your own tree.
+
+`<McpApp>` remains responsible for connecting the app, fetching the bootstrap payload, and seeding the hook caches from it. That seeding is load-bearing: because the adapter implements no read methods, `usePurchase`, `useMerchant`, `useProduct`, and `usePlans` have nothing to render until the payload lands. Bypassing `<McpApp>` entirely means reimplementing that bootstrap, so prefer the two hatches above.
 
 ## Tool contract
 
-The adapter maps each transport method to a single MCP tool name. Export `MCP_TOOL_NAMES` in your server so the two stay in lockstep.
+The adapter is **write-only**. Every read the UI needs — merchant, product, plans, purchase, payment method, balance, usage — arrives on the `BootstrapPayload` that each intent tool returns on `structuredContent`, and `seedMcpCaches` from `@solvapay/react/mcp` primes the hooks' module-level caches from it. The transport therefore never fetches reads, and the old per-read tools (`check_purchase`, `get_merchant`, `get_product`, `list_plans`, `get_payment_method`, `get_customer_balance`, `get_usage`) no longer exist.
 
-| Transport method          | MCP tool name                   | Returns                                                       |
-| ------------------------- | ------------------------------- | ------------------------------------------------------------- |
-| `checkPurchase`           | `check_purchase`                | `{ customerRef, email, name, purchases: [...] }`              |
-| `createCheckoutSession`   | `create_checkout_session`       | `{ sessionId, checkoutUrl }`                                  |
-| `createCustomerSession`   | `create_customer_session`       | `{ sessionId, customerUrl }`                                  |
-| `getPaymentMethod`        | `get_payment_method`            | `{ kind: 'card', brand, last4, expMonth, expYear } \| { kind: 'none' }` |
-| `getMerchant`             | `get_merchant`                  | `Merchant`                                                    |
-| `getProduct`              | `get_product`                   | `Product`                                                     |
-| `listPlans`               | `list_plans`                    | `Plan[]`                                                      |
-| `getBalance`              | `get_customer_balance`          | `{ credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate }` |
-| `createPayment`           | `create_payment_intent`         | `PaymentIntentResult`                                         |
-| `processPayment`          | `process_payment`               | `ProcessPaymentResult`                                        |
-| `createTopupPayment`      | `create_topup_payment_intent`   | `TopupPaymentResult`                                          |
-| `activatePlan`            | `activate_plan`                 | `ActivatePlanResult`                                          |
-| `cancelRenewal`           | `cancel_renewal`                | `CancelResult`                                                |
-| `reactivateRenewal`       | `reactivate_renewal`            | `ReactivateResult`                                            |
+Import `MCP_TOOL_NAMES` from `@solvapay/mcp-core` (also re-exported from `@solvapay/react/mcp`) so client and server stay in lockstep. It is **not** exported from `@solvapay/mcp`.
 
-Your server only needs to implement the tools the UI actually uses. Unimplemented tools surface as a thrown error from the adapter — catch and feature-detect in your component.
+### Transport tools (called by the adapter)
+
+| Transport method        | MCP tool name                 | Returns                      |
+| ----------------------- | ----------------------------- | ---------------------------- |
+| `createPayment`         | `create_payment_intent`       | `PaymentIntentResult`        |
+| `processPayment`        | `process_payment`             | `ProcessPaymentResult`       |
+| `createTopupPayment`    | `create_topup_payment_intent` | `TopupPaymentResult`         |
+| `attachBusinessDetails` | `attach_business_details`     | `{ taxBreakdown }`           |
+| `activatePlan`          | `activate_plan`               | `ActivatePlanResult`         |
+| `cancelRenewal`         | `cancel_renewal`              | `CancelResult`               |
+| `reactivateRenewal`     | `reactivate_renewal`          | `ReactivateResult`           |
+| `createCheckoutSession` | `create_checkout_session`     | `{ sessionId, checkoutUrl }` |
+| `createCustomerSession` | `create_customer_session`     | `{ sessionId, customerUrl }` |
+
+### Intent tools (called by the host or the model)
+
+These are the only tools whose descriptors carry `_meta.ui.resourceUri`, so they are the only ones that open the iframe. Each returns a `BootstrapPayload` stamped with the `view` the shell should render.
+
+| MCP tool name    | `view`     | Surface                                 |
+| ---------------- | ---------- | --------------------------------------- |
+| `upgrade`        | `checkout` | Plan picker + payment                   |
+| `manage_account` | `account`  | Current plan, card, cancel / reactivate |
+| `topup`          | `topup`    | Credit top-up amount picker             |
+
+Unimplemented tools surface as a thrown error from the adapter — catch and feature-detect in your component.
 
 ## Server side
 
-On the server, register each tool with the canonical name so the client adapter can find it. Import the constants so you never hand-type a string.
+`createSolvaPayMcpServer` from `@solvapay/mcp` registers every transport and intent tool, the UI resource, and the Stripe CSP baseline for you. Merchant tools go in `additionalTools`; you never hand-register a commerce tool.
 
 ```ts
-import { MCP_TOOL_NAMES, registerAppTool } from '@solvapay/mcp'
-import { checkPurchaseCore, createCheckoutSessionCore } from '@solvapay/server'
+import { createSolvaPayMcpServer } from '@solvapay/mcp'
+import { z } from 'zod'
 
-registerAppTool(
-  server,
-  MCP_TOOL_NAMES.checkPurchase,
-  { description: 'Fetch the active purchase for the authenticated customer.', inputSchema: {} },
-  async (_args, extra) => {
-    const result = await checkPurchaseCore(buildRequest(extra), { solvaPay })
-    return toolResult(result)
+const server = createSolvaPayMcpServer({
+  solvaPay,
+  productRef: process.env.SOLVAPAY_PRODUCT_REF!,
+  resourceUri: 'ui://my-app/mcp-app.html',
+  htmlPath: './dist/mcp-app.html',
+  publicBaseUrl: 'https://my-mcp.example.com',
+  additionalTools: ({ registerPayable }) => {
+    registerPayable('search_knowledge', {
+      schema: { query: z.string() },
+      handler: async ({ query }, ctx) => ctx.respond(await search(query)),
+    })
   },
-)
-
-registerAppTool(
-  server,
-  MCP_TOOL_NAMES.createCheckoutSession,
-  { description: 'Mint a hosted checkout URL.', inputSchema: { productRef: z.string().optional() } },
-  async (args, extra) => {
-    const result = await createCheckoutSessionCore(buildRequest(extra, { method: 'POST' }), args, { solvaPay })
-    return toolResult(result)
-  },
-)
+})
 ```
 
-Pair this with `createMcpOAuthBridge` from `@solvapay/mcp/fetch` (or `/express`) to surface `customer_ref` on `extra.authInfo` — the core helpers read it from the synthesised request headers. For the full batteries-included setup use `createSolvaPayMcpServer` from `@solvapay/mcp`. A complete working server lives at [`examples/typescript/mcp-checkout-app/src/server.ts`](https://github.com/solvapay/solvapay-sdk/blob/main/examples/typescript/mcp-checkout-app/src/server.ts).
+Pair it with `createMcpOAuthBridge` from `@solvapay/mcp/express` (or the turnkey `createSolvaPayMcpFetch` from `@solvapay/mcp/fetch`) to surface `customer_ref` on `extra.authInfo`. A complete working server lives at [`examples/typescript/mcp-checkout-app/src/server.ts`](https://github.com/solvapay/solvapay-sdk/blob/main/examples/typescript/mcp-checkout-app/src/server.ts).
+
+If you are registering tools on a hand-rolled `McpServer` instead, use `registerAppTool` and `registerAppResource` from `@solvapay/mcp` — they are vendored there because `@modelcontextprotocol/ext-apps` has no SDK v2 server build. Import `RESOURCE_MIME_TYPE` from the same place rather than hardcoding the MIME string.
 
 ## Authentication
 
-Because the real identity lives server-side on the OAuth bridge's `customer_ref`, the provider only needs a sentinel token to flip `isAuthenticated` true. Supply a lightweight auth adapter alongside the transport:
+Because the real identity lives server-side on the OAuth bridge's `customer_ref`, the provider only needs a sentinel token to flip `isAuthenticated` true. `<McpApp>` installs that adapter for you — nothing to configure.
+
+If you mount `SolvaPayProvider` yourself, supply the equivalent alongside the transport:
 
 ```tsx
 const mcpAuthAdapter = {
   getToken: async () => 'mcp-session',
-  getUserId: async () => null,
+  getUserId: async () => bootstrap.customer?.ref ?? null,
 }
 
 <SolvaPayProvider config={{ auth: { adapter: mcpAuthAdapter }, transport }}>
@@ -113,7 +123,7 @@ const mcpAuthAdapter = {
 </SolvaPayProvider>
 ```
 
-Without this, the provider short-circuits the fetch pipeline and the transport never runs.
+Without an adapter, the provider short-circuits the fetch pipeline and the transport never runs.
 
 ## Hosted checkout from inside the iframe
 
@@ -169,7 +179,9 @@ function Account() {
 
 ## Text-only paywall
 
-The MCP App surface uses SolvaPay's **text-only paywall**. A `registerPayable` tool emits a plain-text `Purchase required` response — no embedded UI meta, no structured checkout payload — so the host model can read the copy, call `create_checkout_session`, and surface the returned URL however it likes. There is no `McpPaywallView` / `McpNudgeView` / `McpUpsellStrip` component anymore; render checkout through `<PaymentForm>` or the hosted URL instead.
+The MCP App surface uses SolvaPay's **text-only paywall**. When a `registerPayable` tool is gated it emits a plain-text narration on `content[0].text` that names the recovery intent tool — "You're out of credits. Call the `topup` tool to add more", "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan" — with the structured gate on `structuredContent` for programmatic consumers. No UI meta is stamped on merchant tools, so the iframe never flashes on a silent success.
+
+The model reads the narration and calls the named intent tool, which is what opens the widget. There is no `McpPaywallView` / `McpNudgeView` / `McpUpsellStrip` component anymore.
 
 ## Complete example
 

@@ -84,13 +84,25 @@ See [`create-solvapay` on npm](https://www.npmjs.com/package/create-solvapay) fo
 
 ## Examples
 
-| Example                                                                                                             | Stack         | Highlights                                  |
-| ------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------- |
-| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/express-basic)               | Express       | Paywall + stub mode                         |
-| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/checkout-demo)               | Next.js       | Full checkout + Supabase auth               |
-| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/hosted-checkout-demo) | Next.js       | Redirect checkout + portal                  |
-| [supabase-edge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge)               | Supabase Edge | One-liner `@solvapay/server/fetch` handlers |
-| [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-oauth-bridge)         | Node MCP      | OAuth bridge + `payable.mcp()`              |
+| Example                                                                                                                     | Stack                 | Highlights                                       |
+| --------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------ |
+| [express-basic](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/express-basic)                       | Express               | `payable.http()`; runs keyless via a stub client |
+| [express-provider-linkage](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/express-provider-linkage) | Express               | Your IdP + `ensureCustomer` before metering      |
+| [nextjs-auth0](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/nextjs-auth0)                         | Next.js + Auth0       | Auth0 `sub` → customer linkage, embedded PAYG    |
+| [checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/checkout-demo)                       | Next.js               | Full checkout + Supabase auth                    |
+| [hosted-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/hosted-checkout-demo)         | Next.js               | Redirect checkout + portal                       |
+| [shadcn-checkout](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/shadcn-checkout)                   | Next.js + shadcn/ui   | Primitives mapped onto shadcn via `asChild`      |
+| [tailwind-checkout](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/tailwind-checkout)               | Next.js + Tailwind v4 | Primitives styled entirely in userspace          |
+| [chat-checkout-demo](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/chat-checkout-demo)             | Vite + Workers        | Streaming chat gated with `payable.gate()`       |
+| [supabase-edge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge)                       | Supabase Edge         | One-liner `@solvapay/server/fetch` handlers      |
+| [mcp-time-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-time-app)                         | Node MCP              | Smallest UI-enabled MCP app                      |
+| [mcp-oauth-bridge](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-oauth-bridge)                 | Node MCP              | OAuth bridge for a non-hosted MCP origin         |
+| [mcp-checkout-app](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/mcp-checkout-app)                 | Node MCP              | Full MCP App UI — canonical reference server     |
+| [cloudflare-workers-mcp](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/cloudflare-workers-mcp)     | Workers MCP           | One `fetch` handler via `@solvapay/mcp/fetch`    |
+| [supabase-edge-mcp](https://github.com/solvapay/solvapay-sdk/tree/main/examples/typescript/supabase-edge-mcp)               | Supabase Edge MCP     | Same toolbox on a single Edge Function           |
+
+Plus Python, Ruby, Go, and Rust examples — see the
+[examples README](https://github.com/solvapay/solvapay-sdk/tree/main/examples).
 
 ## Flags
 

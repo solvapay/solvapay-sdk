@@ -34,7 +34,7 @@ import { createTestPlan, createTestProduct, deleteTestProduct } from '@solvapay/
  *
  * 2. **Test Provider with Secret Key**:
  *    You need a provider in the backend with a valid secret key.
- *    See packages/server/README.md for setup instructions.
+ *    See sdks/typescript/server/README.md for setup instructions.
  *
  * ## Running Tests
  *
@@ -89,7 +89,9 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     if (!SOLVAPAY_SECRET_KEY) {
       console.log('\n⚠️  Skipping backend integration tests: SOLVAPAY_SECRET_KEY not set')
       console.log('   Set USE_REAL_BACKEND=true and SOLVAPAY_SECRET_KEY to run these tests')
-      console.log('   See packages/server/README.md "Integration Tests" for setup instructions\n')
+      console.log(
+        '   See sdks/typescript/server/README.md "Integration Tests" for setup instructions\n',
+      )
       return
     }
 
@@ -201,7 +203,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
       console.error('   2. Verify SOLVAPAY_SECRET_KEY is valid')
       console.error('   3. Ensure SDK product/plan endpoints are available')
       console.error('   4. Ensure provider key can create products/plans')
-      console.error('   5. See packages/server/README.md "Integration Tests"')
+      console.error('   5. See sdks/typescript/server/README.md "Integration Tests"')
       console.error()
       throw error
     }
@@ -1450,7 +1452,7 @@ describeIntegration('Backend Integration - Real API with Isolated Product & Plan
     })
 
     // NOTE: Credit-deduction-on-consumption tests are covered by the payment
-    // integration suite (packages/server/__tests__/payment-stripe.integration.test.ts)
+    // integration suite (sdks/typescript/server/__tests__/payment-stripe.integration.test.ts)
     // because they require a real top-up payment flow. Usage-based plans no
     // longer auto-grant credits on activation, so there is no standalone
     // path to "initial credits -> deduct -> remaining decreased" without a

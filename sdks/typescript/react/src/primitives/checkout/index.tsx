@@ -525,7 +525,7 @@ function AmountPicker({ className, children }: AmountPickerProps) {
 }
 
 // Mirrors the canonical `<AmountPicker>` shim's default tree
-// (`packages/react/src/components/AmountPicker.tsx`) so the stepped
+// (`sdks/typescript/react/src/components/AmountPicker.tsx`) so the stepped
 // checkout surface matches the hosted topup page: pills row +
 // labelled custom row with currency-symbol prefix + credit estimate.
 // Inlined rather than importing the shim because the shim mounts its

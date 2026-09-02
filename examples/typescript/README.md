@@ -13,7 +13,7 @@ pnpm build:packages
 ./examples/typescript/setup-env.sh
 
 cd examples/typescript/express-basic
-pnpm dev   # stub mode — no API key needed
+pnpm dev   # runs keyless via an explicit stub client — no API key needed
 ```
 
 See the [top-level examples README](../README.md) for the full catalog, and each example’s own README for deploy / env details.

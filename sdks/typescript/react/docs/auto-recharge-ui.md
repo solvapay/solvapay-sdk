@@ -1,7 +1,7 @@
 # Auto-Recharge UI — layout reference
 
 Design reference for the automatic credit top-up surface (`AutoRecharge` primitive,
-`packages/react/src/primitives/AutoRecharge.tsx`). The mockups below are HTML + inline
+`sdks/typescript/react/src/primitives/AutoRecharge.tsx`). The mockups below are HTML + inline
 CSS so they render as real UI in the markdown preview (open this file's preview pane).
 
 > Tip: VS Code / Cursor markdown preview renders inline styles. GitHub strips most CSS,

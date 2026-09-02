@@ -599,21 +599,20 @@ For comprehensive backend integration tests of the SolvaPay SDK itself, see the 
 
 ### Getting Started
 
-- [Examples Overview](../../docs/guides/examples.mdx) - Overview of all examples
-- [Installation Guide](../../docs/setup/installation.mdx) - SDK installation
-- [Quick Start Guide](../../docs/setup/quick-start.mdx) - 5-minute Express setup
-- [Core Concepts](../../docs/setup/core-concepts.mdx) - Understanding agents, plans, and paywalls
+- [Examples Overview](../../../docs/guides/examples.mdx) - Overview of all examples
+- [Installation Guide](../../../docs/setup/installation.mdx) - SDK installation
+- [Quick Start Guide](../../../docs/setup/quick-start.mdx) - 5-minute Express setup
+- [Core Concepts](../../../docs/setup/core-concepts.mdx) - Understanding agents, plans, and paywalls
 
 ### Framework Guides
 
-- [Express.js Integration Guide](../../docs/guides/express.md) - Complete Express integration guide
-- [Error Handling Guide](../../docs/contributing/error-handling.md) - Error handling patterns
-- [Testing Guide](../../docs/contributing/testing.md) - Testing with stub mode
+- [Express.js Integration Guide](../../../docs/guides/express.mdx) - Complete Express integration guide
+- [Error Handling Guide](../../../docs/contributing/error-handling.md) - Error handling patterns
+- [Testing Guide](../../../docs/contributing/testing.md) - Testing with an injected stub client
 
 ### API Reference
 
-- [Server SDK API Reference](../../../sdks/typescript/server/README.md) - Complete API documentation
-- [Server SDK README](../../../sdks/typescript/server/README.md) - Package documentation
+- [Server SDK README](../../../sdks/typescript/server/README.md) - Package documentation and API reference
 
 ### Additional Resources
 

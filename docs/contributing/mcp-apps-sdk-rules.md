@@ -51,8 +51,8 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 
 ### Package boundaries
 
-- **`@solvapay/mcp` has zero `@modelcontextprotocol/*` runtime dependencies.** This invariant is load-bearing. Do not violate it.
-- **`@solvapay/mcp` is the only package that imports the official SDK (`@modelcontextprotocol/core` / `/server`).** If you need MCP types elsewhere, re-export them through `@solvapay/mcp-core` as structural aliases. `@solvapay/mcp-core` is intentionally framework-neutral with zero `@modelcontextprotocol/*` runtime dep — OAuth bridge middleware lives in `@solvapay/mcp-express` (Node) and `@solvapay/mcp-fetch` (fetch-first runtimes).
+- **`@solvapay/mcp-core` has zero `@modelcontextprotocol/*` dependencies.** This invariant is load-bearing. It stays framework-neutral so alternative adapters (`fastmcp`, raw JSON-RPC) can consume the tool names, descriptors, and paywall meta. If you need MCP types there, declare them as structural aliases.
+- **`@solvapay/mcp` is the only package that imports the official SDK.** It peers `@modelcontextprotocol/core` and `@modelcontextprotocol/server` (v2). Runtime-specific OAuth middleware lives on its subpath exports — `@solvapay/mcp/express` (Node `(req, res, next)`) and `@solvapay/mcp/fetch` (Web-standards `(Request) => Response`). They are subpaths, not separate packages: there is no `@solvapay/mcp-express` or `@solvapay/mcp-fetch`.
 - **`@solvapay/react/mcp` is a subpath export.** Merchants using SolvaPay for non-MCP React surfaces do not pay the ext-apps peer dep cost.
 - **Do not ship a `@solvapay/sdk` umbrella package.** Three-package imports are fine. An umbrella adds maintenance without clarity.
 

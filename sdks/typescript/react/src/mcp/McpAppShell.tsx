@@ -31,7 +31,7 @@ import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { LegalFooter } from '../primitives/LegalFooter'
 
 // Merchant branding is rendered once by `<McpApp>` as a chrome row
-// above the shell (see `packages/react/src/mcp/views/AppHeader.tsx`);
+// above the shell (see `sdks/typescript/react/src/mcp/views/AppHeader.tsx`);
 // hosts that paint their own chrome mark (ChatGPT, Claude Desktop)
 // still suppress the in-widget strip via `AppHeader`'s `mode="auto"`
 // host-name check.

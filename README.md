@@ -27,7 +27,7 @@ npm create solvapay@latest my-mcp-app -- --type mcp
 ```bash
 git clone https://github.com/solvapay/solvapay-sdk
 cd solvapay-sdk && pnpm install && pnpm build
-cd examples/typescript/express-basic && pnpm dev   # stub mode — no API key needed
+cd examples/typescript/express-basic && pnpm dev   # keyless — injects a stub apiClient
 ```
 
 ### Skills for coding agents
@@ -100,15 +100,18 @@ import { SolvaPayProvider, CheckoutLayout } from '@solvapay/react'
 
 ## Examples
 
-| Example                                                            | Stack                       |
-| ------------------------------------------------------------------ | --------------------------- |
-| [express-basic](./examples/typescript/express-basic)               | Express paywall + stub mode |
-| [checkout-demo](./examples/typescript/checkout-demo)               | Next.js checkout + Supabase |
-| [hosted-checkout-demo](./examples/typescript/hosted-checkout-demo) | Redirect checkout + portal  |
-| [supabase-edge](./examples/typescript/supabase-edge)               | Edge Functions one-liners   |
-| [mcp-oauth-bridge](./examples/typescript/mcp-oauth-bridge)         | MCP OAuth + paywall         |
+| Example                                                            | Stack                                |
+| ------------------------------------------------------------------ | ------------------------------------ |
+| [express-basic](./examples/typescript/express-basic)               | Express paywall, keyless stub client |
+| [nextjs-auth0](./examples/typescript/nextjs-auth0)                 | Auth0 linkage + embedded PAYG        |
+| [checkout-demo](./examples/typescript/checkout-demo)               | Next.js checkout + Supabase          |
+| [hosted-checkout-demo](./examples/typescript/hosted-checkout-demo) | Redirect checkout + portal           |
+| [shadcn-checkout](./examples/typescript/shadcn-checkout)           | Primitives on shadcn/ui              |
+| [supabase-edge](./examples/typescript/supabase-edge)               | Edge Functions one-liners            |
+| [mcp-checkout-app](./examples/typescript/mcp-checkout-app)         | Full MCP App UI + server             |
+| [mcp-oauth-bridge](./examples/typescript/mcp-oauth-bridge)         | MCP OAuth + paywall                  |
 
-See [`examples/README.md`](./examples/README.md) for setup instructions.
+See [`examples/README.md`](./examples/README.md) for the full catalog and setup instructions, including the Python, Ruby, Go, and Rust trees.
 
 ## Documentation
 

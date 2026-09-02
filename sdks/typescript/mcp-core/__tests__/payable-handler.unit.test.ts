@@ -9,7 +9,7 @@ import type { ContentBlock, NudgeSpec, ResponseContext, SolvaPayCallToolResult }
 /**
  * Minimal mock `SolvaPayClient` with pluggable `checkLimits` / trackUsage
  * tracking. Mirrors the fixture pattern in
- * `packages/mcp/__tests__/create-solvapay-mcp-server.unit.test.ts`.
+ * `sdks/typescript/mcp/__tests__/create-solvapay-mcp-server.unit.test.ts`.
  */
 interface MockClient extends SolvaPayClient {
   __trackUsageCalls: Array<Record<string, unknown>>

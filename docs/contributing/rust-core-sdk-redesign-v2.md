@@ -1,5 +1,13 @@
 # Rust Core SDK Redesign — v2 draft
 
+> **Historical record.** This is the decision document as written during the migration,
+> preserved for its rationale. Paths, package names, and versions in the per-step notes
+> reflect the layout at the time each step was specified — notably `packages/<name>/`
+> (now `sdks/typescript/<name>/`), the pre-hoist `rust/` and `scripts/` trees, and the
+> v1 `@modelcontextprotocol/sdk` package (now the v2 `@modelcontextprotocol/core` +
+> `/server` split). Read [`architecture.md`](./architecture.md) for the SDK as it exists
+> today; use this document for _why_, not _where_.
+
 > Canonical architecture decision document for the Rust semantic core: behavioral inventories mined from the current source, code-level contract sketches, per-step scope and gotchas for all 55 steps, and dated research notes against upstream toolchains.
 
 Implementation-oriented architecture decision document for migrating SolvaPay's shared SDK behavior into a Rust semantic core while preserving the existing TypeScript/React surface and adding idiomatic Python, Ruby, Go, and Rust packages.

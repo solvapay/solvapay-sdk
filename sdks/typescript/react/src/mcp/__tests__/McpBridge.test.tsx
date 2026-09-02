@@ -3,7 +3,7 @@
  * `app.updateModelContext(...)` (Phase 1) and `app.sendMessage(...)`
  * (Phase 5 groundwork).
  *
- * The bridge lives at `packages/react/src/mcp/bridge.tsx` and exposes:
+ * The bridge lives at `sdks/typescript/react/src/mcp/bridge.tsx` and exposes:
  *   - `<McpBridgeProvider app={app} />`
  *   - `useMcpBridge()` → `{ notifyModelContext, sendMessage }`
  *

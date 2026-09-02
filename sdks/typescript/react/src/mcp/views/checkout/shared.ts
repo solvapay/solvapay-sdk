@@ -1,7 +1,7 @@
 /**
  * Backwards-compatible re-exports for the MCP checkout's shared
  * helpers. The canonical home for these moved to
- * `packages/react/src/primitives/checkout/shared.ts` so the headless
+ * `sdks/typescript/react/src/primitives/checkout/shared.ts` so the headless
  * `useCheckoutFlow` and the `<CheckoutSteps.*>` parts can consume
  * them without depending on `@solvapay/react/mcp`.
  *

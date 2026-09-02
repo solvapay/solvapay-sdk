@@ -5,7 +5,7 @@
  * Usage:
  *   export SOLVAPAY_SECRET_KEY="sp_sandbox_your_key_here"
  *   export SOLVAPAY_API_BASE_URL="http://localhost:3010"
- *   npx tsx packages/server/__tests__/create-test-plan.ts
+ *   npx tsx sdks/typescript/server/__tests__/create-test-plan.ts
  */
 
 import { createSolvaPayClient } from '../src/index'
