@@ -69,6 +69,10 @@ export function stageConsumerSmoke(consumerDir, fs = {}) {
   ]) {
     copy(join(SCRIPTS_DIR, name), join(smokeDir, name))
   }
+  copy(
+    join(SCRIPTS_DIR, '../../../contract/manifest/support-matrix.json'),
+    join(smokeDir, 'support-matrix.json'),
+  )
   return join(smokeDir, 'clean-install-consumer.mjs')
 }
 

@@ -1,7 +1,7 @@
 name: Publish Ruby (RubyGems)
 
 # Separate from the npm Changesets workflow (`.github/workflows/publish.yml`).
-# Builds platform gems via rb-sys-dock on Linux (gnu + musl) and native-host
+# Builds platform gems via rb-sys-dock on Linux (gnu) and native-host
 # `rake native gem` on Darwin, runs `check-gems.rb`, then publishes with
 # RubyGems Trusted Publishing (OIDC).
 #
@@ -14,8 +14,9 @@ name: Publish Ruby (RubyGems)
 #   SOLVAPAY_RELEASE_VERSION → gem / native `version`
 #   SOLVAPAY_CORE_SHA        → `native_build_info` coreSha
 #
-# Linux platform gems use rb-sys-dock (`--mount-toolchains`, Magnus 0.8) so
-# musl rows can be produced from ubuntu-latest. Darwin stays on native hosts.
+# Linux platform gems use rb-sys-dock (`--mount-toolchains`, Magnus 0.8).
+# Darwin stays on native hosts. musl gems are not published: dock hosts do
+# not register `native:*-linux-musl` rake tasks.
 # Windows (x64-mingw-ucrt) prebuilt gems are not published: the dock mingw
 # image still fails rb-sys/bindgen inside LLVM AVX10.2/AMX headers (same as
 # Temporal). Windows consumers install the source gem and compile locally.
@@ -56,12 +57,6 @@ jobs:
             os: ubuntu-latest
             dock: true
           - platform: aarch64-linux
-            os: ubuntu-latest
-            dock: true
-          - platform: x86_64-linux-musl
-            os: ubuntu-latest
-            dock: true
-          - platform: aarch64-linux-musl
             os: ubuntu-latest
             dock: true
           - platform: x86_64-darwin

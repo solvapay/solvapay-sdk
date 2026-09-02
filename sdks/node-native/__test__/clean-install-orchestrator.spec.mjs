@@ -205,6 +205,7 @@ describe('clean-install orchestrator', () => {
     )
     assert.ok(copied.includes('webhook-smoke-fixture.mjs'))
     assert.ok(copied.includes('targets.mjs'))
+    assert.ok(copied.includes('support-matrix.json'))
   })
 
 })

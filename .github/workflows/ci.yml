@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -550,18 +552,6 @@ jobs:
             full: false
             contract: true
             dock: false
-          - platform: x86_64-linux-musl
-            os: ubuntu-latest
-            smoke: false
-            full: false
-            contract: false
-            dock: true
-          - platform: aarch64-linux-musl
-            os: ubuntu-latest
-            smoke: false
-            full: false
-            contract: false
-            dock: true
           - platform: x86_64-darwin
             os: macos-15-intel
             smoke: false

@@ -98,16 +98,8 @@ ruby:
         - aarch64-linux
       filenameExcludes:
         - musl
-    - id: x86_64-linux-musl
-      os: ubuntu-latest
-      dock: true
-      filenameIncludes:
-        - x86_64-linux-musl
-    - id: aarch64-linux-musl
-      os: ubuntu-latest
-      dock: true
-      filenameIncludes:
-        - aarch64-linux-musl
+    # linux-musl gems stay off the required matrix: current rb-sys-dock
+    # hosts do not register `native:*-linux-musl` rake tasks.
     - id: x86_64-darwin
       os: macos-15-intel
       dock: true

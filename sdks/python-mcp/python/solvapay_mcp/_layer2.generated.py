@@ -498,7 +498,8 @@ def mcp_verify_bearer(
     @param now_unix_secs Explicit unix clock for exp and nbf.
     @param jwks_json JWKS document for asymmetric verification.
     @param hs256_secret Explicit HS256 secret for local or stub flows.
-    @param claim_priority Optional customer-ref claim names; defaults to customerRef, customer_ref, sub.
+    @param claim_priority Optional customer-ref claim names; defaults to customerRef, customer_ref,
+    sub.
     @returns Verified claims and customerRef, or a typed 401.
     """
     call_args: dict[str, object] = {}
@@ -540,7 +541,8 @@ def mcp_widget_resource(
     @param csp Optional CSP overrides merged with the Stripe baseline.
     @param api_base_url Optional API origin auto-included in CSP connect-src.
     @param branding Optional merchant branding for tool icons.
-    @returns Stamped JSON-RPC response without contents[0].text, or null when the request is not a widget read.
+    @returns Stamped JSON-RPC response without contents[0].text, or null when the request is not a
+    widget read.
     """
     call_args: dict[str, object] = {}
     call_args["rpc"] = rpc

@@ -5,18 +5,35 @@
  */
 
 import { execFileSync } from 'node:child_process'
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { CHANGESET_DIR, REPO_ROOT } from '../shared/paths.js'
 import { changesetTouchesReleaseTrain, prTouchesReleaseTrainSources } from './lib/release-train.js'
 
-function changedFiles(): string[] {
-  const base = process.env.GITHUB_BASE_REF
-  if (base) {
-    execFileSync('git', ['fetch', '--no-tags', 'origin', base], {
+function fetchPrBase(base: string): void {
+  const gitDir = execFileSync('git', ['rev-parse', '--git-dir'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  }).trim()
+  const shallowMarker = path.isAbsolute(gitDir)
+    ? path.join(gitDir, 'shallow')
+    : path.join(REPO_ROOT, gitDir, 'shallow')
+  if (existsSync(shallowMarker)) {
+    execFileSync('git', ['fetch', '--unshallow', '--no-tags', 'origin'], {
       cwd: REPO_ROOT,
       stdio: 'inherit',
     })
+  }
+  execFileSync('git', ['fetch', '--no-tags', 'origin', base], {
+    cwd: REPO_ROOT,
+    stdio: 'inherit',
+  })
+}
+
+function changedFiles(): string[] {
+  const base = process.env.GITHUB_BASE_REF
+  if (base) {
+    fetchPrBase(base)
     const spec = `origin/${base}...HEAD`
     const out = execFileSync('git', ['diff', '--name-only', spec], {
       cwd: REPO_ROOT,

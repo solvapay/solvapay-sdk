@@ -34,8 +34,10 @@ The `solvapay-mcp` adapter is a pure-Python package published after `solvapay`.
 
 Platform gems ship Ruby ABIs **3.1, 3.2, 3.3, and 3.4** for:
 
-- Linux gnu and musl, x86_64 and aarch64
+- Linux gnu, x86_64 and aarch64
 - macOS x64 and arm64
+
+Linux musl is **source-gem only**. Current rb-sys-dock hosts do not register `native:*-linux-musl` rake tasks.
 
 Windows is **source-gem only**. rb-sys/bindgen currently fails inside LLVM AVX10.2/AMX headers on mingw. Windows users install the source gem and compile with a Rust toolchain.
 

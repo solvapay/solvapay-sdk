@@ -3,7 +3,7 @@
  * `contract/manifest/support-matrix.yaml` via the JSON snapshot.
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -20,13 +20,23 @@ import { fileURLToPath } from 'node:url'
  *   ciContainer: string | null
  * }} TargetSpec */
 
-const MATRIX_PATH = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '../../../contract/manifest/support-matrix.json',
-)
+function loadSupportMatrix() {
+  const here = dirname(fileURLToPath(import.meta.url))
+  const candidates = [
+    join(here, 'support-matrix.json'),
+    join(here, '../../../contract/manifest/support-matrix.json'),
+  ]
+  const matrixPath = candidates.find(candidate => existsSync(candidate))
+  if (!matrixPath) {
+    throw new Error(
+      `support-matrix.json not found next to ${here} or at contract/manifest/`,
+    )
+  }
+  return JSON.parse(readFileSync(matrixPath, 'utf8'))
+}
 
 /** @type {{ nodeNative: { targets: TargetSpec[], nodeMajors: string[] } }} */
-const SUPPORT_MATRIX = JSON.parse(readFileSync(MATRIX_PATH, 'utf8'))
+const SUPPORT_MATRIX = loadSupportMatrix()
 
 /** @type {readonly TargetSpec[]} */
 export const NATIVE_TARGETS = Object.freeze(SUPPORT_MATRIX.nodeNative.targets)

@@ -417,13 +417,15 @@ class SolvaPayClient:
         ...
     async def mcp_resolve_auth(self, args_json: str) -> str:
         """Decide allow vs challenge for one MCP request; facades write the envelope verbatim.
-        @param params RPC method, Authorization header, auth mode, public origin, and optional verification overrides.
+        @param params RPC method, Authorization header, auth mode, public origin, and optional
+        verification overrides.
         @returns allow (with authInfo/customerRef), challenge (401), or error (-32603 at HTTP 200).
         """
         ...
     def mcp_resolve_auth_blocking(self, args_json: str) -> str:
         """Decide allow vs challenge for one MCP request; facades write the envelope verbatim.
-        @param params RPC method, Authorization header, auth mode, public origin, and optional verification overrides.
+        @param params RPC method, Authorization header, auth mode, public origin, and optional
+        verification overrides.
         @returns allow (with authInfo/customerRef), challenge (401), or error (-32603 at HTTP 200).
         """
         ...

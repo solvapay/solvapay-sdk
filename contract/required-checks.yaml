@@ -53,12 +53,6 @@ checks:
   - name: ruby-binding (aarch64-linux)
     jobId: ruby-binding
     gate: Platform build matrices; Ruby contract suite
-  - name: ruby-binding (x86_64-linux-musl)
-    jobId: ruby-binding
-    gate: Platform build matrices
-  - name: ruby-binding (aarch64-linux-musl)
-    jobId: ruby-binding
-    gate: Platform build matrices
   - name: ruby-binding (x86_64-darwin)
     jobId: ruby-binding
     gate: Platform build matrices; Ruby contract suite

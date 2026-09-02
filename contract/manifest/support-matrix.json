@@ -156,26 +156,6 @@
         "filenameAnyOf": []
       },
       {
-        "id": "x86_64-linux-musl",
-        "os": "ubuntu-latest",
-        "dock": true,
-        "filenameIncludes": [
-          "x86_64-linux-musl"
-        ],
-        "filenameExcludes": [],
-        "filenameAnyOf": []
-      },
-      {
-        "id": "aarch64-linux-musl",
-        "os": "ubuntu-latest",
-        "dock": true,
-        "filenameIncludes": [
-          "aarch64-linux-musl"
-        ],
-        "filenameExcludes": [],
-        "filenameAnyOf": []
-      },
-      {
         "id": "x86_64-darwin",
         "os": "macos-15-intel",
         "dock": true,

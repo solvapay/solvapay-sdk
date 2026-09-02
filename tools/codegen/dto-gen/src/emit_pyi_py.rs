@@ -161,18 +161,20 @@ pub(crate) fn render_pydoc(ep: &IrEntryPoint) -> String {
     render_entry_doc_lines(ep, |p| p.names.py.as_str()).join("\n")
 }
 
+const PYDOC_WIDTH: usize = 100;
+
 pub(crate) fn write_pydoc_block(out: &mut String, doc: &str, indent: &str) {
     let trimmed = doc.trim();
     if trimmed.is_empty() {
         return;
     }
-    let lines: Vec<&str> = trimmed.lines().collect();
-    if lines.len() == 1 {
-        let _ = writeln!(out, "{indent}\"\"\"{trimmed}\"\"\"");
+    let wrapped = wrap_pydoc_lines(trimmed, indent.len());
+    if wrapped.len() == 1 {
+        let _ = writeln!(out, "{indent}\"\"\"{first}\"\"\"", first = wrapped[0]);
         return;
     }
-    let _ = writeln!(out, "{indent}\"\"\"{first}", first = lines[0]);
-    for line in &lines[1..] {
+    let _ = writeln!(out, "{indent}\"\"\"{first}", first = wrapped[0]);
+    for line in &wrapped[1..] {
         if line.is_empty() {
             let _ = writeln!(out, "{indent}");
         } else {
@@ -180,6 +182,34 @@ pub(crate) fn write_pydoc_block(out: &mut String, doc: &str, indent: &str) {
         }
     }
     let _ = writeln!(out, "{indent}\"\"\"");
+}
+
+fn wrap_pydoc_lines(doc: &str, indent_len: usize) -> Vec<String> {
+    let budget = PYDOC_WIDTH.saturating_sub(indent_len).max(20);
+    let mut out = Vec::new();
+    for raw in doc.lines() {
+        if raw.is_empty() {
+            out.push(String::new());
+            continue;
+        }
+        if raw.len() <= budget {
+            out.push(raw.to_string());
+            continue;
+        }
+        let mut rest = raw;
+        while rest.len() > budget {
+            let split_at = rest[..budget]
+                .rfind(' ')
+                .filter(|idx| *idx > 0)
+                .unwrap_or(budget);
+            out.push(rest[..split_at].to_string());
+            rest = rest[split_at..].trim_start();
+        }
+        if !rest.is_empty() {
+            out.push(rest.to_string());
+        }
+    }
+    out
 }
 
 fn write_pyi_def(out: &mut String, name: &str, params: &[String], ret: &str) {
@@ -383,6 +413,23 @@ mod tests {
         );
         assert!(!out.contains("Any"));
         assert!(!out.contains("__getattr__"));
+    }
+
+    #[test]
+    fn wraps_pydoc_lines_within_ruff_e501_width() {
+        let long = "@param params RPC method, Authorization header, auth mode, public origin, and optional verification overrides.";
+        let indent_len = 8;
+        let lines = wrap_pydoc_lines(long, indent_len);
+        assert!(
+            lines.len() > 1,
+            "expected a wrap for a line longer than the ruff budget"
+        );
+        assert!(
+            lines
+                .iter()
+                .all(|line| indent_len + line.len() <= PYDOC_WIDTH),
+            "wrapped lines must stay within ruff E501 width: {lines:?}"
+        );
     }
 
     #[test]

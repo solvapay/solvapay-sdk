@@ -15,7 +15,7 @@ describe('support-matrix', () => {
   it('loads the committed YAML and keeps the JSON snapshot current', () => {
     const matrix = loadSupportMatrix(REPO_ROOT)
     expect(matrix.python.wheels).toHaveLength(7)
-    expect(matrix.ruby.gems).toHaveLength(6)
+    expect(matrix.ruby.gems).toHaveLength(4)
     expect(matrix.ruby.abis).toEqual(['3.1', '3.2', '3.3', '3.4'])
     expect(matrix.python.manylinux).toBe('manylinux2014')
     expect(matrix.python.freeThreaded).toBe('not-supported')
