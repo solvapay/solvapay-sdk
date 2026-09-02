@@ -138,6 +138,7 @@ async def strict_client() -> AsyncIterator[httpx.AsyncClient]:
         api_base_url="https://api.test",
         product_ref="prd_demo",
         auth_mode="all",
+        oauth_client=_oauth_recording(),
     )
     asgi = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(
