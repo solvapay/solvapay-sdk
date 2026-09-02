@@ -1,0 +1,57 @@
+name: Push rehearsal tags
+
+# Phase 2 entry point. Pushes rehearsal/solvapay-<lang>-v<version> with the
+# release-bot App token so the language workflows run. Never creates a
+# production solvapay-<lang>-v* tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Sentinel version to tag (default: package.json of @solvapay/release-train)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Generate release-bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Push rehearsal tags
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if [ -n "${{ inputs.version }}" ]; then
+            pnpm exec tsx tools/repo/push-rehearsal-tags.ts --version "${{ inputs.version }}"
+          else
+            pnpm exec tsx tools/repo/push-rehearsal-tags.ts
+          fi

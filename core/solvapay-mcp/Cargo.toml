@@ -9,7 +9,8 @@ homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Shared MCP product surface: descriptors, OAuth, auth gate, JSON-RPC engine"
-publish = false
+readme = "README.md"
+publish = true
 
 [features]
 default = ["server", "engine"]
@@ -21,7 +22,7 @@ engine = ["server"]
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
-solvapay-core = { path = "../solvapay-core", default-features = false }
+solvapay-core = { path = "../solvapay-core", version = "0.1.0", default-features = false }
 uuid = { version = "1.18.0", features = ["v4"] }
 hmac = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }

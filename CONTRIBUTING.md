@@ -158,7 +158,7 @@ Before submitting a pull request, ensure:
 
 ## Releasing
 
-The monorepo is driven by [**Changesets**](https://github.com/changesets/changesets) — packages move on independent semver tracks, and every release is a direct function of the `.changeset/*.md` files accumulated since the previous release.
+The monorepo is driven by [**Changesets**](https://github.com/changesets/changesets). npm packages move on independent semver tracks. Rust, Python, Ruby, and Go share the private `@solvapay/release-train` sentinel — add a changeset for that package when you change `core/**` or a non-TypeScript SDK surface. `pnpm changeset:version` stamps the sentinel into those manifests. See [`docs/publishing.mdx`](./docs/publishing.mdx) and [`docs/contributing/release-sandbox.md`](./docs/contributing/release-sandbox.md) for the lockstep train and how to run a rehearsal. Production language tags are not pushed automatically yet.
 
 ### Writing a changeset
 

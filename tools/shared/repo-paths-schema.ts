@@ -80,7 +80,12 @@ export const TS_PACKAGE_IDS = [
 
 export const TOOL_PACKAGE_IDS = ['cli', 'create-solvapay', 'init'] as const
 
-export const INTERNAL_PACKAGE_IDS = ['demo-services', 'test-utils', 'tsconfig'] as const
+export const INTERNAL_PACKAGE_IDS = [
+  'demo-services',
+  'release-train',
+  'test-utils',
+  'tsconfig',
+] as const
 
 export const RepoPathsManifestSchema = z
   .object({
@@ -130,6 +135,7 @@ export const RepoPathsManifestSchema = z
     }),
     internalPackages: z.object({
       'demo-services': RelPath,
+      'release-train': RelPath,
       'test-utils': RelPath,
       tsconfig: RelPath,
     }),

@@ -1,7 +1,11 @@
 /**
- * Canonical §7.7 native target metadata for artifact check, pack,
- * clean-install smoke, and CI matrix generation (Step 39).
+ * Canonical §7.7 native target metadata. Rows come from
+ * `contract/manifest/support-matrix.yaml` via the JSON snapshot.
  */
+
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 /** @typedef {{
  *   dir: string
@@ -16,105 +20,16 @@
  *   ciContainer: string | null
  * }} TargetSpec */
 
+const MATRIX_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../contract/manifest/support-matrix.json',
+)
+
+/** @type {{ nodeNative: { targets: TargetSpec[], nodeMajors: string[] } }} */
+const SUPPORT_MATRIX = JSON.parse(readFileSync(MATRIX_PATH, 'utf8'))
+
 /** @type {readonly TargetSpec[]} */
-export const NATIVE_TARGETS = Object.freeze([
-  {
-    dir: 'darwin-x64',
-    packageName: '@solvapay/server-native-darwin-x64',
-    rustTriple: 'x86_64-apple-darwin',
-    kind: 'node',
-    binary: 'server-native.darwin-x64.node',
-    platform: 'darwin',
-    arch: 'x64',
-    libc: null,
-    ciHost: 'macos-15-intel',
-    ciContainer: null,
-  },
-  {
-    dir: 'darwin-arm64',
-    packageName: '@solvapay/server-native-darwin-arm64',
-    rustTriple: 'aarch64-apple-darwin',
-    kind: 'node',
-    binary: 'server-native.darwin-arm64.node',
-    platform: 'darwin',
-    arch: 'arm64',
-    libc: null,
-    ciHost: 'macos-15',
-    ciContainer: null,
-  },
-  {
-    dir: 'linux-x64-gnu',
-    packageName: '@solvapay/server-native-linux-x64-gnu',
-    rustTriple: 'x86_64-unknown-linux-gnu',
-    kind: 'node',
-    binary: 'server-native.linux-x64-gnu.node',
-    platform: 'linux',
-    arch: 'x64',
-    libc: 'glibc',
-    ciHost: 'ubuntu-24.04',
-    ciContainer: null,
-  },
-  {
-    dir: 'linux-arm64-gnu',
-    packageName: '@solvapay/server-native-linux-arm64-gnu',
-    rustTriple: 'aarch64-unknown-linux-gnu',
-    kind: 'node',
-    binary: 'server-native.linux-arm64-gnu.node',
-    platform: 'linux',
-    arch: 'arm64',
-    libc: 'glibc',
-    ciHost: 'ubuntu-24.04-arm',
-    ciContainer: null,
-  },
-  {
-    dir: 'linux-x64-musl',
-    packageName: '@solvapay/server-native-linux-x64-musl',
-    rustTriple: 'x86_64-unknown-linux-musl',
-    kind: 'node',
-    binary: 'server-native.linux-x64-musl.node',
-    platform: 'linux',
-    arch: 'x64',
-    libc: 'musl',
-    ciHost: 'ubuntu-24.04',
-    ciContainer: 'node:{nodeMajor}-alpine',
-  },
-  {
-    dir: 'linux-arm64-musl',
-    packageName: '@solvapay/server-native-linux-arm64-musl',
-    rustTriple: 'aarch64-unknown-linux-musl',
-    kind: 'node',
-    binary: 'server-native.linux-arm64-musl.node',
-    platform: 'linux',
-    arch: 'arm64',
-    libc: 'musl',
-    ciHost: 'ubuntu-24.04-arm',
-    ciContainer: 'node:{nodeMajor}-alpine',
-  },
-  {
-    dir: 'win32-x64-msvc',
-    packageName: '@solvapay/server-native-win32-x64-msvc',
-    rustTriple: 'x86_64-pc-windows-msvc',
-    kind: 'node',
-    binary: 'server-native.win32-x64-msvc.node',
-    platform: 'win32',
-    arch: 'x64',
-    libc: null,
-    ciHost: 'windows-latest',
-    ciContainer: null,
-  },
-  {
-    dir: 'win32-arm64-msvc',
-    packageName: '@solvapay/server-native-win32-arm64-msvc',
-    rustTriple: 'aarch64-pc-windows-msvc',
-    kind: 'node',
-    binary: 'server-native.win32-arm64-msvc.node',
-    platform: 'win32',
-    arch: 'arm64',
-    libc: null,
-    ciHost: 'windows-11-arm',
-    ciContainer: null,
-  },
-])
+export const NATIVE_TARGETS = Object.freeze(SUPPORT_MATRIX.nodeNative.targets)
 
 /** All eight native publish targets. */
 export const ALL_TARGETS = Object.freeze([...NATIVE_TARGETS])
@@ -125,7 +40,7 @@ export const CORE_PACKAGE_NAME = '@solvapay/core'
 export const SERVER_WASM_PACKAGE_NAME = '@solvapay/server-wasm'
 
 /** Node majors required by Step 39. */
-export const CLEAN_INSTALL_NODE_MAJORS = Object.freeze(['22', '24', '26'])
+export const CLEAN_INSTALL_NODE_MAJORS = Object.freeze(SUPPORT_MATRIX.nodeNative.nodeMajors)
 
 /**
  * @param {string} dir

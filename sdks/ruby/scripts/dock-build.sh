@@ -11,8 +11,8 @@
 # fails rb-sys/bindgen inside LLVM AVX10.2/AMX headers (same as Temporal).
 set -euo pipefail
 
-platform="${1:?usage: dock-build.sh <rb-sys-platform>}"
-ruby_versions="${2:-3.3}"
+platform="${1:?usage: dock-build.sh <rb-sys-platform> [ruby-versions]}"
+ruby_versions="${2:-3.1:3.2:3.3:3.4}"
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 gem_dir="$(cd "$script_dir/.." && pwd)"
 repo_root="$(cd "$gem_dir/../.." && pwd)"

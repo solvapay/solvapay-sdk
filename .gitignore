@@ -1,6 +1,8 @@
 node_modules
 dist
 .cache
+.ci-venv/
+**/.ci-venv/
 .next
 .env
 .env.*

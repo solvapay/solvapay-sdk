@@ -31,6 +31,7 @@ on:
   push:
     tags:
       - 'solvapay-go-v*'
+      - 'rehearsal/solvapay-go-v*'
 
 permissions:
   contents: read
@@ -59,9 +60,15 @@ jobs:
         run: |
           if [ -n "${{ inputs.version }}" ]; then
             VERSION="${{ inputs.version }}"
+            CHANNEL=production
+          elif [[ "${GITHUB_REF_NAME}" == rehearsal/* ]]; then
+            CHANNEL=rehearsal
+            VERSION="${GITHUB_REF_NAME#rehearsal/solvapay-go-v}"
           else
+            CHANNEL=production
             VERSION="${GITHUB_REF_NAME#solvapay-go-v}"
           fi
+          echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
           echo "core_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -121,22 +128,48 @@ jobs:
           plus SOLVAPAY_GO_DEPLOY_TOKEN and an existing solvapay/solvapay-go repo.
           EOF
 
-      - name: Push subtree + tag to solvapay/solvapay-go
-        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_go == true) || startsWith(github.ref, 'refs/tags/solvapay-go-v') }}
+      - name: Push subtree + tag
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_go == true) || startsWith(github.ref, 'refs/tags/solvapay-go-v') || startsWith(github.ref, 'refs/tags/rehearsal/solvapay-go-v') }}
         shell: bash
         env:
           SPLIT_SHA: ${{ steps.split.outputs.split_sha }}
           TAG: ${{ steps.meta.outputs.tag }}
+          CHANNEL: ${{ steps.meta.outputs.channel }}
           TOKEN: ${{ secrets.SOLVAPAY_GO_DEPLOY_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${TOKEN}" ]; then
             echo "SOLVAPAY_GO_DEPLOY_TOKEN is required for real publish" >&2
-            echo "Also ensure github.com/solvapay/solvapay-go exists." >&2
             exit 1
           fi
-          REMOTE="https://x-access-token:${TOKEN}@github.com/solvapay/solvapay-go.git"
+          if [ "${CHANNEL}" = "rehearsal" ]; then
+            DEST="solvapay/solvapay-go-rehearsal"
+          else
+            DEST="solvapay/solvapay-go"
+          fi
+          REMOTE="https://x-access-token:${TOKEN}@github.com/${DEST}.git"
           git push "${REMOTE}" "${SPLIT_SHA}:refs/heads/main"
-          git tag -f "${TAG}" "${SPLIT_SHA}"
-          git push -f "${REMOTE}" "refs/tags/${TAG}"
-          echo "Published ${TAG} at ${SPLIT_SHA}"
+          git tag "${TAG}" "${SPLIT_SHA}"
+          git push "${REMOTE}" "refs/tags/${TAG}"
+          echo "Published ${TAG} at ${SPLIT_SHA} -> ${DEST}"
+
+      - name: Rehearsal install smoke
+        if: ${{ startsWith(github.ref, 'refs/tags/rehearsal/solvapay-go-v') }}
+        shell: bash
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          TOKEN: ${{ secrets.SOLVAPAY_GO_DEPLOY_TOKEN }}
+        run: |
+          set -euo pipefail
+          export GOPRIVATE=github.com/solvapay/solvapay-go-rehearsal
+          export GOPROXY=direct
+          export GOSUMDB=off
+          export GOMODCACHE="$(mktemp -d)"
+          WORK="$(mktemp -d)"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+          mkdir -p "$WORK/smoke"
+          cat > "$WORK/smoke/go.mod" <<EOF
+          module smoke
+          go 1.25
+          EOF
+          (cd "$WORK/smoke" && go get github.com/solvapay/solvapay-go-rehearsal@${TAG} && go build github.com/solvapay/solvapay-go-rehearsal)

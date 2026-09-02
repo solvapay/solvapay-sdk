@@ -2,7 +2,8 @@
 # Belt-and-braces companion to Clippy unwrap_used / expect_used (§4.4).
 # Scans production Rust under core/, sdks/, tools/, and internal/ and fails
 # on .unwrap() / .expect() / unwrap_err() / expect_err() / panic!(...).
-# Skips #[cfg(test)] modules and files under tests/ directories.
+# Skips #[cfg(test)] modules, #[cfg(..., feature = "panic-probe")] probe
+# exports, files under tests/ directories, and Ruby native staging copies.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -24,8 +25,24 @@ forbidden = re.compile(
   | \bpanic\s*!
     """
 )
-cfg_test_start = re.compile(r"#\s*\[\s*cfg\s*\(\s*test\s*\)\s*\]")
-mod_or_fn = re.compile(r"^\s*(?:pub\s+)?(?:mod|fn)\s+\w+")
+# Skip test-only items and the debug-only panic-probe FFI exports (never default,
+# never in publish artifacts). `cfg(all(..., feature = "panic-probe"))` counts.
+cfg_skip_start = re.compile(
+    r"""(?x)
+    \#\s*\[\s*cfg\s*\(\s*test\s*\)\s*\]
+  | \#\s*\[\s*cfg\s*\([^]]*feature\s*=\s*"panic-probe"
+    """
+)
+mod_or_fn = re.compile(
+    r"""(?x)
+    ^\s*
+    (?:pub(?:\s*\([^)]*\))?\s+)?
+    (?:unsafe\s+)?
+    (?:extern\s+"[^"]+"\s+)?
+    (?:async\s+)?
+    (?:mod|fn)\s+\w+
+    """
+)
 
 violations: list[str] = []
 
@@ -148,7 +165,7 @@ def production_lines(text: str) -> list[tuple[int, str]]:
     i = 0
     while i < len(lines):
         line = lines[i]
-        if cfg_test_start.search(line):
+        if cfg_skip_start.search(line):
             # Skip attribute + following item (mod/fn) including its body.
             # Allow other attributes (including multi-line #[allow(...)]) between
             # cfg(test) and the item.
@@ -194,6 +211,9 @@ def production_lines(text: str) -> list[tuple[int, str]]:
 
 for path in sorted(root.rglob("*.rs")):
     if "target" in path.parts or "node_modules" in path.parts:
+        continue
+    # rb-sys native builds stage a copy of the crate under sdks/ruby/tmp/.
+    if len(path.parts) >= 3 and path.parts[0] == "sdks" and path.parts[1] == "ruby" and "tmp" in path.parts:
         continue
     if "tests" in path.parts:
         continue

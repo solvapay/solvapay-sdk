@@ -37,6 +37,7 @@ contract/mcp-fixtures/
 contract/manifest/binding-symbols.snapshot.json
 contract/manifest/boundary-types.snapshot.json
 contract/manifest/facade-coverage.json
+contract/manifest/support-matrix.json
 contract/manifest/binding-residue.yaml
 
 # Lock files
@@ -59,6 +60,8 @@ yarn.lock
 # Local virtualenvs (never format vendored site-packages)
 **/.venv/
 .venv/
+**/.ci-venv/
+.ci-venv/
 
 # OS
 .DS_Store

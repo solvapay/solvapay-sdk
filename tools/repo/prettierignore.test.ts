@@ -14,6 +14,8 @@ const REQUIRED_IGNORE_PREFIXES = [
   '**/.ruff_cache/',
   'internal/fuzz/',
   'sdks/ruby/tmp/',
+  '**/.ci-venv/',
+  '.ci-venv/',
   '**/*.generated.d.ts',
   '**/*.generated.ts',
   'sdks/typescript/server/src/types/generated.ts',

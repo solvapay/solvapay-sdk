@@ -82,13 +82,7 @@ export type RegistryProbe = (packageName: string) => Promise<RegistryProbeResult
  * Each entry must name a package and a non-empty reason. Empty reasons fail the
  * unpublished-workspace-dep check — this is an explicit deferral, not a severity fudge.
  */
-export const UNPUBLISHED_DEP_ALLOWLIST: readonly UnpublishedDepAllowlistEntry[] = [
-  {
-    name: '@solvapay/server-native',
-    reason:
-      'Nine platform packages (@solvapay/server-native-*) are unwired for npm publish; deferred at docs/contributing/rust-migration-map.md Step 39',
-  },
-]
+export const UNPUBLISHED_DEP_ALLOWLIST: readonly UnpublishedDepAllowlistEntry[] = []
 
 export type WorkspacePackage = {
   name: string
@@ -225,6 +219,7 @@ export async function checkReleaseDryrun(input: ReleaseDryrunInput): Promise<Rel
         const key = `${pkg.name}\0${dep.name}`
         if (seen.has(key)) continue
         seen.add(key)
+        if (batchNames.has(dep.name)) continue
         const { present } = await input.registryProbe(dep.name)
         if (present) continue
         const reason = allowlistReasonFor(dep.name, allowlist)

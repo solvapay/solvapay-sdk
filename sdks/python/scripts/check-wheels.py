@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Pre-publish wheel artifact gate (Step 40 / redesign §7.7 / §10.3).
+"""Pre-publish wheel artifact gate.
 
-Hard-fails when any expected abi3 platform family is missing from a directory of
-built wheels. Mirrors `sdks/node-native/scripts/check-artifacts.mjs`.
+Hard-fails when any expected abi3 platform family is missing, or when a
+manylinux wheel does not carry the pinned tag from support-matrix.json.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 import zipfile
@@ -15,42 +16,34 @@ import zipfile
 PANIC_PROBE_MARKER = b"SOLVAPAY_PANIC_PROBE"
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _load_matrix() -> dict:
+    path = _repo_root() / "contract" / "manifest" / "support-matrix.json"
+    if not path.is_file():
+        print(f"check-wheels: HARD FAIL — missing {path}", file=sys.stderr)
+        raise SystemExit(1)
+    return json.loads(path.read_text())
+
+
 def _is_abi3(name: str) -> bool:
     return "abi3" in name and name.endswith(".whl")
 
 
-def _matchers():
-    # Name → predicate over wheel filename (lowercase).
-    return [
-        (
-            "manylinux-x86_64",
-            lambda n: "manylinux" in n and "x86_64" in n and "musl" not in n,
-        ),
-        (
-            "manylinux-aarch64",
-            lambda n: "manylinux" in n and ("aarch64" in n or "arm64" in n) and "musl" not in n,
-        ),
-        (
-            "musllinux-x86_64",
-            lambda n: "musllinux" in n and "x86_64" in n,
-        ),
-        (
-            "musllinux-aarch64",
-            lambda n: "musllinux" in n and ("aarch64" in n or "arm64" in n),
-        ),
-        (
-            "macos-universal2",
-            lambda n: "macosx" in n and "universal2" in n,
-        ),
-        (
-            "win_amd64",
-            lambda n: "win_amd64" in n or "win32" in n,
-        ),
-        (
-            "win_arm64",
-            lambda n: "win_arm64" in n,
-        ),
-    ]
+def _matches(name: str, rule: dict) -> bool:
+    n = name.lower()
+    for part in rule.get("filenameIncludes", []):
+        if part.lower() not in n:
+            return False
+    for part in rule.get("filenameExcludes", []):
+        if part.lower() in n:
+            return False
+    any_of = rule.get("filenameAnyOf", [])
+    if any_of and not any(part.lower() in n for part in any_of):
+        return False
+    return True
 
 
 def main() -> int:
@@ -63,6 +56,10 @@ def main() -> int:
     )
     args = parser.parse_args()
     wheel_dir: Path = args.dir
+    matrix = _load_matrix()
+    python = matrix["python"]
+    rules = python["wheels"]
+    required_tags = [t.lower() for t in python["manylinuxWheelTags"]]
 
     if not wheel_dir.is_dir():
         print(f"check-wheels: HARD FAIL — directory missing: {wheel_dir}", file=sys.stderr)
@@ -72,12 +69,21 @@ def main() -> int:
     present: list[str] = []
     missing: list[str] = []
 
-    for label, pred in _matchers():
-        matches = [w for w in wheels if _is_abi3(w) and pred(w)]
+    for rule in rules:
+        matches = [w for w in wheels if _is_abi3(w) and _matches(w, rule)]
         if matches:
-            present.append(label)
+            present.append(rule["id"])
+            if rule.get("manylinux") == python["manylinux"]:
+                for match in matches:
+                    if not any(tag in match for tag in required_tags):
+                        print(
+                            "check-wheels: HARD FAIL — manylinux wheel missing pinned tag "
+                            f"{python['manylinux']} ({'/'.join(required_tags)}): {match}",
+                            file=sys.stderr,
+                        )
+                        return 1
         else:
-            missing.append(label)
+            missing.append(rule["id"])
 
     probe_hits: list[str] = []
     for wheel in wheel_dir.rglob("*.whl"):
@@ -97,13 +103,13 @@ def main() -> int:
         print("check-wheels: HARD FAIL — missing abi3 wheel families:", file=sys.stderr)
         for m in missing:
             print(f"  - {m}", file=sys.stderr)
-        print(f"present: {len(present)}/{len(_matchers())}", file=sys.stderr)
+        print(f"present: {len(present)}/{len(rules)}", file=sys.stderr)
         print("found wheels:", file=sys.stderr)
         for w in sorted(wheels) or ["(none)"]:
             print(f"  - {w}", file=sys.stderr)
         return 1
 
-    print(f"check-wheels: OK — {len(present)}/{len(_matchers())} abi3 wheel families present")
+    print(f"check-wheels: OK — {len(present)}/{len(rules)} abi3 wheel families present")
     return 0
 
 

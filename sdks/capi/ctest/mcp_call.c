@@ -3,9 +3,11 @@
  * Usage: mcp_call <op> <args-json-file-or-->
  *   `-` reads args JSON from stdin.
  *
- * Sync MCP ops go through solvapay_call. mcpDispatch / mcpOauthRequest need
- * a client handle (solvapay_client_call). Optional SOLVAPAY_API_BASE_URL
- * defaults to an unreachable origin so oauth-proxy 502 fixtures stay local.
+ * Sync MCP ops go through solvapay_call. Client transport ops
+ * (mcpDispatch, mcpOauthRequest, mcpBootstrap, mcpCallBuiltinTool,
+ * mcpResolveAuth) need a handle (solvapay_client_call). Optional
+ * SOLVAPAY_API_BASE_URL defaults to an unreachable origin so oauth-proxy
+ * 502 fixtures stay local.
  */
 
 #include "../include/solvapay.h"
@@ -16,7 +18,8 @@
 
 static int is_client_op(const char *op) {
   return strcmp(op, "mcpDispatch") == 0 || strcmp(op, "mcpOauthRequest") == 0 ||
-         strcmp(op, "mcpBootstrap") == 0 || strcmp(op, "mcpCallBuiltinTool") == 0;
+         strcmp(op, "mcpBootstrap") == 0 || strcmp(op, "mcpCallBuiltinTool") == 0 ||
+         strcmp(op, "mcpResolveAuth") == 0;
 }
 
 static char *read_all(FILE *in) {

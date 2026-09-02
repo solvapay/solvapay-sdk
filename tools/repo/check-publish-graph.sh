@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# Step 48 — validate crates.io publish graph metadata before first index upload.
+# Validate crates.io publish graph metadata before index upload.
 #
-# Leaf crate `solvapay-dto` can `cargo publish --dry-run` today. Dependents
-# (`solvapay-core` → `solvapay-transport` → `solvapay`) resolve versioned deps
-# from crates.io, so full dry-run verify only works after those crates exist.
-# This script locks the local graph shape so the publish train stays packageable.
+# Publish order: solvapay-export → solvapay-dto → solvapay-core →
+# solvapay-mcp-core → solvapay-transport → solvapay.
 
 set -euo pipefail
 
@@ -34,18 +32,23 @@ check_versioned_path_dep() {
   local toml="$1"
   local dep="$2"
   local path="$3"
-  grep -Eq "${dep} = \{ path = \"${path}\", version = \"[^\"]+\" \}" "$toml" \
+  grep -Eq "${dep} = \{ path = \"${path}\", version = \"[^\"]+\"" "$toml" \
     || fail "${toml}: ${dep} must be path+version (${path})"
 }
 
+check_crate solvapay-export core/solvapay-export
 check_crate solvapay-dto core/solvapay-dto
 check_crate solvapay-core core/solvapay-core
+check_crate solvapay-mcp-core core/solvapay-mcp
 check_crate solvapay-transport core/solvapay-transport
 check_crate solvapay sdks/rust
 
 check_versioned_path_dep core/solvapay-core/Cargo.toml solvapay-dto "../solvapay-dto"
+check_versioned_path_dep core/solvapay-core/Cargo.toml solvapay-export "../solvapay-export"
+check_versioned_path_dep core/solvapay-mcp/Cargo.toml solvapay-core "../solvapay-core"
 check_versioned_path_dep core/solvapay-transport/Cargo.toml solvapay-dto "../solvapay-dto"
 check_versioned_path_dep core/solvapay-transport/Cargo.toml solvapay-core "../solvapay-core"
+check_versioned_path_dep core/solvapay-transport/Cargo.toml solvapay-mcp-core "../solvapay-mcp"
 check_versioned_path_dep sdks/rust/Cargo.toml solvapay-dto "../../core/solvapay-dto"
 check_versioned_path_dep sdks/rust/Cargo.toml solvapay-core "../../core/solvapay-core"
 check_versioned_path_dep sdks/rust/Cargo.toml solvapay-transport "../../core/solvapay-transport"
@@ -68,4 +71,4 @@ do
   grep -Eq '^publish = false' "$toml" || fail "$toml: expected publish = false"
 done
 
-echo "OK: publish graph metadata for solvapay-dto → core → transport → solvapay"
+echo "OK: publish graph metadata for export → dto → core → mcp-core → transport → solvapay"

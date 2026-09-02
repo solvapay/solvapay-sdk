@@ -9,6 +9,7 @@ homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Inert #[solvapay_export] marker scanned by dto-gen"
+readme = "README.md"
 publish = true
 
 [lib]

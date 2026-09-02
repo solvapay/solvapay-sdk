@@ -18,6 +18,8 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
+# Free-threaded CPython (3.13t / 3.14t) is not supported: abi3 wheels do not
+# cover those ABIs, and this train does not ship abi3t artifacts.
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.24", "maturin>=1.8,<2"]

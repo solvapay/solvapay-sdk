@@ -45,6 +45,7 @@ toolPackages:
 
 internalPackages:
   demo-services: internal/demo-services
+  release-train: internal/release-train
   test-utils: internal/test-utils
   tsconfig: internal/tsconfig
 
@@ -498,3 +499,17 @@ lookups:
   exampleWidgetTsxScaffold: tools/create-solvapay/templates/mcp/_base/src/mcp-app.tsx
   exampleDemoToolsCloudflare: examples/typescript/cloudflare-workers-mcp/src/demo-tools.ts
   exampleDemoToolsSupabase: examples/typescript/supabase-edge-mcp/supabase/functions/mcp/demo-tools.ts
+  supportMatrix: contract/manifest/support-matrix.yaml
+  supportMatrixJson: contract/manifest/support-matrix.json
+  cargoExport: core/solvapay-export/Cargo.toml
+  cargoDto: core/solvapay-dto/Cargo.toml
+  cargoCore: core/solvapay-core/Cargo.toml
+  cargoMcpCore: core/solvapay-mcp/Cargo.toml
+  cargoTransport: core/solvapay-transport/Cargo.toml
+  cargoRustFacade: sdks/rust/Cargo.toml
+  pythonPyproject: sdks/python/pyproject.toml
+  pythonMcpPyproject: sdks/python-mcp/pyproject.toml
+  rubyVersion: sdks/ruby/lib/solvapay/version.rb
+  rubyMcpVersion: sdks/ruby-mcp/lib/solvapay/mcp/version.rb
+  nodeNativePackage: sdks/node-native/package.json
+  nodeNativeNpm: sdks/node-native/npm

@@ -147,6 +147,20 @@ jobs:
           pnpm changeset status
           pnpm -r publish --dry-run --no-git-checks
 
+      - name: Tier A — print lockstep tags (no writes)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_TAGS="$(git ls-remote --tags origin | awk '{print $2}' | sed 's#refs/tags/##' | sed 's#^{}##')"
+          pnpm exec tsx tools/repo/resolve-release-channel.ts \
+            --ref refs/heads/main \
+            --run "${GITHUB_RUN_NUMBER}" \
+            --ecosystem npm \
+            --assert-tags \
+            --remote-tags "$(echo "${REMOTE_TAGS}" | tr '\n' ',')"
+          echo "Tier A: lockstep tags are free on origin"
+
       - name: Create Release PR or publish
         id: changesets
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}

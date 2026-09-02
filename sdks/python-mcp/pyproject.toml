@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "SolvaPay payable-MCP adapter for the Python MCP SDK"
 requires-python = ">=3.10"
 dependencies = [
-  "solvapay",
+  "solvapay==0.1.0",
   "mcp>=2.0.0,<3",
   "httpx>=0.27",
   "starlette>=0.38",

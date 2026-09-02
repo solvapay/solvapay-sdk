@@ -1,21 +1,11 @@
 name: Publish Rust (crates.io)
 
-# Separate from the npm Changesets workflow (`.github/workflows/publish.yml`).
-# Stamps release-train version + core SHA, dry-runs `cargo publish` by default,
-# then (when gated) publishes topologically via crates.io Trusted Publishing OIDC.
+# Stamps the lockstep sentinel version + core SHA, then publishes
+# export → dto → core → mcp-core → transport → solvapay.
 #
-# Publish order: solvapay-dto → solvapay-core → solvapay-transport → solvapay
-#
-# Default path is dry-run only. Real crates.io publish is gated behind
-# `workflow_dispatch` input `publish_to_crates_io=true` (or a `solvapay-rust-v*`
-# tag once maintainers enable that path).
-#
-# Version stamping (§7.7):
-#   SOLVAPAY_RELEASE_VERSION → each crate's package.version (+ internal dep versions)
-#   SOLVAPAY_CORE_SHA        → recorded in the job summary / env for parity
-#
-# Maintainer prerequisite: reserve crate names and register Trusted Publishers
-# on crates.io once (see rust-migration-map open handoff items).
+# Production tags (`solvapay-rust-v*`) go to crates.io.
+# Rehearsal tags (`rehearsal/solvapay-rust-v*`) go to a local cargo-http-registry.
+# Those globs cannot match across the `/`.
 
 on:
   workflow_dispatch:
@@ -33,6 +23,7 @@ on:
   push:
     tags:
       - 'solvapay-rust-v*'
+      - 'rehearsal/solvapay-rust-v*'
 
 permissions:
   contents: read
@@ -50,6 +41,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -58,16 +60,25 @@ jobs:
       - name: Install Rust toolchain
         run: rustup show
 
-      - name: Resolve version + core SHA
+      - name: Resolve channel + version
         id: meta
         shell: bash
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
+            pnpm exec tsx tools/repo/resolve-release-channel.ts \
+              --ref "${GITHUB_REF}" \
+              --run "${GITHUB_RUN_NUMBER}" \
+              --version "${{ inputs.version }}" \
+              --ecosystem cargo
           else
-            VERSION="${GITHUB_REF_NAME#solvapay-rust-v}"
+            pnpm exec tsx tools/repo/resolve-release-channel.ts \
+              --ref "${GITHUB_REF}" \
+              --run "${GITHUB_RUN_NUMBER}" \
+              --ecosystem cargo
           fi
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "core_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Stamp crate versions + internal dep versions
@@ -83,26 +94,21 @@ jobs:
 
           version = os.environ["VERSION"]
           crates = [
+              "core/solvapay-export/Cargo.toml",
               "core/solvapay-dto/Cargo.toml",
               "core/solvapay-core/Cargo.toml",
+              "core/solvapay-mcp/Cargo.toml",
               "core/solvapay-transport/Cargo.toml",
               "sdks/rust/Cargo.toml",
           ]
+          dep_re = re.compile(
+              r'(solvapay-(?:export|dto|core|mcp-core|transport)\s*=\s*\{[^}]*?\bversion\s*=\s*")([^"]+)(")'
+          )
           for rel in crates:
               path = Path(rel)
               text = path.read_text()
-              text = re.sub(
-                  r'^version = ".*"$',
-                  f'version = "{version}"',
-                  text,
-                  count=1,
-                  flags=re.M,
-              )
-              text = re.sub(
-                  r'(solvapay-(?:dto|core|transport) = \{ path = "[^"]+", version = )"([^"]+)"( \})',
-                  rf'\g<1>"{version}"\3',
-                  text,
-              )
+              text = re.sub(r'^version = ".*"$', f'version = "{version}"', text, count=1, flags=re.M)
+              text = dep_re.sub(rf'\g<1>{version}\3', text)
               path.write_text(text)
           print(f"stamped version={version} core_sha={os.environ['SOLVAPAY_CORE_SHA']}")
           PY
@@ -117,56 +123,71 @@ jobs:
         run: ./tools/repo/check-publish-graph.sh
 
       - name: Dry-run publish (dependency order)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io != true }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io != true && steps.meta.outputs.channel != 'rehearsal' }}
+        shell: bash
+        env:
+          SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+        run: ./tools/repo/crates-publish.sh --dry-run --version "$SOLVAPAY_RELEASE_VERSION"
+
+      - name: Start local cargo registry (rehearsal)
+        if: ${{ steps.meta.outputs.channel == 'rehearsal' }}
         shell: bash
         run: |
-          set -euo pipefail
-          # Leaf always dry-runs with full verify.
-          cargo publish -p solvapay-dto --dry-run --allow-dirty
-          # Dependents need prior crates on the index for resolve; try dry-run
-          # and accept "no matching package" until the first real publish lands.
-          for crate in solvapay-core solvapay-transport solvapay; do
-            if cargo publish -p "$crate" --dry-run --allow-dirty; then
-              echo "OK: dry-run $crate"
-            else
-              echo "WARN: dry-run $crate skipped (dependency not yet on crates.io index)"
+          cargo install cargo-http-registry --locked
+          mkdir -p /tmp/solvapay-rehearsal-registry
+          cargo-http-registry /tmp/solvapay-rehearsal-registry &
+          echo $! > /tmp/cargo-http-registry.pid
+          mkdir -p .cargo
+          cat >> .cargo/config.toml <<'EOF'
+          [registries.rehearsal]
+          index = "sparse+http://127.0.0.1:8000/index/"
+          EOF
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/index/config.json >/dev/null; then
+              echo "rehearsal registry is up"
+              exit 0
             fi
+            sleep 1
           done
+          echo "rehearsal registry did not start" >&2
+          exit 1
+
+      - name: Publish to local registry (rehearsal)
+        if: ${{ steps.meta.outputs.channel == 'rehearsal' }}
+        shell: bash
+        env:
+          SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+        run: ./tools/repo/crates-publish.sh --registry rehearsal --version "$SOLVAPAY_RELEASE_VERSION"
+
+      - name: Rehearsal install smoke
+        if: ${{ steps.meta.outputs.channel == 'rehearsal' }}
+        shell: bash
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          WORK="$(mktemp -d)"
+          cargo new --bin "$WORK/smoke"
+          (
+            cd "$WORK/smoke"
+            mkdir -p .cargo
+            cat > .cargo/config.toml <<'EOF'
+          [registries.rehearsal]
+          index = "sparse+http://127.0.0.1:8000/index/"
+          EOF
+            cargo add solvapay@${VERSION} --registry rehearsal
+            cargo build
+          )
 
       - name: Authenticate with crates.io (Trusted Publishing)
         id: crates_auth
-        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io == true) || startsWith(github.ref, 'refs/tags/solvapay-rust-v') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io == true) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/solvapay-rust-v')) }}
         uses: rust-lang/crates-io-auth-action@v1
 
       - name: Publish to crates.io (dependency order)
-        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io == true) || startsWith(github.ref, 'refs/tags/solvapay-rust-v') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_to_crates_io == true) || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/solvapay-rust-v')) }}
         shell: bash
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates_auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
           SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
           SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}
-        run: |
-          set -euo pipefail
-          wait_for_index() {
-            local crate="$1"
-            local version="$2"
-            local attempt
-            for attempt in $(seq 1 30); do
-              if cargo search "$crate" --limit 1 2>/dev/null | grep -q "^${crate} = \"${version}\""; then
-                echo "index has ${crate}@${version}"
-                return 0
-              fi
-              echo "waiting for crates.io index: ${crate}@${version} (attempt ${attempt})"
-              sleep 10
-            done
-            echo "WARN: index poll timed out for ${crate}@${version}; continuing" >&2
-          }
-
-          VERSION="${{ steps.meta.outputs.version }}"
-          for crate in solvapay-dto solvapay-core solvapay-transport solvapay; do
-            echo "Publishing ${crate}@${VERSION}"
-            cargo publish -p "$crate" --allow-dirty
-            if [ "$crate" != "solvapay" ]; then
-              wait_for_index "$crate" "$VERSION"
-            fi
-          done
+        run: ./tools/repo/crates-publish.sh --version "$SOLVAPAY_RELEASE_VERSION"

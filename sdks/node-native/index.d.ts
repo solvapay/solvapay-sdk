@@ -339,9 +339,6 @@ export declare function normalizeCancelResponse(argsJson: string): string
  */
 export declare function normalizeReactivateResponse(argsJson: string): string
 
-/** Debug-only panicking export. Contained so a panic never reaches V8. */
-export declare function panicProbe(): void
-
 /**
  * Binding for `paywallErrorToClientPayload`.
  *

@@ -110,6 +110,7 @@ fn core_dir_and_sdk_surfaces_exist() {
         "tools/create-solvapay",
         "tools/init",
         "internal/demo-services",
+        "internal/release-train",
         "internal/test-utils",
         "internal/tsconfig",
     ] {

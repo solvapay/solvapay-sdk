@@ -108,6 +108,24 @@ This workflow has no dist-tag-pinned Deno gate. It ships `@latest`, so a
 `@latest` gate would validate the previous release. Worth revisiting once
 `0.3.0` reaches `@latest`.
 
+## Lockstep train (Rust / Python / Ruby / Go)
+
+`@solvapay/release-train` is the version source of truth. A PR that
+touches `core/**` or a non-TypeScript SDK must add a changeset for it.
+`pnpm changeset:version` stamps that version into the language manifests.
+
+- **Tier A:** `workflow_dispatch` `publish.yml` with `dry_run=true` prints the
+  four tags and fails if any already exist on `origin`.
+- **Rehearsal:** run `push-rehearsal-tags.yml`. Tags are
+  `rehearsal/solvapay-<lang>-v*`. Those workflows publish to TestPyPI,
+  GitHub Packages, `solvapay-go-rehearsal`, and a local Cargo registry,
+  then install-smoke. `rehearsal-npm.yml` snapshot-publishes to Verdaccio.
+- **Production language tags** are not created by automation yet. That is a
+  deliberate one-step follow-up after rehearsals pass.
+
+See [`docs/publishing.mdx`](../../docs/publishing.mdx) and
+[`docs/contributing/release-sandbox.md`](../../docs/contributing/release-sandbox.md).
+
 ## Release workflow summary
 
 ```
@@ -120,7 +138,8 @@ eventually:
 `dev`  ──▶  PR to `main`  ──▶  merge ──▶  changesets/action opens
                                           "Version Packages" PR
 "Version Packages" PR  ──▶  review  ──▶  merge  ──▶  stable @latest
-                                                     publish + git tags
+                                                     npm publish + git tags
+                                                     (language tags: Phase 3)
 ```
 
 ## Required Secrets

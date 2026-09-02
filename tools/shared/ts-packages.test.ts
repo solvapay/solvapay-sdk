@@ -25,7 +25,12 @@ describe('TypeScript package accessors', () => {
 
   it('enumerates tool and internal package ids', () => {
     expect([...TOOL_PACKAGE_IDS]).toEqual(['cli', 'create-solvapay', 'init'])
-    expect([...INTERNAL_PACKAGE_IDS]).toEqual(['demo-services', 'test-utils', 'tsconfig'])
+    expect([...INTERNAL_PACKAGE_IDS]).toEqual([
+      'demo-services',
+      'release-train',
+      'test-utils',
+      'tsconfig',
+    ])
   })
 
   it('resolves each bucket from the layout manifest', () => {

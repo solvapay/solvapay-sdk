@@ -91,6 +91,12 @@ jobs:
       - name: Run contract tests
         run: pnpm test:contract
 
+      - name: Release-train manifest drift
+        run: pnpm checks:release-train
+
+      - name: Release-train changeset gate
+        run: pnpm checks:release-train-changeset
+
       - name: Check OpenAPI snapshot (offline)
         run: pnpm snapshot:openapi:check
 
@@ -167,8 +173,9 @@ jobs:
       - name: crates.io packageability (Step 48)
         run: |
           ./tools/repo/check-publish-graph.sh
-          # Leaf crate: full dry-run + verify (works before any crates.io upload).
+          # Leaves: full dry-run + verify (works before any crates.io upload).
           # Dependents resolve versioned deps from the index after first publish.
+          cargo publish -p solvapay-export --dry-run --allow-dirty
           cargo publish -p solvapay-dto --dry-run --allow-dirty
 
       - name: solvapay facade docs.rs cfg (Step 48)
@@ -311,13 +318,13 @@ jobs:
           - platform: manylinux-x86_64
             os: ubuntu-latest
             target: x86_64
-            manylinux: auto
+            manylinux: manylinux2014
             maturin-args: --release --out dist
             smoke: true
           - platform: manylinux-aarch64
             os: ubuntu-24.04-arm
             target: aarch64
-            manylinux: auto
+            manylinux: manylinux2014
             maturin-args: --release --out dist
             smoke: false
           - platform: musllinux-x86_64
@@ -592,7 +599,7 @@ jobs:
 
       - name: Dock cross-compile platform gem
         if: ${{ matrix.dock }}
-        run: ./scripts/dock-build.sh ${{ matrix.platform }}
+        run: ./scripts/dock-build.sh ${{ matrix.platform }} 3.1:3.2:3.3:3.4
 
       - name: cargo test -p solvapay-ruby
         if: matrix.smoke
@@ -830,9 +837,12 @@ jobs:
 
       - name: Panic-probe containment
         if: matrix.settings.smoke
+        shell: bash
+        env:
+          SOLVAPAY_REQUIRE_PANIC_PROBE: '1'
         run: |
           npx napi build --platform --target ${{ matrix.settings.target }} --features panic-probe
-          SOLVAPAY_REQUIRE_PANIC_PROBE=1 node --test __test__/panic-probe.spec.mjs
+          node --test __test__/panic-probe.spec.mjs
 
   node-binding-artifacts:
     name: node-binding artifact gate

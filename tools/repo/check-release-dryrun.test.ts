@@ -160,13 +160,12 @@ function probeByName(present: readonly string[]): RegistryProbe {
 }
 
 describe('unpublished-workspace-dep', () => {
-  it('fails when a workspace:* dep is absent from the registry', async () => {
+  it('fails when a workspace:* dep is absent from the registry and the batch', async () => {
     const issues = await checkReleaseDryrun({
       packages: [
         pkg('@solvapay/server', '2.1.0', {
-          dependencies: { '@solvapay/server-wasm': 'workspace:*' },
+          dependencies: { '@solvapay/legacy-helper': 'workspace:*' },
         }),
-        pkg('@solvapay/server-wasm', '0.1.0'),
       ],
       changesetIgnore: [],
       workflows: [workflow('publish.yml', DRY_RUN_WORKFLOW)],
@@ -178,11 +177,11 @@ describe('unpublished-workspace-dep', () => {
         i =>
           i.kind === 'unpublished-workspace-dep' &&
           i.packageName === '@solvapay/server' &&
-          i.dependencyName === '@solvapay/server-wasm' &&
+          i.dependencyName === '@solvapay/legacy-helper' &&
           !i.allowlistReason,
       ),
     ).toBe(true)
-    expect(formatReleaseDryrunReport(issues)).toMatch(/@solvapay\/server-wasm/)
+    expect(formatReleaseDryrunReport(issues)).toMatch(/@solvapay\/legacy-helper/)
   })
 
   it('passes when the probe reports the dep present at any version', async () => {
@@ -206,18 +205,17 @@ describe('unpublished-workspace-dep', () => {
     const issues = await checkReleaseDryrun({
       packages: [
         pkg('@solvapay/server', '2.1.0', {
-          optionalDependencies: { '@solvapay/server-native': 'workspace:*' },
+          optionalDependencies: { '@solvapay/not-in-batch': 'workspace:*' },
         }),
-        pkg('@solvapay/server-native', '0.1.0'),
       ],
       changesetIgnore: [],
       workflows: [workflow('publish.yml', DRY_RUN_WORKFLOW)],
       registryProbe: probeAbsent,
-      unpublishedDepAllowlist: [{ name: '@solvapay/server-native', reason }],
+      unpublishedDepAllowlist: [{ name: '@solvapay/not-in-batch', reason }],
     })
     const unpublished = issues.filter(i => i.kind === 'unpublished-workspace-dep')
     expect(unpublished.every(i => Boolean(i.allowlistReason))).toBe(true)
-    expect(unpublished.some(i => i.dependencyName === '@solvapay/server-native')).toBe(true)
+    expect(unpublished.some(i => i.dependencyName === '@solvapay/not-in-batch')).toBe(true)
     expect(formatReleaseDryrunReport(issues)).toMatch(/nine unwired platform packages/)
   })
 
@@ -225,20 +223,19 @@ describe('unpublished-workspace-dep', () => {
     const issues = await checkReleaseDryrun({
       packages: [
         pkg('@solvapay/server', '2.1.0', {
-          optionalDependencies: { '@solvapay/server-native': 'workspace:*' },
+          optionalDependencies: { '@solvapay/not-in-batch': 'workspace:*' },
         }),
-        pkg('@solvapay/server-native', '0.1.0'),
       ],
       changesetIgnore: [],
       workflows: [workflow('publish.yml', DRY_RUN_WORKFLOW)],
       registryProbe: probeAbsent,
-      unpublishedDepAllowlist: [{ name: '@solvapay/server-native', reason: '' }],
+      unpublishedDepAllowlist: [{ name: '@solvapay/not-in-batch', reason: '' }],
     })
     expect(
       issues.some(
         i =>
           i.kind === 'unpublished-workspace-dep' &&
-          i.dependencyName === '@solvapay/server-native' &&
+          i.dependencyName === '@solvapay/not-in-batch' &&
           !i.allowlistReason,
       ),
     ).toBe(true)
@@ -252,9 +249,6 @@ describe('unpublished-workspace-dep', () => {
           peerDependencies: { '@solvapay/dep-b': 'workspace:^' },
           optionalDependencies: { '@solvapay/dep-c': 'workspace:~' },
         }),
-        pkg('@solvapay/dep-a', '1.0.0'),
-        pkg('@solvapay/dep-b', '1.0.0'),
-        pkg('@solvapay/dep-c', '1.0.0'),
       ],
       changesetIgnore: [],
       workflows: [workflow('publish.yml', DRY_RUN_WORKFLOW)],
@@ -283,12 +277,29 @@ describe('unpublished-workspace-dep', () => {
   })
 
   it('requires a non-empty reason on every declared UNPUBLISHED_DEP_ALLOWLIST entry', () => {
-    expect(UNPUBLISHED_DEP_ALLOWLIST.length).toBeGreaterThan(0)
     for (const entry of UNPUBLISHED_DEP_ALLOWLIST) {
       expect(entry.name).toMatch(/^@solvapay\//)
       expect(entry.reason.trim().length).toBeGreaterThan(0)
     }
-    expect(UNPUBLISHED_DEP_ALLOWLIST.some(e => e.name === '@solvapay/server-native')).toBe(true)
+    expect(UNPUBLISHED_DEP_ALLOWLIST.some(e => e.name === '@solvapay/server-native')).toBe(false)
+  })
+
+  it('treats an unpublished workspace dep in the same publish batch as resolved', async () => {
+    const issues = await checkReleaseDryrun({
+      packages: [
+        pkg('@solvapay/server', '2.1.0', {
+          optionalDependencies: { '@solvapay/server-native': 'workspace:*' },
+        }),
+        pkg('@solvapay/server-native', '0.1.0', {
+          optionalDependencies: { '@solvapay/server-native-darwin-arm64': 'workspace:*' },
+        }),
+        pkg('@solvapay/server-native-darwin-arm64', '0.1.0'),
+      ],
+      changesetIgnore: [],
+      workflows: [workflow('publish.yml', DRY_RUN_WORKFLOW)],
+      registryProbe: async () => ({ present: false }),
+    })
+    expect(issues.filter(i => i.kind === 'unpublished-workspace-dep')).toEqual([])
   })
 })
 

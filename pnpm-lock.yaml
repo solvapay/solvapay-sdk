@@ -1060,6 +1060,8 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  internal/release-train: {}
+
   internal/test-utils:
     devDependencies:
       '@solvapay/tsconfig':
