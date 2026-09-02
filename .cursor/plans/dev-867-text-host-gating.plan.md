@@ -15,7 +15,12 @@ _Note on terminology: the reviewer's `freeIncluded / freeUsed / freeRemaining` m
 
 ## Scope boundary (matches the ticket)
 
-§1-§9 below are DEV-867. **§10 and §11 (capability detection, URL-mode elicitation) are explicitly out of scope for DEV-867** — the ticket lists handshake capability detection as a follow-up and says not to expand into it. They are kept here so the research is not lost, and should be filed as their own tickets. Also out of ticket scope: view-local tools, and Managed MCP proxy `formatGate` alignment ([DEV-372](https://linear.app/solvapay/issue/DEV-372)).
+§1-§9 below are DEV-867. **§10 and §11 are explicitly out of scope** — the ticket lists handshake capability detection as a follow-up and says not to expand into it. Both are now filed separately, and the sections here are retained as their design notes:
+
+- §10 → [DEV-869](https://linear.app/solvapay/issue/DEV-869/detect-mcp-apps-support-from-the-handshake-instead-of-sniffing-the) — handshake capability detection
+- §11 → [DEV-870](https://linear.app/solvapay/issue/DEV-870/hand-off-checkout-via-url-mode-elicitation-instead-of-pasting-the-url) — URL-mode elicitation for checkout
+
+Also out of ticket scope: view-local tools, and Managed MCP proxy `formatGate` alignment ([DEV-372](https://linear.app/solvapay/issue/DEV-372)).
 
 ## Why the checkout was invisible
 
@@ -155,11 +160,11 @@ The host-compat checklist is already recorded as host contract §5 — no separa
 
 Optional, low cost, from the x402 convention: an agent reads `tools/list` while planning and needs cost as an input to tool selection, *before* it commits to a call. An optional price annotation on `registerPayable` descriptors, rendered into the tool description and `_meta`, addresses the "price of the next call" complaint at the planning stage. Keep it short — Claude Code triggers MCP Tool Search once tool descriptions pass ~10% of context, and we register 12 tools.
 
-## Out of scope for DEV-867 — file separately
+## Out of scope for DEV-867 — tracked separately
 
 Both items are additive on top of a text path that must work regardless of what any host supports. Background and citations: host contract §3c and §4.
 
-### 10. Handshake capability detection — retire the user-agent sniff
+### 10. Handshake capability detection — [DEV-869](https://linear.app/solvapay/issue/DEV-869/detect-mcp-apps-support-from-the-handshake-instead-of-sniffing-the)
 
 MCP Apps support is negotiated under the extension id `io.modelcontextprotocol/ui`; clients advertise `{ mimeTypes: ['text/html;profile=mcp-app'] }` at `initialize`, and the spec tells servers to check it before registering UI-enabled tools. The reference helper is `getUiCapability(clientCapabilities)`; the logic is a lookup in `capabilities.extensions` plus a MIME-type check, so vendor it next to the ext-apps server helpers we already vendor in `packages/mcp/src/internal/extAppsServer.ts`.
 
@@ -170,7 +175,7 @@ Replace the `/openai-mcp/i` match in [packages/mcp-core/src/hideToolsByAudience.
 
 Once this exists, revisit the `mode` default: the handshake can pick `'ui'` vs `'auto'` per host instead of one global choice. Global `'auto'` remains the correct safe default for hosts that declare nothing.
 
-### 11. URL-mode elicitation for checkout
+### 11. URL-mode elicitation for checkout — [DEV-870](https://linear.app/solvapay/issue/DEV-870/hand-off-checkout-via-url-mode-elicitation-instead-of-pasting-the-url)
 
 SEP-1036 added `mode: 'url'` to elicitation in spec revision 2025-11-25, with payments as an explicit motivating case — and the normative text forbids using form mode for payment credentials. The server sends `elicitation/create` with `{ mode: 'url', url, message, elicitationId }`, the client asks the user to consent to opening it, and the server later fires `notifications/elicitation/complete` with the same id. A tool may also reject up front with `-32042` carrying the pending elicitations.
 
