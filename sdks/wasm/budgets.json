@@ -13,36 +13,37 @@
     "regressionThresholdPct": 10
   },
   "environment": {
-    "node": "v26.5.0",
-    "platform": "darwin",
-    "arch": "arm64",
-    "osRelease": "25.5.0",
+    "node": "v22 (GitHub Actions ubuntu-latest)",
+    "platform": "linux",
+    "arch": "x64",
+    "osRelease": "ubuntu-latest",
     "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)",
     "wasmBindgen": "wasm-bindgen 0.2.126",
     "binaryen": "131.0.0",
-    "recordedAt": "2026-09-01T19:21:59.618Z"
+    "recordedAt": "2026-09-02T07:25:58.770Z"
   },
   "baselines": {
     "browser": {
-      "rawBytes": 380437,
-      "gzipBytes": 148515,
-      "coldStartMs": 13.6192334
+      "rawBytes": 379398,
+      "gzipBytes": 148652,
+      "coldStartMs": 27.247519200000003,
+      "note": "Re-recorded from CI run 33603152099. The previous darwin/arm64 baseline (13.6 ms) is too fast for ubuntu-latest and failed wasm-binding cold-start."
     },
     "edge": {
-      "rawBytes": 1465317,
-      "gzipBytes": 504031,
-      "coldStartMs": 16.9450996,
+      "rawBytes": 1464319,
+      "gzipBytes": 506530,
+      "coldStartMs": 34.2054114,
       "note": "CI-enforced alongside browser; §7.8 headline metric remains browser"
     }
   },
   "maxAllowed": {
     "browser": {
-      "gzipBytes": 163366,
-      "coldStartMs": 20.428850100000002
+      "gzipBytes": 163517,
+      "coldStartMs": 40.871278800000004
     },
     "edge": {
-      "gzipBytes": 554434,
-      "coldStartMs": 25.4176494
+      "gzipBytes": 557183,
+      "coldStartMs": 51.3081171
     }
   }
 }

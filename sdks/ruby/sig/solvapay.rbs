@@ -161,6 +161,8 @@ module SolvaPay
     @usage_type: String
     def initialize: (Facade facade, product: String, usage_type: String) -> void
     def protect: () { (*untyped, **untyped) -> untyped } -> Proc
+    private
+    def extract_customer_ref: (untyped args, untyped kwargs) -> String
   end
 
   def self.create: (?api_key: String?, ?api_base_url: String?, ?limits_cache_ttl: Integer, ?api_client: Client?, ?clock: ^() -> Integer) -> Facade

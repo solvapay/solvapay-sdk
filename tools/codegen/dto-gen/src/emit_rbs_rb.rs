@@ -140,6 +140,8 @@ pub fn emit_rbs_rb(ir: &Ir) -> GenResult<String> {
          \x20   @usage_type: String\n\
          \x20   def initialize: (Facade facade, product: String, usage_type: String) -> void\n\
          \x20   def protect: () { (*untyped, **untyped) -> untyped } -> Proc\n\
+         \x20   private\n\
+         \x20   def extract_customer_ref: (untyped args, untyped kwargs) -> String\n\
          \x20 end\n\n\
          \x20 def self.create: (?api_key: String?, ?api_base_url: String?, ?limits_cache_ttl: Integer, ?api_client: Client?, ?clock: ^() -> Integer) -> Facade\n\
          \x20 def create: (?api_key: String?, ?api_base_url: String?, ?limits_cache_ttl: Integer, ?api_client: Client?, ?clock: ^() -> Integer) -> Facade\n\

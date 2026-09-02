@@ -228,6 +228,13 @@ console.log(
 )
 
 if (record) {
+  // darwin (and other local hosts) is materially faster than ubuntu-latest;
+  // a darwin baseline will fail CI cold-start even when bytes are unchanged.
+  if (process.platform !== 'linux') {
+    fail(
+      `--record must run on linux (CI host). This host is ${process.platform}/${process.arch}; darwin baselines fail the wasm-binding job.`,
+    )
+  }
   writeFileSync(budgetsPath, `${JSON.stringify(observed, null, 2)}\n`)
   console.log(`Wrote ${budgetsPath}`)
 }
