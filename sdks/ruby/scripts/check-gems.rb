@@ -43,8 +43,13 @@ rules = ruby.fetch("gems")
 abis = ruby.fetch("abis")
 
 dir = Pathname("gems")
+host_native = false
 OptionParser.new do |opts|
   opts.on("--dir DIR", "Directory containing built .gem files") { |v| dir = Pathname(v) }
+  opts.on(
+    "--host-native",
+    "Accept host `rake native gem` artifacts (one extension binary) instead of every published ABI",
+  ) { host_native = true }
 end.parse!
 
 unless dir.directory?
@@ -82,12 +87,19 @@ gems.each do |gem_path|
     end
     next unless platform_rule
 
+    bins = Dir.glob(File.join(tmpdir, "**/*.{so,bundle}"))
     found_abis = abis.select do |abi|
       Dir.glob(File.join(tmpdir, "**", abi, "*.{so,bundle}")).any?
     end
-    missing_abis = abis - found_abis
-    unless missing_abis.empty?
-      abi_failures << "#{gem_path.basename}: missing ABI #{missing_abis.join(', ')} (found #{found_abis.join(', ')})"
+    if host_native
+      if bins.empty?
+        abi_failures << "#{gem_path.basename}: missing native extension binary"
+      end
+    else
+      missing_abis = abis - found_abis
+      unless missing_abis.empty?
+        abi_failures << "#{gem_path.basename}: missing ABI #{missing_abis.join(', ')} (found #{found_abis.join(', ')})"
+      end
     end
   end
 end
@@ -99,13 +111,15 @@ unless probe_hits.empty?
 end
 
 unless abi_failures.empty?
-  warn "check-gems: HARD FAIL — platform gem missing expected Ruby ABIs (#{abis.join(':')}):"
+  label = host_native ? "native extension" : "expected Ruby ABIs (#{abis.join(':')})"
+  warn "check-gems: HARD FAIL — platform gem missing #{label}:"
   abi_failures.each { |hit| warn "  - #{hit}" }
   exit 1
 end
 
 if missing.empty?
-  puts "check-gems: OK — #{present.size}/#{rules.size} platform gem families present, ABIs #{abis.join(':')}"
+  abi_note = host_native ? "host-native extension present" : "ABIs #{abis.join(':')}"
+  puts "check-gems: OK — #{present.size}/#{rules.size} platform gem families present, #{abi_note}"
   exit 0
 end
 

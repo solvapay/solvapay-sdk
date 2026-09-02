@@ -437,9 +437,16 @@ jobs:
         env:
           RUSTC_WRAPPER: ''
         run: |
-          python -m pip install -U maturin
-          maturin develop --features panic-probe
-          SOLVAPAY_REQUIRE_PANIC_PROBE=1 python -m pytest -q tests/test_panic_probe.py
+          if [ -f .ci-venv/Scripts/python ]; then
+            PY=.ci-venv/Scripts/python
+            PYTEST=.ci-venv/Scripts/pytest
+          else
+            PY=.ci-venv/bin/python
+            PYTEST=.ci-venv/bin/pytest
+          fi
+          "$PY" -m pip install -U maturin
+          "$PY" -m maturin develop --features panic-probe
+          SOLVAPAY_REQUIRE_PANIC_PROBE=1 "$PYTEST" -q tests/test_panic_probe.py
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
@@ -525,10 +532,11 @@ jobs:
           python3 -c 'import solvapay; print(solvapay.version()); print(solvapay.native_build_info())'
 
   # Step 43 — Magnus/rb-sys Ruby binding platform matrix (§7.7) + artifact gate.
-  # GNU/Darwin legs stay on native hosts for compile + test. Musl gems are
-  # produced via rb-sys-dock (`--mount-toolchains`, Magnus 0.8). Windows
-  # (x64-mingw-ucrt) is excluded: dock mingw still fails rb-sys/bindgen inside
-  # LLVM AVX10.2/AMX headers. Windows consumers compile the source gem.
+  # GNU/Darwin legs stay on native hosts for compile + test. Linux musl gems
+  # are not in this matrix: rb-sys-dock hosts do not register
+  # `native:*-linux-musl` rake tasks. Windows (x64-mingw-ucrt) is excluded:
+  # dock mingw still fails rb-sys/bindgen inside LLVM AVX10.2/AMX headers.
+  # Windows consumers compile the source gem.
   ruby-binding:
     name: ruby-binding (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
@@ -709,7 +717,7 @@ jobs:
           merge-multiple: true
 
       - name: Pre-publish gem gate (hard-fail)
-        run: ruby scripts/check-gems.rb --dir gems
+        run: ruby scripts/check-gems.rb --dir gems --host-native
 
       - name: Install host gem and print build info
         run: |
@@ -988,6 +996,7 @@ jobs:
             --user "$(id -u):$(id -g)" \
             -v "$PWD/clean-install-bundle:/bundle:ro" \
             -v "$PWD/sdks/node-native/scripts:/scripts:ro" \
+            -v "$PWD/contract/manifest/support-matrix.json:/scripts/support-matrix.json:ro" \
             -e HOME=/tmp \
             -w /tmp \
             "$IMAGE" \
