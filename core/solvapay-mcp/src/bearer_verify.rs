@@ -131,7 +131,7 @@ pub fn mcp_verify_bearer(input: &VerifyBearerInput) -> VerifyBearerResult {
     #[cfg(not(feature = "jwt-verify"))]
     {
         let _ = input;
-        return unauthorized(MSG_SERVER_PROFILE);
+        unauthorized(MSG_SERVER_PROFILE)
     }
     #[cfg(feature = "jwt-verify")]
     {
