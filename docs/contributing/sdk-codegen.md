@@ -1,6 +1,6 @@
 # SDK codegen workflow
 
-How to regenerate SolvaPay’s five language surfaces from the OpenAPI snapshot and
+How to regenerate SolvaPay’s six language surfaces from the OpenAPI snapshot and
 contract manifest. This is the day-to-day runbook; architecture rationale lives
 in [`rust-core-sdk-redesign-v2.md`](./rust-core-sdk-redesign-v2.md) (§5.6 / §5.7).
 Collapsing the hand-mirrored `bindings:` / harness layers into Rust-derived
@@ -11,14 +11,14 @@ descriptors is sequenced in [`codegen-ast-derivation.md`](./codegen-ast-derivati
 
 ```text
 Backend OpenAPI ──► snapshot (committed) ──┐
-                                           ├──► pnpm gen (dto-gen) ──► 5 surfaces + glue
+                                           ├──► pnpm gen (dto-gen) ──► 6 surfaces + glue
 SDK contract manifest (reviewed) ──────────┘
 ```
 
 | Artifact                                | Role                                                                               | Who edits                               |
 | --------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------- |
 | `contract/openapi/sdk-v1.snapshot.json` | Filtered `/v1/sdk/*` wire contract                                                 | Regenerated from live backend or source |
-| `contract/manifest/sdk-contract.yaml`   | Public API catalog, overlays, bindings, docs, defaults                             | Humans (reviewed diff)                  |
+| `contract/manifest/sdk-contract.yaml`   | Public API catalog, overlays, docs, defaults                                       | Humans (reviewed diff)                  |
 | Generated outputs                       | DTOs, facades, shims, parity suites, native marshalling                            | **Only** `pnpm gen`                     |
 | `contract/manifest/repo-paths.yaml`     | On-disk layout (dirs, SDK surfaces, dto-gen flags, drift set, external toolchains) | Humans, when a directory moves          |
 
@@ -58,8 +58,8 @@ Run from the repo root (`solvapay-sdk/`).
 | `pnpm snapshot:openapi --from-stack`                       | Fetch `/v1/openapi.json` from every SDK-route-owning local service, merge, rewrite source + snapshot                                    |
 | `pnpm snapshot:openapi --from-url`                         | Fetch a single OpenAPI URL → rewrite source + snapshot                                                                                  |
 | `pnpm snapshot:openapi:check`                              | Offline: re-derive snapshot from source, fail on drift                                                                                  |
-| `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert `operations:` (+ optional `bindings:`) stub from OpenAPI DTOs                                                                    |
-| `pnpm gen:bindings`                                        | Suggest missing `bindings:` / `#[solvapay_export]` targets for orphan operations                                                        |
+| `pnpm gen:scaffold operation <id> --method <M> --path <p>` | Insert an `operations:` stub from OpenAPI DTOs                                                                                          |
+| `pnpm gen:bindings`                                        | Suggest `#[solvapay_export]` targets for orphan catalog operations                                                                      |
 | `pnpm gen`                                                 | Regenerate **all** dto-gen outputs (canonical flag set in `tools/codegen/gen.ts`)                                                       |
 | `pnpm gen:check`                                           | Same as `gen`, then fail if regeneration rewrote any generated path (working-tree idempotence; not a git-HEAD diff)                     |
 | `pnpm gen:clean`                                           | Delete dto-gen artifacts (refuses files without a generated marker). Prints external generator commands it does not cover.              |
@@ -132,10 +132,9 @@ This derives:
 
 - `request` / `response` schema refs from the snapshot
 - path-param → `params` (string) and body → `params` ref
-- all five language `names:` via `deriveNames`
+- all six language `names:` via `deriveNames`
 - a `docs:` block (OpenAPI description used as `summary` when present; otherwise a TODO)
 - default `sync:` matrix
-- a `bindings:` stub (unless `--no-bindings`) with `clientAwait` / `clientSplit`
 
 ### 3. Human review (the curated diff)
 
@@ -146,12 +145,16 @@ Edit `contract/manifest/sdk-contract.yaml`:
   operation `description` (then `summary`). Manifest `docs:` always wins when set.
 - Adjust `nameOverrides` only if a language collides with a reserved word.
 - Confirm `overlays:`, `idempotency`, and error templates.
-- Review the scaffolded `bindings:` (`core` path, `serialize`, `dtoType`,
-  `clientCallArgs`). Fix anything the heuristic got wrong.
 
-### 4. Close binding reconciliation
+### 4. Annotate the Rust method
 
-If scaffold skipped bindings, or you added the operation by hand:
+The catalog entry is inert until a `#[solvapay_export]` symbol links to it. Add the
+method to `SolvaPayClient` in `core/solvapay-transport/src/client.rs` and annotate it
+with `catalog = "operation"`, a `section`, an `emit_order`, and `dto_type` — transport
+defaults supply `artifact` / `sync` / `envelope`. Key reference:
+[`solvapay-export.md`](./solvapay-export.md).
+
+To list what is still unlinked:
 
 ```bash
 pnpm gen:bindings
@@ -169,29 +172,31 @@ pnpm parity:check
 
 Or in one shot: `pnpm gen:all` (also refreshes the snapshot when the backend is up).
 
-### 6. Fixtures and core
+### 6. Fixtures and review
 
 - Add/update `contract/fixtures/…` behavioral goldens for the new op.
-- Implement the Rust transport/core method named in `bindings.*.core`.
+- Review the `contract/manifest/binding-symbols.snapshot.json` diff — it is what tells
+  you whether the attribute said what you meant.
 - Commit the manifest **and** every regenerated file (`pnpm gen:check` must be green).
 
 ---
 
-## Workflow B — Add a binding for an existing catalog op
+## Workflow B — Link an existing catalog op to Rust
 
 When `manifest:check` reports
-`Bindings: orphan catalog entry operation.<id> has no binding linker`:
+`Bindings: orphan catalog entry operation.<id> has no binding linker`, the catalog has
+an entry with no exported Rust symbol behind it. Nothing is inserted into the manifest;
+the fix is annotating the method.
 
 ```bash
-pnpm gen:bindings
+pnpm gen:bindings   # prints the #[solvapay_export] target it expects
+# annotate SolvaPayClient::<snake_case_id> in core/solvapay-transport/src/client.rs
 pnpm gen
 pnpm manifest:check
 ```
 
-Review the inserted `bindings:` block (especially `core` and `call.serialize`)
-before committing. Descriptors are still authored in the manifest; deriving them
-from Rust (`#[solvapay_export]`) is [`codegen-ast-derivation.md`](./codegen-ast-derivation.md)
-Phase 4.
+Review the `binding-symbols.snapshot.json` diff before committing — especially the
+derived `call.serialize` and arg list.
 
 ---
 
@@ -304,8 +309,8 @@ New generated helper / MCP wrapper paths (dto-gen, listed in
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `tools/codegen/gen.ts`                                           | **Only** place that lists dto-gen flags + drift paths                   |
 | `tools/codegen/gen-all.ts`                                       | Full local pipeline                                                     |
-| `tools/codegen/gen-scaffold.ts`                                  | Manifest operation (+ bindings) scaffolder                              |
-| `tools/codegen/gen-bindings.ts`                                  | Orphan binding suggest/fix                                              |
+| `tools/codegen/gen-scaffold.ts`                                  | Manifest operation scaffolder                                           |
+| `tools/codegen/gen-bindings.ts`                                  | Orphan catalog entry → `#[solvapay_export]` suggestions                 |
 | `tools/codegen/lib/manifest-edit.ts`                             | Surgical YAML block edits                                               |
 | `tools/shared/manifest-schema.ts`                                | Zod schema, `deriveNames`, reconciliation                               |
 | `tools/codegen/lib/openapi-pipeline.ts`                          | Filter/prune/canonicalize OpenAPI                                       |
@@ -341,7 +346,7 @@ Shared emitter helpers live in `header.rs` and `chrome.rs`. Shared TypeScript CL
 - Prose documentation quality (beyond OpenAPI fallback)
 - Behavioral golden fixtures under `contract/fixtures/`
 - Sync/async and idempotency intent in the manifest
-- Rust core/transport implementation behind `bindings.*.core`
+- Rust core/transport implementation behind `#[solvapay_export]`
 - Verbatim fixture-runner bodies (32) and C smoke (`ctest/smoke.c` still one op);
   generated `dispatch.rs` / `registry.rs` come from `pnpm gen`
 

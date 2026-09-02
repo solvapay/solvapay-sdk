@@ -1,5 +1,5 @@
 /**
- * Scaffold a new catalog entry (+ optional bindings stub) into sdk-contract.yaml.
+ * Scaffold a new catalog entry into sdk-contract.yaml.
  *
  * Usage:
  *   pnpm gen:scaffold operation <id> --method POST --path /v1/sdk/foo
@@ -7,20 +7,15 @@
  *
  * Derives request/response DTO refs and path-param names from the OpenAPI
  * snapshot. Fills all six language names via `deriveNames`. Leaves a docs
- * placeholder for human prose. Optionally scaffolds a `bindings:` stub.
+ * placeholder for human prose. The Rust side is linked by annotating the
+ * transport method with `#[solvapay_export]`, not from here.
  *
  * Full workflow: docs/contributing/sdk-codegen.md (Workflow A).
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { parse as parseYaml } from 'yaml'
 import { insertSectionEntry, renderYamlFragment, sectionHasEntry } from './lib/manifest-edit.js'
-import {
-  clientBindingsFromYaml,
-  nextClientEmitOrder,
-  bindingStubFields,
-} from './lib/binding-stub.js'
 import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 import { deriveNames, toSnakeCase } from '../shared/manifest-schema.js'
 import type { OpenApiSpec } from './lib/openapi-pipeline.js'
@@ -47,12 +42,11 @@ export interface ScaffoldOptions {
   path: string
   manifestPath: string
   snapshotPath: string
-  withBindings: boolean
 }
 
 function printUsage(): string {
   return `Usage:
-  pnpm gen:scaffold operation <id> --method <GET|POST|PUT|PATCH|DELETE> --path <route> [--no-bindings]
+  pnpm gen:scaffold operation <id> --method <GET|POST|PUT|PATCH|DELETE> --path <route>
 `
 }
 
@@ -171,7 +165,6 @@ function operationBodyYaml(opts: {
     response: opts.response,
     overlays,
     normalization: [],
-    shadow: { volatile: [] },
     idempotency: { kind: 'none' },
     errors: {
       default: {
@@ -196,33 +189,6 @@ function operationBodyYaml(opts: {
   return renderYamlFragment(doc, 4)
 }
 
-function bindingBodyYaml(opts: {
-  id: string
-  method: HttpMethod
-  routePath: string
-  params: Array<Record<string, unknown>>
-  request?: string
-  emitOrder: number
-}): string {
-  const pathRefs = opts.params.filter(p => p.type === 'string').map(p => String(p.name))
-  const bodyParam = opts.params.find(p => typeof p.ref === 'string')
-  const dtoType = opts.request ?? (typeof bodyParam?.ref === 'string' ? bodyParam.ref : undefined)
-  const doc: Record<string, unknown> = bindingStubFields({
-    id: opts.id,
-    method: opts.method,
-    routePath: opts.routePath,
-    pathRefs,
-    bodyParamName: typeof bodyParam?.name === 'string' ? bodyParam.name : undefined,
-    dtoType,
-    emitOrder: opts.emitOrder,
-  })
-  return renderYamlFragment(doc, 4)
-}
-
-function nextClientEmitOrderFromRaw(manifestRaw: string): number {
-  return nextClientEmitOrder(clientBindingsFromYaml(parseYaml(manifestRaw)))
-}
-
 export function parseArgs(argv: string[]): ScaffoldOptions {
   const kind = argv[0]
   const id = argv[1]
@@ -234,7 +200,6 @@ export function parseArgs(argv: string[]): ScaffoldOptions {
   let routePath: string | undefined
   let manifestPath = DEFAULT_MANIFEST
   let snapshotPath = DEFAULT_SNAPSHOT
-  let withBindings = false
 
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i]
@@ -278,10 +243,6 @@ export function parseArgs(argv: string[]): ScaffoldOptions {
       i += 1
       continue
     }
-    if (arg === '--no-bindings') {
-      withBindings = false
-      continue
-    }
     if (arg === '--help' || arg === '-h') {
       throw new Error(printUsage().trim())
     }
@@ -299,7 +260,6 @@ export function parseArgs(argv: string[]): ScaffoldOptions {
     path: routePath,
     manifestPath,
     snapshotPath,
-    withBindings,
   }
 }
 
@@ -334,27 +294,11 @@ export function scaffoldOperation(options: ScaffoldOptions): {
   })
   raw = insertSectionEntry(raw, 'operations', options.id, opBody)
 
-  const lines = [`Scaffolded operations.${options.id}`]
-
-  if (options.withBindings) {
-    if (sectionHasEntry(raw, 'bindings', options.id)) {
-      lines.push(`bindings.${options.id} already present — skipped`)
-    } else {
-      const emitOrder = nextClientEmitOrderFromRaw(raw)
-      const bindBody = bindingBodyYaml({
-        id: options.id,
-        method: options.method,
-        routePath: options.path,
-        params,
-        request,
-        emitOrder,
-      })
-      raw = insertSectionEntry(raw, 'bindings', options.id, bindBody)
-      lines.push(`Add #[solvapay_export] on SolvaPayClient::${toSnakeCase(options.id)}`)
-    }
-  }
-
-  lines.push('Fill/replace docs: prose, then run: pnpm gen && pnpm manifest:check')
+  const lines = [
+    `Scaffolded operations.${options.id}`,
+    `Annotate SolvaPayClient::${toSnakeCase(options.id)} with #[solvapay_export]`,
+    'Fill/replace docs: prose, then run: pnpm gen && pnpm manifest:check',
+  ]
   return { stdout: lines.join('\n') + '\n', manifestRaw: raw }
 }
 

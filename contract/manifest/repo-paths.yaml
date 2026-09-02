@@ -414,6 +414,8 @@ markerExemptions:
     reason: cbindgen autogen_warning config
   - pattern: docs/**
     reason: prose about the generated-file marker
+  - pattern: .cursor/rules/**
+    reason: agent rules that name the generated-file marker
   - pattern: CONTRIBUTING.md
     reason: prose about the generated-file marker
   - pattern: .github/workflows/**
