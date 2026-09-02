@@ -212,7 +212,16 @@ Once deployed, any MCP client can list the tools. The demo toolbox is the Goldbe
 - `predict_price_chart` — paywalled Oracle: 30 days of history + an N-day forecast with an 80% confidence band as parallel numeric arrays; renders as an interactive line-chart artifact on capable hosts (Claude artifacts, ChatGPT Apps, MCP Inspector).
 - `predict_direction` — paywalled Oracle: up/down verdict + confidence score in `[0.5, 0.95]` for the same horizon; renders as a compact verdict card artifact.
 
-Both charge 1 credit per call. When the customer runs out, `content[0].text` narrates "call the `upgrade` tool…" and the host mounts the SolvaPay widget iframe.
+Both charge 1 credit per call. When the customer runs out, `content[0].text`
+narrates the current limit, the reason, and "call the `upgrade` tool…" plus a
+https URL. **No iframe opens on a gate** — official MCP Apps / 2026-07-28 tools
+guidance is that `content` is the model and text-only-host lane, and
+`structuredContent` is often hidden from the model when `content` is present.
+The LLM reads that copy and, if the user agrees, calls `upgrade` /
+`topup` / `activate_plan`, which is the only time a UI host mounts the
+SolvaPay widget. Text-only hosts (Claude Code, CLI, n8n) stop at the
+narration. See
+[`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).
 
 To disable the demo tools when using this example as a template:
 

@@ -91,10 +91,11 @@ What that line hides (from `@solvapay/react/mcp`):
   `Terms · Privacy · Provided by SolvaPay` footer.
 - Paywall narration — merchant paywalled data tools no longer open
   the widget iframe on a gate. Instead the gate's
-  `content[0].text` narrates the recovery intent tool (`upgrade` /
-  `topup` / `activate_plan`) and inlines `checkoutUrl`. The iframe
-  mounts only when the user or LLM deliberately calls one of the
-  three intent tools.
+  `content[0].text` states the current limit, names the recovery
+  intent tool (`upgrade` / `topup` / `activate_plan`), and inlines
+  `checkoutUrl`. Official MCP Apps guidance: the model reads that
+  text, not `structuredContent`. The iframe mounts only when the
+  user or LLM deliberately calls one of the three intent tools.
 
 ## `src/demo-tools.ts`
 
@@ -114,7 +115,17 @@ host-specific sandbox policies without booting the whole iframe.
 
 - **Tools are the vocabulary** the agent sees in `tools/list`. One tool
   per user intent.
+- **`content[0].text` is the model and text-only-host lane.** Official
+  MCP Apps / 2026-07-28 tools guidance: `structuredContent` is for the
+  widget and is often hidden from the model when `content` is present.
+  Gate, nudge, and intent results must be self-sufficient in that first
+  text block (limits, recovery tool, https URL) — never
+  `"shown in the panel."` See
+  [`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).
 - **The UI resource is a single shell** — `bootstrap.view` selects the
-  initial tab; every subsequent navigation is in-app.
+  surface; every subsequent navigation is in-app. Text-only hosts never
+  open it.
 - **Prompts + docs resource** are the narration layer. They tell the
   agent and the user what this server is for before they try a tool.
+  `docs://solvapay/overview.md` is how a text host discovers app
+  capabilities; `manage_account` is how it discovers user info.

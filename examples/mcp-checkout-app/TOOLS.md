@@ -16,21 +16,25 @@ from the agent.
 | `activate_plan` | Pick a plan from the picker, or activate a specific `planRef` | User says "activate", or the agent needs to enumerate plans |
 
 All four intent tools accept an optional `mode: 'ui' | 'text' | 'auto'`
-argument:
+argument. Official MCP Apps / 2026-07-28 tools guidance: `content` is
+the model and text-only-host lane; `structuredContent` is for the
+widget and is often hidden from the model when `content` is present.
+See [`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).
 
 - `'ui'` (default) — emit the UI-resource ref on `_meta.ui` plus a
-  one-line placeholder in `content[0]` (e.g. `"Opened your {product}
-  account. Balance: 865,500 credits (~SEK 802.48). Pass mode:'text' for
-  a markdown summary."`). Keeps UI-rendering hosts (MCP Inspector,
-  ChatGPT Apps, Claude Desktop) tidy — the iframe already carries the
-  rich detail. `structuredContent` still holds the full
-  `BootstrapPayload` so agents have full grounding.
+  **self-sufficient** first text block in `content[0]` (plan / balance /
+  remaining / next step — not `"shown in the panel."`). UI-rendering
+  hosts (MCP Inspector, ChatGPT Apps, Claude Desktop) still open the
+  iframe; text-only hosts can act from that line alone.
+  `structuredContent` still holds the full `BootstrapPayload` for the
+  widget and programmatic consumers.
 - `'text'` — strip `_meta.ui` and emit the full narrated markdown.
   Useful for CLI / text-only hosts, or when the user says "just
   summarise it in chat".
 - `'auto'` — emit both. The narrated text block is annotated with
   `audience: ['assistant']` so audience-aware hosts still hide it from
-  the user pane while feeding it to the model.
+  the user pane while feeding it to the model. Do not rely on the
+  annotation — `content[0]` must stand on its own.
 
 Each returns a `BootstrapPayload` with:
 
@@ -45,9 +49,10 @@ Each returns a `BootstrapPayload` with:
 
 Merchant paywalled data tools do not return a `BootstrapPayload` —
 their gate response is a text-only narration on `content[0].text`
-plus the structured gate on `structuredContent` (no widget mount).
-See the "How paywalls work" section in the `@solvapay/mcp` README for
-the full shape.
+(limit + reason + one recovery tool + https URL) plus the structured
+gate on `structuredContent` for programmatic consumers (no widget
+mount). The model acts from the text. See the "How paywalls work"
+section in the `@solvapay/mcp` README for the full shape.
 
 ## Shell surface (what the UI renders)
 
@@ -88,7 +93,7 @@ test against.
 | **Cursor IDE** | ✓ | ✓ | ✓ | Renders UI iframes as of recent builds; falls back cleanly. |
 | **ChatGPT MCP connectors** | ✓ | ✓ | via Apps SDK | No slash-command UI; About view lists commands as plain copy. |
 | **`basic-host`** | ✓ | ✓ | ✓ | Dev harness; echoes both. |
-| **Programmatic (n8n, agents)** | — | ✓ | ignored | Agents parse `structuredContent`; narrated text is secondary. |
+| **Programmatic (n8n, agents)** | — | ✓ | ignored | Agents must read `content[0].text`. `structuredContent` is a bonus and is often hidden when `content` is present. |
 
 ## Demo data tools (LLM-callable, paywall-gated)
 
@@ -102,8 +107,10 @@ Enabled when `DEMO_TOOLS !== 'false'` — see
 | `query_sales_trends` | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low | Exercise the `ctx.respond()` nudge flow — inline upsell strip on the success response |
 
 All three are wrapped with `solvaPay.payable().mcp()` via
-`registerPayable` so the credit balance decrements per call, and the
-paywall bootstrap auto-opens when credits hit zero.
+`registerPayable` so the credit balance decrements per call. When
+credits hit zero the tool returns a **text-only gate** — no iframe.
+The first text block names the limit, the reason, and the recovery
+intent tool (`upgrade` / `topup` / `activate_plan`).
 
 All three use the `(args, ctx) => ctx.respond(data, options?)` handler
 contract. `query_sales_trends` exercises the nudge branch:
@@ -166,5 +173,7 @@ their descriptions.
 `docs://solvapay/overview.md` — the narrated "start here" doc. Agents
 that call `resources/read` on this URI get a 200-word explanation of
 the four intent tools, the dual-audience fallback, and the auth model
-before they try any tool. Disable with `registerDocsResources: false`
-on `createSolvaPayMcpServer`.
+before they try any tool. This is how a text-only host discovers **app
+capabilities** without an iframe; `manage_account` is how it discovers
+**user info** (plan, remaining, payment method). Disable with
+`registerDocsResources: false` on `createSolvaPayMcpServer`.
