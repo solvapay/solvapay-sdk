@@ -47,7 +47,7 @@ fn emit_client(ir: &Ir) -> String {
          \x20     key = api_key || ENV.fetch(\"SOLVAPAY_SECRET_KEY\", nil)\n\
          \x20     if native_client.nil? && (key.nil? || key.empty?)\n\
          \x20       raise SolvaPayError.new(\"SOLVAPAY_SECRET_KEY is required\", code: \"missing_api_key\")\n\
-         \x20     end\n\
+         \x20     end\n\n\
          \x20     base = api_base_url || ENV.fetch(\"SOLVAPAY_API_BASE_URL\", nil)\n\n\
          \x20     @native_client = native_client || NativeDispatch.build_client(api_key: key, api_base_url: base)\n\
          \x20   end\n\n",

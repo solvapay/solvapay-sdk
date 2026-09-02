@@ -8,6 +8,7 @@ module SolvaPay
       if native_client.nil? && (key.nil? || key.empty?)
         raise SolvaPayError.new("SOLVAPAY_SECRET_KEY is required", code: "missing_api_key")
       end
+
       base = api_base_url || ENV.fetch("SOLVAPAY_API_BASE_URL", nil)
 
       @native_client = native_client || NativeDispatch.build_client(api_key: key, api_base_url: base)

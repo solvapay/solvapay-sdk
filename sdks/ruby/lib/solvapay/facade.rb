@@ -92,6 +92,7 @@ module SolvaPay
           unless limits.is_a?(Hash)
             raise SolvaPay::SolvaPayError.new("checkLimits returned a non-object body", code: "invalid_limits")
           end
+
           event = {
             "kind" => "limitsResult",
             "limits" => limits,
@@ -119,7 +120,7 @@ module SolvaPay
 
       decision = { "outcome" => "allow", "limits" => action["limits"] }
       consequence = action["consequence"]
-      decision["consequence"] = consequence if consequence == "throttled" || consequence == "overage"
+      decision["consequence"] = consequence if %w[throttled overage].include?(consequence)
       build_allow_result(
         backend_ref: backend_ref,
         decision: decision,

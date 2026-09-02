@@ -199,7 +199,10 @@ describe('edge verifyWebhook public facade', () => {
 describe('edge graph dependency assertions', () => {
   it('edge.ts and webhook-wasm.ts never import node: or server-native', () => {
     const root = resolve(__dirname, '../src')
-    const files = ['edge.ts', 'webhook-wasm.ts']
+    // factory + virtual-tools sit on the edge graph via createSolvaPay.
+    // A value import of ./native there becomes an unresolved `./native`
+    // specifier in dist/edge.js (tsup marks it external).
+    const files = ['edge.ts', 'webhook-wasm.ts', 'factory.ts', 'virtual-tools.ts']
     const forbiddenImport = [
       /from\s+['"]@solvapay\/server-native['"]/,
       /from\s+['"]\.\/native['"]/,

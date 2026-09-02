@@ -6,9 +6,27 @@
  * These tools are NOT usage-tracked and bypass the paywall.
  */
 
+import { SolvaPayError } from '@solvapay/core'
 import type { SolvaPayClient } from './types'
 import type { McpToolExtra } from './types'
-import { callNativeSync } from './native'
+
+/**
+ * Ambient sync dispatch published by `index.ts` (napi) or `edge.ts` (WASM).
+ * Must not import `./native` — that file is Node-only and tsup would leave
+ * an unresolved `./native` import in `dist/edge.js`.
+ */
+const AMBIENT_SYNC_API = Symbol.for('solvapay.nativeSyncApi')
+
+function callInstalledSync(fn: string, argsJson: string): unknown {
+  const g = globalThis as typeof globalThis & {
+    [AMBIENT_SYNC_API]?: { callNativeSync: (fn: string, argsJson: string) => unknown }
+  }
+  const api = g[AMBIENT_SYNC_API]
+  if (!api) {
+    throw new SolvaPayError('server sync API not installed')
+  }
+  return api.callNativeSync(fn, argsJson)
+}
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -96,7 +114,7 @@ function mcpTextResult(text: string) {
 }
 
 function virtualToolMarkdown(tool: string, payload: Record<string, unknown>): string {
-  const narrated = callNativeSync(
+  const narrated = callInstalledSync(
     'solvapayCall',
     JSON.stringify({ op: 'mcpNarrate', args: { tool, payload } }),
   )

@@ -7,9 +7,11 @@ import { installNativeMcpApi } from '@solvapay/mcp-core'
 import { installMcpAdapterNative } from './src/adapters/mcp'
 import { callNativeSync } from './src/native'
 import { installNativeDecisionApi } from './src/native-decisions'
+import { publishNativeSyncApi } from './src/native-registry'
 import type { PaywallStructuredContent, PaywallToolResult } from './src/types'
 
 installNativeDecisionApi({ callNativeSync })
+publishNativeSyncApi()
 installNativeCoreApi({ callNativeSync })
 installNativeMcpApi({ callNativeSync })
 installMcpAdapterNative({
