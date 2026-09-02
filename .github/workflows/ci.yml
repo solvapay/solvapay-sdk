@@ -437,16 +437,15 @@ jobs:
         env:
           RUSTC_WRAPPER: ''
         run: |
-          if [ -f .ci-venv/Scripts/python ]; then
-            PY=.ci-venv/Scripts/python
-            PYTEST=.ci-venv/Scripts/pytest
+          if [ -f .ci-venv/Scripts/activate ]; then
+            # Git Bash on Windows
+            source .ci-venv/Scripts/activate
           else
-            PY=.ci-venv/bin/python
-            PYTEST=.ci-venv/bin/pytest
+            source .ci-venv/bin/activate
           fi
-          "$PY" -m pip install -U maturin
-          "$PY" -m maturin develop --features panic-probe
-          SOLVAPAY_REQUIRE_PANIC_PROBE=1 "$PYTEST" -q tests/test_panic_probe.py
+          python -m pip install -U maturin
+          python -m maturin develop --features panic-probe
+          SOLVAPAY_REQUIRE_PANIC_PROBE=1 python -m pytest -q tests/test_panic_probe.py
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
@@ -996,7 +995,7 @@ jobs:
             --user "$(id -u):$(id -g)" \
             -v "$PWD/clean-install-bundle:/bundle:ro" \
             -v "$PWD/sdks/node-native/scripts:/scripts:ro" \
-            -v "$PWD/contract/manifest/support-matrix.json:/scripts/support-matrix.json:ro" \
+            -v "$PWD/contract/manifest:/contract/manifest:ro" \
             -e HOME=/tmp \
             -w /tmp \
             "$IMAGE" \
