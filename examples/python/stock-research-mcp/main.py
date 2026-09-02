@@ -80,6 +80,30 @@ class _MockClient:
         value = call("mcpHandleRequest", payload if isinstance(payload, dict) else {})
         return json.dumps({"ok": True, "value": value})
 
+    async def mcp_resolve_auth(self, args_json: str) -> str:
+        return self.mcp_resolve_auth_blocking(args_json)
+
+    def mcp_resolve_auth_blocking(self, args_json: str) -> str:
+        from solvapay_mcp.core import call
+
+        payload = json.loads(args_json)
+        if not isinstance(payload, dict):
+            payload = {}
+        gate_args: dict[str, object] = {
+            "publicBaseUrl": payload.get("publicBaseUrl"),
+            "rpcMethod": payload.get("rpcMethod"),
+            "authHeader": payload.get("authHeader"),
+            "authMode": payload.get("authMode") or "tools-call",
+            "mcpPath": payload.get("mcpPath"),
+            "jsonRpcId": payload.get("jsonRpcId"),
+        }
+        if payload.get("hs256Secret") is not None:
+            gate_args["hs256Secret"] = payload.get("hs256Secret")
+        if payload.get("jwksJson") is not None:
+            gate_args["jwksJson"] = payload.get("jwksJson")
+        value = call("mcpAuthGate", {k: v for k, v in gate_args.items() if v is not None})
+        return json.dumps({"ok": True, "value": value})
+
     async def mcp_oauth_request(self, args_json: str) -> str:
         return self.mcp_oauth_request_blocking(args_json)
 
