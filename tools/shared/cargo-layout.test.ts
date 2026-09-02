@@ -16,7 +16,7 @@ describe('cargo workspace layout', () => {
   })
 
   it('declares [workspace] on standalone example crates that are not workspace members', () => {
-    const text = readFileSync(joinRoot('examples/rust/get-merchant/Cargo.toml'), 'utf8')
+    const text = readFileSync(joinRoot('examples/rust/guerrillamail-mcp/Cargo.toml'), 'utf8')
     expect(text).toMatch(/^\[workspace\]/m)
   })
 })

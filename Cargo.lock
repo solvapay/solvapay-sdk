@@ -2156,7 +2156,6 @@ dependencies = [
  "serde_json",
  "solvapay-core",
  "solvapay-dto",
- "solvapay-rust-examples-env",
  "solvapay-transport",
  "tokio",
  "walkdir",
@@ -2304,10 +2303,6 @@ dependencies = [
  "solvapay-transport",
  "tokio",
 ]
-
-[[package]]
-name = "solvapay-rust-examples-env"
-version = "0.1.0"
 
 [[package]]
 name = "solvapay-transport"

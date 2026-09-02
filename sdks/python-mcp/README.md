@@ -20,7 +20,7 @@ uv run --extra typecheck ruff check python/solvapay_mcp
 Example (cwd is the example; the project is this package):
 
 ```bash
-uv run --project . --extra dev pytest -q ../../examples/python/paid-mcp
+uv run --project . --extra dev --with uvicorn pytest -q ../../examples/python/stock-research-mcp
 ```
 
 CI `pip install`s the platform `solvapay` wheel instead of the path source.

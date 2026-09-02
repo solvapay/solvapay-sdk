@@ -31,7 +31,6 @@ serde_json = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
 walkdir = { workspace = true }
 wiremock = { workspace = true }
-solvapay-rust-examples-env = { path = "../../examples/rust/env" }
 
 [package.metadata.docs.rs]
 all-features = true

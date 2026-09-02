@@ -179,12 +179,6 @@ jobs:
           rustup toolchain install nightly --profile minimal -c rust-docs
           cargo +nightly doc -p solvapay --all-features --no-deps
 
-      - name: Rust example build+test (Step 48)
-        working-directory: .
-        run: |
-          cargo build --manifest-path examples/rust/get-merchant/Cargo.toml
-          cargo test --manifest-path examples/rust/get-merchant/Cargo.toml
-
       - name: Setup pnpm (shadow selftest)
         uses: pnpm/action-setup@v6
 
@@ -302,11 +296,6 @@ jobs:
       - name: clippy
         run: cargo clippy -p solvapay-mcp --all-targets -- -D warnings
 
-      - name: paid-mcp example
-        run: |
-          cargo build --manifest-path examples/rust/paid-mcp/Cargo.toml
-          cargo test --manifest-path examples/rust/paid-mcp/Cargo.toml
-
       - name: guerrillamail-mcp example
         run: |
           cargo build --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml
@@ -416,8 +405,6 @@ jobs:
           "$PIP" install "${wheel}[dev,typecheck]"
           # Offline Python golden-fixture contract suite (Step 42) + smoke/parity.
           "$PYTEST" -q
-          # D20 / §9 — runnable get-merchant example (offline mock HTTP).
-          "$PYTEST" -q "$GITHUB_WORKSPACE/examples/python/get-merchant"
           # Step 42T — strictness against the *installed* package (generated .pyi + facade).
           "$PY" -c "import solvapay, pathlib; p=pathlib.Path(solvapay.__file__).parent; assert (p/'py.typed').is_file(), 'missing py.typed'; assert (p/'__init__.pyi').is_file(), 'missing __init__.pyi'"
           "$PY" -m mypy --strict --disallow-any-explicit \
@@ -473,7 +460,6 @@ jobs:
             "${GITHUB_WORKSPACE}/sdks/python-mcp/python/solvapay_mcp"
           python -m pyright --project "${GITHUB_WORKSPACE}/sdks/python-mcp"
           python -m ruff check "${GITHUB_WORKSPACE}/sdks/python-mcp/python/solvapay_mcp"
-          python -m pytest -q "${GITHUB_WORKSPACE}/examples/python/paid-mcp"
           python -m pip install httpx uvicorn
           python -m pytest -q "${GITHUB_WORKSPACE}/examples/python/stock-research-mcp"
 
@@ -588,13 +574,6 @@ jobs:
           bundle exec rake test
           bundle exec rbs validate
 
-      - name: Example get_merchant offline test (D20 / §9)
-        if: matrix.full
-        working-directory: ${{ github.workspace }}
-        run: |
-          ruby -I"$GITHUB_WORKSPACE/sdks/ruby/lib" \
-            examples/ruby/get_merchant/test/get_merchant_test.rb
-
       - name: Ruby type-strictness + lint (Step 45T / D18)
         if: matrix.full
         run: |
@@ -653,7 +632,6 @@ jobs:
           bundle exec rubocop lib --no-parallel
           bundle exec steep check
           bundle exec rbs validate
-          bundle exec ruby -Ilib ../../examples/ruby/paid_mcp/test/paid_mcp_test.rb
           bundle exec ruby -Ilib ../../examples/ruby/bitcoin_analytics_mcp/test/run.rb
 
   ruby-binding-artifacts:
@@ -1249,14 +1227,6 @@ jobs:
       - name: MCP-authoring conformance
         working-directory: sdks/go
         run: go test -race ./mcp/...
-
-      - name: Go example build+test (Step 51)
-        working-directory: examples/go/get-merchant
-        run: go test ./...
-
-      - name: Go paid-mcp example
-        working-directory: examples/go/paid-mcp
-        run: go test ./...
 
       - name: Go weather-mcp example
         working-directory: examples/go/weather-mcp

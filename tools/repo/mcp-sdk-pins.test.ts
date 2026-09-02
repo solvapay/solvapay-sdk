@@ -184,9 +184,7 @@ describe('MCP host-SDK pins', () => {
 
     const goModules: Array<{ file: string; requireGoSdk: boolean }> = [
       { file: joinRel(sdkPath('go'), 'go.mod'), requireGoSdk: true },
-      { file: joinRel(EXAMPLES_DIR, 'go', 'paid-mcp', 'go.mod'), requireGoSdk: true },
       { file: joinRel(EXAMPLES_DIR, 'go', 'weather-mcp', 'go.mod'), requireGoSdk: true },
-      { file: joinRel(EXAMPLES_DIR, 'go', 'get-merchant', 'go.mod'), requireGoSdk: false },
     ]
     for (const { file, requireGoSdk } of goModules) {
       const parsed = parseGoMod(read(file))
@@ -375,13 +373,6 @@ describe('MCP host-SDK pins', () => {
     if (rootRmcp !== pins.rustRmcp) {
       violations.push(
         `${posixRel(joinRel(REPO_ROOT, 'Cargo.toml'))}: rmcp ${rootRmcp ?? '(missing)'} !== ${pins.rustRmcp}`,
-      )
-    }
-    const exampleCargo = read(joinRel(EXAMPLES_DIR, 'rust', 'paid-mcp', 'Cargo.toml'))
-    const exampleRmcp = cargoTomlRmcpVersion(exampleCargo)
-    if (exampleRmcp !== pins.rustRmcp) {
-      violations.push(
-        `${posixRel(joinRel(EXAMPLES_DIR, 'rust', 'paid-mcp', 'Cargo.toml'))}: rmcp ${exampleRmcp ?? '(missing)'} !== ${pins.rustRmcp}`,
       )
     }
 

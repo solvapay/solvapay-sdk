@@ -54,7 +54,7 @@ describe('selectTestTasks', () => {
     expect(selected.map(task => task.id)).toEqual(['python.prepare', 'python.test'])
   })
 
-  it('should prepare then test python-mcp including the paid-MCP example', () => {
+  it('should prepare then test python-mcp including the stock-research example', () => {
     const selected = selectTestTasks(['--native-only', '--only', 'python-mcp'])
     if ('error' in selected) {
       throw new Error(selected.error)

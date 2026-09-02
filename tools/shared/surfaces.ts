@@ -47,7 +47,7 @@ const nodeNativeCwd = sdkPath('node-native')
 const wasmCwd = sdkPath('wasm')
 const pythonCwd = sdkPath('python')
 const pythonMcpCwd = sdkPath('pythonMcp')
-const pythonPaidMcpExampleCwd = lookupPath('pythonPaidMcpExample')
+const pythonStockResearchMcpExampleCwd = lookupPath('pythonStockResearchMcpExample')
 const rubyCwd = sdkPath('ruby')
 const rubyMcpCwd = sdkPath('rubyMcp')
 const rubyLib = path.join(sdkPath('ruby'), 'lib')
@@ -288,10 +288,10 @@ export const SURFACES: readonly Surface[] = [
       ),
       task(
         'python-mcp.example',
-        'Python paid-MCP example',
+        'Python stock-research MCP example',
         'uv',
-        ['run', '--project', pythonMcpCwd, '--extra', 'dev', 'pytest', '-q'],
-        pythonPaidMcpExampleCwd,
+        ['run', '--project', pythonMcpCwd, '--extra', 'dev', '--with', 'uvicorn', 'pytest', '-q'],
+        pythonStockResearchMcpExampleCwd,
         pythonRequires,
       ),
     ],
@@ -353,9 +353,9 @@ export const SURFACES: readonly Surface[] = [
       ),
       task(
         'ruby-mcp.example',
-        'Ruby paid-MCP example',
+        'Ruby bitcoin-analytics MCP example',
         'bundle',
-        ['exec', 'ruby', '-Ilib', '../../examples/ruby/paid_mcp/test/paid_mcp_test.rb'],
+        ['exec', 'ruby', '-Ilib', '../../examples/ruby/bitcoin_analytics_mcp/test/run.rb'],
         rubyMcpCwd,
         rubyRequires,
         { RUBYLIB: rubyLib },

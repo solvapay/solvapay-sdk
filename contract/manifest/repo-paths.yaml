@@ -463,8 +463,7 @@ lookups:
   scriptsTmp: tools/.tmp
   pythonLiveContract: sdks/python/scripts/live_contract.py
   rubyLiveContract: sdks/ruby/scripts/live_contract.rb
-  pythonPaidMcpExample: examples/python/paid-mcp
-  rubyPaidMcpExample: examples/ruby/paid_mcp
+  pythonStockResearchMcpExample: examples/python/stock-research-mcp
   rustLiveScenarios: tools/conformance/live-contract/src/scenarios.rs
   goLiveScenarios: sdks/go/internal/livecontract/scenarios.go
   generateTypesScript: sdks/typescript/server/scripts/generate-types.ts

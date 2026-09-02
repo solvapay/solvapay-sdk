@@ -21,9 +21,6 @@ members = [
   "tools/shared/repo-paths",
 ]
 exclude = [
-  "examples/rust/env",
-  "examples/rust/get-merchant",
-  "examples/rust/paid-mcp",
   "examples/rust/guerrillamail-mcp",
   "internal/fuzz",
 ]

@@ -13,7 +13,6 @@ const ALLOWLIST: &[&str] = &[
     "tools/shared/repo-paths/tests/no_hardcoded_paths.rs",
     "sdks/capi/build.rs",
     "sdks/capi/tests/header_golden.rs",
-    "examples/rust/env/src/lib.rs",
     "examples/rust/guerrillamail-mcp/src/main.rs",
     "examples/rust/guerrillamail-mcp/src/sources.rs",
 ];
