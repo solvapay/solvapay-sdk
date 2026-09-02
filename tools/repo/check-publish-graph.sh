@@ -60,7 +60,7 @@ for toml in \
   sdks/capi/Cargo.toml \
   tools/codegen/dto-gen/Cargo.toml \
   tools/conformance/fixture-runner/Cargo.toml \
-  tools/conformance/shadow-invoker/Cargo.toml \
+  tools/conformance/client-conformance/Cargo.toml \
   tools/conformance/live-contract/Cargo.toml \
   tools/shared/repo-paths/Cargo.toml \
   sdks/rust-mcp/Cargo.toml

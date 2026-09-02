@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """Step 42 — live Python contract driver (stdlib-only).
 
-Mirrors `.github/workflows/shadow.yml` / `pnpm shadow:run`, but drives the
-Python native client only against a real backend.
+Drives the Python native client against a real backend.
 
 Env:
-  SOLVAPAY_SHADOW_BASE_URL   required
-  SOLVAPAY_SHADOW_API_KEY    required
-  SOLVAPAY_SHADOW_ENABLE_STRIPE  optional (`true` / `1`) to run requires:stripe
-  SOLVAPAY_LIVE_OUT          optional report path (default: contract/shadow/output/python-live-report.json)
+  SOLVAPAY_LIVE_BASE_URL   required
+  SOLVAPAY_LIVE_API_KEY    required
+  SOLVAPAY_LIVE_ENABLE_STRIPE  optional (`true` / `1`) to run requires:stripe
+  SOLVAPAY_LIVE_OUT          optional report path (default: contract/live/output/python-live-report.json)
 """
 
 from __future__ import annotations
@@ -32,7 +31,7 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 REPO_ROOT = Path(__file__).resolve().parents[4]  # sdks/python/scripts → repo
-DEFAULT_OUT = REPO_ROOT / "contract" / "shadow" / "output" / "python-live-report.json"
+DEFAULT_OUT = REPO_ROOT / "contract" / "live" / "output" / "python-live-report.json"
 
 Requires = Literal["stripe", "activePurchase"]
 
@@ -47,7 +46,7 @@ class Scenario:
     skip_reason: str | None = None
 
 
-# Port of contract/shadow/scenarios.ts — keep dependency order (setup first, deletes last).
+# Port of contract/live/scenarios.ts — keep dependency order (setup first, deletes last).
 SCENARIOS: list[Scenario] = [
     Scenario("getMerchant", "getMerchant", {}),
     Scenario("getPlatformConfig", "getPlatformConfig", {}),
@@ -438,16 +437,16 @@ def setup_side(client: SolvaPayClient, run_id: str) -> dict[str, str]:
 
 
 def main() -> int:
-    base_url = os.environ.get("SOLVAPAY_SHADOW_BASE_URL")
-    api_key = os.environ.get("SOLVAPAY_SHADOW_API_KEY")
+    base_url = os.environ.get("SOLVAPAY_LIVE_BASE_URL")
+    api_key = os.environ.get("SOLVAPAY_LIVE_API_KEY")
     if not base_url or not api_key:
         print(
-            "SOLVAPAY_SHADOW_BASE_URL and SOLVAPAY_SHADOW_API_KEY are required",
+            "SOLVAPAY_LIVE_BASE_URL and SOLVAPAY_LIVE_API_KEY are required",
             file=sys.stderr,
         )
         return 2
 
-    enable_stripe = os.environ.get("SOLVAPAY_SHADOW_ENABLE_STRIPE", "").lower() in {
+    enable_stripe = os.environ.get("SOLVAPAY_LIVE_ENABLE_STRIPE", "").lower() in {
         "1",
         "true",
         "yes",

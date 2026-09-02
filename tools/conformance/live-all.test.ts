@@ -7,15 +7,15 @@ describe('resolveLiveEnv', () => {
     const resolved = resolveLiveEnv({})
     expect('error' in resolved).toBe(true)
     if ('error' in resolved) {
-      expect(resolved.error).toMatch(/SOLVAPAY_SHADOW_BASE_URL/)
-      expect(resolved.error).toMatch(/SOLVAPAY_SHADOW_API_KEY/)
+      expect(resolved.error).toMatch(/SOLVAPAY_LIVE_BASE_URL/)
+      expect(resolved.error).toMatch(/SOLVAPAY_LIVE_API_KEY/)
     }
   })
 
   it('should derive USE_REAL_BACKEND and SOLVAPAY_SECRET_KEY from a populated env', () => {
     const resolved = resolveLiveEnv({
-      SOLVAPAY_SHADOW_BASE_URL: 'http://localhost:3010',
-      SOLVAPAY_SHADOW_API_KEY: 'sk_sandbox_test',
+      SOLVAPAY_LIVE_BASE_URL: 'http://localhost:3010',
+      SOLVAPAY_LIVE_API_KEY: 'sk_sandbox_test',
     })
     expect('error' in resolved).toBe(false)
     if ('error' in resolved) {
@@ -45,24 +45,25 @@ describe('liveTasks', () => {
     expect(python?.cwd).toBe(sdkPath('python'))
   })
 
-  it('should prepend native prepare tasks and a shadow-invoker build', () => {
+  it('should prepend native prepare tasks then the five live drivers', () => {
     const ids = liveTasks({}).map(task => task.id)
-    expect(ids.slice(0, 7)).toEqual([
+    expect(ids.slice(0, 6)).toEqual([
       'node-native.prepare',
       'wasm.prepare',
       'python.prepare',
       'ruby.bundle',
       'ruby.prepare',
       'go-guest.build',
-      'live.build.shadow-invoker',
     ])
-    expect(ids[7]).toBe('live.ts')
+    expect(ids[6]).toBe('live.rust')
+    expect(ids).not.toContain('live.ts')
+    expect(ids).not.toContain('live.build.shadow-invoker')
     expect(ids).not.toContain('python.build')
   })
 
   it('should skip the build phase when skipBuild is set', () => {
     const ids = liveTasks({}, { skipBuild: true }).map(task => task.id)
-    expect(ids[0]).toBe('live.ts')
+    expect(ids[0]).toBe('live.rust')
     expect(ids).not.toContain('live.build.shadow-invoker')
     expect(ids).not.toContain('python.prepare')
   })
@@ -80,8 +81,8 @@ describe('runCli', () => {
     const spawned: string[] = []
     const result = await runCli(['--no-build'], {
       env: {
-        SOLVAPAY_SHADOW_BASE_URL: 'http://localhost:3010',
-        SOLVAPAY_SHADOW_API_KEY: 'sk_sandbox_test',
+        SOLVAPAY_LIVE_BASE_URL: 'http://localhost:3010',
+        SOLVAPAY_LIVE_API_KEY: 'sk_sandbox_test',
       },
       fetch: async () => ({ ok: true, status: 200 }),
       which: () => true,
@@ -93,7 +94,8 @@ describe('runCli', () => {
       write: () => {},
     })
     expect(result.exitCode).toBe(0)
-    expect(spawned[0]).toBe('live.ts')
+    expect(spawned[0]).toBe('live.rust')
+    expect(spawned).not.toContain('live.ts')
     expect(spawned).not.toContain('live.build.shadow-invoker')
     expect(spawned).not.toContain('python.prepare')
   })

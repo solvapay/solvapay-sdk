@@ -16,7 +16,7 @@ members = [
   "sdks/capi",
   "tools/codegen/dto-gen",
   "tools/conformance/fixture-runner",
-  "tools/conformance/shadow-invoker",
+  "tools/conformance/client-conformance",
   "tools/conformance/live-contract",
   "tools/shared/repo-paths",
 ]

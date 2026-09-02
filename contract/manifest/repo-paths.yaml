@@ -449,7 +449,7 @@ lookups:
   rustToolchain: rust-toolchain.toml
   prettierIgnore: .prettierignore
   mcpFixtures: contract/mcp-fixtures
-  rustLiveReport: contract/shadow/output/rust-live-report.json
+  rustLiveReport: contract/live/output/rust-live-report.json
   fuzzCorpus: internal/fuzz/corpus
   fuzzRoot: internal/fuzz
   requiredChecks: contract/required-checks.yaml
@@ -458,7 +458,7 @@ lookups:
   openapiLocalStack: contract/openapi/local-stack.yaml
   openapiSnapshot: contract/openapi/sdk-v1.snapshot.json
   openapiSource: contract/openapi/sdk-v1.source.json
-  shadowOutput: contract/shadow/output
+  liveOutput: contract/live/output
   webhookFixtures: contract/fixtures/webhook-verification
   manifestSchemaTs: tools/shared/manifest-schema.ts
   syntheticOpenapi: tools/codegen/fixtures/synthetic-openapi.json

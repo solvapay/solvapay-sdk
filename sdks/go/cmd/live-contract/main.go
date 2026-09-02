@@ -2,11 +2,11 @@
 //
 // Env:
 //
-//	SOLVAPAY_SHADOW_BASE_URL   required
-//	SOLVAPAY_SHADOW_API_KEY    required
-//	SOLVAPAY_SHADOW_ENABLE_STRIPE  optional (`true` / `1`) to run requires:stripe
+//	SOLVAPAY_LIVE_BASE_URL   required
+//	SOLVAPAY_LIVE_API_KEY    required
+//	SOLVAPAY_LIVE_ENABLE_STRIPE  optional (`true` / `1`) to run requires:stripe
 //	SOLVAPAY_LIVE_OUT          optional report path
-//	  (default: contract/shadow/output/go-live-report.json)
+//	  (default: contract/live/output/go-live-report.json)
 package main
 
 import (
@@ -32,14 +32,14 @@ func main() {
 }
 
 func run() (int, error) {
-	baseURL := os.Getenv("SOLVAPAY_SHADOW_BASE_URL")
-	apiKey := os.Getenv("SOLVAPAY_SHADOW_API_KEY")
+	baseURL := os.Getenv("SOLVAPAY_LIVE_BASE_URL")
+	apiKey := os.Getenv("SOLVAPAY_LIVE_API_KEY")
 	if baseURL == "" || apiKey == "" {
-		return 2, fmt.Errorf("SOLVAPAY_SHADOW_BASE_URL and SOLVAPAY_SHADOW_API_KEY are required")
+		return 2, fmt.Errorf("SOLVAPAY_LIVE_BASE_URL and SOLVAPAY_LIVE_API_KEY are required")
 	}
 
 	enableStripe := false
-	switch strings.ToLower(os.Getenv("SOLVAPAY_SHADOW_ENABLE_STRIPE")) {
+	switch strings.ToLower(os.Getenv("SOLVAPAY_LIVE_ENABLE_STRIPE")) {
 	case "1", "true", "yes":
 		enableStripe = true
 	}
@@ -167,7 +167,7 @@ func defaultOutPath() string {
 	// Expected cwd is sdks/go (module root) → repo root is ../..
 	abs, err := filepath.Abs(filepath.Join("..", "..", "contract", "shadow", "output", "go-live-report.json"))
 	if err != nil {
-		return "contract/shadow/output/go-live-report.json"
+		return "contract/live/output/go-live-report.json"
 	}
 	return abs
 }

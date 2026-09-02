@@ -119,7 +119,7 @@ solvapay-sdk/
 ├─ tools/
 │  ├─ shared/           # layout loaders + `repo-paths` crate
 │  ├─ codegen/          # dto-gen + TS gen wrappers
-│  ├─ conformance/      # fixture-runner, live-contract, shadow-invoker
+│  ├─ conformance/      # fixture-runner, live-contract, client-conformance
 │  ├─ repo/             # repo gates (required-checks, unwrap, publish graph)
 │  ├─ cli/              # `solvapay` CLI (npx solvapay init)
 │  ├─ create-solvapay/  # scaffolder for new MCP apps

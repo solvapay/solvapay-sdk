@@ -1,4 +1,4 @@
-//! Port of `contract/shadow/scenarios.ts` / Python `live_contract.py` SCENARIOS.
+//! Port of `contract/live/scenarios.ts` / Python `live_contract.py` SCENARIOS.
 
 use std::sync::LazyLock;
 

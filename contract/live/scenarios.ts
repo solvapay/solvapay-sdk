@@ -1,5 +1,5 @@
 /**
- * Shadow-mode scenario catalog (step 25).
+ * Live-contract scenario catalog.
  *
  * Dependency-ordered: setup creates per-side product/plan/customer, then
  * scenarios run with `{placeholder}` resolution. Stripe-dependent ops are
@@ -8,7 +8,7 @@
 
 export type ScenarioRequires = 'stripe' | 'activePurchase'
 
-export type ShadowScenario = {
+export type LiveScenario = {
   /** Stable id for reports. */
   id: string
   /** CamelCase operation name. */
@@ -84,7 +84,7 @@ function walkResolve(value: unknown, map: Record<string, string>): unknown {
  * Full scenario list — setup scenarios first, deletes last, stripe ops marked.
  * Covers all 36 operations at least once (success and/or error path).
  */
-export const SHADOW_SCENARIOS: ShadowScenario[] = [
+export const LIVE_SCENARIOS: LiveScenario[] = [
   // Merchant / config
   { id: 'getMerchant', op: 'getMerchant', args: {} },
   { id: 'getPlatformConfig', op: 'getPlatformConfig', args: {} },
@@ -364,5 +364,5 @@ export const SHADOW_SCENARIOS: ShadowScenario[] = [
 
 /** Ops covered by at least one scenario (for coverage asserts). */
 export function scenarioOperationCoverage(): Set<string> {
-  return new Set(SHADOW_SCENARIOS.map(s => s.op))
+  return new Set(LIVE_SCENARIOS.map(s => s.op))
 }

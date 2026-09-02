@@ -1,8 +1,8 @@
-//! Shadow-mode Rust invoker library (step 25).
+//! Native [`SolvaPayClient`] dispatch for golden client-fixture replay.
 //!
 //! Dispatches camelCase operation names onto [`SolvaPayClient`], wrapping the
 //! transport in [`RecordingTransport`] so wire exchanges can be dumped on
-//! divergence. Arg-decoding mirrors `solvapay-transport` fixture support
+//! failure. Arg-decoding mirrors `solvapay-transport` fixture support
 //! (duplicated here because test support is not a linkable crate).
 
 #![allow(clippy::missing_docs_in_private_items)]
@@ -129,40 +129,7 @@ fn parse_body_bytes(bytes: &[u8]) -> Value {
     }
 }
 
-/// stdin request envelope.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct InvokeRequest {
-    /// CamelCase operation id (manifest / `OPERATION_NAMES`).
-    #[serde(rename = "fn")]
-    pub fn_name: String,
-    /// Argument object (path params + body fields).
-    #[serde(default, rename = "argsJson")]
-    pub args_json: Value,
-    /// API origin.
-    pub base_url: String,
-    /// Secret API key.
-    pub api_key: String,
-}
-
-/// stdout response envelope.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct InvokeResponse {
-    /// Success flag.
-    pub ok: bool,
-    /// Success value when `ok`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub value: Option<Value>,
-    /// Structured error observation when `!ok`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub error: Option<ErrorObservation>,
-    /// Recorded wire exchanges.
-    #[serde(default)]
-    pub wire: Vec<WireExchange>,
-}
-
-/// §6.4-style error observation for the TS harness.
+/// §6.4-style error observation for fixture comparison.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ErrorObservation {
@@ -248,38 +215,6 @@ pub fn build_recording_client(base_url: &str, api_key: &str) -> Result<Recording
     let recording_shared: SharedTransport = Arc::new(recording);
     let shell = ClientShell::new(recording_shared, api_key).with_base_url(base_url);
     Ok((SolvaPayClient::new(shell), exchanges))
-}
-
-/// Invoke one operation and return the JSON envelope (incl. wire).
-pub async fn invoke(request: InvokeRequest) -> InvokeResponse {
-    let (client, exchanges) = match build_recording_client(&request.base_url, &request.api_key) {
-        Ok(pair) => pair,
-        Err(err) => {
-            return InvokeResponse {
-                ok: false,
-                value: None,
-                error: Some(sdk_error_to_observation(err)),
-                wire: Vec::new(),
-            };
-        }
-    };
-
-    let outcome = dispatch(&client, &request.fn_name, &request.args_json).await;
-    let wire = exchanges.lock().map(|g| g.clone()).unwrap_or_default();
-    match outcome {
-        Ok(value) => InvokeResponse {
-            ok: true,
-            value: Some(value),
-            error: None,
-            wire,
-        },
-        Err(err) => InvokeResponse {
-            ok: false,
-            value: None,
-            error: Some(sdk_error_to_observation(err)),
-            wire,
-        },
-    }
 }
 
 /// Dispatch `fn_name` + `args` onto a typed client (library entry for tests).
@@ -446,7 +381,7 @@ pub async fn dispatch(
             client.disable_auto_recharge(params).await
         }
         other => Err(SdkError::transport(
-            format!("unsupported shadow-invoker fn: {other}"),
+            format!("unsupported client-conformance fn: {other}"),
             false,
         )),
     }

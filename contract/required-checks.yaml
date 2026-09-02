@@ -13,7 +13,7 @@ checks:
     gate: OpenAPI snapshot diff; Manifest validation + coverage; TS API diff; Generated-diff checks; Per-language examples; Required-checks drift
   - name: Rust
     jobId: rust
-    gate: No-unwrap / no-expect deny; wasm32 no-tokio compile check; Shared fixture conformance; Generated-diff checks; Signature-generation reliability; Doc-comment coverage; Fuzzing (stable corpus replay); Shadow mode (offline selftest)
+    gate: No-unwrap / no-expect deny; wasm32 no-tokio compile check; Shared fixture conformance; Generated-diff checks; Signature-generation reliability; Doc-comment coverage; Fuzzing (stable corpus replay); Native client fixture replay
   - name: rust-mcp
     jobId: rust-mcp
     gate: MCP-authoring conformance; Per-language examples

@@ -293,6 +293,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
+name = "client-conformance"
+version = "0.1.0"
+dependencies = [
+ "fixture-runner",
+ "repo-paths",
+ "serde",
+ "serde_json",
+ "solvapay-core",
+ "solvapay-dto",
+ "solvapay-transport",
+ "tokio",
+ "walkdir",
+ "wiremock",
+]
+
+[[package]]
 name = "cmov"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2081,19 +2097,6 @@ dependencies = [
  "cfg-if",
  "cpufeatures 0.3.0",
  "digest 0.11.3",
-]
-
-[[package]]
-name = "shadow-invoker"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "solvapay-core",
- "solvapay-dto",
- "solvapay-transport",
- "tokio",
- "wiremock",
 ]
 
 [[package]]

@@ -18,20 +18,20 @@ export interface LiveEnv {
 export function resolveLiveEnv(
   env: Record<string, string | undefined>,
 ): LiveEnv | { error: string } {
-  const baseUrl = env.SOLVAPAY_SHADOW_BASE_URL
-  const apiKey = env.SOLVAPAY_SHADOW_API_KEY
+  const baseUrl = env.SOLVAPAY_LIVE_BASE_URL
+  const apiKey = env.SOLVAPAY_LIVE_API_KEY
   if (baseUrl === undefined || baseUrl === '' || apiKey === undefined || apiKey === '') {
     return {
       error:
-        'SOLVAPAY_SHADOW_BASE_URL and SOLVAPAY_SHADOW_API_KEY are required. ' +
+        'SOLVAPAY_LIVE_BASE_URL and SOLVAPAY_LIVE_API_KEY are required. ' +
         `Point the base URL at the provider-app proxy (${PROVIDER_PROXY}) which fans /v1/* out to owning services. ` +
         'Create an sk_sandbox_* key in Developers → Secret keys.',
     }
   }
   return {
     env: {
-      SOLVAPAY_SHADOW_BASE_URL: baseUrl,
-      SOLVAPAY_SHADOW_API_KEY: apiKey,
+      SOLVAPAY_LIVE_BASE_URL: baseUrl,
+      SOLVAPAY_LIVE_API_KEY: apiKey,
       SOLVAPAY_API_BASE_URL: baseUrl,
       USE_REAL_BACKEND: 'true',
       SOLVAPAY_SECRET_KEY: apiKey,
@@ -46,31 +46,10 @@ export function liveTasks(
   const goCwd = sdkPath('go')
   const pythonScript = lookupPath('pythonLiveContract')
   const rubyScript = lookupPath('rubyLiveContract')
-  const shadowOut = lookupPath('shadowOutput')
+  const liveOut = lookupPath('liveOutput')
   const env = extraEnv
-  const buildPhase: Task[] =
-    options.skipBuild === true
-      ? []
-      : [
-          ...nativePrepareTasks(),
-          {
-            id: 'live.build.shadow-invoker',
-            label: 'shadow-invoker',
-            command: 'cargo',
-            args: ['build', '-p', 'shadow-invoker'],
-            cwd: REPO_ROOT,
-            requires: [{ bin: 'cargo', install: 'https://rustup.rs' }],
-          },
-        ]
+  const buildPhase: Task[] = options.skipBuild === true ? [] : [...nativePrepareTasks()]
   const drivers: Task[] = [
-    {
-      id: 'live.ts',
-      label: 'TypeScript shadow',
-      command: 'pnpm',
-      args: ['shadow:run'],
-      cwd: REPO_ROOT,
-      env,
-    },
     {
       id: 'live.rust',
       label: 'Rust live-contract',
@@ -117,7 +96,7 @@ export function liveTasks(
   ].map(task => ({
     ...task,
     // Keep the report directory discoverable in the summary reproduce line.
-    label: `${task.label} (${shadowOut})`,
+    label: `${task.label} (${liveOut})`,
   }))
   return [...buildPhase, ...drivers]
 }
@@ -143,7 +122,7 @@ export async function runCli(argv: string[], deps: LiveDeps = {}): Promise<CliRe
   }
 
   const probe = deps.fetch ?? (url => fetch(url, { signal: AbortSignal.timeout(2000) }))
-  const baseUrl = resolved.env.SOLVAPAY_SHADOW_BASE_URL
+  const baseUrl = resolved.env.SOLVAPAY_LIVE_BASE_URL
   try {
     const response = await probe(baseUrl)
     if (!response.ok) {

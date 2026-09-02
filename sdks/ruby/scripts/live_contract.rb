@@ -3,15 +3,15 @@
 
 # Step 45 — live Ruby contract driver (stdlib-only).
 #
-# Mirrors `sdks/python/scripts/live_contract.py` / shadow-python.yml,
+# Mirrors `sdks/python/scripts/live_contract.py` / live-python.yml,
 # but drives the public Ruby client against a real backend.
 #
 # Env:
-#   SOLVAPAY_SHADOW_BASE_URL   required
-#   SOLVAPAY_SHADOW_API_KEY    required
-#   SOLVAPAY_SHADOW_ENABLE_STRIPE  optional (`true` / `1`) to run requires:stripe
+#   SOLVAPAY_LIVE_BASE_URL   required
+#   SOLVAPAY_LIVE_API_KEY    required
+#   SOLVAPAY_LIVE_ENABLE_STRIPE  optional (`true` / `1`) to run requires:stripe
 #   SOLVAPAY_LIVE_OUT          optional report path
-#     (default: contract/shadow/output/ruby-live-report.json)
+#     (default: contract/live/output/ruby-live-report.json)
 
 require "fileutils"
 require "json"
@@ -25,7 +25,7 @@ module SolvaPay
     module_function
 
     REPO_ROOT = File.expand_path("../../../../", __dir__) # sdks/ruby/scripts → repo
-    DEFAULT_OUT = File.join(REPO_ROOT, "contract", "shadow", "output", "ruby-live-report.json")
+    DEFAULT_OUT = File.join(REPO_ROOT, "contract", "live", "output", "ruby-live-report.json")
 
     Scenario = Struct.new(
       :id,
@@ -37,7 +37,7 @@ module SolvaPay
       keyword_init: true,
     )
 
-    # Port of contract/shadow/scenarios.ts — keep dependency order (setup first, deletes last).
+    # Port of contract/live/scenarios.ts — keep dependency order (setup first, deletes last).
     SCENARIOS = [
       Scenario.new(id: "getMerchant", op: "getMerchant", args: {}),
       Scenario.new(id: "getPlatformConfig", op: "getPlatformConfig", args: {}),
@@ -491,14 +491,14 @@ module SolvaPay
     end
 
     def main
-      base_url = ENV["SOLVAPAY_SHADOW_BASE_URL"]
-      api_key = ENV["SOLVAPAY_SHADOW_API_KEY"]
+      base_url = ENV["SOLVAPAY_LIVE_BASE_URL"]
+      api_key = ENV["SOLVAPAY_LIVE_API_KEY"]
       if base_url.nil? || base_url.empty? || api_key.nil? || api_key.empty?
-        warn "SOLVAPAY_SHADOW_BASE_URL and SOLVAPAY_SHADOW_API_KEY are required"
+        warn "SOLVAPAY_LIVE_BASE_URL and SOLVAPAY_LIVE_API_KEY are required"
         return 2
       end
 
-      enable_stripe = %w[1 true yes].include?(ENV.fetch("SOLVAPAY_SHADOW_ENABLE_STRIPE", "").downcase)
+      enable_stripe = %w[1 true yes].include?(ENV.fetch("SOLVAPAY_LIVE_ENABLE_STRIPE", "").downcase)
       out_path = ENV.fetch("SOLVAPAY_LIVE_OUT", DEFAULT_OUT)
       FileUtils.mkdir_p(File.dirname(out_path))
 

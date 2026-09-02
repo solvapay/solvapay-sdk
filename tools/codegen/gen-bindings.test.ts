@@ -25,7 +25,6 @@ describe('gen-bindings', () => {
           params: [{ name: 'params', ref: 'CheckLimitsRequest', required: true }],
           overlays: [],
           normalization: [],
-          shadow: { volatile: [] },
           idempotency: { kind: 'none' },
           errors: { default: { messageTemplate: 'x' }, cases: [] },
           sync: {
@@ -62,7 +61,6 @@ describe('gen-bindings', () => {
           ],
           overlays: [],
           normalization: [],
-          shadow: { volatile: [] },
           idempotency: { kind: 'none' },
           errors: { default: { messageTemplate: 'x' }, cases: [] },
           sync: {

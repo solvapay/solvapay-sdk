@@ -200,7 +200,7 @@ describe('MCP host-SDK pins', () => {
       }
     }
 
-    const workflowFiles = ['ci.yml', 'shadow-go.yml', 'publish-go.yml']
+    const workflowFiles = ['ci.yml', 'live-go.yml', 'publish-go.yml']
     for (const name of workflowFiles) {
       const file = joinRel(WORKFLOWS_DIR, name)
       const src = read(file)

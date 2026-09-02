@@ -505,6 +505,6 @@ Go/C) and for post-Phase-5 fixture emission (webhook suite first).
   requires a locked-green baseline.
 - Full generation of `fixture-harness.ts` — host-specific half stays
   hand-written (Phase 5).
-- Opt-in live/shadow workflows (`shadow-{python,ruby,go}.yml`, `live_dev.rs`,
+- Opt-in live-contract workflows (`live-{python,ruby,go,rust}.yml`, `live_dev.rs`,
   `live_contract_test.rb`) are not the generated conformance surface. Phase 5
   targets the offline golden gate only.

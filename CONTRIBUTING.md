@@ -79,6 +79,7 @@ map.
 
 - [SDK architecture](./docs/contributing/architecture.md)
 - [SDK codegen (OpenAPI → five surfaces)](./docs/contributing/sdk-codegen.md)
+- [The `#[solvapay_export]` attribute](./docs/contributing/solvapay-export.md)
 - [SDK testing](./docs/contributing/testing.md)
 - [SDK error handling](./docs/contributing/error-handling.md)
 - [SDK performance](./docs/contributing/performance.md)

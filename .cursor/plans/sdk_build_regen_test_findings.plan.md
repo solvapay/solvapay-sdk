@@ -111,7 +111,7 @@ version: 9.6.0` input at every site so `packageManager` is the single source of 
   1128, 1190, 1328, 1437, 1531
 - [.github/workflows/publish.yml](.github/workflows/publish.yml) — line 86
 - [.github/workflows/publish-preview.yml](.github/workflows/publish-preview.yml) — line 46
-- [.github/workflows/shadow.yml](.github/workflows/shadow.yml) — line 36
+- [.github/workflows/live-python.yml](.github/workflows/live-python.yml) (and the other `live-*.yml` drivers)
 
 ### 4. Regenerate the lockfile
 
@@ -453,14 +453,14 @@ expected for this diagnostic route.
 
 ### `pnpm test:live`
 
-**Symptom:** `SOLVAPAY_SHADOW_BASE_URL and SOLVAPAY_SHADOW_API_KEY are required.`
+**Symptom:** `SOLVAPAY_LIVE_BASE_URL and SOLVAPAY_LIVE_API_KEY are required.`
 
 Correct fail-fast behavior, already covered by a unit test in
 [tools/conformance/live-all.test.ts](tools/conformance/live-all.test.ts). `test:live` is
 opt-in: it is absent from `pnpm test`, `pnpm gates`, `.husky/pre-push`, and all of CI (the
-shadow workflows are `workflow_dispatch` only). It needs the platform stack on
+live-contract workflows are `workflow_dispatch` only). It needs the platform stack on
 `http://localhost:3010` and an `sk_sandbox_*` key, per
-[docs/contributing/testing.md](docs/contributing/testing.md) lines 125-139. **No change.**
+[docs/contributing/testing.md](docs/contributing/testing.md). **No change.**
 
 ### Go WASI guest — `wasm-opt not found`
 
@@ -504,7 +504,7 @@ atomically. `ci-typecheck-gate` must be last so it does not land red.
 - [x] `pnpm-remove-old-decls` — delete the `pnpm` block from [package.json](package.json),
       bump `packageManager` to `pnpm@11.15.0`, drop `link-workspace-packages` from `.npmrc`
 - [x] `pnpm-ci-unpin` — remove the `version: 9.6.0` input at all 13 `pnpm/action-setup`
-      sites across `ci.yml` (10), `publish.yml`, `publish-preview.yml`, `shadow.yml`
+      sites across `ci.yml` (10), `publish.yml`, `publish-preview.yml`
 - [x] `pnpm-relock` — `rm -rf node_modules && pnpm install`; confirm `next` still resolves
       to `16.2.7` and that pnpm reports **no** skipped dependency builds
 - [x] `pnpm-drop-npx` — `npx` -> `pnpm exec` in

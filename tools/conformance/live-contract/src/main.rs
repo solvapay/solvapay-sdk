@@ -1,11 +1,11 @@
 //! Step 48 — live Rust contract binary (env-gated).
 //!
 //! Env:
-//!   SOLVAPAY_SHADOW_BASE_URL   required
-//!   SOLVAPAY_SHADOW_API_KEY    required
-//!   SOLVAPAY_SHADOW_ENABLE_STRIPE  optional (`true` / `1`) to run requires:stripe
+//!   SOLVAPAY_LIVE_BASE_URL   required
+//!   SOLVAPAY_LIVE_API_KEY    required
+//!   SOLVAPAY_LIVE_ENABLE_STRIPE  optional (`true` / `1`) to run requires:stripe
 //!   SOLVAPAY_LIVE_OUT          optional report path
-//!     (default: contract/shadow/output/rust-live-report.json)
+//!     (default: contract/live/output/rust-live-report.json)
 
 #![allow(clippy::missing_docs_in_private_items)]
 
@@ -33,15 +33,15 @@ fn main() -> ExitCode {
 }
 
 fn run() -> Result<ExitCode, String> {
-    let base_url = env::var("SOLVAPAY_SHADOW_BASE_URL")
-        .map_err(|_| "SOLVAPAY_SHADOW_BASE_URL and SOLVAPAY_SHADOW_API_KEY are required")?;
-    let api_key = env::var("SOLVAPAY_SHADOW_API_KEY")
-        .map_err(|_| "SOLVAPAY_SHADOW_BASE_URL and SOLVAPAY_SHADOW_API_KEY are required")?;
+    let base_url = env::var("SOLVAPAY_LIVE_BASE_URL")
+        .map_err(|_| "SOLVAPAY_LIVE_BASE_URL and SOLVAPAY_LIVE_API_KEY are required")?;
+    let api_key = env::var("SOLVAPAY_LIVE_API_KEY")
+        .map_err(|_| "SOLVAPAY_LIVE_BASE_URL and SOLVAPAY_LIVE_API_KEY are required")?;
     if base_url.is_empty() || api_key.is_empty() {
-        return Err("SOLVAPAY_SHADOW_BASE_URL and SOLVAPAY_SHADOW_API_KEY are required".to_owned());
+        return Err("SOLVAPAY_LIVE_BASE_URL and SOLVAPAY_LIVE_API_KEY are required".to_owned());
     }
 
-    let enable_stripe = env::var("SOLVAPAY_SHADOW_ENABLE_STRIPE")
+    let enable_stripe = env::var("SOLVAPAY_LIVE_ENABLE_STRIPE")
         .map(|v| {
             let lower = v.to_ascii_lowercase();
             matches!(lower.as_str(), "1" | "true" | "yes")

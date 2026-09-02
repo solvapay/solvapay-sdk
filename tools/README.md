@@ -6,11 +6,11 @@ Repo-root TypeScript tooling for the SolvaPay SDK monorepo, split by job:
 | ----------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Shared      | `tools/shared/`      | Layout loaders (`paths.ts`, `repo-paths.ts`) and the contract-manifest Zod schema used by more than one bucket |
 | Codegen     | `tools/codegen/`     | `pnpm gen` / `gen:scaffold` / `gen:bindings` / `manifest:*` / OpenAPI snapshot                                 |
-| Conformance | `tools/conformance/` | Fixture harness, parity, delegation, shadow, webhook-edge replay                                               |
+| Conformance | `tools/conformance/` | Fixture harness, parity, delegation, live-contract, webhook-edge replay                                        |
 | Repo        | `tools/repo/`        | Required-checks, release dry-run, typecheck, doc-link and fetch-runtime gates                                  |
 
 `tools/` holds both TypeScript gates and unpublished Rust binaries: `dto-gen`
-under `tools/codegen/`, and `fixture-runner` / `live-contract` / `shadow-invoker`
+under `tools/codegen/`, and `fixture-runner` / `live-contract` / `client-conformance`
 under `tools/conformance/`. The `repo-paths` crate lives next to the TS layout
 loader in `tools/shared/repo-paths/`.
 
@@ -31,10 +31,10 @@ See [`docs/contributing/sdk-codegen.md`](../docs/contributing/sdk-codegen.md).
 
 | Command                                    | Script                                          |
 | ------------------------------------------ | ----------------------------------------------- |
-| `pnpm test:contract`                       | Vitest over `tools/` (excludes shadow selftest) |
+| `pnpm test:contract`                       | Vitest over `tools/`                            |
 | `pnpm parity:check`                        | `tools/conformance/parity-check.ts`             |
 | `pnpm delegation:check`                    | `tools/conformance/check-delegation.ts`         |
-| `pnpm shadow:run` / `pnpm shadow:selftest` | `tools/conformance/shadow/`                     |
+| `pnpm test:live`                           | `tools/conformance/live-all.ts`                 |
 
 ## Repo gates
 

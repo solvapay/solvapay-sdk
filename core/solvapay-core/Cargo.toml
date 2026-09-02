@@ -13,7 +13,7 @@ readme = "README.md"
 publish = true
 
 [features]
-# Native consumers (napi, fixture-runner, shadow-invoker) keep full server surface.
+# Native consumers (napi, fixture-runner, client-conformance) keep full server surface.
 default = ["server"]
 # §7.1 capability composition
 server = ["client-full", "webhook-verify"]

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { SHADOW_SCENARIOS } from '../../contract/shadow/scenarios.js'
+import { LIVE_SCENARIOS } from '../../contract/live/scenarios.js'
 import { lookupPath } from '../shared/repo-paths.js'
 
 type CatalogFlags = Map<string, boolean>
@@ -44,8 +44,8 @@ function errorIds(flags: CatalogFlags): string[] {
 }
 
 describe('live catalog expectError drift', () => {
-  const expectedIds = SHADOW_SCENARIOS.map(scenario => scenario.id).sort()
-  const expectedErrorIds = SHADOW_SCENARIOS.filter(scenario => scenario.expectError === true)
+  const expectedIds = LIVE_SCENARIOS.map(scenario => scenario.id).sort()
+  const expectedErrorIds = LIVE_SCENARIOS.filter(scenario => scenario.expectError === true)
     .map(scenario => scenario.id)
     .sort()
 

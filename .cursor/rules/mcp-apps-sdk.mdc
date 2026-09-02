@@ -1,14 +1,46 @@
 ---
-description: SolvaPay MCP Apps SDK — architectural rules for building and refactoring MCP app surfaces, merchant API, and example server
-globs: sdks/typescript/mcp-core/**,sdks/typescript/mcp/**,sdks/typescript/react/src/mcp/**,examples/typescript/mcp-checkout-app/**,examples/typescript/mcp-time-app/**,examples/typescript/supabase-edge-mcp/**,examples/typescript/cloudflare-workers-mcp/**
+description: SolvaPay MCP Apps SDK — three-layer architecture rules for the Rust MCP core, every language payable adapter, the shared widget, and the MCP examples
+globs: core/solvapay-mcp/**,sdks/typescript/mcp-core/**,sdks/typescript/mcp/**,sdks/typescript/react/src/mcp/**,sdks/rust-mcp/**,sdks/python-mcp/**,sdks/ruby-mcp/**,sdks/go/mcp/**,sdks/capi/ctest/mcp_engine.c,sdks/capi/ctest/mcp_json.c,tools/mcp-app-widget/**,tools/conformance/mcp-authoring/**,contract/mcp-fixtures/**,examples/typescript/mcp-checkout-app/**,examples/typescript/mcp-time-app/**,examples/typescript/mcp-oauth-bridge/**,examples/typescript/cloudflare-workers-mcp/**,examples/typescript/supabase-edge-mcp/**,examples/python/stock-research-mcp/**,examples/ruby/bitcoin_analytics_mcp/**,examples/go/weather-mcp/**,examples/rust/guerrillamail-mcp/**
 alwaysApply: false
 ---
 
 # SolvaPay MCP Apps SDK — rules
 
-Rules for building and refactoring the SolvaPay SDK for MCP Apps. Read before writing any code in `sdks/typescript/mcp-core`, `sdks/typescript/mcp` (including its `express` / `fetch` subpaths), `sdks/typescript/react/src/mcp`, or the MCP examples under `examples/typescript/`.
+Rules for building and refactoring the SolvaPay payable-MCP surface in **every**
+language. Read before writing code in the shared Rust MCP core, any language
+adapter, the shared widget, the MCP fixture corpus, or the MCP examples.
 
 Full contributor-facing copy: `docs/contributing/mcp-apps-sdk-rules.md`.
+Normative adapter spec: `docs/contributing/mcp-authoring-adapter-contract.md`.
+Thin-facade rule: `docs/contributing/architecture.md`.
+
+## Where you are
+
+Three layers. Know which one you are editing before you write a line.
+
+1. **Layer 1 — host MCP SDK.** `@modelcontextprotocol/server`, `rmcp`, the `mcp`
+   PyPI package, the `mcp` gem, the Go MCP SDK. Never reimplemented by SolvaPay.
+   C has no host MCP SDK, which is why `sdks/capi/ctest/mcp_engine.c` is the
+   smallest honest expression of the loop.
+2. **Layer 2 — shared Rust core.** `core/solvapay-mcp` (crate
+   `solvapay-mcp-core`, `publish = false`) plus payable decisions in
+   `core/solvapay-core`. Descriptors, OAuth, auth gate, narration, the JSON-RPC
+   engine, and all paywall copy. Written once, reused by every surface.
+3. **Layer 3 — thin host glue.** Transport, body conversion, host-SDK
+   registration, bearer → `authHeader` / `customerRef`, and invoking the
+   merchant handler. Nothing else.
+
+| Language   | Reference layer-3 engine                                | Server construction          | Register payable                                    |
+| ---------- | ------------------------------------------------------- | ---------------------------- | --------------------------------------------------- |
+| TypeScript | `sdks/typescript/mcp-core/src/engine-dispatch.ts`       | `createSolvaPayMcpServer`    | `registerPayableTool` (`registerPayable` on `ctx`)  |
+| Python     | `sdks/python-mcp/python/solvapay_mcp/server/engine.py`  | `create_solvapay_mcp_server` | `register_payable_tool`                             |
+| Ruby       | `sdks/ruby-mcp/lib/solvapay/mcp/engine.rb`              | `SolvaPay::Mcp::Engine`      | `Engine#register_payable`                           |
+| Go         | `sdks/go/mcp/handler.go` + `server.go`                  | `NewServer`                  | `(*Server).RegisterPayable`                         |
+| Rust       | `sdks/rust-mcp/src/server.rs`                           | `McpHttpServer::new`         | `McpHttpServer::register_payable`                   |
+| C          | `sdks/capi/ctest/mcp_engine.c` (+ `mcp_json.c`)         | —                            | — (no payable host SDK)                             |
+
+Wire tool names are snake_case in every language (`upgrade`, `manage_account`,
+`topup`); widget views are `checkout` / `account` / `topup`.
 
 ## North Star
 
@@ -28,64 +60,121 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 
 ## Rules
 
+### Layer discipline
+
+- **Any decision expressible as JSON-in → JSON-out belongs in layer 2.** If you are about to write a conditional in an adapter that another language would also need, you are writing it in the wrong repo directory. Add a core op instead.
+- **Never author gate copy in an adapter.** Paywall classification, gate assembly, and gate narration come from `paywall_tool_result` / `build_paywall_gate` in Rust (`paywallToolResult` / `buildPaywallGate` at the binding boundary). A hand-written fallback string in a host is a bug even when it reads identically.
+- **No callbacks from layer 2 back into the host.** There is no `getCustomerRef` callback into Rust. The host resolves the customer ref (`"hook"` → its own `getCustomerRef`, `"toolArgs"` → `args.customer_ref`) and passes the resolved value or the raw `Authorization` header **in** as JSON.
+- **Layer 3 owns exactly five things:** transport, request/response body conversion, framework routing, host-SDK tool registration, and invoking the merchant handler.
+- **Layer 3 is budgeted at ≤ 280 code lines** per reference adapter, enforced by `pnpm mcp-layer3-budget:check`. When the budget bites, the fix is moving logic into Rust — never splitting the host loop across two files to duck the count.
+
+### Engine contract
+
+- **`mcpDispatch` is the single JSON-RPC entry point.** Hosts convert the HTTP request into `{ rpc, config, authHeader, mcpProtocolVersionHeader? }` and branch **three ways** on `kind`:
+  - `rpc` — write the JSON-RPC body.
+  - `challenge` — write `status` + `WWW-Authenticate` + body.
+  - `invokeHandler` — run the merchant handler, then `mcpResume` with the token.
+- **Envelope `status` is authoritative.** Default 200; 400 for `-32022`; 404 for modern `-32601`. Facade-local catches emit `-32603` at HTTP 200.
+- **Never map an engine failure to HTTP 500 + a stack trace.** Reply `-32603` / `-32700` as JSON-RPC bodies at HTTP 200.
+- **Builtin tools and resources are serviced inside `mcpDispatch`.** The one host exception is the widget `resources/read`: `mcpDispatch` has no access to the vendored HTML and errors if asked for that URI. Hosts call `mcpWidgetResource` on every POST (it returns `null` for non-widget requests), splice `result.contents[0].text` with the vendored HTML, and only then fall through to `mcpDispatch`. That op owns era detection, so the widget path cannot disagree with the engine.
+- **OAuth and discovery HTTP go through `mcpOauthRequest`.** Sync ops (`mcpDescriptors`, `mcpAuthGate`, `mcpMergeCsp`, …) go through `solvapay_call`.
+
+### Protocol eras
+
+- **The engine is dual-era.** Modern `2026-07-28` is selected by request `_meta` carrying `io.modelcontextprotocol/protocolVersion`; legacy `2025-06-18` is claim-less `initialize`.
+- **Modern adds `server/discover` (mandatory), SEP-2549 `resultType` / `_meta.serverInfo`, and `ttlMs: 60000` + `cacheScope: public` on catalog calls.** Legacy is the byte-stable 2025-06-18 shape.
+- **Unsupported `_meta` versions return `-32022` at HTTP 400. Unknown methods return `-32601`** — HTTP 404 modern, 200 legacy.
+- **Drive both eras in any runner you write.** Legacy: `initialize` → `notifications/initialized` → `tools/call`. Modern: `server/discover` → `tools/list` / `tools/call`, no session handshake.
+
+### Generated surfaces — never hand-edit
+
+The per-language layer-2 shims are `@generated`. Editing one fails CI.
+
+| Language   | Generated shim                                                                                  |
+| ---------- | ----------------------------------------------------------------------------------------------- |
+| TypeScript | `sdks/typescript/mcp-core/src/native-mcp.generated.ts`                                          |
+| Rust       | `sdks/rust-mcp/src/layer2_generated.rs`                                                         |
+| Python     | `sdks/python-mcp/python/solvapay_mcp/_layer2.generated.py`                                      |
+| Ruby       | `sdks/ruby-mcp/lib/solvapay/mcp/layer2.generated.rb` + `sdks/ruby-mcp/sig/layer2.generated.rbs` |
+| Go         | `sdks/go/mcp/layer2_generated.go`                                                               |
+
+Change the manifest, run `pnpm gen`, verify with `pnpm gen:check`.
+
+### Fixtures
+
+- **`contract/mcp-fixtures/` is immutable characterization.** A mismatch is a regression in the runner or the Rust core, never a reason to edit a fixture.
+- **Replay every file and assert.** Do not list a suite and early-return. Payable suites go through `registerPayable`; sync ops through `solvapay_call`; async ops (`mcpDispatch`, `mcpOauthRequest`, `mcpBootstrap`, `mcpCallBuiltinTool`) through the language client. Focused command: `pnpm test:mcp-contract`.
+- **Do not drop MCP-authoring fixtures into `contract/fixtures/`.** The layer-2 harnesses hard-fail on unknown `input.fn`.
+
 ### Commerce UI
 
 - **Do not add tabs to the MCP shell.** The four-tab shell is deprecated. Each intent (`/manage_account`, `/topup`, `/upgrade`) opens a single-purpose surface and returns to chat when done.
-- **Do not build an About surface.** Product description lives in tool descriptions, Claude's text response, and the `docs://solvapay/overview.md` resource. Not in an iframe.
+- **Do not build an About surface.** Product description lives in tool descriptions, the assistant's text response, and the `docs://solvapay/overview.md` resource. Not in an iframe.
 - **The UI is a mode, not a primary.** `McpAppShell` is an internal composition. What's exported as primary is intent-specific surfaces.
 - **One surface, one job.** No nested navigation. No multi-step wizards except where genuinely unavoidable (card entry, top-up amount selection). If a surface needs tabs to fit its content, the content is too broad.
-- **Route on `structuredContent.view`, not tool name.** `<McpApp>` resolves the surface from the server-stamped `view` discriminator (`checkout` / `account` / `topup`) on any intent-tool result. The paywall / nudge surfaces were removed with the text-only paywall refactor — merchant paywall / nudge responses narrate in `content[0].text` and don't mount the widget. The iframe opens only when the user (or LLM) deliberately invokes one of the three intent tools (`upgrade` / `manage_account` / `topup`).
+- **Route on `structuredContent.view`, not tool name.** `<McpApp>` resolves the surface from the server-stamped `view` discriminator (`checkout` / `account` / `topup`) on any intent-tool result. The paywall / nudge surfaces were removed with the text-only paywall refactor — merchant paywall / nudge responses narrate in `content[0].text` and don't mount the widget. The iframe opens only when the user (or LLM) deliberately invokes one of the three intent tools.
 
 ### Text-mode
 
-- **UI is the default for intent tools; text is opt-in per call.** `narratedToolResult` ships a one-line placeholder in `content[0]` under the default `mode: 'ui'`. The full narrated markdown is behind `mode: 'text'` for CLI / text-only hosts, or `mode: 'auto'` when the caller wants both. This keeps UI-rendering hosts (MCP Inspector, ChatGPT Apps, Claude Desktop) from double-marking the surface the iframe already carries.
-- **Agent grounding lives on `structuredContent`, not `content[0]`.** The full `BootstrapPayload` rides on `structuredContent` under every mode, so agents parsing JSON are never starved of context — even when the placeholder text is only one line.
+- **UI is the default for intent tools; text is opt-in per call.** Narration ships a one-line placeholder in `content[0]` under the default `mode: 'ui'`. The full narrated markdown is behind `mode: 'text'` for CLI / text-only hosts, or `mode: 'auto'` when the caller wants both. This keeps UI-rendering hosts (MCP Inspector, ChatGPT Apps, Claude Desktop) from double-marking the surface the iframe already carries.
+- **Agent grounding lives on `structuredContent`, not `content[0]`.** The full bootstrap payload rides on `structuredContent` under every mode, so agents parsing JSON are never starved of context — even when the placeholder text is only one line.
 - **Narrated blocks are annotated `audience: ['assistant']` in `'text'` and `'auto'` modes.** Audience-aware hosts hide them from the user pane while still feeding them to the model. Inspector ignores the hint; default `'ui'` mode already keeps Inspector clean.
 - **UI fires only when the interaction genuinely needs pixels.** Listing plans, checking usage, confirming a cancel: prefer `mode: 'text'`. Selecting a payment method, entering card details, comparing plans before paying: default `'ui'` is correct.
 
 ### Merchant API
 
-- **The merchant writes `registerPayable`, not components.** The 90% path is a business-logic handler. If a merchant has to touch a view to ship a paid tool, the SDK has failed.
+- **The merchant registers a payable tool, not components.** The 90% path is a business-logic handler. If a merchant has to touch a view to ship a paid tool, the SDK has failed. This holds identically in Ruby and Go — see the naming table above.
 - **The handler context carries customer state.** Balance, tier, usage, plan shape. Merchants make their own judgments about when to nudge, without building a component.
-- **Paywall is automatic.** The merchant never imports a paywall view, never wires a `_meta.ui.resourceUri`, never constructs a bootstrap payload. The SDK does all of it.
-- **Response envelope is context-aware.** Merchants call `ctx.respond(data)` or `ctx.respond(data).withNudge(...)`. They do not return plain objects that the SDK has to guess about.
+- **Paywall is automatic.** The merchant never imports a paywall view, never wires a `_meta.ui.resourceUri`, never constructs a bootstrap payload. Layer 2 does all of it.
+- **The response envelope is context-aware and mandatory.** Merchants call `ctx.respond(data)`, optionally with a nudge; `ctx.gate(reason)` stops the handler; `ctx.emit(block)` queues a content block flushed before the text block. Returning a raw value instead of the branded envelope is a loud error, not a silent wrap.
+- **Usage outcomes are fixed.** Allow → one `success`. Pre-check gate → one `paywall`. `ctx.gate()` → **no** usage call at all. Handler throw → one `fail`.
 
 ### Pricing stance
 
-- **Usage-based is the opinionated default.** The example server ships with usage-based pricing. The admin MCP suggests usage-based for new products. The checkout UI features usage-based when both are offered.
+- **Usage-based is the opinionated default.** The example servers ship with usage-based pricing. The admin MCP suggests usage-based for new products. The checkout UI features usage-based when both are offered.
 - **Recurring is supported but not featured.** It exists for merchants whose customers want predictable budgets.
 - **Free tier is a first-class option, not an afterthought.** It should be the easiest to activate, not a footnote.
 
 ### Package boundaries
 
-- **`@solvapay/mcp-core` has zero `@modelcontextprotocol/*` dependencies.** This invariant is load-bearing. It stays framework-neutral so alternative adapters (`fastmcp`, raw JSON-RPC) can consume the tool names, descriptors, and paywall meta. If you need MCP types there, declare them as structural aliases.
+- **`@solvapay/mcp-core` has zero `@modelcontextprotocol/*` dependencies.** This invariant is load-bearing — it depends on `@solvapay/core` and nothing else. It stays framework-neutral so alternative adapters (`fastmcp`, raw JSON-RPC) can consume the tool names, descriptors, and paywall meta. If you need MCP types there, declare them as structural aliases.
 - **`@solvapay/mcp` is the only package that imports the official SDK.** It peers `@modelcontextprotocol/core` and `@modelcontextprotocol/server` (v2). Runtime-specific OAuth middleware lives on its subpath exports — `@solvapay/mcp/express` (Node `(req, res, next)`) and `@solvapay/mcp/fetch` (Web-standards `(Request) => Response`). They are subpaths, not separate packages: there is no `@solvapay/mcp-express` or `@solvapay/mcp-fetch`.
 - **`@solvapay/react/mcp` is a subpath export.** Merchants using SolvaPay for non-MCP React surfaces do not pay the ext-apps peer dep cost.
 - **Do not ship a `@solvapay/sdk` umbrella package.** Three-package imports are fine. An umbrella adds maintenance without clarity.
+- **Sibling adapters keep the same one-package-per-ecosystem shape:** crate `solvapay-mcp` (`sdks/rust-mcp`, `publish = false`), PyPI `solvapay-mcp`, RubyGems `solvapay-mcp`, and `github.com/solvapay/solvapay-go/mcp` as a **subpackage** of the `solvapay-go` module — not a separate Go module. Do not add a second package to any ecosystem to host a runtime variant; use a subpath / subpackage.
+
+### Widget
+
+- **Canonical source is `tools/mcp-app-widget/src/mcp-app.tsx`.** It builds to `tools/mcp-app-widget/dist/mcp-app.html`, and `tools/mcp-app-widget/vendor.ts` fans that single file out to `tools/mcp-app-widget/mcp-app.html` plus five SDK destinations: `sdks/typescript/mcp/mcp-app.html`, `sdks/python-mcp/python/solvapay_mcp/data/mcp-app.html`, `sdks/ruby-mcp/lib/solvapay/mcp/data/mcp-app.html`, `sdks/go/mcp/mcp-app.html`, `sdks/rust-mcp/mcp-app.html`.
+- **Never edit a vendored copy.** `tools/mcp-app-widget/check.ts` gates drift (`pnpm --filter @solvapay/mcp-app-widget check`). Fix the source and re-vendor.
+- **The example widget copies are a different, deliberate duplication.** The four TypeScript copies (Cloudflare Workers, Supabase Edge, `mcp-checkout-app`, and the `create-solvapay` scaffold `_base`) stay duplicated so each example remains liftable. Do not extract a shared package. `tools/repo/example-widget-parity.test.ts` gates them.
 
 ### Spec compliance
 
-- **Every tool has annotations.** `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` are required. Not optional. Default for `registerPayable` is `{ readOnlyHint: true, openWorldHint: true }`.
+- **Every tool has annotations.** `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` are required. Not optional. Default for a registered payable tool is `{ readOnlyHint: true, openWorldHint: true }`.
 - **Every UI resource uses `mimeType: RESOURCE_MIME_TYPE`.** Never hardcode the string. Import it — along with `registerAppTool` / `registerAppResource` — from `@solvapay/mcp`, which vendors the server-side ext-apps helpers because `@modelcontextprotocol/ext-apps` has no SDK v2 build. The client-side `@modelcontextprotocol/ext-apps` entrypoint that runs inside the iframe is unaffected and stays a direct dependency.
-- **`_meta.ui.resourceUri` lives only on the three intent-tool descriptors.** Merchant payable tools (`registerPayable`) deliberately do NOT advertise it — hosts MUST open the iframe on every call per SEP-1865 when the descriptor advertises it, which means auto-stamping flashed an empty widget on every silent data-tool success. Paywall / nudge / activation responses ship as plain-text narrations on `content[0].text` (naming the recovery intent tool) with `structuredContent = gate` for programmatic consumers. SolvaPay intent tools (`/upgrade`, `/manage_account`, `/topup`) keep descriptor-level `_meta.ui.resourceUri` because calling them is the user's explicit intent to open the UI.
+- **`_meta.ui.resourceUri` lives only on the three intent-tool descriptors.** Merchant payable tools deliberately do NOT advertise it — hosts MUST open the iframe on every call per SEP-1865 when the descriptor advertises it, which means auto-stamping flashed an empty widget on every silent data-tool success. Paywall / nudge / activation responses ship as plain-text narrations on `content[0].text` (naming the recovery intent tool) with `structuredContent = gate` for programmatic consumers. SolvaPay intent tools (`/upgrade`, `/manage_account`, `/topup`) keep descriptor-level `_meta.ui.resourceUri` because calling them is the user's explicit intent to open the UI.
 - **Stripe.js is loaded from `js.stripe.com/v3` at runtime.** Never bundled. The CSP baseline allows this origin.
 
 ### Developer experience
 
 - **Target: `npx solvapay init` to working paid tool in 60 seconds.** Every decision that adds a step to this path needs justification.
-- **The example server is the primary docs surface.** If a merchant copy-pastes `examples/typescript/mcp-checkout-app`, they get best practices automatically. Keep it minimal and correct.
+- **The examples are the primary docs surface.** A merchant copy-pasting `examples/typescript/mcp-checkout-app`, `examples/python/stock-research-mcp`, `examples/ruby/bitcoin_analytics_mcp`, `examples/go/weather-mcp`, or `examples/rust/guerrillamail-mcp` should get best practices automatically. Keep them minimal and correct.
 - **Errors point at solutions.** If a merchant forgets to mount the OAuth bridge, the error message names the fix. No cryptic 402s.
-- **Config-time validation over runtime failures.** If a required integration step is missing, `createSolvaPayMcpServer` throws at construction, not on the first paid call.
+- **Config-time validation over runtime failures.** If a required integration step is missing, server construction throws, not the first paid call.
 
 ### Demo
 
-- **Demo is not the SDK.** The hero demo uses the Vite-build path because "I built this UI" is a stronger engineering story. Merchants use the bundled-HTML path because it's the 60-second onboarding. The four TypeScript widget copies (Cloudflare, Supabase, `mcp-checkout-app`, scaffold `_base`) are deliberately duplicated so each example stays liftable. Do not extract a shared package. See `docs/contributing/mcp-apps-sdk-rules.md` and `tools/repo/example-widget-parity.test.ts`.
+- **Demo is not the SDK.** The hero demo uses the Vite-build path because "I built this UI" is a stronger engineering story. Merchants use the bundled-HTML path because it's the 60-second onboarding.
 - **Pre-render chart PNGs for the demo.** Do not rely on live chart generation during a live demo. Bulletproof > impressive.
 - **First-run tour is disabled in the demo bootstrap.** Presenter talks over the UI, not against it.
 
 ## When in doubt
 
-Ask: **is this making the merchant's tool feel more native to Claude, or more like a SaaS dashboard embedded in Claude?** The first is right. The second is what you're refactoring away from.
+Ask two questions:
+
+1. **Is this making the merchant's tool feel more native to Claude, or more like a SaaS dashboard embedded in Claude?** The first is right. The second is what you're refactoring away from.
+2. **Would another language need this same decision?** If yes, it belongs in `core/solvapay-mcp`, not in the adapter you happen to be editing.
 
 ## Escape hatches
 

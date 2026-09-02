@@ -32,20 +32,20 @@ WASM on edge/browser). Contract fixtures (`pnpm test:contract`) exercise that
 path directly — there is no `SOLVAPAY_IMPL` selection flag. `@solvapay/mcp-core`
 keeps a TypeScript fallback when the binding is not installed (edge/standalone).
 
-### Shadow harness
+### Native client fixture replay
 
-`pnpm shadow:selftest` is a **required CI check** (not migration residue). It
-compares the published npm facade path (WASM `FetchTransport`) against the Rust
-`shadow-invoker` CLI on the same inputs and flags any wire divergence:
+The required Rust CI job replays `contract/fixtures/client/**` through native
+`SolvaPayClient` + `ReqwestTransport` (`cargo test -p client-conformance`).
+Wiremock matchers assert method, path, query, headers, and body. The same
+corpus already covers core (`fixture-runner`) and WASM+fetch
+(`contract-fixtures-wasm.test.ts`).
 
 ```bash
-pnpm shadow:selftest   # offline: IDENTICAL + intentional-divergence self-check
-pnpm shadow:run        # live comparison (SOLVAPAY_SHADOW_* env, manual/dispatch)
+cargo test -p client-conformance
 ```
 
-The Rust side is `tools/conformance/shadow-invoker`; the TS orchestrator is
-`tools/conformance/shadow/` (report keys `facadeNormalized` / `facadeRaw` /
-`facadeWire`, `args.facade`, side label `facade`).
+Live-backend drivers stay opt-in (`pnpm test:live` and the `live-*.yml`
+`workflow_dispatch` workflows).
 
 ### Cross-language signature parity
 
@@ -129,7 +129,7 @@ pnpm build:all                  # core builds (add --native for bindings)
 ```
 
 `pnpm test:live` is opt-in. It is not part of `pnpm test`, `pnpm gates`, pre-push, or CI.
-Without `SOLVAPAY_SHADOW_BASE_URL` and `SOLVAPAY_SHADOW_API_KEY` it fails fast with that
+Without `SOLVAPAY_LIVE_BASE_URL` and `SOLVAPAY_LIVE_API_KEY` it fails fast with that
 requirement named — that message is correct, not a broken script.
 
 `pnpm build:native` and `pnpm test:native` rebuild host-target Node bindings and can
@@ -150,14 +150,14 @@ The SDK routes are served by five backend services. The provider-app proxy at
 the wrong target.
 
 ```bash
-export SOLVAPAY_SHADOW_BASE_URL=http://localhost:3010
-export SOLVAPAY_SHADOW_API_KEY=sk_sandbox_...   # Developers → Secret keys
+export SOLVAPAY_LIVE_BASE_URL=http://localhost:3010
+export SOLVAPAY_LIVE_API_KEY=sk_sandbox_...   # Developers → Secret keys
 pnpm test:live
 ```
 
 `test:live` also sets `USE_REAL_BACKEND=true` and `SOLVAPAY_SECRET_KEY` for the
 `@solvapay/server` integration suite. JSON reports land under
-`contract/shadow/output/`.
+`contract/live/output/`.
 
 ```bash
 pnpm -F @solvapay/server test

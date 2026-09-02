@@ -95,5 +95,5 @@ by the migration:
 ## Related docs
 
 - [`architecture.md`](./architecture.md) — capability-separated builds
-- [`testing.md`](./testing.md) — shadow harness (request-overhead deltas)
+- [`testing.md`](./testing.md) — native client fixture replay and live-contract drivers
 - [`rust-core-sdk-redesign-v2.md`](./rust-core-sdk-redesign-v2.md) §7.8 — budget rationale

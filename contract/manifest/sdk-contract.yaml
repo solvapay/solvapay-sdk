@@ -5,35 +5,6 @@
 # Go callable-surface methods take ctx context.Context as the first parameter
 # (defaults.goContextFirstParam). Emitters must not invent this parameter.
 
-# Shadow-mode volatile-field rules (step 25). Per-operation `shadow.volatile`
-# JSON Pointers (optional) are applied in addition to these globals.
-shadow:
-  globalVolatileKeys:
-    - createdAt
-    - updatedAt
-    - id
-    - reference
-    - idempotencyKey
-    - clientSecret
-    - sessionId
-    - email
-    # Product/plan names must differ per side on live backends (unique index).
-    - name
-  volatileKeySuffixes:
-    - Ref
-  refPrefixes:
-    - prd_
-    - pln_
-    - cus_
-    - cusess_
-    - pur_
-    - pi_
-    - ses_
-    - usg_
-    - cs_
-    - top_
-    - mcp_
-
 # TS-only residue for the core boundary-type emitter (Phase 3a).
 # Aliases / renames / union reshapes that cannot be derived from Rust.
 boundaryTypesTs:
@@ -189,8 +160,6 @@ operations:
     response: LimitResponseWithPlan
     overlays: [CheckLimitsRequest, LimitResponseWithPlan]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -229,8 +198,6 @@ operations:
     response: UsageRecordResponse
     overlays: [TrackUsageRequest]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -269,8 +236,6 @@ operations:
     response: BulkUsageResponse
     overlays: [TrackUsageBulkRequest]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -310,8 +275,6 @@ operations:
     overlays: [CreateCustomerResult]
     normalization:
       - 'map reference||customerRef → { customerRef }'
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -351,8 +314,6 @@ operations:
     overlays: [UpdateCustomerResult, UpdateCustomerParams]
     normalization:
       - 'map reference||customerRef → { customerRef }'
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -399,8 +360,6 @@ operations:
       - accept bare customer array
       - 'accept { customers: [...] } / { customer: {...} } wrappers'
       - map reference → customerRef; default purchases to []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -441,8 +400,6 @@ operations:
     response: GrantCustomerCreditsResponse
     overlays: [AssignCreditsRequest]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: headerForwarded
       header: Idempotency-Key
@@ -481,8 +438,6 @@ operations:
     response: SdkMerchantResponseDto
     overlays: []
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -515,8 +470,6 @@ operations:
     response: SdkPlatformConfigResponseDto
     overlays: []
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -550,8 +503,6 @@ operations:
     overlays: []
     normalization:
       - 'merge { ...result.data, ...result }'
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -591,8 +542,6 @@ operations:
     normalization:
       - 'accept bare array or { products } wrapper'
       - unwrap nested data field
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -626,8 +575,6 @@ operations:
     response: CreateProductResult
     overlays: [CreateProductResult]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -666,8 +613,6 @@ operations:
     response: McpBootstrapResponse
     overlays: [McpBootstrapResponse]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -706,8 +651,6 @@ operations:
     response: ConfigureMcpPlansResponse
     overlays: [ConfigureMcpPlansResponse]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -750,8 +693,6 @@ operations:
     response: SdkProductResponse
     overlays: []
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -794,8 +735,6 @@ operations:
     overlays: [void]
     normalization:
       - treat HTTP 404 as success
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -833,8 +772,6 @@ operations:
     response: CloneProductResult
     overlays: [CloneProductResult, CloneProductOverrides]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -880,8 +817,6 @@ operations:
       - unwrap nested data field
       - 'merge { ...data, ...plan } with price precedence plan.price ??
         data.price; delete data key'
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -920,8 +855,6 @@ operations:
     response: Plan
     overlays: [CreatePlanParams]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -960,8 +893,6 @@ operations:
     response: Plan
     overlays: []
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1008,8 +939,6 @@ operations:
     overlays: [void]
     normalization:
       - treat HTTP 404 as success
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1051,8 +980,6 @@ operations:
     response: CreatePaymentIntentResult
     overlays: [CreatePaymentIntentParams, CreatePaymentIntentResult]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: autoKey
       format: 'payment-{planRef}-{epochMs}-{random9}'
@@ -1098,8 +1025,6 @@ operations:
         topupProjection,
       ]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: autoKey
       format: 'topup-{epochMs}-{random9}'
@@ -1142,8 +1067,6 @@ operations:
       - 'extract nested { purchase } when present; else top-level object with
         reference'
       - validate JSON parseability of response body
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1192,8 +1115,6 @@ operations:
       - 'extract nested { purchase } when present; else top-level object with
         reference'
       - validate JSON parseability of response body
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1247,8 +1168,6 @@ operations:
         topupProjection,
       ]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1287,8 +1206,6 @@ operations:
     response: AttachBusinessDetailsResult
     overlays: [AttachBusinessDetailsParams, AttachBusinessDetailsResult]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1327,8 +1244,6 @@ operations:
     response: UserInfoResponse
     overlays: [GetUserInfoParams]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1367,8 +1282,6 @@ operations:
     response: GetCustomerBalanceResult
     overlays: [GetCustomerBalanceParams, GetCustomerBalanceResult, CreditDisplayBlock]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1407,8 +1320,6 @@ operations:
     response: CreateCheckoutSessionResponse
     overlays: []
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1447,8 +1358,6 @@ operations:
     response: CreateCustomerSessionResponse
     overlays: []
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1487,8 +1396,6 @@ operations:
     response: ActivatePlanResponseDto
     overlays: []
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1527,8 +1434,6 @@ operations:
     response: PaymentMethodInfo
     overlays: [GetPaymentMethodParams, PaymentMethodInfo]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1567,8 +1472,6 @@ operations:
     response: AutoRechargeResponse
     overlays: [GetAutoRechargeParams, AutoRechargeResponse, AutoRechargeConfig]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1607,8 +1510,6 @@ operations:
     response: SaveAutoRechargeResponse
     overlays: [SaveAutoRechargeInput, AutoRechargeConfig, SaveAutoRechargeParams]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1644,8 +1545,6 @@ operations:
     response: McpJsonValue
     overlays: [McpJsonValue, McpPlanDisplay, McpPlanPricingOption, McpTaxIdFieldCopy]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1681,8 +1580,6 @@ operations:
     response: McpJsonValue
     overlays: [McpJsonValue]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1718,8 +1615,6 @@ operations:
     response: McpJsonValue
     overlays: [McpJsonValue]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1755,8 +1650,6 @@ operations:
     response: McpJsonValue
     overlays: [McpJsonValue]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1792,8 +1685,6 @@ operations:
     response: McpJsonValue
     overlays: [McpJsonValue]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1829,8 +1720,6 @@ operations:
     response: McpJsonValue
     overlays: [McpJsonValue]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
@@ -1869,8 +1758,6 @@ operations:
     response: DisableAutoRechargeSdkResponse
     overlays: [DisableAutoRechargeParams, DisableAutoRechargeSdkResponse]
     normalization: []
-    shadow:
-      volatile: []
     idempotency:
       kind: none
     errors:
