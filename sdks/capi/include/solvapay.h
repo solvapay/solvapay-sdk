@@ -67,6 +67,16 @@ uint32_t solvapay_abi_version(void);
 char *solvapay_version(void);
 
 /*
+ Returns `{version, coreSha}` JSON. Caller must free with [`solvapay_free_string`].
+ */
+char *solvapay_build_info(void);
+
+/*
+ Debug-only panicking export. Contained at the FFI edge (`SolvapayStatus::Panic`).
+ */
+enum SolvapayStatus solvapay_panic_probe(void);
+
+/*
  Creates a client from JSON config. On success writes the opaque handle to `out`.
 
  # Safety

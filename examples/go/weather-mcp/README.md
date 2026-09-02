@@ -42,7 +42,7 @@ Copy `.env.example` to `.env`.
 | ----------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `SOLVAPAY_SECRET_KEY`   | `serve`, `http` | Sandbox secret. Never ship to a client.                                                                            |
 | `SOLVAPAY_PRODUCT`      | `serve`, `http` | Product ref that owns pricing                                                                                      |
-| `SOLVAPAY_API_BASE_URL` | optional        | Defaults to the SDK production API                                                                                 |
+| `SOLVAPAY_API_BASE_URL` | optional        | Defaults to the local platform proxy (`http://localhost:3010`)                                                     |
 | `MCP_HOST` / `MCP_PORT` | `http`          | Defaults `127.0.0.1` / `3030` (same reserved `appmcp` origin as Python stock-research; only one process at a time) |
 | `MCP_PUBLIC_BASE_URL`   | `serve`, `http` | HTTPS origin, no trailing slash, no path. Checkout and widget URLs are built from it.                              |
 | `WEATHER_MCP_NGROK_URL` | `tunnel.sh`     | Reserved HTTPS origin for ngrok                                                                                    |

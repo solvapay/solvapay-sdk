@@ -143,6 +143,12 @@ const MCP_AUTHORING_FIXTURES = [
   'oauth/path-strip-trailing-slash.json',
   'oauth/request-protected-resource-mcp-path.json',
   'overview/resource.json',
+  'resolve-auth/free-invalid-bearer.json',
+  'resolve-auth/free-no-bearer.json',
+  'resolve-auth/gated-local-hs256.json',
+  'resolve-auth/gated-no-bearer.json',
+  'resolve-auth/gated-remote-userinfo.json',
+  'resolve-auth/validator-unreachable.json',
 ]
 
 const REGISTER_PAYABLE_FIXTURES = MCP_AUTHORING_FIXTURES.filter(rel =>

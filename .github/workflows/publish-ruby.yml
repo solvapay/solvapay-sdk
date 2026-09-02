@@ -1,8 +1,9 @@
 name: Publish Ruby (RubyGems)
 
 # Separate from the npm Changesets workflow (`.github/workflows/publish.yml`).
-# Builds platform gems via native-host `rake native gem` for the §7.7 matrix,
-# runs `check-gems.rb`, then publishes with RubyGems Trusted Publishing (OIDC).
+# Builds platform gems via rb-sys-dock on Linux (gnu + musl) and native-host
+# `rake native gem` on Darwin, runs `check-gems.rb`, then publishes with
+# RubyGems Trusted Publishing (OIDC).
 #
 # Default path is dry-run: build + check-gems + local `gem install` (RubyGems
 # has no TestPyPI equivalent). Real `gem push` is gated behind
@@ -13,10 +14,11 @@ name: Publish Ruby (RubyGems)
 #   SOLVAPAY_RELEASE_VERSION → gem / native `version`
 #   SOLVAPAY_CORE_SHA        → `native_build_info` coreSha
 #
-# rb-sys-dock cross-compile remains deferred (rbsys 0.9.128 / Magnus 0.7 mismatch).
-# Windows (x64-mingw-ucrt) prebuilt gems are not published: rb-sys/bindgen + clang 20
-# fails inside LLVM AVX10.2/AMX headers. Windows consumers install the source gem
-# and compile locally via rb_sys/mkmf.
+# Linux platform gems use rb-sys-dock (`--mount-toolchains`, Magnus 0.8) so
+# musl rows can be produced from ubuntu-latest. Darwin stays on native hosts.
+# Windows (x64-mingw-ucrt) prebuilt gems are not published: the dock mingw
+# image still fails rb-sys/bindgen inside LLVM AVX10.2/AMX headers (same as
+# Temporal). Windows consumers install the source gem and compile locally.
 
 on:
   workflow_dispatch:
@@ -51,12 +53,22 @@ jobs:
         include:
           - platform: x86_64-linux
             os: ubuntu-latest
+            dock: true
           - platform: aarch64-linux
-            os: ubuntu-24.04-arm
+            os: ubuntu-latest
+            dock: true
+          - platform: x86_64-linux-musl
+            os: ubuntu-latest
+            dock: true
+          - platform: aarch64-linux-musl
+            os: ubuntu-latest
+            dock: true
           - platform: x86_64-darwin
             os: macos-15-intel
+            dock: false
           - platform: arm64-darwin
             os: macos-latest
+            dock: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -100,7 +112,15 @@ jobs:
         run: bundle install
 
       - name: Native platform gem
+        if: ${{ !matrix.dock }}
         run: bundle exec rake native gem
+        env:
+          SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
+          SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}
+
+      - name: Dock cross-compile platform gem
+        if: ${{ matrix.dock }}
+        run: ./scripts/dock-build.sh ${{ matrix.platform }}
         env:
           SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
           SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}

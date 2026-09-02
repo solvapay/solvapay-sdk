@@ -1672,6 +1672,41 @@ operations:
       go: blocking
       rust: [async, blocking]
       c: blocking
+  mcpResolveAuth:
+    names:
+      ts: mcpResolveAuth
+      py: mcp_resolve_auth
+      rb: mcp_resolve_auth
+      go: McpResolveAuth
+      rust: mcp_resolve_auth
+      c: mcpResolveAuth
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP resolve auth failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Decide allow vs challenge for one MCP request; facades write the envelope verbatim.'
+      params:
+        params: 'RPC method, Authorization header, auth mode, public origin, and optional verification overrides.'
+      returns: 'allow (with authInfo/customerRef), challenge (401), or error (-32603 at HTTP 200).'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
   mcpDispatch:
     names:
       ts: mcpDispatch

@@ -91,5 +91,22 @@ fi
 
 echo "OK: C ABI smoke passed"
 
+echo "==> compile version_skew.c"
+SKEW_BIN="$(mktemp)"
+cc -std=c11 -Wall -Wextra -Werror \
+  -I"$CTEST/../include" \
+  "$CTEST/version_skew.c" \
+  -L"$LIB_DIR" \
+  -lsolvapay_c \
+  "${EXTRA_LIBS[@]}" \
+  -o "$SKEW_BIN"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  DYLD_LIBRARY_PATH="$LIB_DIR${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" "$SKEW_BIN"
+else
+  LD_LIBRARY_PATH="$LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$SKEW_BIN"
+fi
+rm -f "$SKEW_BIN"
+echo "OK: C ABI version stamp passed"
+
 echo "==> C MCP fixtures + engine"
 "$CTEST/mcp.sh"

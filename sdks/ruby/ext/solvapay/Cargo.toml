@@ -12,9 +12,14 @@ publish = false
 name = "solvapay"
 crate-type = ["cdylib"]
 
+[features]
+default = []
+# Debug-only panicking export for FFI unwind tests. Never enable in publish builds.
+panic-probe = []
+
 [dependencies]
-magnus = { version = "0.7", features = ["rb-sys"] }
-rb-sys = { version = "*", default-features = false }
+magnus = { version = "0.8.2", features = ["rb-sys"] }
+rb-sys = { version = "0.9.128", default-features = false }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

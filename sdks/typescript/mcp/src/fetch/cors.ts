@@ -62,19 +62,19 @@ export function authChallenge(
   })
   const headers = new Headers()
   applyNativeCors(req.headers, headers)
-  if (gate.kind === 'challenge') {
-    for (const [key, value] of Object.entries(gate.headers)) {
-      headers.set(key, value)
-    }
-    if (protectedResourcePath !== undefined) {
-      headers.set(
-        'WWW-Authenticate',
-        `Bearer resource_metadata="${publicBaseUrl.replace(/\/$/, '')}${protectedResourcePath}"`,
-      )
-    }
-    return new Response(JSON.stringify(gate.body), { status: gate.status, headers })
+  if (gate.kind !== 'challenge') {
+    throw new Error('mcpAuthGate did not produce a challenge')
   }
-  return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers })
+  for (const [key, value] of Object.entries(gate.headers)) {
+    headers.set(key, value)
+  }
+  if (protectedResourcePath !== undefined) {
+    headers.set(
+      'WWW-Authenticate',
+      `Bearer resource_metadata="${publicBaseUrl.replace(/\/$/, '')}${protectedResourcePath}"`,
+    )
+  }
+  return new Response(JSON.stringify(gate.body), { status: gate.status, headers })
 }
 
 /** Extract the raw bearer token from an `Authorization: Bearer <token>` header, or `null`. */

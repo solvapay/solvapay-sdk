@@ -55,3 +55,25 @@ mod webhook;
 pub extern "C" fn sv_version() -> u64 {
     abi::pack(env!("CARGO_PKG_VERSION").to_owned())
 }
+
+/// Returns `{version, coreSha}` JSON as a packed handle (not an envelope).
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub extern "C" fn sv_build_info() -> u64 {
+    let version = option_env!("SOLVAPAY_RELEASE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
+    let core_sha = option_env!("SOLVAPAY_CORE_SHA").unwrap_or("unknown");
+    abi::pack(format!(
+        r#"{{"version":"{version}","coreSha":"{core_sha}"}}"#
+    ))
+}
+
+/// Debug-only panicking export. wasm32 `panic = "abort"` traps the instance;
+/// wazero surfaces that as a host error rather than aborting the Go process.
+#[cfg(all(target_arch = "wasm32", feature = "panic-probe"))]
+#[no_mangle]
+pub extern "C" fn sv_panic_probe() -> u64 {
+    #[allow(clippy::panic)]
+    {
+        panic!("SOLVAPAY_PANIC_PROBE");
+    }
+}

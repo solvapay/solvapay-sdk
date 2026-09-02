@@ -217,6 +217,11 @@
     },
     {
       "package": "@solvapay/server",
+      "symbol": "nativeBuildInfo",
+      "reason": "binding-infra"
+    },
+    {
+      "package": "@solvapay/server",
       "symbol": "PaywallError",
       "reason": "section-8-exclusion"
     },

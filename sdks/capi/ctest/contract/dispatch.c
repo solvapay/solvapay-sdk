@@ -49,6 +49,7 @@ static const char *kClientOps[] = {
   "mcpBootstrap",
   "mcpCallBuiltinTool",
   "mcpReadResource",
+  "mcpResolveAuth",
   "mcpOauthRequest",
   "mcpDispatch",
   "fetchJwks",

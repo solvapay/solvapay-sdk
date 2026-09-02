@@ -57,6 +57,7 @@ export type NativeClientMethod =
   | 'mcpBootstrap'
   | 'mcpCallBuiltinTool'
   | 'mcpReadResource'
+  | 'mcpResolveAuth'
   | 'mcpOauthRequest'
   | 'mcpDispatch'
   | 'fetchJwks'

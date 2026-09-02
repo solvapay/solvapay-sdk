@@ -26,8 +26,21 @@ at the FFI/facade boundary, into the host exception type, then rethrows/rejects.
 Integrators in every language see the same stable `code` vocabulary and the same
 message templates; only the exception _class_ name and language idioms differ.
 
-Panics never cross a language boundary: `catch_unwind` at every FFI edge turns a
-panic into `SdkError::Transport { retryable: false }` plus a logged report.
+Panics never cross a language boundary as an unwind. Containment is per facade
+(§7.6) — not a single `catch_unwind` on every export:
+
+| Facade                                                                  | Mechanism                                                                                                                                               |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C (`sdks/capi`)                                                         | `catch_unwind` on every `extern "C"` edge, including async-equivalent `solvapay_client_call`                                                            |
+| Python sync (`version`, `verify_webhook`, decisions, payload builders)  | `catch_unwind` / `run_envelope_sync` in `lib.rs`                                                                                                        |
+| Python async / blocking client methods                                  | PyO3 converts a panic to `PanicException`; the debug `panic-probe` feature also wraps `catch_unwind` at the export                                      |
+| Node sync (`napiVersion`, `verifyWebhook`, decisions, payload builders) | `catch_unwind` / `run_envelope_sync` in `lib.rs`                                                                                                        |
+| Node async `NativeClient` (`#[napi]` futures)                           | napi-rs intercepts the panic at the addon boundary and rejects the JS `Promise` / throws `Error` — it does not unwind into V8                           |
+| Ruby sync (`version`, `verify_webhook`, decisions, payload builders)    | `catch_unwind` in `lib.rs`                                                                                                                              |
+| Ruby client methods                                                     | `without_gvl_envelope` catches the panic **before** Magnus ≥0.8, which would otherwise raise an uncatchable `fatal`                                     |
+| `@solvapay/server-wasm` and `sdks/go` WASI guest                        | `panic = "abort"` on `wasm-release` (documented in-crate). A trap becomes a JS exception or a wazero host error; it does not abort the customer process |
+
+The workspace Clippy lints (`unwrap_used`, `expect_used`, `panic`) stop _our_ panics. A dependency panic is what the table above contains. The `panic-probe` cargo feature (never default, never in publish artifacts) exports a deliberate panic so each language test can assert a language-level error. Release artifact gates scan for the `SOLVAPAY_PANIC_PROBE` marker string and fail if it is present.
 
 ## Stable codes and frozen templates
 

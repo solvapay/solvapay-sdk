@@ -12,6 +12,8 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
+# Debug-only panicking export for FFI unwind tests. Never enable in publish builds.
+panic-probe = []
 # Exactly one of edge | browser must be enabled at build time.
 # `edge` = full server surface: webhook verify + transport `WasmClient` +
 # sync decision / MCP payload envelopes. `browser` = public-safe pure sync

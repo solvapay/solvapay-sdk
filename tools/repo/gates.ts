@@ -16,6 +16,7 @@ export const GATE_SCRIPTS = [
   'docs:coverage',
   'docs:parity',
   'delegation:check',
+  'facade-coverage:check',
   'checks:required',
   'generated:external',
 ] as const

@@ -10,7 +10,7 @@
  *   node scripts/check-artifacts.mjs --dir <npm-root>
  */
 
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ALL_TARGETS } from './targets.mjs'
@@ -61,6 +61,31 @@ function main() {
     }
 
     missing.push(`${entry.dir}/${entry.binary}`)
+  }
+
+  const marker = Buffer.from('SOLVAPAY_PANIC_PROBE')
+  const probeHits = []
+  for (const entry of ALL_TARGETS) {
+    const dirPath = join(npmRoot, entry.dir)
+    if (!existsSync(dirPath)) {
+      continue
+    }
+    for (const file of readdirSync(dirPath)) {
+      if (!file.endsWith('.node') && !file.endsWith('.wasm')) {
+        continue
+      }
+      const bytes = readFileSync(join(dirPath, file))
+      if (bytes.includes(marker)) {
+        probeHits.push(`${entry.dir}/${file}`)
+      }
+    }
+  }
+  if (probeHits.length > 0) {
+    console.error('check-artifacts: HARD FAIL — panic-probe marker in release artifact:')
+    for (const hit of probeHits) {
+      console.error(`  - ${hit}`)
+    }
+    process.exit(1)
   }
 
   if (missing.length > 0) {

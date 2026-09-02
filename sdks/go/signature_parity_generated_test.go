@@ -53,6 +53,7 @@ var operationSignatures = []operationSignature{
 	{"McpDispatch", []string{"params"}, []string{"map[string]interface {}"}},
 	{"McpOauthRequest", []string{"params"}, []string{"map[string]interface {}"}},
 	{"McpReadResource", []string{"params"}, []string{"map[string]interface {}"}},
+	{"McpResolveAuth", []string{"params"}, []string{"map[string]interface {}"}},
 	{"ProcessPaymentIntent", []string{"params"}, []string{"map[string]interface {}"}},
 	{"ReactivatePurchase", []string{"params"}, []string{"map[string]interface {}"}},
 	{"SaveAutoRecharge", []string{"params"}, []string{"map[string]interface {}"}},
@@ -130,6 +131,7 @@ var (
 	_ = (*solvapay.Client).McpDispatch
 	_ = (*solvapay.Client).McpOauthRequest
 	_ = (*solvapay.Client).McpReadResource
+	_ = (*solvapay.Client).McpResolveAuth
 	_ = (*solvapay.Client).ProcessPaymentIntent
 	_ = (*solvapay.Client).ReactivatePurchase
 	_ = (*solvapay.Client).SaveAutoRecharge
@@ -140,10 +142,10 @@ var (
 	_ = (*solvapay.Client).UpdateProduct
 )
 
-func TestOperationSignaturesCountIs42(t *testing.T) {
+func TestOperationSignaturesCountIs43(t *testing.T) {
 	t.Helper()
-	if got := len(operationSignatures); got != 42 {
-		t.Fatalf("operationSignatures len = %d, want 42", got)
+	if got := len(operationSignatures); got != 43 {
+		t.Fatalf("operationSignatures len = %d, want 43", got)
 	}
 }
 

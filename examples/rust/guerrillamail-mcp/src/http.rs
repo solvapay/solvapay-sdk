@@ -81,12 +81,12 @@ pub async fn serve_http(source: SharedSource) -> Result<(), ExampleError> {
         api_key: secret,
         ..solvapay::Config::default()
     };
-    if let Ok(base) = std::env::var("SOLVAPAY_API_BASE_URL") {
-        let trimmed = base.trim();
-        if !trimmed.is_empty() {
-            config.api_base_url = Some(trimmed.to_owned());
-        }
-    }
+    let api_base = std::env::var("SOLVAPAY_API_BASE_URL")
+        .ok()
+        .map(|base| base.trim().to_owned())
+        .filter(|base| !base.is_empty())
+        .unwrap_or_else(|| "http://localhost:3010".to_owned());
+    config.api_base_url = Some(api_base);
     let client = Client::new(config)
         .map_err(|e| ExampleError::new(format!("SolvaPay client: {}", e.message())))?;
     let mut server = McpHttpServer::new(

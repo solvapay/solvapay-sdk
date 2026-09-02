@@ -54,6 +54,7 @@ OPERATION_NAMES = (
     'mcp_dispatch',
     'mcp_oauth_request',
     'mcp_read_resource',
+    'mcp_resolve_auth',
     'process_payment_intent',
     'reactivate_purchase',
     'save_auto_recharge',

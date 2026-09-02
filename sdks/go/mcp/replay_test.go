@@ -133,6 +133,8 @@ func TestReplaysAsyncOps(t *testing.T) {
 				got, err = client.McpOauthRequest(ctx, args)
 			case "mcpDispatch":
 				got, err = client.McpDispatch(ctx, args)
+			case "mcpResolveAuth":
+				got, err = client.McpResolveAuth(ctx, args)
 			case "mcpBootstrap":
 				got, err = client.McpBootstrap(ctx, args)
 			default:

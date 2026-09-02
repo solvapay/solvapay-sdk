@@ -162,6 +162,13 @@ export function trialDays(args_json: string): string;
 export function validateBusinessDetails(args_json: string): string;
 
 /**
+ * Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
+ *
+ * Available on both `edge` and `browser` profiles.
+ */
+export function wasmBuildInfo(): string;
+
+/**
  * Returns the crate version string (`CARGO_PKG_VERSION`).
  *
  * Used as a hello-world smoke export proving the WASM module loads under both
@@ -205,6 +212,7 @@ export interface InitOutput {
     readonly toMajorUnits: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
     readonly validateBusinessDetails: (a: number, b: number) => [number, number];
+    readonly wasmBuildInfo: () => [number, number];
     readonly wasmVersion: () => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

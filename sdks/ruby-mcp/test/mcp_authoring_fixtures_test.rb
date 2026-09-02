@@ -129,6 +129,12 @@ MCP_AUTHORING_FIXTURES = [
   "oauth/path-strip-trailing-slash.json",
   "oauth/request-protected-resource-mcp-path.json",
   "overview/resource.json",
+  "resolve-auth/free-invalid-bearer.json",
+  "resolve-auth/free-no-bearer.json",
+  "resolve-auth/gated-local-hs256.json",
+  "resolve-auth/gated-no-bearer.json",
+  "resolve-auth/gated-remote-userinfo.json",
+  "resolve-auth/validator-unreachable.json",
 ].freeze
 
 REGISTER_PAYABLE_FIXTURES = MCP_AUTHORING_FIXTURES.select do |rel|
@@ -138,12 +144,12 @@ end.freeze
 CLIENT_REQUEST_FIXTURES = ["oauth/request-protected-resource-mcp-path.json"].freeze
 
 CORE_OP_FIXTURES = MCP_AUTHORING_FIXTURES.reject do |rel|
-  rel.start_with?("allow/", "customer-ref/", "error/", "gate/", "bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/") ||
+  rel.start_with?("allow/", "customer-ref/", "error/", "gate/", "bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/", "resolve-auth/") ||
     CLIENT_REQUEST_FIXTURES.include?(rel)
 end.freeze
 
 ASYNC_OP_FIXTURES = MCP_AUTHORING_FIXTURES.select do |rel|
-  rel.start_with?("bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/") ||
+  rel.start_with?("bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/", "resolve-auth/") ||
     CLIENT_REQUEST_FIXTURES.include?(rel)
 end.freeze
 
@@ -261,6 +267,7 @@ class McpAuthoringFixturesTest < Minitest::Test
               when "mcpCallBuiltinTool" then client.mcp_call_builtin_tool(params: args)
               when "mcpOauthRequest" then client.mcp_oauth_request(params: args)
               when "mcpDispatch" then client.mcp_dispatch(params: args)
+              when "mcpResolveAuth" then client.mcp_resolve_auth(params: args)
               when "mcpBootstrap" then client.mcp_bootstrap(params: args)
               else
                 flunk("unexpected fn #{fn}")

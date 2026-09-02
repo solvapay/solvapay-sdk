@@ -17,6 +17,7 @@ def test_installed_version_matches_native() -> None:
     info = solvapay.native_build_info()
     assert info is not None
     assert '"version":"0.1.0"' in info
+    assert '"coreSha":' in info
 
 
 def test_version_skew_raises(monkeypatch: pytest.MonkeyPatch) -> None:

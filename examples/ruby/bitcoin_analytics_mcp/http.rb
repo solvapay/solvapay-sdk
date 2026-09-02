@@ -48,12 +48,8 @@ module BitcoinAnalytics
     secret = require_env!("SOLVAPAY_SECRET_KEY", env["SOLVAPAY_SECRET_KEY"])
     product = require_env!("SOLVAPAY_PRODUCT", env["SOLVAPAY_PRODUCT"])
     api_base = env["SOLVAPAY_API_BASE_URL"]
-    api_base = nil if api_base.nil? || api_base.empty?
-    client = if api_base.nil?
-               SolvaPay::Client.new(api_key: secret)
-             else
-               SolvaPay::Client.new(api_key: secret, api_base_url: api_base)
-             end
+    api_base = "http://localhost:3010" if api_base.nil? || api_base.empty?
+    client = SolvaPay::Client.new(api_key: secret, api_base_url: api_base)
     source = live_source?(env["MCP_SOURCE"]) ? LiveSource.new : default_fixture_source
     app = build_http_app(
       client: client,

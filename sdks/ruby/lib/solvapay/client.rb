@@ -288,6 +288,14 @@ module SolvaPay
       NativeDispatch.call_client(@native_client, "mcp_read_resource", args)
     end
 
+    # Decide allow vs challenge for one MCP request; facades write the envelope verbatim.
+    # @param params RPC method, Authorization header, auth mode, public origin, and optional verification overrides.
+    # @return allow (with authInfo/customerRef), challenge (401), or error (-32603 at HTTP 200).
+    def mcp_resolve_auth(params:)
+      args = params #: Hash[String, untyped]
+      NativeDispatch.call_client(@native_client, "mcp_resolve_auth", args)
+    end
+
     # Process a completed payment intent into a purchase or top-up outcome.
     # @param params Process request identifying the payment intent.
     # @return Normalized process-payment result (purchase, top-up, or error branch).

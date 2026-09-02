@@ -22,6 +22,7 @@ export const RUST_CORE_SKIP_FNS = [
   'mcpCallBuiltinTool',
   'mcpOauthRequest',
   'mcpDispatch',
+  'mcpResolveAuth',
 ] as const
 
 export const C_SKIP_FNS = ['registerPayable'] as const

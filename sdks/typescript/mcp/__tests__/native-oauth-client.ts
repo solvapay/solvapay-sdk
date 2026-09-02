@@ -3,11 +3,17 @@ import type {
   McpOauthRequestClient,
   McpOauthRequestResult,
 } from '../src/internal/mcp-oauth-request'
+import type { McpResolveAuthClient } from '../src/internal/mcp-resolve-auth'
 
-export function nativeOauthClient(apiBaseUrl: string): McpOauthRequestClient {
+export function nativeOauthClient(
+  apiBaseUrl: string,
+): McpOauthRequestClient & McpResolveAuthClient {
   const { apiClient } = createSolvaPay({ apiKey: 'sk_test', apiBaseUrl })
   if (typeof apiClient.mcpOauthRequest !== 'function') {
     throw new Error('SolvaPay API client is missing mcpOauthRequest')
+  }
+  if (typeof apiClient.mcpResolveAuth !== 'function') {
+    throw new Error('SolvaPay API client is missing mcpResolveAuth')
   }
   return apiClient as McpOauthRequestClient
 }

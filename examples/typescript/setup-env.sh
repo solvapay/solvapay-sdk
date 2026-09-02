@@ -1,59 +1,53 @@
 #!/bin/bash
 
-# SolvaPay SDK Examples Environment Setup Script
+# Copy example env templates so local `pnpm dev` hits the platform
+# provider-app proxy on :3010. Existing files are left untouched.
 
 echo "Setting up SolvaPay SDK examples environment files..."
 
-# Express example setup
-echo "Setting up express-basic..."
-if [ -f "express-basic/.env.example" ]; then
-  if [ ! -f "express-basic/.env" ]; then
-    cp express-basic/.env.example express-basic/.env
-    echo "Created express-basic/.env from .env.example"
-  else
-    echo "express-basic/.env already exists, skipping"
+copy_if_missing() {
+  local src="$1"
+  local dest="$2"
+  if [ ! -f "$src" ]; then
+    echo "${src} not found"
+    return
   fi
-else
-  echo "express-basic/.env.example not found"
-fi
-
-# Next.js examples setup
-for example in checkout-demo hosted-checkout-demo; do
-  echo "Setting up ${example}..."
-  if [ -f "${example}/env.example" ]; then
-    if [ ! -f "${example}/.env.local" ]; then
-      cp "${example}/env.example" "${example}/.env.local"
-      echo "Created ${example}/.env.local from env.example"
-    else
-      echo "${example}/.env.local already exists, skipping"
-    fi
-  else
-    echo "${example}/env.example not found"
+  if [ -f "$dest" ]; then
+    echo "${dest} already exists, skipping"
+    return
   fi
-done
+  cp "$src" "$dest"
+  echo "Created ${dest} from $(basename "$src")"
+}
 
-# MCP examples setup
-for example in mcp-oauth-bridge mcp-time-app; do
+for example in express-basic express-provider-linkage nextjs-auth0 \
+  shadcn-checkout tailwind-checkout chat-checkout-demo \
+  mcp-oauth-bridge mcp-time-app mcp-checkout-app \
+  cloudflare-workers-mcp supabase-edge-mcp; do
   echo "Setting up ${example}..."
   if [ -f "${example}/.env.example" ]; then
-    if [ ! -f "${example}/.env" ]; then
-      cp "${example}/.env.example" "${example}/.env"
-      echo "Created ${example}/.env from .env.example"
-    else
-      echo "${example}/.env already exists, skipping"
+    dest="${example}/.env"
+    if [ "${example}" = "nextjs-auth0" ]; then
+      dest="${example}/.env.local"
     fi
+    copy_if_missing "${example}/.env.example" "$dest"
   else
     echo "${example}/.env.example not found"
   fi
 done
 
+for example in checkout-demo hosted-checkout-demo; do
+  echo "Setting up ${example}..."
+  copy_if_missing "${example}/env.example" "${example}/.env.local"
+done
+
 echo ""
 echo "Environment setup complete"
 echo ""
-echo "Next steps:"
-echo "1. Edit express-basic/.env with your SolvaPay API key"
-echo "2. Edit checkout-demo/.env.local and hosted-checkout-demo/.env.local"
-echo "3. Edit mcp-oauth-bridge/.env and mcp-time-app/.env"
-echo "4. Run 'pnpm dev' in the example you want to start"
+echo "Examples target SOLVAPAY_API_BASE_URL=http://localhost:3010"
+echo "(provider-app proxy on the local platform stack)."
+echo ""
+echo "Fill in SOLVAPAY_SECRET_KEY and product refs from"
+echo "http://localhost:3010, then run pnpm dev in the example."
 echo ""
 echo "For more information, see examples/README.md"

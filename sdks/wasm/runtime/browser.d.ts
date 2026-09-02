@@ -9,6 +9,7 @@
 export {
   initSync,
   wasmVersion,
+  wasmBuildInfo,
   validateBusinessDetails,
   deriveTaxIdType,
   resolveTaxBehavior,

@@ -60,6 +60,7 @@ const GROUP_MCP: WasmClientMethod[] = [
   'mcpReadResource',
   'mcpOauthRequest',
   'mcpDispatch',
+  'mcpResolveAuth',
   'fetchJwks',
 ]
 
@@ -446,6 +447,7 @@ describe('createSolvaPayClient Group MCP WASM dispatch', () => {
     expect(await client.mcpReadResource!(payload)).toEqual({ fromWasm: 'mcpReadResource' })
     expect(await client.mcpOauthRequest!(payload)).toEqual({ fromWasm: 'mcpOauthRequest' })
     expect(await client.mcpDispatch!(payload)).toEqual({ fromWasm: 'mcpDispatch' })
+    expect(await client.mcpResolveAuth!(payload)).toEqual({ fromWasm: 'mcpResolveAuth' })
     expect(await client.fetchJwks!(payload)).toEqual({ fromWasm: 'fetchJwks' })
 
     expect(fetchMock).not.toHaveBeenCalled()

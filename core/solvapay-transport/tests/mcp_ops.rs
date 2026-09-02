@@ -127,6 +127,7 @@ async fn mcp_dispatch_errors_on_widget_resource_read() {
                 expected_issuer: None,
                 expected_audience: None,
                 now_unix_secs: None,
+                pre_verified_customer_ref: None,
             },
             auth_header: None,
             mcp_protocol_version_header: None,

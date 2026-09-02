@@ -530,6 +530,17 @@ impl NativeClient {
         .await
     }
 
+    /// `mcpResolveAuth`
+    #[napi(js_name = "mcpResolveAuth")]
+    pub async fn mcp_resolve_auth(&self, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        run_envelope(async move {
+            let params: solvapay_transport::McpResolveAuthParams = parse_args_json(&args_json)?;
+            client.mcp_resolve_auth(params).await
+        })
+        .await
+    }
+
     /// `mcpOauthRequest`
     #[napi(js_name = "mcpOauthRequest")]
     pub async fn mcp_oauth_request(&self, args_json: String) -> String {
@@ -610,7 +621,8 @@ pub fn dispatch_envelope_for_fn(fn_name: &str, _args_json: &str) -> Option<Strin
         | "mcpCallBuiltinTool"
         | "mcpReadResource"
         | "mcpOauthRequest"
-        | "mcpDispatch" => None,
+        | "mcpDispatch"
+        | "mcpResolveAuth" => None,
         other => Some(internal_error_envelope(format!(
             "unknown NativeClient fn: {other}"
         ))),

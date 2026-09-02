@@ -20,6 +20,7 @@
 // returns it by value rather than `Box<SdkError>`.
 #![allow(clippy::result_large_err)]
 
+pub(crate) mod auth_cache;
 pub mod client;
 pub mod http;
 pub mod shell;
@@ -40,7 +41,8 @@ pub use client::{encode_path_segment, SolvaPayClient};
 pub use http::{HeaderName, HttpRequest, HttpResponse, Method};
 pub use mcp::{
     FetchJwksParams, McpBootstrapParams, McpCallBuiltinToolParams, McpDispatchParams,
-    McpOauthConfig, McpOauthRequestParams, McpReadResourceParams, McpToolConfig,
+    McpOauthConfig, McpOauthRequestParams, McpReadResourceParams, McpResolveAuthParams,
+    McpToolConfig,
 };
 pub use shell::{
     encode_query_component, mulberry32, normalize_base_url, random9_from_f64,

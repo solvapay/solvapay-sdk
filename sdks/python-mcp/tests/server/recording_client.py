@@ -16,6 +16,32 @@ class RecordingClient:
         if not isinstance(payload, dict):
             payload = {}
         self.calls.append((method, payload))
+        if method in {"mcp_resolve_auth", "mcp_resolve_auth_blocking"} and "mcp_resolve_auth" not in self.responses:
+            from solvapay_mcp.core import call
+
+            gate_args: dict[str, object] = {
+                "publicBaseUrl": payload.get("publicBaseUrl"),
+                "rpcMethod": payload.get("rpcMethod"),
+                "authHeader": payload.get("authHeader"),
+                "authMode": payload.get("authMode") or "tools-call",
+                "mcpPath": payload.get("mcpPath"),
+                "jsonRpcId": payload.get("jsonRpcId"),
+            }
+            if payload.get("hs256Secret") is not None:
+                gate_args["hs256Secret"] = payload.get("hs256Secret")
+            if payload.get("jwksJson") is not None:
+                gate_args["jwksJson"] = payload.get("jwksJson")
+            value = call("mcpAuthGate", {k: v for k, v in gate_args.items() if v is not None})
+            if isinstance(value, dict) and value.get("kind") == "challenge":
+                return json.dumps({"ok": True, "value": value})
+            if payload.get("authHeader"):
+                forced = dict(gate_args)
+                forced["rpcMethod"] = "tools/call"
+                value = call("mcpAuthGate", {k: v for k, v in forced.items() if v is not None})
+                return json.dumps({"ok": True, "value": value})
+            return json.dumps(
+                {"ok": True, "value": {"kind": "allow", "authInfo": None, "customerRef": None}}
+            )
         if method in {"mcp_dispatch", "mcp_dispatch_blocking"} and "mcp_dispatch" not in self.responses:
             from solvapay_mcp.core import call
 

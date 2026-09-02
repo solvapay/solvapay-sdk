@@ -487,6 +487,22 @@ impl BlockingClient {
         runtime().block_on(self.inner.mcp_read_resource(params))
     }
 
+    /// Decide allow vs challenge for one MCP request; facades write the envelope verbatim.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` — RPC method, Authorization header, auth mode, public origin, and optional verification overrides.
+    ///
+    /// # Returns
+    ///
+    /// allow (with authInfo/customerRef), challenge (401), or error (-32603 at HTTP 200).
+    pub fn mcp_resolve_auth(
+        &self,
+        params: solvapay_transport::McpResolveAuthParams,
+    ) -> Result<Value, SdkError> {
+        runtime().block_on(self.inner.mcp_resolve_auth(params))
+    }
+
     /// Process a completed payment intent into a purchase or top-up outcome.
     ///
     /// # Arguments

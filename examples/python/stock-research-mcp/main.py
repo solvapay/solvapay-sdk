@@ -197,9 +197,7 @@ def _live_solvapay() -> tuple[SolvaPay, str, str | None]:
     product = os.environ.get("SOLVAPAY_PRODUCT") or os.environ.get("SOLVAPAY_PRODUCT_REF")
     if not product:
         raise RuntimeError("SOLVAPAY_PRODUCT is missing — copy .env.example to .env")
-    api_base_url = os.environ.get("SOLVAPAY_API_BASE_URL")
-    if not api_base_url:
-        raise RuntimeError("SOLVAPAY_API_BASE_URL is missing — copy .env.example to .env")
+    api_base_url = os.environ.get("SOLVAPAY_API_BASE_URL") or "http://localhost:3010"
     solvapay = create_solvapay(api_key=api_key, api_base_url=api_base_url)
     return solvapay, product, api_base_url
 

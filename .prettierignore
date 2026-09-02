@@ -36,6 +36,7 @@ contract/openapi/*.json
 contract/mcp-fixtures/
 contract/manifest/binding-symbols.snapshot.json
 contract/manifest/boundary-types.snapshot.json
+contract/manifest/facade-coverage.json
 contract/manifest/binding-residue.yaml
 
 # Lock files

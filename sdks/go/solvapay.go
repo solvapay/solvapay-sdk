@@ -45,6 +45,29 @@ func shared(ctx context.Context) (*runtime.Runtime, error) {
 	return sharedRT, sharedErr
 }
 
+// PanicProbe invokes the debug-only guest export. It must return an error
+// (wazero trap) rather than aborting the process.
+func PanicProbe(ctx context.Context) error {
+	rt, err := shared(ctx)
+	if err != nil {
+		return err
+	}
+	return rt.PanicProbe(ctx)
+}
+
+// BuildInfo returns `{version, coreSha}` JSON from the embedded WASI guest.
+//
+// `coreSha` is `unknown` in local/dev builds that did not stamp
+// `SOLVAPAY_CORE_SHA`. The publish workflow stamps both the guest and this
+// facade so they can be compared at runtime.
+func BuildInfo(ctx context.Context) (string, error) {
+	rt, err := shared(ctx)
+	if err != nil {
+		return "", err
+	}
+	return rt.BuildInfo(ctx)
+}
+
 // Version returns the embedded guest crate version (CARGO_PKG_VERSION).
 func Version(ctx context.Context) (string, error) {
 	rt, err := shared(ctx)

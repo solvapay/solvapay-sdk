@@ -9,6 +9,7 @@
 static void keep_abi_symbols(void) {
   (void)&solvapay_abi_version;
   (void)&solvapay_version;
+  (void)&solvapay_build_info;
   (void)&solvapay_client_new;
   (void)&solvapay_client_call;
   (void)&solvapay_verify_webhook;
@@ -56,6 +57,7 @@ static const char *kOps[] = {
   "mcpBootstrap",
   "mcpCallBuiltinTool",
   "mcpReadResource",
+  "mcpResolveAuth",
   "mcpOauthRequest",
   "mcpDispatch",
   "fetchJwks",
@@ -108,6 +110,7 @@ static const char *kRequiredArgs[][kMaxRequired] = {
   {NULL, NULL, NULL},
   {NULL, NULL, NULL},
   {NULL, NULL, NULL},
+  {NULL, NULL, NULL},
 };
 
 static int json_with_filled(char *buf, size_t bufsz, const char *const *args, size_t filled) {
@@ -140,8 +143,8 @@ int main(void) {
 		return 1;
 	}
 	size_t nops = sizeof(kOps) / sizeof(kOps[0]);
-	if (nops != 42) {
-		fprintf(stderr, "FAIL: kOps len = %zu, want 42\n", nops);
+	if (nops != 43) {
+		fprintf(stderr, "FAIL: kOps len = %zu, want 43\n", nops);
 		return 1;
 	}
 
@@ -191,6 +194,6 @@ int main(void) {
 		}
 	}
 	solvapay_client_free(client);
-	printf("OK: C signature parity (42 ops)\n");
+	printf("OK: C signature parity (43 ops)\n");
 	return 0;
 }

@@ -10,6 +10,11 @@ publish = false
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+default = []
+# Debug-only panicking export for FFI unwind tests. Never enable in publish builds.
+panic-probe = []
+
 [dependencies]
 napi = { version = "3", default-features = false, features = ["napi9", "tokio_rt"] }
 napi-derive = "3"

@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -62,30 +61,16 @@ func withAuthGate(s *Server, next http.Handler) http.Handler {
 			method = r.Header.Get("Mcp-Method")
 		}
 
-		now := s.cfg.NowUnixSecs
-		if now == 0 {
-			now = time.Now().Unix()
-		}
 		args := map[string]any{
 			"publicBaseUrl": s.cfg.PublicBaseURL,
 			"rpcMethod":     method,
 			"authMode":      s.cfg.AuthMode,
 			"mcpPath":       s.cfg.MCPPath,
-			"nowUnixSecs":   now,
 		}
 		if s.cfg.Hs256Secret != "" {
 			args["hs256Secret"] = s.cfg.Hs256Secret
 		}
-		if auth := r.Header.Get("Authorization"); auth != "" {
-			jwks, err := s.resolvedJwks(r.Context())
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadGateway)
-				return
-			}
-			if jwks != nil {
-				args["jwksJson"] = jwks
-			}
-		} else if s.cfg.JwksJSON != nil {
+		if s.cfg.JwksJSON != nil {
 			args["jwksJson"] = s.cfg.JwksJSON
 		}
 		if auth := r.Header.Get("Authorization"); auth != "" {
@@ -97,19 +82,15 @@ func withAuthGate(s *Server, next http.Handler) http.Handler {
 				args["jsonRpcId"] = id
 			}
 		}
-		gateRaw, err := CallSync(r.Context(), "mcpAuthGate", args)
+		resolved, err := s.client.McpResolveAuth(r.Context(), args)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
-		var gate map[string]any
-		if err := json.Unmarshal(gateRaw, &gate); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if gate["kind"] == "challenge" {
+		gate := asMap(resolved)
+		if gate["kind"] != "allow" {
 			applyNativeCors(w, r)
-			status := asInt(gate["status"], 401)
+			status := asInt(gate["status"], 200)
 			for k, v := range asStringMap(gate["headers"]) {
 				w.Header().Set(k, v)
 			}

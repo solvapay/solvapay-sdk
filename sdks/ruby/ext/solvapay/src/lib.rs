@@ -126,6 +126,21 @@ fn solvapay_call(args_json: String) -> Result<String, Error> {
     }
 }
 
+/// Debug-only panicking export. Contained here so Magnus ≥0.8 never sees a `fatal`.
+#[cfg(feature = "panic-probe")]
+fn panic_probe() -> Result<(), Error> {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        #[allow(clippy::panic)]
+        {
+            panic!("SOLVAPAY_PANIC_PROBE");
+        }
+    }));
+    match result {
+        Ok(()) => Ok(()),
+        Err(payload) => Err(BindingError::from_panic_payload(payload).into_magnus_err()),
+    }
+}
+
 /// `SolvaPay::Error#code` — returns the snake_case `@code` ivar (or `nil`).
 fn error_code(ex: Exception) -> Result<magnus::Value, Error> {
     ex.funcall("instance_variable_get", ("@code",))
@@ -151,6 +166,8 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     module.define_singleton_method("verify_webhook", function!(verify_webhook, 3))?;
     module.define_singleton_method("_verify_webhook_at", function!(verify_webhook_at, 4))?;
     module.define_singleton_method("solvapay_call", function!(solvapay_call, 1))?;
+    #[cfg(feature = "panic-probe")]
+    module.define_singleton_method("panic_probe", function!(panic_probe, 0))?;
 
     let native = module.define_module("Native")?;
     let client = native.define_class("Client", ruby.class_object())?;

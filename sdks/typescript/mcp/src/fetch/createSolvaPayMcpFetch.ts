@@ -27,6 +27,7 @@ import {
   type McpRequestContext,
 } from './handler'
 import type { McpOauthRequestClient } from '../internal/mcp-oauth-request'
+import type { McpResolveAuthClient } from '../internal/mcp-resolve-auth'
 import { defaultMcpAppHtml } from '#mcp-app-html'
 
 export type { AdditionalToolsContext } from '../server'
@@ -169,7 +170,7 @@ export function createSolvaPayMcpFetch(
   } = options
 
   const apiBaseUrl = handlerRest.apiBaseUrl
-  const nativeOauth = isOauthRequestClient(solvaPay.apiClient) ? solvaPay.apiClient : undefined
+  const nativeOauth = isNativeOauthClient(solvaPay.apiClient) ? solvaPay.apiClient : undefined
   const payables = new Map<string, McpEnginePayable>()
   const mcpDispatch =
     typeof solvaPay.apiClient.mcpDispatch === 'function'
@@ -215,11 +216,6 @@ export function createSolvaPayMcpFetch(
     ...handlerRest,
     ...(handlerRest.oauthClient === undefined && nativeOauth !== undefined
       ? { oauthClient: nativeOauth }
-      : {}),
-    ...(handlerRest.fetchJwks === undefined && typeof solvaPay.apiClient.fetchJwks === 'function'
-      ? {
-          fetchJwks: (jwksUrl: string) => solvaPay.apiClient.fetchJwks!({ jwksUrl }),
-        }
       : {}),
     ...(mcpDispatch !== undefined
       ? {
@@ -274,10 +270,13 @@ export function createSolvaPayMcpFetch(
   })
 }
 
-function isOauthRequestClient(value: unknown): value is McpOauthRequestClient {
+function isNativeOauthClient(
+  value: unknown,
+): value is McpOauthRequestClient & McpResolveAuthClient {
   return (
     value !== null &&
     typeof value === 'object' &&
-    typeof (value as McpOauthRequestClient).mcpOauthRequest === 'function'
+    typeof (value as McpOauthRequestClient).mcpOauthRequest === 'function' &&
+    typeof (value as McpResolveAuthClient).mcpResolveAuth === 'function'
   )
 }

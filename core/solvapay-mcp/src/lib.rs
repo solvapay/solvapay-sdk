@@ -30,8 +30,8 @@ mod engine;
 mod widget_resource;
 
 pub use auth_gate::{
-    is_free_mcp_method, mcp_auth_gate, requires_bearer_auth, AuthGateInput, AuthGateResult,
-    McpAuthMode,
+    is_free_mcp_method, mcp_auth_challenge, mcp_auth_gate, requires_bearer_auth, AuthGateInput,
+    AuthGateResult, McpAuthMode,
 };
 pub use bearer_verify::{
     customer_ref_from_claims, extract_bearer_token, mcp_verify_bearer, VerifyBearerInput,

@@ -37,6 +37,7 @@ exclude = [
   "SolvapayStatus",
   "solvapay_abi_version",
   "solvapay_version",
+  "solvapay_build_info",
   "solvapay_client_new",
   "solvapay_client_call",
   "solvapay_verify_webhook",

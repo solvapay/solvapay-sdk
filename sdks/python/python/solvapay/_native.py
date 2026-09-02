@@ -53,6 +53,7 @@ ClientMethod = Literal[
     "mcp_bootstrap",
     "mcp_call_builtin_tool",
     "mcp_read_resource",
+    "mcp_resolve_auth",
     "mcp_oauth_request",
     "mcp_dispatch",
     "fetch_jwks",]

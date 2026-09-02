@@ -234,6 +234,12 @@ export interface SolvaPayClientGenerated {
  */
   mcpReadResource?(params: unknown): Promise<unknown>
 /**
+ * Decide allow vs challenge for one MCP request; facades write the envelope verbatim.
+ * @param params RPC method, Authorization header, auth mode, public origin, and optional verification overrides.
+ * @returns allow (with authInfo/customerRef), challenge (401), or error (-32603 at HTTP 200).
+ */
+  mcpResolveAuth?(params: unknown): Promise<unknown>
+/**
  * Process a completed payment intent into a purchase or top-up outcome.
  * @param params Process request identifying the payment intent.
  * @returns Normalized process-payment result (purchase, top-up, or error branch).

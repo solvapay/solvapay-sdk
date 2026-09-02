@@ -20,7 +20,13 @@ import { NativeClient } from '../../../sdks/node-native/index.js'
 import type { Fixture } from '../lib/fixture-schema.js'
 import { fixtureHttpStubs, isUnreachableExpect, withFixtureHttp } from './http-stub.js'
 
-const CLIENT_OPS = new Set(['mcpBootstrap', 'mcpCallBuiltinTool', 'mcpOauthRequest', 'mcpDispatch'])
+const CLIENT_OPS = new Set([
+  'mcpBootstrap',
+  'mcpCallBuiltinTool',
+  'mcpOauthRequest',
+  'mcpDispatch',
+  'mcpResolveAuth',
+])
 
 function mcpDcrDiagnostics(args: Record<string, unknown>): unknown {
   const lines: string[] = []
@@ -148,6 +154,8 @@ async function callClientOp(
       return unwrapClientEnvelope(await client.mcpOauthRequest(JSON.stringify(args)))
     case 'mcpDispatch':
       return unwrapClientEnvelope(await client.mcpDispatch(JSON.stringify(args)))
+    case 'mcpResolveAuth':
+      return unwrapClientEnvelope(await client.mcpResolveAuth(JSON.stringify(args)))
     default:
       throw new Error(`not a client MCP op: ${fn}`)
   }

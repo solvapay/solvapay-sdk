@@ -110,6 +110,7 @@ PY
 
 load_env_file "$EXAMPLE_DIR/.env"
 load_env_file "$EXAMPLE_DIR/.env.local"
+export SOLVAPAY_API_BASE_URL="${SOLVAPAY_API_BASE_URL:-http://localhost:3010}"
 
 DEFAULT_PUBLIC_URL="https://appmcp.jack-local.ngrok.app"
 PUBLIC_URL="${BITCOIN_ANALYTICS_NGROK_URL:-${MCP_PUBLIC_BASE_URL:-$DEFAULT_PUBLIC_URL}}"

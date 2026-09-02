@@ -83,6 +83,8 @@
     "checks:release-dryrun": "tsx tools/repo/check-release-dryrun.ts",
     "release:dryrun": "tsx tools/repo/release-dryrun.ts",
     "delegation:check": "tsx tools/conformance/check-delegation.ts",
+    "facade-coverage": "tsx tools/codegen/facade-coverage.ts",
+    "facade-coverage:check": "tsx tools/codegen/facade-coverage.ts --check",
     "mcp-layer3-budget:check": "tsx tools/conformance/check-mcp-layer3-budget.ts",
     "test:clean-install": "pnpm --filter @solvapay/server-native test:clean-install",
     "mcp:checkout": "pnpm --filter @example/mcp-checkout-app dev",

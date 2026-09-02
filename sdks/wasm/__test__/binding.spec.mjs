@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { ready, verifyWebhook, wasmVersion } from '../runtime/node.js'
+import { ready, verifyWebhook, wasmBuildInfo, wasmVersion } from '../runtime/node.js'
 
 const FIXTURE_BODY = JSON.stringify({
   type: 'purchase.created',
@@ -21,6 +21,10 @@ describe('@solvapay/server-wasm node wrapper', () => {
     await ready()
     assert.equal(typeof wasmVersion(), 'string')
     assert.match(wasmVersion(), /^\d+\.\d+\.\d+/)
+    const info = JSON.parse(wasmBuildInfo())
+    assert.equal(info.version, wasmVersion())
+    assert.equal(typeof info.coreSha, 'string')
+    assert.ok(info.coreSha.length > 0)
 
     const json = verifyWebhook(
       FIXTURE_BODY,

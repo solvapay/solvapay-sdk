@@ -69,6 +69,7 @@ pub const OPERATION_SIGNATURES: &[(&str, &[(&str, bool)])] = &[
     ("mcp_dispatch", &[("params", true)]),
     ("mcp_oauth_request", &[("params", true)]),
     ("mcp_read_resource", &[("params", true)]),
+    ("mcp_resolve_auth", &[("params", true)]),
     ("process_payment_intent", &[("params", true)]),
     ("reactivate_purchase", &[("params", true)]),
     ("save_auto_recharge", &[("params", true)]),
@@ -199,6 +200,9 @@ async fn _assert_typed_surface(c: &Client) {
     let _: Result<Value, SdkError> = c
         .mcp_read_resource(_parity_sink::<solvapay_transport::McpReadResourceParams>())
         .await;
+    let _: Result<Value, SdkError> = c
+        .mcp_resolve_auth(_parity_sink::<solvapay_transport::McpResolveAuthParams>())
+        .await;
     let _: Result<solvapay_dto::schemas::ProcessPaymentResult, SdkError> = c
         .process_payment_intent(_parity_sink::<ProcessPaymentIntentParams>())
         .await;
@@ -294,6 +298,8 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
         c.mcp_oauth_request(_parity_sink::<solvapay_transport::McpOauthRequestParams>());
     let _: Result<Value, SdkError> =
         c.mcp_read_resource(_parity_sink::<solvapay_transport::McpReadResourceParams>());
+    let _: Result<Value, SdkError> =
+        c.mcp_resolve_auth(_parity_sink::<solvapay_transport::McpResolveAuthParams>());
     let _: Result<solvapay_dto::schemas::ProcessPaymentResult, SdkError> =
         c.process_payment_intent(_parity_sink::<ProcessPaymentIntentParams>());
     let _: Result<Value, SdkError> =
@@ -317,8 +323,8 @@ fn _assert_typed_surface_blocking(c: &BlockingClient) {
 }
 
 #[test]
-fn operation_signatures_count_is_42() {
-    assert_eq!(OPERATION_SIGNATURES.len(), 42);
+fn operation_signatures_count_is_43() {
+    assert_eq!(OPERATION_SIGNATURES.len(), 43);
 }
 
 #[test]

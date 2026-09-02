@@ -77,7 +77,7 @@ fn ruby_full_surface_matches_committed() {
         .expect("rubyBindings");
 
     let client_names = names_for(&ir, IrBindingArtifact::Client);
-    assert_eq!(client_names.len(), 42);
+    assert_eq!(client_names.len(), 43);
     for name in &client_names {
         assert!(
             emitted.client_rs.contains(&format!("fn {name}")),
@@ -96,7 +96,7 @@ fn ruby_full_surface_matches_committed() {
             "registration missing {name}"
         );
     }
-    assert!(emitted.client_rs.matches("without_gvl(||").count() >= 36);
+    assert!(emitted.client_rs.matches("without_gvl_envelope(||").count() >= 36);
 
     assert_matches(&emitted.args_rs, &src.join("args.rs"), "ruby_args");
     assert_matches(

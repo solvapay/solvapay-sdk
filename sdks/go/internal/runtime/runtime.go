@@ -80,6 +80,35 @@ func (rt *Runtime) Close(ctx context.Context) error {
 	return rt.wz.Close(ctx)
 }
 
+// PanicProbe calls the guest sv_panic_probe export when the guest was built
+// with `--features panic-probe`. Missing exports return a host error.
+func (rt *Runtime) PanicProbe(ctx context.Context) error {
+	inst, err := rt.pool.borrow(ctx)
+	if err != nil {
+		return err
+	}
+	_, callErr := inst.callNoArgs(ctx, "sv_panic_probe")
+	rt.finish(ctx, inst, ctx.Err(), callErr)
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return callErr
+}
+
+// BuildInfo calls the guest sv_build_info export (no client needed).
+func (rt *Runtime) BuildInfo(ctx context.Context) (string, error) {
+	inst, err := rt.pool.borrow(ctx)
+	if err != nil {
+		return "", err
+	}
+	out, callErr := inst.callNoArgs(ctx, "sv_build_info")
+	rt.finish(ctx, inst, ctx.Err(), callErr)
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+	return out, callErr
+}
+
 // Version calls the guest sv_version export (no client needed).
 func (rt *Runtime) Version(ctx context.Context) (string, error) {
 	inst, err := rt.pool.borrow(ctx)

@@ -212,6 +212,10 @@ pub fn dispatch(client: &SolvaPayClient, op: &str, args_json: &str) -> String {
             let params: solvapay_transport::McpReadResourceParams = parse_args_json(&args_json)?;
             client.mcp_read_resource(params).await
         })),
+        "mcpResolveAuth" => runtime::runtime().block_on(run_envelope(async move {
+            let params: solvapay_transport::McpResolveAuthParams = parse_args_json(&args_json)?;
+            client.mcp_resolve_auth(params).await
+        })),
         "mcpOauthRequest" => runtime::runtime().block_on(run_envelope(async move {
             let params: solvapay_transport::McpOauthRequestParams = parse_args_json(&args_json)?;
             client.mcp_oauth_request(params).await

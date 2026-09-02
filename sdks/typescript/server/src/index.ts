@@ -122,6 +122,10 @@ export { McpAdapter } from './adapters'
 /** @internal Node native dispatch seams (fixture harness / package installs). */
 export { callNativeSync } from './native'
 
+/** §7.7 `{version, coreSha}` stamp from the installed `@solvapay/server-native` addon. */
+export { nativeBuildInfo } from './build-info'
+export type { NativeBuildInfo } from './build-info'
+
 /**
  * @internal WASM client seams. The contract fixture harness loads the real
  * `@solvapay/server-wasm` client and installs it as an override so client

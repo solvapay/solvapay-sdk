@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSolvaPayMcpFetchHandler } from '../../src/fetch/handler'
 import type { McpServerFactory } from '@modelcontextprotocol/server'
@@ -7,6 +8,14 @@ const publicBaseUrl = 'https://mcp.example.com'
 const apiBaseUrl = 'https://api.solvapay.com'
 const productRef = 'prd_test_123'
 const oauthClient = nativeOauthClient(apiBaseUrl)
+const hs256Secret = 'solvapay-mcp-fixture-hs256-secret-32b!!'
+
+function signedBearer(claims: Record<string, unknown>): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url')
+  const payload = Buffer.from(JSON.stringify(claims)).toString('base64url')
+  const sig = createHmac('sha256', hs256Secret).update(`${header}.${payload}`).digest('base64url')
+  return `${header}.${payload}.${sig}`
+}
 
 function mockFactory(): McpServerFactory {
   return vi.fn().mockReturnValue({
@@ -135,11 +144,15 @@ describe('createSolvaPayMcpFetchHandler', () => {
       apiBaseUrl,
       productRef,
       oauthClient,
+      hs256Secret,
     })
-    const jwt =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-      Buffer.from(JSON.stringify({ sub: 'cust_1', exp: 9_999_999_999 })).toString('base64url') +
-      '.sig'
+    const jwt = signedBearer({
+      sub: 'cus_1',
+      iss: publicBaseUrl,
+      aud: `${publicBaseUrl}/mcp`,
+      exp: 4_102_444_800,
+      token_use: 'mcp_access',
+    })
 
     const res = await handler(
       new Request(`${publicBaseUrl}/mcp`, {

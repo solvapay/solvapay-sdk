@@ -23,8 +23,6 @@ module SolvaPay
         @oauth_paths = oauth_paths
         @hs256_secret = hs256_secret
         @jwks_json = jwks_json
-        @jwks_cache = nil
-        @jwks_cache_expires_at = 0
         @payables = {} #: Hash[String, untyped]
         @mutex = Mutex.new
       end
@@ -56,7 +54,7 @@ module SolvaPay
         full_path = query.empty? ? path : "#{path}?#{query}"
         method = env["REQUEST_METHOD"].to_s
         return handle_oauth(env, method, full_path) unless path == @mcp_path
-        return [405, { "allow" => "POST" }, []] unless method == "POST"
+        return [405, { "allow" => "POST, OPTIONS" }, []] unless method == "POST"
 
         handle_mcp(env)
       end
@@ -94,13 +92,11 @@ module SolvaPay
               "mcpPath" => @mcp_path,
               "views" => @views,
               "userAgent" => env["HTTP_USER_AGENT"],
-              "nowUnixSecs" => Time.now.to_i,
             },
           }
           params["config"]["hs256Secret"] = @hs256_secret unless @hs256_secret.nil? || @hs256_secret.empty?
+          params["config"]["jwksJson"] = @jwks_json unless @jwks_json.nil?
           auth = env["HTTP_AUTHORIZATION"]
-          jwks = resolved_jwks(auth)
-          params["config"]["jwksJson"] = jwks unless jwks.nil?
           params["authHeader"] = auth unless auth.nil? || auth.empty?
           proto = env["HTTP_MCP_PROTOCOL_VERSION"]
           params["mcpProtocolVersionHeader"] = proto unless proto.nil? || proto.empty?
@@ -244,21 +240,6 @@ module SolvaPay
 
         input.rewind if input.respond_to?(:rewind)
         input.read.to_s
-      end
-
-      def resolved_jwks(auth)
-        return @jwks_json unless @jwks_json.nil?
-        return nil unless @hs256_secret.nil? || @hs256_secret.empty?
-        return nil if auth.nil? || auth.empty?
-        return nil unless @client.respond_to?(:fetch_jwks)
-
-        now = Time.now.to_i
-        return @jwks_cache if !@jwks_cache.nil? && @jwks_cache_expires_at > now
-
-        issuer = @public_base_url.sub(%r{/+\z}, "")
-        @jwks_cache = @client.fetch_jwks(params: { "jwksUrl" => "#{issuer}/.well-known/jwks.json" })
-        @jwks_cache_expires_at = now + 600
-        @jwks_cache
       end
 
       def stringify(value)

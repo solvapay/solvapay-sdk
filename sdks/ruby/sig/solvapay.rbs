@@ -116,6 +116,7 @@ module SolvaPay
     def mcp_dispatch: (params: Hash[String, untyped]) -> untyped
     def mcp_oauth_request: (params: Hash[String, untyped]) -> untyped
     def mcp_read_resource: (params: Hash[String, untyped]) -> untyped
+    def mcp_resolve_auth: (params: Hash[String, untyped]) -> untyped
     def process_payment_intent: (params: Hash[String, untyped]) -> untyped
     def reactivate_purchase: (params: Hash[String, untyped]) -> untyped
     def save_auto_recharge: (params: Hash[String, untyped]) -> untyped

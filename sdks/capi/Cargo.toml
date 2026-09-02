@@ -25,6 +25,8 @@ repo-paths = { path = "../../tools/shared/repo-paths", optional = true }
 [features]
 default = []
 fixture-host = ["dep:fixture-runner", "dep:repo-paths"]
+# Debug-only panicking export for FFI unwind tests. Never enable in publish builds.
+panic-probe = []
 
 [build-dependencies]
 cbindgen = "0.29.0"

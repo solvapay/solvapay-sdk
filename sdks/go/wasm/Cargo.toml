@@ -10,6 +10,11 @@ publish = false
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = []
+# Debug-only panicking export for FFI unwind tests. Never enable in publish builds.
+panic-probe = []
+
 [dependencies]
 solvapay-core = { path = "../../../core/solvapay-core", default-features = false, features = ["server"] }
 solvapay-dto = { path = "../../../core/solvapay-dto" }

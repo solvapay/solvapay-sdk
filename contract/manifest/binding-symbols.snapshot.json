@@ -4281,6 +4281,42 @@
       "coreCall": "mcp_read_resource",
       "clientCallArgs": []
     },
+    "mcpResolveAuth": {
+      "core": "solvapay_transport::SolvaPayClient::mcp_resolve_auth",
+      "names": {
+        "ts": "mcpResolveAuth",
+        "py": "mcp_resolve_auth",
+        "rb": "mcp_resolve_auth",
+        "go": "McpResolveAuth",
+        "rust": "mcp_resolve_auth",
+        "c": "mcpResolveAuth"
+      },
+      "catalog": {
+        "kind": "operation",
+        "id": "mcpResolveAuth"
+      },
+      "args": [],
+      "splitPathRefs": [],
+      "return": "value",
+      "sync": "async",
+      "envelope": "async",
+      "artifact": "client",
+      "emitOrder": 38,
+      "section": "MCP composite",
+      "doc": "`mcpResolveAuth`",
+      "docWasm": null,
+      "rustFnName": "mcp_resolve_auth",
+      "call": {
+        "kind": "wrap",
+        "serialize": "clientAwait",
+        "args": []
+      },
+      "verbatimBody": null,
+      "verbatimBodyWasm": null,
+      "dtoType": "solvapay_transport::McpResolveAuthParams",
+      "coreCall": "mcp_resolve_auth",
+      "clientCallArgs": []
+    },
     "mcpViewMaps": {
       "core": "solvapay_core::mcp::mcp_view_maps",
       "names": {

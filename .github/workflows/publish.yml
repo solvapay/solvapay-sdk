@@ -44,6 +44,8 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      SOLVAPAY_CORE_SHA: ${{ github.sha }}
     # The default `GITHUB_TOKEN` is held to read-only here. All
     # write-side GitHub API calls (commit, branch push, "Version
     # Packages" PR open/update) flow through the `solvapay-release-bot`

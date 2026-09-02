@@ -710,6 +710,22 @@ pub unsafe extern "C" fn sv_mcp_read_resource(args_ptr: *mut u8, args_len: usize
     }))
 }
 
+/// `mcpResolveAuth`
+///
+/// # Safety
+///
+/// `args_ptr` / `args_len` must describe a valid guest allocation from `sv_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn sv_mcp_resolve_auth(args_ptr: *mut u8, args_len: usize) -> u64 {
+    let args_json = read_string(args_ptr, args_len);
+    pack(with_client(|client| {
+        pollster::block_on(run_envelope(async move {
+            let params: solvapay_transport::McpResolveAuthParams = parse_args_json(&args_json)?;
+            client.mcp_resolve_auth(params).await
+        }))
+    }))
+}
+
 /// `mcpOauthRequest`
 ///
 /// # Safety

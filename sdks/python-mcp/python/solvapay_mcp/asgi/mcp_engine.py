@@ -37,7 +37,7 @@ def create_mcp_engine_route(
             apply_native_cors(request, response)
             return response
         if request.method != "POST":
-            response = Response(status_code=405, headers={"Allow": "POST"})
+            response = Response(status_code=405, headers={"Allow": "POST, OPTIONS"})
             apply_native_cors(request, response)
             return response
         try:

@@ -27,6 +27,8 @@ concurrency:
 jobs:
   publish-preview:
     runs-on: ubuntu-latest
+    env:
+      SOLVAPAY_CORE_SHA: ${{ github.sha }}
     permissions:
       contents: read
 

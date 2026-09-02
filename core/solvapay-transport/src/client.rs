@@ -27,6 +27,7 @@ use solvapay_dto::{
     UpdateCustomerResult, UpdatePlanRequest, UpdateProductRequest, UserInfoResponse,
 };
 
+use crate::auth_cache::AuthCaches;
 use crate::shell::{ClientShell, Idempotency, ShellRequest};
 use crate::Method;
 
@@ -38,6 +39,8 @@ use crate::Method;
 pub struct SolvaPayClient {
     /// Shared HTTP shell (auth, base URL, retries, template errors).
     shell: ClientShell,
+    /// JWKS + bearer-verdict caches for `mcpResolveAuth`.
+    auth_caches: AuthCaches,
 }
 
 impl SolvaPayClient {
@@ -51,12 +54,20 @@ impl SolvaPayClient {
     ///
     /// A typed client ready for Group A–C method calls.
     pub fn new(shell: ClientShell) -> Self {
-        Self { shell }
+        Self {
+            shell,
+            auth_caches: AuthCaches::new(),
+        }
     }
 
     /// Returns a shared reference to the underlying shell.
     pub fn shell(&self) -> &ClientShell {
         &self.shell
+    }
+
+    /// JWKS / bearer-verdict caches shared across MCP auth resolution.
+    pub(crate) fn auth_caches(&self) -> &AuthCaches {
+        &self.auth_caches
     }
 
     /// `POST /v1/sdk/customers` — create a customer.

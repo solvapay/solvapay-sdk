@@ -20,6 +20,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { REPO_ROOT } from '../shared/paths.js'
 import { dtoGenArgs, generatedDriftPaths, lookupPath } from '../shared/repo-paths.js'
+import { runFacadeCoverage } from './facade-coverage.js'
 import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
 
 /** dto-gen argv (paths relative to the repo root). Derived from repo-paths.yaml. */
@@ -214,19 +215,27 @@ export function runGen(options: CliOptions): CliResult {
       stderr: `${gen.stderr}${types.stderr}`,
     }
   }
+  const coverage = runFacadeCoverage({ check: false })
+  if (coverage.exitCode !== 0) {
+    return {
+      exitCode: coverage.exitCode,
+      stdout: `${gen.stdout}${types.stdout}${coverage.stdout}`,
+      stderr: `${gen.stderr}${types.stderr}${coverage.stderr}`,
+    }
+  }
   if (!options.check) {
     return {
       exitCode: 0,
-      stdout: `${gen.stdout}${types.stdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
-      stderr: `${gen.stderr}${types.stderr}`,
+      stdout: `${gen.stdout}${types.stdout}${coverage.stdout}Generated SDK surfaces from OpenAPI snapshot + contract manifest\n`,
+      stderr: `${gen.stderr}${types.stderr}${coverage.stderr}`,
     }
   }
   const after = hashGeneratedTree(REPO_ROOT, GENERATED_PATHS)
   const drift = formatIdempotenceResult(diffGeneratedHashes(before ?? new Map(), after))
   return {
     exitCode: drift.exitCode,
-    stdout: `${gen.stdout}${types.stdout}${drift.stdout}`,
-    stderr: `${gen.stderr}${types.stderr}${drift.stderr}`,
+    stdout: `${gen.stdout}${types.stdout}${coverage.stdout}${drift.stdout}`,
+    stderr: `${gen.stderr}${types.stderr}${coverage.stderr}${drift.stderr}`,
   }
 }
 

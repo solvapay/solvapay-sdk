@@ -56,6 +56,7 @@ var Signatures = []Signature{
 	{"McpDispatch", []string{"params"}},
 	{"McpOauthRequest", []string{"params"}},
 	{"McpReadResource", []string{"params"}},
+	{"McpResolveAuth", []string{"params"}},
 	{"ProcessPaymentIntent", []string{"params"}},
 	{"ReactivatePurchase", []string{"params"}},
 	{"SaveAutoRecharge", []string{"params"}},

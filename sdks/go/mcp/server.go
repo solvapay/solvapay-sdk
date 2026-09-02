@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
-	"time"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	solvapay "github.com/solvapay/solvapay-go"
@@ -45,10 +43,6 @@ type Server struct {
 
 	mu       sync.Mutex
 	payables map[string]Options
-
-	jwksMu    sync.Mutex
-	jwksCache any
-	jwksExp   time.Time
 }
 
 // NewServer builds an official MCP server with SolvaPay builtins, the
@@ -347,22 +341,9 @@ func (s *Server) dispatch(ctx context.Context, rpc any, req *mcpsdk.CallToolRequ
 	if s.cfg.Hs256Secret != "" {
 		asMap(params["config"])["hs256Secret"] = s.cfg.Hs256Secret
 	}
-	if auth := authHeaderFromRequest(req); auth != "" {
-		jwks, err := s.resolvedJwks(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if jwks != nil {
-			asMap(params["config"])["jwksJson"] = jwks
-		}
-	} else if s.cfg.JwksJSON != nil {
+	if s.cfg.JwksJSON != nil {
 		asMap(params["config"])["jwksJson"] = s.cfg.JwksJSON
 	}
-	now := s.cfg.NowUnixSecs
-	if now == 0 {
-		now = time.Now().Unix()
-	}
-	asMap(params["config"])["nowUnixSecs"] = now
 	if auth := authHeaderFromRequest(req); auth != "" {
 		params["authHeader"] = auth
 	}
@@ -370,30 +351,6 @@ func (s *Server) dispatch(ctx context.Context, rpc any, req *mcpsdk.CallToolRequ
 		asMap(params["config"])["userAgent"] = ua
 	}
 	return s.client.McpDispatch(ctx, params)
-}
-
-const jwksCacheTTL = 10 * time.Minute
-
-func (s *Server) resolvedJwks(ctx context.Context) (any, error) {
-	if s.cfg.JwksJSON != nil {
-		return s.cfg.JwksJSON, nil
-	}
-	if s.cfg.Hs256Secret != "" {
-		return nil, nil
-	}
-	url := strings.TrimRight(s.cfg.PublicBaseURL, "/") + "/.well-known/jwks.json"
-	s.jwksMu.Lock()
-	defer s.jwksMu.Unlock()
-	if s.jwksCache != nil && time.Now().Before(s.jwksExp) {
-		return s.jwksCache, nil
-	}
-	got, err := s.client.FetchJwks(ctx, map[string]any{"jwksUrl": url})
-	if err != nil {
-		return nil, err
-	}
-	s.jwksCache = got
-	s.jwksExp = time.Now().Add(jwksCacheTTL)
-	return got, nil
 }
 
 func (s *Server) resumePayableFromEnvelope(ctx context.Context, envelope map[string]any) (*mcpsdk.CallToolResult, error) {

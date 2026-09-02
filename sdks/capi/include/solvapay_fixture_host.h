@@ -23,6 +23,11 @@
 #include <stdlib.h>
 
 /*
+ Debug-only panicking export. Contained at the FFI edge (`SolvapayStatus::Panic`).
+ */
+SolvapayStatus solvapay_panic_probe(void);
+
+/*
  Client-less sync dispatch (`validateBusinessDetails`, MCP ops, …).
 
  # Safety

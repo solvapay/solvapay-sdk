@@ -1,0 +1,41 @@
+{
+  "suite": "resolve-auth",
+  "case": "gated-remote-userinfo",
+  "input": {
+    "fn": "mcpResolveAuth",
+    "args": {
+      "rpcMethod": "tools/call",
+      "authHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6MSIsImF1ZCI6Imh0dHA6Ly8xMjcuMC4wLjE6MSIsImV4cCI6NDEwMjQ0NDgwMCwidG9rZW5fdXNlIjoibWNwX2FjY2VzcyIsImp0aSI6Imp0aV9yZW1vdGVfMSIsInNjb3BlIjoidG9vbHM6cmVhZCB0b29sczp3cml0ZSJ9.sig",
+      "authMode": "tools-call",
+      "publicBaseUrl": "http://127.0.0.1:1",
+      "jsonRpcId": 4
+    }
+  },
+  "http": [
+    {
+      "method": "GET",
+      "path": "/v1/customer/auth/userinfo",
+      "status": 200,
+      "body": {
+        "sub": "cus_1",
+        "email": "cus@example.com"
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "kind": "allow",
+      "authInfo": {
+        "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6MSIsImF1ZCI6Imh0dHA6Ly8xMjcuMC4wLjE6MSIsImV4cCI6NDEwMjQ0NDgwMCwidG9rZW5fdXNlIjoibWNwX2FjY2VzcyIsImp0aSI6Imp0aV9yZW1vdGVfMSIsInNjb3BlIjoidG9vbHM6cmVhZCB0b29sczp3cml0ZSJ9.sig",
+        "clientId": "solvapay-mcp-client",
+        "scopes": ["tools:read", "tools:write"],
+        "expiresAt": 4102444800,
+        "extra": {
+          "customer_ref": "cus_1",
+          "resource": "http://127.0.0.1:1"
+        }
+      },
+      "customerRef": "cus_1"
+    }
+  }
+}

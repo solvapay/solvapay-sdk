@@ -67,6 +67,7 @@ mod replay {
                     | "mcpCallBuiltinTool"
                     | "mcpOauthRequest"
                     | "mcpDispatch"
+                    | "mcpResolveAuth"
             ) {
                 continue;
             }

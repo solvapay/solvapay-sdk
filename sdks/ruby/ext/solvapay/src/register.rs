@@ -548,6 +548,10 @@ pub(crate) fn register_generated(native: RModule, client: RClass) -> Result<(), 
         method!(SolvaPayClient::mcp_read_resource, 1),
     )?;
     client.define_method(
+        "mcp_resolve_auth",
+        method!(SolvaPayClient::mcp_resolve_auth, 1),
+    )?;
+    client.define_method(
         "mcp_oauth_request",
         method!(SolvaPayClient::mcp_oauth_request, 1),
     )?;

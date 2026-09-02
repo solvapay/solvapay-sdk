@@ -62,6 +62,7 @@ export type WasmClientMethod =
   | 'mcpBootstrap'
   | 'mcpCallBuiltinTool'
   | 'mcpReadResource'
+  | 'mcpResolveAuth'
   | 'mcpOauthRequest'
   | 'mcpDispatch'
   | 'fetchJwks'

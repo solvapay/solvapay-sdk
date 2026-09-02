@@ -8,15 +8,9 @@
 
 import {
   assertValidProductRef,
-  buildAuthInfoFromBearer,
   logMcpConfigOnce,
-  mcpAuthGate,
   mcpNativeCors,
-  McpBearerAuthError,
   withoutTrailingSlash,
-  defaultMcpBearerExpectations,
-  cachedJwks,
-  jwksUrlFromIssuer,
   type McpAuthInfoExtras,
   type McpAuthMode,
   type OAuthBridgePaths,
@@ -34,6 +28,11 @@ import {
   type McpOauthRequestConfig,
   type McpOauthRequestResult,
 } from '../internal/mcp-oauth-request'
+import {
+  mcpResolveAuth,
+  requireResolveAuthClient,
+  type McpResolveAuthClient,
+} from '../internal/mcp-resolve-auth'
 
 type JsonRpcId = string | number | null
 
@@ -99,11 +98,10 @@ export interface McpOAuthBridgeOptions {
   authInfo?: McpAuthInfoExtras
   hs256Secret?: string
   jwksJson?: unknown
-  fetchJwks?: (jwksUrl: string) => Promise<unknown>
   protectedResourcePath?: string
   authorizationServerPath?: string
   oauthPaths?: OAuthBridgePaths
-  oauthClient?: McpOauthRequestClient | null
+  oauthClient?: (McpOauthRequestClient & McpResolveAuthClient) | null
 }
 
 function getRequestAuthHeader(req: RequestLike): string | null {
@@ -128,37 +126,16 @@ function getRequestJsonRpcId(body: unknown): JsonRpcId {
   return null
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object'
+}
+
 function getRequestJsonRpcMethod(body: unknown): string | undefined {
   if (body && typeof body === 'object' && 'method' in body) {
     const method = (body as { method?: unknown }).method
     return typeof method === 'string' ? method : undefined
   }
   return undefined
-}
-
-function writeChallenge(
-  res: ResponseLike,
-  req: RequestLike,
-  publicBaseUrl: string,
-  mcpPath: string,
-  id: JsonRpcId,
-  rpcMethod?: string,
-) {
-  const gate = mcpAuthGate({
-    publicBaseUrl,
-    mcpPath,
-    jsonRpcId: id,
-    rpcMethod: rpcMethod ?? 'tools/call',
-  })
-  applyCorsHeaders(req, res)
-  if (gate.kind === 'challenge') {
-    for (const [key, value] of Object.entries(gate.headers)) {
-      res.setHeader(key, value)
-    }
-    res.status(gate.status).json(gate.body)
-    return
-  }
-  res.status(401).json({ error: 'Unauthorized' })
 }
 
 function getRequestQuery(req: RequestLike): string {
@@ -375,10 +352,8 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     mcpPath = '/mcp',
     requireAuth = true,
     authMode = 'tools-call',
-    authInfo,
     hs256Secret,
     jwksJson,
-    fetchJwks,
     protectedResourcePath = DEFAULT_PROTECTED_RESOURCE_PATH,
     authorizationServerPath = DEFAULT_AUTHORIZATION_SERVER_PATH,
     oauthPaths,
@@ -465,59 +440,41 @@ export function createMcpOAuthBridge(options: McpOAuthBridgeOptions): Middleware
     const id = getRequestJsonRpcId(req.body)
     const method = getRequestJsonRpcMethod(req.body)
 
-    const expectations = defaultMcpBearerExpectations(publicBaseUrl, mcpPath)
-    let resolvedJwks = jwksJson
-    if (hs256Secret === undefined && resolvedJwks === undefined && fetchJwks !== undefined) {
-      resolvedJwks = await cachedJwks(
-        jwksUrlFromIssuer(expectations.expectedIssuer),
-        fetchJwks,
-        Date.now(),
-      )
+    if (!requireAuth) {
+      next()
+      return
     }
-    const verify = {
-      ...expectations,
-      ...(hs256Secret !== undefined ? { hs256Secret } : {}),
-      ...(resolvedJwks !== undefined ? { jwksJson: resolvedJwks } : {}),
-    }
-    const gate = requireAuth
-      ? mcpAuthGate({
-          rpcMethod: method,
-          authHeader,
-          authMode,
-          publicBaseUrl,
-          mcpPath,
-          jsonRpcId: id,
-          ...verify,
-        })
-      : { kind: 'allow' as const }
-    if (gate.kind === 'challenge') {
+    const resolved = await mcpResolveAuth(
+      {
+        publicBaseUrl,
+        authMode,
+        mcpPath,
+        jsonRpcId: id,
+        ...(method !== undefined ? { rpcMethod: method } : {}),
+        ...(authHeader ? { authHeader } : {}),
+        ...(hs256Secret !== undefined ? { hs256Secret } : {}),
+        ...(jwksJson !== undefined ? { jwksJson } : {}),
+      },
+      requireResolveAuthClient(oauthClient),
+    )
+    if (resolved.kind !== 'allow') {
       applyCorsHeaders(req, res)
-      for (const [key, value] of Object.entries(gate.headers)) {
-        res.setHeader(key, value)
+      const status = resolved.status
+      if (typeof status !== 'number') {
+        throw new Error('mcpResolveAuth non-allow result missing status')
       }
-      res.status(gate.status).json(gate.body)
+      if (isRecord(resolved.headers)) {
+        for (const [key, value] of Object.entries(resolved.headers)) {
+          if (typeof value === 'string') res.setHeader(key, value)
+        }
+      }
+      res.status(status).json(resolved.body)
       return
     }
-    if (!authHeader) {
-      next()
-      return
+    if (isRecord(resolved.authInfo)) {
+      req.auth = resolved.authInfo
     }
-
-    try {
-      const auth = buildAuthInfoFromBearer(authHeader, { ...verify, ...authInfo })
-      if (!auth) {
-        throw new McpBearerAuthError('Missing bearer token')
-      }
-
-      req.auth = auth
-      next()
-    } catch (error) {
-      if (error instanceof McpBearerAuthError) {
-        writeChallenge(res, req, publicBaseUrl, mcpPath, id, method)
-        return
-      }
-      next(error)
-    }
+    next()
   }
 
   return [...oauthMiddlewares, mcpAuthMiddleware]

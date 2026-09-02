@@ -29,6 +29,7 @@ pub(super) fn render(desc: &ParitySuiteDescriptor) -> GenResult<String> {
     output.push_str("static void keep_abi_symbols(void) {\n");
     output.push_str("  (void)&solvapay_abi_version;\n");
     output.push_str("  (void)&solvapay_version;\n");
+    output.push_str("  (void)&solvapay_build_info;\n");
     output.push_str("  (void)&solvapay_client_new;\n");
     output.push_str("  (void)&solvapay_client_call;\n");
     output.push_str("  (void)&solvapay_verify_webhook;\n");

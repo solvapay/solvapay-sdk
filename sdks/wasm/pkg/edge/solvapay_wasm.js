@@ -485,6 +485,17 @@ export class WasmClient {
         return ret;
     }
     /**
+     * `mcpResolveAuth`
+     * @param {string} args_json
+     * @returns {Promise<string>}
+     */
+    mcpResolveAuth(args_json) {
+        const ptr0 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmclient_mcpResolveAuth(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
      * Constructs a client over `FetchTransport` + `ClientShell`.
      *
      * # Arguments
@@ -2587,6 +2598,25 @@ export function verifyWebhook(body, signature, secret, now_unix_secs) {
 }
 
 /**
+ * Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
+ *
+ * Available on both `edge` and `browser` profiles.
+ * @returns {string}
+ */
+export function wasmBuildInfo() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.wasmBuildInfo();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
  * Returns the crate version string (`CARGO_PKG_VERSION`).
  *
  * Used as a hello-world smoke export proving the WASM module loads under both
@@ -2785,7 +2815,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 640, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 654, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf82478b34f74c087);
             return ret;
         },

@@ -10,6 +10,9 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+import zipfile
+
+PANIC_PROBE_MARKER = b"SOLVAPAY_PANIC_PROBE"
 
 
 def _is_abi3(name: str) -> bool:
@@ -32,12 +35,20 @@ def _matchers():
             lambda n: "musllinux" in n and "x86_64" in n,
         ),
         (
+            "musllinux-aarch64",
+            lambda n: "musllinux" in n and ("aarch64" in n or "arm64" in n),
+        ),
+        (
             "macos-universal2",
             lambda n: "macosx" in n and "universal2" in n,
         ),
         (
             "win_amd64",
             lambda n: "win_amd64" in n or "win32" in n,
+        ),
+        (
+            "win_arm64",
+            lambda n: "win_arm64" in n,
         ),
     ]
 
@@ -67,6 +78,20 @@ def main() -> int:
             present.append(label)
         else:
             missing.append(label)
+
+    probe_hits: list[str] = []
+    for wheel in wheel_dir.rglob("*.whl"):
+        with zipfile.ZipFile(wheel) as archive:
+            for name in archive.namelist():
+                if not name.endswith((".so", ".dylib", ".pyd", ".dll")):
+                    continue
+                if PANIC_PROBE_MARKER in archive.read(name):
+                    probe_hits.append(f"{wheel.name}:{name}")
+    if probe_hits:
+        print("check-wheels: HARD FAIL — panic-probe marker in release artifact:", file=sys.stderr)
+        for hit in probe_hits:
+            print(f"  - {hit}", file=sys.stderr)
+        return 1
 
     if missing:
         print("check-wheels: HARD FAIL — missing abi3 wheel families:", file=sys.stderr)

@@ -93,6 +93,8 @@ generated:
   - id: bindingSymbols
     path: contract/manifest/binding-symbols.snapshot.json
     flag: --dump-bindings
+  - id: facadeCoverage
+    path: contract/manifest/facade-coverage.json
   - id: boundaryTypes
     path: contract/manifest/boundary-types.snapshot.json
     flag: --dump-boundary-types
@@ -289,6 +291,7 @@ drift:
   - nativeTs
   - wasmTs
   - bindingSymbols
+  - facadeCoverage
   - boundaryTypes
   - coreTypesTs
   - coreDispatchTs
@@ -424,6 +427,10 @@ markerExemptions:
     reason: third-party Cargo boilerplate
   - pattern: sdks/capi/tests/header_golden.rs
     reason: header golden test names the marker
+  - pattern: tools/codegen/facade-coverage.ts
+    reason: writes the generated-file marker into the coverage matrix
+  - pattern: .cursor/plans/**
+    reason: plans that name the generated-file marker
   - pattern: tools/codegen/check-generated-headers.ts
     reason: gate tooling that names the marker
   - pattern: tools/codegen/check-generated-headers.test.ts

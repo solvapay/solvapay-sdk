@@ -654,6 +654,25 @@ func (c *Client) McpReadResource(ctx context.Context, params map[string]any) (an
 	return out, nil
 }
 
+// McpResolveAuth decide allow vs challenge for one MCP request; facades write the envelope verbatim.
+// The params parameter is RPC method, Authorization header, auth mode, public origin, and optional verification overrides.
+// Returns allow (with authInfo/customerRef), challenge (401), or error (-32603 at HTTP 200).
+func (c *Client) McpResolveAuth(ctx context.Context, params map[string]any) (any, error) {
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	envelope, err := c.rt.CallEnvelope(ctx, "sv_mcp_resolve_auth", string(args))
+	if err != nil {
+		return nil, err
+	}
+	var out any
+	if err := decodeEnvelope(envelope, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProcessPaymentIntent process a completed payment intent into a purchase or top-up outcome.
 // The params parameter is Process request identifying the payment intent.
 // Returns Normalized process-payment result (purchase, top-up, or error branch).

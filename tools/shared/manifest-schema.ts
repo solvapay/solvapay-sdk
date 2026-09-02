@@ -11,7 +11,7 @@ export type Language = (typeof LANGUAGES)[number]
 
 /** Wire (OpenAPI-backed) client operations. Routeless MCP composites are extra. */
 export const EXPECTED_ROUTED_OPERATION_COUNT = 36
-export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 6
+export const EXPECTED_MCP_COMPOSITE_OPERATION_COUNT = 7
 export const EXPECTED_OPERATION_COUNT =
   EXPECTED_ROUTED_OPERATION_COUNT + EXPECTED_MCP_COMPOSITE_OPERATION_COUNT
 
@@ -444,6 +444,7 @@ export const SHIM_JS_NAMES = [
   'mcpCallBuiltinTool',
   'mcpDispatch',
   'mcpOauthRequest',
+  'mcpResolveAuth',
   'mcpReadResource',
   'processPaymentIntent',
   'reactivatePurchase',
@@ -562,7 +563,9 @@ export const SHIM_JS_NAMES = [
 /** Binding-infra exports that are not core symbols (mirrors delegation-allowlist). */
 export const BINDING_INFRA_ALLOWLIST = [
   'napiVersion',
+  'nativeBuildInfo',
   'wasmVersion',
+  'wasmBuildInfo',
   'NativeClient',
   'WasmClient',
 ] as const

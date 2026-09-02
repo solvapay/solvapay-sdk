@@ -25,7 +25,7 @@ function getDeps(): ApiDeps {
   cachedDeps = {
     solvaPay: createSolvaPay({
       apiKey,
-      apiBaseUrl: process.env.SOLVAPAY_API_BASE_URL,
+      apiBaseUrl: process.env.SOLVAPAY_API_BASE_URL ?? 'http://localhost:3010',
     }),
     geminiApiKey: process.env.GEMINI_API_KEY ?? '',
   }

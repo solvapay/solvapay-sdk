@@ -14,6 +14,7 @@ const rustRoot = resolve(pkgRoot, '../..')
 
 const BROWSER_SEMANTIC_ALLOWLIST = new Set([
   'wasmVersion',
+  'wasmBuildInfo',
   // business-details (public-safe, Step 38R-e)
   'validateBusinessDetails',
   'deriveTaxIdType',

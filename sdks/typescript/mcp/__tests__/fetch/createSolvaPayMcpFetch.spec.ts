@@ -29,6 +29,7 @@ const productRef = 'prd_test_factory'
 const resourceUri = 'ui://test/app.html'
 
 function makeSolvaPay() {
+  const native = createSolvaPay({ apiKey: 'sk_test', apiBaseUrl }).apiClient
   const client = {
     checkLimits: vi.fn().mockResolvedValue({ withinLimits: true, remaining: 1, plan: 'free' }),
     trackUsage: vi.fn().mockResolvedValue(undefined),
@@ -49,6 +50,8 @@ function makeSolvaPay() {
       creditsPerMinorUnit: 1,
       displayExchangeRate: 1,
     }),
+    mcpOauthRequest: native.mcpOauthRequest?.bind(native),
+    mcpResolveAuth: native.mcpResolveAuth?.bind(native),
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }

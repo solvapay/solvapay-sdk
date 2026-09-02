@@ -25,6 +25,7 @@ const LEGACY_GENERATED_PATHS = [
   'sdks/typescript/server/src/native.ts',
   'sdks/typescript/server/src/wasm.ts',
   'contract/manifest/binding-symbols.snapshot.json',
+  'contract/manifest/facade-coverage.json',
   'contract/manifest/boundary-types.snapshot.json',
   'sdks/typescript/core/src/types/boundary.generated.d.ts',
   'sdks/typescript/core/src/native-dispatch.ts',
@@ -226,7 +227,7 @@ describe('repo-paths manifest', () => {
     expect(generatedDriftPaths()).toEqual([...LEGACY_GENERATED_PATHS])
   })
 
-  it('keeps generatedDriftPaths on the legacy 89-path list after externalGenerated', () => {
+  it('keeps generatedDriftPaths on the committed generated-path list after externalGenerated', () => {
     expect(generatedDriftPaths()).toHaveLength(LEGACY_GENERATED_PATHS.length)
     expect(generatedDriftPaths()).toEqual([...LEGACY_GENERATED_PATHS])
   })

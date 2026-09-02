@@ -75,7 +75,7 @@ fn python_full_surface_matches_committed() {
         .expect("pythonBindings");
 
     let client_names = names_for(&ir, IrBindingArtifact::Client);
-    assert_eq!(client_names.len(), 42);
+    assert_eq!(client_names.len(), 43);
     for name in &client_names {
         assert!(
             emitted.client_rs.contains(&format!("fn {name}")),

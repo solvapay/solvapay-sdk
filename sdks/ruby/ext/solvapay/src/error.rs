@@ -69,8 +69,11 @@ impl BindingError {
     }
 
     /// Converts into a Magnus [`Error`] raising `SolvaPay::Error` with `@code`.
+    #[allow(deprecated)]
     pub fn into_magnus_err(self) -> Error {
         let Ok(ruby) = Ruby::get() else {
+            // magnus 0.8 removed handle-less constructors. This path is only
+            // reachable if the VM has already torn down.
             return Error::new(exception::runtime_error(), self.message);
         };
         let class = match ruby.eval::<magnus::ExceptionClass>("SolvaPay::Error") {

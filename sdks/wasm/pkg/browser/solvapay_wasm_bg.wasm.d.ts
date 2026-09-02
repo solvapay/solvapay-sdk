@@ -33,6 +33,7 @@ export const solvapayCall: (a: number, b: number) => [number, number];
 export const toMajorUnits: (a: number, b: number) => [number, number];
 export const trialDays: (a: number, b: number) => [number, number];
 export const validateBusinessDetails: (a: number, b: number) => [number, number];
+export const wasmBuildInfo: () => [number, number];
 export const wasmVersion: () => [number, number];
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_malloc: (a: number, b: number) => number;

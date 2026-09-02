@@ -31,13 +31,15 @@ use solvapay_dto::{
 use solvapay_mcp_core::{
     is_modern_era, mcp_descriptors, mcp_handle_request, mcp_overview_resource,
     narrated_tool_result, new_widget_session_id, parse_mode, stamp_catalog_result,
-    stamp_complete_result, tool_error_result, tool_result, HandleRequestInput, McpDescriptorsInput,
+    stamp_complete_result, tool_error_result, tool_result, HandleRequestInput, McpAuthMode,
+    McpDescriptorsInput,
 };
 
 use crate::client::SolvaPayClient;
 use crate::http::{HeaderName, HttpRequest, HttpResponse, Method};
 
 mod oauth_proxy;
+mod resolve_auth;
 
 /// Arguments for [`SolvaPayClient::mcp_bootstrap`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,6 +129,35 @@ pub struct McpDispatchParams {
 pub struct FetchJwksParams {
     /// Absolute JWKS URL (`{issuer}/.well-known/jwks.json`).
     pub jwks_url: String,
+}
+
+/// Arguments for [`SolvaPayClient::mcp_resolve_auth`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct McpResolveAuthParams {
+    /// JSON-RPC method (may be absent).
+    #[serde(default)]
+    pub rpc_method: Option<String>,
+    /// `Authorization` header (may be null).
+    #[serde(default)]
+    pub auth_header: Option<String>,
+    /// Auth mode. Defaults to `tools-call`.
+    #[serde(default)]
+    pub auth_mode: Option<McpAuthMode>,
+    /// Public origin for `WWW-Authenticate` and default `iss`.
+    pub public_base_url: String,
+    /// Optional MCP mount path.
+    #[serde(default)]
+    pub mcp_path: Option<String>,
+    /// JSON-RPC id echoed on challenge / error bodies.
+    #[serde(default)]
+    pub json_rpc_id: Option<Value>,
+    /// Explicit HS256 secret (test / self-hosted AS escape hatch).
+    #[serde(default)]
+    pub hs256_secret: Option<String>,
+    /// Explicit JWKS document (test / self-hosted AS escape hatch).
+    #[serde(default)]
+    pub jwks_json: Option<Value>,
 }
 
 /// Arguments for [`SolvaPayClient::mcp_oauth_request`].
@@ -929,6 +960,20 @@ impl SolvaPayClient {
         }
     }
 
+    /// Resolve MCP bearer auth (`mcpResolveAuth`).
+    ///
+    /// Facades write a `challenge` / `error` envelope verbatim, or attach
+    /// `authInfo` on `allow` and continue. They must not synthesize a 401.
+    #[solvapay_core::solvapay_export(
+        catalog = "operation",
+        section = "MCP composite",
+        emit_order = 38,
+        dto_type = "solvapay_transport::McpResolveAuthParams"
+    )]
+    pub async fn mcp_resolve_auth(&self, params: McpResolveAuthParams) -> Result<Value, SdkError> {
+        resolve_auth::resolve(self, params).await
+    }
+
     /// Handle one OAuth HTTP request (`mcpOauthRequest`).
     #[solvapay_core::solvapay_export(
         catalog = "operation",
@@ -994,10 +1039,45 @@ impl SolvaPayClient {
         dto_type = "solvapay_transport::McpDispatchParams"
     )]
     pub async fn mcp_dispatch(&self, params: McpDispatchParams) -> Result<Value, SdkError> {
+        let rpc_method = params
+            .rpc
+            .get("method")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
+        let json_rpc_id = params.rpc.get("id").cloned();
+        let resolved = self
+            .mcp_resolve_auth(McpResolveAuthParams {
+                rpc_method,
+                auth_header: params.auth_header.clone(),
+                auth_mode: params.config.auth_mode,
+                public_base_url: params.config.public_base_url.clone(),
+                mcp_path: params.config.mcp_path.clone(),
+                json_rpc_id,
+                hs256_secret: params.config.hs256_secret.clone(),
+                jwks_json: params.config.jwks_json.clone(),
+            })
+            .await?;
+        match resolved.get("kind").and_then(Value::as_str) {
+            Some("challenge") => return Ok(resolved),
+            Some("error") => {
+                return Ok(json!({
+                    "kind": "rpc",
+                    "status": resolved.get("status").cloned().unwrap_or(json!(200)),
+                    "rpc": resolved.get("body").cloned().unwrap_or(Value::Null),
+                }));
+            }
+            _ => {}
+        }
+        let pre_verified = resolved
+            .get("customerRef")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
+        let mut config = params.config.clone();
+        config.pre_verified_customer_ref = pre_verified;
         let modern = is_modern_era(&params.rpc);
         let handled = mcp_handle_request(&HandleRequestInput {
             rpc: params.rpc,
-            config: params.config.clone(),
+            config,
             auth_header: params.auth_header.clone(),
             mcp_protocol_version_header: params.mcp_protocol_version_header.clone(),
         })

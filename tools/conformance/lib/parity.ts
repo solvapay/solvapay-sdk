@@ -111,6 +111,7 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   // fixture harness + package installs. Not part of the portable
   // cross-language surface.
   'callNativeSync',
+  'nativeBuildInfo',
   'loadWasmBinding',
   'getWasmClient',
   'setWasmClientForTests',

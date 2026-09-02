@@ -7,14 +7,8 @@
  */
 
 import {
-  buildAuthInfoFromBearer,
-  mcpAuthGate,
   mcpWidgetResource,
   runMcpEngineRequest,
-  defaultMcpBearerExpectations,
-  cachedJwks,
-  jwksUrlFromIssuer,
-  requiresBearerAuth,
   type McpAuthInfoExtras,
   type McpAuthMode,
   type McpEngineConfig,
@@ -30,9 +24,14 @@ import {
   type McpServerFactory,
 } from '@modelcontextprotocol/server'
 import { buildMcpHandlerFace } from './legacyJsonFallback'
-import { applyNativeCors, authChallenge, corsPreflight } from './cors'
+import { applyNativeCors, corsPreflight } from './cors'
 import { createOAuthFetchRouter } from './oauth-bridge'
 import type { McpOauthRequestClient } from '../internal/mcp-oauth-request'
+import {
+  mcpResolveAuth,
+  requireResolveAuthClient,
+  type McpResolveAuthClient,
+} from '../internal/mcp-resolve-auth'
 
 /** Response shaping for modern (2026-07-28) request exchanges. */
 export type McpResponseMode = NonNullable<CreateMcpHandlerOptions['responseMode']>
@@ -49,11 +48,10 @@ export interface CreateSolvaPayMcpFetchHandlerOptions {
   authInfo?: McpAuthInfoExtras
   hs256Secret?: string
   jwksJson?: unknown
-  fetchJwks?: (jwksUrl: string) => Promise<unknown>
   protectedResourcePath?: string
   authorizationServerPath?: string
   oauthPaths?: OAuthBridgePaths
-  oauthClient?: McpOauthRequestClient | null
+  oauthClient?: (McpOauthRequestClient & McpResolveAuthClient) | null
   /**
    * When set, POST `/mcp` in JSON mode is routed through `mcpDispatch`
    * instead of per-tool `McpServer` registration. SSE/streamable HTTP
@@ -104,6 +102,17 @@ function engineHttpResponse(
         ? result.body
         : JSON.stringify(result.body)
   return new Response(body, { status: result.status, headers })
+}
+
+function isAuthInfo(value: unknown): value is AuthInfo {
+  if (!isRecord(value)) {
+    return false
+  }
+  return (
+    typeof value.token === 'string' &&
+    typeof value.clientId === 'string' &&
+    Array.isArray(value.scopes)
+  )
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -174,10 +183,9 @@ export function createSolvaPayMcpFetchHandler(
     mcpPath = '/mcp',
     requireAuth = true,
     authMode = 'tools-call',
-    authInfo,
+    authInfo: _authInfo,
     hs256Secret,
     jwksJson,
-    fetchJwks,
     protectedResourcePath,
     authorizationServerPath,
     oauthPaths,
@@ -205,23 +213,19 @@ export function createSolvaPayMcpFetchHandler(
     ...(onerror !== undefined ? { onerror } : {}),
   })
 
-  const resolveVerify = async (authHeader?: string | null) => {
-    const expectations = defaultMcpBearerExpectations(publicBaseUrl, mcpPath)
-    if (hs256Secret !== undefined) {
-      return { ...expectations, hs256Secret }
+  const writeResolved = (req: Request, resolved: Record<string, unknown>): Response => {
+    const status = resolved.status
+    if (typeof status !== 'number') {
+      throw new Error('mcpResolveAuth non-allow result missing status')
     }
-    if (jwksJson !== undefined) {
-      return { ...expectations, jwksJson }
+    const headers = new Headers()
+    applyNativeCors(req.headers, headers)
+    if (isRecord(resolved.headers)) {
+      for (const [key, value] of Object.entries(resolved.headers)) {
+        if (typeof value === 'string') headers.set(key, value)
+      }
     }
-    if (fetchJwks !== undefined && authHeader) {
-      const json = await cachedJwks(
-        jwksUrlFromIssuer(expectations.expectedIssuer),
-        fetchJwks,
-        Date.now(),
-      )
-      return { ...expectations, jwksJson: json }
-    }
-    return expectations
+    return new Response(JSON.stringify(resolved.body), { status, headers })
   }
 
   return async (req: Request): Promise<Response> => {
@@ -308,7 +312,6 @@ export function createSolvaPayMcpFetchHandler(
             body: widget,
           })
         }
-        const verify = await resolveVerify(req.headers.get('authorization'))
         const result = await runMcpEngineRequest({
           mcpDispatch: engine.mcpDispatch,
           rpc,
@@ -318,7 +321,8 @@ export function createSolvaPayMcpFetchHandler(
             authMode,
             mcpPath,
             userAgent: req.headers.get('user-agent') ?? undefined,
-            ...verify,
+            ...(hs256Secret !== undefined ? { hs256Secret } : {}),
+            ...(jwksJson !== undefined ? { jwksJson } : {}),
           },
           ...(req.headers.get('authorization')
             ? { authHeader: req.headers.get('authorization') ?? undefined }
@@ -350,45 +354,31 @@ export function createSolvaPayMcpFetchHandler(
 
     const authHeader = req.headers.get('authorization')
     const envelope = await readJsonRpcEnvelope(req)
-    const verify = await resolveVerify(authHeader)
+    let resolvedAuth: AuthInfo | undefined
     if (requireAuth) {
-      const gate = mcpAuthGate({
-        publicBaseUrl,
-        rpcMethod: envelope.method,
-        authHeader,
-        authMode,
-        mcpPath,
-        jsonRpcId: envelope.id,
-        ...verify,
-      })
-      if (gate.kind === 'challenge') {
-        return engineHttpResponse(req, {
-          status: gate.status,
-          headers: gate.headers,
-          body: gate.body,
-        })
-      }
-    }
-
-    let resolvedAuthInfo: ReturnType<typeof buildAuthInfoFromBearer> = null
-    if (authHeader) {
-      resolvedAuthInfo = buildAuthInfoFromBearer(authHeader, {
-        ...verify,
-        ...authInfo,
-      })
-      if (!resolvedAuthInfo && requiresBearerAuth(envelope.method, authMode)) {
-        return authChallenge(req, {
+      const resolved = await mcpResolveAuth(
+        {
           publicBaseUrl,
+          authMode,
           mcpPath,
           jsonRpcId: envelope.id,
-        })
+          ...(envelope.method !== undefined ? { rpcMethod: envelope.method } : {}),
+          ...(authHeader ? { authHeader } : {}),
+          ...(hs256Secret !== undefined ? { hs256Secret } : {}),
+          ...(jwksJson !== undefined ? { jwksJson } : {}),
+        },
+        requireResolveAuthClient(oauthClient),
+      )
+      if (resolved.kind !== 'allow') {
+        return writeResolved(req, resolved)
+      }
+      if (isAuthInfo(resolved.authInfo)) {
+        resolvedAuth = resolved.authInfo
       }
     }
 
     const fetchOptions: McpHandlerRequestOptions | undefined =
-      resolvedAuthInfo && typeof resolvedAuthInfo.token === 'string'
-        ? { authInfo: resolvedAuthInfo as AuthInfo }
-        : undefined
+      resolvedAuth !== undefined ? { authInfo: resolvedAuth } : undefined
 
     try {
       const response = await mcpHandler.fetch(req, fetchOptions)

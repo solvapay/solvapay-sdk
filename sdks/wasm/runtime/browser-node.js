@@ -4,7 +4,10 @@
  */
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import init, { wasmVersion as wasmVersionRaw } from '../pkg/browser/solvapay_wasm.js'
+import init, {
+  wasmVersion as wasmVersionRaw,
+  wasmBuildInfo as wasmBuildInfoRaw,
+} from '../pkg/browser/solvapay_wasm.js'
 
 let initPromise
 
@@ -21,4 +24,8 @@ export function ready() {
 
 export function wasmVersion() {
   return wasmVersionRaw()
+}
+
+export function wasmBuildInfo() {
+  return wasmBuildInfoRaw()
 }

@@ -7,14 +7,22 @@
 require "optparse"
 require "pathname"
 
+require "rubygems/package"
+require "tmpdir"
+
+MARKER = "SOLVAPAY_PANIC_PROBE".freeze
+
 EXPECTED = [
   ["x86_64-linux", ->(n) { n.include?("x86_64-linux") && !n.include?("musl") }],
-  ["aarch64-linux", ->(n) { n.include?("aarch64-linux") || n.include?("arm64-linux") }],
+  ["aarch64-linux", ->(n) { n.include?("aarch64-linux") && !n.include?("musl") }],
+  ["x86_64-linux-musl", ->(n) { n.include?("x86_64-linux-musl") }],
+  ["aarch64-linux-musl", ->(n) { n.include?("aarch64-linux-musl") }],
   # Host platform gems use darwin-XX suffixes (e.g. arm64-darwin-25).
   ["x86_64-darwin", ->(n) { n.include?("x86_64-darwin") }],
   ["arm64-darwin", ->(n) { n.include?("arm64-darwin") }],
-  # Windows prebuilt gems are not published (clang/bindgen AVX10.2 breakage);
-  # consumers install the source gem and compile via rb_sys/mkmf.
+  # Windows prebuilt gems are not published: rb-sys-dock still has no working
+  # x64-mingw-ucrt toolchain for this crate (same as Temporal). Consumers
+  # install the source gem and compile via rb_sys/mkmf.
 ].freeze
 
 dir = Pathname("gems")
@@ -38,6 +46,23 @@ EXPECTED.each do |label, pred|
   else
     present << label
   end
+end
+
+probe_hits = []
+dir.glob("**/*.gem").each do |gem_path|
+  Dir.mktmpdir do |tmpdir|
+    Gem::Package.new(gem_path.to_s).extract_files(tmpdir)
+    Dir.glob(File.join(tmpdir, "**/*.{so,bundle,dylib}")).each do |bin|
+      next unless File.binread(bin).include?(MARKER)
+
+      probe_hits << "#{gem_path.basename}:#{File.basename(bin)}"
+    end
+  end
+end
+unless probe_hits.empty?
+  warn "check-gems: HARD FAIL — panic-probe marker in release artifact:"
+  probe_hits.each { |hit| warn "  - #{hit}" }
+  exit 1
 end
 
 if missing.empty?

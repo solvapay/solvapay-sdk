@@ -130,6 +130,7 @@ fn generated_ids_match_enumerated_expectation() {
         "tsGenerated",
         "tsParity",
         "bindingSymbols",
+        "facadeCoverage",
         "boundaryTypes",
         "coreTypesTs",
         "coreDispatchTs",

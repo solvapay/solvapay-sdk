@@ -1419,6 +1419,41 @@ impl SolvaPayClient {
         })
     }
 
+    /// `mcpResolveAuth`
+    fn mcp_resolve_auth<'py>(
+        &self,
+        py: Python<'py>,
+        args_json: String,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let client = Arc::clone(&self.client);
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            Ok::<_, PyErr>(
+                run_envelope(async move {
+                    let params: solvapay_transport::McpResolveAuthParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_resolve_auth(params).await
+                })
+                .await,
+            )
+        })
+    }
+
+    /// Blocking twin of [`Self::mcp_resolve_auth`] (interpreter detached while awaiting).
+    #[pyo3(name = "mcp_resolve_auth_blocking")]
+    fn mcp_resolve_auth_blocking(&self, py: Python<'_>, args_json: String) -> String {
+        let client = Arc::clone(&self.client);
+        py.detach(|| {
+            runtime::get_runtime().block_on(async move {
+                run_envelope(async move {
+                    let params: solvapay_transport::McpResolveAuthParams =
+                        parse_args_json(&args_json)?;
+                    client.mcp_resolve_auth(params).await
+                })
+                .await
+            })
+        })
+    }
+
     /// `mcpOauthRequest`
     fn mcp_oauth_request<'py>(
         &self,

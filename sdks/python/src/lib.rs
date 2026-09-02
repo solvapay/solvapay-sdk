@@ -98,6 +98,23 @@ fn native_build_info() -> PyResult<String> {
     }
 }
 
+/// Debug-only panicking export. Contained so PyO3 never sees an uncaught unwind.
+#[cfg(feature = "panic-probe")]
+#[pyfunction]
+fn panic_probe() -> PyResult<()> {
+    match catch_unwind(AssertUnwindSafe(|| {
+        #[allow(clippy::panic)]
+        {
+            panic!("SOLVAPAY_PANIC_PROBE");
+        }
+    })) {
+        Ok(()) => Ok(()),
+        Err(payload) => {
+            Python::attach(|py| Err(BindingError::from_panic_payload(payload).into_py_err(py)))
+        }
+    }
+}
+
 /// Verifies a SolvaPay webhook signature using the host wall clock.
 ///
 /// Returns the parsed JSON body as a string on success. On failure raises
@@ -177,6 +194,8 @@ fn _solvapay(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(verify_webhook, m)?)?;
     m.add_function(wrap_pyfunction!(_verify_webhook_at, m)?)?;
     m.add_function(wrap_pyfunction!(solvapay_call, m)?)?;
+    #[cfg(feature = "panic-probe")]
+    m.add_function(wrap_pyfunction!(panic_probe, m)?)?;
     register::register_generated(m)?;
     fixture_host::register(m)?;
     Ok(())

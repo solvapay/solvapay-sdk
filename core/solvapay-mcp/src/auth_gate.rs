@@ -72,6 +72,10 @@ pub struct AuthGateInput {
     /// Explicit clock for `exp` / `nbf`. Required when a gated method presents a bearer.
     #[serde(default)]
     pub now_unix_secs: Option<i64>,
+    /// Identity already verified by [`crate`] transport `mcpResolveAuth`.
+    /// When set, the gate treats the bearer as verified and does not re-check crypto.
+    #[serde(default)]
+    pub pre_verified_customer_ref: Option<String>,
 }
 
 /// Auth-gate decision.
@@ -95,6 +99,9 @@ pub enum AuthGateResult {
 /// (JWKS RS256/ES256 or an explicit HS256 secret). Header presence is not enough.
 #[must_use]
 pub fn mcp_auth_gate(input: &AuthGateInput) -> AuthGateResult {
+    if pre_verified(input) {
+        return AuthGateResult::Allow;
+    }
     let mode = input.auth_mode.unwrap_or(McpAuthMode::ToolsCall);
     let gated = requires_bearer_auth(input.rpc_method.as_deref(), mode);
     if !gated {
@@ -104,6 +111,19 @@ pub fn mcp_auth_gate(input: &AuthGateInput) -> AuthGateResult {
         return AuthGateResult::Allow;
     }
     challenge(input)
+}
+
+/// RFC 6750 challenge envelope (401 + `WWW-Authenticate`).
+#[must_use]
+pub fn mcp_auth_challenge(input: &AuthGateInput) -> AuthGateResult {
+    challenge(input)
+}
+
+fn pre_verified(input: &AuthGateInput) -> bool {
+    input
+        .pre_verified_customer_ref
+        .as_deref()
+        .is_some_and(|value| !value.trim().is_empty())
 }
 
 fn bearer_verified(input: &AuthGateInput) -> bool {

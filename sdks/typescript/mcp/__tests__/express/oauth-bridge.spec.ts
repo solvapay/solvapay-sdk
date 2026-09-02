@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import * as mcpCore from '@solvapay/mcp-core'
 import {
   getOAuthAuthorizationServerResponse,
   getOAuthProtectedResourceResponse,
@@ -349,15 +348,13 @@ describe('createMcpOAuthBridge integration', () => {
     expect(state.statusCode).toBe(200)
   })
 
-  it('challenges when bearer verification fails after the auth gate allows', async () => {
-    vi.spyOn(mcpCore, 'buildAuthInfoFromBearer').mockImplementation(() => {
-      throw new mcpCore.McpBearerAuthError('Missing bearer token')
-    })
+  it('challenges when a bearer is present but invalid on a free method', async () => {
     const middlewares = createMcpOAuthBridge({
       publicBaseUrl,
       apiBaseUrl,
       productRef,
       oauthClient,
+      hs256Secret: 'solvapay-mcp-fixture-hs256-secret-32b!!',
     })
     const { res, state } = mockRes()
     const req = mockReq({
@@ -375,34 +372,11 @@ describe('createMcpOAuthBridge integration', () => {
 
     expect(state.statusCode).toBe(401)
     expect(state.ended).toBe(true)
-    vi.restoreAllMocks()
-  })
-
-  it('surfaces unexpected bearer-build failures instead of a 401 challenge', async () => {
-    vi.spyOn(mcpCore, 'buildAuthInfoFromBearer').mockImplementation(() => {
-      throw new Error('jwks exploded')
+    expect(state.body).toEqual({
+      jsonrpc: '2.0',
+      id: 1,
+      error: { code: -32001, message: 'Unauthorized' },
     })
-    const middlewares = createMcpOAuthBridge({
-      publicBaseUrl,
-      apiBaseUrl,
-      productRef,
-      oauthClient,
-    })
-    const { res, state } = mockRes()
-    const req = mockReq({
-      method: 'POST',
-      path: '/mcp',
-      headers: {
-        origin: 'cursor://test',
-        'content-type': 'application/json',
-        authorization: 'Bearer not-a-jwt',
-      },
-      body: { jsonrpc: '2.0', id: 1, method: 'initialize' },
-    })
-
-    await expect(runPipeline(middlewares, req, res, state)).rejects.toThrow('jwks exploded')
-    expect(state.ended).toBe(false)
-    vi.restoreAllMocks()
   })
 
   it('challenges anonymous initialize when authMode is all', async () => {

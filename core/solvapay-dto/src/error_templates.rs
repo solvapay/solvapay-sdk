@@ -72,6 +72,7 @@ pub const OPERATION_NAMES: &[&str] = &[
     "mcpDispatch",
     "mcpOauthRequest",
     "mcpReadResource",
+    "mcpResolveAuth",
     "processPaymentIntent",
     "reactivatePurchase",
     "saveAutoRecharge",
@@ -266,6 +267,11 @@ pub mod operations {
     pub mod mcp_read_resource {
         /// Default failure template.
         pub const DEFAULT: &str = "MCP resource read failed ({status}): {body}";
+    }
+    /// Templates for `mcpResolveAuth`.
+    pub mod mcp_resolve_auth {
+        /// Default failure template.
+        pub const DEFAULT: &str = "MCP resolve auth failed ({status}): {body}";
     }
     /// Templates for `processPaymentIntent`.
     pub mod process_payment_intent {

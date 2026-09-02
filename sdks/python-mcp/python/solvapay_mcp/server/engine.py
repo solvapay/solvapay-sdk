@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import time
 from collections.abc import Mapping
 from weakref import WeakKeyDictionary
 
@@ -13,8 +12,6 @@ from solvapay_mcp.core import call
 from solvapay_mcp.widget import widget_html_rpc
 
 _ENGINE: WeakKeyDictionary[Server[object], _EngineBinding] = WeakKeyDictionary()
-_JWKS_CACHE: dict[str, tuple[object, float]] = {}
-_JWKS_TTL_SECS = 600.0
 
 
 class _EngineBinding:
@@ -30,8 +27,6 @@ class _EngineBinding:
         hide_audiences: list[str] | None,
         csp: dict[str, list[str]] | None = None,
         api_base_url: str | None = None,
-        hs256_secret: str | None = None,
-        jwks_json: object | None = None,
     ) -> None:
         self.solvapay = solvapay
         self.product_ref = product_ref
@@ -42,8 +37,6 @@ class _EngineBinding:
         self.api_base_url = api_base_url
         self.views = views
         self.hide_audiences = hide_audiences
-        self.hs256_secret = hs256_secret
-        self.jwks_json = jwks_json
 
 
 def bind_engine(
@@ -58,8 +51,6 @@ def bind_engine(
     hide_audiences: list[str] | None = None,
     csp: dict[str, list[str]] | None = None,
     api_base_url: str | None = None,
-    hs256_secret: str | None = None,
-    jwks_json: object | None = None,
 ) -> None:
     _ENGINE[server] = _EngineBinding(
         solvapay=solvapay,
@@ -71,8 +62,6 @@ def bind_engine(
         hide_audiences=hide_audiences,
         csp=csp,
         api_base_url=api_base_url,
-        hs256_secret=hs256_secret,
-        jwks_json=jwks_json,
     )
 
 
@@ -131,12 +120,6 @@ async def dispatch_rpc(
         config["apiBaseUrl"] = binding.api_base_url
     if user_agent is not None:
         config["userAgent"] = user_agent
-    if binding.hs256_secret is not None:
-        config["hs256Secret"] = binding.hs256_secret
-    jwks = await _resolved_jwks(binding, auth_header)
-    if jwks is not None:
-        config["jwksJson"] = jwks
-    config["nowUnixSecs"] = int(time.time())
     payload: dict[str, object] = {"rpc": dict(rpc), "config": config}
     if auth_header:
         payload["authHeader"] = auth_header
@@ -164,25 +147,3 @@ async def dispatch_rpc(
             raise TypeError("mcpResume did not return an object")
         return {"kind": "rpc", "rpc": resumed.get("rpc", resumed)}
     return {str(k): v for k, v in envelope.items()}
-
-
-async def _resolved_jwks(binding: _EngineBinding, auth_header: str | None) -> object | None:
-    if binding.jwks_json is not None:
-        return binding.jwks_json
-    if binding.hs256_secret is not None:
-        return None
-    if not auth_header:
-        return None
-    client = binding.solvapay.get_api_client()
-    fetch = getattr(client, "fetch_jwks", None)
-    if fetch is None:
-        return None
-    url = f"{binding.public_base_url.rstrip('/')}/.well-known/jwks.json"
-    now = time.time()
-    hit = _JWKS_CACHE.get(url)
-    if hit is not None and hit[1] > now:
-        return hit[0]
-    raw = await fetch(json.dumps({"jwksUrl": url}))
-    document: object = unwrap_envelope(raw)
-    _JWKS_CACHE[url] = (document, now + _JWKS_TTL_SECS)
-    return document

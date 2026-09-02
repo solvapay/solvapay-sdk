@@ -134,6 +134,8 @@ export declare class NativeClient {
   mcpCallBuiltinTool(argsJson: string): Promise<string>
   /** `mcpReadResource` */
   mcpReadResource(argsJson: string): Promise<string>
+  /** `mcpResolveAuth` */
+  mcpResolveAuth(argsJson: string): Promise<string>
   /** `mcpOauthRequest` */
   mcpOauthRequest(argsJson: string): Promise<string>
   /** `mcpDispatch` */
@@ -320,6 +322,9 @@ export declare function minorUnitsPerMajor(argsJson: string): string
  */
 export declare function napiVersion(): string
 
+/** Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics. */
+export declare function nativeBuildInfo(): string
+
 /**
  * Binding for `normalizeCancelResponse`.
  *
@@ -333,6 +338,9 @@ export declare function normalizeCancelResponse(argsJson: string): string
  * Ok and Err ([`HelperErrorResult`]) both serialize as the envelope **value**.
  */
 export declare function normalizeReactivateResponse(argsJson: string): string
+
+/** Debug-only panicking export. Contained so a panic never reaches V8. */
+export declare function panicProbe(): void
 
 /**
  * Binding for `paywallErrorToClientPayload`.

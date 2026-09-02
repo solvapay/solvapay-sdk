@@ -15,7 +15,7 @@ use std::sync::Arc;
 use serde_json::{json, Value};
 use solvapay_transport::{
     ClientShell, McpCallBuiltinToolParams, McpDispatchParams, McpOauthRequestParams,
-    ReqwestTransport, SharedTransport, SolvaPayClient,
+    McpResolveAuthParams, ReqwestTransport, SharedTransport, SolvaPayClient,
 };
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -108,7 +108,7 @@ async fn replays_async_mcp_fixtures() {
         let fn_name = fixture["input"]["fn"].as_str().unwrap();
         if !matches!(
             fn_name,
-            "mcpCallBuiltinTool" | "mcpOauthRequest" | "mcpDispatch"
+            "mcpCallBuiltinTool" | "mcpOauthRequest" | "mcpDispatch" | "mcpResolveAuth"
         ) {
             continue;
         }
@@ -143,6 +143,13 @@ async fn replays_async_mcp_fixtures() {
                 let params: McpDispatchParams =
                     serde_json::from_value(args).unwrap_or_else(|e| panic!("{rel}: {e:?}"));
                 sp.mcp_dispatch(params)
+                    .await
+                    .unwrap_or_else(|e| panic!("{rel}: {e:?}"))
+            }
+            "mcpResolveAuth" => {
+                let params: McpResolveAuthParams =
+                    serde_json::from_value(args).unwrap_or_else(|e| panic!("{rel}: {e:?}"));
+                sp.mcp_resolve_auth(params)
                     .await
                     .unwrap_or_else(|e| panic!("{rel}: {e:?}"))
             }

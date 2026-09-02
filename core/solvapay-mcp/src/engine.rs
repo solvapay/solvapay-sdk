@@ -169,6 +169,10 @@ pub struct EngineConfig {
     /// Explicit clock for bearer `exp` / `nbf`.
     #[serde(default)]
     pub now_unix_secs: Option<i64>,
+    /// Customer ref already verified by `mcpResolveAuth`. When set, the
+    /// internal gate does not re-verify the bearer.
+    #[serde(default)]
+    pub pre_verified_customer_ref: Option<String>,
 }
 
 /// Input for [`mcp_handle_request`].
@@ -211,6 +215,14 @@ fn customer_ref_from_verified_header(
     auth_header: Option<&str>,
     config: &EngineConfig,
 ) -> Option<String> {
+    if let Some(pre) = config
+        .pre_verified_customer_ref
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        return Some(pre.to_owned());
+    }
     let token = extract_bearer_token(auth_header)?;
     let now_unix_secs = config.now_unix_secs?;
     let origin = config.public_base_url.trim_end_matches('/');
@@ -455,6 +467,7 @@ pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
         expected_issuer: input.config.expected_issuer.clone(),
         expected_audience: input.config.expected_audience.clone(),
         now_unix_secs: input.config.now_unix_secs,
+        pre_verified_customer_ref: input.config.pre_verified_customer_ref.clone(),
     });
     if let AuthGateResult::Challenge {
         status,
@@ -713,6 +726,7 @@ mod tests {
             expected_issuer: None,
             expected_audience: None,
             now_unix_secs: None,
+            pre_verified_customer_ref: None,
         }
     }
 

@@ -97,6 +97,7 @@ const FIXTURE_OPERATION_IDS = SHIM_JS_NAMES.filter(id =>
     'mcpCallBuiltinTool',
     'mcpDispatch',
     'mcpOauthRequest',
+    'mcpResolveAuth',
     'mcpReadResource',
     'processPaymentIntent',
     'reactivatePurchase',

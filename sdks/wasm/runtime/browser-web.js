@@ -13,6 +13,7 @@
 import init, {
   initSync,
   wasmVersion,
+  wasmBuildInfo,
   // business-details (public-safe)
   validateBusinessDetails,
   deriveTaxIdType,
@@ -44,6 +45,7 @@ import init, {
 export {
   initSync,
   wasmVersion,
+  wasmBuildInfo,
   validateBusinessDetails,
   deriveTaxIdType,
   resolveTaxBehavior,

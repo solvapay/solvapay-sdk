@@ -95,11 +95,11 @@ fn live_contract_ops() -> Vec<String> {
 }
 
 #[test]
-fn c_column_emits_full_42_op_surface() {
+fn c_column_emits_full_client_op_surface() {
     let ir = support::lower_bindings_ir();
     let emitted = emit_bindings(&ir, Toolchain::C).expect("emit C");
     let symbols = client_symbols(&ir);
-    assert_eq!(symbols.len(), 42, "expected 42 client binding symbols");
+    assert_eq!(symbols.len(), 43, "expected 43 client binding symbols");
 
     let formatted = support::rustfmt_source(&emitted.client_rs, "dispatch");
     for sym in &symbols {

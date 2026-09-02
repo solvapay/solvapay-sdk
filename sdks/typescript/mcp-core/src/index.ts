@@ -225,8 +225,6 @@ export type {
   McpVerifyBearerOptions,
   McpVerifyBearerResult,
 } from './bearer'
-export { cachedJwks, jwksUrlFromIssuer, resetJwksCacheForTests } from './jwks-cache'
-
 /** True for MCP methods that must not require bearer auth (everything except tools/call). */
 export { isFreeMcpMethod, requiresBearerAuth } from './is-free-mcp-method'
 export type { McpAuthMode } from './is-free-mcp-method'

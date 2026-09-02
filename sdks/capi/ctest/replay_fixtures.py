@@ -14,7 +14,7 @@ from typing import Any
 
 
 SKIP_FNS = {"registerPayable"}
-CLIENT_FNS = {"mcpDispatch", "mcpOauthRequest", "mcpBootstrap", "mcpCallBuiltinTool"}
+CLIENT_FNS = {"mcpDispatch", "mcpOauthRequest", "mcpBootstrap", "mcpCallBuiltinTool", "mcpResolveAuth"}
 
 
 def discover(root: Path) -> list[Path]:

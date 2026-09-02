@@ -126,6 +126,12 @@ var mcpAuthoringFixtures = []string{
 	"oauth/path-strip-trailing-slash.json",
 	"oauth/request-protected-resource-mcp-path.json",
 	"overview/resource.json",
+	"resolve-auth/free-invalid-bearer.json",
+	"resolve-auth/free-no-bearer.json",
+	"resolve-auth/gated-local-hs256.json",
+	"resolve-auth/gated-no-bearer.json",
+	"resolve-auth/gated-remote-userinfo.json",
+	"resolve-auth/validator-unreachable.json",
 }
 
 func registerPayableFixtures() []string {
@@ -146,6 +152,7 @@ func isAsyncClientFixture(rel string) bool {
 		strings.HasPrefix(rel, "builtin-tools/") ||
 		strings.HasPrefix(rel, "oauth-proxy/") ||
 		strings.HasPrefix(rel, "dispatch/") ||
+		strings.HasPrefix(rel, "resolve-auth/") ||
 		rel == "oauth/request-protected-resource-mcp-path.json"
 }
 

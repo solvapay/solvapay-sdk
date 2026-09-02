@@ -29,12 +29,12 @@ See [`docs/contributing/sdk-codegen.md`](../docs/contributing/sdk-codegen.md).
 
 ## Conformance
 
-| Command                                    | Script                                          |
-| ------------------------------------------ | ----------------------------------------------- |
-| `pnpm test:contract`                       | Vitest over `tools/`                            |
-| `pnpm parity:check`                        | `tools/conformance/parity-check.ts`             |
-| `pnpm delegation:check`                    | `tools/conformance/check-delegation.ts`         |
-| `pnpm test:live`                           | `tools/conformance/live-all.ts`                 |
+| Command                 | Script                                  |
+| ----------------------- | --------------------------------------- |
+| `pnpm test:contract`    | Vitest over `tools/`                    |
+| `pnpm parity:check`     | `tools/conformance/parity-check.ts`     |
+| `pnpm delegation:check` | `tools/conformance/check-delegation.ts` |
+| `pnpm test:live`        | `tools/conformance/live-all.ts`         |
 
 ## Repo gates
 

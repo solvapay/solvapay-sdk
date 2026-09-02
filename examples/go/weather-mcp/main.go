@@ -107,10 +107,11 @@ func requireLiveClient(ctx context.Context) (*solvapay.Client, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	var opts []solvapay.Option
-	if base := strings.TrimSpace(os.Getenv("SOLVAPAY_API_BASE_URL")); base != "" {
-		opts = append(opts, solvapay.WithBaseURL(base))
+	base := strings.TrimSpace(os.Getenv("SOLVAPAY_API_BASE_URL"))
+	if base == "" {
+		base = "http://localhost:3010"
 	}
+	opts := []solvapay.Option{solvapay.WithBaseURL(base)}
 	client, err := solvapay.NewClient(ctx, key, opts...)
 	if err != nil {
 		return nil, "", err

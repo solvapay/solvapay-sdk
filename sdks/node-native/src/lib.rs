@@ -89,6 +89,34 @@ pub fn napi_version() -> Result<String> {
     }
 }
 
+/// Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
+#[napi(js_name = "nativeBuildInfo")]
+pub fn native_build_info() -> Result<String> {
+    match catch_unwind(|| {
+        let version = option_env!("SOLVAPAY_RELEASE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
+        let core_sha = option_env!("SOLVAPAY_CORE_SHA").unwrap_or("unknown");
+        format!(r#"{{"version":"{version}","coreSha":"{core_sha}"}}"#)
+    }) {
+        Ok(info) => Ok(info),
+        Err(payload) => Err(BindingError::from_panic_payload(payload).into()),
+    }
+}
+
+/// Debug-only panicking export. Contained so a panic never reaches V8.
+#[cfg(feature = "panic-probe")]
+#[napi(js_name = "panicProbe")]
+pub fn panic_probe() -> Result<()> {
+    match catch_unwind(AssertUnwindSafe(|| {
+        #[allow(clippy::panic)]
+        {
+            panic!("SOLVAPAY_PANIC_PROBE");
+        }
+    })) {
+        Ok(()) => Ok(()),
+        Err(payload) => Err(BindingError::from_panic_payload(payload).into()),
+    }
+}
+
 /// Verifies a SolvaPay webhook signature.
 ///
 /// Returns the parsed JSON body as a string on success. On failure throws a JS

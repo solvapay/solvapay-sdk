@@ -409,6 +409,14 @@ fn ruby_client_header(header: &str) -> String {
             "ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient as CoreClient,",
             "mulberry32, ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient as CoreClient,",
         )
+        .replace(
+            "use crate::runtime::{self, without_gvl};",
+            "use crate::runtime::{self, without_gvl_envelope};",
+        )
+        .replace(
+            "each method releases the GVL via `without_gvl` while",
+            "each method releases the GVL via `without_gvl_envelope` while",
+        )
 }
 
 fn ruby_client_preamble(preamble: &str) -> String {
@@ -1151,7 +1159,7 @@ fn emit_ruby_client_method(sym: &IrBindingSymbol) -> GenResult<String> {
     };
 
     Ok(format!(
-        "{doc}\npub(crate) fn {fn_name}(&self, args_json: String) -> String {{{discard}\n    let client = Arc::clone(&self.client);\n    without_gvl(|| {{\n        runtime::get_runtime().block_on(async move {{ {inner} }})\n    }})\n}}"
+        "{doc}\npub(crate) fn {fn_name}(&self, args_json: String) -> String {{{discard}\n    let client = Arc::clone(&self.client);\n    without_gvl_envelope(|| {{\n        runtime::get_runtime().block_on(async move {{ {inner} }})\n    }})\n}}"
     ))
 }
 
@@ -1203,7 +1211,7 @@ fn emit_client_method(sym: &IrBindingSymbol, toolchain: Toolchain) -> GenResult<
 /// for arg-ignoring methods) and the `run_envelope(async move { … }).await`
 /// expression. Toolchain-agnostic — Node/Wasm wrap it in an `async fn`, Python
 /// wraps it in `future_into_py` + a blocking `block_on` twin, Ruby wraps it in
-/// `without_gvl` + `block_on`.
+/// `without_gvl_envelope` + `block_on`.
 fn client_call_body(sym: &IrBindingSymbol) -> GenResult<(&'static str, String)> {
     let core = core_call(sym)?;
 
@@ -1942,7 +1950,7 @@ mod tests {
         assert!(emitted
             .client_rs
             .contains("pub(crate) fn get_merchant(&self, args_json: String) -> String"));
-        assert!(emitted.client_rs.contains("without_gvl(||"));
+        assert!(emitted.client_rs.contains("without_gvl_envelope(||"));
         assert!(emitted
             .client_rs
             .contains("runtime::get_runtime().block_on"));

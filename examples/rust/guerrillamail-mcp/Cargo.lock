@@ -1331,9 +1331,9 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "3.1.4"
+version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a15bc53261a9dc37e105df006e4656c598379a8f9581f8950debb130f27a7cf"
+checksum = "42b6914fac0be956fe704a38239c3f44a9f841d1b06a5713d2f638065593f5b5"
 dependencies = [
  "chrono",
  "futures",
@@ -1660,6 +1660,7 @@ dependencies = [
  "serde_json",
  "solvapay",
  "solvapay-core",
+ "solvapay-dto",
  "solvapay-mcp-core",
  "thiserror",
  "tokio",
@@ -1669,6 +1670,7 @@ dependencies = [
 name = "solvapay-mcp-core"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.2.17",
  "hmac 0.13.0",
  "p256",
  "rsa",

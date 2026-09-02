@@ -131,6 +131,12 @@ MCP_AUTHORING_FIXTURES = [
     "oauth/path-strip-trailing-slash.json",
     "oauth/request-protected-resource-mcp-path.json",
     "overview/resource.json",
+    "resolve-auth/free-invalid-bearer.json",
+    "resolve-auth/free-no-bearer.json",
+    "resolve-auth/gated-local-hs256.json",
+    "resolve-auth/gated-no-bearer.json",
+    "resolve-auth/gated-remote-userinfo.json",
+    "resolve-auth/validator-unreachable.json",
 ]
 
 REGISTER_PAYABLE_FIXTURES = [
@@ -154,6 +160,7 @@ CORE_OP_FIXTURES = [
             "builtin-tools/",
             "oauth-proxy/",
             "dispatch/",
+            "resolve-auth/",
         )
     )
     and rel not in CLIENT_REQUEST_FIXTURES
@@ -162,7 +169,7 @@ CORE_OP_FIXTURES = [
 ASYNC_OP_FIXTURES = [
     rel
     for rel in MCP_AUTHORING_FIXTURES
-    if rel.startswith(("bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/"))
+    if rel.startswith(("bootstrap/", "builtin-tools/", "oauth-proxy/", "dispatch/", "resolve-auth/"))
     or rel in CLIENT_REQUEST_FIXTURES
 ]
 
@@ -397,6 +404,7 @@ def test_replays_async_op(rel: str) -> None:
             "mcpCallBuiltinTool": client.mcp_call_builtin_tool_blocking,
             "mcpOauthRequest": client.mcp_oauth_request_blocking,
             "mcpDispatch": client.mcp_dispatch_blocking,
+            "mcpResolveAuth": client.mcp_resolve_auth_blocking,
             "mcpBootstrap": client.mcp_bootstrap_blocking,
         }[fn]
         got = unwrap_envelope(method(json.dumps(args)))

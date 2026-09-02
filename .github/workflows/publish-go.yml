@@ -67,6 +67,9 @@ jobs:
           echo "core_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Rebuild embedded WASI guest
+        # Do not stamp SOLVAPAY_CORE_SHA here: the guest is a committed blob and
+        # this job's staleness check requires a byte-identical rebuild. Stamp
+        # the env when regenerating `solvapay_core.wasm` for commit.
         run: ./sdks/go/scripts/build-wasm.sh
 
       - name: WASM staleness check (committed artifact matches source)

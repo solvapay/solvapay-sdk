@@ -40,6 +40,7 @@ export type NativeClientMethod =
   | 'mcpDispatch'
   | 'mcpOauthRequest'
   | 'mcpReadResource'
+  | 'mcpResolveAuth'
   | 'processPaymentIntent'
   | 'reactivatePurchase'
   | 'saveAutoRecharge'
@@ -156,6 +157,9 @@ export function createGeneratedClientOperations(
     },
     async mcpReadResource(params) {
       return dispatchClient('mcpReadResource', params)
+    },
+    async mcpResolveAuth(params) {
+      return dispatchClient('mcpResolveAuth', params)
     },
     async processPaymentIntent(params) {
       return dispatchClient('processPaymentIntent', params)

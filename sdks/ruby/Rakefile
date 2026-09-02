@@ -22,11 +22,13 @@ end
 SolvaPayExtensionTask.new("solvapay", GEMSPEC) do |ext|
   ext.lib_dir = "lib/solvapay"
   ext.cross_compile = true
-  # Windows (x64-mingw-ucrt) omitted — prebuilt gems are not published; install
-  # the source gem and compile locally via rb_sys/mkmf.
+  # Windows (x64-mingw-ucrt) omitted — rb-sys-dock has no working mingw
+  # toolchain for this crate (clang/AVX10.2). Install the source gem.
   ext.cross_platform = %w[
     x86_64-linux
     aarch64-linux
+    x86_64-linux-musl
+    aarch64-linux-musl
     x86_64-darwin
     arm64-darwin
   ]
@@ -37,7 +39,9 @@ require "rake/testtask"
 Rake::TestTask.new(:test) do |t|
   t.libs << "test"
   t.libs << "lib"
-  t.test_files = FileList["test/**/*_test.rb"]
+  # panic_probe_test.rb requires a debug-only cargo feature; CI compiles it
+  # separately. A default `rake test` must not skip-pass that assertion.
+  t.test_files = FileList["test/**/*_test.rb"].exclude("test/panic_probe_test.rb")
 end
 
 task default: %i[compile test]

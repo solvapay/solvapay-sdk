@@ -179,6 +179,10 @@ export class WasmClient {
      */
     mcpReadResource(args_json: string): Promise<string>;
     /**
+     * `mcpResolveAuth`
+     */
+    mcpResolveAuth(args_json: string): Promise<string>;
+    /**
      * Constructs a client over `FetchTransport` + `ClientShell`.
      *
      * # Arguments
@@ -730,6 +734,13 @@ export function validateTopupPaymentIntentParams(args_json: string): string;
 export function verifyWebhook(body: string, signature: string, secret: string, now_unix_secs: number): string;
 
 /**
+ * Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
+ *
+ * Available on both `edge` and `browser` profiles.
+ */
+export function wasmBuildInfo(): string;
+
+/**
  * Returns the crate version string (`CARGO_PKG_VERSION`).
  *
  * Used as a hello-world smoke export proving the WASM module loads under both
@@ -844,6 +855,7 @@ export interface InitOutput {
     readonly validatePurchaseRef: (a: number, b: number) => [number, number];
     readonly validateTopupPaymentIntentParams: (a: number, b: number) => [number, number];
     readonly verifyWebhook: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+    readonly wasmBuildInfo: () => [number, number];
     readonly wasmVersion: () => [number, number];
     readonly wasmclient_activatePlan: (a: number, b: number, c: number) => any;
     readonly wasmclient_assignCredits: (a: number, b: number, c: number) => any;
@@ -879,6 +891,7 @@ export interface InitOutput {
     readonly wasmclient_mcpDispatch: (a: number, b: number, c: number) => any;
     readonly wasmclient_mcpOauthRequest: (a: number, b: number, c: number) => any;
     readonly wasmclient_mcpReadResource: (a: number, b: number, c: number) => any;
+    readonly wasmclient_mcpResolveAuth: (a: number, b: number, c: number) => any;
     readonly wasmclient_new: (a: number, b: number, c: number, d: number) => number;
     readonly wasmclient_processPaymentIntent: (a: number, b: number, c: number) => any;
     readonly wasmclient_reactivatePurchase: (a: number, b: number, c: number) => any;

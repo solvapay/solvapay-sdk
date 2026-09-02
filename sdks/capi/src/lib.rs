@@ -2,7 +2,7 @@
 //!
 //! Surface: opaque generation-counted client handles + generic JSON-envelope
 //! dispatch (`solvapay_client_call`) + sync `solvapay_verify_webhook` /
-//! `solvapay_version` / `solvapay_abi_version`. Every FFI edge uses
+//! `solvapay_version` / `solvapay_build_info` / `solvapay_abi_version`. Every FFI edge uses
 //! `catch_unwind` (§7.6). Full 42-op client dispatch is generated
 //! (`Toolchain::C`). `ctest/smoke.c` stays single-op; full fixture replay is
 //! `ctest/contract.sh`.
@@ -106,6 +106,36 @@ pub extern "C" fn solvapay_version() -> *mut c_char {
     match std::panic::catch_unwind(|| into_c_string(env!("CARGO_PKG_VERSION").to_owned())) {
         Ok(ptr) => ptr,
         Err(_) => ptr::null_mut(),
+    }
+}
+
+/// Returns `{version, coreSha}` JSON. Caller must free with [`solvapay_free_string`].
+#[no_mangle]
+pub extern "C" fn solvapay_build_info() -> *mut c_char {
+    match std::panic::catch_unwind(|| {
+        let version = option_env!("SOLVAPAY_RELEASE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
+        let core_sha = option_env!("SOLVAPAY_CORE_SHA").unwrap_or("unknown");
+        into_c_string(format!(
+            r#"{{"version":"{version}","coreSha":"{core_sha}"}}"#
+        ))
+    }) {
+        Ok(ptr) => ptr,
+        Err(_) => ptr::null_mut(),
+    }
+}
+
+/// Debug-only panicking export. Contained at the FFI edge (`SolvapayStatus::Panic`).
+#[cfg(feature = "panic-probe")]
+#[no_mangle]
+pub extern "C" fn solvapay_panic_probe() -> SolvapayStatus {
+    match std::panic::catch_unwind(AssertUnwindSafe(|| {
+        #[allow(clippy::panic)]
+        {
+            panic!("SOLVAPAY_PANIC_PROBE");
+        }
+    })) {
+        Ok(()) => SolvapayStatus::Ok,
+        Err(_) => SolvapayStatus::Panic,
     }
 }
 

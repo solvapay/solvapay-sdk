@@ -22,6 +22,7 @@ load_env_file "$EXAMPLE_DIR/.env.local"
 
 export MCP_PORT="${MCP_PORT:-3030}"
 export MCP_PUBLIC_BASE_URL="${MCP_PUBLIC_BASE_URL:-https://appmcp.jack-local.ngrok.app}"
+export SOLVAPAY_API_BASE_URL="${SOLVAPAY_API_BASE_URL:-http://localhost:3010}"
 
 exec uv run --project "$PYTHON_MCP" --extra dev --with httpx --with uvicorn \
   python "$EXAMPLE_DIR/main.py" --mode http

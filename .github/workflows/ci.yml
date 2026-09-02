@@ -326,6 +326,12 @@ jobs:
             manylinux: musllinux_1_1
             maturin-args: --release --out dist
             smoke: false
+          - platform: musllinux-aarch64
+            os: ubuntu-24.04-arm
+            target: aarch64
+            manylinux: musllinux_1_1
+            maturin-args: --release --out dist
+            smoke: false
           - platform: macos-universal2
             os: macos-latest
             target: universal2-apple-darwin
@@ -338,6 +344,12 @@ jobs:
             manylinux: ''
             maturin-args: --release --out dist
             smoke: true
+          - platform: win-arm64
+            os: windows-11-arm
+            target: aarch64
+            manylinux: ''
+            maturin-args: --release --out dist
+            smoke: false
     permissions:
       contents: read
     steps:
@@ -409,6 +421,16 @@ jobs:
             python/solvapay/_solvapay.pyi
           "$PY" -m pyright
           "$PY" -m ruff check python/solvapay
+
+      - name: Panic-probe containment
+        if: matrix.smoke
+        shell: bash
+        env:
+          RUSTC_WRAPPER: ''
+        run: |
+          python -m pip install -U maturin
+          maturin develop --features panic-probe
+          SOLVAPAY_REQUIRE_PANIC_PROBE=1 python -m pytest -q tests/test_panic_probe.py
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
@@ -486,13 +508,18 @@ jobs:
       - name: Pre-publish wheel gate (hard-fail)
         run: python3 scripts/check-wheels.py --dir wheels
 
+      - name: Install host wheel and print build info
+        run: |
+          wheel="$(find wheels -name '*manylinux*x86_64*.whl' ! -name '*musl*' | head -n1)"
+          test -n "${wheel}"
+          python3 -m pip install "${wheel}"
+          python3 -c 'import solvapay; print(solvapay.version()); print(solvapay.native_build_info())'
+
   # Step 43 — Magnus/rb-sys Ruby binding platform matrix (§7.7) + artifact gate.
-  # Native hosts only for the scaffold: current rb-sys-dock images ship Ruby 4.0
-  # host + incomplete 3.3 toolchains, which break Magnus 0.7. Cross-compile via
-  # scripts/dock-build.sh lands when the dock image/Magnus stack align (Step 45).
-  # Windows (x64-mingw-ucrt) is excluded: rb-sys/bindgen + clang 20 fails inside
-  # LLVM AVX10.2/AMX intrinsic headers. Windows Ruby consumers install the
-  # source gem and compile locally via rb_sys/mkmf.
+  # GNU/Darwin legs stay on native hosts for compile + test. Musl gems are
+  # produced via rb-sys-dock (`--mount-toolchains`, Magnus 0.8). Windows
+  # (x64-mingw-ucrt) is excluded: dock mingw still fails rb-sys/bindgen inside
+  # LLVM AVX10.2/AMX headers. Windows consumers compile the source gem.
   ruby-binding:
     name: ruby-binding (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
@@ -509,21 +536,37 @@ jobs:
             smoke: true
             full: true
             contract: true
+            dock: false
           - platform: aarch64-linux
             os: ubuntu-24.04-arm
             smoke: false
             full: false
             contract: true
+            dock: false
+          - platform: x86_64-linux-musl
+            os: ubuntu-latest
+            smoke: false
+            full: false
+            contract: false
+            dock: true
+          - platform: aarch64-linux-musl
+            os: ubuntu-latest
+            smoke: false
+            full: false
+            contract: false
+            dock: true
           - platform: x86_64-darwin
             os: macos-15-intel
             smoke: false
             full: false
             contract: true
+            dock: false
           - platform: arm64-darwin
             os: macos-latest
             smoke: true
             full: false
             contract: true
+            dock: false
     permissions:
       contents: read
     steps:
@@ -544,17 +587,31 @@ jobs:
         run: bundle install
 
       - name: Native platform gem
+        if: ${{ !matrix.dock }}
         run: bundle exec rake native gem
+
+      - name: Dock cross-compile platform gem
+        if: ${{ matrix.dock }}
+        run: ./scripts/dock-build.sh ${{ matrix.platform }}
 
       - name: cargo test -p solvapay-ruby
         if: matrix.smoke
         run: cargo test -p solvapay-ruby --lib
 
       - name: Source-gem compile + smoke
+        if: ${{ !matrix.dock }}
         shell: bash
         run: |
           bundle exec rake compile
           bundle exec ruby -Itest -Ilib test/smoke_test.rb
+
+      - name: Panic-probe containment
+        if: matrix.smoke
+        shell: bash
+        run: |
+          bundle exec rake clean
+          RB_SYS_CARGO_FEATURES=panic-probe bundle exec rake compile
+          bundle exec ruby -Itest -Ilib test/panic_probe_test.rb
 
       # Every leg replays the 550-fixture corpus; the full leg already covers it
       # via `rake test`, so skip the duplicate there.
@@ -657,6 +714,13 @@ jobs:
       - name: Pre-publish gem gate (hard-fail)
         run: ruby scripts/check-gems.rb --dir gems
 
+      - name: Install host gem and print build info
+        run: |
+          gem_file="$(find gems -name '*x86_64-linux*.gem' ! -name '*musl*' | head -n1)"
+          test -n "${gem_file}"
+          gem install --local "${gem_file}"
+          ruby -e 'require "solvapay"; puts SolvaPay.version; puts SolvaPay.native_build_info'
+
   # Step 36 — napi-rs Node binding platform matrix (§7.7) + artifact gate.
   node-binding:
     name: node-binding (${{ matrix.settings.target }})
@@ -741,7 +805,7 @@ jobs:
 
       - name: Smoke test (native host)
         if: matrix.settings.smoke
-        run: node --test __test__/binding.spec.mjs
+        run: node --test __test__/binding.spec.mjs __test__/version-skew.spec.mjs
 
       - name: Setup pnpm
         if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
@@ -763,6 +827,12 @@ jobs:
             sdks/node-native/index.js
             sdks/node-native/index.d.ts
           if-no-files-found: error
+
+      - name: Panic-probe containment
+        if: matrix.settings.smoke
+        run: |
+          npx napi build --platform --target ${{ matrix.settings.target }} --features panic-probe
+          SOLVAPAY_REQUIRE_PANIC_PROBE=1 node --test __test__/panic-probe.spec.mjs
 
   node-binding-artifacts:
     name: node-binding artifact gate
@@ -1218,6 +1288,13 @@ jobs:
         working-directory: sdks/go
         run: go test -race ./...
 
+      - name: Panic-probe guest (debug feature, not published)
+        run: |
+          cargo build -p solvapay-go-wasm --target wasm32-wasip1 --profile wasm-release --features panic-probe
+          TARGET_DIR="$(cargo metadata --format-version 1 --no-deps | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')"
+          cp "${TARGET_DIR}/wasm32-wasip1/wasm-release/solvapay_go_wasm.wasm" sdks/go/solvapay_core.wasm
+          (cd sdks/go && SOLVAPAY_REQUIRE_PANIC_PROBE=1 go test -run TestPanicProbeSurfacesAsError -count=1)
+
       - name: MCP-authoring conformance
         working-directory: sdks/go
         run: go test -race ./mcp/...
@@ -1305,6 +1382,9 @@ jobs:
 
       - name: C smoke (create/call/free + handle misuse)
         run: ./sdks/capi/ctest/run.sh
+
+      - name: Panic-probe containment
+        run: ./sdks/capi/ctest/panic-probe.sh
 
       - name: C fixture conformance (550)
         run: ./sdks/capi/ctest/contract.sh

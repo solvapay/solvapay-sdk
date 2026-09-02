@@ -42,6 +42,7 @@ class SignatureParityGeneratedTest < Minitest::Test
     "mcp_dispatch" => [[:keyreq, :params]],
     "mcp_oauth_request" => [[:keyreq, :params]],
     "mcp_read_resource" => [[:keyreq, :params]],
+    "mcp_resolve_auth" => [[:keyreq, :params]],
     "process_payment_intent" => [[:keyreq, :params]],
     "reactivate_purchase" => [[:keyreq, :params]],
     "save_auto_recharge" => [[:keyreq, :params]],
@@ -104,8 +105,8 @@ class SignatureParityGeneratedTest < Minitest::Test
   EXPECTED_REQUEST_ID_FORMAT = "solvapay_{epochMs}_{random9}"
   EXPECTED_USAGE_ACTION_TYPE = "api_call"
 
-  def test_all_42_client_operations_have_exact_keyword_signatures
-    assert_equal 42, OPERATION_SIGNATURES.length
+  def test_all_43_client_operations_have_exact_keyword_signatures
+    assert_equal 43, OPERATION_SIGNATURES.length
     OPERATION_SIGNATURES.each do |name, expected|
       method = SolvaPay::Client.instance_method(name)
       assert_equal expected, method.parameters, name

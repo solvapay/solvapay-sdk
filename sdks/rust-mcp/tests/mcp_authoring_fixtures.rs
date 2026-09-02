@@ -13,6 +13,7 @@ use common::scenario::{parse_observation, parse_scenario, UsageProjection};
 use serde_json::{json, Value};
 use solvapay::transport::{
     McpBootstrapParams, McpCallBuiltinToolParams, McpDispatchParams, McpOauthRequestParams,
+    McpResolveAuthParams,
 };
 use solvapay::{Client, Config};
 use solvapay_mcp::{
@@ -142,6 +143,12 @@ const MCP_AUTHORING_FIXTURES: &[&str] = &[
     "oauth/path-strip-trailing-slash.json",
     "oauth/request-protected-resource-mcp-path.json",
     "overview/resource.json",
+    "resolve-auth/free-invalid-bearer.json",
+    "resolve-auth/free-no-bearer.json",
+    "resolve-auth/gated-local-hs256.json",
+    "resolve-auth/gated-no-bearer.json",
+    "resolve-auth/gated-remote-userinfo.json",
+    "resolve-auth/validator-unreachable.json",
 ];
 
 fn register_payable_fixtures() -> impl Iterator<Item = &'static str> {
@@ -158,6 +165,7 @@ fn is_async_client_fixture(rel: &str) -> bool {
         || rel.starts_with("builtin-tools/")
         || rel.starts_with("oauth-proxy/")
         || rel.starts_with("dispatch/")
+        || rel.starts_with("resolve-auth/")
         || rel == "oauth/request-protected-resource-mcp-path.json"
 }
 
@@ -436,6 +444,14 @@ async fn replays_async_ops() {
                     serde_json::from_value(args).unwrap_or_else(|e| panic!("{rel}: {e:?}"));
                 client
                     .mcp_dispatch(params)
+                    .await
+                    .unwrap_or_else(|e| panic!("{rel}: {e:?}"))
+            }
+            "mcpResolveAuth" => {
+                let params: McpResolveAuthParams =
+                    serde_json::from_value(args).unwrap_or_else(|e| panic!("{rel}: {e:?}"));
+                client
+                    .mcp_resolve_auth(params)
                     .await
                     .unwrap_or_else(|e| panic!("{rel}: {e:?}"))
             }

@@ -5,7 +5,6 @@
 mod core;
 /// HTTP envelope helpers for the engine-driven MCP fetch adapter.
 mod http_util;
-mod jwks;
 mod layer2;
 mod layer2_generated;
 mod register;

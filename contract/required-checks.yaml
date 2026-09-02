@@ -26,12 +26,18 @@ checks:
   - name: python-binding (musllinux-x86_64)
     jobId: python-binding
     gate: Platform build matrices
+  - name: python-binding (musllinux-aarch64)
+    jobId: python-binding
+    gate: Platform build matrices
   - name: python-binding (macos-universal2)
     jobId: python-binding
     gate: Platform build matrices; Python contract suite; Dynamic-language type-strictness
   - name: python-binding (win-amd64)
     jobId: python-binding
     gate: Platform build matrices; Python contract suite; Dynamic-language type-strictness
+  - name: python-binding (win-arm64)
+    jobId: python-binding
+    gate: Platform build matrices
   - name: python-binding artifact gate
     jobId: python-binding-artifacts
     gate: Pre-publish artifact gate
@@ -47,6 +53,12 @@ checks:
   - name: ruby-binding (aarch64-linux)
     jobId: ruby-binding
     gate: Platform build matrices; Ruby contract suite
+  - name: ruby-binding (x86_64-linux-musl)
+    jobId: ruby-binding
+    gate: Platform build matrices
+  - name: ruby-binding (aarch64-linux-musl)
+    jobId: ruby-binding
+    gate: Platform build matrices
   - name: ruby-binding (x86_64-darwin)
     jobId: ruby-binding
     gate: Platform build matrices; Ruby contract suite

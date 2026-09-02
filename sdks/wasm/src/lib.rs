@@ -56,6 +56,27 @@ pub fn wasm_version() -> String {
     env!("CARGO_PKG_VERSION").to_owned()
 }
 
+/// Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
+///
+/// Available on both `edge` and `browser` profiles.
+#[wasm_bindgen(js_name = wasmBuildInfo)]
+pub fn wasm_build_info() -> String {
+    let version = option_env!("SOLVAPAY_RELEASE_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
+    let core_sha = option_env!("SOLVAPAY_CORE_SHA").unwrap_or("unknown");
+    format!(r#"{{"version":"{version}","coreSha":"{core_sha}"}}"#)
+}
+
+/// Debug-only panicking export. wasm32 `panic = "abort"` traps; the JS host
+/// surfaces that as an exception rather than a process abort.
+#[cfg(feature = "panic-probe")]
+#[wasm_bindgen(js_name = panicProbe)]
+pub fn panic_probe() {
+    #[allow(clippy::panic)]
+    {
+        panic!("SOLVAPAY_PANIC_PROBE");
+    }
+}
+
 /// Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
 #[wasm_bindgen(js_name = solvapayCall)]
 pub fn solvapay_call(args_json: String) -> String {

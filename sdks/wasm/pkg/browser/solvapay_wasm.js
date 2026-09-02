@@ -642,6 +642,25 @@ export function validateBusinessDetails(args_json) {
 }
 
 /**
+ * Returns `{version, coreSha}` JSON for §7.7 version stamping diagnostics.
+ *
+ * Available on both `edge` and `browser` profiles.
+ * @returns {string}
+ */
+export function wasmBuildInfo() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.wasmBuildInfo();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
  * Returns the crate version string (`CARGO_PKG_VERSION`).
  *
  * Used as a hello-world smoke export proving the WASM module loads under both

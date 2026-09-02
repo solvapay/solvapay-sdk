@@ -81,7 +81,6 @@ module SolvaPay
       def read_body: (Hash[String, untyped] env) -> String
       def stringify: (untyped value) -> untyped
       def merge_native_cors: (Hash[String, untyped] env, Hash[String, String] headers) -> Hash[String, String]?
-      def resolved_jwks: (untyped auth) -> untyped
       def symbolize: (untyped hash) -> Hash[Symbol, untyped]
     end
 

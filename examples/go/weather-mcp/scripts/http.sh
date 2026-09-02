@@ -21,5 +21,6 @@ load_env_file "$EXAMPLE_DIR/.env.local"
 export MCP_PORT="${MCP_PORT:-3030}"
 export MCP_PUBLIC_BASE_URL="${MCP_PUBLIC_BASE_URL:-https://appmcp.jack-local.ngrok.app}"
 export WEATHER_MCP_SOURCE="${WEATHER_MCP_SOURCE:-live}"
+export SOLVAPAY_API_BASE_URL="${SOLVAPAY_API_BASE_URL:-http://localhost:3010}"
 
 exec go run . --mode http

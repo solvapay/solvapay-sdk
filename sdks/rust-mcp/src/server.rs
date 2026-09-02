@@ -13,7 +13,6 @@ use crate::http_util::{
     encode_json_body, envelope_status, http_from_oauth_envelope, json_response, jsonrpc_error,
     merge_native_cors, string_headers,
 };
-use crate::jwks::JwksCache;
 use crate::register::{GetCustomerRef, PayableError, PayableHandler, PayableTool};
 use crate::resume::{resume_envelope, PayableSpec};
 
@@ -60,7 +59,7 @@ pub struct McpHttpServer {
     views: Option<Vec<String>>,
     oauth_paths: Option<solvapay_mcp_core::OauthPaths>,
     hs256_secret: Option<String>,
-    jwks: JwksCache,
+    jwks_json: Option<Value>,
     payables: HashMap<String, RegisteredPayable>,
 }
 
@@ -84,11 +83,7 @@ impl McpHttpServer {
             views: config.views,
             oauth_paths: config.oauth_paths,
             hs256_secret: config.hs256_secret.clone(),
-            jwks: JwksCache::new(
-                config.jwks_json,
-                config.hs256_secret.is_some(),
-                config.public_base_url.clone(),
-            ),
+            jwks_json: config.jwks_json,
             payables: HashMap::new(),
         }
     }
@@ -147,7 +142,7 @@ impl McpHttpServer {
         }
         if !req.method.eq_ignore_ascii_case("POST") {
             let mut headers = BTreeMap::new();
-            headers.insert("allow".to_owned(), "POST".to_owned());
+            headers.insert("allow".to_owned(), "POST, OPTIONS".to_owned());
             return Ok(McpHttpResponse {
                 status: 405,
                 headers,
@@ -229,33 +224,12 @@ impl McpHttpServer {
                     csp: None,
                     api_base_url: None,
                     branding: None,
-                    jwks_json: match self
-                        .jwks
-                        .resolve(
-                            &self.client,
-                            req.headers.get("authorization").map(String::as_str),
-                        )
-                        .await
-                    {
-                        Ok(json) => json,
-                        Err(err) => {
-                            return jsonrpc_error(
-                                rpc.get("id").cloned().unwrap_or(Value::Null),
-                                -32603,
-                                &format!("JWKS fetch failed: {}", err.message()),
-                                200,
-                            );
-                        }
-                    },
+                    jwks_json: self.jwks_json.clone(),
                     hs256_secret: self.hs256_secret.clone(),
                     expected_issuer: None,
                     expected_audience: None,
-                    now_unix_secs: Some(
-                        std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .map(|d| d.as_secs() as i64)
-                            .unwrap_or(0),
-                    ),
+                    now_unix_secs: None,
+                    pre_verified_customer_ref: None,
                 },
                 auth_header: req.headers.get("authorization").cloned(),
                 mcp_protocol_version_header: req.headers.get("mcp-protocol-version").cloned(),
