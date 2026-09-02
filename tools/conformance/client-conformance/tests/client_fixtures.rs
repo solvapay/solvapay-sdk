@@ -15,9 +15,11 @@ use std::sync::Arc;
 use client_conformance::{
     dispatch, dispatch_operation_names, sdk_error_to_observation, RecordingTransport, WireExchange,
 };
-use fixture_runner::{parse_fixture, assert_expect, BindingError, Fixture, FixtureExpect, Wire};
+use fixture_runner::{assert_expect, parse_fixture, BindingError, Fixture, FixtureExpect, Wire};
 use serde_json::Value;
-use solvapay_transport::{mulberry32, ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient};
+use solvapay_transport::{
+    mulberry32, ClientShell, ReqwestTransport, SharedTransport, SolvaPayClient,
+};
 use walkdir::WalkDir;
 use wiremock::matchers::{body_json, header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -81,7 +83,10 @@ async fn client_fixtures_replay_through_native_client() {
 
 async fn replay_one(fixture: &Fixture) -> Result<(), String> {
     let inner: SharedTransport = Arc::new(ReqwestTransport::new().map_err(|err| {
-        format!("build ReqwestTransport: {}", sdk_error_to_observation(err).message)
+        format!(
+            "build ReqwestTransport: {}",
+            sdk_error_to_observation(err).message
+        )
     })?);
     let (recording, exchanges) = RecordingTransport::new(inner);
     let recording_shared: SharedTransport = Arc::new(recording);
@@ -112,7 +117,10 @@ async fn replay_one(fixture: &Fixture) -> Result<(), String> {
     let client = SolvaPayClient::new(shell);
     let args = Value::Object(fixture.input.args.clone().into_iter().collect());
     let outcome = dispatch(&client, &fixture.input.fn_name, &args).await;
-    let recorded = exchanges.lock().map(|guard| guard.clone()).unwrap_or_default();
+    let recorded = exchanges
+        .lock()
+        .map(|guard| guard.clone())
+        .unwrap_or_default();
 
     let compared = match outcome {
         Ok(value) => assert_expect(&fixture.expect, Ok(value)),
