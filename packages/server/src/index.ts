@@ -133,6 +133,7 @@ export { isPaywallStructuredContent } from './types/paywall'
 // Useful for streaming / SSE / multi-step handlers that can't fit the
 // one-shot adapter shape but still want the SDK's gate copy.
 export { buildPaywallGate } from './paywall-gate'
+export { PaywallStructuredContentSchema } from './types/paywall-schema'
 
 // Pure paywall state engine — classifier + gate / nudge copy builder.
 // Exposed so transport adapters (`@solvapay/mcp-core`) can produce the
@@ -161,6 +162,7 @@ export type {
   PaywallDecision,
   PaywallMetadata,
   PaywallStructuredContent,
+  PaywallGateRecoveryFields,
   RetryOptions,
   WebhookEvent,
   WebhookEventType,

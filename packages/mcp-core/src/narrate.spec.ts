@@ -377,9 +377,9 @@ describe('parseMode', () => {
     expect(parseMode('text')).toBe('text')
     expect(parseMode('auto')).toBe('auto')
   })
-  it('defaults unknown values to ui', () => {
-    expect(parseMode(undefined)).toBe('ui')
-    expect(parseMode('nope')).toBe('ui')
+  it('defaults unknown values to auto', () => {
+    expect(parseMode(undefined)).toBe('auto')
+    expect(parseMode('nope')).toBe('auto')
   })
 })
 
@@ -397,30 +397,22 @@ describe('narratedToolResult', () => {
     } as never,
   })
 
-  it('default (ui) emits placeholder + assistant narrated block + _meta.ui', () => {
+  it('default (auto) emits narration as content[0] and keeps _meta.ui', () => {
     const r = narratedToolResult('manage_account', payload, undefined, {
       ui: { resourceUri: 'ui://x' },
     })
-    expect(r.content).toHaveLength(2)
     expect(r.content[0].type).toBe('text')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).text).toContain('Opened your Acme Knowledge Base account.')
+    expect((r.content[0] as any).text).toContain('Acme Knowledge Base')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).text).toContain('Account details are shown in the panel.')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).text).not.toContain("mode: 'text'")
+    expect((r.content[0] as any).text).not.toContain('shown in the panel')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[0] as any).annotations).toBeUndefined()
-    expect(r.content[1].type).toBe('text')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[1] as any).text).toContain('Acme Knowledge Base')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[1] as any).annotations).toEqual({ audience: ['assistant'] })
     expect(r._meta).toEqual({ ui: { resourceUri: 'ui://x' } })
     expect(r.structuredContent).toEqual(payload)
   })
 
-  it('mode=auto emits narrated text + _meta.ui with assistant audience', () => {
+  it('mode=auto emits narrated text + _meta.ui without hiding it from the user', () => {
     const r = narratedToolResult('manage_account', payload, 'auto', {
       ui: { resourceUri: 'ui://x' },
     })
@@ -428,22 +420,22 @@ describe('narratedToolResult', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[0] as any).text).toContain('Acme Knowledge Base')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).annotations).toEqual({ audience: ['assistant'] })
+    expect((r.content[0] as any).annotations).toBeUndefined()
     expect(r._meta).toEqual({ ui: { resourceUri: 'ui://x' } })
     expect(r.structuredContent).toEqual(payload)
   })
 
-  it('mode=text strips _meta.ui and annotates narrated block for the assistant', () => {
+  it('mode=text strips _meta.ui and keeps the narration visible', () => {
     const r = narratedToolResult('manage_account', payload, 'text', {
       ui: { resourceUri: 'ui://x' },
       audience: 'ui',
     })
     expect(r._meta).toEqual({ audience: 'ui' })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).annotations).toEqual({ audience: ['assistant'] })
+    expect((r.content[0] as any).annotations).toBeUndefined()
   })
 
-  it('mode=ui emits placeholder plus assistant-audience narrated block', () => {
+  it('mode=ui emits a self-sufficient placeholder, never a panel pointer', () => {
     const r = narratedToolResult('manage_account', payload, 'ui', {
       ui: { resourceUri: 'ui://x' },
     })
@@ -451,19 +443,21 @@ describe('narratedToolResult', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[0] as any).text).toContain('Opened your Acme Knowledge Base account.')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).text).not.toContain("mode: 'text'")
+    expect((r.content[0] as any).text).not.toContain('shown in the panel')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[1] as any).annotations).toEqual({ audience: ['assistant'] })
+    expect((r.content[0] as any).text).not.toContain("mode: 'text'")
     expect(r._meta).toEqual({ ui: { resourceUri: 'ui://x' } })
   })
 
-  it('mode=ui upgrade includes plan list in assistant narrated block', () => {
+  it('mode=ui upgrade includes plan name and checkout URL in the placeholder', () => {
     const upgradePayload = basePayload({
       view: 'checkout',
+      checkoutUrl: 'https://customer.solvapay.com/demo?session=abc',
       plans: [
         {
           type: 'recurring',
           name: 'Pro',
+          reference: 'plan_pro',
           requiresPayment: true,
           options: [cycle(), flat(2000)],
         },
@@ -471,11 +465,65 @@ describe('narratedToolResult', () => {
     })
     const r = narratedToolResult('upgrade', upgradePayload, 'ui', { ui: { resourceUri: 'ui://x' } })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[0] as any).text).toContain('Plans and checkout are shown in the panel.')
+    const text = (r.content[0] as any).text as string
+    expect(text).toContain('Pro')
+    expect(text).toContain('https://customer.solvapay.com/demo?session=abc')
+    expect(text).not.toContain('shown in the panel')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((r.content[1] as any).text).toContain('Pro')
+    expect((r.content[1] as any).text).toContain('planRef: plan_pro')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[1] as any).text).toContain('Plans available:')
+  })
+
+  it('upgrade narration includes planRef and checkout URL without a second tool hop', () => {
+    const text = narrateUpgrade(
+      basePayload({
+        view: 'checkout',
+        checkoutUrl: 'https://customer.solvapay.com/demo?session=abc',
+        plans: [
+          {
+            type: 'recurring',
+            name: 'Pro',
+            reference: 'plan_pro',
+            requiresPayment: true,
+            options: [cycle(), flat(2000)],
+          },
+        ] as never,
+      }),
+    ).text
+    expect(text).toContain('planRef: plan_pro')
+    expect(text).toContain('Checkout: https://customer.solvapay.com/demo?session=abc')
+    expect(text).toContain('expires in 15 minutes')
+    expect(text).not.toContain('shown in the panel')
+  })
+
+  it('manage_account narration includes included-usage counters', () => {
+    const text = narrateManageAccount(
+      basePayload({
+        customer: {
+          ref: 'cus_1',
+          purchase: {
+            customerRef: 'cus_1',
+            purchases: [
+              {
+                planSnapshot: {
+                  name: 'Free',
+                  isMetered: true,
+                  price: 0,
+                  currency: 'USD',
+                  options: [perUnit(2)],
+                },
+              },
+            ],
+          } as never,
+          paymentMethod: null,
+          balance: usdBalance,
+          usage: { used: 3, limit: 3, resetsAt: '2026-10-01T00:00:00.000Z' },
+        } as never,
+      }),
+    ).text
+    expect(text).toContain('Used 3 of 3 this period · 0 remaining')
+    expect(text).toContain('docs://solvapay/overview.md')
   })
 
   it('ui placeholder carries balance when the customer snapshot has one', () => {

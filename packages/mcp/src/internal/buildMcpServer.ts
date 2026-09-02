@@ -82,6 +82,7 @@ function registerDescriptor(server: McpServer, tool: SolvaPayToolDescriptor): vo
       ...(tool.title !== undefined ? { title: tool.title } : {}),
       description: tool.description,
       inputSchema: wrapInputSchema(tool.inputSchema),
+      ...(tool.outputSchema !== undefined ? { outputSchema: tool.outputSchema } : {}),
       _meta: metaWithIcons,
       ...(tool.annotations !== undefined ? { annotations: tool.annotations } : {}),
       ...(tool.icons !== undefined ? { icons: tool.icons } : {}),

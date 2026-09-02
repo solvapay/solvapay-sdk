@@ -15,9 +15,59 @@ describe('buildPaywallGate', () => {
     expect(gate.kind).toBe('payment_required')
     expect(gate.product).toBe('prd_x')
     expect(gate.checkoutUrl).toBe('https://pay.example.com/checkout')
-    // Message names a recovery tool for terminal-first hosts.
-    expect(gate.message).toMatch(/upgrade/i)
+    expect(gate.planRef).toBe('free')
+    // Active free plan at cap is limit_reached copy, not "no active plan".
+    expect(gate.message).toMatch(/included usage|upgrade/i)
     expect(gate.message).toContain('https://pay.example.com/checkout')
+    expect(gate.message).toMatch(/expires in 15 minutes/)
+  })
+
+  it('attaches included counters and unit price on a free plan at cap', () => {
+    const gate = buildPaywallGate('prd_x', {
+      ...baseLimits,
+      plan: 'plan_free',
+      meterName: 'api_requests',
+      plans: [
+        {
+          reference: 'plan_free',
+          name: 'Free',
+          type: 'hybrid',
+          price: 0,
+          currency: 'USD',
+          requiresPayment: false,
+          freeUnits: 3,
+          perUnitChargeMinor: 2,
+        },
+      ],
+    })
+    expect(gate.kind).toBe('payment_required')
+    expect(gate.planRef).toBe('plan_free')
+    expect(gate.meterName).toBe('api_requests')
+    expect(gate.included).toEqual({ total: 3, used: 3, remaining: 0 })
+    expect(gate.unitPriceMinor).toBe(2)
+    expect(gate.currency).toBe('USD')
+    expect(gate.plans?.[0]?.reference).toBe('plan_free')
+    expect(gate.message).toMatch(/You've used 3 of 3 included api requests/)
+    expect(gate.message).toMatch(/\$0\.02/)
+  })
+
+  it('omits included when freeUnits is the unlimited sentinel', () => {
+    const gate = buildPaywallGate('prd_x', {
+      ...baseLimits,
+      plan: 'plan_pro',
+      plans: [
+        {
+          reference: 'plan_pro',
+          name: 'Pro',
+          type: 'recurring',
+          price: 2900,
+          currency: 'USD',
+          requiresPayment: true,
+          freeUnits: 0,
+        },
+      ],
+    })
+    expect(gate.included).toBeUndefined()
   })
 
   it('inlines balance and productDetails on payment_required gates when present', () => {

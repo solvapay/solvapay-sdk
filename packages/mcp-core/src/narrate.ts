@@ -265,19 +265,58 @@ function plansListLines(plans: PlanShape[]): string[] {
     const trial = trialDays(p)
     if (trial) parts.push(`${trial}-day trial`)
 
+    if (p.reference) parts.push(`planRef: ${p.reference}`)
+
     return parts.join(' · ')
   })
 }
 
+const CHECKOUT_TTL = 'expires in 15 minutes'
+const DOCS_HINT = 'Capabilities: docs://solvapay/overview.md'
+
+function httpsUrl(value: string | null | undefined): string | null {
+  if (typeof value === 'string' && /^https?:\/\//i.test(value)) return value
+  return null
+}
+
+function checkoutUrlOf(data: BootstrapPayload): string | null {
+  return httpsUrl(data.checkoutUrl)
+}
+
+function checkoutRow(data: BootstrapPayload): string | null {
+  const url = checkoutUrlOf(data)
+  return url ? `Checkout: ${url} (${CHECKOUT_TTL})` : null
+}
+
+function checkoutLink(data: BootstrapPayload): { uri: string; name: string } | null {
+  const url = checkoutUrlOf(data)
+  return url ? { uri: url, name: 'Open checkout' } : null
+}
+
 function hostedPortalLink(data: BootstrapPayload): { uri: string; name: string } | null {
-  // Bootstrap payload doesn't carry a portal URL today; a portal is
-  // provisioned lazily. The narrators only emit a link when an
-  // explicit `portalUrl` shows up — safe forward extension point.
-  const url = (data as unknown as { portalUrl?: string }).portalUrl
-  if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+  const url = httpsUrl(data.portalUrl)
+  if (url) {
     return { uri: url, name: 'Open hosted portal' }
   }
   return null
+}
+
+function usageRow(customer: CustomerShape | null | undefined): string | null {
+  const usage = customer?.usage
+  if (!usage || usage.used == null || usage.limit == null) return null
+  const remaining = Math.max(0, usage.limit - usage.used)
+  const reset = formatDate(usage.resetsAt)
+  const resetClause = reset ? ` · resets ${reset}` : ''
+  return `Used ${usage.used} of ${usage.limit} this period · ${remaining} remaining${resetClause}`
+}
+
+function nextCallRow(active: PurchaseShape): string | null {
+  const snap = active.planSnapshot
+  if (!snap) return null
+  const rate = usageRate(snap)
+  if (rate == null) return null
+  const money = formatMoney(rate.amountMinor, rate.currency ?? snap.currency)
+  return money ? `Next call: ${money}` : null
 }
 
 export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
@@ -298,8 +337,11 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
     } else {
       lines.push('No active plan.')
     }
+    const checkout = checkoutRow(data)
+    if (checkout) lines.push(checkout)
     lines.push('')
     lines.push(commandsLine(['activate_plan', 'upgrade']))
+    lines.push(DOCS_HINT)
   } else {
     lines.push(`**${name} — your account**`)
     lines.push('')
@@ -314,17 +356,38 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
       if (end) parts.push(`renews ${end}`)
       lines.push(`Plan: ${parts.join(' · ')}`)
     }
+    const usage = usageRow(customer)
+    if (usage) lines.push(usage)
     const bal = balanceRow(customer)
     if (bal) lines.push(bal)
+    const nextCall = nextCallRow(active)
+    if (nextCall) lines.push(nextCall)
     const creditsPerCall = resolveCreditsPerCall(active, customer)
     if (creditsPerCall != null) lines.push(costPerCallRow(creditsPerCall))
+    const checkout = checkoutRow(data)
+    if (checkout) lines.push(checkout)
     lines.push('')
     lines.push(commandsLine(['topup', 'upgrade']))
+    lines.push(DOCS_HINT)
   }
 
   const links: NarratorOutput['links'] = []
   const portal = hostedPortalLink(data)
   if (portal) links.push(portal)
+  const checkout = checkoutLink(data)
+  if (checkout) links.push(checkout)
+  return { text: lines.join('\n'), links }
+}
+
+function withCheckout(
+  data: BootstrapPayload,
+  lines: string[],
+): NarratorOutput {
+  const checkout = checkoutRow(data)
+  if (checkout) lines.push(checkout)
+  const links: NarratorOutput['links'] = []
+  const link = checkoutLink(data)
+  if (link) links.push(link)
   return { text: lines.join('\n'), links }
 }
 
@@ -341,7 +404,8 @@ export function narrateUpgrade(data: BootstrapPayload): NarratorOutput {
   }
   lines.push('')
   lines.push(commandsLine(['manage_account', 'topup']))
-  return { text: lines.join('\n') }
+  lines.push(DOCS_HINT)
+  return withCheckout(data, lines)
 }
 
 export function narrateTopup(data: BootstrapPayload): NarratorOutput {
@@ -358,7 +422,7 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
   if (presets) lines.push(`Top-up presets: ${presets}`)
   lines.push('')
   lines.push(commandsLine(['manage_account']))
-  return { text: lines.join('\n') }
+  return withCheckout(data, lines)
 }
 
 export function narrateActivatePlan(data: BootstrapPayload): NarratorOutput {
@@ -374,7 +438,7 @@ export function narrateActivatePlan(data: BootstrapPayload): NarratorOutput {
   }
   lines.push('')
   lines.push(commandsLine(['manage_account', 'topup']))
-  return { text: lines.join('\n') }
+  return withCheckout(data, lines)
 }
 
 export const NARRATORS: Record<IntentTool, (data: BootstrapPayload) => NarratorOutput> = {
@@ -391,25 +455,32 @@ const UI_OPENED_VERB: Record<IntentTool, (productName: string) => string> = {
   activate_plan: p => `Opened ${p} plan picker.`,
 }
 
-const UI_PANEL_SHOWN: Record<IntentTool, string> = {
-  topup: 'Top-up options are shown in the panel.',
-  upgrade: 'Plans and checkout are shown in the panel.',
-  manage_account: 'Account details are shown in the panel.',
-  activate_plan: 'Plan options are shown in the panel.',
+function firstSelectablePlan(data: BootstrapPayload): PlanShape | undefined {
+  const plans = (data.plans ?? []) as PlanShape[]
+  return plans.find(p => !isFreePlan(p)) ?? plans[0]
 }
 
 /**
  * One-line placeholder shown on UI-rendering hosts when the intent
- * tool runs in `mode: 'ui'`. Gives the agent minimal grounding (what
- * surface opened + balance when available) without flooding the user
- * pane with the full narrated markdown that the iframe already covers.
+ * tool runs in `mode: 'ui'`. Self-sufficient for text-only hosts that
+ * still receive this block: plan name, price, and a pasteable https
+ * URL. Never points at "the panel".
  */
 export function uiPlaceholder(tool: IntentTool, data: BootstrapPayload): string {
   const name = productName(data)
   const opened = UI_OPENED_VERB[tool](name)
-  const balance = balanceSummary(data.customer as CustomerShape | null)
   const parts = [opened]
+  const plan = firstSelectablePlan(data)
+  if (plan) {
+    const price = formatPlanPrices(plan)
+    const label = [plan.name ?? 'Plan', price && !isFreePlan(plan) ? price : null]
+      .filter(Boolean)
+      .join(' · ')
+    if (label) parts.push(`${label}.`)
+  }
+  const balance = balanceSummary(data.customer as CustomerShape | null)
   if (balance) parts.push(`Balance: ${balance}.`)
-  parts.push(UI_PANEL_SHOWN[tool])
+  const url = checkoutUrlOf(data)
+  if (url) parts.push(`Checkout: ${url} (${CHECKOUT_TTL}).`)
   return parts.join(' ')
 }

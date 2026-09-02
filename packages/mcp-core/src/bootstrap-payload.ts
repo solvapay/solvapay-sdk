@@ -12,6 +12,8 @@
 
 import {
   checkPurchaseCore,
+  createCheckoutSessionCore,
+  createCustomerSessionCore,
   getCustomerBalanceCore,
   getMerchantCore,
   getPaymentMethodCore,
@@ -159,6 +161,8 @@ export function createBuildBootstrapPayload(
       paymentMethodResult,
       balanceResult,
       usageResult,
+      checkoutResult,
+      portalResult,
     ] = await Promise.all([
       fetchPublishableKey(),
       getMerchantCore(buildRequest(undefined), { solvaPay }),
@@ -168,6 +172,18 @@ export function createBuildBootstrapPayload(
       customerRef ? wrapError(getPaymentMethodCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
       customerRef ? wrapError(getCustomerBalanceCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
       customerRef ? wrapError(getUsageCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
+      wrapError(
+        createCheckoutSessionCore(
+          buildSolvaPayRequest(extra, {
+            getCustomerRef: () => customerRef ?? 'anonymous',
+          }),
+          { productRef, returnUrl: publicBaseUrl },
+          { solvaPay, returnUrl: publicBaseUrl },
+        ),
+      ),
+      customerRef
+        ? wrapError(createCustomerSessionCore(buildRequest(extra), { solvaPay }))
+        : unauthenticated(),
     ])
 
     if (isErrorResult(merchantResult)) {
@@ -199,6 +215,9 @@ export function createBuildBootstrapPayload(
         }
       : null
 
+    const checkout = okOrNull(checkoutResult)
+    const portal = okOrNull(portalResult)
+
     return {
       view,
       productRef,
@@ -208,6 +227,8 @@ export function createBuildBootstrapPayload(
       product: productResult,
       plans,
       customer,
+      checkoutUrl: checkout?.checkoutUrl ?? null,
+      portalUrl: portal?.customerUrl ?? null,
     }
   }
 }

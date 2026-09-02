@@ -91,6 +91,20 @@ hood) and flips the card to **Manage purchase**.
 For a public URL, run `pnpm tunnel` / `pnpm mcp:checkout:tunnel` (cloudflared)
 or enable the platform `mcpapp` ngrok tunnel on `:3030`.
 
+### Stub mode (no credentials)
+
+Set `SOLVAPAY_STUB=1` to boot against `createStubClient` instead of a
+live backend. The first payable tool call gates immediately (the
+anonymous customer starts at the included cap). No real charges occur.
+
+```bash
+SOLVAPAY_STUB=1 MCP_PORT=3030 pnpm --filter @example/mcp-checkout-app serve
+node packages/create-solvapay/templates/mcp/_base/scripts/verify.mjs http://localhost:3030
+```
+
+When `SOLVAPAY_STUB` is unset, `SOLVAPAY_SECRET_KEY` and
+`SOLVAPAY_PRODUCT_REF` remain required.
+
 ## Text-only hosts
 
 MCP Apps is optional. Claude Code, CLI clients, Grok, n8n, and any host
@@ -113,6 +127,26 @@ A gated or account call on a text-only host must still:
 
 Do not write `"shown in the panel."` as the first text block. There
 is no panel.
+
+Host-contract §5 recipe (no `mode` argument on any call). Against stub
+mode, `search_knowledge` gates on the first call:
+
+```bash
+SOLVAPAY_STUB=1 MCP_PORT=3030 pnpm --filter @example/mcp-checkout-app serve
+```
+
+Then, with a raw JSON-RPC client (or `lib/mcp-client.mjs`):
+
+1. `tools/call search_knowledge { query: "probe" }` — `content[0].text`
+   names used/total included, the next-call price, one recovery tool,
+   and a pasteable `https://` URL. No "in the panel."
+2. `tools/call manage_account {}` — first text block states the
+   customer's plan and remaining included usage or credit balance.
+3. `tools/call upgrade {}` — first text block lists at least one plan
+   with a price, a `planRef`, and a `https://` checkout path.
+4. `resources/read docs://solvapay/overview.md` — capability overview.
+
+The scaffolder `scripts/verify.mjs` asserts the same checks.
 
 ## Flow
 

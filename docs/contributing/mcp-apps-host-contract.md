@@ -121,13 +121,13 @@ Run against a host that does **not** mount `ui://` (Claude Code, MCP Inspector w
 
 Supporting requirements: every gate carries machine-readable fields (`planRef`, `productRef`, `checkoutUrl`, counters, unit price) on `structuredContent` as well as in the text; checkout links state their validity; and no required field is silently defaulted when the backend omits it — a narrator that claims to print a field must fail loudly if it is missing.
 
-This is also what the scaffolder's `scripts/verify.mjs` gate check should assert. Note that check has never actually run: it reads `structuredContent?.gate`, but `formatGate` sets `structuredContent = gate` flat, so every probe falls through to `skipped`.
+The scaffolder's `scripts/verify.mjs` `paywallGate` check asserts this against a flat `structuredContent.kind` (`payment_required` | `activation_required`): https URL in `content[0].text` and `checkoutUrl`, plan refs, included counters when present, no "in the panel", and no `_meta.ui` on the gate. Probe args include dummy required strings (`query` / `symbol`) so Zod-validated tools reach the paywall instead of failing argument validation.
 
-## 6. We do not declare `outputSchema` anywhere
+## 6. `outputSchema` on the gate and intent tools
 
 The tools spec: when `outputSchema` is provided, servers MUST populate `structuredContent` conforming to it and clients SHOULD validate. The MCP Apps guidance is blunter — if a tool returns `structuredContent`, declare an `outputSchema`.
 
-We declare none, so nothing on `structuredContent` is validated and hosts have no schema to hydrate against. Adding machine-readable gate fields is the natural moment to declare one. Caveat: a declared schema makes conformance mandatory, so fields omitted when the backend does not send them must be genuinely optional, never required-with-a-default — a default there is exactly the masking the no-fallback rule prohibits.
+Intent tools declare `BootstrapPayloadSchema`. The paywall gate declares `PaywallStructuredContentSchema` (Node entry only — the Zod object is not exported from the edge bundle). Fields the backend omits are optional in the schema, never required-with-a-default.
 
 The core spec also says a tool returning structured content SHOULD return the serialized JSON in a text block for backwards compatibility. Read with SEP-1624's semantic-equivalence rule, the sensible reading is a readable summary carrying the same facts, not a JSON dump.
 

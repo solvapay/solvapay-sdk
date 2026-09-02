@@ -1,10 +1,24 @@
 import { createSolvaPay, createSolvaPayClient } from '@solvapay/server'
+import { createStubClient } from '../../shared/stub-api-client'
 
 export const port = parseInt(process.env.MCP_PORT || '3006', 10)
 export const host = process.env.MCP_HOST || 'localhost'
 export const mcpPublicBaseUrl = process.env.MCP_PUBLIC_BASE_URL || `http://localhost:${port}`
 export const solvapayApiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'http://localhost:3000'
-export const solvapayProductRef = process.env.SOLVAPAY_PRODUCT_REF || ''
+
+/**
+ * Explicit offline mode. When `SOLVAPAY_STUB=1`, the example uses
+ * `createStubClient` and does not charge. When the flag is unset the
+ * existing required-env throws stay exactly as they are — this is not
+ * a silent degrade.
+ */
+export const stubMode = process.env.SOLVAPAY_STUB === '1'
+
+const STUB_PRODUCT_REF = 'prd_stub'
+
+export const solvapayProductRef = stubMode
+  ? process.env.SOLVAPAY_PRODUCT_REF || STUB_PRODUCT_REF
+  : process.env.SOLVAPAY_PRODUCT_REF || ''
 
 /**
  * Origin used when declaring CSP `connectDomains` on the app resource.
@@ -34,17 +48,33 @@ export const mcpAssetOrigins = (process.env.MCP_ASSET_ORIGINS ?? '')
   .map((entry) => entry.trim())
   .filter(Boolean)
 
-if (!process.env.SOLVAPAY_SECRET_KEY) {
-  throw new Error('SOLVAPAY_SECRET_KEY is required for mcp-checkout-app')
+if (stubMode) {
+  console.error(
+    '[mcp-checkout-app] SOLVAPAY_STUB=1 — using the stub API client. No real charges occur.',
+  )
+} else {
+  if (!process.env.SOLVAPAY_SECRET_KEY) {
+    throw new Error('SOLVAPAY_SECRET_KEY is required for mcp-checkout-app')
+  }
+
+  if (!solvapayProductRef) {
+    throw new Error('SOLVAPAY_PRODUCT_REF is required for mcp-checkout-app')
+  }
 }
 
-if (!solvapayProductRef) {
-  throw new Error('SOLVAPAY_PRODUCT_REF is required for mcp-checkout-app')
-}
-
-export const solvaPay = createSolvaPay({
-  apiClient: createSolvaPayClient({
-    apiKey: process.env.SOLVAPAY_SECRET_KEY,
-    apiBaseUrl: solvapayApiBaseUrl,
-  }),
-})
+export const solvaPay = stubMode
+  ? createSolvaPay({
+      apiClient: createStubClient({
+        freeTierLimit: 3,
+        startAtIncludedCap: true,
+        debug: process.env.STUB_DEBUG !== 'false',
+        delays: { checkLimits: 0, trackUsage: 0, customer: 0 },
+      }),
+      limitsCacheTTL: 0,
+    })
+  : createSolvaPay({
+      apiClient: createSolvaPayClient({
+        apiKey: process.env.SOLVAPAY_SECRET_KEY,
+        apiBaseUrl: solvapayApiBaseUrl,
+      }),
+    })

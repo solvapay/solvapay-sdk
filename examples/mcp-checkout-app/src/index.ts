@@ -13,6 +13,7 @@ import {
   solvaPay,
   solvapayApiBaseUrl,
   solvapayProductRef,
+  stubMode,
 } from './config'
 
 let cachedBranding: SolvaPayMerchantBranding | undefined
@@ -27,7 +28,7 @@ app.use(
     publicBaseUrl: mcpPublicBaseUrl,
     apiBaseUrl: solvapayApiBaseUrl,
     productRef: solvapayProductRef,
-    requireAuth: true,
+    requireAuth: !stubMode,
     mcpPath: '/mcp',
   }),
 )
@@ -64,6 +65,15 @@ fetchBranding()
   })
 
 async function start(): Promise<void> {
+  if (stubMode) {
+    app.listen(port, host, () => {
+      console.error(
+        `MCP checkout app listening on http://${host}:${port} (SOLVAPAY_STUB=1, no real charges)`,
+      )
+    })
+    return
+  }
+
   // Opt-in SDK check before the port opens. Shape validation + the one-line
   // mcp config summary already ran when the OAuth bridge was constructed;
   // this is the only deliberate network hop — a bad/missing product would

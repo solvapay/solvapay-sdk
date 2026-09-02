@@ -121,6 +121,14 @@ export interface StubClientOptions {
    * Default: process.env.PUBLIC_BASE_URL || process.env.PUBLIC_URL || process.env.OPENAI_ACTIONS_BASE_URL || 'http://localhost:3000'
    */
   baseUrl?: string
+
+  /**
+   * When true, every free-tier customer starts already at the included
+   * cap so the first `checkLimits` is a gate. Used by mcp-checkout-app
+   * stub mode to reproduce the text-host paywall without burning
+   * allowance first.
+   */
+  startAtIncludedCap?: boolean
 }
 
 export class StubSolvaPayClient implements SolvaPayClient {
@@ -132,6 +140,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   private delays: Required<NonNullable<StubClientOptions['delays']>>
   private debug: boolean
   private baseUrl: string
+  private startAtIncludedCap: boolean
 
   // In-memory storage
   private inMemoryFreeTier: FreeTierData = {}
@@ -144,6 +153,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     this.useFileStorage = options.useFileStorage ?? false
     this.freeTierLimit = options.freeTierLimit ?? 3
     this.debug = options.debug ?? false
+    this.startAtIncludedCap = options.startAtIncludedCap ?? false
     this.baseUrl =
       options.baseUrl ??
       process.env.PUBLIC_BASE_URL ??
@@ -324,6 +334,33 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Check usage limits for a customer
    */
+  private limitCatalog(productRef: string) {
+    return {
+      plans: [
+        {
+          reference: 'plan_free',
+          name: 'Free',
+          type: 'hybrid' as const,
+          price: 0,
+          currency: 'USD',
+          requiresPayment: false,
+          freeUnits: this.freeTierLimit,
+          perUnitChargeMinor: 2,
+        },
+        {
+          reference: 'plan_pro',
+          name: 'Pro',
+          type: 'recurring' as const,
+          price: 2900,
+          currency: 'USD',
+          requiresPayment: true,
+          freeUnits: 0,
+        },
+      ],
+      product: { name: 'Demo Product', reference: productRef },
+    }
+  }
+
   async checkLimits(params: { customerRef: string; productRef: string }): Promise<{
     withinLimits: boolean
     remaining: number
@@ -331,6 +368,9 @@ export class StubSolvaPayClient implements SolvaPayClient {
     meterName?: string
     checkoutSessionId?: string
     checkoutUrl?: string
+    plans?: ReturnType<StubSolvaPayClient['limitCatalog']>['plans']
+    product?: ReturnType<StubSolvaPayClient['limitCatalog']>['product']
+    balance?: { creditBalance: number; remainingUnits: number; creditsPerUnit: number; currency: string }
   }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.checkLimits))
@@ -340,6 +380,12 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
     // Use file lock for thread-safe file operations
     return await this.withFileLock(async () => {
+      const catalog = this.limitCatalog(params.productRef)
+      const withCatalog = <T extends Record<string, unknown>>(result: T) => ({
+        ...result,
+        ...catalog,
+      })
+
       // Load customer data from persistent storage
       const customerData = await this.loadCustomerData()
       const customer = customerData[params.customerRef]
@@ -347,33 +393,42 @@ export class StubSolvaPayClient implements SolvaPayClient {
       // Check if customer has pro or premium plan (unlimited access)
       if (customer?.plan === 'pro' || customer?.plan === 'premium') {
         this.log(`✅ Customer has ${customer.plan} plan with unlimited access`)
-        return {
+        return withCatalog({
           withinLimits: true,
           remaining: 999999,
-          plan: customer.plan,
+          plan: customer.plan === 'pro' ? 'plan_pro' : customer.plan,
           meterName: 'api_requests',
-        }
+        })
       }
 
       // Check if customer has paid access (credits > 0)
       if (customer && customer.credits > 0) {
         this.log(`✅ Customer has paid access with ${customer.credits} credits`)
-        return {
+        return withCatalog({
           withinLimits: true,
           remaining: customer.credits,
           plan: customer.plan || 'paid',
           meterName: 'api_requests',
-        }
+          balance: {
+            creditBalance: customer.credits,
+            remainingUnits: customer.credits,
+            creditsPerUnit: 1,
+            currency: 'USD',
+          },
+        })
       }
 
       // No paid access, check free tier
       const freeTierData = await this.loadFreeTierData()
       const key = `${params.customerRef}_${params.productRef}`
       const now = new Date()
-      const usage = freeTierData[key]
+      let usage = freeTierData[key]
 
-      // Reset daily counter if it's a new day or first time
-      if (!usage || this.isNewDay(usage.lastReset, now)) {
+      if (this.startAtIncludedCap) {
+        usage = { count: this.freeTierLimit, lastReset: now.toISOString() }
+        freeTierData[key] = usage
+        await this.saveFreeTierData(freeTierData)
+      } else if (!usage || this.isNewDay(usage.lastReset, now)) {
         const newUsage = { count: 1, lastReset: now.toISOString() }
         freeTierData[key] = newUsage
         await this.saveFreeTierData(freeTierData)
@@ -381,12 +436,16 @@ export class StubSolvaPayClient implements SolvaPayClient {
         this.log(
           `🆕 Reset daily counter for ${params.customerRef}, remaining: ${this.freeTierLimit - 1}`,
         )
-        return {
+        return withCatalog({
           withinLimits: true,
           remaining: this.freeTierLimit - 1,
-          plan: 'free',
+          plan: 'plan_free',
           meterName: 'api_requests',
-        }
+        })
+      }
+
+      if (!usage) {
+        throw new Error('stub checkLimits: free-tier usage row missing after initialisation')
       }
 
       const withinLimits = usage.count < this.freeTierLimit
@@ -402,12 +461,12 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
       const remaining = Math.max(0, this.freeTierLimit - usage.count)
 
-      const result = {
+      const result = withCatalog({
         withinLimits,
         remaining,
-        plan: 'free',
+        plan: 'plan_free',
         meterName: 'api_requests' as string | undefined,
-      }
+      })
 
       // Add checkout URL if limits exceeded
       if (!withinLimits) {

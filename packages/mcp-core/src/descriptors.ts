@@ -48,6 +48,7 @@ import {
   type SolvaPay,
 } from '@solvapay/server'
 import { z } from 'zod'
+import { BootstrapPayloadSchema } from './bootstrap-schema'
 import { logMcpConfigOnce } from './config-log'
 import {
   buildSolvaPayRequest,
@@ -389,6 +390,7 @@ export function buildSolvaPayDescriptors(
       // suppress the narrated markdown when they know the host is
       // rendering the UI iframe). Default `'auto'` emits both.
       inputSchema: { mode: z.enum(['ui', 'text', 'auto']).optional() },
+      outputSchema: BootstrapPayloadSchema,
       meta: toolMeta,
       annotations: INTENT_TOOL_ANNOTATIONS[view],
       handler: async (args, extra) =>
@@ -404,7 +406,7 @@ export function buildSolvaPayDescriptors(
   }
 
   const MODE_HINT =
-    " By default renders the UI iframe with a one-line placeholder; pass `mode: 'text'` for a markdown-only summary on CLI / text-only hosts, or `mode: 'auto'` to include both."
+    " Default `mode: 'auto'` returns a self-sufficient text summary (plan, price, https checkout URL) and still opens the iframe on UI hosts. Pass `mode: 'text'` to strip the iframe, or `mode: 'ui'` for a one-line placeholder that still includes the checkout URL."
 
   pushIntentTool(
     'checkout',

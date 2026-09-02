@@ -95,6 +95,7 @@ export {
 export type { ProductReadinessInput, ProductReadinessResult } from '@solvapay/core'
 
 // ---- Narrators (per-tool text-mode renderers) ----
+export { BootstrapPayloadSchema } from './bootstrap-schema'
 export {
   NARRATORS,
   narrateManageAccount,

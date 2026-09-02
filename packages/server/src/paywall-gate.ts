@@ -44,6 +44,54 @@ function allPaidPlansArePayg(plans: LimitPlanSummary[] | undefined): boolean {
   return paidPlans.every(p => p.type === 'usage-based' || p.type === 'hybrid')
 }
 
+function activePlanOf(limits: LimitsLike): LimitPlanSummary | undefined {
+  if (!limits.plan) return undefined
+  return limits.plans?.find(p => p.reference === limits.plan)
+}
+
+function includedFromLimits(
+  limits: LimitsLike,
+): { total: number; used: number; remaining: number } | undefined {
+  const total = activePlanOf(limits)?.freeUnits
+  if (total == null || total === 0) return undefined
+  const remaining = limits.remaining
+  return {
+    total,
+    used: Math.max(0, total - remaining),
+    remaining,
+  }
+}
+
+/**
+ * Machine-readable recovery fields for both gate kinds. A field the
+ * backend did not send is omitted, not invented.
+ */
+function recoveryFields(limits: LimitsLike): {
+  planRef?: string
+  plans?: LimitPlanSummary[]
+  meterName?: string
+  unitPriceMinor?: number
+  currency?: string
+  included?: { total: number; used: number; remaining: number }
+  creditBalance?: number
+} {
+  const plan = activePlanOf(limits)
+  const included = includedFromLimits(limits)
+  const creditBalance = limits.balance?.creditBalance ?? limits.creditBalance
+  return {
+    ...(limits.plan ? { planRef: limits.plan } : {}),
+    ...(limits.plans !== undefined ? { plans: limits.plans } : {}),
+    ...(limits.meterName !== undefined ? { meterName: limits.meterName } : {}),
+    ...(plan?.perUnitChargeMinor != null
+      ? { unitPriceMinor: plan.perUnitChargeMinor, currency: plan.currency }
+      : limits.currency
+        ? { currency: limits.currency }
+        : {}),
+    ...(included ? { included } : {}),
+    ...(creditBalance !== undefined ? { creditBalance } : {}),
+  }
+}
+
 export function buildPaywallGate(
   productRef: string,
   limits: LimitsLike,
@@ -71,6 +119,8 @@ export function buildPaywallGate(
     state.kind === 'topup_required' &&
     allPaidPlansArePayg(limits.plans)
 
+  const recovery = recoveryFields(limits)
+
   const preMessage: PaywallStructuredContent =
     limits.activationRequired || useActivationForTopup
       ? {
@@ -81,9 +131,9 @@ export function buildPaywallGate(
           ...(limits.confirmationUrl !== undefined
             ? { confirmationUrl: limits.confirmationUrl }
             : {}),
-          ...(limits.plans !== undefined ? { plans: limits.plans } : {}),
           ...(limits.balance !== undefined ? { balance: limits.balance } : {}),
           ...(limits.product !== undefined ? { productDetails: limits.product } : {}),
+          ...recovery,
         }
       : {
           kind: 'payment_required',
@@ -92,6 +142,7 @@ export function buildPaywallGate(
           message: '',
           ...(limits.balance !== undefined ? { balance: limits.balance } : {}),
           ...(limits.product !== undefined ? { productDetails: limits.product } : {}),
+          ...recovery,
         }
 
   return { ...preMessage, message: buildGateMessage(state, preMessage) }
