@@ -586,12 +586,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
     currency: string
     description?: string
     idempotencyKey?: string
-  }): Promise<{
-    processorPaymentId: string
-    clientSecret: string
-    publishableKey: string
-    accountId?: string
-  }> {
+  }): Promise<CreatePaymentIntentResult> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
 
     this.log(`📡 Stub Request: POST /v1/sdk/payment-intents (topup)`)
@@ -607,6 +602,10 @@ export class StubSolvaPayClient implements SolvaPayClient {
       processorPaymentId,
       clientSecret: `${processorPaymentId}_secret_${Math.random().toString(36).slice(2, 15)}`,
       publishableKey: 'pk_test_stub_demo_key',
+      amount: params.amount,
+      currency: params.currency,
+      status: 'succeeded',
+      customerRef: params.customerRef,
     }
   }
 
@@ -640,6 +639,9 @@ export class StubSolvaPayClient implements SolvaPayClient {
       publishableKey: 'pk_test_stub_demo_key',
       amount: 2900,
       currency: 'USD',
+      status: 'requires_payment_method',
+      customerRef: params.customerRef,
+      planRef: params.planRef,
     }
   }
 
@@ -758,12 +760,20 @@ export class StubSolvaPayClient implements SolvaPayClient {
 
     const credits = await this.getCredits(params.customerRef)
 
+    const amountMajor = credits / 100
     return {
       customerRef: params.customerRef,
       credits,
       displayCurrency: 'USD',
       creditsPerMinorUnit: 100,
       displayExchangeRate: 1,
+      display: {
+        amountMajor,
+        currency: 'USD',
+        exchangeRate: 1,
+        formatted: `$${amountMajor.toFixed(2)}`,
+        rateSource: 'parity',
+      },
     }
   }
 
@@ -1155,13 +1165,16 @@ export class StubSolvaPayClient implements SolvaPayClient {
   async cloneProduct(
     productRef: string,
     overrides?: { name?: string },
-  ): Promise<{ reference: string; name: string }> {
+  ): Promise<ProductResponse> {
     await new Promise(resolve => setTimeout(resolve, this.delays.customer))
     this.log(`📡 Stub Request: POST /v1/sdk/products/${productRef}/clone`)
 
-    const reference = `prd_${Math.random().toString(36).slice(2, 10)}`
-    const name = overrides?.name || `Clone of ${productRef}`
-    return { reference, name }
+    const cloned = await this.getProduct(productRef)
+    return {
+      ...cloned,
+      reference: `prd_${Math.random().toString(36).slice(2, 10)}`,
+      name: overrides?.name || `Clone of ${productRef}`,
+    }
   }
 
   /**

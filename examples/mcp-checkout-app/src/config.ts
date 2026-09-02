@@ -48,18 +48,26 @@ export const mcpAssetOrigins = (process.env.MCP_ASSET_ORIGINS ?? '')
   .map((entry) => entry.trim())
   .filter(Boolean)
 
+function createLiveSolvaPay() {
+  const apiKey = process.env.SOLVAPAY_SECRET_KEY
+  if (!apiKey) {
+    throw new Error('SOLVAPAY_SECRET_KEY is required for mcp-checkout-app')
+  }
+  if (!solvapayProductRef) {
+    throw new Error('SOLVAPAY_PRODUCT_REF is required for mcp-checkout-app')
+  }
+  return createSolvaPay({
+    apiClient: createSolvaPayClient({
+      apiKey,
+      apiBaseUrl: solvapayApiBaseUrl,
+    }),
+  })
+}
+
 if (stubMode) {
   console.error(
     '[mcp-checkout-app] SOLVAPAY_STUB=1 — using the stub API client. No real charges occur.',
   )
-} else {
-  if (!process.env.SOLVAPAY_SECRET_KEY) {
-    throw new Error('SOLVAPAY_SECRET_KEY is required for mcp-checkout-app')
-  }
-
-  if (!solvapayProductRef) {
-    throw new Error('SOLVAPAY_PRODUCT_REF is required for mcp-checkout-app')
-  }
 }
 
 export const solvaPay = stubMode
@@ -72,9 +80,4 @@ export const solvaPay = stubMode
       }),
       limitsCacheTTL: 0,
     })
-  : createSolvaPay({
-      apiClient: createSolvaPayClient({
-        apiKey: process.env.SOLVAPAY_SECRET_KEY,
-        apiBaseUrl: solvapayApiBaseUrl,
-      }),
-    })
+  : createLiveSolvaPay()
