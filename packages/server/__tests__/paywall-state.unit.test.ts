@@ -241,7 +241,7 @@ describe('buildGateMessage', () => {
       gate({ kind: 'activation_required', checkoutUrl }),
     )
     expect(msg).toMatch(/activate_plan/)
-    expect(msg).toContain(checkoutUrl)
+    expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
   })
 
   it('topup_required names topup tool and inlines checkoutUrl', () => {
@@ -250,7 +250,7 @@ describe('buildGateMessage', () => {
       gate({ checkoutUrl }),
     )
     expect(msg).toMatch(/topup/)
-    expect(msg).toContain(checkoutUrl)
+    expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
     expect(msg).not.toMatch(/activate_plan/)
   })
 
@@ -260,7 +260,8 @@ describe('buildGateMessage', () => {
       gate({ checkoutUrl }),
     )
     expect(msg).toMatch(/upgrade/)
-    expect(msg).toContain(checkoutUrl)
+    expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
+    expect(msg).not.toContain(`Open ${checkoutUrl}`)
     expect(msg).toMatch(/expires in 15 minutes/)
     expect(msg).toContain('docs://solvapay/overview.md')
     expect(msg).not.toMatch(/topup/)
@@ -280,7 +281,7 @@ describe('buildGateMessage', () => {
     )
     expect(msg).toMatch(/You've used 3 of 3 included api requests/)
     expect(msg).toMatch(/\$0\.02/)
-    expect(msg).toContain(checkoutUrl)
+    expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
     expect(msg).toMatch(/expires in 15 minutes/)
     expect(msg).toMatch(/upgrade/)
     expect(msg).not.toMatch(/don't have an active plan/)
@@ -318,7 +319,7 @@ describe('buildNudgeMessage', () => {
       }),
     )
     expect(msg).toMatch(/topup/)
-    expect(msg).toContain(checkoutUrl)
+    expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
   })
 
   it('names upgrade for recurring plans approaching the period cap', () => {
@@ -327,6 +328,6 @@ describe('buildNudgeMessage', () => {
       limits({ remaining: 1, checkoutUrl }),
     )
     expect(msg).toMatch(/upgrade/)
-    expect(msg).toContain(checkoutUrl)
+    expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
   })
 })

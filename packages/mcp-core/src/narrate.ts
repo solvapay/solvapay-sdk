@@ -7,8 +7,11 @@
  *  2. Body uses `Label: value` rows (one per line). Inline `·`
  *     separator for compound values. No bullet lists.
  *  3. Commands on a single line as inline-code tokens.
- *  4. External URLs go into `resource_link` blocks, not inline
- *     markdown links.
+ *  4. External URLs are named markdown links (`[Open checkout](url)`)
+ *     plus a matching `resource_link` block. Never dump the raw URL
+ *     as the visible label — hosts render the name; the href stays
+ *     in the text for the model and for terminals that do not render
+ *     markdown.
  *
  * Missing fields skip their row entirely — we never emit `Balance: —`
  * or `Customer: unknown`. A narrator returning just `title + 1 row`
@@ -283,9 +286,13 @@ function checkoutUrlOf(data: BootstrapPayload): string | null {
   return httpsUrl(data.checkoutUrl)
 }
 
+function namedCheckoutMarkdown(url: string): string {
+  return `[Open checkout](${url})`
+}
+
 function checkoutRow(data: BootstrapPayload): string | null {
   const url = checkoutUrlOf(data)
-  return url ? `Checkout: ${url} (${CHECKOUT_TTL})` : null
+  return url ? `Checkout: ${namedCheckoutMarkdown(url)} (${CHECKOUT_TTL})` : null
 }
 
 function checkoutLink(data: BootstrapPayload): { uri: string; name: string } | null {
@@ -481,6 +488,6 @@ export function uiPlaceholder(tool: IntentTool, data: BootstrapPayload): string 
   const balance = balanceSummary(data.customer as CustomerShape | null)
   if (balance) parts.push(`Balance: ${balance}.`)
   const url = checkoutUrlOf(data)
-  if (url) parts.push(`Checkout: ${url} (${CHECKOUT_TTL}).`)
+  if (url) parts.push(`Checkout: ${namedCheckoutMarkdown(url)} (${CHECKOUT_TTL}).`)
   return parts.join(' ')
 }

@@ -18,7 +18,7 @@ describe('buildPaywallGate', () => {
     expect(gate.planRef).toBe('free')
     // Active free plan at cap is limit_reached copy, not "no active plan".
     expect(gate.message).toMatch(/included usage|upgrade/i)
-    expect(gate.message).toContain('https://pay.example.com/checkout')
+    expect(gate.message).toContain('[Open checkout](https://pay.example.com/checkout)')
     expect(gate.message).toMatch(/expires in 15 minutes/)
   })
 

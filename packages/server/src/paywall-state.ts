@@ -137,13 +137,17 @@ function meterLabel(gate: PaywallStructuredContent): string {
   return gate.meterName.replace(/_/g, ' ')
 }
 
+function namedCheckoutMarkdown(url: string): string {
+  return `[Open checkout](${url})`
+}
+
 function recoverClause(
   url: string | null,
   verb: string,
   tool: string,
 ): string {
   if (url) {
-    return ` Open ${url} to ${verb} (expires in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or call the \`${tool}\` tool.`
+    return ` ${namedCheckoutMarkdown(url)} to ${verb} (expires in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or call the \`${tool}\` tool.`
   }
   return ` Call the \`${tool}\` tool.`
 }
@@ -210,7 +214,7 @@ export function buildNudgeMessage(
   limits: LimitResponseWithPlan | null,
 ): string {
   const url = limits?.checkoutUrl && limits.checkoutUrl.length > 0 ? limits.checkoutUrl : null
-  const visitClause = url ? `, or visit ${url}` : ''
+  const visitClause = url ? `, or ${namedCheckoutMarkdown(url)}` : ''
 
   switch (state.kind) {
     case 'topup_required':

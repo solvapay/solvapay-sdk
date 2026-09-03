@@ -467,7 +467,10 @@ describe('narratedToolResult', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const text = (r.content[0] as any).text as string
     expect(text).toContain('Pro')
-    expect(text).toContain('https://customer.solvapay.com/demo?session=abc')
+    expect(text).toContain(
+      '[Open checkout](https://customer.solvapay.com/demo?session=abc)',
+    )
+    expect(text).not.toMatch(/Checkout: https:/)
     expect(text).not.toContain('shown in the panel')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[1] as any).text).toContain('planRef: plan_pro')
@@ -492,9 +495,27 @@ describe('narratedToolResult', () => {
       }),
     ).text
     expect(text).toContain('planRef: plan_pro')
-    expect(text).toContain('Checkout: https://customer.solvapay.com/demo?session=abc')
+    expect(text).toContain(
+      '[Open checkout](https://customer.solvapay.com/demo?session=abc)',
+    )
     expect(text).toContain('expires in 15 minutes')
+    expect(text).not.toMatch(/Checkout: https:/)
     expect(text).not.toContain('shown in the panel')
+  })
+
+  it('topup narration names the checkout link instead of dumping the URL', () => {
+    const { text, links } = narrateTopup(
+      basePayload({
+        view: 'topup',
+        checkoutUrl: 'https://customer.solvapay.com/demo?session=abc',
+      }),
+    )
+    expect(text).toContain('[Open checkout](https://customer.solvapay.com/demo?session=abc)')
+    expect(text).toContain('expires in 15 minutes')
+    expect(text).not.toMatch(/Checkout: https:/)
+    expect(links).toEqual([
+      { uri: 'https://customer.solvapay.com/demo?session=abc', name: 'Open checkout' },
+    ])
   })
 
   it('manage_account narration includes included-usage counters', () => {
