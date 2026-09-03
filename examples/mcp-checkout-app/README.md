@@ -476,12 +476,15 @@ sequenceDiagram
 - Post-purchase account management (update card / cancel) stays on the
   hosted customer portal in both branches. The portal isn't safe to
   embed.
-- The embedded branch depends on the host honouring `_meta.ui.csp`. The
-  runtime probe handles today's non-compliant hosts, but a host that
-  declares compliance yet silently strips `frame-src` will cause
-  Stripe.js to fail mid-confirmation. If that happens, degrade the probe
-  further (e.g. add an explicit `fetch('https://js.stripe.com')` ping)
-  rather than disabling the embedded branch.
+- The embedded branch depends on the host delivering `_meta.ui.csp.frameDomains`
+  to the widget document. The runtime probe handles non-compliant hosts (Claude)
+  and hosts where the declaration is read but the enforced policy still blocks
+  nested iframes (MCPJam Inspector currently reports a runtime mismatch between
+  its effective CSP model and the browser's enforced policy). When the probe
+  blocks, check the widget console for `[solvapay-mcp] host CSP refused the
+  Stripe iframe` — the logged `originalPolicy` names the policy that refused
+  the frame. Adding entries to `_meta.ui.csp` cannot help when the host's
+  sandbox proxy or iframe chain strips or overrides `frame-src`.
 
 ## Endpoints
 
