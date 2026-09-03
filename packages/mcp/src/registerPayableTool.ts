@@ -16,6 +16,7 @@ import {
   type SolvaPayToolIcon,
 } from '@solvapay/mcp-core'
 import type { SolvaPay } from '@solvapay/server'
+import { PaywallStructuredContentSchema } from '@solvapay/server'
 import { registerAppTool } from './internal/extAppsServer'
 
 type ZodObjectSchema = ReturnType<typeof z.object>
@@ -120,11 +121,16 @@ export function registerPayableTool<
   const hasUiResource =
     hasUi && typeof (mergedUi as { resourceUri?: unknown }).resourceUri === 'string'
 
+  const registeredOutputSchema =
+    outputSchema !== undefined
+      ? z.union([outputSchema, PaywallStructuredContentSchema])
+      : undefined
+
   const toolConfig = {
     ...(title !== undefined ? { title } : {}),
     ...(description !== undefined ? { description } : {}),
     ...(schema !== undefined ? { inputSchema: wrapInputSchema(schema) } : {}),
-    ...(outputSchema !== undefined ? { outputSchema } : {}),
+    ...(registeredOutputSchema !== undefined ? { outputSchema: registeredOutputSchema } : {}),
     ...(Object.keys(toolMeta).length > 0 ? { _meta: toolMeta } : {}),
     annotations: effectiveAnnotations,
     ...(icons !== undefined && icons.length > 0 ? { icons } : {}),

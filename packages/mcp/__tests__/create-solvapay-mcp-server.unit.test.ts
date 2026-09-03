@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { z } from 'zod'
 import { MCP_TOOL_NAMES, MCP_PROMPT_NAMES, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
-import { createSolvaPay } from '@solvapay/server'
+import { PaywallStructuredContentSchema, createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
 import { createSolvaPayMcpServer } from '../src'
 
@@ -199,7 +199,7 @@ describe('createSolvaPayMcpServer', () => {
       expect(activate?.annotations?.readOnlyHint).toBe(false)
     })
 
-    it('registerPayable forwards outputSchema and omits the key when absent', () => {
+    it('registerPayable unions merchant outputSchema with the paywall gate schema', () => {
       const schema = z.object({ symbol: z.string() })
       const { server } = buildTestServer({
         additionalTools: ({ registerPayable }) => {
@@ -218,7 +218,26 @@ describe('createSolvaPayMcpServer', () => {
       })
       // @ts-expect-error — private registry used for coverage only
       const registered = server._registeredTools ?? {}
-      expect(registered['with_schema']?.outputSchema).toBe(schema)
+      const registeredSchema = registered['with_schema']?.outputSchema
+      expect(registeredSchema).toBeDefined()
+      expect(registeredSchema).not.toBe(schema)
+
+      const success = registeredSchema?.safeParse({ symbol: 'AAPL' })
+      expect(success?.success).toBe(true)
+
+      const gate = registeredSchema?.safeParse({
+        kind: 'payment_required',
+        product: 'prd_x',
+        checkoutUrl: 'https://example.com/checkout',
+        message: 'Payment required',
+      })
+      expect(gate?.success).toBe(true)
+
+      // Sanity: the paywall schema alone is narrower than the union.
+      expect(
+        PaywallStructuredContentSchema.safeParse({ symbol: 'AAPL' }).success,
+      ).toBe(false)
+
       expect(registered['without_schema']?.outputSchema).toBeUndefined()
     })
 
