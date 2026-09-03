@@ -48,22 +48,22 @@ export function Root() {
 
 The adapter maps each transport method to a single MCP tool name. Export `MCP_TOOL_NAMES` in your server so the two stay in lockstep.
 
-| Transport method          | MCP tool name                   | Returns                                                       |
-| ------------------------- | ------------------------------- | ------------------------------------------------------------- |
-| `checkPurchase`           | `check_purchase`                | `{ customerRef, email, name, purchases: [...] }`              |
-| `createCheckoutSession`   | `create_checkout_session`       | `{ sessionId, checkoutUrl }`                                  |
-| `createCustomerSession`   | `create_customer_session`       | `{ sessionId, customerUrl }`                                  |
-| `getPaymentMethod`        | `get_payment_method`            | `{ kind: 'card', brand, last4, expMonth, expYear } \| { kind: 'none' }` |
-| `getMerchant`             | `get_merchant`                  | `Merchant`                                                    |
-| `getProduct`              | `get_product`                   | `Product`                                                     |
-| `listPlans`               | `list_plans`                    | `Plan[]`                                                      |
-| `getBalance`              | `get_customer_balance`          | `{ credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate }` |
-| `createPayment`           | `create_payment_intent`         | `PaymentIntentResult`                                         |
-| `processPayment`          | `process_payment`               | `ProcessPaymentResult`                                        |
-| `createTopupPayment`      | `create_topup_payment_intent`   | `TopupPaymentResult`                                          |
-| `activatePlan`            | `activate_plan`                 | `ActivatePlanResult`                                          |
-| `cancelRenewal`           | `cancel_renewal`                | `CancelResult`                                                |
-| `reactivateRenewal`       | `reactivate_renewal`            | `ReactivateResult`                                            |
+| Transport method          | MCP tool name                   | Args the adapter adds            | Returns                                                       |
+| ------------------------- | ------------------------------- | -------------------------------- | ------------------------------------------------------------- |
+| `checkPurchase`           | `check_purchase`                | —                                | `{ customerRef, email, name, purchases: [...] }`              |
+| `createCheckoutSession`   | `create_hosted_session`         | `kind: 'checkout'`               | `{ sessionId, checkoutUrl }`                                  |
+| `createCustomerSession`   | `create_hosted_session`         | `kind: 'portal'`                 | `{ sessionId, customerUrl }`                                  |
+| `getPaymentMethod`        | `get_payment_method`            | —                                | `{ kind: 'card', brand, last4, expMonth, expYear } \| { kind: 'none' }` |
+| `getMerchant`             | `get_merchant`                  | —                                | `Merchant`                                                    |
+| `getProduct`              | `get_product`                   | —                                | `Product`                                                     |
+| `listPlans`               | `list_plans`                    | —                                | `Plan[]`                                                      |
+| `getBalance`              | `get_customer_balance`          | —                                | `{ credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate }` |
+| `createPayment`           | `create_payment_intent`         | `purpose: 'plan'`                | `PaymentIntentResult`                                         |
+| `processPayment`          | `process_payment`               | —                                | `ProcessPaymentResult`                                        |
+| `createTopupPayment`      | `create_payment_intent`         | `purpose: 'topup'`               | `TopupPaymentResult`                                          |
+| `activatePlan`            | `activate_plan`                 | —                                | `ActivatePlanResult`                                          |
+| `cancelRenewal`           | `set_renewal`                   | `enabled: false`                 | `CancelResult`                                                |
+| `reactivateRenewal`       | `set_renewal`                   | `enabled: true`                  | `ReactivateResult`                                            |
 
 Your server only needs to implement the tools the UI actually uses. Unimplemented tools surface as a thrown error from the adapter — catch and feature-detect in your component.
 
@@ -87,10 +87,19 @@ registerAppTool(
 
 registerAppTool(
   server,
-  MCP_TOOL_NAMES.createCheckoutSession,
-  { description: 'Mint a hosted checkout URL.', inputSchema: { productRef: z.string().optional() } },
+  MCP_TOOL_NAMES.createHostedSession,
+  {
+    description: 'Mint a hosted checkout or portal URL.',
+    inputSchema: {
+      kind: z.enum(['checkout', 'portal']),
+      productRef: z.string().optional(),
+    },
+  },
   async (args, extra) => {
-    const result = await createCheckoutSessionCore(buildRequest(extra, { method: 'POST' }), args, { solvaPay })
+    const result =
+      args.kind === 'portal'
+        ? await createCustomerSessionCore(buildRequest(extra, { method: 'POST' }), { solvaPay })
+        : await createCheckoutSessionCore(buildRequest(extra, { method: 'POST' }), args, { solvaPay })
     return toolResult(result)
   },
 )
@@ -148,7 +157,7 @@ On `focus` / `visibilitychange`, call `refetch()` from `usePurchase` so returnin
 
 ## Account management
 
-Once a customer has paid, drop `<CurrentPlanCard />` into the tree and the SDK does the rest — plan name, next-billing line, payment-method summary, plus **Update card** and **Cancel plan** actions. The card returns `null` when there is no active purchase, so you can render it unconditionally. The MCP `manage_account` view passes `hideUpdatePaymentButton` and `hideCancelButton` and pairs the card with a single **Manage account** customer-portal CTA — both flows run through the portal there.
+Once a customer has paid, drop `<CurrentPlanCard />` into the tree and the SDK does the rest — plan name, next-billing line, payment-method summary, plus **Update card** and **Cancel plan** actions. The card returns `null` when there is no active purchase, so you can render it unconditionally. The MCP `account` view (`view: "account"`) passes `hideUpdatePaymentButton` and `hideCancelButton` and pairs the card with a single **Manage account** customer-portal CTA — both flows run through the portal there.
 
 ```tsx
 import { CurrentPlanCard, LaunchCustomerPortalButton } from '@solvapay/react'
@@ -163,13 +172,13 @@ function Account() {
 }
 ```
 
-- **`<CurrentPlanCard />`** renders the active plan, mirrored card brand/last4, and inline **Update card** / **Cancel plan** actions. The MCP `manage_account` view hides both — card updates and cancellation route through the **Manage account** customer-portal CTA — and surfaces a one-line hint pointing at it.
+- **`<CurrentPlanCard />`** renders the active plan, mirrored card brand/last4, and inline **Update card** / **Cancel plan** actions. The MCP `account` view hides both — card updates and cancellation route through the **Manage account** customer-portal CTA — and surfaces a one-line hint pointing at it.
 - **`<LaunchCustomerPortalButton />`** opens the hosted customer portal in a new tab (default label: "Manage account"). The button renders enabled from first paint and fetches the portal URL in the background; multiple instances under the same provider share a single in-flight `createCustomerSession` round-trip. When the URL has resolved, click is a real `<a target="_blank">` navigation (sandbox-safe). On a cache-miss click the handler awaits the in-flight promise and falls back to `window.open`.
 - **`usePaymentMethod()`** exposes the mirrored card under `{ paymentMethod, loading, refetch }` when you need to build a custom account view. The card brand and last4 come from the `payment_intent.succeeded` webhook persisted on the Customer — no card-element iframe required inside the MCP App sandbox.
 
 ## Text-only paywall
 
-The MCP App surface uses SolvaPay's **text-only paywall**. A `registerPayable` tool emits a plain-text `Purchase required` response — no embedded UI meta, no structured checkout payload — so the host model can read the copy, call `create_checkout_session`, and surface the returned URL however it likes. There is no `McpPaywallView` / `McpNudgeView` / `McpUpsellStrip` component anymore; render checkout through `<PaymentForm>` or the hosted URL instead.
+The MCP App surface uses SolvaPay's **text-only paywall**. A `registerPayable` tool emits a plain-text `Purchase required` response — no embedded UI meta, no structured checkout payload — so the host model can read the copy, call `create_hosted_session` with `kind: "checkout"`, and surface the returned URL however it likes. There is no `McpPaywallView` / `McpNudgeView` / `McpUpsellStrip` component anymore; render checkout through `<PaymentForm>` or the hosted URL instead.
 
 ## Complete example
 
@@ -178,7 +187,7 @@ A full working example — server, client, OAuth bridge, polling, and the five-s
 ## Known boundaries
 
 - **`trackUsage` stays on the server.** Usage metering belongs on your backend, not the client — continue to call `solvaPay.trackUsage(...)` from `@solvapay/server` inside your tool handlers.
-- **Inline card entry on Claude.** Claude's MCP Apps host applies a fixed sandbox Content Security Policy that does not forward the spec's `frameDomains` declaration. Because Stripe's card surfaces load in a nested iframe, the inline Payment Element cannot render inside Claude's widget. The SDK detects this at runtime and falls back to SolvaPay-hosted checkout in a new tab (see [Hosted checkout from inside the iframe](#hosted-checkout-from-inside-the-iframe)), so checkout still completes and the payment stays on SolvaPay's rail. On hosts that honor the spec (e.g. ChatGPT), the inline Payment Element renders directly — no configuration needed.
+- **Inline card entry on restricted hosts.** Any MCP host whose sandbox chain does not deliver the declared `_meta.ui.csp.frameDomains` to the widget document cannot mount Stripe's Payment Element inline — Stripe's card surfaces load in a nested iframe and require both `frame-src` and (via inherited sandbox flags) `allow-same-origin` on the whole chain. Claude is the named example: it hardcodes `frame-src 'self' blob: data:` and ignores `frameDomains`. MCPJam reads the declaration but its double-iframe sandbox can still report a runtime mismatch between the effective CSP model and the browser's enforced policy. The SDK detects this at runtime (`useStripeProbe`) and falls back to SolvaPay-hosted checkout in a new tab (see [Hosted checkout from inside the iframe](#hosted-checkout-from-inside-the-iframe)), so checkout still completes and the payment stays on SolvaPay's rail. When the probe blocks, check the widget console for `[solvapay-mcp] host CSP refused the Stripe iframe` — the logged `originalPolicy` names the policy that refused the frame. On hosts that honour the spec end-to-end (e.g. `basic-host`, ChatGPT), the inline Payment Element renders directly — no configuration needed.
 
 ## Next steps
 

@@ -22,30 +22,28 @@ with clickable URLs for text-only hosts.
 
 ## What the user can do
 
-- **Upgrade** — start or change a paid plan. \`/upgrade\` opens the embedded
-  checkout (Stripe Elements inline) on UI hosts and returns a hosted-checkout
-  URL on text hosts.
-- **Manage account** — current plan, balance, usage, payment method, cancel
-  or reactivate auto-renewal. Credits + usage are folded inline into the
-  account view. \`/manage_account\`.
-- **Top up credits** — add SolvaPay credits for usage-based plans.
-  \`/topup\`.
-- **Activate plan** — pick a plan from the list or activate a specific plan
-  by \`planRef\`. Free plans activate immediately, usage-based plans activate
-  when balance covers the configured usage, paid plans return the embedded
-  checkout or a hosted-checkout URL. \`/activate_plan\`.
+- **Account** — one read-only viewer for every billing surface. Pass \`view\`:
+  \`checkout\` (upgrade / change plan / buy / subscribe), \`account\` (current
+  plan, cancel, billing), or \`topup\` (add credits). Omit \`view\` and the
+  server picks (no plan → checkout, out of credits → topup, else account).
+  Slash commands \`/upgrade\`, \`/manage_account\`, and \`/topup\` remap onto
+  this tool. \`account\`.
+- **Activate plan** — activate a specific plan by \`planRef\`. Free plans
+  activate immediately, usage-based plans activate when balance covers the
+  configured usage, paid plans return checkout. Requires \`planRef\` — to list
+  plans, call \`account\` with \`view: "checkout"\`. \`/activate_plan\`.
 
 ## How it fits together
 
-Each intent tool returns a full \`BootstrapPayload\` (merchant + product + plans
+The viewer returns a full \`BootstrapPayload\` (merchant + product + plans
 + customer snapshot) so the embedded UI never fires per-view read calls. When
 a paywalled data tool hits the usage limit, its response is plain text: the
-\`content[0].text\` narration names the recovery intent tool
-(\`upgrade\` / \`topup\` / \`activate_plan\`) and inlines \`gate.checkoutUrl\` for
-terminal-first hosts. The structured gate rides on \`structuredContent\` for
-programmatic consumers. No widget iframe opens for a gate — the LLM reads the
-narration and, if the user agrees, calls the named intent tool which mounts
-the checkout / topup / account surface.
+\`content[0].text\` narration names the recovery tool (\`account\`, or
+\`activate_plan\` when a specific planRef is known) and inlines
+\`gate.checkoutUrl\` for terminal-first hosts. The structured gate rides on
+\`structuredContent\` for programmatic consumers. No widget iframe opens for a
+gate — the LLM reads the narration and, if the user agrees, calls the named
+tool which mounts the checkout / topup / account surface.
 
 Auth is handled by the SolvaPay OAuth bridge (see \`createMcpOAuthBridge\`). The
 bridge injects \`customer_ref\` onto every authenticated request; tools that

@@ -90,7 +90,8 @@ describe('payable.gate()', () => {
       expect(result.content.kind).toBe('payment_required')
       expect(result.content.product).toBe('prd_chat')
       expect(result.content.checkoutUrl).toBe('https://example.com/checkout')
-      expect(result.content.message).toMatch(/upgrade/i)
+      expect(result.content.message).toMatch(/`account`/)
+      expect(result.content.message).toMatch(/view:\s*'checkout'/)
     })
 
     it('emits a paywall trackUsage event (mirrors handler-shaped adapters)', async () => {

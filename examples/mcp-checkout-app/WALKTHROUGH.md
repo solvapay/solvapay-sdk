@@ -42,12 +42,9 @@ return createSolvaPayMcpServer({
 
 What that line hides (from `@solvapay/mcp`):
 
-- **12 tools registered** — 4 intent tools (`upgrade`, `manage_account`,
-  `topup`, `activate_plan`), 8 UI-only state-change
-  tools (`create_checkout_session`, `create_customer_session`,
-  `create_payment_intent`, `process_payment`,
-  `create_topup_payment_intent`, `attach_business_details`,
-  `cancel_renewal`, `reactivate_renewal`).
+- **7 tools registered** — 2 intent tools (`account`, `activate_plan`), 5
+  UI-only state-change tools (`create_hosted_session`, `create_payment_intent`,
+  `process_payment`, `set_renewal`, `attach_business_details`).
 - **4 slash-command prompts registered** (`/upgrade`,
   `/manage_account`, `/topup`, `/activate_plan`) —
   additive for hosts that support prompts, silently ignored by hosts
@@ -92,10 +89,11 @@ What that line hides (from `@solvapay/react/mcp`):
 - Paywall narration — merchant paywalled data tools no longer open
   the widget iframe on a gate. Instead the gate's
   `content[0].text` states the current limit, names the recovery
-  intent tool (`upgrade` / `topup` / `activate_plan`), and inlines
+  intent tool (`` `account` `` with the appropriate `view`, or
+  `` `activate_plan` `` when a `planRef` is known), and inlines
   `checkoutUrl`. Official MCP Apps guidance: the model reads that
   text, not `structuredContent`. The iframe mounts only when the
-  user or LLM deliberately calls one of the three intent tools.
+  user or LLM deliberately calls the `account` viewer.
 
 ## `src/demo-tools.ts`
 

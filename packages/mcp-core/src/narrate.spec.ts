@@ -3,11 +3,13 @@ import {
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,
-  narrateActivatePlan,
   balanceSummary,
+  NARRATORS,
+  uiPlaceholder,
 } from './narrate'
+import { VIEWER_TOOL_NAME } from './tool-names'
 import { narratedToolResult, parseMode } from './helpers'
-import type { BootstrapPayload } from './types'
+import type { BootstrapPayload, SolvaPayCallToolResult } from './types'
 
 function basePayload(overrides: Partial<BootstrapPayload> = {}): BootstrapPayload {
   return {
@@ -132,7 +134,8 @@ describe('narrateManageAccount', () => {
     expect(text).toContain('Free · no payment required')
     expect(text).toContain('Starter · pay as you go')
     expect(text).toContain('Unlimited · recurring · $500.00/month')
-    expect(text).toContain('Commands: `/activate_plan` `/upgrade`')
+    expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout".`)
+    expect(text).not.toMatch(/Commands:\s*`\//)
   })
 
   it('labels one-time and hybrid plans distinctly instead of collapsing them to recurring', () => {
@@ -299,7 +302,8 @@ describe('narrateManageAccount', () => {
     expect(text).toContain('Balance: 865,500 credits')
     expect(text).toContain('No active plan.')
     expect(text).not.toContain('**Acme Knowledge Base — your account**')
-    expect(text).toContain('Commands: `/activate_plan` `/upgrade`')
+    expect(text).toContain(`To continue, call \`${VIEWER_TOOL_NAME}\` with view: "checkout".`)
+    expect(text).not.toMatch(/Commands:\s*`\//)
   })
 })
 
@@ -350,27 +354,6 @@ describe('narrateTopup', () => {
   })
 })
 
-describe('narrateActivatePlan', () => {
-  it('lists every plan, free ones included', () => {
-    const { text } = narrateActivatePlan(
-      basePayload({
-        plans: [
-          { type: 'recurring', name: 'Free', requiresPayment: false, options: [cycle()] } as never,
-          {
-            type: 'usage-based',
-            name: 'Starter',
-            requiresPayment: true,
-            options: [perUnit(1)],
-          } as never,
-        ],
-      }),
-    )
-    expect(text).toContain('**Activate a plan — Acme Knowledge Base**')
-    expect(text).toContain('Free · no payment required')
-    expect(text).toContain('Starter · pay as you go')
-  })
-})
-
 describe('parseMode', () => {
   it('parses the three valid modes', () => {
     expect(parseMode('ui')).toBe('ui')
@@ -398,7 +381,7 @@ describe('narratedToolResult', () => {
   })
 
   it('default (auto) emits narration as content[0] and keeps _meta.ui', () => {
-    const r = narratedToolResult('manage_account', payload, undefined, {
+    const r = narratedToolResult('account', payload, undefined, {
       ui: { resourceUri: 'ui://x' },
     })
     expect(r.content[0].type).toBe('text')
@@ -413,7 +396,7 @@ describe('narratedToolResult', () => {
   })
 
   it('mode=auto emits narrated text + _meta.ui without hiding it from the user', () => {
-    const r = narratedToolResult('manage_account', payload, 'auto', {
+    const r = narratedToolResult('account', payload, 'auto', {
       ui: { resourceUri: 'ui://x' },
     })
     expect(r.content[0].type).toBe('text')
@@ -426,7 +409,7 @@ describe('narratedToolResult', () => {
   })
 
   it('mode=text strips _meta.ui and keeps the narration visible', () => {
-    const r = narratedToolResult('manage_account', payload, 'text', {
+    const r = narratedToolResult('account', payload, 'text', {
       ui: { resourceUri: 'ui://x' },
       audience: 'ui',
     })
@@ -436,7 +419,7 @@ describe('narratedToolResult', () => {
   })
 
   it('mode=ui emits a self-sufficient placeholder, never a panel pointer', () => {
-    const r = narratedToolResult('manage_account', payload, 'ui', {
+    const r = narratedToolResult('account', payload, 'ui', {
       ui: { resourceUri: 'ui://x' },
     })
     expect(r.content).toHaveLength(2)
@@ -463,7 +446,7 @@ describe('narratedToolResult', () => {
         },
       ] as never,
     })
-    const r = narratedToolResult('upgrade', upgradePayload, 'ui', { ui: { resourceUri: 'ui://x' } })
+    const r = narratedToolResult('checkout', upgradePayload, 'ui', { ui: { resourceUri: 'ui://x' } })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const text = (r.content[0] as any).text as string
     expect(text).toContain('Pro')
@@ -567,9 +550,108 @@ describe('narratedToolResult', () => {
     expect((r.content[0] as any).text).toContain('Balance: 865,500 credits')
   })
 
-  it('falls back to JSON dump for unknown tool names', () => {
-    const r = narratedToolResult('unknown_tool', payload, 'auto')
+  it('falls back to JSON dump for unknown views', () => {
+    const r = narratedToolResult('unknown_view', payload, 'auto')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[0] as any).text).toContain('"view"')
+  })
+})
+
+describe('text-lane self-sufficiency', () => {
+  const linkedPayload = basePayload({
+    portalUrl: 'https://customer.solvapay.com/manage?id=abc',
+    checkoutUrl: 'https://customer.solvapay.com/checkout?id=def',
+    plans: [
+      {
+        type: 'usage-based',
+        name: 'Pay as you go',
+        requiresPayment: true,
+        options: [perUnit(2)],
+      } as never,
+    ],
+    customer: {
+      ref: 'cus_1',
+      purchase: {
+        customerRef: 'cus_1',
+        purchases: [
+          {
+            planSnapshot: {
+              name: 'dafsfa',
+              isMetered: false,
+              price: 9000,
+              currency: 'USD',
+              options: [cycle(), flat(9000)],
+            },
+          },
+        ],
+      } as never,
+      paymentMethod: null,
+      balance: usdBalance,
+      usage: null,
+    } as never,
+  })
+
+  function textBlocks(content: SolvaPayCallToolResult['content']): string {
+    return content
+      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+      .map(b => b.text)
+      .join('\n')
+  }
+
+  function resourceLinkUris(content: unknown[]): string[] {
+    return content
+      .filter(
+        (b): b is { type: 'resource_link'; uri: string } =>
+          typeof b === 'object' &&
+          b !== null &&
+          (b as { type?: string }).type === 'resource_link',
+      )
+      .map(b => b.uri)
+  }
+
+  it.each(['auto', 'text', 'ui'] as const)(
+    'mode=%s: every resource_link uri also appears as a markdown link in a text block',
+    mode => {
+      const r = narratedToolResult('account', linkedPayload, mode, {
+        ui: { resourceUri: 'ui://x' },
+      })
+      const uris = resourceLinkUris(r.content as unknown[])
+      expect(uris.length).toBeGreaterThan(0)
+      const texts = textBlocks(r.content)
+      for (const uri of uris) {
+        expect(texts).toContain(`](${uri})`)
+      }
+    },
+  )
+
+  it('narrateManageAccount emits Manage account before checkout', () => {
+    const { text } = narrateManageAccount(linkedPayload)
+    const manageAt = text.indexOf('[Manage account](https://customer.solvapay.com/manage?id=abc)')
+    const checkoutAt = text.indexOf('[Open checkout](https://customer.solvapay.com/checkout?id=def)')
+    expect(manageAt).toBeGreaterThanOrEqual(0)
+    expect(checkoutAt).toBeGreaterThan(manageAt)
+  })
+
+  it('no narrator emits the slash-command recovery form', () => {
+    for (const [view, narrate] of Object.entries(NARRATORS)) {
+      const { text } = narrate(linkedPayload)
+      expect(text, view).not.toMatch(/Commands:\s*`\//)
+    }
+  })
+
+  it("uiPlaceholder('account') names the active plan, matching the narrated Plan row", () => {
+    const placeholder = uiPlaceholder('account', linkedPayload)
+    const { text } = narrateManageAccount(linkedPayload)
+    expect(placeholder).toContain('dafsfa')
+    expect(placeholder).toContain('$90.00')
+    expect(placeholder).not.toContain('Pay as you go')
+    expect(text).toMatch(/Plan:\s*dafsfa/)
+    expect(placeholder).toContain('dafsfa')
+  })
+
+  it("uiPlaceholder('checkout') still reads from the catalogue", () => {
+    const placeholder = uiPlaceholder('checkout', linkedPayload)
+    expect(placeholder).toContain('Pay as you go')
+    expect(placeholder).not.toContain('dafsfa')
   })
 })

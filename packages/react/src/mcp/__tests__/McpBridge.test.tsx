@@ -1,20 +1,23 @@
 /**
  * Tests for the MCP bridge — a thin feature-detect wrapper around
- * `app.updateModelContext(...)` (Phase 1) and `app.sendMessage(...)`
- * (Phase 5 groundwork).
+ * `app.updateModelContext(...)` (Phase 1), `app.sendMessage(...)`
+ * (Phase 5 groundwork), and `app.openLink(...)` (outbound navigation).
  *
  * The bridge lives at `packages/react/src/mcp/bridge.tsx` and exposes:
  *   - `<McpBridgeProvider app={app} />`
- *   - `useMcpBridge()` → `{ notifyModelContext, sendMessage }`
+ *   - `useMcpBridge()` → `{ notifyModelContext, sendMessage, notifySuccess }`
+ *   - an `<ExternalLinkProvider>` around its children, so anchors pick
+ *     up host-mediated opening without knowing about MCP
  *
  * Views call the bridge without importing the `App` instance directly,
  * which keeps the per-view primitives usable in non-MCP embeddings.
  */
 
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import React from 'react'
 import { McpBridgeProvider, useMcpBridge } from '../bridge'
+import { useExternalLinkClick } from '../../hooks/useExternalLink'
 
 function Probe() {
   const { notifyModelContext, sendMessage } = useMcpBridge()
@@ -112,6 +115,122 @@ describe('useMcpBridge', () => {
     const app = {}
     const { result } = renderBridge(app)
     await expect(result.current.sendMessage({ text: 'x' })).resolves.toBeUndefined()
+  })
+})
+
+// ------------------------------------------------------------------
+// `ui/open-link` — the only way out of a sandboxed iframe. The bridge
+// exposes it to the view tree as an `<ExternalLinkProvider>` rather
+// than a bridge method, so every anchor the SDK renders picks it up.
+// ------------------------------------------------------------------
+
+function ExternalLinkProbe() {
+  const handleExternalClick = useExternalLinkClick()
+  return (
+    <a
+      href="https://portal.solvapay.test/session"
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={handleExternalClick}
+    >
+      manage account
+    </a>
+  )
+}
+
+function renderExternalLink(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app: any,
+): { click: () => MouseEvent } {
+  render(
+    <McpBridgeProvider app={app}>
+      <ExternalLinkProbe />
+    </McpBridgeProvider>,
+  )
+  return {
+    click: () => {
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true })
+      fireEvent(screen.getByRole('link'), event)
+      return event
+    },
+  }
+}
+
+describe('McpBridgeProvider external links', () => {
+  it('routes anchor clicks through app.openLink when the host declares openLinks', async () => {
+    const openLink = vi.fn().mockResolvedValue({})
+    const app = { openLink, getHostCapabilities: () => ({ openLinks: {} }) }
+    const { click } = renderExternalLink(app)
+
+    const event = click()
+
+    // Claude's sandbox drops `target="_blank"`, so suppressing the
+    // native navigation is required, not merely an optimisation.
+    expect(event.defaultPrevented).toBe(true)
+    await vi.waitFor(() =>
+      expect(openLink).toHaveBeenCalledWith({ url: 'https://portal.solvapay.test/session' }),
+    )
+  })
+
+  it('leaves navigation native when the host exposes openLink but does not declare it', () => {
+    const openLink = vi.fn().mockResolvedValue({})
+    const app = { openLink, getHostCapabilities: () => ({}) }
+    const { click } = renderExternalLink(app)
+
+    const event = click()
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(openLink).not.toHaveBeenCalled()
+  })
+
+  it('leaves navigation native on a host with no openLink at all', () => {
+    const { click } = renderExternalLink({})
+    expect(click().defaultPrevented).toBe(false)
+  })
+
+  it('treats an isError result as a refusal and warns rather than failing silently', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const openLink = vi.fn().mockResolvedValue({ isError: true })
+    const app = { openLink, getHostCapabilities: () => ({ openLinks: {} }) }
+    const { click } = renderExternalLink(app)
+
+    click()
+
+    await vi.waitFor(() => expect(warn).toHaveBeenCalled())
+    expect(warn.mock.calls[0][0]).toContain('https://portal.solvapay.test/session')
+    warn.mockRestore()
+  })
+
+  it('logs the cause when the open-link request itself fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const openLink = vi.fn().mockRejectedValue(new Error('timeout'))
+    const app = { openLink, getHostCapabilities: () => ({ openLinks: {} }) }
+    const { click } = renderExternalLink(app)
+
+    click()
+
+    await vi.waitFor(() => expect(error).toHaveBeenCalled())
+    expect(error.mock.calls[0][1]).toBeInstanceOf(Error)
+    warn.mockRestore()
+    error.mockRestore()
+  })
+
+  it('reads capabilities at click time, not render time', async () => {
+    // The bridge can mount before `connect()` has populated
+    // capabilities; a render-time snapshot would go stale and strand
+    // every link for the rest of the session.
+    const openLink = vi.fn().mockResolvedValue({})
+    let capabilities: { openLinks?: unknown } = {}
+    const app = { openLink, getHostCapabilities: () => capabilities }
+    const { click } = renderExternalLink(app)
+
+    expect(click().defaultPrevented).toBe(false)
+
+    capabilities = { openLinks: {} }
+
+    expect(click().defaultPrevented).toBe(true)
+    await vi.waitFor(() => expect(openLink).toHaveBeenCalledTimes(1))
   })
 })
 

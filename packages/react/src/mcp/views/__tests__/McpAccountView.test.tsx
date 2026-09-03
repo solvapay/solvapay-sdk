@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
 import { McpAccountView } from '../McpAccountView'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo } from '../../../types'
+import type { PlanLike } from '../../plan-actions'
 import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 
 function makeTransport(
@@ -35,6 +36,8 @@ function buildCtx(
   credits: number | null = null,
 ): SolvaPayContextValue {
   const paid = purchases.find(p => (p.amount ?? 0) > 0) ?? null
+  // activePurchase is the primary plan purchase (paid or $0), not "amount > 0".
+  const active = purchases[0] ?? null
   return {
     purchase: {
       loading: false,
@@ -42,7 +45,7 @@ function buildCtx(
       error: null,
       purchases,
       hasProduct: () => purchases.length > 0,
-      activePurchase: paid,
+      activePurchase: active,
       hasPaidPurchase: !!paid,
       activePaidPurchase: paid,
       balanceTransactions: [],
@@ -71,6 +74,27 @@ function renderAccount(
   )
 }
 
+const cycle = (interval = 'month') => ({ kind: 'billingCycle' as const, interval })
+const flat = (amountMinor: number, currency = 'usd') => ({
+  kind: 'charge' as const,
+  per: 'flat' as const,
+  amountMinor,
+  currency,
+})
+const perUnit = (amountMinor: number, meter = 'requests') => ({
+  kind: 'charge' as const,
+  per: 'unit' as const,
+  amountMinor,
+  currency: 'usd',
+  meter,
+})
+
+const catalogPlans: PlanLike[] = [
+  { reference: 'pln_free', requiresPayment: false, price: 0, options: [cycle()] },
+  { reference: 'pln_payg', requiresPayment: true, price: 0, options: [perUnit(2)] },
+  { reference: 'pln_monthly', requiresPayment: true, price: 1999, options: [cycle(), flat(1999)] },
+]
+
 const paidPurchase: PurchaseInfo = {
   reference: 'pur_abc',
   customerRef: 'cus_abc',
@@ -81,7 +105,48 @@ const paidPurchase: PurchaseInfo = {
   amount: 1999,
   currency: 'USD',
   isRecurring: true,
+  planRef: 'pln_monthly',
   planSnapshot: { reference: 'pln_monthly', currency: 'USD', price: 1999, isMetered: false },
+}
+
+const freePurchase: PurchaseInfo = {
+  reference: 'pur_free',
+  customerRef: 'cus_abc',
+  productName: 'Widget API',
+  status: 'active',
+  startDate: '2026-01-01T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
+  amount: 0,
+  currency: 'USD',
+  isRecurring: false,
+  planRef: 'pln_free',
+  planSnapshot: {
+    reference: 'pln_free',
+    name: 'Free',
+    currency: 'USD',
+    price: 0,
+    isMetered: false,
+  },
+}
+
+const paygPurchase: PurchaseInfo = {
+  reference: 'pur_payg',
+  customerRef: 'cus_abc',
+  productName: 'Widget API',
+  status: 'active',
+  startDate: '2026-01-01T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
+  amount: 0,
+  currency: 'USD',
+  isRecurring: false,
+  planRef: 'pln_payg',
+  planSnapshot: {
+    reference: 'pln_payg',
+    name: 'Pay as you go',
+    currency: 'USD',
+    price: 0,
+    isMetered: true,
+  },
 }
 
 describe('McpAccountView', () => {
@@ -152,14 +217,14 @@ describe('McpAccountView', () => {
     expect(screen.queryByRole('button', { name: /cancel plan/i })).toBeNull()
   })
 
-  it('renders the portal hint fine-print under the plan card on a paid plan', async () => {
+  it('renders the portal hint fine-print immediately above the Manage account button', async () => {
     const ctx = buildCtx({}, [paidPurchase], 0)
     renderAccount(ctx)
-    await screen.findByRole('link', { name: /manage account/i })
-    expect(
-      screen.getByText('Click Manage account to update your card or cancel your plan.'),
-    ).toBeTruthy()
-    expect(document.querySelector('[data-solvapay-mcp-portal-hint]')).toBeTruthy()
+    const portalLink = await screen.findByRole('link', { name: /manage account/i })
+    const hint = document.querySelector('[data-solvapay-mcp-portal-hint]')
+    expect(hint?.textContent).toBe('Click Manage account to update your card or cancel your plan.')
+    // The hint names the button, so nothing may come between them.
+    expect(hint?.nextElementSibling).toBe(portalLink)
   })
 
   it('does not render Manage account for a customer without a paid purchase', async () => {
@@ -211,15 +276,30 @@ describe('McpAccountView', () => {
     expect(screen.queryByText('Current plan and usage')).toBeNull()
   })
 
-  it('renders Started … and the purchase reference inside the plan card on a paid plan', async () => {
-    const ctx = buildCtx({}, [paidPurchase], 0)
+  it('renders Started … on a paid plan but hides the purchase reference and payment-method line', async () => {
+    const card = {
+      kind: 'card' as const,
+      brand: 'visa',
+      last4: '4242',
+      expMonth: 4,
+      expYear: 2028,
+    }
+    const ctx = buildCtx(
+      {
+        _config: {
+          transport: makeTransport({ getPaymentMethod: vi.fn().mockResolvedValue(card) }),
+        },
+      },
+      [paidPurchase],
+      0,
+    )
     renderAccount(ctx)
     await waitFor(() => {
       expect(document.querySelector('[data-solvapay-current-plan-started-line]')).toBeTruthy()
-      expect(document.querySelector('[data-solvapay-current-plan-reference]')?.textContent).toBe(
-        'pur_abc',
-      )
     })
+    expect(document.querySelector('[data-solvapay-current-plan-reference]')).toBeNull()
+    expect(document.querySelector('[data-solvapay-current-plan-payment-method]')).toBeNull()
+    expect(screen.queryByText(/Visa|•••• 4242/)).toBeNull()
   })
 
   it('does not render a standalone Credit balance hero section above the plan card', () => {
@@ -227,5 +307,72 @@ describe('McpAccountView', () => {
     renderAccount(ctx)
     expect(screen.queryByRole('region', { name: 'Credit balance' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Credit balance' })).toBeNull()
+  })
+
+  it('titles the surface with Your plan and captions the plan facts', async () => {
+    const ctx = buildCtx({}, [paygPurchase], 500)
+    renderAccount(ctx, { plans: catalogPlans })
+    await waitFor(() => {
+      expect(document.querySelector('[data-solvapay-current-plan-card]')).toBeTruthy()
+    })
+    // Mirrors `Choose a plan` on checkout — same slot, same heading class.
+    const title = screen.getByRole('heading', { name: 'Your plan' })
+    expect(title.className).toContain('solvapay-mcp-heading')
+    expect(screen.getByText('Rate')).toBeTruthy()
+    expect(screen.getByText('Balance')).toBeTruthy()
+  })
+
+  it('renders CurrentPlanCard for a $0 Free purchase even when hasPaidPurchase is false', async () => {
+    const ctx = buildCtx({}, [freePurchase], 0)
+    expect(ctx.purchase.hasPaidPurchase).toBe(false)
+    expect(ctx.purchase.activePurchase).toBe(freePurchase)
+    renderAccount(ctx, { plans: catalogPlans })
+    await waitFor(() => {
+      expect(document.querySelector('[data-solvapay-current-plan-card]')).toBeTruthy()
+    })
+    expect(screen.getByRole('heading', { name: 'Free' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Pick a plan' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Credits' })).toBeNull()
+  })
+
+  it('renders Upgrade for a Free purchase with paid catalog alternatives and calls onChangePlan', async () => {
+    const onChangePlan = vi.fn()
+    const ctx = buildCtx({}, [freePurchase], 0)
+    renderAccount(ctx, { plans: catalogPlans, onChangePlan })
+    const button = await screen.findByRole('button', { name: 'Upgrade' })
+    fireEvent.click(button)
+    expect(onChangePlan).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+  })
+
+  it('renders Change plan for a paid recurring purchase when the catalog has more than one plan', async () => {
+    const onChangePlan = vi.fn()
+    const ctx = buildCtx({}, [paidPurchase], 0)
+    renderAccount(ctx, { plans: catalogPlans, onChangePlan })
+    const button = await screen.findByRole('button', { name: 'Change plan' })
+    fireEvent.click(button)
+    expect(onChangePlan).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull()
+  })
+
+  it('hides Upgrade and Change plan when the catalog has only one plan', async () => {
+    const ctx = buildCtx({}, [paidPurchase], 0)
+    renderAccount(ctx, {
+      plans: [catalogPlans[2]!],
+      onChangePlan: vi.fn(),
+    })
+    await screen.findByRole('link', { name: /manage account/i })
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+  })
+
+  it('renders Change plan, not Upgrade, for a thin PAYG snapshot matched to the catalog', async () => {
+    const onChangePlan = vi.fn()
+    const ctx = buildCtx({}, [paygPurchase], 0)
+    renderAccount(ctx, { plans: catalogPlans, onChangePlan })
+    const button = await screen.findByRole('button', { name: 'Change plan' })
+    fireEvent.click(button)
+    expect(onChangePlan).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull()
   })
 })

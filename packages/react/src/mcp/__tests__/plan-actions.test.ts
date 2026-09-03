@@ -4,6 +4,7 @@ import {
   resolveActivationStrategy,
   resolvePlanActions,
   resolveActivityStrip,
+  mergePlanSnapshot,
   type PlanLike,
 } from '../plan-actions'
 
@@ -177,6 +178,21 @@ describe('resolvePlanActions', () => {
       paidPlanCount: 1,
     })
     expect(actions.changePlan).toBe(false)
+  })
+
+  it('thin PAYG snapshot + catalog plan is usage-based (Change plan), not free (Upgrade)', () => {
+    const merged = mergePlanSnapshot(
+      { price: 0, isMetered: true, reference: 'pln_payg' },
+      paygPlan,
+    )
+    expect(resolvePlanShape(merged)).toBe('usage-based')
+    const actions = resolvePlanActions({
+      purchase: { planSnapshot: merged },
+      planCount: 3,
+      paidPlanCount: 2,
+    })
+    expect(actions.changePlan).toBe(true)
+    expect(actions.upgrade).toBe(false)
   })
 })
 

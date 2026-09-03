@@ -126,11 +126,10 @@ export function isTransportToolName(name: string): boolean {
  * Classification of the host-invoked tool that opened the widget iframe.
  * Drives `<McpApp>`'s mount branching:
  *
- *  - `intent`  — one of `upgrade` / `manage_account` / `topup`. Call
- *                the corresponding tool via `fetchMcpBootstrap`.
+ *  - `intent`  — the `account` viewer. Call it via `fetchMcpBootstrap`.
  *  - `other`   — no tool info, or a SolvaPay transport tool as the
- *                iframe entry point (rare). Fall back to the `upgrade`
- *                intent tool for a fresh snapshot.
+ *                iframe entry point (rare). Fall back to the `account`
+ *                viewer for a fresh snapshot.
  *
  * The previous `data` kind was removed with the text-only paywall
  * refactor: payable merchant tools no longer advertise
@@ -138,7 +137,7 @@ export function isTransportToolName(name: string): boolean {
  * silent success or a paywall response. If one of those ever fires
  * anyway (a legacy opt-in server), the classification falls through
  * to `other` and the shell asks `fetchMcpBootstrap` for a clean
- * `upgrade` snapshot.
+ * `account` snapshot.
  */
 export type HostEntryClassification =
   | { kind: 'intent'; toolName: string; view: keyof typeof TOOL_FOR_VIEW }
@@ -167,10 +166,10 @@ export function classifyHostEntry(app: McpAppBootstrapLike): HostEntryClassifica
 }
 
 /**
- * Infer which intent tool to call for a fresh bootstrap. Returns the
- * matching intent `view` when the host's launching tool is one of
- * `upgrade` / `manage_account` / `topup`, else `'checkout'` (re-fetches
- * via `upgrade`).
+ * Infer which landing view to request for a fresh bootstrap. The
+ * viewer is one tool, so the host tool name no longer distinguishes
+ * surfaces — return the mapped default (`account`) when the host
+ * invoked the viewer, else `'checkout'` (unauthenticated / other).
  *
  * Used by `fetchMcpBootstrap` for both the initial intent-tool mount
  * path and `refreshBootstrap`. For data-tool iframe entries,

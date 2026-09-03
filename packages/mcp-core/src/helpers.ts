@@ -7,8 +7,13 @@
  * `Request` construction, and tool-result wrapping.
  */
 
-import type { BootstrapPayload, McpToolExtra, SolvaPayCallToolResult } from './types'
-import { NARRATORS, uiPlaceholder, type IntentTool } from './narrate'
+import type {
+  BootstrapPayload,
+  McpToolExtra,
+  SolvaPayCallToolResult,
+  SolvaPayMcpViewKind,
+} from './types'
+import { NARRATORS, uiPlaceholder } from './narrate'
 
 /**
  * ISO 4217 currencies where the "minor unit" equals the major unit.
@@ -210,8 +215,9 @@ export function parseMode(raw: unknown): SolvaPayToolMode {
  *  - `text` emits the narrated markdown (plus any `resource_link`
  *    blocks) and strips `_meta.ui.*` so UI-capable hosts render
  *    text-only for this call.
- *  - `ui` emits a one-line self-sufficient placeholder in `content[0]`
- *    and keeps `_meta.ui.*`. Do not annotate the narrated block with
+ *  - `ui` emits a one-line self-sufficient placeholder in `content[0]`,
+ *    the narrated markdown, and the same `resource_link` blocks as
+ *    the other modes. Do not annotate the narrated block with
  *    `audience: ['assistant']` — audience-aware hosts hide those
  *    blocks from the user, and hosts that ignore the annotation must
  *    still see a useful `content[0]`.
@@ -226,12 +232,17 @@ export function parseMode(raw: unknown): SolvaPayToolMode {
  * checking `descriptors.ts` first.
  */
 export function narratedToolResult(
-  tool: IntentTool | string,
+  view: SolvaPayMcpViewKind | string,
   data: BootstrapPayload,
   mode: SolvaPayToolMode = 'auto',
   baseMeta: Record<string, unknown> | undefined = undefined,
 ): SolvaPayCallToolResult {
-  const narrator = (NARRATORS as Record<string, (d: BootstrapPayload) => { text: string; links?: Array<{ uri: string; name: string }> }>)[tool]
+  const narrator = (
+    NARRATORS as Record<
+      string,
+      (d: BootstrapPayload) => { text: string; links?: Array<{ uri: string; name: string }> }
+    >
+  )[view]
   if (!narrator) {
     const fallback = toolResult(data)
     if (mode === 'text' && baseMeta && 'ui' in baseMeta) {
@@ -260,12 +271,12 @@ export function narratedToolResult(
 
   const placeholderBlock: SolvaPayCallToolResult['content'][number] = {
     type: 'text',
-    text: uiPlaceholder(tool as IntentTool, data),
+    text: uiPlaceholder(view as SolvaPayMcpViewKind, data),
   }
 
   const content: SolvaPayCallToolResult['content'] =
     mode === 'ui'
-      ? [placeholderBlock, narratedBlock]
+      ? [placeholderBlock, narratedBlock, ...resourceLinkBlocks]
       : [narratedBlock, ...resourceLinkBlocks]
 
   const meta =

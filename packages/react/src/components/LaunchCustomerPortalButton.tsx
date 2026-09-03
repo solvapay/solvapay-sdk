@@ -7,21 +7,23 @@
  * Render-eager: the button is enabled and labelled from the first paint
  * regardless of session state. The portal session URL is fetched in the
  * background through `useCustomerSessionUrl()` (a single in-flight call
- * shared across every instance under the same transport). When the URL
- * is ready, click is a synchronous `<a target="_blank">` navigation —
- * which MCP host sandboxes permit even though scripted `window.open`
- * after an async round-trip is blocked.
+ * shared across every instance under the same transport).
  *
- * If the user clicks before the URL has resolved, the click handler
- * awaits the in-flight fetch and falls back to `window.open` (works on
- * hosts that don't sandbox scripted opens, e.g. ChatGPT). On Claude the
- * sandbox silently drops the open in that race; the cache-hit path
- * remains the optimal one and is the steady state for any user that
- * doesn't click within a few hundred ms of opening the surface.
+ * Opening the portal always goes through `useExternalLink`, which
+ * prefers the host's `ui/open-link` when one is mounted and otherwise
+ * lets the browser navigate. That distinction matters inside MCP hosts:
+ * Claude's iframe sandbox omits `allow-popups`, so both a bare
+ * `<a target="_blank">` and `window.open()` are dropped without an
+ * error — the button looks alive and does nothing.
+ *
+ * If the user clicks before the URL has resolved, the handler awaits
+ * the in-flight fetch and then opens the resolved URL through the same
+ * path, flipping to the error state if the open is refused.
  */
 
 import React, { forwardRef, useState } from 'react'
 import { useCustomerSessionUrl } from '../hooks/useCustomerSessionUrl'
+import { useExternalLinkClick, useOpenExternal } from '../hooks/useExternalLink'
 import { useCopy } from '../hooks/useCopy'
 import { composeEventHandlers } from '../primitives/composeEventHandlers'
 import { Slot } from '../primitives/slot'
@@ -78,6 +80,8 @@ export const LaunchCustomerPortalButton = forwardRef<
 ) {
   const { status, url, ensure } = useCustomerSessionUrl()
   const copy = useCopy()
+  const handleExternalClick = useExternalLinkClick()
+  const openExternal = useOpenExternal()
   const [clickState, setClickState] = useState<ClickState>('idle')
 
   const isReady = status === 'ready' && typeof url === 'string'
@@ -92,25 +96,29 @@ export const LaunchCustomerPortalButton = forwardRef<
     .filter(Boolean)
     .join(' ') || undefined
 
-  // Synchronous, sandbox-safe path: anchor has a real href + target,
-  // browser handles the navigation, we just notify onLaunch.
-  const handleReadyClick = (): void => {
+  // Cache-hit path: the anchor carries a real href + target, so
+  // `handleExternalClick` either hands the URL to the host (sandboxed
+  // frames) or lets the browser navigate (everywhere else).
+  const handleReadyClick = (event: React.MouseEvent<HTMLAnchorElement>): void => {
     if (!isReady || !url) return
     onLaunch?.(url)
+    handleExternalClick(event)
   }
 
-  // Cache-miss path: prevent the empty-href navigation, await the
-  // shared in-flight promise, then window.open. Claude's sandbox blocks
-  // post-await opens; ChatGPT permits them.
+  // Cache-miss path: suppress the empty-href navigation, await the
+  // shared in-flight promise, then open the resolved URL through the
+  // same host-first opener.
   const handlePendingClick = async (event: React.MouseEvent<HTMLAnchorElement>): Promise<void> => {
     event.preventDefault()
     setClickState('pending')
     try {
       const resolved = await ensure()
-      setClickState('idle')
-      if (typeof window !== 'undefined') {
-        window.open(resolved, '_blank', 'noopener,noreferrer')
+      if (!(await openExternal(resolved))) {
+        setClickState('error')
+        onError?.(new Error(`Host declined to open the customer portal: ${resolved}`))
+        return
       }
+      setClickState('idle')
       onLaunch?.(resolved)
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))

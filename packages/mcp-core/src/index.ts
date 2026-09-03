@@ -29,8 +29,8 @@
  */
 
 // ---- Tool name contract (shared with @solvapay/react/mcp) ----
-export { MCP_TOOL_NAMES } from './tool-names'
-export type { McpToolName } from './tool-names'
+export { INTENT_TOOL_NAMES, MCP_PROMPT_NAMES, MCP_TOOL_NAMES, VIEWER_TOOL_NAME } from './tool-names'
+export type { IntentToolName, McpPromptName, McpToolName } from './tool-names'
 
 // ---- Neutral types ----
 export {
@@ -101,11 +101,11 @@ export {
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,
-  narrateActivatePlan,
   uiPlaceholder,
   balanceSummary,
 } from './narrate'
-export type { IntentTool, NarratorOutput } from './narrate'
+export type { NarratorOutput } from './narrate'
+export { deriveDefaultView } from './derive-view'
 
 // ---- Paywall envelope builders ----
 //

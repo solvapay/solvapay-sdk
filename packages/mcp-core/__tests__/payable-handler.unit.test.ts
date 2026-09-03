@@ -99,7 +99,29 @@ describe('buildPayableHandler — ctx.respond V1', () => {
         type: 'text',
         text: JSON.stringify(data),
       })
+      expect(result.content[1]).toEqual({
+        type: 'text',
+        text: JSON.stringify(data),
+      })
+      expect(JSON.parse((result.content[1] as { text: string }).text)).toEqual(data)
       expect(result._meta).toBeUndefined()
+    })
+
+    it('omits the trailing data block when dataInText is false', async () => {
+      const client = makeMockClient()
+      const solvaPay = makeSolvaPay(client)
+      const data = { foo: 'bar' }
+
+      const handler = buildPayableHandler(
+        solvaPay,
+        { product: 'prd_test' },
+        async (_args, ctx: ResponseContext) => ctx.respond(data, { dataInText: false }),
+      )
+
+      const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0]).toEqual({ type: 'text', text: JSON.stringify(data) })
+      expect(result.structuredContent).toEqual(data)
     })
   })
 
@@ -118,6 +140,7 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
 
       expect(result.content[0]).toEqual({ type: 'text', text: 'Found 1 result' })
+      expect(result.content[1]).toEqual({ type: 'text', text: JSON.stringify({ x: 1 }) })
       expect(result.structuredContent).toEqual({ x: 1 })
     })
   })
@@ -150,6 +173,22 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       expect(firstBlock.type).toBe('text')
       expect(firstBlock.text.startsWith(JSON.stringify({ y: 2 }))).toBe(true)
       expect(firstBlock.text).toContain(nudge.message)
+
+      const dataBlock = result.content[1] as { type: string; text: string }
+      expect(dataBlock.type).toBe('text')
+      expect(dataBlock.text).toBe(JSON.stringify({ y: 2 }))
+      expect(dataBlock.text).not.toContain(nudge.message)
+
+      const resourceBlock = result.content[2] as {
+        type: string
+        resource: { uri: string; mimeType: string; text: string }
+      }
+      expect(resourceBlock.type).toBe('resource')
+      expect(resourceBlock.resource).toEqual({
+        uri: 'solvapay://nudge',
+        mimeType: 'text/plain',
+        text: nudge.message,
+      })
     })
 
     it('still produces a text-only nudge when buildBootstrap is wired (bootstrap builder is ignored)', async () => {
@@ -438,10 +477,10 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       )
 
       const result = (await handler({}, mcpExtra())) as SolvaPayCallToolResult
-      expect(result.content).toHaveLength(3)
       expect(result.content[0]).toEqual({ type: 'text', text: 'intermediate 1' })
       expect(result.content[1]).toEqual({ type: 'text', text: 'intermediate 2' })
       expect(result.content[2]).toMatchObject({ type: 'text' })
+      expect(result.content[3]).toEqual({ type: 'text', text: JSON.stringify({ final: true }) })
     })
   })
 
@@ -577,12 +616,10 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       expect(result._meta).toBeUndefined()
 
       // `content[0].text` is the state-engine's human narration:
-      // names the recovery intent tool (`upgrade` here — no active
-      // plan resolves on the fixture) and inlines `checkoutUrl` for
-      // terminal-first hosts.
+      // names the recovery viewer (`account` with view checkout on this fixture)
       const firstBlock = result.content[0] as { type: string; text: string }
       expect(firstBlock.type).toBe('text')
-      expect(firstBlock.text).toMatch(/upgrade/i)
+      expect(firstBlock.text).toMatch(/`account` tool with view: 'checkout'/i)
       expect(firstBlock.text).toContain('https://example.com/checkout')
       expect(firstBlock.text).not.toMatch(/success/i)
       expect(firstBlock.text).not.toMatch(/"error"/i)

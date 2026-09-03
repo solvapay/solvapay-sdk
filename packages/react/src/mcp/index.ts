@@ -83,6 +83,8 @@ export {
   resolveActivationStrategy,
   resolvePlanActions,
   resolveActivityStrip,
+  mergePlanSnapshot,
+  findCatalogPlan,
 } from './plan-actions'
 export type {
   PlanShape,

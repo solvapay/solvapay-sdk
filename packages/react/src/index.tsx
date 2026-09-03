@@ -73,6 +73,18 @@ export type {
 export { usePaywallResolver } from './hooks/usePaywallResolver'
 export type { UsePaywallResolverReturn } from './hooks/usePaywallResolver'
 
+// External links. Sandboxed embeddings (MCP app iframes) can't navigate
+// or open popups themselves, so every outbound link the SDK renders
+// routes through here. `<McpBridgeProvider>` supplies the opener
+// automatically; mount `<ExternalLinkProvider>` yourself only when
+// hand-rolling a shell in some other sandboxed host.
+export {
+  ExternalLinkProvider,
+  useExternalLinkClick,
+  useOpenExternal,
+} from './hooks/useExternalLink'
+export type { ExternalLinkOpener, ExternalLinkProviderProps } from './hooks/useExternalLink'
+
 // Stepped checkout — headless state engine + composable parts.
 // Pick `useCheckoutFlow` when you want full layout control, or
 // `<CheckoutSteps.*>` for the SDK's pre-styled stepped composition.

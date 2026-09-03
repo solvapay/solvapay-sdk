@@ -63,6 +63,10 @@ Fresh customer opens the MCP App in `basic-host`.
   empty state). Seller + **Your account** detail cards sit in the
   persistent sidebar on wide iframes (or inline below the card on
   narrow frames).
+- On an active plan the card opens with a **Your plan** title in the
+  same slot as checkout's **Choose a plan**, then the plan name and
+  the facts captioned **Rate**/**Price** and **Balance**. The plan
+  facts sit flush inside the card — no nested bordered box.
 - Text-only hosts (Claude Code, basic-host stdout) see the narrated
   markdown summary instead of the UI iframe — same data, different
   render.
@@ -121,7 +125,7 @@ the gate narration.
 
 Select **Pay as you go** and click `Continue with Pay as you go`.
 
-**Expect** *(step transitions: plan → amount → payment → success)*:
+**Expect** _(step transitions: plan → amount → payment → success)_:
 
 - Click fires `activate_plan({ planRef: <payg> })` immediately. Topup-first:
   a zero-balance customer gets `topup_required` and NO purchase is created
@@ -136,7 +140,7 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
   transition. BackLink reads `← Change amount`.
   The order summary + Stripe Elements render inline; a
   `Save card for future top-ups` checkbox sits below.
-- Complete the card. SDK fires `create_topup_payment_intent`
+- Complete the card. SDK fires `create_payment_intent` with `purpose: "topup"`
   (purpose: `credit_topup`) then `process_payment`, then re-fires
   `activate_plan` to create the active PAYG purchase now that credits
   have landed. `step: 'success'`.
@@ -144,15 +148,15 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
   grid (Amount / Credits / Plan / Rate). No CTA — the receipt is
   the terminal state.
 - The SDK has already fired `notifySuccess({ kind: 'topup' })` ->
-  `app.sendMessage` posting `Topped up $18.00. Ready to keep
-  working.` to the chat. The agent picks that up and re-invokes
-  the original `/search_knowledge` call automatically.
+  `app.sendMessage` posting `Topped up $18.00. Ready to keep working.`
+  to the chat. The agent picks that up and re-invokes the original
+  `/search_knowledge` call automatically.
 
 ### 5b. Recurring branch — pay → confirm
 
 Alternative path: select **Pro** in step 4 instead of PAYG.
 
-**Expect** *(step transitions: plan → payment → success)*:
+**Expect** _(step transitions: plan → payment → success)_:
 
 - Click `Continue with Pro — $18/mo`. SDK skips the amount picker
   and jumps straight to `step: 'payment'`.
@@ -173,8 +177,8 @@ Alternative path: select **Pro** in step 4 instead of PAYG.
 
 ### 6. Change-plan re-entry — no banner
 
-After activation, type `/manage_account` → `See plans` on the current-
-plan card.
+After activation, type `/manage_account` → `Upgrade` (Free) or
+`Change plan` (PAYG / paid) on the current-plan card.
 
 **Expect**:
 
@@ -194,7 +198,7 @@ Switch **Account → Top up → Account**.
 - Resize to narrow (<816px): sidebar hides; the primary action card
   renders first, then **Your account**, then **Seller** inline below.
 - No account screen shows product description or a `Current plan and
-  usage` overline.
+usage` overline.
 
 ### Narrated text fallback (any step, text-only host)
 

@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { LaunchCustomerPortalButton } from './LaunchCustomerPortalButton'
+import { ExternalLinkProvider } from '../hooks/useExternalLink'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import type { SolvaPayContextValue, SolvaPayConfig } from '../types'
 import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
@@ -210,6 +211,86 @@ describe('LaunchCustomerPortalButton', () => {
     expect(btn.getAttribute('rel')).toBe('noopener noreferrer')
     fireEvent.click(btn)
     expect(onLaunch).toHaveBeenCalledWith('https://portal.solvapay.test/as-child')
+  })
+
+  it('hands the ready href to the host opener instead of navigating', async () => {
+    const createCustomerSession = vi
+      .fn()
+      .mockResolvedValue({ customerUrl: 'https://portal.solvapay.test/hosted' })
+    const open = vi.fn().mockResolvedValue(true)
+    const onLaunch = vi.fn()
+    const fullTransport = buildTransport({ createCustomerSession })
+    const ctx = buildCtx({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      _config: { transport: fullTransport as any },
+    })
+
+    render(
+      <SolvaPayContext.Provider value={ctx}>
+        <ExternalLinkProvider opener={{ canOpen: () => true, open }}>
+          <LaunchCustomerPortalButton onLaunch={onLaunch} />
+        </ExternalLinkProvider>
+      </SolvaPayContext.Provider>,
+    )
+
+    await waitFor(() =>
+      expect(screen.getByRole('link').getAttribute('data-state')).toBe('ready'),
+    )
+
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true })
+    fireEvent(screen.getByRole('link'), event)
+
+    // The anchor keeps a real href for "copy link address", but the
+    // navigation itself is suppressed: an MCP host sandbox without
+    // `allow-popups` would drop it silently.
+    expect(event.defaultPrevented).toBe(true)
+    await waitFor(() =>
+      expect(open).toHaveBeenCalledWith('https://portal.solvapay.test/hosted'),
+    )
+    expect(onLaunch).toHaveBeenCalledWith('https://portal.solvapay.test/hosted')
+  })
+
+  it('surfaces an error when the host declines to open the portal mid-fetch', async () => {
+    let resolveFetch: (v: { customerUrl: string }) => void = () => {}
+    const createCustomerSession = vi.fn(
+      () =>
+        new Promise<{ customerUrl: string }>(resolve => {
+          resolveFetch = resolve
+        }),
+    )
+    const open = vi.fn().mockResolvedValue(false)
+    const onError = vi.fn()
+    const onLaunch = vi.fn()
+    const fullTransport = buildTransport({ createCustomerSession })
+    const ctx = buildCtx({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      _config: { transport: fullTransport as any },
+    })
+
+    render(
+      <SolvaPayContext.Provider value={ctx}>
+        <ExternalLinkProvider opener={{ canOpen: () => true, open }}>
+          <LaunchCustomerPortalButton
+            onError={onError}
+            onLaunch={onLaunch}
+            errorClassName="is-error"
+          />
+        </ExternalLinkProvider>
+      </SolvaPayContext.Provider>,
+    )
+
+    fireEvent.click(screen.getByRole('link'))
+    await act(async () => {
+      resolveFetch({ customerUrl: 'https://portal.solvapay.test/declined' })
+    })
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalled()
+      expect(screen.getByRole('link').className).toContain('is-error')
+    })
+    expect(onError.mock.calls[0][0].message).toContain('https://portal.solvapay.test/declined')
+    // A refused open is not a launch.
+    expect(onLaunch).not.toHaveBeenCalled()
   })
 
   it('keeps rendering the link and surfaces error className on a failed click-time fetch', async () => {

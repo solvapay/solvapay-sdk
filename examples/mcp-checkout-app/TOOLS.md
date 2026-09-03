@@ -1,179 +1,116 @@
 # `mcp-checkout-app` — tools cheat-sheet
 
-The server registers 12 SolvaPay tools + (optionally) 3 demo data
-tools. Grouped by audience below: what the model sees in `tools/list`
-is in the first two tables; the UI-only tools are tagged
-`_meta.audience: 'ui'` so hosts that honour the field can hide them
-from the agent.
+The server registers **10 SolvaPay tools** + (optionally) 3 demo data tools.
+Grouped by audience below: what the model sees in `tools/list` is in the
+first two tables; the UI-only tools are tagged `_meta.audience: 'ui'` so
+hosts that honour the field can hide them from the agent.
 
-## Intent tools (LLM-callable, dual-audience)
+## Intent tools (LLM-callable)
 
 | Tool | Purpose | When to use |
 | --- | --- | --- |
-| `upgrade` | Start or change a paid plan for the current customer | User says "upgrade", "change plan", "buy", "subscribe" |
-| `manage_account` | Show current plan, balance, payment method, cancel/reactivate | User says "my account", "current plan", "cancel", "billing" |
-| `topup` | Add SolvaPay credits (pay-as-you-go) | User says "top up", "add credits", "buy credits" |
-| `activate_plan` | Pick a plan from the picker, or activate a specific `planRef` | User says "activate", or the agent needs to enumerate plans |
+| `account` | Read-only billing viewer — checkout, account, or topup | User says "upgrade", "change plan", "buy", "subscribe", "my account", "current plan", "cancel", "billing", "top up", "add credits", or "buy credits". Pass optional `view: 'checkout' \| 'account' \| 'topup'`; omit `view` and the server picks (no plan → checkout, out of credits → topup, else account). |
+| `activate_plan` | Activate a specific plan by `planRef` | User says "activate" **and** a `planRef` is known. Requires `planRef` — to list plans, call `account` with `view: "checkout"`. |
 
-All four intent tools accept an optional `mode: 'ui' | 'text' | 'auto'`
-argument. Official MCP Apps / 2026-07-28 tools guidance: `content` is
-the model and text-only-host lane; `structuredContent` is for the
-widget and is often hidden from the model when `content` is present.
+Slash-command prompts (`/upgrade`, `/manage_account`, `/topup`, `/activate_plan`)
+remap onto these two tools with the matching `view` or `planRef`. Prompts cost
+zero tool budget.
+
+The viewer accepts an optional `mode: 'ui' | 'text' | 'auto'` argument.
+Official MCP Apps / 2026-07-28 tools guidance: `content` is the model and
+text-only-host lane; `structuredContent` is for the widget and is often hidden
+from the model when `content` is present.
 See [`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).
 
-- `'ui'` (default) — emit the UI-resource ref on `_meta.ui` plus a
-  **self-sufficient** first text block in `content[0]` (plan / balance /
-  remaining / next step — not `"shown in the panel."`). UI-rendering
-  hosts (MCP Inspector, ChatGPT Apps, Claude Desktop) still open the
-  iframe; text-only hosts can act from that line alone.
-  `structuredContent` still holds the full `BootstrapPayload` for the
-  widget and programmatic consumers.
-- `'text'` — strip `_meta.ui` and emit the full narrated markdown.
-  Useful for CLI / text-only hosts, or when the user says "just
-  summarise it in chat".
-- `'auto'` — emit both. The narrated text block is annotated with
-  `audience: ['assistant']` so audience-aware hosts still hide it from
-  the user pane while feeding it to the model. Do not rely on the
-  annotation — `content[0]` must stand on its own.
+- `'auto'` (default) — narrated markdown in `content[0]` plus `_meta.ui` on UI
+  hosts. `structuredContent` holds the full `BootstrapPayload`.
+- `'text'` — strip `_meta.ui` and emit the full narrated markdown for CLI /
+  text-only hosts.
+- `'ui'` — one-line placeholder in `content[0]` plus `_meta.ui`.
 
-Each returns a `BootstrapPayload` with:
+`account` returns a `BootstrapPayload` with:
 
-- `view` — which screen to mount (`about` / `checkout` / `account` /
-  `topup` / `usage` / `activate`). `manage_account` routes cold-start
-  customers (no active purchase) to `'about'` so they land on the
-  product description + CTA cards instead of an empty Account body.
-- `productRef`, `stripePublishableKey`, `returnUrl` — provisioning for
-  the embedded Stripe Elements.
-- `merchant`, `product`, `plans`, `customer` — seeded data so the
-  iframe never re-fetches.
+- `view` — which screen to mount (`checkout` / `account` / `topup`)
+- `productRef`, `stripePublishableKey`, `returnUrl` — provisioning for Stripe
+  Elements
+- `merchant`, `product`, `plans`, `customer` — seeded data so the iframe never
+  re-fetches
 
-Merchant paywalled data tools do not return a `BootstrapPayload` —
-their gate response is a text-only narration on `content[0].text`
-(limit + reason + one recovery tool + https URL) plus the structured
-gate on `structuredContent` for programmatic consumers (no widget
-mount). The model acts from the text. See the "How paywalls work"
-section in the `@solvapay/mcp` README for the full shape.
+`activate_plan` is a mutator only — it does **not** return a bootstrap payload
+and does not advertise `_meta.ui.resourceUri`.
+
+Merchant paywalled data tools do not return a `BootstrapPayload` — their gate
+response is a text-only narration on `content[0].text` (limit + reason +
+`` `account` `` with a `view` hint, or `` `activate_plan` `` when a `planRef`
+is known) plus the structured gate on `structuredContent`. The model acts from
+the text. See the "How paywalls work" section in the `@solvapay/mcp` README.
 
 ## Shell surface (what the UI renders)
 
-Four tabs render by default (About / Plan / Top up / Account). The
-legacy "Credits" and "Activate" tabs are folded away — Credits lives
-inside Account; the Activate picker is contextual inside Plan (free /
-trial / usage-based cards activate inline, paid cards mount Stripe
-Elements).
+Each `view` opens a **single-purpose surface** — no tab strip. The widget
+cross-navigates between checkout, account, and topup inside the shell without
+new tool calls.
 
-- **About** — product description (`product.name`, `product.description`,
-  `product.imageUrl`), a "Your activity" strip for returning customers
-  (four variants: PAYG balance, recurring-unlimited renew date,
-  recurring-metered usage bar, free usage bar), two contextual CTA
-  cards ("Choose a plan" / "Start free" / "Try without subscribing"),
-  and the slash-command hint list.
-- **Plan** — picker for cold-start customers; Current plan summary
-  with per-variant affordances for returning customers (resolved via
-  `resolvePlanActions`).
-- **Top up** — three-step flow with shared `BackLink` primitive
-  (Amount → Payment → Success; `← Back to my account` on each step).
-- **Account** — balance card, usage meter (when present), Current
-  plan + Manage account ↗ + seller details.
+- **Checkout** — plan picker / upgrade flow (Stripe Elements or hosted
+  checkout fallback).
+- **Account** — current plan, balance, usage, payment method, customer portal
+  CTA, seller details in the sidebar.
+- **Top up** — amount → payment → success with `Back to my account` on each
+  step.
 
-A dismissible first-run tour (gated by
-`localStorage['solvapay-mcp-tour-seen']`) anchors popovers to the
-three core tabs on first launch; a `?` button in the header replays
-it.
+There is no About tab — product copy lives in tool descriptions, narrated
+`content[0].text`, and `docs://solvapay/overview.md`.
 
 ## Host capability matrix
 
-Which host renders what — important so integrators know which mode to
-test against.
-
 | Host | UI iframe | Text | `ui://` resource | Notes |
 | --- | --- | --- | --- | --- |
-| **Claude Desktop** | ✓ | ✓ (collapsed) | ✓ | Default rendering for the SolvaPay MCP Apps we ship. |
-| **Claude Code CLI** | — | ✓ | ignored | Text-only; `**bold**` + `` `code` `` render via ANSI. |
-| **Cursor IDE** | ✓ | ✓ | ✓ | Renders UI iframes as of recent builds; falls back cleanly. |
-| **ChatGPT MCP connectors** | ✓ | ✓ | via Apps SDK | No slash-command UI; About view lists commands as plain copy. |
+| **Claude Desktop** | ✓ | ✓ (collapsed) | ✓ | Default rendering for SolvaPay MCP Apps. |
+| **Claude Code CLI** | — | ✓ | ignored | Text-only; markdown renders via ANSI where supported. |
+| **Cursor IDE** | ✓ | ✓ | ✓ | Renders UI iframes; falls back cleanly. |
+| **ChatGPT MCP connectors** | ✓ | ✓ | via Apps SDK | Slash commands surface as prompts, not tool names. |
 | **`basic-host`** | ✓ | ✓ | ✓ | Dev harness; echoes both. |
-| **Programmatic (n8n, agents)** | — | ✓ | ignored | Agents must read `content[0].text`. `structuredContent` is a bonus and is often hidden when `content` is present. |
+| **Programmatic (n8n, agents)** | — | ✓ | ignored | Read `content[0].text`; treat `structuredContent` as a bonus. |
 
 ## Demo data tools (LLM-callable, paywall-gated)
 
-Enabled when `DEMO_TOOLS !== 'false'` — see
-[`src/demo-tools.ts`](src/demo-tools.ts).
+Enabled when `DEMO_TOOLS !== 'false'` — see [`src/demo-tools.ts`](src/demo-tools.ts).
 
-| Tool | Purpose | When to use |
-| --- | --- | --- |
-| `search_knowledge` | Returns 3 deterministic stub snippets for a query | Exercise the paywall from `basic-host` — each call consumes 1 credit |
-| `get_market_quote` | Returns a deterministic fake market quote | Second tool so you can show the paywall firing on something other than `search_knowledge` |
-| `query_sales_trends` | Returns deterministic sales rows + triggers a `low-balance` **nudge** when credits are running low | Exercise the `ctx.respond()` nudge flow — inline upsell strip on the success response |
+| Tool | Purpose |
+| --- | --- |
+| `search_knowledge` | Deterministic stub snippets — exercises the paywall |
+| `get_market_quote` | Deterministic fake quote — second paywall demo |
+| `query_sales_trends` | Sales rows + optional low-balance **nudge** |
 
-All three are wrapped with `solvaPay.payable().mcp()` via
-`registerPayable` so the credit balance decrements per call. When
-credits hit zero the tool returns a **text-only gate** — no iframe.
-The first text block names the limit, the reason, and the recovery
-intent tool (`upgrade` / `topup` / `activate_plan`).
-
-All three use the `(args, ctx) => ctx.respond(data, options?)` handler
-contract. `query_sales_trends` exercises the nudge branch:
-
-- `ctx.customer.balance` — cached snapshot (≤10s stale) of the
-  pre-check `LimitResponseWithPlan`; read to decide whether to attach
-  a nudge.
-- `ctx.respond(data, { nudge })` — return data with an inline upsell
-  strip that the shell renders above the tool result.
-- `options.units` — reserved for V1.1 variable-unit billing. V1
-  silently ignores the field; V1.1 threads it into `trackUsage`.
-
-### Reserved `ctx` surface (V1 no-op / V1.1 live)
-
-These are typed in V1 so merchants can write forward-compatible code;
-implementations land in V1.1 weeks after V1.
-
-- `ctx.emit(block)` — V1 queues, flushes into `content[]` at the
-  terminal `respond()`. V1.1: real SSE emission.
-- `ctx.progress({ percent, message })` / `ctx.progressRaw({ ... })` —
-  V1 no-op. V1.1: `notifications/progress`.
-- `ctx.signal: AbortSignal` — V1 always unaborted. V1.1: wired to
-  transport cancellation.
-- `options.units` — V1 ignored (billing stays at one credit per call).
-  V1.1 applies variable-unit billing.
+When credits hit zero the tool returns a **text-only gate** naming
+`` `account` `` with the appropriate `view` (or `` `activate_plan` `` when
+activation is the recovery path).
 
 ## UI-only state-change tools (tagged `_meta.audience: 'ui'`)
 
 | Tool | Purpose |
 | --- | --- |
-| `create_checkout_session` | Returns `{ sessionId, checkoutUrl }` for hosted checkout (fallback branch) |
-| `create_customer_session` | Returns `{ sessionId, customerUrl }` for the SolvaPay customer portal |
-| `create_payment_intent` | Creates the Stripe PaymentIntent consumed by the embedded `<PaymentForm>` |
-| `process_payment` | Records the Stripe confirmation and creates the SolvaPay purchase |
-| `create_topup_payment_intent` | Creates the Stripe PaymentIntent for a top-up |
-| `attach_business_details` | Attaches business/consumer details to the PaymentIntent and returns the computed tax breakdown (auto-called on every Payment step) |
-| `cancel_renewal` | Cancels auto-renewal on an active purchase |
-| `reactivate_renewal` | Undoes a pending cancellation |
+| `create_hosted_session` | Hosted checkout or customer portal URL (`kind: "checkout" \| "portal"`) |
+| `create_payment_intent` | Stripe PaymentIntent for plan checkout or top-up (`purpose: "plan" \| "topup"`) |
+| `process_payment` | Confirm payment + create purchase |
+| `attach_business_details` | Tax computation on the Payment step |
+| `set_renewal` | Toggle auto-renewal (`enabled: true \| false`) |
 
-These are called exclusively by the client-side React primitives
-mounted inside the iframe. Hosts that implement `_meta.audience`
-should hide them from the agent; hosts that don't see them but are
-steered away by the `UI-only; agents should prefer ...` prefix on
-their descriptions.
+Called exclusively from the iframe via `createMcpAppAdapter`. Descriptions
+steer agents toward `` `account` `` / `` `activate_plan` `` instead.
 
 ## Slash-command prompts
 
-| Prompt | Args | What it sends |
-| --- | --- | --- |
-| `/upgrade` | `{ planRef? }` | "Show me the upgrade options" / "Activate plan `planRef`" |
-| `/manage_account` | — | "Show me my SolvaPay account" |
-| `/topup` | `{ amount? }` | "I want to top up my SolvaPay credits" |
-| `/activate_plan` | `{ planRef? }` | "What plans can I activate?" / "Activate `planRef`" |
-| `/search_knowledge` (demo) | `{ query? }` | "Search the knowledge base for `query`" |
-| `/get_market_quote` (demo) | `{ symbol? }` | "Get the current market quote for `symbol`" |
-| `/query_sales_trends` (demo) | `{ range? }` | "Query sales trends for `range`" — triggers a `low-balance` nudge when credits are low |
+| Prompt | Maps to |
+| --- | --- |
+| `/upgrade` | `account` with `view: "checkout"` |
+| `/manage_account` | `account` with `view: "account"` |
+| `/topup` | `account` with `view: "topup"` |
+| `/activate_plan` | `activate_plan` when `planRef` known; else `account` + checkout |
+
+Demo prompts (`/search_knowledge`, etc.) are unchanged — see source.
 
 ## Docs resource
 
-`docs://solvapay/overview.md` — the narrated "start here" doc. Agents
-that call `resources/read` on this URI get a 200-word explanation of
-the four intent tools, the dual-audience fallback, and the auth model
-before they try any tool. This is how a text-only host discovers **app
-capabilities** without an iframe; `manage_account` is how it discovers
-**user info** (plan, remaining, payment method). Disable with
-`registerDocsResources: false` on `createSolvaPayMcpServer`.
+`docs://solvapay/overview.md` — narrated "start here" for the two intent tools,
+dual-audience fallback, and auth. Disable with `registerDocsResources: false`.

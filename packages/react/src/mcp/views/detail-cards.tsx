@@ -156,10 +156,12 @@ export interface McpSellerDetailsCardProps {
 }
 
 /**
- * Seller details — company name, legal entity, support email/URL,
- * terms link. Compliance-relevant: a customer paying through the
- * iframe should see who they're actually paying, to the same level of
- * detail as hosted checkout.
+ * Seller details — company name, legal entity, support email/URL.
+ * Contact details are plain text (not anchors): mailto: and
+ * target=_blank both navigate the sandboxed widget iframe itself.
+ * Compliance-relevant: a customer paying through the iframe should
+ * see who they're actually paying, to the same level of detail as
+ * hosted checkout.
  */
 export function McpSellerDetailsCard({
   classNames,
@@ -208,26 +210,8 @@ export function McpSellerDetailsCard({
           <DetailRow value={merchant.legalName} muted={cx.muted} />
         ) : null}
 
-        {supportEmail ? (
-          <dd className="solvapay-mcp-detail-row">
-            <a className="solvapay-mcp-detail-link" href={`mailto:${supportEmail}`}>
-              {supportEmail}
-            </a>
-          </dd>
-        ) : null}
-
-        {supportUrl ? (
-          <dd className="solvapay-mcp-detail-row">
-            <a
-              className="solvapay-mcp-detail-link"
-              href={supportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Support centre
-            </a>
-          </dd>
-        ) : null}
+        {supportEmail ? <DetailRow value={supportEmail} muted={cx.muted} /> : null}
+        {supportUrl ? <DetailRow value={supportUrl} muted={cx.muted} /> : null}
 
         {sellerIdentity.companyNumber ? (
           <DetailRow

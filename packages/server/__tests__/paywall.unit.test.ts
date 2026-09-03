@@ -156,14 +156,13 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(captured).toBeInstanceOf(PaywallError)
       const sc = captured!.structuredContent
       expect(sc.kind).toBe('payment_required')
-      // Text-only paywall names the recovery tool (`upgrade` when
-      // there's no active plan) and inlines `checkoutUrl` for
-      // terminal-first hosts. The legacy "Pick a plan below" widget
-      // copy is gone; it collapsed distinct recovery states into one
-      // widget-assuming nudge.
+      // Text-only paywall names the recovery viewer (`account` with
+      // view: 'checkout' when there's no active plan) and inlines
+      // `checkoutUrl` for terminal-first hosts.
       expect(sc.message).not.toMatch(/Remaining:\s*0/)
       expect(sc.message).not.toMatch(/below/i)
-      expect(sc.message).toMatch(/upgrade/i)
+      expect(sc.message).toMatch(/`account`/)
+      expect(sc.message).toMatch(/view:\s*'checkout'/)
       expect(sc.message).toContain('https://example.com/checkout')
     })
 
@@ -1065,10 +1064,11 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(decision.gate.kind).toBe('payment_required')
       expect(decision.gate.product).toBe('decide-blocked-product')
       expect(decision.gate.checkoutUrl).toBe('https://example.com/checkout')
-      // Text-only paywall: message names the recovery tool (`upgrade`
-      // by default when no active plan resolves) and inlines the URL
-      // for terminal-first hosts.
-      expect(decision.gate.message).toMatch(/upgrade/i)
+      // Text-only paywall: message names the recovery viewer (`account`
+      // with view: 'checkout' by default when no active plan resolves)
+      // and inlines the URL for terminal-first hosts.
+      expect(decision.gate.message).toMatch(/`account`/)
+      expect(decision.gate.message).toMatch(/view:\s*'checkout'/)
       expect(decision.gate.message).toContain('https://example.com/checkout')
       expect(decision.customerRef).toBe('cus_decide_blocked')
       // decide() emits the paywall-outcome usage event so observability
