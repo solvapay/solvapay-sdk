@@ -134,7 +134,7 @@ const VIEW_PARAM_DESCRIPTION =
   'Landing surface. checkout: user says "upgrade", "change plan", "buy", or "subscribe". account: user says "my account", "current plan", "cancel", or "billing". topup: user says "top up", "add credits", or "buy credits". Omit to let the server pick (no plan → checkout, out of credits → topup, else account).'
 
 const VIEWER_DESCRIPTION =
-  'Call when the user says "upgrade", "change plan", "buy", "subscribe", "my account", "current plan", "cancel", "billing", "top up", "add credits", or "buy credits". Opens the SolvaPay billing surface. Pass `view` to pick the landing screen; omit it to let the server pick (no plan → checkout, out of credits → topup, else account). Read-only snapshot — charges happen after the customer confirms.'
+  'Call when the user says "upgrade", "change plan", "buy", "subscribe", "my account", "current plan", "cancel", "billing", "top up", "add credits", or "buy credits". Opens the SolvaPay billing surface. Pass `view` to pick the landing screen; omit it to let the server pick (no plan → checkout, out of credits → topup, else account). Read-only snapshot — charges happen after the customer confirms. Always include the Manage and Checkout markdown links from the tool result in your reply to the user. To change something, call this tool again with `view`: `account` (manage or cancel), `topup` (add credits), or `checkout` (change plan).'
 
 const INTENT_MODE_SCHEMA = z
   .enum(['ui', 'text', 'auto'])

@@ -6,7 +6,8 @@
  *  1. First line is a single `**bold title**` — no headings.
  *  2. Body uses `Label: value` rows (one per line). Inline `·`
  *     separator for compound values. No bullet lists.
- *  3. Commands on a single line as inline-code tokens.
+ *  3. Recovery is a named tool call with arguments, never a slash
+ *     command — slash names are host prompt UI a model cannot fire.
  *  4. External URLs are named markdown links (`[Open checkout](url)`)
  *     plus a matching `resource_link` block. Never dump the raw URL
  *     as the visible label — hosts render the name; the href stays
@@ -30,6 +31,7 @@ import {
   type PricingOptionLike,
 } from '@solvapay/core'
 import type { BootstrapPayload, SolvaPayMcpViewKind } from './types'
+import { VIEWER_TOOL_NAME } from './tool-names'
 
 export interface NarratorOutput {
   text: string
@@ -192,8 +194,9 @@ function costPerCallRow(creditsPerUnit: number): string {
   return `Cost per call: ${fmt} credits`
 }
 
-function commandsLine(commands: string[]): string {
-  return `Commands: ${commands.map(c => `\`/${c}\``).join(' ')}`
+function recoveryLine(views: SolvaPayMcpViewKind[]): string {
+  const calls = views.map(v => `\`${VIEWER_TOOL_NAME}\` with view: "${v}"`).join(' or ')
+  return `To continue, call ${calls}.`
 }
 
 /**
@@ -293,6 +296,15 @@ function checkoutRow(data: BootstrapPayload): string | null {
   return url ? `Checkout: ${namedCheckoutMarkdown(url)} (${CHECKOUT_TTL})` : null
 }
 
+function namedManageMarkdown(url: string): string {
+  return `[Manage account](${url})`
+}
+
+function manageRow(data: BootstrapPayload): string | null {
+  const url = httpsUrl(data.portalUrl)
+  return url ? `Manage: ${namedManageMarkdown(url)}` : null
+}
+
 function checkoutLink(data: BootstrapPayload): { uri: string; name: string } | null {
   const url = checkoutUrlOf(data)
   return url ? { uri: url, name: 'Open checkout' } : null
@@ -342,10 +354,12 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
     } else {
       lines.push('No active plan.')
     }
+    const manage = manageRow(data)
+    if (manage) lines.push(manage)
     const checkout = checkoutRow(data)
     if (checkout) lines.push(checkout)
     lines.push('')
-    lines.push(commandsLine(['activate_plan', 'upgrade']))
+    lines.push(recoveryLine(['checkout']))
     lines.push(DOCS_HINT)
   } else {
     lines.push(`**${name} — your account**`)
@@ -369,10 +383,12 @@ export function narrateManageAccount(data: BootstrapPayload): NarratorOutput {
     if (nextCall) lines.push(nextCall)
     const creditsPerCall = resolveCreditsPerCall(active, customer)
     if (creditsPerCall != null) lines.push(costPerCallRow(creditsPerCall))
+    const manage = manageRow(data)
+    if (manage) lines.push(manage)
     const checkout = checkoutRow(data)
     if (checkout) lines.push(checkout)
     lines.push('')
-    lines.push(commandsLine(['topup', 'upgrade']))
+    lines.push(recoveryLine(['topup', 'checkout']))
     lines.push(DOCS_HINT)
   }
 
@@ -408,7 +424,7 @@ export function narrateUpgrade(data: BootstrapPayload): NarratorOutput {
     lines.push('No paid plans are configured on this product yet.')
   }
   lines.push('')
-  lines.push(commandsLine(['manage_account', 'topup']))
+  lines.push(recoveryLine(['account']))
   lines.push(DOCS_HINT)
   return withCheckout(data, lines)
 }
@@ -426,7 +442,7 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
     .join(' · ')
   if (presets) lines.push(`Top-up presets: ${presets}`)
   lines.push('')
-  lines.push(commandsLine(['manage_account']))
+  lines.push(recoveryLine(['account']))
   return withCheckout(data, lines)
 }
 
@@ -454,11 +470,27 @@ function firstSelectablePlan(data: BootstrapPayload): PlanShape | undefined {
  * still receive this block: plan name, price, and a pasteable https
  * URL. Never points at "the panel".
  */
+function planForPlaceholder(view: SolvaPayMcpViewKind, data: BootstrapPayload): PlanShape | undefined {
+  if (view === 'account') {
+    const snap = activePurchase(data.customer as CustomerShape | null)?.planSnapshot
+    if (snap) {
+      return {
+        name: snap.name,
+        price: snap.price,
+        currency: snap.currency,
+        options: snap.options,
+        reference: snap.reference,
+      }
+    }
+  }
+  return firstSelectablePlan(data)
+}
+
 export function uiPlaceholder(view: SolvaPayMcpViewKind, data: BootstrapPayload): string {
   const name = productName(data)
   const opened = UI_OPENED_VERB[view](name)
   const parts = [opened]
-  const plan = firstSelectablePlan(data)
+  const plan = planForPlaceholder(view, data)
   if (plan) {
     const price = formatPlanPrices(plan)
     const label = [plan.name ?? 'Plan', price && !isFreePlan(plan) ? price : null]

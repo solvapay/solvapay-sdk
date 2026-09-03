@@ -27,19 +27,19 @@
  * data, API keys, or rate limits. Swap the handlers for real ones in
  * a few lines to turn this into a production oracle server.
  *
- * Single rendering strategy — host renders the data:
+ * Dual-lane responses — neither field reaches the model on every host:
  *
- * The merchant's data rides on `structuredContent` so capable hosts
- * (Claude artifacts, ChatGPT Apps, MCP Inspector) render it natively
- * — a line-chart artifact for `predict_price_chart` and a verdict
- * card for `predict_direction`. The SolvaPay widget is reserved for
- * the three intent tools (`upgrade`, `manage_account`, `topup`) where
- * the user deliberately asked for a checkout / account / topup UX.
+ * Silent successes put a human summary on `content[0].text` and the
+ * same payload on `structuredContent` plus a trailing JSON text block
+ * (`dataInText`, default on). No host auto-renders `structuredContent`
+ * as a chart without a declared `ui://` resource. The SolvaPay widget
+ * is reserved for the `account` viewer (slash prompts `/upgrade`,
+ * `/manage_account`, `/topup` remap onto it with `view`).
  *
  * Paywall responses on exhaustion are plain text narrations that name
- * the recovery intent tool and inline `gate.checkoutUrl` for
- * terminal-first hosts. No iframe opens for a gate — the LLM reads
- * the narration and calls the recovery tool, which mounts the widget.
+ * `` `account` `` with the right `view` and inline `gate.checkoutUrl`
+ * for terminal-first hosts. No iframe opens for a gate — the LLM
+ * reads the narration and calls the recovery tool.
  *
  * Gate with the `DEMO_TOOLS` env var (defaults to `true` in dev; set
  * to `"false"` when copying this example to your own repo as a
@@ -47,7 +47,7 @@
  */
 
 import { z } from 'zod'
-import type { AdditionalToolsContext } from '@solvapay/mcp'
+import { VIEWER_TOOL_NAME, type AdditionalToolsContext } from '@solvapay/mcp'
 import type { McpServer } from '@modelcontextprotocol/server'
 
 interface McpServerWithPrompts {
@@ -86,15 +86,36 @@ function readEnv(): Record<string, string | undefined> {
  * tool returns a paywall bootstrap instead of results (handled
  * entirely by `solvaPay.payable().mcp()` inside `registerPayable`).
  *
- * Oracle tools return pure numeric data via `ctx.respond(payload)` so
- * capable MCP hosts (Claude artifacts) render a line chart / verdict
- * card artifact straight off `structuredContent`. Paywall exhaustion
- * ships a text-only narration via `content[0].text` — no iframe opens
- * for a gate, the LLM reads the copy and calls the `upgrade` /
- * `topup` intent tool which mounts the widget.
+ * Oracle tools return numeric arrays via `ctx.respond(payload)` with
+ * a narrated `text` override. `dataInText` (default on) also appends
+ * the serialized payload so hosts that ignore `structuredContent`
+ * still hold the series. No host auto-renders `structuredContent`
+ * as a chart. Paywall exhaustion ships a text-only narration; the
+ * LLM calls `${VIEWER_TOOL_NAME}` with the right `view`.
  */
-const USAGE_BILLING_SUFFIX =
-  'Usage-based billing: each call debits credits per your active plan. Call `manage_account` to see balance and cost per call; paywall opens when out of balance.'
+const USAGE_BILLING_SUFFIX = `Usage-based billing: each call debits credits per your active plan. Call \`${VIEWER_TOOL_NAME}\` with view: "account" to see balance and cost per call; paywall opens when out of balance.`
+
+const priceChartOutputSchema = z.object({
+  symbol: z.string(),
+  currency: z.string(),
+  asOf: z.string(),
+  days: z.number(),
+  history: z.object({ t: z.array(z.number()), price: z.array(z.number()) }),
+  forecast: z.object({
+    t: z.array(z.number()),
+    price: z.array(z.number()),
+    lower: z.array(z.number()),
+    upper: z.array(z.number()),
+  }),
+})
+
+const directionOutputSchema = z.object({
+  symbol: z.string(),
+  days: z.number(),
+  direction: z.enum(['up', 'down']),
+  confidence: z.number(),
+  asOf: z.string(),
+})
 
 export function registerDemoTools(ctx: AdditionalToolsContext): void {
   const { registerPayable, server } = ctx
@@ -102,11 +123,12 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   registerPayable('predict_price_chart', {
     title: 'Predict price chart (Oracle demo)',
     description:
-      `Returns recent daily price history and a forecast over the requested \`days\` horizon with an 80% confidence band; always renders as an interactive line chart artifact in the host. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. ${USAGE_BILLING_SUFFIX}`,
+      `Returns recent daily price history and a forecast over the requested \`days\` horizon with an 80% confidence band. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),
     },
+    outputSchema: priceChartOutputSchema,
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ symbol, days }, ctx) => {
       const upper = symbol.toUpperCase()
@@ -146,11 +168,12 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   registerPayable('predict_direction', {
     title: 'Predict direction (Oracle demo)',
     description:
-      `Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon; always renders as a compact verdict card artifact in the host. Same seeded model as \`predict_price_chart\`, so the verdict matches the chart for the same symbol. ${USAGE_BILLING_SUFFIX}`,
+      `Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon. Same seeded model as \`predict_price_chart\`, so the verdict matches the chart for the same symbol. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),
     },
+    outputSchema: directionOutputSchema,
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ symbol, days }, ctx) => {
       const upper = symbol.toUpperCase()

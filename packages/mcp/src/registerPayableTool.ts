@@ -6,7 +6,7 @@
 
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/server'
 import type { CallToolResult } from '@modelcontextprotocol/server'
-import { z } from 'zod'
+import { z, type ZodTypeAny } from 'zod'
 import {
   buildPayableHandler,
   type BuildBootstrapPayloadFn,
@@ -54,6 +54,12 @@ export interface RegisterPayableToolOptions<
   title?: string
   description?: string
   handler: PayableHandler<InferHandlerArgs<InputSchema>, TData>
+  /**
+   * Opt-in structured-output schema. Declaring it converts a nicety
+   * into a spec MUST — the server must then return conforming
+   * `structuredContent`. Never auto-derived.
+   */
+  outputSchema?: ZodTypeAny
   buildBootstrap?: BuildBootstrapPayloadFn
   getCustomerRef?: (
     args: Record<string, unknown>,
@@ -79,6 +85,7 @@ export function registerPayableTool<
     title,
     description,
     handler,
+    outputSchema,
     buildBootstrap,
     getCustomerRef,
     meta,
@@ -117,6 +124,7 @@ export function registerPayableTool<
     ...(title !== undefined ? { title } : {}),
     ...(description !== undefined ? { description } : {}),
     ...(schema !== undefined ? { inputSchema: wrapInputSchema(schema) } : {}),
+    ...(outputSchema !== undefined ? { outputSchema } : {}),
     ...(Object.keys(toolMeta).length > 0 ? { _meta: toolMeta } : {}),
     annotations: effectiveAnnotations,
     ...(icons !== undefined && icons.length > 0 ? { icons } : {}),

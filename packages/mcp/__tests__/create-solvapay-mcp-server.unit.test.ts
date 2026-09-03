@@ -199,6 +199,29 @@ describe('createSolvaPayMcpServer', () => {
       expect(activate?.annotations?.readOnlyHint).toBe(false)
     })
 
+    it('registerPayable forwards outputSchema and omits the key when absent', () => {
+      const schema = z.object({ symbol: z.string() })
+      const { server } = buildTestServer({
+        additionalTools: ({ registerPayable }) => {
+          registerPayable('with_schema', {
+            product: 'prd_x',
+            schema: { q: z.string() },
+            outputSchema: schema,
+            handler: async () => ({ ok: true }),
+          })
+          registerPayable('without_schema', {
+            product: 'prd_x',
+            schema: { q: z.string() },
+            handler: async () => ({ ok: true }),
+          })
+        },
+      })
+      // @ts-expect-error — private registry used for coverage only
+      const registered = server._registeredTools ?? {}
+      expect(registered['with_schema']?.outputSchema).toBe(schema)
+      expect(registered['without_schema']?.outputSchema).toBeUndefined()
+    })
+
     it('registerPayable defaults to readOnly + openWorld for data tools', () => {
       const { server } = buildTestServer({
         additionalTools: ({ registerPayable }) => {

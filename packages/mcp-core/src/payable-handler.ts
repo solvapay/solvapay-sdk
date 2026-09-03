@@ -196,10 +196,14 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
  * the merchant returned a `ResponseResult` envelope.
  *
  * Text-only nudge: when `options.nudge` is present, the nudge message
- * is appended to `content[0].text` as a plain-text suffix. No
+ * is appended to `content[0].text` as a plain-text suffix and also
+ * emitted as an embedded `resource` block so it survives on hosts
+ * that drop text when `structuredContent` is present. No
  * `structuredContent` switch, no widget route — merchant data stays
  * on `structuredContent` unchanged. The fallback nudge copy from
  * `buildNudgeMessage` is used when `options.nudge.message` is absent.
+ * A trailing JSON text block is appended unless `dataInText` is
+ * `false`.
  */
 async function unwrapResponseEnvelope(
   adapterResult: SolvaPayCallToolResult,
@@ -222,8 +226,9 @@ async function unwrapResponseEnvelope(
   // double newline so terminal hosts render cleanly against the
   // merchant data above.
   let primaryText = baseText
+  let nudgeText: string | undefined
   if (nudge) {
-    const nudgeText =
+    nudgeText =
       nudge.message && nudge.message.length > 0
         ? nudge.message
         : buildNudgeMessage(
@@ -243,6 +248,21 @@ async function unwrapResponseEnvelope(
   const content: SolvaPayCallToolResult['content'] = [
     ...((emittedBlocks ?? []) as SolvaPayCallToolResult['content']),
     { type: 'text', text: primaryText },
+    ...(options?.dataInText !== false
+      ? [{ type: 'text' as const, text: JSON.stringify(data) }]
+      : []),
+    ...(nudgeText !== undefined
+      ? [
+          {
+            type: 'resource' as const,
+            resource: {
+              uri: 'solvapay://nudge',
+              mimeType: 'text/plain',
+              text: nudgeText,
+            },
+          },
+        ]
+      : []),
   ]
 
   // `options.units` is intentionally ignored — V1 billing stays at one

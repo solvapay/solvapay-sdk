@@ -215,8 +215,9 @@ export function parseMode(raw: unknown): SolvaPayToolMode {
  *  - `text` emits the narrated markdown (plus any `resource_link`
  *    blocks) and strips `_meta.ui.*` so UI-capable hosts render
  *    text-only for this call.
- *  - `ui` emits a one-line self-sufficient placeholder in `content[0]`
- *    and keeps `_meta.ui.*`. Do not annotate the narrated block with
+ *  - `ui` emits a one-line self-sufficient placeholder in `content[0]`,
+ *    the narrated markdown, and the same `resource_link` blocks as
+ *    the other modes. Do not annotate the narrated block with
  *    `audience: ['assistant']` — audience-aware hosts hide those
  *    blocks from the user, and hosts that ignore the annotation must
  *    still see a useful `content[0]`.
@@ -275,7 +276,7 @@ export function narratedToolResult(
 
   const content: SolvaPayCallToolResult['content'] =
     mode === 'ui'
-      ? [placeholderBlock, narratedBlock]
+      ? [placeholderBlock, narratedBlock, ...resourceLinkBlocks]
       : [narratedBlock, ...resourceLinkBlocks]
 
   const meta =

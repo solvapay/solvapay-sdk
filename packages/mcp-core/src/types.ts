@@ -474,6 +474,15 @@ export interface ResponseOptions {
   /** Inline upsell strip rendered below the tool result. */
   nudge?: NudgeSpec
   /**
+   * Append the serialized payload as a trailing text block so the model
+   * receives it on hosts that read `content` and ignore
+   * `structuredContent`. Defaults to `true` — the MCP tools spec's
+   * server-directed SHOULD, and the only way a response is complete on
+   * both host families. Set `false` for payloads large enough that the
+   * duplicate is not worth the tokens.
+   */
+  dataInText?: boolean
+  /**
    * [V1.1] Units to bill for this call. Defaults to 1. Must be >= 0.
    *
    * V1 behaviour: field is accepted for forward compatibility but
