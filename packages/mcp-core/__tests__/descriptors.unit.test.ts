@@ -143,6 +143,10 @@ describe('buildSolvaPayDescriptors', () => {
         'app',
       ])
       expect((tool!.meta as Record<string, unknown>)['openai/widgetAccessible']).toBe(true)
+      // ChatGPT resolves model visibility from this legacy string, whose
+      // default is 'public' — without it every transport tool lands in the
+      // model's tool list regardless of `ui.visibility`.
+      expect((tool!.meta as Record<string, unknown>)['openai/visibility']).toBe('private')
       expect(tool!.description).toMatch(/UI-only/i)
     }
 

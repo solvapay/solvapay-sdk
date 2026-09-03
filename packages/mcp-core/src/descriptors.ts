@@ -295,6 +295,13 @@ export function buildSolvaPayDescriptors(
     // ChatGPT Apps SDK rejects iframe `callTool` unless this flag is set.
     // Dual-stamp with `ui.visibility: ['app']` for MCP Apps hosts.
     'openai/widgetAccessible': true as const,
+    // ChatGPT advertises `experimental: { 'openai/visibility': { enabled: true } }`
+    // and resolves model visibility from this legacy string, not from
+    // `ui.visibility`. Its default is `'public'`, so omitting it put every
+    // transport tool into the model's context. Paired with
+    // `openai/widgetAccessible` above, which is what keeps them callable
+    // from the iframe.
+    'openai/visibility': 'private' as const,
   }
   const enabledViews = new Set<SolvaPayMcpViewKind>(views)
   const tools: SolvaPayToolDescriptor[] = []
