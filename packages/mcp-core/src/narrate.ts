@@ -29,15 +29,12 @@ import {
   usageRate,
   type PricingOptionLike,
 } from '@solvapay/core'
-import type { IntentToolName } from './tool-names'
-import type { BootstrapPayload } from './types'
+import type { BootstrapPayload, SolvaPayMcpViewKind } from './types'
 
 export interface NarratorOutput {
   text: string
   links?: Array<{ uri: string; name: string }>
 }
-
-export type IntentTool = IntentToolName
 
 /**
  * A plan as `GET /v1/sdk/products/:ref/plans` actually ships it. Pricing
@@ -433,34 +430,17 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
   return withCheckout(data, lines)
 }
 
-export function narrateActivatePlan(data: BootstrapPayload): NarratorOutput {
-  const lines: string[] = []
-  lines.push(`**Activate a plan — ${productName(data)}**`)
-  lines.push('')
-  const plans = (data.plans ?? []) as PlanShape[]
-  if (plans.length > 0) {
-    lines.push('Plans available:')
-    lines.push(...plansListLines(plans))
-  } else {
-    lines.push('No plans are configured on this product yet.')
+export const NARRATORS: Record<SolvaPayMcpViewKind, (data: BootstrapPayload) => NarratorOutput> =
+  {
+    checkout: narrateUpgrade,
+    account: narrateManageAccount,
+    topup: narrateTopup,
   }
-  lines.push('')
-  lines.push(commandsLine(['manage_account', 'topup']))
-  return withCheckout(data, lines)
-}
 
-export const NARRATORS: Record<IntentTool, (data: BootstrapPayload) => NarratorOutput> = {
-  upgrade: narrateUpgrade,
-  manage_account: narrateManageAccount,
-  topup: narrateTopup,
-  activate_plan: narrateActivatePlan,
-}
-
-const UI_OPENED_VERB: Record<IntentTool, (productName: string) => string> = {
+const UI_OPENED_VERB: Record<SolvaPayMcpViewKind, (productName: string) => string> = {
   topup: p => `Opened ${p} top-up.`,
-  upgrade: p => `Opened ${p} upgrade.`,
-  manage_account: p => `Opened your ${p} account.`,
-  activate_plan: p => `Opened ${p} plan picker.`,
+  checkout: p => `Opened ${p} upgrade.`,
+  account: p => `Opened your ${p} account.`,
 }
 
 function firstSelectablePlan(data: BootstrapPayload): PlanShape | undefined {
@@ -474,9 +454,9 @@ function firstSelectablePlan(data: BootstrapPayload): PlanShape | undefined {
  * still receive this block: plan name, price, and a pasteable https
  * URL. Never points at "the panel".
  */
-export function uiPlaceholder(tool: IntentTool, data: BootstrapPayload): string {
+export function uiPlaceholder(view: SolvaPayMcpViewKind, data: BootstrapPayload): string {
   const name = productName(data)
-  const opened = UI_OPENED_VERB[tool](name)
+  const opened = UI_OPENED_VERB[view](name)
   const parts = [opened]
   const plan = firstSelectablePlan(data)
   if (plan) {

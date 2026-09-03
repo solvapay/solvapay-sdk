@@ -28,7 +28,7 @@ import {
 } from './lib/openapi.mjs'
 import { listTools, callTool, RpcError } from './lib/mcp-client.mjs'
 
-const INTENT_TOOLS = new Set(['upgrade', 'topup', 'activate_plan', 'manage_account'])
+const INTENT_TOOLS = new Set(['account', 'activate_plan'])
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))

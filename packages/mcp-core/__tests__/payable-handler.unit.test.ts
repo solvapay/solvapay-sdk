@@ -577,12 +577,10 @@ describe('buildPayableHandler — ctx.respond V1', () => {
       expect(result._meta).toBeUndefined()
 
       // `content[0].text` is the state-engine's human narration:
-      // names the recovery intent tool (`upgrade` here — no active
-      // plan resolves on the fixture) and inlines `checkoutUrl` for
-      // terminal-first hosts.
+      // names the recovery viewer (`account` with view checkout on this fixture)
       const firstBlock = result.content[0] as { type: string; text: string }
       expect(firstBlock.type).toBe('text')
-      expect(firstBlock.text).toMatch(/upgrade/i)
+      expect(firstBlock.text).toMatch(/`account` tool with view: 'checkout'/i)
       expect(firstBlock.text).toContain('https://example.com/checkout')
       expect(firstBlock.text).not.toMatch(/success/i)
       expect(firstBlock.text).not.toMatch(/"error"/i)

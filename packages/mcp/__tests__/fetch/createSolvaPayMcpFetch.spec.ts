@@ -16,7 +16,7 @@
 import { readFile } from 'node:fs/promises'
 import * as path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { MCP_TOOL_NAMES, SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
+import { MCP_PROMPT_NAMES, MCP_TOOL_NAMES, SOLVAPAY_BOOTSTRAP_URI, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
 import { createSolvaPayMcpFetch } from '../../src/fetch/createSolvaPayMcpFetch'
@@ -119,12 +119,7 @@ async function initialize(handler: (req: Request) => Promise<Response>) {
   )
 }
 
-const INTENT_TOOLS = [
-  MCP_TOOL_NAMES.upgrade,
-  MCP_TOOL_NAMES.manageAccount,
-  MCP_TOOL_NAMES.topup,
-  MCP_TOOL_NAMES.activatePlan,
-]
+const INTENT_TOOLS = [VIEWER_TOOL_NAME, MCP_TOOL_NAMES.activatePlan]
 
 const UI_TOOLS = [
   MCP_TOOL_NAMES.createCheckoutSession,
@@ -177,7 +172,7 @@ describe('createSolvaPayMcpFetch', () => {
     expect(res.json.result?.serverInfo?.icons?.[0]?.src).toBe('https://cdn.acme.test/icon.png')
   })
 
-  it('tools/list returns all 12 SolvaPay tools by default', async () => {
+  it('tools/list returns all 10 SolvaPay tools by default', async () => {
     const handler = buildHandler()
     const init = await initialize(handler)
     expect(init.status).toBe(200)
@@ -289,7 +284,7 @@ describe('createSolvaPayMcpFetch', () => {
     expect(payload.returnUrl).toBe(publicBaseUrl)
   })
 
-  it('tools/call reaches the upgrade intent handler with default mode', async () => {
+  it('tools/call reaches the account viewer with default mode', async () => {
     const handler = buildHandler()
     await initialize(handler)
 
@@ -297,7 +292,7 @@ describe('createSolvaPayMcpFetch', () => {
       jsonrpc: '2.0',
       id: 4,
       method: 'tools/call',
-      params: { name: MCP_TOOL_NAMES.upgrade, arguments: {} },
+      params: { name: VIEWER_TOOL_NAME, arguments: { view: 'checkout' } },
     })
     // The handler may return either a success envelope (narrated +
     // structured bootstrap payload) or a 401 wrapped in the error
@@ -336,8 +331,8 @@ describe('createSolvaPayMcpFetch', () => {
     // method-not-found error when no prompts were registered at all.
     // Either way, no SolvaPay prompt names should leak through.
     const names = list.json.result?.prompts?.map(p => p.name) ?? []
-    for (const intent of INTENT_TOOLS) {
-      expect(names).not.toContain(intent)
+    for (const promptName of Object.values(MCP_PROMPT_NAMES)) {
+      expect(names).not.toContain(promptName)
     }
   })
 

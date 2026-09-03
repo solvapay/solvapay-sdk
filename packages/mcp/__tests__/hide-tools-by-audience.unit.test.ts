@@ -11,7 +11,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { z } from 'zod'
-import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
+import { MCP_TOOL_NAMES, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
 import { createSolvaPayMcpServer } from '../src'
@@ -75,12 +75,7 @@ async function invokeToolsList(
   )
 }
 
-const INTENT_TOOLS = [
-  MCP_TOOL_NAMES.upgrade,
-  MCP_TOOL_NAMES.manageAccount,
-  MCP_TOOL_NAMES.topup,
-  MCP_TOOL_NAMES.activatePlan,
-]
+const INTENT_TOOLS = [VIEWER_TOOL_NAME, MCP_TOOL_NAMES.activatePlan]
 
 const UI_TOOLS = [
   MCP_TOOL_NAMES.createCheckoutSession,
@@ -94,7 +89,7 @@ const UI_TOOLS = [
 ]
 
 describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
-  it('returns all 12 SolvaPay tools by default', async () => {
+  it('returns all 10 SolvaPay tools by default', async () => {
     const server = buildServer()
     const { tools } = await invokeToolsList(server)
     const names = tools.map(t => t.name).sort()

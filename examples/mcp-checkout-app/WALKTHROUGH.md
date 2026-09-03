@@ -92,10 +92,11 @@ What that line hides (from `@solvapay/react/mcp`):
 - Paywall narration — merchant paywalled data tools no longer open
   the widget iframe on a gate. Instead the gate's
   `content[0].text` states the current limit, names the recovery
-  intent tool (`upgrade` / `topup` / `activate_plan`), and inlines
+  intent tool (`` `account` `` with the appropriate `view`, or
+  `` `activate_plan` `` when a `planRef` is known), and inlines
   `checkoutUrl`. Official MCP Apps guidance: the model reads that
   text, not `structuredContent`. The iframe mounts only when the
-  user or LLM deliberately calls one of the three intent tools.
+  user or LLM deliberately calls the `account` viewer.
 
 ## `src/demo-tools.ts`
 

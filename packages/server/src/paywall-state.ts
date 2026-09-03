@@ -141,25 +141,33 @@ function namedCheckoutMarkdown(url: string): string {
   return `[Open checkout](${url})`
 }
 
+const VIEWER_TOOL = 'account'
+
+function callViewer(view?: 'checkout' | 'account' | 'topup'): string {
+  return view
+    ? `call the \`${VIEWER_TOOL}\` tool with view: '${view}'`
+    : `call the \`${VIEWER_TOOL}\` tool`
+}
+
 function recoverClause(
   url: string | null,
   verb: string,
-  tool: string,
+  view?: 'checkout' | 'account' | 'topup',
 ): string {
   if (url) {
-    return ` ${namedCheckoutMarkdown(url)} to ${verb} (expires in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or call the \`${tool}\` tool.`
+    return ` ${namedCheckoutMarkdown(url)} to ${verb} (expires in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or ${callViewer(view)}.`
   }
-  return ` Call the \`${tool}\` tool.`
+  return ` ${callViewer(view).replace(/^c/, 'C')}.`
 }
 
 /**
- * Produce the terminal-friendly gate message. Names exactly one
- * recovery tool (`upgrade` / `topup` / `activate_plan`), except for
- * the rare `reactivation_required` path which names two alternatives
- * (`manage_account` / `upgrade`). Inlines `gate.checkoutUrl` when
- * present so terminal-only MCP hosts (Claude Code, CLI clients) can
- * open a browser directly. States the 15-minute session lifetime
- * inline — the URL is a bearer credential, not a durable link.
+ * Produce the terminal-friendly gate message. Names the `account`
+ * viewer (with a `view` hint when the landing screen matters) or
+ * `activate_plan` when a specific plan needs activating. Inlines
+ * `gate.checkoutUrl` when present so terminal-only MCP hosts (Claude
+ * Code, CLI clients) can open a browser directly. States the
+ * 15-minute session lifetime inline — the URL is a bearer credential,
+ * not a durable link.
  *
  * Kept as a pure string so the adapter layer can concatenate it with
  * an optional narrator prefix without parsing structured copy.
@@ -181,19 +189,19 @@ export function buildGateMessage(
         ? `You've used ${included.used} of ${included.total} included ${meterLabel(gate)} this period.`
         : `You've reached the included usage for this period.`
       const nextLine = price ? ` The next call is ${price}.` : ''
-      return `${usedLine}${nextLine}${recoverClause(url, 'continue', 'upgrade')} ${DOCS_HINT}`
+      return `${usedLine}${nextLine}${recoverClause(url, 'continue', 'checkout')} ${DOCS_HINT}`
     }
     case 'activation_required':
-      return `Your plan needs activation.${recoverClause(url, 'activate', 'activate_plan')} ${DOCS_HINT}`
+      return `Your plan needs activation.${recoverClause(url, 'activate', 'checkout')} Or call \`activate_plan\` with a \`planRef\`. ${DOCS_HINT}`
     case 'topup_required': {
       const currency = gate.currency ?? gate.balance?.currency ?? 'USD'
       const presets = [1000, 2500, 5000, 10_000].map(m => formatMinor(m, currency)).join(' · ')
       return `You're out of credits. Top up first (${presets}).${recoverClause(url, 'add credits', 'topup')} ${DOCS_HINT}`
     }
     case 'upgrade_required':
-      return `You don't have an active plan for this tool.${recoverClause(url, 'pick a plan', 'upgrade')} ${DOCS_HINT}`
+      return `You don't have an active plan for this tool.${recoverClause(url, 'pick a plan', 'checkout')} ${DOCS_HINT}`
     case 'reactivation_required':
-      return `Your previous plan is no longer active. Call the \`manage_account\` tool to reactivate it, or the \`upgrade\` tool to pick a new plan. ${DOCS_HINT}`
+      return `Your previous plan is no longer active. ${callViewer('account').replace(/^c/, 'C')} to reactivate it, or ${callViewer('checkout')} to pick a new plan. ${DOCS_HINT}`
   }
 }
 
@@ -218,13 +226,13 @@ export function buildNudgeMessage(
 
   switch (state.kind) {
     case 'topup_required':
-      return `Heads up — running low on credits. Call the \`topup\` tool to add more${visitClause}.`
+      return `Heads up — running low on credits. ${callViewer('topup').replace(/^c/, 'C')} to add more${visitClause}.`
     case 'upgrade_required':
     case 'limit_reached':
-      return `Heads up — approaching your plan's limit this period. Call the \`upgrade\` tool for more headroom${visitClause}.`
+      return `Heads up — approaching your plan's limit this period. ${callViewer('checkout').replace(/^c/, 'C')} for more headroom${visitClause}.`
     case 'activation_required':
-      return `Heads up — this plan still needs activation. Call the \`activate_plan\` tool${visitClause}.`
+      return `Heads up — this plan still needs activation. Call the \`activate_plan\` tool with a \`planRef\`${visitClause}.`
     case 'reactivation_required':
-      return `Heads up — your plan is no longer active. Call the \`manage_account\` tool to reactivate it${visitClause}.`
+      return `Heads up — your plan is no longer active. ${callViewer('account').replace(/^c/, 'C')} to reactivate it${visitClause}.`
   }
 }

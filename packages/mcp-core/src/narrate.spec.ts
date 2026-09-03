@@ -3,7 +3,6 @@ import {
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,
-  narrateActivatePlan,
   balanceSummary,
 } from './narrate'
 import { narratedToolResult, parseMode } from './helpers'
@@ -350,27 +349,6 @@ describe('narrateTopup', () => {
   })
 })
 
-describe('narrateActivatePlan', () => {
-  it('lists every plan, free ones included', () => {
-    const { text } = narrateActivatePlan(
-      basePayload({
-        plans: [
-          { type: 'recurring', name: 'Free', requiresPayment: false, options: [cycle()] } as never,
-          {
-            type: 'usage-based',
-            name: 'Starter',
-            requiresPayment: true,
-            options: [perUnit(1)],
-          } as never,
-        ],
-      }),
-    )
-    expect(text).toContain('**Activate a plan — Acme Knowledge Base**')
-    expect(text).toContain('Free · no payment required')
-    expect(text).toContain('Starter · pay as you go')
-  })
-})
-
 describe('parseMode', () => {
   it('parses the three valid modes', () => {
     expect(parseMode('ui')).toBe('ui')
@@ -398,7 +376,7 @@ describe('narratedToolResult', () => {
   })
 
   it('default (auto) emits narration as content[0] and keeps _meta.ui', () => {
-    const r = narratedToolResult('manage_account', payload, undefined, {
+    const r = narratedToolResult('account', payload, undefined, {
       ui: { resourceUri: 'ui://x' },
     })
     expect(r.content[0].type).toBe('text')
@@ -413,7 +391,7 @@ describe('narratedToolResult', () => {
   })
 
   it('mode=auto emits narrated text + _meta.ui without hiding it from the user', () => {
-    const r = narratedToolResult('manage_account', payload, 'auto', {
+    const r = narratedToolResult('account', payload, 'auto', {
       ui: { resourceUri: 'ui://x' },
     })
     expect(r.content[0].type).toBe('text')
@@ -426,7 +404,7 @@ describe('narratedToolResult', () => {
   })
 
   it('mode=text strips _meta.ui and keeps the narration visible', () => {
-    const r = narratedToolResult('manage_account', payload, 'text', {
+    const r = narratedToolResult('account', payload, 'text', {
       ui: { resourceUri: 'ui://x' },
       audience: 'ui',
     })
@@ -436,7 +414,7 @@ describe('narratedToolResult', () => {
   })
 
   it('mode=ui emits a self-sufficient placeholder, never a panel pointer', () => {
-    const r = narratedToolResult('manage_account', payload, 'ui', {
+    const r = narratedToolResult('account', payload, 'ui', {
       ui: { resourceUri: 'ui://x' },
     })
     expect(r.content).toHaveLength(2)
@@ -463,7 +441,7 @@ describe('narratedToolResult', () => {
         },
       ] as never,
     })
-    const r = narratedToolResult('upgrade', upgradePayload, 'ui', { ui: { resourceUri: 'ui://x' } })
+    const r = narratedToolResult('checkout', upgradePayload, 'ui', { ui: { resourceUri: 'ui://x' } })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const text = (r.content[0] as any).text as string
     expect(text).toContain('Pro')
@@ -567,8 +545,8 @@ describe('narratedToolResult', () => {
     expect((r.content[0] as any).text).toContain('Balance: 865,500 credits')
   })
 
-  it('falls back to JSON dump for unknown tool names', () => {
-    const r = narratedToolResult('unknown_tool', payload, 'auto')
+  it('falls back to JSON dump for unknown views', () => {
+    const r = narratedToolResult('unknown_view', payload, 'auto')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((r.content[0] as any).text).toContain('"view"')
   })

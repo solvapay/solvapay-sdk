@@ -19,7 +19,7 @@ import type {
   SdkProductResponse,
   components,
 } from '@solvapay/server'
-import { MCP_TOOL_NAMES } from './tool-names'
+import { VIEWER_TOOL_NAME } from './tool-names'
 
 /**
  * Merchant identity surfaced on every `BootstrapPayload`. Structural
@@ -149,8 +149,9 @@ export interface PaywallToolResult {
 /**
  * Which view a SolvaPay MCP server knows how to bootstrap.
  *
- * Each kind maps to exactly one intent `open_*`-style tool: `checkout`,
- * `account`, `topup`. There is no `paywall` or `nudge` view — those
+ * Each kind is a landing screen on the single `account` viewer:
+ * `checkout`, `account`, `topup`. There is no `paywall` or `nudge`
+ * view — those
  * responses are plain text narrations per the text-only paywall
  * refactor (merchant paywall / nudge tool results ship
  * `content[0].text` + `structuredContent = gate` and never open the
@@ -396,8 +397,10 @@ export interface SolvaPayPromptResult {
 }
 
 /**
- * View → intent-tool map, derived from `MCP_TOOL_NAMES` so a new view
- * requires exactly one edit across the entire ecosystem.
+ * View → intent-tool map. All three surfaces collapse onto the single
+ * viewer tool; `view` on the payload (or the optional tool argument)
+ * picks the landing screen. Derived from `VIEWER_TOOL_NAME` so a
+ * rename edits exactly one object.
  *
  * `paywall` has no dedicated intent tool — the paywall response carries
  * the bootstrap payload directly (`paywallToolResult` merges it into
@@ -405,23 +408,19 @@ export interface SolvaPayPromptResult {
  * re-invoking a tool.
  */
 export const TOOL_FOR_VIEW = {
-  checkout: MCP_TOOL_NAMES.upgrade,
-  account: MCP_TOOL_NAMES.manageAccount,
-  topup: MCP_TOOL_NAMES.topup,
-} as const satisfies Record<
-  SolvaPayMcpViewKind,
-  (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES]
->
+  checkout: VIEWER_TOOL_NAME,
+  account: VIEWER_TOOL_NAME,
+  topup: VIEWER_TOOL_NAME,
+} as const satisfies Record<SolvaPayMcpViewKind, typeof VIEWER_TOOL_NAME>
 
 /**
- * Inverse of `TOOL_FOR_VIEW` — intent-tool name → view kind.
+ * Inverse of `TOOL_FOR_VIEW` for host-entry classification. The viewer
+ * is one tool, so this cannot recover the landing view from the name
+ * alone — default to `account` and let `structuredContent.view` win.
  */
-export const VIEW_FOR_TOOL: Record<string, SolvaPayMcpViewKind> = Object.fromEntries(
-  (Object.entries(TOOL_FOR_VIEW) as [SolvaPayMcpViewKind, string][]).map(([view, tool]) => [
-    tool,
-    view,
-  ]),
-)
+export const VIEW_FOR_TOOL: Record<string, SolvaPayMcpViewKind> = {
+  [VIEWER_TOOL_NAME]: 'account',
+}
 
 /**
  * @deprecated Use `TOOL_FOR_VIEW`. Kept as an alias so the rename lands
@@ -443,7 +442,7 @@ export const VIEW_FOR_OPEN_TOOL = VIEW_FOR_TOOL
  * below the tool result by the host; dismissible, non-blocking.
  *
  * V1 ships three default kinds, each with a default CTA that opens the
- * `upgrade` intent tool. `kind: 'custom'` is reserved for V1.1.
+ * `account` viewer. `kind: 'custom'` is reserved for V1.1.
  */
 export interface NudgeSpec {
   kind: 'low-balance' | 'cycle-ending' | 'approaching-limit'

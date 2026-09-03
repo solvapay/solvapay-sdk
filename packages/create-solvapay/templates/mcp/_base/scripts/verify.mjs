@@ -8,8 +8,8 @@
  *     JSON shape.
  *   - `/.well-known/oauth-authorization-server` returns the expected
  *     JSON shape.
- *   - `tools/list` returns the four intent tools (`upgrade`, `topup`,
- *     `activate_plan`, `manage_account`) plus the generated tools, with
+ *   - `tools/list` returns the two intent tools (`account`,
+ *     `activate_plan`) plus the generated tools, with
  *     UI-only tools hidden.
  *   - When at least one paid tool is registered: call it past the
  *     paywall and assert text-only narration in `content[0].text` (no
@@ -22,7 +22,7 @@
 import { readFileSync } from 'node:fs'
 import { rpc, listTools, callTool, getJson, RpcError } from './lib/mcp-client.mjs'
 
-const INTENT_TOOLS = ['upgrade', 'topup', 'activate_plan', 'manage_account']
+const INTENT_TOOLS = ['account', 'activate_plan']
 const UI_TOOL_HINTS = ['create_payment_intent', 'create_topup_payment_intent', 'create_checkout_session']
 
 async function main() {
@@ -35,7 +35,7 @@ async function main() {
   // `--credentials-file` accepts the JSON file written by
   // `mcpjam oauth login --credentials-out`. When present, the new
   // `merchantBootstrap` check actually exercises the SolvaPay layer
-  // by calling `manage_account` with a bearer token. Without it, the
+  // by calling `account` with a bearer token. Without it, the
   // check skips so existing CI pipelines that don't have credentials
   // wired still see a green build.
   let bearerToken
@@ -295,11 +295,11 @@ function assertPaywallGateShape(name, response, gate) {
 }
 
 /**
- * Call `upgrade` and `activate_plan` with no `mode` argument and assert
- * the default (`auto`) result carries a plan ref and an https URL.
+ * Call `account` with no `mode` argument and assert the default
+ * (`auto`) result carries a plan ref and an https URL.
  */
 async function runIntentToolsTextCheck(base, rpcOptions = {}) {
-  const tools = ['upgrade', 'activate_plan']
+  const tools = ['account']
   const results = {}
   for (const name of tools) {
     let response
@@ -383,28 +383,28 @@ async function runPaywallGateCheck(base, candidates, rpcOptions = {}) {
 }
 
 /**
- * Hit `manage_account` (always-registered intent tool) with
- * `{ mode: 'text' }` and assert the response is not an error envelope
- * carrying SolvaPay bootstrap failure text. The text-mode placeholder
- * goes through `buildBootstrapPayload`, which in turn calls
- * `getMerchantCore` — so a missing merchant on the backend surfaces
- * here as an error result with `Provider` in `content[0].text`. That
- * makes this the single check that exercises the deployed worker's
- * SolvaPay layer end-to-end with real credentials.
+ * Hit `account` (the viewer) with `{ mode: 'text' }` and assert the
+ * response is not an error envelope carrying SolvaPay bootstrap
+ * failure text. The text-mode placeholder goes through
+ * `buildBootstrapPayload`, which in turn calls `getMerchantCore` — so
+ * a missing merchant on the backend surfaces here as an error result
+ * with `Provider` in `content[0].text`. That makes this the single
+ * check that exercises the deployed worker's SolvaPay layer
+ * end-to-end with real credentials.
  */
 async function runMerchantBootstrapCheck(base, rpcOptions) {
   let response
   try {
-    response = await callTool(base, 'manage_account', { mode: 'text' }, rpcOptions)
+    response = await callTool(base, 'account', { mode: 'text' }, rpcOptions)
   } catch (err) {
     return {
       status: 'failed',
-      error: `manage_account call failed: ${err?.message ?? err}`,
+      error: `account call failed: ${err?.message ?? err}`,
       info: err instanceof RpcError ? err.info : undefined,
     }
   }
   if (!response || typeof response !== 'object') {
-    return { status: 'failed', error: 'manage_account returned no response envelope' }
+    return { status: 'failed', error: 'account returned no response envelope' }
   }
   const text =
     Array.isArray(response.content) && response.content[0]?.type === 'text'
@@ -418,14 +418,14 @@ async function runMerchantBootstrapCheck(base, rpcOptions) {
     // human / agent to read.
     return {
       status: 'failed',
-      error: 'manage_account returned an error envelope',
+      error: 'account returned an error envelope',
       info: { text },
     }
   }
   if (/\bbootstrap\b/i.test(text) && /provider/i.test(text)) {
     return {
       status: 'failed',
-      error: 'manage_account narration carries a bootstrap failure',
+      error: 'account narration carries a bootstrap failure',
       info: { text },
     }
   }

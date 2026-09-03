@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { z } from 'zod'
-import { MCP_TOOL_NAMES } from '@solvapay/mcp-core'
+import { MCP_TOOL_NAMES, MCP_PROMPT_NAMES, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
 import { createSolvaPay } from '@solvapay/server'
 import type { SolvaPayClient } from '@solvapay/server'
 import { createSolvaPayMcpServer } from '../src'
@@ -80,9 +80,7 @@ describe('createSolvaPayMcpServer', () => {
       MCP_TOOL_NAMES.createCheckoutSession,
       MCP_TOOL_NAMES.createCustomerSession,
       MCP_TOOL_NAMES.attachBusinessDetails,
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.manageAccount,
-      MCP_TOOL_NAMES.topup,
+      VIEWER_TOOL_NAME,
     ]
     for (const name of expected) {
       expect(toolNames).toContain(name)
@@ -104,12 +102,11 @@ describe('createSolvaPayMcpServer', () => {
     expect(toolNames).toContain(MCP_TOOL_NAMES.attachBusinessDetails)
   })
 
-  it('gates intent tools on the views option', () => {
+  it('gates the viewer view enum on the views option', () => {
     const { server } = buildTestServer({ views: ['checkout'] })
     // @ts-expect-error — accessing private _registeredTools for test coverage
     const toolNames = Object.keys(server._registeredTools ?? {})
-    expect(toolNames).toContain(MCP_TOOL_NAMES.upgrade)
-    expect(toolNames).not.toContain(MCP_TOOL_NAMES.manageAccount)
+    expect(toolNames).toContain(VIEWER_TOOL_NAME)
     expect(toolNames).not.toContain('open_paywall')
   })
 
@@ -129,10 +126,10 @@ describe('createSolvaPayMcpServer', () => {
     const promptNames = Object.keys(server._registeredPrompts ?? {})
     expect(promptNames.sort()).toEqual(
       [
-        MCP_TOOL_NAMES.activatePlan,
-        MCP_TOOL_NAMES.manageAccount,
-        MCP_TOOL_NAMES.topup,
-        MCP_TOOL_NAMES.upgrade,
+        MCP_PROMPT_NAMES.activatePlan,
+        MCP_PROMPT_NAMES.manageAccount,
+        MCP_PROMPT_NAMES.topup,
+        MCP_PROMPT_NAMES.upgrade,
       ].sort(),
     )
   })
@@ -152,9 +149,9 @@ describe('createSolvaPayMcpServer', () => {
     // embedded plan picker when called without a planRef).
     expect(promptNames.sort()).toEqual(
       [
-        MCP_TOOL_NAMES.activatePlan,
-        MCP_TOOL_NAMES.manageAccount,
-        MCP_TOOL_NAMES.upgrade,
+        MCP_PROMPT_NAMES.activatePlan,
+        MCP_PROMPT_NAMES.manageAccount,
+        MCP_PROMPT_NAMES.upgrade,
       ].sort(),
     )
   })
@@ -180,33 +177,29 @@ describe('createSolvaPayMcpServer', () => {
     expect(resourceUris).not.toContain('docs://solvapay/overview.md')
   })
 
-  it('leads the upgrade description with trigger phrases, not sibling-tool tails', () => {
+  it('leads the account description with trigger phrases, not sibling-tool tails', () => {
     const { server } = buildTestServer()
     // @ts-expect-error — private registry used for coverage only
     const registered = server._registeredTools ?? {}
-    const upgrade = registered[MCP_TOOL_NAMES.upgrade]
-    expect(upgrade?.description).toContain('upgrade')
-    expect(upgrade?.description).toContain('change plan')
-    expect(upgrade?.description).not.toContain('Also available')
+    const account = registered[VIEWER_TOOL_NAME]
+    expect(account?.description).toContain('upgrade')
+    expect(account?.description).toContain('change plan')
+    expect(account?.description).not.toContain('Also available')
   })
 
   describe('tool annotations', () => {
-    it('flows readOnly + idempotent annotations on all intent tools', () => {
+    it('flows readOnly + idempotent annotations on the viewer intent tool', () => {
       const { server } = buildTestServer()
       // @ts-expect-error — private registry used for coverage only
       const registered = server._registeredTools ?? {}
-      for (const name of [
-        MCP_TOOL_NAMES.manageAccount,
-        MCP_TOOL_NAMES.upgrade,
-        MCP_TOOL_NAMES.topup,
-      ]) {
-        const tool = registered[name]
-        expect(tool?.annotations).toEqual({
-          readOnlyHint: true,
-          idempotentHint: true,
-          openWorldHint: true,
-        })
-      }
+      const viewer = registered[VIEWER_TOOL_NAME]
+      expect(viewer?.annotations).toEqual({
+        readOnlyHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      })
+      const activate = registered[MCP_TOOL_NAMES.activatePlan]
+      expect(activate?.annotations?.readOnlyHint).toBe(false)
     })
 
     it('registerPayable defaults to readOnly + openWorld for data tools', () => {
@@ -274,11 +267,11 @@ describe('createSolvaPayMcpServer', () => {
       expect(ui?.resourceUri).toBeUndefined()
       // SolvaPay intent tools — where opening the iframe IS the UX —
       // still advertise their UI resource.
-      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
-      const upgradeUi = (
-        upgrade?._meta as { ui?: { resourceUri?: string } } | undefined
+      const account = registered[VIEWER_TOOL_NAME]
+      const accountUi = (
+        account?._meta as { ui?: { resourceUri?: string } } | undefined
       )?.ui
-      expect(upgradeUi?.resourceUri).toBe('ui://test/view.html')
+      expect(accountUi?.resourceUri).toBe('ui://test/view.html')
     })
 
     it('stamps _meta.ui.visibility and openai/widgetAccessible on UI-only transport tools but not intent tools', () => {
@@ -294,13 +287,13 @@ describe('createSolvaPayMcpServer', () => {
         (createPayment?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
       ).toBe(true)
 
-      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+      const account = registered[VIEWER_TOOL_NAME]
       const intentUi = (
-        upgrade?._meta as { ui?: { visibility?: readonly string[] } } | undefined
+        account?._meta as { ui?: { visibility?: readonly string[] } } | undefined
       )?.ui
       expect(intentUi?.visibility).not.toEqual(['app'])
       expect(
-        (upgrade?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
+        (account?._meta as Record<string, unknown> | undefined)?.['openai/widgetAccessible'],
       ).toBeUndefined()
     })
 
@@ -314,9 +307,9 @@ describe('createSolvaPayMcpServer', () => {
       })
       // @ts-expect-error — private registry used for coverage only
       const registered = server._registeredTools ?? {}
-      const manageAccount = registered[MCP_TOOL_NAMES.manageAccount]
+      const account = registered[VIEWER_TOOL_NAME]
       const ui = (
-        manageAccount?._meta as
+        account?._meta as
           | { ui?: { icons?: Array<{ src: string }> } }
           | undefined
       )?.ui
@@ -332,9 +325,9 @@ describe('createSolvaPayMcpServer', () => {
       })
       // @ts-expect-error — private registry used for coverage only
       const registered = server._registeredTools ?? {}
-      const upgrade = registered[MCP_TOOL_NAMES.upgrade]
+      const account = registered[VIEWER_TOOL_NAME]
       const ui = (
-        upgrade?._meta as
+        account?._meta as
           | { ui?: { icons?: Array<{ src: string }> } }
           | undefined
       )?.ui

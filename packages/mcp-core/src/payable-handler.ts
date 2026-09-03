@@ -15,12 +15,12 @@
  * paywalled tools no longer advertise `_meta.ui.resourceUri` at the
  * descriptor level, so hosts never open an uninvited iframe on a
  * successful tool call. Paywall / nudge / activation responses are
- * plain text narrations naming the recovery intent tool (`upgrade` /
- * `topup` / `activate_plan`) and inlining `gate.checkoutUrl` for
+ * plain text narrations naming the recovery tool (`account` /
+ * `activate_plan`) and inlining `gate.checkoutUrl` for
  * terminal-only hosts.
  *
  * The widget iframe is reserved for the three SolvaPay intent tools
- * (`upgrade`, `manage_account`, `topup`) where the user deliberately
+ * (`account`) where the user deliberately
  * asked for a checkout UI.
  *
  * Every SolvaPay MCP adapter (`@solvapay/mcp`, future `fastmcp`
@@ -151,8 +151,8 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
     // (`isError: false`, `content[0].text = gate.message`,
     // `structuredContent = gate`). The server's state engine —
     // `classifyPaywallState` + `buildGateMessage` — produced a
-    // narration that names the recovery intent tool (`upgrade` /
-    // `topup` / `activate_plan`) and inlines `checkoutUrl` for
+    // narration that names the recovery tool (`account` /
+    // `activate_plan`) and inlines `checkoutUrl` for
     // terminal-only hosts. We ship the result verbatim.
     //
     // `_meta.ui` is intentionally not stamped: merchant payable-tool

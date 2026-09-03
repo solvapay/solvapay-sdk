@@ -7,8 +7,13 @@
  * `Request` construction, and tool-result wrapping.
  */
 
-import type { BootstrapPayload, McpToolExtra, SolvaPayCallToolResult } from './types'
-import { NARRATORS, uiPlaceholder, type IntentTool } from './narrate'
+import type {
+  BootstrapPayload,
+  McpToolExtra,
+  SolvaPayCallToolResult,
+  SolvaPayMcpViewKind,
+} from './types'
+import { NARRATORS, uiPlaceholder } from './narrate'
 
 /**
  * ISO 4217 currencies where the "minor unit" equals the major unit.
@@ -226,12 +231,17 @@ export function parseMode(raw: unknown): SolvaPayToolMode {
  * checking `descriptors.ts` first.
  */
 export function narratedToolResult(
-  tool: IntentTool | string,
+  view: SolvaPayMcpViewKind | string,
   data: BootstrapPayload,
   mode: SolvaPayToolMode = 'auto',
   baseMeta: Record<string, unknown> | undefined = undefined,
 ): SolvaPayCallToolResult {
-  const narrator = (NARRATORS as Record<string, (d: BootstrapPayload) => { text: string; links?: Array<{ uri: string; name: string }> }>)[tool]
+  const narrator = (
+    NARRATORS as Record<
+      string,
+      (d: BootstrapPayload) => { text: string; links?: Array<{ uri: string; name: string }> }
+    >
+  )[view]
   if (!narrator) {
     const fallback = toolResult(data)
     if (mode === 'text' && baseMeta && 'ui' in baseMeta) {
@@ -260,7 +270,7 @@ export function narratedToolResult(
 
   const placeholderBlock: SolvaPayCallToolResult['content'][number] = {
     type: 'text',
-    text: uiPlaceholder(tool as IntentTool, data),
+    text: uiPlaceholder(view as SolvaPayMcpViewKind, data),
   }
 
   const content: SolvaPayCallToolResult['content'] =

@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
-import { SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
+import { SOLVAPAY_BOOTSTRAP_URI, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
 import { McpApp, type McpAppFull } from '../McpApp'
 import type { CallToolResultLike } from '../bootstrap'
 
@@ -166,7 +166,7 @@ describe('<McpApp>', () => {
     // opening notification can't be parsed. The shell reads
     // solvapay://bootstrap.json instead of replaying the intent tool.
     const app = makeApp({
-      toolName: 'manage_account',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'account',
         productRef: 'prod_1',
@@ -205,14 +205,14 @@ describe('<McpApp>', () => {
     expect(app.readServerResource).toHaveBeenCalledTimes(1)
     expect(app.callServerTool).toHaveBeenCalledTimes(1)
     expect(app.callServerTool).toHaveBeenCalledWith({
-      name: 'manage_account',
+      name: VIEWER_TOOL_NAME,
       arguments: {},
     })
   })
 
-  it('does not re-call the intent tool when the host pushes the opening notification', async () => {
+  it('does not re-call the viewer when the host pushes the opening notification', async () => {
     const app = makeApp({
-      toolName: 'manage_account',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'account',
         productRef: 'prod_1',
@@ -226,9 +226,9 @@ describe('<McpApp>', () => {
     expect(app.callServerTool).not.toHaveBeenCalled()
   })
 
-  it('routes to the account view when the host invokes manage_account', async () => {
+  it('routes to the account view when the host invokes account', async () => {
     const app = makeApp({
-      toolName: 'manage_account',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'account',
         productRef: 'prod_1',
@@ -242,9 +242,9 @@ describe('<McpApp>', () => {
     expect(AccountStub).toHaveBeenCalled()
   })
 
-  it('routes to the topup view when the host invokes topup', async () => {
+  it('routes to the topup view from structuredContent.view', async () => {
     const app = makeApp({
-      toolName: 'topup',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'topup',
         productRef: 'prod_1',
@@ -291,7 +291,7 @@ describe('<McpApp>', () => {
   it('default onClose routes to app.requestTeardown', async () => {
     const requestTeardown = vi.fn().mockResolvedValue(undefined)
     const app = makeApp({
-      toolName: 'upgrade',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'checkout',
         productRef: 'prod_1',
@@ -323,7 +323,7 @@ describe('<McpApp>', () => {
   it('accepts an `onClose` override that replaces the default teardown', async () => {
     const requestTeardown = vi.fn().mockResolvedValue(undefined)
     const app = makeApp({
-      toolName: 'upgrade',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
         view: 'checkout',
         productRef: 'prod_1',
@@ -345,5 +345,42 @@ describe('<McpApp>', () => {
       expect(onClose).toHaveBeenCalledTimes(1)
     })
     expect(requestTeardown).not.toHaveBeenCalled()
+  })
+
+  it('account intent with scrubbed opening notification fetches bootstrap exactly once', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      readServerResourceFails: true,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      initialToolResultParams: {
+        content: [{ type: 'text', text: 'Plans ready' }],
+      },
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(app.callServerTool).toHaveBeenCalledTimes(1)
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: VIEWER_TOOL_NAME,
+      arguments: {},
+    })
+    expect(app.readServerResource).toHaveBeenCalledTimes(1)
+  })
+
+  it('activate_plan as host entry fetches bootstrap once via resource, not tool replay', async () => {
+    const app = makeApp({
+      toolName: 'activate_plan',
+      emitInitialToolResult: false,
+      structuredContent: undefined,
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(app.readServerResource).toHaveBeenCalledTimes(1)
+    expect(app.callServerTool).not.toHaveBeenCalled()
   })
 })
