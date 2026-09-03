@@ -46,6 +46,7 @@ export type {
   PaywallDecision,
   PaywallMetadata,
   PaywallStructuredContent,
+  PaywallGateRecoveryFields,
   PaywallToolResult,
 } from './paywall'
 export { isPaywallStructuredContent } from './paywall'

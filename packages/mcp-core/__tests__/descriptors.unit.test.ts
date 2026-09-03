@@ -60,6 +60,14 @@ function makeSolvaPay(overrides: MakeSolvaPayOverrides = {}) {
       },
     ),
     getPaymentMethod: vi.fn().mockResolvedValue(overrides.paymentMethod ?? { kind: 'none' }),
+    createCheckoutSession: vi.fn().mockResolvedValue({
+      sessionId: 'sess_test',
+      checkoutUrl: 'https://customer.solvapay.com/demo?session=sess_test',
+    }),
+    createCustomerSession: vi.fn().mockResolvedValue({
+      sessionId: 'csess_test',
+      customerUrl: 'https://customer.solvapay.com/portal?session=csess_test',
+    }),
   } as unknown as SolvaPayClient
   return createSolvaPay({ apiClient: client })
 }
@@ -354,6 +362,10 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     const result = await invokeOpen(MCP_TOOL_NAMES.upgrade)
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.customer).toBeNull()
+    // Text hosts still need a pasteable checkout URL without a signed-in
+    // customer — mint against the anonymous ref, same as the paywall.
+    expect(sc.checkoutUrl).toBe('https://customer.solvapay.com/demo?session=sess_test')
+    expect(sc.portalUrl).toBeNull()
   })
 
   it('includes customer snapshot when customer_ref is on authInfo', async () => {
@@ -385,6 +397,8 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(customer.paymentMethod).toMatchObject({ kind: 'card', last4: '4242' })
     expect(customer.balance).toMatchObject({ credits: 500, displayCurrency: 'USD' })
     expect(customer.usage).not.toBeUndefined()
+    expect(sc.checkoutUrl).toBe('https://customer.solvapay.com/demo?session=sess_test')
+    expect(sc.portalUrl).toBe('https://customer.solvapay.com/portal?session=csess_test')
   })
 
   it('defaults plans to [] if list_plans errors', async () => {

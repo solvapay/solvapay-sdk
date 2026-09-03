@@ -15,6 +15,15 @@
 import type { LimitResponseWithPlan, PaywallStructuredContent } from './types'
 
 /**
+ * How long a checkout session URL stays valid. Stated inline in gate
+ * copy so a pasted transcript link is not treated as durable. Do not
+ * extend this TTL — the session id is a guardless bearer credential.
+ */
+export const CHECKOUT_SESSION_TTL_MINUTES = 15
+
+const DOCS_HINT = 'See docs://solvapay/overview.md.'
+
+/**
  * Discriminated union describing which recovery path the customer
  * needs. Every state maps to exactly one primary recovery tool except
  * `reactivation_required`, which surfaces two alternatives (rare).
@@ -23,6 +32,7 @@ export type PaywallState =
   | { kind: 'activation_required' }
   | { kind: 'topup_required' }
   | { kind: 'upgrade_required' }
+  | { kind: 'limit_reached' }
   | { kind: 'reactivation_required' }
 
 /**
@@ -43,10 +53,12 @@ export type PaywallState =
  *     `creditBalance === 0` field, or `remaining === 0` as a
  *     fallback for older backend responses that omit both credit
  *     fields on usage-based plans.
- *  4. Everything else → `upgrade_required`, including:
+ *  4. Active plan at included cap (`plan` is a non-empty ref and
+ *     `remaining <= 0`) → `limit_reached`. This is the "on Free, used
+ *     3 of 3" case — not "no plan".
+ *  5. Everything else → `upgrade_required`, including:
  *     - `limits === null` (defensive),
- *     - no active plan on the product,
- *     - recurring plan at period cap (`remaining <= 0`).
+ *     - no active plan on the product.
  *
  * `reactivation_required` is deferred — it needs a distinct backend
  * signal (future `LimitResponse.inactivePurchaseRef`) which isn't
@@ -99,7 +111,45 @@ export function classifyPaywallState(
     }
   }
 
+  if (limits.plan.length > 0 && limits.remaining <= 0) {
+    return { kind: 'limit_reached' }
+  }
+
   return { kind: 'upgrade_required' }
+}
+
+function formatMinor(amountMinor: number, currency: string): string {
+  const major = amountMinor / 100
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(major)
+  } catch {
+    return `${currency.toUpperCase()} ${major.toFixed(2)}`
+  }
+}
+
+function meterLabel(gate: PaywallStructuredContent): string {
+  if (!gate.meterName) return 'units'
+  return gate.meterName.replace(/_/g, ' ')
+}
+
+function namedCheckoutMarkdown(url: string): string {
+  return `[Open checkout](${url})`
+}
+
+function recoverClause(
+  url: string | null,
+  verb: string,
+  tool: string,
+): string {
+  if (url) {
+    return ` ${namedCheckoutMarkdown(url)} to ${verb} (expires in ${CHECKOUT_SESSION_TTL_MINUTES} minutes), or call the \`${tool}\` tool.`
+  }
+  return ` Call the \`${tool}\` tool.`
 }
 
 /**
@@ -108,7 +158,8 @@ export function classifyPaywallState(
  * the rare `reactivation_required` path which names two alternatives
  * (`manage_account` / `upgrade`). Inlines `gate.checkoutUrl` when
  * present so terminal-only MCP hosts (Claude Code, CLI clients) can
- * open a browser directly.
+ * open a browser directly. States the 15-minute session lifetime
+ * inline — the URL is a bearer credential, not a durable link.
  *
  * Kept as a pure string so the adapter layer can concatenate it with
  * an optional narrator prefix without parsing structured copy.
@@ -118,20 +169,31 @@ export function buildGateMessage(
   gate: PaywallStructuredContent,
 ): string {
   const url = gate.checkoutUrl && gate.checkoutUrl.length > 0 ? gate.checkoutUrl : null
-  const openClause = url ? `, or open ${url} in a browser` : ''
 
   switch (state.kind) {
+    case 'limit_reached': {
+      const included = gate.included
+      const price =
+        gate.unitPriceMinor != null && gate.currency
+          ? formatMinor(gate.unitPriceMinor, gate.currency)
+          : null
+      const usedLine = included
+        ? `You've used ${included.used} of ${included.total} included ${meterLabel(gate)} this period.`
+        : `You've reached the included usage for this period.`
+      const nextLine = price ? ` The next call is ${price}.` : ''
+      return `${usedLine}${nextLine}${recoverClause(url, 'continue', 'upgrade')} ${DOCS_HINT}`
+    }
     case 'activation_required':
-      return `Your plan needs activation before you can use this tool. Call the \`activate_plan\` tool to activate it${openClause}.`
-    case 'topup_required':
-      return `You're out of credits. Call the \`topup\` tool to add more${openClause}.`
+      return `Your plan needs activation.${recoverClause(url, 'activate', 'activate_plan')} ${DOCS_HINT}`
+    case 'topup_required': {
+      const currency = gate.currency ?? gate.balance?.currency ?? 'USD'
+      const presets = [1000, 2500, 5000, 10_000].map(m => formatMinor(m, currency)).join(' · ')
+      return `You're out of credits. Top up first (${presets}).${recoverClause(url, 'add credits', 'topup')} ${DOCS_HINT}`
+    }
     case 'upgrade_required':
-      return `You don't have an active plan for this tool. Call the \`upgrade\` tool to pick a plan${openClause}.`
+      return `You don't have an active plan for this tool.${recoverClause(url, 'pick a plan', 'upgrade')} ${DOCS_HINT}`
     case 'reactivation_required':
-      // Two-alternative case, used sparingly. The caller is free to
-      // swap `manage_account` with `upgrade` copy later if the
-      // backend distinguishes "reactivate previous" from "new plan".
-      return `Your previous plan is no longer active. Call the \`manage_account\` tool to reactivate it, or the \`upgrade\` tool to pick a new plan.`
+      return `Your previous plan is no longer active. Call the \`manage_account\` tool to reactivate it, or the \`upgrade\` tool to pick a new plan. ${DOCS_HINT}`
   }
 }
 
@@ -142,22 +204,23 @@ export function buildGateMessage(
  * like a softer version of the same text-only nudge path.
  *
  * Receives the `PaywallState` the classifier would have produced if
- * the customer had tripped the gate. `upgrade_required` and
- * `topup_required` are the only kinds that currently produce nudge
- * copy; the others are no-ops (shouldn't happen — nudges only fire
- * on successful calls).
+ * the customer had tripped the gate. `upgrade_required`,
+ * `limit_reached`, and `topup_required` are the kinds that currently
+ * produce nudge copy; the others are no-ops (shouldn't happen —
+ * nudges only fire on successful calls).
  */
 export function buildNudgeMessage(
   state: PaywallState,
   limits: LimitResponseWithPlan | null,
 ): string {
   const url = limits?.checkoutUrl && limits.checkoutUrl.length > 0 ? limits.checkoutUrl : null
-  const visitClause = url ? `, or visit ${url}` : ''
+  const visitClause = url ? `, or ${namedCheckoutMarkdown(url)}` : ''
 
   switch (state.kind) {
     case 'topup_required':
       return `Heads up — running low on credits. Call the \`topup\` tool to add more${visitClause}.`
     case 'upgrade_required':
+    case 'limit_reached':
       return `Heads up — approaching your plan's limit this period. Call the \`upgrade\` tool for more headroom${visitClause}.`
     case 'activation_required':
       return `Heads up — this plan still needs activation. Call the \`activate_plan\` tool${visitClause}.`

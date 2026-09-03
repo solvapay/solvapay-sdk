@@ -113,4 +113,11 @@ Script steps:
 - If token is valid:
   - customer identity is resolved via backend `/v1/customer/auth/userinfo`
   - tool arguments are enriched with auth context
-  - `payable.mcp(..., { getCustomerRef })` enforces limits/paywall
+  - `payable.mcp(..., { getCustomerRef })` enforces limits/paywall.
+    A gate is a normal tool result (`isError: false`) whose
+    `content[0].text` states the current limit, the reason, and one
+    recovery path. This example has no UI resource — text-only hosts
+    are the only audience. Official MCP Apps / 2026-07-28 tools
+    guidance: do not put those facts only on `structuredContent`;
+    hosts often hide it when `content` is present. See
+    [`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).

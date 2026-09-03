@@ -13,19 +13,24 @@
  *
  * Single rendering strategy — host renders the data:
  *
- * The merchant's data rides on `structuredContent` so capable hosts
- * (Claude artifacts, ChatGPT Apps, MCP Inspector) render it natively —
- * a chat bubble for `search_knowledge`, a line-chart artifact for
- * `predict_price_chart`, a verdict card for `predict_direction`, and
- * so on. The SolvaPay widget is reserved for the three intent tools
- * (`upgrade`, `manage_account`, `topup`) where the user deliberately
- * asked for a checkout / account / topup UX.
+ * Silent successes put merchant data on `structuredContent` so capable
+ * hosts (Claude artifacts, ChatGPT Apps, MCP Inspector) render it
+ * natively — a chat bubble for `search_knowledge`, a line-chart
+ * artifact for `predict_price_chart`, a verdict card for
+ * `predict_direction`. Always also put a human summary on
+ * `content[0].text`: official MCP Apps / 2026-07-28 tools guidance is
+ * that `content` is the model and text-only-host lane, and
+ * `structuredContent` is often hidden from the model when `content`
+ * is present. The SolvaPay widget is reserved for the three intent
+ * tools (`upgrade`, `manage_account`, `topup`) where the user
+ * deliberately asked for a checkout / account / topup UX.
  *
- * Paywall responses on exhaustion are plain text narrations that name
- * the recovery intent tool (`upgrade` / `topup` / `activate_plan`)
- * and inline `gate.checkoutUrl` for terminal-first hosts. No iframe
- * opens on a paywall — the LLM reads the narration and calls the
- * recovery tool, which mounts the widget.
+ * Paywall responses on exhaustion are plain text narrations that state
+ * the current limit, name the recovery intent tool (`upgrade` /
+ * `topup` / `activate_plan`), and inline `gate.checkoutUrl` for
+ * terminal-first hosts. No iframe opens on a paywall — the LLM reads
+ * `content[0].text` and calls the recovery tool, which mounts the
+ * widget on UI hosts.
  *
  * Gate with the `DEMO_TOOLS` env var (defaults to `true` in dev; set to
  * `"false"` when copying this example to your own repo as a template).

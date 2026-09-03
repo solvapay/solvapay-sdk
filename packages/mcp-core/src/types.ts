@@ -197,6 +197,10 @@ export interface BootstrapPayload {
   product: BootstrapProduct
   plans: BootstrapPlan[]
   customer: BootstrapCustomer | null
+  /** Hosted checkout URL for the current customer, when one could be minted. */
+  checkoutUrl?: string | null
+  /** Customer portal URL for the current customer, when one could be minted. */
+  portalUrl?: string | null
 }
 
 /**
@@ -289,6 +293,12 @@ export interface SolvaPayToolDescriptor {
    * valued so zod stays an optional peer. Empty object = no args.
    */
   inputSchema: Record<string, ZodTypeAny>
+  /**
+   * Optional Standard Schema for `structuredContent`. When set, hosts
+   * can hydrate against it and the server MUST conform. Fields we omit
+   * when absent must be optional here — never required-with-a-default.
+   */
+  outputSchema?: ZodTypeAny
   meta?: Record<string, unknown>
   /**
    * Portable MCP tool annotations surfaced on `tools/list`. Adapters

@@ -103,6 +103,15 @@ async function main() {
         }
       : await runPaywallGateCheck(base, candidates, rpcOptions)
 
+  checks.intentToolsText =
+    toolsResult.status === 'passed' && toolsResult.value.authRequired && !bearerToken
+      ? {
+          status: 'skipped',
+          reason:
+            'worker requires bearer auth; pass `--credentials-file <path>` to exercise intent tools without a mode override',
+        }
+      : await runIntentToolsTextCheck(base, rpcOptions)
+
   // `merchantBootstrap` exercises the SolvaPay bootstrap path by
   // calling `manage_account` (an intent tool, always registered) and
   // asserting the response is not an error envelope. Without a bearer
@@ -226,18 +235,117 @@ function findToolCandidates(names) {
   return names.filter(n => !INTENT_TOOLS.includes(n) && !UI_TOOL_HINTS.includes(n))
 }
 
+function isPaywallGate(structuredContent) {
+  if (!structuredContent || typeof structuredContent !== 'object') return null
+  const kind = structuredContent.kind
+  if (kind === 'payment_required' || kind === 'activation_required') return structuredContent
+  return null
+}
+
+function isHttpsUrl(value) {
+  return typeof value === 'string' && /^https:\/\//i.test(value)
+}
+
+function assertPaywallGateShape(name, response, gate) {
+  assert(
+    Array.isArray(response.content) && response.content[0]?.type === 'text',
+    `gate response on \`${name}\` must put narration in content[0].text`,
+  )
+  const text = response.content[0].text
+  assert(typeof text === 'string' && text.length > 0, `gate narration on \`${name}\` is empty`)
+  assert(
+    INTENT_TOOLS.some(intent => text.includes(intent)),
+    `gate narration on \`${name}\` must name a recovery intent tool (${INTENT_TOOLS.join(' / ')})`,
+  )
+  assert(
+    !/in the panel/i.test(text),
+    `gate narration on \`${name}\` must not point at a panel this host cannot show`,
+  )
+  assert(
+    /https:\/\//i.test(text),
+    `gate narration on \`${name}\` must include a pasteable https URL`,
+  )
+  assert(
+    isHttpsUrl(gate.checkoutUrl),
+    `gate structuredContent.checkoutUrl on \`${name}\` must be a non-empty https URL`,
+  )
+  if (gate.planRef) {
+    assert(typeof gate.planRef === 'string' && gate.planRef.length > 0, `gate planRef on \`${name}\` is empty`)
+  }
+  if (Array.isArray(gate.plans)) {
+    for (const plan of gate.plans) {
+      assert(
+        typeof plan?.reference === 'string' && plan.reference.length > 0,
+        `gate plans[] on \`${name}\` must each carry a reference`,
+      )
+    }
+  }
+  if (gate.included) {
+    assert(
+      typeof gate.included.total === 'number' &&
+        typeof gate.included.used === 'number' &&
+        typeof gate.included.remaining === 'number',
+      `gate included counters on \`${name}\` must be { total, used, remaining }`,
+    )
+  }
+  assert(
+    !response._meta?.['ui'],
+    `gate response on \`${name}\` must not advertise a UI resource (_meta.ui must be absent on a gate)`,
+  )
+}
+
+/**
+ * Call `upgrade` and `activate_plan` with no `mode` argument and assert
+ * the default (`auto`) result carries a plan ref and an https URL.
+ */
+async function runIntentToolsTextCheck(base, rpcOptions = {}) {
+  const tools = ['upgrade', 'activate_plan']
+  const results = {}
+  for (const name of tools) {
+    let response
+    try {
+      response = await callTool(base, name, {}, rpcOptions)
+    } catch (err) {
+      return {
+        status: 'failed',
+        error: `${name} (no mode) call failed: ${err?.message ?? err}`,
+      }
+    }
+    try {
+      assert(
+        Array.isArray(response.content) && response.content[0]?.type === 'text',
+        `\`${name}\` must put narration in content[0].text`,
+      )
+      const text = response.content[0].text
+      assert(
+        !/in the panel/i.test(text),
+        `\`${name}\` default mode must not say "shown in the panel"`,
+      )
+      assert(
+        /https:\/\//i.test(text) || /planRef:/.test(text),
+        `\`${name}\` default mode must include a plan ref or https URL`,
+      )
+      results[name] = { narrationLength: text.length }
+    } catch (err) {
+      return { status: 'failed', error: err.message ?? String(err) }
+    }
+  }
+  return { status: 'passed', value: results }
+}
+
 /**
  * Try each non-intent / non-UI tool with empty arguments and look for
  * the SolvaPay paywall gate shape: text-only narration in
- * `content[0].text` plus a `structuredContent.gate` payload. Returns
- * `passed` on the first match, `skipped` when no candidate gates (free
- * tools or no tools at all), or `failed` only when a candidate gates
- * but the shape is wrong (text missing, iframe leaked, intent tool not
- * named).
+ * `content[0].text` plus a flat `structuredContent` whose `kind` is
+ * `payment_required` or `activation_required`. Returns `passed` on the
+ * first match, `skipped` when no candidate gates (free tools or no
+ * tools at all), or `failed` only when a candidate gates but the
+ * shape is wrong (text missing, iframe leaked, no https URL).
  *
- * Empty-arg invocation deliberately accepts that the upstream may
- * reject the call — we're looking at the SolvaPay envelope, not the
- * upstream response.
+ * Probe args include dummy required strings so Zod-validated payable
+ * tools reach the paywall instead of failing argument validation.
+ * Extra keys are stripped by `z.object()`. We're looking at the
+ * SolvaPay envelope, not the upstream response.
  */
 async function runPaywallGateCheck(base, candidates, rpcOptions = {}) {
   if (candidates.length === 0) {
@@ -246,27 +354,24 @@ async function runPaywallGateCheck(base, candidates, rpcOptions = {}) {
   for (const name of candidates) {
     let response
     try {
-      response = await callTool(base, name, {}, rpcOptions)
+      // Dummy required-string fields so Zod-validated payable tools
+      // (search_knowledge.query, get_market_quote.symbol, …) reach the
+      // paywall instead of failing argument validation. Extra keys are
+      // stripped by z.object().
+      response = await callTool(
+        base,
+        name,
+        { query: 'probe', symbol: 'AAPL', ticker: 'AAPL' },
+        rpcOptions,
+      )
     } catch {
       continue
     }
-    const gate = response?.structuredContent?.gate
+    const gate = isPaywallGate(response?.structuredContent)
     if (!gate) continue
     try {
-      assert(
-        Array.isArray(response.content) && response.content[0]?.type === 'text',
-        `gate response on \`${name}\` must put narration in content[0].text`,
-      )
-      const text = response.content[0].text
-      assert(
-        INTENT_TOOLS.some(intent => text.includes(intent)),
-        `gate narration on \`${name}\` must name a recovery intent tool (${INTENT_TOOLS.join(' / ')})`,
-      )
-      assert(
-        !response._meta?.['ui'],
-        `gate response on \`${name}\` must not advertise a UI resource (_meta.ui must be absent on a gate)`,
-      )
-      return { status: 'passed', value: { tool: name, narrationLength: text.length } }
+      assertPaywallGateShape(name, response, gate)
+      return { status: 'passed', value: { tool: name, narrationLength: response.content[0].text.length } }
     } catch (err) {
       return { status: 'failed', error: err.message ?? String(err) }
     }

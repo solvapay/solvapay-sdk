@@ -215,17 +215,38 @@ async function runPaywallGateProbe(base, exposedTools, rpcOptions = {}) {
   for (const name of candidates) {
     let response
     try {
-      response = await callTool(base, name, {}, rpcOptions)
+      response = await callTool(
+        base,
+        name,
+        { query: 'probe', symbol: 'AAPL', ticker: 'AAPL' },
+        rpcOptions,
+      )
     } catch {
       continue
     }
-    const gate = response?.structuredContent?.gate
-    if (!gate) continue
+    const gate = response?.structuredContent
+    const isGate =
+      gate &&
+      typeof gate === 'object' &&
+      (gate.kind === 'payment_required' || gate.kind === 'activation_required')
+    if (!isGate) continue
     const text = response.content?.[0]?.text
     if (typeof text !== 'string' || !Array.from(INTENT_TOOLS).some(intent => text.includes(intent))) {
       return {
         status: 'failed',
         reason: `gate response on \`${name}\` is missing or malformed text narration`,
+      }
+    }
+    if (/in the panel/i.test(text)) {
+      return {
+        status: 'failed',
+        reason: `gate response on \`${name}\` points at a panel this host cannot show`,
+      }
+    }
+    if (!/https:\/\//i.test(text) || !/^https:\/\//i.test(String(gate.checkoutUrl ?? ''))) {
+      return {
+        status: 'failed',
+        reason: `gate response on \`${name}\` must include a pasteable https checkout URL`,
       }
     }
     return { status: 'passed', tool: name }

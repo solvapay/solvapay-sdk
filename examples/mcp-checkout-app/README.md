@@ -90,6 +90,64 @@ hood) and flips the card to **Manage purchase**.
 
 For a public URL, run `pnpm tunnel` / `pnpm mcp:checkout:tunnel` (cloudflared)
 or enable the platform `mcpapp` ngrok tunnel on `:3030`.
+
+### Stub mode (no credentials)
+
+Set `SOLVAPAY_STUB=1` to boot against `createStubClient` instead of a
+live backend. The first payable tool call gates immediately (the
+anonymous customer starts at the included cap). No real charges occur.
+
+```bash
+SOLVAPAY_STUB=1 MCP_PORT=3030 pnpm --filter @example/mcp-checkout-app serve
+node packages/create-solvapay/templates/mcp/_base/scripts/verify.mjs http://localhost:3030
+```
+
+When `SOLVAPAY_STUB` is unset, `SOLVAPAY_SECRET_KEY` and
+`SOLVAPAY_PRODUCT_REF` remain required.
+
+## Text-only hosts
+
+MCP Apps is optional. Claude Code, CLI clients, Grok, n8n, and any host
+that ignores `ui://` never mount the checkout iframe. Official MCP
+Apps / 2026-07-28 tools guidance: `content` is the model and text-only
+lane; `structuredContent` is for the widget and is often hidden from
+the model when `content` is present. Full contract:
+[`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).
+
+A gated or account call on a text-only host must still:
+
+1. **State current limits** — plan name (or "no plan"), remaining
+   included usage or credit balance, and why this call was blocked.
+2. **Guide the upgrade** — exactly one recovery tool (`upgrade` /
+   `topup` / `activate_plan`) plus a https URL in the same sentence.
+3. **Find capabilities and user info** — `resources/read
+   docs://solvapay/overview.md` for what the app can do;
+   `manage_account` for the signed-in customer's plan, remaining, and
+   payment method.
+
+Do not write `"shown in the panel."` as the first text block. There
+is no panel.
+
+Host-contract §5 recipe (no `mode` argument on any call). Against stub
+mode, `search_knowledge` gates on the first call:
+
+```bash
+SOLVAPAY_STUB=1 MCP_PORT=3030 pnpm --filter @example/mcp-checkout-app serve
+```
+
+Then, with a raw JSON-RPC client (or `lib/mcp-client.mjs`):
+
+1. `tools/call search_knowledge { query: "probe" }` — `content[0].text`
+   names used/total included, the next-call price, one recovery tool,
+   and a pasteable `https://` URL. No "in the panel."
+2. `tools/call manage_account {}` — first text block states the
+   customer's plan and remaining included usage or credit balance.
+3. `tools/call upgrade {}` — first text block lists at least one plan
+   with a price, a `planRef`, and a `https://` checkout path.
+4. `resources/read docs://solvapay/overview.md` — capability overview.
+
+The scaffolder `scripts/verify.mjs` asserts the same checks.
+
 ## Flow
 
 ```mermaid
@@ -103,7 +161,7 @@ sequenceDiagram
   H->>S: tools/call upgrade (intent tool)
   S->>SP: parallel fetch merchant / product / plans / customer
   SP-->>S: snapshots
-  S-->>H: BootstrapPayload (structuredContent) + UI resource URI
+  S-->>H: content[0].text (self-sufficient) + BootstrapPayload (structuredContent) + UI resource URI
   H->>S: resources/read ui://mcp-checkout-app/mcp-app.html
   S-->>H: HTML + _meta.ui.csp
   H-->>U: iframe mounts
@@ -247,12 +305,13 @@ SolvaPay widget iframe is reserved for the three **intent tools**
 asked for a checkout / account / topup UX.
 
 Paywall responses on exhaustion are **plain text narrations**:
-`content[0].text` carries a message that names the recovery intent
-tool (`upgrade` / `topup` / `activate_plan`) and inlines
+`content[0].text` carries the current limit, the reason, the recovery
+intent tool (`upgrade` / `topup` / `activate_plan`), and
 `gate.checkoutUrl` for terminal-first hosts. The LLM reads that copy
-and calls the recovery tool, which mounts the widget. `isError` stays
-`false` across every paywall response so hosts don't short-circuit on
-the error path.
+— not `structuredContent`, which MCP Apps hosts typically hide when
+`content` is present — and calls the recovery tool, which mounts the
+widget on UI hosts. `isError` stays `false` across every paywall
+response so hosts don't short-circuit on the error path.
 
 This is a deliberate departure from the earlier "data-tool iframe
 entry" design. Descriptor-advertising `_meta.ui.resourceUri` means
@@ -310,10 +369,11 @@ the descriptor level, so the host never opens the iframe for a
 paywall or nudge response. Instead:
 
 - **Paywall / activation gate** — `content[0].text` carries a plain
-  narration naming the recovery intent tool (`upgrade` / `topup` /
-  `activate_plan`) and inlining `gate.checkoutUrl`. The host renders
-  the text; the LLM sees the same copy and calls the recovery tool,
-  which mounts the widget for the deliberate checkout UX.
+  narration: current limits, the reason, the recovery intent tool
+  (`upgrade` / `topup` / `activate_plan`), and `gate.checkoutUrl`.
+  The host renders the text; the LLM sees the same copy and calls the
+  recovery tool, which mounts the widget for the deliberate checkout
+  UX. Text-only hosts stop at the narration and the https URL.
 - **Low-balance nudge** — merchant data rides on `structuredContent`
   unchanged, and the nudge message is appended to `content[0].text`
   as a plain-text suffix. The user sees the data and a gentle
@@ -389,8 +449,8 @@ sequenceDiagram
   H->>S: tools/call search_knowledge
   S->>SP: payable.checkLimits
   SP-->>S: withinLimits=false
-  S-->>H: text-only gate: content[0].text narrates "Call `upgrade`..."
-  H-->>LLM: narration + structuredContent = gate
+  S-->>H: text-only gate: content[0].text states limit + "Call `upgrade`..."
+  H-->>LLM: content[0].text (structuredContent may be hidden)
   LLM-->>U: reads the gate narration aloud
 
   U->>LLM: "upgrade me"
