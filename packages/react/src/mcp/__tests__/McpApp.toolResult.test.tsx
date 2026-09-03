@@ -132,12 +132,9 @@ describe('<McpApp> — live tool-result subscription', () => {
     const TRANSPORT_TOOLS = [
       'create_payment_intent',
       'process_payment',
-      'create_topup_payment_intent',
-      'cancel_renewal',
-      'reactivate_renewal',
+      'create_hosted_session',
+      'set_renewal',
       'activate_plan',
-      'create_checkout_session',
-      'create_customer_session',
     ]
 
     for (const transportTool of TRANSPORT_TOOLS) {

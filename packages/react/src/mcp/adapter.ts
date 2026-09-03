@@ -92,26 +92,44 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
   // by every intent tool and seeded into the provider's module-level
   // caches via `seedMcpCaches`, so the transport never has to fetch.
   return {
-    createPayment: params => callTool(MCP_TOOL_NAMES.createPayment, pickDefined({ ...params })),
+    createPayment: params =>
+      callTool(
+        MCP_TOOL_NAMES.createPayment,
+        pickDefined({ purpose: 'plan', ...params }),
+      ),
 
     processPayment: params => callTool(MCP_TOOL_NAMES.processPayment, pickDefined({ ...params })),
 
     createTopupPayment: params =>
-      callTool(MCP_TOOL_NAMES.createTopupPayment, pickDefined({ ...params })),
+      callTool(
+        MCP_TOOL_NAMES.createPayment,
+        pickDefined({ purpose: 'topup', ...params }),
+      ),
 
     attachBusinessDetails: params =>
       callTool(MCP_TOOL_NAMES.attachBusinessDetails, pickDefined({ ...params })),
 
-    cancelRenewal: params => callTool(MCP_TOOL_NAMES.cancelRenewal, pickDefined({ ...params })),
+    cancelRenewal: params =>
+      callTool(
+        MCP_TOOL_NAMES.setRenewal,
+        pickDefined({ enabled: false, ...params }),
+      ),
 
     reactivateRenewal: params =>
-      callTool(MCP_TOOL_NAMES.reactivateRenewal, pickDefined({ ...params })),
+      callTool(
+        MCP_TOOL_NAMES.setRenewal,
+        pickDefined({ enabled: true, ...params }),
+      ),
 
     activatePlan: params => callTool(MCP_TOOL_NAMES.activatePlan, pickDefined({ ...params })),
 
     createCheckoutSession: params =>
-      callTool(MCP_TOOL_NAMES.createCheckoutSession, pickDefined({ ...(params ?? {}) })),
+      callTool(
+        MCP_TOOL_NAMES.createHostedSession,
+        pickDefined({ kind: 'checkout', ...(params ?? {}) }),
+      ),
 
-    createCustomerSession: () => callTool(MCP_TOOL_NAMES.createCustomerSession),
+    createCustomerSession: () =>
+      callTool(MCP_TOOL_NAMES.createHostedSession, { kind: 'portal' }),
   }
 }

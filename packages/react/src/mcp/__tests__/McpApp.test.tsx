@@ -144,7 +144,7 @@ describe('<McpApp>', () => {
 
   it('calls readServerResource once when a transport tool opened the iframe', async () => {
     const app = makeApp({
-      toolName: 'create_checkout_session',
+      toolName: 'create_hosted_session',
       emitInitialToolResult: false,
       structuredContent: {
         view: 'checkout',

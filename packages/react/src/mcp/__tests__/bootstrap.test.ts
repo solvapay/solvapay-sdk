@@ -281,12 +281,9 @@ describe('isTransportToolName / SOLVAPAY_TRANSPORT_TOOL_NAMES', () => {
     for (const name of [
       'create_payment_intent',
       'process_payment',
-      'create_topup_payment_intent',
-      'cancel_renewal',
-      'reactivate_renewal',
+      'create_hosted_session',
+      'set_renewal',
       'activate_plan',
-      'create_checkout_session',
-      'create_customer_session',
     ]) {
       expect(isTransportToolName(name)).toBe(true)
       expect(SOLVAPAY_TRANSPORT_TOOL_NAMES.has(name)).toBe(true)

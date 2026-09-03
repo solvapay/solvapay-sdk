@@ -93,14 +93,11 @@ describe('buildSolvaPayDescriptors', () => {
       [
         MCP_TOOL_NAMES.activatePlan,
         MCP_TOOL_NAMES.attachBusinessDetails,
-        MCP_TOOL_NAMES.cancelRenewal,
-        MCP_TOOL_NAMES.createCheckoutSession,
-        MCP_TOOL_NAMES.createCustomerSession,
+        MCP_TOOL_NAMES.createHostedSession,
         MCP_TOOL_NAMES.createPayment,
-        MCP_TOOL_NAMES.createTopupPayment,
         VIEWER_TOOL_NAME,
         MCP_TOOL_NAMES.processPayment,
-        MCP_TOOL_NAMES.reactivateRenewal,
+        MCP_TOOL_NAMES.setRenewal,
       ].sort(),
     )
 
@@ -138,11 +135,8 @@ describe('buildSolvaPayDescriptors', () => {
       MCP_TOOL_NAMES.attachBusinessDetails,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
-      MCP_TOOL_NAMES.createTopupPayment,
-      MCP_TOOL_NAMES.cancelRenewal,
-      MCP_TOOL_NAMES.reactivateRenewal,
-      MCP_TOOL_NAMES.createCheckoutSession,
-      MCP_TOOL_NAMES.createCustomerSession,
+      MCP_TOOL_NAMES.createHostedSession,
+      MCP_TOOL_NAMES.setRenewal,
     ]
     for (const name of uiOnlyTools) {
       const tool = tools.find(t => t.name === name)
@@ -592,7 +586,7 @@ describe('create_payment_intent descriptor', () => {
     expect(tool).toBeTruthy()
 
     await tool!.handler(
-      { planRef: 'pln_pro', productRef: 'prd_test', currency: 'EUR' },
+      { purpose: 'plan', planRef: 'pln_pro', productRef: 'prd_test', currency: 'EUR' },
       { authInfo: { extra: { customer_ref: 'cus_test' } } },
     )
 

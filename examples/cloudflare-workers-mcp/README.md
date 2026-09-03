@@ -197,7 +197,7 @@ const handler = createSolvaPayMcpFetch({
 })
 ```
 
-`responseMode: 'json'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the seven UI transport tools (`create_payment_intent`, `create_topup_payment_intent`, `process_payment`, `create_checkout_session`, `create_customer_session`, `cancel_renewal`, `reactivate_renewal`) from `tools/list` so the LLM only sees the two intent tools — `account`, `activate_plan` — alongside your own demo tools. ChatGPT-originated `tools/list` requests are auto-detected (matching `user-agent: openai-mcp/...`) and receive the full catalog, so the iframe's transport calls still pass ChatGPT's gateway catalogue check.
+`responseMode: 'json'` is required for Workers (isolates don't pin across requests, so sessions can't persist in memory). `hideToolsByAudience: ['ui']` drops the five UI transport tools (`create_payment_intent`, `process_payment`, `create_hosted_session`, `set_renewal`, `attach_business_details`) from `tools/list` so the LLM only sees the two intent tools — `account`, `activate_plan` — alongside your own demo tools. ChatGPT-originated `tools/list` requests are auto-detected (matching `user-agent: openai-mcp/...`) and receive the full catalog, so the iframe's transport calls still pass ChatGPT's gateway catalogue check.
 
 ## Swapping in your own tools
 

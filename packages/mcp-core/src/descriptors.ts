@@ -442,20 +442,40 @@ export function buildSolvaPayDescriptors(
   // ------- transport tools -------
 
   pushTool({
-    name: MCP_TOOL_NAMES.createCheckoutSession,
+    name: MCP_TOOL_NAMES.createHostedSession,
     description:
       UI_ONLY_PREFIX +
-      'Create a SolvaPay hosted checkout session and return its URL. The UI opens this URL in a new tab when Stripe Elements is blocked by the host sandbox.',
+      'Create a SolvaPay hosted session and return its URL. Pass kind: "checkout" for a hosted checkout URL (fallback when Stripe Elements is blocked) or kind: "portal" for the customer portal URL.',
     inputSchema: {
+      kind: z
+        .enum(['checkout', 'portal'])
+        .describe('"checkout" for hosted checkout; "portal" for customer portal.'),
       planRef: z.string().optional(),
       productRef: z.string().optional(),
     },
     meta: uiToolMeta,
-    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false }),
+    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false, idempotentHint: true }),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createCheckoutSession, args, extra, async () => {
+      trace(MCP_TOOL_NAMES.createHostedSession, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
+
+        const kind = args.kind === 'checkout' || args.kind === 'portal' ? args.kind : undefined
+        if (!kind) {
+          return toolErrorResult({
+            error: 'create_hosted_session requires kind',
+            status: 400,
+            details: 'Pass kind: "checkout" or kind: "portal".',
+          })
+        }
+
+        if (kind === 'portal') {
+          const result = await createCustomerSessionCore(buildRequest(extra, { method: 'POST' }), {
+            solvaPay,
+          })
+          if (isErrorResult(result)) return toolErrorResult(result)
+          return toolResult(result)
+        }
 
         const effectiveProduct =
           typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
@@ -475,11 +495,16 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.createPayment,
     description:
       UI_ONLY_PREFIX +
-      'Create a Stripe payment intent for the authenticated customer to purchase a plan. Returns { clientSecret, publishableKey, accountId?, customerRef } for confirmation with Stripe Elements in the app UI.',
+      'Create a Stripe payment intent for the authenticated customer. Pass purpose: "plan" to purchase a plan (returns { clientSecret, publishableKey, accountId?, customerRef }) or purpose: "topup" for a credit top-up (credits are recorded by webhook after confirmation).',
     inputSchema: {
-      planRef: z.string(),
-      productRef: z.string(),
+      purpose: z
+        .enum(['plan', 'topup'])
+        .describe('"plan" for plan checkout; "topup" for credit top-up.'),
+      planRef: z.string().optional(),
+      productRef: z.string().optional(),
       currency: z.string().optional(),
+      amount: z.number().int().positive().optional(),
+      description: z.string().optional(),
     },
     meta: uiToolMeta,
     annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false }),
@@ -488,11 +513,50 @@ export function buildSolvaPayDescriptors(
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
 
+        const purpose = args.purpose === 'plan' || args.purpose === 'topup' ? args.purpose : undefined
+        if (!purpose) {
+          return toolErrorResult({
+            error: 'create_payment_intent requires purpose',
+            status: 400,
+            details: 'Pass purpose: "plan" or purpose: "topup".',
+          })
+        }
+
+        if (purpose === 'topup') {
+          const amount = typeof args.amount === 'number' ? args.amount : 0
+          const currency = typeof args.currency === 'string' ? args.currency : ''
+          const description = typeof args.description === 'string' ? args.description : undefined
+
+          if (!amount || !currency) {
+            return toolErrorResult({
+              error: 'create_payment_intent topup requires amount and currency',
+              status: 400,
+              details: 'Pass purpose: "topup" with amount (integer cents) and currency.',
+            })
+          }
+
+          const result = await createTopupPaymentIntentCore(
+            buildRequest(extra, { method: 'POST' }),
+            { amount, currency, description },
+            { solvaPay },
+          )
+          if (isErrorResult(result)) return toolErrorResult(result)
+          return toolResult(result)
+        }
+
         const planRef = typeof args.planRef === 'string' ? args.planRef : ''
         const effectiveProduct =
           typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
         const currency =
           typeof args.currency === 'string' && args.currency ? args.currency : undefined
+
+        if (!planRef) {
+          return toolErrorResult({
+            error: 'create_payment_intent plan requires planRef',
+            status: 400,
+            details: 'Pass purpose: "plan" with planRef and productRef.',
+          })
+        }
 
         const result = await createPaymentIntentCore(
           buildRequest(extra, { method: 'POST' }),
@@ -529,57 +593,6 @@ export function buildSolvaPayDescriptors(
         const result = await processPaymentIntentCore(
           buildRequest(extra, { method: 'POST' }),
           { paymentIntentId, productRef: effectiveProduct, planRef },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.createCustomerSession,
-    description:
-      UI_ONLY_PREFIX +
-      'Create a SolvaPay hosted customer portal session and return its URL. Used to let a paid customer manage or cancel their purchase in a new tab.',
-    inputSchema: {},
-    meta: uiToolMeta,
-    annotations: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createCustomerSession, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-        const result = await createCustomerSessionCore(buildRequest(extra, { method: 'POST' }), {
-          solvaPay,
-        })
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.createTopupPayment,
-    description:
-      UI_ONLY_PREFIX +
-      'Create a Stripe payment intent for a credit top-up. Credits are recorded by the SolvaPay webhook after confirmation.',
-    inputSchema: {
-      amount: z.number().int().positive(),
-      currency: z.string(),
-      description: z.string().optional(),
-    },
-    meta: uiToolMeta,
-    annotations: solvapayTool({ readOnlyHint: false, destructiveHint: false }),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.createTopupPayment, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const amount = typeof args.amount === 'number' ? args.amount : 0
-        const currency = typeof args.currency === 'string' ? args.currency : ''
-        const description = typeof args.description === 'string' ? args.description : undefined
-
-        const result = await createTopupPaymentIntentCore(
-          buildRequest(extra, { method: 'POST' }),
-          { amount, currency, description },
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)
@@ -640,51 +653,48 @@ export function buildSolvaPayDescriptors(
   })
 
   pushTool({
-    name: MCP_TOOL_NAMES.cancelRenewal,
+    name: MCP_TOOL_NAMES.setRenewal,
     description:
       UI_ONLY_PREFIX +
-      'Cancel the auto-renewal on an active purchase. Backend keeps access until the current period ends.',
+      'Toggle auto-renewal on an active purchase. Pass enabled: false to cancel (access continues until period end) or enabled: true to undo a pending cancellation.',
     inputSchema: {
       purchaseRef: z.string(),
+      enabled: z
+        .boolean()
+        .describe('true to reactivate auto-renewal; false to cancel renewal.'),
       reason: z.string().optional(),
     },
     meta: uiToolMeta,
     annotations: solvapayTool({ destructiveHint: true, idempotentHint: true }),
     handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.cancelRenewal, args, extra, async () => {
+      trace(MCP_TOOL_NAMES.setRenewal, args, extra, async () => {
         const auth = requireCustomerRef(extra)
         if (typeof auth !== 'string') return auth
 
         const purchaseRef = typeof args.purchaseRef === 'string' ? args.purchaseRef : ''
-        const reason = typeof args.reason === 'string' ? args.reason : undefined
+        if (args.enabled !== true && args.enabled !== false) {
+          return toolErrorResult({
+            error: 'set_renewal requires enabled',
+            status: 400,
+            details: 'Pass enabled: true to reactivate auto-renewal or enabled: false to cancel.',
+          })
+        }
+        const enabled = args.enabled === true
 
+        if (enabled) {
+          const result = await reactivatePurchaseCore(
+            buildRequest(extra, { method: 'POST' }),
+            { purchaseRef },
+            { solvaPay },
+          )
+          if (isErrorResult(result)) return toolErrorResult(result)
+          return toolResult(result)
+        }
+
+        const reason = typeof args.reason === 'string' ? args.reason : undefined
         const result = await cancelPurchaseCore(
           buildRequest(extra, { method: 'POST' }),
           { purchaseRef, reason },
-          { solvaPay },
-        )
-        if (isErrorResult(result)) return toolErrorResult(result)
-        return toolResult(result)
-      }),
-  })
-
-  pushTool({
-    name: MCP_TOOL_NAMES.reactivateRenewal,
-    description:
-      UI_ONLY_PREFIX +
-      "Undo a pending cancellation so auto-renewal resumes. Only valid while the purchase is still active and its end date hasn't passed.",
-    inputSchema: { purchaseRef: z.string() },
-    meta: uiToolMeta,
-    annotations: solvapayTool({ idempotentHint: true }),
-    handler: async (args, extra) =>
-      trace(MCP_TOOL_NAMES.reactivateRenewal, args, extra, async () => {
-        const auth = requireCustomerRef(extra)
-        if (typeof auth !== 'string') return auth
-
-        const purchaseRef = typeof args.purchaseRef === 'string' ? args.purchaseRef : ''
-        const result = await reactivatePurchaseCore(
-          buildRequest(extra, { method: 'POST' }),
-          { purchaseRef },
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)

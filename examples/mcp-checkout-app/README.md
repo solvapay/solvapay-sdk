@@ -24,11 +24,9 @@ a sibling if you need less:
 | `examples/mcp-time-app`        | Node + Express    | Virtual tools + minimal UI, showcases the gate response              | You want the smallest possible paywalled MCP server                                                |
 
 The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the trimmed
-12-tool surface: 5 intent tools (`upgrade`, `manage_account`, `topup`,
-`check_usage`, `activate_plan`) plus 7 UI-only state-change tools
-(`create_checkout_session`, `create_customer_session`,
-`create_payment_intent`, `process_payment`,
-`create_topup_payment_intent`, `cancel_renewal`, `reactivate_renewal`).
+7-tool surface: 2 intent tools (`account`, `activate_plan`) plus 5
+UI-only state-change tools (`create_hosted_session`, `create_payment_intent`,
+`process_payment`, `set_renewal`, `attach_business_details`).
 Product-scoped data (merchant, product, plans) and the customer
 snapshot (purchase, payment method, balance, usage) ride on the
 `BootstrapPayload` every intent tool returns, so the embedded form
@@ -219,7 +217,7 @@ sequenceDiagram
    `process_payment`. Post-purchase the shell calls
    `refreshBootstrap()` and the card switches to `<CurrentPlanCard>`.
 5. **Hosted branch (`probe === 'blocked'`):** the original hosted-button
-   experience — `create_checkout_session` populates an
+   experience — `create_hosted_session` with `kind: "checkout"` populates an
    `<a target="_blank">` anchor, the user completes payment in a new
    tab, and `focus`/`visibilitychange` listeners fire
    `refreshBootstrap()` to flip to **Manage purchase**.
@@ -240,15 +238,12 @@ sequenceDiagram
 
 | Tool | Purpose |
 | --- | --- |
-| `create_checkout_session` | Returns `{ sessionId, checkoutUrl }` for the SolvaPay hosted checkout (used by the fallback branch) |
-| `create_customer_session` | Returns `{ sessionId, customerUrl }` for the SolvaPay customer portal |
-| `create_payment_intent` | Creates the PaymentIntent consumed by the embedded branch's `<PaymentForm>` |
+| `create_hosted_session` | Returns `{ sessionId, checkoutUrl \| customerUrl }` for hosted checkout (`kind: "checkout"`) or customer portal (`kind: "portal"`) |
+| `create_payment_intent` | Creates the PaymentIntent for plan checkout (`purpose: "plan"`) or top-up (`purpose: "topup"`) |
 | `process_payment` | Records the Stripe-side confirmation after `confirmPayment` resolves |
-| `create_topup_payment_intent` | Creates the PaymentIntent consumed by the top-up flow |
-| `cancel_renewal` | Cancels auto-renewal on an active purchase |
-| `reactivate_renewal` | Undoes a pending cancellation |
+| `set_renewal` | Toggles auto-renewal (`enabled: false` to cancel, `enabled: true` to reactivate) |
 
-`returnUrl` on `create_checkout_session` is intentionally unset — there
+`returnUrl` on hosted checkout is intentionally unset — there
 is no meaningful URL to return to inside an MCP host iframe, so the
 SolvaPay backend default is used.
 
@@ -419,7 +414,7 @@ widget to mount on a data-tool call.
    `topup_required` and no purchase yet) → amount picker (presets 500 / 2 000 / 10 000
    credits, `popular` on 2 000) → Continue (local transition only) →
    payment step with inline Stripe Elements → `Pay $18.00` →
-   `create_topup_payment_intent` + `process_payment` → the SDK
+   `create_payment_intent` with `purpose: "topup"` + `process_payment` → the SDK
    re-activates the plan now that credits have landed, creating the
    active PAYG purchase → success surface with receipt grid (no CTA).
    The SDK auto-sends

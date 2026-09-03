@@ -23,7 +23,7 @@ import { readFileSync } from 'node:fs'
 import { rpc, listTools, callTool, getJson, RpcError } from './lib/mcp-client.mjs'
 
 const INTENT_TOOLS = ['account', 'activate_plan']
-const UI_TOOL_HINTS = ['create_payment_intent', 'create_topup_payment_intent', 'create_checkout_session']
+const UI_TOOL_HINTS = ['create_payment_intent', 'create_hosted_session']
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))

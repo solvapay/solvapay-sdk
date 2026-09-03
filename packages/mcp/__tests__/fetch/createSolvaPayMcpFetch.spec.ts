@@ -122,14 +122,11 @@ async function initialize(handler: (req: Request) => Promise<Response>) {
 const INTENT_TOOLS = [VIEWER_TOOL_NAME, MCP_TOOL_NAMES.activatePlan]
 
 const UI_TOOLS = [
-  MCP_TOOL_NAMES.createCheckoutSession,
+  MCP_TOOL_NAMES.createHostedSession,
   MCP_TOOL_NAMES.createPayment,
   MCP_TOOL_NAMES.processPayment,
-  MCP_TOOL_NAMES.createCustomerSession,
-  MCP_TOOL_NAMES.createTopupPayment,
   MCP_TOOL_NAMES.attachBusinessDetails,
-  MCP_TOOL_NAMES.cancelRenewal,
-  MCP_TOOL_NAMES.reactivateRenewal,
+  MCP_TOOL_NAMES.setRenewal,
 ]
 
 interface ToolsListResult {

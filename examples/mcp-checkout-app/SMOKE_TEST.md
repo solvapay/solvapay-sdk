@@ -136,7 +136,7 @@ Select **Pay as you go** and click `Continue with Pay as you go`.
   transition. BackLink reads `← Change amount`.
   The order summary + Stripe Elements render inline; a
   `Save card for future top-ups` checkbox sits below.
-- Complete the card. SDK fires `create_topup_payment_intent`
+- Complete the card. SDK fires `create_payment_intent` with `purpose: "topup"`
   (purpose: `credit_topup`) then `process_payment`, then re-fires
   `activate_plan` to create the active PAYG purchase now that credits
   have landed. `step: 'success'`.

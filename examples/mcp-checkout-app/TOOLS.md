@@ -90,13 +90,11 @@ activation is the recovery path).
 
 | Tool | Purpose |
 | --- | --- |
-| `create_checkout_session` | Hosted checkout URL (fallback branch) |
-| `create_customer_session` | Customer portal URL |
-| `create_payment_intent` | Stripe PaymentIntent for embedded checkout |
+| `create_hosted_session` | Hosted checkout or customer portal URL (`kind: "checkout" \| "portal"`) |
+| `create_payment_intent` | Stripe PaymentIntent for plan checkout or top-up (`purpose: "plan" \| "topup"`) |
 | `process_payment` | Confirm payment + create purchase |
-| `create_topup_payment_intent` | Stripe PaymentIntent for top-up |
 | `attach_business_details` | Tax computation on the Payment step |
-| `cancel_renewal` / `reactivate_renewal` | Subscription lifecycle |
+| `set_renewal` | Toggle auto-renewal (`enabled: true \| false`) |
 
 Called exclusively from the iframe via `createMcpAppAdapter`. Descriptions
 steer agents toward `` `account` `` / `` `activate_plan` `` instead.

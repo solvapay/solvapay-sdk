@@ -8,12 +8,9 @@
 export const MCP_TOOL_NAMES = {
   createPayment: 'create_payment_intent',
   processPayment: 'process_payment',
-  createTopupPayment: 'create_topup_payment_intent',
-  cancelRenewal: 'cancel_renewal',
-  reactivateRenewal: 'reactivate_renewal',
+  createHostedSession: 'create_hosted_session',
+  setRenewal: 'set_renewal',
   activatePlan: 'activate_plan',
-  createCheckoutSession: 'create_checkout_session',
-  createCustomerSession: 'create_customer_session',
   attachBusinessDetails: 'attach_business_details',
   account: 'account',
 } as const

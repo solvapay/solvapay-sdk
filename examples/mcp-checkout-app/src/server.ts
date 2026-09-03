@@ -30,7 +30,6 @@ const RESOURCE_URI = 'ui://mcp-checkout-app/mcp-app.html'
 const REQUIRED_TRANSPORT_TOOLS = [
   'create_payment_intent',
   'process_payment',
-  'create_topup_payment_intent',
   'attach_business_details',
 ] as const
 
