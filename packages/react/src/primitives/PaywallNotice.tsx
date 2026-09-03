@@ -43,7 +43,9 @@ import { Slot } from './slot'
 import { PlanSelector } from './PlanSelector'
 import { CheckoutSteps } from './checkout'
 import { buildDefaultCheckoutPlanFilter } from './checkout/shared'
+import { composeEventHandlers } from './composeEventHandlers'
 import { useCopy } from '../hooks/useCopy'
+import { useExternalLinkClick } from '../hooks/useExternalLink'
 import { usePaywallResolver } from '../hooks/usePaywallResolver'
 import { usePlans } from '../hooks/usePlans'
 import { interpolate } from '../i18n/interpolate'
@@ -405,11 +407,12 @@ const HostedCheckoutLink = forwardRef<
   HTMLAnchorElement,
   React.AnchorHTMLAttributes<HTMLAnchorElement> & { asChild?: boolean }
 >(function PaywallNoticeHostedCheckoutLink(
-  { asChild, children, className, ...rest },
+  { asChild, children, className, onClick, ...rest },
   forwardedRef,
 ) {
   const ctx = usePaywallNoticeCtx('HostedCheckoutLink')
   const copy = useCopy()
+  const handleExternalClick = useExternalLinkClick()
   const href = ctx.content.checkoutUrl
   if (!href) return null
   const Comp = asChild ? Slot : 'a'
@@ -421,6 +424,7 @@ const HostedCheckoutLink = forwardRef<
       rel="noopener noreferrer"
       data-solvapay-paywall-hosted-link=""
       className={className ?? ctx.classNames.hostedLink}
+      onClick={composeEventHandlers(onClick, handleExternalClick)}
       {...rest}
     >
       {children ?? copy.paywall.hostedCheckoutButton}

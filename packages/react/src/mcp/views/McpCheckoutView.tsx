@@ -19,6 +19,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useExternalLinkClick } from '../../hooks/useExternalLink'
 import { useTransport } from '../../hooks/useTransport'
 import { usePurchase } from '../../hooks/usePurchase'
 import { usePurchaseStatus } from '../../hooks/usePurchaseStatus'
@@ -194,6 +195,8 @@ const HostedLinkButton = React.memo(function HostedLinkButton({
   onLaunch,
   cx,
 }: HostedLinkButtonProps) {
+  const handleExternalClick = useExternalLinkClick()
+
   if (state.status === 'ready') {
     return (
       <a
@@ -202,7 +205,10 @@ const HostedLinkButton = React.memo(function HostedLinkButton({
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`${readyLabel} (opens in a new tab)`}
-        onClick={() => onLaunch?.(state.href)}
+        onClick={event => {
+          onLaunch?.(state.href)
+          handleExternalClick(event)
+        }}
       >
         <button type="button" className={cx.button}>
           {readyLabel}
@@ -238,6 +244,7 @@ const AwaitingBody = React.memo(function AwaitingBody({
   onCancel,
   cx,
 }: AwaitingBodyProps) {
+  const handleExternalClick = useExternalLinkClick()
   return (
     <>
       <div className={cx.awaitingHeader}>
@@ -257,7 +264,10 @@ const AwaitingBody = React.memo(function AwaitingBody({
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Reopen checkout (opens in a new tab)"
-        onClick={() => onReopen()}
+        onClick={event => {
+          onReopen()
+          handleExternalClick(event)
+        }}
       >
         <button type="button" className={cx.button}>
           Reopen checkout

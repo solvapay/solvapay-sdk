@@ -15,6 +15,7 @@ import React from 'react'
 import { creditsToDisplayMinorUnits, resolveSellerIdentityDisplay } from '@solvapay/core'
 import { useBalance } from '../../hooks/useBalance'
 import { useCustomer } from '../../hooks/useCustomer'
+import { useExternalLinkClick } from '../../hooks/useExternalLink'
 import { useMerchant } from '../../hooks/useMerchant'
 import { formatPrice } from '../../utils/format'
 import { useHostLocale } from '../useHostLocale'
@@ -167,6 +168,7 @@ export function McpSellerDetailsCard({
 }: McpSellerDetailsCardProps) {
   const cx = resolveMcpClassNames(classNames)
   const { merchant, loading } = useMerchant()
+  const handleExternalClick = useExternalLinkClick()
 
   if (loading && !merchant) {
     return (
@@ -223,6 +225,7 @@ export function McpSellerDetailsCard({
               href={supportUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleExternalClick}
             >
               Support centre
             </a>

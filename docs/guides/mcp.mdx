@@ -43,7 +43,7 @@ const solvaPay = createSolvaPay({
 
 ### 2. Create the MCP server
 
-`createSolvaPayMcpServer` returns a fully wired `McpServer`. It auto-registers the transport and intent tools (`account`, `activate_plan`), the UI resource referenced by the `account` viewer, slash-command prompts (`/upgrade`, `/manage_account`, `/topup`, `/activate_plan`), the narrated `docs://solvapay/overview.md` resource, and the Stripe CSP baseline. You only supply your product and where the UI bundle lives.
+`createSolvaPayMcpServer` returns a fully wired `McpServer`. It auto-registers the transport and intent tools (`account`, `activate_plan`), the UI resource referenced by the `account` viewer, slash-command prompts (`/upgrade`, `/manage_account`, `/topup`, `/activate_plan`), the narrated `docs://solvapay/overview.md` resource, and the MCP Apps CSP baseline. You only supply your product and where the UI bundle lives.
 
 ```typescript
 import path from 'node:path'

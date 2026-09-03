@@ -131,7 +131,8 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
       resourceDomains,
     },
     branding,
-    hideToolsByAudience: ['ui'],
+    hideToolsByAudience:
+      process.env.MCP_VISIBILITY_TEST === '1' ? undefined : ['ui'],
     additionalTools: demoToolsEnabled() ? registerDemoTools : undefined,
     onToolCall: (name, args) => {
       if (process.env.SOLVAPAY_DEBUG === 'true') {

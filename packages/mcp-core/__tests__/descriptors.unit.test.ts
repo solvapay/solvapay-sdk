@@ -157,6 +157,7 @@ describe('buildSolvaPayDescriptors', () => {
     expect(resource.mimeType).toBe('text/html;profile=mcp-app')
     expect(resource.readHtml).toBeTypeOf('function')
     expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
+    expect(resource.csp.resourceDomains).toContain('https://assets.claude.ai')
   })
 
   it('marks the viewer intent tool as read-only', () => {
@@ -297,6 +298,7 @@ describe('buildSolvaPayDescriptors', () => {
     expect(resource.csp.connectDomains).toContain('https://api-dev.solvapay.com')
     // Baseline Stripe origins stay intact.
     expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
+    expect(resource.csp.resourceDomains).toContain('https://assets.claude.ai')
     expect(resource.csp.connectDomains).toContain('https://api.stripe.com')
   })
 

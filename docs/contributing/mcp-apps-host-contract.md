@@ -139,6 +139,8 @@ Our app-only transport tools are correct in kind: `visibility: ["app"]` is the s
 
 One thing to check rather than assume: `notifyModelContext` prefers `structuredContent` when supplied (`bridge.tsx:122-128`). Given §1, emitting `content` text — as the checkout and top-up views already do — is the safe form.
 
+Outbound navigation is now host-mediated too. `ui/open-link` is wired through `<McpBridgeProvider>` as an `<ExternalLinkProvider>` (`hooks/useExternalLink.tsx`), gated on the host declaring `openLinks`, so every anchor the SDK renders picks it up without knowing about MCP. This was a real bug, not a hardening pass: Claude's sandbox omits `allow-popups`, which drops **both** `window.open()` and a synchronous `<a target="_blank">` click. `LaunchCustomerPortalButton` had assumed the anchor form survived and only the post-`await` open was blocked — it isn't so, and "Manage account", hosted checkout, "Reopen checkout", the mandate links, Terms/Privacy and the seller support link were all dead on Claude while working on ChatGPT (whose frame permits popups). Anthropic's own MCP-app reference lists both forms as blocked with `app.openLink({ url })` as the fix. Capabilities are read at click time because the bridge can mount before `connect()` populates them.
+
 ## 8. Adjacent ecosystem: x402
 
 A parallel monetization approach solving a different problem (autonomous wallet settlement, no human in the loop). Two transferable ideas:
@@ -173,6 +175,7 @@ Specification and SEPs:
 Implementation references:
 
 - [`getUiCapability` API reference](https://apps.extensions.modelcontextprotocol.io/api/functions/server-helpers.getUiCapability.html) and [`McpUiClientCapabilities`](https://apps.extensions.modelcontextprotocol.io/api/interfaces/app.McpUiClientCapabilities.html)
+- [Anthropic `mcp-server-dev` plugin — iframe sandbox constraints](https://github.com/anthropics/claude-plugins-official/blob/66799ffb/plugins/mcp-server-dev/skills/build-mcp-app/references/iframe-sandbox.md) and [Apps SDK messages](https://github.com/anthropics/claude-plugins-official/blob/66799ffb/plugins/mcp-server-dev/skills/build-mcp-app/references/apps-sdk-messages.md) — `window.open()` / `<a target="_blank">` both blocked, `app.openLink({ url })` required for outbound navigation
 - [MCP Python SDK — `client_supports_apps`](https://py.sdk.modelcontextprotocol.io/v2/api/mcp/server/apps/)
 - [MCP Ruby SDK — MCP Apps extension](https://ruby.sdk.modelcontextprotocol.io/extensions/mcp-apps/) — "always return a meaningful text result"
 - [TypeScript SDK — `elicitationUrlExample.ts`](https://github.com/modelcontextprotocol/typescript-sdk/blob/327243ce/examples/server/src/elicitationUrlExample.ts) — payment confirmation via URL elicitation
