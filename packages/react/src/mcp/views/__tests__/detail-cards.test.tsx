@@ -176,6 +176,7 @@ describe('<McpSellerDetailsCard>', () => {
   it('renders support email and URL as text rows, never as iframe-navigating links', () => {
     const merchant: Merchant = {
       displayName: 'Acme',
+      legalName: 'Acme Inc.',
       supportEmail: 'support@acme.com',
       supportUrl: 'https://acme.com/support',
     }
