@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { createSolvaPay, type SolvaPayClient } from '@solvapay/server'
-import { buildSolvaPayDescriptors, MCP_TOOL_NAMES } from '../src'
+import { buildSolvaPayDescriptors, INTENT_TOOL_NAMES, MCP_TOOL_NAMES } from '../src'
 
 interface MakeSolvaPayOverrides {
   customer?: {
@@ -592,5 +592,73 @@ describe('create_payment_intent descriptor', () => {
     )
 
     coreSpy.mockRestore()
+  })
+})
+
+describe('buildSolvaPayDescriptors → intent-tool description contract', () => {
+  function buildTools() {
+    return buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    }).tools
+  }
+
+  const TRIGGERS: Record<(typeof INTENT_TOOL_NAMES)[number], string[]> = {
+    upgrade: ['upgrade', 'change plan', 'buy', 'subscribe'],
+    manage_account: ['my account', 'current plan', 'cancel', 'billing'],
+    topup: ['top up', 'add credits', 'buy credits'],
+    activate_plan: ['activate'],
+  }
+
+  it('leads each intent tool with trigger phrases and drops duplicated tails', () => {
+    const tools = buildTools()
+    for (const name of INTENT_TOOL_NAMES) {
+      const tool = tools.find(t => t.name === name)
+      expect(tool, name).toBeTruthy()
+      const description = tool!.description
+      expect(description).not.toMatch(/Also available/i)
+      expect(description).not.toMatch(/On UI hosts/i)
+      expect(description).not.toMatch(/Default `mode:/)
+      for (const phrase of TRIGGERS[name]) {
+        expect(description.toLowerCase()).toContain(phrase)
+      }
+    }
+  })
+
+  it('puts MODE_HINT on the shared mode param, not the tool description', () => {
+    const tools = buildTools()
+    for (const name of INTENT_TOOL_NAMES) {
+      const tool = tools.find(t => t.name === name)
+      const mode = tool?.inputSchema.mode
+      expect(mode, `${name}.inputSchema.mode`).toBeTruthy()
+      expect(mode!.description).toMatch(/mode: 'auto'/)
+      expect(mode!.description).toMatch(/mode: 'text'/)
+      expect(mode!.description).toMatch(/mode: 'ui'/)
+    }
+  })
+
+  it('steers UI-only tools at every intent tool, including topup', () => {
+    const tools = buildTools()
+    const payment = tools.find(t => t.name === MCP_TOOL_NAMES.createPayment)
+    expect(payment?.description).toMatch(/UI-only/)
+    for (const name of INTENT_TOOL_NAMES) {
+      expect(payment?.description).toContain(`\`${name}\``)
+    }
+  })
+
+  it('advertises four intent tools on the overview resource, not five', () => {
+    const { docsResources } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const overview = docsResources?.find(r => r.uri === 'docs://solvapay/overview.md')
+    expect(overview?.description).toMatch(/four intent tools/)
+    expect(overview?.description).not.toMatch(/five intent tools/)
   })
 })

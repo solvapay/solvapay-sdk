@@ -19,7 +19,7 @@ import type {
   SdkProductResponse,
   components,
 } from '@solvapay/server'
-import type { MCP_TOOL_NAMES } from './tool-names'
+import { MCP_TOOL_NAMES } from './tool-names'
 
 /**
  * Merchant identity surfaced on every `BootstrapPayload`. Structural
@@ -405,11 +405,12 @@ export interface SolvaPayPromptResult {
  * re-invoking a tool.
  */
 export const TOOL_FOR_VIEW = {
-  checkout: 'upgrade',
-  account: 'manage_account',
-  topup: 'topup',
-} as const satisfies Partial<
-  Record<SolvaPayMcpViewKind, (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES]>
+  checkout: MCP_TOOL_NAMES.upgrade,
+  account: MCP_TOOL_NAMES.manageAccount,
+  topup: MCP_TOOL_NAMES.topup,
+} as const satisfies Record<
+  SolvaPayMcpViewKind,
+  (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES]
 >
 
 /**

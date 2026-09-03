@@ -29,8 +29,8 @@
  */
 
 // ---- Tool name contract (shared with @solvapay/react/mcp) ----
-export { MCP_TOOL_NAMES } from './tool-names'
-export type { McpToolName } from './tool-names'
+export { INTENT_TOOL_NAMES, MCP_TOOL_NAMES } from './tool-names'
+export type { IntentToolName, McpToolName } from './tool-names'
 
 // ---- Neutral types ----
 export {

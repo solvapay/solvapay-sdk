@@ -21,3 +21,17 @@ export const MCP_TOOL_NAMES = {
 } as const
 
 export type McpToolName = (typeof MCP_TOOL_NAMES)[keyof typeof MCP_TOOL_NAMES]
+
+/**
+ * LLM-facing intent tools, derived from `MCP_TOOL_NAMES` so a rename
+ * edits exactly one object. Narrators, `TOOL_FOR_VIEW`, and the
+ * scaffolder's `INTENT_TOOLS` arrays must stay aligned with this list.
+ */
+export const INTENT_TOOL_NAMES = [
+  MCP_TOOL_NAMES.upgrade,
+  MCP_TOOL_NAMES.manageAccount,
+  MCP_TOOL_NAMES.topup,
+  MCP_TOOL_NAMES.activatePlan,
+] as const
+
+export type IntentToolName = (typeof INTENT_TOOL_NAMES)[number]

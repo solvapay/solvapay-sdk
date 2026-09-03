@@ -180,14 +180,14 @@ describe('createSolvaPayMcpServer', () => {
     expect(resourceUris).not.toContain('docs://solvapay/overview.md')
   })
 
-  it('mentions sibling intent tools in the upgrade description', () => {
+  it('leads the upgrade description with trigger phrases, not sibling-tool tails', () => {
     const { server } = buildTestServer()
     // @ts-expect-error — private registry used for coverage only
     const registered = server._registeredTools ?? {}
     const upgrade = registered[MCP_TOOL_NAMES.upgrade]
-    expect(upgrade?.description).toContain('Also available')
-    expect(upgrade?.description).toContain('manage_account')
-    expect(upgrade?.description).toContain('activate_plan')
+    expect(upgrade?.description).toContain('upgrade')
+    expect(upgrade?.description).toContain('change plan')
+    expect(upgrade?.description).not.toContain('Also available')
   })
 
   describe('tool annotations', () => {

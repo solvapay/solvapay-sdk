@@ -71,7 +71,7 @@ import {
   SOLVAPAY_OVERVIEW_MIME_TYPE,
   SOLVAPAY_OVERVIEW_URI,
 } from './resources/overview'
-import { MCP_TOOL_NAMES } from './tool-names'
+import { INTENT_TOOL_NAMES, MCP_TOOL_NAMES } from './tool-names'
 import { SOLVAPAY_MCP_VIEW_KINDS, TOOL_FOR_VIEW } from './types'
 import type {
   McpToolExtra,
@@ -134,6 +134,13 @@ const INTENT_TOOL_ANNOTATIONS: Record<keyof typeof TOOL_FOR_VIEW, SolvaPayToolAn
   topup: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
   checkout: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
 }
+
+const INTENT_MODE_SCHEMA = z
+  .enum(['ui', 'text', 'auto'])
+  .optional()
+  .describe(
+    "Default `mode: 'auto'` returns a self-sufficient text summary (plan, price, https checkout URL) and still opens the iframe on UI hosts. Pass `mode: 'text'` to strip the iframe, or `mode: 'ui'` for a one-line placeholder that still includes the checkout URL.",
+  )
 
 const DEFAULT_VIEWS: SolvaPayMcpViewKind[] = [...SOLVAPAY_MCP_VIEW_KINDS]
 
@@ -313,8 +320,7 @@ export function buildSolvaPayDescriptors(
     tools.push(toolIcons ? { ...descriptor, icons: toolIcons } : descriptor)
   }
 
-  const UI_ONLY_PREFIX =
-    'UI-only; agents should prefer `upgrade` / `manage_account` / `activate_plan`. '
+  const UI_ONLY_PREFIX = `UI-only; agents should prefer ${INTENT_TOOL_NAMES.map(name => `\`${name}\``).join(' / ')}. `
 
   const buildRequest = (
     extra: McpToolExtra | undefined,
@@ -392,11 +398,7 @@ export function buildSolvaPayDescriptors(
       name,
       title,
       description,
-      // Every intent tool accepts an optional `mode` so users /
-      // agents on any host can opt into text-only responses (or
-      // suppress the narrated markdown when they know the host is
-      // rendering the UI iframe). Default `'auto'` emits both.
-      inputSchema: { mode: z.enum(['ui', 'text', 'auto']).optional() },
+      inputSchema: { mode: INTENT_MODE_SCHEMA },
       outputSchema: BootstrapPayloadSchema,
       meta: toolMeta,
       annotations: INTENT_TOOL_ANNOTATIONS[view],
@@ -412,26 +414,20 @@ export function buildSolvaPayDescriptors(
     })
   }
 
-  const MODE_HINT =
-    " Default `mode: 'auto'` returns a self-sufficient text summary (plan, price, https checkout URL) and still opens the iframe on UI hosts. Pass `mode: 'text'` to strip the iframe, or `mode: 'ui'` for a one-line placeholder that still includes the checkout URL."
-
   pushIntentTool(
     'checkout',
     'Upgrade plan',
-    'Start or change a paid plan for the current customer. On UI hosts this opens the embedded checkout; on text hosts returns a markdown summary with a checkout URL. This tool only returns a read-only snapshot or opens the UI — actual charges happen later in the embedded checkout after the customer confirms. Also available: manage_account (current plan + cancel/reactivate), activate_plan (pick or activate a specific plan), topup (add credits).' +
-      MODE_HINT,
+    'Call when the user says "upgrade", "change plan", "buy", or "subscribe". Starts or changes a paid plan. Read-only snapshot — charges happen after the customer confirms.',
   )
   pushIntentTool(
     'account',
     'Manage account',
-    "Show or manage the current customer's SolvaPay account: plan, balance, usage, payment method, cancel/reactivate auto-renewal. On UI hosts this opens the embedded account view; on text hosts returns a markdown summary. Also available: upgrade (start/change a paid plan), activate_plan (pick or activate), topup (add credits)." +
-      MODE_HINT,
+    'Call when the user says "my account", "current plan", "cancel", or "billing". Shows the current plan, balance, usage, payment method, and cancel/reactivate auto-renewal.',
   )
   pushIntentTool(
     'topup',
     'Top up credits',
-    'Add SolvaPay credits for the current customer. On UI hosts this opens the embedded top-up flow; on text hosts returns a markdown summary with a top-up URL. This tool only returns a read-only snapshot or opens the UI — credits are not charged until the customer confirms payment in the embedded flow. Also available: manage_account (current plan + balance + usage), upgrade (switch to a recurring plan).' +
-      MODE_HINT,
+    'Call when the user says "top up", "add credits", or "buy credits". Adds SolvaPay credits. Credits are not charged until the customer confirms payment.',
   )
   // `activate_plan` is registered below (transport section) as a
   // dual-audience tool that handles both the picker bootstrap (no
@@ -705,12 +701,11 @@ export function buildSolvaPayDescriptors(
     name: MCP_TOOL_NAMES.activatePlan,
     title: 'Activate plan',
     description:
-      'Activate a plan for the current customer. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers the configured usage; paid plans return a markdown checkout link on text hosts or open the embedded checkout on UI hosts. Without a `planRef`: returns the available plans so the customer can pick — UI hosts render the embedded checkout picker, text hosts see a plans list. Also available: upgrade (direct to checkout), manage_account (current plan + usage), topup (add credits).' +
-      MODE_HINT,
+      'Call when the user says "activate" or the agent needs to enumerate plans. With a `planRef`: free plans activate immediately; usage-based plans activate when the balance covers usage; paid plans open checkout. Without a `planRef`: returns the available plans so the customer can pick.',
     inputSchema: {
       productRef: z.string().optional(),
       planRef: z.string().optional(),
-      mode: z.enum(['ui', 'text', 'auto']).optional(),
+      mode: INTENT_MODE_SCHEMA,
     },
     meta: toolMeta,
     annotations: solvapayTool({}),
@@ -782,7 +777,7 @@ export function buildSolvaPayDescriptors(
       name: 'SolvaPay MCP — overview',
       title: 'SolvaPay overview',
       description:
-        'Agent-facing "start here" doc — explains the five intent tools, dual-audience fallback, and auth model before any tool is called.',
+        'Agent-facing "start here" doc — explains the four intent tools, dual-audience fallback, and auth model before any tool is called.',
       mimeType: SOLVAPAY_OVERVIEW_MIME_TYPE,
       readBody: () => SOLVAPAY_OVERVIEW_MARKDOWN,
     },
@@ -806,7 +801,7 @@ export function buildSolvaPayDescriptors(
 
 /**
  * Build the framework-neutral slash-command prompt descriptors for the
- * five SolvaPay intent tools. Exposed standalone so adapters that don't
+ * four SolvaPay intent tools. Exposed standalone so adapters that don't
  * want the full descriptor bundle (or want to register prompts on an
  * already-built server) can still pick them up.
  *

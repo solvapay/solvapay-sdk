@@ -29,6 +29,7 @@ import {
   usageRate,
   type PricingOptionLike,
 } from '@solvapay/core'
+import type { IntentToolName } from './tool-names'
 import type { BootstrapPayload } from './types'
 
 export interface NarratorOutput {
@@ -36,7 +37,7 @@ export interface NarratorOutput {
   links?: Array<{ uri: string; name: string }>
 }
 
-export type IntentTool = 'upgrade' | 'manage_account' | 'topup' | 'activate_plan'
+export type IntentTool = IntentToolName
 
 /**
  * A plan as `GET /v1/sdk/products/:ref/plans` actually ships it. Pricing

@@ -12,7 +12,7 @@
  * narrations now, not widget surfaces. The iframe is only mounted for
  * the three deliberate intent tools.
  */
-export type McpViewKind = 'checkout' | 'account' | 'topup'
+export type { SolvaPayMcpViewKind as McpViewKind } from '@solvapay/mcp-core'
 
 /**
  * @deprecated Use `McpViewKind`. This alias exists for one minor
