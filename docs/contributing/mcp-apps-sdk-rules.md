@@ -29,6 +29,17 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 - **The widget routes on `structuredContent.view`, not tool name.** `<McpApp>` / `<McpAppShell>` pick the surface from the `view` discriminator the server stamps on `account` viewer results (`checkout` / `account` / `topup`), not from `toolInfo.tool.name`. Merchant paywall / nudge responses narrate in `content[0].text` and never mount the widget; the iframe only opens for a deliberate `account` viewer call (slash prompts `/upgrade`, `/manage_account`, `/topup` remap onto it with the matching `view`).
 - **Refresh on mount.** `McpAppShell` fires its mount-refresh once per mount so backgrounded iframes see fresh data when re-opened. There are no paywall/nudge surfaces to skip any more.
 
+### Display modes & layout law
+
+Applies to every SolvaPay commerce surface (MCP inline, MCP fullscreen, hosted checkout, hosted account). Display mode is **host state, not routing**.
+
+- **Primary/action leads.** The task the user came to do. Narrow: first (top). Wide: left column. Account → Your plan. Checkout → Select a plan. Topup → Add credits. Confirmation → Plan activated.
+- **Identity + summary is the trailing rail.** Narrow: below the primary. Wide: right column. Rail internal order: `[Order summary]` (checkout only) → **Seller** → **Your account**. Trust-first: who you're paying, then your own details.
+- **DOM order = reading order = primary first.** Do not use `order: -1` (or Tailwind `order-*`) to pull the rail in front. Screen readers and text/CLI-host parity depend on this.
+- **Fluid from 320px.** Two columns only when the container is wide enough (container query in the SDK at ~720px; `lg` on hosted). Fill the container; cap the *reading measure* of the primary column, not the whole layout. The identity rail is visible at every width when a customer is known — never `display: none` it on a narrow iframe.
+- **Fullscreen is the home for the fuller account/identity layout.** Advertise `availableDisplayModes: ['inline', 'fullscreen']` on `new App(info, capabilities)` (`SOLVAPAY_MCP_APP_CAPABILITIES`). Read `displayMode` from host context. Request a switch only from a user action via `app.requestDisplayMode({ mode: 'fullscreen' })`, and only when the host lists `fullscreen` in `availableDisplayModes`. Do not request `pip` — account/checkout are not live sessions. Inline stays compact/content-height; fullscreen fills the container, honors `safeAreaInsets`, and uses one scroll owner. Same React tree in both modes.
+- **This is not a dashboard.** Fullscreen still renders one surface (`checkout` / `account` / `topup`) with a persistent identity rail. It does not add tabs, an about page, or a second navigation.
+
 ### Text-mode
 
 Grounded in the [MCP 2026-07-28 tools spec](https://modelcontextprotocol.io/specification/2026-07-28/server/tools), [SEP-1865 / MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx), and the [ext-apps overview](https://github.com/modelcontextprotocol/ext-apps/blob/main/docs/overview.md). Host-by-host behaviour is recorded in [`mcp-apps-host-contract.md`](./mcp-apps-host-contract.md).

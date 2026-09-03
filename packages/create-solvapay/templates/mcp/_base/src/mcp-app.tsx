@@ -19,7 +19,7 @@ import {
   applyHostStyleVariables,
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps'
-import { McpApp } from '@solvapay/react/mcp'
+import { McpApp, SOLVAPAY_MCP_APP_CAPABILITIES } from '@solvapay/react/mcp'
 import '@solvapay/react/styles.css'
 import '@solvapay/react/mcp/styles.css'
 
@@ -39,7 +39,10 @@ function applyContext(ctx: McpUiHostContext | undefined) {
   }
 }
 
-const app = new App({ name: 'SolvaPay checkout', version: '1.0.0' })
+const app = new App(
+  { name: 'SolvaPay checkout', version: '1.0.0' },
+  { availableDisplayModes: [...SOLVAPAY_MCP_APP_CAPABILITIES.availableDisplayModes] },
+)
 
 const rootEl = document.getElementById('root')
 if (!rootEl) {

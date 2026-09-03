@@ -23,19 +23,10 @@ import React, { useState } from 'react'
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
-import {
-  McpAccountView,
-  type McpAccountViewProps,
-} from './views/McpAccountView'
+import { McpAccountView, type McpAccountViewProps } from './views/McpAccountView'
 import { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
-import {
-  McpCheckoutView,
-  type McpCheckoutViewProps,
-} from './views/McpCheckoutView'
-import {
-  McpTopupView,
-  type McpTopupViewProps,
-} from './views/McpTopupView'
+import { McpCheckoutView, type McpCheckoutViewProps } from './views/McpCheckoutView'
+import { McpTopupView, type McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { LegalFooter } from '../primitives/LegalFooter'
 
@@ -75,9 +66,7 @@ export interface McpAppShellProps {
  * the surviving three surfaces. Undefined bootstrap views default to
  * `account`.
  */
-function resolveSurface(
-  bootstrapView: McpBootstrap['view'] | string | undefined,
-): McpViewKind {
+function resolveSurface(bootstrapView: McpBootstrap['view'] | string | undefined): McpViewKind {
   switch (bootstrapView) {
     case 'checkout':
     case 'about': // About folds into checkout's picker.
@@ -110,12 +99,11 @@ export function McpAppShell({
   const effectiveView: McpViewKind = overrideView ?? resolvedView
 
   const showFooter = footer ?? true
-  // The sidebar (seller + customer details cards) carries the
-  // account-context info that `<McpAccountView>` would otherwise
-  // render inline. Mount it on every surface whenever a customer is
-  // known so the 520px / 900px frame stays stable across in-session
-  // surface swaps (account → checkout → topup). Unauthenticated
-  // bootstraps fall through to the narrow centered column.
+  // Identity rail (Seller → Your account) trails the primary body at
+  // every width whenever a customer is known. Unauthenticated
+  // bootstraps omit the rail so the primary column stands alone.
+  // DOM order is body-first so reading order matches the visual
+  // law: primary leads, rail trails.
   const showSidebar = bootstrap.customer !== null
 
   return (
@@ -204,7 +192,8 @@ export function McpViewRouter({
   onClose,
 }: McpViewRouterProps): React.ReactNode {
   const { productRef, stripePublishableKey, returnUrl } = bootstrap
-  const CheckoutView = (views?.checkout ?? McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
+  const CheckoutView = (views?.checkout ??
+    McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
   const AccountView = (views?.account ?? McpAccountView) as React.ComponentType<McpAccountViewProps>
   const TopupView = (views?.topup ?? McpTopupView) as React.ComponentType<McpTopupViewProps>
 

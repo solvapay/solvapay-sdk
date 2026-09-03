@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { SOLVAPAY_BOOTSTRAP_URI, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
@@ -38,6 +38,8 @@ function makeApp(opts: {
   readServerResource?: McpAppFull['readServerResource']
   /** When true, `readServerResource` rejects (triggers intent-tool fallback). */
   readServerResourceFails?: boolean
+  hostContext?: Record<string, unknown>
+  requestDisplayMode?: McpAppFull['requestDisplayMode']
 }): McpAppFull {
   const listeners: Record<string, ToolResultHandler[]> = {}
   const emitInitialToolResult = opts.emitInitialToolResult ?? true
@@ -45,7 +47,7 @@ function makeApp(opts: {
   // before `<McpApp>` subscribes to `toolresult`.
   let connected = false
 
-  const fireToolResult: ToolResultHandler = (params) => {
+  const fireToolResult: ToolResultHandler = params => {
     for (const handler of listeners['toolresult'] ?? []) handler(params)
     app.ontoolresult?.(params)
   }
@@ -75,7 +77,11 @@ function makeApp(opts: {
           }))),
     getHostContext: () => {
       if (opts.toolName && !connected) return undefined
-      return opts.toolName ? { toolInfo: { tool: { name: opts.toolName } } } : undefined
+      if (!opts.toolName && !opts.hostContext) return undefined
+      return {
+        ...(opts.toolName ? { toolInfo: { tool: { name: opts.toolName } } } : {}),
+        ...opts.hostContext,
+      }
     },
     connect: opts.connectFails
       ? vi.fn().mockRejectedValue(new Error('connect failed'))
@@ -86,11 +92,7 @@ function makeApp(opts: {
             fireToolResult(opts.initialToolResultParams)
             return
           }
-          if (
-            emitInitialToolResult &&
-            opts.structuredContent !== undefined &&
-            !opts.isError
-          ) {
+          if (emitInitialToolResult && opts.structuredContent !== undefined && !opts.isError) {
             fireToolResult({ structuredContent: opts.structuredContent })
           }
         }),
@@ -105,6 +107,7 @@ function makeApp(opts: {
     onhostcontextchanged: undefined,
     onteardown: undefined,
     requestTeardown: opts.requestTeardown ?? vi.fn().mockResolvedValue(undefined),
+    requestDisplayMode: opts.requestDisplayMode,
     ontoolresult: undefined,
   }
 
@@ -382,5 +385,28 @@ describe('<McpApp>', () => {
     await screen.findByTestId('checkout-stub')
     expect(app.readServerResource).toHaveBeenCalledTimes(1)
     expect(app.callServerTool).not.toHaveBeenCalled()
+  })
+
+  it('stamps data-display-mode from the host context and shows Full view when advertised', async () => {
+    const requestDisplayMode = vi.fn().mockResolvedValue({ mode: 'fullscreen' })
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'inline',
+        availableDisplayModes: ['inline', 'fullscreen'],
+      },
+      requestDisplayMode,
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(container.querySelector('[data-display-mode="inline"]')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Full view' }))
+    expect(requestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' })
   })
 })

@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { McpAccountView } from '../McpAccountView'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
-import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo } from '../../../types'
+import { merchantCache } from '../../../hooks/useMerchant'
+import { createTransportCacheKey } from '../../../transport/cache-key'
+import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo, Merchant } from '../../../types'
 import type { PlanLike } from '../../plan-actions'
 import { mockBalanceStatus } from '../../../test-helpers/mockBalanceStatus'
 
@@ -149,7 +151,27 @@ const paygPurchase: PurchaseInfo = {
   },
 }
 
+function seedMerchant(merchant: Merchant): SolvaPayConfig {
+  const config: SolvaPayConfig = { transport: makeTransport() }
+  const key = createTransportCacheKey(config, '/api/merchant')
+  merchantCache.set(key, { merchant, promise: null, timestamp: Date.now() })
+  return config
+}
+
 describe('McpAccountView', () => {
+  beforeEach(() => {
+    merchantCache.clear()
+  })
+
+  it('renders Seller before Your account when detail cards are inline', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx({ _config: config }, [], 0)
+    renderAccount(ctx)
+    const seller = screen.getByRole('heading', { name: 'Seller' })
+    const account = screen.getByRole('heading', { name: 'Your account' })
+    expect(seller.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('renders a loading card while purchases are loading', () => {
     const ctx = buildCtx({
       purchase: {

@@ -68,8 +68,8 @@ export interface McpAccountViewProps {
    */
   plans?: readonly PlanLike[]
   /**
-   * Skip the Customer + Seller detail cards. `<McpAppShell>` sets this
-   * when it mounts the persistent right-hand sidebar (whenever
+   * Skip the Seller + Your account detail cards. `<McpAppShell>` sets
+   * this when it mounts the trailing identity rail (whenever
    * `bootstrap.customer` is set) so the cards are not duplicated.
    */
   hideDetailCards?: boolean
@@ -212,8 +212,8 @@ export function McpAccountView({
 
       {!hideDetailCards ? (
         <>
-          <McpCustomerDetailsCard classNames={classNames} onTopup={onTopup} />
           <McpSellerDetailsCard classNames={classNames} />
+          <McpCustomerDetailsCard classNames={classNames} onTopup={onTopup} />
         </>
       ) : null}
     </div>

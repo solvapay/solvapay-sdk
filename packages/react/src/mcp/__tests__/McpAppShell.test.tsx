@@ -6,12 +6,7 @@ import type { McpBootstrap } from '../bootstrap'
 import { SolvaPayContext } from '../../SolvaPayProvider'
 import { merchantCache } from '../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../transport/cache-key'
-import type {
-  SolvaPayContextValue,
-  SolvaPayConfig,
-  Merchant,
-  PurchaseInfo,
-} from '../../types'
+import type { SolvaPayContextValue, SolvaPayConfig, Merchant, PurchaseInfo } from '../../types'
 
 function makeTransport(): NonNullable<SolvaPayConfig['transport']> {
   return {
@@ -100,10 +95,7 @@ function renderShell(
 ) {
   return render(
     <SolvaPayContext.Provider value={ctx}>
-      <McpAppShell
-        bootstrap={{ ...baseBootstrap, ...bootstrap }}
-        {...props}
-      />
+      <McpAppShell bootstrap={{ ...baseBootstrap, ...bootstrap }} {...props} />
     </SolvaPayContext.Provider>,
   )
 }
@@ -193,7 +185,13 @@ describe('<McpAppShell>', () => {
           bootstrap={{
             ...baseBootstrap,
             view: 'usage' as never,
-            customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+            customer: {
+              ref: 'cus_1',
+              purchase: null,
+              paymentMethod: null,
+              balance: null,
+              usage: null,
+            },
           }}
           views={{ checkout: Checkout, account: Account }}
         />
@@ -232,10 +230,22 @@ describe('<McpAppShell>', () => {
       supportEmail: 'support@acme.com',
     })
     const ctx = buildCtx(config, [], 1500)
-    renderShell({ view: 'account', customer: authedCustomer }, ctx)
+    const { container } = renderShell({ view: 'account', customer: authedCustomer }, ctx)
     expect(screen.getByLabelText('Your account context')).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Your account' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Seller' })).toBeTruthy()
+
+    const body = container.querySelector('.solvapay-mcp-shell-body')
+    const sidebar = container.querySelector('.solvapay-mcp-shell-sidebar')
+    expect(body).toBeTruthy()
+    expect(sidebar).toBeTruthy()
+    expect(
+      body && sidebar && body.compareDocumentPosition(sidebar) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+
+    const seller = screen.getByRole('heading', { name: 'Seller' })
+    const account = screen.getByRole('heading', { name: 'Your account' })
+    expect(seller.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('mounts the sidebar on every surface when bootstrap.customer is set', () => {

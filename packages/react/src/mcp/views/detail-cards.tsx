@@ -7,8 +7,8 @@
  *
  * Kept intentionally primitive: no hooks beyond `useCustomer` /
  * `useMerchant`, no new CSS dependencies beyond the `solvapay-mcp-*`
- * convention. Callers stack them in either orientation (sidebar puts
- * Seller on top, narrow iframes put Customer on top).
+ * convention. Callers always stack Seller then Your account — the
+ * canonical identity-rail order.
  */
 
 import React from 'react'
@@ -234,7 +234,12 @@ export function McpSellerDetailsCard({
         ) : null}
 
         {merchant.country ? (
-          <DetailRow label="Country" value={merchant.country} labelMuted={cx.muted} />
+          <DetailRow
+            label="Country"
+            value={merchant.country}
+            labelMuted={cx.muted}
+            muted={cx.muted}
+          />
         ) : null}
       </dl>
     </section>

@@ -112,6 +112,31 @@ export {
   type McpHostInfoProviderProps,
 } from './hooks/useHostInfo'
 
+export {
+  McpDisplayModeProvider,
+  useDisplayMode,
+  useRequestDisplayMode,
+  type McpDisplayModeContextValue,
+  type McpDisplayModeProviderProps,
+  type RequestDisplayMode,
+} from './hooks/useDisplayMode'
+
+export {
+  DEFAULT_DISPLAY_MODE_STATE,
+  MCP_DISPLAY_MODES,
+  SOLVAPAY_MCP_APP_CAPABILITIES,
+  isMcpDisplayMode,
+  readDisplayModeState,
+} from './display-mode'
+export type {
+  McpContainerDimensions,
+  McpDisplayMode,
+  McpDisplayModeState,
+  McpSafeAreaInsets,
+} from './display-mode'
+
+export { FullViewButton, type FullViewButtonProps } from './views/FullViewButton'
+
 export { McpCheckoutView } from './views/McpCheckoutView'
 export type { McpCheckoutViewProps } from './views/McpCheckoutView'
 
@@ -119,10 +144,7 @@ export { McpAccountView } from './views/McpAccountView'
 export type { McpAccountViewProps } from './views/McpAccountView'
 
 export { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
-export type {
-  McpCustomerDetailsCardProps,
-  McpSellerDetailsCardProps,
-} from './views/detail-cards'
+export type { McpCustomerDetailsCardProps, McpSellerDetailsCardProps } from './views/detail-cards'
 
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'

@@ -167,6 +167,8 @@ describe('<McpSellerDetailsCard>', () => {
     expect(screen.getByText('Acme Inc.')).toBeTruthy()
     expect(screen.getByText('support@acme.com')).toBeTruthy()
     expect(screen.getByLabelText('Verified seller')).toBeTruthy()
+    const country = screen.getByText('US')
+    expect(country.className).toMatch(/solvapay-mcp-muted/)
   })
 
   // DEV-651: mailto: and target=_blank anchors navigate the sandboxed
