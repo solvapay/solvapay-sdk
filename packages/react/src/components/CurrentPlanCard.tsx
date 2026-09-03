@@ -26,11 +26,13 @@ import { usePurchase } from '../hooks/usePurchase'
 import { usePurchaseStatus } from '../hooks/usePurchaseStatus'
 import { CancelledPlanNotice } from './CancelledPlanNotice'
 import { usePaymentMethod } from '../hooks/usePaymentMethod'
-import { useCopy } from '../hooks/useCopy'
+import { useCopy, useLocale } from '../hooks/useCopy'
+import { useBalance } from '../hooks/useBalance'
 import { BalanceBadge } from './BalanceBadge'
 import { CancelPlanButton } from './CancelPlanButton'
 import { UpdatePaymentMethodButton } from './UpdatePaymentMethodButton'
 import { UsageMeter } from '../primitives/UsageMeter'
+import { formatPaygRate, type BootstrapPlanLike } from '../primitives/checkout/shared'
 import { formatPrice } from '../utils/format'
 import { interpolate } from '../i18n/interpolate'
 import type { PaymentMethodInfo } from '@solvapay/server'
@@ -51,6 +53,8 @@ export interface CurrentPlanCardClassNames {
   usageMeter?: string
   paymentMethod?: string
   actions?: string
+  /** Small muted caption above a value when `showFieldLabels` is set. */
+  fieldLabel?: string
   /** Embedded pending-cancellation notice + reactivate CTA. */
   cancelledNotice?: string
 }
@@ -98,6 +102,17 @@ export interface CurrentPlanCardProps {
    * Hosted-page parity for the MCP account surface.
    */
   showReference?: boolean
+  /**
+   * Caption the price/rate and balance values with a field label
+   * ("Rate", "Balance"). Default: `false`. Those lines are bare
+   * numbers otherwise, which read alike on a surface that shows both.
+   */
+  showFieldLabels?: boolean
+  /**
+   * Live catalog plans. Used to format a PAYG usage rate when the
+   * frozen snapshot has no `options[]`.
+   */
+  plans?: readonly CatalogPlanLike[]
   /** Per-element classNames. */
   classNames?: CurrentPlanCardClassNames
   /**
@@ -117,17 +132,13 @@ function PlanTypeLine({
   className?: string
 }) {
   const copy = useCopy()
-  const isMetered =
-    countsUsage(purchase.planSnapshot) || purchase.planSnapshot?.isMetered === true
+  const isMetered = countsUsage(purchase.planSnapshot) || purchase.planSnapshot?.isMetered === true
 
   if (purchase.isRecurring) {
     const date = formatDate(purchase.nextBillingDate)
     if (!date) return null
     return (
-      <span
-        className={className}
-        data-solvapay-current-plan-next-billing=""
-      >
+      <span className={className} data-solvapay-current-plan-next-billing="">
         {interpolate(copy.currentPlan.nextBilling, { date })}
       </span>
     )
@@ -146,6 +157,101 @@ function PlanTypeLine({
         ? interpolate(copy.currentPlan.expiresOn, { date })
         : copy.currentPlan.validIndefinitely}
     </span>
+  )
+}
+
+/**
+ * Structural catalog / snapshot subset `formatPaygRate` can read.
+ * Wider than `BootstrapPlanLike` so MCP `PlanLike` (which allows `null`
+ * on optional fields) is assignable without a cast.
+ */
+export interface CatalogPlanLike {
+  reference?: string | null
+  name?: string
+  options?: BootstrapPlanLike['options'] | null
+  price?: number | null
+  currency?: string | null
+  requiresPayment?: boolean | null
+  isMetered?: boolean | null
+}
+
+function asPaygPlan(
+  plan: PurchaseInfo['planSnapshot'] | CatalogPlanLike | null | undefined,
+): BootstrapPlanLike | null {
+  if (!plan) return null
+  return {
+    reference: plan.reference ?? undefined,
+    name: 'name' in plan ? plan.name : undefined,
+    price: plan.price ?? undefined,
+    currency: plan.currency ?? undefined,
+    requiresPayment: 'requiresPayment' in plan ? (plan.requiresPayment ?? undefined) : undefined,
+    // Snapshot `options` are generated as `{ [key: string]: unknown }[]`;
+    // formatPaygRate reads them through `@solvapay/core` as PricingOptionLike.
+    options: plan.options as BootstrapPlanLike['options'],
+  }
+}
+
+function resolvePriceLabel({
+  isUsageBased,
+  snapshot,
+  catalogPlan,
+  amount,
+  currency,
+  intervalLabel,
+  locale,
+  balance,
+}: {
+  isUsageBased: boolean
+  snapshot: PurchaseInfo['planSnapshot']
+  catalogPlan: CatalogPlanLike | undefined
+  amount: number
+  currency: string
+  intervalLabel: string | undefined
+  locale: string | undefined
+  balance: ReturnType<typeof useBalance>
+}): string | null {
+  if (isUsageBased) {
+    const snapshotPlan = asPaygPlan(snapshot)
+    const fromSnapshot = snapshotPlan ? formatPaygRate(snapshotPlan, locale, balance) : null
+    if (fromSnapshot) return fromSnapshot
+    const catalogAsPlan = asPaygPlan(catalogPlan)
+    if (catalogAsPlan) {
+      const fromCatalog = formatPaygRate(catalogAsPlan, locale, balance)
+      if (fromCatalog) return fromCatalog
+    }
+    return null
+  }
+
+  return formatPrice(amount, currency, {
+    interval: intervalLabel,
+  })
+}
+
+/**
+ * Captions a value with a small muted label. Renders the value alone
+ * when `label` is null, so surfaces that don't opt into field labels
+ * keep the flat line-per-fact markup they already style against.
+ */
+function PlanField({
+  label,
+  labelClassName,
+  children,
+}: {
+  label: string | null
+  labelClassName?: string
+  children: React.ReactNode
+}) {
+  if (!label) return <>{children}</>
+  return (
+    <div className="solvapay-current-plan-field" data-solvapay-current-plan-field="">
+      <span
+        className={labelClassName ?? 'solvapay-current-plan-field-label'}
+        data-solvapay-current-plan-field-label=""
+      >
+        {label}
+      </span>
+      {children}
+    </div>
   )
 }
 
@@ -192,19 +298,26 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
   hideProductContext,
   showStartDate,
   showReference,
+  showFieldLabels,
+  plans,
   classNames: overrides,
   className,
 }) => {
   const copy = useCopy()
+  const locale = useLocale()
+  const balance = useBalance()
   const { activePurchase } = usePurchase()
   const { formatDate, shouldShowCancelledNotice } = usePurchaseStatus()
   const { paymentMethod } = usePaymentMethod()
 
   if (!activePurchase) return null
 
+  const snapshot = activePurchase.planSnapshot
+  const catalogPlan = plans?.find(
+    p => p.reference === (snapshot?.reference ?? activePurchase.planRef),
+  )
   const isUsageBased =
-    countsUsage(activePurchase.planSnapshot) ||
-    activePurchase.planSnapshot?.isMetered === true
+    countsUsage(snapshot) || snapshot?.isMetered === true || countsUsage(catalogPlan)
   const planType = activePurchase.isRecurring
     ? 'recurring'
     : isUsageBased
@@ -221,11 +334,16 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
     rawCycle && rawCycle in copy.currentPlan.cycleUnit
       ? (rawCycle as keyof typeof copy.currentPlan.cycleUnit)
       : undefined
-  const intervalLabel = cycleKey
-    ? (copy.currentPlan.cycleUnit[cycleKey] ?? rawCycle)
-    : rawCycle
-  const priceLabel = formatPrice(amount, currency, {
-    interval: intervalLabel,
+  const intervalLabel = cycleKey ? (copy.currentPlan.cycleUnit[cycleKey] ?? rawCycle) : rawCycle
+  const priceLabel = resolvePriceLabel({
+    isUsageBased,
+    snapshot,
+    catalogPlan,
+    amount,
+    currency,
+    intervalLabel,
+    locale,
+    balance,
   })
 
   // Plan name is a first-class field: every plan has a name in the plans
@@ -237,24 +355,22 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
       ? activePurchase.productName
       : null
 
-  const rootClass = [
-    'solvapay-current-plan-card',
-    overrides?.root,
-    className,
-  ]
+  const rootClass = ['solvapay-current-plan-card', overrides?.root, className]
     .filter(Boolean)
     .join(' ')
 
   // Hide the payment-method row entirely when the hook errored OR returned a
   // null (no endpoint deployed yet / MCP server doesn't expose the tool) so
   // the card degrades gracefully.
-  const shouldShowPaymentMethod =
-    !hidePaymentMethod && paymentMethod !== null
+  const shouldShowPaymentMethod = !hidePaymentMethod && paymentMethod !== null
 
   const showCancelButton =
-    !hideCancelButton &&
-    !activePurchase.cancelledAt &&
-    !shouldShowCancelledNotice
+    !hideCancelButton && !activePurchase.cancelledAt && !shouldShowCancelledNotice
+
+  // Surfaces that hide both actions (the MCP account view routes card
+  // and cancel through the portal) would otherwise get an empty
+  // section still carrying its own top margin.
+  const showActions = !hideUpdatePaymentButton || showCancelButton
 
   return (
     <section
@@ -288,40 +404,31 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
         {planName}
       </h3>
 
-      <p
-        className={overrides?.price ?? 'solvapay-current-plan-price'}
-        data-solvapay-current-plan-price=""
-      >
-        {priceLabel}
-      </p>
+      {priceLabel ? (
+        <PlanField
+          label={
+            showFieldLabels
+              ? isUsageBased
+                ? copy.currentPlan.rateFieldLabel
+                : copy.currentPlan.priceFieldLabel
+              : null
+          }
+          labelClassName={overrides?.fieldLabel}
+        >
+          <p
+            className={overrides?.price ?? 'solvapay-current-plan-price'}
+            data-solvapay-current-plan-price=""
+          >
+            {priceLabel}
+          </p>
+        </PlanField>
+      ) : null}
 
       <PlanTypeLine
         purchase={activePurchase}
         formatDate={formatDate}
         className={overrides?.dateLine ?? 'solvapay-current-plan-date-line'}
       />
-
-      {showStartDate && (() => {
-        const started = formatDate(activePurchase.startDate)
-        if (!started) return null
-        return (
-          <span
-            className={overrides?.startedLine ?? 'solvapay-current-plan-started-line'}
-            data-solvapay-current-plan-started-line=""
-          >
-            {interpolate(copy.currentPlan.startedOn, { date: started })}
-          </span>
-        )
-      })()}
-
-      {showReference && activePurchase.reference && (
-        <span
-          className={overrides?.reference ?? 'solvapay-current-plan-reference'}
-          data-solvapay-current-plan-reference=""
-        >
-          {activePurchase.reference}
-        </span>
-      )}
 
       {isUsageBased && activePurchase.isRecurring && !hideUsageMeter && (
         <section
@@ -339,12 +446,43 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
       )}
 
       {isUsageBased && (
-        <p
-          className={overrides?.balanceLine ?? 'solvapay-current-plan-balance-line'}
-          data-solvapay-current-plan-balance-line=""
+        <PlanField
+          label={showFieldLabels ? copy.currentPlan.balanceFieldLabel : null}
+          labelClassName={overrides?.fieldLabel}
         >
-          <BalanceBadge />
-        </p>
+          <p
+            className={overrides?.balanceLine ?? 'solvapay-current-plan-balance-line'}
+            data-solvapay-current-plan-balance-line=""
+          >
+            <BalanceBadge />
+          </p>
+        </PlanField>
+      )}
+
+      {/* Provenance trails the money facts: what the plan costs and
+       *  what's left read as one group, then when it started. Slotting
+       *  the start date between price and balance splits that pair. */}
+      {showStartDate &&
+        (() => {
+          const started = formatDate(activePurchase.startDate)
+          if (!started) return null
+          return (
+            <span
+              className={overrides?.startedLine ?? 'solvapay-current-plan-started-line'}
+              data-solvapay-current-plan-started-line=""
+            >
+              {interpolate(copy.currentPlan.startedOn, { date: started })}
+            </span>
+          )
+        })()}
+
+      {showReference && activePurchase.reference && (
+        <span
+          className={overrides?.reference ?? 'solvapay-current-plan-reference'}
+          data-solvapay-current-plan-reference=""
+        >
+          {activePurchase.reference}
+        </span>
       )}
 
       {shouldShowPaymentMethod && paymentMethod && (
@@ -354,13 +492,15 @@ export const CurrentPlanCard: React.FC<CurrentPlanCardProps> = ({
         />
       )}
 
-      <section
-        className={overrides?.actions ?? 'solvapay-current-plan-actions'}
-        data-solvapay-current-plan-actions=""
-      >
-        {!hideUpdatePaymentButton && <UpdatePaymentMethodButton />}
-        {showCancelButton && <CancelPlanButton />}
-      </section>
+      {showActions && (
+        <section
+          className={overrides?.actions ?? 'solvapay-current-plan-actions'}
+          data-solvapay-current-plan-actions=""
+        >
+          {!hideUpdatePaymentButton && <UpdatePaymentMethodButton />}
+          {showCancelButton && <CancelPlanButton />}
+        </section>
+      )}
 
       {shouldShowCancelledNotice && !hideCancelledNotice && (
         <CancelledPlanNotice

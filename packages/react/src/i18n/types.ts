@@ -191,6 +191,15 @@ export interface SolvaPayCopy {
     validIndefinitely: string
     /** "Started {date}" — purchase start-date line on `<CurrentPlanCard>`. */
     startedOn: string
+    /**
+     * Field labels rendered above the otherwise bare values on
+     * `<CurrentPlanCard showFieldLabels>`. A price, a usage rate and a
+     * credit balance are all "a number with a currency" — without a
+     * label the customer cannot tell which one they are reading.
+     */
+    priceFieldLabel: string
+    rateFieldLabel: string
+    balanceFieldLabel: string
     paymentMethod: string
     paymentMethodExpires: string
     noPaymentMethod: string
@@ -234,6 +243,10 @@ export interface SolvaPayCopy {
     seePlansButton: string
     /** Primary CTA on the no-plan state that switches to the Plan tab. */
     pickPlanButton: string
+    /** CTA on a free active plan that opens checkout to pick a paid plan. */
+    upgradeButton: string
+    /** CTA on a non-free active plan that opens checkout to switch plans. */
+    changePlanButton: string
   }
   customerPortal: {
     launchButton: string
