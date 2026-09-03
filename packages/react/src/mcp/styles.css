@@ -829,6 +829,7 @@ body {
 .solvapay-mcp-detail-value {
   font-size: 14px;
   color: var(--color-text-primary, #0f172a);
+  word-break: break-word;
 }
 
 .solvapay-mcp-detail-value-mono {
@@ -836,17 +837,6 @@ body {
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   font-size: 12px;
-}
-
-.solvapay-mcp-detail-link {
-  color: var(--color-text-primary, #0f172a);
-  font-size: 14px;
-  text-decoration: none;
-  word-break: break-word;
-}
-
-.solvapay-mcp-detail-link:hover {
-  text-decoration: underline;
 }
 
 .solvapay-mcp-detail-heading-row {
