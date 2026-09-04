@@ -115,9 +115,7 @@ def _call_sync_decision(name: str, args: dict[str, Any]) -> Any:
 
 
 def _should_retry_usage(error: Exception, _attempt: int) -> bool:
-    return bool(
-        _call_sync_decision("should_retry_usage_error", {"message": str(error)})
-    )
+    return bool(_call_sync_decision("should_retry_usage_error", {"message": str(error)}))
 
 
 def _post_usage(client: ApiClient, request: dict[str, Any]) -> None:
@@ -256,7 +254,6 @@ class SolvaPay:
         return self._bound_client
 
     def track_usage(self, params: Mapping[str, Any]) -> None:
-        """Record a usage event through the same retry path as ``payable`` handlers."""
         _post_usage(self.get_api_client(), dict(params))
 
     def payable(
