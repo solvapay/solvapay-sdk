@@ -1,0 +1,100 @@
+module SolvaPay
+  def self.solvapay_call: (String) -> String
+
+  module Mcp
+    VERSION: String
+    MCP_APP_MIME_TYPE: String
+    MCP_APP_HTML_PATH: String
+
+    def self.default_mcp_app_html: () -> String
+    def self.widget_html_rpc: (untyped rpc, String resource_uri, String public_base_url, String product_ref, ?Array[String]? views) -> Hash[String, untyped]?
+
+    module Core
+      def self.call: (String opcode, untyped args) -> untyped
+    end
+
+    def self.set_format_gate_override: ((^(String, Hash[String, untyped]) -> Hash[String, untyped])?) -> void
+    def self.format_gate_override: () -> (^(String, Hash[String, untyped]) -> Hash[String, untyped])?
+    def self.format_gate_override=: ((^(String, Hash[String, untyped]) -> Hash[String, untyped])?) -> void
+
+    def self.register_payable_tool: (
+      untyped server,
+      String name,
+      solvapay: untyped,
+      product: String,
+      handler: ^(untyped, ResponseContext) -> untyped,
+      ?title: String?,
+      ?description: String?,
+      ?input_schema: untyped,
+      ?get_customer_ref: (^(untyped) -> String)?,
+      ?usage_type: String
+    ) -> void
+
+    def self.invoke_payable: (
+      solvapay: untyped,
+      product: String,
+      handler: ^(untyped, ResponseContext) -> untyped,
+      get_customer_ref: (^(untyped) -> String)?,
+      args: untyped,
+      ?usage_type: String
+    ) -> Hash[String, untyped]
+
+    def self.resolve_customer_ref: (untyped args, (^(untyped) -> String)? get_customer_ref) -> String
+    def self.format_gate: (String message, Hash[String, untyped] gate) -> Hash[String, untyped]
+    def self.limits_from_decision: (untyped decision) -> Hash[String, untyped]
+    def self.stringify_keys: (untyped value) -> untyped
+    def self.to_mcp_response: (untyped payload) -> untyped
+
+    class Engine
+      def initialize: (
+        client: untyped,
+        product_ref: String,
+        public_base_url: String,
+        ?resource_uri: String,
+        ?mcp_path: String,
+        ?views: Array[String]?,
+        ?oauth_paths: Hash[String, untyped]?
+      ) -> void
+      def register_payable: (
+        String name,
+        product: String,
+        handler: ^(untyped, ResponseContext) -> untyped,
+        ?get_customer_ref: (^(untyped) -> String)?,
+        ?usage_type: String,
+        ?title: String?,
+        ?description: String?,
+        ?input_schema: untyped,
+        ?annotations: untyped
+      ) -> Engine
+      def call: (Hash[String, untyped] env) -> [Integer, Hash[String, String], Array[String]]
+      def handle_oauth: (Hash[String, untyped] env, String method, String path) -> [Integer, Hash[String, String], Array[String]]
+      def handle_mcp: (Hash[String, untyped] env) -> [Integer, Hash[String, String], Array[String]]
+      def resume_payable: (untyped envelope) -> [Integer, Hash[String, String], Array[String]]
+      def payable_tool_specs: () -> Array[Hash[String, untyped]]
+      def json_rpc_error: (Integer status, untyped id, Integer code, String message) -> [Integer, Hash[String, String], Array[String]]
+      def oauth_config: () -> Hash[String, untyped]
+      def oauth_response: (untyped envelope) -> [Integer, Hash[String, String], Array[String]]
+      def json_response: (Integer status, untyped body) -> [Integer, Hash[String, String], Array[String]]
+      def encode_body: (untyped body) -> String
+      def stringify_headers: (untyped headers) -> Hash[String, String]
+      def rack_headers: (Hash[String, untyped] env) -> Hash[String, String]
+      def read_body: (Hash[String, untyped] env) -> String
+      def stringify: (untyped value) -> untyped
+      def merge_native_cors: (Hash[String, untyped] env, Hash[String, String] headers) -> Hash[String, String]?
+      def symbolize: (untyped hash) -> Hash[Symbol, untyped]
+    end
+
+    class ResponseContext
+      @customer: Hash[String, untyped]
+      @product: Hash[String, untyped]
+      @product_ref: String
+      @emitted: Array[untyped]
+      attr_reader customer: Hash[String, untyped]
+      attr_reader product: Hash[String, untyped]
+      def initialize: (customer: Hash[String, untyped], product: Hash[String, untyped], product_ref: String) -> void
+      def emit: (untyped block) -> void
+      def respond: (untyped data, ?untyped options) -> Hash[String, untyped]
+      def gate: (?String? reason) -> void
+    end
+  end
+end

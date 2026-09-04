@@ -1,0 +1,83 @@
+{
+  "name": "@solvapay/core",
+  "version": "1.5.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./business-details": {
+      "types": "./dist/business-details-public.d.ts",
+      "import": "./dist/business-details-public.js",
+      "require": "./dist/business-details-public.cjs"
+    },
+    "./browser-wasm": {
+      "types": "./dist/browser-wasm.d.ts",
+      "development": "./src/browser-wasm.ts",
+      "import": "./dist/browser-wasm.js",
+      "require": "./dist/browser-wasm.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "business-details-public.d.ts",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      },
+      "./business-details": {
+        "types": "./dist/business-details-public.d.ts",
+        "import": "./dist/business-details-public.js",
+        "require": "./dist/business-details-public.cjs"
+      },
+      "./browser-wasm": {
+        "types": "./dist/browser-wasm.d.ts",
+        "import": "./dist/browser-wasm.js",
+        "require": "./dist/browser-wasm.cjs"
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solvapay/solvapay-sdk.git",
+    "directory": "sdks/typescript/core"
+  },
+  "sideEffects": [
+    "./dist/browser-wasm.js",
+    "./dist/browser-wasm.cjs",
+    "./src/browser-wasm.ts"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/business-details-public.ts src/browser-wasm.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external @solvapay/server-wasm && cp business-details-public.d.ts dist/business-details-public.d.ts",
+    "dev": "tsup src/index.ts src/business-details-public.ts src/browser-wasm.ts --format esm,cjs --dts --tsconfig tsconfig.build.json --external @solvapay/server-wasm --watch",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "optionalDependencies": {
+    "@solvapay/server-wasm": "workspace:*"
+  },
+  "devDependencies": {
+    "@solvapay/tsconfig": "workspace:*",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
+  }
+}

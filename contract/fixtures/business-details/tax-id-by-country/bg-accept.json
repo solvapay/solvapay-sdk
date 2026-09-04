@@ -1,0 +1,23 @@
+{
+  "suite": "business-details",
+  "case": "bg-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "BG",
+      "taxId": "BG0123456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "BG",
+        "taxId": "BG0123456789",
+        "taxIdType": "eu_vat"
+      }
+    }
+  }
+}

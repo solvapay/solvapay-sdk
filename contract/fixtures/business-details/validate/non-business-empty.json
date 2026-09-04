@@ -1,0 +1,18 @@
+{
+  "suite": "business-details",
+  "case": "non-business-empty",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": false
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": false
+      }
+    }
+  }
+}

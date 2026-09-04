@@ -1,0 +1,17 @@
+{
+  "mail_from": "alerts@example.com",
+  "mail_timestamp": 0,
+  "mail_read": 1,
+  "mail_date": "12:00:00",
+  "reply_to": "",
+  "mail_subject": "Invoice &amp; receipt",
+  "mail_excerpt": "See attached",
+  "mail_id": 42,
+  "att": 1,
+  "content_type": "html",
+  "mail_recipient": "solvatestinbox",
+  "mail_body": "<p>Logo</p><img src=\"/res.php?r=1&n=img&q=https%3A%2F%2Fcdn.example.com%2Flogo.png\" alt=\"logo\"><p>done</p>",
+  "size": 220,
+  "sid_token": "sid_alpha",
+  "auth": { "success": true, "error_codes": [] }
+}

@@ -1,0 +1,38 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "updateProduct",
+    "args": {
+      "productRef": "prd_fixture",
+      "name": "Updated"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "update-product-success",
+  "wire": {
+    "request": {
+      "method": "PUT",
+      "path": "/v1/sdk/products/prd_fixture",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "name": "Updated"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "prd_fixture",
+        "name": "Updated"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "prd_fixture",
+      "name": "Updated"
+    }
+  }
+}

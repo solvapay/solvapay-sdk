@@ -1,0 +1,11 @@
+services:
+  - name: provider
+    port: 3002
+  - name: payment
+    port: 3003
+  - name: billing
+    port: 3004
+  - name: commerce
+    port: 3005
+  - name: webhook
+    port: 3008

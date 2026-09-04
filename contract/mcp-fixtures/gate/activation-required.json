@@ -1,0 +1,68 @@
+{
+  "suite": "gate",
+  "case": "activation-required",
+  "input": {
+    "fn": "registerPayable",
+    "args": {
+      "tool": {
+        "name": "echo_paid",
+        "title": "Echo paid",
+        "description": "Paid echo",
+        "args": {}
+      },
+      "product": "prd_demo",
+      "customerRef": "cus_from_hook",
+      "customerRefSource": "hook",
+      "limits": {
+        "withinLimits": false,
+        "remaining": 0,
+        "plan": "pl_pro",
+        "activationRequired": true,
+        "confirmationUrl": "https://pay.test/confirm",
+        "checkoutUrl": "https://pay.test/x",
+        "plans": [
+          { "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }
+        ]
+      },
+      "handler": {
+        "kind": "respond",
+        "data": { "ok": true }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "toolResult": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `activate_plan` tool. See docs://solvapay/overview.md."
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "kind": "activation_required",
+          "product": "prd_demo",
+          "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `activate_plan` tool. See docs://solvapay/overview.md.",
+          "shortMessage": "Activation required",
+          "checkoutUrl": "https://pay.test/confirm",
+          "confirmationUrl": "https://pay.test/confirm",
+          "planRef": "pl_pro",
+          "plans": [
+            { "reference": "pl_pro", "type": "usage-based", "requiresPayment": true }
+          ]
+        }
+      },
+      "usage": [
+        {
+          "outcome": "paywall",
+          "actionType": "api_call",
+          "units": 1,
+          "productRef": "prd_demo",
+          "customerRef": "cus_from_hook",
+          "metadata": { "action": "requests" }
+        }
+      ]
+    }
+  }
+}

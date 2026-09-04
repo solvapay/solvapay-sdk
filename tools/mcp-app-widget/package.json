@@ -1,0 +1,29 @@
+{
+  "name": "@solvapay/mcp-app-widget",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build && tsx vendor.ts",
+    "check": "tsx check.ts",
+    "vendor": "tsx vendor.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src __tests__"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@solvapay/core": "workspace:*",
+    "@solvapay/react": "workspace:*",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.6",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^4.1.2"
+  }
+}

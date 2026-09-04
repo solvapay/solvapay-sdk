@@ -1,0 +1,23 @@
+{
+  "suite": "business-details",
+  "case": "fi-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "FI",
+      "taxId": "FI12345678"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "FI",
+        "taxId": "FI12345678",
+        "taxIdType": "eu_vat"
+      }
+    }
+  }
+}

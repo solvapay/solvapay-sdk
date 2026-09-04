@@ -1,0 +1,14 @@
+{
+  "suite": "business-details",
+  "case": "auto-lowercase-cad",
+  "input": {
+    "fn": "resolveTaxBehavior",
+    "args": {
+      "behavior": "auto",
+      "currency": "cad"
+    }
+  },
+  "expect": {
+    "result": "exclusive"
+  }
+}

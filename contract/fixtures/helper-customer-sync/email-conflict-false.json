@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "email-conflict-false",
+  "input": {
+    "fn": "isEmailConflict",
+    "args": {
+      "message": "conflict on externalRef"
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

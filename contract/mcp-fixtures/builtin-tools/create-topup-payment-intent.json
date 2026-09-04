@@ -1,0 +1,47 @@
+{
+  "suite": "builtin-tools",
+  "case": "create-topup-payment-intent",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "create_topup_payment_intent",
+      "args": {
+        "amount": 1000,
+        "currency": "USD"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents",
+      "status": 200,
+      "body": {
+        "clientSecret": "sec_t",
+        "processorPaymentId": "pi_t",
+        "publishableKey": "pk_test"
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"clientSecret\":\"sec_t\",\"processorPaymentId\":\"pi_t\",\"publishableKey\":\"pk_test\"}"
+        }
+      ],
+      "structuredContent": {
+        "clientSecret": "sec_t",
+        "processorPaymentId": "pi_t",
+        "publishableKey": "pk_test"
+      }
+    }
+  }
+}

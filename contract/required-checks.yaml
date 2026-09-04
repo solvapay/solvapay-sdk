@@ -1,0 +1,200 @@
+# Required GitHub check names for `main` (Step 55-b).
+# One entry per expanded `.github/workflows/ci.yml` check name.
+# `gate` is the redesign §10.3 / §13 compatibility gate the job enforces.
+# `deferred` records a known gap with an allowed reason (the job stays required).
+# `c-abi-smoke-only` on c-binding: smoke.c is single-op; 42-op dispatch + contract
+# replay live in-tree (`publish = false` — optional ABI, not a released crate).
+# `required: false` + `reason` catalogues a check that must not be branch-protected.
+schemaVersion: 1
+branch: main
+checks:
+  - name: Lint, Build & Test
+    jobId: lint-build-test
+    gate: OpenAPI snapshot diff; Manifest validation + coverage; TS API diff; Generated-diff checks; Per-language examples; Required-checks drift
+  - name: Rust
+    jobId: rust
+    gate: No-unwrap / no-expect deny; wasm32 no-tokio compile check; Shared fixture conformance; Generated-diff checks; Signature-generation reliability; Doc-comment coverage; Fuzzing (stable corpus replay); Native client fixture replay
+  - name: rust-mcp
+    jobId: rust-mcp
+    gate: MCP-authoring conformance; Per-language examples
+  - name: python-binding (manylinux-x86_64)
+    jobId: python-binding
+    gate: Platform build matrices; Python contract suite; Dynamic-language type-strictness; Per-language examples
+  - name: python-binding (manylinux-aarch64)
+    jobId: python-binding
+    gate: Platform build matrices
+  - name: python-binding (musllinux-x86_64)
+    jobId: python-binding
+    gate: Platform build matrices
+  - name: python-binding (musllinux-aarch64)
+    jobId: python-binding
+    gate: Platform build matrices
+  - name: python-binding (macos-universal2)
+    jobId: python-binding
+    gate: Platform build matrices; Python contract suite; Dynamic-language type-strictness
+  - name: python-binding (win-amd64)
+    jobId: python-binding
+    gate: Platform build matrices; Python contract suite; Dynamic-language type-strictness
+  - name: python-binding (win-arm64)
+    jobId: python-binding
+    gate: Platform build matrices
+  - name: python-binding artifact gate
+    jobId: python-binding-artifacts
+    gate: Pre-publish artifact gate
+  - name: python-mcp
+    jobId: python-mcp
+    gate: MCP-authoring conformance; Dynamic-language type-strictness
+  - name: ruby-mcp
+    jobId: ruby-mcp
+    gate: MCP-authoring conformance; Dynamic-language type-strictness; Per-language examples
+  - name: ruby-binding (x86_64-linux)
+    jobId: ruby-binding
+    gate: Platform build matrices; Ruby contract suite; Dynamic-language type-strictness; Per-language examples
+  - name: ruby-binding (aarch64-linux)
+    jobId: ruby-binding
+    gate: Platform build matrices; Ruby contract suite
+  - name: ruby-binding (x86_64-darwin)
+    jobId: ruby-binding
+    gate: Platform build matrices; Ruby contract suite
+  - name: ruby-binding (arm64-darwin)
+    jobId: ruby-binding
+    gate: Platform build matrices; Ruby contract suite
+  - name: ruby-binding artifact gate
+    jobId: ruby-binding-artifacts
+    gate: Pre-publish artifact gate
+  - name: node-binding (x86_64-unknown-linux-gnu)
+    jobId: node-binding
+    gate: Platform build matrices
+  - name: node-binding (aarch64-unknown-linux-gnu)
+    jobId: node-binding
+    gate: Platform build matrices
+  - name: node-binding (x86_64-unknown-linux-musl)
+    jobId: node-binding
+    gate: Platform build matrices
+  - name: node-binding (aarch64-unknown-linux-musl)
+    jobId: node-binding
+    gate: Platform build matrices
+  - name: node-binding (aarch64-apple-darwin)
+    jobId: node-binding
+    gate: Platform build matrices
+  - name: node-binding (x86_64-apple-darwin)
+    jobId: node-binding
+    gate: Platform build matrices
+  - name: node-binding (x86_64-pc-windows-msvc)
+    jobId: node-binding
+    gate: Platform build matrices
+  - name: node-binding (aarch64-pc-windows-msvc)
+    jobId: node-binding
+    gate: Platform build matrices
+  - name: node-binding artifact gate
+    jobId: node-binding-artifacts
+    gate: Pre-publish artifact gate
+  - name: node clean install (native, linux-x64-gnu, Node 22)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-arm64-gnu, Node 22)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-x64-musl, Node 22)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-arm64-musl, Node 22)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, darwin-x64, Node 22)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, darwin-arm64, Node 22)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, win32-x64-msvc, Node 22)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, win32-arm64-msvc, Node 22)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-x64-gnu, Node 24)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-arm64-gnu, Node 24)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-x64-musl, Node 24)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-arm64-musl, Node 24)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, darwin-x64, Node 24)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, darwin-arm64, Node 24)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, win32-x64-msvc, Node 24)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, win32-arm64-msvc, Node 24)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-x64-gnu, Node 26)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-arm64-gnu, Node 26)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-x64-musl, Node 26)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, linux-arm64-musl, Node 26)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, darwin-x64, Node 26)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, darwin-arm64, Node 26)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, win32-x64-msvc, Node 26)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node clean install (native, win32-arm64-msvc, Node 26)
+    jobId: node-clean-install-native
+    gate: Clean-install smoke tests
+  - name: node-binding conformance (Rust-only server/core)
+    jobId: node-binding-conformance
+    gate: Shared fixture conformance; Per-language parity/coverage
+  - name: node-binding delegation inventory
+    jobId: node-binding-delegation
+    gate: node-binding-delegation; mcp-layer3-budget
+  - name: wasm-binding (Step 38 edge/browser)
+    jobId: wasm-binding
+    gate: Browser-WASM symbol audit; Performance regression; Shared fixture conformance
+  - name: go-binding (wazero WASI guest)
+    jobId: go-binding
+    gate: Shared fixture conformance; Per-language examples; MCP-authoring conformance
+  - name: c-binding (native C ABI)
+    jobId: c-binding
+    gate: Shared fixture conformance; Fuzzing (C ABI corpus replay); No-unwrap / no-expect deny
+    deferred: c-abi-smoke-only
+  - name: go-crosscompile (linux/amd64)
+    jobId: go-crosscompile
+    gate: Platform build matrices
+  - name: go-crosscompile (linux/arm64)
+    jobId: go-crosscompile
+    gate: Platform build matrices
+  - name: go-crosscompile (darwin/amd64)
+    jobId: go-crosscompile
+    gate: Platform build matrices
+  - name: go-crosscompile (darwin/arm64)
+    jobId: go-crosscompile
+    gate: Platform build matrices
+  - name: go-crosscompile (windows/amd64)
+    jobId: go-crosscompile
+    gate: Platform build matrices
+  - name: go-crosscompile (windows/arm64)
+    jobId: go-crosscompile
+    gate: Platform build matrices
+  - name: Documentation Validation
+    jobId: documentation
+    gate: Documentation validation

@@ -1,0 +1,39 @@
+{
+  "suite": "plan-pricing",
+  "case": "headline-excludes-setup-fee",
+  "input": {
+    "fn": "headlineCharges",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 2900,
+            "currency": "usd"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 5000,
+            "currency": "usd",
+            "oneTime": true
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "per": "flat",
+        "amountMinor": 2900,
+        "currency": "usd"
+      }
+    ]
+  }
+}

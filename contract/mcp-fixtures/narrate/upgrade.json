@@ -1,0 +1,66 @@
+{
+  "suite": "narrate",
+  "case": "upgrade",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "upgrade",
+      "payload": {
+        "view": "checkout",
+        "productRef": "prd_x",
+        "stripePublishableKey": null,
+        "returnUrl": "https://example.test/r",
+        "merchant": {
+          "displayName": "Acme",
+          "legalName": "Acme Inc."
+        },
+        "product": {
+          "reference": "prd_x",
+          "name": "Acme Knowledge Base"
+        },
+        "plans": [
+          {
+            "type": "recurring",
+            "name": "Free",
+            "requiresPayment": false,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 0,
+                "currency": "usd"
+              }
+            ]
+          },
+          {
+            "type": "recurring",
+            "name": "Pro",
+            "requiresPayment": true,
+            "options": [
+              {
+                "kind": "billingCycle",
+                "interval": "month"
+              },
+              {
+                "kind": "charge",
+                "per": "flat",
+                "amountMinor": 20000,
+                "currency": "usd"
+              }
+            ]
+          }
+        ],
+        "customer": null
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "**Upgrade — Acme Knowledge Base**\n\nPlans available:\nPro · recurring · $200.00/month\nDocs: docs://solvapay/overview.md"
+    }
+  }
+}

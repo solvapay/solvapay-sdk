@@ -1,0 +1,25 @@
+{
+  "suite": "paywall",
+  "case": "payment-minimal",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "plan": "pl_basic",
+        "remaining": 0,
+        "checkoutUrl": "https://pay.test/x"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/x",
+      "planRef": "pl_basic",
+      "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md.",
+      "shortMessage": "Payment required"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "suite": "auth-gate",
+  "case": "challenge-tools-call",
+  "input": {
+    "fn": "mcpAuthGate",
+    "args": {
+      "rpcMethod": "tools/call",
+      "authHeader": null,
+      "authMode": "tools-call",
+      "publicBaseUrl": "https://mcp.example.com",
+      "jsonRpcId": 1
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "challenge",
+      "status": 401,
+      "headers": {
+        "WWW-Authenticate": "Bearer resource_metadata=\"https://mcp.example.com/.well-known/oauth-protected-resource\"",
+        "Access-Control-Expose-Headers": "WWW-Authenticate",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {
+          "code": -32001,
+          "message": "Unauthorized"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "suite": "paywall",
+  "case": "payment-no-url",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "plan": "pl_basic",
+        "remaining": 0
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "checkoutUrl": "",
+      "message": "You've reached the included usage for this period. Call the `upgrade` tool. See docs://solvapay/overview.md.",
+      "shortMessage": "Payment required",
+      "planRef": "pl_basic"
+    }
+  }
+}

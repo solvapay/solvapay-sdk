@@ -1,0 +1,24 @@
+{
+  "suite": "mcp",
+  "case": "with-emitted-blocks",
+  "input": {
+    "fn": "makeResponseResult",
+    "args": {
+      "data": { "ok": true },
+      "emittedBlocks": [
+        { "type": "text", "text": "progress note" },
+        { "type": "image", "data": "abc", "mimeType": "image/png" }
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "__solvapayResponse": true,
+      "data": { "ok": true },
+      "emittedBlocks": [
+        { "type": "text", "text": "progress note" },
+        { "type": "image", "data": "abc", "mimeType": "image/png" }
+      ]
+    }
+  }
+}

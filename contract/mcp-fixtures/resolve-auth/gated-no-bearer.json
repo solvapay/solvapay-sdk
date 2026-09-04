@@ -1,0 +1,32 @@
+{
+  "suite": "resolve-auth",
+  "case": "gated-no-bearer",
+  "input": {
+    "fn": "mcpResolveAuth",
+    "args": {
+      "rpcMethod": "tools/call",
+      "authMode": "tools-call",
+      "publicBaseUrl": "https://mcp.example.com",
+      "jsonRpcId": 2
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "challenge",
+      "status": 401,
+      "headers": {
+        "WWW-Authenticate": "Bearer resource_metadata=\"https://mcp.example.com/.well-known/oauth-protected-resource\"",
+        "Access-Control-Expose-Headers": "WWW-Authenticate",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "error": {
+          "code": -32001,
+          "message": "Unauthorized"
+        }
+      }
+    }
+  }
+}

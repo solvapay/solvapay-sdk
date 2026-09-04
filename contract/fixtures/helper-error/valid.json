@@ -1,0 +1,16 @@
+{
+  "suite": "helper-error",
+  "case": "valid",
+  "input": {
+    "fn": "isErrorResult",
+    "args": {
+      "result": {
+        "error": "Unauthorized",
+        "status": 401
+      }
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

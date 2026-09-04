@@ -7,7 +7,29 @@ hand-rolled version bumps, no ad-hoc `npm dist-tag add` invocations**.
 To cut a release, commit a `.changeset/*.md` file alongside your PR;
 the workflows do the rest.
 
-## Workflows
+## CI gates (`.github/workflows/ci.yml`)
+
+Triggered on `pull_request` to `main`/`dev` (and `workflow_dispatch`). There is no duplicate full-suite `push` trigger — required PR checks are the gate for commits entering those branches.
+
+The authoritative list of expanded check names (including every matrix cell) and the redesign §13 gate each enforces lives in [`contract/required-checks.yaml`](../../contract/required-checks.yaml). Drift is gated by `pnpm checks:required`. To print the `main` branch-protection payload: `node tools/repo/apply-branch-protection.mjs` (`--apply` is maintainer-opt-in).
+
+### Node binding / clean-install (Steps 36–39)
+
+Local entry points (from repo root, after building the host native binding and placing via `napi artifacts`):
+
+```bash
+# Pack (partial local bundle — CI requires all 8 native targets)
+node sdks/node-native/scripts/prepare-clean-install-packages.mjs \
+  --out-dir sdks/node-native/clean-install-bundle \
+  --targets darwin-arm64 --allow-partial
+
+# Host-native clean install
+node sdks/node-native/scripts/clean-install-smoke.mjs \
+  --bundle-dir sdks/node-native/clean-install-bundle \
+  --mode native --target darwin-arm64
+```
+
+Success evidence line: `CLEAN_INSTALL_OK mode=… node=… os=… arch=… libc=… target=… event=evt_fixture_1`.
 
 ### `ci.yml` — PR gate
 
@@ -15,18 +37,18 @@ the workflows do the rest.
 
 Runs `deps:check`, `lint`, `build:packages`, `test`, and the **Deno
 gate** (`pnpm --filter @example/supabase-edge-mcp validate:workspace`).
-The Deno gate type-checks `examples/supabase-edge-mcp` under a real Deno
+The Deno gate type-checks `examples/typescript/supabase-edge-mcp` under a real Deno
 binary against the **workspace source** of the `@solvapay/*` packages,
 so a feature branch proves its own SDK change still works for the
 canonical Supabase Edge consumer before it merges. See
-[`examples/supabase-edge-mcp/README.md`](../../examples/supabase-edge-mcp/README.md)
+[`examples/typescript/supabase-edge-mcp/README.md`](../../examples/typescript/supabase-edge-mcp/README.md)
 for how `deno.workspace.json` resolves workspace source.
 
 ### `publish-preview.yml` — Preview Snapshot
 
-**Trigger:** push to `dev` (or manual `workflow_dispatch`).
+**Trigger:** manual `workflow_dispatch` only. Dispatch defaults to `dry_run=true`: the pre-publish gates still run, then `changeset status` + `pnpm -r publish --dry-run` (no `NPM_TOKEN`); snapshot version/publish/verify and the post-publish Deno gate are skipped. Dispatch with `dry_run=false` to cut a real `@preview` snapshot. `workflow_dispatch` inputs resolve against the default branch.
 
-Every push to `dev` runs the full pre-publish gate:
+A real `@preview` dispatch runs the full pre-publish gate:
 
 1. `pnpm build:packages` — every publishable package builds to `dist/`.
 2. `pnpm test` — unit tests for every workspace package.
@@ -39,7 +61,7 @@ Every push to `dev` runs the full pre-publish gate:
    changeset (plus anything that depends on one).
 6. `pnpm changeset publish --tag preview --no-git-tag` — publishes
    each snapshot to the `@preview` npm dist-tag.
-7. `scripts/verify-npm-publishes.mjs` — confirms every package
+7. `tools/repo/verify-npm-publishes.mjs` — confirms every package
    Changesets claimed to ship is actually fetchable from the registry.
 8. `validate` — a **post-publish** re-run of the Deno gate, this time
    against the `@preview` tag the run just moved.
@@ -62,7 +84,7 @@ pnpm add @solvapay/core@preview
 
 ### `publish.yml` — Stable Release
 
-**Trigger:** push to `main` (or manual `workflow_dispatch`).
+**Trigger:** push to `main` (or manual `workflow_dispatch`). Manual dispatch defaults to `dry_run=true`: the pre-publish gates still run, then `changeset status` + `pnpm -r publish --dry-run` (no `NPM_TOKEN`, no GitHub App token); `changesets/action` is skipped. Push to `main`, or dispatch with `dry_run=false`, takes the real Version-PR / publish path. `workflow_dispatch` inputs resolve against the default branch, so a dry-run dispatch of this input is a post-merge action until the workflow lands on `main`.
 
 Uses [`changesets/action@v1`](https://github.com/changesets/action),
 which runs in two distinct modes:
@@ -86,19 +108,43 @@ This workflow has no dist-tag-pinned Deno gate. It ships `@latest`, so a
 `@latest` gate would validate the previous release. Worth revisiting once
 `0.3.0` reaches `@latest`.
 
+## Lockstep train (Rust / Python / Ruby / Go)
+
+`@solvapay/release-train` is the version source of truth. A PR that
+touches `core/**` or a non-TypeScript SDK must add a changeset for it.
+`pnpm changeset:version` stamps that version into the language manifests.
+
+- **Tier A:** `workflow_dispatch` `publish.yml` with `dry_run=true` prints the
+  four tags and fails if any already exist on `origin`.
+- **Rehearsal:** run `push-rehearsal-tags.yml`. Tags are
+  `rehearsal/solvapay-<lang>-v*`. Those workflows publish to TestPyPI,
+  GitHub Packages, `sdks/go/v*-rehearsal.<run>` on this repo, and a local Cargo registry,
+  then install-smoke. `rehearsal-npm.yml` snapshot-publishes to Verdaccio.
+- **Production:** after npm verify, `publish.yml` runs
+  `push-production-tags.ts` when the sentinel moved. Languages are gated
+  by `vars.RELEASE_PROD_*` (default off). See
+  [`docs/contributing/production-release.md`](../../docs/contributing/production-release.md).
+
+See [`docs/publishing.mdx`](../../docs/publishing.mdx),
+[`docs/contributing/language-previews.md`](../../docs/contributing/language-previews.md),
+and
+[`docs/contributing/release-sandbox.md`](../../docs/contributing/release-sandbox.md).
+
 ## Release workflow summary
 
 ```
-feature branch  ──▶  PR to `dev`  ──▶  merge ──▶  preview snapshot on npm
+feature branch  ──▶  PR to `dev`  ──▶  merge ──▶  (no automatic npm snapshot)
      │
      └── author ran `pnpm changeset` and committed .changeset/*.md
+     └── optional: dispatch `publish-preview.yml` (`dry_run=false`) for `@preview`
 
 eventually:
 
 `dev`  ──▶  PR to `main`  ──▶  merge ──▶  changesets/action opens
                                           "Version Packages" PR
 "Version Packages" PR  ──▶  review  ──▶  merge  ──▶  stable @latest
-                                                     publish + git tags
+                                                     npm publish + git tags
+                                                     (language tags: Phase 3)
 ```
 
 ## Required Secrets
@@ -112,14 +158,16 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 ## Quick Reference
 
-| Action                   | How to trigger                                                                 |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| Publish preview snapshot | Push to `dev`                                                                  |
-| Cut stable release       | Push to `main` (auto-opens Version Packages PR), then merge the generated PR   |
-| Write a changeset        | `pnpm changeset` (interactive)                                                 |
-| Inspect pending releases | `pnpm changeset status --verbose`                                              |
-| Verify fetch-runtime     | `pnpm validate:fetch-runtime` (or `pnpm tsx scripts/validate-fetch-runtime.ts`) |
-| Run the Deno gate        | `pnpm --filter @example/supabase-edge-mcp validate:workspace`                   |
+| Action                       | How to trigger                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| Publish preview snapshot     | Dispatch `publish-preview.yml` with `dry_run=false`                                |
+| Cut stable release           | Push to `main` (auto-opens Version Packages PR), then merge the generated PR       |
+| Write a changeset            | `pnpm changeset` (interactive)                                                     |
+| Inspect pending releases     | `pnpm changeset status --verbose`                                                  |
+| Local npm publish dry-run    | `pnpm release:dryrun` (gates + `pnpm -r publish --dry-run`, no `NPM_TOKEN`)        |
+| Local npm + language dry-run | `pnpm dryrun` (`release:dryrun` then `preview --dry-run --accept-partial`)         |
+| Verify fetch-runtime         | `pnpm validate:fetch-runtime` (or `pnpm tsx tools/repo/validate-fetch-runtime.ts`) |
+| Run the Deno gate            | `pnpm --filter @example/supabase-edge-mcp validate:workspace`                      |
 
 ## Troubleshooting
 
@@ -144,7 +192,7 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 - That shape of failure is a resolution problem, not a type problem.
   `validate:workspace` resolves `@solvapay/*` through pnpm symlinks into
-  `packages/*`, which lands outside `node_modules` — so Deno stops
+  `sdks/typescript/*`, which lands outside `node_modules` — so Deno stops
   mapping the `./chunk-XYZ.js` specifiers tsup writes into its `.d.ts`
   files onto their `.d.ts` siblings. `deno.workspace.json` must keep
   `"unstable": ["sloppy-imports"]` (extension probing restores the
@@ -152,13 +200,13 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
   root so Deno finds the pnpm-populated `node_modules`. Run
   `pnpm build:packages` first — the gate reads `dist/`.
 
-### Deno gate fails only on `dev`/`main`, not on the PR
+### Deno gate fails only on a publish workflow, not on the PR
 
 - The pre-publish gate and the PR gate both run `validate:workspace`, so
   a divergence means the merge commit differs from what CI saw. Rerun
   `pnpm --filter @example/supabase-edge-mcp validate:workspace` locally
   on the merged branch.
-- If the *post-publish* `validate` step is the one failing, the newly
+- If the _post-publish_ `validate` step is the one failing, the newly
   published tarballs are broken (bad `exports` map or peer range), not
   the source. The publish already happened; fix forward with a new
   changeset. Locally, reproduce with `deno check --reload=npm: …` — Deno
@@ -179,4 +227,4 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 - [`.changeset/README.md`](../../.changeset/README.md) — changeset file format
 - [`CONTRIBUTING.md`](../../CONTRIBUTING.md) — development workflow
-- [`scripts/README.md`](../../scripts/README.md) — helper scripts (incl. `validate-fetch-runtime`)
+- [`tools/README.md`](../../tools/README.md) — helper scripts (incl. `validate-fetch-runtime`)

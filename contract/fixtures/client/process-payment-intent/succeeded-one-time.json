@@ -1,0 +1,54 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "processPaymentIntent",
+    "args": {
+      "paymentIntentId": "pi_fixture",
+      "customerRef": "cus_fixture",
+      "productRef": "prd_fixture",
+      "planRef": "plan_basic"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "process-payment-intent-succeeded-one-time",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/payment-intents/pi_fixture/process",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "productRef": "prd_fixture",
+        "customerRef": "cus_fixture",
+        "planRef": "plan_basic"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "status": "succeeded",
+        "type": "one-time",
+        "oneTimePurchase": {
+          "reference": "otp_fixture",
+          "amount": 1000,
+          "currency": "usd",
+          "completedAt": "2026-07-01T00:00:00Z"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "status": "succeeded",
+      "type": "one-time",
+      "oneTimePurchase": {
+        "reference": "otp_fixture",
+        "amount": 1000,
+        "currency": "usd",
+        "completedAt": "2026-07-01T00:00:00Z"
+      }
+    }
+  }
+}

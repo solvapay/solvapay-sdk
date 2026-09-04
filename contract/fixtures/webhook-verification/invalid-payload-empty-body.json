@@ -1,0 +1,21 @@
+{
+  "suite": "webhook-verification",
+  "case": "invalid-payload-empty-body",
+  "input": {
+    "fn": "verifyWebhook",
+    "args": {
+      "body": "",
+      "signature": "t=1782864000,v1=7d0856871d7b22d072d14d51916004793d785c0a94918b92832b9e9c55c3050b",
+      "secret": "whsec_test_fixture_secret"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Invalid webhook payload: body is not valid JSON",
+      "kind": "Webhook",
+      "code": "invalid_payload"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "suite": "helper-purchase",
+  "case": "select-active-none-active",
+  "input": {
+    "fn": "selectActivePurchases",
+    "args": {
+      "purchases": [{ "reference": "pur_1", "status": "cancelled" }]
+    }
+  },
+  "expect": { "result": [] }
+}

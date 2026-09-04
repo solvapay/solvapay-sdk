@@ -1,0 +1,17 @@
+{
+  "suite": "helper-payment",
+  "case": "topup-amount-zero",
+  "input": {
+    "fn": "validateTopupPaymentIntentParams",
+    "args": {
+      "amount": 0,
+      "currency": "USD"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing or invalid amount: must be a positive number",
+      "status": 400
+    }
+  }
+}

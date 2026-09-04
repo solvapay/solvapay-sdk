@@ -1,0 +1,20 @@
+{
+  "suite": "helper-auth",
+  "case": "header-only",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "headerUserId": "middleware-user",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "middleware-user",
+      "email": null,
+      "name": null
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "suite": "paywall",
+  "case": "invoke-payable-next-start-run-gate",
+  "input": {
+    "fn": "invokePayableNext",
+    "args": {
+      "event": {
+        "kind": "start",
+        "customerRef": "cus_1",
+        "product": "prd_1",
+        "usageType": "requests",
+        "startedMs": 10
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "usageType": "requests",
+        "customerRef": "cus_1",
+        "startedMs": 10
+      },
+      "action": {
+        "kind": "runGate",
+        "customerRef": "cus_1",
+        "product": "prd_1",
+        "usageType": "requests"
+      }
+    }
+  }
+}

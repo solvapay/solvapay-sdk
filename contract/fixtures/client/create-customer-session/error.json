@@ -1,0 +1,35 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createCustomerSession",
+    "args": {
+      "customerRef": "cus_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-customer-session-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/customers/customer-sessions",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "customerRef": "cus_fixture"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Create customer session failed (400): bad",
+      "status": 400
+    }
+  }
+}

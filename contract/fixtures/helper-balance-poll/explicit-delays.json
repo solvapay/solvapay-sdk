@@ -1,0 +1,15 @@
+{
+  "suite": "helper-balance-poll",
+  "case": "explicit-delays",
+  "input": {
+    "fn": "pollBalanceUntilIncreased",
+    "args": {
+      "baseline": 100,
+      "observations": [{ "credits": 100 }, { "credits": 250 }],
+      "delays": [100, 200]
+    }
+  },
+  "expect": {
+    "result": { "delays": [100, 200], "result": { "creditsAdded": 150 } }
+  }
+}

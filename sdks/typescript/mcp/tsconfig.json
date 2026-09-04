@@ -1,0 +1,17 @@
+{
+  "extends": "@solvapay/tsconfig/base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "#mcp-app-html": ["./src/defaultMcpAppHtml.ts"],
+      "@solvapay/mcp-core": ["../mcp-core/src"],
+      "@solvapay/server": ["../server/src"],
+      "@solvapay/core": ["../core/src"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["__tests__", "**/*.test.ts"],
+  "references": [{ "path": "../core" }, { "path": "../mcp-core" }]
+}

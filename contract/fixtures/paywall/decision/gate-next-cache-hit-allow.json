@@ -1,0 +1,67 @@
+{
+  "suite": "paywall",
+  "case": "gate-next-cache-hit-allow",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "event": {
+        "kind": "limitsCacheEntry",
+        "remaining": 5,
+        "limits": {
+          "withinLimits": true,
+          "remaining": 5,
+          "checkoutUrl": "https://pay"
+        },
+        "nowMs": 1010,
+        "found": true,
+        "timestampMs": 1000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "action": {
+        "kind": "allow",
+        "customerRef": "cus_abc",
+        "product": "prd_1",
+        "meterName": "requests",
+        "limits": {
+          "withinLimits": true,
+          "remaining": 5,
+          "checkoutUrl": "https://pay"
+        },
+        "customer": {
+          "ref": "cus_abc",
+          "balance": 0,
+          "remaining": 5,
+          "withinLimits": true,
+          "throttled": false,
+          "overage": false
+        },
+        "cache": {
+          "op": "updateRemaining",
+          "key": "cus_abc:prd_1:requests",
+          "remaining": 4
+        }
+      }
+    }
+  }
+}

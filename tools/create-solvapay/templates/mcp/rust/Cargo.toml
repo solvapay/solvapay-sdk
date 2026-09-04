@@ -1,0 +1,17 @@
+[package]
+name = "__CRATE_NAME__"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "__BIN_NAME__"
+path = "src/main.rs"
+
+[dependencies]
+solvapay = "0.1.0"
+solvapay-mcp = "0.1.0"
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+serde_json = "1"
+futures = "0.3"

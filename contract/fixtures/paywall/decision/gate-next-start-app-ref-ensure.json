@@ -1,0 +1,31 @@
+{
+  "suite": "paywall",
+  "case": "gate-next-start-app-ref-ensure",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "event": {
+        "kind": "start",
+        "customerRef": "user-1",
+        "product": "prd_1",
+        "usageType": "requests",
+        "startedMs": 1000
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "user-1",
+        "startedMs": 1000,
+        "limitsCacheTTLMs": 10000
+      },
+      "action": {
+        "kind": "ensureCustomer",
+        "customerRef": "user-1"
+      }
+    }
+  }
+}

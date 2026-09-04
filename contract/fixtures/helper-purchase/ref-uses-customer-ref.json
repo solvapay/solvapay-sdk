@@ -1,0 +1,12 @@
+{
+  "suite": "helper-purchase",
+  "case": "ref-uses-customer-ref",
+  "input": {
+    "fn": "resolvePurchaseCustomerRef",
+    "args": {
+      "customerRef": "cus_ABC",
+      "userId": "user_123"
+    }
+  },
+  "expect": { "result": "cus_ABC" }
+}

@@ -1,0 +1,95 @@
+/**
+ * Manifest-driven TypeScript parity / coverage check (step 18).
+ *
+ * Usage: pnpm parity:check
+ */
+
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { parse as parseYaml } from 'yaml'
+import { SdkContractManifestSchema, type SdkContractManifest } from '../shared/manifest-schema.js'
+import { checkHelperParity, checkMcpParity, checkParity, formatParityReport } from './lib/parity.js'
+import {
+  checkGeneratedClientMethods,
+  readCClientMethods,
+  readCMcpSymbols,
+  readGoClientMethods,
+  readGoHelpers,
+  readGoMcpSymbols,
+  readPyClientMethods,
+  readPyHelpers,
+  readPyMcpSymbols,
+  readRbClientMethods,
+  readRbHelpers,
+  readRbMcpSymbols,
+  readRustClientMethods,
+  readRustHelpers,
+  readRustMcpSymbols,
+  readTsMcpSymbols,
+} from './lib/generated-client-surfaces.js'
+import { REPO_ROOT } from '../shared/paths.js'
+import { contractInputPath, generatedEntry } from '../shared/repo-paths.js'
+import { readTsSurface } from './lib/ts-surface.js'
+
+const DEFAULT_MANIFEST = contractInputPath('sdkManifest')
+
+function main(): number {
+  const manifestPath = process.argv[2] ? path.resolve(process.argv[2]) : DEFAULT_MANIFEST
+  const raw = parseYaml(readFileSync(manifestPath, 'utf8'))
+  const parsed = SdkContractManifestSchema.safeParse(raw)
+  if (!parsed.success) {
+    console.error('Manifest schema validation failed:')
+    for (const issue of parsed.error.issues) {
+      console.error(`  - ${issue.path.join('.')}: ${issue.message}`)
+    }
+    return 1
+  }
+  const manifest: SdkContractManifest = parsed.data
+  const surface = readTsSurface(REPO_ROOT)
+  const snapshotPath = path.join(REPO_ROOT, ...generatedEntry('bindingSymbols').path.split('/'))
+  const snapshot = JSON.parse(readFileSync(snapshotPath, 'utf8')) as {
+    bindings: Record<string, { names: { ts: string }; section?: string }>
+  }
+  const issues = checkParity({
+    manifest,
+    portableExports: surface.portableExports,
+    clientMethods: surface.clientMethods,
+    facadeMethods: surface.facadeMethods,
+    derivedBindings: snapshot.bindings,
+  })
+  issues.push(
+    ...checkGeneratedClientMethods(manifest, readPyClientMethods(REPO_ROOT), 'py'),
+    ...checkGeneratedClientMethods(manifest, readRbClientMethods(REPO_ROOT), 'rb'),
+    ...checkGeneratedClientMethods(manifest, readGoClientMethods(REPO_ROOT), 'go'),
+    ...checkGeneratedClientMethods(manifest, readRustClientMethods(REPO_ROOT), 'rust'),
+    ...checkGeneratedClientMethods(manifest, readCClientMethods(REPO_ROOT), 'c'),
+    ...checkHelperParity(manifest, {
+      ts: surface.portableExports,
+      py: readPyHelpers(REPO_ROOT),
+      rb: readRbHelpers(REPO_ROOT),
+      go: readGoHelpers(REPO_ROOT),
+      rust: readRustHelpers(REPO_ROOT),
+    }),
+    ...checkMcpParity(
+      manifest,
+      {
+        ts: readTsMcpSymbols(REPO_ROOT),
+        py: readPyMcpSymbols(REPO_ROOT),
+        rb: readRbMcpSymbols(REPO_ROOT),
+        go: readGoMcpSymbols(REPO_ROOT),
+        rust: readRustMcpSymbols(REPO_ROOT),
+        c: readCMcpSymbols(REPO_ROOT),
+      },
+      snapshot.bindings,
+    ),
+  )
+  const report = formatParityReport(issues)
+  if (issues.length > 0) {
+    console.error(report)
+    return 1
+  }
+  console.log(report)
+  return 0
+}
+
+process.exit(main())

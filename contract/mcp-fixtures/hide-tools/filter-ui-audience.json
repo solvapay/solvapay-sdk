@@ -1,0 +1,34 @@
+{
+  "suite": "hide-tools",
+  "case": "filter-ui-audience",
+  "input": {
+    "fn": "mcpHideToolsByAudience",
+    "args": {
+      "tools": [
+        {
+          "name": "upgrade",
+          "_meta": {}
+        },
+        {
+          "name": "create_payment_intent",
+          "_meta": {
+            "audience": "ui"
+          }
+        }
+      ],
+      "audiences": [
+        "ui"
+      ]
+    }
+  },
+  "expect": {
+    "result": {
+      "tools": [
+        {
+          "name": "upgrade",
+          "_meta": {}
+        }
+      ]
+    }
+  }
+}

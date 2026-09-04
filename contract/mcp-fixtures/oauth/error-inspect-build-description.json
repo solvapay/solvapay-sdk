@@ -1,0 +1,21 @@
+{
+  "suite": "oauth",
+  "case": "error-inspect-build-description",
+  "input": {
+    "fn": "mcpOauthErrorInspect",
+    "args": {
+      "kind": "build-description",
+      "body": {
+        "errors": [
+          {
+            "path": ["grant_type"],
+            "message": "Required"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": "grant_type: Required"
+  }
+}

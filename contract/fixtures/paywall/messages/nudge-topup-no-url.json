@@ -1,0 +1,19 @@
+{
+  "suite": "paywall",
+  "case": "nudge-topup-no-url",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": {
+        "kind": "topup_required"
+      },
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 1
+      }
+    }
+  },
+  "expect": {
+    "result": "Heads up — running low on credits. Call the `topup` tool to add more."
+  }
+}

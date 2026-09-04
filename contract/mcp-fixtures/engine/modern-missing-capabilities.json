@@ -1,0 +1,38 @@
+{
+  "suite": "engine",
+  "case": "modern-missing-capabilities",
+  "input": {
+    "fn": "mcpHandleRequest",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/list",
+        "params": {
+          "_meta": {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28"
+          }
+        }
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc",
+      "status": 400,
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "error": {
+          "code": -32602,
+          "message": "Invalid params"
+        }
+      }
+    }
+  }
+}

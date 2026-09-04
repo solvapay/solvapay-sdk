@@ -1,0 +1,298 @@
+import { describe, expect, it } from 'vitest'
+import type { ExternalGeneratedEntry } from '../shared/repo-paths-schema.js'
+import { generatedDriftPaths, loadRepoPathsManifest } from '../shared/repo-paths.js'
+import {
+  checkBinaryHashes,
+  checkMarkers,
+  interpretResults,
+  parseHashRegistry,
+  planExternal,
+  runCli,
+  verifyEntry,
+  type CommandCall,
+  type CommandRunner,
+} from './external-generated.js'
+import { planClean } from './gen-clean.js'
+
+function makeEntry(
+  overrides: Partial<ExternalGeneratedEntry> &
+    Pick<ExternalGeneratedEntry, 'id' | 'paths' | 'generator'>,
+): ExternalGeneratedEntry {
+  return {
+    marker: '@generated',
+    verify: 'gitDiff',
+    binary: false,
+    nonDeterministic: false,
+    forbidPatterns: [],
+    ...overrides,
+  }
+}
+
+function stubManifest(entries: ExternalGeneratedEntry[]): {
+  externalGenerated: ExternalGeneratedEntry[]
+} {
+  return { externalGenerated: entries }
+}
+
+function recordingRunner(
+  results: CommandRunner = () => ({ exitCode: 0, stdout: '', stderr: '' }),
+): { runner: CommandRunner; calls: CommandCall[] } {
+  const calls: CommandCall[] = []
+  const runner: CommandRunner = (command, cwd) => {
+    calls.push({ command, cwd })
+    return results(command, cwd)
+  }
+  return { runner, calls }
+}
+
+const capiHeader = makeEntry({
+  id: 'capiHeader',
+  paths: ['out/solvapay.h'],
+  generator: 'cargo build -p solvapay-c',
+})
+
+const goCoreWasm = makeEntry({
+  id: 'goCoreWasm',
+  paths: ['out/core.wasm'],
+  generator: './guest/build-wasm.sh',
+  marker: null,
+  binary: true,
+  nonDeterministic: true,
+})
+
+const wasmPkg = makeEntry({
+  id: 'wasmPkg',
+  paths: ['out/edge.js'],
+  generator: 'pnpm build:wasm',
+  cwd: 'pkg-out',
+  marker: null,
+  verify: 'command',
+  verifyCommand: 'pnpm build:check-drift',
+})
+
+describe('planExternal', () => {
+  const manifest = stubManifest([capiHeader, goCoreWasm, wasmPkg])
+
+  it('returns one entry when filtered by id', () => {
+    expect(planExternal(manifest, { ids: ['capiHeader'] })).toEqual([capiHeader])
+  })
+
+  it('throws listing valid ids when an id is unknown', () => {
+    expect(() => planExternal(manifest, { ids: ['nope'] })).toThrow(
+      /unknown externalGenerated artifact id: nope \(valid: capiHeader, goCoreWasm, wasmPkg\)/,
+    )
+  })
+
+  it('returns all entries in declaration order when unfiltered', () => {
+    expect(planExternal(manifest, {})).toEqual([capiHeader, goCoreWasm, wasmPkg])
+  })
+})
+
+describe('verifyEntry', () => {
+  it('fails gitDiff exit 1 with the generator quoted verbatim', () => {
+    const { runner } = recordingRunner(() => ({
+      exitCode: 1,
+      stdout: 'diff --git a/out/solvapay.h',
+      stderr: '',
+    }))
+    const result = verifyEntry(capiHeader, runner, '/repo')
+    expect(result.status).toBe('fail')
+    expect(result.message).toContain('cargo build -p solvapay-c')
+  })
+
+  it('warns instead of failing when nonDeterministic and gitDiff drifts', () => {
+    const { runner } = recordingRunner(() => ({
+      exitCode: 1,
+      stdout: 'binary files differ',
+      stderr: '',
+    }))
+    const result = verifyEntry(goCoreWasm, runner, '/repo')
+    expect(result.status).toBe('warn')
+    expect(interpretResults([result]).exitCode).toBe(0)
+  })
+
+  it('invokes verifyCommand instead of git diff when verify is command', () => {
+    const { runner, calls } = recordingRunner()
+    verifyEntry(wasmPkg, runner, '/repo')
+    expect(calls).toEqual([{ command: 'pnpm build:check-drift', cwd: '/repo/pkg-out' }])
+    expect(calls.some(call => call.command.includes('git diff'))).toBe(false)
+  })
+
+  it('fails forbidPatterns quoting the declared reason', () => {
+    const entry = makeEntry({
+      id: 'capiHeader',
+      paths: ['out/solvapay.h'],
+      generator: 'cargo build -p solvapay-c',
+      forbidPatterns: [
+        {
+          path: 'out/solvapay.h',
+          pattern: 'solvapay_fh_',
+          reason: 'solvapay.h must not export fixture-host symbols',
+        },
+      ],
+    })
+    const result = verifyEntry(entry, () => ({ exitCode: 0, stdout: '', stderr: '' }), '/repo', {
+      readFile: () => 'void solvapay_fh_reset(void);\n',
+    })
+    expect(result.status).toBe('fail')
+    expect(result.message).toContain('solvapay.h must not export fixture-host symbols')
+  })
+
+  it('issues no restore / git checkout command after a rebuild', () => {
+    const { runner, calls } = recordingRunner()
+    const result = runCli(['--rebuild', '--id', 'capiHeader'], {
+      manifest: stubManifest([capiHeader]),
+      root: '/repo',
+      runCommand: runner,
+      readFile: () => '/* @generated */\n',
+    })
+    expect(result.exitCode).toBe(0)
+    expect(calls.some(call => /git checkout|git restore/.test(call.command))).toBe(false)
+  })
+})
+
+describe('checkMarkers', () => {
+  it('reports unmarked when the declared marker is missing', () => {
+    const entry = makeEntry({
+      id: 'nodeNativeNapi',
+      paths: ['out/index.d.ts'],
+      generator: 'npx napi build',
+      marker: 'auto-generated by NAPI-RS',
+    })
+    const issues = checkMarkers(entry, () => 'export type Binding = {}\n')
+    expect(issues).toEqual([{ rel: 'out/index.d.ts', reason: 'unmarked' }])
+  })
+
+  it('reports no issues when marker is null', () => {
+    const entry = makeEntry({
+      id: 'nodeNativeNapi',
+      paths: ['out/wasi-worker.mjs'],
+      generator: 'npx napi build',
+      marker: null,
+    })
+    const issues = checkMarkers(entry, () => 'export const worker = {}\n')
+    expect(issues).toEqual([])
+  })
+})
+
+describe('runCli --markers-only', () => {
+  it('never invokes the command runner', () => {
+    const { runner, calls } = recordingRunner()
+    const result = runCli(['--markers-only', '--id', 'capiHeader'], {
+      manifest: stubManifest([capiHeader]),
+      root: '/repo',
+      runCommand: runner,
+      readFile: () => '/* @generated by cbindgen */\n',
+      hashRegistryText: '',
+      digest: () => '',
+    })
+    expect(result.exitCode).toBe(0)
+    expect(calls).toEqual([])
+  })
+})
+
+describe('parseHashRegistry', () => {
+  it('round-trips shasum -a 256 format and skips blank lines', () => {
+    const text = [
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  out/core.wasm',
+      '',
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  out/edge_bg.wasm',
+      '',
+    ].join('\n')
+    const parsed = parseHashRegistry(text)
+    expect(parsed).toEqual([
+      {
+        hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        path: 'out/core.wasm',
+      },
+      {
+        hash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        path: 'out/edge_bg.wasm',
+      },
+    ])
+  })
+
+  it('rejects a malformed line loudly', () => {
+    expect(() => parseHashRegistry('not-a-hash  some/path.wasm')).toThrow(
+      /malformed hash registry line/,
+    )
+  })
+})
+
+describe('checkBinaryHashes', () => {
+  const wasm = makeEntry({
+    id: 'wasmPkg',
+    paths: ['out/edge_bg.wasm'],
+    generator: 'pnpm build:wasm',
+    marker: null,
+  })
+
+  it('fails when the registry hash differs from the computed digest', () => {
+    const results = checkBinaryHashes(
+      [wasm],
+      new Map([
+        ['out/edge_bg.wasm', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'],
+      ]),
+      () => 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    )
+    expect(results).toHaveLength(1)
+    expect(results[0]?.status).toBe('fail')
+    expect(results[0]?.message).toContain('out/edge_bg.wasm')
+    expect(results[0]?.message).toContain(
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    )
+    expect(results[0]?.message).toContain(
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    )
+  })
+
+  it('fails loudly when a binary path is absent from the registry', () => {
+    const results = checkBinaryHashes([wasm], new Map(), () => 'deadbeef')
+    expect(results[0]?.status).toBe('fail')
+    expect(results[0]?.message).toMatch(/undeclared binary artifact/)
+  })
+
+  it('fails when the registry lists a path no entry declares', () => {
+    const results = checkBinaryHashes(
+      [wasm],
+      new Map([
+        ['out/edge_bg.wasm', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'],
+        ['out/core.wasm', 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'],
+      ]),
+      () => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    )
+    expect(
+      results.some(item => item.status === 'fail' && /out\/core\.wasm/.test(item.message)),
+    ).toBe(true)
+  })
+
+  it('warns on mismatch when the owning entry is nonDeterministic', () => {
+    const results = checkBinaryHashes(
+      [goCoreWasm],
+      new Map([
+        ['out/core.wasm', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'],
+      ]),
+      () => 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    )
+    expect(results[0]?.status).toBe('warn')
+    expect(interpretResults(results).exitCode).toBe(0)
+  })
+})
+
+describe('externalGenerated vs dto-gen drift', () => {
+  it('is disjoint from planClean and generatedDriftPaths', () => {
+    const manifest = loadRepoPathsManifest()
+    const clean = planClean(manifest)
+    const cleanRels = new Set([
+      ...clean.files.map(item => item.rel),
+      ...clean.directories.map(item => item.rel),
+    ])
+    const drift = new Set(generatedDriftPaths(manifest))
+    for (const entry of manifest.externalGenerated) {
+      for (const rel of entry.paths) {
+        expect(cleanRels.has(rel), `${rel} must not be in planClean()`).toBe(false)
+        expect(drift.has(rel), `${rel} must not be in generatedDriftPaths()`).toBe(false)
+      }
+    }
+  })
+})

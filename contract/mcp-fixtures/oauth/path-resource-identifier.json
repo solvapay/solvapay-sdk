@@ -1,0 +1,15 @@
+{
+  "suite": "oauth",
+  "case": "path-resource-identifier",
+  "input": {
+    "fn": "mcpOauthPath",
+    "args": {
+      "kind": "resource-identifier",
+      "publicBaseUrl": "https://mcp.example.com/",
+      "mcpPath": "mcp"
+    }
+  },
+  "expect": {
+    "result": "https://mcp.example.com/mcp"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "suite": "customer-ref",
+  "case": "jwt-beats-header",
+  "input": {
+    "fn": "resolveCustomerRef",
+    "args": {
+      "verifiedJwtSub": "jwt-sub",
+      "headerCustomerRef": "header-ref"
+    }
+  },
+  "expect": {
+    "result": "jwt-sub"
+  }
+}

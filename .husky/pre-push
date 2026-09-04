@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# Local convenience gate — CI remains authoritative.
+pnpm gates || exit 1

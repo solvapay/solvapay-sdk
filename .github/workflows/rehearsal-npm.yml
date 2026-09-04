@@ -1,0 +1,62 @@
+name: Rehearsal npm (Verdaccio)
+
+# Snapshot-publish the npm workspace to a local Verdaccio. Production
+# registry.npmjs.org is never configured on this path.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build and snapshot-version only; skip Verdaccio publish'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  rehearsal:
+    runs-on: ubuntu-latest
+    services:
+      verdaccio:
+        image: verdaccio/verdaccio:6
+        ports:
+          - 4873:4873
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: http://127.0.0.1:4873/
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build:packages
+
+      - name: Snapshot version
+        run: pnpm changeset version --snapshot rehearsal
+
+      - name: Publish to Verdaccio
+        if: ${{ inputs.dry_run != true }}
+        env:
+          npm_config_registry: http://127.0.0.1:4873/
+        run: |
+          printf '@solvapay:registry=http://127.0.0.1:4873/\n' >> .npmrc
+          pnpm changeset publish --no-git-tag --tag rehearsal
+
+      - name: Install smoke from Verdaccio
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          WORK="$(mktemp -d)"
+          cd "$WORK"
+          npm init -y
+          npm install @solvapay/core --registry http://127.0.0.1:4873/
+          node -e "require('@solvapay/core'); console.log('rehearsal-npm-smoke: ok')"

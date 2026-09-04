@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "cancel-error-does-not-belong",
+  "input": {
+    "fn": "classifyCancelError",
+    "args": { "message": "Purchase does not belong to provider" }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase cannot be cancelled or does not belong to provider",
+      "status": 400,
+      "details": "Purchase does not belong to provider"
+    }
+  }
+}

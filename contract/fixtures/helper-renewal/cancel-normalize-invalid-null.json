@@ -1,0 +1,14 @@
+{
+  "suite": "helper-renewal",
+  "case": "cancel-normalize-invalid-null",
+  "input": {
+    "fn": "normalizeCancelResponse",
+    "args": { "response": null }
+  },
+  "expect": {
+    "result": {
+      "error": "Invalid response from cancel purchase endpoint",
+      "status": 500
+    }
+  }
+}

@@ -27,16 +27,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Setup Deno
         run: |
@@ -72,17 +72,1380 @@ jobs:
       - name: Build packages
         run: pnpm build:packages
 
+      - name: Check vendored MCP App widget
+        run: pnpm generated:external --rebuild --id mcpAppWidget
+
       - name: Run tests
         run: pnpm test
 
-      # Deno gate — type-checks examples/supabase-edge-mcp against the
-      # workspace source of the `@solvapay/*` packages it imports (see
-      # examples/supabase-edge-mcp/deno.workspace.json). Running it on
-      # PRs is what lets a feature branch prove its own SDK change still
-      # type-checks under Deno *before* it merges, rather than finding
-      # out from a post-publish gate one commit later.
+      - name: Build examples
+        run: pnpm build:examples
+
+      - name: Run example unit tests
+        run: |
+          pnpm --filter @solvapay/examples-shared test
+          pnpm --filter @example/express-basic test
+          pnpm --filter @example/express-provider-linkage test
+          pnpm --filter checkout-demo exec vitest run
+          pnpm --filter hosted-checkout-demo test
+          pnpm --filter nextjs-auth0 test
+
+      - name: Run contract tests
+        run: pnpm test:contract
+
+      - name: Release-train manifest drift
+        run: pnpm checks:release-train
+
+      - name: Release-train changeset gate
+        run: pnpm checks:release-train-changeset
+
+      - name: Check OpenAPI snapshot (offline)
+        run: pnpm snapshot:openapi:check
+
+      - name: Check SDK contract manifest (offline)
+        run: pnpm manifest:check
+
+      - name: Check TS surface parity (offline)
+        run: pnpm parity:check
+
+      - name: Check required-checks manifest (offline)
+        run: pnpm checks:required
+
+      - name: overlays.generated.d.ts tsc gate
+        working-directory: sdks/typescript/server
+        run: |
+          pnpm exec tsc --noEmit --strict --moduleResolution bundler --module esnext --target es2022 \
+            src/types/overlays.generated.d.ts
+
+      - name: client.generated.d.ts + signature-parity typecheck
+        working-directory: sdks/typescript/server
+        run: pnpm test:types
+
+      - name: Typecheck all packages
+        run: pnpm typecheck
+
+      # Deno gate — type-checks examples/typescript/supabase-edge-mcp against
+      # the workspace source of the `@solvapay/*` packages it imports (see
+      # examples/typescript/supabase-edge-mcp/deno.workspace.json).
       - name: Deno gate (supabase-edge-mcp type-check against workspace source)
         run: pnpm --filter @example/supabase-edge-mcp validate:workspace
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        # rust-toolchain.toml pins channel, clippy, rustfmt, wasm32-unknown-unknown
+        run: rustup show
+
+      # Magnus/rb-sys (Step 43) needs Ruby headers for workspace build/test/clippy.
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy (unwrap/expect/panic/docs deny)
+        # solvapay-wasm requires --features edge|browser; covered by wasm-binding job.
+        run: cargo clippy --workspace --exclude solvapay-wasm --all-targets -- -D warnings
+
+      - name: no-unwrap ripgrep gate
+        run: ./tools/repo/check-no-unwrap.sh
+
+      - name: cargo build (native)
+        run: cargo build --workspace --exclude solvapay-wasm
+
+      - name: cargo test
+        run: cargo test --workspace --exclude solvapay-wasm
+
+      - name: solvapay facade blocking feature (Step 46/47)
+        run: |
+          cargo build -p solvapay --features blocking
+          cargo test -p solvapay --features blocking
+
+      - name: crates.io packageability (Step 48)
+        run: |
+          ./tools/repo/check-publish-graph.sh
+          # Leaves: full dry-run + verify (works before any crates.io upload).
+          # Dependents resolve versioned deps from the index after first publish.
+          cargo publish -p solvapay-export --dry-run --allow-dirty
+          cargo publish -p solvapay-dto --dry-run --allow-dirty
+
+      - name: solvapay facade docs.rs cfg (Step 48)
+        # docs.rs builds on nightly so `#![cfg_attr(docsrs, feature(doc_cfg))]` works.
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs'
+        run: |
+          rustup toolchain install nightly --profile minimal -c rust-docs
+          cargo +nightly doc -p solvapay --all-features --no-deps
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install JS deps
+        working-directory: .
+        run: pnpm install --frozen-lockfile
+
+      - name: doc-comment coverage gate
+        # Surface-agnostic IR check (§5.6 / D19 / step 18T): every catalogued
+        # entry point must have a non-empty docs.summary. Generation itself also
+        # fails on uncovered entries; this named step makes the signal explicit.
+        run: cargo test -q -p dto-gen --lib doc_coverage -- --nocapture
+
+      - name: doc parity gate
+        # Cross-language emitted-summary parity (Phase 3). doc_coverage proves the
+        # IR has a summary; this proves every language actually rendered it.
+        run: cargo test -q -p dto-gen --test doc_parity -- --nocapture
+
+      - name: solvapay-dto regen drift
+        # Canonical flag set lives in tools/codegen/gen.ts — humans and CI share `pnpm gen` / `pnpm gen:check`.
+        working-directory: .
+        run: pnpm gen:check
+
+      - name: '@generated header gate'
+        working-directory: .
+        run: pnpm exec tsx tools/codegen/check-generated-headers.ts
+
+      - name: External generated markers
+        working-directory: .
+        run: pnpm generated:external --markers-only
+
+      - name: Setup Node.js (wasm Fetch harness)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cache wasm-bindgen-cli
+        id: cache-wasm-bindgen-cli
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen-test-runner
+            ~/.cargo/bin/wasm2es6js
+          key: ${{ runner.os }}-wasm-bindgen-cli-0.2.126
+
+      - name: Install wasm-bindgen-cli
+        if: steps.cache-wasm-bindgen-cli.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version 0.2.126 --locked
+
+      - name: cargo build solvapay-core + solvapay-transport (wasm32)
+        run: |
+          cargo build -p solvapay-core --target wasm32-unknown-unknown
+          # FetchTransport is cfg'd in for wasm32 (step 20); reqwest stays native-only.
+          cargo build -p solvapay-transport --target wasm32-unknown-unknown
+
+      - name: cargo clippy solvapay-transport (wasm32)
+        run: cargo clippy -p solvapay-transport --target wasm32-unknown-unknown --all-targets -- -D warnings
+
+      - name: wasm Fetch transport round-trip
+        run: ./tools/conformance/test-wasm-transport.sh
+
+      - name: assert tokio absent from solvapay-core / solvapay-transport graphs
+        run: |
+          # Normal edges only — tokio is allowed as a native test/dev-dep (wiremock).
+          for pkg in solvapay-core solvapay-transport; do
+            tree="$(cargo tree -p "$pkg" --target wasm32-unknown-unknown --edges normal)"
+            if printf '%s\n' "$tree" | grep -qi 'tokio'; then
+              echo "tokio must not appear in ${pkg}'s normal dependency graph" >&2
+              printf '%s\n' "$tree"
+              exit 1
+            fi
+            echo "OK: tokio absent from ${pkg} normal graph"
+          done
+
+      - name: fixture suite (bound pure-core suites; unbound skipped)
+        run: cargo run -q -p fixture-runner -- contract/fixtures
+
+      - name: Generator completeness (gen:verify)
+        working-directory: .
+        run: pnpm gen:verify
+
+  rust-mcp:
+    name: rust-mcp
+    runs-on: ubuntu-latest
+    needs:
+      - rust
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup show
+
+      - name: MCP-authoring fixtures
+        run: cargo test -p solvapay-mcp
+
+      - name: Gate-copy negative suite
+        run: cargo test -p solvapay-mcp --features test-seams
+
+      - name: clippy
+        run: cargo clippy -p solvapay-mcp --all-targets -- -D warnings
+
+      - name: guerrillamail-mcp example
+        run: |
+          cargo build --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml
+          cargo test --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml
+          cargo clippy --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml --all-targets -- -D warnings
+
+  # Step 40 — PyO3/maturin Python binding abi3 wheel matrix (§7.7) + artifact gate.
+  python-binding:
+    name: python-binding (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: sdks/python
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: manylinux-x86_64
+            os: ubuntu-latest
+            target: x86_64
+            manylinux: manylinux2014
+            maturin-args: --release --out dist
+            smoke: true
+          - platform: manylinux-aarch64
+            os: ubuntu-24.04-arm
+            target: aarch64
+            manylinux: manylinux2014
+            maturin-args: --release --out dist
+            smoke: false
+          - platform: musllinux-x86_64
+            os: ubuntu-latest
+            target: x86_64
+            manylinux: musllinux_1_1
+            maturin-args: --release --out dist
+            smoke: false
+          - platform: musllinux-aarch64
+            os: ubuntu-24.04-arm
+            target: aarch64
+            manylinux: musllinux_1_1
+            maturin-args: --release --out dist
+            smoke: false
+          - platform: macos-universal2
+            os: macos-latest
+            target: universal2-apple-darwin
+            manylinux: ''
+            maturin-args: --release --out dist --target universal2-apple-darwin
+            smoke: true
+          - platform: win-amd64
+            os: windows-latest
+            target: x64
+            manylinux: ''
+            maturin-args: --release --out dist
+            smoke: true
+          - platform: win-arm64
+            os: windows-11-arm
+            target: aarch64
+            manylinux: ''
+            maturin-args: --release --out dist
+            smoke: false
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Rust toolchain
+        run: rustup show
+
+      - name: Build abi3 wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: ${{ matrix.maturin-args }}
+          working-directory: sdks/python
+          sccache: 'true'
+
+      # maturin-action runs the manylinux container as root and leaves a
+      # root-owned workspace `target/` (repo root). Job default cwd is sdks/python.
+      - name: Reclaim workspace target dir ownership
+        if: matrix.smoke && runner.os == 'Linux'
+        working-directory: ${{ github.workspace }}
+        run: |
+          if [ -d target ]; then
+            sudo chown -R "$(id -u):$(id -g)" target
+          fi
+
+      - name: cargo test -p solvapay-python
+        if: matrix.smoke
+        # maturin-action with sccache:'true' leaks RUSTC_WRAPPER=sccache into the
+        # job env from the manylinux container; the host has no sccache binary.
+        env:
+          RUSTC_WRAPPER: ''
+        run: cargo test -p solvapay-python --lib
+
+      - name: Fresh-venv pytest smoke
+        if: matrix.smoke
+        shell: bash
+        run: |
+          python -m venv .ci-venv
+          if [ -f .ci-venv/Scripts/pip ]; then
+            PIP=.ci-venv/Scripts/pip
+            PY=.ci-venv/Scripts/python
+            PYTEST=.ci-venv/Scripts/pytest
+          else
+            PIP=.ci-venv/bin/pip
+            PY=.ci-venv/bin/python
+            PYTEST=.ci-venv/bin/pytest
+          fi
+          # Windows refuses self-upgrade via the pip launcher; use python -m pip.
+          "$PY" -m pip install -U pip
+          wheel="$(ls dist/*.whl | head -n1)"
+          "$PIP" install "${wheel}[dev,typecheck]"
+          # Offline Python golden-fixture contract suite (Step 42) + smoke/parity.
+          "$PYTEST" -q
+          # Step 42T — strictness against the *installed* package (generated .pyi + facade).
+          "$PY" -c "import solvapay, pathlib; p=pathlib.Path(solvapay.__file__).parent; assert (p/'py.typed').is_file(), 'missing py.typed'; assert (p/'__init__.pyi').is_file(), 'missing __init__.pyi'"
+          "$PY" -m mypy --strict --disallow-any-explicit \
+            python/solvapay/__init__.pyi \
+            python/solvapay/facade.pyi \
+            python/solvapay/results.pyi \
+            python/solvapay/errors.pyi \
+            python/solvapay/_solvapay.pyi
+          "$PY" -m pyright
+          "$PY" -m ruff check python/solvapay
+
+      - name: Panic-probe containment
+        if: matrix.smoke
+        shell: bash
+        env:
+          RUSTC_WRAPPER: ''
+        run: |
+          if [ -f .ci-venv/Scripts/activate ]; then
+            # Git Bash on Windows
+            source .ci-venv/Scripts/activate
+          else
+            source .ci-venv/bin/activate
+          fi
+          python -m pip install -U maturin
+          python -m maturin develop --features panic-probe
+          SOLVAPAY_REQUIRE_PANIC_PROBE=1 python -m pytest -q tests/test_panic_probe.py
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheel-${{ matrix.platform }}
+          path: sdks/python/dist/*.whl
+          if-no-files-found: error
+
+  python-mcp:
+    name: python-mcp
+    runs-on: ubuntu-latest
+    needs:
+      - python-binding
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download manylinux python wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: python-wheel-manylinux-x86_64
+          path: /tmp/solvapay-wheel
+
+      - name: Install solvapay wheel and solvapay-mcp
+        run: |
+          python -m pip install -U pip
+          wheel="$(ls /tmp/solvapay-wheel/*.whl | head -n1)"
+          python -m pip install "${wheel}"
+          python -m pip install -e "${GITHUB_WORKSPACE}/sdks/python-mcp[dev,typecheck]"
+
+      - name: MCP-authoring fixtures + typecheck
+        run: |
+          python -m pytest -q "${GITHUB_WORKSPACE}/sdks/python-mcp/tests"
+          python -m mypy --strict --disallow-any-explicit \
+            "${GITHUB_WORKSPACE}/sdks/python-mcp/python/solvapay_mcp"
+          python -m pyright --project "${GITHUB_WORKSPACE}/sdks/python-mcp"
+          python -m ruff check "${GITHUB_WORKSPACE}/sdks/python-mcp/python/solvapay_mcp"
+          python -m pip install httpx uvicorn
+          python -m pytest -q "${GITHUB_WORKSPACE}/examples/python/stock-research-mcp"
+
+  python-binding-artifacts:
+    name: python-binding artifact gate
+    runs-on: ubuntu-latest
+    needs:
+      - python-binding
+    defaults:
+      run:
+        working-directory: sdks/python
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download all python wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: sdks/python/wheels
+          pattern: python-wheel-*
+          merge-multiple: true
+
+      - name: Pre-publish wheel gate (hard-fail)
+        run: python3 scripts/check-wheels.py --dir wheels
+
+      - name: Install host wheel and print build info
+        run: |
+          wheel="$(find wheels -name '*manylinux*x86_64*.whl' ! -name '*musl*' | head -n1)"
+          test -n "${wheel}"
+          python3 -m pip install "${wheel}"
+          python3 -c 'import solvapay; print(solvapay.version()); print(solvapay.native_build_info())'
+
+  # Step 43 — Magnus/rb-sys Ruby binding platform matrix (§7.7) + artifact gate.
+  # GNU/Darwin legs stay on native hosts for compile + test. Linux musl gems
+  # are not in this matrix: rb-sys-dock hosts do not register
+  # `native:*-linux-musl` rake tasks. Windows (x64-mingw-ucrt) is excluded:
+  # dock mingw still fails rb-sys/bindgen inside LLVM AVX10.2/AMX headers.
+  # Windows consumers compile the source gem.
+  ruby-binding:
+    name: ruby-binding (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: sdks/ruby
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x86_64-linux
+            os: ubuntu-latest
+            smoke: true
+            full: true
+            contract: true
+            dock: false
+          - platform: aarch64-linux
+            os: ubuntu-24.04-arm
+            smoke: false
+            full: false
+            contract: true
+            dock: false
+          - platform: x86_64-darwin
+            os: macos-15-intel
+            smoke: false
+            full: false
+            contract: true
+            dock: false
+          - platform: arm64-darwin
+            os: macos-latest
+            smoke: true
+            full: false
+            contract: true
+            dock: false
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby + Rust
+        uses: oxidize-rb/actions/setup-ruby-and-rust@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          # oxidize-rb cargo-binstall has no aarch64-unknown-linux-musl cargo-cache
+          # binary; that hard-fails Setup on ubuntu-24.04-arm.
+          cargo-cache: ${{ matrix.platform != 'aarch64-linux' }}
+          working-directory: sdks/ruby
+
+      - name: Bundle install
+        run: bundle install
+
+      - name: Native platform gem
+        if: ${{ !matrix.dock }}
+        run: bundle exec rake native gem
+
+      - name: Dock cross-compile platform gem
+        if: ${{ matrix.dock }}
+        run: ./scripts/dock-build.sh ${{ matrix.platform }} 3.1:3.2:3.3:3.4
+
+      - name: cargo test -p solvapay-ruby
+        if: matrix.smoke
+        run: cargo test -p solvapay-ruby --lib
+
+      - name: Source-gem compile + smoke
+        if: ${{ !matrix.dock }}
+        shell: bash
+        run: |
+          bundle exec rake compile
+          bundle exec ruby -Itest -Ilib test/smoke_test.rb
+
+      - name: Panic-probe containment
+        if: matrix.smoke
+        shell: bash
+        run: |
+          bundle exec rake clean
+          RB_SYS_CARGO_FEATURES=panic-probe bundle exec rake compile
+          bundle exec ruby -Itest -Ilib test/panic_probe_test.rb
+
+      # Every leg replays the 550-fixture corpus; the full leg already covers it
+      # via `rake test`, so skip the duplicate there.
+      - name: Ruby contract fixture suite
+        if: matrix.contract && !matrix.full
+        run: bundle exec ruby -Itest -Ilib test/contract_fixtures_test.rb
+
+      - name: Full Ruby suite + RBS
+        if: matrix.full
+        run: |
+          bundle exec rake test
+          bundle exec rbs validate
+
+      - name: Ruby type-strictness + lint (Step 45T / D18)
+        if: matrix.full
+        run: |
+          bundle exec steep check
+          bundle exec rubocop lib --no-parallel
+
+      - name: Upload gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruby-gem-${{ matrix.platform }}
+          path: sdks/ruby/pkg/*.gem
+          if-no-files-found: error
+
+  ruby-mcp:
+    name: ruby-mcp
+    runs-on: ubuntu-latest
+    needs:
+      - ruby-binding
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: sdks/ruby-mcp
+
+      - name: Download linux ruby gem
+        uses: actions/download-artifact@v4
+        with:
+          name: ruby-gem-x86_64-linux
+          path: /tmp/solvapay-gem
+
+      - name: Install solvapay platform gem
+        run: |
+          set -euo pipefail
+          gemfile="$(ls /tmp/solvapay-gem/*.gem | head -n1)"
+          dest="${RUNNER_TEMP}/solvapay-gem-home"
+          mkdir -p "${dest}"
+          gem install --install-dir "${dest}" --no-document "${gemfile}"
+          # Bundler only activates Gemfile gems. Point RUBYLIB at the
+          # platform gem so `require "solvapay"` works under bundle exec.
+          lib="$(echo "${dest}"/gems/solvapay-*/lib)"
+          test -f "${lib}/solvapay.rb"
+          echo "RUBYLIB=${lib}${RUBYLIB:+:${RUBYLIB}}" >> "${GITHUB_ENV}"
+
+      - name: MCP-authoring fixtures + typecheck
+        working-directory: sdks/ruby-mcp
+        run: |
+          bundle exec rake test
+          bundle exec rubocop lib --no-parallel
+          bundle exec steep check
+          bundle exec rbs validate
+          bundle exec ruby -Ilib ../../examples/ruby/bitcoin_analytics_mcp/test/run.rb
+
+  ruby-binding-artifacts:
+    name: ruby-binding artifact gate
+    runs-on: ubuntu-latest
+    needs:
+      - ruby-binding
+    defaults:
+      run:
+        working-directory: sdks/ruby
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Download all ruby gem artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: sdks/ruby/gems
+          pattern: ruby-gem-*
+          merge-multiple: true
+
+      - name: Pre-publish gem gate (hard-fail)
+        run: ruby scripts/check-gems.rb --dir gems --host-native
+
+      - name: Install host gem and print build info
+        run: |
+          gem_file="$(find gems -name '*x86_64-linux*.gem' ! -name '*musl*' | head -n1)"
+          test -n "${gem_file}"
+          gem install --local "${gem_file}"
+          ruby -e 'require "solvapay"; puts SolvaPay.version; puts SolvaPay.native_build_info'
+
+  # Step 36 — napi-rs Node binding platform matrix (§7.7) + artifact gate.
+  node-binding:
+    name: node-binding (${{ matrix.settings.target }})
+    runs-on: ${{ matrix.settings.host }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: sdks/node-native
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: npx napi build --platform --release --target x86_64-unknown-linux-gnu --use-napi-cross
+            smoke: true
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: npx napi build --platform --release --target aarch64-unknown-linux-gnu --use-napi-cross
+            smoke: false
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build: npx napi build --platform --release --target x86_64-unknown-linux-musl --cross-compile
+            smoke: false
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            build: npx napi build --platform --release --target aarch64-unknown-linux-musl --cross-compile
+            smoke: false
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            build: npx napi build --platform --release --target aarch64-apple-darwin
+            smoke: true
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            build: npx napi build --platform --release --target x86_64-apple-darwin
+            smoke: false
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            build: npx napi build --platform --release --target x86_64-pc-windows-msvc
+            smoke: true
+          - host: windows-latest
+            target: aarch64-pc-windows-msvc
+            build: npx napi build --platform --release --target aarch64-pc-windows-msvc
+            smoke: false
+        node:
+          - '22'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install Rust toolchain
+        run: rustup show && rustup target add ${{ matrix.settings.target }}
+
+      - name: Setup zig (musl cross)
+        if: contains(matrix.settings.target, 'musl')
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+
+      - name: Install npm deps
+        # optionalDependencies are file:./npm/<triple> until first publish.
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        run: npx napi create-npm-dirs
+
+      - name: Build binding
+        # ring (via reqwest rustls-tls) needs __ARM_ARCH when cross-compiling
+        # aarch64 with napi-cross's C toolchain; musl/zig paths are unaffected.
+        env:
+          CFLAGS_aarch64_unknown_linux_gnu: '-D__ARM_ARCH=8'
+          CFLAGS_aarch64_unknown_linux_musl: '-D__ARM_ARCH=8'
+        run: ${{ matrix.settings.build }}
+        shell: bash
+
+      - name: Smoke test (native host)
+        if: matrix.settings.smoke
+        run: node --test __test__/binding.spec.mjs __test__/version-skew.spec.mjs
+
+      - name: Setup pnpm
+        if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
+        uses: pnpm/action-setup@v6
+
+      - name: Native generated-file drift
+        if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
+        working-directory: .
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm generated:external --rebuild --id nodeNativeNapi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: |
+            sdks/node-native/server-native.*.node
+            sdks/node-native/index.js
+            sdks/node-native/index.d.ts
+          if-no-files-found: error
+
+      - name: Panic-probe containment
+        if: matrix.settings.smoke
+        shell: bash
+        env:
+          SOLVAPAY_REQUIRE_PANIC_PROBE: '1'
+        run: |
+          npx napi build --platform --target ${{ matrix.settings.target }} --features panic-probe
+          node --test __test__/panic-probe.spec.mjs
+
+  node-binding-artifacts:
+    name: node-binding artifact gate
+    runs-on: ubuntu-latest
+    needs:
+      - node-binding
+    defaults:
+      run:
+        working-directory: sdks/node-native
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install npm deps (binding)
+        run: npm ci
+
+      - name: Ensure npm platform dirs
+        run: npx napi create-npm-dirs
+
+      - name: Download all binding artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: sdks/node-native/ci-artifacts
+          pattern: bindings-*
+          merge-multiple: true
+
+      - name: Place artifacts into npm/ via napi artifacts
+        run: |
+          # napi artifacts reads binaries from ./artifacts (CLI --output-dir default).
+          # Loader JS must also sit next to package.json for the move step.
+          mkdir -p artifacts
+          find ci-artifacts -type f -name '*.node' -exec cp -f {} artifacts/ \;
+          find ci-artifacts -type f \( -name 'index.js' -o -name 'index.d.ts' \) -exec cp -f {} . \;
+          ls -la artifacts/ index.js 2>/dev/null || true
+          npx napi artifacts
+
+      - name: Pre-publish artifact gate (hard-fail)
+        run: node scripts/check-artifacts.mjs
+
+      # Step 39 — pack publish-shaped tarballs once for the clean-install matrix.
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        working-directory: .
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Pack clean-install package bundle
+        working-directory: .
+        run: |
+          mkdir -p sdks/node-native/clean-install-bundle
+          node sdks/node-native/scripts/prepare-clean-install-packages.mjs \
+            --out-dir sdks/node-native/clean-install-bundle \
+            --require-all
+
+      - name: Upload clean-install package bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-clean-install-packages
+          path: sdks/node-native/clean-install-bundle/
+          if-no-files-found: error
+
+  # Step 39 — fresh npm install + public @solvapay/server verifyWebhook (native matrix).
+  # Target/host metadata mirrors sdks/node-native/scripts/targets.mjs (8 × Node 22/24/26 = 24).
+  node-clean-install-native:
+    name: node clean install (native, ${{ matrix.target.id }}, Node ${{ matrix.node }})
+    needs:
+      - node-binding-artifacts
+    runs-on: ${{ matrix.target.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24', '26']
+        target:
+          - id: linux-x64-gnu
+            host: ubuntu-24.04
+            musl: 'false'
+          - id: linux-arm64-gnu
+            host: ubuntu-24.04-arm
+            musl: 'false'
+          - id: linux-x64-musl
+            host: ubuntu-24.04
+            musl: 'true'
+          - id: linux-arm64-musl
+            host: ubuntu-24.04-arm
+            musl: 'true'
+          - id: darwin-x64
+            host: macos-15-intel
+            musl: 'false'
+          - id: darwin-arm64
+            host: macos-15
+            musl: 'false'
+          - id: win32-x64-msvc
+            host: windows-latest
+            musl: 'false'
+          - id: win32-arm64-msvc
+            host: windows-11-arm
+            musl: 'false'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download clean-install package bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: server-clean-install-packages
+          path: clean-install-bundle
+
+      - name: Setup Node.js
+        if: matrix.target.musl == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Clean-install smoke (host)
+        if: matrix.target.musl == 'false'
+        shell: bash
+        run: |
+          node sdks/node-native/scripts/clean-install-smoke.mjs \
+            --bundle-dir clean-install-bundle \
+            --mode native \
+            --target "${{ matrix.target.id }}" \
+            --node-major "${{ matrix.node }}"
+
+      - name: Clean-install smoke (musl container)
+        if: matrix.target.musl == 'true'
+        shell: bash
+        run: |
+          # setup-node / JS actions are glibc — run only the smoke inside Alpine.
+          IMAGE="node:${{ matrix.node }}-alpine"
+          docker pull "$IMAGE"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD/clean-install-bundle:/bundle:ro" \
+            -v "$PWD/sdks/node-native/scripts:/scripts:ro" \
+            -v "$PWD/contract/manifest:/contract/manifest:ro" \
+            -e HOME=/tmp \
+            -w /tmp \
+            "$IMAGE" \
+            node /scripts/clean-install-smoke.mjs \
+              --bundle-dir /bundle \
+              --mode native \
+              --target "${{ matrix.target.id }}" \
+              --node-major "${{ matrix.node }}"
+
+  # Step 37R-e / 52 / 53 — Rust-only server+core conformance; mcp-core still dual-mode.
+  node-binding-conformance:
+    name: node-binding conformance (Rust-only server/core)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Rust toolchain (host)
+        run: rustup show
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @solvapay/core (server unit deps)
+        run: pnpm --filter @solvapay/core build
+
+      - name: Build @solvapay/auth (server peer — needed for unit resolve)
+        run: pnpm --filter @solvapay/auth build
+
+      - name: Build @solvapay/mcp-core
+        run: pnpm --filter @solvapay/mcp-core build
+
+      - name: Build @solvapay/server
+        run: pnpm --filter @solvapay/server build
+
+      - name: Build @solvapay/server-native (host)
+        run: pnpm --filter @solvapay/server-native build
+
+      - name: Server unit suite (Rust-only after Step 53)
+        run: pnpm --filter @solvapay/server test:unit
+
+      - name: Core unit suite (Rust-only after Step 52)
+        run: pnpm --filter @solvapay/core test:unit
+
+      - name: mcp-core unit suite
+        run: pnpm --filter @solvapay/mcp-core test:unit
+
+      - name: Contract fixtures
+        run: pnpm test:contract
+
+      - name: React package tests (napi setup + eager browser-wasm stub)
+        run: pnpm --filter @solvapay/react test
+
+  # Step 37R-e — every non-§8 server/core export delegates (or allowlisted).
+  node-binding-delegation:
+    name: node-binding delegation inventory
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Delegation inventory gate
+        run: pnpm delegation:check
+
+      - name: MCP layer-3 adapter line budget
+        run: pnpm mcp-layer3-budget:check
+
+  # Step 38 — edge/browser wasm-bindgen cutover (capability split + budgets + Deno).
+  wasm-binding:
+    name: wasm-binding (Step 38 edge/browser)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Rust toolchain
+        run: rustup show
+
+      - name: Cache wasm-bindgen-cli
+        id: cache-wasm-bindgen-cli-38
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen-test-runner
+            ~/.cargo/bin/wasm2es6js
+          key: ${{ runner.os }}-wasm-bindgen-cli-0.2.126
+
+      - name: Install wasm-bindgen-cli
+        if: steps.cache-wasm-bindgen-cli-38.outputs.cache-hit != 'true'
+        run: cargo install wasm-bindgen-cli --version 0.2.126 --locked
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild wasm artifacts + drift check
+        working-directory: .
+        run: pnpm generated:external --rebuild --id wasmPkg
+
+      - name: Cargo feature / exclusivity checks
+        run: |
+          cargo check -p solvapay-core
+          cargo check -p solvapay-core --no-default-features --features browser
+          cargo check -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features edge
+          cargo check -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features browser
+          if cargo check -p solvapay-wasm --no-default-features --features edge,browser 2>/dev/null; then
+            echo "expected edge+browser to fail" >&2
+            exit 1
+          fi
+          if cargo check -p solvapay-wasm --no-default-features 2>/dev/null; then
+            echo "expected neither feature to fail" >&2
+            exit 1
+          fi
+
+      - name: Native binding unit tests + clippy/fmt gates (wasm crate)
+        run: |
+          cargo test -p solvapay-wasm --no-default-features --features edge --lib
+          cargo fmt --all -- --check
+          cargo clippy -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features edge -- -D warnings
+          cargo clippy -p solvapay-wasm --target wasm32-unknown-unknown --no-default-features --features browser -- -D warnings
+          ./tools/repo/check-no-unwrap.sh
+
+      - name: Browser symbol audit
+        working-directory: sdks/wasm
+        run: pnpm symbols:check
+
+      - name: Size / cold-start budget check
+        working-directory: sdks/wasm
+        run: pnpm measure
+
+      - name: Node smoke (edge wrapper)
+        working-directory: sdks/wasm
+        run: pnpm test
+
+      - name: Build core, auth, server-wasm, server-native, server, mcp-core, mcp
+        run: |
+          pnpm --filter @solvapay/core build
+          pnpm --filter @solvapay/auth build
+          pnpm --filter @solvapay/server-wasm build
+          # verify-webhook.unit.test.ts exercises both node (napi) and edge (WASM).
+          pnpm --filter @solvapay/server-native build
+          pnpm --filter @solvapay/server build
+          pnpm --filter @solvapay/mcp-core build
+          # validate:fetch-runtime checks @solvapay/mcp/fetch dist exports.
+          pnpm --filter @solvapay/mcp build
+
+      - name: Edge implementation unit tests (WASM, Rust-only after Step 53)
+        run: pnpm --filter @solvapay/server test:unit:edge
+
+      - name: Webhook edge corpus (WASM)
+        run: node tools/conformance/replay-webhook-edge-wasm.mjs
+
+      - name: Client fixture corpus (WASM FetchTransport)
+        run: pnpm exec vitest run tools/conformance/contract-fixtures-wasm.test.ts
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: '2.7.4'
+
+      - name: Deno edge + mcp-core smoke
+        run: |
+          deno run --sloppy-imports --allow-env --allow-read=. \
+            sdks/typescript/mcp-core/scripts/deno-edge-smoke.mjs
+
+      - name: Fetch-runtime validation
+        run: pnpm validate:fetch-runtime
+
+  # Step 49 — wazero (Go) binding: rebuild the embedded WASI guest, prove it is
+  # not stale vs. the committed artifact, then run the Go suite under -race.
+  go-binding:
+    name: go-binding (wazero WASI guest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain + WASI target
+        # rust-toolchain.toml pins the channel + wasm32-wasip1; be explicit anyway.
+        run: rustup show && rustup target add wasm32-wasip1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild embedded WASI guest
+        # wasm32-wasip1 is not bit-stable across hosts; goCoreWasm is
+        # nonDeterministic so a hash/gitDiff mismatch warns instead of failing.
+        run: pnpm generated:external --rebuild --id goCoreWasm
+
+      - name: gofmt
+        working-directory: sdks/go
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed on:" >&2
+            echo "$unformatted" >&2
+            exit 1
+          fi
+          echo "OK: gofmt clean"
+
+      - name: go vet
+        working-directory: sdks/go
+        run: go vet ./...
+
+      - name: go test -race
+        working-directory: sdks/go
+        run: go test -race ./...
+
+      - name: Panic-probe guest (debug feature, not published)
+        run: |
+          cargo build -p solvapay-go-wasm --target wasm32-wasip1 --profile wasm-release --features panic-probe
+          TARGET_DIR="$(cargo metadata --format-version 1 --no-deps | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')"
+          cp "${TARGET_DIR}/wasm32-wasip1/wasm-release/solvapay_go_wasm.wasm" sdks/go/solvapay_core.wasm
+          (cd sdks/go && SOLVAPAY_REQUIRE_PANIC_PROBE=1 go test -run TestPanicProbeSurfacesAsError -count=1)
+
+      - name: MCP-authoring conformance
+        working-directory: sdks/go
+        run: go test -race ./mcp/...
+
+      - name: Go weather-mcp example
+        working-directory: examples/go/weather-mcp
+        run: go test ./...
+
+      - name: Fresh-module go get smoke (local replace)
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORK="$(mktemp -d)"
+          BINDING="${GITHUB_WORKSPACE}/sdks/go"
+          printf '%s\n' \
+            'module github.com/solvapay/solvapay-go-smoke' \
+            '' \
+            'go 1.25' \
+            '' \
+            'require github.com/solvapay/solvapay-sdk/sdks/go v0.0.0' \
+            '' \
+            "replace github.com/solvapay/solvapay-sdk/sdks/go => ${BINDING}" \
+            > "$WORK/go.mod"
+          printf '%s\n' \
+            'package main' \
+            '' \
+            'import (' \
+            '	"context"' \
+            '	"fmt"' \
+            '' \
+            '	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"' \
+            ')' \
+            '' \
+            'func main() {' \
+            '	ctx := context.Background()' \
+            '	v, err := solvapay.Version(ctx)' \
+            '	if err != nil {' \
+            '		panic(err)' \
+            '	}' \
+            '	fmt.Println(v)' \
+            '}' \
+            > "$WORK/main.go"
+          (cd "$WORK" && go mod tidy && go build -o /tmp/solvapay-go-smoke .)
+          echo "OK: fresh module builds against local replace"
+
+  # Step 54 — optional native C ABI scaffold (cdylib + cbindgen header + C smoke).
+  c-binding:
+    name: c-binding (native C ABI)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup show
+
+      - name: Install C toolchain
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: cargo build -p solvapay-c
+        run: cargo build -p solvapay-c
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: cargo test -p solvapay-c
+        # Handle registry is process-global; parallel lib tests race on reuse assertions.
+        run: cargo test -p solvapay-c --features fixture-host -- --test-threads=1
+
+      - name: cargo clippy -p solvapay-c
+        run: cargo clippy -p solvapay-c --all-targets --features fixture-host -- -D warnings
+
+      - name: cbindgen header drift check
+        run: pnpm generated:external --rebuild --id capiHeader,capiFixtureHostHeader
+
+      - name: C smoke (create/call/free + handle misuse)
+        run: ./sdks/capi/ctest/run.sh
+
+      - name: Panic-probe containment
+        run: ./sdks/capi/ctest/panic-probe.sh
+
+      - name: C fixture conformance (550)
+        run: ./sdks/capi/ctest/contract.sh
+
+      - name: C MCP fixture replay
+        run: ./sdks/capi/ctest/mcp.sh
+
+      - name: C signature parity
+        run: |
+          cargo build -p solvapay-c
+          TARGET_DIR="$(cargo metadata --format-version=1 --no-deps | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')"
+          LIB_DIR="${TARGET_DIR}/debug"
+          cc -std=c11 -Wall -Wextra -Werror \
+            -I sdks/capi/include \
+            sdks/capi/ctest/signature_parity_generated.c \
+            -L "$LIB_DIR" \
+            -lsolvapay_c \
+            -lpthread -ldl -lm \
+            -o /tmp/solvapay-c-parity
+          LD_LIBRARY_PATH="$LIB_DIR" /tmp/solvapay-c-parity
+
+  # Step 51 — pure-Go + embedded wasm cross-compiles without cgo across the
+  # supported GOOS/GOARCH matrix (build + vet only; no off-host runtime).
+  go-crosscompile:
+    name: go-crosscompile (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    defaults:
+      run:
+        working-directory: sdks/go
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: go build + vet
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          go build ./...
+          go vet ./...
 
   documentation:
     name: Documentation Validation
@@ -102,12 +1465,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Get pnpm store directory
         id: pnpm-cache
@@ -136,7 +1497,7 @@ jobs:
       - name: Validate documentation links
         id: validate-links
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.skip_link_validation != 'true'
-        run: pnpm exec tsx scripts/validate-doc-links.ts --skip-api
+        run: pnpm exec tsx tools/repo/validate-doc-links.ts --skip-api
         continue-on-error: false
         # Validates non-generated documentation links (skips docs/api/** which are generated by docs repo)
         # Note: Documentation is built by the docs repo, not in this CI workflow

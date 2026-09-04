@@ -1,0 +1,19 @@
+from collections.abc import Mapping
+
+def assert_response_result(value: object) -> dict[str, object]: ...
+def build_payable_tool_result(envelope: object) -> dict[str, object]: ...
+def invoke_payable_next(
+    state: object | None = None, event: object | None = None
+) -> dict[str, object]: ...
+def make_response_result(
+    data: object,
+    options: Mapping[str, object] | None = None,
+    emitted_blocks: list[dict[str, object]] | None = None,
+) -> dict[str, object]: ...
+def mcp_native_cors(
+    origin: object | None = None,
+    requested_method: object | None = None,
+    requested_headers: object | None = None,
+    preflight: object | None = None,
+) -> object: ...
+def paywall_tool_result(message: object, structured_content: object) -> dict[str, object]: ...

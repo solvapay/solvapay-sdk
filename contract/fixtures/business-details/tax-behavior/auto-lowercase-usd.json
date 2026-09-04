@@ -1,0 +1,14 @@
+{
+  "suite": "business-details",
+  "case": "auto-lowercase-usd",
+  "input": {
+    "fn": "resolveTaxBehavior",
+    "args": {
+      "behavior": "auto",
+      "currency": "usd"
+    }
+  },
+  "expect": {
+    "result": "exclusive"
+  }
+}

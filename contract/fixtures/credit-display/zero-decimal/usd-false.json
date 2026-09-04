@@ -1,0 +1,13 @@
+{
+  "suite": "credit-display",
+  "case": "zero-decimal-usd-false",
+  "input": {
+    "fn": "isZeroDecimalCurrency",
+    "args": {
+      "currency": "USD"
+    }
+  },
+  "expect": {
+    "result": false
+  }
+}

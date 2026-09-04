@@ -1,0 +1,15 @@
+{
+  "suite": "money-format",
+  "case": "price-free-empty",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 0,
+      "currency": "usd",
+      "free": ""
+    }
+  },
+  "expect": {
+    "result": "$0"
+  }
+}

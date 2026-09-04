@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "ref-needs-ensure",
+  "input": {
+    "fn": "classifyCustomerRef",
+    "args": {
+      "customerRef": "user-123"
+    }
+  },
+  "expect": {
+    "result": "needsEnsure"
+  }
+}

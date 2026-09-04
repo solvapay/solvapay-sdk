@@ -1,0 +1,46 @@
+{
+  "suite": "driver-loop",
+  "case": "gate-handler-success-emits-usage",
+  "input": {
+    "fn": "driveGate",
+    "args": {
+      "customerRef": "cus_abc",
+      "product": "prd_demo",
+      "usageType": "requests",
+      "handler": "success"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "wire": {
+    "exchanges": [
+      {
+        "request": { "method": "POST", "path": "/v1/sdk/limits" },
+        "response": {
+          "status": 200,
+          "body": {
+            "withinLimits": true,
+            "remaining": 3,
+            "meterName": "requests",
+            "checkoutUrl": "https://pay.example/x"
+          }
+        }
+      },
+      {
+        "request": { "method": "POST", "path": "/v1/sdk/usages" },
+        "response": {
+          "status": 200,
+          "body": { "reference": "usg_fixture", "outcome": "success" }
+        }
+      }
+    ]
+  },
+  "expect": {
+    "result": {
+      "requests": [
+        { "method": "POST", "path": "/v1/sdk/limits" },
+        { "method": "POST", "path": "/v1/sdk/usages" }
+      ],
+      "outcome": { "type": "resolved", "kind": "allow" }
+    }
+  }
+}

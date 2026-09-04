@@ -1,0 +1,13 @@
+{
+  "suite": "helper-renewal",
+  "case": "cancel-normalize-flat-status",
+  "input": {
+    "fn": "normalizeCancelResponse",
+    "args": {
+      "response": { "reference": "pur_1", "status": "cancelled" }
+    }
+  },
+  "expect": {
+    "result": { "reference": "pur_1", "status": "cancelled" }
+  }
+}

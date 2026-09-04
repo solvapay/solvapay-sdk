@@ -1,0 +1,37 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "bootstrapMcpProduct",
+    "args": {
+      "originUrl": "https://mcp.example.com",
+      "metadata": {}
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "bootstrap-mcp-product-error",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/products/mcp/bootstrap",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "originUrl": "https://mcp.example.com",
+        "metadata": {}
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Bootstrap MCP product failed (400): bad",
+      "status": 400
+    }
+  }
+}

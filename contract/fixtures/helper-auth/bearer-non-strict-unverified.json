@@ -1,0 +1,20 @@
+{
+  "suite": "helper-auth",
+  "case": "bearer-non-strict-unverified",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "authorizationHeader": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1bnZlcmlmaWVkLXVzZXIiLCJlbWFpbCI6InV2QGV4YW1wbGUuY29tIiwidXNlcl9tZXRhZGF0YSI6eyJmdWxsX25hbWUiOiJVViBOYW1lIn19.not-a-signature",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "unverified-user",
+      "email": "uv@example.com",
+      "name": "UV Name"
+    }
+  }
+}

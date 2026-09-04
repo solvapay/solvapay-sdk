@@ -1,0 +1,486 @@
+import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import React from 'react'
+import { CurrentPlanCard } from './CurrentPlanCard'
+import { SolvaPayContext } from '../SolvaPayProvider'
+import { paymentMethodCache } from '../hooks/usePaymentMethod'
+import type { PurchaseInfo, SolvaPayContextValue, SolvaPayConfig } from '../types'
+import type { PaymentMethodInfo } from '@solvapay/server'
+import { mockBalanceStatus } from '../test-helpers/mockBalanceStatus'
+
+function buildCtx(
+  activePurchase: PurchaseInfo | null,
+  overrides: Partial<SolvaPayContextValue & { config?: SolvaPayConfig }> = {},
+): SolvaPayContextValue {
+  const { config, ...rest } = overrides
+  return {
+    purchase: {
+      loading: false,
+      isRefetching: false,
+      error: null,
+      purchases: activePurchase ? [activePurchase] : [],
+      hasProduct: () => false,
+      activePurchase,
+      hasPaidPurchase: !!activePurchase && (activePurchase.amount ?? 0) > 0,
+      activePaidPurchase: activePurchase,
+      balanceTransactions: [],
+    },
+    refetchPurchase: vi.fn(),
+    upsertPurchase: vi.fn(),
+    createPayment: vi.fn(),
+    createTopupPayment: vi.fn(),
+    cancelRenewal: vi.fn(),
+    reactivateRenewal: vi.fn(),
+    activatePlan: vi.fn(),
+    balance: mockBalanceStatus(),
+    _config: config,
+    ...rest,
+  }
+}
+
+function makeTransport(
+  overrides: Partial<SolvaPayConfig['transport']> = {},
+): NonNullable<SolvaPayConfig['transport']> {
+  return {
+    checkPurchase: vi.fn(),
+    createPayment: vi.fn(),
+    processPayment: vi.fn(),
+    createTopupPayment: vi.fn(),
+    getBalance: vi.fn(),
+    cancelRenewal: vi.fn(),
+    reactivateRenewal: vi.fn(),
+    activatePlan: vi.fn(),
+    createCheckoutSession: vi.fn(),
+    createCustomerSession: vi.fn().mockResolvedValue({ customerUrl: 'https://portal.test' }),
+    getMerchant: vi.fn(),
+    getProduct: vi.fn(),
+    listPlans: vi.fn(),
+    getPaymentMethod: vi.fn<() => Promise<PaymentMethodInfo>>().mockResolvedValue({ kind: 'none' }),
+    ...overrides,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any
+}
+
+function Renderer({
+  ctx,
+  props,
+}: {
+  ctx: SolvaPayContextValue
+  props?: Parameters<typeof CurrentPlanCard>[0]
+}) {
+  return (
+    <SolvaPayContext.Provider value={ctx}>
+      <CurrentPlanCard {...(props ?? {})} />
+    </SolvaPayContext.Provider>
+  )
+}
+
+const recurringPurchase: PurchaseInfo = {
+  reference: 'purchase_abc',
+  customerRef: 'cus_recurring',
+  productName: 'Widget API',
+  status: 'active',
+  startDate: '2026-01-01T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
+  nextBillingDate: '2026-05-01T00:00:00Z',
+  amount: 1999,
+  currency: 'USD',
+  planRef: 'plan_monthly',
+  billingCycle: 'monthly',
+  isRecurring: true,
+  planSnapshot: { reference: 'plan_monthly', price: 1999, currency: 'USD', isMetered: false },
+}
+
+const oneTimePurchase: PurchaseInfo = {
+  reference: 'purchase_ot',
+  productName: 'Widget API',
+  status: 'active',
+  startDate: '2026-01-01T00:00:00Z',
+  endDate: '2026-12-31T00:00:00Z',
+  amount: 9900,
+  currency: 'USD',
+  planRef: 'plan_lifetime',
+  isRecurring: false,
+  createdAt: '2026-01-01T00:00:00Z',
+  customerRef: 'cus_ot',
+  planSnapshot: { reference: 'plan_lifetime', price: 9900, currency: 'USD', isMetered: false },
+}
+
+const usageBasedPurchase: PurchaseInfo = {
+  reference: 'purchase_ub',
+  productName: 'Widget API',
+  status: 'active',
+  startDate: '2026-01-01T00:00:00Z',
+  amount: 0,
+  currency: 'USD',
+  planRef: 'plan_usage',
+  isRecurring: false,
+  createdAt: '2026-01-01T00:00:00Z',
+  customerRef: 'cus_ub',
+  planSnapshot: { reference: 'plan_usage', price: 0, currency: 'USD', isMetered: true },
+}
+
+beforeEach(() => {
+  paymentMethodCache.clear()
+})
+
+describe('CurrentPlanCard', () => {
+  it('returns null when no active purchase exists', () => {
+    const ctx = buildCtx(null, { config: { transport: makeTransport() } })
+    const { container } = render(<Renderer ctx={ctx} />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('renders recurring plan line with next billing date', async () => {
+    const ctx = buildCtx(recurringPurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    expect(screen.getByText(/Next billing:/)).toBeTruthy()
+    // Date formatted via toLocaleDateString — only assert it's not the literal "{date}" placeholder
+    expect(screen.queryByText('Next billing: {date}')).toBeNull()
+    // Legacy purchase (no planSnapshot.name) falls back to productName — never to planRef
+    expect(screen.getByText('Widget API')).toBeTruthy()
+    expect(screen.queryByText('plan_monthly')).toBeNull()
+  })
+
+  it('renders one-time plan line with Expires {date}', async () => {
+    const ctx = buildCtx(oneTimePurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText(/Expires/)
+  })
+
+  it('renders usage-based plan without a date line', async () => {
+    const ctx = buildCtx(usageBasedPurchase, {
+      config: { transport: makeTransport() },
+      balance: mockBalanceStatus({
+        credits: 500,
+        displayCurrency: 'USD',
+        creditsPerMinorUnit: 1,
+        displayExchangeRate: 1,
+      }),
+    })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    expect(screen.queryByText(/Next billing|Expires/)).toBeNull()
+    // BalanceBadge container rendered
+    expect(document.querySelector('[data-solvapay-current-plan-balance-line]')).toBeTruthy()
+  })
+
+  it('renders card payment-method line when the hook returns a card', async () => {
+    const card: PaymentMethodInfo = {
+      kind: 'card',
+      brand: 'visa',
+      last4: '4242',
+      expMonth: 12,
+      expYear: 2030,
+    }
+    const ctx = buildCtx(recurringPurchase, {
+      config: { transport: makeTransport({ getPaymentMethod: vi.fn().mockResolvedValue(card) }) },
+    })
+    render(<Renderer ctx={ctx} />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/•••• 4242/)).toBeTruthy()
+    })
+    expect(screen.getByText(/expires 12\/2030/)).toBeTruthy()
+  })
+
+  it('shows "No payment method on file" when the hook returns kind: none', async () => {
+    const ctx = buildCtx(recurringPurchase, {
+      config: {
+        transport: makeTransport({
+          getPaymentMethod: vi.fn().mockResolvedValue({ kind: 'none' }),
+        }),
+      },
+    })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('No payment method on file')
+  })
+
+  it('hides the payment-method line entirely when the transport method throws', async () => {
+    const ctx = buildCtx(recurringPurchase, {
+      config: {
+        transport: makeTransport({
+          getPaymentMethod: vi.fn().mockRejectedValue(new Error('endpoint unavailable')),
+        }),
+      },
+    })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    // Wait a tick so the hook has time to flip to error state
+    await waitFor(() => {
+      expect(document.querySelector('[data-solvapay-current-plan-payment-method]')).toBeNull()
+    })
+  })
+
+  it('renders the customer-currency price when originalAmount differs from amount', async () => {
+    // 500 SEK charge: backend sends amount as USD cents (5426) and
+    // originalAmount as SEK öre (50000). Without `originalAmount` the card
+    // would render "SEK 54.26" (USD cents labelled SEK).
+    const sekPurchase: PurchaseInfo = {
+      reference: 'purchase_sek',
+      customerRef: 'cus_sek',
+      productName: 'MCP pro',
+      status: 'active',
+      startDate: '2026-04-20T00:00:00Z',
+      createdAt: '2026-04-20T00:00:00Z',
+      amount: 5426,
+      originalAmount: 50000,
+      currency: 'SEK',
+      exchangeRate: 0.1085,
+      planRef: 'plan_sek_monthly',
+      billingCycle: 'monthly',
+      isRecurring: true,
+      planSnapshot: {
+        reference: 'plan_sek_monthly',
+        currency: 'SEK',
+        price: 50000,
+        isMetered: false,
+      },
+    }
+    const ctx = buildCtx(sekPurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    const price = document.querySelector('[data-solvapay-current-plan-price]')
+    expect(price).toBeTruthy()
+    const priceText = price?.textContent ?? ''
+    expect(priceText).toContain('500')
+    expect(priceText).not.toContain('54.26')
+  })
+
+  it('renders the SEK billing cycle as "/ month" rather than "/ monthly"', async () => {
+    const sekPurchase: PurchaseInfo = {
+      reference: 'purchase_sek_cycle',
+      customerRef: 'cus_sek',
+      productName: 'MCP pro',
+      status: 'active',
+      startDate: '2026-04-20T00:00:00Z',
+      createdAt: '2026-04-20T00:00:00Z',
+      amount: 5426,
+      originalAmount: 50000,
+      currency: 'SEK',
+      planRef: 'pln_sek_m',
+      billingCycle: 'monthly',
+      isRecurring: true,
+      planSnapshot: {
+        reference: 'pln_sek_m',
+        name: 'Pro Monthly',
+        currency: 'SEK',
+        price: 50000,
+        isMetered: false,
+      },
+    }
+    const ctx = buildCtx(sekPurchase, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    const price = document.querySelector('[data-solvapay-current-plan-price]')
+    expect(price?.textContent).toContain('/ month')
+    expect(price?.textContent).not.toContain('/ monthly')
+  })
+
+  it('reads the billing cycle from the purchase, not the snapshot', async () => {
+    const snapshotOnlyCycle: PurchaseInfo = {
+      reference: 'purchase_snapshot_cycle',
+      customerRef: 'cus_sek',
+      productName: 'MCP pro',
+      status: 'active',
+      startDate: '2026-04-20T00:00:00Z',
+      createdAt: '2026-04-20T00:00:00Z',
+      amount: 5426,
+      originalAmount: 50000,
+      currency: 'SEK',
+      planRef: 'pln_sek_m',
+      billingCycle: 'monthly',
+      isRecurring: true,
+      planSnapshot: {
+        reference: 'pln_sek_m',
+        name: 'Pro Monthly',
+        price: 50000,
+        currency: 'SEK',
+        isMetered: false,
+      },
+    }
+    const ctx = buildCtx(snapshotOnlyCycle, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    const price = document.querySelector('[data-solvapay-current-plan-price]')
+    expect(price?.textContent).toContain('/ month')
+  })
+
+  it('renders planSnapshot.name when present and falls back to productName when absent', async () => {
+    const named: PurchaseInfo = {
+      ...recurringPurchase,
+      productName: 'Widget API',
+      planSnapshot: {
+        reference: 'plan_monthly',
+        name: 'Pro Monthly',
+        currency: 'USD',
+        price: 1999,
+        isMetered: false,
+      },
+    }
+    const ctx = buildCtx(named, { config: { transport: makeTransport() } })
+    const { rerender } = render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Pro Monthly')
+    // Opaque planRef must never appear in visible text
+    expect(screen.queryByText('plan_monthly')).toBeNull()
+    // When plan name differs from product name, product name renders as context
+    expect(screen.getByText('Widget API')).toBeTruthy()
+    const root = document.querySelector('[data-solvapay-current-plan-card]')
+    expect(root?.getAttribute('data-solvapay-current-plan-ref')).toBe('plan_monthly')
+
+    // Legacy purchase — no snapshot name — falls back to productName
+    const legacyCtx = buildCtx(recurringPurchase, {
+      config: { transport: makeTransport() },
+    })
+    rerender(<Renderer ctx={legacyCtx} />)
+    await screen.findByText('Widget API')
+    expect(screen.queryByText('plan_monthly')).toBeNull()
+  })
+
+  it('renders the plan-name line unconditionally for every plan type', async () => {
+    for (const p of [recurringPurchase, oneTimePurchase, usageBasedPurchase]) {
+      const ctx = buildCtx(p, { config: { transport: makeTransport() } })
+      const { unmount } = render(<Renderer ctx={ctx} />)
+      await screen.findByText('Your plan')
+      expect(document.querySelector('[data-solvapay-current-plan-name]')).toBeTruthy()
+      unmount()
+    }
+  })
+
+  it('does not render when the only purchase is a credit top-up', () => {
+    const topup: PurchaseInfo = {
+      reference: 'pur_topup',
+      customerRef: 'cus_topup',
+      productName: 'Credits',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00Z',
+      createdAt: '2026-01-01T00:00:00Z',
+      amount: 10000,
+      currency: 'SEK',
+      isRecurring: false,
+      metadata: { purpose: 'credit_topup' },
+    }
+    // Simulate provider-level filtering: balance transactions never become
+    // the activePurchase, so the card receives null.
+    const ctx = buildCtx(null, {
+      config: { transport: makeTransport() },
+      purchase: {
+        loading: false,
+        isRefetching: false,
+        error: null,
+        purchases: [topup],
+        hasProduct: () => false,
+        activePurchase: null,
+        hasPaidPurchase: false,
+        activePaidPurchase: null,
+        balanceTransactions: [topup],
+      },
+    })
+    const { container } = render(<Renderer ctx={ctx} />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('honours hidePaymentMethod and hideCancelButton / hideUpdatePaymentButton', async () => {
+    const card: PaymentMethodInfo = {
+      kind: 'card',
+      brand: 'visa',
+      last4: '4242',
+      expMonth: 12,
+      expYear: 2030,
+    }
+    const ctx = buildCtx(recurringPurchase, {
+      config: { transport: makeTransport({ getPaymentMethod: vi.fn().mockResolvedValue(card) }) },
+    })
+    render(
+      <Renderer
+        ctx={ctx}
+        props={{
+          hidePaymentMethod: true,
+          hideCancelButton: true,
+          hideUpdatePaymentButton: true,
+        }}
+      />,
+    )
+
+    await screen.findByText('Your plan')
+    expect(screen.queryByText(/•••• 4242/)).toBeNull()
+    expect(screen.queryByText('Cancel plan')).toBeNull()
+    expect(screen.queryByText('Update card')).toBeNull()
+  })
+
+  it('hides cancel and shows reactivate notice when renewal is pending cancellation', async () => {
+    const pendingCancel: PurchaseInfo = {
+      ...recurringPurchase,
+      cancelledAt: '2026-05-01T00:00:00Z',
+      endDate: '2026-06-01T00:00:00Z',
+    }
+    const ctx = buildCtx(pendingCancel, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Your plan')
+    expect(screen.queryByText('Cancel plan')).toBeNull()
+    expect(document.querySelector('[data-solvapay-cancelled-notice]')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Undo Cancellation/i })).toBeTruthy()
+  })
+
+  it('honours hideCancelledNotice when a parent surface renders its own notice', async () => {
+    const pendingCancel: PurchaseInfo = {
+      ...recurringPurchase,
+      cancelledAt: '2026-05-01T00:00:00Z',
+      endDate: '2026-06-01T00:00:00Z',
+    }
+    const ctx = buildCtx(pendingCancel, { config: { transport: makeTransport() } })
+    render(<Renderer ctx={ctx} props={{ hideCancelledNotice: true }} />)
+
+    await screen.findByText('Your plan')
+    expect(document.querySelector('[data-solvapay-cancelled-notice]')).toBeNull()
+  })
+
+  it('renders credit-based PAYG plan name and does not show unlimited usage label', async () => {
+    const paygPurchase: PurchaseInfo = {
+      reference: 'purchase_payg',
+      customerRef: 'cus_payg',
+      productName: 'Widget API',
+      status: 'active',
+      startDate: '2026-01-01T00:00:00Z',
+      createdAt: '2026-01-01T00:00:00Z',
+      amount: 0,
+      currency: 'USD',
+      isRecurring: false,
+      planRef: 'plan_payg',
+      planSnapshot: {
+        reference: 'plan_payg',
+        name: 'Pay as you go',
+        price: 0,
+        currency: 'USD',
+        isMetered: true,
+      },
+      usage: { used: 0, overageUnits: 0, overageCost: 0 },
+    }
+    const ctx = buildCtx(paygPurchase, {
+      config: { transport: makeTransport() },
+      balance: mockBalanceStatus({
+        loading: false,
+        credits: 100,
+        displayCurrency: 'USD',
+        creditsPerMinorUnit: 1,
+        displayExchangeRate: 1,
+      }),
+    })
+    render(<Renderer ctx={ctx} />)
+
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByText('Unlimited')).toBeNull()
+    expect(document.querySelector('[data-solvapay-current-plan-balance-line]')).toBeTruthy()
+  })
+})

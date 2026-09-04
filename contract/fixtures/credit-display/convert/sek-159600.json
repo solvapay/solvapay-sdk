@@ -1,0 +1,16 @@
+{
+  "suite": "credit-display",
+  "case": "convert-sek-159600",
+  "input": {
+    "fn": "creditsToDisplayMinorUnits",
+    "args": {
+      "credits": 159600,
+      "creditsPerMinorUnit": 100,
+      "displayExchangeRate": 9.46,
+      "displayCurrency": "SEK"
+    }
+  },
+  "expect": {
+    "result": 15098
+  }
+}

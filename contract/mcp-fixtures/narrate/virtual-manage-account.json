@@ -1,0 +1,18 @@
+{
+  "suite": "narrate",
+  "case": "virtual-manage-account",
+  "input": {
+    "fn": "mcpNarrate",
+    "args": {
+      "tool": "virtual_manage_account",
+      "payload": {
+        "portalUrl": "https://pay.example.test/portal"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "text": "## Manage Your Account\n\nAccess your account management portal to:\n- View your current account status\n- See billing history and invoices\n- Update payment methods\n- Cancel or modify your subscription\n\n**[Open Account Portal →](https://pay.example.test/portal)**\n\nThis link is secure and will expire after a short period."
+    }
+  }
+}

@@ -1,0 +1,52 @@
+name: Fuzz (manual)
+
+# Nightly libFuzzer run over the detached internal/fuzz workspace. Dispatch-only:
+# the required gate is the stable corpus-replay suite in cargo test (solvapay-core
+# + solvapay-c). A floating nightly toolchain must not enter the PR gate.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_total_time:
+        description: 'Seconds per fuzz target'
+        required: false
+        type: string
+        default: '120'
+
+jobs:
+  fuzz:
+    name: cargo fuzz (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [webhook_verify, envelope_args, c_handle]
+    defaults:
+      run:
+        working-directory: internal/fuzz
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pinned nightly
+        run: rustup toolchain install nightly-2026-08-20 --profile minimal --component llvm-tools-preview
+
+      - name: Install cargo-fuzz
+        run: cargo +nightly-2026-08-20 install cargo-fuzz --version 0.12.0
+
+      - name: cargo fuzz run
+        run: |
+          cargo +nightly-2026-08-20 fuzz run ${{ matrix.target }} -- \
+            -max_total_time=${{ inputs.max_total_time }}
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crash-${{ matrix.target }}
+          path: |
+            internal/fuzz/artifacts/**
+            internal/fuzz/corpus/${{ matrix.target }}/**
+          if-no-files-found: ignore

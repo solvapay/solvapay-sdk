@@ -1,0 +1,36 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "updateProduct",
+    "args": {
+      "productRef": "prd_fixture",
+      "name": "Updated"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "update-product-error",
+  "wire": {
+    "request": {
+      "method": "PUT",
+      "path": "/v1/sdk/products/prd_fixture",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "name": "Updated"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Update product failed (400): bad",
+      "status": 400
+    }
+  }
+}

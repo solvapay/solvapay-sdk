@@ -1,0 +1,35 @@
+{
+  "suite": "engine",
+  "case": "prompts-get-unknown",
+  "input": {
+    "fn": "mcpHandleRequest",
+    "args": {
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "prompts/get",
+        "params": {
+          "name": "search_knowledge"
+        }
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc",
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "error": {
+          "code": -32602,
+          "message": "Unknown prompt: search_knowledge"
+        }
+      }
+    }
+  }
+}

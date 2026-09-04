@@ -1,0 +1,45 @@
+{
+  "suite": "engine",
+  "case": "gate-denied",
+  "input": {
+    "fn": "mcpResume",
+    "args": {
+      "token": "tok_fixture",
+      "handlerEnvelope": {
+        "kind": "gate",
+        "gate": {
+          "kind": "payment_required",
+          "product": "prd_demo",
+          "checkoutUrl": "https://pay.test/x",
+          "message": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md.",
+          "shortMessage": "Payment required"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "rpc",
+      "rpc": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
+            }
+          ],
+          "isError": false,
+          "structuredContent": {
+            "kind": "payment_required",
+            "product": "prd_demo",
+            "checkoutUrl": "https://pay.test/x",
+            "message": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md.",
+            "shortMessage": "Payment required"
+          }
+        }
+      }
+    }
+  }
+}

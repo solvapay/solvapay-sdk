@@ -1,0 +1,115 @@
+{
+  "name": "@solvapay/server",
+  "version": "2.3.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "edge-light": "./dist/edge.js",
+      "worker": "./dist/edge.js",
+      "deno": "./dist/edge.js",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./edge": {
+      "types": "./dist/edge.d.ts",
+      "import": "./dist/edge.js",
+      "default": "./dist/edge.js"
+    },
+    "./fetch": {
+      "types": "./dist/fetch/index.d.ts",
+      "import": "./dist/fetch/index.js",
+      "require": "./dist/fetch/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "edge-light": "./dist/edge.js",
+        "worker": "./dist/edge.js",
+        "deno": "./dist/edge.js",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      },
+      "./edge": {
+        "types": "./dist/edge.d.ts",
+        "import": "./dist/edge.js",
+        "default": "./dist/edge.js"
+      },
+      "./fetch": {
+        "types": "./dist/fetch/index.d.ts",
+        "import": "./dist/fetch/index.js",
+        "require": "./dist/fetch/index.cjs"
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solvapay/solvapay-sdk.git",
+    "directory": "sdks/typescript/server"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "generate:types": "tsx scripts/generate-types.ts",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:unit:edge": "vitest run __tests__/verify-webhook.unit.test.ts __tests__/verify-webhook-edge-impl.unit.test.ts __tests__/edge-exports.unit.test.ts src/__tests__/edge-exports.test.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts --no-file-parallelism __tests__/backend.integration.test.ts __tests__/customer-update.integration.test.ts __tests__/multi-currency-plans.integration.test.ts",
+    "test:integration:backend": "vitest run --config vitest.integration.config.ts __tests__/backend.integration.test.ts",
+    "test:integration:customer": "vitest run --config vitest.integration.config.ts __tests__/customer-update.integration.test.ts",
+    "test:integration:multi-currency": "vitest run --config vitest.integration.config.ts __tests__/multi-currency-plans.integration.test.ts",
+    "test:integration:payment": "vitest run --config vitest.integration.config.ts __tests__/payment-stripe.integration.test.ts",
+    "test:integration:all": "vitest run --config vitest.integration.config.ts --no-file-parallelism",
+    "test:all": "vitest run && vitest run --config vitest.integration.config.ts --no-file-parallelism",
+    "test:all:integration": "vitest run --config vitest.integration.config.ts --no-file-parallelism",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "test:types": "tsc --noEmit -p src/types/__tests__/tsconfig.types.json"
+  },
+  "dependencies": {
+    "@solvapay/core": "workspace:*",
+    "@solvapay/server-wasm": "workspace:*"
+  },
+  "optionalDependencies": {
+    "@solvapay/server-native": "workspace:*"
+  },
+  "peerDependencies": {
+    "@solvapay/auth": "workspace:^",
+    "zod": "^3.25.0 || ^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@solvapay/auth": "workspace:*",
+    "@solvapay/demo-services": "workspace:*",
+    "@solvapay/test-utils": "workspace:^",
+    "@solvapay/tsconfig": "workspace:*",
+    "dotenv": "^17.4.2",
+    "openapi-typescript": "^7.13.0",
+    "stripe": "^21.0.1",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2",
+    "zod": "^4.3.6"
+  }
+}

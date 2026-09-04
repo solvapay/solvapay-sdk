@@ -1,0 +1,11 @@
+{
+  "suite": "tax-summary",
+  "case": "should-show-missing",
+  "input": {
+    "fn": "shouldShowTaxRow",
+    "args": {}
+  },
+  "expect": {
+    "result": true
+  }
+}

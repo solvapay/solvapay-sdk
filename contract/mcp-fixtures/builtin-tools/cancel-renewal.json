@@ -1,0 +1,44 @@
+{
+  "suite": "builtin-tools",
+  "case": "cancel-renewal",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "cancel_renewal",
+      "args": {
+        "purchaseRef": "pur_1"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/purchases/pur_1/cancel",
+      "status": 200,
+      "body": {
+        "reference": "pur_1",
+        "status": "cancelled"
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"reference\":\"pur_1\",\"status\":\"cancelled\"}"
+        }
+      ],
+      "structuredContent": {
+        "reference": "pur_1",
+        "status": "cancelled"
+      }
+    }
+  }
+}

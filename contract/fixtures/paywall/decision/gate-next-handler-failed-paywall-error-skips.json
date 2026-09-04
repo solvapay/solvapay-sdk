@@ -1,0 +1,41 @@
+{
+  "suite": "paywall",
+  "case": "gate-next-handler-failed-paywall-error-skips",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "event": {
+        "kind": "handlerFailed",
+        "durationMs": 12,
+        "nowMs": 1012,
+        "randomUnit": 0.5,
+        "isPaywallError": true
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "action": {
+        "kind": "skipUsage"
+      }
+    }
+  }
+}

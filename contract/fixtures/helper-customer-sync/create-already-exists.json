@@ -1,0 +1,13 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "create-already-exists",
+  "input": {
+    "fn": "classifyCreateError",
+    "args": {
+      "message": "customer already exists"
+    }
+  },
+  "expect": {
+    "result": "conflict"
+  }
+}

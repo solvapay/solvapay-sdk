@@ -1,0 +1,19 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "create-params-fallback-email",
+  "input": {
+    "fn": "buildCreateCustomerParams",
+    "args": {
+      "customerRef": "user-1",
+      "externalRef": "ext-1"
+    },
+    "clock": "2023-11-14T22:13:20Z"
+  },
+  "expect": {
+    "result": {
+      "email": "user-1-1700000000000@auto-created.local",
+      "externalRef": "ext-1",
+      "metadata": {}
+    }
+  }
+}

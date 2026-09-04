@@ -1,0 +1,22 @@
+{
+  "suite": "paywall",
+  "case": "gate-topup-no-url",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": {
+        "kind": "topup_required"
+      },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "",
+        "message": "",
+        "shortMessage": "Payment required"
+      }
+    }
+  },
+  "expect": {
+    "result": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). Call the `topup` tool. See docs://solvapay/overview.md."
+  }
+}

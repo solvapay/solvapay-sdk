@@ -1,0 +1,46 @@
+{
+  "suite": "paywall",
+  "case": "decide-gate-activation",
+  "input": {
+    "fn": "decidePaywallOutcome",
+    "args": {
+      "withinLimits": false,
+      "product": "prd_demo",
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 0,
+        "activationRequired": true,
+        "confirmationUrl": "https://pay.test/confirm",
+        "checkoutUrl": "https://pay.test/x",
+        "plans": [
+          {
+            "reference": "pl_pro",
+            "type": "usage-based",
+            "requiresPayment": true
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "outcome": "gate",
+      "gate": {
+        "kind": "activation_required",
+        "product": "prd_demo",
+        "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `activate_plan` tool. See docs://solvapay/overview.md.",
+        "checkoutUrl": "https://pay.test/confirm",
+        "confirmationUrl": "https://pay.test/confirm",
+        "plans": [
+          {
+            "reference": "pl_pro",
+            "type": "usage-based",
+            "requiresPayment": true
+          }
+        ],
+        "planRef": "pl_pro",
+        "shortMessage": "Activation required"
+      }
+    }
+  }
+}

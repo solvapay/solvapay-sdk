@@ -1,0 +1,64 @@
+{
+  "suite": "paywall",
+  "case": "decide-gate-payg-topup",
+  "input": {
+    "fn": "decidePaywallOutcome",
+    "args": {
+      "withinLimits": false,
+      "product": "prd_demo",
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 0,
+        "checkoutUrl": "https://pay.test/x",
+        "plans": [
+          {
+            "reference": "pl_pro",
+            "type": "usage-based",
+            "requiresPayment": true
+          },
+          {
+            "reference": "pl_hybrid",
+            "type": "hybrid",
+            "requiresPayment": true
+          }
+        ],
+        "balance": {
+          "creditBalance": 0,
+          "creditsPerUnit": 1,
+          "currency": "usd"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "outcome": "gate",
+      "gate": {
+        "kind": "activation_required",
+        "product": "prd_demo",
+        "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
+        "checkoutUrl": "https://pay.test/x",
+        "planRef": "pl_pro",
+        "creditBalance": 0,
+        "plans": [
+          {
+            "reference": "pl_pro",
+            "type": "usage-based",
+            "requiresPayment": true
+          },
+          {
+            "reference": "pl_hybrid",
+            "type": "hybrid",
+            "requiresPayment": true
+          }
+        ],
+        "balance": {
+          "creditBalance": 0,
+          "creditsPerUnit": 1,
+          "currency": "usd"
+        },
+        "shortMessage": "Activation required"
+      }
+    }
+  }
+}

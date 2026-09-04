@@ -1,0 +1,19 @@
+{
+  "suite": "product-readiness",
+  "case": "assert-valid-bad-shape",
+  "input": {
+    "fn": "assertValidProductRef",
+    "args": {
+      "productRef": "prod_ABC",
+      "context": "buildSolvaPayDescriptors"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "buildSolvaPayDescriptors: productRef must look like \"prd_…\" (got \"prod_ABC\"). Copy the reference from SolvaPay Console → Products.",
+      "kind": "Api",
+      "code": "invalid_product_ref"
+    }
+  }
+}

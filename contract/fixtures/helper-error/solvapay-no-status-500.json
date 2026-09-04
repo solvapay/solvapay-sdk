@@ -1,0 +1,20 @@
+{
+  "suite": "helper-error",
+  "case": "solvapay-no-status-500",
+  "input": {
+    "fn": "mapRouteError",
+    "args": {
+      "kind": "solvapay",
+      "message": "Missing apiKey",
+      "status": null,
+      "operationName": "Create client"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing apiKey",
+      "status": 500,
+      "details": "Missing apiKey"
+    }
+  }
+}

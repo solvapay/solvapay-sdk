@@ -1,0 +1,19 @@
+{
+  "name": "@solvapay/server-native-darwin-x64",
+  "version": "0.1.0",
+  "cpu": [
+    "x64"
+  ],
+  "main": "server-native.darwin-x64.node",
+  "files": [
+    "server-native.darwin-x64.node"
+  ],
+  "description": "SolvaPay napi-rs Node binding (step 36 scaffold)",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18"
+  },
+  "os": [
+    "darwin"
+  ]
+}

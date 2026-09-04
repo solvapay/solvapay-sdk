@@ -1,0 +1,24 @@
+{
+  "suite": "seller-identity",
+  "case": "resolve-gb-vat",
+  "input": {
+    "fn": "resolveSellerIdentityDisplay",
+    "args": {
+      "country": "GB",
+      "vatNumber": "GB987654321",
+      "companyNumber": "GB123456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "taxIdentifier": {
+        "label": "VAT number",
+        "value": "GB987654321"
+      },
+      "companyNumber": {
+        "label": "Company number",
+        "value": "GB123456789"
+      }
+    }
+  }
+}

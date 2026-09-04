@@ -1,0 +1,16 @@
+{
+  "extends": "@solvapay/tsconfig/base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@solvapay/mcp-core": ["../mcp-core/src"],
+      "@solvapay/server": ["../server/src"],
+      "@solvapay/core": ["../core/src"],
+      "@solvapay/core/browser-wasm": ["../core/src/browser-wasm"]
+    }
+  },
+  "include": ["src"],
+  "references": [{ "path": "../core" }, { "path": "../server" }, { "path": "../mcp-core" }]
+}

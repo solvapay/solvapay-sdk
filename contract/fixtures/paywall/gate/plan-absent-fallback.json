@@ -1,0 +1,23 @@
+{
+  "suite": "paywall",
+  "case": "plan-absent-fallback",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "remaining": 0,
+        "checkoutUrl": "https://pay.test/x"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/x",
+      "message": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md.",
+      "shortMessage": "Payment required"
+    }
+  }
+}

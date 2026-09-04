@@ -1,0 +1,46 @@
+[package]
+name = "solvapay-mcp-core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Shared MCP product surface: descriptors, OAuth, auth gate, JSON-RPC engine"
+readme = "README.md"
+publish = true
+
+[features]
+default = ["server", "engine"]
+server = ["solvapay-core/server", "jwt-verify"]
+# RS256/ES256 + HS256 for MCP bearer verification. Off the browser wasm graph.
+jwt-verify = ["dep:hmac", "dep:sha2", "dep:sha2-rsa", "dep:subtle", "dep:rsa", "dep:p256", "dep:getrandom"]
+engine = ["server"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+solvapay-core = { path = "../solvapay-core", version = "0.1.0", default-features = false }
+uuid = { version = "1.18.0", features = ["v4"] }
+hmac = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+# rsa 0.9 is on digest 0.10 / sha2 0.10; workspace sha2 is 0.11 (HMAC).
+sha2-rsa = { package = "sha2", version = "0.10.9", features = ["oid"], optional = true }
+subtle = { workspace = true, optional = true }
+rsa = { workspace = true, optional = true }
+p256 = { workspace = true, optional = true }
+getrandom = { version = "0.2.17", optional = true }
+
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+uuid = { version = "1.18.0", features = ["v4", "js"] }
+getrandom = { version = "0.2.17", features = ["js"], optional = true }
+
+[dev-dependencies]
+repo-paths = { path = "../../tools/shared/repo-paths" }
+tokio = { workspace = true, features = ["rt", "macros"] }
+wiremock = { workspace = true }
+
+[lints]
+workspace = true

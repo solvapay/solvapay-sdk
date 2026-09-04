@@ -1,0 +1,18 @@
+{
+  "suite": "overview",
+  "case": "resource",
+  "input": {
+    "fn": "mcpOverviewResource",
+    "args": {}
+  },
+  "expect": {
+    "result": {
+      "uri": "docs://solvapay/overview.md",
+      "mimeType": "text/markdown",
+      "name": "SolvaPay MCP — overview",
+      "title": "SolvaPay overview",
+      "description": "Agent-facing \"start here\" doc — explains the five intent tools, dual-audience fallback, and auth model before any tool is called.",
+      "body": "# SolvaPay MCP server — overview\n\nThis MCP server connects a SolvaPay-protected product to your host so users can\nmanage their plan, usage, and billing **without leaving the chat**. It is\ndual-audience: every tool returns a UI bootstrap for hosts that render MCP UI\nresources (`basic-host`, Claude Desktop, ChatGPT, etc.) and a markdown summary\nwith clickable URLs for text-only hosts.\n\n## What the user can do\n\n- **Upgrade** — start or change a paid plan. `/upgrade` opens the embedded\n  checkout (Stripe Elements inline) on UI hosts and returns a hosted-checkout\n  URL on text hosts.\n- **Manage account** — current plan, balance, usage, payment method, cancel\n  or reactivate auto-renewal. Credits + usage are folded inline into the\n  account view. `/manage_account`.\n- **Top up credits** — add SolvaPay credits for usage-based plans.\n  `/topup`.\n- **Activate plan** — pick a plan from the list or activate a specific plan\n  by `planRef`. Free plans activate immediately, usage-based plans activate\n  when balance covers the configured usage, paid plans return the embedded\n  checkout or a hosted-checkout URL. `/activate_plan`.\n\n## How it fits together\n\nEach intent tool returns a full `BootstrapPayload` (merchant + product + plans\n+ customer snapshot) so the embedded UI never fires per-view read calls. When\na paywalled data tool hits the usage limit, its response is plain text: the\n`content[0].text` narration names the recovery intent tool\n(`upgrade` / `topup` / `activate_plan`) and inlines `gate.checkoutUrl` for\nterminal-first hosts. The structured gate rides on `structuredContent` for\nprogrammatic consumers. No widget iframe opens for a gate — the LLM reads the\nnarration and, if the user agrees, calls the named intent tool which mounts\nthe checkout / topup / account surface.\n\nAuth is handled by the SolvaPay OAuth bridge (see `createMcpOAuthBridge`). The\nbridge injects `customer_ref` onto every authenticated request; tools that\nneed an authenticated caller return `Unauthorized` when it is missing.\n\n## Also see\n\n- `docs://solvapay/overview.md` (this resource) — agent-facing narration.\n- `ui://<app>/mcp-app.html` — the embedded UI shell.\n- `tools/list` + `prompts/list` — programmatic discovery of the intent tools\n  and their slash-command shortcuts.\n- Documentation: https://docs.solvapay.com/sdks/typescript/guides/mcp-app.\n"
+    }
+  }
+}

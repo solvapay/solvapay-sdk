@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-normalize-nested",
+  "input": {
+    "fn": "normalizeReactivateResponse",
+    "args": {
+      "response": {
+        "purchase": { "reference": "pur_1", "status": "active" }
+      }
+    }
+  },
+  "expect": {
+    "result": { "reference": "pur_1", "status": "active" }
+  }
+}

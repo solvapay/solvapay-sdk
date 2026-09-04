@@ -1,0 +1,39 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getCustomer",
+    "args": {
+      "customerRef": "foo/../purchases"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-customer-encoded-path",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/customers/foo%2F..%2Fpurchases",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "foo/../purchases",
+        "email": "a@example.com",
+        "name": "Ada",
+        "externalRef": "ext_fixture"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "customerRef": "foo/../purchases",
+      "email": "a@example.com",
+      "name": "Ada",
+      "externalRef": "ext_fixture",
+      "purchases": []
+    }
+  }
+}

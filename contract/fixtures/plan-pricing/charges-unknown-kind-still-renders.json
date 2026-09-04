@@ -1,0 +1,32 @@
+{
+  "suite": "plan-pricing",
+  "case": "charges-unknown-kind-still-renders",
+  "input": {
+    "fn": "charges",
+    "args": {
+      "priced": {
+        "options": [
+          {
+            "kind": "mystery",
+            "foo": 1
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 500,
+            "currency": "usd"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": [
+      {
+        "per": "flat",
+        "amountMinor": 500,
+        "currency": "usd"
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "suite": "money-format",
+  "case": "price-interval-month",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 999,
+      "currency": "usd",
+      "interval": "month"
+    }
+  },
+  "expect": {
+    "result": "$9.99 / month"
+  }
+}

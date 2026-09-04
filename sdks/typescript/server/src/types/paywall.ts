@@ -1,0 +1,179 @@
+/**
+ * Paywall Type Definitions
+ *
+ * Types related to paywall protection, limits, and gating functionality.
+ */
+
+import type { components } from './generated'
+import type { LimitResponseWithPlan } from './client'
+
+export type LimitPlanSummary = components['schemas']['LimitPlanItemDto']
+export type LimitActivationBalance = components['schemas']['LimitBalanceDto']
+export type LimitActivationProduct = components['schemas']['LimitProductBriefDto']
+
+/**
+ * Discriminated union describing which recovery path the customer needs.
+ * Every state maps to exactly one primary recovery tool except
+ * `reactivation_required`, which surfaces two alternatives (rare).
+ *
+ * `reactivation_required` is not currently produced by `classifyPaywallState`
+ * (it needs a distinct backend signal), but stays in the union so downstream
+ * code compiles against the full set of discriminants.
+ */
+export type PaywallState =
+  | { kind: 'activation_required' }
+  | { kind: 'topup_required' }
+  | { kind: 'upgrade_required' }
+  | { kind: 'limit_reached' }
+  | { kind: 'reactivation_required' }
+
+export type PaywallGateRecoveryFields = {
+  planRef?: string
+  plans?: LimitPlanSummary[]
+  meterName?: string
+  unitPriceMinor?: number
+  currency?: string
+  included?: { total: number; used: number; remaining: number }
+  creditBalance?: number
+}
+
+/**
+ * Arguments passed to protected handlers
+ */
+export interface PaywallArgs {
+  [key: string]: unknown
+  auth?: { customer_ref?: string }
+}
+
+/**
+ * Metadata for configuring paywall protection
+ */
+export interface PaywallMetadata {
+  product?: string
+  /** Meter to charge against (defaults to `requests`). */
+  meterName?: string
+  /**
+   * @deprecated Use `meterName`. Still accepted as an alias of the meter name.
+   */
+  usageType?: string
+}
+
+/**
+ * Structured content for paywall errors (MCP structuredContent and manual handling).
+ */
+export type PaywallStructuredContent =
+  | ({
+      kind: 'payment_required'
+      /** Product ref from paywall metadata (or env default) */
+      product: string
+      checkoutUrl: string
+      message: string
+      /** Kind-derived throw text (`Activation required` / `Payment required`). */
+      shortMessage: string
+      /**
+       * Quota balance at the moment the paywall tripped. Optional so
+       * older server versions (pre-balance-on-payment_required) stay
+       * compatible; the React `PaywallNotice.Message` prefers this
+       * structured data over the raw `message` when available.
+       */
+      balance?: LimitActivationBalance
+      /** Rich product context from checkLimits (name, ref, provider slug/id) */
+      productDetails?: LimitActivationProduct
+    } & PaywallGateRecoveryFields)
+  | ({
+      kind: 'activation_required'
+      /** Product ref from paywall metadata (or env default) */
+      product: string
+      message: string
+      /** Kind-derived throw text (`Activation required` / `Payment required`). */
+      shortMessage: string
+      /**
+       * Best URL for completing purchase or confirmation; mirrors confirmationUrl when present.
+       */
+      checkoutUrl: string
+      confirmationUrl?: string
+      plans?: LimitPlanSummary[]
+      balance?: LimitActivationBalance
+      /** Rich product context from checkLimits (name, ref, provider slug/id) */
+      productDetails?: LimitActivationProduct
+    } & PaywallGateRecoveryFields)
+
+/**
+ * MCP tool result with optional paywall information — structural copy
+ * of `PaywallToolResult` from `@solvapay/mcp` kept here to avoid a
+ * build-time circular dependency between `@solvapay/server` and
+ * `@solvapay/mcp`. Keep in lockstep — a snapshot test in
+ * `@solvapay/mcp` guards the shape.
+ */
+export interface PaywallToolResult {
+  content?: Array<{
+    type: 'text' | 'image' | 'resource'
+    text?: string
+    data?: string
+    mimeType?: string
+  }>
+  isError?: boolean
+  structuredContent?: PaywallStructuredContent | Record<string, unknown>
+  _meta?: Record<string, unknown>
+}
+
+/**
+ * Runtime type guard for `PaywallStructuredContent`.
+ *
+ * Used by the MCP registration layer to detect paywall-shaped tool results
+ * coming out of `.mcp()` so it knows whether to attach the `_meta.ui`
+ * envelope that tells MCP hosts which UI resource to open.
+ *
+ * @since 1.0.9
+ */
+export function isPaywallStructuredContent(value: unknown): value is PaywallStructuredContent {
+  if (typeof value !== 'object' || value === null || !('kind' in value)) {
+    return false
+  }
+  const kind = (value as { kind?: unknown }).kind
+  return kind === 'payment_required' || kind === 'activation_required'
+}
+
+/**
+ * Discriminated union returned from `paywall.decide(args, metadata)` that
+ * surfaces the pre-check outcome as data instead of an exception.
+ *
+ * Replaces the throw-based `PaywallError` control flow adapters previously
+ * relied on: `allow` carries the resolved customer ref + fresh
+ * `LimitResponseWithPlan` so the handler can run, while `gate` carries the
+ * ready-to-serialise `PaywallStructuredContent` so the adapter's
+ * `formatGate` can emit the transport-specific paywall response.
+ *
+ * The `args` field on `allow` is the same shape passed in — threaded
+ * through so callers can hand it directly to the handler without having
+ * to hold onto a reference across the call.
+ *
+ * @since 1.1.0
+ */
+export type PaywallDecision<T> =
+  | {
+      outcome: 'allow'
+      args: T
+      limits: LimitResponseWithPlan
+      customerRef: string
+      /** Opaque `gate_next` state for `handlerSucceeded` / `handlerFailed`. */
+      driverState: unknown
+      /**
+       * Set when access is granted with consequences. `throttled` is
+       * `onExceed: throttle` (legacy plans — the builder no longer
+       * offers it). `overage` is `onExceed: charge` past the included
+       * cap. Absent on a plain allow. Derived by the core gate driver.
+       */
+      consequence?: 'throttled' | 'overage'
+    }
+  | {
+      outcome: 'gate'
+      gate: PaywallStructuredContent
+      /**
+       * The `LimitResponseWithPlan` consulted when the gate tripped. May
+       * be `null` on degraded paths that couldn't produce a fresh
+       * response (defensive — normal flow always populates this).
+       */
+      limits: LimitResponseWithPlan | null
+      customerRef: string
+    }

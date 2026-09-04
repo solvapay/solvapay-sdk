@@ -1,0 +1,13 @@
+{
+  "suite": "tax-summary",
+  "case": "subtotal-label-not-collecting",
+  "input": {
+    "fn": "formatSubtotalLabel",
+    "args": {
+      "treatment": "not_collecting"
+    }
+  },
+  "expect": {
+    "result": "Subtotal"
+  }
+}

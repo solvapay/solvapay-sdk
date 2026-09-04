@@ -1,0 +1,327 @@
+/**
+ * Scaffold a new catalog entry into sdk-contract.yaml.
+ *
+ * Usage:
+ *   pnpm gen:scaffold operation <id> --method POST --path /v1/sdk/foo
+ *   pnpm gen:scaffold operation <id> --method GET --path /v1/sdk/foo/{ref}
+ *
+ * Derives request/response DTO refs and path-param names from the OpenAPI
+ * snapshot. Fills all six language names via `deriveNames`. Leaves a docs
+ * placeholder for human prose. The Rust side is linked by annotating the
+ * transport method with `#[solvapay_export]`, not from here.
+ *
+ * Full workflow: docs/contributing/sdk-codegen.md (Workflow A).
+ */
+
+import { readFileSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
+import { insertSectionEntry, renderYamlFragment, sectionHasEntry } from './lib/manifest-edit.js'
+import { isDirectRun, parseErrorResult, runScriptMain, type CliResult } from './lib/cli.js'
+import { deriveNames, toSnakeCase } from '../shared/manifest-schema.js'
+import type { OpenApiSpec } from './lib/openapi-pipeline.js'
+import { contractInputPath } from '../shared/repo-paths.js'
+
+const DEFAULT_MANIFEST = contractInputPath('sdkManifest')
+const DEFAULT_SNAPSHOT = contractInputPath('openapiSnapshot')
+
+const DEFAULT_SYNC = {
+  ts: 'async',
+  py: ['async', 'blocking'],
+  rb: 'blocking',
+  go: 'blocking',
+  rust: ['async', 'blocking'],
+  c: 'blocking',
+} as const
+
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+
+export interface ScaffoldOptions {
+  kind: 'operation'
+  id: string
+  method: HttpMethod
+  path: string
+  manifestPath: string
+  snapshotPath: string
+}
+
+function printUsage(): string {
+  return `Usage:
+  pnpm gen:scaffold operation <id> --method <GET|POST|PUT|PATCH|DELETE> --path <route>
+`
+}
+
+function schemaRefName(schema: unknown): string | undefined {
+  if (!schema || typeof schema !== 'object') {
+    return undefined
+  }
+  const ref = (schema as { $ref?: unknown }).$ref
+  if (typeof ref !== 'string') {
+    return undefined
+  }
+  const match = ref.match(/^#\/components\/schemas\/(.+)$/)
+  return match?.[1]
+}
+
+function pathParamNames(routePath: string): string[] {
+  const names: string[] = []
+  const re = /\{([A-Za-z_][A-Za-z0-9_]*)\}/g
+  let match: RegExpExecArray | null
+  while ((match = re.exec(routePath)) !== null) {
+    const name = match[1]
+    if (name !== undefined) {
+      names.push(name)
+    }
+  }
+  return names
+}
+
+function openApiOperation(
+  snapshot: OpenApiSpec,
+  method: HttpMethod,
+  routePath: string,
+): Record<string, unknown> {
+  const methods = snapshot.paths?.[routePath]
+  if (!methods || typeof methods !== 'object') {
+    throw new Error(`OpenAPI path not found: ${routePath}`)
+  }
+  const op = (methods as Record<string, unknown>)[method.toLowerCase()]
+  if (!op || typeof op !== 'object') {
+    throw new Error(`OpenAPI operation not found: ${method} ${routePath}`)
+  }
+  return op as Record<string, unknown>
+}
+
+function requestSchemaName(op: Record<string, unknown>): string | undefined {
+  const body = op.requestBody
+  if (!body || typeof body !== 'object') {
+    return undefined
+  }
+  const content = (body as { content?: Record<string, { schema?: unknown }> }).content
+  const json = content?.['application/json']
+  return schemaRefName(json?.schema)
+}
+
+function responseSchemaName(op: Record<string, unknown>): string {
+  const responses = op.responses
+  if (!responses || typeof responses !== 'object') {
+    throw new Error('OpenAPI operation has no responses')
+  }
+  const responseMap = responses as Record<string, unknown>
+  for (const code of ['200', '201', '202', '204']) {
+    const response = responseMap[code]
+    if (!response || typeof response !== 'object') {
+      continue
+    }
+    if (code === '204') {
+      return 'void'
+    }
+    const content = (response as { content?: Record<string, { schema?: unknown }> }).content
+    const json = content?.['application/json']
+    const name = schemaRefName(json?.schema)
+    if (name !== undefined) {
+      return name
+    }
+  }
+  throw new Error('Could not resolve success response schema from OpenAPI')
+}
+
+function buildParams(
+  pathParams: string[],
+  requestName: string | undefined,
+): Array<Record<string, unknown>> {
+  const params: Array<Record<string, unknown>> = pathParams.map(name => ({
+    name,
+    type: 'string',
+    required: true,
+  }))
+  if (requestName !== undefined) {
+    params.push({
+      name: 'params',
+      ref: requestName,
+      required: true,
+    })
+  }
+  return params
+}
+
+function operationBodyYaml(opts: {
+  method: HttpMethod
+  routePath: string
+  id: string
+  request?: string
+  response: string
+  params: Array<Record<string, unknown>>
+  description?: string
+}): string {
+  const names = deriveNames(opts.id)
+  const overlays = [opts.response, ...(opts.request !== undefined ? [opts.request] : [])]
+  const docsSummary =
+    opts.description?.trim() || `TODO: document ${opts.id} (${opts.method} ${opts.routePath}).`
+  const doc: Record<string, unknown> = {
+    route: { method: opts.method, path: opts.routePath },
+    names,
+    optionalOnClient: false,
+    ...(opts.request !== undefined ? { request: opts.request } : {}),
+    response: opts.response,
+    overlays,
+    normalization: [],
+    idempotency: { kind: 'none' },
+    errors: {
+      default: {
+        messageTemplate: `${opts.id} failed ({status}): {body}`,
+      },
+      cases: [],
+    },
+    params: opts.params,
+    docs: {
+      summary: docsSummary,
+      params: Object.fromEntries(
+        opts.params.map(p => {
+          const name = String(p.name)
+          return [name, `TODO: document param \`${name}\`.`]
+        }),
+      ),
+      returns: `TODO: document return value of ${opts.id}.`,
+    },
+    sync: DEFAULT_SYNC,
+  }
+  // Strip the outer key — insertSectionEntry adds `  id:\n`.
+  return renderYamlFragment(doc, 4)
+}
+
+export function parseArgs(argv: string[]): ScaffoldOptions {
+  const kind = argv[0]
+  const id = argv[1]
+  if (kind !== 'operation' || !id || id.startsWith('--')) {
+    throw new Error(printUsage().trim())
+  }
+
+  let method: HttpMethod | undefined
+  let routePath: string | undefined
+  let manifestPath = DEFAULT_MANIFEST
+  let snapshotPath = DEFAULT_SNAPSHOT
+
+  for (let i = 2; i < argv.length; i += 1) {
+    const arg = argv[i]
+    if (arg === '--method') {
+      const next = argv[i + 1]
+      if (!next || next.startsWith('--')) {
+        throw new Error('--method requires GET|POST|PUT|PATCH|DELETE')
+      }
+      const upper = next.toUpperCase()
+      if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(upper)) {
+        throw new Error(`Invalid method: ${next}`)
+      }
+      method = upper as HttpMethod
+      i += 1
+      continue
+    }
+    if (arg === '--path') {
+      const next = argv[i + 1]
+      if (!next || next.startsWith('--')) {
+        throw new Error('--path requires a route path')
+      }
+      routePath = next
+      i += 1
+      continue
+    }
+    if (arg === '--manifest') {
+      const next = argv[i + 1]
+      if (!next || next.startsWith('--')) {
+        throw new Error('--manifest requires a path')
+      }
+      manifestPath = path.resolve(next)
+      i += 1
+      continue
+    }
+    if (arg === '--snapshot') {
+      const next = argv[i + 1]
+      if (!next || next.startsWith('--')) {
+        throw new Error('--snapshot requires a path')
+      }
+      snapshotPath = path.resolve(next)
+      i += 1
+      continue
+    }
+    if (arg === '--help' || arg === '-h') {
+      throw new Error(printUsage().trim())
+    }
+    throw new Error(`Unknown argument: ${arg}`)
+  }
+
+  if (method === undefined || routePath === undefined) {
+    throw new Error('--method and --path are required\n' + printUsage())
+  }
+
+  return {
+    kind: 'operation',
+    id,
+    method,
+    path: routePath,
+    manifestPath,
+    snapshotPath,
+  }
+}
+
+export function scaffoldOperation(options: ScaffoldOptions): {
+  stdout: string
+  manifestRaw: string
+} {
+  const snapshot = JSON.parse(readFileSync(options.snapshotPath, 'utf8')) as OpenApiSpec
+  const op = openApiOperation(snapshot, options.method, options.path)
+  const request = requestSchemaName(op)
+  const response = responseSchemaName(op)
+  const pathParams = pathParamNames(options.path)
+  const params = buildParams(pathParams, request)
+  const description =
+    (typeof op.description === 'string' && op.description.trim()) ||
+    (typeof op.summary === 'string' && op.summary.trim()) ||
+    undefined
+
+  let raw = readFileSync(options.manifestPath, 'utf8')
+  if (sectionHasEntry(raw, 'operations', options.id)) {
+    throw new Error(`operations.${options.id} already exists in manifest`)
+  }
+
+  const opBody = operationBodyYaml({
+    method: options.method,
+    routePath: options.path,
+    id: options.id,
+    request,
+    response,
+    params,
+    description,
+  })
+  raw = insertSectionEntry(raw, 'operations', options.id, opBody)
+
+  const lines = [
+    `Scaffolded operations.${options.id}`,
+    `Annotate SolvaPayClient::${toSnakeCase(options.id)} with #[solvapay_export]`,
+    'Fill/replace docs: prose, then run: pnpm gen && pnpm manifest:check',
+  ]
+  return { stdout: lines.join('\n') + '\n', manifestRaw: raw }
+}
+
+export async function runCli(argv: string[]): Promise<CliResult> {
+  let options: ScaffoldOptions
+  try {
+    options = parseArgs(argv)
+  } catch (error) {
+    return parseErrorResult(error, printUsage())
+  }
+  try {
+    const result = scaffoldOperation(options)
+    writeFileSync(options.manifestPath, result.manifestRaw)
+    return { exitCode: 0, stdout: result.stdout, stderr: '' }
+  } catch (error) {
+    return {
+      exitCode: 1,
+      stdout: '',
+      stderr: `${error instanceof Error ? error.message : String(error)}\n`,
+    }
+  }
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runScriptMain(runCli)
+}

@@ -1,6 +1,8 @@
 node_modules
 dist
 .cache
+.ci-venv/
+**/.ci-venv/
 .next
 .env
 .env.*
@@ -10,6 +12,7 @@ dist
 .npmrc
 .pnpm-store
 .turbo
+.wrangler
 .cursor/*
 !.cursor/rules/
 !.cursor/plans/
@@ -25,6 +28,12 @@ dist
 # here would defeat the regression-detection window.
 deno.lock
 
+# Playwright / browser-test run artifacts
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # Code coverage
 coverage/
 *.lcov
@@ -36,3 +45,23 @@ docs/api.json
 
 # Scratch research notes — internal, not for the public repo
 research-tmp/
+
+# Contract / snapshot CLI test scratch
+tools/.tmp/
+
+# Live-contract report output
+contract/live/output/
+
+# Rust / Cargo build artifacts
+target/
+**/*.rs.bk
+*.pdb
+
+# napi-rs Node binding (step 36) — native binaries (loaders are committed)
+sdks/node-native/*.node
+sdks/node-native/*.wasm
+sdks/node-native/node_modules/
+sdks/node-native/npm/**/*.node
+sdks/node-native/npm/**/*.wasm
+sdks/node-native/artifacts/
+sdks/node-native/clean-install-bundle/

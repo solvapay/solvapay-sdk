@@ -1,14 +1,18 @@
 name: Publish Preview Snapshot
 
-# On every push to `dev`, run the pre-publish gates and cut a
-# changesets snapshot to the `@preview` dist-tag. Each publish is
-# addressable as `@solvapay/<pkg>@0.0.0-preview-<shortsha>` (stable
-# version pin) plus a mutable `@preview` pointer at the latest.
+# Manual `workflow_dispatch` only. Defaults to dry-run: full pre-publish
+# gates, then `changeset status` + `pnpm -r publish --dry-run` (no NPM_TOKEN).
+# Set `dry_run=false` to cut a real `@preview` snapshot
+# (`@solvapay/<pkg>@0.0.0-preview-<shortsha>` plus a mutable `@preview`
+# pointer). `workflow_dispatch` inputs resolve against the default branch.
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Skip snapshot publish; run gates + pnpm -r publish --dry-run (no NPM_TOKEN)'
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: publish-preview
@@ -17,6 +21,8 @@ concurrency:
 jobs:
   publish-preview:
     runs-on: ubuntu-latest
+    env:
+      SOLVAPAY_CORE_SHA: ${{ github.sha }}
     permissions:
       contents: read
 
@@ -29,13 +35,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 9.6.0
 
       - name: Setup Deno
         run: |
@@ -73,23 +77,28 @@ jobs:
       - name: Validate fetch-runtime — Node gate
         run: pnpm validate:fetch-runtime
 
-      # Deno gate — type-checks examples/supabase-edge-mcp against the
-      # workspace source of the packages this run is about to publish,
-      # via examples/supabase-edge-mcp/deno.workspace.json. This is the
-      # blocking gate: it validates the exact code being shipped, and
-      # unlike a gate pinned to the `@preview` dist-tag it cannot
-      # deadlock (a broken publish used to freeze the tag that the gate
-      # read, so the run that would have fixed it could never get past
-      # its own gate). The same check runs on PRs in ci.yml, so a break
-      # is normally caught before merge.
+      # Deno gate — type-checks examples/typescript/supabase-edge-mcp against the
+      # workspace source of the packages this run is about to publish, via
+      # examples/typescript/supabase-edge-mcp/deno.workspace.json. This is the
+      # blocking gate: it validates the exact code being shipped, and unlike a
+      # gate pinned to the `@preview` dist-tag it cannot deadlock. The same
+      # check runs on PRs in ci.yml, so a break is normally caught before merge.
       - name: Validate fetch-runtime — Deno gate (workspace source)
         run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
+      - name: Dry-run npm publish
+        if: ${{ inputs.dry_run }}
+        run: |
+          pnpm changeset status
+          pnpm -r publish --dry-run --no-git-checks
+
       - name: Version snapshot
+        if: ${{ !inputs.dry_run }}
         run: pnpm changeset version --snapshot preview
 
       - name: Publish snapshot to @preview
         id: publish
+        if: ${{ !inputs.dry_run }}
         run: |
           set -o pipefail
           pnpm changeset publish --tag preview --no-git-tag 2>&1 | tee publish.log
@@ -105,7 +114,8 @@ jobs:
       # and fails the job if any package isn't fetchable after a retry
       # window.
       - name: Verify published packages landed on npm
-        run: node scripts/verify-npm-publishes.mjs publish.log
+        if: ${{ !inputs.dry_run }}
+        run: node tools/repo/verify-npm-publishes.mjs publish.log
 
       # Post-publish `@preview` gate — re-type-checks the same example
       # against the tag this run just moved, using
@@ -118,4 +128,5 @@ jobs:
       # failure reports a broken published preview loudly instead of
       # withholding the publish that would fix it.
       - name: Validate fetch-runtime — Deno gate (published @preview tarballs)
+        if: ${{ !inputs.dry_run }}
         run: pnpm --filter @example/supabase-edge-mcp validate

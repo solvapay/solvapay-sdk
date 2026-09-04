@@ -1,0 +1,37 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "cancelPurchase",
+    "args": {
+      "purchaseRef": "foo/../purchases"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "cancel-purchase-encoded-path",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/purchases/foo%2F..%2Fpurchases/cancel",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "purchase": {
+          "reference": "foo/../purchases",
+          "status": "cancelled"
+        },
+        "message": "ok"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "reference": "foo/../purchases",
+      "status": "cancelled"
+    }
+  }
+}

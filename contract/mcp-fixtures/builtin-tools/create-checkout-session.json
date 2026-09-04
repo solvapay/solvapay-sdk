@@ -1,0 +1,44 @@
+{
+  "suite": "builtin-tools",
+  "case": "create-checkout-session",
+  "input": {
+    "fn": "mcpCallBuiltinTool",
+    "args": {
+      "name": "create_checkout_session",
+      "args": {
+        "planRef": "pln_pro"
+      },
+      "config": {
+        "productRef": "prd_demo",
+        "publicBaseUrl": "https://app.example.com",
+        "resourceUri": "ui://test/view.html"
+      },
+      "customerRef": "cus_1"
+    }
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/v1/sdk/checkout-sessions",
+      "status": 200,
+      "body": {
+        "url": "https://checkout.example/s",
+        "id": "cs_1"
+      }
+    }
+  ],
+  "expect": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"url\":\"https://checkout.example/s\",\"id\":\"cs_1\"}"
+        }
+      ],
+      "structuredContent": {
+        "url": "https://checkout.example/s",
+        "id": "cs_1"
+      }
+    }
+  }
+}

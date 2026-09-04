@@ -1,0 +1,20 @@
+{
+  "suite": "helper-error",
+  "case": "solvapay-with-status",
+  "input": {
+    "fn": "mapRouteError",
+    "args": {
+      "kind": "solvapay",
+      "message": "Get merchant failed (404): not found",
+      "status": 404,
+      "operationName": "Get merchant"
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Get merchant failed (404): not found",
+      "status": 404,
+      "details": "Get merchant failed (404): not found"
+    }
+  }
+}

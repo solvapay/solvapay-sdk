@@ -1,0 +1,19 @@
+{
+  "suite": "paywall",
+  "case": "nudge-upgrade-no-url",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": {
+        "kind": "upgrade_required"
+      },
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 1
+      }
+    }
+  },
+  "expect": {
+    "result": "Heads up — approaching your plan's limit this period. Call the `upgrade` tool for more headroom."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "suite": "business-details",
+  "case": "nl-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "NL",
+      "taxId": "NL123456789B12"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "NL",
+        "taxId": "NL123456789B12",
+        "taxIdType": "eu_vat"
+      }
+    }
+  }
+}

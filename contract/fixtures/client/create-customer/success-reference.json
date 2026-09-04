@@ -1,0 +1,38 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "createCustomer",
+    "args": {
+      "email": "a@example.com",
+      "metadata": {}
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "create-customer-success-reference",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/customers",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "email": "a@example.com",
+        "metadata": {}
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "cus_from_ref",
+        "customerRef": "cus_ignored"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "customerRef": "cus_from_ref"
+    }
+  }
+}

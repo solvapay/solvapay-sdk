@@ -1,6 +1,50 @@
 # SolvaPay SDK Examples
 
-This directory contains example applications demonstrating how to use the SolvaPay SDK in different environments.
+Runnable examples by language. Each language subtree holds at least one offline-tested example (redesign §9 / D20).
+
+## Layout
+
+```text
+examples/
+├── typescript/   # Node / Next / Workers / Supabase / MCP demos (@example/*)
+├── python/       # Python binding examples
+├── ruby/         # Ruby gem examples
+├── go/           # Go module examples
+└── rust/         # Rust crate examples
+```
+
+## TypeScript
+
+All TypeScript demos live under [`typescript/`](./typescript/). Shared stub utilities: [`typescript/shared/`](./typescript/shared/).
+
+```bash
+# from repo root
+pnpm install
+pnpm build:packages
+./examples/typescript/setup-env.sh   # optional .env scaffolding
+
+cd examples/typescript/express-basic && pnpm dev   # keyless — injects a stub apiClient
+```
+
+| Example                                                           | Stack                 | Notes                                                         |
+| ----------------------------------------------------------------- | --------------------- | ------------------------------------------------------------- |
+| [express-basic](./typescript/express-basic)                       | Express               | `payable.http()` paywall; runs keyless via a stub `apiClient` |
+| [express-provider-linkage](./typescript/express-provider-linkage) | Express               | Linkage-first: your IdP + `ensureCustomer` before metering    |
+| [nextjs-auth0](./typescript/nextjs-auth0)                         | Next.js + Auth0       | Canonical Auth0 `sub` → customer linkage + embedded PAYG      |
+| [checkout-demo](./typescript/checkout-demo)                       | Next.js               | Full embedded checkout + Supabase auth                        |
+| [hosted-checkout-demo](./typescript/hosted-checkout-demo)         | Next.js               | Redirect checkout + hosted portal                             |
+| [shadcn-checkout](./typescript/shadcn-checkout)                   | Next.js + shadcn/ui   | Primitives mapped onto shadcn via `asChild` (port 3012)       |
+| [tailwind-checkout](./typescript/tailwind-checkout)               | Next.js + Tailwind v4 | Same four files, styled in userspace (port 3011)              |
+| [chat-checkout-demo](./typescript/chat-checkout-demo)             | Vite + Workers        | Streaming chat gated with `payable.gate()`                    |
+| [supabase-edge](./typescript/supabase-edge)                       | Deno / Edge           | `@solvapay/server/fetch` one-liners                           |
+| [mcp-time-app](./typescript/mcp-time-app)                         | Express MCP           | Smallest UI-enabled MCP app                                   |
+| [mcp-oauth-bridge](./typescript/mcp-oauth-bridge)                 | Express MCP           | OAuth bridge for a non-hosted MCP origin                      |
+| [mcp-checkout-app](./typescript/mcp-checkout-app)                 | Express MCP           | Full MCP App UI — the canonical reference server              |
+| [supabase-edge-mcp](./typescript/supabase-edge-mcp)               | Supabase Edge MCP     | Deno fetch-runtime gate                                       |
+| [cloudflare-workers-mcp](./typescript/cloudflare-workers-mcp)     | Workers MCP           | Sibling of supabase-edge-mcp                                  |
+| [supabase-edge-mcp-proxy](./typescript/supabase-edge-mcp-proxy)   | Cloudflare Worker     | Root-URL proxy so RFC 9728 discovery works                    |
+
+See each example’s README for setup. Build all workspace examples: `pnpm build:examples`.
 
 ## Local platform stack
 
@@ -10,264 +54,49 @@ the vars you need into the target example's own `.env` — each package loads
 dotenv from its directory. Use `SOLVAPAY_API_BASE_URL=http://localhost:3010`
 (provider-app proxy) and remap MCP/example ports to `3030+` so they don't
 collide with platform services. Convenience scripts from the repo root:
-`pnpm mcp:checkout` / `pnpm mcp:checkout:tunnel`.
+`pnpm mcp:checkout` / `pnpm mcp:checkout:tunnel`,
+`pnpm mcp:stock-research` / `pnpm mcp:stock-research:tunnel`,
+`pnpm mcp:bitcoin-analytics` / `pnpm mcp:bitcoin-analytics:tunnel`, and
+`pnpm mcp:guerrillamail` / `pnpm mcp:guerrillamail:tunnel`.
 
-## Shared Utilities
+## Python
 
-The `shared/` folder contains reusable utilities used across multiple examples:
-
-- **`stub-api-client.ts`** - A demo implementation of the SolvaPay API client for local development
-  - No backend required
-  - Simulates free tier limits and paid access
-  - In-memory or file-based persistence
-  - Drop-in replacement for `createSolvaPayClient()`
-
-See [`shared/README.md`](./shared/README.md) for detailed documentation.
-
-## Available Examples
-
-### Next.js Auth0 (`nextjs-auth0`)
-
-A minimal Next.js App Router starter with Auth0 login, shadcn/ui, Tailwind CSS, and a per-user task board:
-
-- Auth0 v4 session auth via `proxy.ts`
-- Protected dashboard and `/api/tasks` CRUD
-- In-memory storage keyed by `session.user.sub`
-- No SolvaPay dependencies (natural follow-up: paywall on task limits)
-
-**Run the example:**
+| Example                                           | Description                                                                                                      |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [stock-research-mcp](./python/stock-research-mcp) | Paywalled MCP tools joining a ranked watchlist with SEC company data. Ngrok via `pnpm mcp:stock-research:tunnel` |
 
 ```bash
-cd examples/nextjs-auth0
-cp .env.example .env.local
-# Add Auth0 credentials — see README.md
-pnpm install
-pnpm dev
+cd examples/python/stock-research-mcp
+uv run --project ../../sdks/python-mcp --extra dev --with uvicorn pytest -q
 ```
 
-The application will start on `http://localhost:3013`
+## Ruby
 
-### Express Basic (`express-basic`)
-
-A simple Express.js server demonstrating:
-
-- Paywall protection for CRUD API endpoints
-- Customer identification via headers
-- Free tier limits with automatic checkout URLs
-- Stub mode for local development (uses shared stub client)
-- Production mode with real backend API
-
-**Run the example:**
+| Example                                               | Description                                                                                                                   |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| [bitcoin_analytics_mcp](./ruby/bitcoin_analytics_mcp) | Paywalled MCP tools composing Bitcoin halving, mempool.space, and btcnode data. Ngrok via `pnpm mcp:bitcoin-analytics:tunnel` |
 
 ```bash
-cd examples/express-basic
-pnpm install
-pnpm dev  # Runs in stub mode by default (no API key needed)
+cd sdks/ruby-mcp
+bundle exec ruby -Ilib ../../examples/ruby/bitcoin_analytics_mcp/test/run.rb
 ```
 
-To use production mode:
+## Go
+
+| Example                         | Description                                                                 |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| [weather-mcp](./go/weather-mcp) | Paywalled Open-Meteo weather tools; HTTP OAuth for MCPJam (`go test ./...`) |
 
 ```bash
-# Set up environment
-cp .env.example .env
-# Edit .env with your actual API key and set USE_REAL_BACKEND=true
-
-pnpm dev
+cd examples/go/weather-mcp && go test ./...
 ```
 
-The server will start on `http://localhost:3001`
+## Rust
 
-**API Endpoints:**
-
-- `GET /` - API info and usage instructions
-- `GET /health` - Server status
-- `POST /tasks` - Create a task (protected)
-- `GET /tasks` - List all tasks (protected)
-- `GET /tasks/:id` - Get a specific task (protected)
-- `DELETE /tasks/:id` - Delete a task (protected)
-
-### Checkout Demo (`checkout-demo`)
-
-A full-featured Next.js checkout application demonstrating:
-
-- Complete checkout flow with plan selection
-- Customer authentication and session management
-- Purchase status checking
-- Payment intent creation and processing
-- Modern UI with Tailwind CSS
-
-**Run the example:**
+| Example                                       | Description                                                                                   |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [guerrillamail-mcp](./rust/guerrillamail-mcp) | Paywalled disposable-inbox MCP over Guerrilla Mail. Ngrok via `pnpm mcp:guerrillamail:tunnel` |
 
 ```bash
-cd examples/checkout-demo
-pnpm install
-pnpm dev
+cargo test --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml
 ```
-
-The application will start on `http://localhost:3010`
-
-**Production deploy (Cloudflare):** [web-app-demo.solvapay.app](https://web-app-demo.solvapay.app) — see
-[checkout-demo README](./checkout-demo/README.md#deploy-to-cloudflare-workers-dev-441) (`pnpm run deploy:cf:prod`).
-
-### Supabase Edge Functions (`supabase-edge`)
-
-A reference project demonstrating:
-
-- One-liner Supabase Edge Functions using `@solvapay/server/fetch`
-- All 10 payment/purchase endpoints as 2-line files
-- Deno import map for npm packages
-- CORS configuration for production
-
-This is a **Deno reference project**, not a Node.js workspace member. It runs via the Supabase CLI, not `pnpm dev`.
-
-**Setup:**
-
-```bash
-cd examples/supabase-edge
-# See README.md for Supabase CLI setup, secrets, and deploy instructions
-```
-
-### MCP OAuth Bridge (`mcp-oauth-bridge`)
-
-A non-hosted MCP server example demonstrating:
-
-- Local `/.well-known/*` discovery endpoints
-- OAuth + dynamic client registration against SolvaPay backend
-- Bearer-token protected `/mcp` endpoint with RFC9728 challenge responses
-- `payable.mcp()` with customer identity from OAuth context
-
-**Run the example:**
-
-```bash
-cd examples/mcp-oauth-bridge
-pnpm install
-cp ../.env.platform-local.example .env   # or cp .env.example .env
-pnpm dev
-```
-
-### MCP Time App (`mcp-time-app`)
-
-A Model Context Protocol (MCP) app example demonstrating:
-
-- MCP app UI resources with `@modelcontextprotocol/ext-apps`
-- OAuth-protected MCP endpoint
-- Paywall protection for MCP tools
-- A simple app surface we continue developing
-
-**Run the example:**
-
-```bash
-cd examples/mcp-time-app
-pnpm install
-cp ../.env.platform-local.example .env   # or cp .env.example .env
-pnpm dev
-```
-
-### Supabase Edge MCP (`supabase-edge-mcp`)
-
-A full SolvaPay MCP server running on **Supabase Edge Functions**. Ships
-the same paywalled demo toolbox as `mcp-checkout-app`, but over
-`createSolvaPayMcpFetchHandler` (Web-standards `Request`/`Response`)
-instead of Express. The canonical Deno consumer for
-`@solvapay/mcp-fetch` — its `deno check` run is wired as a required CI
-gate before every `mcp-fetch` snapshot publish.
-
-```bash
-cd examples/supabase-edge-mcp
-pnpm install
-pnpm build                       # bundle mcp-app.html + copy into ./supabase/functions/mcp/
-supabase secrets set \
-  SOLVAPAY_SECRET_KEY=sk_live_... \
-  SOLVAPAY_PRODUCT_REF=prod_... \
-  MCP_PUBLIC_BASE_URL=https://<your-project-ref>.supabase.co/functions/v1/mcp
-pnpm deploy                      # supabase functions deploy mcp
-```
-
-See [`supabase-edge-mcp/README.md`](./supabase-edge-mcp/README.md) for
-full setup, the two-import-map trick for local dev vs. production, and
-the Deno type-check gate details.
-
-The Express example requires environment variables for configuration:
-
-### Express Example
-
-```bash
-cd examples/express-basic
-cp .env.example .env
-# Edit .env with your actual API key (optional - runs in stub mode without it)
-```
-
-### Environment Variables
-
-**Express Example (.env):**
-
-```bash
-# Optional: Enable real backend (defaults to stub mode)
-USE_REAL_BACKEND=false
-
-# Required if USE_REAL_BACKEND=true: Get your API key from the SolvaPay dashboard
-SOLVAPAY_SECRET_KEY=your_secret_key_here
-
-# Optional: Custom API base URL
-SOLVAPAY_API_BASE_URL=https://api.solvapay.dev
-
-# Optional: Server port (defaults to 3001)
-PORT=3001
-```
-
-**Next.js examples work out of the box** - they require API routes on the backend to handle payment intent creation.
-
-## Development Workflow
-
-1. **Build packages first:**
-
-   ```bash
-   pnpm build:packages
-   ```
-
-2. **Run examples in development mode:**
-
-   ```bash
-   # Express example (runs in stub mode by default)
-   cd examples/express-basic
-   pnpm dev
-
-   # Checkout demo example
-   cd examples/checkout-demo
-   pnpm dev
-
-   # MCP OAuth bridge example
-   cd examples/mcp-oauth-bridge
-   pnpm dev
-
-   # MCP app example
-   cd examples/mcp-time-app
-   pnpm dev
-   ```
-
-3. **Supabase Edge Functions examples:**
-   `supabase-edge` (one-liner `@solvapay/server/fetch` endpoints) and
-   `supabase-edge-mcp` (full MCP server via `@solvapay/mcp/fetch`) both
-   use Deno and run via the Supabase CLI instead of `pnpm dev`:
-
-   ```bash
-   # One-liner SolvaPay endpoints
-   cd examples/supabase-edge
-   supabase start
-   supabase functions serve
-
-   # Full SolvaPay MCP server on Supabase Edge
-   cd examples/supabase-edge-mcp
-   pnpm build          # bundle the iframe UI into ./supabase/functions/mcp/
-   supabase functions serve mcp --import-map supabase/functions/mcp/deno.local.json
-   ```
-
-4. **Watch for changes:**
-   The Node.js examples are configured to automatically restart when you make changes to the SDK packages.
-
-## Key Features Demonstrated
-
-- **Workspace Dependencies**: Examples use `workspace:*` to reference local packages
-- **Hot Reloading**: Changes to SDK packages trigger example restarts
-- **TypeScript Support**: Full type safety across the monorepo
-- **Modern Tooling**: Uses tsup, nodemon, and Next.js for optimal development experience

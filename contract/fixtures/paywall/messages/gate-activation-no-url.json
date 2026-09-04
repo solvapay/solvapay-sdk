@@ -1,0 +1,22 @@
+{
+  "suite": "paywall",
+  "case": "gate-activation-no-url",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": {
+        "kind": "activation_required"
+      },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "",
+        "message": "",
+        "shortMessage": "Payment required"
+      }
+    }
+  },
+  "expect": {
+    "result": "Your plan needs activation. Call the `activate_plan` tool. See docs://solvapay/overview.md."
+  }
+}

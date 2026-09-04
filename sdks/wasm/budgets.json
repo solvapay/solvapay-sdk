@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "measurement": {
+    "gzipLevel": 9,
+    "browserColdStart": "fresh Node process: import runtime/browser-node.js → ready() → wasmVersion()",
+    "edgeColdStart": "fresh Node process: import runtime/node.js → ready() → verifyWebhook(frozen accept fixture)",
+    "samplesPerMetric": 15,
+    "warmupDiscard": 3,
+    "statistic": "percentile p20 (cold start); exact (bytes)",
+    "spread": "median absolute deviation (MAD) of post-warmup samples (diagnostic)",
+    "byteRegressionThresholdPct": 10,
+    "coldStartRegressionThresholdPct": 50,
+    "regressionThresholdPct": 10
+  },
+  "environment": {
+    "node": "v22 (GitHub Actions ubuntu-latest)",
+    "platform": "linux",
+    "arch": "x64",
+    "osRelease": "ubuntu-latest",
+    "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+    "wasmBindgen": "wasm-bindgen 0.2.126",
+    "binaryen": "131.0.0",
+    "recordedAt": "2026-09-02T07:25:58.770Z"
+  },
+  "baselines": {
+    "browser": {
+      "rawBytes": 379398,
+      "gzipBytes": 148652,
+      "coldStartMs": 27.247519200000003,
+      "note": "Re-recorded from CI run 33603152099. The previous darwin/arm64 baseline (13.6 ms) is too fast for ubuntu-latest and failed wasm-binding cold-start."
+    },
+    "edge": {
+      "rawBytes": 1464319,
+      "gzipBytes": 506530,
+      "coldStartMs": 34.2054114,
+      "note": "CI-enforced alongside browser; §7.8 headline metric remains browser"
+    }
+  },
+  "maxAllowed": {
+    "browser": {
+      "gzipBytes": 163517,
+      "coldStartMs": 40.871278800000004
+    },
+    "edge": {
+      "gzipBytes": 557183,
+      "coldStartMs": 51.3081171
+    }
+  }
+}

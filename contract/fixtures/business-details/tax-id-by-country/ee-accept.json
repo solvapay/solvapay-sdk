@@ -1,0 +1,23 @@
+{
+  "suite": "business-details",
+  "case": "ee-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "EE",
+      "taxId": "EE123456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "EE",
+        "taxId": "EE123456789",
+        "taxIdType": "eu_vat"
+      }
+    }
+  }
+}

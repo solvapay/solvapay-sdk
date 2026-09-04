@@ -1,0 +1,13 @@
+{
+  "suite": "helper-product",
+  "case": "present",
+  "input": {
+    "fn": "validateGetProductParams",
+    "args": {
+      "productRef": "prd_1"
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

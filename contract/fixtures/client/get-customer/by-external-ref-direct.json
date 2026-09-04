@@ -1,0 +1,42 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getCustomer",
+    "args": {
+      "externalRef": "ext_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-customer-by-external-ref-direct",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/customers",
+      "query": {
+        "externalRef": "ext_fixture"
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "cus_fixture",
+        "email": "a@example.com",
+        "name": "Ada",
+        "externalRef": "ext_fixture"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "customerRef": "cus_fixture",
+      "email": "a@example.com",
+      "name": "Ada",
+      "externalRef": "ext_fixture",
+      "purchases": []
+    }
+  }
+}

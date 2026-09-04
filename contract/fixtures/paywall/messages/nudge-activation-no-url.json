@@ -1,0 +1,19 @@
+{
+  "suite": "paywall",
+  "case": "nudge-activation-no-url",
+  "input": {
+    "fn": "buildNudgeMessage",
+    "args": {
+      "state": {
+        "kind": "activation_required"
+      },
+      "limits": {
+        "plan": "pl_pro",
+        "remaining": 1
+      }
+    }
+  },
+  "expect": {
+    "result": "Heads up — this plan still needs activation. Call the `activate_plan` tool."
+  }
+}

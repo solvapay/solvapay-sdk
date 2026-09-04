@@ -1,0 +1,23 @@
+{
+  "suite": "paywall",
+  "case": "short-message-activation",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "activationRequired": true,
+        "remaining": 0
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "activation_required",
+      "product": "prd_demo",
+      "shortMessage": "Activation required",
+      "checkoutUrl": "",
+      "message": "Your plan needs activation. Call the `activate_plan` tool. See docs://solvapay/overview.md."
+    }
+  }
+}

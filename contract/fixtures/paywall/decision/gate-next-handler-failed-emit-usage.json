@@ -1,0 +1,56 @@
+{
+  "suite": "paywall",
+  "case": "gate-next-handler-failed-emit-usage",
+  "input": {
+    "fn": "gateNext",
+    "args": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "event": {
+        "kind": "handlerFailed",
+        "durationMs": 12,
+        "nowMs": 1012,
+        "randomUnit": 0.5,
+        "errorMessage": "boom",
+        "isPaywallError": false
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "state": {
+        "product": "prd_1",
+        "meterName": "requests",
+        "originalCustomerRef": "cus_abc",
+        "backendRef": "cus_abc",
+        "startedMs": 1000,
+        "limitsKey": "cus_abc:prd_1:requests",
+        "limitsCacheTTLMs": 10000
+      },
+      "action": {
+        "kind": "emitUsage",
+        "request": {
+          "customerRef": "cus_abc",
+          "actionType": "api_call",
+          "units": 1,
+          "outcome": "fail",
+          "productRef": "prd_1",
+          "duration": 12,
+          "metadata": {
+            "action": "requests",
+            "requestId": "solvapay_1012_i"
+          },
+          "timestamp": "1970-01-01T00:00:01.012Z",
+          "errorMessage": "boom"
+        }
+      }
+    }
+  }
+}

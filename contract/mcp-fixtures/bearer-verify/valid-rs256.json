@@ -1,0 +1,37 @@
+{
+  "suite": "bearer-verify",
+  "case": "valid-rs256",
+  "input": {
+    "fn": "mcpVerifyBearer",
+    "args": {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImZpeHR1cmUtcnNhLTEifQ.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vbWNwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9tY3AuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDB9.MsjMUmp92YOafjEaJQfXKHlrgni7o-zBHCa7kBQvtToDUQ-ZtvR8bSBUbkAKQIJOh6-OSkMwuzgzSKIxAxrcnj07swg9S2IdbF4cLXuz5M_hjJbaG6tFlb1utDukuYk9smuEyabp7jRBsERUPeOeD2p7hKlvicLK_aG_eFbAs4HnOmFFUaw-2s1KXFLBE-onyK2xxFZSgOBjh2KRFyMVnuryJzqJ6iHWVcl0Jja6RA4YcTYYpO1TMBBT445QLmMrBcncfQqxslkusKBXlnwkeq9ZAUZgaAvFCEM8R_FbgyyCZeaSKFtbXjsdv9O2JOjr1wOKB7cQby77T3tvbNLLiw",
+      "jwksJson": {
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "fixture-rsa-1",
+            "alg": "RS256",
+            "use": "sig",
+            "n": "r7g6SkSR2i6LhgAMgcBYIDkbOMWr3rFSx_vwLeZhLwIO0NMNJM2l62SPcuff_fbckM0i2nQpEqL3YVHdwUD7vr6KoZuGZfmoTgM7y6Mu27tPzwJCHW2mcf0fHRg2QzYFGW3dGgrfcNE5YdtuFkDAOPlPcxol7BM9Dvx-QSC2SCgNngsuOonTWNIo2t0G7QNiNpVCccXj6ZQx-HiScLsJefIEtoKFPeyWbIETzHJe_AyBP9kOLdXnoLBWNKcb51e0nRIORn9_EIdpMXv_kFwjB7_Mswrl21fVqNAKYLE5cejdqvxERlX_FLzaH7shFQhOSzh2uBm_vWCLa_cRk5JGuQ",
+            "e": "AQAB"
+          }
+        ]
+      },
+      "expectedIssuer": "https://mcp.example.com",
+      "expectedAudience": "https://mcp.example.com",
+      "nowUnixSecs": 1700000000
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "ok",
+      "claims": {
+        "sub": "cus_1",
+        "iss": "https://mcp.example.com",
+        "aud": "https://mcp.example.com",
+        "exp": 4102444800
+      },
+      "customerRef": "cus_1"
+    }
+  }
+}

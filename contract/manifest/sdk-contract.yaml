@@ -1,0 +1,5476 @@
+# SDK contract manifest — Phase 0 Step 2
+# Canonical public-API catalog for cross-language parity.
+# Validated by: pnpm manifest:check
+#
+# Go callable-surface methods take ctx context.Context as the first parameter
+# (defaults.goContextFirstParam). Emitters must not invent this parameter.
+
+# TS-only residue for the core boundary-type emitter (Phase 3a).
+# Aliases / renames / union reshapes that cannot be derived from Rust.
+boundaryTypesTs:
+  omit:
+    - BuildPromptDescriptorMetadataOptions
+    - BuildToolDescriptorMetadataOptions
+    - BusinessCountryOption
+    - CreditsToDisplayInput
+    - GateContent
+    - HelperErrorResult
+    - McpContentBlock
+    - McpPaywallToolResult
+    - McpViewMaps
+    - MerchantBranding
+    - PaywallBalance
+    - PaywallClientPayload
+    - PaywallGate
+    - PaywallGateKind
+    - PaywallLimits
+    - PaywallPlanSummary
+    - PaywallState
+    - ProductReadinessPlan
+    - PromptContent
+    - PromptDescriptorMetadata
+    - PromptMessage
+    - PromptUserMessage
+    - ResponseEnvelope
+    - SdkError
+    - SellerIdentityInput
+    - TaxIdType
+    - ToolAnnotations
+    - ToolDescriptorMetadata
+    - ToolIcon
+    - WebhookError
+    - WebhookErrorCode
+  aliases:
+    PaymentHelperError:
+      of: HelperErrorResult
+      omitFields: [details]
+    PlansHelperError:
+      of: HelperErrorResult
+      omitFields: [details]
+    ProductHelperError:
+      of: HelperErrorResult
+      omitFields: [details]
+    CheckoutHelperError:
+      of: HelperErrorResult
+      omitFields: [details]
+    LimitsHelperError:
+      of: HelperErrorResult
+      omitFields: [details]
+    ActivatePlanValidationError:
+      of: HelperErrorResult
+      omitFields: [details]
+    RenewalHelperError:
+      of: HelperErrorResult
+    RouteErrorResult:
+      of: HelperErrorResult
+  rename:
+    PaywallGateLimits: PaywallDecisionLimits
+  reshape:
+    PaywallDecisionLimits: |-
+      {
+        withinLimits?: boolean
+        remaining?: number
+        plan?: string
+        checkoutUrl?: string
+        confirmationUrl?: string
+        activationRequired?: boolean
+        plans?: unknown
+        balance?: unknown
+        product?: unknown
+        creditBalance?: number
+      }
+    BusinessDetails: |-
+      | { isBusiness: false; customerCountry?: SupportedBusinessCountry; customerName?: string }
+      | {
+          isBusiness: true
+          country: SupportedBusinessCountry
+          businessName?: string
+          taxId?: string
+          taxIdType?: TaxIdType
+          customerName?: string
+        }
+    TopupProcessOutcome: |-
+      | { status: 'timeout'; message?: string }
+      | { status: 'failed' }
+      | { status: 'cancelled' }
+      | { status: 'succeeded' }
+    PaywallOutcome: |-
+      <TGate = unknown> =
+        | { outcome: 'allow' }
+        | { outcome: 'gate'; gate: TGate }
+    PaymentIntentSource: |-
+      {
+        processorPaymentId: string
+        clientSecret: string
+        publishableKey: string
+        accountId?: string
+      }
+    ProductReadinessInput: |-
+      {
+        status: string
+        plans?: Array<{ isActive: boolean }>
+      }
+    RouteErrorKind: "'solvapay' | 'paywall' | 'error' | 'unknown'"
+    RouteErrorInput: |-
+      {
+        kind: RouteErrorKind
+        message: string | null
+        status?: number | null
+        operationName: string
+        defaultMessage?: string | null
+      }
+    BusinessDetailsValidationIssue: |-
+      {
+        path: PropertyKey[]
+        message: string
+      }
+    ValidateBusinessDetailsResult: |-
+      | { success: true; data: BusinessDetails }
+      | { success: false; error: BusinessDetailsValidationError }
+  extra:
+    UsageSnapshotPurchase: |-
+      {
+        reference?: string
+        productRef?: string
+        planSnapshot?: {
+          isMetered?: boolean
+          options?: Record<string, unknown>[]
+        } | null
+        usage?: {
+          used?: number
+          periodStart?: string
+          periodEnd?: string
+        } | null
+      }
+
+operations:
+  checkLimits:
+    route:
+      method: POST
+      path: /v1/sdk/limits
+    names:
+      ts: checkLimits
+      py: check_limits
+      rb: check_limits
+      go: CheckLimits
+      rust: check_limits
+      c: checkLimits
+    optionalOnClient: false
+    request: CheckLimitsRequest
+    response: LimitResponseWithPlan
+    overlays: [CheckLimitsRequest, LimitResponseWithPlan]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Check limits failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: CheckLimitsRequest
+        required: true
+    docs:
+      summary: "Check remaining usage/spend limits for a customer against a product's plan."
+      params:
+        params: 'Limits request including customer and product refs.'
+      returns: 'Current remaining limits, optionally including plan details.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  trackUsage:
+    route:
+      method: POST
+      path: /v1/sdk/usages
+    names:
+      ts: trackUsage
+      py: track_usage
+      rb: track_usage
+      go: TrackUsage
+      rust: track_usage
+      c: trackUsage
+    optionalOnClient: false
+    request: TrackUsageRequest
+    response: UsageRecordResponse
+    overlays: [TrackUsageRequest]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Track usage failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: TrackUsageRequest
+        required: true
+    docs:
+      summary: 'Record a single usage event against a meter for billing.'
+      params:
+        params: 'Usage event payload (customer, meter, and amount).'
+      returns: 'The recorded usage event response.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  trackUsageBulk:
+    route:
+      method: POST
+      path: /v1/sdk/usages/bulk
+    names:
+      ts: trackUsageBulk
+      py: track_usage_bulk
+      rb: track_usage_bulk
+      go: TrackUsageBulk
+      rust: track_usage_bulk
+      c: trackUsageBulk
+    optionalOnClient: true
+    request: TrackUsageBulkRequest
+    response: BulkUsageResponse
+    overlays: [TrackUsageBulkRequest]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Track usage bulk failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: TrackUsageBulkRequest
+        required: true
+    docs:
+      summary: 'Record multiple usage events in one request.'
+      params:
+        params: 'Bulk usage payload with one or more events.'
+      returns: 'Bulk usage recording response.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  createCustomer:
+    route:
+      method: POST
+      path: /v1/sdk/customers
+    names:
+      ts: createCustomer
+      py: create_customer
+      rb: create_customer
+      go: CreateCustomer
+      rust: create_customer
+      c: createCustomer
+    optionalOnClient: true
+    request: CreateCustomerRequest
+    response: CreateCustomerResult
+    overlays: [CreateCustomerResult]
+    normalization:
+      - 'map reference||customerRef → { customerRef }'
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Create customer failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: CreateCustomerRequest
+        required: true
+    docs:
+      summary: 'Create a customer in SolvaPay for the current merchant.'
+      params:
+        params: 'Customer creation fields (email, external refs, metadata).'
+      returns: 'The created customer projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  updateCustomer:
+    route:
+      method: PATCH
+      path: /v1/sdk/customers/{reference}
+    names:
+      ts: updateCustomer
+      py: update_customer
+      rb: update_customer
+      go: UpdateCustomer
+      rust: update_customer
+      c: updateCustomer
+    optionalOnClient: true
+    request: UpdateCustomerRequest
+    response: UpdateCustomerResult
+    overlays: [UpdateCustomerResult, UpdateCustomerParams]
+    normalization:
+      - 'map reference||customerRef → { customerRef }'
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Update customer failed ({status}): {body}'
+      cases: []
+    params:
+      - name: customerRef
+        type: string
+        required: true
+      - name: params
+        ref: UpdateCustomerParams
+        required: true
+    docs:
+      summary: 'Update an existing customer by reference.'
+      params:
+        customer_ref: 'Customer reference to update.'
+        params: 'Fields to patch on the customer.'
+      returns: 'The updated customer projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  getCustomer:
+    route:
+      method: GET
+      path: /v1/sdk/customers/{reference}
+    names:
+      ts: getCustomer
+      py: get_customer
+      rb: get_customer
+      go: GetCustomer
+      rust: get_customer
+      c: getCustomer
+    optionalOnClient: false
+    request: GetCustomerParams
+    response: CustomerResponseMapped
+    overlays: [GetCustomerParams, CustomerResponseMapped]
+    normalization:
+      - accept direct customer object
+      - accept bare customer array
+      - 'accept { customers: [...] } / { customer: {...} } wrappers'
+      - map reference → customerRef; default purchases to []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Get customer failed ({status}): {body}'
+      cases:
+        - messageTemplate: One of customerRef, externalRef, or email must be provided
+        - messageTemplate: 'No customer found with externalRef: {externalRef}'
+    params:
+      - name: params
+        ref: GetCustomerParams
+        required: true
+    docs:
+      summary: 'Fetch a customer by reference.'
+      params:
+        params: 'Lookup options including the customer reference.'
+      returns: 'The customer projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  assignCredits:
+    route:
+      method: POST
+      path: /v1/sdk/customers/{reference}/credits
+    names:
+      ts: assignCredits
+      py: assign_credits
+      rb: assign_credits
+      go: AssignCredits
+      rust: assign_credits
+      c: assignCredits
+    optionalOnClient: true
+    request: AssignCreditsRequest
+    response: GrantCustomerCreditsResponse
+    overlays: [AssignCreditsRequest]
+    normalization: []
+    idempotency:
+      kind: headerForwarded
+      header: Idempotency-Key
+    errors:
+      default:
+        messageTemplate: 'Assign credits failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: AssignCreditsRequest
+        required: true
+    docs:
+      summary: 'Grant credits to a customer balance.'
+      params:
+        params: 'Credit grant request (customer, amount, and reason).'
+      returns: 'Credit assignment response.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  getMerchant:
+    route:
+      method: GET
+      path: /v1/sdk/merchant
+    names:
+      ts: getMerchant
+      py: get_merchant
+      rb: get_merchant
+      go: GetMerchant
+      rust: get_merchant
+      c: getMerchant
+    optionalOnClient: true
+    response: SdkMerchantResponseDto
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Get merchant failed ({status}): {body}'
+      cases: []
+    params: []
+    docs:
+      summary: 'Fetch the authenticated merchant profile.'
+      returns: 'Merchant profile projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  getPlatformConfig:
+    route:
+      method: GET
+      path: /v1/sdk/platform-config
+    names:
+      ts: getPlatformConfig
+      py: get_platform_config
+      rb: get_platform_config
+      go: GetPlatformConfig
+      rust: get_platform_config
+      c: getPlatformConfig
+    optionalOnClient: true
+    response: SdkPlatformConfigResponseDto
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Get platform config failed ({status}): {body}'
+      cases: []
+    params: []
+    docs:
+      summary: 'Fetch platform configuration for the current merchant.'
+      returns: 'Platform configuration projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  getProduct:
+    route:
+      method: GET
+      path: /v1/sdk/products/{productRef}
+    names:
+      ts: getProduct
+      py: get_product
+      rb: get_product
+      go: GetProduct
+      rust: get_product
+      c: getProduct
+    optionalOnClient: true
+    response: SdkProductResponse
+    overlays: []
+    normalization:
+      - 'merge { ...result.data, ...result }'
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Get product failed ({status}): {body}'
+      cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+    docs:
+      summary: 'Fetch a product by reference.'
+      params:
+        product_ref: 'Product reference to fetch.'
+      returns: 'Product projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  listProducts:
+    route:
+      method: GET
+      path: /v1/sdk/products
+    names:
+      ts: listProducts
+      py: list_products
+      rb: list_products
+      go: ListProducts
+      rust: list_products
+      c: listProducts
+    optionalOnClient: true
+    response: ListProductsResult
+    overlays: [ListProductsResult]
+    normalization:
+      - 'accept bare array or { products } wrapper'
+      - unwrap nested data field
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'List products failed ({status}): {body}'
+      cases: []
+    params: []
+    docs:
+      summary: 'List products for the current merchant.'
+      returns: 'Product list projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  createProduct:
+    route:
+      method: POST
+      path: /v1/sdk/products
+    names:
+      ts: createProduct
+      py: create_product
+      rb: create_product
+      go: CreateProduct
+      rust: create_product
+      c: createProduct
+    optionalOnClient: true
+    request: CreateProductRequest
+    response: CreateProductResult
+    overlays: [CreateProductResult]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Create product failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: CreateProductRequest
+        required: true
+    docs:
+      summary: 'Create a product for the current merchant.'
+      params:
+        params: 'Product creation fields.'
+      returns: 'The created product projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  bootstrapMcpProduct:
+    route:
+      method: POST
+      path: /v1/sdk/products/mcp/bootstrap
+    names:
+      ts: bootstrapMcpProduct
+      py: bootstrap_mcp_product
+      rb: bootstrap_mcp_product
+      go: BootstrapMcpProduct
+      rust: bootstrap_mcp_product
+      c: bootstrapMcpProduct
+    optionalOnClient: true
+    request: McpBootstrapDto
+    response: McpBootstrapResponse
+    overlays: [McpBootstrapResponse]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Bootstrap MCP product failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpBootstrapDto
+        required: true
+    docs:
+      summary: 'Bootstrap an MCP product with default plans and tooling.'
+      params:
+        params: 'MCP bootstrap request payload.'
+      returns: 'Bootstrap result including product and plan refs.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  configureMcpPlans:
+    route:
+      method: PUT
+      path: /v1/sdk/products/{productRef}/mcp/plans
+    names:
+      ts: configureMcpPlans
+      py: configure_mcp_plans
+      rb: configure_mcp_plans
+      go: ConfigureMcpPlans
+      rust: configure_mcp_plans
+      c: configureMcpPlans
+    optionalOnClient: true
+    request: ConfigureMcpPlansDto
+    response: ConfigureMcpPlansResponse
+    overlays: [ConfigureMcpPlansResponse]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Configure MCP plans failed ({status}): {body}'
+      cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: params
+        ref: ConfigureMcpPlansDto
+        required: true
+    docs:
+      summary: 'Configure MCP plans for an existing product.'
+      params:
+        product_ref: 'Product whose MCP plans are configured.'
+        params: 'MCP plan configuration payload.'
+      returns: 'Configured MCP plans response.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  updateProduct:
+    route:
+      method: PUT
+      path: /v1/sdk/products/{productRef}
+    names:
+      ts: updateProduct
+      py: update_product
+      rb: update_product
+      go: UpdateProduct
+      rust: update_product
+      c: updateProduct
+    optionalOnClient: true
+    request: UpdateProductRequest
+    response: SdkProductResponse
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Update product failed ({status}): {body}'
+      cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: params
+        ref: UpdateProductRequest
+        required: true
+    docs:
+      summary: 'Update an existing product by reference.'
+      params:
+        product_ref: 'Product reference to update.'
+        params: 'Fields to patch on the product.'
+      returns: 'The updated product projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  deleteProduct:
+    route:
+      method: DELETE
+      path: /v1/sdk/products/{productRef}
+    names:
+      ts: deleteProduct
+      py: delete_product
+      rb: delete_product
+      go: DeleteProduct
+      rust: delete_product
+      c: deleteProduct
+    optionalOnClient: true
+    response: void
+    overlays: [void]
+    normalization:
+      - treat HTTP 404 as success
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Delete product failed ({status}): {body}'
+      cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+    docs:
+      summary: 'Delete a product by reference.'
+      params:
+        product_ref: 'Product reference to delete.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  cloneProduct:
+    route:
+      method: POST
+      path: /v1/sdk/products/{productRef}/clone
+    names:
+      ts: cloneProduct
+      py: clone_product
+      rb: clone_product
+      go: CloneProduct
+      rust: clone_product
+      c: cloneProduct
+    optionalOnClient: true
+    request: CloneProductDto
+    response: CloneProductResult
+    overlays: [CloneProductResult, CloneProductOverrides]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Clone product failed ({status}): {body}'
+      cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: overrides
+        ref: CloneProductOverrides
+        required: false
+    docs:
+      summary: 'Clone a product, optionally applying field overrides.'
+      params:
+        product_ref: 'Source product reference to clone.'
+        overrides: 'Optional field overrides applied to the clone.'
+      returns: 'The cloned product projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  listPlans:
+    route:
+      method: GET
+      path: /v1/sdk/products/{productRef}/plans
+    names:
+      ts: listPlans
+      py: list_plans
+      rb: list_plans
+      go: ListPlans
+      rust: list_plans
+      c: listPlans
+    optionalOnClient: true
+    response: ListPlansResult
+    overlays: [ListPlansResult]
+    normalization:
+      - 'accept bare array or { plans } wrapper'
+      - unwrap nested data field
+      - 'merge { ...data, ...plan } with price precedence plan.price ??
+        data.price; delete data key'
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'List plans failed ({status}): {body}'
+      cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+    docs:
+      summary: 'List plans for a product.'
+      params:
+        product_ref: 'Product whose plans are listed.'
+      returns: 'Plan list projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  createPlan:
+    route:
+      method: POST
+      path: /v1/sdk/products/{productRef}/plans
+    names:
+      ts: createPlan
+      py: create_plan
+      rb: create_plan
+      go: CreatePlan
+      rust: create_plan
+      c: createPlan
+    optionalOnClient: true
+    request: CreatePlanRequest
+    response: Plan
+    overlays: [CreatePlanParams]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Create plan failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: CreatePlanParams
+        required: true
+    docs:
+      summary: 'Create a plan under a product.'
+      params:
+        params: 'Plan creation fields including product ref.'
+      returns: 'The created plan projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  updatePlan:
+    route:
+      method: PUT
+      path: /v1/sdk/products/{productRef}/plans/{planRef}
+    names:
+      ts: updatePlan
+      py: update_plan
+      rb: update_plan
+      go: UpdatePlan
+      rust: update_plan
+      c: updatePlan
+    optionalOnClient: true
+    request: UpdatePlanRequest
+    response: Plan
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Update plan failed ({status}): {body}'
+      cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: planRef
+        type: string
+        required: true
+      - name: params
+        ref: UpdatePlanRequest
+        required: true
+    docs:
+      summary: 'Update an existing plan by product and plan references.'
+      params:
+        product_ref: 'Product that owns the plan.'
+        plan_ref: 'Plan reference to update.'
+        params: 'Fields to patch on the plan.'
+      returns: 'The updated plan projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  deletePlan:
+    route:
+      method: DELETE
+      path: /v1/sdk/products/{productRef}/plans/{planRef}
+    names:
+      ts: deletePlan
+      py: delete_plan
+      rb: delete_plan
+      go: DeletePlan
+      rust: delete_plan
+      c: deletePlan
+    optionalOnClient: true
+    response: void
+    overlays: [void]
+    normalization:
+      - treat HTTP 404 as success
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Delete plan failed ({status}): {body}'
+      cases: []
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: planRef
+        type: string
+        required: true
+    docs:
+      summary: 'Delete a plan by product and plan references.'
+      params:
+        product_ref: 'Product that owns the plan.'
+        plan_ref: 'Plan reference to delete.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  createPaymentIntent:
+    route:
+      method: POST
+      path: /v1/sdk/payment-intents
+    names:
+      ts: createPaymentIntent
+      py: create_payment_intent
+      rb: create_payment_intent
+      go: CreatePaymentIntent
+      rust: create_payment_intent
+      c: createPaymentIntent
+    optionalOnClient: true
+    request: CreatePaymentIntentParams
+    response: CreatePaymentIntentResult
+    overlays: [CreatePaymentIntentParams, CreatePaymentIntentResult]
+    normalization: []
+    idempotency:
+      kind: autoKey
+      format: 'payment-{planRef}-{epochMs}-{random9}'
+    errors:
+      default:
+        messageTemplate: 'Create payment intent failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: CreatePaymentIntentParams
+        required: true
+    docs:
+      summary: 'Create a payment intent for a purchase or activation flow.'
+      params:
+        params: 'Payment intent creation fields.'
+      returns: 'Created payment intent projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  createTopupPaymentIntent:
+    route:
+      method: POST
+      path: /v1/sdk/payment-intents
+    names:
+      ts: createTopupPaymentIntent
+      py: create_topup_payment_intent
+      rb: create_topup_payment_intent
+      go: CreateTopupPaymentIntent
+      rust: create_topup_payment_intent
+      c: createTopupPaymentIntent
+    optionalOnClient: true
+    request: CreateTopupPaymentIntentParams
+    response: CreateTopupPaymentIntentResult
+    overlays:
+      [
+        CreateTopupPaymentIntentParams,
+        CreateTopupPaymentIntentResult,
+        AutoRechargeInput,
+        topupProjection,
+      ]
+    normalization: []
+    idempotency:
+      kind: autoKey
+      format: 'topup-{epochMs}-{random9}'
+    errors:
+      default:
+        messageTemplate: 'Create topup payment intent failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: CreateTopupPaymentIntentParams
+        required: true
+    docs:
+      summary: 'Create a payment intent to top up a customer balance.'
+      params:
+        params: 'Top-up payment intent fields.'
+      returns: 'Created top-up payment intent projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  cancelPurchase:
+    route:
+      method: POST
+      path: /v1/sdk/purchases/{purchaseRef}/cancel
+    names:
+      ts: cancelPurchase
+      py: cancel_purchase
+      rb: cancel_purchase
+      go: CancelPurchase
+      rust: cancel_purchase
+      c: cancelPurchase
+    optionalOnClient: true
+    request: CancelPurchaseRequest
+    response: SdkPurchaseResponse
+    overlays: [CancelPurchaseParams]
+    normalization:
+      - 'extract nested { purchase } when present; else top-level object with
+        reference'
+      - validate JSON parseability of response body
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Cancel purchase failed ({status}): {body}'
+      cases:
+        - messageTemplate: 'Purchase not found: {body}'
+          status: 404
+        - messageTemplate: 'Purchase cannot be cancelled or does not belong to provider: {body}'
+          status: 400
+        - messageTemplate: 'Invalid JSON response from cancel purchase endpoint:
+            {bodyPrefix200}'
+        - messageTemplate: Invalid response structure from cancel purchase endpoint
+        - messageTemplate: Invalid purchase data in cancel purchase response
+    params:
+      - name: params
+        ref: CancelPurchaseParams
+        required: true
+    docs:
+      summary: 'Cancel an active purchase for a customer.'
+      params:
+        params: 'Cancel request identifying the purchase.'
+      returns: 'Updated purchase info after cancellation.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  reactivatePurchase:
+    route:
+      method: POST
+      path: /v1/sdk/purchases/{purchaseRef}/reactivate
+    names:
+      ts: reactivatePurchase
+      py: reactivate_purchase
+      rb: reactivate_purchase
+      go: ReactivatePurchase
+      rust: reactivate_purchase
+      c: reactivatePurchase
+    optionalOnClient: true
+    response: SdkPurchaseResponse
+    overlays: [ReactivatePurchaseParams]
+    normalization:
+      - 'extract nested { purchase } when present; else top-level object with
+        reference'
+      - validate JSON parseability of response body
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Reactivate purchase failed ({status}): {body}'
+      cases:
+        - messageTemplate: 'Purchase not found: {body}'
+          status: 404
+        - messageTemplate: 'Purchase cannot be reactivated: {body}'
+          status: 400
+        - messageTemplate: 'Invalid JSON response from reactivate purchase endpoint:
+            {bodyPrefix200}'
+        - messageTemplate: Invalid response structure from reactivate purchase endpoint
+        - messageTemplate: Invalid purchase data in reactivate purchase response
+    params:
+      - name: params
+        ref: ReactivatePurchaseParams
+        required: true
+    docs:
+      summary: 'Reactivate a previously cancelled purchase.'
+      params:
+        params: 'Reactivate request identifying the purchase.'
+      returns: 'Updated purchase info after reactivation.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  processPaymentIntent:
+    route:
+      method: POST
+      path: /v1/sdk/payment-intents/{processorPaymentId}/process
+    names:
+      ts: processPaymentIntent
+      py: process_payment_intent
+      rb: process_payment_intent
+      go: ProcessPaymentIntent
+      rust: process_payment_intent
+      c: processPaymentIntent
+    optionalOnClient: true
+    request: ProcessPaymentIntentParams
+    response: ProcessPaymentResult
+    overlays:
+      [
+        ProcessPaymentIntentParams,
+        ProcessPaymentResult,
+        OneTimePurchaseInfo,
+        TopupProcessResult,
+        topupProjection,
+      ]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Process payment failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: ProcessPaymentIntentParams
+        required: true
+    docs:
+      summary: 'Process a completed payment intent into a purchase or top-up outcome.'
+      params:
+        params: 'Process request identifying the payment intent.'
+      returns: 'Normalized process-payment result (purchase, top-up, or error branch).'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  attachBusinessDetails:
+    route:
+      method: POST
+      path: /v1/sdk/payment-intents/{processorPaymentId}/business-details
+    names:
+      ts: attachBusinessDetails
+      py: attach_business_details
+      rb: attach_business_details
+      go: AttachBusinessDetails
+      rust: attach_business_details
+      c: attachBusinessDetails
+    optionalOnClient: true
+    request: AttachBusinessDetailsParams
+    response: AttachBusinessDetailsResult
+    overlays: [AttachBusinessDetailsParams, AttachBusinessDetailsResult]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Attach business details failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: AttachBusinessDetailsParams
+        required: true
+    docs:
+      summary: 'Attach or update business details used for tax and invoicing.'
+      params:
+        params: 'Business details payload.'
+      returns: 'Attached business details result.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  getUserInfo:
+    route:
+      method: POST
+      path: /v1/sdk/user-info
+    names:
+      ts: getUserInfo
+      py: get_user_info
+      rb: get_user_info
+      go: GetUserInfo
+      rust: get_user_info
+      c: getUserInfo
+    optionalOnClient: true
+    request: UserInfoRequest
+    response: UserInfoResponse
+    overlays: [GetUserInfoParams]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Get user info failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: GetUserInfoParams
+        required: true
+    docs:
+      summary: 'Fetch end-user info for a customer session.'
+      params:
+        params: 'User-info request options.'
+      returns: 'User info projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  getCustomerBalance:
+    route:
+      method: GET
+      path: /v1/sdk/customers/{reference}/balance
+    names:
+      ts: getCustomerBalance
+      py: get_customer_balance
+      rb: get_customer_balance
+      go: GetCustomerBalance
+      rust: get_customer_balance
+      c: getCustomerBalance
+    optionalOnClient: true
+    request: GetCustomerBalanceParams
+    response: GetCustomerBalanceResult
+    overlays: [GetCustomerBalanceParams, GetCustomerBalanceResult, CreditDisplayBlock]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Get customer balance failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: GetCustomerBalanceParams
+        required: true
+    docs:
+      summary: 'Fetch a customer credit balance projection for display.'
+      params:
+        params: 'Balance request identifying the customer.'
+      returns: 'Customer balance display projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  createCheckoutSession:
+    route:
+      method: POST
+      path: /v1/sdk/checkout-sessions
+    names:
+      ts: createCheckoutSession
+      py: create_checkout_session
+      rb: create_checkout_session
+      go: CreateCheckoutSession
+      rust: create_checkout_session
+      c: createCheckoutSession
+    optionalOnClient: false
+    request: CreateCheckoutSessionRequest
+    response: CreateCheckoutSessionResponse
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Create checkout session failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: CreateCheckoutSessionRequest
+        required: true
+    docs:
+      summary: 'Create a hosted checkout session for a customer and product.'
+      params:
+        params: 'Checkout session creation fields.'
+      returns: 'Created checkout session projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  createCustomerSession:
+    route:
+      method: POST
+      path: /v1/sdk/customers/customer-sessions
+    names:
+      ts: createCustomerSession
+      py: create_customer_session
+      rb: create_customer_session
+      go: CreateCustomerSession
+      rust: create_customer_session
+      c: createCustomerSession
+    optionalOnClient: false
+    request: CreateCustomerSessionRequest
+    response: CreateCustomerSessionResponse
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Create customer session failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: CreateCustomerSessionRequest
+        required: true
+    docs:
+      summary: 'Create a customer portal/session for self-serve account actions.'
+      params:
+        params: 'Customer session creation fields.'
+      returns: 'Created customer session projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  activatePlan:
+    route:
+      method: POST
+      path: /v1/sdk/activate
+    names:
+      ts: activatePlan
+      py: activate_plan
+      rb: activate_plan
+      go: ActivatePlan
+      rust: activate_plan
+      c: activatePlan
+    optionalOnClient: true
+    request: ActivatePlanDto
+    response: ActivatePlanResponseDto
+    overlays: []
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Activate plan failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: ActivatePlanDto
+        required: true
+    docs:
+      summary: 'Activate a plan for a customer (purchase or entitlement grant).'
+      params:
+        params: 'Plan activation request fields.'
+      returns: 'Activation result projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  getPaymentMethod:
+    route:
+      method: GET
+      path: /v1/sdk/payment-method
+    names:
+      ts: getPaymentMethod
+      py: get_payment_method
+      rb: get_payment_method
+      go: GetPaymentMethod
+      rust: get_payment_method
+      c: getPaymentMethod
+    optionalOnClient: true
+    request: GetPaymentMethodParams
+    response: PaymentMethodInfo
+    overlays: [GetPaymentMethodParams, PaymentMethodInfo]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Get payment method failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: GetPaymentMethodParams
+        required: true
+    docs:
+      summary: 'Fetch the default payment method for a customer.'
+      params:
+        params: 'Payment-method lookup options.'
+      returns: 'Payment method info, when present.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  getAutoRecharge:
+    route:
+      method: GET
+      path: /v1/sdk/auto-recharge
+    names:
+      ts: getAutoRecharge
+      py: get_auto_recharge
+      rb: get_auto_recharge
+      go: GetAutoRecharge
+      rust: get_auto_recharge
+      c: getAutoRecharge
+    optionalOnClient: true
+    request: GetAutoRechargeParams
+    response: AutoRechargeResponse
+    overlays: [GetAutoRechargeParams, AutoRechargeResponse, AutoRechargeConfig]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Get auto-recharge failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: GetAutoRechargeParams
+        required: true
+    docs:
+      summary: 'Fetch auto-recharge configuration for a customer.'
+      params:
+        params: 'Auto-recharge lookup options.'
+      returns: 'Auto-recharge configuration projection.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  saveAutoRecharge:
+    route:
+      method: PUT
+      path: /v1/sdk/auto-recharge
+    names:
+      ts: saveAutoRecharge
+      py: save_auto_recharge
+      rb: save_auto_recharge
+      go: SaveAutoRecharge
+      rust: save_auto_recharge
+      c: saveAutoRecharge
+    optionalOnClient: true
+    request: SaveAutoRechargeInput
+    response: SaveAutoRechargeResponse
+    overlays: [SaveAutoRechargeInput, AutoRechargeConfig, SaveAutoRechargeParams]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Save auto-recharge failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: SaveAutoRechargeParams
+        required: true
+    docs:
+      summary: 'Create or update auto-recharge configuration for a customer.'
+      params:
+        params: 'Auto-recharge settings to persist.'
+      returns: 'Saved auto-recharge configuration.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  mcpBootstrap:
+    names:
+      ts: mcpBootstrap
+      py: mcp_bootstrap
+      rb: mcp_bootstrap
+      go: McpBootstrap
+      rust: mcp_bootstrap
+      c: mcpBootstrap
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue, McpPlanDisplay, McpPlanPricingOption, McpTaxIdFieldCopy]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP bootstrap failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Fan out merchant, product, plans, and customer snapshots for the MCP widget.'
+      params:
+        params: 'View, product ref, public base URL, and optional customer ref.'
+      returns: 'Bootstrap payload JSON for the embedded MCP App widget.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  mcpCallBuiltinTool:
+    names:
+      ts: mcpCallBuiltinTool
+      py: mcp_call_builtin_tool
+      rb: mcp_call_builtin_tool
+      go: McpCallBuiltinTool
+      rust: mcp_call_builtin_tool
+      c: mcpCallBuiltinTool
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP builtin tool failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Invoke one of the twelve SolvaPay builtin MCP tools with optional customer context.'
+      params:
+        params: 'Tool name, arguments, server config, and optional customer ref.'
+      returns: 'Builtin tool result JSON (narrated content and structured payload).'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  mcpReadResource:
+    names:
+      ts: mcpReadResource
+      py: mcp_read_resource
+      rb: mcp_read_resource
+      go: McpReadResource
+      rust: mcp_read_resource
+      c: mcpReadResource
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP resource read failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Read solvapay://bootstrap.json, the overview resource, or the UI widget resource.'
+      params:
+        params: 'Resource URI, server config, and optional customer ref.'
+      returns: 'Resource contents JSON for MCP resources/read.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  mcpOauthRequest:
+    names:
+      ts: mcpOauthRequest
+      py: mcp_oauth_request
+      rb: mcp_oauth_request
+      go: McpOauthRequest
+      rust: mcp_oauth_request
+      c: mcpOauthRequest
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP OAuth request failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Proxy one OAuth HTTP request (discovery, DCR, token, revoke, authorize).'
+      params:
+        params: 'Method, path, headers, body, and OAuth config.'
+      returns: 'HTTP status, headers, and body for the OAuth response.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  mcpResolveAuth:
+    names:
+      ts: mcpResolveAuth
+      py: mcp_resolve_auth
+      rb: mcp_resolve_auth
+      go: McpResolveAuth
+      rust: mcp_resolve_auth
+      c: mcpResolveAuth
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP resolve auth failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Decide allow vs challenge for one MCP request; facades write the envelope verbatim.'
+      params:
+        params: 'RPC method, Authorization header, auth mode, public origin, and optional verification overrides.'
+      returns: 'allow (with authInfo/customerRef), challenge (401), or error (-32603 at HTTP 200).'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  mcpDispatch:
+    names:
+      ts: mcpDispatch
+      py: mcp_dispatch
+      rb: mcp_dispatch
+      go: McpDispatch
+      rust: mcp_dispatch
+      c: mcpDispatch
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'MCP dispatch failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Route one MCP JSON-RPC request; hosts only see rpc, challenge, or invokeHandler.'
+      params:
+        params: 'JSON-RPC body, engine config, and optional Authorization header.'
+      returns: 'Dispatch envelope (rpc, challenge, or invokeHandler).'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  fetchJwks:
+    names:
+      ts: fetchJwks
+      py: fetch_jwks
+      rb: fetch_jwks
+      go: FetchJwks
+      rust: fetch_jwks
+      c: fetchJwks
+    optionalOnClient: true
+    request: McpJsonValue
+    response: McpJsonValue
+    overlays: [McpJsonValue]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'JWKS fetch failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: McpJsonValue
+        required: true
+    docs:
+      summary: 'Fetch an authorization-server JWKS document without attaching merchant credentials.'
+      params:
+        params: 'Absolute jwksUrl (typically {issuer}/.well-known/jwks.json).'
+      returns: 'Raw JWKS JSON object with a keys array.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+  disableAutoRecharge:
+    route:
+      method: DELETE
+      path: /v1/sdk/auto-recharge
+    names:
+      ts: disableAutoRecharge
+      py: disable_auto_recharge
+      rb: disable_auto_recharge
+      go: DisableAutoRecharge
+      rust: disable_auto_recharge
+      c: disableAutoRecharge
+    optionalOnClient: true
+    request: DisableAutoRechargeParams
+    response: DisableAutoRechargeSdkResponse
+    overlays: [DisableAutoRechargeParams, DisableAutoRechargeSdkResponse]
+    normalization: []
+    idempotency:
+      kind: none
+    errors:
+      default:
+        messageTemplate: 'Disable auto-recharge failed ({status}): {body}'
+      cases: []
+    params:
+      - name: params
+        ref: DisableAutoRechargeParams
+        required: true
+    docs:
+      summary: 'Disable auto-recharge for a customer.'
+      params:
+        params: 'Disable request identifying the customer.'
+      returns: 'Updated auto-recharge status after disable.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+
+overlays:
+  McpJsonValue:
+    kind: synthetic
+    doc: 'Untyped JSON object used by routeless MCP composite operations.'
+    marker: true
+  AssignCreditsRequest:
+    kind: extendDto
+    base: GrantCustomerCreditsRequest
+    fields:
+      customerRef:
+        type: string
+        required: true
+      idempotencyKey:
+        type: string
+        required: false
+  AttachBusinessDetailsParams:
+    kind: synthetic
+    fields:
+      paymentIntentId:
+        type: string
+        required: true
+      customerRef:
+        type: string
+        required: false
+      isBusiness:
+        type: boolean
+        required: true
+      businessName:
+        type: string
+        required: false
+      country:
+        type: string
+        required: false
+      customerCountry:
+        type: string
+        required: false
+      customerName:
+        type: string
+        required: false
+      taxId:
+        type: string
+        required: false
+      taxIdType:
+        type: string
+        required: false
+  AttachBusinessDetailsResult:
+    kind: synthetic
+    fields:
+      taxBreakdown:
+        ref: TaxBreakdown
+        required: true
+  AutoMappedTool:
+    kind: synthetic
+    fields:
+      name:
+        type: string
+        required: true
+      description:
+        type: string
+        required: false
+  AutoRechargeConfig:
+    kind: synthetic
+    fields:
+      enabled:
+        type: boolean
+        required: true
+      trigger:
+        ref: AutoRechargeTrigger
+        required: true
+      topup:
+        ref: AutoRechargeTopup
+        required: true
+      fundingSourceType:
+        enum: [saved_card, tokenized_card]
+        required: false
+      paymentMethodId:
+        type: string
+        required: false
+      status:
+        ref: AutoRechargeStatus
+        required: true
+      failureCount:
+        type: number
+        required: true
+      maxMonthlySpendMinor:
+        type: number
+        required: false
+      monthlySpendMinor:
+        type: number
+        required: true
+      monthlySpendPeriod:
+        type: string
+        required: false
+      lastChargeAt:
+        type: string
+        required: false
+      updatedAt:
+        type: string
+        required: false
+      display:
+        ref: AutoRechargeDisplayBlock
+        required: false
+        doc: 'Backend-computed display values — render verbatim; do not derive from
+          trigger fields.'
+  AutoRechargeDisplayBlock:
+    kind: synthetic
+    fields:
+      thresholdAmountMajor:
+        type: number
+        required: true
+      topupAmountMajor:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      formatted:
+        ref: AutoRechargeDisplayFormatted
+        required: true
+      exchangeRate:
+        type: number
+        required: true
+      rateSource:
+        enum: [parity, db, fallback]
+        required: true
+  AutoRechargeDisplayFormatted:
+    kind: synthetic
+    fields:
+      threshold:
+        type: string
+        required: true
+      topup:
+        type: string
+        required: true
+  AutoRechargeInput:
+    kind: synthetic
+    fields:
+      enabled:
+        type: boolean
+        required: true
+      triggerType:
+        literal: balance
+        required: true
+      thresholdAmountMajor:
+        type: number
+        required: false
+      topupAmountMajor:
+        type: number
+        required: false
+      maxMonthlySpendMajor:
+        type: number
+        required: false
+      currency:
+        type: string
+        required: true
+  AutoRechargeResponse:
+    kind: synthetic
+    fields:
+      config:
+        ref: AutoRechargeConfig
+        required: true
+        nullable: true
+      display:
+        ref: AutoRechargeDisplayBlock
+        required: false
+  AutoRechargeStatus:
+    kind: synthetic
+    enum: [active, disabled, failed, pending_setup]
+  AutoRechargeTopup:
+    kind: synthetic
+    fields:
+      mode:
+        literal: fixed
+        required: true
+      amountMinor:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+  AutoRechargeTrigger:
+    kind: synthetic
+    fields:
+      type:
+        literal: balance
+        required: true
+      thresholdAmountMinor:
+        type: number
+        required: true
+  CheckLimitsRequest:
+    kind: synthetic
+    aliasOf: CheckLimitRequest
+    doc: 'Public alias of OpenAPI CheckLimitRequest. Kept so dropping the
+      former extendDto overlay does not rename the exported type.'
+  CloneProductResult:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      name:
+        type: string
+        required: true
+  ConfigureMcpPlansResponse:
+    kind: synthetic
+    fields:
+      product:
+        ref: SdkProductResponse
+        required: true
+      mcpServer:
+        ref: McpServerInfo
+        required: true
+      planMap:
+        map:
+          ref: PlanMapEntry
+        required: true
+  CreateCustomerResult:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  CreatePaymentIntentParams:
+    kind: synthetic
+    fields:
+      productRef:
+        type: string
+        required: true
+      planRef:
+        type: string
+        required: true
+      customerRef:
+        type: string
+        required: true
+      currency:
+        type: string
+        required: false
+      idempotencyKey:
+        type: string
+        required: false
+  CreatePaymentIntentResult:
+    kind: synthetic
+    fields:
+      processorPaymentId:
+        type: string
+        required: true
+      clientSecret:
+        type: string
+        required: true
+      publishableKey:
+        type: string
+        required: true
+      accountId:
+        type: string
+        required: false
+      amount:
+        type: number
+        required: true
+      originalAmount:
+        type: number
+        required: false
+      currency:
+        type: string
+        required: false
+      exchangeRate:
+        type: number
+        required: false
+      status:
+        type: string
+        required: false
+  CreateProductResult:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      name:
+        type: string
+        required: true
+  CreateTopupPaymentIntentParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+      amount:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      description:
+        type: string
+        required: false
+      idempotencyKey:
+        type: string
+        required: false
+      autoRecharge:
+        ref: AutoRechargeInput
+        required: false
+  CreateTopupPaymentIntentResult:
+    kind: synthetic
+    fields:
+      processorPaymentId:
+        type: string
+        required: true
+      clientSecret:
+        type: string
+        required: true
+      publishableKey:
+        type: string
+        required: true
+      accountId:
+        type: string
+        required: false
+  CreditDisplayBlock:
+    kind: synthetic
+    fields:
+      amountMajor:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      formatted:
+        type: string
+        required: true
+      exchangeRate:
+        type: number
+        required: true
+      rateSource:
+        enum: [parity, db, fallback]
+        required: true
+  CustomerResponseMapped:
+    kind: mapDto
+    renames:
+      reference: customerRef
+    fields:
+      customerRef:
+        type: string
+        required: true
+      email:
+        type: string
+        required: false
+      name:
+        type: string
+        required: false
+      externalRef:
+        type: string
+        required: false
+      plan:
+        type: string
+        required: false
+      purchases:
+        array:
+          ref: EnrichedPurchaseInfo
+        required: false
+  DisableAutoRechargeParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  DisableAutoRechargeSdkResponse:
+    kind: synthetic
+    doc: Disable-auto-recharge result. The endpoint only returns on success.
+    fields:
+      success:
+        literal: true
+        required: true
+  EnrichedPurchaseInfo:
+    kind: extendDto
+    base: SdkPurchaseResponse
+    fields:
+      paidAt:
+        type: string
+        required: false
+      nextBillingDate:
+        type: string
+        required: false
+  GetAutoRechargeParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  GetCustomerBalanceParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  GetCustomerBalanceResult:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+      credits:
+        type: number
+        required: true
+      displayCurrency:
+        type: string
+        required: true
+      creditsPerMinorUnit:
+        type: number
+        required: true
+      displayExchangeRate:
+        type: number
+        required: true
+      display:
+        ref: CreditDisplayBlock
+        required: false
+      displayMinorUnits:
+        type: number
+        required: false
+      minorUnitsPerMajor:
+        type: number
+        required: false
+  McpBillingCycleDisplay:
+    kind: synthetic
+    fields:
+      interval:
+        type: string
+        required: true
+      count:
+        type: number
+        required: false
+  McpPlanDisplay:
+    kind: synthetic
+    fields:
+      billingCycle:
+        ref: McpBillingCycleDisplay
+        required: false
+      countsUsage:
+        type: boolean
+        required: true
+      includedUnits:
+        type: number
+        required: false
+      meterName:
+        type: string
+        required: false
+      creditsPerUnit:
+        type: number
+        required: false
+      perUnitCharge:
+        type: unknown
+        required: false
+      trialDays:
+        type: number
+        required: false
+  McpPlanPricingOption:
+    kind: synthetic
+    fields:
+      currency:
+        type: string
+        required: true
+      price:
+        type: number
+        required: true
+      default:
+        type: boolean
+        required: false
+  McpTaxIdFieldCopy:
+    kind: synthetic
+    fields:
+      label:
+        type: string
+        required: false
+      example:
+        type: string
+        required: false
+      helperText:
+        type: string
+        required: false
+  GetCustomerParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: false
+      externalRef:
+        type: string
+        required: false
+      email:
+        type: string
+        required: false
+  GetPaymentMethodParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  LimitResponseWithPlan:
+    kind: extendDto
+    base: LimitResponse
+    fields:
+      plan:
+        type: string
+        required: true
+  ListProductItem:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      name:
+        type: string
+        required: true
+      description:
+        type: string
+        required: false
+  ListPlansResult:
+    kind: synthetic
+    arrayOf: Plan
+  ListProductsResult:
+    kind: synthetic
+    arrayOf: ListProductItem
+  McpBootstrapResponse:
+    kind: synthetic
+    fields:
+      product:
+        ref: SdkProductResponse
+        required: true
+      mcpServer:
+        ref: McpServerInfo
+        required: true
+      planMap:
+        map:
+          ref: PlanMapEntry
+        required: true
+      toolsAutoMapped:
+        type: boolean
+        required: false
+      autoMappedTools:
+        array:
+          ref: AutoMappedTool
+        required: false
+  McpServerInfo:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: false
+      subdomain:
+        type: string
+        required: false
+      mcpProxyUrl:
+        type: string
+        required: false
+      url:
+        type: string
+        required: true
+      defaultPlanRef:
+        type: string
+        required: false
+  OneTimePurchaseInfo:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      customerRef:
+        type: string
+        required: true
+      productRef:
+        type: string
+        required: false
+      amount:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      creditsAdded:
+        type: number
+        required: false
+      completedAt:
+        type: string
+        required: true
+      createdAt:
+        type: string
+        required: true
+  PaymentMethodInfo:
+    kind: synthetic
+    aliasOf: PaymentMethodResult
+  PlanMapEntry:
+    kind: synthetic
+    fields:
+      reference:
+        type: string
+        required: true
+      name:
+        type: string
+        required: false
+  ProcessPaymentIntentParams:
+    kind: synthetic
+    fields:
+      paymentIntentId:
+        type: string
+        required: true
+      productRef:
+        type: string
+        required: false
+      customerRef:
+        type: string
+        required: true
+      planRef:
+        type: string
+        required: false
+  ProcessPaymentResult:
+    kind: synthetic
+    aliasOf: ProcessPaymentResult
+  SaveAutoRechargeInput:
+    kind: extendDto
+    base: AutoRechargeInput
+    fields:
+      deferSetupIntent:
+        type: boolean
+        required: false
+  TaxBreakdown:
+    kind: synthetic
+    fields:
+      subtotal:
+        type: number
+        required: true
+      taxAmount:
+        type: number
+        required: true
+      taxRate:
+        type: number
+        required: true
+      treatment:
+        enum: [reverse_charge, standard, none, not_collecting, not_supported]
+        required: true
+      total:
+        type: number
+        required: true
+      currency:
+        type: string
+        required: true
+      inclusive:
+        type: boolean
+        required: true
+  TopupProcessResult:
+    kind: projectUnion
+    base: ProcessPaymentResult
+    dropVariants: [SucceededRecurring, SucceededOneTime]
+    succeededFields:
+      creditsAdded:
+        type: number
+        required: false
+  TrackUsageBulkRequest:
+    kind: synthetic
+    fields:
+      events:
+        array:
+          ref: TrackUsageRequest
+        required: true
+  TrackUsageRequest:
+    kind: extendDto
+    base: CreateUsageRequest
+    partial: true
+    fields:
+      customerRef:
+        type: string
+        required: true
+      metadata:
+        map:
+          type: unknown
+        required: false
+  UpdateCustomerParams:
+    kind: synthetic
+    fields:
+      email:
+        type: string
+        required: false
+      name:
+        type: string
+        required: false
+      telephone:
+        type: string
+        required: false
+      metadata:
+        map:
+          type: unknown
+        required: false
+      externalRef:
+        type: string
+        required: false
+  CancelPurchaseParams:
+    kind: synthetic
+    fields:
+      purchaseRef:
+        type: string
+        required: true
+      reason:
+        type: string
+        required: false
+  ReactivatePurchaseParams:
+    kind: synthetic
+    fields:
+      purchaseRef:
+        type: string
+        required: true
+  GetUserInfoParams:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+      productRef:
+        type: string
+        required: true
+  CloneProductOverrides:
+    kind: synthetic
+    fields:
+      name:
+        type: string
+        required: false
+  CreatePlanParams:
+    kind: extendDto
+    base: CreatePlanRequest
+    fields:
+      productRef:
+        type: string
+        required: true
+  SaveAutoRechargeParams:
+    kind: extendDto
+    base: SaveAutoRechargeInput
+    fields:
+      customerRef:
+        type: string
+        required: true
+  RetryOptions:
+    kind: synthetic
+    fields:
+      maxRetries:
+        type: number
+        required: false
+      initialDelay:
+        type: number
+        required: false
+      backoffStrategy:
+        enum:
+          - fixed
+          - linear
+          - exponential
+        required: false
+      shouldRetry:
+        type: unknown
+        required: false
+      onRetry:
+        type: unknown
+        required: false
+  UpdateCustomerResult:
+    kind: synthetic
+    fields:
+      customerRef:
+        type: string
+        required: true
+  topupProjection:
+    kind: synthetic
+    marker: true
+  void:
+    kind: synthetic
+    unit: true
+topLevel:
+  verifyWebhook:
+    names:
+      ts: verifyWebhook
+      py: verify_webhook
+      rb: verify_webhook
+      go: VerifyWebhook
+      rust: verify_webhook
+      c: verifyWebhook
+    params:
+      - name: options
+        object:
+          body:
+            type: string
+            required: true
+          signature:
+            type: string
+            required: true
+          secret:
+            type: string
+            required: true
+        required: true
+    docs:
+      summary: 'Verify a SolvaPay webhook signature and parse the event payload.'
+      params:
+        options: 'Webhook body, signature header, and signing secret.'
+      returns: 'Parsed webhook event when verification succeeds.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; TS impl: sdks/typescript/server/src/index.ts'
+      py:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; Python impl: sdks/python/src/lib.rs'
+      rb:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; Ruby impl: sdks/ruby/lib/solvapay/helpers.rb'
+      go:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; Go impl: sdks/go/solvapay.go'
+      rust:
+        handWritten: true
+        reason: 'Host-injected nowUnixSecs; Rust impl: sdks/rust/src'
+        nativeExport: true
+      c:
+        omitted: true
+        reason: 'Webhook verification is host-injected; no generated C helper.'
+  withRetry:
+    names:
+      ts: withRetry
+      py: with_retry
+      rb: with_retry
+      go: WithRetry
+      rust: with_retry
+      c: withRetry
+    params:
+      - name: fn
+        type: unknown
+        required: true
+        doc: () => Promise<T> — callable stand-in
+      - name: options
+        ref: RetryOptions
+        required: false
+    typeParams:
+      - name: T
+    docs:
+      summary: 'Retry an async callable with the frozen default backoff policy.'
+      params:
+        fn: '() => Promise<T> — callable stand-in'
+        options: 'Optional retry overrides.'
+      returns: "The callable's resolved value."
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        handWritten: true
+        reason: 'Retry driving is host-side; the policy lives in core via retry_next_delay_ms. TS impl: sdks/typescript/server/src/retry.ts'
+      py:
+        handWritten: true
+        reason: 'sdks/python/python/solvapay/retry.py'
+      rb:
+        handWritten: true
+        reason: 'sdks/ruby/lib/solvapay/helpers.rb'
+      go:
+        handWritten: true
+        reason: 'sdks/go/retry.go — generics + ctx-aware sleep are not derivable'
+      rust:
+        handWritten: true
+        reason: 'sdks/rust/src/retry.rs'
+      c:
+        omitted: true
+        reason: 'No retry driver on the C ABI.'
+  buildPaywallGate:
+    names:
+      ts: buildPaywallGate
+      py: build_paywall_gate
+      rb: build_paywall_gate
+      go: BuildPaywallGate
+      rust: build_paywall_gate
+      c: buildPaywallGate
+    params:
+      - name: input
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build the structured paywall gate payload for a product and limits snapshot.'
+      params:
+        options: 'Product ref and current limits used to shape the gate.'
+      returns: 'Structured gate content for paywall responses.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  buildCustomerSnapshot:
+    names:
+      ts: buildCustomerSnapshot
+      py: build_customer_snapshot
+      rb: build_customer_snapshot
+      go: BuildCustomerSnapshot
+      rust: build_customer_snapshot
+      c: buildCustomerSnapshot
+    params:
+      - name: input
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build the merchant-facing customer snapshot from a limits body.'
+      params:
+        options: 'Customer ref and last checkLimits body (or null).'
+      returns: 'Customer snapshot with defaults applied, including throttled and overage.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  buildGateMessage:
+    names:
+      ts: buildGateMessage
+      py: build_gate_message
+      rb: build_gate_message
+      go: BuildGateMessage
+      rust: build_gate_message
+      c: buildGateMessage
+    params:
+      - name: input
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build the human-readable paywall gate message from state and gate content.'
+      params:
+        options: 'Paywall state and gate payload inputs.'
+      returns: 'Gate message string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  buildNudgeMessage:
+    names:
+      ts: buildNudgeMessage
+      py: build_nudge_message
+      rb: build_nudge_message
+      go: BuildNudgeMessage
+      rust: build_nudge_message
+      c: buildNudgeMessage
+    params:
+      - name: input
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build a soft nudge message when usage approaches plan limits.'
+      params:
+        options: 'Paywall state and optional limits snapshot.'
+      returns: 'Nudge message string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  classifyPaywallState:
+    names:
+      ts: classifyPaywallState
+      py: classify_paywall_state
+      rb: classify_paywall_state
+      go: ClassifyPaywallState
+      rust: classify_paywall_state
+      c: classifyPaywallState
+    params:
+      - name: input
+        type: unknown
+        required: true
+    docs:
+      summary: 'Classify paywall state from limits and product context.'
+      params:
+        options: 'Inputs used to classify the paywall state.'
+      returns: 'Canonical paywall state label.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  paywallErrorToClientPayload:
+    names:
+      ts: paywallErrorToClientPayload
+      py: paywall_error_to_client_payload
+      rb: paywall_error_to_client_payload
+      go: PaywallErrorToClientPayload
+      rust: paywall_error_to_client_payload
+      c: paywallErrorToClientPayload
+    params:
+      - name: error
+        type: unknown
+        required: true
+    docs:
+      summary: 'Project a PaywallError into the client-facing payload shape.'
+      params:
+        options: 'Paywall error fields to project.'
+      returns: 'Client payload object for paywall responses.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  SolvaPayError:
+    names:
+      ts: SolvaPayError
+      py: SolvaPayError
+      rb: SolvaPayError
+      go: SolvaPayError
+      rust: SolvaPayError
+      c: SolvaPayError
+    params:
+      - name: message
+        type: string
+        required: true
+      - name: init
+        object:
+          status:
+            type: number
+            required: false
+          code:
+            type: string
+            required: false
+        required: false
+    docs:
+      summary: 'Public SDK error class for API, transport, and webhook failures.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        handWritten: true
+        reason: 'Exception class; TS impl: sdks/typescript/core/src/solvapay-error.ts'
+      py:
+        handWritten: true
+        reason: 'Exception class; Python impl: sdks/python/python/solvapay/errors.py'
+      rb:
+        handWritten: true
+        reason: 'Exception class; Ruby impl: sdks/ruby/lib/solvapay/errors.rb'
+      go:
+        handWritten: true
+        reason: 'Error type is host-defined, not a generated helper forwarder.'
+      rust:
+        handWritten: true
+        reason: 'Error type is host-defined, not a generated helper re-export.'
+      c:
+        omitted: true
+        reason: 'No generated C exception class.'
+  PaywallError:
+    names:
+      ts: PaywallError
+      py: PaywallError
+      rb: PaywallError
+      go: PaywallError
+      rust: PaywallError
+      c: PaywallError
+    params:
+      - name: message
+        type: string
+        required: true
+      - name: structuredContent
+        type: unknown
+        required: true
+    docs:
+      summary: 'Paywall gate error carrying structured content for client formatting.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        handWritten: true
+        reason: 'Exception class; TS impl: sdks/typescript/server/src/paywall.ts'
+      py:
+        handWritten: true
+        reason: 'Exception class; Python impl: sdks/python/python/solvapay/errors.py'
+      rb:
+        handWritten: true
+        reason: 'Exception class; Ruby impl: sdks/ruby/lib/solvapay/errors.rb'
+      go:
+        handWritten: true
+        reason: 'Error type is host-defined, not a generated helper forwarder.'
+      rust:
+        handWritten: true
+        reason: 'Error type is host-defined, not a generated helper re-export.'
+      c:
+        omitted: true
+        reason: 'No generated C exception class.'
+
+coreHelpers:
+  validateBusinessDetails:
+    names:
+      ts: validateBusinessDetails
+      py: validate_business_details
+      rb: validate_business_details
+      go: ValidateBusinessDetails
+      rust: validate_business_details
+      c: validateBusinessDetails
+    params: []
+    docs:
+      summary: 'Validate seller business-details fields before submission.'
+      params:
+        options: 'Business details input to validate.'
+      returns: 'Validation issues when present.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  deriveTaxIdType:
+    names:
+      ts: deriveTaxIdType
+      py: derive_tax_id_type
+      rb: derive_tax_id_type
+      go: DeriveTaxIdType
+      rust: derive_tax_id_type
+      c: deriveTaxIdType
+    params: []
+    docs:
+      summary: 'Derive the tax ID type for a business country.'
+      params:
+        options: 'Country used to select the tax ID type.'
+      returns: 'Tax ID type string when known.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  resolveTaxBehavior:
+    names:
+      ts: resolveTaxBehavior
+      py: resolve_tax_behavior
+      rb: resolve_tax_behavior
+      go: ResolveTaxBehavior
+      rust: resolve_tax_behavior
+      c: resolveTaxBehavior
+    params: []
+    docs:
+      summary: 'Resolve inclusive vs exclusive tax behavior for a currency/country pair.'
+      params:
+        options: 'Currency and country used for tax behavior.'
+      returns: 'Resolved tax behavior.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  getTaxIdExample:
+    names:
+      ts: getTaxIdExample
+      py: get_tax_id_example
+      rb: get_tax_id_example
+      go: GetTaxIdExample
+      rust: get_tax_id_example
+      c: getTaxIdExample
+    params: []
+    docs:
+      summary: 'Return an example tax ID string for a country.'
+      params:
+        options: 'Country whose example tax ID is requested.'
+      returns: 'Example tax ID string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  getTaxIdFieldLabel:
+    names:
+      ts: getTaxIdFieldLabel
+      py: get_tax_id_field_label
+      rb: get_tax_id_field_label
+      go: GetTaxIdFieldLabel
+      rust: get_tax_id_field_label
+      c: getTaxIdFieldLabel
+    params: []
+    docs:
+      summary: 'Return the localized field label for a country tax ID.'
+      params:
+        options: 'Country for the tax ID field label.'
+      returns: 'Field label string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  getTaxIdHelperText:
+    names:
+      ts: getTaxIdHelperText
+      py: get_tax_id_helper_text
+      rb: get_tax_id_helper_text
+      go: GetTaxIdHelperText
+      rust: get_tax_id_helper_text
+      c: getTaxIdHelperText
+    params: []
+    docs:
+      summary: 'Return helper text describing the tax ID format for a country.'
+      params:
+        options: 'Country for the tax ID helper text.'
+      returns: 'Helper text string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  BUSINESS_COUNTRY_DISPLAY_NAMES:
+    names:
+      ts: BUSINESS_COUNTRY_DISPLAY_NAMES
+      py: BUSINESS_COUNTRY_DISPLAY_NAMES
+      rb: BUSINESS_COUNTRY_DISPLAY_NAMES
+      go: BUSINESS_COUNTRY_DISPLAY_NAMES
+      rust: BUSINESS_COUNTRY_DISPLAY_NAMES
+      c: BUSINESS_COUNTRY_DISPLAY_NAMES
+    docs:
+      summary: 'Map of supported business country codes to display names.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+  BUSINESS_COUNTRY_OPTIONS:
+    names:
+      ts: BUSINESS_COUNTRY_OPTIONS
+      py: BUSINESS_COUNTRY_OPTIONS
+      rb: BUSINESS_COUNTRY_OPTIONS
+      go: BUSINESS_COUNTRY_OPTIONS
+      rust: BUSINESS_COUNTRY_OPTIONS
+      c: BUSINESS_COUNTRY_OPTIONS
+    docs:
+      summary: 'Ordered list of business country options for seller identity forms.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+  COUNTRY_TO_TAX_ID_TYPE:
+    names:
+      ts: COUNTRY_TO_TAX_ID_TYPE
+      py: COUNTRY_TO_TAX_ID_TYPE
+      rb: COUNTRY_TO_TAX_ID_TYPE
+      go: COUNTRY_TO_TAX_ID_TYPE
+      rust: COUNTRY_TO_TAX_ID_TYPE
+      c: COUNTRY_TO_TAX_ID_TYPE
+    docs:
+      summary: 'Map of business country codes to default tax ID types.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+  SUPPORTED_BUSINESS_COUNTRIES:
+    names:
+      ts: SUPPORTED_BUSINESS_COUNTRIES
+      py: SUPPORTED_BUSINESS_COUNTRIES
+      rb: SUPPORTED_BUSINESS_COUNTRIES
+      go: SUPPORTED_BUSINESS_COUNTRIES
+      rust: SUPPORTED_BUSINESS_COUNTRIES
+      c: SUPPORTED_BUSINESS_COUNTRIES
+    docs:
+      summary: 'Frozen list of country codes supported for seller business details.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+  TAX_BEHAVIORS:
+    names:
+      ts: TAX_BEHAVIORS
+      py: TAX_BEHAVIORS
+      rb: TAX_BEHAVIORS
+      go: TAX_BEHAVIORS
+      rust: TAX_BEHAVIORS
+      c: TAX_BEHAVIORS
+    docs:
+      summary: 'Frozen set of supported tax behavior values.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+  TAX_EXCLUSIVE_CURRENCIES:
+    names:
+      ts: TAX_EXCLUSIVE_CURRENCIES
+      py: TAX_EXCLUSIVE_CURRENCIES
+      rb: TAX_EXCLUSIVE_CURRENCIES
+      go: TAX_EXCLUSIVE_CURRENCIES
+      rust: TAX_EXCLUSIVE_CURRENCIES
+      c: TAX_EXCLUSIVE_CURRENCIES
+    docs:
+      summary: 'Currencies that default to tax-exclusive pricing behavior.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+  TAX_ID_EXAMPLE_BY_COUNTRY:
+    names:
+      ts: TAX_ID_EXAMPLE_BY_COUNTRY
+      py: TAX_ID_EXAMPLE_BY_COUNTRY
+      rb: TAX_ID_EXAMPLE_BY_COUNTRY
+      go: TAX_ID_EXAMPLE_BY_COUNTRY
+      rust: TAX_ID_EXAMPLE_BY_COUNTRY
+      c: TAX_ID_EXAMPLE_BY_COUNTRY
+    docs:
+      summary: 'Map of country codes to example tax ID strings.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+  TAX_ID_TYPES:
+    names:
+      ts: TAX_ID_TYPES
+      py: TAX_ID_TYPES
+      rb: TAX_ID_TYPES
+      go: TAX_ID_TYPES
+      rust: TAX_ID_TYPES
+      c: TAX_ID_TYPES
+    docs:
+      summary: 'Frozen set of supported tax ID type values.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    availability:
+      ts:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      py:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rb:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      go:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      rust:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+      c:
+        {
+          omitted: true,
+          reason: 'Not #[solvapay_export]ed from core yet; bind these constants in a follow-up rather than silently skipping.',
+        }
+  creditsToDisplayMinorUnits:
+    names:
+      ts: creditsToDisplayMinorUnits
+      py: credits_to_display_minor_units
+      rb: credits_to_display_minor_units
+      go: CreditsToDisplayMinorUnits
+      rust: credits_to_display_minor_units
+      c: creditsToDisplayMinorUnits
+    params: []
+    docs:
+      summary: 'Convert credit units into display minor units for a currency.'
+      params:
+        options: 'Credits amount and currency for conversion.'
+      returns: 'Display amount in minor units.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  isUnlimitedRemaining:
+    names:
+      ts: isUnlimitedRemaining
+      py: is_unlimited_remaining
+      rb: is_unlimited_remaining
+      go: IsUnlimitedRemaining
+      rust: is_unlimited_remaining
+      c: isUnlimitedRemaining
+    params: []
+    docs:
+      summary: 'Return whether remaining is the backend unlimited sentinel (-1).'
+      params:
+        options: 'Remaining allowance from a limits response.'
+      returns: 'True only when remaining is exactly -1.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  isZeroDecimalCurrency:
+    names:
+      ts: isZeroDecimalCurrency
+      py: is_zero_decimal_currency
+      rb: is_zero_decimal_currency
+      go: IsZeroDecimalCurrency
+      rust: is_zero_decimal_currency
+      c: isZeroDecimalCurrency
+    params: []
+    docs:
+      summary: 'Return whether a currency uses zero decimal places.'
+      params:
+        options: 'Currency code to inspect.'
+      returns: 'True when the currency has zero decimal places.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  minorUnitsPerMajor:
+    names:
+      ts: minorUnitsPerMajor
+      py: minor_units_per_major
+      rb: minor_units_per_major
+      go: MinorUnitsPerMajor
+      rust: minor_units_per_major
+      c: minorUnitsPerMajor
+    params: []
+    docs:
+      summary: 'Return how many minor units make one major unit for a currency.'
+      params:
+        options: 'Currency code to inspect.'
+      returns: 'Minor units per major unit.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  resolveSellerIdentityDisplay:
+    names:
+      ts: resolveSellerIdentityDisplay
+      py: resolve_seller_identity_display
+      rb: resolve_seller_identity_display
+      go: ResolveSellerIdentityDisplay
+      rust: resolve_seller_identity_display
+      c: resolveSellerIdentityDisplay
+    params: []
+    docs:
+      summary: 'Resolve seller identity fields into a display projection.'
+      params:
+        options: 'Seller identity inputs to project.'
+      returns: 'Display projection for seller identity.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  getSellerTaxIdentifierDisplayLabel:
+    names:
+      ts: getSellerTaxIdentifierDisplayLabel
+      py: get_seller_tax_identifier_display_label
+      rb: get_seller_tax_identifier_display_label
+      go: GetSellerTaxIdentifierDisplayLabel
+      rust: get_seller_tax_identifier_display_label
+      c: getSellerTaxIdentifierDisplayLabel
+    params: []
+    docs:
+      summary: 'Return the display label for a seller tax identifier type.'
+      params:
+        options: 'Tax identifier type to label.'
+      returns: 'Display label string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE:
+    names:
+      ts: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      py: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      rb: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      go: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      rust: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+      c: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    docs:
+      summary: 'Map of seller tax identifier types to display labels.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  shouldShowTaxRow:
+    names:
+      ts: shouldShowTaxRow
+      py: should_show_tax_row
+      rb: should_show_tax_row
+      go: ShouldShowTaxRow
+      rust: should_show_tax_row
+      c: shouldShowTaxRow
+    params: []
+    docs:
+      summary: 'Return whether a VAT amount row should render for a tax treatment.'
+      params:
+        options: 'Tax treatment, or null when unknown.'
+      returns: 'True when a VAT row should be shown.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  formatSubtotalLabel:
+    names:
+      ts: formatSubtotalLabel
+      py: format_subtotal_label
+      rb: format_subtotal_label
+      go: FormatSubtotalLabel
+      rust: format_subtotal_label
+      c: formatSubtotalLabel
+    params: []
+    docs:
+      summary: 'Return the checkout subtotal label for a tax treatment.'
+      params:
+        options: 'Tax treatment, or null when unknown.'
+      returns: 'Subtotal or Subtotal (excl. VAT).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  formatVatSummaryLabel:
+    names:
+      ts: formatVatSummaryLabel
+      py: format_vat_summary_label
+      rb: format_vat_summary_label
+      go: FormatVatSummaryLabel
+      rust: format_vat_summary_label
+      c: formatVatSummaryLabel
+    params: []
+    docs:
+      summary: 'Return the VAT row label for a treatment and rate.'
+      params:
+        options: 'Tax treatment and numeric tax rate.'
+      returns: 'VAT label string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  resolveTaxTreatmentNote:
+    names:
+      ts: resolveTaxTreatmentNote
+      py: resolve_tax_treatment_note
+      rb: resolve_tax_treatment_note
+      go: ResolveTaxTreatmentNote
+      rust: resolve_tax_treatment_note
+      c: resolveTaxTreatmentNote
+    params: []
+    docs:
+      summary: 'Return the buyer-facing note for a non-standard tax treatment.'
+      params:
+        options: 'Tax treatment, or null when unknown.'
+      returns: 'Note string, or null when no note applies.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  REVERSE_CHARGE_NOTE:
+    names:
+      ts: REVERSE_CHARGE_NOTE
+      py: REVERSE_CHARGE_NOTE
+      rb: REVERSE_CHARGE_NOTE
+      go: REVERSE_CHARGE_NOTE
+      rust: REVERSE_CHARGE_NOTE
+      c: REVERSE_CHARGE_NOTE
+    docs:
+      summary: 'Buyer-facing note when VAT reverse charge applies.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  TAX_NOT_COLLECTED_NOTE:
+    names:
+      ts: TAX_NOT_COLLECTED_NOTE
+      py: TAX_NOT_COLLECTED_NOTE
+      rb: TAX_NOT_COLLECTED_NOTE
+      go: TAX_NOT_COLLECTED_NOTE
+      rust: TAX_NOT_COLLECTED_NOTE
+      c: TAX_NOT_COLLECTED_NOTE
+    docs:
+      summary: 'Buyer-facing note when tax is not collected on the purchase.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  formatPrice:
+    names:
+      ts: formatPrice
+      py: format_price
+      rb: format_price
+      go: FormatPrice
+      rust: format_price
+      c: formatPrice
+    params: []
+    docs:
+      summary: 'Format a minor-unit amount as buyer-facing money.'
+      params:
+        options: 'Amount, currency, and optional free-copy, interval, and display mode.'
+      returns: 'Formatted price string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  toMajorUnits:
+    names:
+      ts: toMajorUnits
+      py: to_major_units
+      rb: to_major_units
+      go: ToMajorUnits
+      rust: to_major_units
+      c: toMajorUnits
+    params: []
+    docs:
+      summary: 'Convert a minor-unit amount to its major-unit equivalent.'
+      params:
+        options: 'Minor-unit amount and ISO currency code.'
+      returns: 'Major-unit amount.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  evaluateProductReadiness:
+    names:
+      ts: evaluateProductReadiness
+      py: evaluate_product_readiness
+      rb: evaluate_product_readiness
+      go: EvaluateProductReadiness
+      rust: evaluate_product_readiness
+      c: evaluateProductReadiness
+    params: []
+    docs:
+      summary: 'Evaluate whether a product can be sold (active status plus an active plan).'
+      params:
+        options: 'Product status and plans.'
+      returns: 'Readiness result with issues and plan counts.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  assertValidProductRef:
+    names:
+      ts: assertValidProductRef
+      py: assert_valid_product_ref
+      rb: assert_valid_product_ref
+      go: AssertValidProductRef
+      rust: assert_valid_product_ref
+      c: assertValidProductRef
+    params: []
+    docs:
+      summary: 'Reject empty, placeholder, or non-prd_ product refs at construction time.'
+      params:
+        options: 'Product ref and call-site context name.'
+      returns: 'Throws when the ref is not a real prd_ identifier.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  requireProductRef:
+    names:
+      ts: requireProductRef
+      py: require_product_ref
+      rb: require_product_ref
+      go: RequireProductRef
+      rust: require_product_ref
+      c: requireProductRef
+    params: []
+    docs:
+      summary: 'Resolve a product ref from metadata or env, or throw a named missing-ref error.'
+      params:
+        options: 'Optional metadata product and env product strings.'
+      returns: 'A product ref string, or throws when neither is set.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  charges:
+    names:
+      ts: charges
+      py: charges
+      rb: charges
+      go: Charges
+      rust: charges
+      c: charges
+    params: []
+    docs:
+      summary: 'Return every charge option on a plan, in wire order.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Charge objects (flat, unit, or seat).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  headlineCharges:
+    names:
+      ts: headlineCharges
+      py: headline_charges
+      rb: headline_charges
+      go: HeadlineCharges
+      rust: headline_charges
+      c: headlineCharges
+    params: []
+    docs:
+      summary: 'Return the headline flat charge in each currency, excluding setup fees.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'One flat charge per currency, in first-seen order.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  perUnitCharge:
+    names:
+      ts: perUnitCharge
+      py: per_unit_charge
+      rb: per_unit_charge
+      go: PerUnitCharge
+      rust: per_unit_charge
+      c: perUnitCharge
+    params: []
+    docs:
+      summary: 'Return the first per-unit charge, optionally scoped to one meter.'
+      params:
+        options: 'A priced plan and optional meter name.'
+      returns: 'The metered charge, or null when the plan does not meter usage.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  tierBands:
+    names:
+      ts: tierBands
+      py: tier_bands
+      rb: tier_bands
+      go: TierBands
+      rust: tier_bands
+      c: tierBands
+    params: []
+    docs:
+      summary: 'Return the tier bands a plan prices a meter with, ordered by floor.'
+      params:
+        options: 'A priced plan and optional meter name.'
+      returns: "One meter's band stack; empty when the plan has no bands for that meter."
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  tierMeters:
+    names:
+      ts: tierMeters
+      py: tier_meters
+      rb: tier_meters
+      go: TierMeters
+      rust: tier_meters
+      c: tierMeters
+    params: []
+    docs:
+      summary: 'List every meter the plan prices with tier bands, in first-seen order.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Meter names; empty when the plan has no tier bands.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  usageRate:
+    names:
+      ts: usageRate
+      py: usage_rate
+      rb: usage_rate
+      go: UsageRate
+      rust: usage_rate
+      c: usageRate
+    params: []
+    docs:
+      summary: 'Return what one metered unit costs, from a per-unit charge or the first priced band.'
+      params:
+        options: 'A priced plan and optional meter name.'
+      returns: 'The entry rate, with tiered true when that rate is the floor of a stack.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  billingCycle:
+    names:
+      ts: billingCycle
+      py: billing_cycle
+      rb: billing_cycle
+      go: BillingCycle
+      rust: billing_cycle
+      c: billingCycle
+    params: []
+    docs:
+      summary: 'Read the billing-cycle option from a plan.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Interval (and count when greater than 1), or null.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  trialDays:
+    names:
+      ts: trialDays
+      py: trial_days
+      rb: trial_days
+      go: TrialDays
+      rust: trial_days
+      c: trialDays
+    params: []
+    docs:
+      summary: 'Read the free-trial length in days from a plan.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Trial length in days, or null when the plan has no trial.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  includedUnits:
+    names:
+      ts: includedUnits
+      py: included_units
+      rb: included_units
+      go: IncludedUnits
+      rust: included_units
+      c: includedUnits
+    params: []
+    docs:
+      summary: 'Read the included-unit cap for a meter from the limit option.'
+      params:
+        options: 'A priced plan and optional meter name.'
+      returns: 'Cap (0 means unlimited), or null when no limit is configured.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  meterName:
+    names:
+      ts: meterName
+      py: meter_name
+      rb: meter_name
+      go: MeterName
+      rust: meter_name
+      c: meterName
+    params: []
+    docs:
+      summary: 'Read the meter a plan counts against from a per-unit charge, tier, or limit option.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Meter name, or null when no charge, tier, or limit names one.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  countsUsage:
+    names:
+      ts: countsUsage
+      py: counts_usage
+      rb: counts_usage
+      go: CountsUsage
+      rust: counts_usage
+      c: countsUsage
+    params: []
+    docs:
+      summary: 'True when the plan counts usage via a per-unit charge, limit, or tier.'
+      params:
+        options: 'A catalog plan or frozen planSnapshot carrying options[].'
+      returns: 'Whether the plan has a usage counter even without a per-unit rate.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  peggedCreditsPerUnit:
+    names:
+      ts: peggedCreditsPerUnit
+      py: pegged_credits_per_unit
+      rb: pegged_credits_per_unit
+      go: PeggedCreditsPerUnit
+      rust: pegged_credits_per_unit
+      c: peggedCreditsPerUnit
+    params: []
+    docs:
+      summary: 'Convert a per-unit charge in minor units to credits via the USD peg.'
+      params:
+        options: 'Charge amount, credits per minor unit, and optional USD-to-charge rate.'
+      returns: 'Credits per metered unit (0 for a free meter).'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  creditsPerUnitFromBalance:
+    names:
+      ts: creditsPerUnitFromBalance
+      py: credits_per_unit_from_balance
+      rb: credits_per_unit_from_balance
+      go: CreditsPerUnitFromBalance
+      rust: credits_per_unit_from_balance
+      c: creditsPerUnitFromBalance
+    params: []
+    docs:
+      summary: 'Credits per metered call when the charge currency matches the balance peg.'
+      params:
+        options: 'A priced plan, a balance peg, and an optional meter name.'
+      returns: 'Credits per unit, or null when the rate cannot be established honestly.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+
+facade:
+  createSolvaPay:
+    names:
+      ts: createSolvaPay
+      py: create_solva_pay
+      rb: SolvaPay.create
+      go: solvapay.New
+      rust: 'Client::new'
+      c: solvapay_client_new
+    params:
+      - name: config
+        type: unknown
+        required: false
+    docs:
+      summary: 'Create the idiomatic high-level SolvaPay facade instance.'
+      params:
+        options: 'API credentials and optional facade configuration.'
+      returns: 'Configured SolvaPay facade.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  createSolvaPayClient:
+    names:
+      ts: createSolvaPayClient
+      py: create_solva_pay_client
+      rb: create_solva_pay_client
+      go: CreateSolvaPayClient
+      rust: create_solva_pay_client
+      c: createSolvaPayClient
+    params:
+      - name: opts
+        type: unknown
+        required: true
+    docs:
+      summary: 'Create a portable SolvaPayClient bound to API credentials.'
+      params:
+        options: 'API key and optional base URL.'
+      returns: 'Configured SolvaPayClient.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  payable:
+    names:
+      ts: payable
+      py: payable
+      rb: payable
+      go: Payable
+      rust: payable
+      c: payable
+    params:
+      - name: options
+        type: unknown
+        required: true
+    docs:
+      summary: 'Return a decorator/wrapper that gates a callable behind paywall checks.'
+      params:
+        options: 'Product and usage meter used for gating.'
+      returns: 'Decorator that enforces the paywall before invocation.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  protect:
+    names:
+      ts: protect
+      py: protect
+      rb: protect
+      go: Protect
+      rust: protect
+      c: protect
+    params:
+      - name: options
+        type: unknown
+        required: true
+    docs:
+      summary: 'Protect a callable with paywall gating for the given product.'
+      params:
+        options: 'Product and usage meter used for protection.'
+      returns: 'Protected callable wrapper.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+  gate:
+    names:
+      ts: payable.gate
+      py: sp.gate
+      rb: sp.gate
+      go: sp.Gate
+      rust: sp.gate
+      c: gate
+    params:
+      - name: options
+        type: unknown
+        required: true
+    docs:
+      summary: 'Evaluate the paywall gate for a customer against a product.'
+      params:
+        options: 'Customer ref, product, and usage meter for the gate decision.'
+      returns: 'Paywall or allow result with usage trackers.'
+    sync:
+      ts: async
+      py: [async, blocking]
+      rb: blocking
+      go: blocking
+      rust: [async, blocking]
+      c: blocking
+
+mcp:
+  mcpDescriptors:
+    names:
+      ts: mcpDescriptors
+      py: mcp_descriptors
+      rb: mcp_descriptors
+      go: McpDescriptors
+      rust: mcp_descriptors
+      c: mcpDescriptors
+    params:
+      - name: resourceUri
+        type: string
+        required: true
+      - name: publicBaseUrl
+        type: string
+        required: true
+      - name: productRef
+        type: string
+        required: true
+      - name: views
+        array:
+          type: string
+        required: false
+      - name: csp
+        type: unknown
+        required: false
+      - name: apiBaseUrl
+        type: string
+        required: false
+      - name: branding
+        type: unknown
+        required: false
+    docs:
+      summary: 'Build MCP tool, prompt, and resource descriptors for a product.'
+      params:
+        resourceUri: 'UI resource URI stamped onto tool metadata.'
+        publicBaseUrl: 'Public http(s) origin of the MCP server.'
+        productRef: 'Default product reference for checkout tools.'
+        views: 'Enabled views; defaults to checkout, account, and topup.'
+        csp: 'Optional CSP overrides merged with the Stripe baseline.'
+        apiBaseUrl: 'Optional API origin auto-included in CSP connect-src.'
+        branding: 'Optional merchant branding for tool icons.'
+      returns: 'Descriptor bundle with tools, prompts, and resources.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpMergeCsp:
+    names:
+      ts: mcpMergeCsp
+      py: mcp_merge_csp
+      rb: mcp_merge_csp
+      go: McpMergeCsp
+      rust: mcp_merge_csp
+      c: mcpMergeCsp
+    params:
+      - name: overrides
+        type: unknown
+        required: false
+      - name: apiBaseUrl
+        type: string
+        required: false
+    docs:
+      summary: 'Merge integrator CSP overrides with the Stripe baseline allow-lists.'
+      params:
+        overrides: 'Optional resource/connect/frame domain overrides.'
+        apiBaseUrl: 'Optional API origin added to connect-src.'
+      returns: 'Merged CSP directive lists.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpOverviewResource:
+    names:
+      ts: mcpOverviewResource
+      py: mcp_overview_resource
+      rb: mcp_overview_resource
+      go: McpOverviewResource
+      rust: mcp_overview_resource
+      c: mcpOverviewResource
+    params: []
+    docs:
+      summary: 'Return the frozen MCP overview resource document.'
+      returns: 'Overview markdown and metadata for the overview resource.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpOauthDiscovery:
+    names:
+      ts: mcpOauthDiscovery
+      py: mcp_oauth_discovery
+      rb: mcp_oauth_discovery
+      go: McpOauthDiscovery
+      rust: mcp_oauth_discovery
+      c: mcpOauthDiscovery
+    params:
+      - name: kind
+        type: string
+        required: true
+      - name: publicBaseUrl
+        type: string
+        required: true
+      - name: mcpPath
+        type: string
+        required: false
+      - name: paths
+        type: unknown
+        required: false
+    docs:
+      summary: 'Build an OAuth protected-resource or authorization-server discovery document.'
+      params:
+        kind: 'protected-resource or authorization-server.'
+        publicBaseUrl: 'Public origin with trailing slash stripped.'
+        mcpPath: 'Optional MCP mount path.'
+        paths: 'Optional OAuth route path overrides.'
+      returns: 'RFC 9728 or RFC 8414 discovery JSON.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpOauthPath:
+    names:
+      ts: mcpOauthPath
+      py: mcp_oauth_path
+      rb: mcp_oauth_path
+      go: McpOauthPath
+      rust: mcp_oauth_path
+      c: mcpOauthPath
+    params:
+      - name: kind
+        type: string
+        required: true
+      - name: value
+        type: string
+        required: false
+      - name: publicBaseUrl
+        type: string
+        required: false
+      - name: mcpPath
+        type: string
+        required: false
+      - name: paths
+        type: unknown
+        required: false
+    docs:
+      summary: 'Run one OAuth path helper (slash, resource identifier, or resolve-paths).'
+      params:
+        kind: 'Which path helper to run.'
+        value: 'String argument for slash helpers.'
+        publicBaseUrl: 'Public origin for resource identifiers.'
+        mcpPath: 'Optional MCP mount path.'
+        paths: 'Optional path overrides for resolve-paths.'
+      returns: 'Normalized path string or resolved path map.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpOauthErrorInspect:
+    names:
+      ts: mcpOauthErrorInspect
+      py: mcp_oauth_error_inspect
+      rb: mcp_oauth_error_inspect
+      go: McpOauthErrorInspect
+      rust: mcp_oauth_error_inspect
+      c: mcpOauthErrorInspect
+    params:
+      - name: kind
+        type: string
+        required: true
+      - name: body
+        type: unknown
+        required: false
+      - name: status
+        type: integer
+        required: false
+    docs:
+      summary: 'Inspect an upstream OAuth error body without building a full RFC error.'
+      params:
+        kind: 'has-shape, derive-code, or build-description.'
+        body: 'Upstream error body.'
+        status: 'HTTP status used by derive-code.'
+      returns: 'Boolean, error code, or description string.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpNormalizeOauthError:
+    names:
+      ts: mcpNormalizeOauthError
+      py: mcp_normalize_oauth_error
+      rb: mcp_normalize_oauth_error
+      go: McpNormalizeOauthError
+      rust: mcp_normalize_oauth_error
+      c: mcpNormalizeOauthError
+    params:
+      - name: body
+        type: unknown
+        required: false
+      - name: text
+        type: string
+        required: false
+      - name: status
+        type: integer
+        required: false
+    docs:
+      summary: 'Normalize an upstream OAuth error into the frozen RFC error body.'
+      params:
+        body: 'Parsed upstream JSON body.'
+        text: 'Raw upstream body text.'
+        status: 'HTTP status; defaults to 400.'
+      returns: 'Normalized OAuth error object.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpAuthGate:
+    names:
+      ts: mcpAuthGate
+      py: mcp_auth_gate
+      rb: mcp_auth_gate
+      go: McpAuthGate
+      rust: mcp_auth_gate
+      c: mcpAuthGate
+    params:
+      - name: publicBaseUrl
+        type: string
+        required: true
+      - name: rpcMethod
+        type: string
+        required: false
+      - name: authHeader
+        type: string
+        required: false
+      - name: authMode
+        type: string
+        required: false
+      - name: mcpPath
+        type: string
+        required: false
+      - name: jsonRpcId
+        type: unknown
+        required: false
+      - name: jwksJson
+        type: unknown
+        required: false
+      - name: hs256Secret
+        type: string
+        required: false
+      - name: expectedIssuer
+        type: string
+        required: false
+      - name: expectedAudience
+        type: string
+        required: false
+      - name: nowUnixSecs
+        type: integer
+        required: false
+    docs:
+      summary: 'Decide allow versus 401 WWW-Authenticate challenge for an MCP request.'
+      params:
+        publicBaseUrl: 'Public origin for the WWW-Authenticate resource.'
+        rpcMethod: 'JSON-RPC method; may be absent.'
+        authHeader: 'Authorization header; a gated method requires a verified bearer.'
+        authMode: 'tools-call or all; defaults to tools-call.'
+        mcpPath: 'Optional MCP mount path.'
+        jsonRpcId: 'JSON-RPC id echoed on the challenge body.'
+        jwksJson: 'JWKS document for RS256 or ES256 verification.'
+        hs256Secret: 'Explicit HS256 secret for local or stub flows.'
+        expectedIssuer: 'Expected iss; defaults to the public origin.'
+        expectedAudience: 'Expected aud; defaults to the MCP resource identifier.'
+        nowUnixSecs: 'Explicit unix clock for exp and nbf checks.'
+      returns: 'Allow decision or HTTP challenge payload.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpNativeCors:
+    names:
+      ts: mcpNativeCors
+      py: mcp_native_cors
+      rb: mcp_native_cors
+      go: McpNativeCors
+      rust: mcp_native_cors
+      c: mcpNativeCors
+    params:
+      - name: origin
+        type: string
+        required: false
+      - name: requestedMethod
+        type: string
+        required: false
+      - name: requestedHeaders
+        type: string
+        required: false
+      - name: preflight
+        type: boolean
+        required: false
+    docs:
+      summary: 'Decide native-scheme CORS mirroring for MCP client origins.'
+      params:
+        origin: 'Request Origin header.'
+        requestedMethod: 'Access-Control-Request-Method for preflight.'
+        requestedHeaders: 'Access-Control-Request-Headers for preflight.'
+        preflight: 'When true, emit Allow-Methods, Allow-Headers, and Max-Age.'
+      returns: 'allowed flag plus response headers to merge.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpVerifyBearer:
+    names:
+      ts: mcpVerifyBearer
+      py: mcp_verify_bearer
+      rb: mcp_verify_bearer
+      go: McpVerifyBearer
+      rust: mcp_verify_bearer
+      c: mcpVerifyBearer
+    params:
+      - name: token
+        type: string
+        required: true
+      - name: expectedIssuer
+        type: string
+        required: true
+      - name: expectedAudience
+        type: string
+        required: true
+      - name: nowUnixSecs
+        type: integer
+        required: true
+      - name: jwksJson
+        type: unknown
+        required: false
+      - name: hs256Secret
+        type: string
+        required: false
+      - name: claimPriority
+        type: unknown
+        required: false
+    docs:
+      summary: 'Verify an MCP OAuth bearer JWT against JWKS (RS256/ES256) or an explicit HS256 secret.'
+      params:
+        token: 'Compact JWT (not the Authorization header).'
+        expectedIssuer: 'Required iss claim.'
+        expectedAudience: 'Required aud claim (MCP resource identifier).'
+        nowUnixSecs: 'Explicit unix clock for exp and nbf.'
+        jwksJson: 'JWKS document for asymmetric verification.'
+        hs256Secret: 'Explicit HS256 secret for local or stub flows.'
+        claimPriority: 'Optional customer-ref claim names; defaults to customerRef, customer_ref, sub.'
+      returns: 'Verified claims and customerRef, or a typed 401.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpIsFreeMethod:
+    names:
+      ts: mcpIsFreeMethod
+      py: mcp_is_free_method
+      rb: mcp_is_free_method
+      go: McpIsFreeMethod
+      rust: mcp_is_free_method
+      c: mcpIsFreeMethod
+    params:
+      - name: mcpMethod
+        type: string
+        required: false
+    docs:
+      summary: 'Return whether an MCP JSON-RPC method is free (no bearer) in tools-call mode.'
+      params:
+        mcpMethod: 'JSON-RPC method name; tools/call is gated.'
+      returns: 'True when the method does not require a bearer in tools-call mode.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpRequiresBearerAuth:
+    names:
+      ts: mcpRequiresBearerAuth
+      py: mcp_requires_bearer_auth
+      rb: mcp_requires_bearer_auth
+      go: McpRequiresBearerAuth
+      rust: mcp_requires_bearer_auth
+      c: mcpRequiresBearerAuth
+    params:
+      - name: mcpMethod
+        type: string
+        required: false
+      - name: authMode
+        type: string
+        required: false
+    docs:
+      summary: 'Return whether a bearer is required for a method under the given auth mode.'
+      params:
+        mcpMethod: 'JSON-RPC method name.'
+        authMode: 'tools-call or all; defaults to tools-call.'
+      returns: 'True when a bearer token is required.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpDefaultGate:
+    names:
+      ts: mcpDefaultGate
+      py: mcp_default_gate
+      rb: mcp_default_gate
+      go: McpDefaultGate
+      rust: mcp_default_gate
+      c: mcpDefaultGate
+    params:
+      - name: product
+        type: string
+        required: true
+      - name: reason
+        type: string
+        required: false
+    docs:
+      summary: 'Build the default ctx.gate() paywall structured-content stub.'
+      params:
+        product: 'Product reference stamped onto the gate.'
+        reason: 'Optional merchant message; empty or omitted becomes Payment required.'
+      returns: 'Paywall structured content with kind payment_required.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpDcrDiagnostics:
+    names:
+      ts: mcpDcrDiagnostics
+      py: mcp_dcr_diagnostics
+      rb: mcp_dcr_diagnostics
+      go: McpDcrDiagnostics
+      rust: mcp_dcr_diagnostics
+      c: mcpDcrDiagnostics
+    params:
+      - name: productRef
+        type: string
+        required: true
+      - name: apiBaseUrl
+        type: string
+        required: true
+      - name: status
+        type: integer
+        required: true
+      - name: bodyText
+        type: string
+        required: false
+    docs:
+      summary: 'Build the OAuth DCR failure diagnostic log line.'
+      params:
+        productRef: 'Configured product reference.'
+        apiBaseUrl: 'Configured API origin.'
+        status: 'Upstream HTTP status.'
+        bodyText: 'Upstream body text used to pick the hint.'
+      returns: 'Diagnostic message object.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpConfigLog:
+    names:
+      ts: mcpConfigLog
+      py: mcp_config_log
+      rb: mcp_config_log
+      go: McpConfigLog
+      rust: mcp_config_log
+      c: mcpConfigLog
+    params:
+      - name: apiBaseUrl
+        type: string
+        required: true
+      - name: productRef
+        type: string
+        required: true
+      - name: publicBaseUrl
+        type: string
+        required: true
+    docs:
+      summary: 'Build the one-line MCP config log payload (once-per-process is host-side).'
+      params:
+        apiBaseUrl: 'API origin.'
+        productRef: 'Product reference.'
+        publicBaseUrl: 'Public MCP origin.'
+      returns: 'Config log message object.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpHideToolsByAudience:
+    names:
+      ts: mcpHideToolsByAudience
+      py: mcp_hide_tools_by_audience
+      rb: mcp_hide_tools_by_audience
+      go: McpHideToolsByAudience
+      rust: mcp_hide_tools_by_audience
+      c: mcpHideToolsByAudience
+    params:
+      - name: tools
+        array:
+          type: unknown
+        required: true
+      - name: audiences
+        array:
+          type: string
+        required: true
+      - name: userAgent
+        type: string
+        required: false
+    docs:
+      summary: 'Filter tools/list descriptors by _meta.audience. User-Agent is ignored.'
+      params:
+        tools: 'Tool descriptors; hidden tools include _meta.audience.'
+        audiences: 'Audiences to hide (for example ui).'
+        userAgent: 'Accepted for compatibility; ignored. A User-Agent must not bypass hiding.'
+      returns: 'Filtered tools list.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpNarrate:
+    names:
+      ts: mcpNarrate
+      py: mcp_narrate
+      rb: mcp_narrate
+      go: McpNarrate
+      rust: mcp_narrate
+      c: mcpNarrate
+    params:
+      - name: tool
+        type: string
+        required: true
+      - name: payload
+        type: unknown
+        required: true
+      - name: kind
+        type: string
+        required: false
+      - name: mode
+        type: string
+        required: false
+      - name: meta
+        type: unknown
+        required: false
+    docs:
+      summary: 'Narrate an intent-tool bootstrap payload as markdown or a tool-result envelope.'
+      params:
+        tool: 'Intent tool name.'
+        payload: 'Bootstrap payload to narrate.'
+        kind: 'placeholder selects a one-line UI placeholder.'
+        mode: 'When set, emit a narrated tool-result envelope.'
+        meta: 'Base _meta stamped onto narrated envelopes.'
+      returns: 'Narration markdown or a narrated MCP tool result.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+  mcpHandleRequest:
+    names:
+      ts: mcpHandleRequest
+      py: mcp_handle_request
+      rb: mcp_handle_request
+      go: McpHandleRequest
+      rust: mcp_handle_request
+      c: mcpHandleRequest
+    params:
+      - name: rpc
+        type: unknown
+        required: true
+      - name: config
+        type: unknown
+        required: true
+      - name: authHeader
+        type: string
+        required: false
+    docs:
+      summary: 'Run one MCP JSON-RPC request through the engine (requires the engine feature).'
+      params:
+        rpc: 'JSON-RPC request object.'
+        config: 'Engine config including product and public origin.'
+        authHeader: 'Optional Authorization header.'
+      returns: 'Engine response or invokeHandler continuation.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+    feature: engine
+  mcpResume:
+    names:
+      ts: mcpResume
+      py: mcp_resume
+      rb: mcp_resume
+      go: McpResume
+      rust: mcp_resume
+      c: mcpResume
+    params:
+      - name: token
+        type: string
+        required: true
+      - name: handlerEnvelope
+        type: unknown
+        required: true
+    docs:
+      summary: 'Resume an engine continuation after a host payable handler returns.'
+      params:
+        token: 'Continuation token from invokeHandler.'
+        handlerEnvelope: 'Host handler outcome envelope.'
+      returns: 'Completed JSON-RPC response.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+    feature: engine
+  mcpWidgetResource:
+    names:
+      ts: mcpWidgetResource
+      py: mcp_widget_resource
+      rb: mcp_widget_resource
+      go: McpWidgetResource
+      rust: mcp_widget_resource
+      c: mcpWidgetResource
+    params:
+      - name: rpc
+        type: unknown
+        required: true
+      - name: resourceUri
+        type: string
+        required: true
+      - name: publicBaseUrl
+        type: string
+        required: true
+      - name: productRef
+        type: string
+        required: true
+      - name: views
+        array:
+          type: string
+        required: false
+      - name: csp
+        type: unknown
+        required: false
+      - name: apiBaseUrl
+        type: string
+        required: false
+      - name: branding
+        type: unknown
+        required: false
+    docs:
+      summary: 'Build a widget resources/read JSON-RPC envelope with HTML text omitted for the host to splice.'
+      params:
+        rpc: 'JSON-RPC request object.'
+        resourceUri: 'UI resource URI this host serves.'
+        publicBaseUrl: 'Public http(s) origin of the MCP server.'
+        productRef: 'Default product reference for checkout tools.'
+        views: 'Enabled views; defaults to checkout, account, and topup.'
+        csp: 'Optional CSP overrides merged with the Stripe baseline.'
+        apiBaseUrl: 'Optional API origin auto-included in CSP connect-src.'
+        branding: 'Optional merchant branding for tool icons.'
+      returns: 'Stamped JSON-RPC response without contents[0].text, or null when the request is not a widget read.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: syncOp
+    feature: engine
+  paywallToolResult:
+    names:
+      ts: paywallToolResult
+      py: paywall_tool_result
+      rb: paywall_tool_result
+      go: PaywallToolResult
+      rust: paywall_tool_result
+      c: paywallToolResult
+    params:
+      - name: message
+        type: string
+        required: true
+      - name: structuredContent
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build a text-only MCP paywall tool result (isError false) from narration and a gate.'
+      params:
+        message: 'Narration text for content[0].'
+        structuredContent: 'Machine-readable PaywallGate payload.'
+      returns: 'MCP tool result with isError false and structuredContent.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  makeResponseResult:
+    names:
+      ts: makeResponseResult
+      py: make_response_result
+      rb: make_response_result
+      go: MakeResponseResult
+      rust: make_response_result
+      c: makeResponseResult
+    params:
+      - name: data
+        type: unknown
+        required: true
+      - name: options
+        type: unknown
+        required: false
+      - name: emittedBlocks
+        array:
+          type: unknown
+        required: false
+    docs:
+      summary: 'Construct a branded handler response envelope (__solvapayResponse).'
+      params:
+        data: 'Merchant handler data payload.'
+        options: 'Optional response options object.'
+        emittedBlocks: 'Content blocks queued via ctx.emit before respond.'
+      returns: 'Branded ResponseEnvelope.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  assertResponseResult:
+    names:
+      ts: assertResponseResult
+      py: assert_response_result
+      rb: assert_response_result
+      go: AssertResponseResult
+      rust: assert_response_result
+      c: assertResponseResult
+    params:
+      - name: value
+        type: unknown
+        required: true
+    docs:
+      summary: 'Assert a value is a branded response envelope; brand failures are Transport errors.'
+      params:
+        value: 'Candidate handler return value.'
+      returns: 'The branded envelope, or a Transport error.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  buildPayableToolResult:
+    names:
+      ts: buildPayableToolResult
+      py: build_payable_tool_result
+      rb: build_payable_tool_result
+      go: BuildPayableToolResult
+      rust: build_payable_tool_result
+      c: buildPayableToolResult
+    params:
+      - name: envelope
+        type: unknown
+        required: true
+    docs:
+      summary: 'Unwrap a branded response envelope into an allow-path MCP tool result.'
+      params:
+        envelope: 'Branded handler return from makeResponseResult.'
+      returns: 'MCP allow-path tool result with structuredContent.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  invokePayableNext:
+    names:
+      ts: invokePayableNext
+      py: invoke_payable_next
+      rb: invoke_payable_next
+      go: InvokePayableNext
+      rust: invoke_payable_next
+      c: invokePayableNext
+    params:
+      - name: state
+        type: unknown
+        required: false
+      - name: event
+        type: unknown
+        required: false
+    docs:
+      summary: 'Advance the payable-tool state machine by one event.'
+      params:
+        state: 'Opaque machine state from the previous step.'
+        event: 'Next event (start, gatePaywall, gateAllow, handler*).'
+      returns: 'Next state plus optional MCP result or host callback.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature.'
+  MCP_TOOL_NAMES:
+    names:
+      ts: MCP_TOOL_NAMES
+      py: MCP_TOOL_NAMES
+      rb: MCP_TOOL_NAMES
+      go: MCP_TOOL_NAMES
+      rust: MCP_TOOL_NAMES
+      c: MCP_TOOL_NAMES
+    params: []
+    docs:
+      summary: 'Frozen map of SolvaPay MCP intent and UI tool names.'
+      returns: 'JSON object of canonical tool names.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  mcpViewMaps:
+    names:
+      ts: mcpViewMaps
+      py: mcp_view_maps
+      rb: mcp_view_maps
+      go: McpViewMaps
+      rust: mcp_view_maps
+      c: mcpViewMaps
+    params: []
+    docs:
+      summary: 'Return the frozen view-to-tool and view-to-prompt maps.'
+      returns: 'View maps used by descriptor builders.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  deriveIcons:
+    names:
+      ts: deriveIcons
+      py: derive_icons
+      rb: derive_icons
+      go: DeriveIcons
+      rust: derive_icons
+      c: deriveIcons
+    params:
+      - name: branding
+        type: unknown
+        required: false
+    docs:
+      summary: 'Project merchant branding into MCP tool icons; absent branding yields null.'
+      params:
+        branding: 'Optional merchant branding with iconUrl or logoUrl.'
+      returns: 'Icon list, or null when branding has neither icon nor logo.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  buildToolDescriptorMetadata:
+    names:
+      ts: buildToolDescriptorMetadata
+      py: build_tool_descriptor_metadata
+      rb: build_tool_descriptor_metadata
+      go: BuildToolDescriptorMetadata
+      rust: build_tool_descriptor_metadata
+      c: buildToolDescriptorMetadata
+    params:
+      - name: resourceUri
+        type: string
+        required: true
+      - name: views
+        array:
+          type: string
+        required: false
+      - name: branding
+        type: unknown
+        required: false
+    docs:
+      summary: 'Build ordered tool descriptor metadata for enabled views.'
+      params:
+        resourceUri: 'UI resource URI stamped onto metadata.'
+        views: 'Enabled views; defaults to checkout, account, and topup.'
+        branding: 'Optional merchant branding for icons.'
+      returns: 'Ordered tool descriptor metadata list.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  buildPromptDescriptorMetadata:
+    names:
+      ts: buildPromptDescriptorMetadata
+      py: build_prompt_descriptor_metadata
+      rb: build_prompt_descriptor_metadata
+      go: BuildPromptDescriptorMetadata
+      rust: build_prompt_descriptor_metadata
+      c: buildPromptDescriptorMetadata
+    params:
+      - name: views
+        array:
+          type: string
+        required: false
+    docs:
+      summary: 'Build ordered prompt descriptor metadata for enabled views.'
+      params:
+        views: 'Enabled views; defaults to checkout, account, and topup.'
+      returns: 'Ordered prompt descriptor metadata list.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  buildPromptUserMessage:
+    names:
+      ts: buildPromptUserMessage
+      py: build_prompt_user_message
+      rb: build_prompt_user_message
+      go: BuildPromptUserMessage
+      rust: build_prompt_user_message
+      c: buildPromptUserMessage
+    params:
+      - name: promptName
+        type: string
+        required: true
+      - name: args
+        type: unknown
+        required: true
+    docs:
+      summary: 'Build the user-role prompt message for a SolvaPay slash-command prompt.'
+      params:
+        promptName: 'Prompt name (upgrade, manage_account, topup).'
+        args: 'Prompt argument object.'
+      returns: 'Prompt user message with text content.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+  validatePublicBaseUrl:
+    names:
+      ts: validatePublicBaseUrl
+      py: validate_public_base_url
+      rb: validate_public_base_url
+      go: ValidatePublicBaseUrl
+      rust: validate_public_base_url
+      c: validatePublicBaseUrl
+    params:
+      - name: publicBaseUrl
+        type: string
+        required: true
+    docs:
+      summary: 'Validate publicBaseUrl is http(s); returns a frozen error message or null.'
+      params:
+        publicBaseUrl: 'Candidate public origin.'
+      returns: 'Error message string when invalid; null when valid.'
+    sync:
+      ts: sync
+      py: sync
+      rb: sync
+      go: sync
+      rust: sync
+      c: sync
+    surface: layer2
+    availability:
+      c:
+        omitted: true
+        reason: 'Layer-2 payload builders are not on the production solvapay_call ABI; reachable only via solvapay_fh_call_sync under the fixture-host feature. The wasm browser profile also omits this symbol (edge-only; behind cfg(feature = "edge")).'
+
+errors:
+  webhook:
+    codes:
+      - missing_signature
+      - malformed_signature
+      - timestamp_too_old
+      - invalid_signature
+      - invalid_payload
+    messages:
+      missing_signature: Missing webhook signature
+      malformed_signature: Malformed webhook signature
+      timestamp_too_old: Webhook signature timestamp too old
+      invalid_signature: Invalid webhook signature
+      invalid_payload: 'Invalid webhook payload: body is not valid JSON'
+  paywall:
+    messages:
+      payment_required: Payment required
+      activation_required: Activation required
+  mcp:
+    messages:
+      rawHandlerReturn: 'SolvaPay: registerPayable handler returned a raw value.
+        Handlers must return ctx.respond(data, options?). If you believe you
+        did, this is an internal bug — please file an issue at
+        https://github.com/solvapay/solvapay-sdk/issues.'
+  transport:
+    messageTemplate: '{message}'
+
+defaults:
+  retry:
+    maxRetries: 2
+    initialDelayMs: 500
+    backoff: fixed
+  webhookToleranceSec: 300
+  limitsCacheTTLMs: 10000
+  customerDedupTTLMs: 60000
+  customerDedupMaxCacheSize: 1000
+  anonymousCustomerRef: anonymous
+  requestIdFormat: 'solvapay_{epochMs}_{random9}'
+  usageActionType: api_call
+  idempotencyKeyFormats:
+    payment: 'payment-{planRef}-{epochMs}-{random9}'
+    topup: 'topup-{epochMs}-{random9}'
+  goContextFirstParam: true
+
+nameOverrides:
+  createSolvaPay:
+    rb: SolvaPay.create
+    go: solvapay.New
+    rust: 'Client::new'
+    c: solvapay_client_new
+  gate:
+    ts: payable.gate
+    py: sp.gate
+    rb: sp.gate
+    go: sp.Gate
+    rust: sp.gate
+    c: gate
+  SolvaPayError:
+    ts: SolvaPayError
+    py: SolvaPayError
+    rb: SolvaPayError
+    go: SolvaPayError
+    rust: SolvaPayError
+    c: SolvaPayError
+  PaywallError:
+    ts: PaywallError
+    py: PaywallError
+    rb: PaywallError
+    go: PaywallError
+    rust: PaywallError
+    c: PaywallError
+  BUSINESS_COUNTRY_DISPLAY_NAMES:
+    ts: BUSINESS_COUNTRY_DISPLAY_NAMES
+    py: BUSINESS_COUNTRY_DISPLAY_NAMES
+    rb: BUSINESS_COUNTRY_DISPLAY_NAMES
+    go: BUSINESS_COUNTRY_DISPLAY_NAMES
+    rust: BUSINESS_COUNTRY_DISPLAY_NAMES
+    c: BUSINESS_COUNTRY_DISPLAY_NAMES
+  BUSINESS_COUNTRY_OPTIONS:
+    ts: BUSINESS_COUNTRY_OPTIONS
+    py: BUSINESS_COUNTRY_OPTIONS
+    rb: BUSINESS_COUNTRY_OPTIONS
+    go: BUSINESS_COUNTRY_OPTIONS
+    rust: BUSINESS_COUNTRY_OPTIONS
+    c: BUSINESS_COUNTRY_OPTIONS
+  COUNTRY_TO_TAX_ID_TYPE:
+    ts: COUNTRY_TO_TAX_ID_TYPE
+    py: COUNTRY_TO_TAX_ID_TYPE
+    rb: COUNTRY_TO_TAX_ID_TYPE
+    go: COUNTRY_TO_TAX_ID_TYPE
+    rust: COUNTRY_TO_TAX_ID_TYPE
+    c: COUNTRY_TO_TAX_ID_TYPE
+  SUPPORTED_BUSINESS_COUNTRIES:
+    ts: SUPPORTED_BUSINESS_COUNTRIES
+    py: SUPPORTED_BUSINESS_COUNTRIES
+    rb: SUPPORTED_BUSINESS_COUNTRIES
+    go: SUPPORTED_BUSINESS_COUNTRIES
+    rust: SUPPORTED_BUSINESS_COUNTRIES
+    c: SUPPORTED_BUSINESS_COUNTRIES
+  TAX_BEHAVIORS:
+    ts: TAX_BEHAVIORS
+    py: TAX_BEHAVIORS
+    rb: TAX_BEHAVIORS
+    go: TAX_BEHAVIORS
+    rust: TAX_BEHAVIORS
+    c: TAX_BEHAVIORS
+  TAX_EXCLUSIVE_CURRENCIES:
+    ts: TAX_EXCLUSIVE_CURRENCIES
+    py: TAX_EXCLUSIVE_CURRENCIES
+    rb: TAX_EXCLUSIVE_CURRENCIES
+    go: TAX_EXCLUSIVE_CURRENCIES
+    rust: TAX_EXCLUSIVE_CURRENCIES
+    c: TAX_EXCLUSIVE_CURRENCIES
+  TAX_ID_EXAMPLE_BY_COUNTRY:
+    ts: TAX_ID_EXAMPLE_BY_COUNTRY
+    py: TAX_ID_EXAMPLE_BY_COUNTRY
+    rb: TAX_ID_EXAMPLE_BY_COUNTRY
+    go: TAX_ID_EXAMPLE_BY_COUNTRY
+    rust: TAX_ID_EXAMPLE_BY_COUNTRY
+    c: TAX_ID_EXAMPLE_BY_COUNTRY
+  TAX_ID_TYPES:
+    ts: TAX_ID_TYPES
+    py: TAX_ID_TYPES
+    rb: TAX_ID_TYPES
+    go: TAX_ID_TYPES
+    rust: TAX_ID_TYPES
+    c: TAX_ID_TYPES
+  MCP_TOOL_NAMES:
+    ts: MCP_TOOL_NAMES
+    py: MCP_TOOL_NAMES
+    rb: MCP_TOOL_NAMES
+    go: MCP_TOOL_NAMES
+    rust: MCP_TOOL_NAMES
+    c: MCP_TOOL_NAMES
+  SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE:
+    ts: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    py: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    rb: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    go: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    rust: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+    c: SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+  REVERSE_CHARGE_NOTE:
+    ts: REVERSE_CHARGE_NOTE
+    py: REVERSE_CHARGE_NOTE
+    rb: REVERSE_CHARGE_NOTE
+    go: REVERSE_CHARGE_NOTE
+    rust: REVERSE_CHARGE_NOTE
+    c: REVERSE_CHARGE_NOTE
+  TAX_NOT_COLLECTED_NOTE:
+    ts: TAX_NOT_COLLECTED_NOTE
+    py: TAX_NOT_COLLECTED_NOTE
+    rb: TAX_NOT_COLLECTED_NOTE
+    go: TAX_NOT_COLLECTED_NOTE
+    rust: TAX_NOT_COLLECTED_NOTE
+    c: TAX_NOT_COLLECTED_NOTE
+
+reservedWords:
+  ts: []
+  py: []
+  rb: []
+  go: []
+  rust: []
+  c: []

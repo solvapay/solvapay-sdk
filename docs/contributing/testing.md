@@ -1,35 +1,112 @@
 # SDK testing guide (contributors)
 
 This page is for contributors testing code inside the `solvapay-sdk` monorepo.
+Because shared behavior now lives in one Rust core reused by every language
+facade (see [architecture.md](./architecture.md)), the test strategy centers on
+**one behavioral truth replayed everywhere**: golden fixtures, a shared fixture
+runner, dual-implementation suites, a shadow harness, and cross-language
+signature parity.
 
-## Testing layers
+## Test architecture
 
-- Unit tests: package-level behavior with isolated mocks/stubs
-- Integration tests: end-to-end flows across adapters and HTTP handlers
-- Example validation: verify runnable examples stay in sync with package APIs
+### Golden fixtures — the single behavioral truth
 
-## Stub mode
+`contract/fixtures/` holds behavioral golden fixtures (webhook signatures, retry
+schedules, paywall classification/gate/payload, all 36 client request/response
+shapes, and every helper decision core). Each fixture is a language-neutral
+input → expected-output record. These are the source of truth for behavior; every
+surface must reproduce them byte-for-byte.
 
-Use stub mode for deterministic local and CI testing without real API credentials.
+- **TypeScript side:** the fixture harness (`tools/conformance/lib/fixture-harness.ts`)
+  replays fixtures against the TS facades. Run via `pnpm test:contract`.
+- **Rust side:** `tools/conformance/fixture-runner` replays the same fixtures against
+  the Rust core (`cargo run -q -p fixture-runner -- contract/fixtures` from the
+  repo root), reporting `parsed`/`executed`/`passed`/`failed` counts.
+
+A behavior change is a fixture diff, reviewed like code.
+
+### Runtime bindings
+
+`@solvapay/core` and `@solvapay/server` always dispatch to Rust (napi on Node,
+WASM on edge/browser). Contract fixtures (`pnpm test:contract`) exercise that
+path directly — there is no `SOLVAPAY_IMPL` selection flag. `@solvapay/mcp-core`
+keeps a TypeScript fallback when the binding is not installed (edge/standalone).
+
+### Native client fixture replay
+
+The required Rust CI job replays `contract/fixtures/client/**` through native
+`SolvaPayClient` + `ReqwestTransport` (`cargo test -p client-conformance`).
+Wiremock matchers assert method, path, query, headers, and body. The same
+corpus already covers core (`fixture-runner`) and WASM+fetch
+(`contract-fixtures-wasm.test.ts`).
+
+```bash
+cargo test -p client-conformance
+```
+
+Live-backend drivers stay opt-in (`pnpm test:live` and the `live-*.yml`
+`workflow_dispatch` workflows).
+
+### Cross-language signature parity
+
+Generated signature-parity suites assert every surface exposes the same
+operations with the same shapes. They are emitted by `pnpm gen` and run per
+language in CI (TS `signature-parity.generated.test.ts`, plus the Python/Ruby/
+Rust/Go generated parity tests). Offline drift is caught by `pnpm parity:check`.
+
+### Rust gates
+
+Run from the repo root:
+
+```bash
+cargo test --workspace          # core, transport, dto-gen, bindings
+cargo clippy --workspace --all-targets -- -D warnings
+./tools/repo/check-no-unwrap.sh # bans .unwrap()/.expect()/panic outside #[cfg(test)]
+```
+
+CI also builds/tests the wasm32 target, each language binding
+(`cargo test -p solvapay-{python,ruby,c}`, the Go/wazero suite), and the
+`doc_coverage` gate for generated doc comments.
+
+### Per-language conformance
+
+Each binding runs the shared golden fixtures through its own facade (Python/Ruby/
+Go/Rust contract suites in CI) so conformance is proven per surface, not just in
+the core.
+
+## Package-level tests
+
+- **Unit tests:** package behavior with isolated mocks/stubs.
+- **Integration tests:** end-to-end flows across adapters and HTTP handlers.
+- **Example validation:** verify runnable examples stay in sync with facades.
+
+### Stub clients
+
+For deterministic local/CI testing without real API credentials, inject an
+`apiClient`. A missing key is **not** a stub trigger — `createSolvaPay()` throws
+`Missing apiKey` when neither `config.apiKey` nor `SOLVAPAY_SECRET_KEY` is set.
 
 ```ts
 import { createSolvaPay } from '@solvapay/server'
+import { createStubClient } from '../shared/stub-api-client'
 
-// No API key => stub mode
-const solvaPay = createSolvaPay()
+const solvaPay = createSolvaPay({
+  apiClient: createStubClient({ freeTierLimit: 5 }),
+})
 ```
 
-You can also inject a custom stub client when you need tighter control over limits,
-storage, or artificial delay behavior.
+`createStubClient` lives in `examples/typescript/shared/stub-api-client.ts` and
+takes options for free-tier limits, storage, artificial delay, and debug logging.
+Any object implementing `SolvaPayClient` works if you want a narrower fake.
 
-## Recommended patterns
+### Recommended patterns
 
-- Create a fresh client in `beforeEach` to keep tests isolated
-- Keep free-tier limits small in tests (for example `1-5`) to exercise paywall paths quickly
-- Assert structured paywall error fields (not only message text)
-- Use in-memory storage by default for speed and reliability
+- Create a fresh client in `beforeEach` to keep tests isolated.
+- Keep free-tier limits small (e.g. `1-5`) to exercise paywall paths quickly.
+- Assert structured paywall error fields, not only message text.
+- Use in-memory storage by default for speed and reliability.
 
-## What to test
+### What to test
 
 - purchase checks and limit checks
 - customer resolution and creation paths
@@ -39,11 +116,65 @@ storage, or artificial delay behavior.
 
 ## Local commands
 
+One command per job:
+
 ```bash
-pnpm test
+pnpm test                       # TypeScript package suite (turbo)
+pnpm test:contract              # tools/ contract tests (vitest)
+pnpm test:fixtures              # Rust fixture-runner
+pnpm test:all                   # core language surfaces (add --native for bindings)
+pnpm test:live                  # live-contract drivers against a running stack
+pnpm gates                      # local contract gates (also the pre-push hook)
+pnpm build:all                  # core builds (add --native for bindings)
+```
+
+`pnpm test:live` is opt-in. It is not part of `pnpm test`, `pnpm gates`, pre-push, or CI.
+Without `SOLVAPAY_LIVE_BASE_URL` and `SOLVAPAY_LIVE_API_KEY` it fails fast with that
+requirement named — that message is correct, not a broken script.
+
+`pnpm build:native` and `pnpm test:native` rebuild host-target Node bindings and can
+overwrite tracked `sdks/node-native/index.js` / `index.d.ts` plus non-deterministic
+`sdks/wasm/pkg/` and `sdks/go/solvapay_core.wasm` blobs. Restore those paths before
+pushing (`git checkout -- sdks/node-native/index.d.ts sdks/node-native/index.js
+sdks/wasm/pkg/ sdks/go/solvapay_core.wasm`) unless you intentionally regenerated
+the napi loader.
+
+The Go WASI guest build copies the cargo artifact when `wasm-opt` is missing. That
+fallback is intentional; CI omits Binaryen so linux/amd64 bytes stay canonical.
+`brew install binaryen` shrinks a local artifact only — do not record that blob.
+
+### `test:live` against the local platform
+
+The SDK routes are served by five backend services. The provider-app proxy at
+`http://localhost:3010` fans `/v1/*` out to the owner. Identity on `:3001` is
+the wrong target.
+
+```bash
+export SOLVAPAY_LIVE_BASE_URL=http://localhost:3010
+export SOLVAPAY_LIVE_API_KEY=sk_sandbox_...   # Developers → Secret keys
+pnpm test:live
+```
+
+`test:live` also sets `USE_REAL_BACKEND=true` and `SOLVAPAY_SECRET_KEY` for the
+`@solvapay/server` integration suite. JSON reports land under
+`contract/live/output/`.
+
+```bash
 pnpm -F @solvapay/server test
 pnpm -F @solvapay/react test
 ```
+
+Contract / codegen gates (when touching the manifest, OpenAPI snapshot, fixtures,
+or emitters):
+
+```bash
+pnpm gen:check                  # regen + working-tree idempotence drift gate
+pnpm manifest:check
+pnpm parity:check
+pnpm test:contract
+```
+
+See [`sdk-codegen.md`](./sdk-codegen.md) for the full regenerate workflow.
 
 ## Real-backend integration (`@solvapay/server`)
 
@@ -51,7 +182,7 @@ These suites hit a live platform. Point them at the provider-app proxy on
 `:3010` — not identity-service on `:3001`.
 
 ```bash
-# packages/server/.env
+# sdks/typescript/server/.env
 USE_REAL_BACKEND=true
 SOLVAPAY_SECRET_KEY=sk_sandbox_...
 SOLVAPAY_API_BASE_URL=http://localhost:3010
@@ -77,15 +208,15 @@ Do not also run `stripe listen` — that duplicates every event.
 # from ../platform, with ngrok.yml configured
 pnpm run dev
 
-# from packages/server
-ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
+# from sdks/typescript/server
+ENABLE_WEBHOOK_TESTS=true pnpm --filter @solvapay/server test:integration:payment
 ```
 
 **Fallback (no tunnels):** forward with the Stripe CLI to payment-service.
 
 ```bash
 stripe listen --forward-to localhost:3003/v1/webhooks/stripe
-ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
+ENABLE_WEBHOOK_TESTS=true pnpm --filter @solvapay/server test:integration:payment
 ```
 
 ## CI expectations
@@ -93,11 +224,20 @@ ENABLE_WEBHOOK_TESTS=true pnpm test:integration:payment
 Before opening a PR, make sure:
 
 - all relevant package tests pass
+- generated surfaces are up to date (`pnpm gen:check`) if you changed contract
+  inputs, fixtures, or dto-gen
+- fixtures pass on both sides (`pnpm test:contract` + the `fixture-runner`) when
+  you change behavior
+- Rust gates pass (`cargo test --workspace`, `cargo clippy`, `check-no-unwrap.sh`)
+  when you touch `core/` or `sdks/`
+- new behavior has coverage in unit, integration, or fixture tests
 - docs links are valid (`pnpm docs:validate-links`)
-- any new behavior has coverage in unit or integration tests
 
 ## Where to read next
 
+- [`architecture.md`](./architecture.md) for the two-layer model and surface map
 - `CONTRIBUTING.md` for contributor workflow
+- [`sdk-codegen.md`](./sdk-codegen.md) for OpenAPI → five-surface regeneration
+- [`error-handling.md`](./error-handling.md) for the cross-language error model
 - `examples/` for runnable integration references
-- `packages/*/README.md` for package-specific usage constraints
+- `sdks/typescript/*/README.md` for package-specific usage constraints

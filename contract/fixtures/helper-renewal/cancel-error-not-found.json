@@ -1,0 +1,15 @@
+{
+  "suite": "helper-renewal",
+  "case": "cancel-error-not-found",
+  "input": {
+    "fn": "classifyCancelError",
+    "args": { "message": "Purchase pur_1 not found" }
+  },
+  "expect": {
+    "result": {
+      "error": "Purchase not found",
+      "status": 404,
+      "details": "Purchase pur_1 not found"
+    }
+  }
+}

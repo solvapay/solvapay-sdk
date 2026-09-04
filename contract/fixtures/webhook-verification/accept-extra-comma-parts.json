@@ -1,0 +1,32 @@
+{
+  "suite": "webhook-verification",
+  "case": "accept-extra-comma-parts",
+  "input": {
+    "fn": "verifyWebhook",
+    "args": {
+      "body": "{\"type\":\"purchase.created\",\"id\":\"evt_fixture_1\",\"created\":1782864000,\"api_version\":\"2025-10-01\",\"data\":{\"object\":{\"id\":\"pur_fixture_1\"},\"previous_attributes\":null},\"livemode\":false,\"request\":{\"id\":null,\"idempotency_key\":null}}",
+      "signature": "t=1782864000,v1=04834cba2241fe998a4fb5b8bb4632b2c2e18a3e330dba1905f62b365521ca82,v0=deadbeef",
+      "secret": "whsec_test_fixture_secret"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "expect": {
+    "result": {
+      "type": "purchase.created",
+      "id": "evt_fixture_1",
+      "created": 1782864000,
+      "api_version": "2025-10-01",
+      "data": {
+        "object": {
+          "id": "pur_fixture_1"
+        },
+        "previous_attributes": null
+      },
+      "livemode": false,
+      "request": {
+        "id": null,
+        "idempotency_key": null
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "suite": "mcp",
+  "case": "with-options-units-passthrough",
+  "input": {
+    "fn": "makeResponseResult",
+    "args": {
+      "data": { "ok": true },
+      "options": { "units": 3, "text": "billed" }
+    }
+  },
+  "expect": {
+    "result": {
+      "__solvapayResponse": true,
+      "data": { "ok": true },
+      "options": { "units": 3, "text": "billed" }
+    }
+  }
+}

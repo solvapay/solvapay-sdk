@@ -1,0 +1,32 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getCustomerBalance",
+    "args": {
+      "customerRef": "cus_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-customer-balance-error",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/customers/cus_fixture/balance",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 400,
+      "body": "bad"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Get customer balance failed (400): bad",
+      "status": 400
+    }
+  }
+}

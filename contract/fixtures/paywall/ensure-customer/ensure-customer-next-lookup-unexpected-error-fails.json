@@ -1,0 +1,29 @@
+{
+  "suite": "paywall",
+  "case": "ensure-customer-next-lookup-unexpected-error-fails",
+  "input": {
+    "fn": "ensureCustomerNext",
+    "args": {
+      "state": {
+        "customerRef": "user-1",
+        "canCreateCustomer": true,
+        "canUpdateCustomer": true,
+        "dedupTTLMs": 60000,
+        "cacheKey": "user-1",
+        "pending": "lookupInitial"
+      },
+      "event": {
+        "kind": "customerLookupResult",
+        "found": false,
+        "errorMessage": "timeout"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Transport",
+      "status": 400,
+      "details": "ensure_customer_next getCustomer failed: timeout"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "suite": "helper-renewal",
+  "case": "reactivate-normalize-missing-reference",
+  "input": {
+    "fn": "normalizeReactivateResponse",
+    "args": {
+      "response": { "status": "active" }
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Reactivate purchase response missing required fields",
+      "status": 500
+    }
+  }
+}

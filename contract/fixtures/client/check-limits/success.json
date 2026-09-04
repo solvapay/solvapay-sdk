@@ -1,0 +1,39 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "checkLimits",
+    "args": {
+      "customerRef": "cus_fixture",
+      "productRef": "prd_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "check-limits-success",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/limits",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      },
+      "body": {
+        "customerRef": "cus_fixture",
+        "productRef": "prd_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "plan": "plan_basic",
+        "remaining": 10
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "plan": "plan_basic",
+      "remaining": 10
+    }
+  }
+}

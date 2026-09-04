@@ -10,9 +10,35 @@ build/
 coverage/
 *.tsbuildinfo
 
+# Markdown that uses `+` continuation lines (Prettier treats `+` as a list marker)
+core/solvapay-mcp/src/overview.md
+
 # Generated files
 generated/
 docs/api/
+docs/api.json
+**/*.generated.d.ts
+**/*.generated.ts
+**/*.generated.test.ts
+sdks/typescript/server/src/types/generated.ts
+sdks/typescript/core/src/native-core.ts
+sdks/typescript/core/src/native-helpers.ts
+sdks/typescript/core/src/native-dispatch.ts
+sdks/typescript/server/src/native-decisions.ts
+**/next-env.d.ts
+sdks/wasm/pkg/
+sdks/node-native/index.d.ts
+sdks/node-native/index.js
+tools/codegen/dto-gen/assets/
+
+# Contract snapshots / byte-gated fixtures (key order is load-bearing)
+contract/openapi/*.json
+contract/mcp-fixtures/
+contract/manifest/binding-symbols.snapshot.json
+contract/manifest/boundary-types.snapshot.json
+contract/manifest/facade-coverage.json
+contract/manifest/support-matrix.json
+contract/manifest/binding-residue.yaml
 
 # Lock files
 pnpm-lock.yaml
@@ -26,9 +52,16 @@ yarn.lock
 .env*
 !.env.example
 
-# IDE
+# IDE / editor local state
 .vscode/
 .idea/
+.cursor/
+
+# Local virtualenvs (never format vendored site-packages)
+**/.venv/
+.venv/
+**/.ci-venv/
+.ci-venv/
 
 # OS
 .DS_Store
@@ -40,3 +73,18 @@ Thumbs.db
 # Cache
 .cache/
 
+# Rust build artifacts (JSON fingerprints match Prettier's **/*.json glob)
+target/
+**/target/
+
+# Language tooling caches
+.mypy_cache/
+**/.mypy_cache/
+.pytest_cache/
+**/.pytest_cache/
+.ruff_cache/
+**/.ruff_cache/
+
+# Binary / local native build trees
+internal/fuzz/
+sdks/ruby/tmp/

@@ -1,0 +1,32 @@
+{
+  "suite": "plan-pricing",
+  "case": "included-units-pro-null",
+  "input": {
+    "fn": "includedUnits",
+    "args": {
+      "priced": {
+        "type": "recurring",
+        "reference": "pln_5Y886LGR",
+        "name": "Pro",
+        "requiresPayment": true,
+        "price": 3000,
+        "currency": "USD",
+        "options": [
+          {
+            "kind": "billingCycle",
+            "interval": "month"
+          },
+          {
+            "kind": "charge",
+            "per": "flat",
+            "amountMinor": 3000,
+            "currency": "usd"
+          }
+        ]
+      }
+    }
+  },
+  "expect": {
+    "result": null
+  }
+}

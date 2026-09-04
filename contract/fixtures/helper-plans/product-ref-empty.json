@@ -1,0 +1,16 @@
+{
+  "suite": "helper-plans",
+  "case": "product-ref-empty",
+  "input": {
+    "fn": "validateListPlansParams",
+    "args": {
+      "productRef": ""
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Missing required parameter: productRef",
+      "status": 400
+    }
+  }
+}

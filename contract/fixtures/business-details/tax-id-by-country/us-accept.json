@@ -1,0 +1,23 @@
+{
+  "suite": "business-details",
+  "case": "us-accept",
+  "input": {
+    "fn": "validateBusinessDetails",
+    "args": {
+      "isBusiness": true,
+      "country": "US",
+      "taxId": "12-3456789"
+    }
+  },
+  "expect": {
+    "result": {
+      "success": true,
+      "data": {
+        "isBusiness": true,
+        "country": "US",
+        "taxId": "12-3456789",
+        "taxIdType": "us_ein"
+      }
+    }
+  }
+}

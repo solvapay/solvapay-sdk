@@ -1,0 +1,43 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "getProduct",
+    "args": {
+      "productRef": "prd_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "get-product-success-data-merge",
+  "wire": {
+    "request": {
+      "method": "GET",
+      "path": "/v1/sdk/products/prd_fixture",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "reference": "prd_fixture",
+        "name": "Top",
+        "data": {
+          "name": "Nested",
+          "description": "from-data"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "name": "Top",
+      "description": "from-data",
+      "reference": "prd_fixture",
+      "data": {
+        "name": "Nested",
+        "description": "from-data"
+      }
+    }
+  }
+}

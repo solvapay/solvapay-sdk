@@ -1,0 +1,16 @@
+{
+  "suite": "mcp",
+  "case": "data-null-passthrough",
+  "input": {
+    "fn": "makeResponseResult",
+    "args": {
+      "data": null
+    }
+  },
+  "expect": {
+    "result": {
+      "__solvapayResponse": true,
+      "data": null
+    }
+  }
+}

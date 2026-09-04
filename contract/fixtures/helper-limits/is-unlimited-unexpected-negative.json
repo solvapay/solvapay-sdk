@@ -1,0 +1,9 @@
+{
+  "suite": "helper-limits",
+  "case": "is-unlimited-unexpected-negative",
+  "input": {
+    "fn": "isUnlimitedRemaining",
+    "args": { "remaining": -2 }
+  },
+  "expect": { "result": false }
+}

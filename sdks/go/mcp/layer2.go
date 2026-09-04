@@ -1,0 +1,51 @@
+package mcp
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
+)
+
+func callLayer2(ctx context.Context, fn string, args any) (json.RawMessage, error) {
+	raw, err := json.Marshal(args)
+	if err != nil {
+		return nil, err
+	}
+	value, err := nativecall.CallValueJSON(ctx, fn, string(raw))
+	if err != nil {
+		return nil, err
+	}
+	if len(value) == 0 || string(value) == "null" {
+		return nil, fmt.Errorf("native %s returned empty value", fn)
+	}
+	return value, nil
+}
+
+func paywallToolResult(ctx context.Context, message string, gate json.RawMessage) (json.RawMessage, error) {
+	if len(gate) == 0 {
+		gate = json.RawMessage(`{}`)
+	}
+	return PaywallToolResult(ctx, message, gate)
+}
+
+func makeResponseResult(ctx context.Context, data json.RawMessage, options map[string]any, emitted []json.RawMessage) (json.RawMessage, error) {
+	var optionsArg any
+	if options != nil {
+		optionsArg = options
+	}
+	var emittedArg any
+	if len(emitted) > 0 {
+		emittedArg = emitted
+	}
+	return MakeResponseResult(ctx, data, optionsArg, emittedArg)
+}
+
+func assertResponseResult(ctx context.Context, value json.RawMessage) (json.RawMessage, error) {
+	return AssertResponseResult(ctx, value)
+}
+
+func buildPayableToolResult(ctx context.Context, envelope json.RawMessage) (json.RawMessage, error) {
+	return BuildPayableToolResult(ctx, envelope)
+}

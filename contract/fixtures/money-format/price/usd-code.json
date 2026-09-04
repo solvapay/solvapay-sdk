@@ -1,0 +1,15 @@
+{
+  "suite": "money-format",
+  "case": "price-usd-code",
+  "input": {
+    "fn": "formatPrice",
+    "args": {
+      "amountMinor": 1000,
+      "currency": "usd",
+      "currencyDisplay": "code"
+    }
+  },
+  "expect": {
+    "result": "USD 10"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "suite": "helper-checkout",
+  "case": "return-url-all-absent",
+  "input": {
+    "fn": "resolveReturnUrl",
+    "args": {}
+  },
+  "expect": {
+    "result": null
+  }
+}

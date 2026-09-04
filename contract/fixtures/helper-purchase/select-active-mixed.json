@@ -1,0 +1,20 @@
+{
+  "suite": "helper-purchase",
+  "case": "select-active-mixed",
+  "input": {
+    "fn": "selectActivePurchases",
+    "args": {
+      "purchases": [
+        { "reference": "pur_1", "status": "active" },
+        { "reference": "pur_2", "status": "cancelled" },
+        { "reference": "pur_3", "status": "active" }
+      ]
+    }
+  },
+  "expect": {
+    "result": [
+      { "reference": "pur_1", "status": "active" },
+      { "reference": "pur_3", "status": "active" }
+    ]
+  }
+}

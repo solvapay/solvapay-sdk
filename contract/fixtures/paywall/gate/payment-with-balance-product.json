@@ -1,0 +1,44 @@
+{
+  "suite": "paywall",
+  "case": "payment-with-balance-product",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "plan": "pl_basic",
+        "remaining": 0,
+        "checkoutUrl": "https://pay.test/x",
+        "balance": {
+          "creditBalance": 0,
+          "creditsPerUnit": 1,
+          "currency": "usd"
+        },
+        "product": {
+          "name": "Demo",
+          "reference": "prd_demo"
+        }
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "checkoutUrl": "https://pay.test/x",
+      "message": "You're out of credits. Top up first ($10.00 \u00b7 $25.00 \u00b7 $50.00 \u00b7 $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
+      "balance": {
+        "creditBalance": 0,
+        "creditsPerUnit": 1,
+        "currency": "usd"
+      },
+      "productDetails": {
+        "name": "Demo",
+        "reference": "prd_demo"
+      },
+      "shortMessage": "Payment required",
+      "planRef": "pl_basic",
+      "creditBalance": 0
+    }
+  }
+}

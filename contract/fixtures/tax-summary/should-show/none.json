@@ -1,0 +1,13 @@
+{
+  "suite": "tax-summary",
+  "case": "should-show-none",
+  "input": {
+    "fn": "shouldShowTaxRow",
+    "args": {
+      "treatment": "none"
+    }
+  },
+  "expect": {
+    "result": true
+  }
+}

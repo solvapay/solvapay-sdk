@@ -1,0 +1,21 @@
+{
+  "suite": "paywall",
+  "case": "decide-allow",
+  "input": {
+    "fn": "decidePaywallOutcome",
+    "args": {
+      "withinLimits": true,
+      "product": "prd_demo",
+      "limits": {
+        "withinLimits": true,
+        "remaining": 5,
+        "plan": "free"
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "outcome": "allow"
+    }
+  }
+}

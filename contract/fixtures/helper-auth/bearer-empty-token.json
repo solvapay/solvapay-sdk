@@ -1,0 +1,20 @@
+{
+  "suite": "helper-auth",
+  "case": "bearer-empty-token",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "authorizationHeader": "Bearer    ",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "error": "Unauthorized",
+      "status": 401,
+      "details": "User ID not found. Ensure middleware is configured."
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "suite": "helper-auth",
+  "case": "bearer-valid-hs256",
+  "input": {
+    "fn": "resolveAuthenticatedUser",
+    "args": {
+      "authorizationHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyLTEiLCJlbWFpbCI6InVAZXhhbXBsZS5jb20iLCJ1c2VyX21ldGFkYXRhIjp7ImZ1bGxfbmFtZSI6IkZ1bGwgTmFtZSJ9fQ.tiEmf6lHsvxrQGJdw7PyY5s_xXtCM__kELl2s_2CyTM",
+      "jwtSecret": "fixture-secret-at-least-32-chars-long!!",
+      "includeEmail": true,
+      "includeName": true,
+      "strictMode": false
+    }
+  },
+  "expect": {
+    "result": {
+      "userId": "user-1",
+      "email": "u@example.com",
+      "name": "Full Name"
+    }
+  }
+}

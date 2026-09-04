@@ -1,0 +1,917 @@
+//! Stateless JSON-RPC engine (`mcpHandleRequest` / `mcpResume`).
+
+#![allow(clippy::missing_docs_in_private_items)]
+
+use std::collections::{HashMap, HashSet};
+use std::sync::{Mutex, OnceLock};
+
+use serde::Deserialize;
+use serde_json::{json, Value};
+use solvapay_core::{build_prompt_user_message, paywall_tool_result, PaywallGate};
+use uuid::Uuid;
+
+use crate::auth_gate::{mcp_auth_gate, AuthGateInput, AuthGateResult, McpAuthMode};
+use crate::bearer_verify::{
+    extract_bearer_token, mcp_verify_bearer, VerifyBearerInput, VerifyBearerResult,
+};
+use crate::descriptors::{mcp_descriptors, McpDescriptorsInput};
+use crate::hide_tools::{is_hidden_by_audience, mcp_hide_tools_by_audience, HideToolsInput};
+use crate::oauth::mcp_resource_identifier;
+
+/// Catalog TTL matching `defaultCatalogTTLMs` in `sdks/go/mcp/server.go`.
+pub const CATALOG_TTL_MS: u64 = 60_000;
+
+/// Dual-era versions the engine implements. `2025-06-18` is pinned by
+/// `contract/mcp-fixtures/engine/initialize.json` — do not advertise `2025-11-25`.
+pub const SUPPORTED_VERSIONS: [&str; 2] = ["2026-07-28", "2025-06-18"];
+
+const PROTOCOL_VERSION_PTR: &str = "/params/_meta/io.modelcontextprotocol~1protocolVersion";
+const CLIENT_CAPABILITIES_PTR: &str = "/params/_meta/io.modelcontextprotocol~1clientCapabilities";
+
+/// `None` = legacy era (no envelope claim); `Some(v)` = modern claim.
+#[must_use]
+pub fn envelope_version(rpc: &Value) -> Option<&str> {
+    rpc.pointer(PROTOCOL_VERSION_PTR).and_then(Value::as_str)
+}
+
+/// True when the request carries a per-request `_meta` protocol version.
+#[must_use]
+pub fn is_modern_era(rpc: &Value) -> bool {
+    envelope_version(rpc).is_some()
+}
+
+fn server_info() -> Value {
+    json!({
+        "name": "solvapay-mcp",
+        "version": env!("CARGO_PKG_VERSION"),
+    })
+}
+
+/// Stamp `resultType` + `io.modelcontextprotocol/serverInfo` on a modern result.
+pub fn stamp_complete_result(result: &mut Value) {
+    if let Value::Object(map) = result {
+        map.insert("resultType".to_owned(), json!("complete"));
+        let meta = map.entry("_meta").or_insert_with(|| json!({}));
+        if let Value::Object(meta_map) = meta {
+            meta_map.insert(
+                "io.modelcontextprotocol/serverInfo".to_owned(),
+                server_info(),
+            );
+        }
+    }
+}
+
+/// Stamp the SEP-2549 catalog cache fields plus the complete envelope.
+pub fn stamp_catalog_result(result: &mut Value) {
+    stamp_complete_result(result);
+    if let Value::Object(map) = result {
+        map.insert("ttlMs".to_owned(), json!(CATALOG_TTL_MS));
+        map.insert("cacheScope".to_owned(), json!("public"));
+    }
+}
+
+/// Merchant payable entry in [`EngineConfig::payable_tools`].
+///
+/// A bare string is dispatch-only (`tools/call` routing); the host owns
+/// `tools/list`. An object is routed **and** advertised in `tools/list`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum PayableToolConfig {
+    /// Name-only: route `tools/call`, do not advertise.
+    Name(String),
+    /// Full descriptor: route and advertise.
+    Spec(Box<PayableToolSpec>),
+}
+
+impl PayableToolConfig {
+    /// Tool name used for `tools/call` routing.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Name(name) => name.as_str(),
+            Self::Spec(spec) => spec.name.as_str(),
+        }
+    }
+}
+
+/// Descriptor advertised when a host sends an object-form payable tool.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PayableToolSpec {
+    /// MCP tool name.
+    pub name: String,
+    /// Optional title (defaults to `name` when advertised).
+    #[serde(default)]
+    pub title: Option<String>,
+    /// Optional description.
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Optional JSON Schema (defaults to an empty object schema).
+    #[serde(default)]
+    pub input_schema: Option<Value>,
+    /// Optional MCP annotations. Omitted from `tools/list` when absent.
+    #[serde(default)]
+    pub annotations: Option<Value>,
+    /// Optional `_meta`. Omitted from `tools/list` when absent.
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Value>,
+    /// Optional JSON Schema for `structuredContent`. Omitted from `tools/list` when
+    /// absent — a paywall-only default would reject successful payable payloads.
+    #[serde(default)]
+    pub output_schema: Option<Value>,
+}
+
+/// Engine server config.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngineConfig {
+    /// Product ref.
+    pub product_ref: String,
+    /// Public origin.
+    pub public_base_url: String,
+    /// UI resource URI.
+    pub resource_uri: String,
+    /// Views.
+    #[serde(default)]
+    pub views: Option<Vec<String>>,
+    /// Merchant payables: bare names route only; objects also appear in `tools/list`.
+    #[serde(default)]
+    pub payable_tools: Vec<PayableToolConfig>,
+    /// Auth mode.
+    #[serde(default)]
+    pub auth_mode: Option<McpAuthMode>,
+    /// Optional MCP mount path for OAuth resource identifiers.
+    #[serde(default)]
+    pub mcp_path: Option<String>,
+    /// Audiences hidden from `tools/list` and rejected on `tools/call`.
+    #[serde(default)]
+    pub hide_audiences: Option<Vec<String>>,
+    /// Accepted for wire compatibility. Ignored — a User-Agent must not bypass hiding.
+    #[serde(default)]
+    pub user_agent: Option<String>,
+    /// Optional CSP overrides forwarded to [`mcp_descriptors`].
+    #[serde(default)]
+    pub csp: Option<crate::csp::SolvaPayMcpCsp>,
+    /// Optional API origin for CSP auto-include.
+    #[serde(default)]
+    pub api_base_url: Option<String>,
+    /// Optional branding forwarded to [`mcp_descriptors`].
+    #[serde(default)]
+    pub branding: Option<crate::descriptors::BrandingIn>,
+    /// JWKS document for bearer verification.
+    #[serde(default)]
+    pub jwks_json: Option<Value>,
+    /// Explicit HS256 secret for local / stub flows.
+    #[serde(default)]
+    pub hs256_secret: Option<String>,
+    /// Expected token `iss`. Defaults to the public origin.
+    #[serde(default)]
+    pub expected_issuer: Option<String>,
+    /// Expected token `aud`. Defaults to the MCP resource identifier.
+    #[serde(default)]
+    pub expected_audience: Option<String>,
+    /// Explicit clock for bearer `exp` / `nbf`.
+    #[serde(default)]
+    pub now_unix_secs: Option<i64>,
+    /// Customer ref already verified by `mcpResolveAuth`. When set, the
+    /// internal gate does not re-verify the bearer.
+    #[serde(default)]
+    pub pre_verified_customer_ref: Option<String>,
+}
+
+/// Input for [`mcp_handle_request`].
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HandleRequestInput {
+    /// JSON-RPC request object.
+    pub rpc: Value,
+    /// Engine config.
+    pub config: EngineConfig,
+    /// Optional Authorization header.
+    #[serde(default)]
+    pub auth_header: Option<String>,
+    /// Optional `MCP-Protocol-Version` HTTP header (hosts forward this).
+    #[serde(default)]
+    pub mcp_protocol_version_header: Option<String>,
+}
+
+/// Input for [`mcp_resume`].
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResumeInput {
+    /// Continuation token from `invokeHandler`.
+    pub token: String,
+    /// Host handler outcome.
+    pub handler_envelope: Value,
+}
+
+struct Continuation {
+    rpc_id: Value,
+    modern: bool,
+}
+
+fn store() -> &'static Mutex<HashMap<String, Continuation>> {
+    static STORE: OnceLock<Mutex<HashMap<String, Continuation>>> = OnceLock::new();
+    STORE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn customer_ref_from_verified_header(
+    auth_header: Option<&str>,
+    config: &EngineConfig,
+) -> Option<String> {
+    if let Some(pre) = config
+        .pre_verified_customer_ref
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        return Some(pre.to_owned());
+    }
+    let token = extract_bearer_token(auth_header)?;
+    let now_unix_secs = config.now_unix_secs?;
+    let origin = config.public_base_url.trim_end_matches('/');
+    let expected_issuer = config
+        .expected_issuer
+        .clone()
+        .unwrap_or_else(|| origin.to_owned());
+    let expected_audience = config
+        .expected_audience
+        .clone()
+        .unwrap_or_else(|| mcp_resource_identifier(origin, config.mcp_path.as_deref()));
+    match mcp_verify_bearer(&VerifyBearerInput {
+        token: token.to_owned(),
+        jwks_json: config.jwks_json.clone(),
+        hs256_secret: config.hs256_secret.clone(),
+        expected_issuer,
+        expected_audience,
+        now_unix_secs,
+        claim_priority: None,
+    }) {
+        VerifyBearerResult::Ok { customer_ref, .. } => Some(customer_ref),
+        VerifyBearerResult::Unauthorized { .. } => None,
+    }
+}
+
+fn rpc_ok(id: Value, result: Value) -> Value {
+    json!({ "kind": "rpc", "rpc": { "jsonrpc": "2.0", "id": id, "result": result } })
+}
+
+fn rpc_err(id: Value, code: i32, message: &str, data: Option<Value>, status: u16) -> Value {
+    let mut err = json!({ "code": code, "message": message });
+    if let Some(data) = data {
+        err["data"] = data;
+    }
+    let mut out = json!({ "kind": "rpc", "rpc": { "jsonrpc": "2.0", "id": id, "error": err } });
+    if status != 200 {
+        out["status"] = json!(status);
+    }
+    out
+}
+
+fn rpc_result(id: Value, mut result: Value, modern: bool, catalog: bool) -> Value {
+    if modern {
+        if catalog {
+            stamp_catalog_result(&mut result);
+        } else {
+            stamp_complete_result(&mut result);
+        }
+    }
+    rpc_ok(id, result)
+}
+
+fn classify_era(rpc: &Value, header: Option<&str>) -> Result<bool, Value> {
+    let Some(requested) = envelope_version(rpc) else {
+        return Ok(false);
+    };
+    let id = rpc.get("id").cloned().unwrap_or(Value::Null);
+    if let Some(header) = header {
+        let trimmed = header.trim();
+        if !trimmed.is_empty() && trimmed != requested {
+            return Err(rpc_err(
+                id,
+                -32020,
+                "Header mismatch",
+                Some(json!({ "header": trimmed, "requested": requested })),
+                400,
+            ));
+        }
+    }
+    if !SUPPORTED_VERSIONS.contains(&requested) {
+        return Err(rpc_err(
+            id,
+            -32022,
+            "Unsupported protocol version",
+            Some(json!({
+                "supported": SUPPORTED_VERSIONS,
+                "requested": requested,
+            })),
+            400,
+        ));
+    }
+    if rpc.pointer(CLIENT_CAPABILITIES_PTR).is_none() {
+        return Err(rpc_err(id, -32602, "Invalid params", None, 400));
+    }
+    Ok(true)
+}
+
+fn method_not_found(rpc: &Value, method: &str, modern: bool) -> Value {
+    match rpc.get("id") {
+        None => json!({ "kind": "rpc" }),
+        Some(id) => rpc_err(
+            id.clone(),
+            -32601,
+            &format!("Method not found: {method}"),
+            None,
+            if modern { 404 } else { 200 },
+        ),
+    }
+}
+
+fn descriptors_for(config: &EngineConfig) -> Result<crate::descriptors::McpDescriptors, String> {
+    mcp_descriptors(&McpDescriptorsInput {
+        resource_uri: config.resource_uri.clone(),
+        public_base_url: config.public_base_url.clone(),
+        product_ref: config.product_ref.clone(),
+        views: config.views.clone(),
+        csp: config.csp.clone(),
+        api_base_url: config.api_base_url.clone(),
+        branding: config.branding.clone(),
+    })
+}
+
+fn payable_list_item(spec: &PayableToolSpec) -> Value {
+    let title = spec
+        .title
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(spec.name.as_str());
+    let input_schema = spec
+        .input_schema
+        .clone()
+        .unwrap_or_else(|| json!({ "type": "object", "properties": {} }));
+    let mut item = json!({
+        "name": spec.name,
+        "title": title,
+        "inputSchema": input_schema,
+    });
+    if let Some(description) = &spec.description {
+        item["description"] = json!(description);
+    }
+    if let Some(annotations) = &spec.annotations {
+        item["annotations"] = annotations.clone();
+    }
+    if let Some(meta) = &spec.meta {
+        item["_meta"] = meta.clone();
+    }
+    if let Some(output_schema) = &spec.output_schema {
+        item["outputSchema"] = output_schema.clone();
+    }
+    with_legacy_ui_meta(item)
+}
+
+fn merge_payable_specs(tools: &mut Vec<Value>, payable_tools: &[PayableToolConfig]) {
+    let existing: HashSet<String> = tools
+        .iter()
+        .filter_map(|tool| tool.get("name").and_then(Value::as_str).map(str::to_owned))
+        .collect();
+    for entry in payable_tools {
+        let PayableToolConfig::Spec(spec) = entry else {
+            continue;
+        };
+        if spec.name.is_empty() || existing.contains(&spec.name) {
+            continue;
+        }
+        tools.push(payable_list_item(spec));
+    }
+}
+
+fn tool_list_item(tool: &crate::descriptors::McpToolDescriptor) -> Value {
+    let title = tool
+        .title
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(tool.name.as_str());
+    let mut item = json!({
+        "name": tool.name,
+        "title": title,
+        "description": tool.description,
+        "inputSchema": tool.input_schema,
+        "annotations": tool.annotations,
+        "_meta": tool.meta,
+    });
+    if let Some(output_schema) = &tool.output_schema {
+        item["outputSchema"] = output_schema.clone();
+    }
+    with_legacy_ui_meta(item)
+}
+
+fn catalog_tools(config: &EngineConfig) -> Result<Vec<Value>, String> {
+    let desc = descriptors_for(config)?;
+    let mut tools: Vec<Value> = desc.tools.iter().map(tool_list_item).collect();
+    merge_payable_specs(&mut tools, &config.payable_tools);
+    Ok(tools)
+}
+
+fn hidden_tool_call_error(
+    id: Value,
+    name: &str,
+    modern: bool,
+    config: &EngineConfig,
+) -> Result<Option<Value>, String> {
+    let audiences = config.hide_audiences.clone().unwrap_or_default();
+    if audiences.is_empty() {
+        return Ok(None);
+    }
+    let tools = catalog_tools(config)?;
+    let Some(tool) = tools
+        .iter()
+        .find(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
+    else {
+        return Ok(None);
+    };
+    if is_hidden_by_audience(tool, &audiences) {
+        Ok(Some(rpc_err(
+            id,
+            -32601,
+            &format!("Method not found: {name}"),
+            None,
+            if modern { 404 } else { 200 },
+        )))
+    } else {
+        Ok(None)
+    }
+}
+
+fn with_legacy_ui_meta(mut tool: Value) -> Value {
+    if let Some(meta) = tool.get_mut("_meta") {
+        let uri = meta
+            .get("ui")
+            .and_then(|ui| ui.get("resourceUri"))
+            .and_then(Value::as_str)
+            .map(str::to_owned);
+        if let Some(uri) = uri {
+            if meta.get("ui/resourceUri").is_none() {
+                meta["ui/resourceUri"] = json!(uri);
+            }
+        }
+    }
+    tool
+}
+
+/// Route one JSON-RPC request.
+pub fn mcp_handle_request(input: &HandleRequestInput) -> Result<Value, String> {
+    let method = input
+        .rpc
+        .get("method")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let id = input.rpc.get("id").cloned().unwrap_or(Value::Null);
+    let gate = mcp_auth_gate(&AuthGateInput {
+        rpc_method: Some(method.to_owned()),
+        auth_header: input.auth_header.clone(),
+        auth_mode: input.config.auth_mode,
+        public_base_url: input.config.public_base_url.clone(),
+        mcp_path: input.config.mcp_path.clone(),
+        json_rpc_id: Some(id.clone()),
+        jwks_json: input.config.jwks_json.clone(),
+        hs256_secret: input.config.hs256_secret.clone(),
+        expected_issuer: input.config.expected_issuer.clone(),
+        expected_audience: input.config.expected_audience.clone(),
+        now_unix_secs: input.config.now_unix_secs,
+        pre_verified_customer_ref: input.config.pre_verified_customer_ref.clone(),
+    });
+    if let AuthGateResult::Challenge {
+        status,
+        headers,
+        body,
+    } = gate
+    {
+        return Ok(
+            json!({ "kind": "challenge", "status": status, "headers": headers, "body": body }),
+        );
+    }
+
+    let modern = match classify_era(&input.rpc, input.mcp_protocol_version_header.as_deref()) {
+        Ok(modern) => modern,
+        Err(err) => return Ok(err),
+    };
+
+    match method {
+        "initialize" => {
+            let proto = input
+                .rpc
+                .pointer("/params/protocolVersion")
+                .and_then(Value::as_str)
+                .unwrap_or("2025-06-18");
+            Ok(rpc_ok(
+                id,
+                json!({
+                            "protocolVersion": proto,
+                            "capabilities": { "tools": {}, "resources": {}, "prompts": {} },
+                "serverInfo": { "name": "solvapay-mcp", "version": env!("CARGO_PKG_VERSION") },
+                        }),
+            ))
+        }
+        "server/discover" => {
+            let mut result = json!({
+                "supportedVersions": SUPPORTED_VERSIONS,
+                "capabilities": { "tools": {}, "resources": {}, "prompts": {} },
+            });
+            stamp_complete_result(&mut result);
+            if let Value::Object(map) = &mut result {
+                map.insert("ttlMs".to_owned(), json!(0));
+                map.insert("cacheScope".to_owned(), json!("public"));
+            }
+            Ok(rpc_ok(id, result))
+        }
+        "subscriptions/listen" => Ok(rpc_ok(
+            id.clone(),
+            json!({
+                "_meta": { "io.modelcontextprotocol/subscriptionId": id },
+                "resultType": "complete",
+            }),
+        )),
+        "notifications/initialized" => Ok(rpc_ok(id, json!({}))),
+        "ping" if !modern => Ok(rpc_ok(id, json!({}))),
+        "tools/list" => {
+            let tools = catalog_tools(&input.config)?;
+            let filtered = mcp_hide_tools_by_audience(&HideToolsInput {
+                tools,
+                audiences: input.config.hide_audiences.clone().unwrap_or_default(),
+                user_agent: input.config.user_agent.clone(),
+            });
+            Ok(rpc_result(
+                id,
+                json!({ "tools": filtered.get("tools").cloned().unwrap_or(Value::Array(Vec::new())) }),
+                modern,
+                true,
+            ))
+        }
+        "tools/call" => {
+            let name = input
+                .rpc
+                .pointer("/params/name")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let args = input
+                .rpc
+                .pointer("/params/arguments")
+                .cloned()
+                .unwrap_or(json!({}));
+            if let Some(denied) = hidden_tool_call_error(id.clone(), name, modern, &input.config)? {
+                return Ok(denied);
+            }
+            if input.config.payable_tools.iter().any(|t| t.name() == name) {
+                let token = Uuid::new_v4().to_string();
+                let customer_ref =
+                    customer_ref_from_verified_header(input.auth_header.as_deref(), &input.config);
+                match store().lock() {
+                    Ok(mut map) => {
+                        map.insert(
+                            token.clone(),
+                            Continuation {
+                                rpc_id: id.clone(),
+                                modern,
+                            },
+                        );
+                    }
+                    Err(_) => return Err("continuation store poisoned".to_owned()),
+                }
+                return Ok(json!({
+                    "kind": "invokeHandler",
+                    "token": token,
+                    "tool": name,
+                    "args": args,
+                    "customerRef": customer_ref,
+                }));
+            }
+            Ok(json!({
+                "kind": "callBuiltin",
+                "name": name,
+                "args": args,
+                "customerRef": customer_ref_from_verified_header(
+                    input.auth_header.as_deref(),
+                    &input.config,
+                ),
+                "rpcId": id,
+            }))
+        }
+        "resources/list" => {
+            let origin = mcp_resource_identifier(&input.config.public_base_url, None);
+            let _ = origin;
+            let desc = descriptors_for(&input.config)?;
+            let mut ui = desc.resource.clone();
+            if ui.get("name").is_none() {
+                ui["name"] = json!("SolvaPay UI");
+            }
+            ui["_meta"] = json!({
+                "ui": {
+                    "csp": desc.csp,
+                    "prefersBorder": false
+                }
+            });
+            Ok(rpc_result(
+                id,
+                json!({
+                    "resources": [desc.docs, desc.bootstrap, ui]
+                }),
+                modern,
+                true,
+            ))
+        }
+        "prompts/list" => {
+            let desc = descriptors_for(&input.config)?;
+            Ok(rpc_result(
+                id,
+                json!({ "prompts": desc.prompts }),
+                modern,
+                true,
+            ))
+        }
+        "resources/read" => {
+            let uri = input
+                .rpc
+                .pointer("/params/uri")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            if uri == "docs://solvapay/overview.md" {
+                let overview = crate::overview::mcp_overview_resource();
+                return Ok(rpc_result(
+                    id,
+                    json!({
+                        "contents": [{
+                            "uri": overview.uri,
+                            "mimeType": overview.mime_type,
+                            "text": overview.body
+                        }]
+                    }),
+                    modern,
+                    true,
+                ));
+            }
+            Ok(json!({
+                "kind": "readResource",
+                "uri": uri,
+                "rpcId": id,
+            }))
+        }
+        "prompts/get" => {
+            let name = input
+                .rpc
+                .pointer("/params/name")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let desc = descriptors_for(&input.config)?;
+            if !desc.prompts.iter().any(|p| p.name == name) {
+                return Ok(rpc_err(
+                    id,
+                    -32602,
+                    &format!("Unknown prompt: {name}"),
+                    None,
+                    200,
+                ));
+            }
+            let args = input
+                .rpc
+                .pointer("/params/arguments")
+                .cloned()
+                .unwrap_or_else(|| json!({}));
+            let messages = serde_json::to_value(build_prompt_user_message(name, &args))
+                .map_err(|err| err.to_string())?;
+            Ok(rpc_result(id, messages, modern, false))
+        }
+        other => Ok(method_not_found(&input.rpc, other, modern)),
+    }
+}
+
+/// Resume after the host ran a payable handler.
+pub fn mcp_resume(input: &ResumeInput) -> Result<Value, String> {
+    let (id, modern) = match store().lock() {
+        Ok(mut map) => map
+            .remove(&input.token)
+            .map(|c| (c.rpc_id, c.modern))
+            .unwrap_or((Value::Null, false)),
+        Err(_) => (Value::Null, false),
+    };
+    if input.handler_envelope.get("kind").and_then(Value::as_str) == Some("gate") {
+        let gate_value = input
+            .handler_envelope
+            .get("gate")
+            .cloned()
+            .ok_or_else(|| "missing gate".to_owned())?;
+        let gate: PaywallGate =
+            serde_json::from_value(gate_value).map_err(|err| err.to_string())?;
+        let result = paywall_tool_result(&gate.message, &gate);
+        let result_json = serde_json::to_value(result).map_err(|err| err.to_string())?;
+        return Ok(rpc_result(id, result_json, modern, false));
+    }
+    Ok(rpc_result(
+        id,
+        input.handler_envelope.clone(),
+        modern,
+        false,
+    ))
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+
+    fn config() -> EngineConfig {
+        EngineConfig {
+            product_ref: "prd_demo".to_owned(),
+            public_base_url: "https://app.example.com".to_owned(),
+            resource_uri: "ui://test/view.html".to_owned(),
+            views: None,
+            payable_tools: Vec::new(),
+            auth_mode: None,
+            mcp_path: None,
+            hide_audiences: None,
+            user_agent: None,
+            csp: None,
+            api_base_url: None,
+            branding: None,
+            jwks_json: None,
+            hs256_secret: None,
+            expected_issuer: None,
+            expected_audience: None,
+            now_unix_secs: None,
+            pre_verified_customer_ref: None,
+        }
+    }
+
+    fn handle_from_json(value: Value) -> Value {
+        let input: HandleRequestInput = serde_json::from_value(value).expect("input");
+        mcp_handle_request(&input).expect("handle")
+    }
+
+    fn list_rpc(payable_tools: Value) -> Vec<Value> {
+        let got = handle_from_json(json!({
+            "rpc": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list",
+                "params": {}
+            },
+            "config": {
+                "productRef": "prd_demo",
+                "publicBaseUrl": "https://app.example.com",
+                "resourceUri": "ui://test/view.html",
+                "payableTools": payable_tools
+            }
+        }));
+        got["rpc"]["result"]["tools"].as_array().unwrap().clone()
+    }
+
+    fn call_rpc(payable_tools: Value) -> Value {
+        handle_from_json(json!({
+            "rpc": {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": { "name": "echo_paid", "arguments": { "n": 1 } }
+            },
+            "config": {
+                "productRef": "prd_demo",
+                "publicBaseUrl": "https://app.example.com",
+                "resourceUri": "ui://test/view.html",
+                "payableTools": payable_tools,
+                "hs256Secret": "solvapay-mcp-fixture-hs256-secret-32b!!",
+                "nowUnixSecs": 1700000000
+            },
+            "authHeader": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjdXNfMSIsImlzcyI6Imh0dHBzOi8vYXBwLmV4YW1wbGUuY29tIiwiYXVkIjoiaHR0cHM6Ly9hcHAuZXhhbXBsZS5jb20iLCJleHAiOjQxMDI0NDQ4MDB9.eLnto3RR7-xPGkMTusU3H2uVAS7IH4An3Np2-x2g3iU"
+        }))
+    }
+
+    fn payable_spec_json() -> Value {
+        json!({
+            "name": "echo_paid",
+            "title": "Echo paid",
+            "description": "Echo arguments after a paid gate",
+            "inputSchema": {
+                "type": "object",
+                "properties": { "n": { "type": "number" } }
+            }
+        })
+    }
+
+    #[test]
+    fn tools_list_includes_payable_spec_title_and_schema() {
+        let tools = list_rpc(json!([payable_spec_json()]));
+        let echo = tools
+            .iter()
+            .find(|t| t["name"] == "echo_paid")
+            .expect("payable advertised");
+        assert_eq!(echo["title"], "Echo paid");
+        assert_eq!(echo["description"], "Echo arguments after a paid gate");
+        assert_eq!(
+            echo["inputSchema"],
+            json!({ "type": "object", "properties": { "n": { "type": "number" } } })
+        );
+        assert!(echo.get("annotations").is_none());
+        assert!(echo.get("_meta").is_none());
+        assert!(
+            echo.get("outputSchema").is_none(),
+            "generic payable tools must not inherit the gate oneOf schema"
+        );
+    }
+
+    #[test]
+    fn tools_list_omits_bare_payable_name() {
+        let tools = list_rpc(json!(["echo_paid"]));
+        assert!(tools.iter().all(|t| t["name"] != "echo_paid"));
+    }
+
+    #[test]
+    fn tools_call_routes_spec_and_bare_name() {
+        let spec_call = call_rpc(json!([payable_spec_json()]));
+        assert_eq!(spec_call["kind"], "invokeHandler");
+        assert_eq!(spec_call["tool"], "echo_paid");
+
+        let name_call = call_rpc(json!(["echo_paid"]));
+        assert_eq!(name_call["kind"], "invokeHandler");
+        assert_eq!(name_call["tool"], "echo_paid");
+    }
+
+    #[test]
+    fn prompts_get_returns_user_messages_for_known_name() {
+        let got = handle_from_json(json!({
+            "rpc": {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "prompts/get",
+                "params": { "name": "upgrade", "arguments": {} }
+            },
+            "config": {
+                "productRef": "prd_demo",
+                "publicBaseUrl": "https://app.example.com",
+                "resourceUri": "ui://test/view.html"
+            }
+        }));
+        assert_eq!(got["kind"], "rpc");
+        assert!(got.get("rpc").and_then(|rpc| rpc.get("error")).is_none());
+        let messages = got["rpc"]["result"]["messages"]
+            .as_array()
+            .expect("messages array");
+        assert_eq!(messages[0]["role"], "user");
+        assert_eq!(messages[0]["content"]["type"], "text");
+        assert!(
+            messages[0]["content"]["text"]
+                .as_str()
+                .unwrap()
+                .contains("upgrade"),
+            "{got}"
+        );
+    }
+
+    #[test]
+    fn prompts_get_unknown_name_is_jsonrpc_error() {
+        let got = handle_from_json(json!({
+            "rpc": {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "prompts/get",
+                "params": { "name": "search_knowledge" }
+            },
+            "config": {
+                "productRef": "prd_demo",
+                "publicBaseUrl": "https://app.example.com",
+                "resourceUri": "ui://test/view.html"
+            }
+        }));
+        assert_eq!(got["kind"], "rpc");
+        assert_eq!(got["rpc"]["error"]["code"], -32602);
+        assert!(
+            got["rpc"]["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("search_knowledge"),
+            "{got}"
+        );
+        assert!(got["rpc"]["result"].is_null(), "{got}");
+    }
+
+    #[test]
+    fn header_mismatch_returns_32020() {
+        let input = HandleRequestInput {
+            rpc: json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list",
+                "params": {
+                    "_meta": {
+                        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                        "io.modelcontextprotocol/clientCapabilities": {}
+                    }
+                }
+            }),
+            config: config(),
+            auth_header: None,
+            mcp_protocol_version_header: Some("2025-06-18".to_owned()),
+        };
+        let got = mcp_handle_request(&input).expect("handle");
+        assert_eq!(got["status"], 400);
+        assert_eq!(got["rpc"]["error"]["code"], -32020);
+    }
+}

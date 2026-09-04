@@ -1,0 +1,22 @@
+{
+  "suite": "paywall",
+  "case": "short-message-payment",
+  "input": {
+    "fn": "buildPaywallGate",
+    "args": {
+      "productRef": "prd_demo",
+      "limits": {
+        "remaining": 0
+      }
+    }
+  },
+  "expect": {
+    "result": {
+      "kind": "payment_required",
+      "product": "prd_demo",
+      "shortMessage": "Payment required",
+      "checkoutUrl": "",
+      "message": "You don't have an active plan for this tool. Call the `upgrade` tool. See docs://solvapay/overview.md."
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": "..",
+    "baseUrl": "..",
+    "paths": {
+      "@solvapay/react/primitives": ["src/primitives/index.ts"]
+    }
+  },
+  "include": ["types-surface.test-d.ts", "../src"],
+  "references": []
+}

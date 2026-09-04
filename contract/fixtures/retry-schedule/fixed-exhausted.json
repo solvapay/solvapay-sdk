@@ -1,0 +1,17 @@
+{
+  "suite": "retry-schedule",
+  "case": "fixed-exhausted",
+  "input": {
+    "fn": "withRetry",
+    "args": {
+      "attempts": [{ "throw": "boom" }, { "throw": "boom" }, { "throw": "boom" }]
+    }
+  },
+  "expect": {
+    "result": {
+      "delays": [500, 500],
+      "events": ["call:0", "sleep:500", "call:1", "sleep:500", "call:2"],
+      "outcome": { "type": "rejected", "name": "Error", "message": "boom" }
+    }
+  }
+}

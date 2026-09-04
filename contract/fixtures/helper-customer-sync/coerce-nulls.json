@@ -1,0 +1,14 @@
+{
+  "suite": "helper-customer-sync",
+  "case": "coerce-nulls",
+  "input": {
+    "fn": "coerceCustomerOptions",
+    "args": {
+      "email": null,
+      "name": null
+    }
+  },
+  "expect": {
+    "result": {}
+  }
+}

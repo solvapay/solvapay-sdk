@@ -1,0 +1,13 @@
+{
+  "suite": "business-details",
+  "case": "field-label-gb",
+  "input": {
+    "fn": "getTaxIdFieldLabel",
+    "args": {
+      "country": "GB"
+    }
+  },
+  "expect": {
+    "result": "VAT Number"
+  }
+}

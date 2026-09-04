@@ -1,0 +1,14 @@
+{
+  "suite": "money-format",
+  "case": "to-major-usd-1999",
+  "input": {
+    "fn": "toMajorUnits",
+    "args": {
+      "amountMinor": 1999,
+      "currency": "usd"
+    }
+  },
+  "expect": {
+    "result": 19.99
+  }
+}

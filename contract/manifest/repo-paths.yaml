@@ -1,0 +1,530 @@
+version: 1
+
+dirs:
+  contract: contract
+  core: core
+  docs: docs
+  examples: examples
+  tools: tools
+  toolsShared: tools/shared
+  toolsCodegen: tools/codegen
+  toolsConformance: tools/conformance
+  toolsRepo: tools/repo
+  workflows: .github/workflows
+  changeset: .changeset
+  sdksTypescript: sdks/typescript
+  internal: internal
+
+sdks:
+  node-native: sdks/node-native
+  wasm: sdks/wasm
+  python: sdks/python
+  ruby: sdks/ruby
+  go: sdks/go
+  capi: sdks/capi
+  rust: sdks/rust
+  typescript: sdks/typescript
+  pythonMcp: sdks/python-mcp
+  rubyMcp: sdks/ruby-mcp
+  rustMcp: sdks/rust-mcp
+
+tsPackages:
+  auth: sdks/typescript/auth
+  core: sdks/typescript/core
+  mcp: sdks/typescript/mcp
+  mcp-core: sdks/typescript/mcp-core
+  next: sdks/typescript/next
+  react: sdks/typescript/react
+  react-supabase: sdks/typescript/react-supabase
+  server: sdks/typescript/server
+
+toolPackages:
+  cli: tools/cli
+  create-solvapay: tools/create-solvapay
+  init: tools/init
+
+internalPackages:
+  demo-services: internal/demo-services
+  release-train: internal/release-train
+  test-utils: internal/test-utils
+  tsconfig: internal/tsconfig
+
+contractInputs:
+  openapiSnapshot:
+    path: contract/openapi/sdk-v1.snapshot.json
+    flag: --snapshot
+  sdkManifest:
+    path: contract/manifest/sdk-contract.yaml
+    flag: --manifest
+  coreSrc:
+    path: core/solvapay-core/src
+    flag: --core-src
+  bindingResidue:
+    path: contract/manifest/binding-residue.yaml
+    flag: --binding-residue
+  transportSrc:
+    path: core/solvapay-transport/src
+    flag: --transport-src
+  clientFixtures:
+    path: contract/fixtures/client
+  fixtures:
+    path: contract/fixtures
+
+# dto-gen flag order is: flagged contractInputs (openapiSnapshot, sdkManifest,
+# coreSrc, bindingResidue, transportSrc), then this list in order. Entries without `flag` are drift-only.
+generated:
+  - id: rustDto
+    path: core/solvapay-dto/src
+    flag: --out
+    driftPath: core/solvapay-dto
+  - id: tsOverlays
+    path: sdks/typescript/server/src/types/overlays.generated.d.ts
+    flag: --ts-out
+  - id: tsClient
+    path: sdks/typescript/server/src/types/client.generated.d.ts
+    flag: --ts-client-out
+  - id: tsClientRuntime
+    path: sdks/typescript/server/src/client.runtime.generated.ts
+    flag: --ts-client-runtime-out
+  - id: tsGenerated
+    path: sdks/typescript/server/src/types/generated.ts
+  - id: tsParity
+    path: sdks/typescript/server/src/__generated__/signature-parity.generated.test.ts
+    flag: --ts-parity-out
+  - id: bindingSymbols
+    path: contract/manifest/binding-symbols.snapshot.json
+    flag: --dump-bindings
+  - id: facadeCoverage
+    path: contract/manifest/facade-coverage.json
+  - id: wasmBrowserSymbols
+    path: sdks/wasm/browser-symbols.generated.json
+    driftPaths:
+      - sdks/wasm/browser-symbols.generated.json
+  - id: boundaryTypes
+    path: contract/manifest/boundary-types.snapshot.json
+    flag: --dump-boundary-types
+  - id: coreTypesTs
+    path: sdks/typescript/core/src/types/boundary.generated.d.ts
+    flag: --core-types-ts-out
+  - id: coreDispatchTs
+    path: sdks/typescript/core/src/native-dispatch.ts
+    flag: --core-dispatch-ts-out
+  - id: coreNativeTs
+    path: sdks/typescript/core/src/native-core.ts
+    flag: --core-native-ts-out
+  - id: coreHelpersTs
+    path: sdks/typescript/core/src/native-helpers.ts
+    flag: --core-helpers-ts-out
+  - id: serverDecisionsTs
+    path: sdks/typescript/server/src/native-decisions.ts
+    flag: --server-decisions-ts-out
+  - id: nodeBindings
+    path: sdks/node-native/src
+    flag: --node-bindings-out
+    driftPaths:
+      - sdks/node-native/src/args.rs
+      - sdks/node-native/src/decisions.rs
+      - sdks/node-native/src/payload_builders.rs
+      - sdks/node-native/src/native_client.rs
+  - id: wasmBindings
+    path: sdks/wasm/src
+    flag: --wasm-bindings-out
+    driftPaths:
+      - sdks/wasm/src/args.rs
+      - sdks/wasm/src/decisions.rs
+      - sdks/wasm/src/payload_builders.rs
+      - sdks/wasm/src/wasm_client.rs
+  - id: pythonBindings
+    path: sdks/python/src
+    flag: --python-bindings-out
+    driftPaths:
+      - sdks/python/src/args.rs
+      - sdks/python/src/decisions.rs
+      - sdks/python/src/payload_builders.rs
+      - sdks/python/src/client.rs
+      - sdks/python/src/register.rs
+  - id: rubyBindings
+    path: sdks/ruby/ext/solvapay/src
+    flag: --ruby-bindings-out
+    driftPaths:
+      - sdks/ruby/ext/solvapay/src/args.rs
+      - sdks/ruby/ext/solvapay/src/decisions.rs
+      - sdks/ruby/ext/solvapay/src/payload_builders.rs
+      - sdks/ruby/ext/solvapay/src/client.rs
+      - sdks/ruby/ext/solvapay/src/register.rs
+  - id: nativeTs
+    path: sdks/typescript/server/src/native.ts
+    flag: --native-ts-out
+  - id: wasmTs
+    path: sdks/typescript/server/src/wasm.ts
+    flag: --wasm-ts-out
+  - id: nativePy
+    path: sdks/python/python/solvapay/_native.py
+    flag: --native-py-out
+  - id: pyStub
+    path: sdks/python/python/solvapay/__init__.pyi
+    flag: --py-stub-out
+  - id: pyHelpers
+    path: sdks/python/python/solvapay/helpers.generated.py
+    flag: --py-helpers-out
+  - id: pyParity
+    path: sdks/python/tests/signature_parity_generated_test.py
+    flag: --py-parity-out
+  - id: pyConformance
+    path: sdks/python/tests/contract
+    flag: --py-conformance-out
+    driftPaths:
+      - sdks/python/tests/contract/__init__.py
+      - sdks/python/tests/contract/clock.py
+      - sdks/python/tests/contract/names.py
+      - sdks/python/tests/contract/fixture_loader.py
+      - sdks/python/tests/contract/compare.py
+      - sdks/python/tests/contract/stub_backend.py
+      - sdks/python/tests/contract/host_adapters.py
+      - sdks/python/tests/contract/dispatch.py
+  - id: nativeRb
+    path: sdks/ruby/lib/solvapay/_native.rb
+    flag: --native-rb-out
+  - id: rbClient
+    path: sdks/ruby/lib/solvapay/client.rb
+    flag: --rb-client-out
+  - id: rubyHelpers
+    path: sdks/ruby/lib/solvapay/helpers.generated.rb
+  - id: rbRbs
+    path: sdks/ruby/sig/solvapay.rbs
+    flag: --rb-rbs-out
+  - id: rbMcpRbs
+    path: sdks/ruby-mcp/sig/layer2.generated.rbs
+    flag: --rb-mcp-rbs-out
+  - id: rbParity
+    path: sdks/ruby/test/signature_parity_generated_test.rb
+    flag: --rb-parity-out
+  - id: rbConformance
+    path: sdks/ruby/test/contract
+    flag: --rb-conformance-out
+    driftPaths:
+      - sdks/ruby/test/contract/clock.rb
+      - sdks/ruby/test/contract/names.rb
+      - sdks/ruby/test/contract/fixture_loader.rb
+      - sdks/ruby/test/contract/compare.rb
+      - sdks/ruby/test/contract/stub_backend.rb
+      - sdks/ruby/test/contract/host_adapters.rb
+      - sdks/ruby/test/contract/dispatch.rb
+  - id: rsClient
+    path: sdks/rust/src/client_generated.rs
+    flag: --rs-client-out
+  - id: rsHelpers
+    path: sdks/rust/src/helpers_generated.rs
+    flag: --rs-helpers-out
+  - id: rsBlocking
+    path: sdks/rust/src/blocking_generated.rs
+  - id: rsParity
+    path: sdks/rust/tests/signature_parity_generated.rs
+    flag: --rs-parity-out
+  - id: goBindings
+    path: sdks/go/wasm/src
+    flag: --go-bindings-out
+    driftPaths:
+      - sdks/go/wasm/src/args.rs
+      - sdks/go/wasm/src/decisions.rs
+      - sdks/go/wasm/src/payload_builders.rs
+      - sdks/go/wasm/src/client.rs
+      - sdks/go/wasm/src/webhook.rs
+  - id: goClient
+    path: sdks/go/client_generated.go
+    flag: --go-client-out
+  - id: goHelpers
+    path: sdks/go/helpers_generated.go
+    flag: --go-helpers-out
+  - id: goParity
+    path: sdks/go/signature_parity_generated_test.go
+    flag: --go-parity-out
+  - id: goConformance
+    path: sdks/go/internal/contract
+    flag: --go-conformance-out
+    driftPaths:
+      - sdks/go/internal/contract/clock.go
+      - sdks/go/internal/contract/names.go
+      - sdks/go/internal/contract/fixture_loader.go
+      - sdks/go/internal/contract/compare.go
+      - sdks/go/internal/contract/stub_backend.go
+      - sdks/go/internal/contract/host_adapters.go
+      - sdks/go/internal/contract/dispatch.go
+  - id: cBindings
+    path: sdks/capi/src
+    flag: --c-bindings-out
+    driftPaths:
+      - sdks/capi/src/dispatch.rs
+  - id: cConformance
+    path: sdks/capi/ctest/contract
+    flag: --c-conformance-out
+    driftPaths:
+      - sdks/capi/ctest/contract/dispatch.c
+      - sdks/capi/ctest/contract/dispatch.h
+      - sdks/capi/ctest/contract/harness.c
+      - sdks/capi/ctest/contract/harness.h
+  - id: cParity
+    path: sdks/capi/ctest/signature_parity_generated.c
+    flag: --c-parity-out
+  - id: fixtureRunner
+    path: tools/conformance/fixture-runner/src/registry.rs
+    flag: --fixture-runner-out
+  - id: rbMcpLayer2
+    path: sdks/ruby-mcp/lib/solvapay/mcp/layer2.generated.rb
+    flag: --rb-mcp-layer2-out
+  - id: pyMcpLayer2
+    path: sdks/python-mcp/python/solvapay_mcp/_layer2.generated.py
+    flag: --py-mcp-layer2-out
+  - id: goMcpLayer2
+    path: sdks/go/mcp/layer2_generated.go
+    flag: --go-mcp-layer2-out
+  - id: tsMcpNative
+    path: sdks/typescript/mcp-core/src/native-mcp.generated.ts
+    flag: --ts-mcp-native-out
+  - id: rsMcpLayer2
+    path: sdks/rust-mcp/src/layer2_generated.rs
+    flag: --rs-mcp-layer2-out
+
+# GENERATED_PATHS order (not the same as dto-gen flag order).
+drift:
+  - rustDto
+  - tsOverlays
+  - tsClient
+  - tsClientRuntime
+  - tsGenerated
+  - tsParity
+  - nativeTs
+  - wasmTs
+  - bindingSymbols
+  - facadeCoverage
+  - wasmBrowserSymbols
+  - boundaryTypes
+  - coreTypesTs
+  - coreDispatchTs
+  - coreNativeTs
+  - coreHelpersTs
+  - serverDecisionsTs
+  - nodeBindings
+  - wasmBindings
+  - pythonBindings
+  - nativePy
+  - pyStub
+  - pyHelpers
+  - pyParity
+  - pyConformance
+  - rubyBindings
+  - nativeRb
+  - rbClient
+  - rubyHelpers
+  - rbRbs
+  - rbMcpRbs
+  - rbParity
+  - rbConformance
+  - rsClient
+  - rsHelpers
+  - rsBlocking
+  - rsParity
+  - goBindings
+  - goClient
+  - goHelpers
+  - goParity
+  - goConformance
+  - cBindings
+  - cConformance
+  - cParity
+  - fixtureRunner
+  - rbMcpLayer2
+  - pyMcpLayer2
+  - goMcpLayer2
+  - tsMcpNative
+  - rsMcpLayer2
+
+# SHA256 registry for binary artifacts in `externalGenerated` (`shasum -a 256` format).
+sha256Registry: contract/manifest/generated-binaries.sha256
+
+# Artifacts owned by external toolchains (NAPI-RS, wasm-bindgen, cbindgen, Go
+# WASI guest, MCP App widget vendor). Distinct from `generated:` so gen:clean /
+# gen:check do not delete or dto-gen-diff them.
+externalGenerated:
+  - id: nodeNativeNapi
+    paths:
+      - sdks/node-native/index.d.ts
+      - sdks/node-native/index.js
+    generator: npx napi build --platform --release
+    cwd: sdks/node-native
+    # Remaining files carry the NAPI-RS banner.
+    marker: null
+  - id: wasmPkg
+    # wasm32-unknown-unknown + wasm-opt -Oz is not bit-stable across hosts
+    # (darwin vs qemu linux/amd64 vs native GHA amd64). JS glue hashes are
+    # host-stable; the .wasm blobs are not. Treat binary drift as a warning
+    # like goCoreWasm. Rebuild writes pkg/ in place; gitDiff against HEAD is
+    # the check. Do not run `pnpm build:wasm` immediately before
+    # `pnpm build:check-drift` — that compared a staging build to a just-wiped
+    # pkg/ and never examined committed bytes.
+    paths:
+      - sdks/wasm/pkg/edge/solvapay_wasm.js
+      - sdks/wasm/pkg/edge/solvapay_wasm.d.ts
+      - sdks/wasm/pkg/edge/solvapay_wasm_bg.wasm
+      - sdks/wasm/pkg/edge/solvapay_wasm_bg.wasm.d.ts
+      - sdks/wasm/pkg/browser/solvapay_wasm.js
+      - sdks/wasm/pkg/browser/solvapay_wasm.d.ts
+      - sdks/wasm/pkg/browser/solvapay_wasm_bg.wasm
+      - sdks/wasm/pkg/browser/solvapay_wasm_bg.wasm.d.ts
+    generator: pnpm build:wasm
+    cwd: sdks/wasm
+    # Only solvapay_wasm.js carries @generated; the two .d.ts files have lint pragmas; _bg.wasm is binary.
+    marker: null
+    nonDeterministic: true
+  - id: goCoreWasm
+    # wasm32-wasip1 output is not bit-stable across hosts (mac vs linux/amd64 vs
+    # GHA). The sha256 is a local-rebuild aid, not a CI hard fail. CI warns on
+    # mismatch. Refresh the committed blob from linux/amd64 when go-wasm/core
+    # sources change:
+    #   docker run --rm --platform linux/amd64 -v "$PWD:/workspace" -w /workspace \
+    #     rust:1.96.0-bookworm bash -c 'export PATH=/usr/local/cargo/bin:$PATH; rustup target add wasm32-wasip1; ./sdks/go/scripts/build-wasm.sh'
+    paths:
+      - sdks/go/solvapay_core.wasm
+    generator: ./sdks/go/scripts/build-wasm.sh
+    marker: null
+    binary: true
+    nonDeterministic: true
+  - id: capiHeader
+    paths:
+      - sdks/capi/include/solvapay.h
+    generator: cargo build -p solvapay-c
+    forbidPatterns:
+      - path: sdks/capi/include/solvapay.h
+        pattern: solvapay_fh_
+        reason: solvapay.h must not export fixture-host symbols
+  - id: capiFixtureHostHeader
+    paths:
+      - sdks/capi/include/solvapay_fixture_host.h
+    generator: cargo build -p solvapay-c --features fixture-host
+  - id: mcpAppWidget
+    paths:
+      - sdks/python-mcp/python/solvapay_mcp/data/mcp-app.html
+      - sdks/ruby-mcp/lib/solvapay/mcp/data/mcp-app.html
+      - sdks/go/mcp/mcp-app.html
+      - sdks/rust-mcp/mcp-app.html
+      - sdks/typescript/mcp/mcp-app.html
+    generator: pnpm exec tsx tools/mcp-app-widget/vendor.ts
+    marker: null
+    verify: command
+    verifyCommand: pnpm exec tsx tools/mcp-app-widget/check.ts
+
+# Marker-carrying files that are not generated artifacts (inverse header gate).
+markerExemptions:
+  - pattern: tools/codegen/dto-gen/**
+    reason: emitter sources that contain the marker string they emit
+  - pattern: sdks/capi/cbindgen.toml
+    reason: cbindgen autogen_warning config
+  - pattern: sdks/capi/cbindgen.fixture-host.toml
+    reason: cbindgen autogen_warning config
+  - pattern: docs/**
+    reason: prose about the generated-file marker
+  - pattern: .cursor/rules/**
+    reason: agent rules that name the generated-file marker
+  - pattern: CONTRIBUTING.md
+    reason: prose about the generated-file marker
+  - pattern: .github/workflows/**
+    reason: CI prose about the generated-file marker
+  - pattern: '**/Cargo.lock'
+    reason: third-party Cargo boilerplate
+  - pattern: sdks/capi/tests/header_golden.rs
+    reason: header golden test names the marker
+  - pattern: tools/codegen/facade-coverage.ts
+    reason: writes the generated-file marker into the coverage matrix
+  - pattern: tools/codegen/wasm-profiles.ts
+    reason: writes the generated-file marker into browser-symbols.generated.json
+  - pattern: .cursor/plans/**
+    reason: plans that name the generated-file marker
+  - pattern: tools/codegen/check-generated-headers.ts
+    reason: gate tooling that names the marker
+  - pattern: tools/codegen/check-generated-headers.test.ts
+    reason: gate tooling that names the marker
+  - pattern: tools/codegen/external-generated.test.ts
+    reason: gate tooling that names the marker
+  - pattern: tools/codegen/lib/generated-marker.ts
+    reason: gate tooling that names the marker
+  - pattern: tools/shared/repo-paths-schema.ts
+    reason: schema comments that name the marker
+  - pattern: contract/manifest/repo-paths.yaml
+    reason: layout comments that name the marker
+  - pattern: sdks/wasm/scripts/build.mjs
+    reason: wasm generator tooling that names the marker
+  - pattern: sdks/typescript/server/scripts/generate-types.ts
+    reason: type generator tooling that names the marker
+  - pattern: tools/repo/validate-doc-links.ts
+    reason: doc-link gate mentions generated files
+  - pattern: contract/fixtures/README.md
+    reason: prose about generated fixtures
+
+lookups:
+  rustToolchain: rust-toolchain.toml
+  prettierIgnore: .prettierignore
+  mcpFixtures: contract/mcp-fixtures
+  rustLiveReport: contract/live/output/rust-live-report.json
+  fuzzCorpus: internal/fuzz/corpus
+  fuzzRoot: internal/fuzz
+  requiredChecks: contract/required-checks.yaml
+  delegationAllowlist: contract/delegation-allowlist.json
+  openapiDir: contract/openapi
+  openapiLocalStack: contract/openapi/local-stack.yaml
+  openapiSnapshot: contract/openapi/sdk-v1.snapshot.json
+  openapiSource: contract/openapi/sdk-v1.source.json
+  liveOutput: contract/live/output
+  webhookFixtures: contract/fixtures/webhook-verification
+  manifestSchemaTs: tools/shared/manifest-schema.ts
+  syntheticOpenapi: tools/codegen/fixtures/synthetic-openapi.json
+  scriptsTmp: tools/.tmp
+  pythonLiveContract: sdks/python/scripts/live_contract.py
+  rubyLiveContract: sdks/ruby/scripts/live_contract.rb
+  pythonStockResearchMcpExample: examples/python/stock-research-mcp
+  rustLiveScenarios: tools/conformance/live-contract/src/scenarios.rs
+  goLiveScenarios: sdks/go/internal/livecontract/scenarios.go
+  generateTypesScript: sdks/typescript/server/scripts/generate-types.ts
+  goLiveContract: sdks/go/cmd/live-contract
+  goWasmBuild: sdks/go/scripts/build-wasm.sh
+  pythonCheckWheels: sdks/python/scripts/check-wheels.py
+  pythonInstallSmoke: sdks/python/scripts/install-smoke.py
+  rubyCheckGems: sdks/ruby/scripts/check-gems.rb
+  rubyInstallSmoke: sdks/ruby/scripts/install-smoke.rb
+  rubyDockBuild: sdks/ruby/scripts/dock-build.sh
+  cratesPublish: tools/repo/crates-publish.sh
+  checkPublishGraph: tools/repo/check-publish-graph.sh
+  capiCtestRun: sdks/capi/ctest/run.sh
+  capiCtestContract: sdks/capi/ctest/contract.sh
+  packageJson: package.json
+  mcpAppWidgetCanonical: tools/mcp-app-widget/mcp-app.html
+  mcpAppWidgetDist: tools/mcp-app-widget/dist/mcp-app.html
+  mcpAppWidgetPython: sdks/python-mcp/python/solvapay_mcp/data/mcp-app.html
+  mcpAppWidgetRuby: sdks/ruby-mcp/lib/solvapay/mcp/data/mcp-app.html
+  mcpAppWidgetGo: sdks/go/mcp/mcp-app.html
+  mcpAppWidgetRust: sdks/rust-mcp/mcp-app.html
+  mcpAppWidgetTypescript: sdks/typescript/mcp/mcp-app.html
+  exampleWidgetHtmlCloudflare: examples/typescript/cloudflare-workers-mcp/mcp-app.html
+  exampleWidgetHtmlSupabase: examples/typescript/supabase-edge-mcp/mcp-app.html
+  exampleWidgetHtmlCheckout: examples/typescript/mcp-checkout-app/mcp-app.html
+  exampleWidgetHtmlScaffold: tools/create-solvapay/templates/mcp/ts/_base/mcp-app.html
+  exampleWidgetTsxCloudflare: examples/typescript/cloudflare-workers-mcp/src/mcp-app.tsx
+  exampleWidgetTsxSupabase: examples/typescript/supabase-edge-mcp/src/mcp-app.tsx
+  exampleWidgetTsxCheckout: examples/typescript/mcp-checkout-app/src/mcp-app.tsx
+  exampleWidgetTsxScaffold: tools/create-solvapay/templates/mcp/ts/_base/src/mcp-app.tsx
+  exampleDemoToolsCloudflare: examples/typescript/cloudflare-workers-mcp/src/demo-tools.ts
+  exampleDemoToolsSupabase: examples/typescript/supabase-edge-mcp/supabase/functions/mcp/demo-tools.ts
+  wasmProfiles: contract/manifest/wasm-profiles.yaml
+  supportMatrix: contract/manifest/support-matrix.yaml
+  supportMatrixJson: contract/manifest/support-matrix.json
+  cargoExport: core/solvapay-export/Cargo.toml
+  cargoDto: core/solvapay-dto/Cargo.toml
+  cargoCore: core/solvapay-core/Cargo.toml
+  cargoMcpCore: core/solvapay-mcp/Cargo.toml
+  cargoTransport: core/solvapay-transport/Cargo.toml
+  cargoRustFacade: sdks/rust/Cargo.toml
+  pythonPyproject: sdks/python/pyproject.toml
+  pythonMcpPyproject: sdks/python-mcp/pyproject.toml
+  rubyVersion: sdks/ruby/lib/solvapay/version.rb
+  rubyMcpVersion: sdks/ruby-mcp/lib/solvapay/mcp/version.rb
+  nodeNativePackage: sdks/node-native/package.json
+  nodeNativeNpm: sdks/node-native/npm

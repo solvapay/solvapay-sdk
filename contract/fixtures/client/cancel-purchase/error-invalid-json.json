@@ -1,0 +1,31 @@
+{
+  "suite": "client",
+  "input": {
+    "fn": "cancelPurchase",
+    "args": {
+      "purchaseRef": "pur_fixture"
+    },
+    "clock": "2026-07-01T00:00:00Z"
+  },
+  "case": "cancel-purchase-error-invalid-json",
+  "wire": {
+    "request": {
+      "method": "POST",
+      "path": "/v1/sdk/purchases/pur_fixture/cancel",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk_test_fixture"
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": "not-json{"
+    }
+  },
+  "expect": {
+    "error": {
+      "name": "SolvaPayError",
+      "message": "Invalid JSON response from cancel purchase endpoint: not-json{"
+    }
+  }
+}

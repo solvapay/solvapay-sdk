@@ -1,0 +1,22 @@
+{
+  "suite": "paywall",
+  "case": "gate-upgrade-url",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": {
+        "kind": "upgrade_required"
+      },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "",
+        "shortMessage": "Payment required"
+      }
+    }
+  },
+  "expect": {
+    "result": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "suite": "paywall",
+  "case": "gate-activation-url",
+  "input": {
+    "fn": "buildGateMessage",
+    "args": {
+      "state": {
+        "kind": "activation_required"
+      },
+      "gate": {
+        "kind": "payment_required",
+        "product": "prd_demo",
+        "checkoutUrl": "https://pay.test/x",
+        "message": "",
+        "shortMessage": "Payment required"
+      }
+    }
+  },
+  "expect": {
+    "result": "Your plan needs activation. [Open checkout](https://pay.test/x) to activate (expires in 15 minutes), or call the `activate_plan` tool. See docs://solvapay/overview.md."
+  }
+}
