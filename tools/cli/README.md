@@ -106,11 +106,11 @@ Plus Python, Ruby, Go, and Rust examples — see the
 
 ## Flags
 
-| Flag                | Description                                                                                                                                                                    |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `-y`, `--yes`       | Skip the browser confirmation prompt. For TypeScript only, may create a `package.json` if none exists.                                                                         |
-| `-l`, `--language`  | Override language detection (`ts`, `python`, `ruby`, `go`, `rust`). Required with `--yes` when no manifest is present.                                                         |
-| `--dev`             | Target the SolvaPay dev backend (`https://api-dev.solvapay.com`). Persists `SOLVAPAY_API_BASE_URL` to `.env`. Internal testing only — production keys are rejected by api-dev. |
+| Flag               | Description                                                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-y`, `--yes`      | Skip the browser confirmation prompt. For TypeScript only, may create a `package.json` if none exists.                                                                         |
+| `-l`, `--language` | Override language detection (`ts`, `python`, `ruby`, `go`, `rust`). Required with `--yes` when no manifest is present.                                                         |
+| `--dev`            | Target the SolvaPay dev backend (`https://api-dev.solvapay.com`). Persists `SOLVAPAY_API_BASE_URL` to `.env`. Internal testing only — production keys are rejected by api-dev. |
 
 ## What `solvapay init` does
 

@@ -45,6 +45,7 @@ struct RegisteredPayable {
     title: Option<String>,
     description: Option<String>,
     input_schema: Option<Map<String, Value>>,
+    output_schema: Option<Value>,
     handler: PayableHandler,
     get_customer_ref: Option<GetCustomerRef>,
 }
@@ -118,6 +119,7 @@ impl McpHttpServer {
                 title: tool.title,
                 description: tool.description,
                 input_schema: tool.input_schema,
+                output_schema: tool.output_schema,
                 handler,
                 get_customer_ref,
             },
@@ -203,6 +205,7 @@ impl McpHttpServer {
                     })),
                     annotations: None,
                     meta: None,
+                    output_schema: spec.output_schema.clone(),
                 }))
             })
             .collect();

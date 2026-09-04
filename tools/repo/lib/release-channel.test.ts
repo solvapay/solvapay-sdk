@@ -98,10 +98,7 @@ describe('tag availability', () => {
 describe('assertAllRehearsalTags', () => {
   it('accepts only tags under rehearsal/', () => {
     expect(() =>
-      assertAllRehearsalTags([
-        'rehearsal/solvapay-rust-v0.1.0',
-        'rehearsal/solvapay-go-v0.1.0',
-      ]),
+      assertAllRehearsalTags(['rehearsal/solvapay-rust-v0.1.0', 'rehearsal/solvapay-go-v0.1.0']),
     ).not.toThrow()
   })
 

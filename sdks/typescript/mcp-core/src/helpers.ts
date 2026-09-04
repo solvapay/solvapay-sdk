@@ -104,36 +104,32 @@ export function toolResult(data: unknown): SolvaPayCallToolResult {
  * Requested rendering mode per-call. Passed through the `mode` input
  * arg of every intent tool.
  *
- * - `'ui'` (default) — emit a one-line placeholder in `content[0]`
- *   alongside the UI resource ref on `_meta.ui`. Keeps UI-rendering
- *   hosts (MCP Inspector, ChatGPT Apps, Claude Desktop) tidy — the
- *   iframe already carries the rich detail. Agents get the full
- *   `BootstrapPayload` on `structuredContent` for grounding.
- * - `'text'` — strip the UI resource ref and emit the full narrated
- *   markdown so CLI / text-only hosts get a human summary.
- * - `'auto'` — same user-visible envelope as `'ui'` (placeholder +
- *   `_meta.ui`) plus the assistant-audience narration. Hosts that
- *   omit the placeholder (MCPJam) never mount the iframe.
+ * - `'auto'` (default) — narrated markdown in `content[0]` (plan refs,
+ *   price, pasteable checkout URL) and keep `_meta.ui` so UI hosts
+ *   still open the iframe. Unknown / omitted `mode` values land here.
+ * - `'text'` — same narration, strip `_meta.ui` so UI-capable hosts
+ *   stay text-only for this call.
+ * - `'ui'` — one-line placeholder in `content[0]` plus the narration
+ *   as a second block, keeping `_meta.ui`. The placeholder itself
+ *   names plan, price, and URL so opting into `ui` is not a dead end
+ *   on text-only hosts.
  */
 export type SolvaPayToolMode = 'ui' | 'text' | 'auto'
 
 export function parseMode(raw: unknown): SolvaPayToolMode {
   if (raw === 'ui' || raw === 'text' || raw === 'auto') return raw
-  return 'ui'
+  return 'auto'
 }
 
 /**
  * Build a `SolvaPayCallToolResult` that respects the requested `mode`:
  *
- *  - `ui` (default) emits a one-line placeholder in `content[0]` and
- *    keeps `_meta.ui.*` so UI-rendering hosts open the iframe without
- *    a noisy narration beneath it. `structuredContent` still carries
- *    the raw bootstrap payload so agents have full grounding.
- *  - `text` emits the full narrated markdown (plus any
- *    `resource_link` blocks) and strips `_meta.ui.*` so UI-capable
- *    hosts render text-only for this call.
- *  - `auto` emits the same placeholder + `_meta.ui` envelope as `ui`,
- *    plus the assistant-audience narration.
+ *  - `auto` (default) emits the narrated markdown as `content[0]` and
+ *    keeps `_meta.ui.*` so UI-rendering hosts still open the iframe.
+ *  - `text` emits the same narration (plus any `resource_link` blocks)
+ *    and strips `_meta.ui.*`.
+ *  - `ui` emits a one-line placeholder in `content[0]` plus the
+ *    narrated block, keeping `_meta.ui.*`.
  *
  * The narrator is picked by the `tool` name; unknown tools fall back
  * to the JSON dump that `toolResult` produces today.
@@ -147,7 +143,7 @@ export function parseMode(raw: unknown): SolvaPayToolMode {
 export function narratedToolResult(
   tool: IntentTool | string,
   data: BootstrapPayload,
-  mode: SolvaPayToolMode = 'ui',
+  mode: SolvaPayToolMode = 'auto',
   baseMeta: Record<string, unknown> | undefined = undefined,
 ): SolvaPayCallToolResult {
   return callMcpSyncOp<SolvaPayCallToolResult>('mcpNarrate', {

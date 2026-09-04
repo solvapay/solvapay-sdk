@@ -17,6 +17,6 @@
     }
   },
   "expect": {
-    "result": "Your plan needs activation before you can use this tool. Call the `activate_plan` tool to activate it."
+    "result": "Your plan needs activation. Call the `activate_plan` tool. See docs://solvapay/overview.md."
   }
 }

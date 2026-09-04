@@ -3,9 +3,9 @@
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use solvapay_core::{
-    billing_cycle, credits_per_unit_from_balance, credits_to_display_minor_units,
-    format_major_fixed, headline_charges, is_zero_decimal_currency, meter_name, to_major_units,
-    trial_days, usage_rate, CreditsToDisplayInput,
+    billing_cycle, credits_to_display_minor_units, format_major_fixed, headline_charges,
+    is_zero_decimal_currency, meter_name, to_major_units, trial_days, usage_rate,
+    CreditsToDisplayInput,
 };
 
 /// Input for [`mcp_narrate`].
@@ -217,20 +217,51 @@ fn plans_list_lines(plans: &[Value]) -> Vec<String> {
             if let Some(trial) = trial_days(Some(plan)).filter(|d| *d != 0) {
                 parts.push(format!("{trial}-day trial"));
             }
+            if let Some(reference) = plan
+                .get("reference")
+                .and_then(Value::as_str)
+                .filter(|s| !s.is_empty())
+            {
+                parts.push(format!("planRef: {reference}"));
+            }
             parts.join(" · ")
         })
         .collect()
 }
 
-fn commands_line(commands: &[&str]) -> String {
-    format!(
-        "Commands: {}",
-        commands
-            .iter()
-            .map(|c| format!("`/{c}`"))
-            .collect::<Vec<_>>()
-            .join(" ")
-    )
+const CHECKOUT_SESSION_TTL_MINUTES: u32 = 15;
+const DOCS_URI: &str = "docs://solvapay/overview.md";
+
+fn http_url<'a>(data: &'a Value, key: &str) -> Option<&'a str> {
+    let url = data.get(key).and_then(Value::as_str)?;
+    if url.starts_with("http://") || url.starts_with("https://") {
+        Some(url)
+    } else {
+        None
+    }
+}
+
+fn checkout_line(data: &Value) -> Option<String> {
+    let url = http_url(data, "checkoutUrl")?;
+    Some(format!(
+        "Checkout: [Open checkout]({url}) (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes)"
+    ))
+}
+
+fn hosted_checkout_link(data: &Value) -> Option<Value> {
+    let url = http_url(data, "checkoutUrl")?;
+    Some(json!({ "uri": url, "name": "Open checkout" }))
+}
+
+fn docs_line() -> String {
+    format!("Docs: {DOCS_URI}")
+}
+
+fn recovery_links(data: &Value) -> Vec<Value> {
+    [hosted_checkout_link(data), hosted_portal_link(data)]
+        .into_iter()
+        .flatten()
+        .collect()
 }
 
 fn hosted_portal_link(data: &Value) -> Option<Value> {
@@ -279,8 +310,7 @@ pub fn narrate_manage_account(data: &Value) -> Value {
                 lines.push("No active plan. Plans available:".to_owned());
                 lines.extend(plans_list_lines(&plans));
             }
-            lines.push(String::new());
-            lines.push(commands_line(&["activate_plan", "upgrade"]));
+            lines.push(docs_line());
         }
         Some(active) => {
             lines.push(format!("**{name} — your account**"));
@@ -309,25 +339,51 @@ pub fn narrate_manage_account(data: &Value) -> Value {
             if let Some(bal) = balance_row(customer) {
                 lines.push(bal);
             }
-            if active.pointer("/planSnapshot/isMetered") == Some(&Value::Bool(true)) {
-                if let Some(credits) = credits_per_unit_from_balance(
-                    active.get("planSnapshot"),
-                    customer.and_then(|c| c.get("balance")),
-                    None,
-                ) {
-                    let fmt = format_grouped_number(credits as f64);
-                    lines.push(format!("Cost per call: {fmt} credits"));
-                }
+            if let Some(usage_line) = included_usage_line(customer) {
+                lines.push(usage_line);
             }
-            lines.push(String::new());
-            lines.push(commands_line(&["topup", "upgrade"]));
+            if let Some(next) = next_call_line(active, customer) {
+                lines.push(next);
+            }
+            lines.push(docs_line());
         }
     }
-    let mut links = Vec::new();
-    if let Some(portal) = hosted_portal_link(data) {
-        links.push(portal);
+    if let Some(checkout) = checkout_line(data) {
+        lines.push(checkout);
     }
-    narrate_manage_output(lines.join("\n"), links)
+    narrate_manage_output(lines.join("\n"), recovery_links(data))
+}
+
+fn included_usage_line(customer: Option<&Value>) -> Option<String> {
+    let usage = customer?.get("usage")?;
+    if usage.is_null() {
+        return None;
+    }
+    let used = usage.get("used").and_then(Value::as_f64)?;
+    let total = usage
+        .get("total")
+        .or_else(|| usage.get("included"))
+        .and_then(Value::as_f64)?;
+    let remaining = usage
+        .get("remaining")
+        .and_then(Value::as_f64)
+        .unwrap_or_else(|| (total - used).max(0.0));
+    Some(format!(
+        "Used {} of {} this period · {} remaining",
+        format_grouped_number(used),
+        format_grouped_number(total),
+        format_grouped_number(remaining)
+    ))
+}
+
+fn next_call_line(active: &Value, _customer: Option<&Value>) -> Option<String> {
+    let plan = active.get("planSnapshot")?;
+    let rate = usage_rate(Some(plan), None)?;
+    if rate.amount_minor <= 0.0 {
+        return None;
+    }
+    let money = format_money(Some(rate.amount_minor), Some(&rate.currency))?;
+    Some(format!("Next call: {money}"))
 }
 
 /// Narrate `upgrade`.
@@ -351,9 +407,11 @@ pub fn narrate_upgrade(data: &Value) -> Value {
         lines.push("Plans available:".to_owned());
         lines.extend(plans_list_lines(&plans));
     }
-    lines.push(String::new());
-    lines.push(commands_line(&["manage_account", "topup"]));
-    narrator_output(lines.join("\n"), Vec::new())
+    if let Some(checkout) = checkout_line(data) {
+        lines.push(checkout);
+    }
+    lines.push(docs_line());
+    narrator_output(lines.join("\n"), recovery_links(data))
 }
 
 /// Narrate `topup`.
@@ -378,9 +436,11 @@ pub fn narrate_topup(data: &Value) -> Value {
     if !presets.is_empty() {
         lines.push(format!("Top-up presets: {}", presets.join(" · ")));
     }
-    lines.push(String::new());
-    lines.push(commands_line(&["manage_account"]));
-    narrator_output(lines.join("\n"), Vec::new())
+    if let Some(checkout) = checkout_line(data) {
+        lines.push(checkout);
+    }
+    lines.push(docs_line());
+    narrator_output(lines.join("\n"), recovery_links(data))
 }
 
 /// Narrate `activate_plan`.
@@ -401,9 +461,11 @@ pub fn narrate_activate_plan(data: &Value) -> Value {
         lines.push("Plans available:".to_owned());
         lines.extend(plans_list_lines(&plans));
     }
-    lines.push(String::new());
-    lines.push(commands_line(&["manage_account", "topup"]));
-    narrator_output(lines.join("\n"), Vec::new())
+    if let Some(checkout) = checkout_line(data) {
+        lines.push(checkout);
+    }
+    lines.push(docs_line());
+    narrator_output(lines.join("\n"), recovery_links(data))
 }
 
 fn opened_verb(tool: &str, name: &str) -> String {
@@ -416,27 +478,31 @@ fn opened_verb(tool: &str, name: &str) -> String {
     }
 }
 
-fn panel_shown(tool: &str) -> &'static str {
-    match tool {
-        "topup" => "Top-up options are shown in the panel.",
-        "upgrade" => "Plans and checkout are shown in the panel.",
-        "manage_account" => "Account details are shown in the panel.",
-        "activate_plan" => "Plan options are shown in the panel.",
-        _ => "",
-    }
-}
-
-/// One-line UI placeholder.
+/// One-line UI placeholder with plan, price, and checkout URL.
 #[must_use]
 pub fn ui_placeholder(tool: &str, data: &Value) -> String {
     let name = product_name(data);
     let mut parts = vec![opened_verb(tool, &name)];
+    if let Some(plan) = data
+        .get("plans")
+        .and_then(Value::as_array)
+        .and_then(|plans| plans.first())
+    {
+        let plan_name = plan.get("name").and_then(Value::as_str).unwrap_or("Plan");
+        let price = format_plan_prices(plan);
+        if price.is_empty() {
+            parts.push(format!("{plan_name}."));
+        } else {
+            parts.push(format!("{plan_name} · {price}."));
+        }
+    }
     if let Some(balance) = balance_summary(data.get("customer")) {
         parts.push(format!("Balance: {balance}."));
     }
-    let panel = panel_shown(tool);
-    if !panel.is_empty() {
-        parts.push(panel.to_owned());
+    if let Some(url) = http_url(data, "checkoutUrl") {
+        parts.push(format!(
+            "[Open checkout]({url}) (expires in {CHECKOUT_SESSION_TTL_MINUTES} minutes)."
+        ));
     }
     parts.join(" ")
 }
@@ -503,14 +569,14 @@ pub fn new_widget_session_id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
 
-/// Parse `mode` (`ui` / `text` / `auto`); unknown values default to `ui`.
+/// Parse `mode` (`ui` / `text` / `auto`); unknown values default to `auto`.
 #[must_use]
 pub fn parse_mode(raw: Option<&str>) -> &'static str {
     match raw {
         Some("ui") => "ui",
         Some("text") => "text",
         Some("auto") => "auto",
-        _ => "ui",
+        _ => "auto",
     }
 }
 
@@ -576,7 +642,6 @@ pub fn narrated_tool_result(
     let narrated_block = json!({
         "type": "text",
         "text": text,
-        "annotations": { "audience": ["assistant"] },
     });
     let resource_links: Vec<Value> = links
         .into_iter()
@@ -585,7 +650,6 @@ pub fn narrated_tool_result(
                 "type": "resource_link",
                 "uri": link.get("uri"),
                 "name": link.get("name"),
-                "annotations": { "audience": ["user"] },
             })
         })
         .collect();
@@ -593,12 +657,12 @@ pub fn narrated_tool_result(
         "type": "text",
         "text": ui_placeholder(tool, data),
     });
-    let content = if mode == "text" {
+    let content = if mode == "ui" {
+        vec![placeholder_block, narrated_block]
+    } else {
         let mut blocks = vec![narrated_block];
         blocks.extend(resource_links);
         blocks
-    } else {
-        vec![placeholder_block, narrated_block]
     };
     let meta = if mode == "text" {
         strip_ui_meta(base_meta)

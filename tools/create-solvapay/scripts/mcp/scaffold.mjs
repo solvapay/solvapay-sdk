@@ -52,6 +52,7 @@ import {
 // approach returned `/C:/...` on Windows and broke once published to npm.
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BASE_TEMPLATE_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', 'ts', '_base')
+const SHARED_SCRIPTS_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', '_shared', 'scripts')
 const OPENAPI_OVERLAY_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', 'ts', 'from-openapi')
 
 const VALID_AUTH_KINDS = new Set([
@@ -119,6 +120,7 @@ async function main() {
   await copyDir(BASE_TEMPLATE_DIR, target, {
     substitutions,
   })
+  await copyDir(SHARED_SCRIPTS_DIR, join(target, 'scripts'), { substitutions })
   await applyOpenApiOverlay(target, substitutions)
 
   const generated = []

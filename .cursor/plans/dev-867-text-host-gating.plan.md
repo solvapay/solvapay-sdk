@@ -218,3 +218,7 @@ Kept verbatim as the acceptance source:
 > - Paywall copy should be user-facing, not agent-facing: "You've used 3 of 3 free merchant lookups. Next lookup is $0.02. Continue with pay as you go." The first gate we hit was "no active plan / call upgrade," which is wrong if they were already on Free.
 > - PAYG at $0 balance: if activation is top-up-first, say that in the same message and include the top-up URL plus presets. Don't open a second invisible panel.
 > - Host-compat checklist: iframe optional, https checkout required, plan refs required, usage counters required, one-shot recovery (no tool hop).
+
+## Port note (Rust-core rewrite)
+
+§10 (handshake capability detection, DEV-869) and §11 (URL-mode elicitation, DEV-870) stay out of scope. Implementation of §1–§9 lives in `core/solvapay-core` (`paywall_state.rs`, `paywall_gate.rs`) and `core/solvapay-mcp` (`narrate.rs`, `descriptors.rs`), not in the deleted `packages/` layout.

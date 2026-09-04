@@ -16,7 +16,7 @@ def parse_mode(raw: object) -> SolvaPayToolMode:
         return "text"
     if raw == "auto":
         return "auto"
-    return "ui"
+    return "auto"
 
 
 def tool_result(data: object) -> dict[str, object]:
@@ -49,7 +49,7 @@ def preview_json(value: object, max_len: int = 400) -> str:
 def narrated_tool_result(
     tool: str,
     data: Mapping[str, object],
-    mode: SolvaPayToolMode = "ui",
+    mode: SolvaPayToolMode = "auto",
     base_meta: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {

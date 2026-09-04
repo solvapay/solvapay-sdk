@@ -795,7 +795,7 @@ mod tests {
     #[test]
     fn corpus_count_round_trip_and_assert() {
         let count = solvapay_fh_fixture_count();
-        assert_eq!(count, 696, "parsed fixture census");
+        assert_eq!(count, 698, "parsed fixture census");
 
         let mut classify_index = None;
         for i in 0..count {

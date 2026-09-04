@@ -17,6 +17,6 @@
     }
   },
   "expect": {
-    "result": "Your plan needs activation before you can use this tool. Call the `activate_plan` tool to activate it, or open https://pay.test/x in a browser."
+    "result": "Your plan needs activation. [Open checkout](https://pay.test/x) to activate (expires in 15 minutes), or call the `activate_plan` tool. See docs://solvapay/overview.md."
   }
 }

@@ -110,7 +110,9 @@ pub use mcp::{
     ToolDescriptorMetadata, ToolIcon, MCP_TOOL_NAMES, PUBLIC_BASE_URL_ERROR, TOOL_FOR_VIEW,
     VIEW_FOR_TOOL,
 };
-pub use money_format::{format_grouped_major, format_major_fixed, format_price, to_major_units};
+pub use money_format::{
+    format_grouped_major, format_major_fixed, format_money_intl, format_price, to_major_units,
+};
 pub use payment::{
     attach_business_details_validation_error, project_payment_intent_result,
     project_topup_process_outcome, validate_attach_business_details_params,
@@ -126,8 +128,8 @@ pub use paywall_decision::{
 pub use paywall_gate::{build_paywall_gate, PaywallGate, PaywallGateKind, PaywallGateLimits};
 pub use paywall_payload::{paywall_client_payload, PaywallClientPayload};
 pub use paywall_state::{
-    build_gate_message, build_nudge_message, classify_paywall_state, GateContent, PaywallBalance,
-    PaywallLimits, PaywallPlanSummary, PaywallState,
+    build_gate_message, build_nudge_message, classify_paywall_state, GateContent, IncludedUsage,
+    PaywallBalance, PaywallLimits, PaywallPlanSummary, PaywallState,
 };
 pub use plans::validate_list_plans_params;
 pub use pricing_options::{

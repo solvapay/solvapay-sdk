@@ -36,11 +36,7 @@ describe('rewriteManifest', () => {
 
   it('pins go.mod module versions', () => {
     const raw = `module example.com/demo\n\nrequire github.com/solvapay/solvapay-go v0.0.0\n`
-    const out = rewriteManifest(
-      'go',
-      raw,
-      new Map([['github.com/solvapay/solvapay-go', 'v0.2.0']]),
-    )
+    const out = rewriteManifest('go', raw, new Map([['github.com/solvapay/solvapay-go', 'v0.2.0']]))
     expect(out).toContain('github.com/solvapay/solvapay-go v0.2.0')
   })
 })

@@ -6,7 +6,10 @@ const SNAKE_RE = /[^a-z0-9]+/g
 
 export function snakeCase(value: string): string {
   const fromCamel = value.replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-  const cleaned = fromCamel.toLowerCase().replace(SNAKE_RE, '_').replace(/^_+|_+$/g, '')
+  const cleaned = fromCamel
+    .toLowerCase()
+    .replace(SNAKE_RE, '_')
+    .replace(/^_+|_+$/g, '')
   return cleaned || 'app'
 }
 

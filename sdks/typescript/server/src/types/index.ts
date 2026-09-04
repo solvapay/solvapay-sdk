@@ -44,6 +44,7 @@ export type {
   LimitPlanSummary,
   PaywallArgs,
   PaywallDecision,
+  PaywallGateRecoveryFields,
   PaywallMetadata,
   PaywallStructuredContent,
   PaywallToolResult,

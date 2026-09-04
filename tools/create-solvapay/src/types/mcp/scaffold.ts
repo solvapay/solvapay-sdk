@@ -40,6 +40,7 @@ function resolvePackageRoot(startFile: string): string {
 
 const PACKAGE_ROOT = resolvePackageRoot(fileURLToPath(import.meta.url))
 export const MCP_TS_TEMPLATE_ROOT = join(PACKAGE_ROOT, 'templates', 'mcp', 'ts')
+export const MCP_SHARED_SCRIPTS_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', '_shared', 'scripts')
 export const BASE_TEMPLATE_DIR = join(MCP_TS_TEMPLATE_ROOT, '_base')
 export const FROM_OPENAPI_OVERLAY_DIR = join(MCP_TS_TEMPLATE_ROOT, 'from-openapi')
 export const FROM_SCRATCH_OVERLAY_DIR = join(MCP_TS_TEMPLATE_ROOT, 'from-scratch')

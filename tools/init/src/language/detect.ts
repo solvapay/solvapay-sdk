@@ -1,11 +1,7 @@
 import { access } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import path from 'node:path'
-import {
-  LANGUAGE_MANIFESTS,
-  SCAFFOLD_LANGUAGES,
-  type ScaffoldLanguage,
-} from './ids'
+import { LANGUAGE_MANIFESTS, SCAFFOLD_LANGUAGES, type ScaffoldLanguage } from './ids'
 
 export type LanguageDetection =
   | { status: 'detected'; language: ScaffoldLanguage }

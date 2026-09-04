@@ -53,6 +53,14 @@ async fn mcp_bootstrap_unauthenticated_matches_widget_placeholders() {
         })))
         .mount(&server)
         .await;
+    Mock::given(method("POST"))
+        .and(path("/v1/sdk/checkout-sessions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "checkoutUrl": "https://checkout.example/s",
+            "sessionId": "cs_1"
+        })))
+        .mount(&server)
+        .await;
 
     let got = client(&server)
         .mcp_bootstrap(McpBootstrapParams {
@@ -72,6 +80,8 @@ async fn mcp_bootstrap_unauthenticated_matches_widget_placeholders() {
     assert_eq!(got["product"]["name"], "Demo");
     assert_eq!(got["plans"][0]["name"], "Pro");
     assert_eq!(got["customer"], Value::Null);
+    assert_eq!(got["checkoutUrl"], "https://checkout.example/s");
+    assert_eq!(got["portalUrl"], Value::Null);
     assert!(got["merchant"].get("identityDisplay").is_some());
     assert!(got["taxIdFields"]["DE"]["label"].is_string());
 }

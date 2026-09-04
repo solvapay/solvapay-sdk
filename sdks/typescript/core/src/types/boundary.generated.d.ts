@@ -462,6 +462,24 @@ export type GateNextOutput = {
 }
 
 /**
+ * Included-usage counters emitted on gates when `freeUnits` is a positive cap.
+ */
+export type IncludedUsage = {
+  /**
+   * Included units for the period (`freeUnits`).
+   */
+  total: number
+  /**
+   * Derived as `max(0, total - remaining)`.
+   */
+  used: number
+  /**
+   * Remaining included units from the limits response.
+   */
+  remaining: number
+}
+
+/**
  * Next host action or a formatted tool result.
  */
 export type InvokePayableAction =

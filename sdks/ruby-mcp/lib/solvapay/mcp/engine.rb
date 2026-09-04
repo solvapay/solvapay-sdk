@@ -28,7 +28,7 @@ module SolvaPay
       end
 
       def register_payable(name, product:, handler:, get_customer_ref: nil, usage_type: "requests",
-                           title: nil, description: nil, input_schema: nil, annotations: nil)
+                           title: nil, description: nil, input_schema: nil, output_schema: nil, annotations: nil)
         raise ArgumentError, "tool name is required" if name.nil? || name.empty?
         raise ArgumentError, "product is required" if product.nil? || product.empty?
         raise ArgumentError, "handler is required" if handler.nil?
@@ -42,6 +42,7 @@ module SolvaPay
             title: title,
             description: description,
             input_schema: input_schema,
+            output_schema: output_schema,
             annotations: annotations,
           }
         end
@@ -160,6 +161,7 @@ module SolvaPay
           entry["title"] = spec[:title] unless spec[:title].nil?
           entry["description"] = spec[:description] unless spec[:description].nil?
           entry["inputSchema"] = spec[:input_schema] unless spec[:input_schema].nil?
+          entry["outputSchema"] = spec[:output_schema] unless spec[:output_schema].nil?
           entry["annotations"] = spec[:annotations] unless spec[:annotations].nil?
           entry
         end

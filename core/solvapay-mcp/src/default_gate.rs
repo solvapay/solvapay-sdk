@@ -36,5 +36,6 @@ pub fn mcp_default_gate(product: &str, reason: Option<&str>) -> PaywallGate {
         plans: None,
         balance: None,
         product_details: None,
+        ..PaywallGate::default()
     }
 }

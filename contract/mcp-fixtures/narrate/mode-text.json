@@ -72,12 +72,7 @@
       "content": [
         {
           "type": "text",
-          "text": "**Acme Knowledge Base — your account**\n\nPlan: Unlimited · $500.00/monthly · renews May 1, 2026\nBalance: 100 credits (~$0.01)\n\nCommands: `/topup` `/upgrade`",
-          "annotations": {
-            "audience": [
-              "assistant"
-            ]
-          }
+          "text": "**Acme Knowledge Base — your account**\n\nPlan: Unlimited · $500.00/monthly · renews May 1, 2026\nBalance: 100 credits (~$0.01)\nDocs: docs://solvapay/overview.md"
         }
       ],
       "structuredContent": {

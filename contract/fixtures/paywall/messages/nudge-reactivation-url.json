@@ -15,6 +15,6 @@
     }
   },
   "expect": {
-    "result": "Heads up — your plan is no longer active. Call the `manage_account` tool to reactivate it, or visit https://pay.test/x."
+    "result": "Heads up — your plan is no longer active. Call the `manage_account` tool to reactivate it, or [Open checkout](https://pay.test/x)."
   }
 }

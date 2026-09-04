@@ -15,6 +15,6 @@
     }
   },
   "expect": {
-    "result": "Heads up — running low on credits. Call the `topup` tool to add more, or visit https://pay.test/x."
+    "result": "Heads up — running low on credits. Call the `topup` tool to add more, or [Open checkout](https://pay.test/x)."
   }
 }

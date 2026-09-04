@@ -9,6 +9,38 @@
       "publicBaseUrl": "https://app.example.com"
     }
   },
+  "http": [
+    {
+      "method": "GET",
+      "path": "/v1/sdk/platform-config",
+      "status": 200,
+      "body": { "stripePublishableKey": "pk_test" }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sdk/merchant",
+      "status": 200,
+      "body": { "displayName": "Acme" }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sdk/products/prd_demo",
+      "status": 200,
+      "body": { "name": "Demo" }
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sdk/products/prd_demo/plans",
+      "status": 200,
+      "body": { "plans": [{ "name": "Pro" }] }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sdk/checkout-sessions",
+      "status": 200,
+      "body": { "checkoutUrl": "https://checkout.example/s", "sessionId": "cs_1" }
+    }
+  ],
   "expect": {
     "result": {
       "view": "account",
@@ -40,6 +72,8 @@
         }
       ],
       "customer": null,
+      "checkoutUrl": "https://checkout.example/s",
+      "portalUrl": null,
       "taxIdFields": {
         "AT": {
           "label": "VAT ID",

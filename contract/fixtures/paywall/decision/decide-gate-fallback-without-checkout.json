@@ -16,7 +16,7 @@
         "kind": "payment_required",
         "product": "prd_demo",
         "checkoutUrl": "",
-        "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan.",
+        "message": "You don't have an active plan for this tool. Call the `upgrade` tool. See docs://solvapay/overview.md.",
         "shortMessage": "Payment required"
       }
     }

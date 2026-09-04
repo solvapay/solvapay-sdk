@@ -36,7 +36,7 @@
   },
   "expect": {
     "result": {
-      "text": "**Top up — Acme Knowledge Base**\n\nBalance: 865,500 credits (~$86.55)\nTop-up presets: $10.00 · $25.00 · $50.00 · $100.00\n\nCommands: `/manage_account`"
+      "text": "**Top up — Acme Knowledge Base**\n\nBalance: 865,500 credits (~$86.55)\nTop-up presets: $10.00 · $25.00 · $50.00 · $100.00\nDocs: docs://solvapay/overview.md"
     }
   }
 }

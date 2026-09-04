@@ -426,6 +426,8 @@ const NON_CLIENT_FIXTURES = [
   'paywall/classification/needs-upgrade-flag.json',
   'paywall/classification/null-limits.json',
   'paywall/classification/plans-none-match.json',
+  'paywall/classification/recurring-at-cap-with-counters.json',
+  'paywall/classification/recurring-at-cap-without-free-units.json',
   'paywall/classification/recurring-at-cap.json',
   'paywall/classification/usage-based-nested-balance-0.json',
   'paywall/classification/usage-based-nonzero-balance.json',

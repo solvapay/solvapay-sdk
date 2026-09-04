@@ -17,7 +17,7 @@ const UI_ONLY_PREFIX: &str =
 
 /// Trailing mode hint appended to intent-tool / activate_plan descriptions.
 const MODE_HINT: &str =
-    " By default renders the UI iframe with a one-line placeholder; pass `mode: 'text'` for a markdown-only summary on CLI / text-only hosts, or `mode: 'auto'` to include both.";
+    " By default (`mode: 'auto'`) returns a markdown summary with plan refs and a checkout URL and still opens the UI iframe on hosts that support it; pass `mode: 'text'` for markdown only, or `mode: 'ui'` for the iframe plus a one-line placeholder.";
 
 /// Default enabled views when the caller omits `views`.
 const DEFAULT_VIEWS: &[&str] = &["checkout", "account", "topup"];

@@ -1,10 +1,13 @@
 import { createSolvaPay, createSolvaPayClient } from '@solvapay/server'
+import { createStubClient } from '../../shared/stub-api-client'
 
 export const port = parseInt(process.env.MCP_PORT || '3006', 10)
 export const host = process.env.MCP_HOST || '127.0.0.1'
 export const mcpPublicBaseUrl = process.env.MCP_PUBLIC_BASE_URL || `http://localhost:${port}`
 export const solvapayApiBaseUrl = process.env.SOLVAPAY_API_BASE_URL || 'http://localhost:3010'
-export const solvapayProductRef = process.env.SOLVAPAY_PRODUCT_REF || ''
+export const stubMode = process.env.SOLVAPAY_STUB === '1'
+export const solvapayProductRef =
+  process.env.SOLVAPAY_PRODUCT_REF || (stubMode ? 'prd_stub_demo' : '')
 
 /**
  * Origin used when declaring CSP `connectDomains` on the app resource.
@@ -34,17 +37,31 @@ export const mcpAssetOrigins = (process.env.MCP_ASSET_ORIGINS ?? '')
   .map(entry => entry.trim())
   .filter(Boolean)
 
-if (!process.env.SOLVAPAY_SECRET_KEY) {
+if (!stubMode && !process.env.SOLVAPAY_SECRET_KEY) {
   throw new Error('SOLVAPAY_SECRET_KEY is required for mcp-checkout-app')
 }
 
-if (!solvapayProductRef) {
+if (!stubMode && !solvapayProductRef) {
   throw new Error('SOLVAPAY_PRODUCT_REF is required for mcp-checkout-app')
 }
 
-export const solvaPay = createSolvaPay({
-  apiClient: createSolvaPayClient({
-    apiKey: process.env.SOLVAPAY_SECRET_KEY,
-    apiBaseUrl: solvapayApiBaseUrl,
-  }),
-})
+export const solvaPay = stubMode
+  ? createSolvaPay({
+      apiClient: createStubClient({
+        freeTierLimit: 3,
+        debug: true,
+      }),
+      limitsCacheTTL: 0,
+    })
+  : createSolvaPay({
+      apiClient: createSolvaPayClient({
+        apiKey: process.env.SOLVAPAY_SECRET_KEY,
+        apiBaseUrl: solvapayApiBaseUrl,
+      }),
+    })
+
+if (stubMode) {
+  console.warn(
+    '[mcp-checkout-app] SOLVAPAY_STUB=1: using the in-process stub client. No real charges occur.',
+  )
+}

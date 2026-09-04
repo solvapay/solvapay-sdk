@@ -74,16 +74,16 @@ describe('classifyPaywallState', () => {
     expect(state).toEqual({ kind: 'topup_required' })
   })
 
-  it('returns upgrade_required when there is no resolvable plan', () => {
+  it('returns limit_reached when a plan ref is set even if the catalog is empty', () => {
     const state = classifyPaywallState(limits({ plan: 'free', plans: [] }))
-    expect(state).toEqual({ kind: 'upgrade_required' })
+    expect(state).toEqual({ kind: 'limit_reached' })
   })
 
   it('returns upgrade_required when limits is null', () => {
     expect(classifyPaywallState(null)).toEqual({ kind: 'upgrade_required' })
   })
 
-  it('returns upgrade_required when on a recurring plan at period cap', () => {
+  it('returns limit_reached when on a recurring plan at period cap', () => {
     const state = classifyPaywallState(
       limits({
         plan: 'pln_rec',
@@ -100,7 +100,7 @@ describe('classifyPaywallState', () => {
         remaining: 0,
       }),
     )
-    expect(state).toEqual({ kind: 'upgrade_required' })
+    expect(state).toEqual({ kind: 'limit_reached' })
   })
 
   it('returns topup_required for an exhausted usage-based plan even when the response omits the balance block', () => {

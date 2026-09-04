@@ -115,6 +115,10 @@ pub struct PayableToolSpec {
     /// Optional `_meta`. Omitted from `tools/list` when absent.
     #[serde(default, rename = "_meta")]
     pub meta: Option<Value>,
+    /// Optional JSON Schema for `structuredContent`. Omitted from `tools/list` when
+    /// absent — a paywall-only default would reject successful payable payloads.
+    #[serde(default)]
+    pub output_schema: Option<Value>,
 }
 
 /// Engine server config.
@@ -359,6 +363,9 @@ fn payable_list_item(spec: &PayableToolSpec) -> Value {
     if let Some(meta) = &spec.meta {
         item["_meta"] = meta.clone();
     }
+    if let Some(output_schema) = &spec.output_schema {
+        item["outputSchema"] = output_schema.clone();
+    }
     with_legacy_ui_meta(item)
 }
 
@@ -384,14 +391,18 @@ fn tool_list_item(tool: &crate::descriptors::McpToolDescriptor) -> Value {
         .as_deref()
         .filter(|s| !s.is_empty())
         .unwrap_or(tool.name.as_str());
-    with_legacy_ui_meta(json!({
+    let mut item = json!({
         "name": tool.name,
         "title": title,
         "description": tool.description,
         "inputSchema": tool.input_schema,
         "annotations": tool.annotations,
         "_meta": tool.meta,
-    }))
+    });
+    if let Some(output_schema) = &tool.output_schema {
+        item["outputSchema"] = output_schema.clone();
+    }
+    with_legacy_ui_meta(item)
 }
 
 fn catalog_tools(config: &EngineConfig) -> Result<Vec<Value>, String> {
@@ -800,6 +811,7 @@ mod tests {
         );
         assert!(echo.get("annotations").is_none());
         assert!(echo.get("_meta").is_none());
+        assert!(echo["outputSchema"]["oneOf"].is_array());
     }
 
     #[test]

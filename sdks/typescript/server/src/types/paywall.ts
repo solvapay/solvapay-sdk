@@ -24,7 +24,18 @@ export type PaywallState =
   | { kind: 'activation_required' }
   | { kind: 'topup_required' }
   | { kind: 'upgrade_required' }
+  | { kind: 'limit_reached' }
   | { kind: 'reactivation_required' }
+
+export type PaywallGateRecoveryFields = {
+  planRef?: string
+  plans?: LimitPlanSummary[]
+  meterName?: string
+  unitPriceMinor?: number
+  currency?: string
+  included?: { total: number; used: number; remaining: number }
+  creditBalance?: number
+}
 
 /**
  * Arguments passed to protected handlers
@@ -51,7 +62,7 @@ export interface PaywallMetadata {
  * Structured content for paywall errors (MCP structuredContent and manual handling).
  */
 export type PaywallStructuredContent =
-  | {
+  | ({
       kind: 'payment_required'
       /** Product ref from paywall metadata (or env default) */
       product: string
@@ -68,8 +79,8 @@ export type PaywallStructuredContent =
       balance?: LimitActivationBalance
       /** Rich product context from checkLimits (name, ref, provider slug/id) */
       productDetails?: LimitActivationProduct
-    }
-  | {
+    } & PaywallGateRecoveryFields)
+  | ({
       kind: 'activation_required'
       /** Product ref from paywall metadata (or env default) */
       product: string
@@ -85,7 +96,7 @@ export type PaywallStructuredContent =
       balance?: LimitActivationBalance
       /** Rich product context from checkLimits (name, ref, provider slug/id) */
       productDetails?: LimitActivationProduct
-    }
+    } & PaywallGateRecoveryFields)
 
 /**
  * MCP tool result with optional paywall information — structural copy

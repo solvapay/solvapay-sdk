@@ -38,7 +38,8 @@ type DescriptorTool struct {
 	Name        string          `json:"name"`
 	Title       string          `json:"title,omitempty"`
 	Description string          `json:"description"`
-	InputSchema json.RawMessage `json:"inputSchema"`
+	InputSchema  json.RawMessage `json:"inputSchema"`
+	OutputSchema json.RawMessage `json:"outputSchema,omitempty"`
 	Annotations json.RawMessage `json:"annotations"`
 	Meta        json.RawMessage `json:"meta"`
 	Icons       json.RawMessage `json:"icons,omitempty"`

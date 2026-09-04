@@ -12,7 +12,7 @@ Go share a lockstep version owned by the private sentinel
 
 - **Preview** — dispatch [`.github/workflows/publish-preview.yml`](../.github/workflows/publish-preview.yml) with `dry_run=false` to ship snapshot versions on the `@preview` dist-tag. Pushing to `dev` does not publish.
 - **Stable npm** — push to `main` runs [`.github/workflows/publish.yml`](../.github/workflows/publish.yml). Pending changesets open a "Version Packages" PR; merging that PR with an empty `.changeset/` publishes to `@latest` and pushes npm tags.
-- **Lockstep train** — that same Version Packages PR bumps `@solvapay/release-train`. `pnpm changeset:version` stamps Cargo / `pyproject.toml` / `version.rb`. Production `solvapay-<lang>-v*` tags are **not** pushed yet. Wiring sketch: [production-release.md](./contributing/production-release.md).
+- **Lockstep train** — that same Version Packages PR bumps `@solvapay/release-train`. `pnpm changeset:version` stamps Cargo / `pyproject.toml` / `version.rb`. After npm verify, `publish.yml` pushes `solvapay-<lang>-v*` when the sentinel moved and `vars.RELEASE_PROD_*` is on. Runbook: [production-release.md](./contributing/production-release.md).
 - **Rehearsal** — [`.github/workflows/push-rehearsal-tags.yml`](../.github/workflows/push-rehearsal-tags.yml) pushes `rehearsal/solvapay-<lang>-v*` tags. Runbook: [language-previews.md](./contributing/language-previews.md). A private sandbox fork is a separate setup: [release-sandbox.md](./contributing/release-sandbox.md).
 
 Authoring rules (bump levels, `workspace:^` peers, `pnpm changeset status --verbose`) live in [`CONTRIBUTING.md`](../CONTRIBUTING.md) and [`.cursor/rules/monorepo-versioning.mdc`](../.cursor/rules/monorepo-versioning.mdc). Do not duplicate them here.
@@ -143,13 +143,12 @@ work to `main` opens a Version Packages PR that will publish **all of it**
 when that PR merges. Review that PR as a conscious release, not a side
 effect of the train work.
 
-### Phase 3 (not implemented here)
+### Phase 3 (production tags)
 
-See [production-release.md](./contributing/production-release.md). When
-rehearsals are boring, add one step to the publish leg of `publish.yml`,
-gated on `steps.changesets.outputs.published == 'true'`, that pushes the four
-production tags with the release-bot App token. Enable one ecosystem at a
-time; crates.io last.
+See [production-release.md](./contributing/production-release.md). The
+publish leg of `publish.yml` pushes production language tags after npm
+verify when the sentinel moved. Flip `vars.RELEASE_PROD_*` one ecosystem
+at a time after rehearsal is green; crates.io last.
 
 ## Why npm can diverge from this workspace
 

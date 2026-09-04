@@ -86,6 +86,7 @@ mod tests {
             plans: None,
             balance: None,
             product_details: None,
+            ..PaywallGate::default()
         };
         let err = SdkError::paywall("Payment required", gate);
         let env = parse_envelope(&err_envelope(&err));

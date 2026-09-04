@@ -328,6 +328,9 @@ export class StubSolvaPayClient implements SolvaPayClient {
     meterName?: string
     checkoutSessionId?: string
     checkoutUrl?: string
+    plans?: Awaited<ReturnType<StubSolvaPayClient['listPlans']>>
+    product?: { name: string; ref: string }
+    balance?: { creditBalance: number }
   }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.checkLimits))
@@ -345,6 +348,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       if (customer?.plan === 'pro' || customer?.plan === 'premium') {
         this.log(`✅ Customer has ${customer.plan} plan with unlimited access`)
         return {
+          ...(await this.limitsRecovery(params.productRef, customer.credits)),
           withinLimits: true,
           remaining: 999999,
           plan: customer.plan,
@@ -356,6 +360,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
       if (customer && customer.credits > 0) {
         this.log(`✅ Customer has paid access with ${customer.credits} credits`)
         return {
+          ...(await this.limitsRecovery(params.productRef, customer.credits)),
           withinLimits: true,
           remaining: customer.credits,
           plan: customer.plan || 'paid',
@@ -379,6 +384,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
           `🆕 Reset daily counter for ${params.customerRef}, remaining: ${this.freeTierLimit - 1}`,
         )
         return {
+          ...(await this.limitsRecovery(params.productRef, 0)),
           withinLimits: true,
           remaining: this.freeTierLimit - 1,
           plan: 'free',
@@ -400,13 +406,13 @@ export class StubSolvaPayClient implements SolvaPayClient {
       const remaining = Math.max(0, this.freeTierLimit - usage.count)
 
       const result = {
+        ...(await this.limitsRecovery(params.productRef, 0)),
         withinLimits,
         remaining,
         plan: 'free',
         meterName: 'api_requests' as string | undefined,
       }
 
-      // Add checkout URL if limits exceeded
       if (!withinLimits) {
         return {
           ...result,
@@ -955,6 +961,28 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Helper method: Set customer plan (for testing)
    */
+  private async limitsRecovery(
+    productRef: string,
+    creditBalance: number,
+  ): Promise<{
+    plans: Awaited<ReturnType<StubSolvaPayClient['listPlans']>>
+    product: { name: string; ref: string }
+    balance: { creditBalance: number }
+  }> {
+    const plans = await this.listPlans(productRef)
+    const withCounters = plans.map(plan => {
+      if (plan.reference === 'plan_free' || plan.name === 'Free') {
+        return { ...plan, reference: 'free', freeUnits: this.freeTierLimit, perUnitChargeMinor: 2 }
+      }
+      return { ...plan, perUnitChargeMinor: plan.price }
+    }) as Awaited<ReturnType<StubSolvaPayClient['listPlans']>>
+    return {
+      plans: withCounters,
+      product: { name: 'Demo', ref: productRef },
+      balance: { creditBalance },
+    }
+  }
+
   async setPlan(customerRef: string, plan: 'free' | 'pro' | 'premium'): Promise<void> {
     const customerData = await this.loadCustomerData()
     if (!customerData[customerRef]) {
@@ -1108,6 +1136,22 @@ export class StubSolvaPayClient implements SolvaPayClient {
     const reference = `prd_${Math.random().toString(36).slice(2, 10)}`
     const name = overrides?.name || `Clone of ${productRef}`
     return { reference, name }
+  }
+
+  /**
+   * Stub MCP bearer decision. Discovery is anonymous. `tools/call` is
+   * allowed with a synthetic customer so `SOLVAPAY_STUB=1` can trip a
+   * paywall without OAuth credentials.
+   */
+  async mcpResolveAuth(params: { rpcMethod?: string; authHeader?: string | null }): Promise<{
+    kind: 'allow'
+    authInfo: null
+    customerRef: string | null
+  }> {
+    const method = params.rpcMethod ?? ''
+    const customerRef = method === 'tools/call' ? 'cus_stub' : null
+    this.log(`🔐 mcpResolveAuth ${method || '(none)'} → allow customerRef=${customerRef ?? 'null'}`)
+    return { kind: 'allow', authInfo: null, customerRef }
   }
 
   /**

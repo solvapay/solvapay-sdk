@@ -48,6 +48,7 @@ fn register_payable_tool_and_response_context_surface() {
                 "customer_ref".to_owned(),
                 json!({ "type": "string" }),
             )])),
+            output_schema: None,
             usage_type: None,
         },
         handler,

@@ -102,6 +102,7 @@ export function buildSolvaPayDescriptors(
     ...(tool.title !== undefined ? { title: tool.title } : {}),
     description: tool.description,
     inputSchema: {},
+    ...(tool.outputSchema !== undefined ? { outputSchema: tool.outputSchema } : {}),
     meta: tool.meta,
     annotations: tool.annotations as SolvaPayToolDescriptor['annotations'],
     ...(tool.icons !== undefined ? { icons: tool.icons as SolvaPayToolDescriptor['icons'] } : {}),

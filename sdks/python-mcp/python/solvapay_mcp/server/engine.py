@@ -100,6 +100,11 @@ async def dispatch_rpc(
             **({"title": spec.title} if spec.title is not None else {}),
             **({"description": spec.description} if spec.description is not None else {}),
             "inputSchema": spec.input_schema,
+            **(
+                {"outputSchema": spec.output_schema}
+                if getattr(spec, "output_schema", None) is not None
+                else {}
+            ),
         }
         for name, spec in sorted(registry.items(), key=lambda item: item[0])
     ]

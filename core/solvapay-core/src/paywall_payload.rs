@@ -126,6 +126,7 @@ mod tests {
             plans: None,
             balance: None,
             product_details: None,
+            ..PaywallGate::default()
         }
     }
 
@@ -140,6 +141,7 @@ mod tests {
             plans: None,
             balance: None,
             product_details: None,
+            ..PaywallGate::default()
         }
     }
 

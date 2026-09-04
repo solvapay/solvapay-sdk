@@ -140,7 +140,7 @@ describe('paywall bindings', () => {
         },
       }),
     ).toBe(
-      "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
+      "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
     )
   })
 

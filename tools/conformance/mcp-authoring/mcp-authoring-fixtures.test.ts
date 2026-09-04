@@ -42,6 +42,7 @@ const MCP_AUTHORING_FIXTURES = [
   'bearer-verify/wrong-audience.json',
   'bearer-verify/wrong-issuer.json',
   'bearer-verify/wrong-key.json',
+  'bootstrap/authenticated.json',
   'bootstrap/unauthenticated.json',
   'builtin-tools/activate-plan-no-ref.json',
   'builtin-tools/activate-plan.json',

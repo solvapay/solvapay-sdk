@@ -389,6 +389,7 @@ fn scripted_paywall() -> SdkError {
             plans: None,
             balance: None,
             product_details: None,
+            ..PaywallGate::default()
         },
     )
 }

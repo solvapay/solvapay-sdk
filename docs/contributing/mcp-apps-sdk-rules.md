@@ -21,10 +21,10 @@ Every payable-MCP change lands in exactly one of three layers.
 The consequences worth internalising:
 
 - **Any decision expressible as JSON-in → JSON-out belongs in layer 2.** If another language would need the same conditional, it does not go in the adapter you happen to be editing.
-- **Gate copy is never authored in an adapter.** It comes from `paywall_tool_result` / `build_paywall_gate` in Rust (`paywallToolResult` / `buildPaywallGate` at the binding boundary). A hand-written fallback string is a bug even when it reads identically.
+- **Gate copy is never authored in an adapter.** Gate copy and narration originate in `core/solvapay-core/src/paywall_state.rs` and `core/solvapay-mcp/src/narrate.rs`, then ship through `paywall_tool_result` / `build_paywall_gate`. A hand-written fallback string is a bug even when it reads identically.
 - **Layer 2 never calls back into the host.** There is no `getCustomerRef` callback into Rust; the host resolves the ref and passes it in as JSON.
 - **`mcpDispatch` is the single JSON-RPC entry point,** and hosts branch three ways on `kind` (`rpc` / `challenge` / `invokeHandler`). The one host exception is the widget `resources/read`, which goes through `mcpWidgetResource` because the engine has no access to the vendored HTML.
-- **`contract/mcp-fixtures/` is immutable characterization.** A mismatch is a runner or core regression, never a fixture edit. Focused command: `pnpm test:mcp-contract`.
+- **`contract/mcp-fixtures/` is immutable characterization.** A mismatch is a runner or core regression, not a reason to record actual output. An intentional, spec-driven re-authoring (hand-written expected JSON, called out in the commit) is the only allowed edit. Focused command: `pnpm test:mcp-contract`.
 
 See the adapter contract for the full result-shape, usage-outcome, and protocol-era tables.
 

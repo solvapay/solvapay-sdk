@@ -49,7 +49,9 @@ export function languageChoiceEntries(
 ): Array<ChoiceEntry<ScaffoldLanguage>> {
   return languages.map(id => ({
     id,
-    label: PREVIEW_LANGUAGES.includes(id) ? `${LANGUAGE_LABELS[id]} (preview)` : LANGUAGE_LABELS[id],
+    label: PREVIEW_LANGUAGES.includes(id)
+      ? `${LANGUAGE_LABELS[id]} (preview)`
+      : LANGUAGE_LABELS[id],
   }))
 }
 

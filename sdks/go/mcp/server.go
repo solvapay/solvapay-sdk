@@ -201,17 +201,22 @@ func (s *Server) registerBuiltinTool(tool DescriptorTool) {
 	if len(tool.InputSchema) > 0 && string(tool.InputSchema) != "null" {
 		inputSchema = json.RawMessage(tool.InputSchema)
 	}
+	var outputSchema any
+	if len(tool.OutputSchema) > 0 && string(tool.OutputSchema) != "null" {
+		outputSchema = json.RawMessage(tool.OutputSchema)
+	}
 	title := tool.Title
 	if title == "" {
 		title = tool.Name
 	}
 	s.MCP.AddTool(&mcpsdk.Tool{
-		Name:        tool.Name,
-		Title:       title,
-		Description: tool.Description,
-		InputSchema: inputSchema,
-		Annotations: annotations,
-		Meta:        meta,
+		Name:         tool.Name,
+		Title:        title,
+		Description:  tool.Description,
+		InputSchema:  inputSchema,
+		OutputSchema: outputSchema,
+		Annotations:  annotations,
+		Meta:         meta,
 	}, s.dispatchToolHandler(tool.Name))
 }
 

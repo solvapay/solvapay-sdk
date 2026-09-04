@@ -28,7 +28,5 @@ export function assertOpenapiLanguage(language: ScaffoldLanguage): void {
 }
 
 export function formatLanguageList(languages: readonly ScaffoldLanguage[]): string {
-  return languages
-    .map(id => (PREVIEW_LANGUAGES.includes(id) ? `${id} (preview)` : id))
-    .join(', ')
+  return languages.map(id => (PREVIEW_LANGUAGES.includes(id) ? `${id} (preview)` : id)).join(', ')
 }

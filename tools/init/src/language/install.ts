@@ -11,11 +11,7 @@ export type SdkInstallPlan = {
   missingMessage: string
 }
 
-const spawnResult = (
-  command: string,
-  args: string[],
-  cwd: string,
-): Promise<InstallResult> => {
+const spawnResult = (command: string, args: string[], cwd: string): Promise<InstallResult> => {
   const pretty = `${command} ${args.join(' ')}`
   return new Promise(resolve => {
     const child = spawn(command, args, {
@@ -34,13 +30,12 @@ const spawnResult = (
     child.stdout?.on('data', handleChunk)
     child.stderr?.on('data', handleChunk)
     child.once('error', error => {
-      const missing = error.message.includes('ENOENT') || (error as NodeJS.ErrnoException).code === 'ENOENT'
+      const missing =
+        error.message.includes('ENOENT') || (error as NodeJS.ErrnoException).code === 'ENOENT'
       resolve({
         ok: false,
         command: pretty,
-        warning: missing
-          ? `${command} is not installed`
-          : error.message,
+        warning: missing ? `${command} is not installed` : error.message,
       })
     })
     child.once('close', code => {
@@ -64,7 +59,12 @@ export function sdkInstallPlan(language: ScaffoldLanguage): SdkInstallPlan {
     case 'ts':
       return {
         command: 'npm',
-        args: ['install', '@solvapay/server@latest', '@solvapay/core@latest', '@solvapay/auth@latest'],
+        args: [
+          'install',
+          '@solvapay/server@latest',
+          '@solvapay/core@latest',
+          '@solvapay/auth@latest',
+        ],
         missingMessage:
           'npm is required to install the SolvaPay TypeScript SDK. Install Node.js from https://nodejs.org and re-run.',
       }
@@ -93,8 +93,7 @@ export function sdkInstallPlan(language: ScaffoldLanguage): SdkInstallPlan {
       return {
         command: 'cargo',
         args: ['add', 'solvapay', 'solvapay-mcp'],
-        missingMessage:
-          '`cargo` is not installed. Install Rust from https://rustup.rs and re-run.',
+        missingMessage: '`cargo` is not installed. Install Rust from https://rustup.rs and re-run.',
       }
   }
 }

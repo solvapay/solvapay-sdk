@@ -11,5 +11,5 @@
       }
     }
   },
-  "expect": { "result": { "kind": "upgrade_required" } }
+  "expect": { "result": { "kind": "limit_reached" } }
 }

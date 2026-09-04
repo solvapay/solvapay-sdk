@@ -298,6 +298,7 @@ mod tests {
             plans: None,
             balance: None,
             product_details: None,
+            ..PaywallGate::default()
         };
         let paywall = SdkError::paywall("Payment required", gate.clone());
         match &paywall {
@@ -356,6 +357,7 @@ mod tests {
             plans: Some(json!([])),
             balance: None,
             product_details: None,
+            ..PaywallGate::default()
         };
         let paywall = SdkError::paywall("Activation required", gate);
         let value = serde_json::to_value(&paywall).expect("serialize paywall");

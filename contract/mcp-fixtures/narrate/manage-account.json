@@ -62,7 +62,7 @@
   },
   "expect": {
     "result": {
-      "text": "**Welcome to Acme Knowledge Base**\n\nNo active plan. Plans available:\nFree · no payment required\nUnlimited · recurring · $500.00/month\n\nCommands: `/activate_plan` `/upgrade`",
+      "text": "**Welcome to Acme Knowledge Base**\n\nNo active plan. Plans available:\nFree · no payment required\nUnlimited · recurring · $500.00/month\nDocs: docs://solvapay/overview.md",
       "links": []
     }
   }

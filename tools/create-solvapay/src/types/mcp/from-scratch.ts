@@ -9,11 +9,17 @@ import { constants } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { detectPackageManager, resolveLatestVersions, runInitInDirectory } from '@solvapay/init'
 import type { InitCommandOptions, ScaffoldLanguage } from '@solvapay/init'
-import { applyDevPathDeps, installLanguageDependencies, namePlaceholders, patchManifest } from '../../languages'
+import {
+  applyDevPathDeps,
+  installLanguageDependencies,
+  namePlaceholders,
+  patchManifest,
+} from '../../languages'
 import {
   applyOverlay,
   assertTargetDirAbsent,
   BASE_TEMPLATE_DIR,
+  MCP_SHARED_SCRIPTS_DIR,
   copyDir,
   deriveServerName,
   FROM_SCRATCH_OVERLAY_DIR,
@@ -77,7 +83,10 @@ const DEV_PATHS = (
   sdkRoot: string,
 ): Record<string, string> | undefined => {
   // Absolute paths so `--dev` still resolves after the scaffold is moved.
-  const abs = (parts: string[]): string => join(sdkRoot, ...parts).split('\\').join('/')
+  const abs = (parts: string[]): string =>
+    join(sdkRoot, ...parts)
+      .split('\\')
+      .join('/')
   switch (language) {
     case 'python':
       return {
@@ -146,6 +155,7 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   } else {
     await copyDir(mcpLanguageTemplateDir(language), target, { substitutions })
   }
+  await copyDir(MCP_SHARED_SCRIPTS_DIR, join(target, 'scripts'), { substitutions })
 
   await writeBootstrapEnv(target, productRef ?? PLACEHOLDERS.PRODUCT_REF, {
     dev,
@@ -242,7 +252,9 @@ export async function runFromScratch(input: FromScratchInput): Promise<void> {
   if (language === 'ts') {
     process.stdout.write(`   # Edit src/tools/${toolName}.ts to replace the placeholder.\n`)
   } else {
-    process.stdout.write(`   # Edit the placeholder ${names.toolNameSnake} tool before going live.\n`)
+    process.stdout.write(
+      `   # Edit the placeholder ${names.toolNameSnake} tool before going live.\n`,
+    )
   }
 
   printConnectionSnippets({ projectName, workerUrl: publicBaseUrl })

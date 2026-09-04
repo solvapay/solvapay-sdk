@@ -8,9 +8,9 @@ from solvapay_mcp.server.results import (
 )
 
 
-def test_parse_mode_defaults_unknown_and_missing_to_ui() -> None:
-    assert parse_mode(None) == "ui"
-    assert parse_mode("nope") == "ui"
+def test_parse_mode_defaults_unknown_and_missing_to_auto() -> None:
+    assert parse_mode(None) == "auto"
+    assert parse_mode("nope") == "auto"
     assert parse_mode("text") == "text"
     assert parse_mode("auto") == "auto"
 
@@ -49,7 +49,7 @@ def test_narrated_tool_result_ui_mode_keeps_placeholder_and_ui_meta() -> None:
     assert isinstance(content, list)
     assert content[0]["type"] == "text"
     assert "Opened your Acme account." in str(content[0]["text"])
-    assert content[1]["annotations"] == {"audience": ["assistant"]}
+    assert "annotations" not in content[0]
     assert result["_meta"]["ui"]["resourceUri"] == "ui://x"
 
 

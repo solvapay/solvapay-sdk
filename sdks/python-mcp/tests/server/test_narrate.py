@@ -71,7 +71,7 @@ def test_narrate_manage_account_cold_start() -> None:
     assert "Free · no payment required" in str(text)
     assert "Starter · pay as you go" in str(text)
     assert "Unlimited · recurring · $500.00" in str(text)
-    assert "Commands: `/activate_plan` `/upgrade`" in str(text)
+    assert "Docs: docs://solvapay/overview.md" in str(text)
 
 
 def test_narrate_upgrade_lists_paid_plans() -> None:
@@ -152,4 +152,4 @@ def test_ui_placeholder_includes_balance() -> None:
     )
     assert placeholder.startswith("Opened your Acme Knowledge Base account.")
     assert "Balance:" in placeholder
-    assert "Account details are shown in the panel." in placeholder
+    assert "in the panel" not in placeholder

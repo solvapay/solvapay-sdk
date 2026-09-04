@@ -365,6 +365,7 @@ export function installEngineHandlers(
         ...(descriptor.title !== undefined ? { title: descriptor.title } : {}),
         description: descriptor.description,
         inputSchema: descriptor.inputSchema,
+        ...(descriptor.outputSchema !== undefined ? { outputSchema: descriptor.outputSchema } : {}),
         annotations: descriptor.annotations,
         _meta: meta,
         ...(descriptor.icons !== undefined ? { icons: descriptor.icons } : {}),

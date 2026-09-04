@@ -55,6 +55,7 @@ async fn engine_loop_invoke_handler_then_resume() {
             title: None,
             description: None,
             input_schema: None,
+            output_schema: None,
             usage_type: None,
         },
         handler,
@@ -134,6 +135,7 @@ async fn tools_list_includes_registered_payable_descriptor() {
                     .cloned()
                     .unwrap(),
             ),
+            output_schema: None,
             usage_type: None,
         },
         handler,

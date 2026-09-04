@@ -81,6 +81,7 @@ mod tests {
             plans: None,
             balance: None,
             product_details: None,
+            ..PaywallGate::default()
         }
     }
 
@@ -129,6 +130,7 @@ mod tests {
             plans: Some(json!([{ "reference": "pl_pro" }])),
             balance: Some(json!({ "creditBalance": 0 })),
             product_details: Some(json!({ "name": "Demo" })),
+            ..PaywallGate::default()
         };
         let value = serde_json::to_value(paywall_tool_result("activate", &gate)).unwrap();
         let sc = value.get("structuredContent").unwrap();

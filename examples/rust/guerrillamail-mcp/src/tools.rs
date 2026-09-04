@@ -130,6 +130,7 @@ fn tool_spec(
         } else {
             Some(properties)
         },
+        output_schema: None,
         usage_type: Some("requests".to_owned()),
     }
 }

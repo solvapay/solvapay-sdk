@@ -71,6 +71,9 @@ pub struct McpToolDescriptor {
     pub icons: Option<Value>,
     /// JSON Schema.
     pub input_schema: Value,
+    /// Optional output JSON Schema for `structuredContent`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_schema: Option<Value>,
 }
 
 /// Descriptor bundle (no handlers).
@@ -101,6 +104,98 @@ fn json_schema(properties: Value, required: &[&str]) -> Value {
 
 fn mode_schema() -> Value {
     json!({ "type": "string", "enum": ["ui", "text", "auto"] })
+}
+
+fn output_schema_for(name: &str) -> Option<Value> {
+    match name {
+        "upgrade" | "manage_account" | "topup" | "activate_plan" => Some(bootstrap_output_schema()),
+        _ => None,
+    }
+}
+
+fn bootstrap_output_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+            "view": { "type": "string" },
+            "productRef": { "type": "string" },
+            "checkoutUrl": { "type": ["string", "null"] },
+            "portalUrl": { "type": ["string", "null"] },
+            "plans": { "type": "array" },
+            "customer": {},
+            "product": {},
+            "merchant": {}
+        }
+    })
+}
+
+/// Gate `structuredContent` schema. Payable tools must not default to this —
+/// a success payload would fail host validation. Pass it explicitly when a
+/// tool only ever returns a gate.
+#[allow(dead_code)]
+pub(crate) fn paywall_structured_content_schema() -> Value {
+    json!({
+        "oneOf": [
+            {
+                "type": "object",
+                "required": ["kind", "product", "checkoutUrl", "message", "shortMessage"],
+                "additionalProperties": true,
+                "properties": {
+                    "kind": { "const": "payment_required" },
+                    "product": { "type": "string" },
+                    "checkoutUrl": { "type": "string" },
+                    "message": { "type": "string" },
+                    "shortMessage": { "type": "string" },
+                    "planRef": { "type": "string" },
+                    "plans": { "type": "array" },
+                    "meterName": { "type": "string" },
+                    "unitPriceMinor": { "type": "number" },
+                    "currency": { "type": "string" },
+                    "included": {
+                        "type": "object",
+                        "properties": {
+                            "total": { "type": "number" },
+                            "used": { "type": "number" },
+                            "remaining": { "type": "number" }
+                        }
+                    },
+                    "creditBalance": { "type": "number" },
+                    "balance": {},
+                    "productDetails": {}
+                }
+            },
+            {
+                "type": "object",
+                "required": ["kind", "product", "checkoutUrl", "message", "shortMessage"],
+                "additionalProperties": true,
+                "properties": {
+                    "kind": { "const": "activation_required" },
+                    "product": { "type": "string" },
+                    "checkoutUrl": { "type": "string" },
+                    "message": { "type": "string" },
+                    "shortMessage": { "type": "string" },
+                    "planRef": { "type": "string" },
+                    "plans": { "type": "array" },
+                    "meterName": { "type": "string" },
+                    "unitPriceMinor": { "type": "number" },
+                    "currency": { "type": "string" },
+                    "included": {
+                        "type": "object",
+                        "properties": {
+                            "total": { "type": "number" },
+                            "used": { "type": "number" },
+                            "remaining": { "type": "number" }
+                        }
+                    },
+                    "creditBalance": { "type": "number" },
+                    "confirmationUrl": { "type": "string" },
+                    "balance": {},
+                    "productDetails": {}
+                }
+            }
+        ]
+    })
 }
 
 fn input_schema_for(name: &str) -> Value {
@@ -182,6 +277,7 @@ fn tool_from_meta(meta: ToolDescriptorMetadata) -> McpToolDescriptor {
         meta: meta.meta,
         icons,
         input_schema: input_schema_for(&name),
+        output_schema: output_schema_for(&name),
     }
 }
 

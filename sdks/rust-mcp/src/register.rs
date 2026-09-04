@@ -55,6 +55,8 @@ pub struct PayableTool {
     pub description: Option<String>,
     /// Optional JSON Schema field map (`{ "customer_ref": { "type": "string" } }`).
     pub input_schema: Option<Map<String, Value>>,
+    /// Optional JSON Schema for `structuredContent`.
+    pub output_schema: Option<Value>,
     /// Meter / usage type (default `"requests"`).
     pub usage_type: Option<String>,
 }

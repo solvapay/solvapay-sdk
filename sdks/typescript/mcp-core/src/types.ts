@@ -201,6 +201,8 @@ export interface BootstrapPayload {
   product: BootstrapProduct
   plans: BootstrapPlan[]
   customer: BootstrapCustomer | null
+  checkoutUrl?: string | null
+  portalUrl?: string | null
   taxIdFields?: Record<
     string,
     { label?: string | null; example?: string | null; helperText?: string | null }
@@ -297,6 +299,8 @@ export interface SolvaPayToolDescriptor {
    * valued so zod stays an optional peer. Empty object = no args.
    */
   inputSchema: Record<string, ZodTypeAny>
+  /** JSON Schema for `structuredContent` when the tool declares one. */
+  outputSchema?: Record<string, unknown>
   meta?: Record<string, unknown>
   /**
    * Portable MCP tool annotations surfaced on `tools/list`. Adapters

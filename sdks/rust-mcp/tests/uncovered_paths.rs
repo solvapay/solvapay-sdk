@@ -123,6 +123,7 @@ async fn sdk_error_propagates_as_rmcp_error() {
             title: None,
             description: None,
             input_schema: None,
+            output_schema: None,
             usage_type: None,
         },
         handler,

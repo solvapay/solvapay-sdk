@@ -17,6 +17,6 @@
     }
   },
   "expect": {
-    "result": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
+    "result": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
   }
 }

@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use solvapay_core::{
     billing_cycle, counts_usage, credits_per_unit_from_balance, credits_to_display_minor_units,
-    format_major_fixed, get_business_country_options, get_tax_id_example, get_tax_id_field_label,
+    format_money_intl, get_business_country_options, get_tax_id_example, get_tax_id_field_label,
     get_tax_id_helper_text, headline_charges, included_units, is_error_result, meter_name,
     minor_units_per_major, normalize_cancel_response, normalize_reactivate_response,
     per_unit_charge, project_topup_process_outcome, project_usage_snapshot,
@@ -20,7 +20,7 @@ use solvapay_core::{
     trial_days, validate_activate_plan_params, validate_attach_business_details_params,
     validate_create_payment_intent_params, validate_process_payment_intent_params,
     validate_purchase_ref, validate_topup_payment_intent_params, CreditsToDisplayInput, SdkError,
-    SellerIdentityInput,
+    SellerIdentityInput, ANONYMOUS_CUSTOMER_REF,
 };
 use solvapay_dto::{
     ActivatePlanDto, AttachBusinessDetailsParams, CancelPurchaseParams, CheckLimitsRequest,
@@ -430,18 +430,11 @@ fn enrich_purchase(mut purchase: Value) -> Value {
 fn format_minor_intl(amount: Option<f64>, currency: Option<&str>) -> Option<String> {
     let amount = amount?;
     let currency = currency?;
-    format_money_intl(amount, currency)
+    format_money_intl_opt(amount, currency)
 }
 
-fn format_money_intl(amount_minor: f64, currency: &str) -> Option<String> {
-    let zero = solvapay_core::is_zero_decimal_currency(currency);
-    let major = solvapay_core::to_major_units(amount_minor, currency);
-    let fraction = if zero { 0 } else { 2 };
-    Some(format_major_intl(major, currency, fraction))
-}
-
-fn format_major_intl(major: f64, currency: &str, fraction: usize) -> String {
-    format_major_fixed(major, currency, fraction)
+fn format_money_intl_opt(amount_minor: f64, currency: &str) -> Option<String> {
+    Some(format_money_intl(amount_minor, currency))
 }
 
 fn check_limits_request(customer_ref: &str, product_ref: &str) -> CheckLimitsRequest {
@@ -549,6 +542,39 @@ impl SolvaPayClient {
             .map(|plan| enrich_plan(plan, balance_for_plans))
             .collect();
 
+        let checkout_customer = customer_ref.unwrap_or(ANONYMOUS_CUSTOMER_REF);
+        let checkout_req = CreateCheckoutSessionRequest {
+            customer_ref: Some(checkout_customer.to_owned()),
+            plan_ref: None,
+            product_ref: Some(params.product_ref.clone()),
+            purpose: None,
+            return_url: Some(params.public_base_url.clone()),
+        };
+        let portal_req = customer_ref.map(|customer_ref| CreateCustomerSessionRequest {
+            customer_ref: Some(customer_ref.to_owned()),
+            product_ref: Some(params.product_ref.clone()),
+        });
+        let checkout_session = self.create_checkout_session_json(checkout_req).await.ok();
+        let portal_session = match portal_req {
+            Some(req) => self.create_customer_session_json(req).await.ok(),
+            None => None,
+        };
+        let checkout_url = checkout_session.and_then(|value| {
+            value
+                .get("checkoutUrl")
+                .and_then(Value::as_str)
+                .filter(|s| !s.is_empty())
+                .map(str::to_owned)
+        });
+        let portal_url = portal_session.and_then(|value| {
+            value
+                .get("customerUrl")
+                .or_else(|| value.get("portalUrl"))
+                .and_then(Value::as_str)
+                .filter(|s| !s.is_empty())
+                .map(str::to_owned)
+        });
+
         Ok(json!({
             "view": params.view,
             "productRef": params.product_ref,
@@ -559,6 +585,8 @@ impl SolvaPayClient {
             "plans": plans,
             "customer": customer,
             "taxIdFields": tax_id_fields_table(),
+            "checkoutUrl": checkout_url,
+            "portalUrl": portal_url,
         }))
     }
 
@@ -587,10 +615,7 @@ impl SolvaPayClient {
             .as_deref()
             .map(str::trim)
             .filter(|s| !s.is_empty());
-        let mode = match parse_mode(args.get("mode").and_then(Value::as_str)) {
-            "text" => "text",
-            _ => "ui",
-        };
+        let mode = parse_mode(args.get("mode").and_then(Value::as_str));
         let session = params
             .widget_session_id
             .clone()

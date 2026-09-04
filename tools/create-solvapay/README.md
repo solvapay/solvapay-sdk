@@ -66,17 +66,17 @@ npm run deploy       # Cloudflare Workers deploy
 
 **Common**
 
-| Flag                | Description                                                   |
-| ------------------- | ------------------------------------------------------------- |
+| Flag                | Description                                                           |
+| ------------------- | --------------------------------------------------------------------- |
 | `--type <kind>`     | Project type (`mcp`, `next-auth0`). Required in non-interactive mode. |
-| `-l, --language`    | `ts`, `python`, `ruby`, `go`, `rust` (prompt in TTY; default `ts`) |
-| `-y`, `--yes`       | Non-interactive: accept all defaults                          |
-| `--product <ref>`   | Pre-fill `SOLVAPAY_PRODUCT_REF` (skip the picker)             |
-| `--non-interactive` | Alias for `--yes`; fail fast on missing prompt input          |
-| `--skip-install`    | Skip post-scaffold `npm install`                              |
-| `--skip-init`       | Skip post-scaffold `solvapay init` (no browser OAuth)         |
-| `--dev`             | Target api-dev.solvapay.com (internal testing only)           |
-| `--list-types`      | List available project types and exit                         |
+| `-l, --language`    | `ts`, `python`, `ruby`, `go`, `rust` (prompt in TTY; default `ts`)    |
+| `-y`, `--yes`       | Non-interactive: accept all defaults                                  |
+| `--product <ref>`   | Pre-fill `SOLVAPAY_PRODUCT_REF` (skip the picker)                     |
+| `--non-interactive` | Alias for `--yes`; fail fast on missing prompt input                  |
+| `--skip-install`    | Skip post-scaffold `npm install`                                      |
+| `--skip-init`       | Skip post-scaffold `solvapay init` (no browser OAuth)                 |
+| `--dev`             | Target api-dev.solvapay.com (internal testing only)                   |
+| `--list-types`      | List available project types and exit                                 |
 
 **MCP (`--type mcp`)**
 

@@ -53,6 +53,15 @@
           }
         ]
       }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/sdk/checkout-sessions",
+      "status": 200,
+      "body": {
+        "checkoutUrl": "https://checkout.example/s",
+        "sessionId": "cs_1"
+      }
     }
   ],
   "expect": {
@@ -60,12 +69,12 @@
       "content": [
         {
           "type": "text",
-          "text": "**Upgrade \u2014 Demo**\n\nPlans available:\nPro \u00b7 recurring\n\nCommands: `/manage_account` `/topup`",
-          "annotations": {
-            "audience": [
-              "assistant"
-            ]
-          }
+          "text": "**Upgrade \u2014 Demo**\n\nPlans available:\nPro \u00b7 recurring\nCheckout: [Open checkout](https://checkout.example/s) (expires in 15 minutes)\nDocs: docs://solvapay/overview.md"
+        },
+        {
+          "type": "resource_link",
+          "uri": "https://checkout.example/s",
+          "name": "Open checkout"
         }
       ],
       "structuredContent": {
@@ -98,6 +107,8 @@
           }
         ],
         "customer": null,
+        "checkoutUrl": "https://checkout.example/s",
+        "portalUrl": null,
         "taxIdFields": {
           "AT": {
             "label": "VAT ID",

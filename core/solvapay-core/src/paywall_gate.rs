@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::paywall_state::{
-    build_gate_message, classify_paywall_state, GateContent, PaywallBalance, PaywallLimits,
-    PaywallPlanSummary, PaywallState,
+    build_gate_message, classify_paywall_state, GateContent, IncludedUsage, PaywallBalance,
+    PaywallLimits, PaywallPlanSummary, PaywallState,
 };
 
 /// Limits input read by [`build_paywall_gate`].
@@ -63,6 +63,12 @@ pub struct PaywallGateLimits {
     /// Authoritative backend deny reason: auto-upgrade required.
     #[serde(default)]
     pub needs_upgrade: Option<bool>,
+    /// Meter name used in included-usage copy and recovery fields.
+    #[serde(default)]
+    pub meter_name: Option<String>,
+    /// Product-level currency when the active plan does not carry one.
+    #[serde(default)]
+    pub currency: Option<String>,
 }
 
 /// Recovery discriminator emitted on the wire as `kind`.
@@ -89,8 +95,8 @@ impl PaywallGateKind {
 /// Ready-to-serialize paywall gate (`PaywallStructuredContent` parity).
 ///
 /// `checkout_url` and `message` are always present (`checkout_url` may be `""`).
-/// The four optional blocks are emitted only when present in the input (never
-/// `null`); the payment branch never emits `plans` / `confirmation_url`.
+/// Optional blocks are emitted only when present in the input (never `null`).
+/// Recovery fields (`planRef`, `plans`, counters, price) land on both branches.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaywallGate {
@@ -107,7 +113,7 @@ pub struct PaywallGate {
     /// Confirmation URL echoed on the activation branch when present in the input.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub confirmation_url: Option<String>,
-    /// Product plans echoed verbatim on the activation branch when present.
+    /// Product plans echoed on both branches when present.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plans: Option<Value>,
     /// Quota balance echoed verbatim when present in the input.
@@ -116,6 +122,46 @@ pub struct PaywallGate {
     /// Rich product context echoed verbatim (input `product` → `productDetails`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub product_details: Option<Value>,
+    /// Active plan reference from `limits.plan`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_ref: Option<String>,
+    /// Meter name from the limits response.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meter_name: Option<String>,
+    /// Per-unit charge from the active plan.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unit_price_minor: Option<f64>,
+    /// Currency from the active plan or the limits response.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+    /// Included counters when `freeUnits` is a positive cap.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub included: Option<IncludedUsage>,
+    /// Coalesced credit balance (`balance.creditBalance ?? creditBalance`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub credit_balance: Option<f64>,
+}
+
+impl Default for PaywallGate {
+    fn default() -> Self {
+        Self {
+            kind: PaywallGateKind::PaymentRequired,
+            product: String::new(),
+            checkout_url: String::new(),
+            message: String::new(),
+            short_message: String::new(),
+            confirmation_url: None,
+            plans: None,
+            balance: None,
+            product_details: None,
+            plan_ref: None,
+            meter_name: None,
+            unit_price_minor: None,
+            currency: None,
+            included: None,
+            credit_balance: None,
+        }
+    }
 }
 
 /// Non-empty string, or `None` when absent / empty (JS `||` truthiness).
@@ -204,6 +250,89 @@ fn classifier_view(limits: &PaywallGateLimits, balance: Option<&Value>) -> Paywa
         checkout_url: limits.checkout_url.clone(),
         needs_top_up: limits.needs_top_up,
         needs_upgrade: limits.needs_upgrade,
+        meter_name: limits.meter_name.clone(),
+        currency: limits.currency.clone(),
+    }
+}
+
+/// Machine-readable recovery fields. A field the backend did not send is omitted.
+struct RecoveryFields {
+    /// Active plan reference from `limits.plan`.
+    plan_ref: Option<String>,
+    /// Catalog plans from `limits.plans`.
+    plans: Option<Value>,
+    /// Meter name for included-usage copy.
+    meter_name: Option<String>,
+    /// Per-unit charge of the active plan, in minor units.
+    unit_price_minor: Option<f64>,
+    /// ISO currency for [`Self::unit_price_minor`].
+    currency: Option<String>,
+    /// Included-usage counters when `freeUnits` is a positive cap.
+    included: Option<IncludedUsage>,
+    /// Credit balance coalesced from nested or top-level fields.
+    credit_balance: Option<f64>,
+}
+
+/// Plan object in `limits.plans` whose `reference` matches `limits.plan`.
+fn active_plan_of(limits: &PaywallGateLimits) -> Option<&Value> {
+    let plan_ref = limits.plan.as_deref().filter(|s| !s.is_empty())?;
+    limits
+        .plans
+        .as_ref()?
+        .iter()
+        .find(|p| p.get("reference").and_then(Value::as_str) == Some(plan_ref))
+}
+
+/// Included counters from the active plan's `freeUnits` and `limits.remaining`.
+fn included_from_limits(limits: &PaywallGateLimits) -> Option<IncludedUsage> {
+    let plan = active_plan_of(limits)?;
+    let total = plan.get("freeUnits").and_then(Value::as_f64)?;
+    if total == 0.0 {
+        return None;
+    }
+    let remaining = limits.remaining?;
+    Some(IncludedUsage {
+        total,
+        used: (total - remaining).max(0.0),
+        remaining,
+    })
+}
+
+/// Collect recovery fields for both gate branches. Absent backend data stays `None`.
+fn recovery_fields(limits: &PaywallGateLimits) -> RecoveryFields {
+    let plan = active_plan_of(limits);
+    let included = included_from_limits(limits);
+    let credit_balance = limits
+        .balance
+        .as_ref()
+        .and_then(|b| b.get("creditBalance").and_then(Value::as_f64))
+        .or(limits.credit_balance);
+    let (unit_price_minor, currency) = match plan.and_then(|p| {
+        p.get("perUnitChargeMinor")
+            .and_then(Value::as_f64)
+            .map(|amount| {
+                (
+                    amount,
+                    p.get("currency")
+                        .and_then(Value::as_str)
+                        .map(ToOwned::to_owned),
+                )
+            })
+    }) {
+        Some((amount, currency)) => (Some(amount), currency),
+        None => (None, limits.currency.clone()),
+    };
+    RecoveryFields {
+        plan_ref: limits.plan.clone().filter(|s| !s.is_empty()),
+        plans: limits
+            .plans
+            .as_ref()
+            .map(|items| Value::Array(items.clone())),
+        meter_name: limits.meter_name.clone(),
+        unit_price_minor,
+        currency,
+        included,
+        credit_balance,
     }
 }
 
@@ -254,10 +383,17 @@ pub fn build_paywall_gate(product_ref: &str, limits: &PaywallGateLimits) -> Payw
     .unwrap_or_default()
     .to_owned();
 
+    let recovery = recovery_fields(limits);
     let message = build_gate_message(
         &state,
         &GateContent {
             checkout_url: Some(checkout_url.clone()),
+            meter_name: recovery.meter_name.clone(),
+            unit_price_minor: recovery.unit_price_minor,
+            currency: recovery.currency.clone(),
+            included: recovery.included.clone(),
+            balance: balance
+                .and_then(|value| serde_json::from_value::<PaywallBalance>(value.clone()).ok()),
         },
     );
 
@@ -269,19 +405,18 @@ pub fn build_paywall_gate(product_ref: &str, limits: &PaywallGateLimits) -> Payw
             checkout_url,
             message,
             short_message: kind.short_message().to_owned(),
-            // TS emits `confirmationUrl` on presence (`!== undefined`); `null`
-            // already collapses to `None`, so `Some` marks a present value.
             confirmation_url: limits.confirmation_url.clone(),
-            plans: limits
-                .plans
-                .as_ref()
-                .map(|items| Value::Array(items.clone())),
+            plans: recovery.plans,
             balance: balance.cloned(),
             product_details: product.cloned(),
+            plan_ref: recovery.plan_ref,
+            meter_name: recovery.meter_name,
+            unit_price_minor: recovery.unit_price_minor,
+            currency: recovery.currency,
+            included: recovery.included,
+            credit_balance: recovery.credit_balance,
         }
     } else {
-        // Payment branch never emits `plans` / `confirmation_url`, even when the
-        // input carries them.
         let kind = PaywallGateKind::PaymentRequired;
         PaywallGate {
             kind,
@@ -290,9 +425,15 @@ pub fn build_paywall_gate(product_ref: &str, limits: &PaywallGateLimits) -> Payw
             message,
             short_message: kind.short_message().to_owned(),
             confirmation_url: None,
-            plans: None,
+            plans: recovery.plans,
             balance: balance.cloned(),
             product_details: product.cloned(),
+            plan_ref: recovery.plan_ref,
+            meter_name: recovery.meter_name,
+            unit_price_minor: recovery.unit_price_minor,
+            currency: recovery.currency,
+            included: recovery.included,
+            credit_balance: recovery.credit_balance,
         }
     }
 }
@@ -385,7 +526,8 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
+                "planRef": "pl_basic",
+                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
             })
         );
     }
@@ -400,7 +542,8 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "",
-                "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan."
+                "planRef": "pl_basic",
+                "message": "You've reached the included usage for this period. Call the `upgrade` tool. See docs://solvapay/overview.md."
             })
         );
     }
@@ -418,7 +561,7 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
+                "message": "You don't have an active plan for this tool. [Open checkout](https://pay.test/x) to pick a plan (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
             })
         );
     }
@@ -442,9 +585,10 @@ mod tests {
                 "kind": "activation_required",
                 "product": "prd_demo",
                 "shortMessage": "Activation required",
-                "message": "Your plan needs activation before you can use this tool. Call the `activate_plan` tool to activate it, or open https://pay.test/confirm in a browser.",
+                "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `activate_plan` tool. See docs://solvapay/overview.md.",
                 "checkoutUrl": "https://pay.test/confirm",
                 "confirmationUrl": "https://pay.test/confirm",
+                "planRef": "pl_pro",
                 "plans": [plan("pl_pro", "usage-based", true)]
             })
         );
@@ -471,8 +615,10 @@ mod tests {
                 "kind": "activation_required",
                 "product": "prd_demo",
                 "shortMessage": "Activation required",
-                "message": "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
+                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
                 "checkoutUrl": "https://pay.test/x",
+                "planRef": "pl_pro",
+                "creditBalance": 0.0,
                 "plans": [
                     plan("pl_pro", "usage-based", true),
                     plan("pl_hybrid", "hybrid", true)
@@ -483,7 +629,7 @@ mod tests {
     }
 
     #[test]
-    fn topup_with_recurring_stays_payment_and_omits_plans() {
+    fn topup_with_recurring_stays_payment_and_keeps_plans() {
         let actual = gate_value(
             "prd_demo",
             json!({
@@ -504,7 +650,13 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
+                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
+                "planRef": "pl_pro",
+                "creditBalance": 0.0,
+                "plans": [
+                    plan("pl_pro", "usage-based", true),
+                    plan("pl_pro", "recurring", true)
+                ],
                 "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" }
             })
         );
@@ -529,7 +681,9 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
+                "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
+                "planRef": "pl_basic",
+                "creditBalance": 0.0,
                 "balance": { "creditBalance": 0, "creditsPerUnit": 1, "currency": "usd" },
                 "productDetails": { "name": "Demo", "reference": "prd_demo" }
             })
@@ -557,7 +711,8 @@ mod tests {
                 "product": "prd_demo",
                 "shortMessage": "Payment required",
                 "checkoutUrl": "https://pay.test/x",
-                "message": "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser."
+                "planRef": "pl_basic",
+                "message": "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md."
             })
         );
     }

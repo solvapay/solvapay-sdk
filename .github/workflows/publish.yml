@@ -189,3 +189,20 @@ jobs:
       - name: Verify published packages landed on npm
         if: steps.changesets.outputs.published == 'true'
         run: node tools/repo/verify-npm-publishes.mjs --packages='${{ steps.changesets.outputs.publishedPackages }}'
+
+      # Production language tags fire publish-python/ruby/go/rust. Only
+      # when npm actually published (not the Version Packages *open* leg).
+      # The script no-ops if the lockstep sentinel did not move, or if no
+      # RELEASE_PROD_* repo variable is true. GITHUB_TOKEN must be the App
+      # token so the tag push triggers those workflows.
+      - name: Push production language tags
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_PROD_PYTHON: ${{ vars.RELEASE_PROD_PYTHON }}
+          RELEASE_PROD_RUBY: ${{ vars.RELEASE_PROD_RUBY }}
+          RELEASE_PROD_GO: ${{ vars.RELEASE_PROD_GO }}
+          RELEASE_PROD_RUST: ${{ vars.RELEASE_PROD_RUST }}
+        run: |
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          pnpm exec tsx tools/repo/push-production-tags.ts

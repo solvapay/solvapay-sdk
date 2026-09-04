@@ -17,6 +17,6 @@
     }
   },
   "expect": {
-    "result": "Your previous plan is no longer active. Call the `manage_account` tool to reactivate it, or the `upgrade` tool to pick a new plan."
+    "result": "Your previous plan is no longer active. Call the `manage_account` tool to reactivate it, or the `upgrade` tool to pick a new plan. See docs://solvapay/overview.md."
   }
 }

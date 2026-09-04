@@ -27,6 +27,12 @@ const DEFAULT_BOOTSTRAP_STUBS: FixtureHttpStub[] = [
     status: 200,
     body: { plans: [{ name: 'Pro' }] },
   },
+  {
+    method: 'POST',
+    path: '/v1/sdk/checkout-sessions',
+    status: 200,
+    body: { checkoutUrl: 'https://checkout.example/s', sessionId: 'cs_1' },
+  },
 ]
 
 export function isUnreachableExpect(expectResult: unknown): boolean {

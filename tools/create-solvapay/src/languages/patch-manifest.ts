@@ -130,7 +130,10 @@ export function applyDevPathDeps(
       .map(([name, pathValue]) => `${name} = { path = "${pathValue}", editable = true }`)
       .join('\n')
     if (raw.includes('[tool.uv.sources]')) {
-      return raw.replace(/\[tool\.uv\.sources\][\s\S]*?(?=\n\[|$)/, `[tool.uv.sources]\n${sources}\n`)
+      return raw.replace(
+        /\[tool\.uv\.sources\][\s\S]*?(?=\n\[|$)/,
+        `[tool.uv.sources]\n${sources}\n`,
+      )
     }
     return `${raw.trimEnd()}\n\n[tool.uv.sources]\n${sources}\n`
   }

@@ -39,7 +39,9 @@ async function main(): Promise<void> {
       if (!factory) continue
       const type = await factory()
       process.stdout.write(`${type.id.padEnd(12)} ${type.summary}\n`)
-      process.stdout.write(`             languages: ${formatLanguageList(type.supportedLanguages)}\n`)
+      process.stdout.write(
+        `             languages: ${formatLanguageList(type.supportedLanguages)}\n`,
+      )
     }
     return
   }

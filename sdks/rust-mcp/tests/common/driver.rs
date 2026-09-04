@@ -110,6 +110,7 @@ pub async fn call_registered_payable(
             title: scenario.tool.title.clone(),
             description: scenario.tool.description.clone(),
             input_schema: scenario.tool.input_schema.clone(),
+            output_schema: None,
             usage_type: scenario.usage_type.clone(),
         },
         compile_handler(scenario.handler.clone()),

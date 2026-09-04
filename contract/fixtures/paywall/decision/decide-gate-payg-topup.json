@@ -36,8 +36,10 @@
       "gate": {
         "kind": "activation_required",
         "product": "prd_demo",
-        "message": "You're out of credits. Call the `topup` tool to add more, or open https://pay.test/x in a browser.",
+        "message": "You're out of credits. Top up first ($10.00 · $25.00 · $50.00 · $100.00). [Open checkout](https://pay.test/x) to add credits (expires in 15 minutes), or call the `topup` tool. See docs://solvapay/overview.md.",
         "checkoutUrl": "https://pay.test/x",
+        "planRef": "pl_pro",
+        "creditBalance": 0,
         "plans": [
           {
             "reference": "pl_pro",

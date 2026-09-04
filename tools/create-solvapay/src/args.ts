@@ -80,12 +80,7 @@ const COMMON_BOOLEAN_FLAGS = new Set([
 const MCP_VALUE_FLAGS = new Set(['--openapi', '--tool-name', '--module'])
 const MCP_BOOLEAN_FLAGS = new Set(['--no-openapi', '--help'])
 
-export const MCP_SPECIFIC_FLAGS = new Set([
-  '--openapi',
-  '--no-openapi',
-  '--tool-name',
-  '--module',
-])
+export const MCP_SPECIFIC_FLAGS = new Set(['--openapi', '--no-openapi', '--tool-name', '--module'])
 
 export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
   const out: ParsedCommonArgs = {

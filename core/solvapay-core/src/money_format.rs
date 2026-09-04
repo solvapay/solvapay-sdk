@@ -342,6 +342,26 @@ pub fn format_grouped_major(major: f64, fraction: usize) -> String {
     }
 }
 
+/// Format a minor-unit amount with the narration-stable Intl-style table.
+///
+/// Zero-decimal currencies emit no fraction digits; others always use two.
+///
+/// # Arguments
+///
+/// * `amount_minor` - Amount in minor units
+/// * `currency` - ISO currency code
+///
+/// # Returns
+///
+/// Formatted money such as `"$0.02"` or `"¥1,000"`.
+#[must_use]
+pub fn format_money_intl(amount_minor: f64, currency: &str) -> String {
+    let zero = is_zero_decimal_currency(currency);
+    let major = to_major_units(amount_minor, currency);
+    let fraction = if zero { 0 } else { 2 };
+    format_major_fixed(major, currency, fraction)
+}
+
 /// Narration-stable formatter: `$`/`€`/`£`/`¥` prefix, otherwise `CODE amount`.
 ///
 /// Preserves byte-parity with the previous `narrate.rs` / transport helpers.

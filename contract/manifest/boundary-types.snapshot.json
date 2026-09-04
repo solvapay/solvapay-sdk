@@ -2285,6 +2285,73 @@
             "ty": {
               "kind": "string"
             }
+          },
+          {
+            "rustName": "meter_name",
+            "wireName": "meterName",
+            "rustdoc": "Meter name used in included-usage copy.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "unit_price_minor",
+            "wireName": "unitPriceMinor",
+            "rustdoc": "Next-call unit price in minor units.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "currency",
+            "wireName": "currency",
+            "rustdoc": "ISO currency for [`Self::unit_price_minor`] / top-up presets.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "included",
+            "wireName": "included",
+            "rustdoc": "Included counters when the active plan has a finite `freeUnits`.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "IncludedUsage"
+            }
+          },
+          {
+            "rustName": "balance",
+            "wireName": "balance",
+            "rustdoc": "Nested balance (currency fallback for PAYG-at-zero copy).",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "PaywallBalance"
+            }
           }
         ]
       }
@@ -2478,6 +2545,57 @@
             "cfgFeature": null,
             "ty": {
               "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    "IncludedUsage": {
+      "module": "paywall_state",
+      "rustdoc": "Included-usage counters emitted on gates when `freeUnits` is a positive cap.",
+      "serde": "both",
+      "cfgFeature": null,
+      "shape": {
+        "kind": "struct",
+        "renameAll": "camelCase",
+        "fields": [
+          {
+            "rustName": "total",
+            "wireName": "total",
+            "rustdoc": "Included units for the period (`freeUnits`).",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "used",
+            "wireName": "used",
+            "rustdoc": "Derived as `max(0, total - remaining)`.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "remaining",
+            "wireName": "remaining",
+            "rustdoc": "Remaining included units from the limits response.",
+            "optional": false,
+            "skipSerializingIf": null,
+            "serdeDefault": false,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
             }
           }
         ]
@@ -3198,6 +3316,19 @@
             "ty": {
               "kind": "f64"
             }
+          },
+          {
+            "rustName": "currency",
+            "wireName": "currency",
+            "rustdoc": "ISO currency on the nested balance block.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
           }
         ]
       }
@@ -3360,7 +3491,7 @@
     },
     "PaywallGate": {
       "module": "paywall_gate",
-      "rustdoc": "Ready-to-serialize paywall gate (`PaywallStructuredContent` parity).\n\n`checkout_url` and `message` are always present (`checkout_url` may be `\"\"`).\nThe four optional blocks are emitted only when present in the input (never\n`null`); the payment branch never emits `plans` / `confirmation_url`.",
+      "rustdoc": "Ready-to-serialize paywall gate (`PaywallStructuredContent` parity).\n\n`checkout_url` and `message` are always present (`checkout_url` may be `\"\"`).\nOptional blocks are emitted only when present in the input (never `null`).\nRecovery fields (`planRef`, `plans`, counters, price) land on both branches.",
       "serde": "both",
       "cfgFeature": null,
       "shape": {
@@ -3449,7 +3580,7 @@
           {
             "rustName": "plans",
             "wireName": "plans",
-            "rustdoc": "Product plans echoed verbatim on the activation branch when present.",
+            "rustdoc": "Product plans echoed on both branches when present.",
             "optional": true,
             "skipSerializingIf": "Option::is_none",
             "serdeDefault": true,
@@ -3483,6 +3614,85 @@
             "cfgFeature": null,
             "ty": {
               "kind": "value"
+            }
+          },
+          {
+            "rustName": "plan_ref",
+            "wireName": "planRef",
+            "rustdoc": "Active plan reference from `limits.plan`.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "meter_name",
+            "wireName": "meterName",
+            "rustdoc": "Meter name from the limits response.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "unit_price_minor",
+            "wireName": "unitPriceMinor",
+            "rustdoc": "Per-unit charge from the active plan.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "currency",
+            "wireName": "currency",
+            "rustdoc": "Currency from the active plan or the limits response.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "included",
+            "wireName": "included",
+            "rustdoc": "Included counters when `freeUnits` is a positive cap.",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "named",
+              "name": "IncludedUsage"
+            }
+          },
+          {
+            "rustName": "credit_balance",
+            "wireName": "creditBalance",
+            "rustdoc": "Coalesced credit balance (`balance.creditBalance ?? creditBalance`).",
+            "optional": true,
+            "skipSerializingIf": "Option::is_none",
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
             }
           }
         ]
@@ -3668,6 +3878,32 @@
             "ty": {
               "kind": "bool"
             }
+          },
+          {
+            "rustName": "meter_name",
+            "wireName": "meterName",
+            "rustdoc": "Meter name used in included-usage copy and recovery fields.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "currency",
+            "wireName": "currency",
+            "rustdoc": "Product-level currency when the active plan does not carry one.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
           }
         ]
       }
@@ -3802,6 +4038,32 @@
             "ty": {
               "kind": "bool"
             }
+          },
+          {
+            "rustName": "meter_name",
+            "wireName": "meterName",
+            "rustdoc": "Meter name used in user-facing included-usage copy.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
+          },
+          {
+            "rustName": "currency",
+            "wireName": "currency",
+            "rustdoc": "Product-level currency when the active plan does not carry one.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
           }
         ]
       }
@@ -3895,6 +4157,45 @@
             "ty": {
               "kind": "bool"
             }
+          },
+          {
+            "rustName": "free_units",
+            "wireName": "freeUnits",
+            "rustdoc": "Included units on the active plan (`0` is the unlimited sentinel).",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "per_unit_charge_minor",
+            "wireName": "perUnitChargeMinor",
+            "rustdoc": "Per-unit charge in minor units on the active plan.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "f64"
+            }
+          },
+          {
+            "rustName": "currency",
+            "wireName": "currency",
+            "rustdoc": "ISO currency on the active plan.",
+            "optional": true,
+            "skipSerializingIf": null,
+            "serdeDefault": true,
+            "serializeWith": null,
+            "cfgFeature": null,
+            "ty": {
+              "kind": "string"
+            }
           }
         ]
       }
@@ -3927,6 +4228,13 @@
             "rustName": "UpgradeRequired",
             "wireName": "upgrade_required",
             "rustdoc": "Everything else (including null/degraded limits); primary recovery is `upgrade`.",
+            "cfgFeature": null,
+            "fields": []
+          },
+          {
+            "rustName": "LimitReached",
+            "wireName": "limit_reached",
+            "rustdoc": "Active plan at included cap (`plan` is a non-empty ref and `remaining <= 0`).",
             "cfgFeature": null,
             "fields": []
           },
@@ -7571,6 +7879,36 @@
         }
       }
     },
+    "solvapay_core::money_format::format_money_intl": {
+      "name": "format_money_intl",
+      "module": "money_format",
+      "implTy": null,
+      "rustdoc": "Format a minor-unit amount with the narration-stable Intl-style table.\n\nZero-decimal currencies emit no fraction digits; others always use two.\n\n# Arguments\n\n* `amount_minor` - Amount in minor units\n* `currency` - ISO currency code\n\n# Returns\n\nFormatted money such as `\"$0.02\"` or `\"¥1,000\"`.",
+      "params": [
+        {
+          "rustName": "amount_minor",
+          "byRef": false,
+          "optional": false,
+          "ty": {
+            "kind": "f64"
+          }
+        },
+        {
+          "rustName": "currency",
+          "byRef": true,
+          "optional": false,
+          "ty": {
+            "kind": "string"
+          }
+        }
+      ],
+      "return": {
+        "optional": false,
+        "ty": {
+          "kind": "string"
+        }
+      }
+    },
     "solvapay_core::money_format::format_price": {
       "name": "format_price",
       "module": "money_format",
@@ -8129,7 +8467,7 @@
       "name": "build_gate_message",
       "module": "paywall_state",
       "implTy": null,
-      "rustdoc": "Produce the terminal-friendly gate message for `state`.\n\nInlines `gate.checkout_url` when non-empty, except for\n[`PaywallState::ReactivationRequired`] which never inlines the URL.\n\n# Arguments\n\n* `state` - Classified paywall state.\n* `gate` - Structured gate content (only `checkout_url` is read).\n\n# Returns\n\nFrozen copy string, byte-identical to the TypeScript helpers.",
+      "rustdoc": "Produce the terminal-friendly gate message for `state`.\n\nInlines `gate.checkout_url` when non-empty, except for\n[`PaywallState::ReactivationRequired`] which never inlines the URL.\n\n# Arguments\n\n* `state` - Classified paywall state.\n* `gate` - Structured gate content (`checkout_url`, counters, price).\n\n# Returns\n\nFrozen copy string stating the block, reason, price, and recovery URL.",
       "params": [
         {
           "rustName": "state",
@@ -8193,7 +8531,7 @@
       "name": "classify_paywall_state",
       "module": "paywall_state",
       "implTy": null,
-      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` trumps everything.\n2. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`. Prefer these over the credit-balance heuristic.\n3. Usage-based out of credits → `topup_required` (plan type, or balance-block\n   proxy; credit channels then `remaining === 0` fallback).\n4. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
+      "rustdoc": "Classify limits into a [`PaywallState`].\n\nPrecedence mirrors TypeScript `classifyPaywallState`:\n1. `activation_required == Some(true)` trumps everything.\n2. Authoritative `needs_top_up` / `needs_upgrade` when the backend sent\n   `Some(true)`. Prefer these over the credit-balance heuristic.\n3. Usage-based out of credits → `topup_required` (plan type, or balance-block\n   proxy; credit channels then `remaining === 0` fallback).\n4. Active plan at included cap (`plan` is a non-empty ref and\n   `remaining <= 0`) → `limit_reached`.\n5. Everything else (including `None` limits) → `upgrade_required`.\n\n# Arguments\n\n* `limits` - Limits response, or `None` on degraded paths (`null` in JSON).\n\n# Returns\n\nRecovery-tool-specific state. Never returns [`PaywallState::ReactivationRequired`].",
       "params": [
         {
           "rustName": "limits",

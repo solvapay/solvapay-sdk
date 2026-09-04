@@ -177,6 +177,7 @@ export type {
   NextAdapterOptions,
   PaywallArgs,
   PaywallDecision,
+  PaywallGateRecoveryFields,
   PaywallMetadata,
   PaywallStructuredContent,
   RetryOptions,

@@ -120,8 +120,10 @@ touches `core/**` or a non-TypeScript SDK must add a changeset for it.
   `rehearsal/solvapay-<lang>-v*`. Those workflows publish to TestPyPI,
   GitHub Packages, `solvapay-go-rehearsal`, and a local Cargo registry,
   then install-smoke. `rehearsal-npm.yml` snapshot-publishes to Verdaccio.
-- **Production language tags** are not created by automation yet. That is a
-  deliberate one-step follow-up after rehearsals pass.
+- **Production:** after npm verify, `publish.yml` runs
+  `push-production-tags.ts` when the sentinel moved. Languages are gated
+  by `vars.RELEASE_PROD_*` (default off). See
+  [`docs/contributing/production-release.md`](../../docs/contributing/production-release.md).
 
 See [`docs/publishing.mdx`](../../docs/publishing.mdx),
 [`docs/contributing/language-previews.md`](../../docs/contributing/language-previews.md),

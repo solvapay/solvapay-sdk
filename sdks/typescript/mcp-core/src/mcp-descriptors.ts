@@ -24,6 +24,7 @@ export type McpDescriptorTool = {
   meta: Record<string, unknown>
   icons?: unknown
   inputSchema: Record<string, unknown>
+  outputSchema?: Record<string, unknown>
 }
 
 export type McpDescriptorsBundle = {

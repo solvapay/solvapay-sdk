@@ -28,7 +28,7 @@
       "gate": {
         "kind": "activation_required",
         "product": "prd_demo",
-        "message": "Your plan needs activation before you can use this tool. Call the `activate_plan` tool to activate it, or open https://pay.test/confirm in a browser.",
+        "message": "Your plan needs activation. [Open checkout](https://pay.test/confirm) to activate (expires in 15 minutes), or call the `activate_plan` tool. See docs://solvapay/overview.md.",
         "checkoutUrl": "https://pay.test/confirm",
         "confirmationUrl": "https://pay.test/confirm",
         "plans": [
@@ -38,6 +38,7 @@
             "requiresPayment": true
           }
         ],
+        "planRef": "pl_pro",
         "shortMessage": "Activation required"
       }
     }

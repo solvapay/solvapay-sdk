@@ -63,7 +63,7 @@
   },
   "expect": {
     "result": {
-      "text": "Opened your Acme Knowledge Base account. Balance: 100 credits (~$0.01). Account details are shown in the panel."
+      "text": "Opened your Acme Knowledge Base account. Balance: 100 credits (~$0.01)."
     }
   }
 }

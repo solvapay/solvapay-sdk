@@ -230,4 +230,35 @@ describe('buildPaywallGate', () => {
     const gate = buildPaywallGate('prd_x', limits)
     expect(gate.kind).toBe('activation_required')
   })
+
+  it('attaches recovery fields on both gate branches', () => {
+    const plans = [
+      {
+        reference: 'pln_rec',
+        name: 'Pro',
+        type: 'recurring' as const,
+        price: 1000,
+        currency: 'USD',
+        requiresPayment: true,
+        freeUnits: 3,
+        perUnitChargeMinor: 2,
+      },
+    ]
+    const gate = buildPaywallGate('prd_x', {
+      withinLimits: false,
+      remaining: 0,
+      plan: 'pln_rec',
+      meterName: 'lookups',
+      checkoutUrl: 'https://pay.example.com/checkout',
+      plans,
+      balance: { creditBalance: 0, remainingUnits: 0, creditsPerUnit: 1 },
+    })
+    expect(gate.planRef).toBe('pln_rec')
+    expect(gate.plans).toEqual(plans)
+    expect(gate.meterName).toBe('lookups')
+    expect(gate.unitPriceMinor).toBe(2)
+    expect(gate.currency).toBe('USD')
+    expect(gate.included).toEqual({ total: 3, used: 3, remaining: 0 })
+    expect(gate.creditBalance).toBe(0)
+  })
 })

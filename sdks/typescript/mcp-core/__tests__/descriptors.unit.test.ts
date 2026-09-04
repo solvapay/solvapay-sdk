@@ -145,6 +145,17 @@ describe('buildSolvaPayDescriptors', () => {
       expect(tool!.description).toMatch(/UI-only/i)
     }
 
+    for (const name of intentTools) {
+      const tool = tools.find(t => t.name === name)
+      expect(tool?.outputSchema).toMatchObject({
+        type: 'object',
+        properties: {
+          checkoutUrl: { type: ['string', 'null'] },
+          portalUrl: { type: ['string', 'null'] },
+        },
+      })
+    }
+
     expect(resource.uri).toBe('ui://test/view.html')
     expect(resource.mimeType).toBe('text/html;profile=mcp-app')
     expect(resource.readHtml).toBeTypeOf('function')
