@@ -811,7 +811,10 @@ mod tests {
         );
         assert!(echo.get("annotations").is_none());
         assert!(echo.get("_meta").is_none());
-        assert!(echo["outputSchema"]["oneOf"].is_array());
+        assert!(
+            echo.get("outputSchema").is_none(),
+            "generic payable tools must not inherit the gate oneOf schema"
+        );
     }
 
     #[test]

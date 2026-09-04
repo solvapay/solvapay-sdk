@@ -16,14 +16,15 @@ export const PAYWALL_GATE_SMOKE_INPUT = {
   },
 }
 
-/** @type {{ kind: string, product: string, checkoutUrl: string, message: string, shortMessage: string }} */
+/** @type {{ kind: string, product: string, checkoutUrl: string, message: string, shortMessage: string, planRef: string }} */
 export const PAYWALL_GATE_SMOKE_EXPECTED = {
   kind: 'payment_required',
   product: 'prd_demo',
   checkoutUrl: 'https://pay.test/x',
   message:
-    "You don't have an active plan for this tool. Call the `upgrade` tool to pick a plan, or open https://pay.test/x in a browser.",
+    "You've reached the included usage for this period. [Open checkout](https://pay.test/x) to continue (expires in 15 minutes), or call the `upgrade` tool. See docs://solvapay/overview.md.",
   shortMessage: 'Payment required',
+  planRef: 'pl_basic',
 }
 
 export const CUSTOMER_SMOKE_REF = 'cus_smoke_1'

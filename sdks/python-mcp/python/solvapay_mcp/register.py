@@ -80,6 +80,7 @@ class _PayableTool:
     description: str | None
     input_schema: dict[str, object]
     get_customer_ref: GetCustomerRef | None
+    output_schema: dict[str, object] | None = None
     usage_type: str = "requests"
 
 
@@ -511,6 +512,7 @@ def register_payable_tool(
     title: str | None = None,
     description: str | None = None,
     input_schema: dict[str, object] | None = None,
+    output_schema: dict[str, object] | None = None,
     get_customer_ref: GetCustomerRef | None = None,
     usage_type: str | None = None,
 ) -> None:
@@ -525,6 +527,7 @@ def register_payable_tool(
         title=title,
         description=description,
         input_schema=schema,
+        output_schema=output_schema,
         get_customer_ref=get_customer_ref,
         usage_type=(
             usage_type.strip()
