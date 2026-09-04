@@ -1,9 +1,11 @@
+import type { ScaffoldLanguage } from '@solvapay/init'
 import type { ParsedTypeArgs, RunOptions } from '../args'
 
 export type ProjectType = {
   id: string
   label: string
   summary: string
+  supportedLanguages: readonly ScaffoldLanguage[]
   parseArgs(argv: readonly string[]): ParsedTypeArgs
   run(opts: RunOptions): Promise<void>
 }

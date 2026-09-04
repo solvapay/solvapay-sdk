@@ -63,7 +63,8 @@ jobs:
             CHANNEL=production
           elif [[ "${GITHUB_REF_NAME}" == rehearsal/* ]]; then
             CHANNEL=rehearsal
-            VERSION="${GITHUB_REF_NAME#rehearsal/solvapay-go-v}"
+            BASE="${GITHUB_REF_NAME#rehearsal/solvapay-go-v}"
+            VERSION="${BASE}-rehearsal.${GITHUB_RUN_NUMBER}"
           else
             CHANNEL=production
             VERSION="${GITHUB_REF_NAME#solvapay-go-v}"
@@ -148,9 +149,20 @@ jobs:
             DEST="solvapay/solvapay-go"
           fi
           REMOTE="https://x-access-token:${TOKEN}@github.com/${DEST}.git"
-          git push "${REMOTE}" "${SPLIT_SHA}:refs/heads/main"
-          git tag "${TAG}" "${SPLIT_SHA}"
-          git push "${REMOTE}" "refs/tags/${TAG}"
+          if [ "${CHANNEL}" = "rehearsal" ]; then
+            WORK="$(mktemp -d)"
+            git clone --no-checkout . "$WORK/split"
+            git -C "$WORK/split" checkout "${SPLIT_SHA}"
+            (cd "$WORK/split" && "${GITHUB_WORKSPACE}/sdks/go/scripts/rehearsal-retarget-module.sh")
+            SPLIT_SHA="$(git -C "$WORK/split" rev-parse HEAD)"
+            git -C "$WORK/split" push "${REMOTE}" "${SPLIT_SHA}:refs/heads/main"
+            git -C "$WORK/split" tag "${TAG}" "${SPLIT_SHA}"
+            git -C "$WORK/split" push "${REMOTE}" "refs/tags/${TAG}"
+          else
+            git push "${REMOTE}" "${SPLIT_SHA}:refs/heads/main"
+            git tag "${TAG}" "${SPLIT_SHA}"
+            git push "${REMOTE}" "refs/tags/${TAG}"
+          fi
           echo "Published ${TAG} at ${SPLIT_SHA} -> ${DEST}"
 
       - name: Rehearsal install smoke

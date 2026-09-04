@@ -10,15 +10,12 @@
  */
 
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process'
-import { formatReleaseDryrunReport, runReleaseDryrunCheck } from './lib/release-dryrun.js'
+import {
+  failingReleaseDryrunIssues,
+  formatReleaseDryrunReport,
+  runReleaseDryrunCheck,
+} from './lib/release-dryrun.js'
 import { REPO_ROOT } from '../shared/paths.js'
-
-const issues = await runReleaseDryrunCheck(REPO_ROOT)
-if (issues.length > 0) {
-  console.error(formatReleaseDryrunReport(issues))
-  process.exit(1)
-}
-console.error(formatReleaseDryrunReport(issues))
 
 const steps: Array<{ title: string; command: string; args: string[] }> = [
   { title: 'deps:check', command: 'pnpm', args: ['deps:check'] },
@@ -44,18 +41,29 @@ function fail(step: string, result: SpawnSyncReturns<string>): void {
   process.exit(code)
 }
 
-for (const step of steps) {
-  console.error(`\n=== ${step.title} ===`)
-  const result = spawnSync(step.command, step.args, {
-    cwd: REPO_ROOT,
-    stdio: 'inherit',
-    encoding: 'utf8',
-  })
-  if (result.error) {
-    console.error(result.error)
-    fail(step.title, result)
+async function main(): Promise<void> {
+  const issues = await runReleaseDryrunCheck(REPO_ROOT)
+  const failing = failingReleaseDryrunIssues(issues)
+  console.error(formatReleaseDryrunReport(issues))
+  if (failing.length > 0) {
+    process.exit(1)
   }
-  if (result.status !== 0) fail(step.title, result)
+
+  for (const step of steps) {
+    console.error(`\n=== ${step.title} ===`)
+    const result = spawnSync(step.command, step.args, {
+      cwd: REPO_ROOT,
+      stdio: 'inherit',
+      encoding: 'utf8',
+    })
+    if (result.error) {
+      console.error(result.error)
+      fail(step.title, result)
+    }
+    if (result.status !== 0) fail(step.title, result)
+  }
+
+  console.error('\nrelease:dryrun complete')
 }
 
-console.error('\nrelease:dryrun complete')
+void main()

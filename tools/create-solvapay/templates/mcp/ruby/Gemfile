@@ -1,0 +1,8 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+gem "solvapay", "0.1.0"
+gem "solvapay-mcp", "0.1.0"
+gem "puma"
+gem "rack"

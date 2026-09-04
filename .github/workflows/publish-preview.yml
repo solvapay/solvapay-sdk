@@ -1,17 +1,11 @@
 name: Publish Preview Snapshot
 
-# On every push to `dev`, run the pre-publish gates and cut a
-# changesets snapshot to the `@preview` dist-tag. Each publish is
-# addressable as `@solvapay/<pkg>@0.0.0-preview-<shortsha>` (stable
-# version pin) plus a mutable `@preview` pointer at the latest.
-# Manual `workflow_dispatch` defaults to dry-run: full pre-publish gates, then
-# `changeset status` + `pnpm -r publish --dry-run` (no NPM_TOKEN). Set
-# `dry_run=false` (or push to `dev`) to cut a real `@preview` snapshot.
-# `workflow_dispatch` inputs resolve against the default branch.
+# Manual `workflow_dispatch` only. Defaults to dry-run: full pre-publish
+# gates, then `changeset status` + `pnpm -r publish --dry-run` (no NPM_TOKEN).
+# Set `dry_run=false` to cut a real `@preview` snapshot
+# (`@solvapay/<pkg>@0.0.0-preview-<shortsha>` plus a mutable `@preview`
+# pointer). `workflow_dispatch` inputs resolve against the default branch.
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
     inputs:
       dry_run:
@@ -93,18 +87,18 @@ jobs:
         run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
       - name: Dry-run npm publish
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        if: ${{ inputs.dry_run }}
         run: |
           pnpm changeset status
           pnpm -r publish --dry-run --no-git-checks
 
       - name: Version snapshot
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        if: ${{ !inputs.dry_run }}
         run: pnpm changeset version --snapshot preview
 
       - name: Publish snapshot to @preview
         id: publish
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        if: ${{ !inputs.dry_run }}
         run: |
           set -o pipefail
           pnpm changeset publish --tag preview --no-git-tag 2>&1 | tee publish.log
@@ -120,7 +114,7 @@ jobs:
       # and fails the job if any package isn't fetchable after a retry
       # window.
       - name: Verify published packages landed on npm
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        if: ${{ !inputs.dry_run }}
         run: node tools/repo/verify-npm-publishes.mjs publish.log
 
       # Post-publish `@preview` gate — re-type-checks the same example
@@ -134,5 +128,5 @@ jobs:
       # failure reports a broken published preview loudly instead of
       # withholding the publish that would fix it.
       - name: Validate fetch-runtime — Deno gate (published @preview tarballs)
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        if: ${{ !inputs.dry_run }}
         run: pnpm --filter @example/supabase-edge-mcp validate

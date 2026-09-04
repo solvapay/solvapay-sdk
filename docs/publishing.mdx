@@ -10,10 +10,10 @@ npm packages in this monorepo publish on **independent per-package semver** via
 Go share a lockstep version owned by the private sentinel
 [`@solvapay/release-train`](../internal/release-train/package.json).
 
-- **Preview** — push to `dev` runs [`.github/workflows/publish-preview.yml`](../.github/workflows/publish-preview.yml) and ships snapshot versions on the `@preview` dist-tag.
+- **Preview** — dispatch [`.github/workflows/publish-preview.yml`](../.github/workflows/publish-preview.yml) with `dry_run=false` to ship snapshot versions on the `@preview` dist-tag. Pushing to `dev` does not publish.
 - **Stable npm** — push to `main` runs [`.github/workflows/publish.yml`](../.github/workflows/publish.yml). Pending changesets open a "Version Packages" PR; merging that PR with an empty `.changeset/` publishes to `@latest` and pushes npm tags.
-- **Lockstep train** — that same Version Packages PR bumps `@solvapay/release-train`. `pnpm changeset:version` stamps Cargo / `pyproject.toml` / `version.rb`. Production `solvapay-<lang>-v*` tags are **not** pushed yet (Phase 3).
-- **Rehearsal** — [`.github/workflows/push-rehearsal-tags.yml`](../.github/workflows/push-rehearsal-tags.yml) pushes `rehearsal/solvapay-<lang>-v*` tags. See [release-sandbox.md](./contributing/release-sandbox.md).
+- **Lockstep train** — that same Version Packages PR bumps `@solvapay/release-train`. `pnpm changeset:version` stamps Cargo / `pyproject.toml` / `version.rb`. Production `solvapay-<lang>-v*` tags are **not** pushed yet. Wiring sketch: [production-release.md](./contributing/production-release.md).
+- **Rehearsal** — [`.github/workflows/push-rehearsal-tags.yml`](../.github/workflows/push-rehearsal-tags.yml) pushes `rehearsal/solvapay-<lang>-v*` tags. Runbook: [language-previews.md](./contributing/language-previews.md). A private sandbox fork is a separate setup: [release-sandbox.md](./contributing/release-sandbox.md).
 
 Authoring rules (bump levels, `workspace:^` peers, `pnpm changeset status --verbose`) live in [`CONTRIBUTING.md`](../CONTRIBUTING.md) and [`.cursor/rules/monorepo-versioning.mdc`](../.cursor/rules/monorepo-versioning.mdc). Do not duplicate them here.
 
@@ -43,10 +43,10 @@ Pick patch / minor / major per package. Internal peer dependencies use
 `workspace:^` so a peer patch does not cascade a major. See CONTRIBUTING for the
 full table.
 
-## Preview (`dev`)
+## Preview (`workflow_dispatch`)
 
-Pushing to `dev` fires `publish-preview.yml`. That job produces Changesets
-snapshot versions and publishes them to the `@preview` dist-tag.
+`publish-preview.yml` is manual. Dispatch with `dry_run=false` to produce
+Changesets snapshot versions and publish them to the `@preview` dist-tag.
 
 The unpublished-dependency registry gate (`check-release-dryrun --registry`)
 does **not** run in `publish-preview.yml`.
@@ -124,6 +124,10 @@ Python and Ruby also publish `solvapay-mcp` after the core package.
 
 ### How to run a rehearsal
 
+See [language-previews.md](./contributing/language-previews.md) for
+prerequisites, dispatch (including `--replace`), and per-language preview
+install. Short version:
+
 1. Merge the Version Packages PR on a sandbox repo, or stamp locally with the sentinel version you want.
 2. Run **Push rehearsal tags** (`push-rehearsal-tags.yml`) on that SHA.
 3. Watch the four language workflows plus `rehearsal-npm.yml` if you want a Verdaccio npm snapshot.
@@ -141,7 +145,8 @@ effect of the train work.
 
 ### Phase 3 (not implemented here)
 
-When rehearsals are boring, add one step to the publish leg of `publish.yml`,
+See [production-release.md](./contributing/production-release.md). When
+rehearsals are boring, add one step to the publish leg of `publish.yml`,
 gated on `steps.changesets.outputs.published == 'true'`, that pushes the four
 production tags with the release-bot App token. Enable one ecosystem at a
 time; crates.io last.
@@ -185,7 +190,13 @@ Platform and ABI coverage: [platform-support.mdx](./platform-support.mdx).
 ```bash
 pnpm changeset
 pnpm changeset status --verbose
+pnpm dryrun
 pnpm checks:release-dryrun
 pnpm build:packages
 pnpm docs:check
 ```
+
+`pnpm dryrun` is the umbrella: npm `release:dryrun` (graph gate, build, test,
+`pnpm -r publish --dry-run`) then language `preview --dry-run --accept-partial`
+(rust / python / ruby / go artifacts on this host). The two halves stay
+separate commands when you only need one.

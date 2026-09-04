@@ -17,6 +17,9 @@ import { mkdir, readdir, readFile, writeFile, copyFile, stat } from 'node:fs/pro
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { PackageManager } from '@solvapay/init'
+import { LANGUAGE_RUNTIME_DEPS } from '@solvapay/init'
+export { resolveLatestSolvapayVersions } from '@solvapay/init'
+export type { ResolveLatestVersionsOptions } from '@solvapay/init'
 
 function resolvePackageRoot(startFile: string): string {
   let dir = dirname(startFile)
@@ -36,10 +39,17 @@ function resolvePackageRoot(startFile: string): string {
 }
 
 const PACKAGE_ROOT = resolvePackageRoot(fileURLToPath(import.meta.url))
-export const BASE_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', '_base')
-export const FROM_OPENAPI_OVERLAY_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', 'from-openapi')
-export const FROM_SCRATCH_OVERLAY_DIR = join(PACKAGE_ROOT, 'templates', 'mcp', 'from-scratch')
+export const MCP_TS_TEMPLATE_ROOT = join(PACKAGE_ROOT, 'templates', 'mcp', 'ts')
+export const BASE_TEMPLATE_DIR = join(MCP_TS_TEMPLATE_ROOT, '_base')
+export const FROM_OPENAPI_OVERLAY_DIR = join(MCP_TS_TEMPLATE_ROOT, 'from-openapi')
+export const FROM_SCRATCH_OVERLAY_DIR = join(MCP_TS_TEMPLATE_ROOT, 'from-scratch')
 export const SCAFFOLD_SCRIPT_PATH = join(PACKAGE_ROOT, 'scripts', 'mcp', 'scaffold.mjs')
+
+export function mcpLanguageTemplateDir(language: string): string {
+  return join(PACKAGE_ROOT, 'templates', 'mcp', language)
+}
+
+export const NEXT_AUTH0_TEMPLATE_DIR = join(PACKAGE_ROOT, 'templates', 'next-auth0')
 
 export const PLACEHOLDERS = Object.freeze({
   WORKER_NAME: '__WORKER_NAME__',
@@ -98,6 +108,12 @@ const TEXT_EXTENSIONS = new Set([
   '.toml',
   '.env',
   '.example',
+  '.py',
+  '.rb',
+  '.go',
+  '.rs',
+  '.sh',
+  '.mod',
 ])
 
 function isTextFile(name: string): boolean {
@@ -293,6 +309,8 @@ export type WriteBootstrapEnvOptions = {
    * runs — so the `--dev` story holds even between scaffold and init.
    */
   dev?: boolean
+  /** Public MCP origin written to MCP_PUBLIC_BASE_URL. Defaults to the TS worker URL. */
+  publicBaseUrl?: string
 }
 
 const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
@@ -303,10 +321,11 @@ export async function writeBootstrapEnv(
   options: WriteBootstrapEnvOptions = {},
 ): Promise<void> {
   const envPath = join(target, '.env')
+  const publicBaseUrl = options.publicBaseUrl ?? 'http://localhost:8787'
   const lines = [
     '# Created by create-solvapay. Secrets land here from `solvapay init`.',
     `SOLVAPAY_PRODUCT_REF=${productRef}`,
-    'MCP_PUBLIC_BASE_URL=http://localhost:8787',
+    `MCP_PUBLIC_BASE_URL=${publicBaseUrl}`,
   ]
   if (options.dev) {
     lines.push(`SOLVAPAY_API_BASE_URL=${DEV_API_BASE_URL}`)
@@ -400,72 +419,10 @@ export function printConnectionSnippets(options: ConnectionSnippetsOptions): voi
  * `@solvapay/*` publish without republishing `create-solvapay`. The
  * `fallback` is used when the registry call fails (offline, blocked
  * network, registry outage) — it mirrors the caret pin currently in
- * `templates/mcp/_base/package.json` so the generated project is still
+ * `templates/mcp/ts/_base/package.json` so the generated project is still
  * installable in that case.
  */
-export const SOLVAPAY_RUNTIME_DEPS: ReadonlyArray<{ name: string; fallback: string }> =
-  Object.freeze([
-    { name: '@solvapay/mcp', fallback: '0.3.0' },
-    { name: '@solvapay/server', fallback: '1.1.0' },
-    { name: '@solvapay/react', fallback: '1.2.0' },
-  ])
-
-export type ResolveLatestVersionsOptions = {
-  /** Per-package timeout in milliseconds. Defaults to 3000ms. */
-  timeoutMs?: number
-  /** Optional logger. Defaults to writing one line per package to stdout. */
-  onResolve?: (entry: { name: string; version: string; source: 'registry' | 'fallback' }) => void
-}
-
-/**
- * Resolve the current `latest` dist-tag for each dep against the npm
- * registry. Runs all lookups in parallel with a per-package abort
- * timeout. Any failure (network error, non-2xx response, malformed
- * payload, timeout) silently falls back to the dep's hardcoded
- * `fallback` so offline scaffolds still produce an installable
- * `package.json`.
- */
-export async function resolveLatestSolvapayVersions(
-  deps: ReadonlyArray<{ name: string; fallback: string }> = SOLVAPAY_RUNTIME_DEPS,
-  options: ResolveLatestVersionsOptions = {},
-): Promise<Map<string, string>> {
-  const timeoutMs = options.timeoutMs ?? 3000
-  const onResolve =
-    options.onResolve ??
-    (entry => {
-      const suffix = entry.source === 'fallback' ? ' (offline fallback)' : ''
-      process.stdout.write(`   ${entry.name}@${entry.version}${suffix}\n`)
-    })
-
-  const settled = await Promise.all(
-    deps.map(async dep => {
-      try {
-        const url = `https://registry.npmjs.org/${encodeURIComponent(dep.name)}/latest`
-        const response = await fetch(url, {
-          headers: { accept: 'application/json' },
-          signal: AbortSignal.timeout(timeoutMs),
-        })
-        if (!response.ok) {
-          return { dep, version: dep.fallback, source: 'fallback' as const }
-        }
-        const body = (await response.json()) as { version?: unknown }
-        if (typeof body.version !== 'string' || body.version.length === 0) {
-          return { dep, version: dep.fallback, source: 'fallback' as const }
-        }
-        return { dep, version: body.version, source: 'registry' as const }
-      } catch {
-        return { dep, version: dep.fallback, source: 'fallback' as const }
-      }
-    }),
-  )
-
-  const result = new Map<string, string>()
-  for (const entry of settled) {
-    result.set(entry.dep.name, entry.version)
-    onResolve({ name: entry.dep.name, version: entry.version, source: entry.source })
-  }
-  return result
-}
+export const SOLVAPAY_RUNTIME_DEPS = LANGUAGE_RUNTIME_DEPS.ts
 
 /**
  * Rewrite `dependencies[<name>]` entries in `<target>/package.json` to

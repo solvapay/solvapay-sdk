@@ -46,9 +46,9 @@ for how `deno.workspace.json` resolves workspace source.
 
 ### `publish-preview.yml` — Preview Snapshot
 
-**Trigger:** push to `dev` (or manual `workflow_dispatch`). Manual dispatch defaults to `dry_run=true`: the pre-publish gates still run, then `changeset status` + `pnpm -r publish --dry-run` (no `NPM_TOKEN`); snapshot version/publish/verify and the post-publish Deno gate are skipped. Push to `dev`, or dispatch with `dry_run=false`, still cuts a real `@preview` snapshot. `workflow_dispatch` inputs resolve against the default branch.
+**Trigger:** manual `workflow_dispatch` only. Dispatch defaults to `dry_run=true`: the pre-publish gates still run, then `changeset status` + `pnpm -r publish --dry-run` (no `NPM_TOKEN`); snapshot version/publish/verify and the post-publish Deno gate are skipped. Dispatch with `dry_run=false` to cut a real `@preview` snapshot. `workflow_dispatch` inputs resolve against the default branch.
 
-Every push to `dev` runs the full pre-publish gate:
+A real `@preview` dispatch runs the full pre-publish gate:
 
 1. `pnpm build:packages` — every publishable package builds to `dist/`.
 2. `pnpm test` — unit tests for every workspace package.
@@ -123,15 +123,18 @@ touches `core/**` or a non-TypeScript SDK must add a changeset for it.
 - **Production language tags** are not created by automation yet. That is a
   deliberate one-step follow-up after rehearsals pass.
 
-See [`docs/publishing.mdx`](../../docs/publishing.mdx) and
+See [`docs/publishing.mdx`](../../docs/publishing.mdx),
+[`docs/contributing/language-previews.md`](../../docs/contributing/language-previews.md),
+and
 [`docs/contributing/release-sandbox.md`](../../docs/contributing/release-sandbox.md).
 
 ## Release workflow summary
 
 ```
-feature branch  ──▶  PR to `dev`  ──▶  merge ──▶  preview snapshot on npm
+feature branch  ──▶  PR to `dev`  ──▶  merge ──▶  (no automatic npm snapshot)
      │
      └── author ran `pnpm changeset` and committed .changeset/*.md
+     └── optional: dispatch `publish-preview.yml` (`dry_run=false`) for `@preview`
 
 eventually:
 
@@ -153,15 +156,16 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
 
 ## Quick Reference
 
-| Action                    | How to trigger                                                                     |
-| ------------------------- | ---------------------------------------------------------------------------------- |
-| Publish preview snapshot  | Push to `dev`                                                                      |
-| Cut stable release        | Push to `main` (auto-opens Version Packages PR), then merge the generated PR       |
-| Write a changeset         | `pnpm changeset` (interactive)                                                     |
-| Inspect pending releases  | `pnpm changeset status --verbose`                                                  |
-| Local npm publish dry-run | `pnpm release:dryrun` (gates + `pnpm -r publish --dry-run`, no `NPM_TOKEN`)        |
-| Verify fetch-runtime      | `pnpm validate:fetch-runtime` (or `pnpm tsx tools/repo/validate-fetch-runtime.ts`) |
-| Run the Deno gate         | `pnpm --filter @example/supabase-edge-mcp validate:workspace`                      |
+| Action                       | How to trigger                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| Publish preview snapshot     | Dispatch `publish-preview.yml` with `dry_run=false`                                |
+| Cut stable release           | Push to `main` (auto-opens Version Packages PR), then merge the generated PR       |
+| Write a changeset            | `pnpm changeset` (interactive)                                                     |
+| Inspect pending releases     | `pnpm changeset status --verbose`                                                  |
+| Local npm publish dry-run    | `pnpm release:dryrun` (gates + `pnpm -r publish --dry-run`, no `NPM_TOKEN`)        |
+| Local npm + language dry-run | `pnpm dryrun` (`release:dryrun` then `preview --dry-run --accept-partial`)         |
+| Verify fetch-runtime         | `pnpm validate:fetch-runtime` (or `pnpm tsx tools/repo/validate-fetch-runtime.ts`) |
+| Run the Deno gate            | `pnpm --filter @example/supabase-edge-mcp validate:workspace`                      |
 
 ## Troubleshooting
 
@@ -194,7 +198,7 @@ Set the NPM token in **Repository Settings → Secrets and variables → Actions
   root so Deno finds the pnpm-populated `node_modules`. Run
   `pnpm build:packages` first — the gate reads `dist/`.
 
-### Deno gate fails only on `dev`/`main`, not on the PR
+### Deno gate fails only on a publish workflow, not on the PR
 
 - The pre-publish gate and the PR gate both run `validate:workspace`, so
   a divergence means the merge commit differs from what CI saw. Rerun

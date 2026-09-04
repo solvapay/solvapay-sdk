@@ -25,12 +25,12 @@ npx solvapay init
 
 When you run `npx solvapay init`, the CLI:
 
-1. Checks for `package.json` and offers to create one if missing
-2. Detects your package manager (`npm`, `yarn`, or `pnpm`)
+1. Detects the project language from manifests (`package.json`, `pyproject.toml`, `Gemfile`, `go.mod`, `Cargo.toml`), or asks when that is ambiguous. Pass `--language` to override.
+2. For TypeScript, checks for `package.json` and offers to create one if missing. Other languages require their manifest already on disk.
 3. Opens your browser to sign in to SolvaPay Console
 4. Writes `SOLVAPAY_SECRET_KEY` to `.env`
 5. Ensures `.env` is listed in `.gitignore`
-6. Installs `@solvapay/server`, `@solvapay/core`, and `@solvapay/auth`
+6. Installs the SolvaPay SDK for that language
 7. Verifies your secret key with SolvaPay
 8. Prints a quick start snippet
 
@@ -38,7 +38,7 @@ When you run `npx solvapay init`, the CLI:
 
 | File | What changes |
 | --- | --- |
-| `package.json` | Created if missing (after confirmation) |
+| `package.json` | TypeScript only — created if missing (after confirmation) |
 | `.env` | Adds or updates `SOLVAPAY_SECRET_KEY` |
 | `.gitignore` | Adds `.env` if needed |
 | `node_modules` and lockfile | Installs base SolvaPay SDK packages |
@@ -58,8 +58,11 @@ Use [Installation](./installation) for exact package commands.
 To start from scratch, use the `create-solvapay` scaffolder instead of `init`:
 
 ```bash
-# Paid MCP server (Cloudflare Worker + embedded checkout widget)
-npm create solvapay my-mcp-app -- --type mcp
+# Paid MCP server (TypeScript / Cloudflare Workers by default)
+npm create solvapay my-mcp-app -- --type mcp --no-openapi
+
+# Same server in Python (preview until PyPI packages publish)
+npm create solvapay my-mcp-app -- --type mcp --no-openapi --language python
 
 # Generate MCP tools from an OpenAPI spec
 npm create solvapay my-api-mcp -- --type mcp --openapi ./openapi.yaml
@@ -72,12 +75,12 @@ npm create solvapay my-app -- --type next-auth0
 
 | `--type` | What you get |
 | --- | --- |
-| `mcp` | A paid MCP server on Cloudflare Workers: `@solvapay/mcp` server factory, OAuth bridge, and an embedded checkout widget built with `@solvapay/react/mcp`. With `--openapi <url\|path>`, tools are generated from your API spec; with `--no-openapi` you get a placeholder paid tool |
+| `mcp` | A paid MCP server. TypeScript (`--language ts`, default) is a Cloudflare Worker with `@solvapay/mcp` and the checkout widget. Python, Ruby, Go, and Rust (`--language python\|ruby\|go\|rust`) scaffold an HTTP `/mcp` server — those languages are preview until production registry publish. `--openapi` is TypeScript-only |
 | `next-auth0` | A Next.js App Router starter wired for Auth0: `@auth0/nextjs-auth0` session handling, `createAuth0AuthMiddleware` from `@solvapay/next/middleware`, and the `externalRef` customer linkage set up for you. `--auth auth0` is a shortcut for this type |
 
-Useful flags: `--product <ref>` to pre-select a product, `-y` / `--non-interactive` for CI,
+Useful flags: `--language <id>`, `--product <ref>` to pre-select a product, `-y` / `--non-interactive` for CI,
 `--skip-install`, and `--skip-init` (the scaffolder runs `solvapay init` at the end unless you
-skip it). Run `npm create solvapay -- --list-types` to see available templates.
+skip it). Run `npm create solvapay -- --list-types` to see available templates and languages.
 
 ## Re-run setup safely
 

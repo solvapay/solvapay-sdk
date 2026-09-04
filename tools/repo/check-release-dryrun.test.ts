@@ -323,4 +323,16 @@ describe('release-dryrun live tree', () => {
   it('passes the live workspace (stable versions, workspace:* batch, dry-run defaults)', async () => {
     expect(await runReleaseDryrunCheck(REPO_ROOT)).toEqual([])
   })
+
+  it('exposes pnpm dryrun as npm rehearsal then language preview dry-run', () => {
+    const raw: unknown = JSON.parse(readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'))
+    if (typeof raw !== 'object' || raw === null || !('scripts' in raw)) {
+      throw new Error('package.json missing scripts')
+    }
+    const scripts = raw.scripts
+    if (typeof scripts !== 'object' || scripts === null || !('dryrun' in scripts)) {
+      throw new Error('package.json missing scripts.dryrun')
+    }
+    expect(scripts.dryrun).toBe('pnpm release:dryrun && pnpm preview --dry-run --accept-partial')
+  })
 })

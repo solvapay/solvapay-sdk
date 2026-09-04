@@ -172,7 +172,7 @@ export async function runFromOpenapi(input: FromOpenapiInput): Promise<void> {
   if (skipInit) {
     process.stdout.write('⏭  Skipping `solvapay init` (--skip-init)\n')
   } else {
-    await runInitInDirectory({ cwd: target, options, skipSdkInstall: true })
+    await runInitInDirectory({ cwd: target, options, skipSdkInstall: true, language: 'ts' })
   }
 
   await gitInit(target)

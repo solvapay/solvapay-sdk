@@ -107,12 +107,21 @@ describe('runInitInDirectory (integration)', () => {
     expect(gitignoreContent).toContain('.env')
   })
 
-  it('creates package.json in the target cwd when missing under --yes', async () => {
-    await runInitInDirectory({ cwd, options: { yes: true } })
+  it('creates package.json in an empty dir only when --language ts is explicit', async () => {
+    await runInitInDirectory({ cwd, options: { yes: true, language: 'ts' } })
 
-    const pkg = JSON.parse(await readFile(path.join(cwd, 'package.json'), 'utf8'))
+    const pkg = JSON.parse(await readFile(path.join(cwd, 'package.json'), 'utf8')) as {
+      version: string
+      private: boolean
+    }
     expect(pkg.version).toBe('1.0.0')
     expect(pkg.private).toBe(true)
+  })
+
+  it('does not invent a package.json under --yes when language cannot be detected', async () => {
+    await expect(runInitInDirectory({ cwd, options: { yes: true } })).rejects.toThrow(
+      /Pass --language/,
+    )
   })
 
   it('respects skipSdkInstall: true and never invokes installSolvaPaySdk', async () => {

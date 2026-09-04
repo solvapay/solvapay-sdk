@@ -2,10 +2,17 @@
 # Cross-compile a platform gem via rb-sys-dock with the cargo workspace mounted
 # so path deps (solvapay-core/dto/transport) resolve inside the container.
 #
-# Magnus 0.8 + `--mount-toolchains` is the working Temporal pattern
-# (temporalio/sdk-ruby `.github/workflows/build-gems.yml`). The older
-# `rbsys/*:0.9.128` + Magnus 0.7 combination shipped a Ruby 4.0 host with
-# incomplete 3.3 toolchains and is no longer the recorded path.
+# Magnus 0.8 is the working Temporal pattern
+# (temporalio/sdk-ruby `.github/workflows/build-gems.yml`). Gemfile.lock
+# pins `rb_sys 0.9.128`, so `rbsys/*:0.9.128` is the image in use.
+# Magnus 0.8 builds against that image's cross rubies; the old blocker
+# was Magnus 0.7.
+#
+# rust-toolchain.toml pins the workspace to 1.96.0. `--mount-toolchains`
+# only installs cross std onto the container's default stable toolchain,
+# so cargo still cannot find `core` for aarch64/Darwin. Derive the rust
+# triple from the pinned rb_sys gem and `rustup target add` it inside
+# the container so rustup honours the pin.
 #
 # Windows `x64-mingw-ucrt` stays source-gem-only: the dock mingw image still
 # fails rb-sys/bindgen inside LLVM AVX10.2/AMX headers (same as Temporal).
@@ -17,6 +24,9 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 gem_dir="$(cd "$script_dir/.." && pwd)"
 repo_root="$(cd "$gem_dir/../.." && pwd)"
 
+rust_target="$(bundle exec --gemfile "$gem_dir/Gemfile" ruby \
+  -rrb_sys -e 'puts RbSys::ToolchainInfo.new(ARGV[0]).rust_target' "$platform")"
+
 cd "$repo_root"
 bundle exec --gemfile "$gem_dir/Gemfile" rb-sys-dock \
   --platform "$platform" \
@@ -24,4 +34,4 @@ bundle exec --gemfile "$gem_dir/Gemfile" rb-sys-dock \
   --directory "$repo_root" \
   --mount-toolchains \
   -- \
-  "cd sdks/ruby && bundle install && RUBY_CC_VERSION=${ruby_versions} bundle exec rake native:${platform} gem"
+  "rustup target add ${rust_target} && cd sdks/ruby && bundle install && bundle exec rake native:${platform} gem"

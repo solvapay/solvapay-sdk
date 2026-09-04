@@ -54,8 +54,14 @@ def main() -> int:
         default=Path("wheels"),
         help="Directory containing built .whl files",
     )
+    parser.add_argument(
+        "--allow-missing",
+        default="",
+        help="Comma-separated wheel family ids that may be absent (local previews only)",
+    )
     args = parser.parse_args()
     wheel_dir: Path = args.dir
+    allow_missing = {item.strip() for item in args.allow_missing.split(",") if item.strip()}
     matrix = _load_matrix()
     python = matrix["python"]
     rules = python["wheels"]
@@ -82,6 +88,8 @@ def main() -> int:
                             file=sys.stderr,
                         )
                         return 1
+        elif rule["id"] in allow_missing:
+            print(f"check-wheels: skip missing {rule['id']} (--allow-missing)")
         else:
             missing.append(rule["id"])
 

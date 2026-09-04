@@ -34,6 +34,17 @@ describe('runInitCommand', () => {
     })
   })
 
+  it('forwards --language through to runInitInDirectory', async () => {
+    vi.mocked(runInitInDirectory).mockResolvedValue()
+
+    await runInitCommand({ yes: true, language: 'python' })
+
+    expect(runInitInDirectory).toHaveBeenCalledWith({
+      cwd: process.cwd(),
+      options: { yes: true, language: 'python' },
+    })
+  })
+
   it('forwards --product through to runInitInDirectory', async () => {
     vi.mocked(runInitInDirectory).mockResolvedValue()
 

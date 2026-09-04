@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assertAllRehearsalTags,
   assertHostMatchesChannel,
   assertTagsAvailable,
   ecosystemVersion,
@@ -53,6 +54,7 @@ describe('ecosystemVersion', () => {
     expect(ecosystemVersion('0.2.0', 'production', 'python', 7)).toBe('0.2.0')
     expect(ecosystemVersion('0.2.0', 'rehearsal', 'npm', 7)).toBe('0.2.0-rehearsal.7')
     expect(ecosystemVersion('0.2.0', 'rehearsal', 'cargo', 7)).toBe('0.2.0-rehearsal.7')
+    expect(ecosystemVersion('0.2.0', 'rehearsal', 'go', 7)).toBe('0.2.0-rehearsal.7')
     expect(ecosystemVersion('0.2.0', 'rehearsal', 'python', 7)).toBe('0.2.0.dev7')
     expect(ecosystemVersion('0.2.0', 'rehearsal', 'ruby', 7)).toBe('0.2.0.pre.7')
   })
@@ -90,5 +92,23 @@ describe('tag availability', () => {
       /tags already exist on remote/,
     )
     expect(() => assertTagsAvailable(tags, [])).not.toThrow()
+  })
+})
+
+describe('assertAllRehearsalTags', () => {
+  it('accepts only tags under rehearsal/', () => {
+    expect(() =>
+      assertAllRehearsalTags([
+        'rehearsal/solvapay-rust-v0.1.0',
+        'rehearsal/solvapay-go-v0.1.0',
+      ]),
+    ).not.toThrow()
+  })
+
+  it('throws when any tag is outside rehearsal/', () => {
+    expect(() =>
+      assertAllRehearsalTags(['rehearsal/solvapay-rust-v0.1.0', 'solvapay-go-v0.1.0']),
+    ).toThrow(/non-rehearsal tags: solvapay-go-v0.1.0/)
+    expect(() => assertAllRehearsalTags(['rehearsal'])).toThrow(/non-rehearsal tags: rehearsal/)
   })
 })

@@ -7,12 +7,22 @@
 import { execFileSync } from 'node:child_process'
 import { REPO_ROOT } from '../shared/paths.js'
 import { readReleaseTrainVersion } from './lib/release-train.js'
-import { assertTagsAvailable, trainTags } from './lib/release-channel.js'
+import { assertAllRehearsalTags, assertTagsAvailable, trainTags } from './lib/release-channel.js'
 
 function git(args: string[]): string {
   return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' }).trim()
 }
 
+function localTagExists(tag: string): boolean {
+  try {
+    git(['show-ref', '--verify', '--quiet', `refs/tags/${tag}`])
+    return true
+  } catch {
+    return false
+  }
+}
+
+const replace = process.argv.includes('--replace')
 const version = process.argv.includes('--version')
   ? process.argv[process.argv.indexOf('--version') + 1]
   : readReleaseTrainVersion(REPO_ROOT)
@@ -30,7 +40,20 @@ const remoteTags = git(['ls-remote', '--tags', 'origin'])
   })
   .filter(Boolean)
 
-assertTagsAvailable(tags, remoteTags)
+if (replace) {
+  assertAllRehearsalTags(tags)
+  for (const tag of tags) {
+    if (remoteTags.includes(tag)) {
+      git(['push', 'origin', '--delete', `refs/tags/${tag}`])
+      console.log(`deleted remote ${tag}`)
+    }
+    if (localTagExists(tag)) {
+      git(['tag', '-d', tag])
+    }
+  }
+} else {
+  assertTagsAvailable(tags, remoteTags)
+}
 
 const sha = git(['rev-parse', 'HEAD'])
 for (const tag of tags) {

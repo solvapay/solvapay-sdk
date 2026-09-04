@@ -214,7 +214,7 @@ describe('SOLVAPAY_RUNTIME_DEPS', () => {
     }
   })
 
-  it('fallbacks match the caret pins in templates/mcp/_base/package.json', async () => {
+  it('fallbacks match the caret pins in templates/mcp/ts/_base/package.json', async () => {
     const raw = await readFile(path.join(BASE_TEMPLATE_DIR, 'package.json'), 'utf8')
     const pkg = JSON.parse(raw) as { dependencies: Record<string, string> }
     for (const dep of SOLVAPAY_RUNTIME_DEPS) {

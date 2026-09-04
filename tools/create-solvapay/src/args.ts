@@ -6,12 +6,14 @@
  * commander/yargs dependency.
  */
 
-import type { InitCommandOptions } from '@solvapay/init'
+import type { InitCommandOptions, ScaffoldLanguage } from '@solvapay/init'
+import { parseScaffoldLanguage } from '@solvapay/init'
 
 export type ParsedCommonArgs = {
   projectName?: string
   type?: string
   auth?: string
+  language?: ScaffoldLanguage
   product?: string
   yes: boolean
   dev: boolean
@@ -30,6 +32,7 @@ export type ParsedMcpArgs = {
   openapi?: string
   noOpenapi: boolean
   toolName?: string
+  module?: string
   help: boolean
   unknownFlag?: string
 }
@@ -41,16 +44,19 @@ export type RunOptions = {
   projectName: string
   common: ParsedCommonArgs
   raw: readonly string[]
+  language: import('@solvapay/init').ScaffoldLanguage
 }
 
 const FLAG_ALIASES: Record<string, string> = {
   '-y': '--yes',
   '-h': '--help',
+  '-l': '--language',
 }
 
 const COMMON_SKIP_FLAGS = new Set([
   '--type',
   '--auth',
+  '--language',
   '--yes',
   '--non-interactive',
   '--product',
@@ -59,7 +65,7 @@ const COMMON_SKIP_FLAGS = new Set([
   '--dev',
 ])
 
-const COMMON_VALUE_FLAGS = new Set(['--type', '--auth', '--product'])
+const COMMON_VALUE_FLAGS = new Set(['--type', '--auth', '--product', '--language'])
 const COMMON_BOOLEAN_FLAGS = new Set([
   '--yes',
   '--non-interactive',
@@ -71,10 +77,15 @@ const COMMON_BOOLEAN_FLAGS = new Set([
   '--dev',
 ])
 
-const MCP_VALUE_FLAGS = new Set(['--openapi', '--tool-name'])
+const MCP_VALUE_FLAGS = new Set(['--openapi', '--tool-name', '--module'])
 const MCP_BOOLEAN_FLAGS = new Set(['--no-openapi', '--help'])
 
-export const MCP_SPECIFIC_FLAGS = new Set(['--openapi', '--no-openapi', '--tool-name'])
+export const MCP_SPECIFIC_FLAGS = new Set([
+  '--openapi',
+  '--no-openapi',
+  '--tool-name',
+  '--module',
+])
 
 export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
   const out: ParsedCommonArgs = {
@@ -112,6 +123,14 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
       if (arg === '--type') out.type = value
       if (arg === '--auth') out.auth = value
       if (arg === '--product') out.product = value
+      if (arg === '--language') {
+        const parsed = parseScaffoldLanguage(value)
+        if (!parsed.ok) {
+          out.unknownFlag = parsed.reason
+          return out
+        }
+        out.language = parsed.language
+      }
       continue
     }
 
@@ -131,7 +150,7 @@ export function parseArgs(argv: readonly string[]): ParsedCommonArgs {
     }
 
     if (MCP_SPECIFIC_FLAGS.has(arg)) {
-      if (arg === '--openapi' || arg === '--tool-name') {
+      if (arg === '--openapi' || arg === '--tool-name' || arg === '--module') {
         i++
       }
       continue
@@ -163,7 +182,7 @@ export function parseMcpArgs(argv: readonly string[]): ParsedMcpArgs {
     }
 
     if (COMMON_SKIP_FLAGS.has(arg)) {
-      if (arg === '--type' || arg === '--auth' || arg === '--product') {
+      if (arg === '--type' || arg === '--auth' || arg === '--product' || arg === '--language') {
         i++
       }
       continue
@@ -177,6 +196,7 @@ export function parseMcpArgs(argv: readonly string[]): ParsedMcpArgs {
       }
       if (arg === '--openapi') out.openapi = value
       if (arg === '--tool-name') out.toolName = value
+      if (arg === '--module') out.module = value
       continue
     }
 
@@ -209,7 +229,12 @@ export function inferMcpMode(args: ParsedMcpArgs): McpMode | null {
 }
 
 export function toInitOptions(common: ParsedCommonArgs): InitCommandOptions {
-  return { yes: common.yes, dev: common.dev, productRef: common.product }
+  return {
+    yes: common.yes,
+    dev: common.dev,
+    productRef: common.product,
+    language: common.language,
+  }
 }
 
 const KEBAB_RE = /^[a-z][a-z0-9-]*$/
@@ -254,11 +279,12 @@ export const HELP_TEXT = `Usage:
   npm create solvapay <project-name> -- --type <kind> [flags]
 
 Project types:
-  mcp    Monetized MCP server on Cloudflare Workers (from-openapi or from-scratch)
+  mcp    Monetized MCP server (TypeScript / Cloudflare Workers, plus Python/Ruby/Go/Rust)
   next-auth0  Next.js + Auth0 starter with SolvaPay middleware wiring
 
 Common flags:
   --type <kind>          Project type to scaffold (default: prompt; required if non-interactive)
+  -l, --language <id>    ts, python, ruby, go, rust (default: prompt in TTY; ts if non-interactive)
   --auth <provider>      Shortcut surface for auth-focused starters (e.g. auth0).
   -y, --yes              Non-interactive: accept all defaults
   --product <ref>        Pre-fill SOLVAPAY_PRODUCT_REF (skip the picker)
@@ -288,6 +314,7 @@ MCP flags:
   --openapi <url|path>   Spec URL or local path. Implies from-openapi sub-mode.
   --no-openapi           Skip OpenAPI; scaffold from-scratch.
   --tool-name <camel>    Placeholder tool name in from-scratch mode (default: helloTool).
+  --module <path>        Go module path (default: github.com/example/<project-name>).
   --dev                  Target the SolvaPay dev backend (api-dev.solvapay.com).
                          Internal testing only. Seeds .env with
                          SOLVAPAY_API_BASE_URL=https://api-dev.solvapay.com

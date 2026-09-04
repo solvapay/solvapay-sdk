@@ -1,6 +1,4 @@
 import { detectPackageManager, runInitInDirectory } from '@solvapay/init'
-import { fileURLToPath } from 'node:url'
-import { join } from 'node:path'
 import type { ProjectType } from '../registry'
 import type { ParsedTypeArgs, RunOptions } from '../../args'
 import { toInitOptions } from '../../args'
@@ -9,11 +7,8 @@ import {
   copyDir,
   gitInit,
   installProjectDependencies,
+  NEXT_AUTH0_TEMPLATE_DIR,
 } from '../mcp/scaffold'
-
-const NEXT_AUTH0_TEMPLATE_DIR = join(
-  fileURLToPath(new URL('../../../templates/next-auth0', import.meta.url)),
-)
 
 const parseNextAuth0Args = (): ParsedTypeArgs => ({
   noOpenapi: false,
@@ -24,6 +19,7 @@ export const nextAuth0ProjectType: ProjectType = {
   id: 'next-auth0',
   label: 'Next.js + Auth0 starter',
   summary: 'Next.js starter with SolvaPay Auth0 middleware + provider wiring',
+  supportedLanguages: ['ts'],
   parseArgs: parseNextAuth0Args,
   run,
 }
@@ -56,7 +52,7 @@ async function run(opts: RunOptions): Promise<void> {
   if (common.skipInit) {
     process.stdout.write('⏭  Skipping `solvapay init` (--skip-init)\n')
   } else {
-    await runInitInDirectory({ cwd: target, options, skipSdkInstall: true })
+    await runInitInDirectory({ cwd: target, options, skipSdkInstall: true, language: 'ts' })
   }
 
   await gitInit(target)

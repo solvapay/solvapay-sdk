@@ -21,15 +21,11 @@ end
 
 SolvaPayExtensionTask.new("solvapay", GEMSPEC) do |ext|
   ext.lib_dir = "lib/solvapay"
-  ext.cross_compile = true
+  # RbSys::ExtensionTask derives cross_compile / cross_platform from
+  # RUBY_TARGET (set by rb-sys-dock). Do not hardcode the platform list —
+  # it only produces "no configuration section" warnings.
   # Windows (x64-mingw-ucrt) omitted — rb-sys-dock has no working mingw
   # toolchain for this crate (clang/AVX10.2). Install the source gem.
-  ext.cross_platform = %w[
-    x86_64-linux
-    aarch64-linux
-    x86_64-darwin
-    arm64-darwin
-  ]
 end
 
 require "rake/testtask"

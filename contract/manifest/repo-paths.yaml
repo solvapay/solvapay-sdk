@@ -479,6 +479,14 @@ lookups:
   generateTypesScript: sdks/typescript/server/scripts/generate-types.ts
   goLiveContract: sdks/go/cmd/live-contract
   goWasmBuild: sdks/go/scripts/build-wasm.sh
+  goRehearsalRetarget: sdks/go/scripts/rehearsal-retarget-module.sh
+  pythonCheckWheels: sdks/python/scripts/check-wheels.py
+  pythonInstallSmoke: sdks/python/scripts/install-smoke.py
+  rubyCheckGems: sdks/ruby/scripts/check-gems.rb
+  rubyInstallSmoke: sdks/ruby/scripts/install-smoke.rb
+  rubyDockBuild: sdks/ruby/scripts/dock-build.sh
+  cratesPublish: tools/repo/crates-publish.sh
+  checkPublishGraph: tools/repo/check-publish-graph.sh
   capiCtestRun: sdks/capi/ctest/run.sh
   capiCtestContract: sdks/capi/ctest/contract.sh
   packageJson: package.json
@@ -492,11 +500,11 @@ lookups:
   exampleWidgetHtmlCloudflare: examples/typescript/cloudflare-workers-mcp/mcp-app.html
   exampleWidgetHtmlSupabase: examples/typescript/supabase-edge-mcp/mcp-app.html
   exampleWidgetHtmlCheckout: examples/typescript/mcp-checkout-app/mcp-app.html
-  exampleWidgetHtmlScaffold: tools/create-solvapay/templates/mcp/_base/mcp-app.html
+  exampleWidgetHtmlScaffold: tools/create-solvapay/templates/mcp/ts/_base/mcp-app.html
   exampleWidgetTsxCloudflare: examples/typescript/cloudflare-workers-mcp/src/mcp-app.tsx
   exampleWidgetTsxSupabase: examples/typescript/supabase-edge-mcp/src/mcp-app.tsx
   exampleWidgetTsxCheckout: examples/typescript/mcp-checkout-app/src/mcp-app.tsx
-  exampleWidgetTsxScaffold: tools/create-solvapay/templates/mcp/_base/src/mcp-app.tsx
+  exampleWidgetTsxScaffold: tools/create-solvapay/templates/mcp/ts/_base/src/mcp-app.tsx
   exampleDemoToolsCloudflare: examples/typescript/cloudflare-workers-mcp/src/demo-tools.ts
   exampleDemoToolsSupabase: examples/typescript/supabase-edge-mcp/supabase/functions/mcp/demo-tools.ts
   supportMatrix: contract/manifest/support-matrix.yaml

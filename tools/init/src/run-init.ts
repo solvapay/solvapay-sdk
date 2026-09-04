@@ -15,14 +15,27 @@ import {
   writeSolvaPayProductRefToEnv,
   writeSolvaPaySecretToEnv,
 } from './env'
-import { getInstallCommand, getSolvaPayBasePackages, installSolvaPaySdk } from './install'
+import { getSolvaPayBasePackages } from './install'
+import {
+  detectProjectLanguage,
+  getLanguageInstallCommand,
+  installSdk,
+  LANGUAGE_LABELS,
+  LANGUAGE_MANIFESTS,
+  promptLanguage,
+  SCAFFOLD_LANGUAGES,
+  type ScaffoldLanguage,
+} from './language'
 import {
   askKeepConfiguredProduct,
   formatConfiguredProductLabel,
   pickProductInteractive,
 } from './product-picker'
 import { listProducts } from './products'
-import { detectPackageManager, ensureNodeProject, waitForEnter } from './project'
+import { ensureNodeProject, waitForEnter } from './project'
+import { access } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import path from 'node:path'
 
 const DEFAULT_API_BASE_URL = 'https://api.solvapay.com'
 const DEV_API_BASE_URL = 'https://api-dev.solvapay.com'
@@ -98,20 +111,89 @@ export type InitCommandOptions = {
    * any further user action.
    */
   dev?: boolean
+  /**
+   * Override language detection. Used by `solvapay init --language` and
+   * forwarded by `create-solvapay` after the scaffolder already chose one.
+   */
+  language?: ScaffoldLanguage
 }
 
 export type RunInitInDirectoryOptions = {
   cwd: string
   options?: InitCommandOptions
   /**
-   * When true, skip the `installSolvaPaySdk` step. `create-solvapay`
-   * sets this because the scaffolded `package.json` ships the right MCP
-   * deps (`@solvapay/mcp`, `@solvapay/react`, MCP SDK, wrangler, vite...)
-   * and runs its own project-local `npm install` before delegating.
+   * When true, skip the SDK install step. `create-solvapay` sets this
+   * because the scaffold already installed project-local deps.
    * `solvapay init` keeps the default (`false`) so existing projects get
-   * the SolvaPay base packages installed for them.
+   * the SolvaPay packages installed for them.
    */
   skipSdkInstall?: boolean
+  /**
+   * Explicit language from `create-solvapay`. Wins over detection and
+   * `--language` so init never re-prompts after a scaffold.
+   */
+  language?: ScaffoldLanguage
+}
+
+const fileExists = async (filePath: string): Promise<boolean> => {
+  try {
+    await access(filePath, constants.F_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const resolveInitLanguage = async (
+  cwd: string,
+  options: InitCommandOptions,
+  explicit?: ScaffoldLanguage,
+): Promise<ScaffoldLanguage> => {
+  if (explicit) return explicit
+  if (options.language) return options.language
+
+  const detection = await detectProjectLanguage(cwd)
+  if (detection.status === 'detected') return detection.language
+
+  if (options.yes) {
+    throw new Error(
+      'Could not detect project language from manifests. Pass --language <ts|python|ruby|go|rust>.',
+    )
+  }
+
+  const candidates = detection.status === 'ambiguous' ? detection.candidates : SCAFFOLD_LANGUAGES
+  return promptLanguage(candidates)
+}
+
+const ensureLanguageProject = async (
+  cwd: string,
+  language: ScaffoldLanguage,
+  options: InitCommandOptions,
+): Promise<'cancelled' | 'ready'> => {
+  if (language === 'ts') {
+    const projectCheck = await ensureNodeProject({ cwd, autoCreate: options.yes })
+    if (projectCheck.action === 'cancelled') {
+      process.stdout.write(
+        'Initialization cancelled. Run `npm init -y` first, then `solvapay init`.\n',
+      )
+      return 'cancelled'
+    }
+    const created = projectCheck.action === 'created'
+    process.stdout.write(
+      `🔍 Detected ${LANGUAGE_LABELS.ts} project (package.json ${created ? 'created' : 'found'})\n`,
+    )
+    return 'ready'
+  }
+
+  const manifest = LANGUAGE_MANIFESTS[language]
+  if (!(await fileExists(path.join(cwd, manifest)))) {
+    throw new Error(
+      `No ${manifest} found in ${cwd}. This does not look like a ${LANGUAGE_LABELS[language]} project. ` +
+        `Pass --language only when the matching manifest is already present.`,
+    )
+  }
+  process.stdout.write(`🔍 Detected ${LANGUAGE_LABELS[language]} project (${manifest} found)\n`)
+  return 'ready'
 }
 
 const configureProductRef = async (
@@ -204,6 +286,7 @@ export const runInitInDirectory = async ({
   cwd,
   options = {},
   skipSdkInstall = false,
+  language: explicitLanguage,
 }: RunInitInDirectoryOptions): Promise<void> => {
   const apiBaseUrl = resolveApiBaseUrl(options)
   printBanner()
@@ -214,19 +297,10 @@ export const runInitInDirectory = async ({
     )
   }
 
-  const projectCheck = await ensureNodeProject({ cwd, autoCreate: options.yes })
-  if (projectCheck.action === 'cancelled') {
-    process.stdout.write(
-      'Initialization cancelled. Run `npm init -y` first, then `solvapay init`.\n',
-    )
+  const language = await resolveInitLanguage(cwd, options, explicitLanguage)
+  const projectReady = await ensureLanguageProject(cwd, language, options)
+  if (projectReady === 'cancelled') {
     return
-  }
-
-  const packageManager = await detectPackageManager(cwd)
-  if (projectCheck.action === 'created') {
-    process.stdout.write(`🔍 Detected ${packageManager} project (package.json created)\n`)
-  } else {
-    process.stdout.write(`🔍 Detected ${packageManager} project (package.json found)\n`)
   }
 
   const initSession = await createInitSession(apiBaseUrl)
@@ -381,15 +455,17 @@ export const runInitInDirectory = async ({
   if (!skipSdkInstall) {
     const onInstallProgress = createInstallProgressReporter()
     onInstallProgress('Resolving packages')
-    const installResult = await installSolvaPaySdk(packageManager, cwd, onInstallProgress)
+    const installResult = await installSdk(language, cwd, onInstallProgress)
     finishInstallProgressReporter()
     if (installResult.ok) {
       process.stdout.write('✅ SolvaPay SDK packages installed\n')
-      const installedPackages = getSolvaPayBasePackages()
-      const packageList = installedPackages.join(', ')
-      process.stdout.write(`📦 Added ${installedPackages.length} packages: ${packageList}\n`)
+      if (language === 'ts') {
+        const installedPackages = getSolvaPayBasePackages()
+        const packageList = installedPackages.join(', ')
+        process.stdout.write(`📦 Added ${installedPackages.length} packages: ${packageList}\n`)
+      }
     } else {
-      const manualInstallCommand = await getInstallCommand(packageManager)
+      const manualInstallCommand = await getLanguageInstallCommand(language)
       process.stdout.write(
         `⚠️ Install failed (${installResult.warning || 'unknown error'}). Run manually: ${manualInstallCommand}\n`,
       )

@@ -16,6 +16,13 @@ describe('support-matrix', () => {
     const matrix = loadSupportMatrix(REPO_ROOT)
     expect(matrix.python.wheels).toHaveLength(7)
     expect(matrix.ruby.gems).toHaveLength(4)
+    expect(matrix.ruby.gems.map(gem => gem.os)).toEqual([
+      'ubuntu-latest',
+      'ubuntu-latest',
+      'ubuntu-latest',
+      'ubuntu-latest',
+    ])
+    expect(JSON.stringify(matrix)).not.toMatch(/"dock"/)
     expect(matrix.ruby.abis).toEqual(['3.1', '3.2', '3.3', '3.4'])
     expect(matrix.python.manylinux).toBe('manylinux2014')
     expect(matrix.python.freeThreaded).toBe('not-supported')

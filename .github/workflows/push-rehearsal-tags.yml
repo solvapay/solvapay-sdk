@@ -11,6 +11,11 @@ on:
         description: 'Sentinel version to tag (default: package.json of @solvapay/release-train)'
         required: false
         type: string
+      replace:
+        description: 'Delete existing rehearsal tags on origin before re-pushing'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -50,8 +55,11 @@ jobs:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          ARGS=()
           if [ -n "${{ inputs.version }}" ]; then
-            pnpm exec tsx tools/repo/push-rehearsal-tags.ts --version "${{ inputs.version }}"
-          else
-            pnpm exec tsx tools/repo/push-rehearsal-tags.ts
+            ARGS+=(--version "${{ inputs.version }}")
           fi
+          if [ "${{ inputs.replace }}" = "true" ]; then
+            ARGS+=(--replace)
+          fi
+          pnpm exec tsx tools/repo/push-rehearsal-tags.ts "${ARGS[@]}"

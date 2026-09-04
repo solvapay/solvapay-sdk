@@ -22,6 +22,16 @@ describe('parseArgs', () => {
     expect(result.type).toBe('mcp')
   })
 
+  it('parses --language / -l', () => {
+    expect(parseArgs(['--language', 'python']).language).toBe('python')
+    expect(parseArgs(['-l', 'go']).language).toBe('go')
+  })
+
+  it('rejects an unknown --language', () => {
+    const result = parseArgs(['--language', 'cobol'])
+    expect(result.unknownFlag).toMatch(/Unknown language/)
+  })
+
   it('parses --auth <provider>', () => {
     const result = parseArgs(['my-app', '--auth', 'auth0'])
     expect(result.projectName).toBe('my-app')
@@ -114,6 +124,10 @@ describe('parseMcpArgs', () => {
     expect(parseMcpArgs(['--tool-name', 'fetchPet']).toolName).toBe('fetchPet')
   })
 
+  it('parses --module <path>', () => {
+    expect(parseMcpArgs(['--module', 'github.com/acme/demo']).module).toBe('github.com/acme/demo')
+  })
+
   it('parses a realistic mix', () => {
     const result = parseMcpArgs([
       'my-app',
@@ -178,6 +192,7 @@ describe('toInitOptions', () => {
       yes: true,
       dev: true,
       productRef: undefined,
+      language: undefined,
     })
   })
 
@@ -186,6 +201,7 @@ describe('toInitOptions', () => {
       yes: false,
       dev: false,
       productRef: undefined,
+      language: undefined,
     })
   })
 
@@ -194,6 +210,7 @@ describe('toInitOptions', () => {
       yes: false,
       dev: false,
       productRef: 'prd_abc',
+      language: undefined,
     })
   })
 })

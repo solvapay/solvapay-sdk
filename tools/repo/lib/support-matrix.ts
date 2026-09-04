@@ -9,7 +9,6 @@ const FilenameRule = z.object({
   os: z.string().min(1).optional(),
   target: z.string().min(1).optional(),
   manylinux: z.string().optional(),
-  dock: z.boolean().optional(),
   filenameIncludes: z.array(z.string()).default([]),
   filenameExcludes: z.array(z.string()).default([]),
   filenameAnyOf: z.array(z.string()).default([]),

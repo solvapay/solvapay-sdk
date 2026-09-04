@@ -44,6 +44,7 @@ See [`docs/contributing/sdk-codegen.md`](../docs/contributing/sdk-codegen.md).
 | `pnpm validate:fetch-runtime`                        | `tools/repo/validate-fetch-runtime.ts`                                                |
 | `pnpm checks:required`                               | `tools/repo/check-required-checks.ts`                                                 |
 | `pnpm checks:release-dryrun` / `pnpm release:dryrun` | `tools/repo/check-release-dryrun.ts`, `release-dryrun.ts`                             |
+| `pnpm dryrun`                                        | `release:dryrun` then `preview --dry-run --accept-partial`                            |
 | `pnpm deps:check`                                    | `tools/repo/check-dependency-health.ts`                                               |
 | `pnpm loc`                                           | `tools/repo/count-loc.ts` (`--include-examples`, `--include-tools`, `--include-docs`) |
 | `pnpm typecheck`                                     | `tools/repo/typecheck-packages.ts`                                                    |

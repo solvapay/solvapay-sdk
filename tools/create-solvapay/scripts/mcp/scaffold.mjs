@@ -51,8 +51,8 @@ import {
 // to a filesystem path — the previous `new URL(import.meta.url).pathname`
 // approach returned `/C:/...` on Windows and broke once published to npm.
 const HERE = dirname(fileURLToPath(import.meta.url))
-const BASE_TEMPLATE_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', '_base')
-const OPENAPI_OVERLAY_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', 'from-openapi')
+const BASE_TEMPLATE_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', 'ts', '_base')
+const OPENAPI_OVERLAY_DIR = resolve(HERE, '..', '..', 'templates', 'mcp', 'ts', 'from-openapi')
 
 const VALID_AUTH_KINDS = new Set([
   'none',
@@ -217,7 +217,7 @@ async function assertTemplatePresent(templateDir) {
   } catch {
     throw new Error(
       `Template directory missing: ${templateDir}. ` +
-        `The packaged templates/mcp/_base/ tree did not ship with this build.`,
+        `The packaged templates/mcp/ts/_base/ tree did not ship with this build.`,
     )
   }
   // `src/worker.ts` is the entrypoint scaffold expects to copy and the
@@ -230,7 +230,7 @@ async function assertTemplatePresent(templateDir) {
   } catch {
     throw new Error(
       `Template marker file missing: ${marker}. ` +
-        `templates/mcp/_base/ is in placeholder state — investigate the published create-solvapay tarball.`,
+        `templates/mcp/ts/_base/ is in placeholder state — investigate the published create-solvapay tarball.`,
     )
   }
 }

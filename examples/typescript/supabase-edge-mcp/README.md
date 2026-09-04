@@ -231,11 +231,11 @@ supabase secrets set DEMO_TOOLS=false
 
 This example is type-checked under a real Deno binary in three places — not a test, an actual `deno check`. **Any change that breaks the canonical Supabase Edge consumer blocks the merge.**
 
-| Workflow                                                                     | Step                                                                         | Reads                                          |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------- |
-| [`ci.yml`](../../.github/workflows/ci.yml) (every PR)                        | `validate:workspace`                                                         | workspace source                               |
-| [`publish-preview.yml`](../../.github/workflows/publish-preview.yml) (`dev`) | `validate:workspace` pre-publish, then `validate` after the npm verification | source, then the published `@preview` tarballs |
-| [`publish.yml`](../../.github/workflows/publish.yml) (`main`)                | `validate:workspace`                                                         | workspace source                               |
+| Workflow                                                                      | Step                                                                         | Reads                                          |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------- |
+| [`ci.yml`](../../.github/workflows/ci.yml) (every PR)                         | `validate:workspace`                                                         | workspace source                               |
+| [`publish-preview.yml`](../../.github/workflows/publish-preview.yml) (manual) | `validate:workspace` pre-publish, then `validate` after the npm verification | source, then the published `@preview` tarballs |
+| [`publish.yml`](../../.github/workflows/publish.yml) (`main`)                 | `validate:workspace`                                                         | workspace source                               |
 
 The workspace gate is the blocking one everywhere, because it checks the code the run is actually shipping. The `@preview` gate runs only _after_ `publish-preview.yml` has published and verified the tag: it is the only check that exercises the assembled npm tarballs — their published `exports` maps and peer ranges — rather than workspace `dist/`, but it must not gate the publish. When it did, a broken publish froze the very tag the gate read, so the run that would have fixed it could never get past its own gate.
 

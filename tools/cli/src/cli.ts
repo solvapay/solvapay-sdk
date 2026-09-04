@@ -1,5 +1,6 @@
 import { runDoctorCommand } from './commands/doctor'
 import { runInitCommand } from './commands/init'
+import { parseDoctorArgs, parseInitArgs } from './parse-args'
 import { PACKAGE_VERSION, printVersionBanner } from './version-banner'
 
 const HELP_TEXT = `SolvaPay CLI
@@ -12,7 +13,8 @@ Commands:
   doctor  Verify secret key, API URL, product ref, and product readiness
 
 Flags for init:
-  -y, --yes         Auto-create package.json and skip browser confirmation prompt
+  -y, --yes         Auto-create package.json (TypeScript) and skip browser confirmation
+  --language <id>   Override language detection (ts, python, ruby, go, rust)
   --product <ref>   Verify and persist SOLVAPAY_PRODUCT_REF without product picker
   --dev             Target the SolvaPay dev backend (api-dev.solvapay.com).
                     Internal testing only — production secret keys are rejected
@@ -21,38 +23,6 @@ Flags for init:
 Flags for doctor:
   --dev             Target the SolvaPay dev backend (api-dev.solvapay.com)
 `
-
-function parseInitArgs(argv: string[]): { yes: boolean; dev: boolean; productRef?: string } {
-  let yes = false
-  let dev = false
-  let productRef: string | undefined
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg === '--yes' || arg === '-y') {
-      yes = true
-    } else if (arg === '--dev') {
-      dev = true
-    } else if (arg === '--product') {
-      productRef = argv[++i]
-      if (!productRef || productRef.startsWith('-')) {
-        throw new Error('--product requires a product reference')
-      }
-    }
-  }
-  return { yes, dev, productRef }
-}
-
-function parseDoctorArgs(argv: string[]): { dev: boolean } {
-  let dev = false
-  for (const arg of argv) {
-    if (arg === '--dev') {
-      dev = true
-    } else if (arg.startsWith('-')) {
-      throw new Error(`Unknown doctor flag: ${arg}`)
-    }
-  }
-  return { dev }
-}
 
 const main = async () => {
   const command = process.argv[2]

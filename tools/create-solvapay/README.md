@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/create-solvapay.svg)](https://www.npmjs.com/package/create-solvapay)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-The recommended way to create **paid MCP apps** — Cloudflare Workers transport, `@solvapay/mcp` paywall, `@solvapay/react/mcp` checkout/account/topup UI, and deploy scripts in one step.
+The recommended way to create **paid MCP apps** in TypeScript, Python, Ruby, Go, or Rust. TypeScript scaffolds a Cloudflare Workers app (`@solvapay/mcp` + `@solvapay/react/mcp`). Other languages scaffold an HTTP `/mcp` server from the matching official SDK.
 
 ## Quickstart
 
@@ -22,7 +22,10 @@ From scratch (single placeholder tool):
 
 ```bash
 npm create solvapay@latest my-mcp-app -- --type mcp --no-openapi
+npm create solvapay@latest my-mcp-app -- --type mcp --no-openapi --language python
 ```
+
+`--language` is `ts` (default in non-interactive mode), `python`, `ruby`, `go`, or `rust`. Non-TypeScript languages are preview until those SDKs publish to production registries. OpenAPI codegen is TypeScript-only.
 
 ### Skills for coding agents
 
@@ -36,11 +39,15 @@ npm create solvapay@latest my-mcp-app -- --type mcp --no-openapi
 
 ## What the scaffold includes
 
+TypeScript (`--language ts`) is a Cloudflare Worker:
+
 - **Worker transport** — fetch-first MCP endpoint via `@solvapay/mcp/fetch`
 - **Paywall** — `registerPayable` tools wired to your SolvaPay product
 - **Widget UI** — `@solvapay/react/mcp` checkout, account, and topup views
 - **OAuth bridge** — discovery metadata and bearer-token customer identity
 - **Deploy scripts** — `npm run deploy` with wrangler + secret upload
+
+Python, Ruby, Go, and Rust (`--language python|ruby|go|rust`, preview) scaffold an HTTP `/mcp` server on port 3030 with a placeholder paid tool, `.env.example`, and `scripts/http.sh` / `scripts/tunnel.sh`.
 
 See the generated project README and [MCP app guide](https://docs.solvapay.com/sdks/typescript/guides/mcp-app) for local dev and go-live steps.
 
@@ -61,7 +68,8 @@ npm run deploy       # Cloudflare Workers deploy
 
 | Flag                | Description                                                   |
 | ------------------- | ------------------------------------------------------------- |
-| `--type <kind>`     | Project type (`mcp` today). Required in non-interactive mode. |
+| `--type <kind>`     | Project type (`mcp`, `next-auth0`). Required in non-interactive mode. |
+| `-l, --language`    | `ts`, `python`, `ruby`, `go`, `rust` (prompt in TTY; default `ts`) |
 | `-y`, `--yes`       | Non-interactive: accept all defaults                          |
 | `--product <ref>`   | Pre-fill `SOLVAPAY_PRODUCT_REF` (skip the picker)             |
 | `--non-interactive` | Alias for `--yes`; fail fast on missing prompt input          |
@@ -77,6 +85,7 @@ npm run deploy       # Cloudflare Workers deploy
 | `--openapi <url\|path>` | OpenAPI / Swagger spec — implies from-openapi mode                |
 | `--no-openapi`          | From-scratch mode with a placeholder paid tool                    |
 | `--tool-name <camel>`   | Placeholder tool name in from-scratch mode (default: `helloTool`) |
+| `--module <path>`       | Go module path (default: `github.com/example/<project-name>`)     |
 
 Run `npm create solvapay my-app -- --type mcp --help` for MCP-specific help.
 

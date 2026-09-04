@@ -9,6 +9,8 @@ import {
   toInitOptions,
   validateToolName,
 } from '../../args'
+import { assertOpenapiLanguage } from '../../languages/matrix'
+import { defaultGoModule } from '../../languages/names'
 import { runFromOpenapi } from './from-openapi'
 import { runFromScratch } from './from-scratch'
 
@@ -16,14 +18,15 @@ const DEFAULT_TOOL_NAME = 'helloTool'
 
 export const mcpProjectType: ProjectType = {
   id: 'mcp',
-  label: 'MCP server (Cloudflare Workers)',
-  summary: 'Monetized MCP server on Cloudflare Workers (from-openapi or from-scratch)',
+  label: 'MCP server',
+  summary: 'Monetized MCP server (TypeScript Workers, plus Python/Ruby/Go/Rust)',
+  supportedLanguages: ['ts', 'python', 'ruby', 'go', 'rust'],
   parseArgs: parseMcpArgs,
   run,
 }
 
 async function run(opts: RunOptions): Promise<void> {
-  const { target, projectName, common, raw } = opts
+  const { target, projectName, common, raw, language } = opts
   const mcpArgs = parseMcpArgs(raw)
   const nonInteractive = common.nonInteractive || common.yes || !stdin.isTTY
 
@@ -45,7 +48,11 @@ async function run(opts: RunOptions): Promise<void> {
     mode = hasSpec ? 'from-openapi' : 'from-scratch'
   }
 
-  const initOptions = toInitOptions(common)
+  if (mode === 'from-openapi') {
+    assertOpenapiLanguage(language)
+  }
+
+  const initOptions = toInitOptions({ ...common, language })
 
   if (mode === 'from-openapi') {
     const spec = await resolveOpenapiSpec(mcpArgs.openapi, nonInteractive)
@@ -64,16 +71,34 @@ async function run(opts: RunOptions): Promise<void> {
   }
 
   const toolName = await resolveToolName(mcpArgs.toolName, nonInteractive)
+  const goModule =
+    language === 'go'
+      ? await resolveGoModule(mcpArgs.module, projectName, nonInteractive)
+      : undefined
   await runFromScratch({
     target,
     projectName,
     toolName,
+    language,
+    goModule,
     options: initOptions,
     productRef: common.product,
     skipInstall: common.skipInstall,
     skipInit: common.skipInit,
     dev: common.dev,
   })
+}
+
+async function resolveGoModule(
+  value: string | undefined,
+  projectName: string,
+  nonInteractive: boolean,
+): Promise<string> {
+  const fallback = defaultGoModule(projectName)
+  if (value && value.trim()) return value.trim()
+  if (nonInteractive || !stdin.isTTY) return fallback
+  const answer = (await ask(`Go module path (default ${fallback}): `)).trim()
+  return answer || fallback
 }
 
 async function resolveOpenapiSpec(

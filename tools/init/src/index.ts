@@ -39,6 +39,33 @@ export type { ListProductsResult, ProductSummary } from './products'
 export { detectPackageManager, ensureNodeProject, waitForEnter } from './project'
 export type { EnsureNodeProjectResult, PackageManager } from './project'
 
+export {
+  detectProjectLanguage,
+  getLanguageInstallCommand,
+  installSdk,
+  isScaffoldLanguage,
+  LANGUAGE_LABELS,
+  LANGUAGE_MANIFESTS,
+  LANGUAGE_RUNTIME_DEPS,
+  languageChoiceEntries,
+  parseScaffoldLanguage,
+  PREVIEW_LANGUAGES,
+  promptChoice,
+  promptLanguage,
+  resolveLatestSolvapayVersions,
+  resolveLatestVersions,
+  SCAFFOLD_LANGUAGES,
+  sdkInstallPlan,
+} from './language'
+export type {
+  ChoiceEntry,
+  LanguageDep,
+  LanguageDetection,
+  ResolveLatestVersionsOptions,
+  ScaffoldLanguage,
+  SdkInstallPlan,
+} from './language'
+
 export { runInitInDirectory } from './run-init'
 export type { InitCommandOptions, RunInitInDirectoryOptions } from './run-init'
 

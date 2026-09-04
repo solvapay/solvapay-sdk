@@ -11,6 +11,7 @@
 import { resolve } from 'node:path'
 import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
+import { languageChoiceEntries, promptChoice } from '@solvapay/init'
 import {
   hasMcpSpecificFlags,
   HELP_TEXT,
@@ -19,6 +20,7 @@ import {
   parseMcpArgs,
   sanitizeProjectName,
 } from './args'
+import { assertLanguageSupported, formatLanguageList } from './languages/matrix'
 import { PROJECT_TYPE_IDS, PROJECT_TYPES } from './types/registry'
 import { PACKAGE_VERSION, printVersionBanner } from './version-banner'
 
@@ -36,7 +38,8 @@ async function main(): Promise<void> {
       const factory = PROJECT_TYPES[id]
       if (!factory) continue
       const type = await factory()
-      process.stdout.write(`${type.id.padEnd(6)} ${type.summary}\n`)
+      process.stdout.write(`${type.id.padEnd(12)} ${type.summary}\n`)
+      process.stdout.write(`             languages: ${formatLanguageList(type.supportedLanguages)}\n`)
     }
     return
   }
@@ -107,8 +110,35 @@ async function main(): Promise<void> {
   }
 
   const type = await factory()
+  let language = args.language
+  if (!language) {
+    if (type.supportedLanguages.length === 1) {
+      language = type.supportedLanguages[0]
+    } else if (nonInteractive) {
+      language = 'ts'
+    } else {
+      language = await promptChoice(
+        'Which language?',
+        languageChoiceEntries(type.supportedLanguages),
+      )
+    }
+  }
+  if (!language) {
+    process.stderr.write('Could not resolve a language.\n')
+    process.exitCode = 2
+    return
+  }
+  try {
+    assertLanguageSupported(type.id, language)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unsupported language'
+    process.stderr.write(`${message}\n`)
+    process.exitCode = 2
+    return
+  }
+
   printVersionBanner()
-  await type.run({ target, projectName, common: args, raw: rawArgv })
+  await type.run({ target, projectName, common: args, raw: rawArgv, language })
 }
 
 async function resolveProjectName(
@@ -135,31 +165,14 @@ async function resolveProjectName(
 }
 
 async function promptProjectType(): Promise<string> {
-  if (!stdin.isTTY || !stdout.isTTY) {
-    throw new Error('--type <kind> is required when stdin is not a TTY.')
-  }
-
-  process.stdout.write('What are you building?\n')
   const entries: Array<{ id: string; label: string }> = []
   for (const id of PROJECT_TYPE_IDS) {
     const factory = PROJECT_TYPES[id]
     if (!factory) continue
     const type = await factory()
     entries.push({ id: type.id, label: type.label })
-    process.stdout.write(`  ${entries.length}) ${type.label}\n`)
   }
-
-  const rl = readline.createInterface({ input: stdin, output: stdout })
-  try {
-    const answer = (await rl.question('> ')).trim()
-    const index = Number.parseInt(answer, 10)
-    if (!Number.isFinite(index) || index < 1 || index > entries.length) {
-      throw new Error(`Invalid selection: ${answer}`)
-    }
-    return entries[index - 1].id
-  } finally {
-    rl.close()
-  }
+  return promptChoice('What are you building?', entries)
 }
 
 async function ask(prompt: string): Promise<string> {

@@ -167,3 +167,12 @@ export function assertTagsAvailable(
     throw new Error(`release-channel: tags already exist on remote: ${existing.join(', ')}`)
   }
 }
+
+export function assertAllRehearsalTags(tags: readonly string[]): void {
+  const invalid = tags.filter(tag => !tag.startsWith('rehearsal/'))
+  if (invalid.length > 0) {
+    throw new Error(
+      `release-channel: refusing to operate on non-rehearsal tags: ${invalid.join(', ')}`,
+    )
+  }
+}

@@ -106,18 +106,19 @@ Plus Python, Ruby, Go, and Rust examples — see the
 
 ## Flags
 
-| Flag          | Description                                                                                                                                                                    |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `-y`, `--yes` | Auto-create `package.json` and skip the browser confirmation prompt.                                                                                                           |
-| `--dev`       | Target the SolvaPay dev backend (`https://api-dev.solvapay.com`). Persists `SOLVAPAY_API_BASE_URL` to `.env`. Internal testing only — production keys are rejected by api-dev. |
+| Flag                | Description                                                                                                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-y`, `--yes`       | Skip the browser confirmation prompt. For TypeScript only, may create a `package.json` if none exists.                                                                         |
+| `-l`, `--language`  | Override language detection (`ts`, `python`, `ruby`, `go`, `rust`). Required with `--yes` when no manifest is present.                                                         |
+| `--dev`             | Target the SolvaPay dev backend (`https://api-dev.solvapay.com`). Persists `SOLVAPAY_API_BASE_URL` to `.env`. Internal testing only — production keys are rejected by api-dev. |
 
 ## What `solvapay init` does
 
-- Checks for `package.json` (and can create one if missing)
+- Detects the project language from manifests (`package.json`, `pyproject.toml`, `Gemfile`, `go.mod`, `Cargo.toml`), or asks when that is ambiguous
 - Shows auth URL and asks you to press Enter before opening browser authentication
 - Writes `SOLVAPAY_SECRET_KEY` to `.env` (with overwrite confirmation)
 - Ensures `.env` is ignored in `.gitignore`
-- Installs `@solvapay/server` and `@solvapay/core`
+- Installs the matching SolvaPay SDK for the detected language
 - Verifies the key and prints a setup summary
 
 ## Product configuration

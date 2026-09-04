@@ -44,12 +44,17 @@ abis = ruby.fetch("abis")
 
 dir = Pathname("gems")
 host_native = false
+allow_missing = []
 OptionParser.new do |opts|
   opts.on("--dir DIR", "Directory containing built .gem files") { |v| dir = Pathname(v) }
   opts.on(
     "--host-native",
     "Accept host `rake native gem` artifacts (one extension binary) instead of every published ABI",
   ) { host_native = true }
+  opts.on(
+    "--allow-missing IDS",
+    "Comma-separated platform family ids that may be absent (local previews only)",
+  ) { |v| allow_missing = v.split(",").map(&:strip).reject(&:empty?) }
 end.parse!
 
 unless dir.directory?
@@ -65,7 +70,11 @@ missing = []
 rules.each do |rule|
   matches = gem_names.select { |g| matches?(g, rule) }
   if matches.empty?
-    missing << rule["id"]
+    if allow_missing.include?(rule["id"])
+      warn "check-gems: skip missing #{rule["id"]} (--allow-missing)"
+    else
+      missing << rule["id"]
+    end
   else
     present << rule["id"]
   end

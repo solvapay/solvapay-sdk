@@ -117,7 +117,7 @@ jobs:
         env:
           SOLVAPAY_RELEASE_VERSION: ${{ steps.meta.outputs.version }}
           SOLVAPAY_CORE_SHA: ${{ steps.meta.outputs.core_sha }}
-        run: cargo build --workspace
+        run: cargo build --workspace --exclude solvapay-wasm
 
       - name: Publish graph metadata check
         run: ./tools/repo/check-publish-graph.sh
