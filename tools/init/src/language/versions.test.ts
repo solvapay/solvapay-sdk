@@ -66,6 +66,6 @@ describe('resolveLatestVersions', () => {
   it('falls back on non-2xx', async () => {
     globalThis.fetch = vi.fn(async () => new Response('gone', { status: 404 })) as typeof fetch
     const map = await resolveLatestVersions('go', LANGUAGE_RUNTIME_DEPS.go, { onResolve: () => {} })
-    expect(map.get('github.com/solvapay/solvapay-go')).toBe('v0.1.0')
+    expect(map.get('github.com/solvapay/solvapay-sdk/sdks/go')).toBe('v0.1.0')
   })
 })

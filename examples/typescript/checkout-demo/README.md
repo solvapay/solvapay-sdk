@@ -151,7 +151,7 @@ pnpm start
 ```
 
 `pnpm dev` serves locally on [http://localhost:3014](http://localhost:3014) and
-exposes your reserved tunnel (e.g. `https://checkout-jack-local.ngrok.app`) via
+exposes your reserved tunnel (e.g. `https://checkout-<your-subdomain>.ngrok.app`) via
 ngrok. Use the **tunnel URL** for Google/Supabase auth so the OAuth callback
 lands back on the same origin. For Next-only without a tunnel: `pnpm dev:local`.
 

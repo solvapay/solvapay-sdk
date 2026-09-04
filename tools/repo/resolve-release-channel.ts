@@ -14,6 +14,7 @@ import {
   assertHostMatchesChannel,
   assertTagsAvailable,
   ecosystemVersion,
+  goModuleTag,
   parseReleaseTag,
   registryHost,
   resolveChannelFromRef,
@@ -77,6 +78,7 @@ assertHostMatchesChannel(channel, ecosystem, host)
 writeOutput('channel', channel)
 writeOutput('sentinel', sentinel)
 writeOutput('version', ecosystemVersion(languageVersion, channel, ecosystem, runNumber))
+writeOutput('go_module_tag', goModuleTag(languageVersion, channel, runNumber))
 writeOutput('host', host)
 writeOutput('tag_rust', tags.rust)
 writeOutput('tag_python', tags.python)

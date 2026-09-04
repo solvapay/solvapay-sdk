@@ -144,24 +144,24 @@ ruby main.rb --mode demo --gate
 
 HTTP serve binds `127.0.0.1:3030` by default — the same reserved
 `mcpapp` origin as stock-research and weather-mcp
-(`https://appmcp.jack-local.ngrok.app` → `localhost:3030`). Only one of
+(`https://appmcp.<your-subdomain>.ngrok.app` → `localhost:3030`). Only one of
 those examples can own the origin at a time. Requires Puma
 (`gem install puma`).
 
 ```bash
 # from repo root — copies the same .env keys as weather-mcp / stock-research
 pnpm mcp:bitcoin-analytics          # local http://127.0.0.1:3030/mcp
-pnpm mcp:bitcoin-analytics:tunnel   # https://appmcp.jack-local.ngrok.app/mcp
+pnpm mcp:bitcoin-analytics:tunnel   # https://appmcp.<your-subdomain>.ngrok.app/mcp
 ```
 
-In MCPJam, connect to **`https://appmcp.jack-local.ngrok.app/mcp`** (tunnel)
+In MCPJam, connect to **`https://appmcp.<your-subdomain>.ngrok.app/mcp`** (tunnel)
 or `http://127.0.0.1:3030/mcp` (local-only).
 
 | Variable                      | Required     | Notes                                                   |
 | ----------------------------- | ------------ | ------------------------------------------------------- |
 | `SOLVAPAY_SECRET_KEY`         | yes          | Copied from the other MCP examples' `.env`              |
 | `SOLVAPAY_PRODUCT`            | yes          | Same `prd_*` as weather / stock-research                |
-| `MCP_PUBLIC_BASE_URL`         | yes for HTTP | Defaults to `https://appmcp.jack-local.ngrok.app`       |
+| `MCP_PUBLIC_BASE_URL`         | yes for HTTP | Required; your reserved ngrok origin                    |
 | `BITCOIN_ANALYTICS_NGROK_URL` | no           | Same reserved origin; do not use the mcp-proxy wildcard |
 | `SOLVAPAY_API_BASE_URL`       | no           | Local stack: `http://localhost:3010`                    |
 | `MCP_HOST` / `MCP_PORT`       | no           | Default `127.0.0.1` / `3030`                            |

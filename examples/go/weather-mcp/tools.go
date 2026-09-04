@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	solvapaymcp "github.com/solvapay/solvapay-go/mcp"
+	solvapaymcp "github.com/solvapay/solvapay-sdk/sdks/go/mcp"
 )
 
 const (

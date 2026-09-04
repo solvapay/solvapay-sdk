@@ -11,8 +11,8 @@ import (
 
 	"errors"
 
-	solvapay "github.com/solvapay/solvapay-go"
-	"github.com/solvapay/solvapay-go/internal/nativecall"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
 var TopupBalancePollDelaysMS = []int{500, 1000, 2000, 4000}

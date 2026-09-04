@@ -22,7 +22,7 @@ import { joinRel, lookupRel, REPO_ROOT } from '../shared/paths.js'
 import {
   coverageReportLines,
   defaultPreviewRunNumber,
-  goRehearsalModulePath,
+  goProductionModulePath,
   hostCoverage,
   missingPreviewTokens,
   parsePreviewArgs,
@@ -54,7 +54,6 @@ const TESTPYPI_LEGACY = 'https://test.pypi.org/legacy/'
 const TESTPYPI_SIMPLE = 'https://test.pypi.org/simple/'
 const PYPI_SIMPLE = 'https://pypi.org/simple/'
 const RUBY_REHEARSAL_HOST = 'https://rubygems.pkg.github.com/solvapay'
-const GO_REHEARSAL_REPO = 'solvapay/solvapay-go-rehearsal'
 const RUBY_ABIS = '3.1:3.2:3.3:3.4'
 const WINDOWS_WHEEL_TARGETS = [
   { target: 'x86_64-pc-windows-msvc', id: 'win_amd64' },
@@ -689,17 +688,7 @@ async function previewRuby(
   ])
 }
 
-function cloneSplit(splitSha: string): string {
-  const work = mkdtempSync(path.join(tmpdir(), 'solvapay-go-split-'))
-  const dest = path.join(work, 'split')
-  run('clone split', 'git', ['clone', '--no-checkout', REPO_ROOT, dest])
-  run('checkout split', 'git', ['checkout', splitSha], { cwd: dest })
-  return dest
-}
-
-async function previewGo(plan: PreviewPlan): Promise<void> {
-  const version = plan.versions.go
-  const tag = `v${version}`
+async function previewGo(_plan: PreviewPlan): Promise<void> {
   const goCwd = sdkPath('go')
   const wasmPath = path.join(goCwd, 'solvapay_core.wasm')
   run('rustup wasm32-wasip1', 'rustup', ['target', 'add', 'wasm32-wasip1'])
@@ -717,59 +706,47 @@ async function previewGo(plan: PreviewPlan): Promise<void> {
   run('go build', 'go', ['build', './...'], { cwd: goCwd })
   run('go vet', 'go', ['vet', './...'], { cwd: goCwd })
 
-  const prefix = posixRel(goCwd)
-  const splitSha = runCapture('git subtree split', 'git', [
-    'subtree',
-    'split',
-    `--prefix=${prefix}`,
-    'HEAD',
-  ])
-  const lastLine = splitSha.split('\n').at(-1)
-  if (lastLine === undefined || lastLine.length === 0) {
-    throw new Error('preview: git subtree split produced no SHA')
-  }
-  const splitRoot = cloneSplit(lastLine)
-  run('verify split go build', 'go', ['build', './...'], { cwd: splitRoot })
-  run('verify split go vet', 'go', ['vet', './...'], { cwd: splitRoot })
-  if (plan.dryRun) return
-
-  const token = process.env.SOLVAPAY_GO_DEPLOY_TOKEN
-  if (token === undefined || token.length === 0) {
-    throw new Error('preview: SOLVAPAY_GO_DEPLOY_TOKEN is required to publish Go')
-  }
-  run('rehearsal retarget', lookupPath('goRehearsalRetarget'), [], { cwd: splitRoot })
-  const rewrittenSha = runCapture('retarget sha', 'git', ['rev-parse', 'HEAD'], { cwd: splitRoot })
-  const remote = `https://x-access-token:${token}@github.com/${GO_REHEARSAL_REPO}.git`
-  run('push rehearsal main', 'git', ['push', remote, `${rewrittenSha}:refs/heads/main`], {
-    cwd: splitRoot,
-  })
-  run('tag rehearsal', 'git', ['tag', tag, rewrittenSha], { cwd: splitRoot })
-  run('push rehearsal tag', 'git', ['push', remote, `refs/tags/${tag}`], { cwd: splitRoot })
-
-  const modcache = mkdtempSync(path.join(tmpdir(), 'solvapay-go-modcache-'))
+  const modulePath = goProductionModulePath()
   const smoke = mkdtempSync(path.join(tmpdir(), 'solvapay-go-smoke-'))
-  writeFileSync(path.join(smoke, 'go.mod'), 'module smoke\n\ngo 1.25\n')
-  const modulePath = goRehearsalModulePath()
-  run('go get rehearsal', 'go', ['get', `${modulePath}@${tag}`], {
+  writeFileSync(
+    path.join(smoke, 'go.mod'),
+    [
+      'module github.com/solvapay/solvapay-go-smoke',
+      '',
+      'go 1.25',
+      '',
+      `require ${modulePath} v0.0.0`,
+      '',
+      `replace ${modulePath} => ${goCwd}`,
+      '',
+    ].join('\n'),
+  )
+  writeFileSync(
+    path.join(smoke, 'main.go'),
+    [
+      'package main',
+      '',
+      'import (',
+      '\t"context"',
+      '\t"fmt"',
+      '',
+      `\tsolvapay "${modulePath}"`,
+      ')',
+      '',
+      'func main() {',
+      '\tctx := context.Background()',
+      '\tv, err := solvapay.Version(ctx)',
+      '\tif err != nil {',
+      '\t\tpanic(err)',
+      '\t}',
+      '\tfmt.Println(v)',
+      '}',
+      '',
+    ].join('\n'),
+  )
+  run('go mod tidy', 'go', ['mod', 'tidy'], { cwd: smoke })
+  run('go build smoke', 'go', ['build', '-o', path.join(smoke, 'solvapay-go-smoke'), '.'], {
     cwd: smoke,
-    env: {
-      GOPRIVATE: modulePath,
-      GOPROXY: 'direct',
-      GOSUMDB: 'off',
-      GOMODCACHE: modcache,
-      GIT_CONFIG_COUNT: '1',
-      GIT_CONFIG_KEY_0: `url.https://x-access-token:${token}@github.com/.insteadOf`,
-      GIT_CONFIG_VALUE_0: 'https://github.com/',
-    },
-  })
-  run('go build rehearsal', 'go', ['build', modulePath], {
-    cwd: smoke,
-    env: {
-      GOPRIVATE: modulePath,
-      GOPROXY: 'direct',
-      GOSUMDB: 'off',
-      GOMODCACHE: modcache,
-    },
   })
 }
 

@@ -86,7 +86,7 @@ export function sdkInstallPlan(language: ScaffoldLanguage): SdkInstallPlan {
     case 'go':
       return {
         command: 'go',
-        args: ['get', 'github.com/solvapay/solvapay-go@latest'],
+        args: ['get', 'github.com/solvapay/solvapay-sdk/sdks/go@latest'],
         missingMessage: '`go` is not installed. Install Go from https://go.dev/dl/ and re-run.',
       }
     case 'rust':

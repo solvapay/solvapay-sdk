@@ -19,7 +19,7 @@ export const LANGUAGE_RUNTIME_DEPS: Record<ScaffoldLanguage, readonly LanguageDe
     { name: 'solvapay', fallback: '0.1.0' },
     { name: 'solvapay-mcp', fallback: '0.1.0' },
   ],
-  go: [{ name: 'github.com/solvapay/solvapay-go', fallback: 'v0.1.0' }],
+  go: [{ name: 'github.com/solvapay/solvapay-sdk/sdks/go', fallback: 'v0.1.0' }],
   rust: [
     { name: 'solvapay', fallback: '0.1.0' },
     { name: 'solvapay-mcp', fallback: '0.1.0' },

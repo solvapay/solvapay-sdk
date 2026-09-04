@@ -21,18 +21,17 @@ per-run suffix so the same sentinel can be previewed more than once.
 | Rust     | [`publish-rust.yml`](../../.github/workflows/publish-rust.yml)     | in-job `cargo-http-registry` at `http://127.0.0.1:8000` | `<sentinel>-rehearsal.<run>`  |
 | Python   | [`publish-python.yml`](../../.github/workflows/publish-python.yml) | TestPyPI (`solvapay`, `solvapay-mcp`)                   | `<sentinel>.dev<run>`         |
 | Ruby     | [`publish-ruby.yml`](../../.github/workflows/publish-ruby.yml)     | GitHub Packages `rubygems.pkg.github.com/solvapay`      | `<sentinel>.pre.<run>`        |
-| Go       | [`publish-go.yml`](../../.github/workflows/publish-go.yml)         | `solvapay/solvapay-go-rehearsal`                        | `v<sentinel>-rehearsal.<run>` |
+| Go       | [`publish-go.yml`](../../.github/workflows/publish-go.yml)         | `sdks/go/v<sentinel>-rehearsal.<run>` on this repo      | `v<sentinel>-rehearsal.<run>` |
 
 `<run>` is `github.run_number` of that language workflow.
 
 ## Prerequisites
 
-Confirm these before the first dispatch. Missing Go or Python setup fails
+Confirm these before the first dispatch. Missing Python setup fails
 that language job at publish, not at tag push.
 
-- **Go (blocking).** Create empty private `solvapay/solvapay-go-rehearsal`.
-  Mint a token with `contents: write` on it and store it as repo secret
-  `SOLVAPAY_GO_DEPLOY_TOKEN`.
+- **Go.** None. Rehearsal publishes `sdks/go/v<sentinel>-rehearsal.<run>`
+  on this public repo. `@latest` never selects a prerelease.
 - **Python (blocking).** On TestPyPI, create projects `solvapay` and
   `solvapay-mcp`. Add a Trusted Publisher for repo `solvapay/solvapay-sdk`,
   workflow `publish-python.yml`. OIDC only — `id-token: write` is already
@@ -98,11 +97,12 @@ pnpm exec tsx tools/repo/push-rehearsal-tags.ts --replace
 That pushes all four `rehearsal/` tags and starts Python (every wheel
 family, including both Windows runners), Ruby (every platform via
 `rb-sys-dock` on `ubuntu-latest`), Rust (`cargo publish --dry-run` over
-the crates.io graph), and Go (subtree split plus install smoke).
+the crates.io graph), and Go (nested-module tag plus public-proxy smoke).
 Rehearsal targets are
 TestPyPI, GitHub Packages, a local cargo registry, and
-`solvapay-go-rehearsal` — never a production registry
-(`assertHostMatchesChannel`).
+`sdks/go/v*-rehearsal.<run>` on this repo — never a production registry
+(`assertHostMatchesChannel`; Go is the exception where the host is the
+same and the channel is the prerelease suffix).
 
 `--replace` deletes only existing `rehearsal/` tags, then re-pushes them
 at `HEAD`. Use it to re-run the matrix on the same sentinel.
@@ -143,12 +143,12 @@ release-train sentinel.
 Fail before any build when a selected language is missing its token
 (except `--dry-run`, which never publishes).
 
-| Language | Token                      | Notes                                                                                             |
-| -------- | -------------------------- | ------------------------------------------------------------------------------------------------- |
-| Rust     | none                       | Ephemeral `cargo-http-registry` on `127.0.0.1:8000`                                               |
-| Python   | `SOLVAPAY_TESTPYPI_TOKEN`  | TestPyPI project API token for `solvapay` and `solvapay-mcp`. OIDC Trusted Publishing is CI-only. |
-| Ruby     | `GEM_HOST_API_KEY`         | GitHub PAT with `write:packages`                                                                  |
-| Go       | `SOLVAPAY_GO_DEPLOY_TOKEN` | Same name as CI; `contents: write` on `solvapay/solvapay-go-rehearsal`                            |
+| Language | Token                     | Notes                                                                                               |
+| -------- | ------------------------- | --------------------------------------------------------------------------------------------------- |
+| Rust     | none                      | Ephemeral `cargo-http-registry` on `127.0.0.1:8000`                                                 |
+| Python   | `SOLVAPAY_TESTPYPI_TOKEN` | TestPyPI project API token for `solvapay` and `solvapay-mcp`. OIDC Trusted Publishing is CI-only.   |
+| Ruby     | `GEM_HOST_API_KEY`        | GitHub PAT with `write:packages`                                                                    |
+| Go       | none                      | Local preview is verification-only (wasm + `go build`/`vet` + replace smoke). Real rehearsal is CI. |
 
 ### Local prerequisites
 
@@ -205,14 +205,11 @@ GitHub Packages needs an authenticated `gem` source (a token with
 ### Go
 
 ```bash
-export GOPRIVATE=github.com/solvapay/solvapay-go-rehearsal
-export GOPROXY=direct
-export GOSUMDB=off
-go get github.com/solvapay/solvapay-go-rehearsal@v0.1.0-rehearsal.<run>
+go get github.com/solvapay/solvapay-sdk/sdks/go@v0.1.0-rehearsal.<run>
 ```
 
-The rehearsal module repo is private; `go get` needs a GitHub token that
-can read it.
+`@latest` never selects the prerelease. Pin the exact `vX.Y.Z-rehearsal.N`
+tag from the language workflow that published it.
 
 ### Rust
 

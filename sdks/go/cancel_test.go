@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	solvapay "github.com/solvapay/solvapay-go"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
 )
 
 // TestGetMerchantContextCancellation verifies that cancelling the context mid

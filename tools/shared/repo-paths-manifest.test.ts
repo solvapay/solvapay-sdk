@@ -26,6 +26,7 @@ const LEGACY_GENERATED_PATHS = [
   'sdks/typescript/server/src/wasm.ts',
   'contract/manifest/binding-symbols.snapshot.json',
   'contract/manifest/facade-coverage.json',
+  'sdks/wasm/browser-symbols.generated.json',
   'contract/manifest/boundary-types.snapshot.json',
   'sdks/typescript/core/src/types/boundary.generated.d.ts',
   'sdks/typescript/core/src/native-dispatch.ts',

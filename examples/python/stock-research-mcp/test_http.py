@@ -64,8 +64,8 @@ def test_mcp_auth_mode_rejects_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_is_public_mcp_origin() -> None:
-    assert is_public_mcp_origin("https://appmcp.jack-local.ngrok.app") is True
-    assert is_public_mcp_origin("https://stockmcp.local.jack-local.ngrok.app") is True
+    assert is_public_mcp_origin("https://appmcp.your-subdomain.ngrok.app") is True
+    assert is_public_mcp_origin("https://stockmcp.local.your-subdomain.ngrok.app") is True
     assert is_public_mcp_origin("http://localhost:3031") is False
     assert is_public_mcp_origin("http://127.0.0.1:3031") is False
     assert is_public_mcp_origin(None) is False

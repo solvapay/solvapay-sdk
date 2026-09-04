@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	solvapaymcp "github.com/solvapay/solvapay-go/mcp"
+	solvapaymcp "github.com/solvapay/solvapay-sdk/sdks/go/mcp"
 )
 
 func registerTools(srv *solvapaymcp.Server, product string) error {

@@ -1,7 +1,7 @@
 /**
  * Ops-by-facade coverage matrix (ICU4X missing_apis.txt generalised).
  *
- * Reads binding-symbols.snapshot.json and scans the 11 `sdks/` facades for
+ * Reads binding-symbols.snapshot.json and scans the 12 `sdks/` facades for
  * each op's language name. Gaps require a reason. `pnpm gen` writes the
  * committed matrix; drift is a red build.
  *
@@ -33,13 +33,15 @@ export const FACADES = [
   'rust',
   'rust-mcp',
   'typescript',
-  'wasm',
+  'wasm-edge',
+  'wasm-browser',
 ] as const
 
 export type FacadeId = (typeof FACADES)[number]
 type NameKey = 'ts' | 'py' | 'rb' | 'go' | 'rust' | 'c'
+type ScanMode = 'text' | 'dts-exports'
 
-const FACADE_SCAN: Record<FacadeId, { nameKey: NameKey; roots: string[] }> = {
+const FACADE_SCAN: Record<FacadeId, { nameKey: NameKey; roots: string[]; mode?: ScanMode }> = {
   capi: {
     nameKey: 'c',
     roots: [
@@ -77,7 +79,16 @@ const FACADE_SCAN: Record<FacadeId, { nameKey: NameKey; roots: string[] }> = {
   rust: { nameKey: 'rust', roots: [path.join(sdkPath('rust'), 'src')] },
   'rust-mcp': { nameKey: 'rust', roots: [path.join(sdkPath('rustMcp'), 'src')] },
   typescript: { nameKey: 'ts', roots: [sdkPath('typescript')] },
-  wasm: { nameKey: 'ts', roots: [path.join(sdkPath('wasm'), 'src')] },
+  'wasm-edge': {
+    nameKey: 'ts',
+    mode: 'dts-exports',
+    roots: [path.join(sdkPath('wasm'), 'pkg', 'edge', 'solvapay_wasm.d.ts')],
+  },
+  'wasm-browser': {
+    nameKey: 'ts',
+    mode: 'dts-exports',
+    roots: [path.join(sdkPath('wasm'), 'pkg', 'browser', 'solvapay_wasm.d.ts')],
+  },
 }
 
 const MCP_ONLY_REASON =
@@ -91,6 +102,37 @@ const RUST_FACADE_GAP =
 
 const GO_FACADE_GAP =
   'not on the Go public facade; the WASI guest or contract harness may still bind it internally'
+
+const WASM_BROWSER_GAP =
+  'capability-separated browser profile (§7.1): requires the `edge` Cargo feature (transport client / secret key / webhook), compiled out of `pkg/browser`'
+
+const WASM_EDGE_GAP = 'not on the edge wasm-bindgen surface'
+
+const BINDGEN_RUNTIME = new Set(['initSync', 'init', '__wbg_init'])
+
+export function parseDtsExports(source: string): Set<string> {
+  const names = new Set<string>()
+  for (const raw of source.split('\n')) {
+    const fn = raw.match(/^export function (\w+)/)
+    if (fn) {
+      names.add(fn[1])
+      continue
+    }
+    const cnst = raw.match(/^export const (\w+)/)
+    if (cnst) {
+      names.add(cnst[1])
+      continue
+    }
+    const method = raw.match(/^ {4}([A-Za-z_][A-Za-z0-9_]*)\(/)
+    if (method && method[1] !== 'free') {
+      names.add(method[1])
+    }
+  }
+  for (const runtime of BINDGEN_RUNTIME) {
+    names.delete(runtime)
+  }
+  return names
+}
 
 export type FacadeCell = { exposed: true } | { exposed: false; reason: string }
 
@@ -142,20 +184,35 @@ function collectFiles(abs: string, acc: string[]): void {
   }
 }
 
-function loadCorpus(facade: FacadeId): string {
+type FacadeCorpus = { mode: 'text'; text: string } | { mode: 'dts-exports'; names: Set<string> }
+
+function loadCorpus(facade: FacadeId): FacadeCorpus {
+  const spec = FACADE_SCAN[facade]
   const files: string[] = []
-  for (const root of FACADE_SCAN[facade].roots) {
+  for (const root of spec.roots) {
     collectFiles(root, files)
   }
-  return files.map(file => readFileSync(file, 'utf8')).join('\n')
+  if (spec.mode === 'dts-exports') {
+    const names = new Set<string>()
+    for (const file of files) {
+      for (const name of parseDtsExports(readFileSync(file, 'utf8'))) {
+        names.add(name)
+      }
+    }
+    return { mode: 'dts-exports', names }
+  }
+  return { mode: 'text', text: files.map(file => readFileSync(file, 'utf8')).join('\n') }
 }
 
-function nameExposed(corpus: string, name: string | undefined): boolean {
+function nameExposed(corpus: FacadeCorpus, name: string | undefined): boolean {
   if (!name) {
     return false
   }
+  if (corpus.mode === 'dts-exports') {
+    return corpus.names.has(name)
+  }
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`(?:^|[^A-Za-z0-9_])${escaped}(?:$|[^A-Za-z0-9_])`).test(corpus)
+  return new RegExp(`(?:^|[^A-Za-z0-9_])${escaped}(?:$|[^A-Za-z0-9_])`).test(corpus.text)
 }
 
 function isMcpFacade(facade: FacadeId): boolean {
@@ -168,7 +225,7 @@ export function buildFacadeCoverage(
 ): FacadeCoverageFile {
   const corpora = Object.fromEntries(FACADES.map(id => [id, loadCorpus(id)])) as Record<
     FacadeId,
-    string
+    FacadeCorpus
   >
   const ops: FacadeCoverageFile['ops'] = {}
   for (const [opId, entry] of Object.entries(snapshot.bindings).sort(([a], [b]) =>
@@ -203,6 +260,14 @@ export function buildFacadeCoverage(
       }
       if (facade === 'go') {
         row[facade] = { exposed: false, reason: GO_FACADE_GAP }
+        continue
+      }
+      if (facade === 'wasm-browser') {
+        row[facade] = { exposed: false, reason: WASM_BROWSER_GAP }
+        continue
+      }
+      if (facade === 'wasm-edge') {
+        row[facade] = { exposed: false, reason: WASM_EDGE_GAP }
         continue
       }
       row[facade] = {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Browser symbol audit (§7.1): exact semantic-export allowlist + raw WASM
- * exports + generated glue inspection + dependency-tree assertions.
+ * Browser symbol audit (§7.1): declared allowlist, measured pkg/browser
+ * exports, and runtime/browser-web.js re-exports must be the same set.
  */
 import { spawnSync } from 'node:child_process'
 import { readFileSync, existsSync } from 'node:fs'
@@ -12,36 +12,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const pkgRoot = resolve(__dirname, '..')
 const rustRoot = resolve(pkgRoot, '../..')
 
-const BROWSER_SEMANTIC_ALLOWLIST = new Set([
-  'wasmVersion',
-  'wasmBuildInfo',
-  // business-details (public-safe, Step 38R-e)
-  'validateBusinessDetails',
-  'deriveTaxIdType',
-  'resolveTaxBehavior',
-  'getTaxIdExample',
-  'getTaxIdFieldLabel',
-  'getTaxIdHelperText',
-  'getBusinessCountryOptions',
-  // credit-display (public-safe)
-  'creditsToDisplayMinorUnits',
-  'isZeroDecimalCurrency',
-  'minorUnitsPerMajor',
-  'isUnlimitedRemaining',
-  // seller-identity (public-safe)
-  'resolveSellerIdentityDisplay',
-  'getSellerTaxIdentifierDisplayLabel',
-  'SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE',
-  // plan-pricing readers React checkout primitives call
-  'charges',
-  'headlineCharges',
-  'perUnitCharge',
-  'billingCycle',
-  'trialDays',
-  'includedUnits',
-  'peggedCreditsPerUnit',
-  'creditsPerUnitFromBalance',
-])
 const FORBIDDEN_SEMANTIC = [
   'verifyWebhook',
   'verify_webhook',
@@ -51,7 +21,12 @@ const FORBIDDEN_SEMANTIC = [
   'processPaymentIntent',
   'checkLimits',
   'trackUsage',
+  'solvapayCall',
+  'invokePayableNext',
 ]
+
+const BINDGEN_RUNTIME = new Set(['initSync', 'init', '__wbg_init'])
+const WRAPPER_EXPORTS = new Set(['initSync', 'ready', 'ensureReadySync'])
 
 /** Internal wasm-bindgen / allocator exports may match these patterns. */
 const INTERNAL_EXPORT_PATTERNS = [
@@ -73,11 +48,71 @@ function fail(msg) {
   process.exit(1)
 }
 
+function parseDtsExports(source) {
+  const names = new Set()
+  for (const raw of source.split('\n')) {
+    const fn = raw.match(/^export function (\w+)/)
+    if (fn) {
+      names.add(fn[1])
+      continue
+    }
+    const cnst = raw.match(/^export const (\w+)/)
+    if (cnst) {
+      names.add(cnst[1])
+    }
+  }
+  for (const runtime of BINDGEN_RUNTIME) {
+    names.delete(runtime)
+  }
+  return names
+}
+
+function parseNamedExportBlock(source) {
+  const names = new Set()
+  const match = source.match(/export \{([\s\S]*?)\}/)
+  if (!match) {
+    fail('runtime/browser-web.js is missing an explicit export { … } block')
+  }
+  for (const part of match[1].split(',')) {
+    const name = part.trim()
+    if (name) names.add(name)
+  }
+  for (const wrapper of WRAPPER_EXPORTS) {
+    names.delete(wrapper)
+  }
+  return names
+}
+
+function formatSet(set) {
+  return [...set].sort().join(', ')
+}
+
+function assertEqualSets(left, right, leftLabel, rightLabel) {
+  const missing = [...left].filter(name => !right.has(name)).sort()
+  const extra = [...right].filter(name => !left.has(name)).sort()
+  if (missing.length > 0 || extra.length > 0) {
+    fail(
+      `${leftLabel} ↔ ${rightLabel} mismatch` +
+        (missing.length > 0 ? `\n  missing from ${rightLabel}: ${missing.join(', ')}` : '') +
+        (extra.length > 0 ? `\n  extra in ${rightLabel}: ${extra.join(', ')}` : ''),
+    )
+  }
+}
+
+const allowlistPath = join(pkgRoot, 'browser-symbols.generated.json')
+if (!existsSync(allowlistPath)) {
+  fail('browser-symbols.generated.json missing — run `pnpm gen`')
+}
+const allowlist = new Set(JSON.parse(readFileSync(allowlistPath, 'utf8')).browserSafe)
+if (allowlist.size === 0) {
+  fail('generated browserSafe allowlist is empty')
+}
+
 const browserWasm = join(pkgRoot, 'pkg/browser/solvapay_wasm_bg.wasm')
 const browserGlue = join(pkgRoot, 'pkg/browser/solvapay_wasm.js')
 const browserDts = join(pkgRoot, 'pkg/browser/solvapay_wasm.d.ts')
 
-if (!existsSync(browserWasm) || !existsSync(browserGlue)) {
+if (!existsSync(browserWasm) || !existsSync(browserGlue) || !existsSync(browserDts)) {
   fail('browser artifacts missing — run `pnpm build` in sdks/wasm first')
 }
 
@@ -87,7 +122,6 @@ const rawExports = WebAssembly.Module.exports(mod).map(e => e.name)
 
 for (const name of rawExports) {
   if (isInternalExport(name)) continue
-  // wasm-bindgen mangled export for wasmVersion looks like wasmVersion or similar
   const semantic = name.replace(/^solvapay_wasm_/, '')
   if (FORBIDDEN_SEMANTIC.some(f => name.includes(f) || semantic.includes(f))) {
     fail(`forbidden raw export: ${name}`)
@@ -95,16 +129,14 @@ for (const name of rawExports) {
 }
 
 const glue = readFileSync(browserGlue, 'utf8')
-const dts = existsSync(browserDts) ? readFileSync(browserDts, 'utf8') : ''
+const dts = readFileSync(browserDts, 'utf8')
 for (const forbidden of FORBIDDEN_SEMANTIC) {
   if (glue.includes(forbidden) || dts.includes(forbidden)) {
     fail(`forbidden symbol in generated glue/d.ts: ${forbidden}`)
   }
 }
 
-// JS-visible named exports from the browser runtime wrapper surface.
 const runtimeBrowser = readFileSync(join(pkgRoot, 'runtime/browser-web.js'), 'utf8')
-// Strip block/line comments before scanning for forbidden identifiers.
 const runtimeCode = runtimeBrowser
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .replace(/\/\/.*$/gm, '')
@@ -115,14 +147,11 @@ if (!runtimeCode.includes('wasmVersion')) {
   fail('runtime/browser-web.js must export wasmVersion')
 }
 
-// Allowlist check: only wasmVersion as semantic export in .d.ts of browser package surface.
-for (const name of BROWSER_SEMANTIC_ALLOWLIST) {
-  if (!runtimeBrowser.includes(name)) {
-    fail(`missing allowed semantic export wiring: ${name}`)
-  }
-}
+const dtsExports = parseDtsExports(dts)
+const runtimeExports = parseNamedExportBlock(runtimeBrowser)
+assertEqualSets(allowlist, dtsExports, 'declared allowlist', 'pkg/browser d.ts')
+assertEqualSets(allowlist, runtimeExports, 'declared allowlist', 'runtime/browser-web.js')
 
-// Dependency tree: browser feature graph must exclude transport/reqwest/tokio.
 const tree = spawnSync(
   'cargo',
   [
@@ -151,4 +180,4 @@ for (const banned of ['solvapay-transport', 'reqwest', 'tokio', 'rsa', 'p256']) 
 
 console.log('OK: browser symbol audit passed')
 console.log(`  raw exports: ${rawExports.length}`)
-console.log(`  semantic allowlist: ${[...BROWSER_SEMANTIC_ALLOWLIST].join(', ')}`)
+console.log(`  semantic allowlist: ${formatSet(allowlist)}`)

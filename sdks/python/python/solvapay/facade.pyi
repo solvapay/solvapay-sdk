@@ -40,6 +40,9 @@ class SolvaPay:
     def get_api_client(self) -> ApiClient:
         """Return the bound client, constructing the native client on first use."""
         ...
+    def track_usage(self, params: dict[str, object]) -> None:
+        """Record a usage event through the same retry path as ``payable`` handlers."""
+        ...
     def payable(
         self, *, product: str, usage_type: str = "requests"
     ) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:

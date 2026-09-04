@@ -4,8 +4,8 @@ import (
 	"context"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
-	solvapay "github.com/solvapay/solvapay-go"
-	solvapaymcp "github.com/solvapay/solvapay-go/mcp"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
+	solvapaymcp "github.com/solvapay/solvapay-sdk/sdks/go/mcp"
 )
 
 func runStdio(ctx context.Context, client *solvapay.Client, product, publicBaseURL string, source Source) error {

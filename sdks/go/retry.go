@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/solvapay/solvapay-go/internal/nativecall"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
 // RetryOptions configures [WithRetry]. Delay math is computed in the guest.

@@ -9,8 +9,8 @@ import (
 	"net/url"
 	"strings"
 
-	solvapay "github.com/solvapay/solvapay-go"
-	solvapaymcp "github.com/solvapay/solvapay-go/mcp"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
+	solvapaymcp "github.com/solvapay/solvapay-sdk/sdks/go/mcp"
 )
 
 type httpServeConfig struct {

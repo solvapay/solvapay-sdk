@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/solvapay/solvapay-go/internal/livecontract"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/livecontract"
 )
 
 func TestScenariosCoverThirtySixOpsInDependencyOrder(t *testing.T) {

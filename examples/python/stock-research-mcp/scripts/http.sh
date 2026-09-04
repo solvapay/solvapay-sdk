@@ -21,7 +21,13 @@ load_env_file "$EXAMPLE_DIR/.env"
 load_env_file "$EXAMPLE_DIR/.env.local"
 
 export MCP_PORT="${MCP_PORT:-3030}"
-export MCP_PUBLIC_BASE_URL="${MCP_PUBLIC_BASE_URL:-https://appmcp.jack-local.ngrok.app}"
+if [[ -z "${MCP_PUBLIC_BASE_URL:-}" ]]; then
+  echo "Missing MCP_PUBLIC_BASE_URL." >&2
+  echo "Set it in examples/python/stock-research-mcp/.env to your reserved ngrok origin, for example:" >&2
+  echo "  MCP_PUBLIC_BASE_URL=https://appmcp.your-subdomain.ngrok.app" >&2
+  exit 1
+fi
+export MCP_PUBLIC_BASE_URL
 export SOLVAPAY_API_BASE_URL="${SOLVAPAY_API_BASE_URL:-http://localhost:3010}"
 
 exec uv run --project "$PYTHON_MCP" --extra dev --with httpx --with uvicorn \

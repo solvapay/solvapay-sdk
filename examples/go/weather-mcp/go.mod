@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.7.0
-	github.com/solvapay/solvapay-go v0.0.0
+	github.com/solvapay/solvapay-sdk/sdks/go v0.0.0
 )
 
 require (
@@ -19,4 +19,4 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 )
 
-replace github.com/solvapay/solvapay-go => ../../../sdks/go
+replace github.com/solvapay/solvapay-sdk/sdks/go => ../../../sdks/go

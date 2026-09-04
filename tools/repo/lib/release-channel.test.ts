@@ -4,6 +4,7 @@ import {
   assertHostMatchesChannel,
   assertTagsAvailable,
   ecosystemVersion,
+  goModuleTag,
   parseReleaseTag,
   resolveChannelFromRef,
   tagsAlreadyOnRemote,
@@ -61,6 +62,13 @@ describe('ecosystemVersion', () => {
 
   it('throws when a rehearsal run number is missing', () => {
     expect(() => ecosystemVersion('0.2.0', 'rehearsal', 'python', 0)).toThrow(/run number/)
+  })
+})
+
+describe('goModuleTag', () => {
+  it('prefixes the nested module path and keeps rehearsal as a prerelease', () => {
+    expect(goModuleTag('0.2.0', 'production', 7)).toBe('sdks/go/v0.2.0')
+    expect(goModuleTag('0.2.0', 'rehearsal', 7)).toBe('sdks/go/v0.2.0-rehearsal.7')
   })
 })
 

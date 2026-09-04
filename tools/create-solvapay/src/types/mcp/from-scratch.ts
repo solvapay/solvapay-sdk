@@ -99,7 +99,7 @@ const DEV_PATHS = (
         'solvapay-mcp': abs(['sdks', 'ruby-mcp']),
       }
     case 'go':
-      return { 'github.com/solvapay/solvapay-go': abs(['sdks', 'go']) }
+      return { 'github.com/solvapay/solvapay-sdk/sdks/go': abs(['sdks', 'go']) }
     case 'rust':
       return {
         solvapay: abs(['sdks', 'rust']),

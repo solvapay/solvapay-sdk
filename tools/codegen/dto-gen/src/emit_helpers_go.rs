@@ -24,7 +24,7 @@ pub fn emit_helpers_go(ir: &Ir) -> GenResult<String> {
         "package solvapay\n\n\
          import (\n\
          \t\"context\"\n\n\
-         \t\"github.com/solvapay/solvapay-go/internal/nativecall\"\n\
+         \t\"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall\"\n\
          )\n\n",
     );
     for (binding, entry) in catalog_helper_bindings(ir) {

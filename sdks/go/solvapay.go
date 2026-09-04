@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/solvapay/solvapay-go/internal/nativecall"
-	"github.com/solvapay/solvapay-go/internal/runtime"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/runtime"
 )
 
 //go:embed solvapay_core.wasm

@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	solvapay "github.com/solvapay/solvapay-go"
-	"github.com/solvapay/solvapay-go/internal/livecontract"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/livecontract"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/solvapay/solvapay-go/internal/nativecall"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
 func callLayer2(ctx context.Context, fn string, args any) (json.RawMessage, error) {

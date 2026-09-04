@@ -63,6 +63,9 @@ export const TS_ONLY_ALLOWLIST: readonly string[] = [
   'createCustomerHandler',
   'createWebhookHandler',
   'createSolvapayWebhookHandler',
+  'getAutoRecharge',
+  'saveAutoRecharge',
+  'disableAutoRecharge',
   'jsonResponse',
   'errorResponse',
   // TS route-helper cores (framework-agnostic but not cross-language catalogued)

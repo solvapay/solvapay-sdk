@@ -145,7 +145,7 @@ solvapay-sdk/
 | `solvapay-core`      | Validation, retry policy, webhook verify, helper decision cores, paywall, business/credit/seller logic, MCP payload builders, error model | `serde`, `hmac`/`sha2`, `subtle`. **No** `reqwest`, **no** `tokio`, **no** `wasm-bindgen` — this is what keeps browser WASM small |
 | `solvapay-dto`       | Generated wire models + SDK overlays                                                                                                      | `serde` only; generated — never hand-edited                                                                                       |
 | `solvapay-export`    | Inert `#[solvapay_export]` marker scanned by dto-gen                                                                                      | Proc-macro crate; no runtime logic                                                                                                |
-| `solvapay-transport` | `Transport` trait, `reqwest`/rustls (native) + Fetch (wasm32) impls, client shell, 36 routed methods + 5 MCP composites (41 total)        | Depends on core + dto; async but runtime-agnostic                                                                                 |
+| `solvapay-transport` | `Transport` trait, `reqwest`/rustls (native) + Fetch (wasm32) impls, client shell, 36 routed methods + 7 MCP composites (43 total)        | Depends on core + dto; async but runtime-agnostic                                                                                 |
 | `solvapay`           | Public crates.io facade: idiomatic re-exports + `blocking` feature                                                                        | Depends on transport + core; ergonomics only, no new logic                                                                        |
 
 ## What's implemented where
@@ -177,9 +177,9 @@ TypeScript facade that delegates to it. All paths are verified on disk.
 
 **HTTP client — `solvapay-transport`:** the `Transport` trait plus the reqwest
 (native) and Fetch (wasm32) implementations and the client shell that wires auth
-headers, idempotency, and retry, with 36 routed client methods plus 5
+headers, idempotency, and retry, with 36 routed client methods plus 7
 routeless MCP composites (`mcpBootstrap`, `mcpCallBuiltinTool`, `mcpReadResource`,
-`mcpOauthRequest`, `mcpDispatch`) →
+`mcpOauthRequest`, `mcpDispatch`, `mcpResolveAuth`, `fetchJwks`) →
 `core/solvapay-transport/src/{transport,reqwest_transport,fetch_transport,shell,client}.rs`.
 
 **TypeScript delegation glue:**
@@ -201,7 +201,7 @@ capabilities; only syntax differs (cross-surface parity is enforced in CI).
 | TypeScript   | napi-rs (Node native), wasm-bindgen (edge + browser)                                 | GA — the published `@solvapay/*` packages                                |
 | Python       | PyO3 + maturin (`abi3` wheels) + `solvapay-mcp` adapter                              | Built + tested in CI; publish is TestPyPI-gated (not GA)                 |
 | Ruby         | Magnus + rb-sys (platform gems) + `solvapay-mcp` adapter                             | Built + tested in CI; publish gated (not GA)                             |
-| Go           | wazero + embedded `wasm32-wasip1` core (`//go:embed`) + `solvapay-go/mcp` adapter    | Built + tested in CI; subtree module release (not GA)                    |
+| Go           | wazero + embedded `wasm32-wasip1` core (`//go:embed`) + `solvapay-go/mcp` adapter    | Built + tested in CI; nested module tags `sdks/go/v*` (not GA)           |
 | Rust         | `solvapay` crate (thin facade, no FFI) + `blocking` feature + `solvapay-mcp` adapter | Built + tested in CI; crates.io publish gated (not GA)                   |
 | C ABI (opt.) | cbindgen + opaque handles (`sdks/capi`)                                              | Generated `dispatch.rs` (golden-tested); opaque handles + `ctest` engine |
 
@@ -230,7 +230,7 @@ allowlists exactly the public-safe exports. Webhook verification and the
 transport client are `edge`-gated, so no secret-key `WasmClient` symbol can enter
 the browser module. The structural gate is the Cargo feature graph plus the
 export audit — not a runtime check. The **browser** wasm-bindgen profile also
-omits the five MCP composite client ops; those exist on Node napi, the edge
+omits the seven MCP composite client ops; those exist on Node napi, the edge
 WASM profile, and the native Python/Ruby/Go/Rust/C adapters.
 
 TypeScript `client.ts` operation wrappers are generated (`client.runtime.generated.ts`).
@@ -303,10 +303,14 @@ Hand-written and never moved to Rust:
 - Per-language examples under `examples/<language>/`
 
 **Nil-core helper deviation.** `payment-method`, `auto-recharge`, `merchant`,
-and the HTTP `trackUsage` helper deliberately have no Rust decision core.
-Do not grow new semantic logic there — that is where facade copies quietly
-drifted (the payable-path `metadata.action` bug). New decisions go through
-a JSON-in / JSON-out core function.
+and the HTTP `trackUsage` helper are TypeScript-only route orchestrators
+(not copies across the six language facades). They stay host-bound because
+core forbids env reads and timers: `merchant` reads config via
+`getSolvaPayConfig()`, `usage` runs `ensureCustomer` plus a retry loop,
+and `auto-recharge` is a capability guard around a client call. The old
+payable-path `metadata.action` drift is fixed — `payable-handler` posts the
+driver-rendered body, locked by `payable-handler.unit.test.ts`. New
+decisions still go through a JSON-in / JSON-out core function.
 
 ## Design principles
 

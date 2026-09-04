@@ -18,7 +18,7 @@ describe('sdkInstallPlan', () => {
 
   it('uses go get for Go', () => {
     const plan = sdkInstallPlan('go')
-    expect(plan.args).toEqual(['get', 'github.com/solvapay/solvapay-go@latest'])
+    expect(plan.args).toEqual(['get', 'github.com/solvapay/solvapay-sdk/sdks/go@latest'])
   })
 
   it('uses cargo add for Rust', () => {

@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"os"
 
-	solvapay "github.com/solvapay/solvapay-go"
-	solvapaymcp "github.com/solvapay/solvapay-go/mcp"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
+	solvapaymcp "github.com/solvapay/solvapay-sdk/sdks/go/mcp"
 )
 
 func requireLiveClient(ctx context.Context) (*solvapay.Client, string, error) {

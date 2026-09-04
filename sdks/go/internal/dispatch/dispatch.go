@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"strings"
 
-	solvapay "github.com/solvapay/solvapay-go"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
 )
 
 // Signature is one catalogued client method: PascalCase name → param names (excluding ctx).

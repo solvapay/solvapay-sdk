@@ -27,6 +27,7 @@ const ALLOWLIST = new Set([
   'conformance/lib/surface-loc-budget.ts',
   'codegen/manifest.test.ts',
   'repo/lib/release-train.test.ts',
+  'repo/lib/release-channel.test.ts',
   'repo/prettierignore.test.ts',
   'repo/doc-script-references.test.ts',
   'mcp-app-widget/__tests__/widget-artifact.test.ts',

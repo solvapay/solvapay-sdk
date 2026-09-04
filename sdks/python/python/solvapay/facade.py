@@ -255,6 +255,10 @@ class SolvaPay:
         self._bound_client = SolvaPayClient(key, self._api_base_url)
         return self._bound_client
 
+    def track_usage(self, params: Mapping[str, Any]) -> None:
+        """Record a usage event through the same retry path as ``payable`` handlers."""
+        _post_usage(self.get_api_client(), dict(params))
+
     def payable(
         self, *, product: str, usage_type: str = "requests"
     ) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:

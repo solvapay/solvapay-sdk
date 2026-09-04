@@ -1322,9 +1322,9 @@ jobs:
             '' \
             'go 1.25' \
             '' \
-            'require github.com/solvapay/solvapay-go v0.0.0' \
+            'require github.com/solvapay/solvapay-sdk/sdks/go v0.0.0' \
             '' \
-            "replace github.com/solvapay/solvapay-go => ${BINDING}" \
+            "replace github.com/solvapay/solvapay-sdk/sdks/go => ${BINDING}" \
             > "$WORK/go.mod"
           printf '%s\n' \
             'package main' \
@@ -1333,7 +1333,7 @@ jobs:
             '	"context"' \
             '	"fmt"' \
             '' \
-            '	solvapay "github.com/solvapay/solvapay-go"' \
+            '	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"' \
             ')' \
             '' \
             'func main() {' \

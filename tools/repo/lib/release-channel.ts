@@ -5,6 +5,8 @@
  * `rehearsal/` and can never match a production tag glob.
  */
 
+import { loadRepoPathsManifest } from '../../shared/repo-paths.js'
+
 export const RELEASE_TRAIN_LANGUAGES = ['rust', 'python', 'ruby', 'go'] as const
 
 export type ReleaseTrainLanguage = (typeof RELEASE_TRAIN_LANGUAGES)[number]
@@ -24,7 +26,10 @@ const PRODUCTION_HOSTS: Record<ReleaseEcosystem, string> = {
   cargo: 'https://crates.io/',
   python: 'https://upload.pypi.org/legacy/',
   ruby: 'https://rubygems.org/',
-  go: 'https://github.com/solvapay/solvapay-go',
+  // Go publishes as a nested module on this repo. Channel separation is the
+  // prerelease suffix (`-rehearsal.N`), so assertHostMatchesChannel cannot
+  // tell production from rehearsal for `go`.
+  go: 'https://github.com/solvapay/solvapay-sdk',
 }
 
 const REHEARSAL_HOSTS: Record<ReleaseEcosystem, string> = {
@@ -32,7 +37,7 @@ const REHEARSAL_HOSTS: Record<ReleaseEcosystem, string> = {
   cargo: 'http://127.0.0.1:8000/index/',
   python: 'https://test.pypi.org/legacy/',
   ruby: 'https://rubygems.pkg.github.com/solvapay',
-  go: 'https://github.com/solvapay/solvapay-go-rehearsal',
+  go: 'https://github.com/solvapay/solvapay-sdk',
 }
 
 const SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
@@ -120,6 +125,11 @@ export function ecosystemVersion(
     case 'ruby':
       return `${base}.pre.${runNumber}`
   }
+}
+
+export function goModuleTag(version: string, channel: ReleaseChannel, runNumber: number): string {
+  const goSdk = loadRepoPathsManifest().sdks.go
+  return `${goSdk}/v${ecosystemVersion(version, channel, 'go', runNumber)}`
 }
 
 export function registryHost(channel: ReleaseChannel, ecosystem: ReleaseEcosystem): string {

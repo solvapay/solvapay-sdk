@@ -55,8 +55,8 @@ CHECKOUT_DEMO_NGROK_URL="${CHECKOUT_DEMO_NGROK_URL:-}"
 if [[ -z "$CHECKOUT_DEMO_NGROK_URL" ]]; then
   echo "Missing CHECKOUT_DEMO_NGROK_URL." >&2
   echo "Set it in examples/typescript/checkout-demo/.env or .env.local, for example:" >&2
-  echo "  CHECKOUT_DEMO_NGROK_URL=https://checkout-jack-local.ngrok.app" >&2
-  echo "  CHECKOUT_DEMO_NGROK_HOST=checkout-jack-local.ngrok.app" >&2
+  echo "  CHECKOUT_DEMO_NGROK_URL=https://checkout-your-subdomain.ngrok.app" >&2
+  echo "  CHECKOUT_DEMO_NGROK_HOST=checkout-your-subdomain.ngrok.app" >&2
   exit 1
 fi
 

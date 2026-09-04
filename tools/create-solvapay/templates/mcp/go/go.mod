@@ -4,5 +4,5 @@ go 1.22
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.7.0
-	github.com/solvapay/solvapay-go v0.1.0
+	github.com/solvapay/solvapay-sdk/sdks/go v0.1.0
 )

@@ -85,7 +85,7 @@ OAuth discovery at `/.well-known/oauth-protected-resource` and `/oauth/*`.
 what the discovery documents advertise.
 
 This process is the server behind the reserved `appmcp` origin
-(`https://appmcp.jack-local.ngrok.app` → `127.0.0.1:3030`), same as
+(`https://appmcp.<your-subdomain>.ngrok.app` → `127.0.0.1:3030`), same as
 bitcoin-analytics, stock-research, and weather-mcp. Only one of those
 examples can own the origin at a time.
 
@@ -98,24 +98,24 @@ cargo run --manifest-path examples/rust/guerrillamail-mcp/Cargo.toml -- --mode d
 
 ```bash
 pnpm mcp:guerrillamail          # local http://127.0.0.1:3030/mcp
-pnpm mcp:guerrillamail:tunnel   # https://appmcp.jack-local.ngrok.app/mcp
+pnpm mcp:guerrillamail:tunnel   # https://appmcp.<your-subdomain>.ngrok.app/mcp
 ```
 
-In MCPJam, connect to **`https://appmcp.jack-local.ngrok.app/mcp`** (tunnel)
+In MCPJam, connect to **`https://appmcp.<your-subdomain>.ngrok.app/mcp`** (tunnel)
 or `http://127.0.0.1:3030/mcp` (local-only). Discovery documents still use
 `MCP_PUBLIC_BASE_URL`, so local-only still requires that origin to match
 whatever the client will fetch. `tools/call` needs
 `Authorization: Bearer <JWT>`; the engine takes `customer_ref` from `sub`.
 
-| Variable                  | Required     | Notes                                                            |
-| ------------------------- | ------------ | ---------------------------------------------------------------- |
-| `SOLVAPAY_SECRET_KEY`     | yes for HTTP | Sandbox secret                                                   |
-| `SOLVAPAY_PRODUCT`        | yes for HTTP | `prd_*` billed per tool call                                     |
-| `MCP_PUBLIC_BASE_URL`     | yes for HTTP | Defaults to `https://appmcp.jack-local.ngrok.app` in the scripts |
-| `SOLVAPAY_API_BASE_URL`   | no           | Local stack: `http://localhost:3010`                             |
-| `MCP_HOST` / `MCP_PORT`   | no           | Default `127.0.0.1` / `3030`                                     |
-| `MCP_SOURCE`              | no           | `live` or `fixture`                                              |
-| `GUERRILLAMAIL_NGROK_URL` | no           | Same reserved origin as the other MCP examples                   |
+| Variable                  | Required     | Notes                                          |
+| ------------------------- | ------------ | ---------------------------------------------- |
+| `SOLVAPAY_SECRET_KEY`     | yes for HTTP | Sandbox secret                                 |
+| `SOLVAPAY_PRODUCT`        | yes for HTTP | `prd_*` billed per tool call                   |
+| `MCP_PUBLIC_BASE_URL`     | yes for HTTP | Required; your reserved ngrok origin           |
+| `SOLVAPAY_API_BASE_URL`   | no           | Local stack: `http://localhost:3010`           |
+| `MCP_HOST` / `MCP_PORT`   | no           | Default `127.0.0.1` / `3030`                   |
+| `MCP_SOURCE`              | no           | `live` or `fixture`                            |
+| `GUERRILLAMAIL_NGROK_URL` | no           | Same reserved origin as the other MCP examples |
 
 ## Tests
 

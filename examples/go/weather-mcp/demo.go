@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	solvapay "github.com/solvapay/solvapay-go"
-	solvapaymcp "github.com/solvapay/solvapay-go/mcp"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
+	solvapaymcp "github.com/solvapay/solvapay-sdk/sdks/go/mcp"
 )
 
 type demoOptions struct {

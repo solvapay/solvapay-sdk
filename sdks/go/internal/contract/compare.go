@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"reflect"
 
-	solvapay "github.com/solvapay/solvapay-go"
-	"github.com/solvapay/solvapay-go/internal/nativecall"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
 var webhookCodes = map[string]struct{}{

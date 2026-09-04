@@ -275,7 +275,7 @@ describe('createSolvaPayMcpFetchHandler', () => {
       responseMode: 'json',
       engine: {
         mcpDispatch: async () => {
-          throw new Error('/Users/jacksmith/secret/engine.ts:1 exploded')
+          throw new Error('/Users/dev/secret/engine.ts:1 exploded')
         },
         config: {
           productRef,

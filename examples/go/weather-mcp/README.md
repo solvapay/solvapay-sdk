@@ -60,7 +60,7 @@ go test ./...
 1. `cp .env.example .env` and set `SOLVAPAY_SECRET_KEY`, `SOLVAPAY_PRODUCT`, and
    `MCP_PUBLIC_BASE_URL` to your reserved HTTPS origin.
 2. Start the tunnel: `./scripts/tunnel.sh`.
-3. In MCPJam, add server URL `https://appmcp.jack-local.ngrok.app/mcp`.
+3. In MCPJam, add server URL `https://appmcp.<your-subdomain>.ngrok.app/mcp`.
 4. `tools/list` works without a bearer (`authMode` is `tools-call`).
 5. The first `get_current_weather` call triggers OAuth (DCR + authorize + token).
 6. A customer without entitlement gets a `payment_required` result (`isError` is

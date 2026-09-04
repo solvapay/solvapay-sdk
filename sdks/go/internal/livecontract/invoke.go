@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	solvapay "github.com/solvapay/solvapay-go"
-	"github.com/solvapay/solvapay-go/internal/dispatch"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/dispatch"
 )
 
 // Invoke calls one camelCase operation and returns a JSON observation ({ok, value|error}).

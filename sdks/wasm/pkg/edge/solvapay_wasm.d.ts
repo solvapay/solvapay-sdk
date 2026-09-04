@@ -629,6 +629,8 @@ export function shouldShowTaxRow(args_json: string): string;
 
 /**
  * Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
+ *
+ * Edge-only: the browser profile must not ship the MCP engine.
  */
 export function solvapayCall(args_json: string): string;
 

@@ -1,4 +1,4 @@
-module github.com/solvapay/solvapay-go
+module github.com/solvapay/solvapay-sdk/sdks/go
 
 go 1.25.0
 

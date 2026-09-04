@@ -132,6 +132,7 @@ fn generated_ids_match_enumerated_expectation() {
         "tsParity",
         "bindingSymbols",
         "facadeCoverage",
+        "wasmBrowserSymbols",
         "boundaryTypes",
         "coreTypesTs",
         "coreDispatchTs",

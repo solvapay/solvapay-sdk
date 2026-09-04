@@ -22,8 +22,8 @@ import {
   rubyAllowMissingForArches,
   rubyPlatformsForArches,
   previewStampRels,
+  goProductionModulePath,
   requiredPreviewToken,
-  rewriteGoRehearsalImports,
   selectedPreviewLanguages,
   uncoveredHostFamilies,
 } from './language-preview.js'
@@ -111,11 +111,11 @@ describe('preview versions', () => {
 })
 
 describe('tokens', () => {
-  it('requires no token for rust and named tokens for the other three', () => {
+  it('requires no token for rust and go and named tokens for python and ruby', () => {
     expect(requiredPreviewToken('rust')).toBeUndefined()
     expect(requiredPreviewToken('python')).toBe('SOLVAPAY_TESTPYPI_TOKEN')
     expect(requiredPreviewToken('ruby')).toBe('GEM_HOST_API_KEY')
-    expect(requiredPreviewToken('go')).toBe('SOLVAPAY_GO_DEPLOY_TOKEN')
+    expect(requiredPreviewToken('go')).toBeUndefined()
   })
 
   it('fails loudly when a selected language is missing its token', () => {
@@ -127,7 +127,6 @@ describe('tokens', () => {
       missingPreviewTokens(['rust', 'python', 'ruby', 'go'], {
         SOLVAPAY_TESTPYPI_TOKEN: 't',
         GEM_HOST_API_KEY: 'g',
-        SOLVAPAY_GO_DEPLOY_TOKEN: 'd',
       }),
     ).toEqual([])
   })
@@ -272,20 +271,9 @@ describe('coverage report', () => {
   })
 })
 
-describe('rewriteGoRehearsalImports', () => {
-  it('retargets the production module path without double-suffixing', () => {
-    const source = [
-      'module github.com/solvapay/solvapay-go',
-      'import "github.com/solvapay/solvapay-go/internal/runtime"',
-      'import "github.com/solvapay/solvapay-go-rehearsal/internal/runtime"',
-    ].join('\n')
-    expect(rewriteGoRehearsalImports(source)).toBe(
-      [
-        'module github.com/solvapay/solvapay-go-rehearsal',
-        'import "github.com/solvapay/solvapay-go-rehearsal/internal/runtime"',
-        'import "github.com/solvapay/solvapay-go-rehearsal/internal/runtime"',
-      ].join('\n'),
-    )
+describe('goProductionModulePath', () => {
+  it('is the nested monorepo module path', () => {
+    expect(goProductionModulePath()).toBe('github.com/solvapay/solvapay-sdk/sdks/go')
   })
 })
 

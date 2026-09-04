@@ -6,7 +6,7 @@ package solvapay
 import (
 	"context"
 
-	"github.com/solvapay/solvapay-go/internal/nativecall"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
 // REVERSE_CHARGE_NOTE buyer-facing note when VAT reverse charge applies.

@@ -44,21 +44,21 @@ uv run --extra dev --with httpx python ../../examples/python/stock-research-mcp/
 
 Streamable HTTP on `/mcp` (default `MCP_PORT=3030`) plus OAuth discovery at
 `/.well-known/oauth-protected-resource`. This process is the server behind
-the reserved origin **`https://appmcp.jack-local.ngrok.app`** (platform ngrok
+the reserved origin **`https://appmcp.<your-subdomain>.ngrok.app`** (platform ngrok
 `mcpapp` → `localhost:3030`). Do not run `mcp-checkout-app` on 3030 at the
 same time, and do not use the mcp-proxy wildcard
-(`https://<tenant>.local.jack-local.ngrok.app`) — that is a different process
+(`https://<tenant>.local.<your-subdomain>.ngrok.app`) — that is a different process
 and returns `MCP server not found`.
 
 ```bash
 cp .env.example .env
 # set SOLVAPAY_SECRET_KEY, SOLVAPAY_PRODUCT, SOLVAPAY_API_BASE_URL
-# STOCK_RESEARCH_NGROK_URL defaults to https://appmcp.jack-local.ngrok.app
+# STOCK_RESEARCH_NGROK_URL is required; your reserved ngrok origin
 
 pnpm mcp:stock-research:tunnel
 ```
 
-In MCPJam, connect to **`https://appmcp.jack-local.ngrok.app/mcp`** and complete
+In MCPJam, connect to **`https://appmcp.<your-subdomain>.ngrok.app/mcp`** and complete
 OAuth. Local-only: `pnpm mcp:stock-research` then `http://127.0.0.1:3030/mcp`
 (still requires `MCP_PUBLIC_BASE_URL` so discovery documents are correct).
 

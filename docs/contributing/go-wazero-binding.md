@@ -1,6 +1,6 @@
 # Go binding: wazero + committed WASI guest
 
-The Go facade (`sdks/go`, published as `github.com/solvapay/solvapay-go`) does
+The Go facade (`sdks/go`, published as `github.com/solvapay/solvapay-sdk/sdks/go`) does
 not link `sdks/capi` and does not use cgo. It embeds a `wasm32-wasip1` build of
 `solvapay-core` + `solvapay-transport` (`solvapay_core.wasm`) and runs that
 guest under [wazero](https://github.com/tetratelabs/wazero). HTTP leaves the

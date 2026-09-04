@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { FACADES, missingReasons, type FacadeCoverageFile } from './facade-coverage.js'
+import {
+  FACADES,
+  missingReasons,
+  parseDtsExports,
+  type FacadeCoverageFile,
+} from './facade-coverage.js'
 
 describe('facade-coverage', () => {
-  it('enumerates the 11 sdks/ facades', () => {
-    expect(FACADES).toHaveLength(11)
+  it('enumerates the 12 sdks/ facades (wasm split into edge/browser)', () => {
+    expect(FACADES).toEqual(expect.arrayContaining(['wasm-edge', 'wasm-browser']))
+    expect(FACADES).not.toContain('wasm')
+    expect(FACADES).toHaveLength(12)
   })
 
   it('flags gaps that lack a reason', () => {
@@ -17,5 +24,25 @@ describe('facade-coverage', () => {
       ops: { createCustomer: empty },
     }
     expect(missingReasons(coverage)).toEqual(['createCustomer.capi'])
+  })
+
+  it('parses exported functions, consts, and class methods from a .d.ts', () => {
+    const names = parseDtsExports(`
+/**
+ * Binding for formatPrice.
+ */
+export function formatPrice(args_json: string): string;
+export const wasmVersion: string;
+export class WasmClient {
+    free(): void;
+    createCustomer(args_json: string): Promise<string>;
+}
+export function initSync(module: unknown): unknown;
+`)
+    expect(names.has('formatPrice')).toBe(true)
+    expect(names.has('wasmVersion')).toBe(true)
+    expect(names.has('createCustomer')).toBe(true)
+    expect(names.has('free')).toBe(false)
+    expect(names.has('WasmClient')).toBe(false)
   })
 })

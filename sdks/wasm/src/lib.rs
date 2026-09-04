@@ -7,9 +7,10 @@
 //!   payload builders ([`payload_builders`]), and the async
 //!   [`wasm_client::WasmClient`] Groups A–C methods over `FetchTransport`.
 //! - `browser`: public-safe pure surface — `wasm_version` + the
-//!   business-details / credit-display / seller-identity subset of
-//!   `payload_builders` plus the plan-pricing readers React's checkout
-//!   primitives call. No webhook, no secret-key client, no MCP symbols.
+//!   business-details / credit-display / seller-identity / money-format /
+//!   tax-note subset of `payload_builders` plus the plan-pricing readers
+//!   React's checkout primitives call. No webhook, no secret-key client,
+//!   no MCP symbols (`solvapayCall` / `invokePayableNext` are edge-only).
 //!
 //! # Panic safety
 //!
@@ -78,6 +79,9 @@ pub fn panic_probe() {
 }
 
 /// Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
+///
+/// Edge-only: the browser profile must not ship the MCP engine.
+#[cfg(feature = "edge")]
 #[wasm_bindgen(js_name = solvapayCall)]
 pub fn solvapay_call(args_json: String) -> String {
     solvapay_mcp_core::solvapay_call(&args_json)

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	solvapay "github.com/solvapay/solvapay-go"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
 )
 
 const testBearer = "Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL3dlYXRoZXIuZXhhbXBsZS50ZXN0IiwiYXVkIjoiaHR0cHM6Ly93ZWF0aGVyLmV4YW1wbGUudGVzdC9tY3AiLCJleHAiOjQxMDI0NDQ4MDAsInN1YiI6ImN1c18xIn0.XnsPdqvyrlXUx7j-wqsJxriXawZxLHn9LvvUVNuZzbs"

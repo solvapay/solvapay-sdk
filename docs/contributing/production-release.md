@@ -83,8 +83,7 @@ Rehearsal tags (`rehearsal/solvapay-<lang>-v*`) never match those globs.
 - **RubyGems trusted publisher** for `publish-ruby.yml`.
 - **`CARGO_REGISTRY_TOKEN`** (or crates.io Trusted Publishing) for
   `publish-rust.yml`.
-- **`SOLVAPAY_GO_DEPLOY_TOKEN`** with `contents: write` on
-  `solvapay/solvapay-go`.
+- **`vars.RELEASE_PROD_GO`** to include Go in a production train bump.
 - Crates.io publish order confirmed by `pnpm` /
   `tools/repo/check-publish-graph.sh`.
 

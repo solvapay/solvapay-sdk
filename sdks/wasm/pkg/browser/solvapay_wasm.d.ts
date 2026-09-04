@@ -92,11 +92,6 @@ export function headlineCharges(args_json: string): string;
 export function includedUnits(args_json: string): string;
 
 /**
- * Binding for `invokePayableNext`.
- */
-export function invokePayableNext(args_json: string): string;
-
-/**
  * Binding for `isUnlimitedRemaining`.
  */
 export function isUnlimitedRemaining(args_json: string): string;
@@ -140,11 +135,6 @@ export function resolveTaxTreatmentNote(args_json: string): string;
  * Binding for `shouldShowTaxRow`.
  */
 export function shouldShowTaxRow(args_json: string): string;
-
-/**
- * Client-less MCP / sync dispatch. Args JSON: `{"op","args"}`.
- */
-export function solvapayCall(args_json: string): string;
 
 /**
  * Binding for `toMajorUnits`.
@@ -198,7 +188,6 @@ export interface InitOutput {
     readonly getTaxIdHelperText: (a: number, b: number) => [number, number];
     readonly headlineCharges: (a: number, b: number) => [number, number];
     readonly includedUnits: (a: number, b: number) => [number, number];
-    readonly invokePayableNext: (a: number, b: number) => [number, number];
     readonly isUnlimitedRemaining: (a: number, b: number) => [number, number];
     readonly isZeroDecimalCurrency: (a: number, b: number) => [number, number];
     readonly minorUnitsPerMajor: (a: number, b: number) => [number, number];
@@ -208,7 +197,6 @@ export interface InitOutput {
     readonly resolveTaxBehavior: (a: number, b: number) => [number, number];
     readonly resolveTaxTreatmentNote: (a: number, b: number) => [number, number];
     readonly shouldShowTaxRow: (a: number, b: number) => [number, number];
-    readonly solvapayCall: (a: number, b: number) => [number, number];
     readonly toMajorUnits: (a: number, b: number) => [number, number];
     readonly trialDays: (a: number, b: number) => [number, number];
     readonly validateBusinessDetails: (a: number, b: number) => [number, number];

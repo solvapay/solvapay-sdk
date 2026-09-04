@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/solvapay/solvapay-go/internal/dispatch"
-	"github.com/solvapay/solvapay-go/internal/livecontract"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/dispatch"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/livecontract"
 )
 
 type fixtureFile struct {

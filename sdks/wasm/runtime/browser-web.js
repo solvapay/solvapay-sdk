@@ -40,6 +40,14 @@ import init, {
   includedUnits,
   peggedCreditsPerUnit,
   creditsPerUnitFromBalance,
+  formatPrice,
+  formatSubtotalLabel,
+  formatVatSummaryLabel,
+  resolveTaxTreatmentNote,
+  shouldShowTaxRow,
+  toMajorUnits,
+  REVERSE_CHARGE_NOTE,
+  TAX_NOT_COLLECTED_NOTE,
 } from '../pkg/browser/solvapay_wasm.js'
 
 export {
@@ -68,6 +76,14 @@ export {
   includedUnits,
   peggedCreditsPerUnit,
   creditsPerUnitFromBalance,
+  formatPrice,
+  formatSubtotalLabel,
+  formatVatSummaryLabel,
+  resolveTaxTreatmentNote,
+  shouldShowTaxRow,
+  toMajorUnits,
+  REVERSE_CHARGE_NOTE,
+  TAX_NOT_COLLECTED_NOTE,
 }
 
 let initPromise

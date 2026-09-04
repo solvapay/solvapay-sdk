@@ -25,7 +25,7 @@ pub(super) fn render(desc: &ParitySuiteDescriptor) -> GenResult<String> {
     output.push_str("import (\n");
     output.push_str("\t\"reflect\"\n");
     output.push_str("\t\"testing\"\n\n");
-    output.push_str("\tsolvapay \"github.com/solvapay/solvapay-go\"\n");
+    output.push_str("\tsolvapay \"github.com/solvapay/solvapay-sdk/sdks/go\"\n");
     output.push_str(")\n\n");
 
     output.push_str(

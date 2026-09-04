@@ -1,0 +1,53 @@
+# Reviewed browser wasm-bindgen surface (§7.1).
+# The generated allowlist is derived from `browserSafe`. The symbol audit
+# asserts set equality against pkg/browser/*.d.ts and runtime/browser-web.js.
+# Do not derive this list from the artifact — that would enforce nothing.
+
+browserSafe:
+  - wasmVersion
+  - wasmBuildInfo
+  # business-details
+  - validateBusinessDetails
+  - deriveTaxIdType
+  - resolveTaxBehavior
+  - getTaxIdExample
+  - getTaxIdFieldLabel
+  - getTaxIdHelperText
+  - getBusinessCountryOptions
+  # credit-display
+  - creditsToDisplayMinorUnits
+  - isZeroDecimalCurrency
+  - minorUnitsPerMajor
+  - isUnlimitedRemaining
+  # seller-identity
+  - resolveSellerIdentityDisplay
+  - getSellerTaxIdentifierDisplayLabel
+  - SELLER_TAX_IDENTIFIER_DISPLAY_LABEL_BY_TYPE
+  # plan-pricing readers
+  - charges
+  - headlineCharges
+  - perUnitCharge
+  - billingCycle
+  - trialDays
+  - includedUnits
+  - peggedCreditsPerUnit
+  - creditsPerUnitFromBalance
+  # money-format / tax-note (pure, public-safe)
+  - formatPrice
+  - formatSubtotalLabel
+  - formatVatSummaryLabel
+  - resolveTaxTreatmentNote
+  - shouldShowTaxRow
+  - toMajorUnits
+  - REVERSE_CHARGE_NOTE
+  - TAX_NOT_COLLECTED_NOTE
+
+excluded:
+  - name: verifyWebhook
+    reason: webhook verification is edge-only (secret + clock)
+  - name: WasmClient
+    reason: secret-key transport client; compiled out of the browser profile
+  - name: solvapayCall
+    reason: MCP engine dispatch; edge-only
+  - name: invokePayableNext
+    reason: MCP payable driver; edge-only

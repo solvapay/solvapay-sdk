@@ -10,15 +10,15 @@ Monetize APIs, AI agents, and MCP servers — paywall protection, checkout UI, a
 
 ## Language surfaces
 
-| Language          | Packages                          | Status                                  |
-| ----------------- | --------------------------------- | --------------------------------------- |
-| TypeScript / Node | `solvapay` CLI, `@solvapay/*`     | Published on npm                        |
-| Python            | `solvapay`, `solvapay-mcp`        | Built and tested — not yet on PyPI      |
-| Ruby              | `solvapay`, `solvapay-mcp`        | Built and tested — not yet on RubyGems  |
-| Go                | `github.com/solvapay/solvapay-go` | Built and tested — not yet published    |
-| Rust              | `solvapay`                        | Built and tested — not yet on crates.io |
+| Language          | Packages                                   | Status                                  |
+| ----------------- | ------------------------------------------ | --------------------------------------- |
+| TypeScript / Node | `solvapay` CLI, `@solvapay/*`              | Published on npm                        |
+| Python            | `solvapay`, `solvapay-mcp`                 | Built and tested — not yet on PyPI      |
+| Ruby              | `solvapay`, `solvapay-mcp`                 | Built and tested — not yet on RubyGems  |
+| Go                | `github.com/solvapay/solvapay-sdk/sdks/go` | Built and tested — not yet published    |
+| Rust              | `solvapay`                                 | Built and tested — not yet on crates.io |
 
-Only the TypeScript surface can be installed from a registry today. The other four are built, tested, and exercised by the shared conformance fixtures in this repo, but their release trains have not pushed production tags yet — so `pip install solvapay`, `gem install solvapay`, `cargo add solvapay`, and `go get github.com/solvapay/solvapay-go` do **not** resolve. To use them now, clone this repo and depend on the in-tree path. See [`docs/publishing.mdx`](./docs/publishing.mdx) for the release train.
+Only the TypeScript surface can be installed from a registry today. The other four are built, tested, and exercised by the shared conformance fixtures in this repo, but their release trains have not pushed production tags yet — so `pip install solvapay`, `gem install solvapay`, `cargo add solvapay`, and `go get github.com/solvapay/solvapay-sdk/sdks/go` do **not** resolve. To use them now, clone this repo and depend on the in-tree path. See [`docs/publishing.mdx`](./docs/publishing.mdx) for the release train.
 
 - [`docs/platform-support.mdx`](./docs/platform-support.mdx) — wheel, gem, and ABI coverage per platform
 - [`docs/contributing/architecture.md`](./docs/contributing/architecture.md) — the Rust core and how each surface delegates to it
@@ -174,7 +174,7 @@ result.track_success(duration: 12) if result.is_a?(SolvaPay::PayableAllowResult)
 ### Go
 
 ```go
-import solvapay "github.com/solvapay/solvapay-go"
+import solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
 
 client, err := solvapay.NewClient(ctx, os.Getenv("SOLVAPAY_SECRET_KEY"))
 if err != nil {

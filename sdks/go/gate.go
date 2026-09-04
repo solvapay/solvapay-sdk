@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/solvapay/solvapay-go/internal/nativecall"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
 const defaultLimitsCacheTTL = time.Duration(DefaultLimitsCacheTTLMs) * time.Millisecond

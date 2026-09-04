@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
-	solvapay "github.com/solvapay/solvapay-go"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
 )
 
 func compileHandler(sc scenario) Handler {

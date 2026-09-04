@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reserved-domain ngrok for Python stock-research on appmcp.jack-local.
+# Reserved-domain ngrok for Python stock-research on appmcp.your-subdomain.
 # If the platform agent already has that hostname online, reuse it and bind
 # the local HTTP server to the tunnel's existing local port (3030).
 set -euo pipefail
@@ -70,7 +70,7 @@ load_env_file() {
 
 # True when an ngrok agent already advertises this exact hostname.
 # Wildcard tunnels (the platform MCP proxy) are not a match — this example
-# must sit on the reserved origin `appmcp.jack-local.ngrok.app`, not the proxy.
+# must sit on the reserved origin `appmcp.your-subdomain.ngrok.app`, not the proxy.
 tunnel_local_port() {
   local want="$1"
   python3 - "$want" "$NGROK_API" <<'PY'
@@ -105,8 +105,13 @@ load_env_file "$EXAMPLE_DIR/.env"
 load_env_file "$EXAMPLE_DIR/.env.local"
 export SOLVAPAY_API_BASE_URL="${SOLVAPAY_API_BASE_URL:-http://localhost:3010}"
 
-DEFAULT_PUBLIC_URL="https://appmcp.jack-local.ngrok.app"
-PUBLIC_URL="${STOCK_RESEARCH_NGROK_URL:-${MCP_PUBLIC_BASE_URL:-$DEFAULT_PUBLIC_URL}}"
+PUBLIC_URL="${STOCK_RESEARCH_NGROK_URL:-${MCP_PUBLIC_BASE_URL:-}}"
+if [[ -z "$PUBLIC_URL" ]]; then
+  echo "Missing STOCK_RESEARCH_NGROK_URL (or MCP_PUBLIC_BASE_URL)." >&2
+  echo "Set it in examples/python/stock-research-mcp/.env to your reserved ngrok origin, for example:" >&2
+  echo "  STOCK_RESEARCH_NGROK_URL=https://appmcp.your-subdomain.ngrok.app" >&2
+  exit 1
+fi
 
 export MCP_PUBLIC_BASE_URL="$PUBLIC_URL"
 

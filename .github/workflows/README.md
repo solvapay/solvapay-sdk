@@ -118,7 +118,7 @@ touches `core/**` or a non-TypeScript SDK must add a changeset for it.
   four tags and fails if any already exist on `origin`.
 - **Rehearsal:** run `push-rehearsal-tags.yml`. Tags are
   `rehearsal/solvapay-<lang>-v*`. Those workflows publish to TestPyPI,
-  GitHub Packages, `solvapay-go-rehearsal`, and a local Cargo registry,
+  GitHub Packages, `sdks/go/v*-rehearsal.<run>` on this repo, and a local Cargo registry,
   then install-smoke. `rehearsal-npm.yml` snapshot-publishes to Verdaccio.
 - **Production:** after npm verify, `publish.yml` runs
   `push-production-tags.ts` when the sentinel moved. Languages are gated

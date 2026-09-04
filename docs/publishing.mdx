@@ -115,7 +115,7 @@ publishes only to the sandbox host for that ecosystem.
 | Workflow             | Production                                  | Rehearsal                                      |
 | -------------------- | ------------------------------------------- | ---------------------------------------------- |
 | `publish-rust.yml`   | crates.io                                   | local `cargo-http-registry`                    |
-| `publish-go.yml`     | `solvapay/solvapay-go` (non-force tag push) | `solvapay/solvapay-go-rehearsal` + `GOPRIVATE` |
+| `publish-go.yml`     | `sdks/go/v*` on this repo                   | `sdks/go/v*-rehearsal.<run>` on this repo      |
 | `publish-python.yml` | PyPI (`skip-existing: true`)                | TestPyPI                                       |
 | `publish-ruby.yml`   | RubyGems (pre-check before `gem push`)      | GitHub Packages                                |
 

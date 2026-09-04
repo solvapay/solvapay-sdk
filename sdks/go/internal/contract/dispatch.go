@@ -9,9 +9,9 @@ import (
 	"errors"
 	"fmt"
 
-	solvapay "github.com/solvapay/solvapay-go"
-	"github.com/solvapay/solvapay-go/internal/dispatch"
-	"github.com/solvapay/solvapay-go/internal/nativecall"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/dispatch"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
 const apiKey = "sk_test_fixture"

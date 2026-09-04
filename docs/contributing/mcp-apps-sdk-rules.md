@@ -32,16 +32,16 @@ See the adapter contract for the full result-shape, usage-outcome, and protocol-
 
 The same surface under each ecosystem's conventions. Wire tool names stay snake_case everywhere (`upgrade`, `manage_account`, `topup`); widget views are `checkout` / `account` / `topup`.
 
-| Language   | Package / module                         | Server construction          | Register payable                                   | Reference layer-3 engine                               |
-| ---------- | ---------------------------------------- | ---------------------------- | -------------------------------------------------- | ------------------------------------------------------ |
-| TypeScript | `@solvapay/mcp` (+ `@solvapay/mcp-core`) | `createSolvaPayMcpServer`    | `registerPayableTool` (`registerPayable` on `ctx`) | `sdks/typescript/mcp-core/src/engine-dispatch.ts`      |
-| Python     | PyPI `solvapay-mcp`                      | `create_solvapay_mcp_server` | `register_payable_tool`                            | `sdks/python-mcp/python/solvapay_mcp/server/engine.py` |
-| Ruby       | RubyGems `solvapay-mcp`                  | `SolvaPay::Mcp::Engine`      | `Engine#register_payable`                          | `sdks/ruby-mcp/lib/solvapay/mcp/engine.rb`             |
-| Go         | `github.com/solvapay/solvapay-go/mcp`    | `NewServer`                  | `(*Server).RegisterPayable`                        | `sdks/go/mcp/handler.go` + `server.go`                 |
-| Rust       | crate `solvapay-mcp` (`publish = false`) | `McpHttpServer::new`         | `McpHttpServer::register_payable`                  | `sdks/rust-mcp/src/server.rs`                          |
-| C          | `sdks/capi`                              | —                            | — (no payable host SDK)                            | `sdks/capi/ctest/mcp_engine.c` (+ `mcp_json.c`)        |
+| Language   | Package / module                               | Server construction          | Register payable                                   | Reference layer-3 engine                               |
+| ---------- | ---------------------------------------------- | ---------------------------- | -------------------------------------------------- | ------------------------------------------------------ |
+| TypeScript | `@solvapay/mcp` (+ `@solvapay/mcp-core`)       | `createSolvaPayMcpServer`    | `registerPayableTool` (`registerPayable` on `ctx`) | `sdks/typescript/mcp-core/src/engine-dispatch.ts`      |
+| Python     | PyPI `solvapay-mcp`                            | `create_solvapay_mcp_server` | `register_payable_tool`                            | `sdks/python-mcp/python/solvapay_mcp/server/engine.py` |
+| Ruby       | RubyGems `solvapay-mcp`                        | `SolvaPay::Mcp::Engine`      | `Engine#register_payable`                          | `sdks/ruby-mcp/lib/solvapay/mcp/engine.rb`             |
+| Go         | `github.com/solvapay/solvapay-sdk/sdks/go/mcp` | `NewServer`                  | `(*Server).RegisterPayable`                        | `sdks/go/mcp/handler.go` + `server.go`                 |
+| Rust       | crate `solvapay-mcp` (`publish = false`)       | `McpHttpServer::new`         | `McpHttpServer::register_payable`                  | `sdks/rust-mcp/src/server.rs`                          |
+| C          | `sdks/capi`                                    | —                            | — (no payable host SDK)                            | `sdks/capi/ctest/mcp_engine.c` (+ `mcp_json.c`)        |
 
-Each ecosystem gets **one** adapter package. Runtime variants are subpaths or subpackages, never a second package: `@solvapay/mcp/express` and `@solvapay/mcp/fetch` are subpath exports, and `solvapay-go/mcp` is a subpackage of the `solvapay-go` module.
+Each ecosystem gets **one** adapter package. Runtime variants are subpaths or subpackages, never a second package: `@solvapay/mcp/express` and `@solvapay/mcp/fetch` are subpath exports, and `github.com/solvapay/solvapay-sdk/sdks/go/mcp` is a subpackage of the nested Go module.
 
 ## Generated MCP surfaces
 
@@ -118,7 +118,7 @@ These read identically in every language; substitute the names from the table ab
 - **`@solvapay/mcp` is the only package that imports the official SDK.** It peers `@modelcontextprotocol/core` and `@modelcontextprotocol/server` (v2). Runtime-specific OAuth middleware lives on its subpath exports — `@solvapay/mcp/express` (Node `(req, res, next)`) and `@solvapay/mcp/fetch` (Web-standards `(Request) => Response`). They are subpaths, not separate packages: there is no `@solvapay/mcp-express` or `@solvapay/mcp-fetch`.
 - **`@solvapay/react/mcp` is a subpath export.** Merchants using SolvaPay for non-MCP React surfaces do not pay the ext-apps peer dep cost.
 - **Do not ship a `@solvapay/sdk` umbrella package.** Three-package imports are fine. An umbrella adds maintenance without clarity.
-- **The sibling adapters keep the same shape.** One adapter package per ecosystem — crate `solvapay-mcp` (`sdks/rust-mcp`, `publish = false`), PyPI `solvapay-mcp`, RubyGems `solvapay-mcp`, and `github.com/solvapay/solvapay-go/mcp` as a subpackage of the `solvapay-go` module rather than a module of its own. Do not add a second package to any ecosystem to host a runtime variant.
+- **The sibling adapters keep the same shape.** One adapter package per ecosystem — crate `solvapay-mcp` (`sdks/rust-mcp`, `publish = false`), PyPI `solvapay-mcp`, RubyGems `solvapay-mcp`, and `github.com/solvapay/solvapay-sdk/sdks/go/mcp` as a subpackage of the nested Go module rather than a module of its own. Do not add a second package to any ecosystem to host a runtime variant.
 
 ### Spec compliance
 

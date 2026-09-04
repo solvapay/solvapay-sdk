@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/solvapay/solvapay-go/internal/contract"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/contract"
 )
 
 const wantParsed, wantReplayed = 698, 693

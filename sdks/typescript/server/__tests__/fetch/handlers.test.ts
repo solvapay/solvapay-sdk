@@ -24,6 +24,9 @@ vi.mock('../../src/helpers', () => ({
   createCustomerSessionCore: vi.fn(),
   getMerchantCore: vi.fn(),
   getProductCore: vi.fn(),
+  getAutoRechargeCore: vi.fn(),
+  saveAutoRechargeCore: vi.fn(),
+  disableAutoRechargeCore: vi.fn(),
   isErrorResult: vi.fn(
     (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
   ),
@@ -49,6 +52,9 @@ import {
   createCustomerSessionCore,
   getMerchantCore,
   getProductCore,
+  getAutoRechargeCore,
+  saveAutoRechargeCore,
+  disableAutoRechargeCore,
 } from '../../src/helpers'
 import { verifyWebhook } from '../../src/edge'
 import {
@@ -67,6 +73,9 @@ import {
   createCustomerSession,
   getMerchant,
   getProduct,
+  getAutoRecharge,
+  saveAutoRecharge,
+  disableAutoRecharge,
   solvapayWebhook,
 } from '../../src/fetch/handlers'
 import { configureCors } from '../../src/fetch/cors'
@@ -86,6 +95,9 @@ const mockCreateCheckoutSessionCore = vi.mocked(createCheckoutSessionCore)
 const mockCreateCustomerSessionCore = vi.mocked(createCustomerSessionCore)
 const mockGetMerchantCore = vi.mocked(getMerchantCore)
 const mockGetProductCore = vi.mocked(getProductCore)
+const mockGetAutoRechargeCore = vi.mocked(getAutoRechargeCore)
+const mockSaveAutoRechargeCore = vi.mocked(saveAutoRechargeCore)
+const mockDisableAutoRechargeCore = vi.mocked(disableAutoRechargeCore)
 const mockVerifyWebhook = vi.mocked(verifyWebhook)
 
 function fakeGet(url = 'http://localhost/api/test') {
@@ -300,6 +312,37 @@ describe('getProduct', () => {
     const res = await getProduct(fakeGet('http://localhost/api/product?productRef=prd_1'))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ reference: 'prd_1', name: 'Widget API' })
+  })
+})
+
+describe('getAutoRecharge', () => {
+  it('returns auto-recharge config on success', async () => {
+    mockGetAutoRechargeCore.mockResolvedValue({ config: { enabled: true } } as never)
+
+    const res = await getAutoRecharge(fakeGet('http://localhost/api/auto-recharge'))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ config: { enabled: true } })
+  })
+})
+
+describe('saveAutoRecharge', () => {
+  it('parses body and returns saved config', async () => {
+    mockSaveAutoRechargeCore.mockResolvedValue({ config: { enabled: true } } as never)
+
+    const res = await saveAutoRecharge(fakePost({ enabled: true, thresholdCredits: 10 }))
+    expect(res.status).toBe(200)
+    expect(mockSaveAutoRechargeCore).toHaveBeenCalled()
+    expect(await res.json()).toMatchObject({ config: { enabled: true } })
+  })
+})
+
+describe('disableAutoRecharge', () => {
+  it('returns success payload', async () => {
+    mockDisableAutoRechargeCore.mockResolvedValue({ success: true } as never)
+
+    const res = await disableAutoRecharge(fakePost())
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ success: true })
   })
 })
 

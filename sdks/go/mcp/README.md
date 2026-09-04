@@ -4,7 +4,7 @@ Payable MCP adapter over the official [`mcp`](https://pkg.go.dev/github.com/mode
 Layer 3 is hand-written Go. Paywall copy and compact `respond` text come from the
 SolvaPay layer-2 WASM guest — never from adapter-authored strings.
 
-Import this package as `github.com/solvapay/solvapay-go/mcp`. Import the host SDK as:
+Import this package as `github.com/solvapay/solvapay-sdk/sdks/go/mcp`. Import the host SDK as:
 
 ```go
 mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"

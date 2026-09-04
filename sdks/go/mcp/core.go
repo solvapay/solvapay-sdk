@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/solvapay/solvapay-go/internal/nativecall"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/nativecall"
 )
 
 // CallSync invokes a Rust MCP op through the wazero guest (`sv_solvapay_call_binding`).

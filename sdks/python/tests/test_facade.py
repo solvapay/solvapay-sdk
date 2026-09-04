@@ -355,6 +355,14 @@ async def test_gate_paywall_when_limits_exhausted() -> None:
     assert result.content.get("product") == "prd_demo" or "kind" in result.content
 
 
+def test_track_usage_posts_through_retry_path() -> None:
+    client = StubClient()
+    sp = create_solvapay(api_client=client)
+    payload = {"customerRef": "cus_abc", "productRef": "prd_demo", "units": 1}
+    sp.track_usage(payload)
+    assert client.tracked == [payload]
+
+
 def test_gate_blocking_matches_async_kind() -> None:
     client = StubClient(within_limits=False, remaining=0)
     sp = create_solvapay(api_client=client)
@@ -394,7 +402,7 @@ async def test_gate_missing_backend_customer_ref_is_actionable() -> None:
             )
 
     missing_ref = "cus_RG8I0GVR"
-    api_base = "https://jack-local.ngrok.app"
+    api_base = "https://api.example.test"
     client = MissingCustomerClient()
     sp = create_solvapay(api_client=client, api_base_url=api_base)
     with pytest.raises(SolvaPayError) as exc_info:

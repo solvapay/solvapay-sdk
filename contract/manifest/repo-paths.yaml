@@ -96,6 +96,10 @@ generated:
     flag: --dump-bindings
   - id: facadeCoverage
     path: contract/manifest/facade-coverage.json
+  - id: wasmBrowserSymbols
+    path: sdks/wasm/browser-symbols.generated.json
+    driftPaths:
+      - sdks/wasm/browser-symbols.generated.json
   - id: boundaryTypes
     path: contract/manifest/boundary-types.snapshot.json
     flag: --dump-boundary-types
@@ -293,6 +297,7 @@ drift:
   - wasmTs
   - bindingSymbols
   - facadeCoverage
+  - wasmBrowserSymbols
   - boundaryTypes
   - coreTypesTs
   - coreDispatchTs
@@ -430,6 +435,8 @@ markerExemptions:
     reason: header golden test names the marker
   - pattern: tools/codegen/facade-coverage.ts
     reason: writes the generated-file marker into the coverage matrix
+  - pattern: tools/codegen/wasm-profiles.ts
+    reason: writes the generated-file marker into browser-symbols.generated.json
   - pattern: .cursor/plans/**
     reason: plans that name the generated-file marker
   - pattern: tools/codegen/check-generated-headers.ts
@@ -479,7 +486,6 @@ lookups:
   generateTypesScript: sdks/typescript/server/scripts/generate-types.ts
   goLiveContract: sdks/go/cmd/live-contract
   goWasmBuild: sdks/go/scripts/build-wasm.sh
-  goRehearsalRetarget: sdks/go/scripts/rehearsal-retarget-module.sh
   pythonCheckWheels: sdks/python/scripts/check-wheels.py
   pythonInstallSmoke: sdks/python/scripts/install-smoke.py
   rubyCheckGems: sdks/ruby/scripts/check-gems.rb
@@ -507,6 +513,7 @@ lookups:
   exampleWidgetTsxScaffold: tools/create-solvapay/templates/mcp/ts/_base/src/mcp-app.tsx
   exampleDemoToolsCloudflare: examples/typescript/cloudflare-workers-mcp/src/demo-tools.ts
   exampleDemoToolsSupabase: examples/typescript/supabase-edge-mcp/supabase/functions/mcp/demo-tools.ts
+  wasmProfiles: contract/manifest/wasm-profiles.yaml
   supportMatrix: contract/manifest/support-matrix.yaml
   supportMatrixJson: contract/manifest/support-matrix.json
   cargoExport: core/solvapay-export/Cargo.toml

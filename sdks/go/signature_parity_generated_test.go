@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	solvapay "github.com/solvapay/solvapay-go"
+	solvapay "github.com/solvapay/solvapay-sdk/sdks/go"
 )
 
 // operationSignature is one catalogued client method: name → param names and reflect types (excluding ctx).

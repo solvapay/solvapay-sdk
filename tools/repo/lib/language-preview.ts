@@ -90,7 +90,7 @@ const TOKEN_BY_LANGUAGE: Record<PreviewLanguage, string | undefined> = {
   rust: undefined,
   python: 'SOLVAPAY_TESTPYPI_TOKEN',
   ruby: 'GEM_HOST_API_KEY',
-  go: 'SOLVAPAY_GO_DEPLOY_TOKEN',
+  go: undefined,
 }
 
 const ECOSYSTEM_BY_LANGUAGE: Record<PreviewLanguage, ReleaseEcosystem> = {
@@ -107,9 +107,7 @@ const STAMP_RELS: Record<PreviewLanguage, readonly string[]> = {
   go: [],
 }
 
-const GO_PRODUCTION_MODULE = 'github.com/solvapay/solvapay-go'
-const GO_REHEARSAL_MODULE = 'github.com/solvapay/solvapay-go-rehearsal'
-const GO_MODULE_RE = /github\.com\/solvapay\/solvapay-go(?!-rehearsal)/g
+const GO_PRODUCTION_MODULE = 'github.com/solvapay/solvapay-sdk/sdks/go'
 const PYTHON_LOCK_RELS = [
   `${REPO_PATHS.sdks.python}/uv.lock`,
   `${REPO_PATHS.sdks.pythonMcp}/uv.lock`,
@@ -545,14 +543,6 @@ export function previewPlan(flags: PreviewFlags, baseVersion: string): PreviewPl
   }
 }
 
-export function rewriteGoRehearsalImports(source: string): string {
-  return source.replace(GO_MODULE_RE, GO_REHEARSAL_MODULE)
-}
-
 export function goProductionModulePath(): string {
   return GO_PRODUCTION_MODULE
-}
-
-export function goRehearsalModulePath(): string {
-  return GO_REHEARSAL_MODULE
 }

@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/solvapay/solvapay-go/internal/runtime"
+	"github.com/solvapay/solvapay-sdk/sdks/go/internal/runtime"
 )
 
 type sharedFn func(ctx context.Context) (*runtime.Runtime, error)

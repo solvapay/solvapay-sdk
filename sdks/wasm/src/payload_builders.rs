@@ -12,7 +12,7 @@ use solvapay_core::{
     credits_to_display_minor_units, derive_tax_id_type, format_price, format_subtotal_label,
     format_vat_summary_label, get_business_country_options,
     get_seller_tax_identifier_display_label, get_tax_id_example, get_tax_id_field_label,
-    get_tax_id_helper_text, invoke_payable_next, is_unlimited_remaining, is_zero_decimal_currency,
+    get_tax_id_helper_text, is_unlimited_remaining, is_zero_decimal_currency,
     minor_units_per_major, resolve_seller_identity_display, resolve_tax_behavior,
     resolve_tax_treatment_note, reverse_charge_note, seller_tax_identifier_display_label_by_type,
     should_show_tax_row, tax_not_collected_note, to_major_units, validate_business_details,
@@ -20,10 +20,7 @@ use solvapay_core::{
 };
 use wasm_bindgen::prelude::*;
 
-use crate::args::{
-    args_map, optional_f64, optional_string, optional_value, require_f64, require_string,
-    result_as_value, to_value,
-};
+use crate::args::{args_map, optional_f64, optional_string, require_f64, require_string, to_value};
 use crate::error::run_envelope_sync;
 
 // --- money-format (public-safe) ---
@@ -340,19 +337,6 @@ pub fn is_unlimited_remaining_binding(args_json: String) -> String {
 
 // --- MCP payload / descriptors (edge-only) ---
 
-/// Binding for `invokePayableNext`.
-#[wasm_bindgen(js_name = "invokePayableNext")]
-pub fn invoke_payable_next_binding(args_json: String) -> String {
-    run_envelope_sync(|| {
-        let args = args_map(&args_json)?;
-        let state = optional_value(&args, "state");
-        let event = optional_value(&args, "event");
-        result_as_value(invoke_payable_next(state.as_ref(), event.as_ref()))
-    })
-}
-
-// --- MCP payload / descriptors (edge-only) ---
-
 /// Edge-only MCP payload / descriptor envelope bindings (server surface).
 ///
 /// Excluded from the browser profile so the public bundle never ships
@@ -363,14 +347,16 @@ mod mcp_payload {
     use solvapay_core::{
         assert_response_result, build_payable_tool_result, build_prompt_descriptor_metadata,
         build_prompt_user_message, build_tool_descriptor_metadata, derive_icons,
-        make_response_result, mcp_tool_names_json, mcp_view_maps, paywall_tool_result,
-        validate_public_base_url, BuildPromptDescriptorMetadataOptions,
+        invoke_payable_next, make_response_result, mcp_tool_names_json, mcp_view_maps,
+        paywall_tool_result, validate_public_base_url, BuildPromptDescriptorMetadataOptions,
         BuildToolDescriptorMetadataOptions, MerchantBranding, PaywallGate, ResponseEnvelope,
         SdkError,
     };
     use wasm_bindgen::prelude::*;
 
-    use crate::args::{args_map, require_string, require_typed, to_value};
+    use crate::args::{
+        args_map, optional_value, require_string, require_typed, result_as_value, to_value,
+    };
     use crate::error::run_envelope_sync;
 
     /// Binding for `paywallToolResult` (also used by `McpAdapter.formatGate`).
@@ -547,6 +533,17 @@ mod mcp_payload {
             let args = args_map(&args_json)?;
             let envelope: ResponseEnvelope = require_typed(&args, "envelope")?;
             to_value(&build_payable_tool_result(&envelope))
+        })
+    }
+
+    /// Binding for `invokePayableNext`.
+    #[wasm_bindgen(js_name = "invokePayableNext")]
+    pub fn invoke_payable_next_binding(args_json: String) -> String {
+        run_envelope_sync(|| {
+            let args = args_map(&args_json)?;
+            let state = optional_value(&args, "state");
+            let event = optional_value(&args, "event");
+            result_as_value(invoke_payable_next(state.as_ref(), event.as_ref()))
         })
     }
 

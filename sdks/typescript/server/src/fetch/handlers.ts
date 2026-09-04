@@ -43,6 +43,8 @@ import {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   getCustomerBalanceCore,
+  disableAutoRechargeCore,
+  getAutoRechargeCore,
   getMerchantCore,
   getPaymentMethodCore,
   getProductCore,
@@ -50,6 +52,7 @@ import {
   listPlansCore,
   processPaymentIntentCore,
   reactivatePurchaseCore,
+  saveAutoRechargeCore,
   syncCustomerCore,
   trackUsageCore,
 } from '../helpers'
@@ -261,6 +264,46 @@ export async function getMerchant(req: Request): Promise<Response> {
   if (corsResponse) return corsResponse
 
   const result = await getMerchantCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function getAutoRecharge(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const result = await getAutoRechargeCore(req)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function saveAutoRecharge(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const body = await parseJsonBody(req)
+  const result = await saveAutoRechargeCore(req, body as never)
+
+  if (isErrorResult(result)) {
+    return errorResponse(result, req)
+  }
+
+  return jsonResponseWithCors(result, req)
+}
+
+export async function disableAutoRecharge(req: Request): Promise<Response> {
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
+
+  const result = await disableAutoRechargeCore(req)
 
   if (isErrorResult(result)) {
     return errorResponse(result, req)
