@@ -66,9 +66,14 @@ fn product_ref() -> String {
 fn listen_addr() -> SocketAddr {
     let host = std::env::var("MCP_HOST").unwrap_or_else(|_| "127.0.0.1".into());
     let port = std::env::var("MCP_PORT").unwrap_or_else(|_| "3030".into());
-    format!("{host}:{port}")
-        .parse()
-        .unwrap_or_else(|_| "127.0.0.1:3030".parse().expect("fallback addr"))
+    let spec = format!("{host}:{port}");
+    match spec.parse() {
+        Ok(addr) => addr,
+        Err(_) => {
+            eprintln!("invalid MCP_HOST/MCP_PORT: {spec}");
+            std::process::exit(1);
+        }
+    }
 }
 
 fn placeholder_handler() -> PayableHandler {

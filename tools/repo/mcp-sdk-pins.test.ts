@@ -248,6 +248,7 @@ describe('MCP host-SDK pins', () => {
           toolPackageDir('create-solvapay'),
           'templates',
           'mcp',
+          'ts',
           '_base',
           'package.json',
         ),
