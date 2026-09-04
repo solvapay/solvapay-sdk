@@ -15,7 +15,13 @@
 
 import { promises as fs } from 'fs'
 import path from 'path'
-import type { SolvaPayClient, CustomerResponseMapped, TrackUsageResponse } from '@solvapay/server'
+import type {
+  SolvaPayClient,
+  CustomerResponseMapped,
+  TrackUsageResponse,
+  CheckLimitsRequest,
+  LimitResponseWithPlan,
+} from '@solvapay/server'
 
 // Re-export the interface from SDK for convenience
 export type { SolvaPayClient }
@@ -321,17 +327,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
   /**
    * Check usage limits for a customer
    */
-  async checkLimits(params: { customerRef: string; productRef: string }): Promise<{
-    withinLimits: boolean
-    remaining: number
-    plan: string
-    meterName?: string
-    checkoutSessionId?: string
-    checkoutUrl?: string
-    plans?: Awaited<ReturnType<StubSolvaPayClient['listPlans']>>
-    product?: { name: string; ref: string }
-    balance?: { creditBalance: number }
-  }> {
+  async checkLimits(params: CheckLimitsRequest): Promise<LimitResponseWithPlan> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, this.delays.checkLimits))
 
@@ -971,15 +967,22 @@ export class StubSolvaPayClient implements SolvaPayClient {
   }> {
     const plans = await this.listPlans(productRef)
     const withCounters = plans.map(plan => {
+      const price = plan.price ?? 0
       if (plan.reference === 'plan_free' || plan.name === 'Free') {
-        return { ...plan, reference: 'free', freeUnits: this.freeTierLimit, perUnitChargeMinor: 2 }
+        return {
+          ...plan,
+          reference: 'free',
+          price,
+          freeUnits: this.freeTierLimit,
+          perUnitChargeMinor: 2,
+        }
       }
-      return { ...plan, perUnitChargeMinor: plan.price }
-    }) as Awaited<ReturnType<StubSolvaPayClient['listPlans']>>
+      return { ...plan, price, perUnitChargeMinor: price }
+    })
     return {
       plans: withCounters,
-      product: { name: 'Demo', ref: productRef },
-      balance: { creditBalance },
+      product: { name: 'Demo', reference: productRef },
+      balance: { creditBalance, creditsPerUnit: 1, currency: 'USD' },
     }
   }
 
