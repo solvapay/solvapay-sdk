@@ -9,7 +9,7 @@ Research companion to [DEV-867](https://linear.app/solvapay/issue/DEV-867/improv
 Anthropic's MCP Apps talk states that a tool result's three fields have three different audiences:
 
 - **`content` goes to the model** and to text-only hosts. Keep it short. When the app renders the output, the model needs just enough to know what was displayed.
-- **`structuredContent` is typed data the app reads**, optimised for UI rendering. The model *may or may not* see it — **when `content` is also present, `structuredContent` is hidden from the model.**
+- **`structuredContent` is typed data the app reads**, optimised for UI rendering. The model _may or may not_ see it — **when `content` is also present, `structuredContent` is hidden from the model.**
 - **`_meta` goes to the app only.** The model never sees it.
 
 This is not one team's convention. Two clarification SEPs say the same in normative language:
@@ -35,15 +35,15 @@ The MCP Apps specification (2026-01-26) is explicit, and this is the strongest e
 > - **Tools MUST return meaningful content array even when UI is available**
 > - Servers MAY register different tool variants based on host capabilities
 
-And on the host side: *"If host does not support MCP Apps, tool behaves as standard tool (text-only fallback)."*
+And on the host side: _"If host does not support MCP Apps, tool behaves as standard tool (text-only fallback)."_
 
-A one-line "shown in the panel" placeholder does not satisfy "meaningful content array." The Ruby SDK's MCP Apps guide states the same rule as a one-liner: *"The extension is optional: always return a meaningful text result."*
+A one-line "shown in the panel" placeholder does not satisfy "meaningful content array." The Ruby SDK's MCP Apps guide states the same rule as a one-liner: _"The extension is optional: always return a meaningful text result."_
 
 ## 3. What this changes in implementation
 
 ### 3a. Keep the narration short, not just present
 
-*"content goes to the model. Keep it short."* Our narrators emit a full markdown block (title, plan list, balance row, commands line). Sending that on every intent call, including on hosts that also render the iframe, is the token waste MCP Apps exists to eliminate.
+_"content goes to the model. Keep it short."_ Our narrators emit a full markdown block (title, plan list, balance row, commands line). Sending that on every intent call, including on hosts that also render the iframe, is the token waste MCP Apps exists to eliminate.
 
 The resolution is not to go back to a placeholder. The short line must be **self-sufficient**: plan, remaining or balance, reason, one recovery tool, and the https URL, in one or two lines. Trim the narrators rather than adding rows to them.
 
@@ -133,7 +133,7 @@ The core spec also says a tool returning structured content SHOULD return the se
 
 ## 7. What we already do correctly
 
-`updateModelContext` is implemented at [`packages/react/src/mcp/bridge.tsx`](../../packages/react/src/mcp/bridge.tsx) with the properties the talk calls for: feature-detected, errors swallowed so a non-compliant host cannot break the user flow, and emitted at committed milestones (plan select, payment success, top-up confirmed), covered by `__tests__/update-model-context.emissions.test.tsx`. `app.sendMessage` is wired for user-visible follow-ups. This is what tells the model a plan went active without spending a tool call.
+`updateModelContext` is implemented at [`sdks/typescript/react/src/mcp/bridge.tsx`](../../sdks/typescript/react/src/mcp/bridge.tsx) with the properties the talk calls for: feature-detected, errors swallowed so a non-compliant host cannot break the user flow, and emitted at committed milestones (plan select, payment success, top-up confirmed), covered by `__tests__/update-model-context.emissions.test.tsx`. `app.sendMessage` is wired for user-visible follow-ups. This is what tells the model a plan went active without spending a tool call.
 
 Our app-only transport tools are correct in kind: `visibility: ["app"]` is the spec's own mechanism, defaulting to `["model", "app"]`, with hosts required to exclude non-model tools from the agent's list.
 
