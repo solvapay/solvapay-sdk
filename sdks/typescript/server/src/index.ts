@@ -171,7 +171,6 @@ export type {
   LimitActivationProduct,
   LimitPlanSummary,
   LimitResponseWithPlan,
-  CheckLimitsRequest,
   SolvaPayClient,
   PayableOptions,
   HttpAdapterOptions,

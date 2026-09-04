@@ -19,9 +19,10 @@ import type {
   SolvaPayClient,
   CustomerResponseMapped,
   TrackUsageResponse,
-  CheckLimitsRequest,
   LimitResponseWithPlan,
 } from '@solvapay/server'
+
+type CheckLimitsRequest = Parameters<SolvaPayClient['checkLimits']>[0]
 
 // Re-export the interface from SDK for convenience
 export type { SolvaPayClient }
@@ -406,7 +407,7 @@ export class StubSolvaPayClient implements SolvaPayClient {
         withinLimits,
         remaining,
         plan: 'free',
-        meterName: 'api_requests' as string | undefined,
+        meterName: 'api_requests',
       }
 
       if (!withinLimits) {
@@ -960,24 +961,37 @@ export class StubSolvaPayClient implements SolvaPayClient {
   private async limitsRecovery(
     productRef: string,
     creditBalance: number,
-  ): Promise<{
-    plans: Awaited<ReturnType<StubSolvaPayClient['listPlans']>>
-    product: { name: string; ref: string }
-    balance: { creditBalance: number }
-  }> {
+  ): Promise<Pick<LimitResponseWithPlan, 'plans' | 'product' | 'balance'>> {
     const plans = await this.listPlans(productRef)
     const withCounters = plans.map(plan => {
       const price = plan.price ?? 0
-      if (plan.reference === 'plan_free' || plan.name === 'Free') {
+      const type = plan.type
+      const currency = plan.currency ?? 'USD'
+      const name = plan.name
+      const requiresPayment = plan.requiresPayment ?? false
+      if (plan.reference === 'plan_free' || name === 'Free') {
         return {
-          ...plan,
+          type,
           reference: 'free',
+          name,
+          currency,
           price,
+          requiresPayment,
           freeUnits: this.freeTierLimit,
           perUnitChargeMinor: 2,
+          options: plan.options,
         }
       }
-      return { ...plan, price, perUnitChargeMinor: price }
+      return {
+        type,
+        reference: plan.reference,
+        name,
+        currency,
+        price,
+        requiresPayment,
+        perUnitChargeMinor: price,
+        options: plan.options,
+      }
     })
     return {
       plans: withCounters,
