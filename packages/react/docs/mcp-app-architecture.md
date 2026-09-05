@@ -35,11 +35,11 @@ Both compound and primitive access are first-class:
 - `<McpApp app={app} />` is the turnkey 5-line entrypoint for any MCP App
   built on `@modelcontextprotocol/ext-apps`. It mounts a `SolvaPayProvider`
   and wraps a thin `<McpAppShell>` around `<McpViewRouter>`.
-- `<McpAppShell>` — in-iframe layout (header / sidebar / footer) that
-  surface-routes by `bootstrap.view`. There is no tab strip and no
-  user-driven cross-surface navigation; the in-session mutations are
-  limited to the `account → topup` (via the customer details card) and
-  `account → checkout` (via "Change plan") swaps.
+- `<McpAppShell>` — in-iframe layout (provenance line / body / footer)
+  that surface-routes by `bootstrap.view`. There is no tab strip, no
+  identity sidebar, and no user-driven cross-surface navigation; the
+  in-session mutations are limited to `account → topup` (credits CTA)
+  and `account → checkout` (via "Change plan").
 - `<McpViewRouter>` — single `switch` on `McpViewKind` that resolves each
   view from `views?.*` overrides (falling back to the built-in primitive).
   Exported for integrators that own their own shell.
@@ -170,4 +170,18 @@ internally it uses `useSyncExternalStore` so concurrent renders always
 observe a coherent snapshot. Error notifications are filtered out — the
 consumer pairs the hook with whatever error UI they want driven off the
 adapter promise.
+
+## Old patterns
+
+<details>
+<summary>Seller + Your account sidebar (removed)</summary>
+
+`<McpSellerDetailsCard>`, `<McpCustomerDetailsCard>`, and
+`McpAccountView.hideDetailCards` used to ship as public exports. The
+shell laid them out in a trailing 320px rail behind a 720px container
+query. That dashboard chrome is gone. Identity is one provenance line
+(`{merchant} · Paying as {email}`) via `<McpProvenanceLine>`. Do not
+reintroduce the cards or `hideDetailCards`.
+
+</details>
 

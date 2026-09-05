@@ -6,8 +6,7 @@
  *
  * One primary card carries the billing state for the current action.
  * Product name and description live in the host/tool text — not here.
- * Customer/seller identity cards render inline on narrow iframes or in
- * the shell sidebar on wide frames via `hideDetailCards`.
+ * Seller / customer identity lives on the shell provenance line.
  *
  * The plan card has four shapes, picked by the customer's actual state:
  *
@@ -39,7 +38,6 @@ import {
   resolvePlanShape,
   type PlanLike,
 } from '../plan-actions'
-import { McpCustomerDetailsCard, McpSellerDetailsCard } from './detail-cards'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 export interface McpAccountViewProps {
@@ -51,8 +49,8 @@ export interface McpAccountViewProps {
   classNames?: McpViewClassNames
   /**
    * Called when the user clicks the "Top up" link inside the
-   * pay-as-you-go credit card or the Customer details card.
-   * `<McpAppShell>` wires this to a tab switch so nothing re-mounts.
+   * pay-as-you-go credit card. `<McpAppShell>` wires this to a
+   * surface swap so nothing re-mounts.
    */
   onTopup?: () => void
   /**
@@ -67,12 +65,6 @@ export interface McpAccountViewProps {
    * passes `bootstrap.plans`.
    */
   plans?: readonly PlanLike[]
-  /**
-   * Skip the Seller + Your account detail cards. `<McpAppShell>` sets
-   * this when it mounts the trailing identity rail (whenever
-   * `bootstrap.customer` is set) so the cards are not duplicated.
-   */
-  hideDetailCards?: boolean
 }
 
 export function McpAccountView({
@@ -80,7 +72,6 @@ export function McpAccountView({
   onTopup,
   onChangePlan,
   plans,
-  hideDetailCards,
 }: McpAccountViewProps) {
   const cx = resolveMcpClassNames(classNames)
   const copy = useCopy()
@@ -209,13 +200,6 @@ export function McpAccountView({
           </>
         ) : null}
       </div>
-
-      {!hideDetailCards ? (
-        <>
-          <McpSellerDetailsCard classNames={classNames} />
-          <McpCustomerDetailsCard classNames={classNames} onTopup={onTopup} />
-        </>
-      ) : null}
     </div>
   )
 }

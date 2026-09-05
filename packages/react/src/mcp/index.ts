@@ -143,8 +143,8 @@ export type { McpCheckoutViewProps } from './views/McpCheckoutView'
 export { McpAccountView } from './views/McpAccountView'
 export type { McpAccountViewProps } from './views/McpAccountView'
 
-export { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
-export type { McpCustomerDetailsCardProps, McpSellerDetailsCardProps } from './views/detail-cards'
+export { McpProvenanceLine, formatProvenanceLine } from './views/McpProvenanceLine'
+export type { McpProvenanceLineProps } from './views/McpProvenanceLine'
 
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'
@@ -154,6 +154,11 @@ export type { McpTopupViewProps } from './views/McpTopupView'
 // narrations now — hosts render them in text and the widget iframe is
 // reserved for deliberate intent-tool calls (`upgrade` /
 // `manage_account` / `topup`).
+//
+// `McpSellerDetailsCard` / `McpCustomerDetailsCard` and
+// `McpAccountView.hideDetailCards` were removed with the sidebar. The
+// shell paints one provenance line (`McpProvenanceLine`) instead. See
+// `packages/react/docs/mcp-app-architecture.md`.
 
 export { resolveMcpClassNames } from './views/types'
 export type { McpViewClassNames } from './views/types'

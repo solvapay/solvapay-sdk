@@ -163,13 +163,12 @@ describe('McpAccountView', () => {
     merchantCache.clear()
   })
 
-  it('renders Seller before Your account when detail cards are inline', () => {
+  it('does not render Seller or Your account cards — identity lives on the shell provenance line', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx({ _config: config }, [], 0)
     renderAccount(ctx)
-    const seller = screen.getByRole('heading', { name: 'Seller' })
-    const account = screen.getByRole('heading', { name: 'Your account' })
-    expect(seller.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Seller' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Your account' })).toBeNull()
   })
 
   it('renders a loading card while purchases are loading', () => {

@@ -210,9 +210,9 @@ describe('<McpAppShell>', () => {
       },
       ctx,
     )
-    // Account view renders the sidebar's Details cards, not the
-    // Checkout picker — assert via the "Your account context" aside.
-    expect(screen.getByLabelText('Your account context')).toBeTruthy()
+    // Account view no longer mounts a sidebar — assert via the
+    // provenance line the shell paints for an authenticated customer.
+    expect(screen.getByText('Acme · Paying as demo@acme.test')).toBeTruthy()
   })
 
   const authedCustomer = {
@@ -223,7 +223,7 @@ describe('<McpAppShell>', () => {
     usage: null,
   }
 
-  it('renders Your account and Seller cards in the sidebar when bootstrap.customer is set', () => {
+  it('collapses identity to a provenance line and mounts no sidebar', () => {
     const config = seedMerchant({
       displayName: 'Acme',
       legalName: 'Acme Inc.',
@@ -231,41 +231,31 @@ describe('<McpAppShell>', () => {
     })
     const ctx = buildCtx(config, [], 1500)
     const { container } = renderShell({ view: 'account', customer: authedCustomer }, ctx)
-    expect(screen.getByLabelText('Your account context')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Your account' })).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Seller' })).toBeTruthy()
-
-    const body = container.querySelector('.solvapay-mcp-shell-body')
-    const sidebar = container.querySelector('.solvapay-mcp-shell-sidebar')
-    expect(body).toBeTruthy()
-    expect(sidebar).toBeTruthy()
-    expect(
-      body && sidebar && body.compareDocumentPosition(sidebar) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-
-    const seller = screen.getByRole('heading', { name: 'Seller' })
-    const account = screen.getByRole('heading', { name: 'Your account' })
-    expect(seller.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText('Acme · Paying as demo@acme.test')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Your account' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Seller' })).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-sidebar')).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-layout')).toBeNull()
   })
 
-  it('mounts the sidebar on every surface when bootstrap.customer is set', () => {
+  it('paints the provenance line on every surface when bootstrap.customer is set', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
 
     for (const view of ['account', 'checkout', 'topup'] as const) {
       const { unmount } = renderShell({ view, customer: authedCustomer }, ctx)
-      expect(screen.getByLabelText('Your account context')).toBeTruthy()
+      expect(screen.getByText('Acme · Paying as demo@acme.test')).toBeTruthy()
       unmount()
     }
   })
 
-  it('does not mount the sidebar when bootstrap.customer is null', () => {
+  it('does not paint a provenance line when bootstrap.customer is null', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
 
     for (const view of ['account', 'checkout', 'topup'] as const) {
       const { unmount } = renderShell({ view, customer: null }, ctx)
-      expect(screen.queryByLabelText('Your account context')).toBeNull()
+      expect(screen.queryByText(/Paying as/)).toBeNull()
       unmount()
     }
   })
@@ -392,7 +382,7 @@ describe('<McpAppShell>', () => {
       fireEvent.click(screen.getByTestId('change-plan'))
     })
     expect(screen.getByTestId('checkout-stub')).toBeTruthy()
-    expect(screen.getByLabelText('Your account context')).toBeTruthy()
+    expect(screen.getByText('Acme · Paying as demo@acme.test')).toBeTruthy()
   })
 
   it('forwards `onClose` to the checkout view', () => {

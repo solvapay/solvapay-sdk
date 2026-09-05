@@ -31,14 +31,43 @@ If you're building a UI surface that doesn't match one of these three, stop and 
 
 ### Display modes & layout law
 
-Applies to every SolvaPay commerce surface (MCP inline, MCP fullscreen, hosted checkout, hosted account). Display mode is **host state, not routing**.
+Applies to every SolvaPay commerce surface (MCP inline, MCP fullscreen, hosted checkout, hosted account, hosted top-up). Display mode is **host state, not routing**.
 
-- **Primary/action leads.** The task the user came to do. Narrow: first (top). Wide: left column. Account → Your plan. Checkout → Select a plan. Topup → Add credits. Confirmation → Plan activated.
-- **Identity + summary is the trailing rail.** Narrow: below the primary. Wide: right column. Rail internal order: `[Order summary]` (checkout only) → **Seller** → **Your account**. Trust-first: who you're paying, then your own details.
-- **DOM order = reading order = primary first.** Do not use `order: -1` (or Tailwind `order-*`) to pull the rail in front. Screen readers and text/CLI-host parity depend on this.
-- **Fluid from 320px.** Two columns only when the container is wide enough (container query in the SDK at ~720px; `lg` on hosted). Fill the container; cap the *reading measure* of the primary column, not the whole layout. The identity rail is visible at every width when a customer is known — never `display: none` it on a narrow iframe.
-- **Fullscreen is the home for the fuller account/identity layout.** Advertise `availableDisplayModes: ['inline', 'fullscreen']` on `new App(info, capabilities)` (`SOLVAPAY_MCP_APP_CAPABILITIES`). Read `displayMode` from host context. Request a switch only from a user action via `app.requestDisplayMode({ mode: 'fullscreen' })`, and only when the host lists `fullscreen` in `availableDisplayModes`. Do not request `pip` — account/checkout are not live sessions. Inline stays compact/content-height; fullscreen fills the container, honors `safeAreaInsets`, and uses one scroll owner. Same React tree in both modes.
-- **This is not a dashboard.** Fullscreen still renders one surface (`checkout` / `account` / `topup`) with a persistent identity rail. It does not add tabs, an about page, or a second navigation.
+Payment and management are **asymmetric**. Every canonical design file confirms this. Do not unify them back to “primary always leads.”
+
+- **Payment surfaces lead with the summary rail.** Checkout, top-up, and plan-switch. Wide: `grid-template-columns: 340px minmax(0,1fr)`, `gap: 56px`. `SummaryRail` is first in source order, 340px, `border-right`, no fill. Narrow: the same rail stacks above the action column (collapsible on hosted mobile). The action column is Pay / card / CTA.
+- **Management surfaces lead with the task.** Account (and the fuller fullscreen account layout). Wide: `grid-template-columns: minmax(0,1fr) 300px`. Content first; `ContextRail` trails at 300px with `border-left`. Narrow: no rail — the one always-relevant number pins in the header.
+- **DOM order = reading order = source order.** Do not use `order: -1` or Tailwind `order-*` to swap columns. Screen readers and text/CLI-host parity depend on this. Payment puts the rail first because that *is* the reading order; management puts the task first for the same reason.
+- **Fluid from 320px.** Two columns only when the container is wide enough (hosted at `lg` / 1000px content). Fill the container; cap the *reading measure* of the action column, not the whole layout. The MCP widget has no sidebar grid and no 720px container query — identity is a provenance line. Fullscreen hosted geometry (1000px, rails) is the remaining phase-two seam.
+- **Fullscreen is the hosted page, not a stretched widget.** Advertise `availableDisplayModes: ['inline', 'fullscreen']` on `new App(info, capabilities)` (`SOLVAPAY_MCP_APP_CAPABILITIES`). Read `displayMode` from host context. Request a switch only from a user action via `app.requestDisplayMode({ mode: 'fullscreen' })`, and only when the host lists `fullscreen` in `availableDisplayModes`. Do not request `pip` — account/checkout are not live sessions. Inline stays compact/content-height. Fullscreen is one centered 1000px column that keeps the payment-vs-management asymmetry, with no SolvaPay header (the host owns window chrome), one scroll owner, and `safeAreaInsets`. Same React tree in both modes.
+- **This is not a dashboard.** Fullscreen still renders one surface (`checkout` / `account` / `topup`). It does not add tabs, an about page, or a second navigation.
+
+### Shared token vocabulary (phase-two SDK contract)
+
+Hosted pages and the MCP widget share one custom-property vocabulary. Use the MCP Apps spec names. `--solvapay-*` is only for branding concepts the spec has no word for.
+
+```
+--color-background-primary / --color-background-secondary
+--color-text-primary / --color-text-secondary
+--color-border-primary / --color-border-secondary
+--font-sans / --font-mono
+--border-radius-sm / --border-radius-md / --border-radius-lg / --border-radius-xl
+
+--solvapay-accent / --solvapay-accent-text
+--solvapay-identifier
+--solvapay-selection / --solvapay-selection-wash
+--solvapay-row-hover / --solvapay-control-hover
+--solvapay-danger
+```
+
+Do not invent a parallel `--sp-*` namespace or a second hardcoded palette. Stripe `appearance` reads live values off `document.documentElement` via `getComputedStyle` (`buildStripeAppearance`).
+
+**Frame owner sets the font.** `--font-sans` is owned by the frame that mounts the UI:
+
+- Hosted pages: the provider's `fontFamily` feeds `--font-sans` (Inter fallback). `--font-mono` is pinned (IBM Plex Mono) and is not provider-overridable — it carries tabular alignment in ledgers.
+- MCP widget: the host (Claude / ChatGPT) injects fonts via `hostContext.styles.css.fonts` and `applyHostStyleVariables`. Do not ship Inter (or any brand face) as an override of `--font-sans`. `--font-mono` may stay pinned.
+
+`font-feature-settings: "ss01","cv11"` is scoped to the Inter / no-provider-font case only.
 
 ### Text-mode
 

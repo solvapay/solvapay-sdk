@@ -4,7 +4,8 @@
  * Opt-in via `import '@solvapay/react/mcp/styles.css'`. Every selector
  * uses CSS variables with concrete fallbacks, so MCP hosts that publish
  * their own tokens (via `applyHostStyleVariables`) override SolvaPay's
- * defaults automatically.
+ * defaults automatically. `html`/`body` stay transparent so the host
+ * canvas shows through; the card is a hairline frame, not a filled sheet.
  *
  * All classes start with `solvapay-mcp-` so they don't collide with the
  * core `@solvapay/react` styles or with integrator-supplied classes.
@@ -20,7 +21,8 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--color-background-primary, #ffffff);
+  /* Host canvas shows through. The iframe is a guest, not a sheet. */
+  background: transparent;
   color: var(--color-text-primary, #0f172a);
   font-family: var(
     --font-sans,
@@ -82,10 +84,9 @@ body {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  border-radius: var(--border-radius-lg, 12px);
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-primary, #ffffff);
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
+  /* Hairline frame only — no fill, no shadow. Host tokens win. */
+  border-radius: var(--border-radius-xl, 16px);
+  border: 1px solid var(--color-border-primary, #a0a0a0);
   transition: opacity 180ms ease;
 }
 
@@ -625,28 +626,23 @@ body {
  * The UsageMeter primitive already ships default styles in
  * @solvapay/react/styles.css — the MCP view only adds view-level spacing. */
 
-/* Shell chrome — layout, sidebar, footer
+/* Shell chrome — provenance, body, footer
  *
- * Merchant branding moved to `<AppHeader>` inside each view (see
- * `.solvapay-mcp-app-header-*` above) so hosts that paint their own
- * chrome mark (ChatGPT, Claude Desktop) can suppress the strip, while
- * MCP Jam / VS Code keep the in-widget mark they need. The shell now
- * only lays out the view router + optional sidebar + footer.
+ * Merchant branding lives on `<AppHeader>` in the chrome row. Identity
+ * collapses to one provenance line. There is no sidebar grid.
  */
 
 .solvapay-mcp-shell {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  /* Inline-size container for the two-column layout below
-   * (`@container (min-width: 720px)`). Scoped here rather than on
-   * `.solvapay-mcp-main` so dormant fixed-positioned overlays
-   * (`.solvapay-mcp-tour-overlay`, `.solvapay-mcp-tour-popover`) that
-   * render as siblings of `<McpAppShell>` inside `.solvapay-mcp-main`
-   * stay anchored to the iframe viewport — `container-type` makes the
-   * element a containing block for `position: fixed` descendants per
-   * the CSS containment spec, so we keep that scope tight. */
-  container-type: inline-size;
+}
+
+.solvapay-mcp-provenance {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-text-secondary, #475569);
 }
 
 .solvapay-mcp-tablist {
@@ -688,12 +684,6 @@ body {
   border-radius: 6px;
 }
 
-.solvapay-mcp-shell-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-}
-
 /* Body column carrying every step of every surface (account card,
  * checkout step stack, topup form). The layout fills the container;
  * this column caps only its reading measure. */
@@ -707,9 +697,7 @@ body {
 }
 
 /* Dampens iframe shrink → grow round-trips when a brief "Loading…"
- * interstitial paints between surface swaps. Scoped to the primary
- * body so short identity cards in the rail do not reserve dead
- * height. */
+ * interstitial paints between surface swaps. */
 .solvapay-mcp-shell-body .solvapay-mcp-card:first-of-type {
   min-height: 160px;
 }
@@ -718,23 +706,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-/* Identity rail is visible at every width. Narrow: stacks under the
- * primary (DOM order = reading order). Wide: right-hand column via
- * container query — no `order: -1`, no `display: none`. */
-
-.solvapay-mcp-shell-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-@container (min-width: 720px) {
-  .solvapay-mcp-shell-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
 }
 
 /* Fullscreen: fill the host container, one scroll owner on `main`,
@@ -797,95 +768,10 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   font-weight: 400;
 }
 
-/* Account view — Customer + Seller details cards
- *
- * Kept self-contained so the same markup renders identically inside
- * `<McpAccountView>` and the wide-iframe sidebar in `<McpAppShell>`.
- */
-
 .solvapay-mcp-account {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.solvapay-mcp-detail-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin: 0;
-}
-
-.solvapay-mcp-detail-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0;
-}
-
-.solvapay-mcp-detail-label {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.solvapay-mcp-detail-value {
-  font-size: 14px;
-  color: var(--color-text-primary, #0f172a);
-  word-break: break-word;
-}
-
-.solvapay-mcp-detail-value-mono {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-    monospace;
-  font-size: 12px;
-}
-
-.solvapay-mcp-detail-heading-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.solvapay-mcp-customer-card .solvapay-mcp-detail-grid {
-  flex: 1;
-}
-
-.solvapay-mcp-detail-balance-row {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: auto;
-}
-
-.solvapay-mcp-detail-balance-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.solvapay-mcp-detail-balance-row .solvapay-mcp-link-button {
-  align-self: flex-end;
-  flex: 0 0 auto;
-}
-
-.solvapay-mcp-verified-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--color-background-success-subtle, #ecfdf5);
-  color: var(--color-text-success, #065f46);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.4;
 }
 
 /* ---- Back-link primitive ---- */

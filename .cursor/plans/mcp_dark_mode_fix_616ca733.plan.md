@@ -12,7 +12,7 @@ todos:
     content: Declare non-spec custom vars in `:root` and override them in `[data-theme="dark"]` inside `packages/react/src/mcp/styles.css`.
     status: pending
   - id: shadow-theme
-    content: Replace hardcoded shadows on `.solvapay-mcp-card` and `.solvapay-mcp-tour-popover` with `--shadow-sm` / `--shadow-lg`, with dark overrides.
+    content: Replace hardcoded shadows on `.solvapay-mcp-card` and `.solvapay-mcp-tour-popover` with `--shadow-sm` / `--shadow-lg`, with dark overrides. (Card shadow was dropped in hosted Phase 11 host-blend — only the tour popover remains.)
     status: pending
   - id: verification-doc
     content: Document the manual dark-mode verification recipe in `examples/mcp-checkout-app/README.md`.

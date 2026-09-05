@@ -530,7 +530,7 @@ export function McpApp({
   // loading → ready transitions. Besides re-seeding the module-level
   // hook caches, we must also update the `bootstrap` state because the
   // shell reads `bootstrap.view` + `bootstrap.customer` to pick the
-  // surface and sidebar state: without `setBootstrap`, a refresh that
+  // surface and provenance line: without `setBootstrap`, a refresh that
   // reveals new capabilities (e.g. a freshly-topped-up balance) would
   // leave the shell stale.
   const refreshBootstrap = useMemo(
