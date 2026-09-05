@@ -657,7 +657,7 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function AutoRechargeCo
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [ctx.open, ctx.resetForm, ctx.setOpen, ctx.focusTrigger])
+  }, [ctx])
 
   if (!ctx.open || typeof document === 'undefined') return null
 

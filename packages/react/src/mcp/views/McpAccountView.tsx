@@ -18,7 +18,6 @@ import { useBalance } from '../../hooks/useBalance'
 import { useCopy, useLocale } from '../../hooks/useCopy'
 import { useMerchant } from '../../hooks/useMerchant'
 import { usePurchase } from '../../hooks/usePurchase'
-import { usePurchaseStatus } from '../../hooks/usePurchaseStatus'
 import { interpolate } from '../../i18n/interpolate'
 import { CancelledPlanNotice } from '../../primitives/CancelledPlanNotice'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
@@ -76,7 +75,6 @@ export function McpAccountView({
   const { displayMode } = useDisplayMode()
   const isFullscreen = displayMode === 'fullscreen'
   const { loading, hasPaidPurchase, activePurchase, purchases } = usePurchase()
-  const { shouldShowCancelledNotice } = usePurchaseStatus()
   const { credits } = useBalance()
   const { merchant } = useMerchant()
   const { config: autoRecharge } = useAutoRecharge()

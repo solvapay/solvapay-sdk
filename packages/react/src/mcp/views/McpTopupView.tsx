@@ -174,6 +174,8 @@ function EmbeddedTopup({
   const locale = useHostLocale()
   const { notifyModelContext, notifySuccess } = useMcpBridge()
   const topupSelector = useTopupAmountSelector({ currency })
+  const { displayMode } = useDisplayMode()
+  const isFullscreen = displayMode === 'fullscreen'
 
   const handleCurrencyChange = (code: string) => {
     setSelectedCurrency(code.toUpperCase())
@@ -288,8 +290,6 @@ function EmbeddedTopup({
     )
   }
 
-  const { displayMode } = useDisplayMode()
-  const isFullscreen = displayMode === 'fullscreen'
   const currencyDisplay = showCurrencySwitch ? 'code' : 'symbol'
 
   const amountForm = (
