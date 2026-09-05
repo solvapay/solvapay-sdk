@@ -11,6 +11,11 @@
  *  - `account`  — current plan, balance, usage, payment method.
  *  - `topup`    — amount picker + Stripe.
  *
+ * Identity is a single provenance line (`{merchant} · Paying as {email}`).
+ * Fullscreen wraps the surface in a 1000px hosted column. Payment
+ * leads a summary rail; management is one column so the split itself
+ * signals a transaction.
+ *
  * The legacy `'paywall'` / `'nudge'` surfaces were removed with the
  * text-only paywall refactor — merchant paywall / nudge responses are
  * plain narrations, not widget payloads. Legacy bootstrap
@@ -23,19 +28,12 @@ import React, { useState } from 'react'
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
-import {
-  McpAccountView,
-  type McpAccountViewProps,
-} from './views/McpAccountView'
-import { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
-import {
-  McpCheckoutView,
-  type McpCheckoutViewProps,
-} from './views/McpCheckoutView'
-import {
-  McpTopupView,
-  type McpTopupViewProps,
-} from './views/McpTopupView'
+import { useCustomer } from '../hooks/useCustomer'
+import { McpAccountView, type McpAccountViewProps } from './views/McpAccountView'
+import { McpCheckoutView, type McpCheckoutViewProps } from './views/McpCheckoutView'
+import { McpHostedColumn, McpHostedLayout } from './views/McpHosted'
+import { McpProvenanceLine } from './views/McpProvenanceLine'
+import { McpTopupView, type McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { LegalFooter } from '../primitives/LegalFooter'
 
@@ -75,9 +73,7 @@ export interface McpAppShellProps {
  * the surviving three surfaces. Undefined bootstrap views default to
  * `account`.
  */
-function resolveSurface(
-  bootstrapView: McpBootstrap['view'] | string | undefined,
-): McpViewKind {
+function resolveSurface(bootstrapView: McpBootstrap['view'] | string | undefined): McpViewKind {
   switch (bootstrapView) {
     case 'checkout':
     case 'about': // About folds into checkout's picker.
@@ -101,53 +97,48 @@ export function McpAppShell({
   onClose,
 }: McpAppShellProps) {
   // In-session surface swaps (no host re-invocation): the customer
-  // clicks "Change plan" on the account view, "Top up" on the
-  // customer-details card, or "Back" on the topup view. The paywall /
-  // nudge CTA flips were removed along with those surfaces.
+  // clicks "Change plan" on the account view, "Top up" on the credits
+  // card, or "Back" on the topup view. The paywall / nudge CTA flips
+  // were removed along with those surfaces.
   const [overrideView, setOverrideView] = useState<McpViewKind | null>(null)
 
   const resolvedView = resolveSurface(bootstrap.view)
   const effectiveView: McpViewKind = overrideView ?? resolvedView
 
   const showFooter = footer ?? true
-  // The sidebar (seller + customer details cards) carries the
-  // account-context info that `<McpAccountView>` would otherwise
-  // render inline. Mount it on every surface whenever a customer is
-  // known so the 520px / 900px frame stays stable across in-session
-  // surface swaps (account → checkout → topup). Unauthenticated
-  // bootstraps fall through to the narrow centered column.
-  const showSidebar = bootstrap.customer !== null
+  const surface = effectiveView === 'account' ? 'management' : 'payment'
+  const provenance = bootstrap.customer ? (
+    <ShellProvenance merchantName={bootstrap.merchant.displayName} />
+  ) : null
 
   return (
     <div className="solvapay-mcp-shell">
-      <div className="solvapay-mcp-shell-layout">
-        <div className="solvapay-mcp-shell-body">
-          <McpViewRouter
-            view={effectiveView}
-            bootstrap={bootstrap}
-            views={views}
-            classNames={classNames}
-            suppressDetailCards={showSidebar}
-            onSurfaceChange={setOverrideView}
-            onRefreshBootstrap={onRefreshBootstrap}
-            onClose={onClose}
-          />
-        </div>
-
-        {showSidebar ? (
-          <aside className="solvapay-mcp-shell-sidebar" aria-label="Your account context">
-            <McpSellerDetailsCard classNames={classNames} />
-            <McpCustomerDetailsCard
+      <McpHostedColumn surface={surface}>
+        {surface === 'payment' ? provenance : null}
+        <McpHostedLayout>
+          <div className="solvapay-mcp-shell-body">
+            <McpViewRouter
+              view={effectiveView}
+              bootstrap={bootstrap}
+              views={views}
               classNames={classNames}
-              onTopup={() => setOverrideView('topup')}
+              onSurfaceChange={setOverrideView}
+              onRefreshBootstrap={onRefreshBootstrap}
+              onClose={onClose}
             />
-          </aside>
-        ) : null}
-      </div>
+            {surface === 'management' ? provenance : null}
+          </div>
+        </McpHostedLayout>
+      </McpHostedColumn>
 
       {showFooter ? <ShellFooter classNames={classNames} /> : null}
     </div>
   )
+}
+
+function ShellProvenance({ merchantName }: { merchantName: string | undefined }) {
+  const { email } = useCustomer()
+  return <McpProvenanceLine merchantName={merchantName} email={email} />
 }
 
 function ShellFooter({ classNames }: { classNames?: McpViewClassNames }) {
@@ -165,11 +156,9 @@ export interface McpViewRouterProps {
   bootstrap: McpBootstrap
   views?: McpAppViewOverrides
   classNames?: McpViewClassNames
-  /** Whether the shell already renders the customer/seller cards in a sidebar. */
-  suppressDetailCards?: boolean
   /**
    * Called when a surface asks to swap to another surface in-session
-   * (account → topup via the details card, account → checkout via
+   * (account → topup via the credits CTA, account → checkout via
    * "Change plan", topup → account via "Back"). The shell wires this
    * to its `overrideView` state.
    */
@@ -198,13 +187,13 @@ export function McpViewRouter({
   bootstrap,
   views,
   classNames,
-  suppressDetailCards,
   onSurfaceChange,
   onRefreshBootstrap,
   onClose,
 }: McpViewRouterProps): React.ReactNode {
   const { productRef, stripePublishableKey, returnUrl } = bootstrap
-  const CheckoutView = (views?.checkout ?? McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
+  const CheckoutView = (views?.checkout ??
+    McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
   const AccountView = (views?.account ?? McpAccountView) as React.ComponentType<McpAccountViewProps>
   const TopupView = (views?.topup ?? McpTopupView) as React.ComponentType<McpTopupViewProps>
 
@@ -234,7 +223,6 @@ export function McpViewRouter({
           onTopup={goTopup}
           onChangePlan={goCheckout}
           plans={bootstrap.plans}
-          hideDetailCards={suppressDetailCards}
         />
       )
     case 'topup':

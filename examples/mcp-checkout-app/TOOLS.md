@@ -54,7 +54,7 @@ new tool calls.
 - **Checkout** — plan picker / upgrade flow (Stripe Elements or hosted
   checkout fallback).
 - **Account** — current plan, balance, usage, payment method, customer portal
-  CTA, seller details in the sidebar.
+  CTA. Identity is the shell provenance line, not a sidebar.
 - **Top up** — amount → payment → success with `Back to my account` on each
   step.
 

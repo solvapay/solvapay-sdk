@@ -107,7 +107,11 @@ function useAutoRechargeCtx(part: string): AutoRechargeContextValue {
 
 function getCurrencySymbol(currency: string): string {
   try {
-    const parts = new Intl.NumberFormat('en', { style: 'currency', currency }).formatToParts(0)
+    const parts = new Intl.NumberFormat('en', {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'narrowSymbol',
+    }).formatToParts(0)
     const sym = parts.find(p => p.type === 'currency')
     return sym?.value ?? currency.toUpperCase()
   } catch {
@@ -653,7 +657,7 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function AutoRechargeCo
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [ctx.open, ctx.resetForm, ctx.setOpen, ctx.focusTrigger])
+  }, [ctx])
 
   if (!ctx.open || typeof document === 'undefined') return null
 
@@ -892,6 +896,7 @@ const Fields = forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTML
             <ThresholdField />
             <TopupField />
             <MaxMonthlySpendField />
+            <DeepDrawdownExplainer />
             <ValidationError />
           </>
         )}
@@ -934,6 +939,7 @@ const Body = forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTMLFi
             <ThresholdField />
             <TopupField />
             <MaxMonthlySpendField />
+            <DeepDrawdownExplainer />
             <ValidationError />
             <Actions />
           </>
@@ -1135,6 +1141,23 @@ const MaxMonthlySpendField = forwardRef<
       </span>
       <p data-solvapay-auto-recharge-max-spend-helper="">{copy.autoRecharge.maxMonthlySpendHelper}</p>
     </section>
+  )
+})
+
+const DeepDrawdownExplainer = forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(function AutoRechargeDeepDrawdownExplainer({ className, ...rest }, forwardedRef) {
+  const copy = useCopy()
+  return (
+    <p
+      ref={forwardedRef}
+      className={className}
+      data-solvapay-auto-recharge-deep-drawdown=""
+      {...rest}
+    >
+      {copy.autoRecharge.deepDrawdownExplainer}
+    </p>
   )
 })
 

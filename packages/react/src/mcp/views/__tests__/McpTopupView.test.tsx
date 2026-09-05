@@ -54,6 +54,7 @@ vi.mock('../../useStripeProbe', () => ({ useStripeProbe: () => 'ready' }))
 
 import { McpTopupView } from '../McpTopupView'
 import { McpBridgeProvider, type McpBridgeAppLike } from '../../bridge'
+import { McpDisplayModeProvider } from '../../hooks/useDisplayMode'
 import { merchantCache } from '../../../hooks/useMerchant'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import type { Merchant, SolvaPayConfig, SolvaPayContextValue } from '../../../types'
@@ -114,16 +115,24 @@ function buildCtx(config: SolvaPayConfig, displayCurrency = 'USD'): SolvaPayCont
   }
 }
 
-function renderTopup(merchant: Merchant, displayCurrency = 'USD') {
+function renderTopup(
+  merchant: Merchant,
+  displayCurrency = 'USD',
+  displayMode: 'inline' | 'fullscreen' = 'inline',
+) {
   const transport = createMockTransport(merchant)
   const config: SolvaPayConfig = { transport }
   const ctx = buildCtx(config, displayCurrency)
   const app: McpBridgeAppLike = { updateModelContext: vi.fn().mockResolvedValue(undefined) }
   return render(
     <SolvaPayContext.Provider value={ctx}>
-      <McpBridgeProvider app={app}>
-        <McpTopupView publishableKey="pk_test" returnUrl="https://example.test/r" />
-      </McpBridgeProvider>
+      <McpDisplayModeProvider
+        value={{ displayMode, availableDisplayModes: ['inline', 'fullscreen'] }}
+      >
+        <McpBridgeProvider app={app}>
+          <McpTopupView publishableKey="pk_test" returnUrl="https://example.test/r" />
+        </McpBridgeProvider>
+      </McpDisplayModeProvider>
     </SolvaPayContext.Provider>,
   )
 }
@@ -193,7 +202,7 @@ describe('<McpTopupView> — topup currency picker', () => {
     const { container } = renderTopup(multiCurrencyMerchant)
     await screen.findByLabelText('Topup currency')
     const pill = container.querySelector('[data-amount="10"]')
-    expect(pill?.textContent?.replace(/\u00A0/g, ' ')).toBe('USD 10')
+    expect(pill?.textContent?.replace(/\u00A0/g, ' ')).toMatch(/USD 10/)
     expect(pill?.textContent).not.toMatch(/^\$/)
   })
 
@@ -210,8 +219,10 @@ describe('<McpTopupView> — topup currency picker', () => {
   it('keeps currency symbols in amount pills for single-currency merchants', async () => {
     renderTopup(singleCurrencyUsdMerchant)
     await screen.findByText('Add credits')
-    expect(screen.getByRole('button', { name: '$10' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'USD 10' })).toBeNull()
+    const ten = document.querySelector('[data-amount="10"]')
+    expect(ten?.textContent?.replace(/\u00A0/g, ' ')).toMatch(/\$10/)
+    expect(ten?.textContent).not.toMatch(/USD 10/)
+    expect(screen.queryByRole('button', { name: /^USD 10/ })).toBeNull()
   })
 
   it('preserves the entered amount when returning via Change amount', async () => {
@@ -225,5 +236,41 @@ describe('<McpTopupView> — topup currency picker', () => {
     fireEvent.click(screen.getByRole('button', { name: /Change amount/i }))
     await screen.findByText('Add credits')
     expect((screen.getByPlaceholderText('0.00') as HTMLInputElement).value).toBe('25')
+  })
+
+  it('renders preset tiles with the credits they buy', async () => {
+    const { container } = renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    const tile = container.querySelector('.solvapay-mcp-preset-tile')
+    expect(tile).toBeTruthy()
+    expect(tile?.textContent).toMatch(/100K credits/)
+    expect(screen.getByText('Total due today')).toBeTruthy()
+  })
+
+  it('leads the fullscreen amount step with a summary rail', async () => {
+    const { container } = renderTopup(singleCurrencyUsdMerchant, 'USD', 'fullscreen')
+    await screen.findByText('Add credits')
+    expect(container.querySelector('.solvapay-mcp-summary-rail')).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-hosted-layout')?.getAttribute('data-rail')).toBe(
+      'hosted',
+    )
+  })
+
+  it('leads the payment step with a summary rail before the card form', async () => {
+    const { container } = renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByTestId('topup-form-stub')
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(rail).toBeTruthy()
+    expect(action).toBeTruthy()
+    expect(rail?.textContent).toMatch(/\$25/)
+    expect(
+      rail && action && (rail.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBeTruthy()
   })
 })

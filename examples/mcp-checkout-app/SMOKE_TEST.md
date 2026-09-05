@@ -60,9 +60,9 @@ Fresh customer opens the MCP App in `basic-host`.
   **not** repeated inside the account iframe.
 - `bootstrap.view === 'account'` by default → `<McpAccountView>`
   renders one primary card (current plan, credits, or pick-a-plan
-  empty state). Seller + **Your account** detail cards sit in the
-  persistent sidebar on wide iframes (or inline below the card on
-  narrow frames).
+  empty state). Identity is one provenance line
+  (`{merchant} · Paying as {email}`), not a Seller / Your account
+  sidebar.
 - On an active plan the card opens with a **Your plan** title in the
   same slot as checkout's **Choose a plan**, then the plan name and
   the facts captioned **Rate**/**Price** and **Balance**. The plan
@@ -186,17 +186,15 @@ After activation, type `/manage_account` → `Upgrade` (Free) or
   the amber banner is **absent** and the `Stay on Free` link is
   hidden. One flag, one visual — same surface, different framing.
 
-### 7. Sidebar stability check
+### 7. Provenance line
 
-Open the app on a **wide** iframe (>=816px) from the account view.
-Switch **Account → Top up → Account**.
+Open the app from the account view. Switch **Account → Top up → Account**.
 
 **Expect**:
 
-- **Seller** + **Your account** cards stay in the left sidebar on
-  wide frames — widgets do not jump when swapping surfaces.
-- Resize to narrow (<816px): sidebar hides; the primary action card
-  renders first, then **Your account**, then **Seller** inline below.
+- One provenance line (`{merchant} · Paying as {email}`) stays above
+  the body on every surface when a customer is signed in.
+- No **Seller** or **Your account** cards, no sidebar rail.
 - No account screen shows product description or a `Current plan and
 usage` overline.
 

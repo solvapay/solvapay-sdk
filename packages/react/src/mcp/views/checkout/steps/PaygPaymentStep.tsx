@@ -14,6 +14,7 @@ import { TopupForm } from '../../../../primitives/TopupForm'
 import { formatPrice } from '../../../../utils/format'
 import { useHostLocale } from '../../../useHostLocale'
 import { BackLink } from '../../BackLink'
+import { McpHostedBody, McpHostedLayout, McpSummaryRail } from '../../McpHosted'
 import type { TopupFormSuccessExtras } from '../../../../types'
 import type { BootstrapPlanLike, Cx } from '../shared'
 
@@ -54,66 +55,72 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
       : null
 
   return (
-    <>
-      <BackLink label="Change amount" onClick={onBack} />
-
-      <h2 className={cx.heading}>Payment</h2>
-
-      <div className="solvapay-mcp-checkout-order-summary" data-variant="payg">
-        <div className="solvapay-mcp-checkout-order-summary-row">
-          <span className={cx.muted}>
-            {creditsAdded != null
-              ? `${creditsAdded.toLocaleString(locale)} credits`
-              : formatPrice(amountMinor, currency, { locale })}
-          </span>
-          {creditsAdded != null ? <span>{formatPrice(amountMinor, currency, { locale })}</span> : null}
+    <McpHostedLayout>
+      <McpSummaryRail>
+        <div className="solvapay-mcp-checkout-order-summary" data-variant="payg">
+          <div className="solvapay-mcp-checkout-order-summary-row">
+            <span className={cx.muted}>
+              {creditsAdded != null
+                ? `${creditsAdded.toLocaleString(locale)} credits`
+                : formatPrice(amountMinor, currency, { locale })}
+            </span>
+            {creditsAdded != null ? (
+              <span>{formatPrice(amountMinor, currency, { locale })}</span>
+            ) : null}
+          </div>
+          <div className="solvapay-mcp-checkout-order-summary-row">
+            <span className={cx.muted}>One-time</span>
+          </div>
         </div>
-        <div className="solvapay-mcp-checkout-order-summary-row">
-          <span className={cx.muted}>One-time</span>
-        </div>
-      </div>
+      </McpSummaryRail>
 
-      <TopupForm.Root
-        amount={amountMinor}
-        currency={currency}
-        returnUrl={returnUrl}
-        className={cx.topupForm}
-        onSuccess={(_intent, extras) => onSuccess(extras)}
-      >
-        <TopupForm.Loading />
-        <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
-          <label className={cx.businessToggle}>
-            <TopupForm.BusinessDetails.Toggle />
-            I&apos;m purchasing as a business
-          </label>
-          <TopupForm.BusinessDetails.BusinessName
-            className={cx.businessField}
-            placeholder="Business name"
-          />
-          <TopupForm.BusinessDetails.Country className={cx.businessField} />
-          <TopupForm.BusinessDetails.TaxId
-            className={cx.businessField}
-            placeholder="Tax / VAT ID"
-          />
-        </TopupForm.BusinessDetails.Root>
-        <TopupForm.Summary.Rows className={cx.taxSummary} />
-        <TopupForm.PaymentElement />
-        <TopupForm.Error className={cx.error} />
+      <McpHostedBody>
+        <BackLink label="Change amount" onClick={onBack} />
 
-        {/* Per brief §4: optional "Save card for future top-ups"
+        <h2 className={cx.heading}>Payment</h2>
+
+        <TopupForm.Root
+          amount={amountMinor}
+          currency={currency}
+          returnUrl={returnUrl}
+          className={cx.topupForm}
+          onSuccess={(_intent, extras) => onSuccess(extras)}
+        >
+          <TopupForm.Loading />
+          <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
+            <label className={cx.businessToggle}>
+              <TopupForm.BusinessDetails.Toggle />
+              I&apos;m purchasing as a business
+            </label>
+            <TopupForm.BusinessDetails.BusinessName
+              className={cx.businessField}
+              placeholder="Business name"
+            />
+            <TopupForm.BusinessDetails.Country className={cx.businessField} />
+            <TopupForm.BusinessDetails.TaxId
+              className={cx.businessField}
+              placeholder="Tax / VAT ID"
+            />
+          </TopupForm.BusinessDetails.Root>
+          <TopupForm.Summary.Rows className={cx.taxSummary} />
+          <TopupForm.Error className={cx.error} />
+
+          {/* Per brief §4: optional "Save card for future top-ups"
             checkbox below the Stripe element. Purely informational
             today — Stripe's default `setup_future_usage` from the
             intent dictates whether the card actually gets saved. */}
-        <label className="solvapay-mcp-checkout-save-card">
-          <input type="checkbox" defaultChecked />
-          <span className={cx.muted}>Save card for future top-ups</span>
-        </label>
+          <label className="solvapay-mcp-checkout-save-card">
+            <input type="checkbox" defaultChecked />
+            <span className={cx.muted}>Save card for future top-ups</span>
+          </label>
 
-        <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
-        <TopupForm.SubmitButton className={cx.button}>
-          Pay {formatPrice(amountMinor, currency, { locale })}
-        </TopupForm.SubmitButton>
-      </TopupForm.Root>
-    </>
+          <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
+          <TopupForm.SubmitButton className={cx.button}>
+            Pay {formatPrice(amountMinor, currency, { locale })}
+          </TopupForm.SubmitButton>
+        </TopupForm.Root>
+      </McpHostedBody>
+    </McpHostedLayout>
   )
 })

@@ -6,12 +6,7 @@ import type { McpBootstrap } from '../bootstrap'
 import { SolvaPayContext } from '../../SolvaPayProvider'
 import { merchantCache } from '../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../transport/cache-key'
-import type {
-  SolvaPayContextValue,
-  SolvaPayConfig,
-  Merchant,
-  PurchaseInfo,
-} from '../../types'
+import type { SolvaPayContextValue, SolvaPayConfig, Merchant, PurchaseInfo } from '../../types'
 
 function makeTransport(): NonNullable<SolvaPayConfig['transport']> {
   return {
@@ -100,10 +95,7 @@ function renderShell(
 ) {
   return render(
     <SolvaPayContext.Provider value={ctx}>
-      <McpAppShell
-        bootstrap={{ ...baseBootstrap, ...bootstrap }}
-        {...props}
-      />
+      <McpAppShell bootstrap={{ ...baseBootstrap, ...bootstrap }} {...props} />
     </SolvaPayContext.Provider>,
   )
 }
@@ -193,7 +185,13 @@ describe('<McpAppShell>', () => {
           bootstrap={{
             ...baseBootstrap,
             view: 'usage' as never,
-            customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+            customer: {
+              ref: 'cus_1',
+              purchase: null,
+              paymentMethod: null,
+              balance: null,
+              usage: null,
+            },
           }}
           views={{ checkout: Checkout, account: Account }}
         />
@@ -212,9 +210,9 @@ describe('<McpAppShell>', () => {
       },
       ctx,
     )
-    // Account view renders the sidebar's Details cards, not the
-    // Checkout picker — assert via the "Your account context" aside.
-    expect(screen.getByLabelText('Your account context')).toBeTruthy()
+    // Account view no longer mounts a sidebar — assert via the
+    // provenance line the shell paints for an authenticated customer.
+    expect(screen.getByText('Acme · Paying as demo@acme.test')).toBeTruthy()
   })
 
   const authedCustomer = {
@@ -225,37 +223,39 @@ describe('<McpAppShell>', () => {
     usage: null,
   }
 
-  it('renders Your account and Seller cards in the sidebar when bootstrap.customer is set', () => {
+  it('collapses identity to a provenance line and mounts no sidebar', () => {
     const config = seedMerchant({
       displayName: 'Acme',
       legalName: 'Acme Inc.',
       supportEmail: 'support@acme.com',
     })
     const ctx = buildCtx(config, [], 1500)
-    renderShell({ view: 'account', customer: authedCustomer }, ctx)
-    expect(screen.getByLabelText('Your account context')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Your account' })).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Seller' })).toBeTruthy()
+    const { container } = renderShell({ view: 'account', customer: authedCustomer }, ctx)
+    expect(screen.getByText('Acme · Paying as demo@acme.test')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Your account' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Seller' })).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-sidebar')).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-shell-layout')).toBeNull()
   })
 
-  it('mounts the sidebar on every surface when bootstrap.customer is set', () => {
+  it('paints the provenance line on every surface when bootstrap.customer is set', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
 
     for (const view of ['account', 'checkout', 'topup'] as const) {
       const { unmount } = renderShell({ view, customer: authedCustomer }, ctx)
-      expect(screen.getByLabelText('Your account context')).toBeTruthy()
+      expect(screen.getByText('Acme · Paying as demo@acme.test')).toBeTruthy()
       unmount()
     }
   })
 
-  it('does not mount the sidebar when bootstrap.customer is null', () => {
+  it('does not paint a provenance line when bootstrap.customer is null', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
 
     for (const view of ['account', 'checkout', 'topup'] as const) {
       const { unmount } = renderShell({ view, customer: null }, ctx)
-      expect(screen.queryByLabelText('Your account context')).toBeNull()
+      expect(screen.queryByText(/Paying as/)).toBeNull()
       unmount()
     }
   })
@@ -382,7 +382,41 @@ describe('<McpAppShell>', () => {
       fireEvent.click(screen.getByTestId('change-plan'))
     })
     expect(screen.getByTestId('checkout-stub')).toBeTruthy()
-    expect(screen.getByLabelText('Your account context')).toBeTruthy()
+    expect(screen.getByText('Acme · Paying as demo@acme.test')).toBeTruthy()
+  })
+
+  it('wraps the body in a hosted column and stamps the surface kind', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const { container, rerender } = render(
+      <SolvaPayContext.Provider value={ctx}>
+        <McpAppShell bootstrap={{ ...baseBootstrap, view: 'checkout' }} />
+      </SolvaPayContext.Provider>,
+    )
+    const hosted = container.querySelector('.solvapay-mcp-hosted')
+    expect(hosted).toBeTruthy()
+    expect(hosted).toHaveAttribute('data-mcp-surface', 'payment')
+
+    rerender(
+      <SolvaPayContext.Provider value={ctx}>
+        <McpAppShell
+          bootstrap={{ ...baseBootstrap, view: 'account', customer: authedCustomer }}
+        />
+      </SolvaPayContext.Provider>,
+    )
+    expect(container.querySelector('.solvapay-mcp-hosted')).toHaveAttribute(
+      'data-mcp-surface',
+      'management',
+    )
+  })
+
+  it('puts account provenance in the single column, not a trailing rail', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const { container } = renderShell({ view: 'account', customer: authedCustomer }, ctx)
+    expect(container.querySelector('.solvapay-mcp-context-rail')).toBeNull()
+    const body = container.querySelector('.solvapay-mcp-shell-body')
+    expect(body?.textContent).toContain('Acme · Paying as demo@acme.test')
   })
 
   it('forwards `onClose` to the checkout view', () => {

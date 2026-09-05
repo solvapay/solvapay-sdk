@@ -131,7 +131,7 @@ export interface SolvaPayCopy {
     invalidThreshold: string
     thresholdTooLow: string
     minTopupAmount: string
-    topupBelowThreshold: string
+    deepDrawdownExplainer: string
     invalidMaxMonthlySpend: string
     maxMonthlySpendBelowTopup: string
     maxMonthlySpendLabel: string
@@ -247,6 +247,16 @@ export interface SolvaPayCopy {
     upgradeButton: string
     /** CTA on a non-free active plan that opens checkout to switch plans. */
     changePlanButton: string
+    /** Eyebrow above the balance hero. */
+    creditBalance: string
+    /** Primary top-up CTA on the account strip. */
+    addFunds: string
+    autoRechargeOn: string
+    autoRechargeOff: string
+    turnOn: string
+    activeProducts: string
+    /** Caption under the balance when a merchant name is known. */
+    worksAcross: string
   }
   customerPortal: {
     launchButton: string

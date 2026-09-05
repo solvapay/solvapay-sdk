@@ -10,7 +10,7 @@
  */
 
 import { countsUsage } from '@solvapay/core'
-import React, { forwardRef, useCallback, useContext } from 'react'
+import React, { forwardRef, useCallback, useContext, useMemo } from 'react'
 import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { usePurchase } from '../hooks/usePurchase'
@@ -72,11 +72,15 @@ export const CancelPlanButton = forwardRef<HTMLButtonElement, CancelPlanButtonPr
     const { activePurchase } = usePurchase()
     const { cancelRenewal, isCancelling } = usePurchaseActions()
 
-    const effectivePurchase: PurchaseInfo | null = purchaseRef
-      ? activePurchase && activePurchase.reference === purchaseRef
-        ? activePurchase
-        : ({ reference: purchaseRef } as PurchaseInfo)
-      : activePurchase
+    const effectivePurchase: PurchaseInfo | null = useMemo(
+      () =>
+        purchaseRef
+          ? activePurchase && activePurchase.reference === purchaseRef
+            ? activePurchase
+            : ({ reference: purchaseRef } as PurchaseInfo)
+          : activePurchase,
+      [purchaseRef, activePurchase],
+    )
 
     const effectiveRef = purchaseRef ?? effectivePurchase?.reference
 

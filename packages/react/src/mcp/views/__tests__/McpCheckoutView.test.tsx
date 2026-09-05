@@ -323,20 +323,21 @@ afterEach(() => {
 // ------------------------------------------------------------------
 
 describe('<McpCheckoutView> — plan step', () => {
-  it('renders the amber "Upgrade to continue" banner when fromPaywall is true', () => {
+  it('names that a paid plan is needed when fromPaywall is activation_required', () => {
     renderView({ fromPaywall: true, paywallKind: 'activation_required' })
-    expect(screen.getByText(/Upgrade to continue/)).toBeTruthy()
     expect(screen.getByText(/This tool needs a paid plan/)).toBeTruthy()
   })
 
-  it('shows the quota-exhausted copy for paywallKind=payment_required', () => {
-    renderView({ fromPaywall: true, paywallKind: 'payment_required' })
-    expect(screen.getByText(/used your free quota/i)).toBeTruthy()
+  it('shows the limit-reached handoff for paywallKind=payment_required', () => {
+    renderView({ fromPaywall: true, paywallKind: 'payment_required', onBack: vi.fn() })
+    expect(screen.getByText('Limit reached')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Open account' })).toBeTruthy()
   })
 
-  it('does not render the banner or Stay-on-Free link when fromPaywall is false', () => {
+  it('does not render the limit handoff or Stay-on-Free link when fromPaywall is false', () => {
     renderView({ fromPaywall: false, onClose: vi.fn() })
-    expect(screen.queryByText(/Upgrade to continue/)).toBeNull()
+    expect(screen.queryByText(/Limit reached/)).toBeNull()
+    expect(screen.queryByText(/This tool needs a paid plan/)).toBeNull()
     expect(screen.queryByText(/Stay on Free/)).toBeNull()
   })
 
@@ -347,8 +348,14 @@ describe('<McpCheckoutView> — plan step', () => {
       expect(screen.getByText('Pay as you go')).toBeTruthy()
       expect(screen.getByText('Pro')).toBeTruthy()
     })
-    // "Free" would appear as the card name; ensure it's absent.
-    expect(screen.queryByText(/^Free$/)).toBeNull()
+    // "Free" would appear as the card name; a $0 PAYG price may still
+    // format as "Free" in the price slot.
+    expect(document.querySelector('.solvapay-mcp-plan-row-name')?.textContent).not.toMatch(
+      /^Free$/,
+    )
+    expect(
+      [...document.querySelectorAll('.solvapay-mcp-plan-row-name')].map(el => el.textContent),
+    ).not.toContain('Free')
   })
 
   it('shows the current plan as a disabled card with a Current badge — including when it is Free', async () => {
@@ -970,6 +977,22 @@ describe('<McpCheckoutView> — CSS hooks', () => {
       container.querySelectorAll('.solvapay-mcp-checkout-order-summary-row').length,
     ).toBeGreaterThan(0)
     expect(container.querySelector('.solvapay-mcp-checkout-save-card')).toBeTruthy()
+  })
+
+  it('PaygPaymentStep leads with a 340px summary rail before the action column', async () => {
+    const { container } = await advanceToPaygPayment()
+    const hosted = container.querySelector('.solvapay-mcp-hosted-layout')
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(hosted).toBeTruthy()
+    expect(rail).toBeTruthy()
+    expect(action).toBeTruthy()
+    expect(rail?.contains(container.querySelector('.solvapay-mcp-checkout-order-summary'))).toBe(
+      true,
+    )
+    expect(
+      rail && action && (rail.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBeTruthy()
   })
 
   it('PAYG SuccessStep renders success-check + receipt CSS hooks', async () => {

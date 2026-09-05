@@ -1,14 +1,55 @@
 /**
  * Default styles for `<McpApp>` and the per-view primitives.
  *
- * Opt-in via `import '@solvapay/react/mcp/styles.css'`. Every selector
- * uses CSS variables with concrete fallbacks, so MCP hosts that publish
- * their own tokens (via `applyHostStyleVariables`) override SolvaPay's
- * defaults automatically.
+ * Opt-in via `import '@solvapay/react/mcp/styles.css'`. Host-owned
+ * tokens (`--color-*`, `--font-*`, `--border-radius-*`) are defined
+ * once on `:root` with `light-dark()` so hosts that publish nothing
+ * still get a WCAG-compliant palette, and hosts that publish tokens
+ * win. `html`/`body` stay transparent so the host canvas shows
+ * through; the card is a hairline frame, not a filled sheet.
  *
  * All classes start with `solvapay-mcp-` so they don't collide with the
  * core `@solvapay/react` styles or with integrator-supplied classes.
  */
+
+:root {
+  color-scheme: light dark;
+
+  --color-background-primary: light-dark(#FFFFFF, #171717);
+  --color-background-secondary: light-dark(#F4F4F4, #262626);
+  --color-text-primary: light-dark(#171717, #FAF9F5);
+  --color-text-secondary: light-dark(#6B6A67, #A3A29E);
+  --color-border-primary: light-dark(#8A8A8A, #7E7E7E);
+  --color-border-secondary: light-dark(#D9D9D9, #3A3A3A);
+  --color-background-inverse: light-dark(#171717, #FAF9F5);
+  --color-text-inverse: light-dark(#FFFFFF, #171717);
+  --color-text-warning: light-dark(#78350F, #FBBF24);
+  --color-background-warning: light-dark(#FFFBEB, #3D2E00);
+  --color-text-danger: var(--solvapay-danger);
+  --color-background-danger: light-dark(#FEF2F2, #3F1D1D);
+  --color-ring-primary: var(--solvapay-selection);
+
+  --solvapay-row-hover: light-dark(#FAFAFA, #1F1F1F);
+  --solvapay-control-hover: light-dark(#F5F5F5, #2A2A2A);
+  --solvapay-selection: light-dark(#4D89A2, #6B9CAE);
+  --solvapay-selection-wash: light-dark(#F2F7F9, #1C2B34);
+  --solvapay-danger: light-dark(#C4322A, #F97066);
+  --solvapay-identifier: light-dark(#65659B, #9B9BE0);
+  --solvapay-accent: light-dark(#000000, #E8E8E8);
+  --solvapay-accent-text: light-dark(#FFFFFF, #171717);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+
+  --border-radius-xs: 4px;
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 8px;
+  --border-radius-xl: 16px;
+  --border-radius-full: 9999px;
+}
+
 
 *,
 *::before,
@@ -20,18 +61,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--color-background-primary, #ffffff);
-  color: var(--color-text-primary, #0f172a);
-  font-family: var(
-    --font-sans,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    sans-serif
-  );
+  /* Host canvas shows through. The iframe is a guest, not a sheet. */
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -41,85 +74,87 @@ body {
   padding: 16px;
 }
 
-/* Outer chrome cap. The AppHeader, body card stack, and LegalFooter
- * align as one visually unified block centred in the iframe. The 480
- * default matches Stripe Checkout's ~440-480 pay column, Apple Pay
- * sheet's ~390 form, Material 3 dialog content max of 560, and
- * Refactoring UI's ~30em form-width rule.
- *
- * Both the sidebar lift (below) and the per-step content (button,
- * payment form, plan-selector grid) inherit this cap, so the form
- * stays centred in the iframe and `Provided by SolvaPay · Terms ·
- * Privacy` aligns to the card's left/right edges rather than the
- * iframe's.
- *
- * SEP-1865 §"Container Dimensions" delegates the size choice to the
- * View when the host omits `containerDimensions.width`/`maxWidth`
- * (Unbounded mode). Anthropic's PRIMARY use case (Claude Desktop
- * ~400-500px) and OpenAI's inline examples (220-360px) are both
- * narrower than 480, so the cap is a no-op there and content fills,
- * matching Anthropic's "apps fill the container width" guidance.
- * Surfaces that need the full host viewport can still request
- * `displayMode: "fullscreen"`. */
+/* Fill the host container. Anthropic: "Apps always fill the
+ * container width — there are no fixed breakpoints." `main` stays
+ * `width: 100%` so `@container mcp (min-width: 760px)` sees the
+ * host. The visual widget — chrome, loading card, shell — is one
+ * centered 760px block (no-op below that width). Fullscreen lifts
+ * the cap and becomes a centered 1000px hosted column. */
 .solvapay-mcp-main {
+  --solvapay-surface: var(--color-background-primary);
+  --solvapay-muted: var(--color-background-secondary);
+  --solvapay-muted-foreground: var(--color-text-secondary);
+  --solvapay-border: var(--color-border-secondary);
+  --solvapay-destructive: var(--solvapay-danger);
+  --solvapay-accent-foreground: var(--solvapay-accent-text);
+  --solvapay-font: var(--font-sans);
+  --solvapay-radius: var(--border-radius-md);
+
+  /* Shared type scale. Ten levels is a product decision — the host
+   * publishes three. Narrow (420) is the default; the 760px query
+   * lifts the inline density tokens below. */
+  --solvapay-type-display: 600 36px/1.22 var(--font-sans);
+  --solvapay-type-heading: 600 24px/1.29 var(--font-sans);
+  --solvapay-type-price: 500 40px/1 var(--font-sans);
+  --solvapay-type-row: 600 18px/1.3 var(--font-sans);
+  --solvapay-type-body: 400 15px/1.5 var(--font-sans);
+  --solvapay-type-label: 500 14px/1.4 var(--font-sans);
+  --solvapay-type-caption: 400 13px/1.5 var(--font-sans);
+  --solvapay-type-eyebrow-step: 500 15px/1.87 var(--font-sans);
+  --solvapay-type-eyebrow-rail: 400 12px/1.67 var(--font-sans);
+  --solvapay-type-balance: 500 30px/1 var(--font-sans);
+  --solvapay-type-title: 600 18px/1.3 var(--font-sans);
+  --solvapay-type-plan-row: 600 15px/1.3 var(--font-sans);
+  --solvapay-type-total: 500 22px/1.2 var(--font-sans);
+  --solvapay-type-rail-hero: 500 32px/1 var(--font-sans);
+  --solvapay-card-padding: 20px;
+  --solvapay-section-gap: 18px;
+  --solvapay-control-height: 44px;
+  --solvapay-cta-height: 48px;
+
+  container-type: inline-size;
+  container-name: mcp;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-inline-size: 480px;
+  width: 100%;
+}
+
+.solvapay-mcp-chrome-row,
+.solvapay-mcp-main > .solvapay-mcp-card,
+.solvapay-mcp-shell {
+  width: 100%;
+  max-inline-size: 760px;
   margin-inline: auto;
 }
 
-/* When `bootstrap.customer` is set, `showSidebar` in McpAppShell.tsx
- * mounts a `.solvapay-mcp-shell-sidebar` aside (seller + customer
- * details cards) on every surface — account, checkout, and topup —
- * so the frame does not reshape mid-flow. Lift the cap so the
- * 320 sidebar + 16 gap + 480 body grid fits AND the matching
- * `@container (min-width: 816px)` query below can fire.
- *
- * The lift is gated behind `@media (min-width: 816px)` so it only
- * fires when the iframe is actually wide enough to render the
- * sidebar. Without that gate, on iframes between 480 and 815 the
- * cap would lift to 816 but the iframe would shrink the main to
- * its own width — the body would sit at 480 anchored to the left
- * of a 700px main, and the footer's `space-between` would spread
- * `Provided by SolvaPay · Terms · Privacy` to the iframe edges
- * instead of the body's edges. With the gate, those iframes treat
- * the authed user like the unauthed path: main stays at 480 and
- * the inline `<McpCustomerDetailsCard>` carries the account
- * context that the sidebar would have shown.
- *
- * The `:has()` selector is intentionally view-agnostic — the shell
- * controls when the aside actually mounts via the customer-present
- * gate. Unauthenticated bootstraps never trigger the lift. */
-@media (min-width: 816px) {
-  .solvapay-mcp-main:has(.solvapay-mcp-shell-sidebar) {
-    max-inline-size: 816px;
-  }
+.solvapay-mcp-chrome-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
 }
 
-.solvapay-mcp-header h1 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+.solvapay-mcp-chrome-row:empty {
+  display: none;
+}
+
+.solvapay-mcp-chrome-row .solvapay-mcp-close {
+  margin-left: auto;
+  width: auto;
+  flex: 0 0 auto;
 }
 
 .solvapay-mcp-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border-radius: var(--border-radius-lg, 12px);
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-primary, #ffffff);
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
+  gap: var(--solvapay-section-gap);
+  padding: var(--solvapay-card-padding);
+  /* Hairline frame only — no fill, no shadow. Host tokens win. */
+  border-radius: var(--border-radius-xl);
+  border: 1px solid var(--color-border-primary);
   transition: opacity 180ms ease;
-  /* Dampens iframe shrink → grow round-trips when a brief
-   * "Loading…" interstitial paints between bootstrap re-fetches
-   * during `account` ↔ `checkout` ↔ `topup` view swaps. Kept below
-   * the natural height of the simplest real card (PAYG account
-   * state) so content drives sizing and we don't trail awkward
-   * empty space under short cards. */
-  min-height: 160px;
 }
 
 /*
@@ -143,7 +178,7 @@ body {
 .solvapay-mcp-app-header-initials {
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
   flex: 0 0 auto;
 }
 
@@ -155,8 +190,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-background-secondary, #f1f5f9);
-  color: var(--color-text-secondary, #475569);
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
   font-size: 10px;
   font-weight: 600;
 }
@@ -164,7 +199,7 @@ body {
 .solvapay-mcp-app-header-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -238,10 +273,10 @@ body {
 .solvapay-mcp-currency-switch {
   flex: 0 0 auto;
   padding: 4px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 6px;
-  background: var(--color-background, #ffffff);
-  color: var(--color-text, #0f172a);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--border-radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -249,15 +284,15 @@ body {
 
 .solvapay-mcp-muted {
   margin: 0;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .solvapay-mcp-notice {
   padding: 12px;
-  border-radius: 8px;
-  background: var(--color-background-warning, #fffbeb);
-  color: var(--color-text-warning, #78350f);
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-warning);
+  color: var(--color-text-warning);
   font-size: 13px;
   display: flex;
   flex-direction: column;
@@ -271,9 +306,9 @@ body {
 .solvapay-mcp-error {
   margin: 0;
   padding: 12px;
-  border-radius: 8px;
-  background: var(--color-background-danger, #fef2f2);
-  color: var(--color-text-danger, #991b1b);
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-danger);
+  color: var(--color-text-danger);
   font-size: 13px;
 }
 
@@ -290,10 +325,10 @@ body {
   gap: 8px;
   width: 100%;
   padding: 10px 16px;
-  border-radius: var(--border-radius-md, 8px);
+  border-radius: var(--border-radius-md);
   border: none;
-  background: var(--color-background-accent, #0f172a);
-  color: var(--color-text-on-accent, #ffffff);
+  background: var(--color-background-inverse);
+  color: var(--color-text-inverse);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -315,14 +350,14 @@ body {
   padding: 0;
   background: none;
   border: none;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   font-size: 13px;
   cursor: pointer;
   text-decoration: underline;
 }
 
 .solvapay-mcp-link-button:hover {
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-text-primary);
 }
 
 .solvapay-mcp-awaiting-header {
@@ -341,8 +376,8 @@ body {
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid var(--color-border-secondary, #e2e8f0);
-  border-top-color: var(--color-background-accent, #0f172a);
+  border: 2px solid var(--color-border-secondary);
+  border-top-color: var(--color-background-inverse);
   border-radius: 50%;
   animation: solvapay-mcp-spin 0.8s linear infinite;
 }
@@ -387,7 +422,7 @@ body {
 }
 
 .solvapay-mcp-account [data-solvapay-current-plan-field-label] {
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
 }
 
 .solvapay-mcp-account-credit-stack {
@@ -441,10 +476,10 @@ body {
 
 .solvapay-mcp-amount-option {
   padding: 6px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-primary, #ffffff);
-  color: var(--color-text-primary, #0f172a);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-border-primary);
+  background: transparent;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -457,17 +492,17 @@ body {
  * color — stays within the pre-refactor black/white/gray palette. The
  * selected state below still wins and fills the chip with the accent. */
 .solvapay-mcp-amount-option[data-popular]:not([data-state='selected']) {
-  border-color: var(--color-text-primary, #0f172a);
+  border-color: var(--color-text-primary);
 }
 
 .solvapay-mcp-amount-option:hover:not([data-state='selected']):not(:disabled) {
-  background: var(--color-background-subtle, #f9fafb);
+  background: var(--solvapay-control-hover);
 }
 
 .solvapay-mcp-amount-option[data-state='selected'] {
-  border-color: var(--color-background-accent, #0f172a);
-  background: var(--color-background-accent, #0f172a);
-  color: var(--color-text-on-accent, #ffffff);
+  border-color: var(--color-background-inverse);
+  background: var(--color-background-inverse);
+  color: var(--color-text-inverse);
 }
 
 /* `.solvapay-mcp-amount-custom` now wraps the bordered row — currency
@@ -480,19 +515,19 @@ body {
   gap: 8px;
   width: 100%;
   padding: 10px 12px;
-  border-radius: var(--border-radius-md, 8px);
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-primary, #ffffff);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-border-primary);
+  background: transparent;
   transition: border-color 120ms ease;
 }
 
 .solvapay-mcp-amount-custom:focus-within {
-  border-color: var(--color-text-primary, #0f172a);
-  box-shadow: 0 0 0 1px var(--color-text-primary, #0f172a);
+  border-color: var(--color-ring-primary);
+  box-shadow: 0 0 0 1px var(--color-ring-primary);
 }
 
 .solvapay-mcp-amount-currency-symbol {
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 500;
 }
@@ -502,7 +537,7 @@ body {
   background: transparent;
   border: none;
   outline: none;
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-text-primary);
   font-size: 14px;
   min-width: 0;
   padding: 0;
@@ -520,8 +555,8 @@ body {
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  border-radius: 8px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
 }
 
 .solvapay-mcp-business-toggle {
@@ -529,7 +564,7 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
@@ -543,8 +578,8 @@ body {
 .solvapay-mcp-business-field {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  border-radius: 6px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--border-radius-sm);
   font-size: 14px;
 }
 
@@ -553,8 +588,8 @@ body {
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  border-radius: 8px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
   font-size: 13px;
 }
 
@@ -579,14 +614,14 @@ body {
 .solvapay-mcp-tax-summary .solvapay-tax-summary-row--total {
   font-weight: 600;
   padding-top: 6px;
-  border-top: 1px solid var(--color-border-secondary, #e2e8f0);
+  border-top: 1px solid var(--color-border-secondary);
 }
 
 .solvapay-mcp-tax-summary [data-solvapay-topup-form-summary-tax-note],
 .solvapay-mcp-tax-summary [data-solvapay-payment-form-summary-tax-note] {
   margin: 0;
   font-size: 12px;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
 }
 
 /* Pay-with-card step header: amount being purchased is the hero, the
@@ -595,15 +630,14 @@ body {
  * `BalanceBadge` — balance is the right hero on those screens. */
 .solvapay-mcp-topup-amount-hero {
   margin: 0;
-  font-size: 28px;
-  font-weight: 600;
+  font: var(--solvapay-type-rail-hero);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .solvapay-mcp-topup-balance-context {
   margin: 0;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
@@ -629,111 +663,28 @@ body {
   min-height: 280px;
 }
 
-/* Activation view */
-
-.solvapay-mcp-activation-flow {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Paywall view (Phase 2.1) */
-
-.solvapay-mcp-paywall-plans {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.solvapay-mcp-paywall-embedded-checkout {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border-secondary, #e2e8f0);
-}
-
-/* Usage view (Phase 2.2)
+/* Shell chrome — provenance, body, footer
  *
- * The UsageMeter primitive already ships default styles in
- * @solvapay/react/styles.css — the MCP view only adds view-level spacing. */
-
-/* Shell chrome — layout, sidebar, footer
- *
- * Merchant branding moved to `<AppHeader>` inside each view (see
- * `.solvapay-mcp-app-header-*` above) so hosts that paint their own
- * chrome mark (ChatGPT, Claude Desktop) can suppress the strip, while
- * MCP Jam / VS Code keep the in-widget mark they need. The shell now
- * only lays out the view router + optional sidebar + footer.
+ * Merchant branding lives on `<AppHeader>` in the chrome row. Identity
+ * collapses to one provenance line. There is no sidebar grid.
  */
 
 .solvapay-mcp-shell {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  /* Inline-size container for the sidebar layout below
-   * (`.solvapay-mcp-shell-sidebar` / `.solvapay-mcp-shell-layout` use
-   * `@container (min-width: 900px)`). Scoped here rather than on
-   * `.solvapay-mcp-main` so dormant fixed-positioned overlays
-   * (`.solvapay-mcp-tour-overlay`, `.solvapay-mcp-tour-popover`) that
-   * render as siblings of `<McpAppShell>` inside `.solvapay-mcp-main`
-   * stay anchored to the iframe viewport — `container-type` makes the
-   * element a containing block for `position: fixed` descendants per
-   * the CSS containment spec, so we keep that scope tight. */
-  container-type: inline-size;
 }
 
-.solvapay-mcp-tablist {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--color-border-secondary, #e2e8f0);
-  overflow-x: auto;
-  /* Hide scrollbar on WebKit while still allowing overflow for narrow iframes */
-  scrollbar-width: thin;
-}
-
-.solvapay-mcp-tab {
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--color-text-secondary, #475569);
+.solvapay-mcp-provenance {
+  margin: 0;
   font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    color 120ms ease,
-    border-color 120ms ease;
-}
-
-.solvapay-mcp-tab:hover:not([data-active='true']) {
-  color: var(--color-text-primary, #0f172a);
-}
-
-.solvapay-mcp-tab[data-active='true'] {
-  color: var(--color-text-primary, #0f172a);
-  border-bottom-color: var(--color-background-accent, #0f172a);
-}
-
-.solvapay-mcp-tab:focus-visible {
-  outline: 2px solid var(--color-background-accent, #0f172a);
-  outline-offset: -2px;
-  border-radius: 6px;
-}
-
-.solvapay-mcp-shell-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
 }
 
 /* Body column carrying every step of every surface (account card,
- * checkout step stack, topup form). Width policy is owned by the
- * outer `.solvapay-mcp-main` cap (480 default, 816 with sidebar) —
- * inside a single-column layout grid the body fills its 480 cell
- * exactly; in the two-column sidebar layout the grid's first track
- * is `minmax(0, 480px)` (below). No body-level max needed. */
+ * checkout step stack, topup form). The reading-measure cap lives
+ * on the shell so provenance, card and footer stay one block. */
 .solvapay-mcp-shell-body {
   display: flex;
   flex-direction: column;
@@ -741,51 +692,93 @@ body {
   min-width: 0;
 }
 
-.solvapay-mcp-shell-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* Dampens iframe shrink → grow round-trips when a brief "Loading…"
+ * interstitial paints between surface swaps. */
+.solvapay-mcp-shell-body .solvapay-mcp-card:first-of-type {
+  min-height: 160px;
 }
 
-/* Wide-shell sidebar: visible when the shell's own inline size is
- * >=816 (480 body + 16 gap + 320 sidebar). Container query (not
- * media query) so the layout fires on the shell's own size, not the
- * iframe viewport — the matching media-gated `:has()` lift above
- * ensures `.solvapay-mcp-main` only reaches 816 on iframes that can
- * actually host the wide layout. Hosts with narrow iframes (ChatGPT
- * ~400px, compact Claude Desktop) fall through to the single-column
- * layout with the inline detail cards under the active card. */
+/* Fullscreen is the hosted page, not a stretched widget: one scroll
+ * owner on `main`, a centered 1000px column, payment rail 340,
+ * management one column. Below 1000px of host width the container
+ * query falls back to the inline single-column stack. Host chrome
+ * (window close) stays outside the iframe; our Close control sits
+ * in the chrome row. Host `safeAreaInsets` land as extra padding on
+ * `.solvapay-mcp-main` from the display-mode hook — not
+ * `env(safe-area-inset-*)`, which cannot see the host composer. */
+.solvapay-mcp-main[data-display-mode='fullscreen'] {
+  min-block-size: 100%;
+  overflow: auto;
+  container-type: inline-size;
+  container-name: mcp mcp-hosted;
+}
 
-.solvapay-mcp-shell-sidebar {
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-hosted {
+  max-width: 1000px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-app-header {
   display: none;
 }
 
-@container (min-width: 816px) {
-  /* Sidebar track sits at 320px on the left and the body track is
-   * `minmax(0, 480px)` on the right. `order: -1` on the sidebar
-   * bumps it to the front of grid auto-placement so DOM order stays
-   * body-first (primary action first for screen readers on the
-   * checkout/topup payment surfaces) while visual order is
-   * sidebar-left. The outer `.solvapay-mcp-main` is already
-   * `margin-inline: auto` capped at 816, so the 320+16+480 = 816px
-   * composition lands centred in the iframe without any extra
-   * `justify-content` on the grid. */
-  .solvapay-mcp-shell-layout {
-    grid-template-columns: 320px minmax(0, 480px);
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-chrome-row,
+.solvapay-mcp-main[data-display-mode='fullscreen'] > .solvapay-mcp-card {
+  max-inline-size: none;
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen']
+  .solvapay-mcp-card:has(.solvapay-mcp-hosted-layout) {
+  padding: 0;
+  border: none;
+}
+
+html:has(.solvapay-mcp-main[data-display-mode='fullscreen']),
+html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) body,
+html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
+  height: 100%;
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-shell {
+  flex: 1;
+  min-height: 0;
+  max-inline-size: none;
+  /* Gutters sit on the centering wrapper, outside the 1000px column. */
+  padding: 56px 72px 40px;
+}
+
+.solvapay-mcp-hosted-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.solvapay-mcp-summary-rail {
+  min-width: 0;
+  border-bottom: 1px solid var(--color-border-secondary);
+  padding-bottom: 16px;
+}
+
+.solvapay-mcp-hosted-body {
+  min-width: 0;
+}
+
+@container mcp-hosted (min-width: 1000px) {
+  .solvapay-mcp-hosted-layout:has(> .solvapay-mcp-summary-rail) {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 56px;
+    align-items: stretch;
   }
 
-  .solvapay-mcp-shell-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    order: -1;
-  }
-
-  /* Account tab is hidden in the wide-shell layout — its content
-   * lives in the sidebar. Stays in the DOM so the arrow-key nav is
-   * stable; CSS just takes it out of flow. */
-  .solvapay-mcp-tab[data-hide-wide='true'] {
-    display: none;
+  .solvapay-mcp-summary-rail {
+    border-bottom: none;
+    border-right: 1px solid var(--color-border-secondary);
+    padding-bottom: 0;
+    padding-right: 56px;
+    padding-top: 56px;
   }
 }
 
@@ -815,7 +808,7 @@ body {
    * slate-600 so the footer reads cleanly against white without
    * fading into the card border. Matches the rest of the MCP
    * chrome (`AppHeader`, muted body copy). */
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
 }
 
 /* Match the visual spacing of the inner `Terms · Privacy` separator.
@@ -830,93 +823,10 @@ body {
   font-weight: 400;
 }
 
-/* Account view — Customer + Seller details cards
- *
- * Kept self-contained so the same markup renders identically inside
- * `<McpAccountView>` and the wide-iframe sidebar in `<McpAppShell>`.
- */
-
 .solvapay-mcp-account {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.solvapay-mcp-detail-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.solvapay-mcp-detail-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.solvapay-mcp-detail-label {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.solvapay-mcp-detail-value {
-  font-size: 14px;
-  color: var(--color-text-primary, #0f172a);
-  word-break: break-word;
-}
-
-.solvapay-mcp-detail-value-mono {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-    monospace;
-  font-size: 12px;
-}
-
-.solvapay-mcp-detail-heading-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.solvapay-mcp-customer-card .solvapay-mcp-detail-grid {
-  flex: 1;
-}
-
-.solvapay-mcp-detail-balance-row {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: auto;
-}
-
-.solvapay-mcp-detail-balance-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.solvapay-mcp-detail-balance-row .solvapay-mcp-link-button {
-  align-self: flex-end;
-  flex: 0 0 auto;
-}
-
-.solvapay-mcp-verified-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--color-background-success-subtle, #ecfdf5);
-  color: var(--color-text-success, #065f46);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.4;
 }
 
 /* ---- Back-link primitive ---- */
@@ -933,14 +843,14 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-text-secondary, #475467);
+  color: var(--color-text-secondary);
   font-size: 13px;
   cursor: pointer;
   transition: color 120ms ease;
 }
 
 .solvapay-mcp-back-link:hover {
-  color: var(--color-text-primary, #101828);
+  color: var(--color-text-primary);
 }
 
 /* Underline only the label on hover — applying `text-decoration` to
@@ -973,99 +883,6 @@ body {
   margin-left: 0.35em;
 }
 
-/* ---- Plan actions row ---- */
-
-.solvapay-mcp-plan-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.solvapay-mcp-plan-topup-prompt {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-/* ---- First-run tour ---- */
-
-.solvapay-mcp-tour-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1000;
-}
-
-.solvapay-mcp-tour-popover {
-  position: fixed;
-  max-width: 280px;
-  pointer-events: auto;
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--color-background-elevated, #ffffff);
-  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
-  border: 1px solid var(--color-border-default, #e4e7ec);
-}
-
-.solvapay-mcp-tour-title {
-  margin: 0 0 4px 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.solvapay-mcp-tour-body {
-  margin: 0 0 12px 0;
-  font-size: 13px;
-  color: var(--color-text-secondary, #475467);
-}
-
-.solvapay-mcp-tour-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-}
-
-.solvapay-mcp-tour-skip,
-.solvapay-mcp-tour-next {
-  appearance: none;
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  cursor: pointer;
-  border-radius: 4px;
-  font-size: 13px;
-}
-
-.solvapay-mcp-tour-next {
-  background: var(--color-background-primary, #0f172a);
-  color: var(--color-text-on-primary, #ffffff);
-}
-
-.solvapay-mcp-tour-progress {
-  color: var(--color-text-tertiary, #667085);
-}
-
-.solvapay-mcp-tour-replay {
-  appearance: none;
-  background: none;
-  border: 1px solid var(--color-border-default, #e4e7ec);
-  border-radius: 999px;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  color: var(--color-text-secondary, #475467);
-}
-
-.solvapay-mcp-tour-replay:hover {
-  color: var(--color-text-primary, #101828);
-}
-
 /* McpUpsellStrip / McpNudgeView styles were removed along with the
  * components — paywall / nudge responses are plain text narrations
  * now and no widget surface renders for them. */
@@ -1074,26 +891,24 @@ body {
  *
  * Styles for the two-branch <McpCheckoutView>: PlanStep → AmountStep →
  * PaygPaymentStep / RecurringPaymentStep → SuccessStep. Palette is
- * strictly the same monochrome family as the rest of the MCP shell —
- * white surfaces, secondary-border greys, subtle-bg fills, primary
- * slate ink, secondary slate for muted copy. No warning tints, no
- * success halo — `.solvapay-mcp-error` is the only chromatic note and
- * it stays untouched for a11y semantics. */
+ * the shared hosted vocabulary — host tokens on `--color-*`, branding
+ * extras on `--solvapay-*`. Inner surfaces stay transparent with a
+ * hairline; `.solvapay-mcp-error` is the only reserved chromatic note. */
 
 .solvapay-mcp-checkout-banner {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 12px;
-  border-radius: var(--border-radius-md, 8px);
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-subtle, #f9fafb);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-border-secondary);
+  background: var(--color-background-secondary);
 }
 
 .solvapay-mcp-checkout-banner-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-text-primary);
 }
 
 .solvapay-mcp-checkout-banner-message {
@@ -1126,27 +941,19 @@ body {
   flex-direction: column;
   gap: 6px;
   padding: 12px;
-  border-radius: var(--border-radius-md, 8px);
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-subtle, #f9fafb);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-border-primary);
+  background: transparent;
 }
 
-.solvapay-mcp-checkout-order-summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-primary, #0f172a);
-}
+/* Order-summary rows share `.solvapay-mcp-line-item`. */
 
 .solvapay-mcp-checkout-save-card {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
@@ -1155,40 +962,27 @@ body {
   cursor: pointer;
 }
 
-.solvapay-mcp-checkout-terms {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 .solvapay-mcp-checkout-receipt {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin: 0;
   padding: 12px;
-  border-radius: var(--border-radius-md, 8px);
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-subtle, #f9fafb);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-border-primary);
+  background: transparent;
 }
 
-.solvapay-mcp-checkout-receipt-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
+/* Receipt rows share `.solvapay-mcp-line-item`. */
 
 .solvapay-mcp-checkout-receipt-row dt {
   margin: 0;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-secondary);
 }
 
 .solvapay-mcp-checkout-receipt-row dd {
   margin: 0;
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 
@@ -1202,9 +996,9 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-primary, #ffffff);
-  color: var(--color-text-primary, #0f172a);
+  border: 1px solid var(--color-border-secondary);
+  background: transparent;
+  color: var(--color-text-primary);
   font-size: 18px;
   line-height: 1;
 }
@@ -1216,11 +1010,451 @@ body {
 
 .solvapay-mcp-checkout-manage-pointer code {
   padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--color-background-subtle, #f9fafb);
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-    monospace;
+  border-radius: var(--border-radius-sm);
+  background: var(--color-background-secondary);
+  font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--color-text-primary, #0f172a);
+  color: var(--color-text-primary);
+}
+
+/* ---- v2 primitive vocabulary ----
+ *
+ * Plain CSS translation of the hosted primitives. Inner surfaces stay
+ * transparent + hairline; selected / raised fills use inverse or
+ * `--color-background-secondary`, never `--color-background-primary`.
+ * Focus uses the spec `--color-ring-primary` token. */
+
+.solvapay-mcp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.solvapay-mcp-section-title {
+  margin: 0;
+  font: var(--solvapay-type-heading);
+  letter-spacing: -0.5px;
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-eyebrow[data-variant='step'] {
+  font: var(--solvapay-type-eyebrow-step);
+  letter-spacing: 2px;
+}
+
+.solvapay-mcp-eyebrow[data-variant='rail'] {
+  font: var(--solvapay-type-eyebrow-rail);
+  letter-spacing: 1px;
+}
+
+.solvapay-mcp-line-item,
+.solvapay-mcp-checkout-order-summary-row,
+.solvapay-mcp-checkout-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font: var(--solvapay-type-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-line-item[data-muted='true'],
+.solvapay-mcp-line-item[data-muted='true'] .solvapay-mcp-line-item-value {
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-line-item-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.solvapay-mcp-amount-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.solvapay-mcp-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.solvapay-mcp-preset-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 60px;
+  padding: 8px 4px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--border-radius-md);
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.solvapay-mcp-preset-tile:hover:not([data-state='selected']):not(:disabled) {
+  background: var(--solvapay-control-hover);
+}
+
+.solvapay-mcp-preset-tile[data-state='selected'] {
+  border-color: var(--color-background-inverse);
+  background: var(--color-background-inverse);
+  color: var(--color-text-inverse);
+}
+
+.solvapay-mcp-preset-tile:focus-visible,
+.solvapay-mcp-plan-row:focus-visible,
+.solvapay-mcp-toggle:focus-visible {
+  outline: none;
+  border-color: var(--color-ring-primary);
+  box-shadow: 0 0 0 1px var(--color-ring-primary);
+}
+
+.solvapay-mcp-preset-tile-amount {
+  font: 500 17px/1.2 var(--font-sans);
+}
+
+.solvapay-mcp-preset-tile-credits {
+  font: var(--solvapay-type-caption);
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-preset-tile[data-state='selected'] .solvapay-mcp-preset-tile-credits {
+  color: var(--color-text-inverse);
+  opacity: 0.75;
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-preset-tile {
+  position: relative;
+  padding: 16px;
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen']
+  .solvapay-mcp-preset-tile[data-state='selected']::after {
+  content: '✓';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--border-radius-full);
+  background: var(--color-text-inverse);
+  color: var(--color-background-inverse);
+  font: 600 11px/1 var(--font-sans);
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen'] [data-solvapay-amount-picker-confirm],
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-button {
+  min-height: 56px;
+}
+
+.solvapay-mcp-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.solvapay-mcp-limit-reached {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.solvapay-mcp-limit-reached-title {
+  margin: 0;
+  font: var(--solvapay-type-title);
+  letter-spacing: -0.4px;
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-topup-total {
+  font: var(--solvapay-type-total);
+  letter-spacing: -0.6px;
+}
+
+.solvapay-mcp-plan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 16px 20px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-md);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.solvapay-mcp-plan-row[data-state='selected'] {
+  border-color: var(--color-background-inverse);
+}
+
+.solvapay-mcp-plan-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.solvapay-mcp-plan-row-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: var(--solvapay-type-plan-row);
+  letter-spacing: -0.3px;
+}
+
+.solvapay-mcp-plan-row-description {
+  font: var(--solvapay-type-body);
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-plan-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.solvapay-mcp-plan-row-price {
+  font: var(--solvapay-type-label);
+}
+
+.solvapay-mcp-plan-row-check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: var(--border-radius-full);
+  border: 1px solid var(--color-border-primary);
+  background: transparent;
+  color: transparent;
+  font: 600 11px/1 var(--font-sans);
+}
+
+.solvapay-mcp-plan-row[data-state='selected'] .solvapay-mcp-plan-row-check {
+  border-color: var(--color-background-inverse);
+  background: var(--color-background-inverse);
+  color: var(--color-text-inverse);
+}
+
+.solvapay-mcp-status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--solvapay-type-caption);
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-status-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--border-radius-full);
+  background: var(--color-text-primary);
+  flex: 0 0 auto;
+}
+
+.solvapay-mcp-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-full);
+  font: var(--solvapay-type-caption);
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.solvapay-mcp-field-label {
+  font: var(--solvapay-type-label);
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-field-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--solvapay-control-height);
+  padding: 0 14px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--border-radius-md);
+  background: transparent;
+}
+
+.solvapay-mcp-field-control:focus-within {
+  border-color: var(--color-ring-primary);
+  box-shadow: 0 0 0 1px var(--color-ring-primary);
+}
+
+.solvapay-mcp-field-affix {
+  color: var(--color-text-secondary);
+  font: var(--solvapay-type-body);
+}
+
+.solvapay-mcp-field-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: 400 15px/1 var(--font-mono);
+}
+
+.solvapay-mcp-toggle {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 26px;
+  padding: 3px;
+  border: none;
+  border-radius: var(--border-radius-full);
+  background: var(--color-background-secondary);
+  cursor: pointer;
+}
+
+.solvapay-mcp-toggle[data-state='on'] {
+  background: var(--color-background-inverse);
+  justify-content: flex-end;
+}
+
+.solvapay-mcp-toggle-knob {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--border-radius-full);
+  background: var(--color-text-primary);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+}
+
+.solvapay-mcp-toggle[data-state='on'] .solvapay-mcp-toggle-knob {
+  background: var(--color-text-inverse);
+}
+
+.solvapay-mcp-ledger-row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.9fr 0.8fr 0.9fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border-secondary);
+  font: var(--solvapay-type-body);
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-ledger-row:last-child {
+  border-bottom: none;
+}
+
+.solvapay-mcp-ledger-row [data-align='right'] {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.solvapay-mcp-attribution {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 400 12px/1.5 var(--font-sans);
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-balance-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.solvapay-mcp-balance-hero {
+  margin: 0;
+  font: var(--solvapay-type-balance);
+  letter-spacing: -1.2px;
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-product-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border-secondary);
+}
+
+.solvapay-mcp-product-row:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.solvapay-mcp-product-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.solvapay-mcp-split-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@container mcp (min-width: 760px) {
+  .solvapay-mcp-card,
+  .solvapay-mcp-hosted {
+    --solvapay-type-balance: 500 36px/1 var(--font-sans);
+    --solvapay-type-title: 600 20px/1.3 var(--font-sans);
+    --solvapay-type-plan-row: 600 17px/1.3 var(--font-sans);
+    --solvapay-card-padding: 24px;
+    --solvapay-section-gap: 20px;
+  }
+
+  .solvapay-mcp-split-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+  }
+
+  .solvapay-mcp-plan-row {
+    padding: 16px 20px;
+  }
+
+  .solvapay-mcp-hosted-layout[data-rail='inline']:has(> .solvapay-mcp-summary-rail) {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 32px;
+    align-items: stretch;
+  }
+
+  .solvapay-mcp-hosted-layout[data-rail='inline'] > .solvapay-mcp-summary-rail {
+    border-bottom: none;
+    border-right: 1px solid var(--color-border-secondary);
+    padding-bottom: 0;
+    padding-right: 32px;
+  }
 }

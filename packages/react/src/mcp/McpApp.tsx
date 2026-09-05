@@ -42,7 +42,15 @@ import type { McpCheckoutViewProps } from './views/McpCheckoutView'
 import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { AppHeader } from './views/AppHeader'
+import { CloseButton } from './views/CloseButton'
 import { McpHostInfoProvider } from './hooks/useHostInfo'
+import { McpDisplayModeProvider } from './hooks/useDisplayMode'
+import {
+  DEFAULT_DISPLAY_MODE_STATE,
+  hostSafeAreaPadding,
+  readDisplayModeState,
+  type McpDisplayModeState,
+} from './display-mode'
 
 /**
  * Minimal host-context shape `<McpApp>` reads. Kept loose so the real
@@ -208,6 +216,9 @@ export function McpApp({
   // and `HOSTS_WITH_MERCHANT_CHROME`). Null until the handshake
   // completes.
   const [hostName, setHostName] = useState<string | null>(null)
+  const [displayModeState, setDisplayModeState] = useState<McpDisplayModeState>(
+    DEFAULT_DISPLAY_MODE_STATE,
+  )
   // Counter tracking client-initiated bootstrap fetches (mount +
   // `refreshBootstrap`). The tool-result subscription consults it so
   // it doesn't double-apply the same payload a fetch is about to
@@ -237,6 +248,7 @@ export function McpApp({
     setInitError(null)
     setBootstrap(null)
     setHostName(null)
+    setDisplayModeState(DEFAULT_DISPLAY_MODE_STATE)
 
     // Tracks whether the opening `toolresult` (or a client fetch) has
     // already applied bootstrap — used to gate the fetch fallback and
@@ -281,8 +293,13 @@ export function McpApp({
     // `@modelcontextprotocol/ext-apps` `App` exposes lifecycle hooks as
     // property setters — mutating the `app` prop is intentional and part
     // of the documented integration contract.
-    app.onhostcontextchanged = (ctx: McpUiHostContextLike) => {
+    const applyHostContext = (ctx: McpUiHostContextLike | undefined) => {
       applyContextRef.current?.(ctx)
+      setDisplayModeState(readDisplayModeState(ctx))
+    }
+
+    app.onhostcontextchanged = (ctx: McpUiHostContextLike) => {
+      applyHostContext(ctx)
     }
     app.onteardown = async () => ({})
 
@@ -321,7 +338,7 @@ export function McpApp({
         )
         hasBootstrap = true
         setBootstrap(fresh)
-      } catch (err) {
+      } catch {
         if (!hasBootstrap && classifyHostEntry(app).kind === 'intent') {
           // Intent entry whose opening notification didn't carry a
           // parseable bootstrap (e.g. MCPJam scrubs `structuredContent`
@@ -332,9 +349,6 @@ export function McpApp({
         }
         // Post-mount non-bootstrap or errored payload — ignore silently.
         // The mounted view survives.
-        if (typeof console !== 'undefined') {
-          console.debug('[solvapay] non-bootstrap tool-result notification:', err)
-        }
       }
     }
 
@@ -368,7 +382,7 @@ export function McpApp({
       try {
         await app.connect()
         if (cancelled) return
-        applyContextRef.current?.(app.getHostContext())
+        applyHostContext(app.getHostContext())
         // Capture the host implementation name now that `connect()` has
         // populated it. `<AppHeader mode="auto">` consumes this via
         // `useHostName()` to decide whether to render (ChatGPT paints
@@ -424,9 +438,7 @@ export function McpApp({
     if (typeof document === 'undefined') return
     if (!iconUrl) return
     const MANAGED_ATTR = 'data-solvapay-favicon'
-    const existing = document.head.querySelector<HTMLLinkElement>(
-      `link[${MANAGED_ATTR}]`,
-    )
+    const existing = document.head.querySelector<HTMLLinkElement>(`link[${MANAGED_ATTR}]`)
     const link = existing ?? document.createElement('link')
     link.setAttribute(MANAGED_ATTR, '')
     link.rel = 'icon'
@@ -440,9 +452,7 @@ export function McpApp({
     // icon swap is invisible. Managed via a separate `data-*` attr so
     // favicon + preload links don't clobber each other.
     const PRELOAD_ATTR = 'data-solvapay-icon-preload'
-    const existingPreload = document.head.querySelector<HTMLLinkElement>(
-      `link[${PRELOAD_ATTR}]`,
-    )
+    const existingPreload = document.head.querySelector<HTMLLinkElement>(`link[${PRELOAD_ATTR}]`)
     const preload = existingPreload ?? document.createElement('link')
     preload.setAttribute(PRELOAD_ATTR, '')
     preload.rel = 'preload'
@@ -457,44 +467,41 @@ export function McpApp({
     }
   }, [iconUrl])
 
-  const providerConfig = useMemo(
-    () => {
-      // Build the resolved config first so every `seedMcpCaches` call
-      // (first render + post-refresh) runs against the same object the
-      // hooks later read via `configRef.current` — otherwise
-      // `createTransportCacheKey` could in principle compute a
-      // different key at refresh-time than at mount-time.
-      const resolved: SolvaPayConfig = {
-        // `SolvaPayProvider` short-circuits its fetch pipeline when there's
-        // no auth token, which means our `checkPurchase` override would
-        // never run. In the MCP App the real identity lives server-side on
-        // the OAuth bridge's `customer_ref`, so we just need to tell the
-        // provider "yes, you're authenticated". Returning a sentinel token
-        // is enough to flip `isAuthenticated` true and unlock the refetch
-        // path.
-        auth: {
-          adapter: {
-            getToken: async () => 'mcp-session',
-            getUserId: async () => initial?.customerRef ?? null,
-          },
+  const providerConfig = useMemo(() => {
+    // Build the resolved config first so every `seedMcpCaches` call
+    // (first render + post-refresh) runs against the same object the
+    // hooks later read via `configRef.current` — otherwise
+    // `createTransportCacheKey` could in principle compute a
+    // different key at refresh-time than at mount-time.
+    const resolved: SolvaPayConfig = {
+      // `SolvaPayProvider` short-circuits its fetch pipeline when there's
+      // no auth token, which means our `checkPurchase` override would
+      // never run. In the MCP App the real identity lives server-side on
+      // the OAuth bridge's `customer_ref`, so we just need to tell the
+      // provider "yes, you're authenticated". Returning a sentinel token
+      // is enough to flip `isAuthenticated` true and unlock the refetch
+      // path.
+      auth: {
+        adapter: {
+          getToken: async () => 'mcp-session',
+          getUserId: async () => initial?.customerRef ?? null,
         },
-        transport,
-        initial,
-        refreshInitial: async (): Promise<SolvaPayProviderInitial | null> => {
-          // Re-fetch the bootstrap payload by replaying the host-invoked
-          // intent tool (`fetchMcpBootstrap` infers it from host context —
-          // defaulting to `upgrade` when none is present). Re-seeds the
-          // module caches so every hook sees the refreshed snapshot.
-          const fresh = await fetchMcpBootstrap(app)
-          const next = bootstrapToInitial(fresh)
-          seedMcpCaches(next, resolved)
-          return next
-        },
-      }
-      return resolved
-    },
-    [transport, initial, app],
-  )
+      },
+      transport,
+      initial,
+      refreshInitial: async (): Promise<SolvaPayProviderInitial | null> => {
+        // Re-fetch the bootstrap payload by replaying the host-invoked
+        // intent tool (`fetchMcpBootstrap` infers it from host context —
+        // defaulting to `upgrade` when none is present). Re-seeds the
+        // module caches so every hook sees the refreshed snapshot.
+        const fresh = await fetchMcpBootstrap(app)
+        const next = bootstrapToInitial(fresh)
+        seedMcpCaches(next, resolved)
+        return next
+      },
+    }
+    return resolved
+  }, [transport, initial, app])
 
   // Seed the module-level hook caches synchronously during render,
   // before any child mounts. Children (`useMerchant` / `useProduct` /
@@ -513,7 +520,7 @@ export function McpApp({
   // loading → ready transitions. Besides re-seeding the module-level
   // hook caches, we must also update the `bootstrap` state because the
   // shell reads `bootstrap.view` + `bootstrap.customer` to pick the
-  // surface and sidebar state: without `setBootstrap`, a refresh that
+  // surface and provenance line: without `setBootstrap`, a refresh that
   // reveals new capabilities (e.g. a freshly-topped-up balance) would
   // leave the shell stale.
   const refreshBootstrap = useMemo(
@@ -547,69 +554,62 @@ export function McpApp({
   const effectiveOnClose = onClose ?? defaultOnClose
 
   const effectiveBootstrap =
-    bootstrap && productRefOverride
-      ? { ...bootstrap, productRef: productRefOverride }
-      : bootstrap
+    bootstrap && productRefOverride ? { ...bootstrap, productRef: productRefOverride } : bootstrap
 
   return (
     <McpHostInfoProvider hostName={hostName}>
-      <main className="solvapay-mcp-main">
-        {/*
-         * `<AppHeader>` lives above the conditional provider tree so
-         * the merchant mark persists across loading / error / ready
-         * states. Pass `bootstrap.merchant` directly: the header's
-         * cache lookup would return `null` here because this slot is
-         * outside the `<SolvaPayProvider>` subtree (no
-         * `SolvaPayContext` in scope), so without the prop we'd fall
-         * back to the `SolvaPay` / `SP` placeholder even after
-         * bootstrap resolves.
-         */}
-        <AppHeader
-          classNames={classNames}
-          merchant={(effectiveBootstrap?.merchant as Merchant | undefined) ?? null}
-        />
-        {initError ? (
-          <div className={`${cx.card} ${cx.error}`.trim()}>
-            <h2 className={cx.heading}>Unable to load SolvaPay</h2>
-            <p>{initError}</p>
+      <McpDisplayModeProvider value={displayModeState}>
+        <main
+          className="solvapay-mcp-main"
+          data-display-mode={displayModeState.displayMode}
+          style={hostSafeAreaPadding(displayModeState.safeAreaInsets)}
+        >
+          {/*
+           * Chrome row sits above the conditional provider tree so the
+           * merchant mark and close control persist across loading / error
+           * / ready states. `<AppHeader>` takes `bootstrap.merchant`
+           * directly: the header's cache lookup would return `null` here
+           * because this slot is outside the `<SolvaPayProvider>` subtree.
+           */}
+          <div className="solvapay-mcp-chrome-row">
+            {displayModeState.displayMode !== 'fullscreen' ? (
+              <AppHeader
+                classNames={classNames}
+                merchant={(effectiveBootstrap?.merchant as Merchant | undefined) ?? null}
+              />
+            ) : null}
+            <CloseButton classNames={classNames} onClose={effectiveOnClose} />
           </div>
-        ) : !effectiveBootstrap ? (
-          // Intent-tool / fallback entries show a loading card while the
-          // in-flight `fetchMcpBootstrap` call resolves. Data-tool iframe
-          // entries no longer exist (payable merchant tools don't advertise
-          // `_meta.ui.resourceUri`) so this is always legitimate user
-          // feedback for an in-flight tool call.
-          //
-          // The empty `.solvapay-mcp-shell-sidebar` sibling makes the
-          // `:has(.solvapay-mcp-shell-sidebar)` cap-lift in styles.css
-          // match from the first paint, so the `.solvapay-mcp-main` cap
-          // stays at 900px through the loading → mounted transition
-          // instead of snapping 520 → 900 once `<McpAppShell>` arrives.
-          // The placeholder stays `display: none` (the `@container
-          // (min-width: 900px)` query has no `.solvapay-mcp-shell`
-          // ancestor here so it never fires) and `aria-hidden` keeps it
-          // out of the AT tree.
-          <>
+          {initError ? (
+            <div className={`${cx.card} ${cx.error}`.trim()}>
+              <h2 className={cx.heading}>Unable to load SolvaPay</h2>
+              <p>{initError}</p>
+            </div>
+          ) : !effectiveBootstrap ? (
+            // Intent-tool / fallback entries show a loading card while the
+            // in-flight `fetchMcpBootstrap` call resolves. Data-tool iframe
+            // entries no longer exist (payable merchant tools don't advertise
+            // `_meta.ui.resourceUri`) so this is always legitimate user
+            // feedback for an in-flight tool call.
             <div className={cx.card}>
               <p>Loading…</p>
             </div>
-            <aside className="solvapay-mcp-shell-sidebar" aria-hidden="true" />
-          </>
-        ) : (
-          <SolvaPayProvider config={providerConfig}>
-            <McpBridgeProvider app={app} messageOnSuccess={messageOnSuccess}>
-              <McpAppShell
-                bootstrap={effectiveBootstrap}
-                views={views}
-                classNames={classNames}
-                {...(footer !== undefined ? { footer } : {})}
-                onRefreshBootstrap={refreshBootstrap}
-                onClose={effectiveOnClose}
-              />
-            </McpBridgeProvider>
-          </SolvaPayProvider>
-        )}
-      </main>
+          ) : (
+            <SolvaPayProvider config={providerConfig}>
+              <McpBridgeProvider app={app} messageOnSuccess={messageOnSuccess}>
+                <McpAppShell
+                  bootstrap={effectiveBootstrap}
+                  views={views}
+                  classNames={classNames}
+                  {...(footer !== undefined ? { footer } : {})}
+                  onRefreshBootstrap={refreshBootstrap}
+                  onClose={effectiveOnClose}
+                />
+              </McpBridgeProvider>
+            </SolvaPayProvider>
+          )}
+        </main>
+      </McpDisplayModeProvider>
     </McpHostInfoProvider>
   )
 }

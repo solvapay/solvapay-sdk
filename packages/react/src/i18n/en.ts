@@ -150,7 +150,8 @@ export const enCopy: SolvaPayCopy = {
     invalidThreshold: 'Enter a valid balance threshold.',
     thresholdTooLow: 'Balance threshold must be greater than zero.',
     minTopupAmount: 'Top-up amount must be at least {amount}.',
-    topupBelowThreshold: 'Top-up amount must be at least your balance threshold ({amount}).',
+    deepDrawdownExplainer:
+      'If your balance has fallen well below the threshold, we add a multiple of this amount in one charge.',
     invalidMaxMonthlySpend: 'Maximum monthly spend must be a positive amount.',
     maxMonthlySpendBelowTopup:
       'Maximum monthly spend must be at least your top-up amount ({amount}).',
@@ -236,6 +237,13 @@ export const enCopy: SolvaPayCopy = {
     pickPlanButton: 'Pick a plan',
     upgradeButton: 'Upgrade',
     changePlanButton: 'Change plan',
+    creditBalance: 'Credit balance',
+    addFunds: 'Add funds',
+    autoRechargeOn: 'Auto-recharge on',
+    autoRechargeOff: 'Auto-recharge off',
+    turnOn: 'Turn on',
+    activeProducts: 'Active products',
+    worksAcross: 'Works across every {merchant} product.',
   },
   customerPortal: {
     launchButton: 'Manage account',

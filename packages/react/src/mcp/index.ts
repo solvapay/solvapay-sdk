@@ -79,6 +79,13 @@ export type { McpAppShellProps } from './McpAppShell'
 export type { McpViewKind, McpTabKind } from './view-kind'
 
 export {
+  deriveActiveProducts,
+  formatProductTerms,
+  formatSince,
+} from './derive-active-products'
+export type { ActiveProduct } from './derive-active-products'
+
+export {
   resolvePlanShape,
   resolveActivationStrategy,
   resolvePlanActions,
@@ -112,26 +119,71 @@ export {
   type McpHostInfoProviderProps,
 } from './hooks/useHostInfo'
 
+export {
+  McpDisplayModeProvider,
+  useDisplayMode,
+  type McpDisplayModeProviderProps,
+} from './hooks/useDisplayMode'
+
+export {
+  DEFAULT_DISPLAY_MODE_STATE,
+  MCP_DISPLAY_MODES,
+  SOLVAPAY_MCP_APP_CAPABILITIES,
+  hostSafeAreaPadding,
+  isMcpDisplayMode,
+  readDisplayModeState,
+} from './display-mode'
+export type {
+  McpContainerDimensions,
+  McpDisplayMode,
+  McpDisplayModeState,
+  McpSafeAreaInsets,
+} from './display-mode'
+
+export { CloseButton, type CloseButtonProps } from './views/CloseButton'
+
 export { McpCheckoutView } from './views/McpCheckoutView'
 export type { McpCheckoutViewProps } from './views/McpCheckoutView'
 
 export { McpAccountView } from './views/McpAccountView'
 export type { McpAccountViewProps } from './views/McpAccountView'
 
-export { McpCustomerDetailsCard, McpSellerDetailsCard } from './views/detail-cards'
-export type {
-  McpCustomerDetailsCardProps,
-  McpSellerDetailsCardProps,
-} from './views/detail-cards'
+export { McpProvenanceLine, formatProvenanceLine } from './views/McpProvenanceLine'
+export type { McpProvenanceLineProps } from './views/McpProvenanceLine'
 
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'
+
+export { McpLimitReached } from './views/McpLimitReached'
 
 // Paywall / nudge surfaces were removed as part of the text-only
 // paywall refactor. Merchant paywall / nudge responses are plain
 // narrations now — hosts render them in text and the widget iframe is
 // reserved for deliberate intent-tool calls (`upgrade` /
 // `manage_account` / `topup`).
+//
+// `McpSellerDetailsCard` / `McpCustomerDetailsCard` and
+// `McpAccountView.hideDetailCards` were removed with the sidebar. The
+// shell paints one provenance line (`McpProvenanceLine`) instead. See
+// `packages/react/docs/mcp-app-architecture.md`.
 
 export { resolveMcpClassNames } from './views/types'
 export type { McpViewClassNames } from './views/types'
+
+export {
+  AmountLadder,
+  AttributionFooter,
+  Eyebrow,
+  Field,
+  LedgerRow,
+  LineItem,
+  Pill,
+  PlanRow,
+  PresetTile,
+  Section,
+  SplitRow,
+  StatusDot,
+  Toggle,
+  sanitizeDecimalInput,
+} from './primitives'
+export type { AmountLadderRow } from './primitives'

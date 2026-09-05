@@ -64,8 +64,7 @@ What that line hides (from `@solvapay/mcp`):
 
 The client bundle entrypoint. Creates the `@modelcontextprotocol/ext-apps`
 `App`, mounts `<McpApp app={app} applyContext={...} />`. Everything
-else (provider setup, view routing, the tabbed shell, the responsive
-sidebar) lives inside `<McpApp>`.
+else (provider setup, view routing, the shell) lives inside `<McpApp>`.
 
 ```tsx
 const app = new App({ name: 'SolvaPay checkout', version: '1.0.0' })
@@ -83,8 +82,8 @@ What that line hides (from `@solvapay/react/mcp`):
   `useMerchant` / `useProduct` / `usePlans` / `usePaymentMethod` never
   fire a first-mount fetch.
 - `<McpAppShell>` — surface-routed (account / checkout / topup), no tab
-  strip. Persistent **Seller** + **Your account** sidebar on wide
-  iframes; inline detail cards below the primary card on narrow frames.
+  strip. One provenance line (`{merchant} · Paying as {email}`) instead
+  of a Seller / Your account sidebar.
   `Terms · Privacy · Provided by SolvaPay` footer.
 - Paywall narration — merchant paywalled data tools no longer open
   the widget iframe on a gate. Instead the gate's

@@ -61,6 +61,11 @@ describe('useTopupAmountSelector', () => {
       expect(result.current.currencySymbol).toBe('$')
     })
 
+    it('returns kr for SEK', () => {
+      const { result } = renderHook(() => useTopupAmountSelector({ currency: 'SEK' }))
+      expect(result.current.currencySymbol).toBe('kr')
+    })
+
     it('returns the currency code for invalid currencies', () => {
       const { result } = renderHook(() => useTopupAmountSelector({ currency: 'INVALID' }))
       expect(result.current.currencySymbol).toBe('INVALID')
