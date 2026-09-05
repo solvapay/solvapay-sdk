@@ -41,6 +41,7 @@ import { useMcpBridge } from '../bridge'
 import { useHostLocale } from '../useHostLocale'
 import { useStripeProbe } from '../useStripeProbe'
 import { BackLink } from './BackLink'
+import { McpHostedBody, McpHostedLayout, McpSummaryRail } from './McpHosted'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 const FALLBACK_TOPUP_CURRENCY = 'USD'
@@ -219,14 +220,18 @@ function EmbeddedTopup({
 
     return (
       <section className={cx.card} aria-label="Top-up payment">
+        <McpHostedLayout>
+          <McpSummaryRail>
+            <section className={cx.stack}>
+              <p className={cx.muted}>Pay with card</p>
+              <p className={cx.topupAmountHero}>{displayAmount}</p>
+              {contextParts.length > 0 ? (
+                <p className={cx.topupBalanceContext}>{contextParts.join(' · ')}</p>
+              ) : null}
+            </section>
+          </McpSummaryRail>
+          <McpHostedBody>
         <BackLink label="Change amount" onClick={() => setScreen({ step: 'amount' })} />
-        <section className={cx.stack}>
-          <p className={cx.muted}>Pay with card</p>
-          <p className={cx.topupAmountHero}>{displayAmount}</p>
-          {contextParts.length > 0 ? (
-            <p className={cx.topupBalanceContext}>{contextParts.join(' · ')}</p>
-          ) : null}
-        </section>
         <TopupForm.Root
           amount={committedAmountMinor}
           currency={currency}
@@ -273,6 +278,8 @@ function EmbeddedTopup({
             Top up {displayAmount}
           </TopupForm.SubmitButton>
         </TopupForm.Root>
+          </McpHostedBody>
+        </McpHostedLayout>
       </section>
     )
   }

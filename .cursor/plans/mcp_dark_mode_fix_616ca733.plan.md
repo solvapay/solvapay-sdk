@@ -9,10 +9,10 @@ todos:
     content: Bridge `--solvapay-*` onto MCP spec vars inside `.solvapay-mcp-main` in `packages/react/src/mcp/styles.css` (host palette flows into primitives).
     status: pending
   - id: mcp-dark-overrides
-    content: Declare non-spec custom vars in `:root` and override them in `[data-theme="dark"]` inside `packages/react/src/mcp/styles.css`.
+    content: Invented `--color-*` names were substituted for spec tokens in hosted Phase 11 token seam. Remaining work is `[data-theme="dark"]` / `prefers-color-scheme` fallbacks only for tokens the host may not populate.
     status: pending
   - id: shadow-theme
-    content: Replace hardcoded shadows on `.solvapay-mcp-card` and `.solvapay-mcp-tour-popover` with `--shadow-sm` / `--shadow-lg`, with dark overrides. (Card shadow was dropped in hosted Phase 11 host-blend — only the tour popover remains.)
+    content: Tour popover now uses `--shadow-lg`. Add a dark `--shadow-lg` override. Card shadow stays dropped.
     status: pending
   - id: verification-doc
     content: Document the manual dark-mode verification recipe in `examples/mcp-checkout-app/README.md`.
@@ -25,7 +25,7 @@ isProject: false
 `applyDocumentTheme("dark")` only sets `data-theme="dark"` and `color-scheme: dark` on `<html>` — swapping CSS variables is the SDK's job. Today neither stylesheet ships a dark palette, so:
 
 - `@solvapay/react/styles.css` primitives (`PlanSelector`, `PaymentForm`, `AmountPicker`, `CurrentPlanCard`, `CancelledPlanNotice`, `UsageMeter`, `TopupForm`, `BalanceBadge`, `CreditGate`, `PaywallNotice`, `CheckoutSummary`) stay light because `--solvapay-surface/accent/muted/border/...` are hardcoded to light HSL values with no override. This is what produces the white "Pay as you go" / "Unlimited" cards in the Claude Desktop screenshot.
-- `@solvapay/react/mcp/styles.css` uses a mix of MCP spec vars (good — hosts override those) and **non-spec custom vars** (`--color-background-accent|subtle|elevated|raised|success-subtle`, `--color-border-default`, `--color-text-on-accent|on-primary`) with hardcoded light fallbacks that hosts never populate.
+- `@solvapay/react/mcp/styles.css` now uses MCP spec vars (`--color-background-inverse`, `--color-text-inverse`, `--color-background-secondary` / `-tertiary`, `--color-border-primary`). Light hex fallbacks remain for hosts that omit a token; they still need a dark fallback when `data-theme="dark"` is set without host vars.
 - `.solvapay-mcp-card`, `.solvapay-mcp-tour-popover` also hardcode `rgba(15,23,42,0.05)` / `rgba(16,24,40,0.12)` box-shadows tuned for light surfaces.
 
 ## Fix

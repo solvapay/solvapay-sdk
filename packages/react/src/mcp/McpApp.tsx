@@ -42,6 +42,7 @@ import type { McpCheckoutViewProps } from './views/McpCheckoutView'
 import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { AppHeader } from './views/AppHeader'
+import { CloseButton } from './views/CloseButton'
 import { FullViewButton } from './views/FullViewButton'
 import { McpHostInfoProvider } from './hooks/useHostInfo'
 import { McpDisplayModeProvider } from './hooks/useDisplayMode'
@@ -596,10 +597,13 @@ export function McpApp({
            * `<SolvaPayProvider>` subtree.
            */}
           <div className="solvapay-mcp-chrome-row">
-            <AppHeader
-              classNames={classNames}
-              merchant={(effectiveBootstrap?.merchant as Merchant | undefined) ?? null}
-            />
+            {displayModeState.displayMode !== 'fullscreen' ? (
+              <AppHeader
+                classNames={classNames}
+                merchant={(effectiveBootstrap?.merchant as Merchant | undefined) ?? null}
+              />
+            ) : null}
+            <CloseButton classNames={classNames} onClose={effectiveOnClose} />
             <FullViewButton classNames={classNames} />
           </div>
           {initError ? (

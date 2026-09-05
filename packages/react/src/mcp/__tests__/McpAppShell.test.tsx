@@ -385,6 +385,44 @@ describe('<McpAppShell>', () => {
     expect(screen.getByText('Acme · Paying as demo@acme.test')).toBeTruthy()
   })
 
+  it('wraps the body in a hosted column and stamps the surface kind', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const { container, rerender } = render(
+      <SolvaPayContext.Provider value={ctx}>
+        <McpAppShell bootstrap={{ ...baseBootstrap, view: 'checkout' }} />
+      </SolvaPayContext.Provider>,
+    )
+    const hosted = container.querySelector('.solvapay-mcp-hosted')
+    expect(hosted).toBeTruthy()
+    expect(hosted).toHaveAttribute('data-mcp-surface', 'payment')
+
+    rerender(
+      <SolvaPayContext.Provider value={ctx}>
+        <McpAppShell
+          bootstrap={{ ...baseBootstrap, view: 'account', customer: authedCustomer }}
+        />
+      </SolvaPayContext.Provider>,
+    )
+    expect(container.querySelector('.solvapay-mcp-hosted')).toHaveAttribute(
+      'data-mcp-surface',
+      'management',
+    )
+  })
+
+  it('puts provenance in a trailing context rail on the account surface', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    const { container } = renderShell({ view: 'account', customer: authedCustomer }, ctx)
+    const rail = container.querySelector('.solvapay-mcp-context-rail')
+    expect(rail).toBeTruthy()
+    expect(rail?.textContent).toContain('Acme · Paying as demo@acme.test')
+    const hosted = container.querySelector('.solvapay-mcp-hosted')
+    const body = container.querySelector('.solvapay-mcp-shell-body')
+    expect(hosted && body && rail).toBeTruthy()
+    expect(body?.compareDocumentPosition(rail as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('forwards `onClose` to the checkout view', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)

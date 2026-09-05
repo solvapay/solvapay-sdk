@@ -46,8 +46,8 @@ body {
 /* Fill the host container. Anthropic: "Apps always fill the
  * container width — there are no fixed breakpoints." The primary
  * column's *text measure* is capped on `.solvapay-mcp-shell-body`,
- * not the whole layout. Fullscreen drops any remaining constraint
- * via `[data-display-mode='fullscreen']` below. */
+ * not the whole layout. Fullscreen becomes a centered 1000px
+ * hosted column (see `[data-display-mode='fullscreen']` below). */
 .solvapay-mcp-main {
   display: flex;
   flex-direction: column;
@@ -67,7 +67,8 @@ body {
   display: none;
 }
 
-.solvapay-mcp-chrome-row .solvapay-mcp-full-view {
+.solvapay-mcp-chrome-row .solvapay-mcp-full-view,
+.solvapay-mcp-chrome-row .solvapay-mcp-close {
   margin-left: auto;
   width: auto;
   flex: 0 0 auto;
@@ -206,10 +207,10 @@ body {
 .solvapay-mcp-currency-switch {
   flex: 0 0 auto;
   padding: 4px 8px;
-  border: 1px solid var(--color-border, #e2e8f0);
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
   border-radius: 6px;
-  background: var(--color-background, #ffffff);
-  color: var(--color-text, #0f172a);
+  background: var(--color-background-primary, #ffffff);
+  color: var(--color-text-primary, #0f172a);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -260,8 +261,8 @@ body {
   padding: 10px 16px;
   border-radius: var(--border-radius-md, 8px);
   border: none;
-  background: var(--color-background-accent, #0f172a);
-  color: var(--color-text-on-accent, #ffffff);
+  background: var(--color-background-inverse, #0f172a);
+  color: var(--color-text-inverse, #ffffff);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -310,7 +311,7 @@ body {
   width: 16px;
   height: 16px;
   border: 2px solid var(--color-border-secondary, #e2e8f0);
-  border-top-color: var(--color-background-accent, #0f172a);
+  border-top-color: var(--color-background-inverse, #0f172a);
   border-radius: 50%;
   animation: solvapay-mcp-spin 0.8s linear infinite;
 }
@@ -429,13 +430,13 @@ body {
 }
 
 .solvapay-mcp-amount-option:hover:not([data-state='selected']):not(:disabled) {
-  background: var(--color-background-subtle, #f9fafb);
+  background: var(--color-background-secondary, #f9fafb);
 }
 
 .solvapay-mcp-amount-option[data-state='selected'] {
-  border-color: var(--color-background-accent, #0f172a);
-  background: var(--color-background-accent, #0f172a);
-  color: var(--color-text-on-accent, #ffffff);
+  border-color: var(--color-background-inverse, #0f172a);
+  background: var(--color-background-inverse, #0f172a);
+  color: var(--color-text-inverse, #ffffff);
 }
 
 /* `.solvapay-mcp-amount-custom` now wraps the bordered row — currency
@@ -675,11 +676,11 @@ body {
 
 .solvapay-mcp-tab[data-active='true'] {
   color: var(--color-text-primary, #0f172a);
-  border-bottom-color: var(--color-background-accent, #0f172a);
+  border-bottom-color: var(--color-background-inverse, #0f172a);
 }
 
 .solvapay-mcp-tab:focus-visible {
-  outline: 2px solid var(--color-background-accent, #0f172a);
+  outline: 2px solid var(--color-background-inverse, #0f172a);
   outline-offset: -2px;
   border-radius: 6px;
 }
@@ -708,12 +709,36 @@ body {
   gap: 16px;
 }
 
-/* Fullscreen: fill the host container, one scroll owner on `main`,
- * same primary-left / rail-right law. Host chrome (close) stays
- * outside the iframe; safe-area insets are applied on `#root`. */
+/* Fullscreen is the hosted page, not a stretched widget: one scroll
+ * owner on `main`, a centered 1000px column, payment rail 340 /
+ * management rail 300. Below 1000px of host width the container
+ * query falls back to the inline single-column stack. Host chrome
+ * (window close) stays outside the iframe; our Close control sits
+ * in the chrome row. Safe-area insets are applied on `#root`. */
 .solvapay-mcp-main[data-display-mode='fullscreen'] {
   min-block-size: 100%;
   overflow: auto;
+  container-type: inline-size;
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-hosted {
+  max-width: 1000px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-app-header {
+  display: none;
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-shell-body {
+  max-inline-size: none;
+}
+
+.solvapay-mcp-main[data-display-mode='fullscreen']
+  .solvapay-mcp-card:has(.solvapay-mcp-hosted-layout) {
+  padding: 0;
+  border: none;
 }
 
 html:has(.solvapay-mcp-main[data-display-mode='fullscreen']),
@@ -725,6 +750,63 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 .solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-shell {
   flex: 1;
   min-height: 0;
+}
+
+.solvapay-mcp-hosted-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.solvapay-mcp-summary-rail,
+.solvapay-mcp-context-rail {
+  min-width: 0;
+}
+
+.solvapay-mcp-summary-rail {
+  border-bottom: 1px solid var(--color-border-secondary, #e2e8f0);
+  padding-bottom: 16px;
+}
+
+.solvapay-mcp-context-rail {
+  border-top: 1px solid var(--color-border-secondary, #e2e8f0);
+  padding-top: 16px;
+}
+
+.solvapay-mcp-hosted-body {
+  min-width: 0;
+}
+
+@container (min-width: 1000px) {
+  .solvapay-mcp-hosted-layout:has(> .solvapay-mcp-summary-rail) {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 56px;
+    align-items: start;
+  }
+
+  .solvapay-mcp-hosted-layout:has(> .solvapay-mcp-context-rail) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 56px;
+    align-items: start;
+  }
+
+  .solvapay-mcp-summary-rail {
+    border-bottom: none;
+    border-right: 1px solid var(--color-border-secondary, #e2e8f0);
+    padding-bottom: 0;
+    padding-right: 56px;
+    padding-top: 56px;
+  }
+
+  .solvapay-mcp-context-rail {
+    border-top: none;
+    border-left: 1px solid var(--color-border-secondary, #e2e8f0);
+    padding-top: 56px;
+    padding-left: 40px;
+  }
 }
 
 /*
@@ -859,9 +941,9 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   pointer-events: auto;
   padding: 12px 16px;
   border-radius: 8px;
-  background: var(--color-background-elevated, #ffffff);
-  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
-  border: 1px solid var(--color-border-default, #e4e7ec);
+  background: var(--color-background-tertiary, #ffffff);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(16, 24, 40, 0.12));
+  border: 1px solid var(--color-border-primary, #e4e7ec);
 }
 
 .solvapay-mcp-tour-title {
@@ -896,8 +978,8 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 }
 
 .solvapay-mcp-tour-next {
-  background: var(--color-background-primary, #0f172a);
-  color: var(--color-text-on-primary, #ffffff);
+  background: var(--color-background-inverse, #0f172a);
+  color: var(--color-text-inverse, #ffffff);
 }
 
 .solvapay-mcp-tour-progress {
@@ -907,7 +989,7 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 .solvapay-mcp-tour-replay {
   appearance: none;
   background: none;
-  border: 1px solid var(--color-border-default, #e4e7ec);
+  border: 1px solid var(--color-border-primary, #e4e7ec);
   border-radius: 999px;
   width: 24px;
   height: 24px;
@@ -942,7 +1024,7 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   padding: 12px;
   border-radius: var(--border-radius-md, 8px);
   border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-subtle, #f9fafb);
+  background: var(--color-background-secondary, #f9fafb);
 }
 
 .solvapay-mcp-checkout-banner-title {
@@ -983,7 +1065,7 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   padding: 12px;
   border-radius: var(--border-radius-md, 8px);
   border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-subtle, #f9fafb);
+  background: var(--color-background-secondary, #f9fafb);
 }
 
 .solvapay-mcp-checkout-order-summary-row {
@@ -1024,7 +1106,7 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   padding: 12px;
   border-radius: var(--border-radius-md, 8px);
   border: 1px solid var(--color-border-secondary, #e2e8f0);
-  background: var(--color-background-subtle, #f9fafb);
+  background: var(--color-background-secondary, #f9fafb);
 }
 
 .solvapay-mcp-checkout-receipt-row {
@@ -1072,7 +1154,7 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 .solvapay-mcp-checkout-manage-pointer code {
   padding: 1px 6px;
   border-radius: 4px;
-  background: var(--color-background-subtle, #f9fafb);
+  background: var(--color-background-secondary, #f9fafb);
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;

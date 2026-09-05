@@ -38,4 +38,25 @@ describe('MCP widget host blend', () => {
     expect(card).not.toMatch(/background:/)
     expect(card).not.toMatch(/box-shadow:/)
   })
+
+  it('does not invent --color-* names the MCP Apps spec does not define', () => {
+    const invented = [
+      '--color-background-accent',
+      '--color-background-subtle',
+      '--color-background-elevated',
+      '--color-background-raised',
+      '--color-background-success-subtle',
+      '--color-border-default',
+      '--color-text-on-accent',
+      '--color-text-on-primary',
+      '--color-border,',
+      '--color-background,',
+      '--color-text,',
+    ]
+    for (const token of invented) {
+      expect(STYLES).not.toContain(token)
+    }
+    expect(STYLES).toMatch(/--color-background-inverse/)
+    expect(STYLES).toMatch(/--color-text-inverse/)
+  })
 })

@@ -226,4 +226,22 @@ describe('<McpTopupView> — topup currency picker', () => {
     await screen.findByText('Add credits')
     expect((screen.getByPlaceholderText('0.00') as HTMLInputElement).value).toBe('25')
   })
+
+  it('leads the payment step with a summary rail before the card form', async () => {
+    const { container } = renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByTestId('topup-form-stub')
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(rail).toBeTruthy()
+    expect(action).toBeTruthy()
+    expect(rail?.textContent).toMatch(/\$25/)
+    expect(
+      rail && action && (rail.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBeTruthy()
+  })
 })

@@ -35,11 +35,14 @@ Both compound and primitive access are first-class:
 - `<McpApp app={app} />` is the turnkey 5-line entrypoint for any MCP App
   built on `@modelcontextprotocol/ext-apps`. It mounts a `SolvaPayProvider`
   and wraps a thin `<McpAppShell>` around `<McpViewRouter>`.
-- `<McpAppShell>` — in-iframe layout (provenance line / body / footer)
-  that surface-routes by `bootstrap.view`. There is no tab strip, no
-  identity sidebar, and no user-driven cross-surface navigation; the
-  in-session mutations are limited to `account → topup` (credits CTA)
-  and `account → checkout` (via "Change plan").
+- `<McpAppShell>` — in-iframe layout (hosted column / provenance /
+  body / footer) that surface-routes by `bootstrap.view`. There is no
+  tab strip, no identity sidebar, and no user-driven cross-surface
+  navigation; the in-session mutations are limited to `account →
+  topup` (credits CTA) and `account → checkout` (via "Change plan").
+  Inline stays a single-column stack. Fullscreen is the hosted page:
+  a centered 1000px column, payment rail 340 / management rail 300,
+  no in-widget header — close control and attribution footer only.
 - `<McpViewRouter>` — single `switch` on `McpViewKind` that resolves each
   view from `views?.*` overrides (falling back to the built-in primitive).
   Exported for integrators that own their own shell.

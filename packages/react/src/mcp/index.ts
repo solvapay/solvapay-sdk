@@ -136,6 +136,7 @@ export type {
 } from './display-mode'
 
 export { FullViewButton, type FullViewButtonProps } from './views/FullViewButton'
+export { CloseButton, type CloseButtonProps } from './views/CloseButton'
 
 export { McpCheckoutView } from './views/McpCheckoutView'
 export type { McpCheckoutViewProps } from './views/McpCheckoutView'

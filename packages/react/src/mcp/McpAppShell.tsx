@@ -12,7 +12,9 @@
  *  - `topup`    — amount picker + Stripe.
  *
  * Identity is a single provenance line (`{merchant} · Paying as {email}`),
- * not a Seller / Your account sidebar.
+ * not a Seller / Your account sidebar. Fullscreen wraps the surface in
+ * a 1000px hosted column; payment leads a summary rail, account trails
+ * a context rail.
  *
  * The legacy `'paywall'` / `'nudge'` surfaces were removed with the
  * text-only paywall refactor — merchant paywall / nudge responses are
@@ -29,6 +31,7 @@ import type { McpViewKind } from './view-kind'
 import { useCustomer } from '../hooks/useCustomer'
 import { McpAccountView, type McpAccountViewProps } from './views/McpAccountView'
 import { McpCheckoutView, type McpCheckoutViewProps } from './views/McpCheckoutView'
+import { McpContextRail, McpHostedColumn, McpHostedLayout } from './views/McpHosted'
 import { McpProvenanceLine } from './views/McpProvenanceLine'
 import { McpTopupView, type McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
@@ -103,21 +106,32 @@ export function McpAppShell({
   const effectiveView: McpViewKind = overrideView ?? resolvedView
 
   const showFooter = footer ?? true
+  const surface = effectiveView === 'account' ? 'management' : 'payment'
+  const provenance = bootstrap.customer ? (
+    <ShellProvenance merchantName={bootstrap.merchant.displayName} />
+  ) : null
 
   return (
     <div className="solvapay-mcp-shell">
-      {bootstrap.customer ? <ShellProvenance merchantName={bootstrap.merchant.displayName} /> : null}
-      <div className="solvapay-mcp-shell-body">
-        <McpViewRouter
-          view={effectiveView}
-          bootstrap={bootstrap}
-          views={views}
-          classNames={classNames}
-          onSurfaceChange={setOverrideView}
-          onRefreshBootstrap={onRefreshBootstrap}
-          onClose={onClose}
-        />
-      </div>
+      <McpHostedColumn surface={surface}>
+        {surface === 'payment' ? provenance : null}
+        <McpHostedLayout>
+          <div className="solvapay-mcp-shell-body">
+            <McpViewRouter
+              view={effectiveView}
+              bootstrap={bootstrap}
+              views={views}
+              classNames={classNames}
+              onSurfaceChange={setOverrideView}
+              onRefreshBootstrap={onRefreshBootstrap}
+              onClose={onClose}
+            />
+          </div>
+          {surface === 'management' && provenance ? (
+            <McpContextRail>{provenance}</McpContextRail>
+          ) : null}
+        </McpHostedLayout>
+      </McpHostedColumn>
 
       {showFooter ? <ShellFooter classNames={classNames} /> : null}
     </div>

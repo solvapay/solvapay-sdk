@@ -972,6 +972,22 @@ describe('<McpCheckoutView> — CSS hooks', () => {
     expect(container.querySelector('.solvapay-mcp-checkout-save-card')).toBeTruthy()
   })
 
+  it('PaygPaymentStep leads with a 340px summary rail before the action column', async () => {
+    const { container } = await advanceToPaygPayment()
+    const hosted = container.querySelector('.solvapay-mcp-hosted-layout')
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(hosted).toBeTruthy()
+    expect(rail).toBeTruthy()
+    expect(action).toBeTruthy()
+    expect(rail?.contains(container.querySelector('.solvapay-mcp-checkout-order-summary'))).toBe(
+      true,
+    )
+    expect(
+      rail && action && (rail.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBeTruthy()
+  })
+
   it('PAYG SuccessStep renders success-check + receipt CSS hooks', async () => {
     const { container } = await advanceToPaygSuccess()
     expect(container.querySelector('.solvapay-mcp-checkout-success-check')).toBeTruthy()
