@@ -438,4 +438,30 @@ describe('<McpApp>', () => {
     })
     expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
   })
+
+  it('applies hostContext.safeAreaInsets as padding on the root container', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'inline',
+        safeAreaInsets: { top: 12, right: 0, bottom: 8, left: 4 },
+      },
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    const main = container.querySelector('.solvapay-mcp-main')
+    expect(main).toBeTruthy()
+    expect(main).toHaveStyle({
+      paddingTop: '12px',
+      paddingRight: '0px',
+      paddingBottom: '8px',
+      paddingLeft: '4px',
+    })
+  })
 })

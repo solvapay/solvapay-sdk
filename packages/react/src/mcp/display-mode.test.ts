@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_DISPLAY_MODE_STATE,
+  hostSafeAreaPadding,
   isMcpDisplayMode,
   readDisplayModeState,
   SOLVAPAY_MCP_APP_CAPABILITIES,
@@ -38,6 +39,26 @@ describe('readDisplayModeState', () => {
     ).toEqual({
       displayMode: 'inline',
       availableDisplayModes: ['inline', 'fullscreen'],
+    })
+  })
+})
+
+describe('hostSafeAreaPadding', () => {
+  it('returns zeros when the host reports no insets', () => {
+    expect(hostSafeAreaPadding(undefined)).toEqual({
+      paddingTop: 0,
+      paddingRight: 0,
+      paddingBottom: 0,
+      paddingLeft: 0,
+    })
+  })
+
+  it('maps hostContext.safeAreaInsets onto root padding', () => {
+    expect(hostSafeAreaPadding({ top: 12, right: 0, bottom: 8, left: 4 })).toEqual({
+      paddingTop: 12,
+      paddingRight: 0,
+      paddingBottom: 8,
+      paddingLeft: 4,
     })
   })
 })

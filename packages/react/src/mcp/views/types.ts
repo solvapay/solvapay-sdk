@@ -13,8 +13,16 @@ export interface McpViewClassNames {
   muted?: string
   button?: string
   linkButton?: string
+  /**
+   * @deprecated Prefer composing the hosted notice primitives.
+   * Slot retained for integrator overrides that still target it.
+   */
   notice?: string
   error?: string
+  /**
+   * @deprecated Awaiting-payment chrome is an internal checkout state.
+   * Slot retained for integrator overrides that still target it.
+   */
   awaitingHeader?: string
   balanceRow?: string
   amountPicker?: string
@@ -28,6 +36,10 @@ export interface McpViewClassNames {
   businessToggle?: string
   businessField?: string
   taxSummary?: string
+  /**
+   * @deprecated Activation is no longer a standalone view.
+   * Slot retained for integrator overrides that still target it.
+   */
   activationFlow?: string
   /** Root wrapper of `<AppHeader>` (icon + merchant name row). */
   appHeader?: string

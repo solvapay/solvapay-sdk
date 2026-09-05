@@ -410,17 +410,13 @@ describe('<McpAppShell>', () => {
     )
   })
 
-  it('puts provenance in a trailing context rail on the account surface', () => {
+  it('puts account provenance in the single column, not a trailing rail', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
     const { container } = renderShell({ view: 'account', customer: authedCustomer }, ctx)
-    const rail = container.querySelector('.solvapay-mcp-context-rail')
-    expect(rail).toBeTruthy()
-    expect(rail?.textContent).toContain('Acme · Paying as demo@acme.test')
-    const hosted = container.querySelector('.solvapay-mcp-hosted')
+    expect(container.querySelector('.solvapay-mcp-context-rail')).toBeNull()
     const body = container.querySelector('.solvapay-mcp-shell-body')
-    expect(hosted && body && rail).toBeTruthy()
-    expect(body?.compareDocumentPosition(rail as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(body?.textContent).toContain('Acme · Paying as demo@acme.test')
   })
 
   it('forwards `onClose` to the checkout view', () => {

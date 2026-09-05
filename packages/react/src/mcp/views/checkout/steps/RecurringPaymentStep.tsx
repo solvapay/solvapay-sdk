@@ -85,6 +85,7 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
           onSuccess={onSuccess as any}
         >
           <PaymentForm.Loading />
+          <PaymentForm.PaymentElement />
           <PaymentForm.BusinessDetails.Root className={cx.businessDetails}>
             <label className={cx.businessToggle}>
               <PaymentForm.BusinessDetails.Toggle />
@@ -104,7 +105,6 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
             render amounts only, which is why business checkout showed a naked
             "$90 / VAT Free / $90" column. DEV-723. */}
           <PaymentForm.TaxSummary.Rows className={cx.taxSummary} />
-          <PaymentForm.PaymentElement />
           <PaymentForm.Error className={cx.error} />
           <PaymentForm.MandateText />
 

@@ -236,6 +236,13 @@ export const enCopy: SolvaPayCopy = {
     pickPlanButton: 'Pick a plan',
     upgradeButton: 'Upgrade',
     changePlanButton: 'Change plan',
+    creditBalance: 'Credit balance',
+    addFunds: 'Add funds',
+    autoRechargeOn: 'Auto-recharge on',
+    autoRechargeOff: 'Auto-recharge off',
+    turnOn: 'Turn on',
+    activeProducts: 'Active products',
+    worksAcross: 'Works across every {merchant} product.',
   },
   customerPortal: {
     launchButton: 'Manage account',

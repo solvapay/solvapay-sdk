@@ -1,36 +1,33 @@
 'use client'
 
 /**
- * `<McpAccountView>` — the "manage your SolvaPay account" screen surfaced
- * by the `manage_account` MCP tool.
+ * `<McpAccountView>` — manage-account surface for the `account` viewer.
  *
- * One primary card carries the billing state for the current action.
- * Product name and description live in the host/tool text — not here.
- * Seller / customer identity lives on the shell provenance line.
- *
- * The plan card has four shapes, picked by the customer's actual state:
- *
- *  - **Active purchase** — `<CurrentPlanCard>` with plan name, price or
- *    usage rate, and an Upgrade / Change plan CTA when the catalog has
- *    alternatives. Paid plans with `amount > 0` also get a
- *    `<LaunchCustomerPortalButton>` ("Manage account") below.
- *  - **Cancelled-but-active purchase** — `<CancelledPlanNotice>` with
- *    its reactivate button.
- *  - **Pay-as-you-go credits, no plan** — compact balance card with
- *    `Credits` heading, `<BalanceBadge>`, `Top up`, and `See plans`.
- *  - **No plan, no credits** — empty-state card with `Pick a plan` CTA.
+ * v2 shape: the balance strip leads, auto-recharge sits beside it, and
+ * Active products rows name the product + plan + since. Inline stays a
+ * summary (at most three rows, two actions). Fullscreen can add per-row
+ * Change plan and the customer-portal CTA. The old PLAN / SINCE /
+ * AUTO-RECHARGE three-up is gone.
  */
 
 import React from 'react'
-import { CurrentPlanCard } from '../../components/CurrentPlanCard'
+import { creditsToDisplayMinorUnits, minorUnitsPerMajor } from '@solvapay/core'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
+import { useAutoRecharge } from '../../hooks/useAutoRecharge'
 import { useBalance } from '../../hooks/useBalance'
-import { useCopy } from '../../hooks/useCopy'
+import { useCopy, useLocale } from '../../hooks/useCopy'
+import { useMerchant } from '../../hooks/useMerchant'
 import { usePurchase } from '../../hooks/usePurchase'
 import { usePurchaseStatus } from '../../hooks/usePurchaseStatus'
-import { BalanceBadge } from '../../primitives/BalanceBadge'
+import { interpolate } from '../../i18n/interpolate'
 import { CancelledPlanNotice } from '../../primitives/CancelledPlanNotice'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
+import {
+  deriveActiveProducts,
+  formatProductTerms,
+  type ActiveProduct,
+} from '../derive-active-products'
+import { useDisplayMode } from '../hooks/useDisplayMode'
 import {
   findCatalogPlan,
   mergePlanSnapshot,
@@ -38,7 +35,10 @@ import {
   resolvePlanShape,
   type PlanLike,
 } from '../plan-actions'
+import { Eyebrow, Section, SplitRow, StatusDot } from '../primitives'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
+
+const INLINE_PRODUCT_CAP = 3
 
 export interface McpAccountViewProps {
   /**
@@ -48,20 +48,17 @@ export interface McpAccountViewProps {
   product?: Pick<BootstrapProduct, 'name' | 'description'> | null
   classNames?: McpViewClassNames
   /**
-   * Called when the user clicks the "Top up" link inside the
-   * pay-as-you-go credit card. `<McpAppShell>` wires this to a
-   * surface swap so nothing re-mounts.
+   * Called when the user clicks "Add funds". `<McpAppShell>` wires this
+   * to a surface swap so nothing re-mounts.
    */
   onTopup?: () => void
   /**
-   * Called when the user clicks "Pick a plan" from the empty state,
-   * "See plans" on the credits-only state, or Upgrade / Change plan
-   * on an active plan. Wired by the shell to switch to checkout.
+   * Called when the user clicks "Pick a plan" or a per-row Change plan
+   * (fullscreen only). Wired by the shell to switch to checkout.
    */
   onChangePlan?: () => void
   /**
-   * Product catalog used to decide Upgrade vs Change plan and to
-   * format a PAYG rate when the purchase snapshot is thin. The shell
+   * Product catalog used to decide Upgrade vs Change plan. The shell
    * passes `bootstrap.plans`.
    */
   plans?: readonly PlanLike[]
@@ -75,9 +72,14 @@ export function McpAccountView({
 }: McpAccountViewProps) {
   const cx = resolveMcpClassNames(classNames)
   const copy = useCopy()
-  const { loading, hasPaidPurchase, activePurchase } = usePurchase()
+  const locale = useLocale() ?? 'en'
+  const { displayMode } = useDisplayMode()
+  const isFullscreen = displayMode === 'fullscreen'
+  const { loading, hasPaidPurchase, activePurchase, purchases } = usePurchase()
   const { shouldShowCancelledNotice } = usePurchaseStatus()
   const { credits } = useBalance()
+  const { merchant } = useMerchant()
+  const { config: autoRecharge } = useAutoRecharge()
 
   if (loading) {
     return (
@@ -87,64 +89,39 @@ export function McpAccountView({
     )
   }
 
-  const hasAnyPlan = Boolean(activePurchase) || shouldShowCancelledNotice
+  const products = deriveActiveProducts(purchases)
+  const visibleProducts = isFullscreen ? products : products.slice(0, INLINE_PRODUCT_CAP)
   const hasCredits = (credits ?? 0) > 0
-  // The portal only meaningfully serves paid plans with a non-zero
-  // amount (free plans have nothing to manage in Stripe). The hint
-  // and the button must use the same gate or the hint will point at
-  // a button that never renders.
   const showPortalCta = Boolean(
-    hasPaidPurchase && activePurchase && activePurchase.amount && activePurchase.amount > 0,
+    isFullscreen &&
+      hasPaidPurchase &&
+      activePurchase &&
+      activePurchase.amount &&
+      activePurchase.amount > 0,
   )
-
-  const catalogPlan = findCatalogPlan(plans, activePurchase?.planSnapshot, activePurchase?.planRef)
-  const planForActions = mergePlanSnapshot(activePurchase?.planSnapshot, catalogPlan)
-  const paidPlanCount = (plans ?? []).filter(plan => resolvePlanShape(plan) !== 'free').length
-  const actions = resolvePlanActions({
-    purchase: {
-      planSnapshot: planForActions,
-      hasPaymentMethod: false,
-    },
-    planCount: plans?.length ?? 0,
-    paidPlanCount,
-  })
-  const showChangePlanCta = Boolean(onChangePlan && (actions.upgrade || actions.changePlan))
+  const autoRechargeOn = Boolean(autoRecharge?.enabled)
+  const showPickPlan = Boolean(onChangePlan && products.length === 0)
 
   return (
     <div className="solvapay-mcp-account">
       <div className={cx.card}>
-        {activePurchase ? (
-          <>
-            {/* Surface title, mirroring `Choose a plan` on checkout and
-             *  `Add credits` on topup — every MCP surface names its job
-             *  in the same slot. Rendered here rather than through the
-             *  card's own `<h2>` so it inherits the shared step-heading
-             *  treatment as a direct child of `.solvapay-mcp-card`. */}
-            <h2 className={cx.heading}>{copy.currentPlan.heading}</h2>
-            {/* TODO(mcp-host-cancel): inline `<CancelPlanButton>` doesn't fire
-             *  reliably inside the MCP host iframe — likely a sandboxed
-             *  `window.confirm()` or a `cancel_purchase` tool gap. Until
-             *  that's root-caused, the card collapses to a single
-             *  "Manage account" CTA below; cancellation runs through the
-             *  Stripe portal instead. Tracked separately. */}
-            <CurrentPlanCard
-              hideHeading
-              hideProductContext
-              hideUpdatePaymentButton
-              hideCancelButton
-              hideCancelledNotice
-              hidePaymentMethod
-              showStartDate
-              showFieldLabels
-              plans={plans}
-            />
-            {showChangePlanCta ? (
-              <button type="button" className={cx.button} onClick={onChangePlan}>
-                {actions.upgrade ? copy.account.upgradeButton : copy.account.changePlanButton}
-              </button>
-            ) : null}
-          </>
-        ) : null}
+        <BalanceStrip
+          merchantName={merchant?.displayName}
+          locale={locale}
+          worksAcross={copy.account.worksAcross}
+          creditBalanceLabel={copy.account.creditBalance}
+        />
+
+        <SplitRow>
+          <p className={cx.muted}>
+            {autoRechargeOn ? copy.account.autoRechargeOn : copy.account.autoRechargeOff}
+          </p>
+          {onTopup ? (
+            <button type="button" className={cx.button} onClick={onTopup}>
+              {copy.account.addFunds}
+            </button>
+          ) : null}
+        </SplitRow>
 
         <CancelledPlanNotice.Root className={cx.notice}>
           <CancelledPlanNotice.Heading />
@@ -153,40 +130,43 @@ export function McpAccountView({
           <CancelledPlanNotice.ReactivateButton className={cx.button} />
         </CancelledPlanNotice.Root>
 
-        {!hasAnyPlan && hasCredits && (
-          <div className={`${cx.stack} solvapay-mcp-account-credit-stack`.trim()}>
-            <h2 className={cx.heading}>{copy.account.payAsYouGoTitle}</h2>
-            <BalanceBadge />
-            <div className={cx.balanceRow}>
-              {onTopup ? (
-                <button type="button" className={cx.button} onClick={onTopup}>
-                  Top up
-                </button>
-              ) : null}
-              {onChangePlan ? (
-                <button type="button" className={cx.linkButton} onClick={onChangePlan}>
-                  {copy.account.seePlansButton}
-                </button>
-              ) : null}
-            </div>
-          </div>
-        )}
+        {visibleProducts.length > 0 ? (
+          <Section>
+            <Eyebrow variant="rail">{copy.account.activeProducts}</Eyebrow>
+            {visibleProducts.map(product => {
+              const action = rowPlanAction(product, plans, copy)
+              return (
+                <ProductRow
+                  key={product.reference}
+                  product={product}
+                  locale={locale}
+                  showChangePlan={isFullscreen && Boolean(onChangePlan) && action.show}
+                  changePlanLabel={action.label}
+                  onChangePlan={onChangePlan}
+                />
+              )
+            })}
+          </Section>
+        ) : null}
 
-        {!hasAnyPlan && !hasCredits && (
+        {products.length === 0 && !hasCredits ? (
           <div className={cx.stack}>
             <h2 className={cx.heading}>{copy.account.noPlanTitle}</h2>
             <p className={cx.muted}>{copy.account.noPlanBody}</p>
-            {onChangePlan ? (
+            {showPickPlan ? (
               <button type="button" className={cx.button} onClick={onChangePlan}>
                 {copy.account.pickPlanButton}
               </button>
             ) : null}
           </div>
-        )}
+        ) : null}
 
-        {/* The hint names the button by label ("Click Manage account
-         *  to …"), so it has to sit with it rather than under the plan
-         *  card with the Change plan CTA in between. */}
+        {showPickPlan && hasCredits ? (
+          <button type="button" className={cx.linkButton} onClick={onChangePlan}>
+            {copy.account.seePlansButton}
+          </button>
+        ) : null}
+
         {showPortalCta ? (
           <>
             <p className={cx.muted} data-solvapay-mcp-portal-hint="">
@@ -202,4 +182,121 @@ export function McpAccountView({
       </div>
     </div>
   )
+}
+
+function BalanceStrip({
+  merchantName,
+  locale,
+  worksAcross,
+  creditBalanceLabel,
+}: {
+  merchantName?: string
+  locale: string
+  worksAcross: string
+  creditBalanceLabel: string
+}) {
+  const { credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate } = useBalance()
+  const formattedCredits = new Intl.NumberFormat(locale).format(credits ?? 0)
+  const fiat = formatFiatEquivalent({
+    credits: credits ?? 0,
+    displayCurrency,
+    creditsPerMinorUnit,
+    displayExchangeRate,
+    locale,
+  })
+  const caption = [fiat ? `About ${fiat}.` : null, merchantName ? interpolate(worksAcross, { merchant: merchantName }) : null]
+    .filter(Boolean)
+    .join(' ')
+
+  return (
+    <div className="solvapay-mcp-balance-strip">
+      <Eyebrow variant="rail">{creditBalanceLabel}</Eyebrow>
+      <p className="solvapay-mcp-balance-hero">
+        {formattedCredits}
+        {' credits'}
+      </p>
+      {caption ? <p className="solvapay-mcp-muted">{caption}</p> : null}
+    </div>
+  )
+}
+
+function ProductRow({
+  product,
+  locale,
+  showChangePlan,
+  changePlanLabel,
+  onChangePlan,
+}: {
+  product: ActiveProduct
+  locale: string
+  showChangePlan: boolean
+  changePlanLabel: string
+  onChangePlan?: () => void
+}) {
+  return (
+    <div className="solvapay-mcp-product-row">
+      <div className="solvapay-mcp-product-row-body">
+        <div className="solvapay-mcp-plan-row-name">
+          <span>{product.productName}</span>
+          <StatusDot label="Active" />
+        </div>
+        <p className="solvapay-mcp-muted">{formatProductTerms(product, locale)}</p>
+      </div>
+      {showChangePlan && onChangePlan ? (
+        <button type="button" className="solvapay-mcp-link-button" onClick={onChangePlan}>
+          {changePlanLabel}
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
+function rowPlanAction(
+  product: ActiveProduct,
+  plans: readonly PlanLike[] | undefined,
+  copy: ReturnType<typeof useCopy>,
+): { label: string; show: boolean } {
+  const catalogPlan = findCatalogPlan(plans, { reference: product.planRef }, product.planRef)
+  const planForActions = mergePlanSnapshot(
+    { reference: product.planRef, isMetered: product.isMetered, price: product.amount },
+    catalogPlan,
+  )
+  const paidPlanCount = (plans ?? []).filter(plan => resolvePlanShape(plan) !== 'free').length
+  const actions = resolvePlanActions({
+    purchase: { planSnapshot: planForActions, hasPaymentMethod: false },
+    planCount: plans?.length ?? 0,
+    paidPlanCount,
+  })
+  if (actions.upgrade) return { label: copy.account.upgradeButton, show: true }
+  if (actions.changePlan) return { label: copy.account.changePlanButton, show: true }
+  return { label: copy.account.changePlanButton, show: false }
+}
+
+function formatFiatEquivalent({
+  credits,
+  displayCurrency,
+  creditsPerMinorUnit,
+  displayExchangeRate,
+  locale,
+}: {
+  credits: number
+  displayCurrency: string | null
+  creditsPerMinorUnit: number | null
+  displayExchangeRate: number | null
+  locale: string
+}): string | null {
+  if (!displayCurrency || !creditsPerMinorUnit) return null
+  const displayMinor = creditsToDisplayMinorUnits({
+    credits,
+    creditsPerMinorUnit,
+    displayExchangeRate: displayExchangeRate ?? 1,
+    displayCurrency,
+  })
+  if (displayMinor === null) return null
+  const minorPerMajor = minorUnitsPerMajor(displayCurrency)
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: displayCurrency,
+    minimumFractionDigits: minorPerMajor === 1 ? 0 : 2,
+  }).format(displayMinor / minorPerMajor)
 }

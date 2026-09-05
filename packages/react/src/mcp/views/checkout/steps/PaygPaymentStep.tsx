@@ -87,6 +87,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
           onSuccess={(_intent, extras) => onSuccess(extras)}
         >
           <TopupForm.Loading />
+          <TopupForm.PaymentElement />
           <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
             <label className={cx.businessToggle}>
               <TopupForm.BusinessDetails.Toggle />
@@ -103,7 +104,6 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
             />
           </TopupForm.BusinessDetails.Root>
           <TopupForm.Summary.Rows className={cx.taxSummary} />
-          <TopupForm.PaymentElement />
           <TopupForm.Error className={cx.error} />
 
           {/* Per brief §4: optional "Save card for future top-ups"

@@ -29,15 +29,6 @@ function applyContext(ctx: McpUiHostContext | undefined) {
   if (ctx.theme) applyDocumentTheme(ctx.theme)
   if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables)
   if (ctx.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts)
-
-  const root = document.getElementById('root')
-  const insets = ctx.safeAreaInsets
-  if (insets && root) {
-    root.style.paddingTop = `${16 + insets.top}px`
-    root.style.paddingRight = `${16 + insets.right}px`
-    root.style.paddingBottom = `${16 + insets.bottom}px`
-    root.style.paddingLeft = `${16 + insets.left}px`
-  }
 }
 
 const app = new App(

@@ -11,10 +11,10 @@
  *  - `account`  — current plan, balance, usage, payment method.
  *  - `topup`    — amount picker + Stripe.
  *
- * Identity is a single provenance line (`{merchant} · Paying as {email}`),
- * not a Seller / Your account sidebar. Fullscreen wraps the surface in
- * a 1000px hosted column; payment leads a summary rail, account trails
- * a context rail.
+ * Identity is a single provenance line (`{merchant} · Paying as {email}`).
+ * Fullscreen wraps the surface in a 1000px hosted column. Payment
+ * leads a summary rail; management is one column so the split itself
+ * signals a transaction.
  *
  * The legacy `'paywall'` / `'nudge'` surfaces were removed with the
  * text-only paywall refactor — merchant paywall / nudge responses are
@@ -31,7 +31,7 @@ import type { McpViewKind } from './view-kind'
 import { useCustomer } from '../hooks/useCustomer'
 import { McpAccountView, type McpAccountViewProps } from './views/McpAccountView'
 import { McpCheckoutView, type McpCheckoutViewProps } from './views/McpCheckoutView'
-import { McpContextRail, McpHostedColumn, McpHostedLayout } from './views/McpHosted'
+import { McpHostedColumn, McpHostedLayout } from './views/McpHosted'
 import { McpProvenanceLine } from './views/McpProvenanceLine'
 import { McpTopupView, type McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
@@ -126,10 +126,8 @@ export function McpAppShell({
               onRefreshBootstrap={onRefreshBootstrap}
               onClose={onClose}
             />
+            {surface === 'management' ? provenance : null}
           </div>
-          {surface === 'management' && provenance ? (
-            <McpContextRail>{provenance}</McpContextRail>
-          ) : null}
         </McpHostedLayout>
       </McpHostedColumn>
 

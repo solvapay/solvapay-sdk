@@ -117,3 +117,25 @@ export function readDisplayModeState(ctx: unknown): McpDisplayModeState {
     ...(safeAreaInsets ? { safeAreaInsets } : {}),
   }
 }
+
+/**
+ * Host composer / device insets as root-container padding.
+ *
+ * Read `hostContext.safeAreaInsets`, not `env(safe-area-inset-*)` —
+ * inside a sandboxed iframe the env() values are the device's, and
+ * the host composer is what actually overlaps us. Zero when the host
+ * reports nothing; adding zero is harmless.
+ */
+export function hostSafeAreaPadding(insets: McpSafeAreaInsets | undefined): {
+  paddingTop: number
+  paddingRight: number
+  paddingBottom: number
+  paddingLeft: number
+} {
+  return {
+    paddingTop: insets?.top ?? 0,
+    paddingRight: insets?.right ?? 0,
+    paddingBottom: insets?.bottom ?? 0,
+    paddingLeft: insets?.left ?? 0,
+  }
+}

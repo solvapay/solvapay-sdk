@@ -103,6 +103,39 @@ node packages/create-solvapay/templates/mcp/_base/scripts/verify.mjs http://loca
 When `SOLVAPAY_STUB` is unset, `SOLVAPAY_SECRET_KEY` and
 `SOLVAPAY_PRODUCT_REF` remain required.
 
+## Dark-mode verification
+
+The widget follows the OS colour scheme through `light-dark()` on one
+`:root` — there is no `[data-theme]` toggle and no
+`prefers-color-scheme` guard. Hosts that publish `--color-*` tokens
+win; `:root` only supplies defaults.
+
+```bash
+pnpm --filter @example/mcp-checkout-app dev
+```
+
+1. Toggle the OS colour scheme (or force it in DevTools → Rendering →
+   **Emulate CSS `prefers-color-scheme`**). Walk plan grid, top-up
+   amount picker, account details, and the success receipt. Inner
+   chips and summaries must stay transparent — they should not paint
+   a light box on a dark host canvas.
+2. Repeat with host tokens assigned on `html` to confirm the bridge:
+
+```css
+html {
+  --color-background-primary: #262624;
+  --color-background-secondary: #30302e;
+  --color-text-primary: #f5f4ed;
+  --color-text-secondary: #a3a29e;
+  --color-border-secondary: #3a3a3a;
+}
+```
+
+`PlanSelector` and `PaymentForm` read `--solvapay-*`. Those names
+remap onto the host `--color-*` tokens inside `.solvapay-mcp-main`, so
+this second pass must restyle the core primitives, not just the MCP
+chrome.
+
 ## Text-only hosts
 
 MCP Apps is optional. Claude Code, CLI clients, Grok, n8n, and any host

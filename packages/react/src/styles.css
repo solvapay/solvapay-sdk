@@ -9,17 +9,25 @@
  */
 
 :root {
-  --solvapay-accent: hsl(222 47% 11%);
-  --solvapay-accent-foreground: hsl(0 0% 98%);
-  --solvapay-accent-hover: hsl(222 47% 20%);
-  --solvapay-surface: hsl(0 0% 100%);
-  --solvapay-muted: hsl(210 40% 96%);
-  --solvapay-muted-foreground: hsl(215 16% 47%);
-  --solvapay-border: hsl(214 32% 91%);
-  --solvapay-destructive: hsl(0 72% 51%);
+  color-scheme: light dark;
+  --solvapay-accent: light-dark(#000000, #E8E8E8);
+  --solvapay-accent-foreground: light-dark(#FFFFFF, #171717);
+  --solvapay-accent-text: var(--solvapay-accent-foreground);
+  --solvapay-accent-hover: light-dark(#2A2A2A, #FFFFFF);
+  --solvapay-surface: light-dark(#FFFFFF, #171717);
+  --solvapay-muted: light-dark(#F4F4F4, #262626);
+  --solvapay-muted-foreground: light-dark(#6B6A67, #A3A29E);
+  --solvapay-border: light-dark(#D9D9D9, #3A3A3A);
+  --solvapay-destructive: light-dark(#C4322A, #F97066);
+  --solvapay-danger: var(--solvapay-destructive);
+  --solvapay-identifier: light-dark(#65659B, #9B9BE0);
+  --solvapay-selection: light-dark(#4D89A2, #6B9CAE);
+  --solvapay-selection-wash: light-dark(#F2F7F9, #1C2B34);
+  --solvapay-row-hover: light-dark(#FAFAFA, #1F1F1F);
+  --solvapay-control-hover: light-dark(#F5F5F5, #2A2A2A);
   --solvapay-warning: hsl(38 92% 50%);
   --solvapay-success: hsl(142 71% 45%);
-  --solvapay-radius: 0.5rem;
+  --solvapay-radius: 8px;
   --solvapay-font: inherit;
 }
 
@@ -1911,7 +1919,7 @@
   margin-top: 0.125rem;
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
-  background: var(--solvapay-muted, #f1f5f9);
+  background: var(--solvapay-muted);
   color: var(--solvapay-muted-foreground);
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',

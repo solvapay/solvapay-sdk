@@ -5,11 +5,12 @@
  *
  * Inline stays a single-column stack. Fullscreen at ≥1000px of host
  * width becomes the hosted page: payment leads with a 340px summary
- * rail, management trails a 300px context rail. Same React tree —
- * CSS container queries flip the geometry.
+ * rail; management stays one column. Same React tree — CSS container
+ * queries flip the payment geometry.
  */
 
 import React from 'react'
+import { useDisplayMode } from '../hooks/useDisplayMode'
 
 export function McpHostedColumn({
   surface,
@@ -26,7 +27,13 @@ export function McpHostedColumn({
 }
 
 export function McpHostedLayout({ children }: { children: React.ReactNode }) {
-  return <div className="solvapay-mcp-hosted-layout">{children}</div>
+  const { displayMode } = useDisplayMode()
+  const rail = displayMode === 'fullscreen' ? 'hosted' : 'inline'
+  return (
+    <div className="solvapay-mcp-hosted-layout" data-rail={rail}>
+      {children}
+    </div>
+  )
 }
 
 export function McpSummaryRail({ children }: { children: React.ReactNode }) {

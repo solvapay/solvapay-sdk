@@ -48,6 +48,7 @@ import { McpHostInfoProvider } from './hooks/useHostInfo'
 import { McpDisplayModeProvider } from './hooks/useDisplayMode'
 import {
   DEFAULT_DISPLAY_MODE_STATE,
+  hostSafeAreaPadding,
   readDisplayModeState,
   type McpDisplayMode,
   type McpDisplayModeState,
@@ -587,7 +588,11 @@ export function McpApp({
   return (
     <McpHostInfoProvider hostName={hostName}>
       <McpDisplayModeProvider value={displayModeValue}>
-        <main className="solvapay-mcp-main" data-display-mode={displayModeState.displayMode}>
+        <main
+          className="solvapay-mcp-main"
+          data-display-mode={displayModeState.displayMode}
+          style={hostSafeAreaPadding(displayModeState.safeAreaInsets)}
+        >
           {/*
            * Chrome row sits above the conditional provider tree so the
            * merchant mark and Full view control persist across loading
