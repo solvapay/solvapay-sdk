@@ -2,9 +2,9 @@
  * MCP Apps display-mode types and host-context readers.
  *
  * Display mode is host state, not routing: the host publishes
- * `displayMode` / `availableDisplayModes` on `McpUiHostContext` and
- * the view requests a switch via `app.requestDisplayMode({ mode })`
- * from a user action. `@solvapay/react/mcp` does not import
+ * `displayMode` / `availableDisplayModes` on `McpUiHostContext`.
+ * The host owns the expand affordance; the SDK reads and reacts.
+ * `@solvapay/react/mcp` does not import
  * `@modelcontextprotocol/ext-apps` — these types are structural
  * aliases of that package's `McpUiDisplayMode` /
  * `McpUiAppCapabilities.availableDisplayModes`.

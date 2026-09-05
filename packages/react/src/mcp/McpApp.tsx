@@ -43,14 +43,12 @@ import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { AppHeader } from './views/AppHeader'
 import { CloseButton } from './views/CloseButton'
-import { FullViewButton } from './views/FullViewButton'
 import { McpHostInfoProvider } from './hooks/useHostInfo'
 import { McpDisplayModeProvider } from './hooks/useDisplayMode'
 import {
   DEFAULT_DISPLAY_MODE_STATE,
   hostSafeAreaPadding,
   readDisplayModeState,
-  type McpDisplayMode,
   type McpDisplayModeState,
 } from './display-mode'
 
@@ -108,13 +106,6 @@ export interface McpAppFull extends McpAppBootstrapLike, McpAppLike, McpBridgeAp
    * minimal adapters don't have to stub it.
    */
   requestTeardown?: () => Promise<void> | void
-  /**
-   * Ask the host to switch display mode (`inline` / `fullscreen` /
-   * `pip`). Exposed by `@modelcontextprotocol/ext-apps` `App`. Optional
-   * so tests and minimal adapters can omit it — the Full view control
-   * hides when this is missing.
-   */
-  requestDisplayMode?: (params: { mode: McpDisplayMode }) => Promise<{ mode: McpDisplayMode }>
 }
 
 export interface McpAppViewOverrides {
@@ -347,7 +338,7 @@ export function McpApp({
         )
         hasBootstrap = true
         setBootstrap(fresh)
-      } catch (err) {
+      } catch {
         if (!hasBootstrap && classifyHostEntry(app).kind === 'intent') {
           // Intent entry whose opening notification didn't carry a
           // parseable bootstrap (e.g. MCPJam scrubs `structuredContent`
@@ -358,9 +349,6 @@ export function McpApp({
         }
         // Post-mount non-bootstrap or errored payload — ignore silently.
         // The mounted view survives.
-        if (typeof console !== 'undefined') {
-          console.debug('[solvapay] non-bootstrap tool-result notification:', err)
-        }
       }
     }
 
@@ -565,29 +553,12 @@ export function McpApp({
   )
   const effectiveOnClose = onClose ?? defaultOnClose
 
-  const requestDisplayMode = useMemo(() => {
-    const request = app.requestDisplayMode
-    if (!request) return undefined
-    return async (mode: McpDisplayMode): Promise<McpDisplayMode> => {
-      const result = await request({ mode })
-      return result.mode
-    }
-  }, [app])
-
-  const displayModeValue = useMemo(
-    () => ({
-      ...displayModeState,
-      requestDisplayMode,
-    }),
-    [displayModeState, requestDisplayMode],
-  )
-
   const effectiveBootstrap =
     bootstrap && productRefOverride ? { ...bootstrap, productRef: productRefOverride } : bootstrap
 
   return (
     <McpHostInfoProvider hostName={hostName}>
-      <McpDisplayModeProvider value={displayModeValue}>
+      <McpDisplayModeProvider value={displayModeState}>
         <main
           className="solvapay-mcp-main"
           data-display-mode={displayModeState.displayMode}
@@ -595,11 +566,10 @@ export function McpApp({
         >
           {/*
            * Chrome row sits above the conditional provider tree so the
-           * merchant mark and Full view control persist across loading
-           * / error / ready states. `<AppHeader>` takes
-           * `bootstrap.merchant` directly: the header's cache lookup
-           * would return `null` here because this slot is outside the
-           * `<SolvaPayProvider>` subtree.
+           * merchant mark and close control persist across loading / error
+           * / ready states. `<AppHeader>` takes `bootstrap.merchant`
+           * directly: the header's cache lookup would return `null` here
+           * because this slot is outside the `<SolvaPayProvider>` subtree.
            */}
           <div className="solvapay-mcp-chrome-row">
             {displayModeState.displayMode !== 'fullscreen' ? (
@@ -609,7 +579,6 @@ export function McpApp({
               />
             ) : null}
             <CloseButton classNames={classNames} onClose={effectiveOnClose} />
-            <FullViewButton classNames={classNames} />
           </div>
           {initError ? (
             <div className={`${cx.card} ${cx.error}`.trim()}>

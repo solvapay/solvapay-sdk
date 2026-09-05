@@ -39,7 +39,6 @@ function makeApp(opts: {
   /** When true, `readServerResource` rejects (triggers intent-tool fallback). */
   readServerResourceFails?: boolean
   hostContext?: Record<string, unknown>
-  requestDisplayMode?: McpAppFull['requestDisplayMode']
 }): McpAppFull {
   const listeners: Record<string, ToolResultHandler[]> = {}
   const emitInitialToolResult = opts.emitInitialToolResult ?? true
@@ -107,7 +106,6 @@ function makeApp(opts: {
     onhostcontextchanged: undefined,
     onteardown: undefined,
     requestTeardown: opts.requestTeardown ?? vi.fn().mockResolvedValue(undefined),
-    requestDisplayMode: opts.requestDisplayMode,
     ontoolresult: undefined,
   }
 
@@ -387,8 +385,7 @@ describe('<McpApp>', () => {
     expect(app.callServerTool).not.toHaveBeenCalled()
   })
 
-  it('stamps data-display-mode from the host context and shows Full view when advertised', async () => {
-    const requestDisplayMode = vi.fn().mockResolvedValue({ mode: 'fullscreen' })
+  it('stamps data-display-mode from the host context', async () => {
     const app = makeApp({
       toolName: VIEWER_TOOL_NAME,
       structuredContent: {
@@ -400,17 +397,14 @@ describe('<McpApp>', () => {
         displayMode: 'inline',
         availableDisplayModes: ['inline', 'fullscreen'],
       },
-      requestDisplayMode,
     })
     const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
     const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
     await screen.findByTestId('checkout-stub')
     expect(container.querySelector('[data-display-mode="inline"]')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Full view' }))
-    expect(requestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' })
   })
 
-  it('fullscreen chrome is close + footer only — no in-widget header or Full view', async () => {
+  it('fullscreen chrome is close + footer only — no in-widget header', async () => {
     const requestTeardown = vi.fn().mockResolvedValue(undefined)
     const app = makeApp({
       toolName: VIEWER_TOOL_NAME,
@@ -431,7 +425,6 @@ describe('<McpApp>', () => {
     await screen.findByTestId('checkout-stub')
     expect(container.querySelector('[data-display-mode="fullscreen"]')).toBeTruthy()
     expect(container.querySelector('.solvapay-mcp-app-header')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Full view' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     await waitFor(() => {
       expect(requestTeardown).toHaveBeenCalledTimes(1)

@@ -122,10 +122,7 @@ export {
 export {
   McpDisplayModeProvider,
   useDisplayMode,
-  useRequestDisplayMode,
-  type McpDisplayModeContextValue,
   type McpDisplayModeProviderProps,
-  type RequestDisplayMode,
 } from './hooks/useDisplayMode'
 
 export {
@@ -143,7 +140,6 @@ export type {
   McpSafeAreaInsets,
 } from './display-mode'
 
-export { FullViewButton, type FullViewButtonProps } from './views/FullViewButton'
 export { CloseButton, type CloseButtonProps } from './views/CloseButton'
 
 export { McpCheckoutView } from './views/McpCheckoutView'
