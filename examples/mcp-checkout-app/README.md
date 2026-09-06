@@ -24,9 +24,9 @@ a sibling if you need less:
 | `examples/mcp-time-app`        | Node + Express    | Virtual tools + minimal UI, showcases the gate response              | You want the smallest possible paywalled MCP server                                                |
 
 The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the trimmed
-7-tool surface: 2 intent tools (`account`, `activate_plan`) plus 5
-UI-only state-change tools (`create_hosted_session`, `create_payment_intent`,
-`process_payment`, `set_renewal`, `attach_business_details`).
+8-tool surface: 2 intent tools (`account`, `activate_plan`) plus 6
+UI-only tools (`create_hosted_session`, `create_payment_intent`,
+`process_payment`, `set_renewal`, `attach_business_details`, `get_history`).
 Product-scoped data (merchant, product, plans) and the customer
 snapshot (purchase, payment method, balance, usage) ride on the
 `BootstrapPayload` every intent tool returns, so the embedded form
@@ -102,6 +102,39 @@ node packages/create-solvapay/templates/mcp/_base/scripts/verify.mjs http://loca
 
 When `SOLVAPAY_STUB` is unset, `SOLVAPAY_SECRET_KEY` and
 `SOLVAPAY_PRODUCT_REF` remain required.
+
+## Dark-mode verification
+
+The widget follows the OS colour scheme through `light-dark()` on one
+`:root` — there is no `[data-theme]` toggle and no
+`prefers-color-scheme` guard. Hosts that publish `--color-*` tokens
+win; `:root` only supplies defaults.
+
+```bash
+pnpm --filter @example/mcp-checkout-app dev
+```
+
+1. Toggle the OS colour scheme (or force it in DevTools → Rendering →
+   **Emulate CSS `prefers-color-scheme`**). Walk plan grid, top-up
+   amount picker, account details, and the success receipt. Inner
+   chips and summaries must stay transparent — they should not paint
+   a light box on a dark host canvas.
+2. Repeat with host tokens assigned on `html` to confirm the bridge:
+
+```css
+html {
+  --color-background-primary: #262624;
+  --color-background-secondary: #30302e;
+  --color-text-primary: #f5f4ed;
+  --color-text-secondary: #a3a29e;
+  --color-border-secondary: #3a3a3a;
+}
+```
+
+`PlanSelector` and `PaymentForm` read `--solvapay-*`. Those names
+remap onto the host `--color-*` tokens inside `.solvapay-mcp-main`, so
+this second pass must restyle the core primitives, not just the MCP
+chrome.
 
 ## Text-only hosts
 
@@ -241,6 +274,7 @@ sequenceDiagram
 | `create_payment_intent` | Creates the PaymentIntent for plan checkout (`purpose: "plan"`) or top-up (`purpose: "topup"`) |
 | `process_payment` | Records the Stripe-side confirmation after `confirmPayment` resolves |
 | `set_renewal` | Toggles auto-renewal (`enabled: false` to cancel, `enabled: true` to reactivate) |
+| `get_history` | Product charges + account-wide credit activity for the fullscreen history section |
 
 `returnUrl` on hosted checkout is intentionally unset — there
 is no meaningful URL to return to inside an MCP host iframe, so the

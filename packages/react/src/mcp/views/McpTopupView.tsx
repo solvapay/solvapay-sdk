@@ -28,19 +28,33 @@
  */
 
 import React, { useState } from 'react'
+import type { AutoRechargeInput } from '@solvapay/server'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
+import {
+  createDefaultAutoRechargeForm,
+  validateAutoRechargeForm,
+  type AutoRechargeFormState,
+} from '../../helpers/auto-recharge-form'
 import { useBalance } from '../../hooks/useBalance'
+import { useCopy } from '../../hooks/useCopy'
 import { useMerchant } from '../../hooks/useMerchant'
 import { useTopupAmountSelector } from '../../hooks/useTopupAmountSelector'
 import { AmountPicker, useAmountPicker } from '../../primitives/AmountPicker'
 import { BalanceBadge } from '../../primitives/BalanceBadge'
 import { MandateText } from '../../primitives/MandateText'
-import { TopupForm } from '../../primitives/TopupForm'
+import { TopupForm, useTopupForm } from '../../primitives/TopupForm'
 import { formatPrice, getMinorUnitsPerMajor } from '../../utils/format'
+import { formatCompactCredits } from '../format-compact-credits'
+import { useDisplayMode } from '../hooks/useDisplayMode'
 import { useMcpBridge } from '../bridge'
 import { useHostLocale } from '../useHostLocale'
 import { useStripeProbe } from '../useStripeProbe'
+import { chargeAmountMinor } from './chargeAmount'
+import { AmountLadder, Eyebrow, SplitRow, Toggle } from '../primitives'
 import { BackLink } from './BackLink'
+import { McpAutoRechargeFields } from './autoRecharge/McpAutoRechargeFields'
+import { McpHostedBody, McpHostedLayout, McpSummaryRail } from './McpHosted'
+import { McpPaymentHeader } from './McpPaymentHeader'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 const FALLBACK_TOPUP_CURRENCY = 'USD'
@@ -65,7 +79,7 @@ export interface McpTopupViewProps {
 
 type TopupScreen =
   | { step: 'amount' }
-  | { step: 'payment'; amountMinor: number }
+  | { step: 'payment'; amountMinor: number; autoRecharge?: AutoRechargeInput }
   | { step: 'success'; amountMinor: number }
 
 type CreditEstimate = { kind: 'available'; credits: number } | { kind: 'unavailable' }
@@ -166,9 +180,16 @@ function EmbeddedTopup({
   const showCurrencySwitch = topupCurrencies.length > 1
   const { adjustBalance, credits, creditsPerMinorUnit, displayCurrency, displayExchangeRate } =
     useBalance()
+  const copy = useCopy()
+  const [autoRechargeForm, setAutoRechargeForm] = useState<AutoRechargeFormState>(() =>
+    createDefaultAutoRechargeForm(currency),
+  )
+  const [autoRechargeError, setAutoRechargeError] = useState<string | null>(null)
   const locale = useHostLocale()
   const { notifyModelContext, notifySuccess } = useMcpBridge()
   const topupSelector = useTopupAmountSelector({ currency })
+  const { displayMode } = useDisplayMode()
+  const isFullscreen = displayMode === 'fullscreen'
 
   const handleCurrencyChange = (code: string) => {
     setSelectedCurrency(code.toUpperCase())
@@ -200,7 +221,6 @@ function EmbeddedTopup({
 
   if (screen.step === 'payment') {
     const committedAmountMinor = screen.amountMinor
-    const displayAmount = formatPrice(committedAmountMinor, currency, { locale, free: '' })
     const creditEstimate = estimateTopupCredits(
       committedAmountMinor,
       currency,
@@ -219,19 +239,11 @@ function EmbeddedTopup({
 
     return (
       <section className={cx.card} aria-label="Top-up payment">
-        <BackLink label="Change amount" onClick={() => setScreen({ step: 'amount' })} />
-        <section className={cx.stack}>
-          <p className={cx.muted}>Pay with card</p>
-          <p className={cx.topupAmountHero}>{displayAmount}</p>
-          {contextParts.length > 0 ? (
-            <p className={cx.topupBalanceContext}>{contextParts.join(' · ')}</p>
-          ) : null}
-        </section>
         <TopupForm.Root
           amount={committedAmountMinor}
           currency={currency}
+          autoRecharge={screen.autoRecharge}
           returnUrl={returnUrl}
-          className={cx.topupForm}
           onSuccess={() => {
             adjustBalance(committedAmountMinor * (creditsPerMinorUnit ?? 100))
             setScreen({ step: 'success', amountMinor: committedAmountMinor })
@@ -249,30 +261,149 @@ function EmbeddedTopup({
             onTopupSuccess?.(committedAmountMinor)
           }}
         >
-          <TopupForm.Loading />
-          <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
-            <label className={cx.businessToggle}>
-              <TopupForm.BusinessDetails.Toggle />
-              I&apos;m purchasing as a business
-            </label>
-            <TopupForm.BusinessDetails.BusinessName
-              className={cx.businessField}
-              placeholder="Business name"
-            />
-            <TopupForm.BusinessDetails.Country className={cx.businessField} />
-            <TopupForm.BusinessDetails.TaxId
-              className={cx.businessField}
-              placeholder="Tax / VAT ID"
-            />
-          </TopupForm.BusinessDetails.Root>
-          <TopupForm.Summary.Rows className={cx.taxSummary} />
-          <TopupForm.PaymentElement />
-          <TopupForm.Error className={cx.error} />
-          <MandateText mode="topup" amountMinor={committedAmountMinor} currency={currency} />
-          <TopupForm.SubmitButton className={cx.button}>
-            Top up {displayAmount}
-          </TopupForm.SubmitButton>
+          <McpHostedLayout>
+            <McpSummaryRail>
+              <section className={cx.stack}>
+                <p className={cx.muted}>Total due today</p>
+                <p className={cx.topupAmountHero}>
+                  <TopupChargeAmount amountMinor={committedAmountMinor} currency={currency} />
+                </p>
+                {contextParts.length > 0 ? (
+                  <p className={cx.topupBalanceContext}>{contextParts.join(' · ')}</p>
+                ) : null}
+                {isFullscreen ? (
+                  <TopupForm.Summary.Rows className={cx.taxSummary} />
+                ) : (
+                  <TopupForm.Summary.TaxNote className={cx.muted} />
+                )}
+              </section>
+            </McpSummaryRail>
+            <McpHostedBody>
+              <McpPaymentHeader
+                backLabel="Change amount"
+                onBack={() => setScreen({ step: 'amount' })}
+              />
+              <div className={cx.topupForm}>
+                <TopupForm.Loading />
+                <TopupForm.PaymentElement />
+                <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
+                  <TopupForm.BusinessDetails.Fields />
+                </TopupForm.BusinessDetails.Root>
+                <TopupForm.Error className={cx.error} />
+                <TopupForm.SubmitButton className={cx.button}>
+                  Top up{' '}
+                  <TopupChargeAmount amountMinor={committedAmountMinor} currency={currency} />
+                </TopupForm.SubmitButton>
+                <MandateText mode="topup" amountMinor={committedAmountMinor} currency={currency} />
+              </div>
+            </McpHostedBody>
+          </McpHostedLayout>
         </TopupForm.Root>
+      </section>
+    )
+  }
+
+  const currencyDisplay = showCurrencySwitch ? 'code' : 'symbol'
+
+  const amountForm = (
+    <AmountPicker.Root
+      currency={currency}
+      emit="minor"
+      selector={topupSelector}
+      className={cx.amountPicker}
+    >
+      {isFullscreen ? null : (
+        <AmountStepHeader
+          cx={cx}
+          currency={currency}
+          topupCurrencies={topupCurrencies}
+          showCurrencySwitch={showCurrencySwitch}
+          onCurrencyChange={handleCurrencyChange}
+        />
+      )}
+      <PresetAmountGrid currencyDisplay={currencyDisplay} locale={locale} />
+      <CustomAmountRow
+        rowClassName={cx.amountCustom}
+        currencyDisplay={currencyDisplay}
+      />
+      <div className="solvapay-mcp-auto-recharge-inline">
+        <SplitRow>
+          <p>{copy.autoRechargeView.heading}</p>
+          <Toggle
+            checked={autoRechargeForm.enabled}
+            label={copy.autoRechargeView.heading}
+            onChange={enabled => {
+              setAutoRechargeError(null)
+              setAutoRechargeForm(current => ({ ...current, enabled }))
+            }}
+          />
+        </SplitRow>
+        {autoRechargeForm.enabled ? (
+          <McpAutoRechargeFields
+            form={autoRechargeForm}
+            onChange={next => {
+              setAutoRechargeError(null)
+              setAutoRechargeForm(next)
+            }}
+            currency={currency}
+            validationError={autoRechargeError}
+            creditsPerMinorUnit={creditsPerMinorUnit}
+            displayExchangeRate={displayExchangeRate}
+          />
+        ) : null}
+      </div>
+      <AmountDueSummary locale={locale} currency={currency} />
+      <AmountPicker.Confirm
+        className={cx.button}
+        onConfirm={amountMinor => {
+          const result = validateAutoRechargeForm(
+            autoRechargeForm,
+            currency,
+            { creditsPerMinorUnit, displayExchangeRate },
+            copy.autoRecharge,
+          )
+          if (!result.ok) {
+            setAutoRechargeError(result.error)
+            return
+          }
+          setAutoRechargeError(null)
+          setScreen({
+            step: 'payment',
+            amountMinor,
+            autoRecharge: result.payload.enabled ? result.payload : undefined,
+          })
+          void notifyModelContext({
+            text: `User confirmed topup of ${formatPrice(amountMinor, currency, {
+              locale,
+              free: '',
+            })}.`,
+          })
+        }}
+      >
+        Continue
+      </AmountPicker.Confirm>
+    </AmountPicker.Root>
+  )
+
+  if (isFullscreen) {
+    return (
+      <section className={cx.card} aria-label="Add credits">
+        <McpHostedLayout>
+          <McpSummaryRail>
+            <AmountStepHeader
+              cx={cx}
+              currency={currency}
+              topupCurrencies={topupCurrencies}
+              showCurrencySwitch={showCurrencySwitch}
+              onCurrencyChange={handleCurrencyChange}
+              rail
+            />
+          </McpSummaryRail>
+          <McpHostedBody>
+            {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
+            {amountForm}
+          </McpHostedBody>
+        </McpHostedLayout>
       </section>
     )
   }
@@ -280,17 +411,65 @@ function EmbeddedTopup({
   return (
     <section className={cx.card} aria-label="Add credits">
       {onBack ? <BackLink label="Back to my account" onClick={onBack} /> : null}
-      <header className={cx.balanceRow}>
-        <h2 className={cx.heading}>Add credits</h2>
-        <BalanceBadge />
-      </header>
+      {amountForm}
+    </section>
+  )
+}
+
+function TopupChargeAmount({
+  amountMinor,
+  currency,
+}: {
+  amountMinor: number
+  currency: string
+}) {
+  const locale = useHostLocale()
+  const { taxBreakdown } = useTopupForm()
+  const minor = chargeAmountMinor(taxBreakdown, amountMinor)
+  return <>{formatPrice(minor, taxBreakdown?.currency ?? currency, { locale, free: '' })}</>
+}
+
+function AmountStepHeader({
+  cx,
+  currency,
+  topupCurrencies,
+  showCurrencySwitch,
+  onCurrencyChange,
+  rail,
+}: {
+  cx: Cx
+  currency: string
+  topupCurrencies: string[]
+  showCurrencySwitch: boolean
+  onCurrencyChange: (code: string) => void
+  rail?: boolean
+}) {
+  const { credits } = useBalance()
+  const locale = useHostLocale()
+  const formattedBalance =
+    credits != null ? new Intl.NumberFormat(locale).format(credits) : undefined
+  return (
+    <header className={rail ? cx.stack : undefined}>
+      {rail ? (
+        <>
+          <Eyebrow variant="rail">Add credits</Eyebrow>
+          {formattedBalance ? (
+            <p className={cx.muted}>Balance {formattedBalance} credits</p>
+          ) : null}
+        </>
+      ) : (
+        <div className={cx.balanceRow}>
+          <h2 className={cx.heading}>Add credits</h2>
+          <BalanceBadge />
+        </div>
+      )}
       {showCurrencySwitch ? (
         <label className="solvapay-mcp-step-header">
           <span className={cx.muted}>Pay in</span>
           <select
             className="solvapay-mcp-currency-switch"
             value={currency}
-            onChange={event => handleCurrencyChange(event.target.value)}
+            onChange={event => onCurrencyChange(event.target.value)}
             aria-label="Topup currency"
           >
             {topupCurrencies.map(code => (
@@ -301,68 +480,66 @@ function EmbeddedTopup({
           </select>
         </label>
       ) : null}
-      <AmountPicker.Root
-        currency={currency}
-        emit="minor"
-        selector={topupSelector}
-        className={cx.amountPicker}
-      >
-        <QuickAmountOptions
-          className={cx.amountOptions}
-          optionClassName={cx.amountOption}
-          currencyDisplay={showCurrencySwitch ? 'code' : 'symbol'}
-          locale={locale}
-        />
-        <CustomAmountRow
-          rowClassName={cx.amountCustom}
-          currencyDisplay={showCurrencySwitch ? 'code' : 'symbol'}
-        />
-        <AmountPicker.Confirm
-          className={cx.button}
-          onConfirm={amountMinor => {
-            setScreen({ step: 'payment', amountMinor })
-            void notifyModelContext({
-              text: `User confirmed topup of ${formatPrice(amountMinor, currency, {
-                locale,
-                free: '',
-              })}.`,
-            })
-          }}
-        >
-          Continue
-        </AmountPicker.Confirm>
-      </AmountPicker.Root>
-    </section>
+    </header>
   )
 }
 
-function QuickAmountOptions({
-  className,
-  optionClassName,
+function PresetAmountGrid({
   currencyDisplay,
   locale,
 }: {
-  className: string
-  optionClassName: string
   currencyDisplay: 'symbol' | 'code'
   locale: string
 }) {
-  const { quickAmounts, currency } = useAmountPicker()
+  const { quickAmounts, currency, creditsPerMinorUnit, displayExchangeRate } =
+    useAmountPicker()
+  const { displayCurrency } = useBalance()
   return (
-    <fieldset className={className} aria-label="Quick amounts">
+    <div className="solvapay-mcp-preset-grid" aria-label="Quick amounts">
       {quickAmounts.map(amount => {
-        const label = formatPrice(amount * getMinorUnitsPerMajor(currency), currency, {
+        const minor = amount * getMinorUnitsPerMajor(currency)
+        const label = formatPrice(minor, currency, {
           locale,
           free: '',
           currencyDisplay,
         })
+        const estimate = estimateTopupCredits(
+          minor,
+          currency,
+          displayCurrency,
+          creditsPerMinorUnit,
+          displayExchangeRate,
+        )
         return (
-          <AmountPicker.Option key={amount} amount={amount} className={optionClassName}>
-            {label}
+          <AmountPicker.Option key={amount} amount={amount} className="solvapay-mcp-preset-tile">
+            <span className="solvapay-mcp-preset-tile-amount">{label}</span>
+            <span className="solvapay-mcp-preset-tile-credits">
+              {estimate.kind === 'available'
+                ? formatCompactCredits(estimate.credits, locale)
+                : ''}
+            </span>
           </AmountPicker.Option>
         )
       })}
-    </fieldset>
+    </div>
+  )
+}
+
+function AmountDueSummary({ locale, currency }: { locale: string; currency: string }) {
+  const { resolvedAmountMinor } = useAmountPicker()
+  const displayAmount =
+    resolvedAmountMinor != null
+      ? formatPrice(resolvedAmountMinor, currency, { locale, free: '' })
+      : formatPrice(0, currency, { locale, free: '' })
+  return (
+    <AmountLadder
+      rows={[
+        {
+          label: 'Total due today',
+          value: <span className="solvapay-mcp-topup-total">{displayAmount}</span>,
+        },
+      ]}
+    />
   )
 }
 

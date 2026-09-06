@@ -1018,7 +1018,12 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
       const product = resolveProductRef(options.productRef || options.product)
 
       const usageType = options.meterName || options.usageType || 'requests'
-      const metadata = { product, meterName: usageType, usageType }
+      const metadata = {
+        product,
+        meterName: usageType,
+        usageType,
+        ...(options.toolName ? { toolName: options.toolName } : {}),
+      }
 
       return {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1140,7 +1145,7 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
             outcome: 'success' | 'fail',
             opts?: { duration?: number; metadata?: Record<string, unknown>; error?: unknown },
           ) => {
-            const requestId = `gate_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+            const requestId = decision.requestId
             const errMeta =
               opts?.error !== undefined
                 ? {
@@ -1154,9 +1159,11 @@ export function createSolvaPay(config?: CreateSolvaPayConfig): SolvaPay {
               units: 1,
               outcome,
               ...(opts?.duration !== undefined ? { duration: opts.duration } : {}),
+              idempotencyKey: `${requestId}:${outcome}`,
               metadata: {
                 action: meterName,
                 requestId,
+                ...(decideMetadata.toolName ? { toolName: decideMetadata.toolName } : {}),
                 ...errMeta,
                 ...(opts?.metadata ?? {}),
               },

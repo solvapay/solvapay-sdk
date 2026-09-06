@@ -1,30 +1,30 @@
 'use client'
 
 /**
- * Step 1 — plan selection. Renders the `PlanSelector` grid and a
- * primary `Continue with …` CTA that stays disabled until a plan is
- * selected.
+ * Step 1 — plan selection. One ordered column of `PlanRow`s. Back
+ * link sits top-left above the heading. Selection changes only the
+ * row border and check fill — the 20px check slot never reflows.
  *
- * When `fromPaywall` is true the step assumes it owns the "you hit a
- * paywall" reason copy and prefaces the grid with an `UpgradeBanner`.
- * `hideUpgradeBanner` overrides that — set it from custom surfaces
- * that already provide the reason copy outside the step (e.g. a
- * consumer wrapping the state machine in their own `<PaywallNotice>`
- * which already renders a heading + message).
+ * When `fromPaywall` is `activation_required` the step names that a
+ * plan is needed. `payment_required` is state F on the account
+ * surface — this step no longer prefixes a limit-reached handoff.
+ * `hideUpgradeBanner` suppresses the activation preface.
  */
 
 import React, { memo } from 'react'
 import { PlanSelector, usePlanSelector } from '../../../../primitives/PlanSelector'
 import { useCopy } from '../../../../hooks/useCopy'
+import { useBalance } from '../../../../hooks/useBalance'
 import { useHostLocale } from '../../../useHostLocale'
 import { BackLink } from '../../BackLink'
 import type { BootstrapPlanLike, Cx } from '../shared'
 import { formatContinueLabel } from '../shared'
+import { CheckoutPlanRow } from '../CheckoutPlanRow'
 
 interface PlanStepProps {
   fromPaywall: boolean
   paywallKind?: 'payment_required' | 'activation_required'
-  /** Suppresses the inline `UpgradeBanner` even when `fromPaywall` is true. */
+  /** Suppresses the inline upgrade preface even when `fromPaywall` is true. */
   hideUpgradeBanner?: boolean
   onContinue: () => void
   onStayOnFree?: () => void
@@ -50,33 +50,46 @@ export const PlanStep = memo(function PlanStep({
   activationError,
   cx,
 }: PlanStepProps) {
-  const { selectedPlan, selectedPlanRef, getSelectedOption } = usePlanSelector()
+  const { selectedPlan, selectedPlanRef, getSelectedOption, plans, select, isCurrent, isFree } =
+    usePlanSelector()
   const locale = useHostLocale()
   const copy = useCopy()
+  const balance = useBalance()
   const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
   const pricingOption = selectedPlan ? getSelectedOption(selectedPlan) : undefined
   const ctaLabel = formatContinueLabel(selectedPlanShape, locale, pricingOption)
-  const showBanner = fromPaywall && !hideUpgradeBanner
+  const showPreface = fromPaywall && !hideUpgradeBanner && paywallKind !== 'payment_required'
 
   return (
     <>
       {onBack ? <BackLink label={copy.checkout.backToAccount} onClick={onBack} /> : null}
 
-      {showBanner ? <UpgradeBanner kind={paywallKind} cx={cx} /> : null}
+      {showPreface ? (
+        <p className={cx.muted} role="status">
+          This tool needs a paid plan. Pick one to get started.
+        </p>
+      ) : null}
 
       <div className="solvapay-mcp-plan-step-header">
         <h2 className={cx.heading}>Choose a plan</h2>
         <PlanSelector.CurrencySwitcher className="solvapay-plan-selector-currency-switcher" />
       </div>
 
-      <PlanSelector.Grid className="solvapay-plan-selector-grid">
-        <PlanSelector.Card className="solvapay-plan-selector-card">
-          <PlanSelector.CardBadge className="solvapay-plan-selector-card-badge" />
-          <PlanSelector.CardName className="solvapay-plan-selector-card-name" />
-          <PlanSelector.CardPrice className="solvapay-plan-selector-card-price" />
-          <PlanSelector.CardInterval className="solvapay-plan-selector-card-interval" />
-        </PlanSelector.Card>
-      </PlanSelector.Grid>
+      <div className="solvapay-mcp-plan-list">
+        {plans.map(plan => (
+          <CheckoutPlanRow
+            key={plan.reference}
+            plan={plan}
+            locale={locale}
+            selected={selectedPlanRef === plan.reference}
+            current={isCurrent(plan.reference)}
+            free={isFree(plan.reference)}
+            selectedOption={getSelectedOption(plan)}
+            balance={balance}
+            onSelect={() => select(plan.reference)}
+          />
+        ))}
+      </div>
       <PlanSelector.Loading className="solvapay-plan-selector-loading" />
       <PlanSelector.Error className="solvapay-plan-selector-error" />
 
@@ -109,29 +122,3 @@ export const PlanStep = memo(function PlanStep({
     </>
   )
 })
-
-function UpgradeBanner({
-  kind,
-  cx,
-}: {
-  kind?: 'payment_required' | 'activation_required'
-  cx: Cx
-}) {
-  // `payment_required` fires when the customer's active plan hit its
-  // limit (quota exhausted on Free); `activation_required` fires when
-  // no paid plan is active and the tool requires one.
-  const copy =
-    kind === 'payment_required'
-      ? "You've used your free quota. Pick a plan to keep going."
-      : 'This tool needs a paid plan. Pick one to get started.'
-  return (
-    <div
-      className="solvapay-mcp-checkout-banner"
-      role="status"
-      data-solvapay-mcp-checkout-banner=""
-    >
-      <strong className="solvapay-mcp-checkout-banner-title">Upgrade to continue</strong>
-      <span className={`${cx.muted} solvapay-mcp-checkout-banner-message`.trim()}>{copy}</span>
-    </div>
-  )
-}

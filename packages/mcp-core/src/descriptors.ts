@@ -42,6 +42,7 @@ import {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   attachBusinessDetailsCore,
+  getHistoryCore,
   isErrorResult,
   processPaymentIntentCore,
   reactivatePurchaseCore,
@@ -409,7 +410,10 @@ export function buildSolvaPayDescriptors(
       handler: async (args, extra) =>
         trace(VIEWER_TOOL_NAME, args, extra, async () => {
           const requested =
-            args.view === 'checkout' || args.view === 'account' || args.view === 'topup'
+            args.view === 'checkout' ||
+            args.view === 'account' ||
+            args.view === 'topup' ||
+            args.view === 'auto-recharge'
               ? args.view
               : undefined
           if (requested !== undefined && !enabledViews.has(requested)) {
@@ -610,6 +614,10 @@ export function buildSolvaPayDescriptors(
       isBusiness: z.boolean(),
       businessName: z.string().optional(),
       country: z.string().optional(),
+      customerCountry: z.string().optional(),
+      customerName: z.string().optional(),
+      customerState: z.string().optional(),
+      customerPostalCode: z.string().optional(),
       taxId: z.string().optional(),
       taxIdType: z.enum(['eu_vat', 'gb_vat', 'us_ein']).optional(),
     },
@@ -626,6 +634,14 @@ export function buildSolvaPayDescriptors(
         const businessName =
           typeof args.businessName === 'string' ? args.businessName : undefined
         const country = typeof args.country === 'string' ? args.country : undefined
+        const customerCountry =
+          typeof args.customerCountry === 'string' ? args.customerCountry : undefined
+        const customerName =
+          typeof args.customerName === 'string' ? args.customerName : undefined
+        const customerState =
+          typeof args.customerState === 'string' ? args.customerState : undefined
+        const customerPostalCode =
+          typeof args.customerPostalCode === 'string' ? args.customerPostalCode : undefined
         const taxId = typeof args.taxId === 'string' ? args.taxId : undefined
         const taxIdType =
           args.taxIdType === 'eu_vat' ||
@@ -642,6 +658,10 @@ export function buildSolvaPayDescriptors(
             isBusiness,
             ...(businessName !== undefined && { businessName }),
             ...(country !== undefined && { country }),
+            ...(customerCountry !== undefined && { customerCountry }),
+            ...(customerName !== undefined && { customerName }),
+            ...(customerState !== undefined && { customerState }),
+            ...(customerPostalCode !== undefined && { customerPostalCode }),
             ...(taxId !== undefined && { taxId }),
             ...(taxIdType !== undefined && { taxIdType }),
           },
@@ -695,6 +715,36 @@ export function buildSolvaPayDescriptors(
         const result = await cancelPurchaseCore(
           buildRequest(extra, { method: 'POST' }),
           { purchaseRef, reason },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  })
+
+  pushTool({
+    name: MCP_TOOL_NAMES.getHistory,
+    description:
+      UI_ONLY_PREFIX +
+      'Load product charge history and account-wide credit activity for the authenticated customer. Charges come from purchases for this product; credit activity is every credit event on the account.',
+    inputSchema: {
+      productRef: z.string().optional(),
+      limit: z.number().int().positive().max(100).optional(),
+    },
+    meta: uiToolMeta,
+    annotations: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+    handler: async (args, extra) =>
+      trace(MCP_TOOL_NAMES.getHistory, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const effectiveProduct =
+          typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
+        const limit = typeof args.limit === 'number' ? args.limit : undefined
+
+        const result = await getHistoryCore(
+          buildRequest(extra, { method: 'GET' }),
+          { productRef: effectiveProduct, ...(limit !== undefined ? { limit } : {}) },
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)

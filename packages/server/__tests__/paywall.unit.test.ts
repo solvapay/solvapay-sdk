@@ -695,6 +695,28 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(mockApiClient.trackUsageCalls[0].metadata?.action).toBe('api_calls')
     })
 
+    it('sends an idempotencyKey derived from the decide() requestId', async () => {
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({ product: 'idempotency-test' })
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'cus_idem' } })
+
+      expect(mockApiClient.trackUsageCalls).toHaveLength(1)
+      const call = mockApiClient.trackUsageCalls[0]
+      expect(call.idempotencyKey).toBe(`${call.metadata.requestId}:success`)
+    })
+
+    it('records toolName on usage events when payable metadata carries it', async () => {
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({ product: 'tool-name-test', toolName: 'search_knowledge' })
+      const protectedHandler = await payable.function(handler)
+
+      await protectedHandler({ auth: { customer_ref: 'cus_tool' } })
+
+      expect(mockApiClient.trackUsageCalls[0].metadata.toolName).toBe('search_knowledge')
+    })
+
     it('should include outcome and requestId in usage tracking', async () => {
       const handler = vi.fn().mockResolvedValue({ success: true })
       const payable = solvaPay.payable({ product: 'prd_tracking' })
@@ -928,6 +950,41 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       vi.useRealTimers()
     })
 
+    it('coalesces concurrent checkLimits and consumes one unit per caller', async () => {
+      let resolveLimits!: (value: {
+        withinLimits: boolean
+        remaining: number
+        plan: string
+      }) => void
+      const pending = new Promise<{
+        withinLimits: boolean
+        remaining: number
+        plan: string
+      }>(resolve => {
+        resolveLimits = resolve
+      })
+      const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits').mockReturnValue(pending)
+
+      const handler = vi.fn().mockResolvedValue({ success: true })
+      const payable = solvaPay.payable({ product: 'cache-concurrent' })
+      const protectedHandler = await payable.function(handler)
+
+      const args = { auth: { customer_ref: 'cus_concurrent' } }
+      const first = protectedHandler(args)
+      const second = protectedHandler(args)
+      const third = protectedHandler(args)
+      const fourth = protectedHandler(args)
+
+      resolveLimits({ withinLimits: true, remaining: 3, plan: 'free' })
+
+      await expect(first).resolves.toEqual({ success: true })
+      await expect(second).resolves.toEqual({ success: true })
+      await expect(third).resolves.toEqual({ success: true })
+      await expect(fourth).rejects.toBeInstanceOf(PaywallError)
+      expect(checkLimitsSpy).toHaveBeenCalledTimes(1)
+      expect(handler).toHaveBeenCalledTimes(3)
+    })
+
     it('should keep cache entries isolated by usageType', async () => {
       const checkLimitsSpy = vi.spyOn(mockApiClient, 'checkLimits')
       const handler = vi.fn().mockResolvedValue({ success: true })
@@ -1047,6 +1104,7 @@ describe('Paywall Unit Tests - Mocked Backend', () => {
       expect(decision.customerRef).toBe('cus_decide_ok')
       expect(decision.limits.withinLimits).toBe(true)
       expect(decision.args).toEqual({ auth: { customer_ref: 'decide_ok' } })
+      expect(decision.requestId).toMatch(/^solvapay_/)
       // `allow` outcomes do NOT emit a trackUsage event from decide() —
       // the caller (protect/adapter) is responsible for tracking the
       // handler's success/fail outcome once it runs.

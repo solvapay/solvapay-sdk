@@ -24,7 +24,11 @@ function getQuickAmounts(currency: string): number[] {
 
 function getCurrencySymbol(currency: string): string {
   try {
-    const parts = new Intl.NumberFormat('en', { style: 'currency', currency }).formatToParts(0)
+    const parts = new Intl.NumberFormat('en', {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'narrowSymbol',
+    }).formatToParts(0)
     const sym = parts.find(p => p.type === 'currency')
     return sym?.value || currency
   } catch {

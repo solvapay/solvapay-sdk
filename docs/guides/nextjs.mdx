@@ -247,7 +247,7 @@ export async function GET(request: Request) {
 
 - `getMerchant` returns `{ name, iconUrl, logoUrl, termsUrl, privacyUrl, ... }` — use it to brand checkout and mandate copy.
 - `getProduct` returns the product with public plans for the current authenticated customer.
-- `getPaymentMethod` returns `{ kind: 'card', brand, last4, expMonth, expYear } | { kind: 'none' }`, mirrored from the last successful `payment_intent.succeeded` webhook. Safe to poll alongside `check-purchase`.
+- `getPaymentMethod` returns `{ kind: 'card', brand, last4, expMonth, expYear, reusable } | { kind: 'none' }`, mirrored from the last successful `payment_intent.succeeded` webhook. Safe to poll alongside `check-purchase`. `reusable` tells a chargeable saved card apart from a card that is only on file — check it before offering an off-session action such as auto-recharge.
 
 #### Customer Balance
 

@@ -33,6 +33,10 @@ export type {
   TrackUsageBulkResponse,
   AssignCreditsRequest,
   AssignCreditsResponse,
+  CreditActivityType,
+  CreditActivityEntry,
+  CreditActivityResult,
+  GetHistoryResult,
 } from './client'
 // Re-export SolvaPayClient interface from types/client.ts
 export type { SolvaPayClient } from './client'

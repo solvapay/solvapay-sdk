@@ -1,6 +1,6 @@
 # `mcp-checkout-app` — tools cheat-sheet
 
-The server registers **10 SolvaPay tools** + (optionally) 3 demo data tools.
+The server registers **8 SolvaPay tools** + (optionally) 3 demo data tools.
 Grouped by audience below: what the model sees in `tools/list` is in the
 first two tables; the UI-only tools are tagged `_meta.audience: 'ui'` so
 hosts that honour the field can hide them from the agent.
@@ -54,7 +54,8 @@ new tool calls.
 - **Checkout** — plan picker / upgrade flow (Stripe Elements or hosted
   checkout fallback).
 - **Account** — current plan, balance, usage, payment method, customer portal
-  CTA, seller details in the sidebar.
+  CTA. Identity is `Paying as {email}` inside the payment form, not a
+  sidebar.
 - **Top up** — amount → payment → success with `Back to my account` on each
   step.
 
@@ -95,6 +96,7 @@ activation is the recovery path).
 | `process_payment` | Confirm payment + create purchase |
 | `attach_business_details` | Tax computation on the Payment step |
 | `set_renewal` | Toggle auto-renewal (`enabled: true \| false`) |
+| `get_history` | Product charges + account-wide credit activity (fullscreen history) |
 
 Called exclusively from the iframe via `createMcpAppAdapter`. Descriptions
 steer agents toward `` `account` `` / `` `activate_plan` `` instead.

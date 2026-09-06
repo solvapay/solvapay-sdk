@@ -5,7 +5,7 @@ description: "Render SolvaPay checkout and account management inside an MCP host
 
 An **MCP App** is a UI resource that an MCP host loads inside a sandboxed iframe. Host sandboxes typically block direct HTTP calls to arbitrary backends, so the UI cannot hit your API the way a normal React app would.
 
-The TypeScript SDK ships a dedicated adapter for this environment. `createMcpAppAdapter` returns a `SolvaPayTransport` that tunnels every data call through `app.callServerTool` instead of HTTP. Mount it on `SolvaPayProvider` and every hook (`usePurchase`, `useMerchant`, `<CurrentPlanCard>`, `<LaunchCustomerPortalButton>`, etc.) works unchanged.
+The TypeScript SDK ships a dedicated adapter for this environment. `createMcpAppAdapter` returns a `SolvaPayTransport` that tunnels calls through `app.callServerTool` instead of HTTP, and the data the UI needs at mount arrives on the bootstrap payload rather than over the wire a second time. Mount the transport on `SolvaPayProvider` and every hook (`usePurchase`, `useMerchant`, `<CurrentPlanCard>`, `<LaunchCustomerPortalButton>`, etc.) works unchanged.
 
 ## Prerequisites
 
@@ -22,15 +22,49 @@ pnpm add @solvapay/react @modelcontextprotocol/ext-apps
 
 ## Quick start
 
-Wire the adapter into `SolvaPayProvider` and you're done — every SDK hook routes through the MCP transport.
+`<McpApp>` is the turnkey path: it connects the app, applies the host theme, fetches the bootstrap payload, mounts `SolvaPayProvider` over the MCP transport, and routes the server-stamped `view` (`checkout` / `account` / `topup`) into the matching SolvaPay surface.
 
 ```tsx
-import { App } from '@modelcontextprotocol/ext-apps'
+import { createRoot } from 'react-dom/client'
+import {
+  App,
+  applyDocumentTheme,
+  applyHostFonts,
+  applyHostStyleVariables,
+  type McpUiHostContext,
+} from '@modelcontextprotocol/ext-apps'
+import { McpApp, SOLVAPAY_MCP_APP_CAPABILITIES } from '@solvapay/react/mcp'
+import '@solvapay/react/styles.css'
+import '@solvapay/react/mcp/styles.css'
+
+function applyContext(ctx: McpUiHostContext | undefined) {
+  if (!ctx) return
+  if (ctx.theme) applyDocumentTheme(ctx.theme)
+  if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables)
+  if (ctx.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts)
+}
+
+const app = new App(
+  { name: 'my-app', version: '1.0.0' },
+  { availableDisplayModes: [...SOLVAPAY_MCP_APP_CAPABILITIES.availableDisplayModes] },
+)
+
+createRoot(document.getElementById('root')!).render(
+  <McpApp app={app} applyContext={applyContext} />,
+)
+```
+
+Pass `SOLVAPAY_MCP_APP_CAPABILITIES` as the second argument to `new App(...)` so the host only offers display modes this surface can handle — see [Display modes](#display-modes).
+
+### Custom shell
+
+To own the provider mount, wire the adapter yourself. Every SDK hook then routes through the MCP transport unchanged.
+
+```tsx
 import { SolvaPayProvider, CurrentPlanCard } from '@solvapay/react'
 import { createMcpAppAdapter } from '@solvapay/react/mcp'
 import '@solvapay/react/styles.css'
 
-const app = new App({ name: 'my-app', version: '1.0.0' })
 const transport = createMcpAppAdapter(app)
 
 export function Root() {
@@ -42,48 +76,40 @@ export function Root() {
 }
 ```
 
-`app.connect()` still has to run once before the provider mounts — do it in a top-level bootstrap effect alongside whatever host-context handling you need.
+`app.connect()` still has to run once before the provider mounts — do it in a top-level bootstrap effect alongside whatever host-context handling you need. `<McpApp>` does this for you.
 
 ## Tool contract
 
-The adapter maps each transport method to a single MCP tool name. Export `MCP_TOOL_NAMES` in your server so the two stay in lockstep.
+The adapter does **not** have a tool per hook. Everything the UI reads at mount — purchase, merchant, product, plans, payment method, balance, usage, and limits — arrives on the `account` viewer's bootstrap payload, and `seedMcpCaches` hydrates the provider caches from it. The adapter only calls a tool when the UI needs to write, or needs data that bootstrap does not carry.
 
-| Transport method          | MCP tool name                   | Args the adapter adds            | Returns                                                       |
-| ------------------------- | ------------------------------- | -------------------------------- | ------------------------------------------------------------- |
-| `checkPurchase`           | `check_purchase`                | —                                | `{ customerRef, email, name, purchases: [...] }`              |
-| `createCheckoutSession`   | `create_hosted_session`         | `kind: 'checkout'`               | `{ sessionId, checkoutUrl }`                                  |
-| `createCustomerSession`   | `create_hosted_session`         | `kind: 'portal'`                 | `{ sessionId, customerUrl }`                                  |
-| `getPaymentMethod`        | `get_payment_method`            | —                                | `{ kind: 'card', brand, last4, expMonth, expYear } \| { kind: 'none' }` |
-| `getMerchant`             | `get_merchant`                  | —                                | `Merchant`                                                    |
-| `getProduct`              | `get_product`                   | —                                | `Product`                                                     |
-| `listPlans`               | `list_plans`                    | —                                | `Plan[]`                                                      |
-| `getBalance`              | `get_customer_balance`          | —                                | `{ credits, displayCurrency, creditsPerMinorUnit, displayExchangeRate }` |
-| `createPayment`           | `create_payment_intent`         | `purpose: 'plan'`                | `PaymentIntentResult`                                         |
-| `processPayment`          | `process_payment`               | —                                | `ProcessPaymentResult`                                        |
-| `createTopupPayment`      | `create_payment_intent`         | `purpose: 'topup'`               | `TopupPaymentResult`                                          |
-| `activatePlan`            | `activate_plan`                 | —                                | `ActivatePlanResult`                                          |
-| `cancelRenewal`           | `set_renewal`                   | `enabled: false`                 | `CancelResult`                                                |
-| `reactivateRenewal`       | `set_renewal`                   | `enabled: true`                  | `ReactivateResult`                                            |
+| Transport method        | MCP tool name           | Args the adapter adds | Returns                                     |
+| ----------------------- | ----------------------- | --------------------- | ------------------------------------------- |
+| `createPayment`         | `create_payment_intent` | `purpose: 'plan'`     | `PaymentIntentResult`                       |
+| `createTopupPayment`    | `create_payment_intent` | `purpose: 'topup'`    | `TopupPaymentResult`                        |
+| `processPayment`        | `process_payment`       | —                     | `ProcessPaymentResult`                      |
+| `attachBusinessDetails` | `attach_business_details` | —                   | `{ taxBreakdown }`                          |
+| `activatePlan`          | `activate_plan`         | —                     | `ActivatePlanResult`                        |
+| `cancelRenewal`         | `set_renewal`           | `enabled: false`      | `CancelResult`                              |
+| `reactivateRenewal`     | `set_renewal`           | `enabled: true`       | `ReactivateResult`                          |
+| `createCheckoutSession` | `create_hosted_session` | `kind: 'checkout'`    | `{ sessionId, checkoutUrl }`                |
+| `createCustomerSession` | `create_hosted_session` | `kind: 'portal'`      | `{ sessionId, customerUrl }`                |
+| `getHistory`            | `get_history`           | —                     | `{ charges, creditActivity }`               |
 
-Your server only needs to implement the tools the UI actually uses. Unimplemented tools surface as a thrown error from the adapter — catch and feature-detect in your component.
+`get_history` is the one read the adapter still makes: the bootstrap payload only carries the **active** purchase, so past charges and credit-ledger rows have to be fetched when the history section mounts.
+
+Import `MCP_TOOL_NAMES` from `@solvapay/mcp-core` on both sides so a rename edits one file. Unimplemented tools surface as a thrown error from the adapter — catch and feature-detect in your component.
 
 ## Server side
 
-On the server, register each tool with the canonical name so the client adapter can find it. Import the constants so you never hand-type a string.
+`createSolvaPayMcpServer` registers all of these for you. Register them by hand only when you maintain your own `McpServer` wiring, and always use the canonical name from `MCP_TOOL_NAMES`.
 
 ```ts
 import { MCP_TOOL_NAMES, registerAppTool } from '@solvapay/mcp'
-import { checkPurchaseCore, createCheckoutSessionCore } from '@solvapay/server'
-
-registerAppTool(
-  server,
-  MCP_TOOL_NAMES.checkPurchase,
-  { description: 'Fetch the active purchase for the authenticated customer.', inputSchema: {} },
-  async (_args, extra) => {
-    const result = await checkPurchaseCore(buildRequest(extra), { solvaPay })
-    return toolResult(result)
-  },
-)
+import {
+  createCheckoutSessionCore,
+  createCustomerSessionCore,
+  getHistoryCore,
+} from '@solvapay/server'
 
 registerAppTool(
   server,
@@ -100,6 +126,19 @@ registerAppTool(
       args.kind === 'portal'
         ? await createCustomerSessionCore(buildRequest(extra, { method: 'POST' }), { solvaPay })
         : await createCheckoutSessionCore(buildRequest(extra, { method: 'POST' }), args, { solvaPay })
+    return toolResult(result)
+  },
+)
+
+registerAppTool(
+  server,
+  MCP_TOOL_NAMES.getHistory,
+  {
+    description: 'Past charges and credit activity for the authenticated customer.',
+    inputSchema: { productRef: z.string(), limit: z.number().int().positive().optional() },
+  },
+  async (args, extra) => {
+    const result = await getHistoryCore(buildRequest(extra), args, { solvaPay })
     return toolResult(result)
   },
 )
@@ -124,16 +163,56 @@ const mcpAuthAdapter = {
 
 Without this, the provider short-circuits the fetch pipeline and the transport never runs.
 
+## Display modes
+
+Display mode is host state, not routing. The host publishes `displayMode` and `availableDisplayModes` on its context; the SDK reads them and reacts. The **host owns the expand affordance** — the SDK never calls `requestDisplayMode`.
+
+Advertise what the surface can handle when you construct the app:
+
+```tsx
+import { SOLVAPAY_MCP_APP_CAPABILITIES } from '@solvapay/react/mcp'
+
+const app = new App(
+  { name: 'my-app', version: '1.0.0' },
+  { availableDisplayModes: [...SOLVAPAY_MCP_APP_CAPABILITIES.availableDisplayModes] },
+)
+```
+
+That advertises `inline` and `fullscreen` only — `pip` is excluded because checkout and account are not live sessions. Both modes render the same React tree:
+
+- **`inline`** — a compact, content-height block centred at `36rem`.
+- **`fullscreen`** — a hosted 1000px column with no SolvaPay header, since the host owns the window chrome. Below 1000px of measured host width it falls back to the inline stack. `safeAreaInsets` from the host context are applied as root padding.
+
+`<McpApp>` wires this up. In a custom shell, read the state with `useDisplayMode()` (under `<McpDisplayModeProvider>`) or `readDisplayModeState(hostContext)`.
+
+## Theming
+
+The widget blends into the host canvas rather than painting its own surface. It reads the MCP Apps spec token names the host publishes (`--color-*`, `--font-*`, `--border-radius-*`) and uses `--solvapay-*` only for branding extras — apply the host context with `applyDocumentTheme` / `applyHostStyleVariables` / `applyHostFonts` and the rest follows.
+
+The Stripe Payment Element is themed from those same live CSS variables, so card fields match the host's type and colour without a Stripe `appearance` object of your own. Set `color-scheme` on the widget document so native controls and the Stripe iframe agree on light or dark.
+
+## Outbound links
+
+**Never render a bare `<a target="_blank">` and never call `window.open()` directly.** Claude's iframe sandbox omits `allow-popups`, so both are dropped silently — the control looks alive and does nothing.
+
+Every outbound link goes through one of two hooks, which prefer the host's `ui/open-link` when the host declares the `openLinks` capability and fall back to native navigation everywhere else. The capability is read at click time, not render time.
+
+- **`useExternalLinkClick()`** — for anchors. Keep the real `href` on the element so the link is still meaningful to assistive tech and to hosts that do navigate.
+- **`useOpenExternal()`** — for flows that resolve a URL after an `await`.
+
+`<McpApp>` mounts the opener automatically. In a custom shell inside some other sandboxed host, mount `<ExternalLinkProvider>` yourself.
+
 ## Hosted checkout from inside the iframe
 
-Open checkout in a new browser tab. Pre-fetch the session URL on mount and render a real `<a target="_blank">` anchor — scripted `window.open` after an async round-trip is blocked by typical host sandboxes, but anchor clicks are permitted.
+Open checkout in a new browser tab. Pre-fetch the session URL on mount and render an anchor whose click goes through `useExternalLinkClick`.
 
 ```tsx
 import { useEffect, useState } from 'react'
-import { useSolvaPay } from '@solvapay/react'
+import { useExternalLinkClick, useSolvaPay } from '@solvapay/react'
 
 function UpgradeButton({ productRef }: { productRef: string }) {
   const { _config } = useSolvaPay()
+  const onLinkClick = useExternalLinkClick()
   const [href, setHref] = useState<string | null>(null)
 
   useEffect(() => {
@@ -146,8 +225,8 @@ function UpgradeButton({ productRef }: { productRef: string }) {
 
   if (!href) return <button disabled>Loading…</button>
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer">
-      <button>Upgrade</button>
+    <a href={href} target="_blank" rel="noopener noreferrer" onClick={onLinkClick}>
+      Upgrade
     </a>
   )
 }
@@ -174,7 +253,26 @@ function Account() {
 
 - **`<CurrentPlanCard />`** renders the active plan, mirrored card brand/last4, and inline **Update card** / **Cancel plan** actions. The MCP `account` view hides both — card updates and cancellation route through the **Manage account** customer-portal CTA — and surfaces a one-line hint pointing at it.
 - **`<LaunchCustomerPortalButton />`** opens the hosted customer portal in a new tab (default label: "Manage account"). The button renders enabled from first paint and fetches the portal URL in the background; multiple instances under the same provider share a single in-flight `createCustomerSession` round-trip. When the URL has resolved, click is a real `<a target="_blank">` navigation (sandbox-safe). On a cache-miss click the handler awaits the in-flight promise and falls back to `window.open`.
-- **`usePaymentMethod()`** exposes the mirrored card under `{ paymentMethod, loading, refetch }` when you need to build a custom account view. The card brand and last4 come from the `payment_intent.succeeded` webhook persisted on the Customer — no card-element iframe required inside the MCP App sandbox.
+- **`usePaymentMethod()`** exposes the mirrored card under `{ paymentMethod, loading, refetch }` when you need to build a custom account view. The card brand and last4 come from the `payment_intent.succeeded` webhook persisted on the Customer — no card-element iframe required inside the MCP App sandbox. A card also reports `reusable`, which tells a chargeable saved card apart from a card that is only on file — read it before offering an off-session action such as auto-recharge.
+- **Buyer identity** renders as `<McpPayingAs>` inside the payment form. The MCP surfaces have no sidebar, so there is no separate identity card.
+
+### Migrating from the sidebar layout
+
+These MCP-only exports were removed with the sidebar. Turnkey `<McpApp>` integrators are unaffected; custom shells that imported them must migrate.
+
+| Removed                                | Replacement                                            |
+| -------------------------------------- | ------------------------------------------------------ |
+| `McpSellerDetailsCard`                 | Seller identity renders in the fullscreen account view's identity footer |
+| `McpCustomerDetailsCard`               | `<McpPayingAs>`, inside the payment form                |
+| `McpAccountView` prop `hideDetailCards` | No longer needed — the cards are gone                  |
+| `McpLimitReached`                      | Gates are plain-text narrations; see [Text-only paywall](#text-only-paywall) |
+| `CloseButton`                          | The host owns window chrome in fullscreen               |
+
+## Usage and history
+
+The bootstrap payload seeds `limits`, so `useLimits()` and `useUsage()` render remaining allowance on first paint without a second round-trip. When the backend measured a finite cap, `used` and `limit` come back on the limits result and are authoritative — do not reconstruct the cap as `used + remaining`, and do not read consumption off the purchase snapshot.
+
+History is the exception to the seed-from-bootstrap rule: the bootstrap payload only carries the **active** purchase, so past charges and credit-ledger rows are fetched through `get_history` when the history section mounts. On the server, `getHistoryCore(request, { productRef, limit })` from `@solvapay/server` returns `{ charges, creditActivity }`; fetch-runtime servers can mount the `getHistory` handler from `@solvapay/server/fetch` at `GET /api/history` instead.
 
 ## Text-only paywall
 

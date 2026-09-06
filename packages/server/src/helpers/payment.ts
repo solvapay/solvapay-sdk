@@ -402,6 +402,8 @@ export async function attachBusinessDetailsCore(
       country: body.country,
       customerCountry: body.customerCountry,
       customerName: body.customerName,
+      customerState: body.customerState,
+      customerPostalCode: body.customerPostalCode,
       taxId: body.taxId,
       taxIdType: body.taxIdType,
     })

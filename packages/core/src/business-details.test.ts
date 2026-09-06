@@ -4,11 +4,21 @@ import {
   BUSINESS_COUNTRY_DISPLAY_NAMES,
   BUSINESS_COUNTRY_OPTIONS,
   COUNTRY_TO_TAX_ID_TYPE,
+  POSTAL_CODE_REQUIRED_COUNTRIES,
+  STATE_REQUIRED_COUNTRIES,
   SUPPORTED_BUSINESS_COUNTRIES,
   deriveTaxIdType,
+  getCustomerAddressFieldErrors,
+  getPostalCodeFieldLabel,
+  getPostalCodePlaceholder,
+  getStateFieldLabel,
   getTaxIdExample,
   getTaxIdFieldLabel,
   getTaxIdHelperText,
+  isCustomerAddressComplete,
+  isPostalCodeRequired,
+  isStateRequired,
+  resolveBuyerCountry,
   resolveTaxBehavior,
   validateBusinessDetails,
 } from './business-details'
@@ -128,6 +138,7 @@ describe('validateBusinessDetails', () => {
     expect(result.success).toBe(true)
     if (result.success && result.data.isBusiness) {
       expect(result.data.country).toBe('SE')
+      expect(result.data.customerCountry).toBe('SE')
       expect(result.data.businessName).toBeUndefined()
       expect(result.data.taxId).toBeUndefined()
     }
@@ -284,5 +295,100 @@ describe('BusinessDetailsSchema', () => {
         ]),
       )
     }
+  })
+
+  it('preserves customerState and customerPostalCode on the non-business branch', () => {
+    const result = BusinessDetailsSchema.parse({
+      isBusiness: false,
+      customerCountry: 'us',
+      customerState: 'CA',
+      customerPostalCode: '94103',
+    })
+
+    expect(result).toEqual({
+      isBusiness: false,
+      customerCountry: 'US',
+      customerState: 'CA',
+      customerPostalCode: '94103',
+    })
+  })
+
+  it('always emits customerCountry on the business branch', () => {
+    expect(
+      BusinessDetailsSchema.parse({
+        isBusiness: true,
+        country: 'DE',
+        customerCountry: 'se',
+      }),
+    ).toEqual({
+      isBusiness: true,
+      country: 'DE',
+      customerCountry: 'SE',
+    })
+  })
+
+  it('preserves customerState and customerPostalCode on the business branch', () => {
+    const result = BusinessDetailsSchema.parse({
+      isBusiness: true,
+      country: 'us',
+      customerState: 'NY',
+      customerPostalCode: '10001',
+    })
+
+    expect(result).toEqual({
+      isBusiness: true,
+      country: 'US',
+      customerCountry: 'US',
+      customerState: 'NY',
+      customerPostalCode: '10001',
+    })
+  })
+
+})
+
+describe('buyer address helpers', () => {
+  it('keeps postal and state requirement tables aligned with hosted checkout', () => {
+    expect([...POSTAL_CODE_REQUIRED_COUNTRIES]).toEqual(['US', 'CA', 'GB'])
+    expect([...STATE_REQUIRED_COUNTRIES]).toEqual(['US', 'CA', 'IN'])
+  })
+
+  it('uses hosted labels for state and postal fields', () => {
+    expect(isPostalCodeRequired('US')).toBe(true)
+    expect(isPostalCodeRequired('SE')).toBe(false)
+    expect(isStateRequired('IN')).toBe(true)
+    expect(isStateRequired('GB')).toBe(false)
+    expect(getStateFieldLabel('US')).toBe('State')
+    expect(getStateFieldLabel('CA')).toBe('Province')
+    expect(getPostalCodeFieldLabel('US')).toBe('ZIP code')
+    expect(getPostalCodeFieldLabel('GB')).toBe('Postal code')
+    expect(getPostalCodePlaceholder('US')).toBe('94103')
+    expect(getPostalCodePlaceholder('GB')).toBe('Required')
+  })
+
+  it('resolves the buyer country from customerCountry, falling back to country for business', () => {
+    expect(resolveBuyerCountry({ isBusiness: false, customerCountry: 'SE' })).toBe('SE')
+    expect(resolveBuyerCountry({ isBusiness: true, country: 'DE', customerCountry: 'SE' })).toBe(
+      'SE',
+    )
+    expect(resolveBuyerCountry({ isBusiness: true, country: 'DE' })).toBe('DE')
+    expect(resolveBuyerCountry({ isBusiness: false })).toBeUndefined()
+  })
+
+  it('treats the address as complete only when required state and postal are present', () => {
+    expect(isCustomerAddressComplete({ isBusiness: false, customerCountry: 'SE' })).toBe(true)
+    expect(isCustomerAddressComplete({ isBusiness: false, customerCountry: 'US' })).toBe(false)
+    expect(
+      isCustomerAddressComplete({
+        isBusiness: false,
+        customerCountry: 'US',
+        customerState: 'CA',
+        customerPostalCode: '94103',
+      }),
+    ).toBe(true)
+    expect(isCustomerAddressComplete({ isBusiness: false })).toBe(false)
+    expect(getCustomerAddressFieldErrors({ isBusiness: false, customerCountry: 'US' })).toEqual({
+      customerPostalCode: 'ZIP code is required',
+      customerState: 'State is required',
+    })
   })
 })

@@ -4,9 +4,12 @@ node_modules/
 .wrangler/
 .env
 .env.local
+.env.dev
+.env.dev.local
 .env.prod
 .env.prod.local
 !.env.example
+!.env.dev.example
 !.env.prod.example
 # Legacy pre-rename: ignore `.dev.vars*` too so any developer who
 # followed earlier instructions (copy .dev.vars.example -> .dev.vars

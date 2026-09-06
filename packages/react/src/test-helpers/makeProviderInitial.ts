@@ -14,6 +14,7 @@ export function makeProviderInitial(
     paymentMethod: null,
     balance: null,
     usage: null,
+    limits: null,
     merchant,
     product,
     plans,

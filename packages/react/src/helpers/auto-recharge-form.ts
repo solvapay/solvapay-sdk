@@ -11,13 +11,12 @@ import { interpolate } from '../i18n/interpolate'
 /**
  * Localized validation copy for the auto-recharge form. Structurally compatible
  * with the `autoRecharge` slice of the SDK copy, so callers can pass `copy.autoRecharge`
- * directly. `minTopupAmount` and `topupBelowThreshold` are templates with `{amount}`.
+ * directly. `minTopupAmount` is a template with `{amount}`.
  */
 export type AutoRechargeValidationMessages = {
   invalidThreshold: string
   thresholdTooLow: string
   minTopupAmount: string
-  topupBelowThreshold: string
   invalidMaxMonthlySpend: string
   maxMonthlySpendBelowTopup: string
 }
@@ -26,7 +25,6 @@ const DEFAULT_VALIDATION_MESSAGES: AutoRechargeValidationMessages = {
   invalidThreshold: 'Enter a valid balance threshold.',
   thresholdTooLow: 'Balance threshold must be greater than zero.',
   minTopupAmount: 'Top-up amount must be at least {amount}.',
-  topupBelowThreshold: 'Top-up amount must be at least your balance threshold ({amount}).',
   invalidMaxMonthlySpend: 'Maximum monthly spend must be a positive amount.',
   maxMonthlySpendBelowTopup:
     'Maximum monthly spend must be at least your top-up amount ({amount}).',
@@ -241,21 +239,6 @@ export function validateAutoRechargeForm(
     }
   }
   payload.topupAmountMajor = amountMajor
-
-  // The top-up must clear the threshold, otherwise the recharge leaves the
-  // balance below it and re-triggers on the next check.
-  if (amountMajor < payload.thresholdAmountMajor) {
-    return {
-      ok: false,
-      error: interpolate(messages.topupBelowThreshold, {
-        amount: formatPrice(
-          Math.round(payload.thresholdAmountMajor * minorPerMajor),
-          currency,
-          { free: '' },
-        ),
-      }),
-    }
-  }
 
   if (form.maxMonthlySpendMajor.trim().length > 0) {
     const max = parsePositiveNumber(form.maxMonthlySpendMajor)

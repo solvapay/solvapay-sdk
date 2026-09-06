@@ -72,6 +72,17 @@ export interface McpCheckoutViewProps {
    * surface routing.
    */
   onBack?: () => void
+  /**
+   * Pre-select this plan and, with `autoAdvance`, skip the plan step
+   * by running `flow.advance()` once the selector has that plan.
+   */
+  initialPlanRef?: string
+  /**
+   * When set with `initialPlanRef`, fire the plan-step Continue path
+   * automatically so a ladder Switch/Activate lands on amount or
+   * payment — not a second plan picker.
+   */
+  autoAdvance?: boolean
   classNames?: McpViewClassNames
   children?: React.ReactNode
 }
@@ -87,6 +98,8 @@ export function McpCheckoutView({
   plans,
   onClose,
   onBack,
+  initialPlanRef,
+  autoAdvance,
   classNames,
   children,
 }: McpCheckoutViewProps) {
@@ -112,6 +125,8 @@ export function McpCheckoutView({
         plans={plans}
         onClose={onClose}
         onBack={onBack}
+        initialPlanRef={initialPlanRef}
+        autoAdvance={autoAdvance}
         cx={cx}
         classNames={classNames}
       >

@@ -160,7 +160,6 @@ const Root = forwardRef<HTMLDivElement, RootProps>(function ActivationFlowRoot(
     }
     if (!calledSuccessRef.current) {
       calledSuccessRef.current = true
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep('activated')
       if (result) {
         const activationResult: ActivationResult = { kind: 'activated', result }

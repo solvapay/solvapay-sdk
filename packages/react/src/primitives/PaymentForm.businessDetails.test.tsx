@@ -17,7 +17,7 @@ const attachHookMock = vi.hoisted(() => ({
 vi.mock('../hooks/useBusinessDetailsAttach', () => ({
   defaultBusinessDetails: { isBusiness: false },
   useBusinessDetailsAttach: vi.fn(() => ({
-    businessDetails: { isBusiness: false },
+    businessDetails: { isBusiness: false, customerCountry: 'SE' },
     setBusinessDetails: attachHookMock.setBusinessDetails,
     fieldErrors: {},
     taxBreakdown: null,

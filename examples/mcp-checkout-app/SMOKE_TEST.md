@@ -60,9 +60,9 @@ Fresh customer opens the MCP App in `basic-host`.
   **not** repeated inside the account iframe.
 - `bootstrap.view === 'account'` by default → `<McpAccountView>`
   renders one primary card (current plan, credits, or pick-a-plan
-  empty state). Seller + **Your account** detail cards sit in the
-  persistent sidebar on wide iframes (or inline below the card on
-  narrow frames).
+  empty state). Identity is not on this surface — `Paying as {email}`
+  appears only inside the payment form, not as a Seller / Your
+  account sidebar.
 - On an active plan the card opens with a **Your plan** title in the
   same slot as checkout's **Choose a plan**, then the plan name and
   the facts captioned **Rate**/**Price** and **Balance**. The plan
@@ -186,17 +186,18 @@ After activation, type `/manage_account` → `Upgrade` (Free) or
   the amber banner is **absent** and the `Stay on Free` link is
   hidden. One flag, one visual — same surface, different framing.
 
-### 7. Sidebar stability check
+### 7. Paying as
 
-Open the app on a **wide** iframe (>=816px) from the account view.
-Switch **Account → Top up → Account**.
+Open the app from the account view. Switch **Account → Top up** and
+advance to the payment step. Then go back to the amount step.
 
 **Expect**:
 
-- **Seller** + **Your account** cards stay in the left sidebar on
-  wide frames — widgets do not jump when swapping surfaces.
-- Resize to narrow (<816px): sidebar hides; the primary action card
-  renders first, then **Your account**, then **Seller** inline below.
+- `Paying as {email}` appears only on the payment step, inside the
+  form column — inline shares the back-link row; fullscreen stacks
+  under the heading.
+- The amount step, plan picker, and account surface do not show it.
+- No **Seller** or **Your account** cards, no sidebar rail.
 - No account screen shows product description or a `Current plan and
 usage` overline.
 

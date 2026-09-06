@@ -51,6 +51,10 @@ export type ActivationStrategy = 'activate' | 'topup-first' | 'paid-checkout'
 export interface PlanLike {
   /** Catalog / snapshot identifier used to match a purchase back to a live plan. */
   reference?: string | null
+  /** Display name. Catalog plans carry it; thin snapshots may not. */
+  name?: string | null
+  /** Backend-derived pricing label, e.g. `'usage-based'` or `'hybrid'`. */
+  type?: string | null
   /** Composable pricing options: charges, billing cycle, limit, trial. */
   options?: PricingOptionLike[] | null
   /** `false` marks a free plan. Only present on a plan, not a snapshot. */

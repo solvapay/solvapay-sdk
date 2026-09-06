@@ -30,6 +30,11 @@ export interface PaywallMetadata {
    * @deprecated Use `meterName`. Still accepted as an alias of the meter name.
    */
   usageType?: string
+  /**
+   * Tool or handler name recorded on usage events so consumption is
+   * attributable. Set by `registerPayable` / `buildPayableHandler`.
+   */
+  toolName?: string
 }
 
 /**
@@ -163,6 +168,11 @@ export type PaywallDecision<T> =
        * wire data.
        */
       consequence?: 'throttled' | 'overage'
+      /**
+       * Id minted by `decide()` and reused by `runAllow()` so success /
+       * fail tracking shares one idempotency key with the decision.
+       */
+      requestId: string
     }
   | {
       outcome: 'gate'
@@ -174,4 +184,5 @@ export type PaywallDecision<T> =
        */
       limits: LimitResponseWithPlan | null
       customerRef: string
+      requestId: string
     }

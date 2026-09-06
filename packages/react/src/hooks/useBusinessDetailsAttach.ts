@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  getCustomerAddressFieldErrors,
+  isCustomerAddressComplete,
   validateBusinessDetails,
   type BusinessDetailsInput,
   type TaxBreakdown,
@@ -16,6 +18,8 @@ export type AttachBusinessDetailsFn = (params: {
   country?: string
   customerCountry?: string
   customerName?: string
+  customerState?: string
+  customerPostalCode?: string
   taxId?: string
   taxIdType?: import('@solvapay/core').TaxIdType
 }) => Promise<{ taxBreakdown: TaxBreakdown }>
@@ -68,7 +72,16 @@ export function useBusinessDetailsAttach(
     setBusinessDetailsState(prev => {
       const next = { ...prev, ...patch }
       if (patch.isBusiness === false) {
-        return { isBusiness: false }
+        return {
+          isBusiness: false,
+          ...(next.customerCountry && { customerCountry: next.customerCountry }),
+          ...(next.customerState && { customerState: next.customerState }),
+          ...(next.customerPostalCode && { customerPostalCode: next.customerPostalCode }),
+          ...(next.customerName && { customerName: next.customerName }),
+        }
+      }
+      if (patch.isBusiness === true && !next.country && next.customerCountry) {
+        return { ...next, country: next.customerCountry }
       }
       return next
     })
@@ -82,9 +95,13 @@ export function useBusinessDetailsAttach(
         return !attachBusinessDetails
       }
 
+      const addressErrors = getCustomerAddressFieldErrors(input)
       const validation = validateBusinessDetails(input)
-      if (!validation.success) {
-        setFieldErrors(mapBusinessFieldErrors(input))
+      if (!validation.success || !isCustomerAddressComplete(input)) {
+        setFieldErrors({
+          ...mapBusinessFieldErrors(input),
+          ...addressErrors,
+        })
         return false
       }
 
@@ -126,8 +143,15 @@ export function useBusinessDetailsAttach(
     if (!processorPaymentId || !attachBusinessDetails) return
 
     const validation = validateBusinessDetails(businessDetails)
-    if (!validation.success) {
-      setFieldErrors(mapBusinessFieldErrors(businessDetails))
+    if (!validation.success || !isCustomerAddressComplete(businessDetails)) {
+      const countrySelected = !!(
+        businessDetails.customerCountry?.trim() ||
+        (businessDetails.isBusiness && businessDetails.country?.trim())
+      )
+      setFieldErrors({
+        ...mapBusinessFieldErrors(businessDetails),
+        ...(countrySelected ? getCustomerAddressFieldErrors(businessDetails) : {}),
+      })
       setBusinessDetailsAttached(false)
       return
     }

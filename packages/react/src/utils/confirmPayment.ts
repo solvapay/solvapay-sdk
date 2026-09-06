@@ -14,6 +14,47 @@ import { interpolate } from '../i18n/interpolate'
  */
 export type ConfirmPaymentMode = 'payment-element' | 'card-element'
 
+export type ConfirmBillingDetails = {
+  email?: string
+  name?: string
+  address?: {
+    line1?: string
+    line2?: string
+    city?: string
+    state?: string
+    postal_code?: string
+    country?: string
+  }
+}
+
+export function buildConfirmBillingDetails(input: {
+  email?: string
+  name?: string
+  country?: string
+  state?: string
+  postalCode?: string
+}): ConfirmBillingDetails | undefined {
+  const name = input.name?.trim()
+  const email = input.email?.trim()
+  const country = input.country?.trim()
+  if (!name && !email && !country) return undefined
+
+  return {
+    ...(name && { name }),
+    ...(email && { email }),
+    ...(country && {
+      address: {
+        line1: '',
+        line2: '',
+        city: '',
+        state: input.state?.trim() ?? '',
+        postal_code: input.postalCode?.trim() ?? '',
+        country,
+      },
+    }),
+  }
+}
+
 export type ConfirmPaymentInput = {
   stripe: Stripe
   elements: StripeElements
@@ -24,8 +65,8 @@ export type ConfirmPaymentInput = {
    */
   mode?: ConfirmPaymentMode
   returnUrl: string
-  /** Billing details from `useCustomer()` (echoed from backend). */
-  billingDetails?: { email?: string; name?: string }
+  /** Billing details from `useCustomer()` plus the SolvaPay-owned address. */
+  billingDetails?: ConfirmBillingDetails
   /**
    * When true, skip the browser redirect during PaymentElement confirmation
    * and resolve only if the intent finishes synchronously. This is what

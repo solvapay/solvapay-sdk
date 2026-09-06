@@ -14,11 +14,20 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const taxState = vi.hoisted(() => ({
+  payment: null as { total: number; currency: string } | null,
+  topup: null as { total: number; currency: string } | null,
+}))
+
 // ------------------------------------------------------------------
 // Primitive stubs — keep the view's state machine testable without
 // mounting real Stripe Elements. The stubs simulate success when the
 // user clicks the submit button.
 // ------------------------------------------------------------------
+
+vi.mock('../../../components/PaymentFormContext', () => ({
+  usePaymentForm: () => ({ taxBreakdown: taxState.payment }),
+}))
 
 vi.mock('../../../primitives/TopupForm', () => {
   const Root: React.FC<{
@@ -55,7 +64,8 @@ vi.mock('../../../primitives/TopupForm', () => {
     Subtotal: () => null,
     Tax: () => null,
     Total: () => null,
-    Rows: () => null,
+    TaxNote: () => <span data-testid="tax-note">tax note</span>,
+    Rows: () => <div data-testid="tax-rows">tax rows</div>,
   }
   return {
     TopupForm: {
@@ -67,6 +77,11 @@ vi.mock('../../../primitives/TopupForm', () => {
       BusinessDetails,
       Summary,
     },
+    useTopupForm: () => ({
+      taxBreakdown: taxState.topup,
+      amount: 1800,
+      currency: 'USD',
+    }),
   }
 })
 
@@ -109,8 +124,8 @@ vi.mock('../../../primitives/PaymentForm', () => {
     Subtotal: () => null,
     Tax: () => null,
     Total: () => null,
-    TaxNote: () => null,
-    Rows: () => null,
+    TaxNote: () => <span data-testid="tax-note">tax note</span>,
+    Rows: () => <div data-testid="tax-rows">tax rows</div>,
   }
   return {
     PaymentForm: {
@@ -139,6 +154,7 @@ vi.mock('../../useStripeProbe', () => ({
 // ------------------------------------------------------------------
 
 import { McpCheckoutView } from '../McpCheckoutView'
+import { McpDisplayModeProvider } from '../../hooks/useDisplayMode'
 import { plansCache } from '../../../hooks/usePlans'
 import { merchantCache } from '../../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../../transport/cache-key'
@@ -270,7 +286,7 @@ function buildCtx(config: SolvaPayConfig, purchases: PurchaseInfo[] = []): Solva
 
 function renderView(
   props: Partial<React.ComponentProps<typeof McpCheckoutView>> = {},
-  options: { bridgeApp?: McpBridgeAppLike } = {},
+  options: { bridgeApp?: McpBridgeAppLike; displayMode?: 'inline' | 'fullscreen' } = {},
 ) {
   const transport = props.publishableKey
     ? makeTransport()
@@ -289,6 +305,15 @@ function renderView(
   // `useMcpBridge()` calls become no-ops, matching production wiring
   // when the host doesn't implement a given capability.
   const bridgeApp: McpBridgeAppLike = options.bridgeApp ?? {}
+  const view = (
+    <McpCheckoutView
+      productRef={productRef}
+      publishableKey="pk_test"
+      returnUrl="https://example.test/r"
+      plans={bootstrapPlans}
+      {...props}
+    />
+  )
   return {
     ctx,
     transport,
@@ -296,13 +321,18 @@ function renderView(
     ...render(
       <SolvaPayContext.Provider value={ctx}>
         <McpBridgeProvider app={bridgeApp}>
-          <McpCheckoutView
-            productRef={productRef}
-            publishableKey="pk_test"
-            returnUrl="https://example.test/r"
-            plans={bootstrapPlans}
-            {...props}
-          />
+          {options.displayMode ? (
+            <McpDisplayModeProvider
+              value={{
+                displayMode: options.displayMode,
+                availableDisplayModes: ['inline', 'fullscreen'],
+              }}
+            >
+              {view}
+            </McpDisplayModeProvider>
+          ) : (
+            view
+          )}
         </McpBridgeProvider>
       </SolvaPayContext.Provider>,
     ),
@@ -312,6 +342,8 @@ function renderView(
 beforeEach(() => {
   plansCache.clear()
   merchantCache.clear()
+  taxState.payment = null
+  taxState.topup = null
 })
 
 afterEach(() => {
@@ -323,20 +355,21 @@ afterEach(() => {
 // ------------------------------------------------------------------
 
 describe('<McpCheckoutView> — plan step', () => {
-  it('renders the amber "Upgrade to continue" banner when fromPaywall is true', () => {
+  it('names that a paid plan is needed when fromPaywall is activation_required', () => {
     renderView({ fromPaywall: true, paywallKind: 'activation_required' })
-    expect(screen.getByText(/Upgrade to continue/)).toBeTruthy()
     expect(screen.getByText(/This tool needs a paid plan/)).toBeTruthy()
   })
 
-  it('shows the quota-exhausted copy for paywallKind=payment_required', () => {
-    renderView({ fromPaywall: true, paywallKind: 'payment_required' })
-    expect(screen.getByText(/used your free quota/i)).toBeTruthy()
+  it('does not render the retired limit-reached handoff for payment_required', () => {
+    renderView({ fromPaywall: true, paywallKind: 'payment_required', onBack: vi.fn() })
+    expect(screen.queryByText('Limit reached')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Open account' })).toBeNull()
   })
 
-  it('does not render the banner or Stay-on-Free link when fromPaywall is false', () => {
+  it('does not render the limit handoff or Stay-on-Free link when fromPaywall is false', () => {
     renderView({ fromPaywall: false, onClose: vi.fn() })
-    expect(screen.queryByText(/Upgrade to continue/)).toBeNull()
+    expect(screen.queryByText(/Limit reached/)).toBeNull()
+    expect(screen.queryByText(/This tool needs a paid plan/)).toBeNull()
     expect(screen.queryByText(/Stay on Free/)).toBeNull()
   })
 
@@ -347,8 +380,12 @@ describe('<McpCheckoutView> — plan step', () => {
       expect(screen.getByText('Pay as you go')).toBeTruthy()
       expect(screen.getByText('Pro')).toBeTruthy()
     })
-    // "Free" would appear as the card name; ensure it's absent.
-    expect(screen.queryByText(/^Free$/)).toBeNull()
+    // "Free" would appear as the card name; a $0 PAYG price may still
+    // format as "Free" in the price slot.
+    expect(document.querySelector('.solvapay-mcp-plan-row-name')?.textContent).not.toMatch(/^Free$/)
+    expect(
+      [...document.querySelectorAll('.solvapay-mcp-plan-row-name')].map(el => el.textContent),
+    ).not.toContain('Free')
   })
 
   it('shows the current plan as a disabled card with a Current badge — including when it is Free', async () => {
@@ -390,7 +427,7 @@ describe('<McpCheckoutView> — plan step', () => {
     })
     const freeCard = screen
       .getByText('Current')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLButtonElement
+      .closest('.solvapay-mcp-plan-row') as HTMLButtonElement
     expect(freeCard).toBeTruthy()
     expect(freeCard.getAttribute('data-state')).toBe('current')
     expect(freeCard.getAttribute('aria-disabled')).toBe('true')
@@ -401,7 +438,7 @@ describe('<McpCheckoutView> — plan step', () => {
     // Free card.
     const paygCard = screen
       .getByText('Pay as you go')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLButtonElement
+      .closest('.solvapay-mcp-plan-row') as HTMLButtonElement
     expect(paygCard.getAttribute('data-state')).toBe('selected')
 
     // Clicking the Free card is a no-op — the continue CTA tracks PAYG.
@@ -418,7 +455,7 @@ describe('<McpCheckoutView> — plan step', () => {
       expect(screen.getByRole('button', { name: /Continue with Pay as you go/ })).toBeTruthy()
     })
     // Select Pro → CTA updates.
-    const proCard = screen.getByText('Pro').closest('[data-solvapay-plan-selector-card]')
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row')
     expect(proCard).toBeTruthy()
     act(() => {
       fireEvent.click(proCard!)
@@ -592,6 +629,25 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     expect(transport.activatePlan).toHaveBeenCalledTimes(1) // unchanged
   })
 
+  it('shows Paying as on the payment step and not on the plan or amount step', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    expect(screen.queryByText(/Paying as/)).toBeNull()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    })
+    await waitFor(() => expect(screen.getByText(/How many credits/)).toBeTruthy())
+    expect(screen.queryByText(/Paying as/)).toBeNull()
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '18' } })
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await waitFor(() => expect(screen.getByTestId('topup-form-stub')).toBeTruthy())
+    expect(screen.getByText('Paying as demo@acme.test')).toBeTruthy()
+  })
+
   it('success step renders the PAYG receipt with no CTA — agent continues from the auto-sent chat message', async () => {
     const onClose = vi.fn()
     renderView({ fromPaywall: true, onClose })
@@ -626,7 +682,7 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     // minor unit. The old fixture asserted "1 credit / call" off a
     // fabricated `creditsPerUnit`, contradicting the peg this same file
     // pins for the order summary below.
-    expect(screen.getByText('100 credits / call')).toBeTruthy()
+    expect(screen.getByText('100 credits / request')).toBeTruthy()
 
     // Regression guard: the success step previously rendered a
     // `Back to chat` button that called `app.requestTeardown()`,
@@ -684,9 +740,7 @@ describe('<McpCheckoutView> — Recurring branch', () => {
   it('skips the amount step and lands on payment directly', async () => {
     const { transport } = renderView({ fromPaywall: true })
     await waitFor(() => screen.getByText('Pro'))
-    const proCard = screen
-      .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -700,14 +754,67 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     // activate_plan does NOT fire for the recurring branch — the
     // subscription intent replaces the active plan server-side.
     expect(transport.activatePlan).not.toHaveBeenCalled()
+    expect(screen.getByText('Paying as demo@acme.test')).toBeTruthy()
+  })
+
+  it('keeps the tax note in the rail and out of the form body', async () => {
+    const { container } = renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
+    })
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    expect(rail?.contains(screen.getByTestId('tax-note'))).toBe(true)
+    expect(screen.queryByTestId('tax-rows')).toBeNull()
+  })
+
+  it('puts the tax ladder in the fullscreen rail', async () => {
+    const { container } = renderView({ fromPaywall: true }, { displayMode: 'fullscreen' })
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
+    })
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(rail?.contains(screen.getByTestId('tax-rows'))).toBe(true)
+    expect(action?.contains(screen.getByTestId('tax-rows'))).toBe(false)
+  })
+
+  it('CTA reads the tax-inclusive total from form context', async () => {
+    taxState.payment = { total: 2250, currency: 'USD' }
+    renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
+    })
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    expect(screen.getByTestId('payment-submit-label')).toHaveTextContent('$22.50')
+  })
+
+  it('does not show Paying as on the recurring plan step', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByText('Pro'))
+    expect(screen.queryByText(/Paying as/)).toBeNull()
   })
 
   it('BackLink on recurring payment step returns to plan', async () => {
     renderView({ fromPaywall: true })
     await waitFor(() => screen.getByText('Pro'))
-    const proCard = screen
-      .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -725,9 +832,7 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     const onClose = vi.fn()
     renderView({ fromPaywall: true, onClose })
     await waitFor(() => screen.getByText('Pro'))
-    const proCard = screen
-      .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -811,9 +916,7 @@ describe('<McpCheckoutView> — multi-currency plans', () => {
   it('updates the continue label and recurring payment summary when currency is switched', async () => {
     renderMultiCurrencyView()
     await waitFor(() => screen.getByText('Pro'))
-    const proCard = screen
-      .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -963,13 +1066,57 @@ describe('<McpCheckoutView> — CSS hooks', () => {
     expect(popular).toHaveLength(1)
   })
 
-  it('PaygPaymentStep renders order-summary + save-card CSS hooks', async () => {
+  it('PaygPaymentStep renders order-summary CSS hooks', async () => {
     const { container } = await advanceToPaygPayment()
     expect(container.querySelector('.solvapay-mcp-checkout-order-summary')).toBeTruthy()
     expect(
       container.querySelectorAll('.solvapay-mcp-checkout-order-summary-row').length,
     ).toBeGreaterThan(0)
-    expect(container.querySelector('.solvapay-mcp-checkout-save-card')).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-checkout-save-card')).toBeNull()
+  })
+
+  it('PaygPaymentStep leads with a 340px summary rail before the action column', async () => {
+    const { container } = await advanceToPaygPayment()
+    const hosted = container.querySelector('.solvapay-mcp-hosted-layout')
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(hosted).toBeTruthy()
+    expect(rail).toBeTruthy()
+    expect(action).toBeTruthy()
+    expect(rail?.contains(container.querySelector('.solvapay-mcp-checkout-order-summary'))).toBe(
+      true,
+    )
+    expect(
+      rail && action && rail.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(rail?.contains(screen.getByTestId('tax-note'))).toBe(true)
+    expect(screen.queryByTestId('tax-rows')).toBeNull()
+  })
+
+  it('PaygPaymentStep puts the tax ladder in the fullscreen rail', async () => {
+    const { container } = renderView({ fromPaywall: true }, { displayMode: 'fullscreen' })
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    })
+    await waitFor(() => screen.getByText(/How many credits/))
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '18' } })
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await waitFor(() => screen.getByTestId('topup-form-stub'))
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(rail?.contains(screen.getByTestId('tax-rows'))).toBe(true)
+    expect(action?.contains(screen.getByTestId('tax-rows'))).toBe(false)
+  })
+
+  it('PaygPaymentStep CTA reads the tax-inclusive total from form context', async () => {
+    taxState.topup = { total: 2250, currency: 'USD' }
+    await advanceToPaygPayment()
+    expect(screen.getByTestId('topup-submit-label')).toHaveTextContent('$22.50')
   })
 
   it('PAYG SuccessStep renders success-check + receipt CSS hooks', async () => {
@@ -979,5 +1126,24 @@ describe('<McpCheckoutView> — CSS hooks', () => {
     expect(container.querySelectorAll('.solvapay-mcp-checkout-receipt-row').length).toBeGreaterThan(
       0,
     )
+  })
+})
+
+describe('<McpCheckoutView> — auto-advance from a ladder pick', () => {
+  it('lands on the payment step for a recurring plan without rendering Choose a plan', async () => {
+    renderView({ initialPlanRef: 'pln_pro', autoAdvance: true })
+    await waitFor(() => expect(screen.getByTestId('payment-form-stub')).toBeTruthy())
+    expect(screen.queryByText('Choose a plan')).toBeNull()
+    expect(screen.queryByText(/How many credits/)).toBeNull()
+  })
+
+  it('lands on the amount step for PAYG with an empty wallet', async () => {
+    const { transport } = renderView({ initialPlanRef: 'pln_payg', autoAdvance: true })
+    await waitFor(() => expect(screen.getByText(/How many credits/)).toBeTruthy())
+    expect(screen.queryByText('Choose a plan')).toBeNull()
+    expect(transport.activatePlan).toHaveBeenCalledWith({
+      productRef,
+      planRef: 'pln_payg',
+    })
   })
 })

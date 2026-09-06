@@ -14,9 +14,15 @@ import {
   BUSINESS_COUNTRY_OPTIONS,
   SUPPORTED_BUSINESS_COUNTRIES,
   validateBusinessDetails,
+  getPostalCodeFieldLabel,
+  getPostalCodePlaceholder,
+  getStateFieldLabel,
   getTaxIdFieldLabel,
   getTaxIdExample,
   getTaxIdHelperText,
+  isPostalCodeRequired,
+  isStateRequired,
+  resolveBuyerCountry,
   type BusinessDetailsInput,
   type SupportedBusinessCountry,
   type TaxBreakdown,
@@ -46,6 +52,8 @@ function isBusinessDetailsKey(key: PropertyKey): key is keyof BusinessDetailsInp
     key === 'country' ||
     key === 'customerCountry' ||
     key === 'customerName' ||
+    key === 'customerState' ||
+    key === 'customerPostalCode' ||
     key === 'taxId' ||
     key === 'taxIdType'
   )
@@ -232,16 +240,26 @@ export function createBusinessDetailsParts(
     forwardedRef,
   ) {
     const ctx = useCtx('BusinessDetails.Country')
-    if (!ctx.businessDetails.isBusiness) return null
+    const country =
+      ctx.businessDetails.customerCountry ?? ctx.businessDetails.country ?? ''
+    const countryError =
+      ctx.fieldErrors.customerCountry ?? ctx.fieldErrors.country ? true : undefined
 
     const commonProps = {
-      [attr(prefix, 'business-details-country')]: '',
-      value: ctx.businessDetails.country ?? '',
-      'aria-invalid': ctx.fieldErrors.country ? true : undefined,
-      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLSelectElement>) => {
-        ctx.setBusinessDetails({ country: e.target.value })
-      }),
       ...rest,
+      [attr(prefix, 'business-details-country')]: '',
+      value: country,
+      'aria-invalid': countryError,
+      'aria-label': rest['aria-label'] ?? 'Country',
+      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const nextCountry = e.target.value
+        ctx.setBusinessDetails({
+          customerCountry: nextCountry || undefined,
+          ...(ctx.businessDetails.isBusiness ? { country: nextCountry || undefined } : {}),
+          ...(!isStateRequired(nextCountry) ? { customerState: undefined } : {}),
+          ...(!isPostalCodeRequired(nextCountry) ? { customerPostalCode: undefined } : {}),
+        })
+      }),
     } satisfies CountryCommonProps
 
     const defaultOptions = (
@@ -268,6 +286,61 @@ export function createBusinessDetailsParts(
         {children ?? defaultOptions}
       </select>
     )
+  })
+
+  const State = forwardRef<HTMLInputElement, FieldProps>(function BusinessDetailsState(
+    { asChild, onChange, ...rest },
+    forwardedRef,
+  ) {
+    const ctx = useCtx('BusinessDetails.State')
+    const country = resolveBuyerCountry(ctx.businessDetails)
+    if (!country || !isStateRequired(country)) return null
+
+    const commonProps = {
+      ...rest,
+      [attr(prefix, 'business-details-state')]: '',
+      type: 'text',
+      value: ctx.businessDetails.customerState ?? '',
+      'aria-invalid': ctx.fieldErrors.customerState ? true : undefined,
+      'aria-label': rest['aria-label'] ?? getStateFieldLabel(country),
+      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLInputElement>) => {
+        ctx.setBusinessDetails({ customerState: e.target.value || undefined })
+      }),
+    } satisfies FieldCommonProps
+
+    if (asChild) {
+      return <Slot ref={forwardedRef} {...commonProps} />
+    }
+
+    return <input ref={forwardedRef} {...commonProps} />
+  })
+
+  const PostalCode = forwardRef<HTMLInputElement, FieldProps>(function BusinessDetailsPostalCode(
+    { asChild, onChange, ...rest },
+    forwardedRef,
+  ) {
+    const ctx = useCtx('BusinessDetails.PostalCode')
+    const country = resolveBuyerCountry(ctx.businessDetails)
+    if (!country || !isPostalCodeRequired(country)) return null
+
+    const commonProps = {
+      ...rest,
+      [attr(prefix, 'business-details-postal')]: '',
+      type: 'text',
+      value: ctx.businessDetails.customerPostalCode ?? '',
+      placeholder: rest.placeholder ?? getPostalCodePlaceholder(country),
+      'aria-invalid': ctx.fieldErrors.customerPostalCode ? true : undefined,
+      'aria-label': rest['aria-label'] ?? getPostalCodeFieldLabel(country),
+      onChange: composeEventHandlers(onChange, (e: React.ChangeEvent<HTMLInputElement>) => {
+        ctx.setBusinessDetails({ customerPostalCode: e.target.value || undefined })
+      }),
+    } satisfies FieldCommonProps
+
+    if (asChild) {
+      return <Slot ref={forwardedRef} {...commonProps} />
+    }
+
+    return <input ref={forwardedRef} {...commonProps} />
   })
 
   const TaxId = forwardRef<HTMLInputElement, FieldProps>(function BusinessDetailsTaxId(
@@ -300,13 +373,33 @@ export function createBusinessDetailsParts(
     forwardedRef,
   ) {
     const ctx = useCtx('BusinessDetails.Fields')
-    const country = ctx.businessDetails.country ?? ''
+    const country = resolveBuyerCountry(ctx.businessDetails) ?? ''
     const taxIdLabel = resolveTaxIdLabel(country)
     const taxIdPlaceholder = resolveTaxIdPlaceholder(country)
     const taxIdHelperText = resolveTaxIdHelperText(country)
+    const showState = !!country && isStateRequired(country)
+    const showPostal = !!country && isPostalCodeRequired(country)
 
     const content = (
       <>
+        <label className="solvapay-business-field">
+          <span className="solvapay-business-field-label">Country</span>
+          <Country />
+        </label>
+        {showState ? (
+          <label className="solvapay-business-field">
+            <span className="solvapay-business-field-label">{getStateFieldLabel(country)}</span>
+            <State />
+          </label>
+        ) : null}
+        {showPostal ? (
+          <label className="solvapay-business-field">
+            <span className="solvapay-business-field-label">
+              {getPostalCodeFieldLabel(country)}
+            </span>
+            <PostalCode />
+          </label>
+        ) : null}
         <label className="solvapay-checkout-business-toggle">
           <Toggle />
           I&apos;m purchasing as a business
@@ -316,10 +409,6 @@ export function createBusinessDetailsParts(
             <label className="solvapay-business-field">
               <span className="solvapay-business-field-label">Business name</span>
               <BusinessName placeholder="Acme GmbH" />
-            </label>
-            <label className="solvapay-business-field">
-              <span className="solvapay-business-field-label">Country</span>
-              <Country />
             </label>
             <label className="solvapay-business-field">
               <span className="solvapay-business-field-label">{taxIdLabel}</span>
@@ -354,6 +443,8 @@ export function createBusinessDetailsParts(
     Toggle,
     BusinessName,
     Country,
+    State,
+    PostalCode,
     TaxId,
     Fields,
   } as const
