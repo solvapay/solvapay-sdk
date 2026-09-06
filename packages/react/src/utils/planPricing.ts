@@ -14,10 +14,10 @@ export type PlanPricingOption = {
  * same resolver without a cast.
  */
 export type PricedPlanLike = {
-  currency?: string
-  price?: number
-  options?: PricingOptionLike[]
-  pricingOptions?: PlanPricingOption[]
+  currency?: string | null
+  price?: number | null
+  options?: PricingOptionLike[] | null
+  pricingOptions?: PlanPricingOption[] | null
 }
 
 /**

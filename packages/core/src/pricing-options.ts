@@ -365,11 +365,16 @@ function headlinePriceMinor(priced: PricedLike | null | undefined): number {
 
 export type PricingShape = 'free' | 'usage' | 'recurring' | 'hybrid' | 'oneTime'
 
+/**
+ * Derived scalars accept `null` because the wire sends them that way on
+ * frozen plan snapshots — an absent value and an explicit `null` mean the
+ * same thing here, and every read below treats them alike.
+ */
 export interface PlanPricingShapeInput extends PricedLike {
-  requiresPayment?: boolean
-  type?: string
-  currency?: string
-  price?: number
+  requiresPayment?: boolean | null
+  type?: string | null
+  currency?: string | null
+  price?: number | null
 }
 
 export interface PlanPricingShape {

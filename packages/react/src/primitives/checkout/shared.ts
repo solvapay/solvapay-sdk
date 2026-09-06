@@ -34,16 +34,17 @@ export const CHECKOUT_STEPS = ['plan', 'amount', 'payment', 'success'] as const
  *
  * Mirrors what the API actually sends: pricing lives in `options[]`, and
  * the only derived scalars on the wire are `type`, `price`, `currency`
- * and `requiresPayment`.
+ * and `requiresPayment`. Every field admits `null` because frozen plan
+ * snapshots send it explicitly; it is read as "absent" throughout.
  */
 export interface BootstrapPlanLike {
-  reference?: string
-  name?: string
-  type?: string
-  price?: number
-  currency?: string
-  requiresPayment?: boolean
-  options?: PricingOptionLike[]
+  reference?: string | null
+  name?: string | null
+  type?: string | null
+  price?: number | null
+  currency?: string | null
+  requiresPayment?: boolean | null
+  options?: PricingOptionLike[] | null
   pricingOptions?: Array<{
     currency: string
     price: number

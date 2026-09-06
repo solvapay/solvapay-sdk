@@ -53,6 +53,8 @@ export interface PlanLike {
   reference?: string | null
   /** Display name. Catalog plans carry it; thin snapshots may not. */
   name?: string | null
+  /** Backend-derived pricing label, e.g. `'usage-based'` or `'hybrid'`. */
+  type?: string | null
   /** Composable pricing options: charges, billing cycle, limit, trial. */
   options?: PricingOptionLike[] | null
   /** `false` marks a free plan. Only present on a plan, not a snapshot. */

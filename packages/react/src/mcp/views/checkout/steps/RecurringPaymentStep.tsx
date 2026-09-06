@@ -13,6 +13,7 @@ import { PaymentForm } from '../../../../primitives/PaymentForm'
 import { usePlanSelection } from '../../../../components/PlanSelectionContext'
 import { formatPrice } from '../../../../utils/format'
 import { resolvePlanPricingOption } from '../../../../utils/planPricing'
+import type { PaymentIntent } from '@stripe/stripe-js'
 import type { Plan } from '../../../../types'
 import { useDisplayMode } from '../../../hooks/useDisplayMode'
 import { useHostLocale } from '../../../useHostLocale'
@@ -62,8 +63,7 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
       productRef={productRef}
       returnUrl={returnUrl}
       requireTermsAcceptance={false}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onSuccess={onSuccess as any}
+      onSuccess={onSuccess}
     >
       <McpHostedLayout>
         <McpSummaryRail>

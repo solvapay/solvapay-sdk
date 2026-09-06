@@ -103,7 +103,7 @@ export function EmbeddedCheckout({
   }, [plans])
   const paygPlanRef = useMemo(() => {
     const payg = paidPlans.find(p => isPayg(p))
-    return payg?.reference
+    return payg?.reference ?? undefined
   }, [paidPlans])
 
   const planFilter = useMemo(
