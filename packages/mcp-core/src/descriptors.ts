@@ -410,7 +410,10 @@ export function buildSolvaPayDescriptors(
       handler: async (args, extra) =>
         trace(VIEWER_TOOL_NAME, args, extra, async () => {
           const requested =
-            args.view === 'checkout' || args.view === 'account' || args.view === 'topup'
+            args.view === 'checkout' ||
+            args.view === 'account' ||
+            args.view === 'topup' ||
+            args.view === 'auto-recharge'
               ? args.view
               : undefined
           if (requested !== undefined && !enabledViews.has(requested)) {

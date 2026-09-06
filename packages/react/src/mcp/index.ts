@@ -189,6 +189,9 @@ export type { McpPayingAsProps } from './views/McpPayingAs'
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'
 
+export { McpAutoRechargeView } from './views/McpAutoRechargeView'
+export type { McpAutoRechargeViewProps } from './views/McpAutoRechargeView'
+
 // Paywall / nudge surfaces were removed as part of the text-only
 // paywall refactor. Merchant paywall / nudge responses are plain
 // narrations now — hosts render them in text and the widget iframe is

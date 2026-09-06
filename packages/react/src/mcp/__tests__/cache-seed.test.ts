@@ -82,7 +82,14 @@ describe('seedMcpCaches', () => {
     const config: SolvaPayConfig = { transport: makeTransport() }
     seedMcpCaches(
       makeInitial({
-        paymentMethod: { kind: 'card', brand: 'visa', last4: '4242', expMonth: 1, expYear: 2030 },
+        paymentMethod: {
+          kind: 'card',
+          brand: 'visa',
+          last4: '4242',
+          expMonth: 1,
+          expYear: 2030,
+          reusable: true,
+        },
       }),
       config,
     )
@@ -98,7 +105,14 @@ describe('seedMcpCaches', () => {
     seedMcpCaches(
       makeInitial({
         customerRef: null,
-        paymentMethod: { kind: 'card', brand: 'visa', last4: '4242', expMonth: 1, expYear: 2030 },
+        paymentMethod: {
+          kind: 'card',
+          brand: 'visa',
+          last4: '4242',
+          expMonth: 1,
+          expYear: 2030,
+          reusable: true,
+        },
       }),
       config,
     )

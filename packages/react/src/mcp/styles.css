@@ -92,6 +92,7 @@ body {
   --solvapay-usage-safe: var(--color-text-primary);
   --solvapay-usage-warning: var(--color-text-warning);
   --solvapay-usage-critical: var(--color-text-warning);
+  --solvapay-success: var(--color-background-inverse);
 
   /* Shared type scale. Ten levels is a product decision — the host
    * publishes three. Narrow (420) is the default; the 760px query
@@ -1940,4 +1941,103 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   margin: 0;
   font: 400 13px/1.5 var(--font-sans);
   color: var(--color-text-primary);
+}
+
+.solvapay-mcp-auto-recharge-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.solvapay-mcp-auto-recharge-fields-explainer,
+.solvapay-mcp-auto-recharge-fields-error {
+  margin: 0;
+  font: var(--solvapay-type-caption);
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-auto-recharge-fields-error {
+  color: var(--color-text-danger);
+}
+
+.solvapay-mcp-auto-recharge-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-secondary);
+}
+
+.solvapay-mcp-auto-recharge-inline p {
+  margin: 0;
+}
+
+.solvapay-mcp-auto-recharge-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--solvapay-section-gap);
+}
+
+.solvapay-mcp-auto-recharge-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.solvapay-mcp-auto-recharge-summary {
+  margin: 0;
+  font: var(--solvapay-type-body);
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-auto-recharge-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-secondary);
+}
+
+.solvapay-mcp-auto-recharge-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.solvapay-mcp-auto-recharge-actions .solvapay-mcp-button {
+  width: auto;
+  min-height: var(--solvapay-control-height);
+  padding-inline: 18px;
+}
+
+.solvapay-mcp-auto-recharge-actions-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.solvapay-mcp-auto-recharge-turn-off {
+  align-self: center;
+  padding-top: 6px;
+}
+
+@container mcp (min-width: 760px) {
+  .solvapay-mcp-auto-recharge-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .solvapay-mcp-auto-recharge-fields-explainer,
+  .solvapay-mcp-auto-recharge-fields-error {
+    grid-column: 1 / -1;
+  }
+
+  .solvapay-mcp-auto-recharge-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
 }

@@ -161,6 +161,14 @@ describe('MCP primitive vocabulary', () => {
     expect(control).toMatch(/border:\s*1px solid var\(--color-border-primary\)/)
     expect(STYLES).toMatch(/--solvapay-control-height:\s*44px/)
   })
+
+  it('lays auto-recharge fields out as a 3-column grid at the 760px mcp breakpoint', () => {
+    const stacked = firstRule(STYLES, /\.solvapay-mcp-auto-recharge-fields\s*\{([^}]+)\}/)
+    expect(stacked).toMatch(/flex-direction:\s*column/)
+    expect(STYLES).toMatch(
+      /@container\s+mcp\s*\(min-width:\s*760px\)[\s\S]*?\.solvapay-mcp-auto-recharge-fields\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+    )
+  })
 })
 
 describe('MCP inline density contract', () => {

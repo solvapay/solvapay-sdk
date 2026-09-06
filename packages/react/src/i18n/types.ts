@@ -147,6 +147,24 @@ export interface SolvaPayCopy {
     taxDisclosure: string
     statusFailed: string
   }
+  autoRechargeView: {
+    heading: string
+    description: string
+    thresholdLabel: string
+    topupLabel: string
+    maxMonthlySpendLabel: string
+    maxMonthlySpendPlaceholder: string
+    explainer: string
+    explainerNoEstimate: string
+    footerCaption: string
+    cancel: string
+    turnOn: string
+    save: string
+    turnOff: string
+    statusOn: string
+    back: string
+    setupUnexpected: string
+  }
   activationFlow: {
     heading: string
     activateButton: string
@@ -256,6 +274,8 @@ export interface SolvaPayCopy {
     autoRechargeOn: string
     autoRechargeOff: string
     turnOn: string
+    /** On-state link that opens the dedicated auto-recharge view. */
+    manage: string
     /** Caption under auto-recharge off on a running credit plan (B). */
     autoRechargeOffCaption: string
     /** Caption under auto-recharge off when calls are already failing (D). */

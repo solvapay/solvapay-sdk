@@ -101,6 +101,7 @@ export {
   narrateManageAccount,
   narrateUpgrade,
   narrateTopup,
+  narrateAutoRecharge,
   uiPlaceholder,
   balanceSummary,
 } from './narrate'

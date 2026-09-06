@@ -832,17 +832,31 @@ export function narrateTopup(data: BootstrapPayload): NarratorOutput {
   return withCheckout(data, lines)
 }
 
+export function narrateAutoRecharge(data: BootstrapPayload): NarratorOutput {
+  const lines: string[] = []
+  lines.push(`**Auto-recharge — ${productName(data)}**`)
+  lines.push('')
+  const bal = balanceRow(data.customer as CustomerShape | null)
+  if (bal) lines.push(bal)
+  lines.push('Tops your balance up automatically so calls do not fail. Nothing is charged today.')
+  lines.push('')
+  lines.push(recoveryLine(['account']))
+  return withCheckout(data, lines)
+}
+
 export const NARRATORS: Record<SolvaPayMcpViewKind, (data: BootstrapPayload) => NarratorOutput> =
   {
     checkout: narrateUpgrade,
     account: narrateManageAccount,
     topup: narrateTopup,
+    'auto-recharge': narrateAutoRecharge,
   }
 
 const UI_OPENED_VERB: Record<SolvaPayMcpViewKind, (productName: string) => string> = {
   topup: p => `Opened ${p} top-up.`,
   checkout: p => `Opened ${p} upgrade.`,
   account: p => `Opened your ${p} account.`,
+  'auto-recharge': p => `Opened ${p} auto-recharge.`,
 }
 
 function firstSelectablePlan(data: BootstrapPayload): PlanShape | undefined {

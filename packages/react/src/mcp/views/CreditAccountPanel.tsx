@@ -11,6 +11,7 @@ import { useBalance } from '../../hooks/useBalance'
 import { useCopy } from '../../hooks/useCopy'
 import { useHistory } from '../../hooks/useHistory'
 import { useMerchant } from '../../hooks/useMerchant'
+import { usePaymentMethod } from '../../hooks/usePaymentMethod'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
 import { resolveRateDisplay } from '../account-state'
@@ -35,6 +36,7 @@ export function CreditAccountPanel({
   locale,
   classNames,
   onTopup,
+  onAutoRecharge,
   onChangePlan,
   showPortalCta,
 }: {
@@ -47,6 +49,7 @@ export function CreditAccountPanel({
   locale: string
   classNames?: McpViewClassNames
   onTopup?: () => void
+  onAutoRecharge?: () => void
   onChangePlan?: () => void
   showPortalCta: boolean
 }): React.ReactElement {
@@ -55,6 +58,7 @@ export function CreditAccountPanel({
   const balance = useBalance()
   const { merchant } = useMerchant()
   const { config: autoRecharge } = useAutoRecharge()
+  const { paymentMethod } = usePaymentMethod()
   const { displayMode } = useDisplayMode()
   const isFullscreen = displayMode === 'fullscreen'
   const history = useHistory({
@@ -75,6 +79,10 @@ export function CreditAccountPanel({
   })
   const showChangePlan = Boolean(onChangePlan && (actions.changePlan || actions.upgrade))
   const autoRechargeOn = Boolean(autoRecharge?.enabled)
+  const hasReusableCard = paymentMethod?.kind === 'card' && paymentMethod.reusable
+  const autoRechargeAction =
+    onAutoRecharge && (autoRechargeOn || hasReusableCard) ? onAutoRecharge : undefined
+  const autoRechargeActionLabel = autoRechargeOn ? copy.account.manage : copy.account.turnOn
 
   return (
     <div className="solvapay-mcp-account">
@@ -112,9 +120,9 @@ export function CreditAccountPanel({
               </p>
             ) : null}
           </div>
-          {!autoRechargeOn && onTopup ? (
-            <button type="button" className={cx.linkButton} onClick={onTopup}>
-              {copy.account.turnOn}
+          {autoRechargeAction ? (
+            <button type="button" className={cx.linkButton} onClick={autoRechargeAction}>
+              {autoRechargeActionLabel}
             </button>
           ) : null}
         </SplitRow>

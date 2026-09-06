@@ -168,6 +168,29 @@ export const enCopy: SolvaPayCopy = {
     taxDisclosure: 'Plus applicable tax.',
     statusFailed: 'Payment failed — update your card to resume',
   },
+  autoRechargeView: {
+    heading: 'Auto-recharge',
+    description:
+      'Tops your balance up automatically so calls do not fail. Nothing is charged today.',
+    thresholdLabel: 'When balance falls below',
+    topupLabel: 'Add each time',
+    maxMonthlySpendLabel: 'Maximum monthly spend',
+    maxMonthlySpendPlaceholder: 'No limit',
+    explainer:
+      'Each recharge adds about {credits} credits, plus applicable tax. If your balance has fallen well below the threshold we add a multiple of this amount in one charge. Leave the spend limit blank for unlimited recharges.',
+    explainerNoEstimate:
+      'Each recharge includes applicable tax. If your balance has fallen well below the threshold we add a multiple of this amount in one charge. Leave the spend limit blank for unlimited recharges.',
+    footerCaption:
+      'Recharges use the payment method on your account. First charge happens when your balance drops below {threshold}.',
+    cancel: 'Cancel',
+    turnOn: 'Turn on auto-recharge',
+    save: 'Save changes',
+    turnOff: 'Turn off auto-recharge',
+    statusOn: 'On',
+    back: 'Back to account',
+    setupUnexpected:
+      'Your saved card is no longer reusable. Add a card from checkout, then try again.',
+  },
   activationFlow: {
     heading: 'Confirm your plan',
     activateButton: 'Activate',
@@ -270,6 +293,7 @@ export const enCopy: SolvaPayCopy = {
     autoRechargeOn: 'Auto-recharge on',
     autoRechargeOff: 'Auto-recharge off',
     turnOn: 'Turn on →',
+    manage: 'Manage →',
     autoRechargeOffCaption: 'Calls fail the moment the balance runs out.',
     autoRechargeOffFixCaption: 'Turning it on stops this happening again.',
     callsFailingCaption: 'The plan is active, but calls fail until you add credits.',

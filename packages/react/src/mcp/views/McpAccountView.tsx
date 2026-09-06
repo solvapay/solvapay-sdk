@@ -40,10 +40,15 @@ export interface McpAccountViewProps {
   productRef?: string
   classNames?: McpViewClassNames
   /**
-   * Called when the user clicks "Add funds" or "Turn on". `<McpAppShell>`
+   * Called when the user clicks "Add funds". `<McpAppShell>`
    * wires this to a surface swap so nothing re-mounts.
    */
   onTopup?: () => void
+  /**
+   * Called when the user clicks "Turn on" or "Manage" on the
+   * auto-recharge row. Wired by the shell to the dedicated view.
+   */
+  onAutoRecharge?: () => void
   /**
    * Called when the user clicks "Pick a plan" or Change plan.
    * Wired by the shell to switch to checkout.
@@ -61,6 +66,7 @@ export function McpAccountView({
   productRef,
   classNames,
   onTopup,
+  onAutoRecharge,
   onChangePlan,
   plans,
 }: McpAccountViewProps) {
@@ -112,6 +118,7 @@ export function McpAccountView({
         locale={locale}
         classNames={classNames}
         onTopup={onTopup}
+        onAutoRecharge={onAutoRecharge}
         onChangePlan={onChangePlan}
         showPortalCta={showPortalCta}
       />

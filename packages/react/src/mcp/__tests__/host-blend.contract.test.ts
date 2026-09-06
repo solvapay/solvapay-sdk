@@ -177,6 +177,7 @@ describe('MCP widget host blend', () => {
     expect(main).toMatch(/--solvapay-border:\s*var\(--color-border-secondary\)/)
     expect(main).toMatch(/--solvapay-destructive:\s*var\(--solvapay-danger\)/)
     expect(main).toMatch(/--solvapay-accent-foreground:\s*var\(--solvapay-accent-text\)/)
+    expect(main).toMatch(/--solvapay-success:\s*var\(--color-background-inverse\)/)
   })
 
   it('meets WCAG 2.2 AA against our surfaces and Claude canvases', () => {

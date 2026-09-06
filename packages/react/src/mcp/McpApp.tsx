@@ -38,6 +38,7 @@ import { seedMcpCaches } from './cache-seed'
 import { McpAppShell } from './McpAppShell'
 import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
 import type { McpAccountViewProps } from './views/McpAccountView'
+import type { McpAutoRechargeViewProps } from './views/McpAutoRechargeView'
 import type { McpCheckoutViewProps } from './views/McpCheckoutView'
 import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
@@ -111,6 +112,7 @@ export interface McpAppViewOverrides {
   checkout?: React.ComponentType<McpCheckoutViewProps>
   account?: React.ComponentType<McpAccountViewProps>
   topup?: React.ComponentType<McpTopupViewProps>
+  autoRecharge?: React.ComponentType<McpAutoRechargeViewProps>
 }
 
 export interface McpAppProps {

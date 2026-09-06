@@ -256,9 +256,10 @@ describe('<McpAppShell>', () => {
       account: () => <div data-testid="account-stub" />,
       checkout: () => <div data-testid="checkout-stub" />,
       topup: () => <div data-testid="topup-stub" />,
+      autoRecharge: () => <div data-testid="auto-recharge-stub" />,
     }
 
-    for (const view of ['account', 'checkout', 'topup'] as const) {
+    for (const view of ['account', 'checkout', 'topup', 'auto-recharge'] as const) {
       const { unmount } = renderShell({ view, customer: authedCustomer }, ctx, { views: stubs })
       expect(screen.queryByText(/Paying as/)).toBeNull()
       unmount()
