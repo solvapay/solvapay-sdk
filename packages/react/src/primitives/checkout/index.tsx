@@ -42,6 +42,8 @@ import { usePlans } from '../../hooks/usePlans'
 import {
   buildDefaultCheckoutPlanFilter,
   formatContinueLabel,
+  formatCycleSuffix,
+  planBillingCycle,
   planBillingInterval,
   planSortByPaygFirstThenAsc,
   shortCycle,
@@ -699,14 +701,16 @@ function RecurringPayment({ className }: { className?: string }) {
   // into the merchant-wide wallet via `flow.topupCurrency`.
   const currency = (selectedPlanShape.currency ?? 'USD').toUpperCase()
   const amountMinor = selectedPlanShape.price ?? 0
-  const cycle = planBillingInterval(selectedPlanShape)
+  const cycle = planBillingCycle(selectedPlanShape)
   const planName = selectedPlanShape.name ?? 'Plan'
   // A plan is recurring iff it carries a billing-cycle option. One-time /
   // lifetime plans (no cycle) get `Pay $X` copy + a single-line order
   // summary so they don't read as a subscription.
-  const isRecurring = !!cycle
+  const isRecurring = cycle != null
   const formattedAmount = formatPrice(amountMinor, currency, { locale })
-  const priceLine = isRecurring ? `${formattedAmount}/${shortCycle(cycle)}` : formattedAmount
+  const priceLine = isRecurring
+    ? `${formattedAmount}${formatCycleSuffix(cycle)}`
+    : `${formattedAmount} once`
   return (
     <div className={className ?? 'solvapay-checkout-payment'} data-branch="recurring">
       <div className="solvapay-checkout-order-summary" data-variant="recurring">

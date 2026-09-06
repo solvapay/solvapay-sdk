@@ -11,7 +11,8 @@
  */
 
 import React from 'react'
-import { billingCycle, headlineCharges, includedUnits } from '@solvapay/core'
+import { billingCycle, includedUnits } from '@solvapay/core'
+import { formatPlanPriceLabel } from '../../primitives/checkout/shared'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
 import { useActivation } from '../../hooks/useActivation'
@@ -22,7 +23,6 @@ import { useUsage } from '../../hooks/useUsage'
 import { interpolate } from '../../i18n/interpolate'
 import { CancelledPlanNotice } from '../../primitives/CancelledPlanNotice'
 import { UsageMeter } from '../../primitives/UsageMeter'
-import { formatPrice } from '../../utils/format'
 import {
   allowanceMeterUnit,
   daysUntil,
@@ -240,7 +240,7 @@ function OverageAccountPanel({
   const used = usage?.used ?? 0
   const meter = usage?.meterRef ?? null
   const unit = allowanceMeterUnit(meter, cap)
-  const price = formatPlanPrice(planForActions, locale)
+  const price = planForActions ? formatPlanPriceLabel(planForActions, locale) : null
   const planName = allowanceProduct?.planName ?? planForActions?.name
   const planLine = [planName, price].filter(Boolean).join(' · ') || null
 
@@ -426,16 +426,6 @@ function findActivatablePlan(plans: readonly PlanLike[] | undefined): PlanLike &
     throw new Error('McpAccountView: state H requires a free catalog plan to activate')
   }
   return { ...chosen, reference: chosen.reference }
-}
-
-function formatPlanPrice(plan: PlanLike | null, locale: string): string | null {
-  if (!plan) return null
-  const headline = headlineCharges(plan)[0]
-  const amount = headline?.amountMinor ?? plan.price ?? 0
-  const currency = headline?.currency ?? plan.currency ?? 'usd'
-  const price = formatPrice(amount, currency, { locale, free: '' })
-  const cycle = billingCycle(plan)
-  return cycle ? `${price} per ${cycle.interval}` : price
 }
 
 function formatCount(value: number, locale: string): string {

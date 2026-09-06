@@ -522,7 +522,7 @@ describe('CurrentPlanCard', () => {
     const price = document.querySelector('[data-solvapay-current-plan-price]')
     expect(price?.textContent).toBeTruthy()
     expect(price?.textContent).not.toMatch(/Free/)
-    expect(price?.textContent).toMatch(/\/ call/)
+    expect(price?.textContent).toMatch(/\/ request/)
   })
 
   it('omits the price line for a $0 PAYG plan that is metered but has no options', async () => {
@@ -599,7 +599,7 @@ describe('CurrentPlanCard', () => {
     // text stays exactly what surfaces already assert against.
     const price = document.querySelector('[data-solvapay-current-plan-price]')
     expect(price?.textContent).not.toMatch(/Rate/)
-    expect(price?.textContent).toMatch(/\/ call/)
+    expect(price?.textContent).toMatch(/\/ request/)
   })
 
   it('captions a non-metered plan price with Price rather than Rate', async () => {

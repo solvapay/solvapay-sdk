@@ -29,6 +29,7 @@ import {
   includedUnits,
   isZeroDecimalCurrency,
   meterName,
+  planPricingShape,
   trialDays,
   usageRate,
   type PricingOptionLike,
@@ -233,6 +234,7 @@ function recoveryLine(views: SolvaPayMcpViewKind[]): string {
  * this SDK can't read.
  */
 function formatPlanPrices(p: PlanShape): string {
+  const shape = planPricingShape(p)
   const charges = headlineCharges(p)
   if (charges.length > 0) {
     return charges
@@ -245,7 +247,7 @@ function formatPlanPrices(p: PlanShape): string {
   // derived top-level `price` is 0, so falling straight through to it
   // announced a paid plan as free. Lead with the rate instead, marked as a
   // floor when the plan prices in bands.
-  const rate = usageRate(p)
+  const rate = shape.rate ?? usageRate(p)
   if (rate && rate.amountMinor > 0) {
     const money = formatMoney(rate.amountMinor, rate.currency)
     if (money != null) {
@@ -266,12 +268,12 @@ function isFreePlan(p: PlanShape): boolean {
 
 function planTypeLabel(p: PlanShape): string {
   if (isFreePlan(p)) return 'no payment required'
-  switch (p.type) {
-    case 'usage-based':
+  switch (planPricingShape(p).shape) {
+    case 'usage':
       return 'pay as you go'
     case 'hybrid':
       return 'subscription + usage'
-    case 'one-time':
+    case 'oneTime':
       return 'one-time'
     default:
       return 'recurring'
@@ -279,7 +281,7 @@ function planTypeLabel(p: PlanShape): string {
 }
 
 function formatCycle(p: PlanShape): string {
-  const cycle = billingCycle(p)
+  const cycle = planPricingShape(p).cycle ?? billingCycle(p)
   if (!cycle) return ''
   return cycle.count ? `/${cycle.count} ${cycle.interval}s` : `/${cycle.interval}`
 }

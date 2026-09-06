@@ -7,7 +7,7 @@
  */
 
 import React, { memo } from 'react'
-import type { PaymentIntent } from '@stripe/stripe-js'
+import type { BillingCycleLike } from '@solvapay/core'
 import { usePaymentForm } from '../../../../components/PaymentFormContext'
 import { PaymentForm } from '../../../../primitives/PaymentForm'
 import { usePlanSelection } from '../../../../components/PlanSelectionContext'
@@ -20,7 +20,7 @@ import { chargeAmountMinor } from '../../chargeAmount'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from '../../McpHosted'
 import { McpPaymentHeader } from '../../McpPaymentHeader'
 import type { BootstrapPlanLike, Cx } from '../shared'
-import { inferIncludedUnits, planBillingInterval, planMeterName, shortCycle } from '../shared'
+import { inferIncludedUnits, planBillingCycle, planMeterName, formatCycleSuffix } from '../shared'
 
 interface RecurringPaymentStepProps {
   plan: BootstrapPlanLike
@@ -49,7 +49,7 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
   const currency = pricingOption.currency.toUpperCase()
   const locale = useHostLocale()
   const amountMinor = pricingOption.price ?? 0
-  const cycle = planBillingInterval(plan) ?? 'month'
+  const cycle = planBillingCycle(plan)
   const included = inferIncludedUnits(plan)
   const meterName = planMeterName(plan) ?? 'units'
   const planName = plan.name ?? 'Plan'
@@ -71,7 +71,8 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
             <div className="solvapay-mcp-checkout-order-summary-row">
               <span className={cx.muted}>{planName}</span>
               <span>
-                {formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}
+                {formatPrice(amountMinor, currency, { locale })}
+                {formatCycleSuffix(cycle)}
               </span>
             </div>
             {included != null ? (
@@ -121,15 +122,15 @@ function RecurringChargeCta({
 }: {
   amountMinor: number
   currency: string
-  cycle: string
+  cycle: BillingCycleLike | null
 }) {
   const locale = useHostLocale()
   const { taxBreakdown } = usePaymentForm()
   const minor = chargeAmountMinor(taxBreakdown, amountMinor)
   return (
     <>
-      Subscribe — {formatPrice(minor, taxBreakdown?.currency ?? currency, { locale })}/
-      {shortCycle(cycle)}
+      Subscribe — {formatPrice(minor, taxBreakdown?.currency ?? currency, { locale })}
+      {formatCycleSuffix(cycle)}
     </>
   )
 }

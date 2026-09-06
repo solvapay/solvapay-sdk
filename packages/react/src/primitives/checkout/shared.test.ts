@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { buildDefaultCheckoutPlanFilter, formatPaygRate, planMeterName } from './shared'
+import { buildDefaultCheckoutPlanFilter, formatPaygRate, formatPlanPriceLabel, planMeterName } from './shared'
 import type { Plan } from '../../types'
 
 /**
@@ -125,7 +125,7 @@ describe('buildDefaultCheckoutPlanFilter', () => {
 describe('formatPaygRate', () => {
   it('renders credits per call once the balance supplies the peg', () => {
     expect(formatPaygRate({ ...payg, options: [perUnit(10)] }, 'en-US', usdBalance)).toBe(
-      '1,000 credits / call',
+      '1,000 credits / request',
     )
   })
 
@@ -135,18 +135,18 @@ describe('formatPaygRate', () => {
         ...usdBalance,
         creditsPerMinorUnit: 1,
       }),
-    ).toBe('1 credit / call')
+    ).toBe('1 credit / request')
   })
 
   it('falls back to the charge itself when there is no balance to peg against', () => {
     // Without the peg there is no honest credit figure, but the price
     // per call is still known — show that rather than nothing.
-    expect(formatPaygRate(payg, 'en-US')).toBe('$0.02 / call')
+    expect(formatPaygRate(payg, 'en-US')).toBe('$0.02 / request')
   })
 
   it('falls back to the charge when it is priced outside the balance currency', () => {
     expect(formatPaygRate({ ...payg, options: [perUnit(200, 'eur')] }, 'en-US', usdBalance)).toBe(
-      '€2 / call',
+      '€2 / request',
     )
   })
 
@@ -160,17 +160,17 @@ describe('formatPaygRate', () => {
   // because later units are priced by their own bands.
   it('labels a tiered plan from its entry band', () => {
     const tiered: Plan = { ...payg, options: [band(0, 1000, 2), band(1000, null, 1)] }
-    expect(formatPaygRate(tiered, 'en-US')).toBe('from $0.02 / call')
+    expect(formatPaygRate(tiered, 'en-US')).toBe('from $0.02 / request')
   })
 
   it('prices a tiered plan in credits when the balance supplies the peg', () => {
     const tiered: Plan = { ...payg, options: [band(0, 1000, 10), band(1000, null, 5)] }
-    expect(formatPaygRate(tiered, 'en-US', usdBalance)).toBe('from 1,000 credits / call')
+    expect(formatPaygRate(tiered, 'en-US', usdBalance)).toBe('from 1,000 credits / request')
   })
 
   it('drops the floor marker for a single-band plan, which is just a rate', () => {
     const oneBand: Plan = { ...payg, options: [band(0, null, 2)] }
-    expect(formatPaygRate(oneBand, 'en-US')).toBe('$0.02 / call')
+    expect(formatPaygRate(oneBand, 'en-US')).toBe('$0.02 / request')
   })
 
   it('returns null for a zero-rate band, which costs nothing per call', () => {
@@ -203,5 +203,29 @@ describe('planMeterName', () => {
 
   it('returns null when no option names a meter', () => {
     expect(planMeterName(recurring)).toBeNull()
+  })
+})
+
+describe('formatPlanPriceLabel', () => {
+  it('labels a free plan as Free', () => {
+    expect(formatPlanPriceLabel(free, 'en-US')).toBe('Free')
+  })
+
+  it('never labels a usage-based plan as Free when the headline price is zero', () => {
+    expect(formatPlanPriceLabel(payg, 'en-US')).toBe('Pay per use')
+  })
+
+  it('distinguishes recurring and one-time plans at the same amount', () => {
+    expect(formatPlanPriceLabel(recurring, 'en-US')).toBe('$18/mo')
+    expect(formatPlanPriceLabel(pack, 'en-US')).toBe('$5 once')
+  })
+
+  it('honours a multi-interval billing cycle count', () => {
+    const quarterly: Plan = {
+      ...recurring,
+      options: [{ kind: 'billingCycle', interval: 'month', count: 3 }, flat(9000)],
+      price: 9000,
+    }
+    expect(formatPlanPriceLabel(quarterly, 'en-US')).toBe('$90/3 mo')
   })
 })

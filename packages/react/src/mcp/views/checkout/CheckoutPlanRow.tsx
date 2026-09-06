@@ -9,18 +9,18 @@
 
 import React from 'react'
 import { useBalance } from '../../../hooks/useBalance'
-import { formatPrice } from '../../../utils/format'
 import { isPaygPlan } from '../../../utils/isPayg'
 import type { Plan } from '../../../types'
 import { PlanRow } from '../../primitives'
 import type { PlanLike } from '../../plan-actions'
 import {
   formatPaygRate,
+  formatPlanPriceLabel,
   inferIncludedUnits,
-  planBillingInterval,
+  planBillingCycle,
   planMeterName,
-  shortCycle,
-} from './shared'
+  formatCycleSuffix,
+} from '../../../primitives/checkout/shared'
 
 export type LadderPlan = PlanLike & {
   reference: string
@@ -55,8 +55,7 @@ export function CheckoutPlanRow({
   const isPaygCurrent = current && isPaygPlan(plan)
   const disabled = disabledOverride ?? (free || (current && !isPaygCurrent))
   const state = resolvePlanRowState({ current, selected, free, isPaygCurrent })
-  const interval = planBillingInterval(plan)
-  const priceLabel = formatPlanPrice(selectedOption, locale, interval, isPaygPlan(plan))
+  const priceLabel = formatPlanPriceLabel(plan, locale, selectedOption)
   const description = descriptionOverride ?? planWhatItGives(plan, locale, balance)
 
   return (
@@ -92,17 +91,6 @@ export function resolvePlanRowState({
   return 'idle'
 }
 
-export function formatPlanPrice(
-  option: { price: number; currency: string },
-  locale: string,
-  interval: string | null,
-  payg: boolean,
-): string {
-  const priceLabel = formatPrice(option.price ?? 0, option.currency.toUpperCase(), { locale })
-  if (payg || !interval) return priceLabel
-  return `${priceLabel}/${shortCycle(interval)}`
-}
-
 export function planWhatItGives(
   plan: LadderPlan | Plan,
   locale: string,
@@ -115,7 +103,8 @@ export function planWhatItGives(
   const meter = planMeterName(plan)
   if (included != null) {
     const noun = meter ?? 'included'
-    return `${included.toLocaleString(locale)} ${noun}`
+    const cycleSuffix = formatCycleSuffix(planBillingCycle(plan))
+    return `${included.toLocaleString(locale)} ${noun}${cycleSuffix ? ` ${cycleSuffix}` : ''}`
   }
   return undefined
 }

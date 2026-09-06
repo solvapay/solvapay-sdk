@@ -8,7 +8,8 @@
  */
 
 import React from 'react'
-import { billingCycle, headlineCharges } from '@solvapay/core'
+import { billingCycle } from '@solvapay/core'
+import { formatPlanPriceLabel } from '../../primitives/checkout/shared'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
 import { useCopy } from '../../hooks/useCopy'
@@ -17,7 +18,6 @@ import { useLimits } from '../../hooks/useLimits'
 import { useUsage } from '../../hooks/useUsage'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 import { interpolate } from '../../i18n/interpolate'
-import { formatPrice } from '../../utils/format'
 import { UsageMeter } from '../../primitives/UsageMeter'
 import {
   allowanceMeterUnit,
@@ -86,7 +86,7 @@ export function AllowanceAccountPanel({
   const dropPrice = planShape === 'free' || planShape === 'trial'
   const planLine = allowanceProduct
     ? formatAllowanceTerms(allowanceProduct, locale, {
-        price: dropPrice ? null : formatPlanPrice(planForActions, locale),
+        price: dropPrice ? null : planForActions ? formatPlanPriceLabel(planForActions, locale) : null,
         renewsOn: !dropPrice && period.kind === 'date' ? period.periodEnd : null,
         started: dropPrice,
         qualifier: oneTime.planQualifier,
@@ -202,16 +202,6 @@ export function AllowanceAccountPanel({
       {isFullscreen ? <AccountIdentityFooter /> : null}
     </div>
   )
-}
-
-function formatPlanPrice(plan: PlanLike | null, locale: string): string | null {
-  if (!plan) return null
-  const headline = headlineCharges(plan)[0]
-  const amount = headline?.amountMinor ?? plan.price ?? 0
-  const currency = headline?.currency ?? plan.currency ?? 'usd'
-  const price = formatPrice(amount, currency, { locale, free: '' })
-  const cycle = billingCycle(plan)
-  return cycle ? `${price} per ${cycle.interval}` : price
 }
 
 function formatCount(value: number, locale: string): string {

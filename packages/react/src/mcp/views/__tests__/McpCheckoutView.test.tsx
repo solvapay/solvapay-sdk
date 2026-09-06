@@ -684,7 +684,7 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     // minor unit. The old fixture asserted "1 credit / call" off a
     // fabricated `creditsPerUnit`, contradicting the peg this same file
     // pins for the order summary below.
-    expect(screen.getByText('100 credits / call')).toBeTruthy()
+    expect(screen.getByText('100 credits / request')).toBeTruthy()
 
     // Regression guard: the success step previously rendered a
     // `Back to chat` button that called `app.requestTeardown()`,

@@ -112,10 +112,10 @@ describe('formatAllowanceTerms', () => {
   it('puts price and renews on a paid allowance plan', () => {
     expect(
       formatAllowanceTerms(deriveActiveProducts([starter])[0]!, 'en-US', {
-        price: '$30 per month',
+        price: '$30/mo',
         renewsOn: '2026-09-12T00:00:00Z',
       }),
-    ).toBe('Starter · $30 per month · renews Sep 12, 2026')
+    ).toBe('Starter · $30/mo · renews Sep 12, 2026')
   })
 
   it('drops price on free and uses started', () => {

@@ -8,6 +8,7 @@ import {
   meterName,
   peggedCreditsPerUnit,
   perUnitCharge,
+  planPricingShape,
   tierBands,
   tierMeters,
   trialDays,
@@ -394,5 +395,58 @@ describe('tier readers (DEV-816)', () => {
         creditsPerMinorUnit: 100,
       }),
     ).toBe(200)
+  })
+})
+
+describe('planPricingShape', () => {
+  it('marks a no-payment plan as free', () => {
+    expect(planPricingShape(freePlan)).toMatchObject({ shape: 'free' })
+  })
+
+  it('marks a pure usage-based plan as usage even when headline price is zero', () => {
+    expect(planPricingShape(paygPlan)).toMatchObject({
+      shape: 'usage',
+      headlineMinor: 0,
+      rate: expect.objectContaining({ amountMinor: 2 }),
+    })
+  })
+
+  it('marks a recurring flat plan as recurring with its cycle', () => {
+    expect(planPricingShape(proPlan)).toMatchObject({
+      shape: 'recurring',
+      headlineMinor: 3000,
+      cycle: { interval: 'month' },
+    })
+  })
+
+  it('marks a one-time flat plan as oneTime', () => {
+    expect(
+      planPricingShape({
+        type: 'one-time',
+        requiresPayment: true,
+        currency: 'USD',
+        options: [{ kind: 'charge', per: 'flat', amountMinor: 500, currency: 'usd' }],
+      }),
+    ).toMatchObject({ shape: 'oneTime', headlineMinor: 500 })
+  })
+
+  it('marks a recurring plan with billable usage as hybrid', () => {
+    expect(
+      planPricingShape({
+        type: 'hybrid',
+        requiresPayment: true,
+        currency: 'USD',
+        options: [
+          { kind: 'billingCycle', interval: 'month' },
+          { kind: 'charge', per: 'flat', amountMinor: 3000, currency: 'usd' },
+          { kind: 'charge', per: 'unit', amountMinor: 2, currency: 'usd', meter: 'requests' },
+        ],
+      }),
+    ).toMatchObject({
+      shape: 'hybrid',
+      headlineMinor: 3000,
+      cycle: { interval: 'month' },
+      rate: expect.objectContaining({ amountMinor: 2 }),
+    })
   })
 })
