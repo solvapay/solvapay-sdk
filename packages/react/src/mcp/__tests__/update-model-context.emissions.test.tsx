@@ -55,12 +55,18 @@ vi.mock('../../primitives/TopupForm', () => {
     Subtotal: () => null,
     Tax: () => null,
     Total: () => null,
+    TaxNote: () => null,
     Rows: () => null,
   }
   return {
     TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary },
+    useTopupForm: () => ({ taxBreakdown: null, amount: 0, currency: 'USD' }),
   }
 })
+
+vi.mock('../../components/PaymentFormContext', () => ({
+  usePaymentForm: () => ({ taxBreakdown: null }),
+}))
 
 vi.mock('../../primitives/PaymentForm', () => {
   const Root: React.FC<{

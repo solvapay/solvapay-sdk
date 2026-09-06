@@ -14,11 +14,20 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const taxState = vi.hoisted(() => ({
+  payment: null as { total: number; currency: string } | null,
+  topup: null as { total: number; currency: string } | null,
+}))
+
 // ------------------------------------------------------------------
 // Primitive stubs — keep the view's state machine testable without
 // mounting real Stripe Elements. The stubs simulate success when the
 // user clicks the submit button.
 // ------------------------------------------------------------------
+
+vi.mock('../../../components/PaymentFormContext', () => ({
+  usePaymentForm: () => ({ taxBreakdown: taxState.payment }),
+}))
 
 vi.mock('../../../primitives/TopupForm', () => {
   const Root: React.FC<{
@@ -55,7 +64,8 @@ vi.mock('../../../primitives/TopupForm', () => {
     Subtotal: () => null,
     Tax: () => null,
     Total: () => null,
-    Rows: () => null,
+    TaxNote: () => <span data-testid="tax-note">tax note</span>,
+    Rows: () => <div data-testid="tax-rows">tax rows</div>,
   }
   return {
     TopupForm: {
@@ -67,6 +77,11 @@ vi.mock('../../../primitives/TopupForm', () => {
       BusinessDetails,
       Summary,
     },
+    useTopupForm: () => ({
+      taxBreakdown: taxState.topup,
+      amount: 1800,
+      currency: 'USD',
+    }),
   }
 })
 
@@ -109,8 +124,8 @@ vi.mock('../../../primitives/PaymentForm', () => {
     Subtotal: () => null,
     Tax: () => null,
     Total: () => null,
-    TaxNote: () => null,
-    Rows: () => null,
+    TaxNote: () => <span data-testid="tax-note">tax note</span>,
+    Rows: () => <div data-testid="tax-rows">tax rows</div>,
   }
   return {
     PaymentForm: {
@@ -139,6 +154,7 @@ vi.mock('../../useStripeProbe', () => ({
 // ------------------------------------------------------------------
 
 import { McpCheckoutView } from '../McpCheckoutView'
+import { McpDisplayModeProvider } from '../../hooks/useDisplayMode'
 import { plansCache } from '../../../hooks/usePlans'
 import { merchantCache } from '../../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../../transport/cache-key'
@@ -270,7 +286,7 @@ function buildCtx(config: SolvaPayConfig, purchases: PurchaseInfo[] = []): Solva
 
 function renderView(
   props: Partial<React.ComponentProps<typeof McpCheckoutView>> = {},
-  options: { bridgeApp?: McpBridgeAppLike } = {},
+  options: { bridgeApp?: McpBridgeAppLike; displayMode?: 'inline' | 'fullscreen' } = {},
 ) {
   const transport = props.publishableKey
     ? makeTransport()
@@ -289,6 +305,15 @@ function renderView(
   // `useMcpBridge()` calls become no-ops, matching production wiring
   // when the host doesn't implement a given capability.
   const bridgeApp: McpBridgeAppLike = options.bridgeApp ?? {}
+  const view = (
+    <McpCheckoutView
+      productRef={productRef}
+      publishableKey="pk_test"
+      returnUrl="https://example.test/r"
+      plans={bootstrapPlans}
+      {...props}
+    />
+  )
   return {
     ctx,
     transport,
@@ -296,13 +321,18 @@ function renderView(
     ...render(
       <SolvaPayContext.Provider value={ctx}>
         <McpBridgeProvider app={bridgeApp}>
-          <McpCheckoutView
-            productRef={productRef}
-            publishableKey="pk_test"
-            returnUrl="https://example.test/r"
-            plans={bootstrapPlans}
-            {...props}
-          />
+          {options.displayMode ? (
+            <McpDisplayModeProvider
+              value={{
+                displayMode: options.displayMode,
+                availableDisplayModes: ['inline', 'fullscreen'],
+              }}
+            >
+              {view}
+            </McpDisplayModeProvider>
+          ) : (
+            view
+          )}
         </McpBridgeProvider>
       </SolvaPayContext.Provider>,
     ),
@@ -312,6 +342,8 @@ function renderView(
 beforeEach(() => {
   plansCache.clear()
   merchantCache.clear()
+  taxState.payment = null
+  taxState.topup = null
 })
 
 afterEach(() => {
@@ -729,6 +761,60 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     expect(screen.getByText('Paying as demo@acme.test')).toBeTruthy()
   })
 
+  it('keeps the tax note in the rail and out of the form body', async () => {
+    const { container } = renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen
+      .getByText('Pro')
+      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
+    })
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    expect(rail?.contains(screen.getByTestId('tax-note'))).toBe(true)
+    expect(screen.queryByTestId('tax-rows')).toBeNull()
+  })
+
+  it('puts the tax ladder in the fullscreen rail', async () => {
+    const { container } = renderView({ fromPaywall: true }, { displayMode: 'fullscreen' })
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen
+      .getByText('Pro')
+      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
+    })
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(rail?.contains(screen.getByTestId('tax-rows'))).toBe(true)
+    expect(action?.contains(screen.getByTestId('tax-rows'))).toBe(false)
+  })
+
+  it('CTA reads the tax-inclusive total from form context', async () => {
+    taxState.payment = { total: 2250, currency: 'USD' }
+    renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByText('Pro'))
+    const proCard = screen
+      .getByText('Pro')
+      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+    act(() => {
+      fireEvent.click(proCard)
+    })
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pro/ }))
+    })
+    await waitFor(() => screen.getByTestId('payment-form-stub'))
+    expect(screen.getByTestId('payment-submit-label')).toHaveTextContent('$22.50')
+  })
+
   it('does not show Paying as on the recurring plan step', async () => {
     renderView({ fromPaywall: true })
     await waitFor(() => screen.getByText('Pro'))
@@ -1019,6 +1105,34 @@ describe('<McpCheckoutView> — CSS hooks', () => {
     expect(
       rail && action && (rail.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING),
     ).toBeTruthy()
+    expect(rail?.contains(screen.getByTestId('tax-note'))).toBe(true)
+    expect(screen.queryByTestId('tax-rows')).toBeNull()
+  })
+
+  it('PaygPaymentStep puts the tax ladder in the fullscreen rail', async () => {
+    const { container } = renderView({ fromPaywall: true }, { displayMode: 'fullscreen' })
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    })
+    await waitFor(() => screen.getByText(/How many credits/))
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '18' } })
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await waitFor(() => screen.getByTestId('topup-form-stub'))
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(rail?.contains(screen.getByTestId('tax-rows'))).toBe(true)
+    expect(action?.contains(screen.getByTestId('tax-rows'))).toBe(false)
+  })
+
+  it('PaygPaymentStep CTA reads the tax-inclusive total from form context', async () => {
+    taxState.topup = { total: 2250, currency: 'USD' }
+    await advanceToPaygPayment()
+    expect(screen.getByTestId('topup-submit-label')).toHaveTextContent('$22.50')
   })
 
   it('PAYG SuccessStep renders success-check + receipt CSS hooks', async () => {

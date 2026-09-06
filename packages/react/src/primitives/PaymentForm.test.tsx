@@ -378,9 +378,10 @@ describe('PaymentForm post-success purchase merge', () => {
   })
 
   async function clickSubmitAndSettle() {
-    const button = await screen.findByTestId('submit')
-    await waitFor(() => {
-      expect(button.getAttribute('data-state')).toBe('idle')
+    const button = await waitFor(() => {
+      const next = screen.getByTestId('submit')
+      expect(next.getAttribute('data-state')).toBe('idle')
+      return next
     })
     await act(async () => {
       fireEvent.click(button)

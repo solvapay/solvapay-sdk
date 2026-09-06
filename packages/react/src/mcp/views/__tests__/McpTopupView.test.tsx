@@ -12,6 +12,10 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import React from 'react'
 
+const taxState = vi.hoisted(() => ({
+  topup: null as { total: number; currency: string } | null,
+}))
+
 vi.mock('../../../primitives/AutoRecharge', () => {
   const Root: React.FC<{
     deferCardSetup?: boolean
@@ -91,9 +95,25 @@ vi.mock('../../../primitives/TopupForm', () => {
     Subtotal: () => null,
     Tax: () => null,
     Total: () => null,
-    Rows: () => null,
+    TaxNote: () => <span data-testid="tax-note">tax note</span>,
+    Rows: () => <div data-testid="tax-rows">tax rows</div>,
   }
-  return { TopupForm: { Root, Loading, PaymentElement, Error: ErrorSlot, SubmitButton, BusinessDetails, Summary } }
+  return {
+    TopupForm: {
+      Root,
+      Loading,
+      PaymentElement,
+      Error: ErrorSlot,
+      SubmitButton,
+      BusinessDetails,
+      Summary,
+    },
+    useTopupForm: () => ({
+      taxBreakdown: taxState.topup,
+      amount: 2500,
+      currency: 'USD',
+    }),
+  }
 })
 
 vi.mock('../../../primitives/MandateText', () => ({ MandateText: () => null }))
@@ -205,6 +225,7 @@ const singleCurrencyUsdMerchant: Merchant = {
 
 beforeEach(() => {
   merchantCache.clear()
+  taxState.topup = null
 })
 
 afterEach(() => {
@@ -354,5 +375,35 @@ describe('<McpTopupView> — topup currency picker', () => {
     expect(
       rail && action && (rail.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING),
     ).toBeTruthy()
+    expect(rail?.contains(screen.getByTestId('tax-note'))).toBe(true)
+    expect(screen.queryByTestId('tax-rows')).toBeNull()
+  })
+
+  it('puts the tax ladder in the fullscreen payment rail', async () => {
+    const { container } = renderTopup(singleCurrencyUsdMerchant, 'USD', 'fullscreen')
+    await screen.findByText('Add credits')
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByTestId('topup-form-stub')
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    const action = container.querySelector('.solvapay-mcp-hosted-body')
+    expect(rail?.contains(screen.getByTestId('tax-rows'))).toBe(true)
+    expect(action?.contains(screen.getByTestId('tax-rows'))).toBe(false)
+  })
+
+  it('labels the rail hero and CTA with the tax-inclusive total', async () => {
+    taxState.topup = { total: 3125, currency: 'USD' }
+    const { container } = renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByTestId('topup-form-stub')
+    const rail = container.querySelector('.solvapay-mcp-summary-rail')
+    expect(rail?.textContent).toMatch(/\$31\.25/)
+    expect(screen.getByTestId('topup-submit')).toHaveTextContent('$31.25')
   })
 })

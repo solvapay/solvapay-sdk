@@ -212,3 +212,28 @@ describe('MCP inline density contract', () => {
     expect(capMatch?.[1]).toBe(thresholdMatch?.[1])
   })
 })
+
+describe('MCP tax-summary rail stack', () => {
+  it('is a plain stack, not a bordered form box', () => {
+    const rule = firstRule(STYLES, /\.solvapay-mcp-tax-summary\s*\{([^}]+)\}/)
+    expect(rule).toMatch(/display:\s*flex/)
+    expect(rule).toMatch(/flex-direction:\s*column/)
+    expect(rule).not.toMatch(/border:\s*1px solid/)
+    expect(rule).not.toMatch(/padding:\s*10px 12px/)
+    expect(rule).not.toMatch(/border-radius/)
+  })
+
+  it('keeps the total-row hairline and tax-note selectors', () => {
+    const total = firstRule(
+      STYLES,
+      /\.solvapay-mcp-tax-summary \.solvapay-tax-summary-row--total\s*\{([^}]+)\}/,
+    )
+    expect(total).toMatch(/border-top/)
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-tax-summary \[data-solvapay-topup-form-summary-tax-note\]/,
+    )
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-tax-summary \[data-solvapay-payment-form-summary-tax-note\]/,
+    )
+  })
+})

@@ -212,9 +212,18 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
           data-solvapay-payment-form=""
           data-state="error"
         >
-          <p role="alert" data-solvapay-payment-form-error="">
-            {copy.errors.paymentInitFailed} {checkoutError.message || copy.errors.unknownError}
-          </p>
+          <PendingInner
+            planRef={effectivePlanRef}
+            productRef={effectiveProductRef}
+            resolvedPlanRef={resolvedPlanRef}
+            plan={resolvedPlan ?? null}
+            returnUrl={finalReturnUrl}
+            submitButtonText={submitButtonText}
+            buttonClassName={buttonClassName}
+            error={`${copy.errors.paymentInitFailed} ${checkoutError.message || copy.errors.unknownError}`}
+          >
+            {children}
+          </PendingInner>
         </section>
       )
     }
@@ -290,9 +299,18 @@ const Root = forwardRef<HTMLElement, PaymentFormRootProps>(
         data-solvapay-payment-form=""
         data-state="loading"
       >
-        <output data-solvapay-payment-form-loading="">
-          <Spinner size="md" />
-        </output>
+        <PendingInner
+          planRef={effectivePlanRef}
+          productRef={effectiveProductRef}
+          resolvedPlanRef={resolvedPlanRef}
+          plan={resolvedPlan ?? null}
+          returnUrl={finalReturnUrl}
+          submitButtonText={submitButtonText}
+          buttonClassName={buttonClassName}
+          error={null}
+        >
+          {children}
+        </PendingInner>
       </section>
     )
   },
@@ -832,6 +850,79 @@ const FreeInner: React.FC<{
       submitButtonText,
       buttonClassName,
       submit,
+    ],
+  )
+
+  return <PaymentFormProvider value={contextValue}>{children}</PaymentFormProvider>
+}
+
+/** Pre-Elements context so Loading / Error slots own chrome while Root stays mounted. */
+const PendingInner: React.FC<{
+  planRef?: string
+  productRef?: string
+  resolvedPlanRef: string | null
+  plan: Plan | null
+  returnUrl: string
+  submitButtonText?: string
+  buttonClassName?: string
+  error: string | null
+  children?: React.ReactNode
+}> = ({
+  planRef,
+  productRef,
+  resolvedPlanRef,
+  plan,
+  returnUrl,
+  submitButtonText,
+  buttonClassName,
+  error,
+  children,
+}) => {
+  const contextValue: PaymentFormContextValue = useMemo(
+    () => ({
+      planRef,
+      productRef,
+      prefillCustomer: undefined,
+      resolvedPlanRef,
+      plan,
+      clientSecret: null,
+      processorPaymentId: null,
+      stripe: null,
+      elements: null,
+      isProcessing: false,
+      isReady: false,
+      paymentInputComplete: false,
+      termsAccepted: false,
+      requireTermsAcceptance: false,
+      canSubmit: false,
+      error,
+      elementKind: null,
+      returnUrl,
+      submitButtonText,
+      buttonClassName,
+      customerName: '',
+      setCustomerName: () => {},
+      businessDetails: defaultBusinessDetails,
+      taxBreakdown: null,
+      businessDetailsAttached: false,
+      businessDetailsAttaching: false,
+      businessDetailsError: null,
+      fieldErrors: {},
+      setBusinessDetails: () => {},
+      setElementKind: () => {},
+      setPaymentInputComplete: () => {},
+      setTermsAccepted: () => {},
+      submit: async () => {},
+    }),
+    [
+      planRef,
+      productRef,
+      resolvedPlanRef,
+      plan,
+      returnUrl,
+      submitButtonText,
+      buttonClassName,
+      error,
     ],
   )
 

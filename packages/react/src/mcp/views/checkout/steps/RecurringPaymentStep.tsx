@@ -8,12 +8,15 @@
 
 import React, { memo } from 'react'
 import type { PaymentIntent } from '@stripe/stripe-js'
+import { usePaymentForm } from '../../../../components/PaymentFormContext'
 import { PaymentForm } from '../../../../primitives/PaymentForm'
 import { usePlanSelection } from '../../../../components/PlanSelectionContext'
 import { formatPrice } from '../../../../utils/format'
 import { resolvePlanPricingOption } from '../../../../utils/planPricing'
 import type { Plan } from '../../../../types'
+import { useDisplayMode } from '../../../hooks/useDisplayMode'
 import { useHostLocale } from '../../../useHostLocale'
+import { chargeAmountMinor } from '../../chargeAmount'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from '../../McpHosted'
 import { McpPaymentHeader } from '../../McpPaymentHeader'
 import type { BootstrapPlanLike, Cx } from '../shared'
@@ -50,60 +53,83 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
   const included = inferIncludedUnits(plan)
   const meterName = planMeterName(plan) ?? 'units'
   const planName = plan.name ?? 'Plan'
+  const { displayMode } = useDisplayMode()
+  const isFullscreen = displayMode === 'fullscreen'
 
   return (
-    <McpHostedLayout>
-      <McpSummaryRail>
-        <div className="solvapay-mcp-checkout-order-summary" data-variant="recurring">
-          <div className="solvapay-mcp-checkout-order-summary-row">
-            <span className={cx.muted}>{planName}</span>
-            <span>
-              {formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}
-            </span>
-          </div>
-          {included != null ? (
+    <PaymentForm.Root
+      planRef={planRef}
+      productRef={productRef}
+      returnUrl={returnUrl}
+      requireTermsAcceptance={false}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onSuccess={onSuccess as any}
+    >
+      <McpHostedLayout>
+        <McpSummaryRail>
+          <div className="solvapay-mcp-checkout-order-summary" data-variant="recurring">
             <div className="solvapay-mcp-checkout-order-summary-row">
-              <span className={cx.muted}>
-                {included.toLocaleString(locale)} {meterName} included
+              <span className={cx.muted}>{planName}</span>
+              <span>
+                {formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}
               </span>
             </div>
-          ) : null}
-        </div>
-      </McpSummaryRail>
+            {included != null ? (
+              <div className="solvapay-mcp-checkout-order-summary-row">
+                <span className={cx.muted}>
+                  {included.toLocaleString(locale)} {meterName} included
+                </span>
+              </div>
+            ) : null}
+            {isFullscreen ? (
+              <PaymentForm.TaxSummary.Rows className={cx.taxSummary} />
+            ) : (
+              <PaymentForm.TaxSummary.TaxNote className={cx.muted} />
+            )}
+          </div>
+        </McpSummaryRail>
 
-      <McpHostedBody>
-        <McpPaymentHeader
-          backLabel="Change plan"
-          onBack={onBack}
-          heading="Payment"
-          headingClassName={cx.heading}
-        />
+        <McpHostedBody>
+          <McpPaymentHeader
+            backLabel="Change plan"
+            onBack={onBack}
+            heading="Payment"
+            headingClassName={cx.heading}
+          />
 
-        <PaymentForm.Root
-          planRef={planRef}
-          productRef={productRef}
-          returnUrl={returnUrl}
-          requireTermsAcceptance={false}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onSuccess={onSuccess as any}
-        >
           <PaymentForm.Loading />
           <PaymentForm.PaymentElement />
           <PaymentForm.BusinessDetails.Root className={cx.businessDetails}>
             <PaymentForm.BusinessDetails.Fields />
           </PaymentForm.BusinessDetails.Root>
-          {/* `Rows` (not the bare leaves) so every line is labelled — the leaves
-            render amounts only, which is why business checkout showed a naked
-            "$90 / VAT Free / $90" column. DEV-723. */}
-          <PaymentForm.TaxSummary.Rows className={cx.taxSummary} />
           <PaymentForm.Error className={cx.error} />
           <PaymentForm.MandateText />
 
           <PaymentForm.SubmitButton className={cx.button}>
-            Subscribe — {formatPrice(amountMinor, currency, { locale })}/{shortCycle(cycle)}
+            <RecurringChargeCta amountMinor={amountMinor} currency={currency} cycle={cycle} />
           </PaymentForm.SubmitButton>
-        </PaymentForm.Root>
-      </McpHostedBody>
-    </McpHostedLayout>
+        </McpHostedBody>
+      </McpHostedLayout>
+    </PaymentForm.Root>
   )
 })
+
+function RecurringChargeCta({
+  amountMinor,
+  currency,
+  cycle,
+}: {
+  amountMinor: number
+  currency: string
+  cycle: string
+}) {
+  const locale = useHostLocale()
+  const { taxBreakdown } = usePaymentForm()
+  const minor = chargeAmountMinor(taxBreakdown, amountMinor)
+  return (
+    <>
+      Subscribe — {formatPrice(minor, taxBreakdown?.currency ?? currency, { locale })}/
+      {shortCycle(cycle)}
+    </>
+  )
+}

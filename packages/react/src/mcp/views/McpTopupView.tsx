@@ -37,13 +37,14 @@ import { AmountPicker, useAmountPicker } from '../../primitives/AmountPicker'
 import { AutoRecharge } from '../../primitives/AutoRecharge'
 import { BalanceBadge } from '../../primitives/BalanceBadge'
 import { MandateText } from '../../primitives/MandateText'
-import { TopupForm } from '../../primitives/TopupForm'
+import { TopupForm, useTopupForm } from '../../primitives/TopupForm'
 import { formatPrice, getMinorUnitsPerMajor } from '../../utils/format'
 import { formatCompactCredits } from '../format-compact-credits'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 import { useMcpBridge } from '../bridge'
 import { useHostLocale } from '../useHostLocale'
 import { useStripeProbe } from '../useStripeProbe'
+import { chargeAmountMinor } from './chargeAmount'
 import { AmountLadder, Eyebrow } from '../primitives'
 import { BackLink } from './BackLink'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from './McpHosted'
@@ -210,7 +211,6 @@ function EmbeddedTopup({
 
   if (screen.step === 'payment') {
     const committedAmountMinor = screen.amountMinor
-    const displayAmount = formatPrice(committedAmountMinor, currency, { locale, free: '' })
     const creditEstimate = estimateTopupCredits(
       committedAmountMinor,
       currency,
@@ -229,27 +229,11 @@ function EmbeddedTopup({
 
     return (
       <section className={cx.card} aria-label="Top-up payment">
-        <McpHostedLayout>
-          <McpSummaryRail>
-            <section className={cx.stack}>
-              <p className={cx.muted}>Total due today</p>
-              <p className={cx.topupAmountHero}>{displayAmount}</p>
-              {contextParts.length > 0 ? (
-                <p className={cx.topupBalanceContext}>{contextParts.join(' · ')}</p>
-              ) : null}
-            </section>
-          </McpSummaryRail>
-          <McpHostedBody>
-        <McpPaymentHeader
-          backLabel="Change amount"
-          onBack={() => setScreen({ step: 'amount' })}
-        />
         <TopupForm.Root
           amount={committedAmountMinor}
           currency={currency}
           autoRecharge={pendingAutoRecharge ?? undefined}
           returnUrl={returnUrl}
-          className={cx.topupForm}
           onSuccess={() => {
             adjustBalance(committedAmountMinor * (creditsPerMinorUnit ?? 100))
             setScreen({ step: 'success', amountMinor: committedAmountMinor })
@@ -267,20 +251,44 @@ function EmbeddedTopup({
             onTopupSuccess?.(committedAmountMinor)
           }}
         >
-          <TopupForm.Loading />
-          <TopupForm.PaymentElement />
-          <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
-            <TopupForm.BusinessDetails.Fields />
-          </TopupForm.BusinessDetails.Root>
-          <TopupForm.Summary.Rows className={cx.taxSummary} />
-          <TopupForm.Error className={cx.error} />
-          <MandateText mode="topup" amountMinor={committedAmountMinor} currency={currency} />
-          <TopupForm.SubmitButton className={cx.button}>
-            Top up {displayAmount}
-          </TopupForm.SubmitButton>
+          <McpHostedLayout>
+            <McpSummaryRail>
+              <section className={cx.stack}>
+                <p className={cx.muted}>Total due today</p>
+                <p className={cx.topupAmountHero}>
+                  <TopupChargeAmount amountMinor={committedAmountMinor} currency={currency} />
+                </p>
+                {contextParts.length > 0 ? (
+                  <p className={cx.topupBalanceContext}>{contextParts.join(' · ')}</p>
+                ) : null}
+                {isFullscreen ? (
+                  <TopupForm.Summary.Rows className={cx.taxSummary} />
+                ) : (
+                  <TopupForm.Summary.TaxNote className={cx.muted} />
+                )}
+              </section>
+            </McpSummaryRail>
+            <McpHostedBody>
+              <McpPaymentHeader
+                backLabel="Change amount"
+                onBack={() => setScreen({ step: 'amount' })}
+              />
+              <div className={cx.topupForm}>
+                <TopupForm.Loading />
+                <TopupForm.PaymentElement />
+                <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
+                  <TopupForm.BusinessDetails.Fields />
+                </TopupForm.BusinessDetails.Root>
+                <TopupForm.Error className={cx.error} />
+                <MandateText mode="topup" amountMinor={committedAmountMinor} currency={currency} />
+                <TopupForm.SubmitButton className={cx.button}>
+                  Top up{' '}
+                  <TopupChargeAmount amountMinor={committedAmountMinor} currency={currency} />
+                </TopupForm.SubmitButton>
+              </div>
+            </McpHostedBody>
+          </McpHostedLayout>
         </TopupForm.Root>
-          </McpHostedBody>
-        </McpHostedLayout>
       </section>
     )
   }
@@ -365,6 +373,19 @@ function EmbeddedTopup({
       {amountForm}
     </section>
   )
+}
+
+function TopupChargeAmount({
+  amountMinor,
+  currency,
+}: {
+  amountMinor: number
+  currency: string
+}) {
+  const locale = useHostLocale()
+  const { taxBreakdown } = useTopupForm()
+  const minor = chargeAmountMinor(taxBreakdown, amountMinor)
+  return <>{formatPrice(minor, taxBreakdown?.currency ?? currency, { locale, free: '' })}</>
 }
 
 function AmountStepHeader({
