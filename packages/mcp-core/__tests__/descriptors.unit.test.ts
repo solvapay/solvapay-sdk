@@ -415,6 +415,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(customer.paymentMethod).toMatchObject({ kind: 'card', last4: '4242' })
     expect(customer.balance).toMatchObject({ credits: 500, displayCurrency: 'USD' })
     expect(customer.usage).not.toBeUndefined()
+    expect(customer.limits).not.toBeUndefined()
     expect(sc.checkoutUrl).toBe('https://customer.solvapay.com/demo?session=sess_test')
     expect(sc.portalUrl).toBe('https://customer.solvapay.com/portal?session=csess_test')
   })

@@ -4,6 +4,7 @@ import {
   AmountLadder,
   AttributionFooter,
   Eyebrow,
+  FactBand,
   Field,
   LedgerRow,
   Pill,
@@ -12,8 +13,10 @@ import {
   Section,
   SplitRow,
   StatusDot,
+  StatusPill,
   Toggle,
   sanitizeDecimalInput,
+  statusPillTone,
 } from '../index'
 
 describe('sanitizeDecimalInput', () => {
@@ -86,11 +89,83 @@ describe('MCP primitives', () => {
     render(
       <>
         <StatusDot label="Active" />
+        <StatusDot label="No plan" empty />
         <Pill>MCP</Pill>
       </>,
     )
     expect(screen.getByText('Active').className).toBe('solvapay-mcp-status-dot')
+    expect(screen.getByText('No plan')).toHaveAttribute('data-empty', '')
     expect(screen.getByText('MCP').className).toBe('solvapay-mcp-pill')
+  })
+
+  it('reserves StatusPill accent for D, F and I', () => {
+    expect(statusPillTone('D')).toBe('accent')
+    expect(statusPillTone('F')).toBe('accent')
+    expect(statusPillTone('I')).toBe('accent')
+    expect(statusPillTone('E')).toBe('neutral')
+    expect(statusPillTone('B')).toBe('neutral')
+    expect(statusPillTone('H')).toBe('neutral')
+  })
+
+  it('marks an accent StatusPill and leaves a neutral pill unaccented', () => {
+    const { rerender } = render(<StatusPill tone="accent">Calls failing</StatusPill>)
+    const accent = screen.getByText('Calls failing')
+    expect(accent.className).toContain('solvapay-mcp-status-pill')
+    expect(accent).toHaveAttribute('data-tone', 'accent')
+
+    rerender(<StatusPill>Active</StatusPill>)
+    expect(screen.getByText('Active')).toHaveAttribute('data-tone', 'neutral')
+  })
+
+  it('renders FactBand items and drops omitted facts instead of a placeholder column', () => {
+    const { rerender } = render(
+      <FactBand
+        items={[
+          { key: 'remaining', label: 'Remaining', value: '3,800 calls', caption: 'Of 10,000 this period.' },
+          { key: 'renews', label: 'Renews', value: 'Sep 12, 2026', caption: 'In 6 days.' },
+          { key: 'credits', label: 'Credits', value: 'Not used', caption: 'Balance is untouched.' },
+        ]}
+      />,
+    )
+    const band = screen.getByText('Remaining').closest('.solvapay-mcp-fact-band')
+    expect(band?.className).toContain('solvapay-mcp-fact-band')
+    expect(band?.querySelectorAll('.solvapay-mcp-fact-band-item')).toHaveLength(3)
+    expect(screen.getByText('Of 10,000 this period.').className).toBe(
+      'solvapay-mcp-fact-band-caption',
+    )
+
+    rerender(
+      <FactBand
+        items={[
+          { key: 'renews', label: 'Renews', value: 'Sep 12, 2026' },
+          { key: 'credits', label: 'Credits', value: 'Not used' },
+        ]}
+      />,
+    )
+    const unmetered = screen.getByText('Renews').closest('.solvapay-mcp-fact-band')
+    expect(unmetered?.querySelectorAll('.solvapay-mcp-fact-band-item')).toHaveLength(2)
+    expect(screen.queryByText('Remaining')).toBeNull()
+    expect(screen.queryByText('Unlimited')).toBeNull()
+  })
+
+  it('keeps a compact FactBand value for the row layout', () => {
+    render(
+      <FactBand
+        items={[
+          {
+            key: 'remaining',
+            label: 'Remaining',
+            value: '3,800 calls',
+            compactValue: '3,800 of 10,000 calls',
+            caption: 'Of 10,000 this period.',
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText('3,800 of 10,000 calls').className).toBe(
+      'solvapay-mcp-fact-band-compact',
+    )
+    expect(screen.getByText('3,800 calls').className).toBe('solvapay-mcp-fact-band-value')
   })
 
   it('sanitizes decimal Field input and keeps prefix/suffix out of the border', () => {

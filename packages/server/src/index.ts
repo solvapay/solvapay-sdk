@@ -234,6 +234,7 @@ export {
   checkPurchaseCore,
   trackUsageCore,
   getUsageCore,
+  deriveUsageSnapshot,
   listPlansCore,
   checkLimitsCore,
   getMerchantCore,
@@ -250,4 +251,5 @@ export type {
   CustomerBalanceResult,
   PurchaseCheckResult,
   GetUsageResult,
+  UsageLimitsInput,
 } from './helpers'

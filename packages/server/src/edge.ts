@@ -111,6 +111,7 @@ export {
   checkPurchaseCore,
   trackUsageCore,
   getUsageCore,
+  deriveUsageSnapshot,
   listPlansCore,
   checkLimitsCore,
   getMerchantCore,

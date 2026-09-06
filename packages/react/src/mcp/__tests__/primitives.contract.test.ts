@@ -37,6 +37,9 @@ const PRIMITIVE_CLASSES = [
   '.solvapay-mcp-toggle',
   '.solvapay-mcp-ledger-row',
   '.solvapay-mcp-attribution',
+  '.solvapay-mcp-status-pill',
+  '.solvapay-mcp-fact-band',
+  '.solvapay-mcp-usage-meter',
 ] as const
 
 describe('MCP primitive vocabulary', () => {
@@ -105,6 +108,33 @@ describe('MCP primitive vocabulary', () => {
     expect(on).toMatch(/background:\s*var\(--color-background-inverse\)/)
   })
 
+  it('accents StatusPill with warning tokens and never invents an accent palette', () => {
+    const accent = firstRule(
+      STYLES,
+      /\.solvapay-mcp-status-pill\[data-tone='accent'\]\s*\{([^}]+)\}/,
+    )
+    expect(accent).toMatch(/--color-background-warning/)
+    expect(accent).toMatch(/--color-text-warning/)
+    expect(accent).not.toMatch(/#[0-9A-Fa-f]{3,8}/)
+  })
+
+  it('defaults FactBand to key-value rows and becomes fixed-width columns at 760px', () => {
+    const band = firstRule(STYLES, /\.solvapay-mcp-fact-band\s*\{([^}]+)\}/)
+    expect(band).toMatch(/flex-direction:\s*column/)
+    expect(band).not.toMatch(/grid-template-columns/)
+
+    expect(STYLES).toMatch(
+      /@container\s+mcp\s*\(min-width:\s*760px\)[\s\S]*?\.solvapay-mcp-fact-band\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*196px\)/,
+    )
+  })
+
+  it('pins MCP UsageMeter fill tokens to warning, not the shared 75/90 red critical', () => {
+    const main = firstRule(STYLES, /\.solvapay-mcp-main\s*\{([^}]+)\}/)
+    expect(main).toMatch(/--solvapay-usage-warning:\s*var\(--color-text-warning\)/)
+    expect(main).toMatch(/--solvapay-usage-critical:\s*var\(--color-text-warning\)/)
+    expect(main).toMatch(/--solvapay-usage-safe:\s*var\(--color-text-primary\)/)
+  })
+
   it('uses --color-ring-primary for primitive focus, not an invented ring token', () => {
     expect(STYLES).toMatch(
       /\.solvapay-mcp-preset-tile:focus-visible[\s\S]*?--color-ring-primary/,
@@ -146,6 +176,9 @@ describe('MCP inline density contract', () => {
     expect(STYLES).toMatch(/@container\s+mcp\s*\(min-width:\s*760px\)/)
     expect(STYLES).toMatch(/@container\s+mcp-hosted\s*\(min-width:\s*1000px\)/)
     expect(STYLES).not.toMatch(/@container\s*\(min-width:\s*1000px\)/)
+    expect(STYLES).toMatch(
+      /@container\s+mcp-hosted\s*\(min-width:\s*1000px\)[\s\S]*?\[data-rail='hosted'\]:has\(>\s*\.solvapay-mcp-summary-rail\)/,
+    )
   })
 
   it('defaults to the 420px type scale and lifts it at 760px', () => {

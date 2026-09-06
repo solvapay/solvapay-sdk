@@ -5,6 +5,9 @@ import { McpDisplayModeProvider } from '../../hooks/useDisplayMode'
 import { McpAccountView } from '../McpAccountView'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import { merchantCache } from '../../../hooks/useMerchant'
+import { limitsCache } from '../../../hooks/useLimits'
+import { seedUsageSnapshot } from '../../../hooks/useUsage'
+import type { TransportLimitsResult } from '../../../transport/types'
 import { createTransportCacheKey } from '../../../transport/cache-key'
 import type { SolvaPayContextValue, SolvaPayConfig, PurchaseInfo, Merchant } from '../../../types'
 import type { PlanLike } from '../../plan-actions'
@@ -52,7 +55,9 @@ function buildCtx(
       hasPaidPurchase: !!paid,
       activePaidPurchase: paid,
       balanceTransactions: [],
+      customerRef: 'cus_abc',
     },
+    customerRef: 'cus_abc',
     refetchPurchase: vi.fn(),
     upsertPurchase: vi.fn(),
     createPayment: vi.fn(),
@@ -100,10 +105,50 @@ const perUnit = (amountMinor: number, meter = 'requests') => ({
   meter,
 })
 
+const limit = (cap: number, meter = 'requests') => ({
+  kind: 'limit' as const,
+  cap,
+  meter,
+})
+
 const catalogPlans: PlanLike[] = [
-  { reference: 'pln_free', requiresPayment: false, price: 0, options: [cycle()] },
-  { reference: 'pln_payg', requiresPayment: true, price: 0, options: [perUnit(2)] },
-  { reference: 'pln_monthly', requiresPayment: true, price: 1999, options: [cycle(), flat(1999)] },
+  {
+    reference: 'pln_free',
+    name: 'Free',
+    requiresPayment: false,
+    price: 0,
+    options: [cycle(), limit(3)],
+  },
+  {
+    reference: 'pln_payg',
+    name: 'Pay as you go',
+    requiresPayment: true,
+    price: 0,
+    options: [perUnit(2)],
+  },
+  {
+    reference: 'pln_monthly',
+    name: 'Monthly',
+    requiresPayment: true,
+    price: 1999,
+    options: [cycle(), flat(1999)],
+  },
+  {
+    reference: 'pln_starter',
+    name: 'Starter',
+    requiresPayment: true,
+    price: 3000,
+    currency: 'usd',
+    options: [cycle(), flat(3000), limit(10000)],
+  },
+  {
+    reference: 'pln_pro',
+    name: 'Pro',
+    requiresPayment: true,
+    price: 9000,
+    currency: 'usd',
+    options: [flat(9000)],
+  },
 ]
 
 const paidPurchase: PurchaseInfo = {
@@ -124,20 +169,83 @@ const freePurchase: PurchaseInfo = {
   reference: 'pur_free',
   customerRef: 'cus_abc',
   productName: 'Widget API',
+  productRef: 'prd_widget',
   status: 'active',
-  startDate: '2026-01-01T00:00:00Z',
-  createdAt: '2026-01-01T00:00:00Z',
+  startDate: '2026-09-01T00:00:00Z',
+  createdAt: '2026-09-01T00:00:00Z',
   amount: 0,
   currency: 'USD',
-  isRecurring: false,
+  isRecurring: true,
   planRef: 'pln_free',
   planSnapshot: {
     reference: 'pln_free',
     name: 'Free',
     currency: 'USD',
     price: 0,
+    isMetered: true,
+  },
+  usage: { used: 2, periodEnd: '2026-10-01T00:00:00Z' },
+}
+
+const starterPurchase: PurchaseInfo = {
+  reference: 'pur_starter',
+  customerRef: 'cus_abc',
+  productName: 'Widget API',
+  productRef: 'prd_widget',
+  status: 'active',
+  startDate: '2026-08-12T00:00:00Z',
+  createdAt: '2026-08-12T00:00:00Z',
+  amount: 3000,
+  currency: 'USD',
+  isRecurring: true,
+  planRef: 'pln_starter',
+  planSnapshot: {
+    reference: 'pln_starter',
+    name: 'Starter',
+    currency: 'USD',
+    price: 3000,
+    isMetered: true,
+  },
+  usage: { used: 6200, periodEnd: '2026-09-12T00:00:00Z' },
+}
+
+const unlimitedPurchase: PurchaseInfo = {
+  reference: 'pur_pro',
+  customerRef: 'cus_abc',
+  productName: 'Widget API',
+  productRef: 'prd_widget',
+  status: 'active',
+  startDate: '2026-09-01T00:00:00Z',
+  createdAt: '2026-09-01T00:00:00Z',
+  amount: 9000,
+  currency: 'USD',
+  isRecurring: false,
+  planRef: 'pln_pro',
+  planSnapshot: {
+    reference: 'pln_pro',
+    name: 'Pro',
+    currency: 'USD',
+    price: 9000,
     isMetered: false,
   },
+}
+
+function seedLimits(partial: Partial<TransportLimitsResult> & { remaining: number }): void {
+  limitsCache.set('cus_abc:prd_widget:requests', {
+    data: {
+      withinLimits: true,
+      meterName: 'requests',
+      activationRequired: false,
+      throttled: null,
+      overage: null,
+      needsTopUp: null,
+      needsUpgrade: null,
+      upgraded: null,
+      ...partial,
+    },
+    timestamp: Date.now(),
+    promise: null,
+  })
 }
 
 const paygPurchase: PurchaseInfo = {
@@ -150,6 +258,7 @@ const paygPurchase: PurchaseInfo = {
   amount: 0,
   currency: 'USD',
   isRecurring: false,
+  productRef: 'prd_widget',
   planRef: 'pln_payg',
   planSnapshot: {
     reference: 'pln_payg',
@@ -170,6 +279,8 @@ function seedMerchant(merchant: Merchant): SolvaPayConfig {
 describe('McpAccountView', () => {
   beforeEach(() => {
     merchantCache.clear()
+    limitsCache.clear()
+    seedUsageSnapshot(null)
   })
 
   it('does not render Seller or Your account cards', () => {
@@ -180,7 +291,7 @@ describe('McpAccountView', () => {
     expect(screen.queryByRole('heading', { name: 'Your account' })).toBeNull()
   })
 
-  it('renders a loading card while purchases are loading', () => {
+  it('renders a same-height skeleton on state G, not a zero balance', () => {
     const ctx = buildCtx({
       purchase: {
         loading: true,
@@ -194,29 +305,88 @@ describe('McpAccountView', () => {
         balanceTransactions: [],
       },
     })
-    renderAccount(ctx)
-    expect(screen.getByText('Loading account…')).toBeTruthy()
+    renderAccount(ctx, { productRef: 'prd_widget' })
+    const skeleton = document.querySelector('[data-solvapay-mcp-account-skeleton]')
+    expect(skeleton).toBeTruthy()
+    expect(skeleton).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText('Loading account…')).toBeNull()
+    expect(screen.queryByText('Credit balance')).toBeNull()
+    expect(screen.queryByText('0 credits')).toBeNull()
+    expect(screen.queryByText('Remaining')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
-  it('leads with the credit balance strip when there is no plan but credits exist', () => {
+  it('keeps the skeleton while limits resolve on a loaded purchase', () => {
+    const ctx = buildCtx(
+      {
+        _config: {
+          transport: makeTransport({
+            getLimits: () => new Promise(() => undefined),
+          }),
+        },
+      },
+      [starterPurchase],
+      0,
+    )
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+    })
+    expect(document.querySelector('[data-solvapay-mcp-account-skeleton]')).toBeTruthy()
+    expect(screen.queryByText('0 credits')).toBeNull()
+    expect(screen.queryByText('Credit balance')).toBeNull()
+    expect(screen.queryByText('Unlimited')).toBeNull()
+    expect(screen.queryByText('10,000 calls')).toBeNull()
+    expect(screen.queryByText('Loading account…')).toBeNull()
+  })
+
+  it('hides the credit balance on state A even when credits exist', () => {
     const ctx = buildCtx({}, [], 500)
-    renderAccount(ctx)
-    expect(screen.getByText('Credit balance')).toBeTruthy()
-    expect(screen.getByText('500 credits')).toBeTruthy()
-    expect(screen.getByText('Auto-recharge off')).toBeTruthy()
-    expect(screen.queryByRole('heading', { name: 'Credits' })).toBeNull()
-    expect(screen.queryByText(/pay-as-you-go credits/i)).toBeNull()
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+    })
+    expect(screen.queryByText('Credit balance')).toBeNull()
+    expect(screen.queryByText('500 credits')).toBeNull()
+    expect(screen.queryByText('Auto-recharge off')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add funds' })).toBeNull()
+    expect(screen.getByText('Widget API')).toBeTruthy()
+    expect(screen.getByText('No plan')).toBeTruthy()
+    expect(
+      screen.getByText('Choose a plan to start using it. Calls fail until one is active.'),
+    ).toBeTruthy()
   })
 
-  it('renders the Pick a plan empty state when there are no purchases and no credits', () => {
-    const ctx = buildCtx({}, [], 0)
-    renderAccount(ctx)
-    expect(screen.getByRole('heading', { name: 'Pick a plan' })).toBeTruthy()
-    expect(
-      screen.getByText(
-        'Choose a free, pay-as-you-go, or paid plan to start using this MCP server.',
-      ),
-    ).toBeTruthy()
+  it('renders a PlanRow ladder on state A and emphasizes PAYG', () => {
+    const onChangePlan = vi.fn()
+    const activatePlan = vi.fn().mockResolvedValue({ status: 'activated' })
+    const ctx = buildCtx({ activatePlan }, [], 599_800)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
+    expect(screen.getByText('Plans')).toBeTruthy()
+    const payg = screen.getByRole('button', { name: /Pay as you go/ })
+    expect(payg).toHaveAttribute('data-state', 'selected')
+    expect(screen.getByRole('button', { name: /^Free/ })).not.toHaveAttribute(
+      'data-state',
+      'selected',
+    )
+    expect(screen.getByRole('button', { name: /Starter/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Pro/ })).toBeTruthy()
+    fireEvent.click(payg)
+    expect(onChangePlan).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: /^Free/ }))
+    expect(activatePlan).toHaveBeenCalledWith({
+      productRef: 'prd_widget',
+      planRef: 'pln_free',
+    })
+    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Pick a plan' })).toBeNull()
   })
 
   it('does not render the fallback copy when there is a paid purchase', async () => {
@@ -276,13 +446,16 @@ describe('McpAccountView', () => {
     expect(document.querySelector('[data-solvapay-mcp-portal-hint]')).toBeNull()
   })
 
-  it('does not render a product hero or description even when product prop is passed', () => {
-    const ctx = buildCtx({}, [paidPurchase], 0)
+  it('puts the product identity on state A without a page hero', () => {
+    const ctx = buildCtx({}, [], 0)
     renderAccount(ctx, {
+      plans: catalogPlans,
       product: { name: 'Acme Pro', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
     })
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
-    expect(screen.queryByText('Pro-tier API for Acme.')).toBeNull()
+    expect(screen.getByText('Acme Pro')).toBeTruthy()
+    expect(screen.getByText('Pro-tier API for Acme.')).toBeTruthy()
     expect(document.querySelector('[data-solvapay-mcp-product-header]')).toBeNull()
   })
 
@@ -293,49 +466,129 @@ describe('McpAccountView', () => {
     expect(screen.queryByText('Current plan and usage')).toBeNull()
   })
 
-  it('names active products with plan and since instead of a PLAN / SINCE three-up', () => {
+  it('quotes the credit rate on the plan line when the balance peg is known', () => {
+    const ctx = buildCtx({}, [paygPurchase], 599_800)
+    ctx.balance = mockBalanceStatus({
+      credits: 599_800,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+    })
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: null },
+      productRef: 'prd_widget',
+    })
+    expect(screen.getByText('Pay as you go · 200 credits per call · since Jan 1, 2026')).toBeTruthy()
+  })
+
+  it('puts the plan line above the credit balance on a running PAYG plan', () => {
     const ctx = buildCtx({}, [paygPurchase], 500)
-    renderAccount(ctx, { plans: catalogPlans })
-    expect(screen.getByText('Active products')).toBeTruthy()
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+    })
     expect(screen.getByText('Widget API')).toBeTruthy()
+    expect(screen.getByText('Pro-tier API for Acme.')).toBeTruthy()
     expect(screen.getByText('Pay as you go · since Jan 1, 2026')).toBeTruthy()
     expect(screen.getByText('Active')).toBeTruthy()
+    expect(screen.getByText('Credit balance')).toBeTruthy()
+    expect(screen.getByText('500 credits')).toBeTruthy()
+    expect(screen.getByText('Calls fail the moment the balance runs out.')).toBeTruthy()
+    expect(screen.queryByText('Active products')).toBeNull()
     expect(document.querySelector('[data-solvapay-current-plan-card]')).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Your plan' })).toBeNull()
-    expect(screen.queryByText('Rate')).toBeNull()
   })
 
-  it('lists a Free purchase as an active product even when hasPaidPurchase is false', () => {
+  it('shows the failing pill and reframes auto-recharge when the credit plan is spent', () => {
+    limitsCache.set('cus_abc:prd_widget:requests', {
+      data: {
+        remaining: 0,
+        withinLimits: false,
+        needsTopUp: true,
+        meterName: 'requests',
+        activationRequired: false,
+        throttled: null,
+        overage: null,
+        needsUpgrade: null,
+        upgraded: null,
+      },
+      timestamp: Date.now(),
+      promise: null,
+    })
+    const onTopup = vi.fn()
+    const ctx = buildCtx({}, [paygPurchase], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+      onTopup,
+    })
+    const pill = screen.getByText('Calls failing')
+    expect(pill).toHaveAttribute('data-tone', 'accent')
+    expect(screen.getByText('0 credits')).toBeTruthy()
+    expect(
+      screen.getByText('The plan is active, but calls fail until you add credits.'),
+    ).toBeTruthy()
+    expect(screen.getByText('Turning it on stops this happening again.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on →' }))
+    expect(onTopup).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps other products off a product-scoped credit plan', () => {
+    const other: PurchaseInfo = {
+      ...paygPurchase,
+      reference: 'pur_other',
+      productRef: 'prd_other',
+      productName: 'Other MCP',
+    }
+    const ctx = buildCtx({}, [paygPurchase, other], 500)
+    renderAccount(ctx, { plans: catalogPlans, productRef: 'prd_widget' })
+    expect(screen.getByText('Widget API')).toBeTruthy()
+    expect(screen.queryByText('Other MCP')).toBeNull()
+  })
+
+  it('lists a Free purchase as an allowance plan even when hasPaidPurchase is false', () => {
     const ctx = buildCtx({}, [freePurchase], 0)
     expect(ctx.purchase.hasPaidPurchase).toBe(false)
-    renderAccount(ctx, { plans: catalogPlans })
+    renderAccount(ctx, { plans: catalogPlans, productRef: 'prd_widget' })
     expect(screen.getByText('Widget API')).toBeTruthy()
-    expect(screen.getByText('Free · since Jan 1, 2026')).toBeTruthy()
+    expect(screen.getByText('Free · started Sep 1, 2026')).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Pick a plan' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Credits' })).toBeNull()
+    expect(screen.queryByText('Active products')).toBeNull()
   })
 
-  it('hides per-row plan actions inline and shows Upgrade on a free row in fullscreen', () => {
+  it('keeps Change plan as the header label on free and puts See plans on a link', () => {
+    seedLimits({ remaining: 1, withinLimits: true })
     const onChangePlan = vi.fn()
     const ctx = buildCtx({}, [freePurchase], 0)
-    const { unmount } = renderAccount(ctx, { plans: catalogPlans, onChangePlan })
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
     expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
-    unmount()
-
-    renderAccount(ctx, { plans: catalogPlans, onChangePlan }, 'fullscreen')
-    fireEvent.click(screen.getByRole('button', { name: 'Upgrade' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Change plan' }))
     expect(onChangePlan).toHaveBeenCalledTimes(1)
-    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'See plans →' }))
+    expect(onChangePlan).toHaveBeenCalledTimes(2)
   })
 
-  it('shows Change plan on a paid row in fullscreen when the catalog has alternatives', () => {
+  it('shows Change plan on a paid allowance plan when the catalog has alternatives', () => {
+    seedLimits({ remaining: 3800, withinLimits: true })
     const onChangePlan = vi.fn()
-    const ctx = buildCtx({}, [paidPurchase], 0)
-    renderAccount(ctx, { plans: catalogPlans, onChangePlan }, 'fullscreen')
+    const ctx = buildCtx({}, [starterPurchase], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Change plan' }))
     expect(onChangePlan).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'See plans →' })).toBeNull()
   })
 
   it('hides Upgrade and Change plan in fullscreen when the catalog has only one plan', async () => {
@@ -353,10 +606,10 @@ describe('McpAccountView', () => {
     expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
   })
 
-  it('renders Change plan, not Upgrade, for a thin PAYG snapshot in fullscreen', () => {
+  it('renders Change plan, not Upgrade, for a thin PAYG snapshot', () => {
     const onChangePlan = vi.fn()
-    const ctx = buildCtx({}, [paygPurchase], 0)
-    renderAccount(ctx, { plans: catalogPlans, onChangePlan }, 'fullscreen')
+    const ctx = buildCtx({}, [paygPurchase], 500)
+    renderAccount(ctx, { plans: catalogPlans, onChangePlan, productRef: 'prd_widget' })
     fireEvent.click(screen.getByRole('button', { name: 'Change plan' }))
     expect(onChangePlan).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull()
@@ -365,8 +618,236 @@ describe('McpAccountView', () => {
   it('calls onTopup from Add funds', () => {
     const onTopup = vi.fn()
     const ctx = buildCtx({}, [paygPurchase], 500)
-    renderAccount(ctx, { onTopup })
+    renderAccount(ctx, { onTopup, plans: catalogPlans, productRef: 'prd_widget' })
     fireEvent.click(screen.getByRole('button', { name: 'Add funds' }))
     expect(onTopup).toHaveBeenCalledTimes(1)
+  })
+
+  it('leads a running subscription with Remaining, Renews, and untouched credits', () => {
+    seedLimits({ remaining: 3800, withinLimits: true })
+    const ctx = buildCtx({}, [starterPurchase], 599_800)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+      onTopup: vi.fn(),
+    })
+    expect(screen.getByText('Widget API')).toBeTruthy()
+    expect(screen.getByText('Pro-tier API for Acme.')).toBeTruthy()
+    expect(screen.getByText('Starter · $30 per month · renews Sep 12, 2026')).toBeTruthy()
+    expect(screen.getByText('Remaining')).toBeTruthy()
+    expect(screen.getByText('3,800 calls')).toBeTruthy()
+    expect(screen.getByText('Of 10,000 this period.')).toBeTruthy()
+    expect(screen.getByText('3,800 of 10,000 calls')).toBeTruthy()
+    expect(screen.getByText('Renews')).toBeTruthy()
+    expect(screen.getByText('Sep 12, 2026')).toBeTruthy()
+    expect(screen.getByText('Credits')).toBeTruthy()
+    expect(screen.getAllByText('Not used').length).toBeGreaterThan(0)
+    expect(screen.getByText('Balance is untouched.')).toBeTruthy()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'safe')
+    expect(
+      screen.getByText('6,200 of 10,000 calls used, 62%. A warning shows at 80%, and calls stop at 100%.'),
+    ).toBeTruthy()
+    expect(screen.queryByText('Credit balance')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add funds' })).toBeNull()
+    expect(screen.queryByText('Auto-recharge off')).toBeNull()
+    expect(screen.queryByText('Active products')).toBeNull()
+  })
+
+  it('prints Unlimited on Remaining for an unmetered subscription and omits the meter', () => {
+    seedLimits({ remaining: -1, withinLimits: true })
+    const ctx = buildCtx({}, [unlimitedPurchase], 599_800)
+    renderAccount(ctx, { plans: catalogPlans, productRef: 'prd_widget' })
+    expect(screen.getByText('Remaining')).toBeTruthy()
+    expect(screen.getByText('Unlimited')).toBeTruthy()
+    expect(screen.getByText('Credits')).toBeTruthy()
+    expect(screen.getAllByText('Not used').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.queryByText('Credit balance')).toBeNull()
+  })
+
+  it('drops price from the free plan line and warns on the last remaining call', () => {
+    seedLimits({ remaining: 1, withinLimits: true })
+    const onChangePlan = vi.fn()
+    const ctx = buildCtx({}, [freePurchase], 599_800)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+      onChangePlan,
+      onTopup: vi.fn(),
+    })
+    expect(screen.getByText('Free · started Sep 1, 2026')).toBeTruthy()
+    expect(screen.queryByText(/\$/)).toBeNull()
+    expect(screen.getByText('1 call')).toBeTruthy()
+    expect(screen.getByText('Of 3 this period.')).toBeTruthy()
+    expect(screen.getByText('Resets')).toBeTruthy()
+    expect(screen.getByText('Oct 1, 2026')).toBeTruthy()
+    expect(screen.getAllByText('Not used').length).toBeGreaterThan(0)
+    expect(screen.getByText('Balance is untouched.')).toBeTruthy()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'warning')
+    expect(
+      screen.getByText(
+        '2 of 3 calls used, 67%. One remaining call is the difference between working and blocked.',
+      ),
+    ).toBeTruthy()
+    expect(screen.getByText('Need more than 3 calls a month?')).toBeTruthy()
+    expect(
+      screen.getByText('Pay as you go starts without payment and uses your credits.'),
+    ).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Add funds' })).toBeNull()
+    expect(screen.queryByText('Credit balance')).toBeNull()
+  })
+
+  it('keeps After your first call when the allowance has no period yet', () => {
+    seedLimits({ remaining: 10000, withinLimits: true })
+    const firstRun: PurchaseInfo = {
+      ...starterPurchase,
+      usage: { used: 0 },
+    }
+    const ctx = buildCtx({}, [firstRun], 0)
+    renderAccount(ctx, { plans: catalogPlans, productRef: 'prd_widget' })
+    expect(screen.getByText('After your first call')).toBeTruthy()
+    expect(screen.getByText('10,000 calls')).toBeTruthy()
+  })
+
+  it('promotes the plan ladder on a free plan at cap and states the credit trap', () => {
+    seedLimits({ remaining: 0, withinLimits: false })
+    const onChangePlan = vi.fn()
+    const ctx = buildCtx({}, [freePurchase], 599_800)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+      onChangePlan,
+      onTopup: vi.fn(),
+    })
+    const pill = screen.getByText('Free limit reached')
+    expect(pill).toHaveAttribute('data-tone', 'accent')
+    expect(screen.getByText('Free · 3 calls per month')).toBeTruthy()
+    expect(screen.getByText('Your free calls are used up')).toBeTruthy()
+    expect(screen.getByText(/Calls fail until the limit resets on Oct 1/)).toBeTruthy()
+    expect(
+      screen.getByText(
+        'You have 599,800 credits. Free does not spend them, so adding funds will not restore calls.',
+      ),
+    ).toBeTruthy()
+    expect(screen.getByText('Carry on with')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Free/ })).toBeNull()
+    const payg = screen.getByRole('button', { name: /Pay as you go/ })
+    expect(payg).toHaveAttribute('data-state', 'selected')
+    fireEvent.click(payg)
+    expect(onChangePlan).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+    expect(screen.queryByText('Credit balance')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add funds' })).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+  })
+
+  it('uses the same at-cap ladder for a paid allowance and drops the current plan', () => {
+    seedLimits({ remaining: 0, withinLimits: false })
+    const ctx = buildCtx({}, [starterPurchase], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: null },
+      productRef: 'prd_widget',
+      onChangePlan: vi.fn(),
+    })
+    expect(screen.getByText('Starter limit reached')).toBeTruthy()
+    expect(screen.getByText('Your Starter calls are used up')).toBeTruthy()
+    expect(screen.queryByText(/does not spend them/)).toBeNull()
+    expect(screen.queryByRole('button', { name: /Starter/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Pay as you go/ })).toHaveAttribute(
+      'data-state',
+      'selected',
+    )
+    expect(screen.getByRole('button', { name: /Pro/ })).toBeTruthy()
+    expect(screen.queryByText('Credit balance')).toBeNull()
+  })
+
+  it('wires Start free plan on state H and keeps failure language off', () => {
+    seedLimits({ remaining: 0, withinLimits: false, activationRequired: true })
+    const activatePlan = vi.fn().mockResolvedValue({ status: 'activated' })
+    const ctx = buildCtx({ activatePlan }, [], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+      onChangePlan: vi.fn(),
+    })
+    expect(screen.getByText('Widget API')).toBeTruthy()
+    expect(screen.getByText('Not started')).toBeTruthy()
+    expect(screen.getByText('3 free calls a month, ready to claim')).toBeTruthy()
+    expect(screen.getByText('No card, no charge. You can change plan later.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Start free plan' }))
+    expect(activatePlan).toHaveBeenCalledWith({
+      productRef: 'prd_widget',
+      planRef: 'pln_free',
+    })
+    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+    expect(screen.queryByText('Free limit reached')).toBeNull()
+    expect(screen.queryByText('Calls failing')).toBeNull()
+    expect(screen.queryByText('Credit balance')).toBeNull()
+  })
+
+  it('shows used-of-allowance and a 100% meter on state I without overage money', () => {
+    seedLimits({ remaining: 0, withinLimits: true, overage: true })
+    const onChangePlan = vi.fn()
+    const overagePurchase: PurchaseInfo = {
+      ...starterPurchase,
+      usage: { used: 11240, periodEnd: '2026-09-12T00:00:00Z' },
+    }
+    const ctx = buildCtx({}, [overagePurchase], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
+    const pill = screen.getByText('Over the allowance')
+    expect(pill).toHaveAttribute('data-tone', 'accent')
+    expect(screen.getByText('Starter · $30 per month')).toBeTruthy()
+    expect(screen.getByText('Used')).toBeTruthy()
+    expect(screen.getByText('11,240 of 10,000 calls')).toBeTruthy()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'critical')
+    expect(screen.getByText('Calls are still working.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'See plans with a higher limit →' }))
+    expect(onChangePlan).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText(/\$12/)).toBeNull()
+    expect(screen.queryByText(/charged at/i)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+    expect(screen.queryByText('Credit balance')).toBeNull()
+  })
+
+  it('restyles cancelled notice on state J with a date status and secondary Reactivate', () => {
+    seedLimits({ remaining: 3800, withinLimits: true })
+    const reactivateRenewal = vi.fn().mockResolvedValue({ success: true })
+    const cancelled: PurchaseInfo = {
+      ...starterPurchase,
+      cancelledAt: '2026-09-04T00:00:00Z',
+      endDate: '2026-10-12T00:00:00Z',
+    }
+    const ctx = buildCtx({ reactivateRenewal }, [cancelled], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+      productRef: 'prd_widget',
+      onChangePlan: vi.fn(),
+    })
+    expect(screen.getByText('Active until Oct 12')).toBeTruthy()
+    expect(screen.getByText('Starter · cancelled Sep 4, 2026')).toBeTruthy()
+    expect(screen.getByText(/days left on this plan/)).toBeTruthy()
+    expect(
+      screen.getByText('Calls keep working until Oct 12, then stop. You will not be charged again.'),
+    ).toBeTruthy()
+    expect(screen.getByText('3,800 of 10,000 calls')).toBeTruthy()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'safe')
+    const reactivate = screen.getByRole('button', { name: 'Reactivate Starter' })
+    expect(reactivate).toHaveAttribute('data-variant', 'secondary')
+    fireEvent.click(reactivate)
+    expect(reactivateRenewal).toHaveBeenCalledWith({ purchaseRef: 'pur_starter' })
+    expect(screen.queryByText('Your purchase has been cancelled')).toBeNull()
+    expect(screen.queryByText('Undo Cancellation')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
   })
 })

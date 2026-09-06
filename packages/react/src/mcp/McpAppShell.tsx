@@ -208,6 +208,8 @@ export function McpViewRouter({
       return (
         <AccountView
           classNames={classNames}
+          product={bootstrap.product}
+          productRef={productRef}
           onTopup={goTopup}
           onChangePlan={goCheckout}
           plans={bootstrap.plans}

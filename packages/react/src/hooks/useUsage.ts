@@ -29,7 +29,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePurchase } from './usePurchase'
 import { useTransport } from './useTransport'
 import { useLimits } from './useLimits'
+import type { GetUsageResult } from '@solvapay/server'
 import type { PurchaseInfo } from '../types'
+
+/** @internal Seeded by `seedMcpCaches`. Do not use in application code. */
+let seededUsage: UsageSnapshot | null = null
+let usageSeedGeneration = 0
+
+/** @internal Exported for `seedMcpCaches` and tests. */
+export function seedUsageSnapshot(usage: UsageSnapshot | GetUsageResult | null): void {
+  seededUsage = usage
+  usageSeedGeneration += 1
+}
 
 export interface UseUsageReturn {
   /** Raw usage snapshot (`null` when no usage-based plan is active). */
@@ -106,9 +117,18 @@ export function useUsage(): UseUsageReturn {
   const { activePurchase, refetch: refetchPurchase, loading: purchaseLoading } = usePurchase()
   const transport = useTransport()
 
-  const [override, setOverride] = useState<UsageSnapshot | null>(null)
+  const [override, setOverride] = useState<UsageSnapshot | null>(() => seededUsage)
+  const [seedGeneration, setSeedGeneration] = useState(usageSeedGeneration)
   const [error, setError] = useState<Error | null>(null)
   const [transportLoading, setTransportLoading] = useState(false)
+
+  // `seedMcpCaches` mutates the module seed synchronously (mount and
+  // bootstrap refresh). Reconcile during render so a refresh with the
+  // same purchase ref still replaces a stale override.
+  if (seedGeneration !== usageSeedGeneration) {
+    setSeedGeneration(usageSeedGeneration)
+    setOverride(seededUsage)
+  }
 
   // Only metered plans have an allowance to look up; everything else
   // would spend a request to learn nothing.
@@ -133,7 +153,7 @@ export function useUsage(): UseUsageReturn {
   // the fresh `derived` snapshot (`usage = override ?? derived`).
   const activePurchaseRef = activePurchase?.reference ?? null
   useEffect(() => {
-    setOverride(null)
+    setOverride(seededUsage)
   }, [activePurchaseRef])
 
   const usage = override ?? derived

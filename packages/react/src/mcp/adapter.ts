@@ -86,11 +86,11 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
   const callTool = async <T>(name: string, args: Record<string, unknown> = {}): Promise<T> =>
     unwrap<T>(await app.callServerTool({ name, arguments: args }))
 
-  // Read tools (check_purchase, get_merchant, get_product, list_plans,
-  // get_payment_method, get_customer_balance, get_usage) are intentionally
-  // omitted — their data is folded into the `BootstrapPayload` returned
-  // by every intent tool and seeded into the provider's module-level
-  // caches via `seedMcpCaches`, so the transport never has to fetch.
+  // Read tools for data the bootstrap already holds (purchase, merchant,
+  // product, plans, payment method, balance, usage, limits) are omitted —
+  // `seedMcpCaches` hydrates the provider caches. That invariant is "do
+  // not refetch what bootstrap already has", not a blanket ban on new
+  // read tools (history is the exception).
   return {
     createPayment: params =>
       callTool(

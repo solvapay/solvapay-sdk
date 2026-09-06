@@ -89,6 +89,9 @@ body {
   --solvapay-accent-foreground: var(--solvapay-accent-text);
   --solvapay-font: var(--font-sans);
   --solvapay-radius: var(--border-radius-md);
+  --solvapay-usage-safe: var(--color-text-primary);
+  --solvapay-usage-warning: var(--color-text-warning);
+  --solvapay-usage-critical: var(--color-text-warning);
 
   /* Shared type scale. Ten levels is a product decision — the host
    * publishes three. Narrow (420) is the default; the 760px query
@@ -770,15 +773,20 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   margin-bottom: 0;
 }
 
+.solvapay-mcp-hosted[data-mcp-surface='management'] .solvapay-mcp-hosted-layout {
+  display: flex;
+  flex-direction: column;
+}
+
 @container mcp-hosted (min-width: 1000px) {
-  .solvapay-mcp-hosted-layout:has(> .solvapay-mcp-summary-rail) {
+  .solvapay-mcp-hosted-layout[data-rail='hosted']:has(> .solvapay-mcp-summary-rail) {
     display: grid;
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 56px;
     align-items: stretch;
   }
 
-  .solvapay-mcp-summary-rail {
+  .solvapay-mcp-hosted-layout[data-rail='hosted'] > .solvapay-mcp-summary-rail {
     border-bottom: none;
     border-right: 1px solid var(--color-border-secondary);
     padding-bottom: 0;
@@ -1198,17 +1206,24 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   gap: 10px;
 }
 
-.solvapay-mcp-limit-reached {
+.solvapay-mcp-used-up {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 6px;
+  padding: 20px 0;
+  border-top: 1px solid var(--color-border-secondary);
+  border-bottom: 1px solid var(--color-border-secondary);
 }
 
-.solvapay-mcp-limit-reached-title {
+.solvapay-mcp-used-up-title {
   margin: 0;
   font: var(--solvapay-type-title);
-  letter-spacing: -0.4px;
+  letter-spacing: -0.5px;
   color: var(--color-text-primary);
+}
+
+.solvapay-mcp-used-up p {
+  margin: 0;
 }
 
 .solvapay-mcp-topup-total {
@@ -1302,6 +1317,11 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   flex: 0 0 auto;
 }
 
+.solvapay-mcp-status-dot[data-empty]::before {
+  background: transparent;
+  border: 1px solid var(--color-border-primary);
+}
+
 .solvapay-mcp-pill {
   display: inline-flex;
   align-items: center;
@@ -1310,6 +1330,94 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   border-radius: var(--border-radius-full);
   font: var(--solvapay-type-caption);
   color: var(--color-text-primary);
+}
+
+.solvapay-mcp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-full);
+  background: transparent;
+  font: 500 11px/1.4 var(--font-sans);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.solvapay-mcp-status-pill[data-tone='accent'] {
+  border-color: color-mix(in srgb, var(--color-text-warning) 35%, var(--color-border-secondary));
+  background: var(--color-background-warning);
+  color: var(--color-text-warning);
+}
+
+.solvapay-mcp-fact-band {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.solvapay-mcp-fact-band-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+}
+
+.solvapay-mcp-fact-band-label {
+  margin: 0;
+  font: var(--solvapay-type-body);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-fact-band-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  margin: 0;
+  font: 500 14px/1.5 var(--font-sans);
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+.solvapay-mcp-fact-band-caption {
+  display: none;
+}
+
+.solvapay-mcp-fact-band-item:has(.solvapay-mcp-fact-band-compact) .solvapay-mcp-fact-band-value {
+  display: none;
+}
+
+.solvapay-mcp-allowance-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-secondary);
+}
+
+.solvapay-mcp-usage-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.solvapay-mcp-usage-meter-caption {
+  margin: 0;
+  font: var(--solvapay-type-caption);
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-fact-band-value [data-unknown] {
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-usage-meter [data-solvapay-usage-meter-bar] {
+  height: 6px;
+  background: var(--color-border-secondary);
 }
 
 .solvapay-mcp-field {
@@ -1415,6 +1523,31 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   color: var(--color-text-secondary);
 }
 
+.solvapay-mcp-credit-plan-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.solvapay-mcp-credit-plan-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.solvapay-mcp-auto-recharge-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.solvapay-mcp-auto-recharge-copy p {
+  margin: 0;
+}
+
 .solvapay-mcp-balance-strip {
   display: flex;
   flex-direction: column;
@@ -1472,6 +1605,64 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
     gap: 32px;
   }
 
+  .solvapay-mcp-allowance-body {
+    padding-top: 0;
+    border-top: none;
+    gap: 20px;
+  }
+
+  .solvapay-mcp-fact-band {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 196px);
+    gap: 18px;
+    padding: 20px 0;
+    border-top: 1px solid var(--color-border-secondary);
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+
+  .solvapay-mcp-fact-band-item {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 4px;
+    padding-right: 18px;
+    border-right: 1px solid var(--color-border-secondary);
+  }
+
+  .solvapay-mcp-fact-band-item:last-child {
+    padding-right: 0;
+    border-right: none;
+  }
+
+  .solvapay-mcp-fact-band-label {
+    font: var(--solvapay-type-eyebrow-rail);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .solvapay-mcp-fact-band-body {
+    align-items: flex-start;
+    gap: 4px;
+    font: 500 20px/1.3 var(--font-sans);
+    letter-spacing: -0.4px;
+    text-align: left;
+  }
+
+  .solvapay-mcp-fact-band-compact {
+    display: none;
+  }
+
+  .solvapay-mcp-fact-band-item:has(.solvapay-mcp-fact-band-compact) .solvapay-mcp-fact-band-value {
+    display: inline;
+  }
+
+  .solvapay-mcp-fact-band-caption {
+    display: block;
+    font: var(--solvapay-type-caption);
+    letter-spacing: 0;
+    color: var(--color-text-secondary);
+  }
+
   .solvapay-mcp-plan-row {
     padding: 16px 20px;
   }
@@ -1489,4 +1680,128 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
     padding-bottom: 0;
     padding-right: 32px;
   }
+}
+
+.solvapay-mcp-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.solvapay-mcp-skeleton-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.solvapay-mcp-skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.solvapay-mcp-skeleton-line {
+  display: block;
+  border-radius: 4px;
+  background: var(--color-background-secondary);
+}
+
+.solvapay-mcp-skeleton-name {
+  width: 120px;
+  height: 18px;
+}
+
+.solvapay-mcp-skeleton-status {
+  width: 64px;
+  height: 14px;
+}
+
+.solvapay-mcp-skeleton-desc {
+  width: 100%;
+  height: 13px;
+}
+
+.solvapay-mcp-skeleton-desc-short {
+  width: 60%;
+  height: 13px;
+}
+
+.solvapay-mcp-skeleton-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-secondary);
+}
+
+.solvapay-mcp-skeleton-label {
+  width: 80px;
+  height: 14px;
+}
+
+.solvapay-mcp-skeleton-value {
+  width: 110px;
+  height: 14px;
+}
+
+.solvapay-mcp-skeleton-label-sm {
+  width: 64px;
+  height: 14px;
+}
+
+.solvapay-mcp-skeleton-value-sm {
+  width: 96px;
+  height: 14px;
+}
+
+.solvapay-mcp-skeleton-meter {
+  width: 100%;
+  height: 6px;
+}
+
+.solvapay-mcp-skeleton-cta {
+  width: 100%;
+  height: 44px;
+}
+
+.solvapay-mcp-button[data-variant='secondary'] {
+  background: transparent;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-primary);
+}
+
+.solvapay-mcp-button[data-variant='secondary']:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+  opacity: 1;
+}
+
+.solvapay-mcp-claim-body,
+.solvapay-mcp-cancelled-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-secondary);
+}
+
+.solvapay-mcp-claim-title,
+.solvapay-mcp-cancelled-title {
+  margin: 0;
+  font: 500 16px/1.4 var(--font-sans);
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-overage-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-secondary);
+}
+
+.solvapay-mcp-overage-copy {
+  margin: 0;
+  font: 400 13px/1.5 var(--font-sans);
+  color: var(--color-text-primary);
 }

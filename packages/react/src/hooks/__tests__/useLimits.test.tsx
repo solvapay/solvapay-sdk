@@ -203,6 +203,22 @@ describe('useLimits', () => {
       expect(result.current.meterName).toBeNull()
       expect(result.current.error).toBeNull()
     })
+
+    it('serves a bootstrap-seeded cache entry under the MCP adapter', async () => {
+      setTransport({ getLimits: undefined })
+      limitsCache.set('cus_test:prd_api:requests', {
+        data: limitsResult({ remaining: 3800, withinLimits: true }),
+        timestamp: Date.now(),
+        promise: null,
+      })
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+      expect(result.current.remaining).toBe(3800)
+      expect(result.current.withinLimits).toBe(true)
+      expect(result.current.error).toBeNull()
+    })
   })
 
   describe('cache', () => {

@@ -59,8 +59,8 @@ export { checkPurchaseCore } from './purchase'
 export type { PurchaseCheckResult } from './purchase'
 
 // Export usage tracking helpers
-export { trackUsageCore, getUsageCore } from './usage'
-export type { GetUsageResult } from './usage'
+export { trackUsageCore, getUsageCore, deriveUsageSnapshot } from './usage'
+export type { GetUsageResult, UsageLimitsInput } from './usage'
 
 // Export balance polling helpers
 export {

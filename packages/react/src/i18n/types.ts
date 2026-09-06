@@ -241,6 +241,8 @@ export interface SolvaPayCopy {
     noPlanBody: string
     /** Inline CTA on the pay-as-you-go state that switches to the Plan tab. */
     seePlansButton: string
+    /** E upgrade link. Change plan stays the header label. */
+    seePlans: string
     /** Primary CTA on the no-plan state that switches to the Plan tab. */
     pickPlanButton: string
     /** CTA on a free active plan that opens checkout to pick a paid plan. */
@@ -254,9 +256,63 @@ export interface SolvaPayCopy {
     autoRechargeOn: string
     autoRechargeOff: string
     turnOn: string
+    /** Caption under auto-recharge off on a running credit plan (B). */
+    autoRechargeOffCaption: string
+    /** Caption under auto-recharge off when calls are already failing (D). */
+    autoRechargeOffFixCaption: string
+    /** Balance caption when the credit plan is at zero (D). */
+    callsFailingCaption: string
     activeProducts: string
     /** Caption under the balance when a merchant name is known. */
     worksAcross: string
+    /** E upgrade prompt. `{total}` `{unit}` `{interval}`. */
+    needMoreAllowance: string
+    /** E upgrade caption under the See plans link. */
+    upgradePaygCaption: string
+    /** StatusDot label on state A. */
+    noPlanStatus: string
+    /** Caption under the product on state A. */
+    choosePlanCaption: string
+    /** Eyebrow above the A ladder. */
+    plansEyebrow: string
+    /** Eyebrow above the F ladder. */
+    carryOnEyebrow: string
+    /** Caption under the A ladder. */
+    plansStartCaption: string
+    /** F headline. `{plan}` `{unit}`. */
+    usedUpTitle: string
+    /** F body when a reset date is known. `{date}` `{days}`. */
+    usedUpBody: string
+    /** F body when the period has not started. */
+    usedUpBodyNoDate: string
+    /** F anti-trap when credits > 0. `{credits}` `{plan}`. */
+    antiTrapCredits: string
+    /** F wait line. `{date}` `{plan}`. */
+    waitUntilReset: string
+    /** StatusDot label on state H. */
+    notStartedStatus: string
+    /** H headline. `{total}` `{unit}` `{interval}`. */
+    readyToClaim: string
+    /** H caption under the headline. */
+    noCardCaption: string
+    /** H primary CTA. Wires `activatePlan`. */
+    startFreePlan: string
+    /** I body — calls succeed; no money figure. */
+    stillWorking: string
+    /** I upgrade link. Change plan stays off. */
+    seeHigherLimit: string
+    /** I used-of-allowance line. `{used}` `{total}` `{unit}`. */
+    usedOfAllowance: string
+    /** J StatusDot. `{date}` is month + day. */
+    activeUntil: string
+    /** J plan line. `{plan}` `{date}`. */
+    cancelledPlanLine: string
+    /** J headline. `{days}`. */
+    daysLeftTitle: string
+    /** J body. `{date}` is month + day. */
+    cancelledBody: string
+    /** J secondary CTA. `{plan}`. */
+    reactivatePlan: string
   }
   customerPortal: {
     launchButton: string
@@ -395,6 +451,35 @@ export interface SolvaPayCopy {
     topUpCta: string
     upgradeCta: string
     refreshCta: string
+    /** FactBand eyebrows. */
+    remainingEyebrow: string
+    renewsEyebrow: string
+    resetsEyebrow: string
+    creditsEyebrow: string
+    usedEyebrow: string
+    /** "{remaining} {unit}" — wide Remaining headline. */
+    remainingCalls: string
+    /** "{remaining} of {total} {unit}" — compact Remaining value. */
+    remainingOfTotal: string
+    /** "Of {total} this period." */
+    ofTotalThisPeriod: string
+    /** "{used} of {total} {unit} used, {percent}%." */
+    usedOfTotalPercent: string
+    warningThresholdHint: string
+    lastCallHint: string
+    afterFirstCall: string
+    /** FactBand Renews/Resets caption. */
+    inDays: string
+    notKnownYet: string
+    creditsNotUsed: string
+    creditsUntouched: string
+    rateConfirmedAtCheckout: string
+    fromCreditsPerCall: string
+    creditsPerCall: string
+    /** Accent pills: D / I / F. */
+    callsFailing: string
+    overAllowance: string
+    limitReached: string
   }
 }
 

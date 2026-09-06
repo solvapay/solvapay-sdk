@@ -133,11 +133,10 @@ export interface SolvaPayTransport {
   /**
    * Optional: fetch the customer's runtime allowance for a (product, meter)
    * pair. HTTP transports implement via
-   * `GET /api/limits?productRef=…&meterName=…`. MCP adapters typically omit
-   * — the value lives on the bootstrap payload and refreshes via
-   * `refreshBootstrap()`. When undefined, `useLimits()` returns `null` for
-   * `remaining` / `withinLimits` with `loading: false` (graceful fallback,
-   * matching `useUsage`'s behaviour when `getUsage` is absent).
+   * `GET /api/limits?productRef=…&meterName=…`. MCP adapters omit the
+   * method — bootstrap seeds `limitsCache` and `useUsage` prefers the
+   * seeded snapshot. When undefined and nothing is seeded, `useLimits()`
+   * returns `null` for `remaining` / `withinLimits` with `loading: false`.
    */
   getLimits?: (params: { productRef: string; meterName?: string }) => Promise<TransportLimitsResult>
 

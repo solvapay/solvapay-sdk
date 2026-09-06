@@ -31,6 +31,7 @@ function customer(overrides: {
             displayExchangeRate: 1,
           },
     usage: null,
+    limits: null,
   } as BootstrapCustomer
 }
 

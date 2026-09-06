@@ -10,6 +10,7 @@ import type {
   PaymentMethodInfo,
   CustomerBalanceResult,
   GetUsageResult,
+  LimitResponseWithPlan,
   PurchaseCheckResult,
   PurchaseInfo,
 } from '@solvapay/server'
@@ -269,6 +270,7 @@ export interface SolvaPayProviderInitial {
   paymentMethod: PaymentMethodInfo | null
   balance: CustomerBalanceResult | null
   usage: GetUsageResult | null
+  limits: LimitResponseWithPlan | null
   merchant: Merchant
   product: Product
   plans: Plan[]

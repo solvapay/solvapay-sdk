@@ -114,5 +114,6 @@ describe('createMcpAppAdapter', () => {
     expect(transport.listPlans).toBeUndefined()
     expect(transport.getPaymentMethod).toBeUndefined()
     expect(transport.getUsage).toBeUndefined()
+    expect(transport.getLimits).toBeUndefined()
   })
 })

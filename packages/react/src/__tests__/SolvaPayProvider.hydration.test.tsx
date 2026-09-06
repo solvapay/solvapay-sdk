@@ -63,6 +63,7 @@ function makeInitial(
       },
     },
     usage: null,
+    limits: null,
     merchant: { displayName: 'Acme', legalName: 'Acme Inc' },
     product: { reference: 'prd_test' },
     plans: [],

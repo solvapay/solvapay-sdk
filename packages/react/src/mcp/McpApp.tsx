@@ -174,6 +174,7 @@ function bootstrapToInitial(bs: McpBootstrap): SolvaPayProviderInitial {
     paymentMethod: bs.customer?.paymentMethod ?? null,
     balance: bs.customer?.balance ?? null,
     usage: bs.customer?.usage ?? null,
+    limits: bs.customer?.limits ?? null,
     merchant: bs.merchant as unknown as Merchant,
     product: bs.product as unknown as Product,
     plans: bs.plans as unknown as Plan[],

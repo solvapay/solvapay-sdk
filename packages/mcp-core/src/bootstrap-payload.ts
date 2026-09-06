@@ -11,14 +11,15 @@
  */
 
 import {
+  checkLimitsCore,
   checkPurchaseCore,
   createCheckoutSessionCore,
   createCustomerSessionCore,
+  deriveUsageSnapshot,
   getCustomerBalanceCore,
   getMerchantCore,
   getPaymentMethodCore,
   getProductCore,
-  getUsageCore,
   isErrorResult,
   listPlansCore,
   type ErrorResult,
@@ -110,10 +111,12 @@ const createBootstrapProductError = (productResult: ErrorResult): Error => {
  * `buildSolvaPayDescriptors` bundle.
  *
  * The returned function runs `getMerchant`, `getProduct`, `listPlans`,
- * `checkPurchase`, `getPaymentMethod`, `getCustomerBalance`, `getUsage`
+ * `checkPurchase`, `getPaymentMethod`, `getCustomerBalance`, `checkLimits`
  * in parallel, failing loudly when merchant or product can't load (the
  * React shell can't render meaningfully without them) and degrading
- * gracefully on per-customer sub-reads.
+ * gracefully on per-customer sub-reads. Usage is derived from the
+ * purchase + the same limits result so metered plans do not call
+ * `checkLimits` twice.
  */
 export function createBuildBootstrapPayload(
   options: CreateBuildBootstrapPayloadOptions,
@@ -152,6 +155,9 @@ export function createBuildBootstrapPayload(
     const unauthenticated = (): Promise<ErrorResult> =>
       Promise.resolve({ error: 'unauthenticated', status: 401 })
 
+    const limitsRequest = () =>
+      buildSolvaPayRequest(extra, { query: { productRef }, getCustomerRef })
+
     const [
       stripePublishableKey,
       merchantResult,
@@ -160,7 +166,7 @@ export function createBuildBootstrapPayload(
       purchaseResult,
       paymentMethodResult,
       balanceResult,
-      usageResult,
+      limitsResult,
       checkoutResult,
       portalResult,
     ] = await Promise.all([
@@ -171,7 +177,7 @@ export function createBuildBootstrapPayload(
       customerRef ? wrapError(checkPurchaseCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
       customerRef ? wrapError(getPaymentMethodCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
       customerRef ? wrapError(getCustomerBalanceCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
-      customerRef ? wrapError(getUsageCore(buildRequest(extra), { solvaPay })) : unauthenticated(),
+      customerRef ? wrapError(checkLimitsCore(limitsRequest(), { solvaPay })) : unauthenticated(),
       wrapError(
         createCheckoutSessionCore(
           buildSolvaPayRequest(extra, {
@@ -205,13 +211,27 @@ export function createBuildBootstrapPayload(
         }
       : null
 
+    const limits = okOrNull(limitsResult)
+    const activePurchase = enrichedPurchase?.purchases.find(p => p.status === 'active')
+    const usageUsed = typeof activePurchase?.usage?.used === 'number' ? activePurchase.usage.used : 0
+    const usage = customerRef
+      ? deriveUsageSnapshot({
+          used: usageUsed,
+          periodStart: activePurchase?.usage?.periodStart,
+          periodEnd: activePurchase?.usage?.periodEnd,
+          purchaseRef: activePurchase?.reference,
+          limits,
+        })
+      : null
+
     const customer: BootstrapPayload['customer'] = customerRef
       ? {
           ref: customerRef,
           purchase: enrichedPurchase,
           paymentMethod: okOrNull(paymentMethodResult),
           balance: okOrNull(balanceResult),
-          usage: okOrNull(usageResult),
+          usage,
+          limits,
         }
       : null
 

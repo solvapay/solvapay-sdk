@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { useUsage } from '../useUsage'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { seedUsageSnapshot, useUsage } from '../useUsage'
 import { usePurchase } from '../usePurchase'
 import { useTransport } from '../useTransport'
 import { useLimits } from '../useLimits'
@@ -87,6 +87,35 @@ function meteredPurchase(overrides: Record<string, unknown> = {}) {
 }
 
 describe('useUsage', () => {
+  beforeEach(() => {
+    seedUsageSnapshot(null)
+  })
+
+  it('prefers a bootstrap-seeded snapshot over the purchase-derived one', () => {
+    setPurchase({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      activePurchase: meteredPurchase({ usage: { used: 1 } }) as any,
+    })
+    setTransport()
+    setLimits({ remaining: null, unlimited: null, meterName: null })
+    seedUsageSnapshot({
+      meterRef: 'requests',
+      total: 10000,
+      used: 6200,
+      remaining: 3800,
+      percentUsed: 62,
+      purchaseRef: 'pur_1',
+    })
+
+    const { result } = renderHook(() => useUsage())
+
+    expect(result.current.usage).toMatchObject({
+      total: 10000,
+      remaining: 3800,
+      used: 6200,
+    })
+  })
+
   it('combines purchase usage with the allowance from useLimits', () => {
     setPurchase({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

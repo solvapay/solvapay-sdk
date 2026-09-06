@@ -13,9 +13,9 @@
  *
  * Routes through the SDK transport layer (HTTP by default,
  * `transport.getLimits` when overridden). When the transport doesn't
- * implement `getLimits` (e.g. an MCP adapter without the route), the hook
- * returns `null` for `remaining` / `withinLimits` with `loading: false` —
- * matches `useUsage`'s graceful fallback.
+ * implement `getLimits` (MCP adapter), the hook serves a bootstrap-seeded
+ * cache entry if one exists; otherwise `remaining` / `withinLimits` stay
+ * `null` with `loading: false`.
  *
  * Cache: module-level, keyed by `customerRef:productRef:meterName` with a
  * 10 s TTL that mirrors the backend paywall's `limitsCacheTTL`. Multiple
@@ -226,10 +226,23 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
 
   const fetchLimits = useCallback(
     async (force: boolean): Promise<void> => {
-      if (!productRef || !enabled || !transport.getLimits) {
-        // Graceful fallback when the transport doesn't implement
-        // `getLimits` — clear loading without surfacing an error so
-        // consumers can feature-detect by checking `remaining === null`.
+      if (!productRef || !enabled) {
+        setLoading(false)
+        return
+      }
+
+      if (!transport.getLimits) {
+        // MCP adapters omit `getLimits` — serve a bootstrap-seeded
+        // cache entry when one exists (even past the HTTP TTL; there
+        // is no transport to refresh against). No seed → graceful
+        // null, matching `useUsage` when `getUsage` is absent.
+        const seeded = limitsCache.get(cacheKey(customerRef, productRef, meterName))
+        if (seeded?.data) {
+          setData(seeded.data)
+          setLoading(false)
+          setError(null)
+          return
+        }
         setLoading(false)
         return
       }

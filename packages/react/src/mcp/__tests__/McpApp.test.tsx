@@ -457,4 +457,53 @@ describe('<McpApp>', () => {
       paddingLeft: '4px',
     })
   })
+
+  it('applies hostContext.safeAreaInsets in fullscreen as well as inline', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'account',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'fullscreen',
+        availableDisplayModes: ['inline', 'fullscreen'],
+        safeAreaInsets: { top: 20, right: 8, bottom: 16, left: 8 },
+      },
+    })
+    const AccountStub = vi.fn(() => <div data-testid="account-stub">stubbed account</div>)
+    const { container } = render(<McpApp app={app} views={{ account: AccountStub }} />)
+    await screen.findByTestId('account-stub')
+    expect(container.querySelector('.solvapay-mcp-main')).toHaveStyle({
+      paddingTop: '20px',
+      paddingRight: '8px',
+      paddingBottom: '16px',
+      paddingLeft: '8px',
+    })
+  })
+
+  it('falls back to the widget rail when fullscreen host width is under 1000px', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'fullscreen',
+        availableDisplayModes: ['inline', 'fullscreen'],
+        containerDimensions: { width: 800 },
+      },
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(container.querySelector('[data-display-mode="fullscreen"]')).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-hosted-layout')).toHaveAttribute(
+      'data-rail',
+      'widget',
+    )
+  })
 })

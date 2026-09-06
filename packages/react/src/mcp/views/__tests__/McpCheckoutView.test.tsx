@@ -360,10 +360,10 @@ describe('<McpCheckoutView> — plan step', () => {
     expect(screen.getByText(/This tool needs a paid plan/)).toBeTruthy()
   })
 
-  it('shows the limit-reached handoff for paywallKind=payment_required', () => {
+  it('does not render the retired limit-reached handoff for payment_required', () => {
     renderView({ fromPaywall: true, paywallKind: 'payment_required', onBack: vi.fn() })
-    expect(screen.getByText('Limit reached')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Open account' })).toBeTruthy()
+    expect(screen.queryByText('Limit reached')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Open account' })).toBeNull()
   })
 
   it('does not render the limit handoff or Stay-on-Free link when fromPaywall is false', () => {

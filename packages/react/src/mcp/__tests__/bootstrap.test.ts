@@ -123,6 +123,7 @@ describe('fetchMcpBootstrap', () => {
           paymentMethod: { kind: 'none' },
           balance: null,
           usage: null,
+          limits: null,
         },
       },
     })

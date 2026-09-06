@@ -13,6 +13,7 @@ import type { ZodTypeAny } from 'zod'
 import type {
   CustomerBalanceResult,
   GetUsageResult,
+  LimitResponseWithPlan,
   PaymentMethodInfo,
   PurchaseCheckResult,
   SdkMerchantResponse,
@@ -53,6 +54,13 @@ export interface BootstrapCustomer {
   paymentMethod: PaymentMethodInfo | null
   balance: CustomerBalanceResult | null
   usage: GetUsageResult | null
+  /**
+   * Runtime allowance from the same `checkLimits` call that feeds
+   * `usage`. Null when the customer is unauthenticated or the limits
+   * sub-read failed. Carries `withinLimits`, `activationRequired`,
+   * `overage`, `needsTopUp` — the flags usage math discards.
+   */
+  limits: LimitResponseWithPlan | null
 }
 
 /**

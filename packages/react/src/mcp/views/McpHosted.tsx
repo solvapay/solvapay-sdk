@@ -5,11 +5,13 @@
  *
  * Inline stays a single-column stack. Fullscreen at ≥1000px of host
  * width becomes the hosted page: payment leads with a 340px summary
- * rail; management stays one column. Same React tree — CSS container
- * queries flip the payment geometry.
+ * rail; management stays one column. Below 1000px of reported host
+ * width, `data-rail="widget"` keeps the stacked panel. Same React
+ * tree — CSS container queries flip the payment geometry.
  */
 
 import React from 'react'
+import { resolveHostedRail } from '../display-mode'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 
 export function McpHostedColumn({
@@ -27,8 +29,8 @@ export function McpHostedColumn({
 }
 
 export function McpHostedLayout({ children }: { children: React.ReactNode }) {
-  const { displayMode } = useDisplayMode()
-  const rail = displayMode === 'fullscreen' ? 'hosted' : 'inline'
+  const displayMode = useDisplayMode()
+  const rail = resolveHostedRail(displayMode)
   return (
     <div className="solvapay-mcp-hosted-layout" data-rail={rail}>
       {children}

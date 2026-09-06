@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { McpAppShell, type McpAppShellProps } from '../McpAppShell'
 import type { McpBootstrap } from '../bootstrap'
+import { McpDisplayModeProvider } from '../hooks/useDisplayMode'
+import type { McpDisplayModeState } from '../display-mode'
 import { SolvaPayContext } from '../../SolvaPayProvider'
 import { merchantCache } from '../../hooks/useMerchant'
 import { createTransportCacheKey } from '../../transport/cache-key'
@@ -92,10 +94,16 @@ function renderShell(
   bootstrap: Partial<McpBootstrap>,
   ctx: SolvaPayContextValue,
   props: Partial<McpAppShellProps> = {},
+  displayMode?: McpDisplayModeState,
 ) {
+  const shell = <McpAppShell bootstrap={{ ...baseBootstrap, ...bootstrap }} {...props} />
   return render(
     <SolvaPayContext.Provider value={ctx}>
-      <McpAppShell bootstrap={{ ...baseBootstrap, ...bootstrap }} {...props} />
+      {displayMode ? (
+        <McpDisplayModeProvider value={displayMode}>{shell}</McpDisplayModeProvider>
+      ) : (
+        shell
+      )}
     </SolvaPayContext.Provider>,
   )
 }
@@ -111,7 +119,7 @@ describe('<McpAppShell>', () => {
     renderShell(
       {
         view: 'account',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
       },
       ctx,
     )
@@ -143,7 +151,7 @@ describe('<McpAppShell>', () => {
     renderShell(
       {
         view: 'account',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
       },
       ctx,
       { views: { account: Account } },
@@ -191,6 +199,7 @@ describe('<McpAppShell>', () => {
               paymentMethod: null,
               balance: null,
               usage: null,
+              limits: null,
             },
           }}
           views={{ checkout: Checkout, account: Account }}
@@ -207,7 +216,7 @@ describe('<McpAppShell>', () => {
     renderShell(
       {
         view: undefined,
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
       },
       ctx,
       { views: { account: Account } },
@@ -222,6 +231,7 @@ describe('<McpAppShell>', () => {
     paymentMethod: null,
     balance: null,
     usage: null,
+    limits: null,
   }
 
   it('mounts no sidebar and paints no Paying as on the account surface', () => {
@@ -276,7 +286,7 @@ describe('<McpAppShell>', () => {
     expect(container.querySelector('.solvapay-mcp-shell-tagline')).toBeNull()
   })
 
-  it('does not thread bootstrap.product into the account view as a product hero', () => {
+  it('threads bootstrap.product into state A as identity, not a page hero', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
     renderShell(
@@ -287,12 +297,14 @@ describe('<McpAppShell>', () => {
           name: 'Acme Knowledge Base',
           description: 'Search Acme docs from anywhere.',
         } as never,
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
       },
       ctx,
     )
     expect(screen.queryByRole('heading', { level: 1, name: 'Acme Knowledge Base' })).toBeNull()
-    expect(screen.queryByText('Search Acme docs from anywhere.')).toBeNull()
+    expect(screen.getByText('Acme Knowledge Base')).toBeTruthy()
+    expect(screen.getByText('Search Acme docs from anywhere.')).toBeTruthy()
+    expect(screen.getByText('No plan')).toBeTruthy()
   })
 
   it('renders the SolvaPay legal footer with solvapay.com legal URLs', () => {
@@ -331,7 +343,7 @@ describe('<McpAppShell>', () => {
     renderShell(
       {
         view: 'account',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
       },
       ctx,
       { onRefreshBootstrap: onRefresh },
@@ -347,7 +359,7 @@ describe('<McpAppShell>', () => {
     const ctx = buildCtx(config, [], 0)
     const { container } = renderShell(
       {
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
       },
       ctx,
     )
@@ -368,7 +380,7 @@ describe('<McpAppShell>', () => {
     renderShell(
       {
         view: 'account',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null },
+        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
       },
       ctx,
       { views: { account: Account, checkout: Checkout } },
@@ -413,6 +425,26 @@ describe('<McpAppShell>', () => {
     const body = container.querySelector('.solvapay-mcp-shell-body')
     expect(body).toBeTruthy()
     expect(body?.textContent).not.toMatch(/Paying as/)
+  })
+
+  it('keeps account as one management column in both display modes', () => {
+    const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
+    const ctx = buildCtx(config, [], 0)
+    for (const displayMode of ['inline', 'fullscreen'] as const) {
+      const { container, unmount } = renderShell(
+        { view: 'account', customer: authedCustomer },
+        ctx,
+        {},
+        { displayMode, availableDisplayModes: ['inline', 'fullscreen'] },
+      )
+      expect(container.querySelector('.solvapay-mcp-hosted')).toHaveAttribute(
+        'data-mcp-surface',
+        'management',
+      )
+      expect(container.querySelector('.solvapay-mcp-summary-rail')).toBeNull()
+      expect(container.querySelector('.solvapay-mcp-context-rail')).toBeNull()
+      unmount()
+    }
   })
 
   it('forwards `onClose` to the checkout view', () => {

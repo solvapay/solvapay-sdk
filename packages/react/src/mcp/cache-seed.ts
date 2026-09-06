@@ -1,21 +1,48 @@
 /**
  * Seed the module-level hook caches (`merchantCache`, `productCache`,
- * `plansCache`, `paymentMethodCache`) from a `SolvaPayProviderInitial`
- * snapshot so the MCP App shell never fires a first-mount fetch.
+ * `plansCache`, `paymentMethodCache`, `limitsCache`) from a
+ * `SolvaPayProviderInitial` snapshot so the MCP App shell never fires a
+ * first-mount fetch.
  *
  * Called from `<McpApp>` before rendering `<SolvaPayProvider>`. The
- * seeded entries share the same 5-minute TTL as normal fetches — once
- * expired the caches fall back to their existing behaviour (which, for
- * MCP, returns the seeded value because the hooks' fetchers become
- * no-ops after the read tools are dropped).
+ * seeded entries share the same TTL as normal fetches — once expired
+ * the caches fall back to their existing behaviour (which, for MCP,
+ * returns the seeded value because the hooks' fetchers become no-ops
+ * after the read tools are dropped).
  */
 
 import { merchantCache } from '../hooks/useMerchant'
 import { productCache } from '../hooks/useProduct'
 import { plansCache } from '../hooks/usePlans'
 import { paymentMethodCache } from '../hooks/usePaymentMethod'
+import { limitsCache } from '../hooks/useLimits'
+import { seedUsageSnapshot } from '../hooks/useUsage'
 import { createTransportCacheKey } from '../transport/cache-key'
+import type { TransportLimitsResult } from '../transport/types'
+import type { LimitResponseWithPlan } from '@solvapay/server'
 import type { SolvaPayConfig, SolvaPayProviderInitial } from '../types'
+
+export function toTransportLimits(limits: LimitResponseWithPlan): TransportLimitsResult {
+  return {
+    withinLimits: limits.withinLimits,
+    remaining: limits.remaining,
+    meterName: limits.meterName ?? null,
+    activationRequired: limits.activationRequired === true,
+    ...(limits.throttled !== undefined ? { throttled: limits.throttled } : {}),
+    ...(limits.overage !== undefined ? { overage: limits.overage } : {}),
+    ...(limits.needsTopUp !== undefined ? { needsTopUp: limits.needsTopUp } : {}),
+    ...(limits.needsUpgrade !== undefined ? { needsUpgrade: limits.needsUpgrade } : {}),
+    ...(limits.upgraded !== undefined ? { upgraded: limits.upgraded } : {}),
+  }
+}
+
+function limitsCacheKey(
+  customerRef: string,
+  productRef: string,
+  meterName: string,
+): string {
+  return `${customerRef}:${productRef}:${meterName}`
+}
 
 /**
  * Pre-populate the hook caches with the snapshot from the bootstrap
@@ -69,6 +96,17 @@ export function seedMcpCaches(
       paymentMethod: initial.paymentMethod,
       promise: null,
       timestamp: now,
+    })
+  }
+
+  seedUsageSnapshot(initial.usage)
+
+  if (initial.limits && initial.customerRef) {
+    const meterName = initial.limits.meterName || 'requests'
+    limitsCache.set(limitsCacheKey(initial.customerRef, initial.product.reference, meterName), {
+      data: toTransportLimits(initial.limits),
+      timestamp: now,
+      promise: null,
     })
   }
 }
