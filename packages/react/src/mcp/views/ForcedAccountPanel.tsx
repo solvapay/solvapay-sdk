@@ -326,12 +326,23 @@ function CancelledAccountPanel({
       : null
   const total =
     remaining != null
-      ? (usage?.total ?? (cap && cap > 0 ? cap : remaining + (usage?.used ?? 0)))
+      ? (usage?.total ?? (cap && cap > 0 ? cap : null))
       : cap && cap > 0
         ? cap
         : null
   const meter = usage?.meterRef ?? limits.meterName
   const showMeter = remaining != null && total != null && total > 0
+  const used =
+    remaining != null && total != null
+      ? usage?.total != null
+        ? usage.used
+        : Math.max(0, total - remaining)
+      : (usage?.used ?? 0)
+  const percent =
+    usage?.percentUsed ??
+    (total != null && total > 0
+      ? Math.min(100, Math.round((used / total) * 10000) / 100)
+      : null)
 
   return (
     <div className="solvapay-mcp-account">
@@ -378,7 +389,13 @@ function CancelledAccountPanel({
                 unit: allowanceMeterUnit(meter, total),
               })}
             />
-            <McpUsageMeter usageOverride={usage}>
+            <McpUsageMeter
+              usageOverride={
+                usage != null && total != null
+                  ? { ...usage, total, used, percentUsed: percent }
+                  : usage
+              }
+            >
               <UsageMeter.Bar />
             </McpUsageMeter>
           </div>

@@ -129,6 +129,8 @@ describe('seedMcpCaches', () => {
           meterName: 'requests',
           plan: 'pro',
           activationRequired: false,
+          used: 6200,
+          limit: 10000,
         },
       }),
       config,
@@ -140,6 +142,8 @@ describe('seedMcpCaches', () => {
       withinLimits: true,
       meterName: 'requests',
       activationRequired: false,
+      used: 6200,
+      limit: 10000,
     })
   })
 })

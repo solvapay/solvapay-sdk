@@ -179,13 +179,13 @@ describe('trackUsageCore', () => {
 })
 
 describe('deriveUsageSnapshot', () => {
-  it('computes total from used + remaining when the cap is finite', () => {
+  it('takes total from limits.limit and used from limits.used when the cap is finite', () => {
     expect(
       deriveUsageSnapshot({
-        used: 6200,
+        used: 0,
         purchaseRef: 'pur_1',
         periodStart: '2026-09-01T00:00:00.000Z',
-        limits: { remaining: 3800, meterName: 'requests' },
+        limits: { remaining: 3800, meterName: 'requests', used: 6200, limit: 10000 },
       }),
     ).toEqual({
       meterRef: 'requests',
@@ -195,6 +195,36 @@ describe('deriveUsageSnapshot', () => {
       percentUsed: 62,
       periodStart: '2026-09-01T00:00:00.000Z',
       purchaseRef: 'pur_1',
+    })
+  })
+
+  it('derives used as limit - remaining when used is omitted', () => {
+    expect(
+      deriveUsageSnapshot({
+        used: 0,
+        limits: { remaining: 1, limit: 3 },
+      }),
+    ).toEqual({
+      meterRef: null,
+      total: 3,
+      used: 2,
+      remaining: 1,
+      percentUsed: 66.67,
+    })
+  })
+
+  it('leaves the cap unknown when the backend supplied neither used nor limit', () => {
+    expect(
+      deriveUsageSnapshot({
+        used: 6200,
+        limits: { remaining: 3800, meterName: 'requests' },
+      }),
+    ).toEqual({
+      meterRef: 'requests',
+      total: null,
+      used: 6200,
+      remaining: 3800,
+      percentUsed: null,
     })
   })
 
@@ -241,7 +271,7 @@ describe('getUsageCore', () => {
 
     const result = await getUsageCore(fakeRequest(), {
       solvaPay: { apiClient: { checkLimits } } as never,
-      limits: { remaining: 3800, meterName: 'requests' },
+      limits: { remaining: 3800, meterName: 'requests', used: 6200, limit: 10000 },
     })
 
     expect(checkLimits).not.toHaveBeenCalled()

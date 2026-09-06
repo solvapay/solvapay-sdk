@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { SOLVAPAY_BOOTSTRAP_URI, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'

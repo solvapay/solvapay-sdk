@@ -10,6 +10,8 @@ function makeClient() {
       meterName: 'requests',
       plan: 'pro',
       activationRequired: false,
+      used: 6200,
+      limit: 10000,
     }),
     trackUsage: vi.fn(),
     createCustomer: vi.fn().mockResolvedValue({ customerRef: 'cus_42' }),
@@ -107,6 +109,6 @@ describe('createBuildBootstrapPayload', () => {
 
     expect(client.checkLimits).toHaveBeenCalledTimes(1)
     expect(payload.customer?.limits).toMatchObject({ activationRequired: true, remaining: 0 })
-    expect(payload.customer?.usage).toMatchObject({ used: 0, remaining: 0, total: 0 })
+    expect(payload.customer?.usage).toMatchObject({ used: 0, remaining: 0, total: null })
   })
 })

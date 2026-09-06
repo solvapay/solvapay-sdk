@@ -70,6 +70,11 @@ export interface BuildPayableHandlerContext {
     args: Record<string, unknown>,
     extra?: McpToolExtra,
   ) => string | Promise<string>
+  /**
+   * Registered tool name, forwarded onto `PaywallMetadata` so usage
+   * events are attributable to a tool.
+   */
+  toolName?: string
 }
 
 /**
@@ -107,7 +112,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
   ctx: BuildPayableHandlerContext,
   handler: MerchantHandler<TArgs, TResult>,
 ): (args: Record<string, unknown>, extra?: McpToolExtra) => Promise<SolvaPayCallToolResult> {
-  const { product, getCustomerRef } = ctx
+  const { product, getCustomerRef, toolName } = ctx
 
   // The business logic passed to `.mcp(...)` is called by
   // `paywall.protect` with `(args, handlerContext)`. We close over
@@ -132,7 +137,7 @@ export function buildPayableHandler<TArgs extends Record<string, unknown>, TResu
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const protectedHandler = solvaPay
-    .payable({ product, getCustomerRef })
+    .payable({ product, getCustomerRef, ...(toolName ? { toolName } : {}) })
     .mcp(wrappedBusinessLogic as any)
 
   return async (

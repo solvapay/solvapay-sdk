@@ -96,7 +96,7 @@ export function registerPayableTool<
 
   const protectedHandler = buildPayableHandler(
     solvaPay,
-    { product, buildBootstrap, getCustomerRef },
+    { product, buildBootstrap, getCustomerRef, toolName: name },
     handler as unknown as Parameters<typeof buildPayableHandler>[2],
   )
 

@@ -80,6 +80,8 @@ interface LimitsProjection {
   remaining: number | null
   unlimited: boolean | null
   meterName: string | null
+  used: number | null
+  limit: number | null
 }
 
 function deriveUsage(
@@ -91,14 +93,23 @@ function deriveUsage(
   if (!countsUsage(purchase.planSnapshot) && purchase.planSnapshot?.isMetered !== true && !usage) {
     return null
   }
-  const used = typeof usage?.used === 'number' ? usage.used : 0
   // `remaining` carries the backend's `-1` unlimited sentinel, which
   // `unlimited` already decodes — only a confirmed finite cap produces a
   // total. While limits are loading (or the transport has no `getLimits`)
-  // both stay `null`: cap unknown, not cap absent.
+  // both stay `null`: cap unknown, not cap absent. Never fabricate a
+  // cap as `used + remaining`; `purchase.usage.used` is only ever reset
+  // to zero by the backend.
   const hasFiniteCap = limits.unlimited === false && limits.remaining !== null
   const remaining = hasFiniteCap ? limits.remaining : null
-  const total = remaining === null ? null : used + remaining
+  const total = typeof limits.limit === 'number' && limits.limit > 0 ? limits.limit : null
+  const used =
+    typeof limits.used === 'number'
+      ? limits.used
+      : total !== null && remaining !== null
+        ? Math.max(0, total - remaining)
+        : typeof usage?.used === 'number'
+          ? usage.used
+          : 0
   const percentUsed =
     total !== null && total > 0 ? Math.min(100, Math.round((used / total) * 10000) / 100) : null
   return {
@@ -138,14 +149,23 @@ export function useUsage(): UseUsageReturn {
     remaining: limitRemaining,
     unlimited,
     meterName,
+    used: limitUsed,
+    limit,
   } = useLimits({
     productRef: activePurchase?.productRef,
     enabled: usageCounted,
   })
 
   const derived = useMemo(
-    () => deriveUsage(activePurchase ?? null, { remaining: limitRemaining, unlimited, meterName }),
-    [activePurchase, limitRemaining, unlimited, meterName],
+    () =>
+      deriveUsage(activePurchase ?? null, {
+        remaining: limitRemaining,
+        unlimited,
+        meterName,
+        used: limitUsed,
+        limit,
+      }),
+    [activePurchase, limitRemaining, unlimited, meterName, limitUsed, limit],
   )
 
   // Clear transport-fetched override when the active purchase changes

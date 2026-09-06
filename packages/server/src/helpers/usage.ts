@@ -29,6 +29,10 @@ export interface GetUsageResult {
 export interface UsageLimitsInput {
   remaining: number
   meterName?: string | null
+  /** Consumed units this period, when the backend measured a finite cap. */
+  used?: number
+  /** The effective finite cap, when the backend measured one. */
+  limit?: number
 }
 
 /**
@@ -71,16 +75,28 @@ export function deriveUsageSnapshot(input: {
   // backend bug behind a silent "no cap" reading).
   const hasFiniteCap = input.limits.remaining >= 0
   const remaining = hasFiniteCap ? input.limits.remaining : null
-  const total = remaining === null ? null : input.used + remaining
+  // The cap is authoritative input, never `used + remaining`. When the
+  // backend did not measure a finite cap, leave `total` unknown rather
+  // than fabricating one from the purchase-derived `used` (always 0).
+  const total =
+    typeof input.limits.limit === 'number' && input.limits.limit > 0
+      ? input.limits.limit
+      : null
+  const used =
+    typeof input.limits.used === 'number'
+      ? input.limits.used
+      : total !== null && remaining !== null
+        ? Math.max(0, total - remaining)
+        : input.used
   const percentUsed =
     total !== null && total > 0
-      ? Math.min(100, Math.round((input.used / total) * 10000) / 100)
+      ? Math.min(100, Math.round((used / total) * 10000) / 100)
       : null
 
   return {
     meterRef: input.limits.meterName ?? null,
     total,
-    used: input.used,
+    used,
     remaining,
     percentUsed,
     ...period,

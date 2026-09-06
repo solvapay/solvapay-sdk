@@ -8,7 +8,7 @@
  * `config?.enabled`: turn-on and edit.
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import {
   buildSummaryLine,
   configToForm,
@@ -61,13 +61,14 @@ export function McpAutoRechargeView({ classNames, onBack }: McpAutoRechargeViewP
   const [validationError, setValidationError] = useState<string | null>(null)
   const [setupError, setSetupError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (loading || hydrated) return
+  // Hydrate once loading finishes. Adjust during render so we don't
+  // schedule a cascading effect update.
+  if (!loading && !hydrated) {
+    setHydrated(true)
     if (config?.enabled) {
       setForm({ ...configToForm(config, currency), enabled: true })
     }
-    setHydrated(true)
-  }, [loading, config, currency, hydrated])
+  }
 
   const editing = Boolean(config?.enabled)
   const summary = buildSummaryLine(form, currency)

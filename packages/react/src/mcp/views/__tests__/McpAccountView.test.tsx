@@ -731,7 +731,7 @@ describe('McpAccountView', () => {
   })
 
   it('leads a running subscription with Remaining, Renews, and untouched credits', () => {
-    seedLimits({ remaining: 3800, withinLimits: true })
+    seedLimits({ remaining: 3800, withinLimits: true, used: 6200, limit: 10000 })
     const ctx = buildCtx({}, [starterPurchase], 599_800)
     renderAccount(ctx, {
       plans: catalogPlans,
@@ -774,7 +774,7 @@ describe('McpAccountView', () => {
   })
 
   it('drops price from the free plan line and warns on the last remaining call', () => {
-    seedLimits({ remaining: 1, withinLimits: true })
+    seedLimits({ remaining: 1, withinLimits: true, used: 2, limit: 3 })
     const onChangePlan = vi.fn()
     const ctx = buildCtx({}, [freePurchase], 599_800)
     renderAccount(ctx, {

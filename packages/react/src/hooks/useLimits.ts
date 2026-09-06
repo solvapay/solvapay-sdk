@@ -122,6 +122,16 @@ export interface UseLimitsReturn {
   needsUpgrade: boolean | null
   /** The customer was auto-upgraded and access was restored. `null` while loading. */
   upgraded: boolean | null
+  /**
+   * Consumed units this period. `null` while loading, when disabled, or
+   * when the backend did not measure a finite cap.
+   */
+  used: number | null
+  /**
+   * The effective finite cap for this meter. `null` while loading, when
+   * disabled, or when the backend did not measure a finite cap.
+   */
+  limit: number | null
   loading: boolean
   error: Error | null
   refetch: () => Promise<void>
@@ -325,6 +335,11 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
         const next: TransportLimitsResult = {
           ...baseline,
           remaining: Math.max(0, baseline.remaining + delta),
+          // Keep `used` self-consistent with the remaining nudge so
+          // a meter that reads both does not flash a collapsing cap.
+          ...(typeof baseline.used === 'number'
+            ? { used: Math.max(0, baseline.used - delta) }
+            : {}),
           // Don't optimistically flip `withinLimits` — paywall gating
           // can hinge on factors beyond `remaining > 0`
           // (activationRequired, etc.). Let the trailing refetch
@@ -358,6 +373,8 @@ export function useLimits(options: UseLimitsOptions): UseLimitsReturn {
     needsTopUp: data?.needsTopUp ?? null,
     needsUpgrade: data?.needsUpgrade ?? null,
     upgraded: data?.upgraded ?? null,
+    used: data?.used ?? null,
+    limit: data?.limit ?? null,
     loading,
     error,
     refetch,

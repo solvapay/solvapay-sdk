@@ -213,10 +213,12 @@ export function createBuildBootstrapPayload(
 
     const limits = okOrNull(limitsResult)
     const activePurchase = enrichedPurchase?.purchases.find(p => p.status === 'active')
-    const usageUsed = typeof activePurchase?.usage?.used === 'number' ? activePurchase.usage.used : 0
     const usage = customerRef
       ? deriveUsageSnapshot({
-          used: usageUsed,
+          // Consumption comes from `limits.used` (or `limit - remaining`)
+          // inside `deriveUsageSnapshot`. `purchase.usage.used` is only
+          // ever reset to zero by the backend and must not be the source.
+          used: 0,
           periodStart: activePurchase?.usage?.periodStart,
           periodEnd: activePurchase?.usage?.periodEnd,
           purchaseRef: activePurchase?.reference,

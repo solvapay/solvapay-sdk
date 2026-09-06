@@ -104,6 +104,8 @@ describe('useLimits', () => {
       expect(result.current.withinLimits).toBe(true)
       expect(result.current.meterName).toBe('requests')
       expect(result.current.activationRequired).toBe(false)
+      expect(result.current.used).toBeNull()
+      expect(result.current.limit).toBeNull()
       expect(result.current.error).toBeNull()
       expect(getLimits).toHaveBeenCalledWith({ productRef: 'prd_api', meterName: 'requests' })
     })
@@ -432,8 +434,34 @@ describe('useLimits', () => {
       })
 
       expect(result.current.remaining).toBe(4)
+      expect(result.current.used).toBeNull()
       // Still only the initial fetch — the trailing refetch happens on the timer.
       expect(getLimits).toHaveBeenCalledTimes(1)
+    })
+
+    it('optimistically increments used alongside the remaining decrement', async () => {
+      const getLimits = vi.fn().mockResolvedValue({
+        withinLimits: true,
+        remaining: 5,
+        meterName: 'requests',
+        activationRequired: false,
+        used: 1,
+        limit: 6,
+      })
+      setTransport({ getLimits })
+
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+      const { result } = renderHook(() => useLimits({ productRef: 'prd_api' }))
+      await vi.waitFor(() => expect(result.current.remaining).toBe(5))
+
+      act(() => {
+        result.current.adjustRemaining(-1)
+      })
+
+      expect(result.current.remaining).toBe(4)
+      expect(result.current.used).toBe(2)
+      expect(result.current.limit).toBe(6)
     })
 
     it('schedules a trailing refetch after the optimistic grace window', async () => {

@@ -78,6 +78,18 @@ export interface TransportLimitsResult {
   needsUpgrade?: boolean
   /** The customer was auto-upgraded and access was restored. */
   upgraded?: boolean
+  /**
+   * Consumed units this period. Present only when the backend measured
+   * a finite cap. Authoritative — do not reconstruct from
+   * `purchase.usage.used`.
+   */
+  used?: number
+  /**
+   * The effective finite cap for this meter. Present only when the
+   * backend measured a finite cap. Authoritative — do not reconstruct
+   * as `used + remaining`.
+   */
+  limit?: number
 }
 
 /** Re-exported from `@solvapay/server` for transport consumers. */

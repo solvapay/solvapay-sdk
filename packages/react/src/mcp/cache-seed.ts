@@ -33,6 +33,8 @@ export function toTransportLimits(limits: LimitResponseWithPlan): TransportLimit
     ...(limits.needsTopUp !== undefined ? { needsTopUp: limits.needsTopUp } : {}),
     ...(limits.needsUpgrade !== undefined ? { needsUpgrade: limits.needsUpgrade } : {}),
     ...(limits.upgraded !== undefined ? { upgraded: limits.upgraded } : {}),
+    ...(limits.used !== undefined ? { used: limits.used } : {}),
+    ...(limits.limit !== undefined ? { limit: limits.limit } : {}),
   }
 }
 

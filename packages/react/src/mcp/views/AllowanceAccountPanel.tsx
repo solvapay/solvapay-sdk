@@ -109,10 +109,7 @@ export function AllowanceAccountPanel({
     limitsResolved: limits.remaining !== null || cap === 0,
   })
   const meter = usage?.meterRef ?? limits.meterName
-  const total =
-    remaining.kind === 'finite'
-      ? (usage?.total ?? (usage != null ? usage.used + remaining.remaining : cap))
-      : null
+  const total = remaining.kind === 'finite' ? (usage?.total ?? cap) : null
   const facts = buildAllowanceFacts({
     remaining,
     total,
@@ -126,8 +123,17 @@ export function AllowanceAccountPanel({
   })
 
   const showMeter = remaining.kind === 'finite' && usage != null && total != null && total > 0
-  const used = usage?.used ?? 0
-  const percent = usage?.percentUsed ?? null
+  const used =
+    remaining.kind === 'finite' && total != null
+      ? usage?.total != null
+        ? usage.used
+        : Math.max(0, total - remaining.remaining)
+      : (usage?.used ?? 0)
+  const percent =
+    usage?.percentUsed ??
+    (total != null && total > 0
+      ? Math.min(100, Math.round((used / total) * 10000) / 100)
+      : null)
   const meterCaption = showMeter
     ? buildMeterCaption({
         used,
@@ -154,7 +160,13 @@ export function AllowanceAccountPanel({
         <div className="solvapay-mcp-allowance-body">
           <FactBand items={facts} />
           {showMeter ? (
-            <McpUsageMeter usageOverride={usage}>
+            <McpUsageMeter
+              usageOverride={
+                usage != null && total != null
+                  ? { ...usage, total, used, percentUsed: percent }
+                  : usage
+              }
+            >
               <UsageMeter.Bar />
               {meterCaption ? (
                 <p className="solvapay-mcp-usage-meter-caption">{meterCaption}</p>

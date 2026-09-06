@@ -63,6 +63,8 @@ function setLimits(override: Partial<ReturnType<typeof useLimits>> = {}) {
     error: null,
     refetch: vi.fn().mockResolvedValue(undefined),
     adjustRemaining: vi.fn(),
+    used: null,
+    limit: null,
     ...override,
   })
 }
@@ -122,7 +124,7 @@ describe('useUsage', () => {
       activePurchase: meteredPurchase() as any,
     })
     setTransport()
-    setLimits()
+    setLimits({ used: 750, limit: 1000 })
     const { result } = renderHook(() => useUsage())
 
     expect(result.current.usage).toEqual({
@@ -144,7 +146,7 @@ describe('useUsage', () => {
       activePurchase: meteredPurchase({ usage: { used: 850 } }) as any,
     })
     setTransport()
-    setLimits({ remaining: 150 })
+    setLimits({ remaining: 150, used: 850, limit: 1000 })
     const { result } = renderHook(() => useUsage())
     expect(result.current.isApproachingLimit).toBe(true)
     expect(result.current.isAtLimit).toBe(false)
@@ -156,7 +158,7 @@ describe('useUsage', () => {
       activePurchase: meteredPurchase({ usage: { used: 1000 } }) as any,
     })
     setTransport()
-    setLimits({ remaining: 0 })
+    setLimits({ remaining: 0, used: 1000, limit: 1000 })
     const { result } = renderHook(() => useUsage())
     expect(result.current.isAtLimit).toBe(true)
   })
@@ -167,7 +169,7 @@ describe('useUsage', () => {
       activePurchase: meteredPurchase({ usage: { used: 100 } }) as any,
     })
     setTransport()
-    setLimits({ remaining: 900 })
+    setLimits({ remaining: 900, used: 100, limit: 1000 })
     const { result } = renderHook(() => useUsage())
 
     expect(result.current.usage?.meterRef).toBe('tokens')
@@ -222,7 +224,7 @@ describe('useUsage', () => {
       }) as any,
     })
     setTransport()
-    setLimits({ remaining: 2, meterName: 'tokens' })
+    setLimits({ remaining: 2, meterName: 'tokens', used: 1, limit: 3 })
     const { result } = renderHook(() => useUsage())
 
     expect(result.current.usage).toMatchObject({
@@ -282,5 +284,20 @@ describe('useUsage', () => {
 
     expect(result.current.usage).not.toBeNull()
     expect(result.current.isUnlimited).toBe(false)
+  })
+
+  it('leaves the cap unknown when useLimits has no measured used/limit', () => {
+    setPurchase({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      activePurchase: meteredPurchase({ usage: { used: 0 } }) as any,
+    })
+    setTransport()
+    setLimits({ remaining: 1 })
+    const { result } = renderHook(() => useUsage())
+
+    expect(result.current.usage?.total).toBeNull()
+    expect(result.current.usage?.used).toBe(0)
+    expect(result.current.usage?.remaining).toBe(1)
+    expect(result.current.percentUsed).toBeNull()
   })
 })

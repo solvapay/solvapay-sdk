@@ -46,7 +46,6 @@ import {
   planBillingCycle,
   planBillingInterval,
   planSortByPaygFirstThenAsc,
-  shortCycle,
   type BootstrapPlanLike,
   type CheckoutStep,
 } from './shared'

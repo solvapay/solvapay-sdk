@@ -281,6 +281,8 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         needsTopUp?: boolean
         needsUpgrade?: boolean
         upgraded?: boolean
+        used?: number
+        limit?: number
       }>(config, url, {
         method: 'GET',
         onErrorContext: 'getLimits',
@@ -296,6 +298,8 @@ export function createHttpTransport(config: SolvaPayConfig | undefined): SolvaPa
         needsTopUp: data.needsTopUp,
         needsUpgrade: data.needsUpgrade,
         upgraded: data.upgraded,
+        ...(data.used !== undefined ? { used: data.used } : {}),
+        ...(data.limit !== undefined ? { limit: data.limit } : {}),
       }
     },
 

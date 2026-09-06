@@ -1801,6 +1801,10 @@ export interface components {
       /** @description ISO 4217 currency code for credit fields */
       currency?: string
       /**
+       * The effective finite cap for this meter. Present only when the backend measured a finite cap.
+       */
+      limit?: number
+      /**
        * The meter name to use when tracking usage events
        * @example requests
        */
@@ -1824,6 +1828,10 @@ export interface components {
       throttled?: boolean
       /** @description The customer was auto-upgraded to the target pricing to restore access — `onExceed: auto_upgrade` succeeded. */
       upgraded?: boolean
+      /**
+       * Consumed usage units this period. Present only when the backend measured a finite cap.
+       */
+      used?: number
       /**
        * Whether the customer is within their usage limits
        * @example true
