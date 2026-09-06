@@ -382,7 +382,7 @@ function mergePlan(
     ...snapshot,
     options: snapshotHasOptions ? snapshot.options : catalog.options,
     requiresPayment: snapshot.requiresPayment ?? catalog.requiresPayment,
-    isMetered: snapshot.isMetered ?? catalog.isMetered,
+    isMetered: snapshot.isMetered,
   }
 }
 
