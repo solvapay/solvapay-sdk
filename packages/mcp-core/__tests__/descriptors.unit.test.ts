@@ -95,6 +95,7 @@ describe('buildSolvaPayDescriptors', () => {
         MCP_TOOL_NAMES.attachBusinessDetails,
         MCP_TOOL_NAMES.createHostedSession,
         MCP_TOOL_NAMES.createPayment,
+        MCP_TOOL_NAMES.getHistory,
         VIEWER_TOOL_NAME,
         MCP_TOOL_NAMES.processPayment,
         MCP_TOOL_NAMES.setRenewal,
@@ -137,6 +138,7 @@ describe('buildSolvaPayDescriptors', () => {
       MCP_TOOL_NAMES.processPayment,
       MCP_TOOL_NAMES.createHostedSession,
       MCP_TOOL_NAMES.setRenewal,
+      MCP_TOOL_NAMES.getHistory,
     ]
     for (const name of uiOnlyTools) {
       const tool = tools.find(t => t.name === name)

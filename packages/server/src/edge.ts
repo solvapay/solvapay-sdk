@@ -120,6 +120,7 @@ export {
   getAutoRechargeCore,
   saveAutoRechargeCore,
   disableAutoRechargeCore,
+  getHistoryCore,
   isErrorResult,
   handleRouteError,
 } from './helpers'

@@ -6,6 +6,7 @@ import { McpAccountView } from '../McpAccountView'
 import { SolvaPayContext } from '../../../SolvaPayProvider'
 import { merchantCache } from '../../../hooks/useMerchant'
 import { limitsCache } from '../../../hooks/useLimits'
+import { historyCache } from '../../../hooks/useHistory'
 import { seedUsageSnapshot } from '../../../hooks/useUsage'
 import type { TransportLimitsResult } from '../../../transport/types'
 import { createTransportCacheKey } from '../../../transport/cache-key'
@@ -44,6 +45,7 @@ function buildCtx(
   const paid = purchases.find(p => (p.amount ?? 0) > 0) ?? null
   // activePurchase is the primary plan purchase (paid or $0), not "amount > 0".
   const active = purchases[0] ?? null
+  const { purchase: purchaseOverride, ...rest } = overrides
   return {
     purchase: {
       loading: false,
@@ -56,6 +58,7 @@ function buildCtx(
       activePaidPurchase: paid,
       balanceTransactions: [],
       customerRef: 'cus_abc',
+      ...purchaseOverride,
     },
     customerRef: 'cus_abc',
     refetchPurchase: vi.fn(),
@@ -67,7 +70,7 @@ function buildCtx(
     activatePlan: vi.fn(),
     balance: mockBalanceStatus({ credits }),
     _config: { transport: makeTransport() },
-    ...overrides,
+    ...rest,
   }
 }
 
@@ -280,6 +283,7 @@ describe('McpAccountView', () => {
   beforeEach(() => {
     merchantCache.clear()
     limitsCache.clear()
+    historyCache.clear()
     seedUsageSnapshot(null)
   })
 
@@ -405,13 +409,12 @@ describe('McpAccountView', () => {
     unmount()
 
     renderAccount(ctx, {}, 'fullscreen')
-    const link = await screen.findByRole('link', { name: /manage account/i })
+    const link = await screen.findByRole('link', { name: /full account/i })
     await waitFor(() => expect(link.getAttribute('href')).toBe('https://portal.test'))
+    expect(screen.queryByRole('link', { name: /manage account/i })).toBeNull()
     expect(screen.queryByRole('link', { name: /update card/i })).toBeNull()
     expect(screen.queryByRole('button', { name: /cancel plan/i })).toBeNull()
-    const hint = document.querySelector('[data-solvapay-mcp-portal-hint]')
-    expect(hint?.textContent).toBe('Click Manage account to update your card or cancel your plan.')
-    expect(hint?.nextElementSibling).toBe(link)
+    expect(document.querySelector('[data-solvapay-mcp-portal-hint]')).toBeNull()
   })
 
   it('does not render Manage account for a customer without a paid purchase', async () => {
@@ -601,7 +604,7 @@ describe('McpAccountView', () => {
       },
       'fullscreen',
     )
-    await screen.findByRole('link', { name: /manage account/i })
+    await screen.findByRole('link', { name: /full account/i })
     expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
   })
@@ -849,5 +852,299 @@ describe('McpAccountView', () => {
     expect(screen.queryByText('Your purchase has been cancelled')).toBeNull()
     expect(screen.queryByText('Undo Cancellation')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
+  })
+
+  const creditHistory = {
+    charges: [],
+    creditActivity: {
+      entries: [
+        {
+          type: 'USAGE',
+          amount: -200,
+          balance: 599_800,
+          productName: 'Cool MCP',
+          timestamp: '2026-09-05T14:22:00.000Z',
+        },
+        {
+          type: 'USAGE',
+          amount: -2500,
+          balance: 600_200,
+          productName: 'Statement Parser',
+          timestamp: '2026-09-04T09:41:00.000Z',
+        },
+        {
+          type: 'TOPUP',
+          amount: 500_000,
+          balance: 602_700,
+          timestamp: '2026-08-31T11:03:00.000Z',
+        },
+      ],
+      hasMore: false,
+    },
+  }
+
+  const chargeHistory = {
+    charges: [
+      {
+        reference: 'pur_aug',
+        customerRef: 'cus_abc',
+        productName: 'Widget API',
+        status: 'active',
+        startDate: '2026-08-12T00:00:00Z',
+        createdAt: '2026-08-12T00:00:00Z',
+        amount: 3000,
+        currency: 'USD',
+        isRecurring: true,
+        billingCycle: 'monthly',
+        planSnapshot: { name: 'Starter' },
+      },
+      {
+        reference: 'pur_jul',
+        customerRef: 'cus_abc',
+        productName: 'Widget API',
+        status: 'expired',
+        startDate: '2026-07-12T00:00:00Z',
+        createdAt: '2026-07-12T00:00:00Z',
+        amount: 3000,
+        currency: 'USD',
+        isRecurring: true,
+        billingCycle: 'monthly',
+        planSnapshot: { name: 'Starter' },
+      },
+    ],
+    creditActivity: { entries: [], hasMore: false },
+  }
+
+  function historyTransport(history: typeof creditHistory | typeof chargeHistory | Error) {
+    return makeTransport({
+      getHistory:
+        history instanceof Error
+          ? vi.fn().mockRejectedValue(history)
+          : vi.fn().mockResolvedValue(history),
+    })
+  }
+
+  function seedMerchantWith(
+    merchant: Merchant,
+    transport: NonNullable<SolvaPayConfig['transport']>,
+  ): SolvaPayConfig {
+    const config: SolvaPayConfig = { transport }
+    const key = createTransportCacheKey(config, '/api/merchant')
+    merchantCache.set(key, { merchant, promise: null, timestamp: Date.now() })
+    return config
+  }
+
+  it('renders account-wide credit activity on fullscreen B and not on inline', async () => {
+    const config = seedMerchantWith(
+      { displayName: 'Acme', legalName: 'Acme Inc.' },
+      historyTransport(creditHistory),
+    )
+    const ctx = buildCtx({ _config: config }, [paygPurchase], 599_800)
+    const { unmount } = renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+    })
+    expect(screen.queryByRole('columnheader', { name: 'Event' })).toBeNull()
+    expect(screen.queryByText('Every credit event on your account, newest first')).toBeNull()
+    unmount()
+
+    renderAccount(
+      ctx,
+      {
+        plans: catalogPlans,
+        product: { name: 'Widget API', description: null },
+        productRef: 'prd_widget',
+      },
+      'fullscreen',
+    )
+    expect(await screen.findByRole('columnheader', { name: 'Event' })).toBeTruthy()
+    expect(screen.getByRole('columnheader', { name: 'When' })).toBeTruthy()
+    expect(screen.getByRole('columnheader', { name: 'Credits' })).toBeTruthy()
+    expect(screen.getByRole('columnheader', { name: 'Balance' })).toBeTruthy()
+    expect(screen.getByText('Cool MCP')).toBeTruthy()
+    expect(screen.getByText('Statement Parser')).toBeTruthy()
+    expect(screen.getByText('Top-up')).toBeTruthy()
+    expect(screen.getByText('−200')).toBeTruthy()
+    expect(screen.getByText('+500,000')).toBeTruthy()
+    expect(screen.getByText('599,800')).toBeTruthy()
+    expect(
+      screen.getByText(
+        'Every credit event on your account, newest first, including other products and top-ups. Credits are shared, so the balance only makes sense account-wide.',
+      ),
+    ).toBeTruthy()
+    expect(screen.getByRole('link', { name: /full history/i })).toBeTruthy()
+    expect(screen.queryByRole('columnheader', { name: 'Charge' })).toBeNull()
+    expect(screen.queryByText('Receipt')).toBeNull()
+  })
+
+  it('keeps empty credit activity distinct from a failed fetch', async () => {
+    const emptyConfig = seedMerchantWith(
+      { displayName: 'Acme', legalName: 'Acme Inc.' },
+      historyTransport({
+        charges: [],
+        creditActivity: { entries: [], hasMore: false },
+      }),
+    )
+    const emptyCtx = buildCtx({ _config: emptyConfig }, [paygPurchase], 500)
+    const { unmount } = renderAccount(
+      emptyCtx,
+      { plans: catalogPlans, productRef: 'prd_widget' },
+      'fullscreen',
+    )
+    expect(await screen.findByText('No credit activity yet.')).toBeTruthy()
+    expect(screen.queryByText("Couldn't load credit activity.")).toBeNull()
+
+    unmount()
+    historyCache.clear()
+    const failConfig = seedMerchantWith(
+      { displayName: 'Acme', legalName: 'Acme Inc.' },
+      historyTransport(new Error('history unavailable')),
+    )
+    const failCtx = buildCtx({ _config: failConfig }, [paygPurchase], 500)
+    renderAccount(
+      failCtx,
+      { plans: catalogPlans, productRef: 'prd_widget' },
+      'fullscreen',
+    )
+    expect(await screen.findByText("Couldn't load credit activity.")).toBeTruthy()
+    expect(screen.queryByText('No credit activity yet.')).toBeNull()
+  })
+
+  it('renders product charges on fullscreen C without a Receipt column', async () => {
+    seedLimits({ remaining: 3800, withinLimits: true })
+    const config = seedMerchantWith(
+      { displayName: 'Acme', legalName: 'Acme Inc.' },
+      historyTransport(chargeHistory),
+    )
+    const ctx = buildCtx({ _config: config }, [starterPurchase], 0)
+    renderAccount(
+      ctx,
+      {
+        plans: catalogPlans,
+        product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+        productRef: 'prd_widget',
+      },
+      'fullscreen',
+    )
+    expect(await screen.findByRole('columnheader', { name: 'Charge' })).toBeTruthy()
+    expect(screen.getAllByText('Starter · monthly')).toHaveLength(2)
+    expect(screen.getByText('Aug 12, 2026')).toBeTruthy()
+    expect(screen.getAllByText('$30')).toHaveLength(2)
+    expect(screen.queryByText('Receipt')).toBeNull()
+    expect(screen.getByText('This plan does not spend your balance.')).toBeTruthy()
+    expect(screen.queryByText('Balance is untouched.')).toBeNull()
+    expect(screen.queryByRole('columnheader', { name: 'Event' })).toBeNull()
+  })
+
+  it('keeps empty charges distinct from a failed fetch', async () => {
+    seedLimits({ remaining: 3800, withinLimits: true })
+    const emptyConfig = seedMerchantWith(
+      { displayName: 'Acme', legalName: 'Acme Inc.' },
+      historyTransport({
+        charges: [],
+        creditActivity: { entries: [], hasMore: false },
+      }),
+    )
+    const { unmount } = renderAccount(
+      buildCtx({ _config: emptyConfig }, [starterPurchase], 0),
+      { plans: catalogPlans, productRef: 'prd_widget' },
+      'fullscreen',
+    )
+    expect(await screen.findByText('No charges yet.')).toBeTruthy()
+    expect(screen.queryByText("Couldn't load charges.")).toBeNull()
+
+    unmount()
+    historyCache.clear()
+    const failConfig = seedMerchantWith(
+      { displayName: 'Acme', legalName: 'Acme Inc.' },
+      historyTransport(new Error('history unavailable')),
+    )
+    renderAccount(
+      buildCtx({ _config: failConfig }, [starterPurchase], 0),
+      { plans: catalogPlans, productRef: 'prd_widget' },
+      'fullscreen',
+    )
+    expect(await screen.findByText("Couldn't load charges.")).toBeTruthy()
+    expect(screen.queryByText('No charges yet.')).toBeNull()
+  })
+
+  it('uses fullscreen consequence lines on state A, not the shorter widget rows', () => {
+    const config = seedMerchant({ displayName: 'Test', legalName: 'Test Inc.' })
+    const ctx = buildCtx({ _config: config }, [], 599_800)
+    ctx.balance = mockBalanceStatus({
+      credits: 599_800,
+      displayCurrency: 'USD',
+      creditsPerMinorUnit: 100,
+      displayExchangeRate: 1,
+    })
+    const { unmount } = renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+    })
+    expect(screen.queryByText(/No card needed/)).toBeNull()
+    expect(screen.queryByText(/Cancel any time/)).toBeNull()
+    unmount()
+
+    renderAccount(
+      ctx,
+      {
+        plans: catalogPlans,
+        product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
+        productRef: 'prd_widget',
+      },
+      'fullscreen',
+    )
+    expect(
+      screen.getByText('3 calls per month, then calls fail. No card needed.'),
+    ).toBeTruthy()
+    expect(
+      screen.getByText(
+        'From 200 credits per call, drawn from your credit balance. Credits work across every Test product.',
+      ),
+    ).toBeTruthy()
+    expect(
+      screen.getByText('10,000 calls per month. No credits used. Cancel any time.'),
+    ).toBeTruthy()
+    expect(
+      screen.getByText('Unlimited calls, one time. No credits used, no renewal.'),
+    ).toBeTruthy()
+  })
+
+  it('prints merchant place and buyer identity on the fullscreen footer without verified or Stripe', async () => {
+    seedLimits({ remaining: 3800, withinLimits: true })
+    const config = seedMerchantWith(
+      {
+        displayName: 'Test',
+        legalName: 'Test Inc.',
+        city: 'San Francisco',
+        stateOrCounty: 'CA',
+        websiteUrl: 'https://aaa.com',
+      },
+      historyTransport(chargeHistory),
+    )
+    const ctx = buildCtx(
+      {
+        _config: config,
+        purchase: {
+          email: 'tommy@solvapay.com',
+          name: 'Tommy Berglind',
+        },
+      },
+      [starterPurchase],
+      0,
+    )
+    renderAccount(
+      ctx,
+      { plans: catalogPlans, productRef: 'prd_widget' },
+      'fullscreen',
+    )
+    expect(await screen.findByText('Sold by Test')).toBeTruthy()
+    expect(screen.getByText('San Francisco, CA')).toBeTruthy()
+    expect(screen.getByRole('link', { name: /aaa.com/ })).toHaveAttribute('href', 'https://aaa.com')
+    expect(screen.getByText('Tommy Berglind')).toBeTruthy()
+    expect(screen.getByText('tommy@solvapay.com')).toBeTruthy()
+    expect(screen.getByRole('link', { name: /full account/i })).toBeTruthy()
+    expect(screen.queryByText(/verified/i)).toBeNull()
+    expect(screen.queryByText(/Identity checked by Stripe/)).toBeNull()
   })
 })

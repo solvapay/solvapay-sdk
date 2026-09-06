@@ -265,6 +265,26 @@ export interface SolvaPayCopy {
     activeProducts: string
     /** Caption under the balance when a merchant name is known. */
     worksAcross: string
+    /** Fullscreen identity footer. `{merchant}`. No verified suffix. */
+    soldBy: string
+    /** Portal text link. The button adds the external-link glyph. */
+    fullHistory: string
+    /** Portal text link. The button adds the external-link glyph. */
+    fullAccount: string
+    creditActivityEyebrow: string
+    chargesEyebrow: string
+    creditActivityCaption: string
+    creditActivityEmpty: string
+    creditActivityFailed: string
+    chargesEmpty: string
+    chargesFailed: string
+    eventColumn: string
+    whenColumn: string
+    creditsColumn: string
+    balanceColumn: string
+    chargeColumn: string
+    dateColumn: string
+    amountColumn: string
     /** E upgrade prompt. `{total}` `{unit}` `{interval}`. */
     needMoreAllowance: string
     /** E upgrade caption under the See plans link. */
@@ -473,6 +493,8 @@ export interface SolvaPayCopy {
     notKnownYet: string
     creditsNotUsed: string
     creditsUntouched: string
+    /** Fullscreen C credits caption. Widget C/E keep `creditsUntouched`. */
+    creditsDoNotSpend: string
     rateConfirmedAtCheckout: string
     fromCreditsPerCall: string
     creditsPerCall: string

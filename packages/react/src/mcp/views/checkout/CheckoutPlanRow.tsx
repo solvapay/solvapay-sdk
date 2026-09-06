@@ -36,6 +36,7 @@ export function CheckoutPlanRow({
   selectedOption,
   balance,
   disabled: disabledOverride,
+  description: descriptionOverride,
   onSelect,
 }: {
   plan: LadderPlan
@@ -47,6 +48,8 @@ export function CheckoutPlanRow({
   balance: ReturnType<typeof useBalance>
   /** When omitted, Free and a non-PAYG current plan are disabled (checkout). */
   disabled?: boolean
+  /** Fullscreen A supplies the longer consequence line. */
+  description?: string
   onSelect: () => void
 }): React.ReactElement {
   const isPaygCurrent = current && isPaygPlan(plan)
@@ -54,7 +57,7 @@ export function CheckoutPlanRow({
   const state = resolvePlanRowState({ current, selected, free, isPaygCurrent })
   const interval = planBillingInterval(plan)
   const priceLabel = formatPlanPrice(selectedOption, locale, interval, isPaygPlan(plan))
-  const description = planWhatItGives(plan, locale, balance)
+  const description = descriptionOverride ?? planWhatItGives(plan, locale, balance)
 
   return (
     <PlanRow

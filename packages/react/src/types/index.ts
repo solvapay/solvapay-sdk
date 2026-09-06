@@ -45,9 +45,14 @@ export interface Merchant {
   legalName: string
   supportEmail?: string
   supportUrl?: string
+  /** Public website. Distinct from `supportUrl` — the two are not copied onto each other. */
+  websiteUrl?: string
   termsUrl?: string
   privacyUrl?: string
   country?: string
+  city?: string
+  /** Free-text region from the legal address — may be "CA" or "Greater London". */
+  stateOrCounty?: string
   /** Company registration number (EIN, Companies House No, Org No). */
   companyNumber?: string
   /** Tax identification number (US: EIN). */
@@ -301,6 +306,7 @@ export interface SolvaPayConfig {
     autoRecharge?: string // Default: '/api/auto-recharge'
     getUsage?: string // Default: '/api/usage'
     getLimits?: string // Default: '/api/limits'
+    getHistory?: string // Default: '/api/history'
   }
 
   /**

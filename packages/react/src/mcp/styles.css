@@ -1515,6 +1515,120 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   font-variant-numeric: tabular-nums;
 }
 
+.solvapay-mcp-history {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.solvapay-mcp-history-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.solvapay-mcp-history-link {
+  font: 500 13px/1 var(--font-sans);
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.solvapay-mcp-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.solvapay-mcp-history-table[data-kind='credits'] {
+  table-layout: fixed;
+}
+
+.solvapay-mcp-history-table[data-kind='credits'] th:nth-child(1),
+.solvapay-mcp-history-table[data-kind='credits'] td:nth-child(1) {
+  width: 43%;
+}
+
+.solvapay-mcp-history-table[data-kind='credits'] th:nth-child(2),
+.solvapay-mcp-history-table[data-kind='credits'] td:nth-child(2) {
+  width: 23%;
+}
+
+.solvapay-mcp-history-table th {
+  padding: 0 16px 12px 0;
+  border-bottom: 1px solid var(--color-border-secondary);
+  font: 400 12px/1.67 var(--font-sans);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.solvapay-mcp-history-table th:last-child,
+.solvapay-mcp-history-table td:last-child,
+.solvapay-mcp-history-table [data-align='right'] {
+  text-align: right;
+  padding-right: 0;
+}
+
+.solvapay-mcp-history-table td {
+  padding: 14px 16px 14px 0;
+  border-bottom: 1px solid var(--color-border-secondary);
+  font: 400 14px/1.4 var(--font-sans);
+  color: var(--color-text-secondary);
+  vertical-align: middle;
+}
+
+.solvapay-mcp-history-table td:first-child,
+.solvapay-mcp-history-table td[data-align='right']:nth-last-child(2) {
+  font: 500 15px/1.4 var(--font-sans);
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-history-table td[data-align='right']:last-child {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.solvapay-mcp-history-title,
+.solvapay-mcp-history-subtitle {
+  display: block;
+}
+
+.solvapay-mcp-history-title {
+  font: 500 15px/1.4 var(--font-sans);
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-history-subtitle {
+  margin-top: 2px;
+  font: 400 13px/1.5 var(--font-mono);
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-account-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border-secondary);
+}
+
+.solvapay-mcp-account-footer-merchant,
+.solvapay-mcp-account-footer-buyer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.solvapay-mcp-account-footer-buyer {
+  text-align: right;
+  align-items: flex-end;
+}
+
 .solvapay-mcp-attribution {
   display: flex;
   align-items: center;

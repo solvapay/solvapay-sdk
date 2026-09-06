@@ -29,6 +29,7 @@ export {
   createPaymentIntent,
   createTopupPaymentIntent,
   customerBalance,
+  getHistory,
   getMerchant,
   getPaymentMethod,
   getProduct,

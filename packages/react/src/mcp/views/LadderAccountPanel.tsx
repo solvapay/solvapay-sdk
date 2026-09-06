@@ -16,6 +16,7 @@ import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPorta
 import { useActivation } from '../../hooks/useActivation'
 import { useBalance } from '../../hooks/useBalance'
 import { useCopy } from '../../hooks/useCopy'
+import { useMerchant } from '../../hooks/useMerchant'
 import { useUsage } from '../../hooks/useUsage'
 import { interpolate } from '../../i18n/interpolate'
 import {
@@ -25,6 +26,8 @@ import {
   resolvePeriodDisplay,
 } from '../account-state'
 import { formatShortDate, type ActiveProduct } from '../derive-active-products'
+import { useDisplayMode } from '../hooks/useDisplayMode'
+import { planConsequence } from '../plan-consequence'
 import {
   resolveActivationStrategy,
   resolvePlanShape,
@@ -32,6 +35,7 @@ import {
   type PlanShape,
 } from '../plan-actions'
 import { Eyebrow, Section } from '../primitives'
+import { AccountIdentityFooter } from './accountFullscreen'
 import { PlanIdentityHeader } from './accountViewShared'
 import { CheckoutPlanRow, type LadderPlan } from './checkout/CheckoutPlanRow'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
@@ -64,6 +68,9 @@ export function LadderAccountPanel({
   const cx = resolveMcpClassNames(classNames)
   const copy = useCopy()
   const balance = useBalance()
+  const { merchant } = useMerchant()
+  const { displayMode } = useDisplayMode()
+  const isFullscreen = displayMode === 'fullscreen' && accountState === 'A'
   const { usage } = useUsage()
   const { activate, error } = useActivation()
   const credits = balance.credits ?? 0
@@ -156,6 +163,13 @@ export function LadderAccountPanel({
                   disabled={false}
                   selectedOption={optionFromPlan(plan)}
                   balance={balance}
+                  description={
+                    isFullscreen
+                      ? planConsequence(plan, locale, balance, {
+                          merchantName: merchant?.displayName,
+                        })
+                      : undefined
+                  }
                   onSelect={() => handlePlanClick(plan)}
                 />
               ))}
@@ -187,7 +201,7 @@ export function LadderAccountPanel({
           </p>
         ) : null}
 
-        {showPortalCta ? (
+        {showPortalCta && !isFullscreen ? (
           <>
             <p className={cx.muted} data-solvapay-mcp-portal-hint="">
               {copy.currentPlan.portalHint}
@@ -200,6 +214,7 @@ export function LadderAccountPanel({
           </>
         ) : null}
       </div>
+      {isFullscreen ? <AccountIdentityFooter /> : null}
     </div>
   )
 }

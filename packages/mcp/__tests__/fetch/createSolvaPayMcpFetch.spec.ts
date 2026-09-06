@@ -127,6 +127,7 @@ const UI_TOOLS = [
   MCP_TOOL_NAMES.processPayment,
   MCP_TOOL_NAMES.attachBusinessDetails,
   MCP_TOOL_NAMES.setRenewal,
+  MCP_TOOL_NAMES.getHistory,
 ]
 
 interface ToolsListResult {

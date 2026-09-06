@@ -127,6 +127,14 @@ export type {
   PeriodDisplay,
   OneTimeDisplay,
 } from './account-state'
+export { planConsequence } from './plan-consequence'
+export {
+  CREDIT_ACTIVITY_TYPE_LABELS,
+  mapCreditActivityRow,
+  mapChargeRow,
+  formatMerchantPlace,
+  websiteHostLabel,
+} from './history-rows'
 
 export { BackLink } from './views/BackLink'
 export type { BackLinkProps } from './views/BackLink'

@@ -108,6 +108,7 @@ export function McpAccountView({
         creditProduct={products[0]}
         planForActions={planForActions}
         plans={plans}
+        productRef={productRef}
         locale={locale}
         classNames={classNames}
         onTopup={onTopup}

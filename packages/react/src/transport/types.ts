@@ -23,6 +23,7 @@ import type {
 } from '../types'
 import type {
   GetUsageResult,
+  GetHistoryResult,
   ProcessPaymentResult,
   TopupProcessResult,
   PaymentMethodInfo,
@@ -102,11 +103,12 @@ export interface TransportCustomerSessionResult {
 export interface SolvaPayTransport {
   /**
    * Read tools. HTTP transports implement these via `GET /api/*` routes.
-   * MCP adapters omit them because the data is delivered on the
-   * bootstrap payload (see `BootstrapPayload.customer` / `merchant` /
-   * `product` / `plans` in `@solvapay/mcp`). Hooks consume these via
-   * module-level caches that the MCP host seeds at mount time, so the
-   * transport path is only exercised on HTTP.
+   * MCP adapters omit reads for data the bootstrap already holds
+   * (purchase, merchant, product, plans, payment method, balance,
+   * usage, limits) — `seedMcpCaches` hydrates those. That invariant is
+   * "do not refetch what bootstrap already has", not a blanket ban.
+   * `getHistory` is the exception: charge / credit activity is not on
+   * bootstrap (`checkPurchaseCore` is active-only).
    */
   checkPurchase?: () => Promise<CustomerPurchaseData>
   getBalance?: () => Promise<TransportBalanceResult>
@@ -139,6 +141,12 @@ export interface SolvaPayTransport {
    * returns `null` for `remaining` / `withinLimits` with `loading: false`.
    */
   getLimits?: (params: { productRef: string; meterName?: string }) => Promise<TransportLimitsResult>
+  /**
+   * Product-scoped charges plus account-wide credit activity. Fetch on
+   * history-section mount, not app mount. HTTP: `GET /api/history`.
+   * MCP: `get_history` UI-only tool.
+   */
+  getHistory?: (params?: { productRef?: string; limit?: number }) => Promise<GetHistoryResult>
 
   createPayment: (params: {
     planRef?: string

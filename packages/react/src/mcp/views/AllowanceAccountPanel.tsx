@@ -12,8 +12,10 @@ import { billingCycle, headlineCharges } from '@solvapay/core'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
 import { useCopy } from '../../hooks/useCopy'
+import { useHistory } from '../../hooks/useHistory'
 import { useLimits } from '../../hooks/useLimits'
 import { useUsage } from '../../hooks/useUsage'
+import { useDisplayMode } from '../hooks/useDisplayMode'
 import { interpolate } from '../../i18n/interpolate'
 import { formatPrice } from '../../utils/format'
 import { UsageMeter } from '../../primitives/UsageMeter'
@@ -39,6 +41,7 @@ import {
 } from '../plan-actions'
 import { FactBand, SplitRow, type FactBandItem } from '../primitives'
 import { McpUsageMeter } from '../primitives/UsageMeter'
+import { AccountIdentityFooter, ChargesSection } from './accountFullscreen'
 import { PlanIdentityHeader } from './accountViewShared'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -69,8 +72,14 @@ export function AllowanceAccountPanel({
 }): React.ReactElement {
   const cx = resolveMcpClassNames(classNames)
   const copy = useCopy()
+  const { displayMode } = useDisplayMode()
+  const isFullscreen = displayMode === 'fullscreen' && accountState === 'C'
   const limits = useLimits({ productRef, enabled: Boolean(productRef) })
   const { usage } = useUsage()
+  const history = useHistory({
+    productRef,
+    enabled: isFullscreen,
+  })
   const oneTime = resolveOneTimeDisplay(planForActions)
   const periodEnd = usage?.periodEnd ?? null
   const period = resolvePeriodDisplay(periodEnd)
@@ -113,6 +122,7 @@ export function AllowanceAccountPanel({
     meter,
     locale,
     copy,
+    fullscreenCredits: isFullscreen,
   })
 
   const showMeter = remaining.kind === 'finite' && usage != null && total != null && total > 0
@@ -169,7 +179,7 @@ export function AllowanceAccountPanel({
             </button>
           </SplitRow>
         ) : null}
-        {showPortalCta ? (
+        {showPortalCta && !isFullscreen ? (
           <>
             <p className={cx.muted} data-solvapay-mcp-portal-hint="">
               {copy.currentPlan.portalHint}
@@ -182,6 +192,14 @@ export function AllowanceAccountPanel({
           </>
         ) : null}
       </div>
+      {isFullscreen && productRef ? (
+        <ChargesSection
+          charges={history.charges}
+          loading={history.loading}
+          error={history.error}
+        />
+      ) : null}
+      {isFullscreen ? <AccountIdentityFooter /> : null}
     </div>
   )
 }
@@ -209,6 +227,7 @@ function buildAllowanceFacts({
   meter,
   locale,
   copy,
+  fullscreenCredits,
 }: {
   remaining: ReturnType<typeof resolveRemaining>
   total: number | null
@@ -218,6 +237,7 @@ function buildAllowanceFacts({
   meter: string | null
   locale: string
   copy: ReturnType<typeof useCopy>
+  fullscreenCredits: boolean
 }): FactBandItem[] {
   const items: FactBandItem[] = []
 
@@ -289,7 +309,9 @@ function buildAllowanceFacts({
     label: copy.usage.creditsEyebrow,
     value: copy.usage.creditsNotUsed,
     compactValue: copy.usage.creditsNotUsed,
-    caption: copy.usage.creditsUntouched,
+    caption: fullscreenCredits
+      ? copy.usage.creditsDoNotSpend
+      : copy.usage.creditsUntouched,
   })
 
   return items

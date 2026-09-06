@@ -42,6 +42,7 @@ import {
   createPaymentIntentCore,
   createTopupPaymentIntentCore,
   attachBusinessDetailsCore,
+  getHistoryCore,
   isErrorResult,
   processPaymentIntentCore,
   reactivatePurchaseCore,
@@ -711,6 +712,36 @@ export function buildSolvaPayDescriptors(
         const result = await cancelPurchaseCore(
           buildRequest(extra, { method: 'POST' }),
           { purchaseRef, reason },
+          { solvaPay },
+        )
+        if (isErrorResult(result)) return toolErrorResult(result)
+        return toolResult(result)
+      }),
+  })
+
+  pushTool({
+    name: MCP_TOOL_NAMES.getHistory,
+    description:
+      UI_ONLY_PREFIX +
+      'Load product charge history and account-wide credit activity for the authenticated customer. Charges come from purchases for this product; credit activity is every credit event on the account.',
+    inputSchema: {
+      productRef: z.string().optional(),
+      limit: z.number().int().positive().max(100).optional(),
+    },
+    meta: uiToolMeta,
+    annotations: solvapayTool({ readOnlyHint: true, idempotentHint: true }),
+    handler: async (args, extra) =>
+      trace(MCP_TOOL_NAMES.getHistory, args, extra, async () => {
+        const auth = requireCustomerRef(extra)
+        if (typeof auth !== 'string') return auth
+
+        const effectiveProduct =
+          typeof args.productRef === 'string' && args.productRef ? args.productRef : productRef
+        const limit = typeof args.limit === 'number' ? args.limit : undefined
+
+        const result = await getHistoryCore(
+          buildRequest(extra, { method: 'GET' }),
+          { productRef: effectiveProduct, ...(limit !== undefined ? { limit } : {}) },
           { solvaPay },
         )
         if (isErrorResult(result)) return toolErrorResult(result)

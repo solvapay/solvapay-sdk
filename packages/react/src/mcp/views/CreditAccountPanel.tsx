@@ -9,7 +9,9 @@ import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPorta
 import { useAutoRecharge } from '../../hooks/useAutoRecharge'
 import { useBalance } from '../../hooks/useBalance'
 import { useCopy } from '../../hooks/useCopy'
+import { useHistory } from '../../hooks/useHistory'
 import { useMerchant } from '../../hooks/useMerchant'
+import { useDisplayMode } from '../hooks/useDisplayMode'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
 import { resolveRateDisplay } from '../account-state'
 import { formatProductTerms, type ActiveProduct } from '../derive-active-products'
@@ -19,6 +21,7 @@ import {
   type PlanLike,
 } from '../plan-actions'
 import { SplitRow } from '../primitives'
+import { AccountIdentityFooter, CreditActivitySection } from './accountFullscreen'
 import { BalanceStrip, PlanIdentityHeader } from './accountViewShared'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -28,6 +31,7 @@ export function CreditAccountPanel({
   creditProduct,
   planForActions,
   plans,
+  productRef,
   locale,
   classNames,
   onTopup,
@@ -39,6 +43,7 @@ export function CreditAccountPanel({
   creditProduct?: ActiveProduct
   planForActions: PlanLike | null
   plans?: readonly PlanLike[]
+  productRef?: string
   locale: string
   classNames?: McpViewClassNames
   onTopup?: () => void
@@ -50,6 +55,12 @@ export function CreditAccountPanel({
   const balance = useBalance()
   const { merchant } = useMerchant()
   const { config: autoRecharge } = useAutoRecharge()
+  const { displayMode } = useDisplayMode()
+  const isFullscreen = displayMode === 'fullscreen'
+  const history = useHistory({
+    productRef,
+    enabled: isFullscreen,
+  })
   const rate = resolveRateDisplay(planForActions, balance)
   const planLine = creditProduct
     ? formatProductTerms(creditProduct, locale, {
@@ -107,7 +118,7 @@ export function CreditAccountPanel({
             </button>
           ) : null}
         </SplitRow>
-        {showPortalCta ? (
+        {showPortalCta && !isFullscreen ? (
           <>
             <p className={cx.muted} data-solvapay-mcp-portal-hint="">
               {copy.currentPlan.portalHint}
@@ -120,6 +131,14 @@ export function CreditAccountPanel({
           </>
         ) : null}
       </div>
+      {isFullscreen && productRef ? (
+        <CreditActivitySection
+          entries={history.creditActivity?.entries ?? null}
+          loading={history.loading}
+          error={history.error}
+        />
+      ) : null}
+      {isFullscreen ? <AccountIdentityFooter /> : null}
     </div>
   )
 }

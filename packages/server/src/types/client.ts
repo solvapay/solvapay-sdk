@@ -229,6 +229,37 @@ export type ConfigureMcpPlansRequest = components['schemas']['ConfigureMcpPlansD
 
 export type ConfigureMcpPlansResponse = components['schemas']['ConfigureMcpPlansResult']
 
+export type CreditActivityType = 'USAGE' | 'TOPUP' | 'GRANT' | 'REFUND' | 'ADJUSTMENT'
+
+/**
+ * One account-wide credit ledger row from `GET /v1/sdk/credits/activity`.
+ * Seven fields only — amounts are credit units, not money.
+ */
+export interface CreditActivityEntry {
+  type: CreditActivityType
+  amount: number
+  balance: number
+  productName?: string
+  productRef?: string
+  reason?: string
+  timestamp: string
+}
+
+export interface CreditActivityResult {
+  entries: CreditActivityEntry[]
+  hasMore: boolean
+}
+
+/**
+ * Settled `get_history` / `useHistory` payload. Charges are product-scoped
+ * purchases; credit activity is account-wide. History is not on bootstrap —
+ * `checkPurchaseCore` only returns `status === 'active'`.
+ */
+export interface GetHistoryResult {
+  charges: PurchaseInfo[]
+  creditActivity: CreditActivityResult
+}
+
 /**
  * SolvaPay API Client Interface
  *
@@ -413,6 +444,28 @@ export interface SolvaPayClient {
 
   // GET: /v1/sdk/payment-method?customerRef=...
   getPaymentMethod?(params: { customerRef: string }): Promise<PaymentMethodInfo>
+
+  // GET: /v1/sdk/purchases?customerRef=&productRef=
+  listPurchases?(params: {
+    customerRef?: string
+    productRef?: string
+    status?:
+      | 'pending'
+      | 'active'
+      | 'trialing'
+      | 'past_due'
+      | 'cancelled'
+      | 'expired'
+      | 'suspended'
+      | 'refunded'
+    includeFree?: boolean
+  }): Promise<{ purchases: PurchaseInfo[] }>
+
+  // GET: /v1/sdk/credits/activity?customerRef=&limit=
+  getCreditActivity?(params: {
+    customerRef: string
+    limit?: number
+  }): Promise<CreditActivityResult>
 
   // GET: /v1/sdk/auto-recharge?customerRef=...
   getAutoRecharge?(params: { customerRef: string }): Promise<AutoRechargeResponse>

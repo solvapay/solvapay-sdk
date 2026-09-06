@@ -131,5 +131,9 @@ export function createMcpAppAdapter(app: McpAppLike): SolvaPayTransport {
 
     createCustomerSession: () =>
       callTool(MCP_TOOL_NAMES.createHostedSession, { kind: 'portal' }),
+
+    // History is not on bootstrap (`checkPurchaseCore` is active-only).
+    // This is the documented exception to the reads-from-bootstrap rule.
+    getHistory: params => callTool(MCP_TOOL_NAMES.getHistory, pickDefined({ ...params })),
   }
 }

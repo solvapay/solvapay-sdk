@@ -285,6 +285,7 @@ describe('isTransportToolName / SOLVAPAY_TRANSPORT_TOOL_NAMES', () => {
       'create_hosted_session',
       'set_renewal',
       'activate_plan',
+      'get_history',
     ]) {
       expect(isTransportToolName(name)).toBe(true)
       expect(SOLVAPAY_TRANSPORT_TOOL_NAMES.has(name)).toBe(true)
