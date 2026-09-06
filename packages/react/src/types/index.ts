@@ -13,6 +13,7 @@ import type {
   LimitResponseWithPlan,
   PurchaseCheckResult,
   PurchaseInfo,
+  SdkMerchantResponse,
 } from '@solvapay/server'
 
 export type { PurchaseInfo }
@@ -37,45 +38,10 @@ export interface PaymentIntentResult {
 }
 
 /**
- * Subset of merchant identity surfaced by `GET /v1/sdk/merchant`.
+ * Merchant identity surfaced by `GET /v1/sdk/merchant`.
  * Used by `<MandateText>` and customer-facing trust signals.
  */
-export interface Merchant {
-  displayName: string
-  legalName: string
-  supportEmail?: string
-  supportUrl?: string
-  /** Public website. Distinct from `supportUrl` — the two are not copied onto each other. */
-  websiteUrl?: string
-  termsUrl?: string
-  privacyUrl?: string
-  country?: string
-  city?: string
-  /** Free-text region from the legal address — may be "CA" or "Greater London". */
-  stateOrCounty?: string
-  /** Company registration number (EIN, Companies House No, Org No). */
-  companyNumber?: string
-  /** Tax identification number (US: EIN). */
-  taxId?: string
-  /** VAT identification number (UK/EU). */
-  vatNumber?: string
-  defaultCurrency?: string
-  /**
-   * Full set of currencies (including `defaultCurrency`) the customer may
-   * pay credit topups in. Surfaced only when the merchant enabled more than
-   * one — single-currency merchants leave this undefined and keep today's
-   * behavior. Drives the topup currency switcher in the PAYG amount step.
-   */
-  supportedTopupCurrencies?: string[]
-  statementDescriptor?: string
-  logoUrl?: string
-  /**
-   * Absolute URL to a square app icon / logomark. Preferred over
-   * `logoUrl` for avatar slots and chrome-strip icons that can't
-   * letterbox a landscape mark.
-   */
-  iconUrl?: string
-}
+export type Merchant = SdkMerchantResponse
 
 export interface UseMerchantReturn {
   merchant: Merchant | null

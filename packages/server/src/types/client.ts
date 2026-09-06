@@ -229,26 +229,15 @@ export type ConfigureMcpPlansRequest = components['schemas']['ConfigureMcpPlansD
 
 export type ConfigureMcpPlansResponse = components['schemas']['ConfigureMcpPlansResult']
 
-export type CreditActivityType = 'USAGE' | 'TOPUP' | 'GRANT' | 'REFUND' | 'ADJUSTMENT'
+export type CreditActivityType = components['schemas']['CreditActivityEntryDto']['type']
 
 /**
  * One account-wide credit ledger row from `GET /v1/sdk/credits/activity`.
  * Seven fields only — amounts are credit units, not money.
  */
-export interface CreditActivityEntry {
-  type: CreditActivityType
-  amount: number
-  balance: number
-  productName?: string
-  productRef?: string
-  reason?: string
-  timestamp: string
-}
+export type CreditActivityEntry = components['schemas']['CreditActivityEntryDto']
 
-export interface CreditActivityResult {
-  entries: CreditActivityEntry[]
-  hasMore: boolean
-}
+export type CreditActivityResult = components['schemas']['CreditActivityResponseDto']
 
 /**
  * Settled `get_history` / `useHistory` payload. Charges are product-scoped
