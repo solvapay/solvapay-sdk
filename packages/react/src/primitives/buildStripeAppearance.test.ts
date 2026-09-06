@@ -24,8 +24,15 @@ function paletteRoot(
 ): HTMLElement {
   const root = document.createElement('div')
   root.style.colorScheme = scheme
+  if (overrides.fontSize == null) {
+    root.style.fontSize = '16px'
+  }
   for (const [token, value] of Object.entries({ ...FULL_PALETTE, ...overrides })) {
     if (value === null) continue
+    if (token === 'fontSize') {
+      root.style.fontSize = value
+      continue
+    }
     root.style.setProperty(token, value)
   }
   document.body.appendChild(root)
@@ -66,7 +73,9 @@ describe('buildStripeAppearance', () => {
       colorDanger: 'rgb(196, 50, 42)',
       borderRadius: '8px',
       fontFamily: 'Inter, sans-serif',
-      gridRowSpacing: '16px',
+      fontSizeBase: '16px',
+      gridRowSpacing: '12px',
+      gridColumnSpacing: '12px',
     })
   })
 
@@ -79,15 +88,39 @@ describe('buildStripeAppearance', () => {
     expect(dark?.variables?.colorText).toBe('rgb(232, 232, 232)')
   })
 
+  it('derives input metrics from the host root font size', () => {
+    const widget = buildStripeAppearance(paletteRoot({ fontSize: '14px' }))
+    expect(widget?.variables?.fontSizeBase).toBe('14px')
+    expect(widget?.variables?.gridRowSpacing).toBe('10.5px')
+    expect(widget?.variables?.gridColumnSpacing).toBe('10.5px')
+    expect(widget?.rules?.['.Input']).toMatchObject({
+      fontSize: '14px',
+      lineHeight: '21px',
+      padding: '6px 10.5px',
+    })
+    expect(widget?.rules?.['.Input']).not.toHaveProperty('height')
+
+    const web = buildStripeAppearance(paletteRoot({ fontSize: '16px' }))
+    expect(web?.rules?.['.Input']).toMatchObject({
+      fontSize: '16px',
+      lineHeight: '24px',
+      padding: '7px 12px',
+    })
+    expect(web?.rules?.['.Input']).not.toHaveProperty('height')
+  })
+
   it('mirrors host input chrome on Stripe Input / Label / Tab / AccordionItem', () => {
     const appearance = buildStripeAppearance(paletteRoot())
     expect(appearance?.rules?.['.Input']).toMatchObject({
-      height: '40px',
-      padding: '0 12px',
+      fontSize: '16px',
+      lineHeight: '24px',
+      padding: '7px 12px',
       boxShadow: 'none',
       border: '1px solid rgb(217, 217, 217)',
       borderRadius: '8px',
+      fontFamily: 'Inter, sans-serif',
     })
+    expect(appearance?.rules?.['.Input']).not.toHaveProperty('height')
     expect(appearance?.rules?.['.Input:focus']).toMatchObject({
       borderColor: 'rgb(0, 0, 0)',
       boxShadow: '0 0 0 1px rgb(0, 0, 0)',
@@ -98,6 +131,11 @@ describe('buildStripeAppearance', () => {
       fontWeight: '500',
       color: 'rgb(107, 106, 103)',
       marginBottom: '8px',
+    })
+    expect(appearance?.rules?.['.Error']).toMatchObject({
+      fontSize: '12px',
+      marginTop: '6px',
+      color: 'rgb(196, 50, 42)',
     })
     expect(appearance?.rules?.['.Tab']).toMatchObject({
       border: '1px solid rgb(217, 217, 217)',

@@ -45,6 +45,41 @@ const CSS_WIDE_KEYWORDS = new Set([
 type StripeVariables = NonNullable<Appearance['variables']>
 type StripeRules = NonNullable<Appearance['rules']>
 
+/** Mirrors the business-details input rule in styles.css — locked by contract test. */
+const CONTROL_HEIGHT_RATIO = 2.5
+const CONTROL_PADDING_X_RATIO = 0.75
+const LINE_HEIGHT_RATIO = 1.5
+const LABEL_FONT_RATIO = 0.8125
+const LABEL_MARGIN_RATIO = 0.5
+const ERROR_FONT_RATIO = 0.75
+const ERROR_MARGIN_RATIO = 0.375
+
+function readRootFontPx(root: Element): number {
+  const px = parseFloat(getComputedStyle(root).fontSize)
+  return Number.isFinite(px) && px > 0 ? px : 16
+}
+
+function px(value: number): string {
+  return `${value}px`
+}
+
+function deriveControlMetrics(rootPx: number) {
+  const lineHeight = LINE_HEIGHT_RATIO * rootPx
+  const paddingY = (CONTROL_HEIGHT_RATIO * rootPx - 2 - lineHeight) / 2
+  const paddingX = CONTROL_PADDING_X_RATIO * rootPx
+  const gridGap = CONTROL_PADDING_X_RATIO * rootPx
+  return {
+    fontSize: px(rootPx),
+    lineHeight: px(lineHeight),
+    padding: `${px(paddingY)} ${px(paddingX)}`,
+    labelFontSize: px(LABEL_FONT_RATIO * rootPx),
+    labelMarginBottom: px(LABEL_MARGIN_RATIO * rootPx),
+    errorFontSize: px(ERROR_FONT_RATIO * rootPx),
+    errorMarginTop: px(ERROR_MARGIN_RATIO * rootPx),
+    gridGap: px(gridGap),
+  }
+}
+
 function isUsableToken(value: string): boolean {
   return !CSS_WIDE_KEYWORDS.has(value.trim().toLowerCase())
 }
@@ -70,8 +105,13 @@ export function buildStripeAppearance(root: Element): Appearance | undefined {
   probe.style.cssText = 'position:absolute;left:-9999px;top:0'
   root.appendChild(probe)
 
+  const rootPx = readRootFontPx(root)
+  const metrics = deriveControlMetrics(rootPx)
+
   const variables: StripeVariables = {
-    gridRowSpacing: '16px',
+    fontSizeBase: metrics.fontSize,
+    gridRowSpacing: metrics.gridGap,
+    gridColumnSpacing: metrics.gridGap,
   }
 
   for (const [stripeKey, token] of Object.entries(COLOR_VARIABLES)) {
@@ -94,16 +134,20 @@ export function buildStripeAppearance(root: Element): Appearance | undefined {
   })()
   const accent = variables.colorText
   const muted = variables.colorTextSecondary
+  const danger = variables.colorDanger
   const radius = variables.borderRadius
   const surface = variables.colorBackground
+  const fontFamily = variables.fontFamily
 
   probe.remove()
 
   const rules: StripeRules = {
     '.Input': {
-      height: '40px',
-      padding: '0 12px',
+      fontSize: metrics.fontSize,
+      lineHeight: metrics.lineHeight,
+      padding: metrics.padding,
       boxShadow: 'none',
+      ...(fontFamily ? { fontFamily } : {}),
       ...(border ? { border: `1px solid ${border}` } : {}),
       ...(radius ? { borderRadius: radius } : {}),
     },
@@ -117,10 +161,15 @@ export function buildStripeAppearance(root: Element): Appearance | undefined {
         : {}),
     },
     '.Label': {
-      fontSize: '13px',
+      fontSize: metrics.labelFontSize,
       fontWeight: '500',
-      marginBottom: '8px',
+      marginBottom: metrics.labelMarginBottom,
       ...(muted ? { color: muted } : {}),
+    },
+    '.Error': {
+      fontSize: metrics.errorFontSize,
+      marginTop: metrics.errorMarginTop,
+      ...(danger ? { color: danger } : {}),
     },
     '.Tab': {
       ...(border ? { border: `1px solid ${border}` } : {}),

@@ -269,4 +269,23 @@ describe('MCP payment form deboxing', () => {
       /\.solvapay-mcp-business-details input\[type=['"]checkbox['"]\]\s*\{[^}]*accent-color:\s*var\(--color-background-inverse\)/,
     )
   })
+
+  it('gives the hosted body a section gap between header and form', () => {
+    const rule = firstRule(STYLES, /\.solvapay-mcp-hosted-body\s*\{([^}]+)\}/)
+    expect(rule).toMatch(/display:\s*flex/)
+    expect(rule).toMatch(/flex-direction:\s*column/)
+    expect(rule).toMatch(/gap:\s*var\(--solvapay-section-gap\)/)
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-hosted-body > \.solvapay-mcp-back-link\s*\{[^}]*margin-bottom:\s*0/,
+    )
+  })
+
+  it('locks the business-details input ratios the Stripe builder mirrors', () => {
+    expect(WEB_STYLES).toMatch(
+      /\[data-solvapay-payment-form-business-details-name\][\s\S]*?height:\s*2\.5rem/,
+    )
+    expect(WEB_STYLES).toMatch(
+      /\[data-solvapay-payment-form-business-details-name\][\s\S]*?padding:\s*0 0\.75rem/,
+    )
+  })
 })
