@@ -702,6 +702,12 @@ body {
  * see the host composer. */
 .solvapay-mcp-main[data-display-mode='fullscreen'] {
   min-block-size: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  justify-content: safe center;
   overflow: auto;
   container-type: inline-size;
   container-name: mcp mcp-hosted;
@@ -717,7 +723,10 @@ body {
   display: none;
 }
 
-.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-chrome-row,
+.solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-chrome-row {
+  display: none;
+}
+
 .solvapay-mcp-main[data-display-mode='fullscreen'] > .solvapay-mcp-card {
   max-inline-size: none;
 }
@@ -731,17 +740,23 @@ body {
 html:has(.solvapay-mcp-main[data-display-mode='fullscreen']),
 html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) body,
 html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
+  width: 100%;
   height: 100%;
 }
 
+html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
+  padding: 0;
+  overflow: hidden;
+}
+
 .solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-shell {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
-  align-self: center;
-  inline-size: 100%;
+  width: 100%;
   /* 1000px column + the 72px gutter on each side. */
   max-inline-size: 1144px;
   padding: 56px 72px 40px;
+  margin-inline: 0;
 }
 
 .solvapay-mcp-hosted-layout {

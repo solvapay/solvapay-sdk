@@ -57,7 +57,7 @@ export type McpHostedRail = 'hosted' | 'inline' | 'widget'
 
 /**
  * Space the host says we have. Prefer the tighter of `width` and
- * `maxWidth` so a cap still forces the widget stack.
+ * `maxWidth`.
  */
 export function hostWidthPx(
   dimensions: McpContainerDimensions | undefined,
@@ -73,20 +73,19 @@ export function hostWidthPx(
  * Which payment geometry to stamp on `data-rail`.
  *
  * - `inline` — widget; 260px split only at the 760px mcp query
- * - `hosted` — fullscreen with room; 340px split at the 1000px query
- * - `widget` — fullscreen under 1000px of host width; stacked, never
- *   the 260px inline split
+ * - `hosted` — fullscreen; 340px split at the 1000px `mcp-hosted` query
  *
- * When the host omits a width, return `hosted` and let the container
- * query decide. Chrome (`displayMode`) stays fullscreen either way.
+ * Fullscreen always stamps `hosted`. Host-reported
+ * `containerDimensions` can be stale (MCPJam keeps a 720 template
+ * width on a `fixed inset-0` surface), so the JS width gate is not
+ * trusted. `@container mcp-hosted (min-width: 1000px)` owns the
+ * geometry from the measured width. Chrome (`displayMode`) stays
+ * fullscreen either way.
  */
 export function resolveHostedRail(
-  state: Pick<McpDisplayModeState, 'displayMode' | 'containerDimensions'>,
+  state: Pick<McpDisplayModeState, 'displayMode'>,
 ): McpHostedRail {
-  if (state.displayMode !== 'fullscreen') return 'inline'
-  const width = hostWidthPx(state.containerDimensions)
-  if (width !== undefined && width < MCP_HOSTED_MIN_WIDTH) return 'widget'
-  return 'hosted'
+  return state.displayMode === 'fullscreen' ? 'hosted' : 'inline'
 }
 
 export function isMcpDisplayMode(value: unknown): value is McpDisplayMode {

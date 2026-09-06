@@ -3,11 +3,12 @@
 /**
  * Hosted-page layout primitives for the MCP widget.
  *
- * Inline stays a single-column stack. Fullscreen at ≥1000px of host
- * width becomes the hosted page: payment leads with a 340px summary
- * rail; management stays one column. Below 1000px of reported host
- * width, `data-rail="widget"` keeps the stacked panel. Same React
- * tree — CSS container queries flip the payment geometry.
+ * Inline stays a single-column stack. Fullscreen stamps
+ * `data-rail="hosted"`; the 340px payment split engages only when
+ * `@container mcp-hosted (min-width: 1000px)` matches the measured
+ * width. Management stays one column. Same React tree — CSS
+ * container queries flip the payment geometry. Host-reported
+ * `containerDimensions` are not trusted for this gate.
  */
 
 import React from 'react'

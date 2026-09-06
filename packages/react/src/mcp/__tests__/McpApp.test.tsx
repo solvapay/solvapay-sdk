@@ -479,7 +479,7 @@ describe('<McpApp>', () => {
     })
   })
 
-  it('falls back to the widget rail when fullscreen host width is under 1000px', async () => {
+  it('stamps the hosted rail in fullscreen even when the host reports a stale 720px width', async () => {
     const app = makeApp({
       toolName: VIEWER_TOOL_NAME,
       structuredContent: {
@@ -490,7 +490,7 @@ describe('<McpApp>', () => {
       hostContext: {
         displayMode: 'fullscreen',
         availableDisplayModes: ['inline', 'fullscreen'],
-        containerDimensions: { width: 800 },
+        containerDimensions: { width: 720 },
       },
     })
     const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
@@ -499,7 +499,7 @@ describe('<McpApp>', () => {
     expect(container.querySelector('[data-display-mode="fullscreen"]')).toBeTruthy()
     expect(container.querySelector('.solvapay-mcp-hosted-layout')).toHaveAttribute(
       'data-rail',
-      'widget',
+      'hosted',
     )
   })
 })

@@ -92,11 +92,11 @@ describe('resolveHostedRail', () => {
     expect(resolveHostedRail({ displayMode: 'fullscreen' })).toBe('hosted')
   })
 
-  it('uses the hosted rail at 1000px and the widget stack below it', () => {
+  it('uses the hosted rail in fullscreen even when the host reports a stale width under 1000px', () => {
     expect(
       resolveHostedRail({
         displayMode: 'fullscreen',
-        containerDimensions: { width: 1000 },
+        containerDimensions: { width: 720 },
       }),
     ).toBe('hosted')
     expect(
@@ -104,17 +104,19 @@ describe('resolveHostedRail', () => {
         displayMode: 'fullscreen',
         containerDimensions: { width: 999 },
       }),
-    ).toBe('widget')
-  })
-
-  it('treats maxWidth as a host-width cap when width is missing or larger', () => {
-    expect(hostWidthPx({ maxWidth: 800 })).toBe(800)
-    expect(hostWidthPx({ width: 1200, maxWidth: 800 })).toBe(800)
+    ).toBe('hosted')
     expect(
       resolveHostedRail({
         displayMode: 'fullscreen',
-        containerDimensions: { width: 1200, maxWidth: 800 },
+        containerDimensions: { width: 1000 },
       }),
-    ).toBe('widget')
+    ).toBe('hosted')
+  })
+})
+
+describe('hostWidthPx', () => {
+  it('treats maxWidth as a host-width cap when width is missing or larger', () => {
+    expect(hostWidthPx({ maxWidth: 800 })).toBe(800)
+    expect(hostWidthPx({ width: 1200, maxWidth: 800 })).toBe(800)
   })
 })

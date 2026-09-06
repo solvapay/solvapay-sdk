@@ -37,13 +37,13 @@ describe('<McpHostedLayout>', () => {
     )
   })
 
-  it('falls back to the widget stack when fullscreen host width is under 1000px', () => {
+  it('stamps the hosted rail in fullscreen even when the host reports a stale 720px width', () => {
     const { container } = render(
       <McpDisplayModeProvider
         value={{
           displayMode: 'fullscreen',
           availableDisplayModes: ['inline', 'fullscreen'],
-          containerDimensions: { width: 800 },
+          containerDimensions: { width: 720 },
         }}
       >
         <McpHostedLayout>
@@ -53,7 +53,7 @@ describe('<McpHostedLayout>', () => {
     )
     expect(container.querySelector('.solvapay-mcp-hosted-layout')).toHaveAttribute(
       'data-rail',
-      'widget',
+      'hosted',
     )
   })
 })
