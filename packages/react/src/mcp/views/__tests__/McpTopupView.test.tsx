@@ -256,6 +256,18 @@ describe('<McpTopupView> — topup currency picker', () => {
     )
   })
 
+  it('shows Paying as on the payment step and not on the amount step', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    expect(screen.queryByText(/Paying as/)).toBeNull()
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await screen.findByTestId('topup-form-stub')
+    expect(screen.getByText('Paying as demo@acme.test')).toBeTruthy()
+  })
+
   it('leads the payment step with a summary rail before the card form', async () => {
     const { container } = renderTopup(singleCurrencyUsdMerchant)
     await screen.findByText('Add credits')

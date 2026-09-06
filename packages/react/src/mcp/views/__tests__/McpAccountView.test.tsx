@@ -172,7 +172,7 @@ describe('McpAccountView', () => {
     merchantCache.clear()
   })
 
-  it('does not render Seller or Your account cards — identity lives on the shell provenance line', () => {
+  it('does not render Seller or Your account cards', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx({ _config: config }, [], 0)
     renderAccount(ctx)

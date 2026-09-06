@@ -599,6 +599,25 @@ describe('<McpCheckoutView> — PAYG branch', () => {
     expect(transport.activatePlan).toHaveBeenCalledTimes(1) // unchanged
   })
 
+  it('shows Paying as on the payment step and not on the plan or amount step', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    expect(screen.queryByText(/Paying as/)).toBeNull()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue with Pay as you go/ }))
+    })
+    await waitFor(() => expect(screen.getByText(/How many credits/)).toBeTruthy())
+    expect(screen.queryByText(/Paying as/)).toBeNull()
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '18' } })
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+    await waitFor(() => expect(screen.getByTestId('topup-form-stub')).toBeTruthy())
+    expect(screen.getByText('Paying as demo@acme.test')).toBeTruthy()
+  })
+
   it('success step renders the PAYG receipt with no CTA — agent continues from the auto-sent chat message', async () => {
     const onClose = vi.fn()
     renderView({ fromPaywall: true, onClose })
@@ -707,6 +726,13 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     // activate_plan does NOT fire for the recurring branch — the
     // subscription intent replaces the active plan server-side.
     expect(transport.activatePlan).not.toHaveBeenCalled()
+    expect(screen.getByText('Paying as demo@acme.test')).toBeTruthy()
+  })
+
+  it('does not show Paying as on the recurring plan step', async () => {
+    renderView({ fromPaywall: true })
+    await waitFor(() => screen.getByText('Pro'))
+    expect(screen.queryByText(/Paying as/)).toBeNull()
   })
 
   it('BackLink on recurring payment step returns to plan', async () => {

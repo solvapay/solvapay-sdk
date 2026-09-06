@@ -14,8 +14,8 @@ import { formatPrice } from '../../../../utils/format'
 import { resolvePlanPricingOption } from '../../../../utils/planPricing'
 import type { Plan } from '../../../../types'
 import { useHostLocale } from '../../../useHostLocale'
-import { BackLink } from '../../BackLink'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from '../../McpHosted'
+import { McpPaymentHeader } from '../../McpPaymentHeader'
 import type { BootstrapPlanLike, Cx } from '../shared'
 import { inferIncludedUnits, planBillingInterval, planMeterName, shortCycle } from '../shared'
 
@@ -72,9 +72,12 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
       </McpSummaryRail>
 
       <McpHostedBody>
-        <BackLink label="Change plan" onClick={onBack} />
-
-        <h2 className={cx.heading}>Payment</h2>
+        <McpPaymentHeader
+          backLabel="Change plan"
+          onBack={onBack}
+          heading="Payment"
+          headingClassName={cx.heading}
+        />
 
         <PaymentForm.Root
           planRef={planRef}

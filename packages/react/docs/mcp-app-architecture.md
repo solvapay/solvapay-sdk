@@ -35,8 +35,8 @@ Both compound and primitive access are first-class:
 - `<McpApp app={app} />` is the turnkey 5-line entrypoint for any MCP App
   built on `@modelcontextprotocol/ext-apps`. It mounts a `SolvaPayProvider`
   and wraps a thin `<McpAppShell>` around `<McpViewRouter>`.
-- `<McpAppShell>` — in-iframe layout (hosted column / provenance /
-  body / footer) that surface-routes by `bootstrap.view`. There is no
+- `<McpAppShell>` — in-iframe layout (hosted column / body / footer)
+  that surface-routes by `bootstrap.view`. There is no
   tab strip, no identity sidebar, and no user-driven cross-surface
   navigation; the in-session mutations are limited to `account →
   topup` (credits CTA) and `account → checkout` (via "Change plan").
@@ -182,8 +182,8 @@ adapter promise.
 `<McpSellerDetailsCard>`, `<McpCustomerDetailsCard>`, and
 `McpAccountView.hideDetailCards` used to ship as public exports. The
 shell laid them out in a trailing 320px rail behind a 720px container
-query. That dashboard chrome is gone. Identity is one provenance line
-(`{merchant} · Paying as {email}`) via `<McpProvenanceLine>`. Do not
+query. That dashboard chrome is gone. Identity is `<McpPayingAs>`
+(`Paying as {email}`) inside the payment form only. Do not
 reintroduce the cards or `hideDetailCards`.
 
 </details>

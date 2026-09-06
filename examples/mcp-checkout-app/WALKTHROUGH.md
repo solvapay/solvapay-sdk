@@ -82,8 +82,8 @@ What that line hides (from `@solvapay/react/mcp`):
   `useMerchant` / `useProduct` / `usePlans` / `usePaymentMethod` never
   fire a first-mount fetch.
 - `<McpAppShell>` — surface-routed (account / checkout / topup), no tab
-  strip. One provenance line (`{merchant} · Paying as {email}`) instead
-  of a Seller / Your account sidebar.
+  strip. `Paying as {email}` lives inside the payment form
+  (`<McpPayingAs>`), not a Seller / Your account sidebar.
   `Terms · Privacy · Provided by SolvaPay` footer.
 - Paywall narration — merchant paywalled data tools no longer open
   the widget iframe on a gate. Instead the gate's

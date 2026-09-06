@@ -13,8 +13,8 @@ import { MandateText } from '../../../../primitives/MandateText'
 import { TopupForm } from '../../../../primitives/TopupForm'
 import { formatPrice } from '../../../../utils/format'
 import { useHostLocale } from '../../../useHostLocale'
-import { BackLink } from '../../BackLink'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from '../../McpHosted'
+import { McpPaymentHeader } from '../../McpPaymentHeader'
 import type { TopupFormSuccessExtras } from '../../../../types'
 import type { BootstrapPlanLike, Cx } from '../shared'
 
@@ -75,9 +75,12 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
       </McpSummaryRail>
 
       <McpHostedBody>
-        <BackLink label="Change amount" onClick={onBack} />
-
-        <h2 className={cx.heading}>Payment</h2>
+        <McpPaymentHeader
+          backLabel="Change amount"
+          onBack={onBack}
+          heading="Payment"
+          headingClassName={cx.heading}
+        />
 
         <TopupForm.Root
           amount={amountMinor}

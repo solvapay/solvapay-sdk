@@ -11,10 +11,10 @@
  *  - `account`  — current plan, balance, usage, payment method.
  *  - `topup`    — amount picker + Stripe.
  *
- * Identity is a single provenance line (`{merchant} · Paying as {email}`).
- * Fullscreen wraps the surface in a 1000px hosted column. Payment
- * leads a summary rail; management is one column so the split itself
- * signals a transaction.
+ * Identity (`Paying as {email}`) lives inside the payment form, not
+ * the shell. Fullscreen wraps the surface in a 1000px hosted column.
+ * Payment leads a summary rail; management is one column so the
+ * split itself signals a transaction.
  *
  * The legacy `'paywall'` / `'nudge'` surfaces were removed with the
  * text-only paywall refactor — merchant paywall / nudge responses are
@@ -28,11 +28,9 @@ import React, { useState } from 'react'
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
-import { useCustomer } from '../hooks/useCustomer'
 import { McpAccountView, type McpAccountViewProps } from './views/McpAccountView'
 import { McpCheckoutView, type McpCheckoutViewProps } from './views/McpCheckoutView'
 import { McpHostedColumn, McpHostedLayout } from './views/McpHosted'
-import { McpProvenanceLine } from './views/McpProvenanceLine'
 import { McpTopupView, type McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { LegalFooter } from '../primitives/LegalFooter'
@@ -107,14 +105,10 @@ export function McpAppShell({
 
   const showFooter = footer ?? true
   const surface = effectiveView === 'account' ? 'management' : 'payment'
-  const provenance = bootstrap.customer ? (
-    <ShellProvenance merchantName={bootstrap.merchant.displayName} />
-  ) : null
 
   return (
     <div className="solvapay-mcp-shell">
       <McpHostedColumn surface={surface}>
-        {surface === 'payment' ? provenance : null}
         <McpHostedLayout>
           <div className="solvapay-mcp-shell-body">
             <McpViewRouter
@@ -126,7 +120,6 @@ export function McpAppShell({
               onRefreshBootstrap={onRefreshBootstrap}
               onClose={onClose}
             />
-            {surface === 'management' ? provenance : null}
           </div>
         </McpHostedLayout>
       </McpHostedColumn>
@@ -134,11 +127,6 @@ export function McpAppShell({
       {showFooter ? <ShellFooter classNames={classNames} /> : null}
     </div>
   )
-}
-
-function ShellProvenance({ merchantName }: { merchantName: string | undefined }) {
-  const { email } = useCustomer()
-  return <McpProvenanceLine merchantName={merchantName} email={email} />
 }
 
 function ShellFooter({ classNames }: { classNames?: McpViewClassNames }) {

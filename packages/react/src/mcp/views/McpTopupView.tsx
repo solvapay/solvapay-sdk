@@ -46,6 +46,7 @@ import { useStripeProbe } from '../useStripeProbe'
 import { AmountLadder, Eyebrow } from '../primitives'
 import { BackLink } from './BackLink'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from './McpHosted'
+import { McpPaymentHeader } from './McpPaymentHeader'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 const FALLBACK_TOPUP_CURRENCY = 'USD'
@@ -237,7 +238,10 @@ function EmbeddedTopup({
             </section>
           </McpSummaryRail>
           <McpHostedBody>
-        <BackLink label="Change amount" onClick={() => setScreen({ step: 'amount' })} />
+        <McpPaymentHeader
+          backLabel="Change amount"
+          onBack={() => setScreen({ step: 'amount' })}
+        />
         <TopupForm.Root
           amount={committedAmountMinor}
           currency={currency}

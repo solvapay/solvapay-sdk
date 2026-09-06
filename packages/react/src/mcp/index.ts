@@ -148,8 +148,8 @@ export type { McpCheckoutViewProps } from './views/McpCheckoutView'
 export { McpAccountView } from './views/McpAccountView'
 export type { McpAccountViewProps } from './views/McpAccountView'
 
-export { McpProvenanceLine, formatProvenanceLine } from './views/McpProvenanceLine'
-export type { McpProvenanceLineProps } from './views/McpProvenanceLine'
+export { McpPayingAs } from './views/McpPayingAs'
+export type { McpPayingAsProps } from './views/McpPayingAs'
 
 export { McpTopupView } from './views/McpTopupView'
 export type { McpTopupViewProps } from './views/McpTopupView'
@@ -163,8 +163,8 @@ export { McpLimitReached } from './views/McpLimitReached'
 // `manage_account` / `topup`).
 //
 // `McpSellerDetailsCard` / `McpCustomerDetailsCard` and
-// `McpAccountView.hideDetailCards` were removed with the sidebar. The
-// shell paints one provenance line (`McpProvenanceLine`) instead. See
+// `McpAccountView.hideDetailCards` were removed with the sidebar.
+// Identity is `McpPayingAs` inside the payment form. See
 // `packages/react/docs/mcp-app-architecture.md`.
 
 export { resolveMcpClassNames } from './views/types'
