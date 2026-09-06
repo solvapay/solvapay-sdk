@@ -186,6 +186,10 @@ export interface SolvaPayTransport {
     isBusiness: boolean
     businessName?: string
     country?: string
+    customerCountry?: string
+    customerName?: string
+    customerState?: string
+    customerPostalCode?: string
     taxId?: string
     taxIdType?: TaxIdType
   }) => Promise<{ taxBreakdown: TaxBreakdown }>

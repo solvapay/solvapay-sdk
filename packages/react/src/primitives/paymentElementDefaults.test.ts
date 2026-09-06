@@ -5,9 +5,12 @@ import {
 } from './paymentElementDefaults'
 
 describe('withPaymentElementDefaults', () => {
-  it('disables Stripe Link by default when no options are supplied', () => {
+  it('disables Stripe Link and Stripe address collection by default', () => {
     const merged = withPaymentElementDefaults()
-    expect(merged).toEqual({ wallets: { link: 'never' } })
+    expect(merged).toEqual({
+      wallets: { link: 'never' },
+      fields: { billingDetails: { address: 'never' } },
+    })
   })
 
   it('disables Stripe Link by default when options omit the wallets field', () => {
@@ -27,6 +30,21 @@ describe('withPaymentElementDefaults', () => {
   })
 
   it('exposes the defaults as a frozen-shape constant for reuse', () => {
-    expect(DEFAULT_PAYMENT_ELEMENT_OPTIONS).toEqual({ wallets: { link: 'never' } })
+    expect(DEFAULT_PAYMENT_ELEMENT_OPTIONS).toEqual({
+      wallets: { link: 'never' },
+      fields: { billingDetails: { address: 'never' } },
+    })
+  })
+
+  it('keeps address:never when a caller passes an empty fields object', () => {
+    const merged = withPaymentElementDefaults({ fields: {} })
+    expect(merged?.fields?.billingDetails).toEqual({ address: 'never' })
+  })
+
+  it('composes caller billingDetails fields with the default address:never', () => {
+    const merged = withPaymentElementDefaults({
+      fields: { billingDetails: { name: 'never' } },
+    })
+    expect(merged?.fields?.billingDetails).toEqual({ address: 'never', name: 'never' })
   })
 })

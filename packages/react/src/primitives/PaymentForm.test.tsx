@@ -74,12 +74,18 @@ vi.mock('@stripe/stripe-js', () => ({
   loadStripe: vi.fn(() => Promise.resolve({ confirmPayment: vi.fn() })),
 }))
 
-vi.mock('../utils/confirmPayment', () => ({
-  confirmPayment: vi.fn().mockResolvedValue({
-    status: 'succeeded',
-    paymentIntent: { id: 'pi_test_123', status: 'succeeded' },
-  }),
-}))
+vi.mock('../utils/confirmPayment', async () => {
+  const actual = await vi.importActual<typeof import('../utils/confirmPayment')>(
+    '../utils/confirmPayment',
+  )
+  return {
+    ...actual,
+    confirmPayment: vi.fn().mockResolvedValue({
+      status: 'succeeded',
+      paymentIntent: { id: 'pi_test_123', status: 'succeeded' },
+    }),
+  }
+})
 
 vi.mock('../utils/processPaymentResult', () => ({
   reconcilePayment: vi.fn().mockResolvedValue({ status: 'success' }),
@@ -93,7 +99,7 @@ const attachHookMock = vi.hoisted(() => ({
 vi.mock('../hooks/useBusinessDetailsAttach', () => ({
   defaultBusinessDetails: { isBusiness: false },
   useBusinessDetailsAttach: vi.fn(() => ({
-    businessDetails: { isBusiness: false },
+    businessDetails: { isBusiness: false, customerCountry: 'SE' },
     setBusinessDetails: attachHookMock.setBusinessDetails,
     fieldErrors: {},
     taxBreakdown: null,

@@ -610,6 +610,10 @@ export function buildSolvaPayDescriptors(
       isBusiness: z.boolean(),
       businessName: z.string().optional(),
       country: z.string().optional(),
+      customerCountry: z.string().optional(),
+      customerName: z.string().optional(),
+      customerState: z.string().optional(),
+      customerPostalCode: z.string().optional(),
       taxId: z.string().optional(),
       taxIdType: z.enum(['eu_vat', 'gb_vat', 'us_ein']).optional(),
     },
@@ -626,6 +630,14 @@ export function buildSolvaPayDescriptors(
         const businessName =
           typeof args.businessName === 'string' ? args.businessName : undefined
         const country = typeof args.country === 'string' ? args.country : undefined
+        const customerCountry =
+          typeof args.customerCountry === 'string' ? args.customerCountry : undefined
+        const customerName =
+          typeof args.customerName === 'string' ? args.customerName : undefined
+        const customerState =
+          typeof args.customerState === 'string' ? args.customerState : undefined
+        const customerPostalCode =
+          typeof args.customerPostalCode === 'string' ? args.customerPostalCode : undefined
         const taxId = typeof args.taxId === 'string' ? args.taxId : undefined
         const taxIdType =
           args.taxIdType === 'eu_vat' ||
@@ -642,6 +654,10 @@ export function buildSolvaPayDescriptors(
             isBusiness,
             ...(businessName !== undefined && { businessName }),
             ...(country !== undefined && { country }),
+            ...(customerCountry !== undefined && { customerCountry }),
+            ...(customerName !== undefined && { customerName }),
+            ...(customerState !== undefined && { customerState }),
+            ...(customerPostalCode !== undefined && { customerPostalCode }),
             ...(taxId !== undefined && { taxId }),
             ...(taxIdType !== undefined && { taxIdType }),
           },

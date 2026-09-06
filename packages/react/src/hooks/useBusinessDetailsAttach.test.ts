@@ -25,12 +25,26 @@ describe('useBusinessDetailsAttach', () => {
     expect(result.current.requiresBusinessAttach).toBe(false)
   })
 
-  it('debounces auto-attach for consumer details and calls onTaxChange', async () => {
+  it('does not auto-attach until a buyer country is selected', async () => {
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
+
+    renderHook(() =>
+      useBusinessDetailsAttach({
+        processorPaymentId: 'pi_test_123',
+        attachBusinessDetails,
+      }),
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 400))
+    expect(attachBusinessDetails).not.toHaveBeenCalled()
+  })
+
+  it('debounces auto-attach for consumer details and sends customerCountry', async () => {
     const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
     const onTaxChange = vi.fn()
     const refreshElements = vi.fn().mockResolvedValue(undefined)
 
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useBusinessDetailsAttach({
         processorPaymentId: 'pi_test_123',
         attachBusinessDetails,
@@ -38,6 +52,10 @@ describe('useBusinessDetailsAttach', () => {
         refreshElements,
       }),
     )
+
+    act(() => {
+      result.current.setBusinessDetails({ customerCountry: 'SE' })
+    })
 
     await waitFor(
       () => {
@@ -49,20 +67,81 @@ describe('useBusinessDetailsAttach', () => {
     expect(attachBusinessDetails).toHaveBeenCalledWith({
       paymentIntentId: 'pi_test_123',
       isBusiness: false,
+      customerCountry: 'SE',
     })
     expect(onTaxChange).toHaveBeenCalledWith(taxBreakdown)
     expect(refreshElements).toHaveBeenCalled()
   })
 
-  it('does not call refreshElements when not provided', async () => {
+  it('sends customerCountry on the business attach payload', async () => {
     const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
 
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useBusinessDetailsAttach({
         processorPaymentId: 'pi_test_123',
         attachBusinessDetails,
       }),
     )
+
+    act(() => {
+      result.current.setBusinessDetails({
+        isBusiness: true,
+        country: 'SE',
+        customerCountry: 'SE',
+      })
+    })
+
+    await waitFor(
+      () => {
+        expect(attachBusinessDetails).toHaveBeenCalledWith({
+          paymentIntentId: 'pi_test_123',
+          isBusiness: true,
+          country: 'SE',
+          customerCountry: 'SE',
+        })
+      },
+      { timeout: 2000 },
+    )
+  })
+
+  it('preserves customerCountry when toggling off business', async () => {
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
+    const { result } = renderHook(() =>
+      useBusinessDetailsAttach({
+        processorPaymentId: 'pi_test_123',
+        attachBusinessDetails,
+      }),
+    )
+
+    act(() => {
+      result.current.setBusinessDetails({ customerCountry: 'SE' })
+    })
+    act(() => {
+      result.current.setBusinessDetails({ isBusiness: true })
+    })
+    act(() => {
+      result.current.setBusinessDetails({ isBusiness: false })
+    })
+
+    expect(result.current.businessDetails).toEqual({
+      isBusiness: false,
+      customerCountry: 'SE',
+    })
+  })
+
+  it('does not call refreshElements when not provided', async () => {
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
+
+    const { result } = renderHook(() =>
+      useBusinessDetailsAttach({
+        processorPaymentId: 'pi_test_123',
+        attachBusinessDetails,
+      }),
+    )
+
+    act(() => {
+      result.current.setBusinessDetails({ customerCountry: 'SE' })
+    })
 
     await waitFor(() => expect(attachBusinessDetails).toHaveBeenCalled(), { timeout: 2000 })
   })
@@ -101,6 +180,10 @@ describe('useBusinessDetailsAttach', () => {
         attachBusinessDetails,
       }),
     )
+
+    act(() => {
+      result.current.setBusinessDetails({ customerCountry: 'SE' })
+    })
 
     await waitFor(() => expect(result.current.businessDetailsAttached).toBe(true), {
       timeout: 2000,

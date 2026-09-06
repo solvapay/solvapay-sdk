@@ -92,19 +92,7 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
           <TopupForm.Loading />
           <TopupForm.PaymentElement />
           <TopupForm.BusinessDetails.Root className={cx.businessDetails}>
-            <label className={cx.businessToggle}>
-              <TopupForm.BusinessDetails.Toggle />
-              I&apos;m purchasing as a business
-            </label>
-            <TopupForm.BusinessDetails.BusinessName
-              className={cx.businessField}
-              placeholder="Business name"
-            />
-            <TopupForm.BusinessDetails.Country className={cx.businessField} />
-            <TopupForm.BusinessDetails.TaxId
-              className={cx.businessField}
-              placeholder="Tax / VAT ID"
-            />
+            <TopupForm.BusinessDetails.Fields />
           </TopupForm.BusinessDetails.Root>
           <TopupForm.Summary.Rows className={cx.taxSummary} />
           <TopupForm.Error className={cx.error} />

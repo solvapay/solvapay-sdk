@@ -55,7 +55,7 @@ import {
 import { CheckoutSummary as CheckoutSummaryShim } from '../components/CheckoutSummary'
 import { MandateText as MandateTextShim } from '../components/MandateText'
 import { Spinner } from '../components/Spinner'
-import { confirmPayment } from '../utils/confirmPayment'
+import { buildConfirmBillingDetails, confirmPayment } from '../utils/confirmPayment'
 import { reconcilePayment } from '../utils/processPaymentResult'
 import {
   readPaymentIntentClientSecret,
@@ -81,6 +81,7 @@ import type {
   Plan,
 } from '../types'
 import type { ActivatePlanResult } from '@solvapay/server'
+import { isCustomerAddressComplete, resolveBuyerCountry } from '@solvapay/core'
 
 // ---------- helpers ----------
 
@@ -315,15 +316,7 @@ const PaidInner: React.FC<{
   onResult?: PaymentFormProps['onResult']
   onError?: PaymentFormProps['onError']
   onTaxChange?: PaymentFormProps['onTaxChange']
-  attachBusinessDetails?: (params: {
-    paymentIntentId: string
-    customerRef?: string
-    isBusiness: boolean
-    businessName?: string
-    country?: string
-    taxId?: string
-    taxIdType?: import('@solvapay/core').TaxIdType
-  }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>
+  attachBusinessDetails?: import('../hooks/useBusinessDetailsAttach').AttachBusinessDetailsFn
   customerRef?: string
   children?: React.ReactNode
 }> = ({
@@ -497,6 +490,7 @@ const PaidInner: React.FC<{
     paymentInputComplete &&
     (!requireTermsAcceptance || termsAccepted) &&
     (!requiresBusinessAttach || businessDetailsAttached) &&
+    isCustomerAddressComplete(businessDetails) &&
     !businessDetailsAttaching &&
     !isProcessing
 
@@ -540,10 +534,13 @@ const PaidInner: React.FC<{
         clientSecret,
         mode: elementKind === 'card-element' ? 'card-element' : 'payment-element',
         returnUrl,
-        billingDetails: {
-          ...(customerName.trim() && { name: customerName.trim() }),
+        billingDetails: buildConfirmBillingDetails({
+          name: customerName.trim() || customer.name,
           email: customer.email ?? prefillCustomer?.email,
-        },
+          country: resolveBuyerCountry(businessDetails),
+          state: businessDetails.customerState,
+          postalCode: businessDetails.customerPostalCode,
+        }),
         copy,
       })
 

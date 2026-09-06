@@ -713,9 +713,13 @@
 
 [data-solvapay-payment-form-business-details-name],
 [data-solvapay-payment-form-business-details-country],
+[data-solvapay-payment-form-business-details-state],
+[data-solvapay-payment-form-business-details-postal],
 [data-solvapay-payment-form-business-details-tax-id],
 [data-solvapay-topup-form-business-details-name],
 [data-solvapay-topup-form-business-details-country],
+[data-solvapay-topup-form-business-details-state],
+[data-solvapay-topup-form-business-details-postal],
 [data-solvapay-topup-form-business-details-tax-id] {
   width: 100%;
   height: 2.5rem;
@@ -730,9 +734,13 @@
 
 [data-solvapay-payment-form-business-details-name]:focus,
 [data-solvapay-payment-form-business-details-country]:focus,
+[data-solvapay-payment-form-business-details-state]:focus,
+[data-solvapay-payment-form-business-details-postal]:focus,
 [data-solvapay-payment-form-business-details-tax-id]:focus,
 [data-solvapay-topup-form-business-details-name]:focus,
 [data-solvapay-topup-form-business-details-country]:focus,
+[data-solvapay-topup-form-business-details-state]:focus,
+[data-solvapay-topup-form-business-details-postal]:focus,
 [data-solvapay-topup-form-business-details-tax-id]:focus {
   outline: none;
   border-color: var(--solvapay-accent);

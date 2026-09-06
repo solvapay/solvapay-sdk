@@ -571,7 +571,12 @@ body {
 .solvapay-mcp-business-details:not(
     :has([data-solvapay-topup-form-business-details-toggle]:checked)
   ):not(:has([data-solvapay-payment-form-business-details-toggle]:checked))
-  .solvapay-mcp-business-field {
+  :is(
+    [data-solvapay-topup-form-business-details-name],
+    [data-solvapay-topup-form-business-details-tax-id],
+    [data-solvapay-payment-form-business-details-name],
+    [data-solvapay-payment-form-business-details-tax-id]
+  ) {
   display: none;
 }
 

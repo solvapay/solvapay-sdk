@@ -456,6 +456,10 @@ export interface SolvaPayContextValue {
     isBusiness: boolean
     businessName?: string
     country?: string
+    customerCountry?: string
+    customerName?: string
+    customerState?: string
+    customerPostalCode?: string
     taxId?: string
     taxIdType?: import('@solvapay/core').TaxIdType
   }) => Promise<{ taxBreakdown: import('@solvapay/core').TaxBreakdown }>

@@ -90,19 +90,7 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
           <PaymentForm.Loading />
           <PaymentForm.PaymentElement />
           <PaymentForm.BusinessDetails.Root className={cx.businessDetails}>
-            <label className={cx.businessToggle}>
-              <PaymentForm.BusinessDetails.Toggle />
-              I&apos;m purchasing as a business
-            </label>
-            <PaymentForm.BusinessDetails.BusinessName
-              className={cx.businessField}
-              placeholder="Business name"
-            />
-            <PaymentForm.BusinessDetails.Country className={cx.businessField} />
-            <PaymentForm.BusinessDetails.TaxId
-              className={cx.businessField}
-              placeholder="Tax / VAT ID"
-            />
+            <PaymentForm.BusinessDetails.Fields />
           </PaymentForm.BusinessDetails.Root>
           {/* `Rows` (not the bare leaves) so every line is labelled — the leaves
             render amounts only, which is why business checkout showed a naked

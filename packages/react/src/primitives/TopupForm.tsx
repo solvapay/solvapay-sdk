@@ -43,9 +43,13 @@ import { Spinner } from '../components/Spinner'
 import { SolvaPayContext } from '../SolvaPayProvider'
 import { MissingProviderError } from '../utils/errors'
 import {
+  isCustomerAddressComplete,
+  resolveBuyerCountry,
   type BusinessDetailsInput,
   type TaxBreakdown,
 } from '@solvapay/core'
+import { useCustomer } from '../hooks/useCustomer'
+import { buildConfirmBillingDetails, confirmPayment } from '../utils/confirmPayment'
 import type { TopupFormProps } from '../types'
 import {
   readPaymentIntentClientSecret,
@@ -53,7 +57,7 @@ import {
 } from './paymentIntentReturn'
 import {
   useBusinessDetailsAttach,
-  defaultBusinessDetails,
+  type UseBusinessDetailsAttachReturn,
 } from '../hooks/useBusinessDetailsAttach'
 import {
   createBusinessDetailsParts,
@@ -182,6 +186,16 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
 
   const canMountElements = !!(stripePromise && clientSecret && elementsOptions)
 
+  // Owned on Root so country/state/postal survive the OfflineInner → Inner
+  // swap when the PaymentIntent arrives. OfflineInner used to no-op
+  // `setBusinessDetails`, which dropped the buyer country before attach.
+  const businessAttach = useBusinessDetailsAttach({
+    processorPaymentId,
+    attachBusinessDetails,
+    customerRef,
+    onTaxChange,
+  })
+
   const innerCommon = {
     amount,
     currency,
@@ -192,10 +206,8 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     state: dataState,
     onSuccess,
     onError,
-    onTaxChange,
     processTopupPayment,
-    attachBusinessDetails,
-    customerRef,
+    businessAttach,
   }
 
   const shell = (
@@ -231,7 +243,6 @@ type InnerProps = {
   state: TopupFormState
   onSuccess?: TopupFormProps['onSuccess']
   onError?: TopupFormProps['onError']
-  onTaxChange?: TopupFormProps['onTaxChange']
   /**
    * Provider-side backend confirmation hook. When present, `submit`
    * awaits it before firing `onSuccess` so the customer is fully
@@ -253,16 +264,7 @@ type InnerProps = {
     | { status: 'failed' }
     | { status: 'cancelled' }
   >
-  attachBusinessDetails?: (params: {
-    paymentIntentId: string
-    customerRef?: string
-    isBusiness: boolean
-    businessName?: string
-    country?: string
-    taxId?: string
-    taxIdType?: import('@solvapay/core').TaxIdType
-  }) => Promise<{ taxBreakdown: TaxBreakdown }>
-  customerRef?: string
+  businessAttach: UseBusinessDetailsAttachReturn
   children?: React.ReactNode
 }
 
@@ -276,15 +278,14 @@ const Inner: React.FC<InnerProps> = ({
   state,
   onSuccess,
   onError,
-  onTaxChange,
   processTopupPayment,
-  attachBusinessDetails,
-  customerRef,
+  businessAttach,
   children,
 }) => {
   const stripe = useStripe()
   const elements = useElements()
   const copy = useCopy()
+  const customer = useCustomer()
 
   const [paymentInputComplete, setPaymentInputComplete] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -383,12 +384,7 @@ const Inner: React.FC<InnerProps> = ({
     businessDetailsError,
     requiresBusinessAttach,
     runAttach,
-  } = useBusinessDetailsAttach({
-    processorPaymentId,
-    attachBusinessDetails,
-    customerRef,
-    onTaxChange,
-  })
+  } = businessAttach
 
   const isReady = !!(stripe && elements)
   const canSubmit =
@@ -397,6 +393,7 @@ const Inner: React.FC<InnerProps> = ({
     !isProcessing &&
     !!clientSecret &&
     (!requiresBusinessAttach || businessDetailsAttached) &&
+    isCustomerAddressComplete(businessDetails) &&
     !businessDetailsAttaching
 
   const submit = useCallback(async () => {
@@ -420,29 +417,37 @@ const Inner: React.FC<InnerProps> = ({
     setError(null)
     setIsProcessing(true)
 
-    const { error: submitError } = await elements.submit()
-    if (submitError) {
-      const msg = submitError.message || copy.errors.paymentUnexpected
-      setError(msg)
-      setIsProcessing(false)
-      onError?.(new Error(msg))
-      return
-    }
-
-    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+    const result = await confirmPayment({
+      stripe,
       elements,
       clientSecret,
-      confirmParams: { return_url: returnUrl },
-      redirect: 'if_required',
+      returnUrl,
+      billingDetails: buildConfirmBillingDetails({
+        name: customer.name,
+        email: customer.email,
+        country: resolveBuyerCountry(businessDetails),
+        state: businessDetails.customerState,
+        postalCode: businessDetails.customerPostalCode,
+      }),
+      copy,
     })
 
-    if (confirmError) {
-      const msg = confirmError.message || copy.errors.paymentUnexpected
-      setError(msg)
+    if (result.status === 'error' || result.status === 'requires_action' || result.status === 'other') {
+      setError(result.message)
       setIsProcessing(false)
-      onError?.(new Error(msg))
+      if (result.status === 'error') {
+        onError?.(new Error(result.message))
+      }
       return
     }
+
+    if (result.status === 'pending') {
+      setError(result.message)
+      setIsProcessing(false)
+      return
+    }
+
+    const paymentIntent = result.paymentIntent
 
     let creditsAdded: number | undefined
     if (paymentIntent && processTopupPayment) {
@@ -483,6 +488,7 @@ const Inner: React.FC<InnerProps> = ({
     elements,
     clientSecret,
     returnUrl,
+    customer,
     copy,
     onSuccess,
     onError,
@@ -558,11 +564,11 @@ const OfflineInner: React.FC<InnerProps> = ({
   returnUrl,
   outerError,
   state,
+  businessAttach,
   children,
 }) => {
   const noopSubmit = useCallback(async () => {}, [])
   const noopSet = useCallback(() => {}, [])
-  const noopBusinessSet = useCallback(() => {}, [])
   const ctx = useMemo<TopupFormContextValue>(
     () => ({
       amount,
@@ -578,13 +584,13 @@ const OfflineInner: React.FC<InnerProps> = ({
       canSubmit: false,
       error: outerError,
       returnUrl,
-      businessDetails: defaultBusinessDetails,
-      taxBreakdown: null,
-      businessDetailsAttached: false,
-      businessDetailsAttaching: false,
-      businessDetailsError: null,
-      fieldErrors: {},
-      setBusinessDetails: noopBusinessSet,
+      businessDetails: businessAttach.businessDetails,
+      taxBreakdown: businessAttach.taxBreakdown,
+      businessDetailsAttached: businessAttach.businessDetailsAttached,
+      businessDetailsAttaching: businessAttach.businessDetailsAttaching,
+      businessDetailsError: businessAttach.businessDetailsError,
+      fieldErrors: businessAttach.fieldErrors,
+      setBusinessDetails: businessAttach.setBusinessDetails,
       setPaymentInputComplete: noopSet,
       submit: noopSubmit,
     }),
@@ -596,9 +602,9 @@ const OfflineInner: React.FC<InnerProps> = ({
       processorPaymentId,
       outerError,
       returnUrl,
+      businessAttach,
       noopSet,
       noopSubmit,
-      noopBusinessSet,
     ],
   )
   return <TopupFormContext.Provider value={ctx}>{children}</TopupFormContext.Provider>

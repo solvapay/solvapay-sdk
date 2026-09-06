@@ -25,7 +25,10 @@ vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) =>
     React.createElement('div', { 'data-testid': 'stripe-elements' }, children),
   useStripe: () => ({ confirmPayment: stripeMocks.confirmPayment }),
-  useElements: () => ({ getElement: vi.fn(), submit: stripeMocks.submit }),
+  useElements: () => ({
+    getElement: vi.fn().mockReturnValue({ __tag: 'payment' }),
+    submit: stripeMocks.submit,
+  }),
   PaymentElement: (props: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: any
@@ -83,6 +86,18 @@ function Wrap({ value, children }: { value: SolvaPayContextValue; children: Reac
   return React.createElement(SolvaPayContext.Provider, { value }, children)
 }
 
+async function selectBuyerCountry(value = 'SE') {
+  await waitFor(() => {
+    expect(
+      document.querySelector('[data-solvapay-topup-form][data-state="ready"]'),
+    ).toBeTruthy()
+  })
+  const country = await screen.findByRole('combobox', { name: /country/i })
+  await act(async () => {
+    fireEvent.change(country, { target: { value } })
+  })
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   lastPaymentElementOptions.current = undefined
@@ -98,6 +113,7 @@ describe('TopupForm primitive', () => {
       <Wrap value={ctx()}>
         <TopupForm.Root amount={1000} data-testid="root">
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
           <TopupForm.Loading data-testid="loading" />
         </TopupForm.Root>
@@ -181,6 +197,7 @@ describe('TopupForm primitive', () => {
       <Wrap value={ctx()}>
         <TopupForm.Root amount={1000}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton asChild>
             <button data-testid="pay" className="pay-btn">
               Pay $10
@@ -201,6 +218,8 @@ describe('TopupForm primitive', () => {
     await act(async () => {
       fireEvent.click(pe)
     })
+
+    await selectBuyerCountry()
 
     await waitFor(() => expect(screen.getByTestId('pay').getAttribute('data-state')).toBe('idle'))
 
@@ -271,6 +290,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
       </Wrap>,
@@ -284,6 +304,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('payment-element'))
     })
+    await selectBuyerCountry()
     await waitFor(() =>
       expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
     )
@@ -311,6 +332,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
           <TopupForm.Error data-testid="error" />
         </TopupForm.Root>
@@ -323,6 +345,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('payment-element'))
     })
+    await selectBuyerCountry()
     await waitFor(() =>
       expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
     )
@@ -348,6 +371,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
       </Wrap>,
@@ -359,6 +383,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('payment-element'))
     })
+    await selectBuyerCountry()
     await waitFor(() =>
       expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
     )
@@ -388,6 +413,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
       </Wrap>,
@@ -399,6 +425,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('payment-element'))
     })
+    await selectBuyerCountry()
     await waitFor(() =>
       expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
     )
@@ -420,6 +447,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess} onError={onError}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
       </Wrap>,
@@ -431,6 +459,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('payment-element'))
     })
+    await selectBuyerCountry()
     await waitFor(() =>
       expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
     )
@@ -455,6 +484,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
       </Wrap>,
@@ -466,6 +496,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('payment-element'))
     })
+    await selectBuyerCountry()
     await waitFor(() =>
       expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
     )
@@ -493,6 +524,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       <Wrap value={ctx({ processTopupPayment })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
       </Wrap>,
@@ -504,6 +536,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('payment-element'))
     })
+    await selectBuyerCountry()
     await waitFor(() =>
       expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
     )
@@ -530,6 +563,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
       <Wrap value={ctx({ processTopupPayment: undefined })}>
         <TopupForm.Root amount={1000} onSuccess={onSuccess}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.SubmitButton data-testid="submit" />
         </TopupForm.Root>
       </Wrap>,
@@ -541,6 +575,7 @@ describe('TopupForm submit gates onSuccess on processTopupPayment', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('payment-element'))
     })
+    await selectBuyerCountry()
     await waitFor(() =>
       expect(screen.getByTestId('submit').getAttribute('data-state')).toBe('idle'),
     )
@@ -624,6 +659,55 @@ describe('TopupForm business details + summary', () => {
     })
   }
 
+  it('keeps a country chosen during load and attaches once the payment intent lands', async () => {
+    const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
+    let resolveTopup!: (value: {
+      clientSecret: string
+      publishableKey: string
+      processorPaymentId: string
+    }) => void
+    const createTopupPayment = vi.fn().mockImplementation(
+      () =>
+        new Promise<{
+          clientSecret: string
+          publishableKey: string
+          processorPaymentId: string
+        }>(resolve => {
+          resolveTopup = resolve
+        }),
+    )
+
+    render(
+      <Wrap value={businessCtx({ attachBusinessDetails, createTopupPayment })}>
+        <TopupForm.Root amount={1000} currency="USD">
+          <TopupForm.BusinessDetails.Country />
+        </TopupForm.Root>
+      </Wrap>,
+    )
+
+    const country = await screen.findByRole('combobox', { name: /country/i })
+    await act(async () => {
+      fireEvent.change(country, { target: { value: 'SE' } })
+    })
+    expect(country).toHaveValue('SE')
+
+    await act(async () => {
+      resolveTopup({
+        clientSecret: 'pi_topup_secret',
+        publishableKey: 'pk_test_123',
+        processorPaymentId: 'pi_test_123',
+      })
+    })
+
+    await waitFor(() =>
+      expect(attachBusinessDetails).toHaveBeenCalledWith({
+        paymentIntentId: 'pi_test_123',
+        isBusiness: false,
+        customerCountry: 'SE',
+      }),
+    )
+  })
+
   it('auto-attaches consumer details and enables submit once tax breakdown lands', async () => {
     const onTaxChange = vi.fn()
     const attachBusinessDetails = vi.fn().mockResolvedValue({ taxBreakdown })
@@ -632,6 +716,7 @@ describe('TopupForm business details + summary', () => {
       <Wrap value={businessCtx({ attachBusinessDetails })}>
         <TopupForm.Root amount={1000} currency="USD" onTaxChange={onTaxChange}>
           <TopupForm.PaymentElement />
+          <TopupForm.BusinessDetails.Country />
           <TopupForm.Summary.Root>
             <TopupForm.Summary.Total data-testid="total" />
           </TopupForm.Summary.Root>
@@ -640,10 +725,12 @@ describe('TopupForm business details + summary', () => {
       </Wrap>,
     )
 
+    await selectBuyerCountry()
     await waitFor(() => expect(attachBusinessDetails).toHaveBeenCalled())
     expect(attachBusinessDetails).toHaveBeenCalledWith({
       paymentIntentId: 'pi_test_123',
       isBusiness: false,
+      customerCountry: 'SE',
     })
     await waitFor(() => expect(onTaxChange).toHaveBeenCalledWith(taxBreakdown))
 
@@ -681,6 +768,7 @@ describe('TopupForm business details + summary', () => {
       </Wrap>,
     )
 
+    await selectBuyerCountry()
     await waitFor(() => expect(attachBusinessDetails).toHaveBeenCalledTimes(1))
 
     await waitFor(() =>
