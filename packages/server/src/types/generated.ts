@@ -4025,6 +4025,8 @@ export interface operations {
                 kind: 'card'
                 /** @example 4242 */
                 last4: string
+                /** @example true */
+                reusable: boolean
               }
             | {
                 /** @enum {string} */

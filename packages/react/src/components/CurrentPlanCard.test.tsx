@@ -206,6 +206,7 @@ describe('CurrentPlanCard', () => {
       last4: '4242',
       expMonth: 12,
       expYear: 2030,
+      reusable: true,
     }
     const ctx = buildCtx(recurringPurchase, {
       config: { transport: makeTransport({ getPaymentMethod: vi.fn().mockResolvedValue(card) }) },
@@ -427,6 +428,7 @@ describe('CurrentPlanCard', () => {
       last4: '4242',
       expMonth: 12,
       expYear: 2030,
+      reusable: true,
     }
     const ctx = buildCtx(recurringPurchase, {
       config: { transport: makeTransport({ getPaymentMethod: vi.fn().mockResolvedValue(card) }) },
