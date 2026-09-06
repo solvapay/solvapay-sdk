@@ -10,6 +10,7 @@ describe('withPaymentElementDefaults', () => {
     expect(merged).toEqual({
       wallets: { link: 'never' },
       fields: { billingDetails: { address: 'never' } },
+      layout: { type: 'tabs' },
     })
   })
 
@@ -33,7 +34,13 @@ describe('withPaymentElementDefaults', () => {
     expect(DEFAULT_PAYMENT_ELEMENT_OPTIONS).toEqual({
       wallets: { link: 'never' },
       fields: { billingDetails: { address: 'never' } },
+      layout: { type: 'tabs' },
     })
+  })
+
+  it('lets callers override the tabs layout', () => {
+    const merged = withPaymentElementDefaults({ layout: { type: 'accordion' } })
+    expect(merged?.layout).toEqual({ type: 'accordion' })
   })
 
   it('keeps address:never when a caller passes an empty fields object', () => {

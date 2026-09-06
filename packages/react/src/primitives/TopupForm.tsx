@@ -36,7 +36,9 @@ import { Slot } from './slot'
 import { composeEventHandlers } from './composeEventHandlers'
 import { AmountPicker as AmountPickerPrimitive } from './AmountPicker'
 import { LegalFooter } from './LegalFooter'
+import { composeRefs } from './composeRefs'
 import { withPaymentElementDefaults } from './paymentElementDefaults'
+import { useStripeAppearance } from './useStripeAppearance'
 import { useTopup } from '../hooks/useTopup'
 import { useCopy, useLocale } from '../hooks/useCopy'
 import { Spinner } from '../components/Spinner'
@@ -119,6 +121,7 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     returnUrl,
     submitButtonText: _submitButtonText,
     buttonClassName: _buttonClassName,
+    appearance,
     className,
     asChild,
     children,
@@ -165,12 +168,21 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
 
   const finalReturnUrl = returnUrl || (typeof window !== 'undefined' ? window.location.href : '/')
 
+  const [rootEl, setRootEl] = useState<HTMLElement | null>(null)
+  const attachRoot = useCallback((node: HTMLElement | null) => {
+    if (!node) return
+    setRootEl(prev => (prev === node ? prev : node))
+  }, [])
+  const resolvedAppearance = useStripeAppearance(rootEl, appearance)
+
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return undefined
-    return { clientSecret, locale: toStripeElementLocale(locale) }
-  }, [clientSecret, locale])
-
-  const Comp = asChild ? Slot : 'section'
+    return {
+      clientSecret,
+      locale: toStripeElementLocale(locale),
+      ...(resolvedAppearance ? { appearance: resolvedAppearance } : {}),
+    }
+  }, [clientSecret, locale, resolvedAppearance])
 
   const outerError = !hasAmount
     ? copy.errors.configMissingAmount
@@ -184,7 +196,13 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
       ? 'ready'
       : 'loading'
 
-  const canMountElements = !!(stripePromise && clientSecret && elementsOptions)
+  const appearanceReady = appearance !== undefined || rootEl !== null
+  const canMountElements = !!(
+    stripePromise &&
+    clientSecret &&
+    elementsOptions &&
+    appearanceReady
+  )
 
   // Owned on Root so country/state/postal survive the OfflineInner → Inner
   // swap when the PaymentIntent arrives. OfflineInner used to no-op
@@ -210,27 +228,47 @@ const Root = forwardRef<HTMLElement, RootProps>(function TopupFormRoot(props, fo
     businessAttach,
   }
 
-  const shell = (
-    <Comp
-      ref={forwardedRef as React.Ref<HTMLElement>}
+  const rootRef = composeRefs(forwardedRef as React.Ref<HTMLElement>, attachRoot)
+
+  if (asChild) {
+    const slotted = (
+      <Slot
+        ref={rootRef}
+        className={className}
+        data-solvapay-topup-form=""
+        data-state={dataState}
+        {...rest}
+      >
+        {children}
+      </Slot>
+    )
+    if (canMountElements) {
+      return (
+        <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
+          <Inner {...innerCommon}>{slotted}</Inner>
+        </Elements>
+      )
+    }
+    return <OfflineInner {...innerCommon}>{slotted}</OfflineInner>
+  }
+
+  return (
+    <section
+      ref={rootRef}
       className={className}
       data-solvapay-topup-form=""
       data-state={dataState}
       {...rest}
     >
-      {children}
-    </Comp>
+      {canMountElements ? (
+        <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
+          <Inner {...innerCommon}>{children}</Inner>
+        </Elements>
+      ) : (
+        <OfflineInner {...innerCommon}>{children}</OfflineInner>
+      )}
+    </section>
   )
-
-  if (canMountElements) {
-    return (
-      <Elements key={clientSecret} stripe={stripePromise} options={elementsOptions}>
-        <Inner {...innerCommon}>{shell}</Inner>
-      </Elements>
-    )
-  }
-
-  return <OfflineInner {...innerCommon}>{shell}</OfflineInner>
 })
 
 type InnerProps = {
@@ -283,6 +321,8 @@ const Inner: React.FC<InnerProps> = ({
   children,
 }) => {
   const stripe = useStripe()
+  const stripeAvailable = !!stripe
+  const stripeRef = useRef(stripe)
   const elements = useElements()
   const copy = useCopy()
   const customer = useCustomer()
@@ -293,7 +333,14 @@ const Inner: React.FC<InnerProps> = ({
   const returnResumeStarted = useRef(false)
 
   useEffect(() => {
-    if (!stripe || returnResumeStarted.current || typeof window === 'undefined') return
+    stripeRef.current = stripe
+  })
+
+  useEffect(() => {
+    const stripeApi = stripeRef.current
+    if (!stripeAvailable || !stripeApi || returnResumeStarted.current || typeof window === 'undefined') {
+      return
+    }
     const returnClientSecret = readPaymentIntentClientSecret(window.location.search)
     if (!returnClientSecret) return
     returnResumeStarted.current = true
@@ -303,7 +350,7 @@ const Inner: React.FC<InnerProps> = ({
       setIsProcessing(true)
       setError(null)
 
-      const retrieved = await stripe.retrievePaymentIntent(returnClientSecret)
+      const retrieved = await stripeApi.retrievePaymentIntent(returnClientSecret)
       if (cancelled) return
       stripPaymentIntentParams()
 
@@ -315,7 +362,7 @@ const Inner: React.FC<InnerProps> = ({
 
       let paymentIntent = retrieved.paymentIntent
       if (paymentIntent.status === 'requires_action') {
-        const actionResult = await stripe.handleNextAction({ clientSecret: returnClientSecret })
+        const actionResult = await stripeApi.handleNextAction({ clientSecret: returnClientSecret })
         if (cancelled) return
         if (actionResult.error || !actionResult.paymentIntent) {
           setError(copy.errors.paymentRequires3ds)
@@ -372,7 +419,7 @@ const Inner: React.FC<InnerProps> = ({
     return () => {
       cancelled = true
     }
-  }, [stripe, copy, processTopupPayment, onSuccess, onError])
+  }, [stripeAvailable, copy, processTopupPayment, onSuccess, onError])
 
   const {
     businessDetails,

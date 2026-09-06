@@ -546,17 +546,18 @@ body {
 .solvapay-mcp-topup-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
 }
 
 /* Business purchase / VAT — collapsed by default; fields expand inline on toggle. */
 .solvapay-mcp-business-details {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-md);
+  gap: 16px;
+}
+
+.solvapay-mcp-business-details input[type='checkbox'] {
+  accent-color: var(--color-background-inverse);
 }
 
 .solvapay-mcp-business-toggle {

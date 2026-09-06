@@ -14,6 +14,9 @@
  * address fields would ask for country a second time and never reach
  * `customerCountry`.
  *
+ * `layout: tabs` drops Stripe's one-item accordion header when only card
+ * is available, and shows real tabs when there is more than one method.
+ *
  * Callers can always override via the `options` prop on the slot, e.g.
  * `options={{ wallets: { link: 'auto' } }}` to re-enable Link, or
  * `options={{ wallets: { applePay: 'never' } }}` which composes with the
@@ -27,6 +30,7 @@ type PaymentElementOptions = ComponentProps<typeof StripePaymentElement>['option
 export const DEFAULT_PAYMENT_ELEMENT_OPTIONS = {
   wallets: { link: 'never' },
   fields: { billingDetails: { address: 'never' } },
+  layout: { type: 'tabs' },
 } satisfies PaymentElementOptions
 
 /**

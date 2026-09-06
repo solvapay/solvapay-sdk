@@ -670,6 +670,13 @@
   padding: 0;
 }
 
+[data-solvapay-payment-form-business-details-fields],
+[data-solvapay-topup-form-business-details-fields] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .solvapay-checkout-business-toggle,
 [data-solvapay-payment-form-business-details-toggle],
 [data-solvapay-topup-form-business-details-toggle] {

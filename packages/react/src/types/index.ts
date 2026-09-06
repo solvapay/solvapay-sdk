@@ -2,7 +2,7 @@
  * TypeScript type definitions for @solvapay/react
  */
 
-import type { PaymentIntent } from '@stripe/stripe-js'
+import type { Appearance, PaymentIntent } from '@stripe/stripe-js'
 import type {
   ProcessPaymentResult,
   TopupProcessResult,
@@ -182,6 +182,12 @@ export interface TopupFormProps {
   submitButtonText?: string
   className?: string
   buttonClassName?: string
+  /**
+   * Stripe Elements appearance. When omitted, the form reads `--solvapay-*`
+   * tokens from the form root and builds a host-matched appearance. Pass
+   * `null` to restore Stripe's default theme.
+   */
+  appearance?: Appearance | null
 }
 
 export interface PurchaseStatus {
@@ -745,6 +751,12 @@ export interface PaymentFormProps {
   requireTermsAcceptance?: boolean
   /** Fired when business-details attach returns an updated tax breakdown. */
   onTaxChange?: (breakdown: import('@solvapay/core').TaxBreakdown) => void
+  /**
+   * Stripe Elements appearance. When omitted, the form reads `--solvapay-*`
+   * tokens from the form root and builds a host-matched appearance. Pass
+   * `null` to restore Stripe's default theme.
+   */
+  appearance?: Appearance | null
 }
 
 export interface UseTopupAmountSelectorOptions {

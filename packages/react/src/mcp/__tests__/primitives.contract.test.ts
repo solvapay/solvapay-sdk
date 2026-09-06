@@ -237,3 +237,36 @@ describe('MCP tax-summary rail stack', () => {
     )
   })
 })
+
+const WEB_STYLES = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'styles.css'),
+  'utf8',
+)
+
+describe('MCP payment form deboxing', () => {
+  it('keeps .solvapay-mcp-business-details as a borderless stack', () => {
+    const rule = firstRule(STYLES, /\.solvapay-mcp-business-details\s*\{([^}]+)\}/)
+    expect(rule).toMatch(/display:\s*flex/)
+    expect(rule).toMatch(/flex-direction:\s*column/)
+    expect(rule).toMatch(/gap:\s*16px/)
+    expect(rule).not.toMatch(/border:/)
+    expect(rule).not.toMatch(/padding:/)
+  })
+
+  it('widens the top-up form group gap', () => {
+    const rule = firstRule(STYLES, /\.solvapay-mcp-topup-form\s*\{([^}]+)\}/)
+    expect(rule).toMatch(/gap:\s*20px/)
+  })
+
+  it('gives the shared business-details fields section a column gap', () => {
+    expect(WEB_STYLES).toMatch(
+      /\[data-solvapay-payment-form-business-details-fields\],\s*\[data-solvapay-topup-form-business-details-fields\]\s*\{[^}]*gap:/,
+    )
+  })
+
+  it('neutrals the business checkbox with the inverse token', () => {
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-business-details input\[type=['"]checkbox['"]\]\s*\{[^}]*accent-color:\s*var\(--color-background-inverse\)/,
+    )
+  })
+})
