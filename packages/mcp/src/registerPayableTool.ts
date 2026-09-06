@@ -6,7 +6,7 @@
 
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/server'
 import type { CallToolResult } from '@modelcontextprotocol/server'
-import { z } from 'zod'
+import { z, type ZodTypeAny } from 'zod'
 import {
   buildPayableHandler,
   type BuildBootstrapPayloadFn,
@@ -16,6 +16,7 @@ import {
   type SolvaPayToolIcon,
 } from '@solvapay/mcp-core'
 import type { SolvaPay } from '@solvapay/server'
+import { PaywallStructuredContentSchema } from '@solvapay/server'
 import { registerAppTool } from './internal/extAppsServer'
 
 type ZodObjectSchema = ReturnType<typeof z.object>
@@ -54,6 +55,12 @@ export interface RegisterPayableToolOptions<
   title?: string
   description?: string
   handler: PayableHandler<InferHandlerArgs<InputSchema>, TData>
+  /**
+   * Opt-in structured-output schema. Declaring it converts a nicety
+   * into a spec MUST — the server must then return conforming
+   * `structuredContent`. Never auto-derived.
+   */
+  outputSchema?: ZodTypeAny
   buildBootstrap?: BuildBootstrapPayloadFn
   getCustomerRef?: (
     args: Record<string, unknown>,
@@ -79,6 +86,7 @@ export function registerPayableTool<
     title,
     description,
     handler,
+    outputSchema,
     buildBootstrap,
     getCustomerRef,
     meta,
@@ -113,10 +121,16 @@ export function registerPayableTool<
   const hasUiResource =
     hasUi && typeof (mergedUi as { resourceUri?: unknown }).resourceUri === 'string'
 
+  const registeredOutputSchema =
+    outputSchema !== undefined
+      ? z.union([outputSchema, PaywallStructuredContentSchema])
+      : undefined
+
   const toolConfig = {
     ...(title !== undefined ? { title } : {}),
     ...(description !== undefined ? { description } : {}),
     ...(schema !== undefined ? { inputSchema: wrapInputSchema(schema) } : {}),
+    ...(registeredOutputSchema !== undefined ? { outputSchema: registeredOutputSchema } : {}),
     ...(Object.keys(toolMeta).length > 0 ? { _meta: toolMeta } : {}),
     annotations: effectiveAnnotations,
     ...(icons !== undefined && icons.length > 0 ? { icons } : {}),

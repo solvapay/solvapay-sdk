@@ -1,8 +1,7 @@
 /**
  * Phase 3 — live `ui/notifications/tool-result` re-routing.
  *
- * When a host re-invokes one of our intent tools (`upgrade`,
- * `manage_account`, `topup`) against an already-mounted widget, the
+ * When a host re-invokes the `account` viewer against an already-mounted
  * `App` fires a `toolresult` notification with fresh `structuredContent`.
  * `<McpApp>` must pick that up and swap the rendered surface without
  * waiting for an iframe remount.
@@ -12,6 +11,7 @@ import { render, screen, waitFor, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { McpApp, type McpAppFull } from '../McpApp'
+import { VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
 
 beforeEach(() => {
   vi.useRealTimers()
@@ -71,7 +71,7 @@ function makeEventfulApp(opts: {
 describe('<McpApp> — live tool-result subscription', () => {
   it('re-routes the rendered surface when a new tool-result notification arrives', async () => {
     const { app, hostContext, fireToolResult } = makeEventfulApp({
-      initialToolName: 'upgrade',
+      initialToolName: VIEWER_TOOL_NAME,
       initialStructured: {
         view: 'checkout',
         productRef: 'prod_1',
@@ -85,12 +85,11 @@ describe('<McpApp> — live tool-result subscription', () => {
 
     render(<McpApp app={app} views={{ checkout: CheckoutStub, topup: TopupStub }} />)
 
-    // Initial route: checkout (because `upgrade` was the launching tool).
+    // Initial route: checkout from structuredContent.view.
     await screen.findByTestId('checkout-stub')
 
-    // Host re-invokes `topup` against the already-mounted widget.
-    // Simulate the host-context update + tool-result notification.
-    hostContext.toolInfo.tool.name = 'topup'
+    // Host re-invokes account with a topup payload against the widget.
+    hostContext.toolInfo.tool.name = VIEWER_TOOL_NAME
 
     await act(async () => {
       fireToolResult({
@@ -111,7 +110,7 @@ describe('<McpApp> — live tool-result subscription', () => {
 
   it('ignores tool-result notifications for transport tools (e.g. create_payment_intent)', async () => {
     const { app, hostContext, fireToolResult } = makeEventfulApp({
-      initialToolName: 'manage_account',
+      initialToolName: VIEWER_TOOL_NAME,
       initialStructured: {
         view: 'account',
         productRef: 'prod_1',
@@ -133,12 +132,9 @@ describe('<McpApp> — live tool-result subscription', () => {
     const TRANSPORT_TOOLS = [
       'create_payment_intent',
       'process_payment',
-      'create_topup_payment_intent',
-      'cancel_renewal',
-      'reactivate_renewal',
+      'create_hosted_session',
+      'set_renewal',
       'activate_plan',
-      'create_checkout_session',
-      'create_customer_session',
     ]
 
     for (const transportTool of TRANSPORT_TOOLS) {
@@ -168,7 +164,7 @@ describe('<McpApp> — live tool-result subscription', () => {
     // in-flight view — the handler catches the parse failure and
     // leaves the shell alone. `requestTeardown` must NOT fire.
     const { app, hostContext, fireToolResult } = makeEventfulApp({
-      initialToolName: 'upgrade',
+      initialToolName: VIEWER_TOOL_NAME,
       initialStructured: {
         view: 'checkout',
         productRef: 'prod_1',
@@ -183,7 +179,7 @@ describe('<McpApp> — live tool-result subscription', () => {
     render(<McpApp app={app} views={{ checkout: CheckoutStub, topup: TopupStub }} />)
     await screen.findByTestId('checkout-stub')
 
-    hostContext.toolInfo.tool.name = 'topup'
+    hostContext.toolInfo.tool.name = VIEWER_TOOL_NAME
 
     await act(async () => {
       fireToolResult({
@@ -207,7 +203,7 @@ describe('<McpApp> — live tool-result subscription', () => {
     // Without the `bootstrapRef.current === null` guard, every
     // unrelated tool call on the server would tear the widget down.
     const { app, hostContext, fireToolResult } = makeEventfulApp({
-      initialToolName: 'upgrade',
+      initialToolName: VIEWER_TOOL_NAME,
       initialStructured: {
         view: 'checkout',
         productRef: 'prod_1',
@@ -237,7 +233,7 @@ describe('<McpApp> — live tool-result subscription', () => {
   it('falls back to the legacy `ontoolresult` setter when addEventListener is unavailable', async () => {
     let setHandler: ToolResultHandler | undefined
 
-    const hostContext = { toolInfo: { tool: { name: 'upgrade' } } }
+    const hostContext = { toolInfo: { tool: { name: VIEWER_TOOL_NAME } } }
     const app = {
       callServerTool: vi.fn().mockResolvedValue({
         structuredContent: {
@@ -277,7 +273,7 @@ describe('<McpApp> — live tool-result subscription', () => {
     render(<McpApp app={app} views={{ checkout: CheckoutStub, topup: TopupStub }} />)
     await screen.findByTestId('checkout-stub')
 
-    hostContext.toolInfo.tool.name = 'topup'
+    hostContext.toolInfo.tool.name = VIEWER_TOOL_NAME
 
     await act(async () => {
       setHandler?.({

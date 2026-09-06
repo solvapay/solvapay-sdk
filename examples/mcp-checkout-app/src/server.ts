@@ -30,7 +30,6 @@ const RESOURCE_URI = 'ui://mcp-checkout-app/mcp-app.html'
 const REQUIRED_TRANSPORT_TOOLS = [
   'create_payment_intent',
   'process_payment',
-  'create_topup_payment_intent',
   'attach_business_details',
 ] as const
 
@@ -132,7 +131,8 @@ export function createServer(branding?: SolvaPayMerchantBranding): McpServer {
       resourceDomains,
     },
     branding,
-    hideToolsByAudience: ['ui'],
+    hideToolsByAudience:
+      process.env.MCP_VISIBILITY_TEST === '1' ? undefined : ['ui'],
     additionalTools: demoToolsEnabled() ? registerDemoTools : undefined,
     onToolCall: (name, args) => {
       if (process.env.SOLVAPAY_DEBUG === 'true') {

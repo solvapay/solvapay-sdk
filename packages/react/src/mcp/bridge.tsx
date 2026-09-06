@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * MCP bridge — a thin feature-detect wrapper around the two outbound
- * host methods we emit from SolvaPay views:
+ * MCP bridge — a thin feature-detect wrapper around the outbound host
+ * methods we emit from SolvaPay views:
  *
  *   - `app.updateModelContext({ content | structuredContent })` —
  *     Phase 1: committed widget milestones (plan select, cancel /
@@ -12,9 +12,13 @@
  *   - `app.sendMessage({ role, content })` — Phase 5: optional
  *     user-visible follow-ups after success (top-up completed, plan
  *     activated).
+ *   - `app.openLink({ url })` — the only way out of the iframe on hosts
+ *     whose sandbox omits `allow-popups`. Exposed to the view tree as an
+ *     `<ExternalLinkProvider>` rather than a bridge method, so every
+ *     anchor the SDK renders picks it up without knowing about MCP.
  *
  * Views read the bridge via `useMcpBridge()`. Outside a
- * `<McpBridgeProvider>`, both methods resolve to no-ops so the views
+ * `<McpBridgeProvider>`, all methods resolve to no-ops so the views
  * stay reusable in non-MCP embeddings.
  *
  * `<McpBridgeProvider>` is mounted internally by `<McpApp>` wrapping
@@ -24,6 +28,7 @@
  */
 
 import React, { createContext, useContext, useMemo } from 'react'
+import { ExternalLinkProvider, type ExternalLinkOpener } from '../hooks/useExternalLink'
 import { formatPrice } from '../utils/format'
 import { useHostLocale } from './useHostLocale'
 
@@ -41,6 +46,19 @@ export interface McpBridgeAppLike {
     role: 'user'
     content: Array<{ type: 'text'; text: string }>
   }) => Promise<unknown> | void
+  /**
+   * `ui/open-link` — ask the host to open a URL in the user's browser.
+   * On hosts whose iframe sandbox omits `allow-popups` (Claude) this is
+   * the only way out of the frame: `<a target="_blank">` and
+   * `window.open()` are both dropped there without an error.
+   */
+  openLink?: (params: { url: string }) => Promise<{ isError?: boolean } | undefined>
+  /**
+   * Host capabilities resolved during `connect()`. `openLinks` gates
+   * `openLink` — a host can expose the method without declaring
+   * support, and calling it blind would swallow the click.
+   */
+  getHostCapabilities?: () => { openLinks?: unknown } | undefined
 }
 
 export interface NotifyModelContextParams {
@@ -163,7 +181,37 @@ export function McpBridgeProvider({ app, messageOnSuccess, children }: McpBridge
     }
   }, [app, locale, messageOnSuccess])
 
-  return <McpBridgeContext.Provider value={value}>{children}</McpBridgeContext.Provider>
+  const opener = useMemo<ExternalLinkOpener>(
+    () => ({
+      // Capabilities are read at click time, not render time: the
+      // bridge can mount before `connect()` has populated them, and a
+      // render-time snapshot would go stale.
+      canOpen: () =>
+        typeof app.openLink === 'function' && Boolean(app.getHostCapabilities?.()?.openLinks),
+      open: async (url: string): Promise<boolean> => {
+        if (typeof app.openLink !== 'function') return false
+        try {
+          const result = await app.openLink({ url })
+          // `isError` is the host's documented refusal signal (blocked
+          // domain, user cancelled), not a transport failure.
+          return result?.isError !== true
+        } catch (err) {
+          // Reported to the caller as `false` so it can surface the
+          // dead end; logged here because this is the only frame that
+          // still holds the cause.
+          console.error('[solvapay] ui/open-link failed:', err)
+          return false
+        }
+      },
+    }),
+    [app],
+  )
+
+  return (
+    <McpBridgeContext.Provider value={value}>
+      <ExternalLinkProvider opener={opener}>{children}</ExternalLinkProvider>
+    </McpBridgeContext.Provider>
+  )
 }
 
 export function useMcpBridge(): McpBridgeValue {

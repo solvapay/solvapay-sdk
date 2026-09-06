@@ -209,17 +209,17 @@ See [`packages/mcp-fetch/src/handler.ts`](../../packages/mcp-fetch/src/handler.t
 
 Once deployed, any MCP client can list the tools. The demo toolbox is the Goldberg stock-predictor Oracle — two paywalled tools that share a single seeded simulation so their outputs agree for the same ticker:
 
-- `predict_price_chart` — paywalled Oracle: 30 days of history + an N-day forecast with an 80% confidence band as parallel numeric arrays; renders as an interactive line-chart artifact on capable hosts (Claude artifacts, ChatGPT Apps, MCP Inspector).
-- `predict_direction` — paywalled Oracle: up/down verdict + confidence score in `[0.5, 0.95]` for the same horizon; renders as a compact verdict card artifact.
+- `predict_price_chart` — paywalled Oracle: 30 days of history + an N-day forecast with an 80% confidence band as parallel numeric arrays. Declares an `outputSchema`. The narration asks the model to draw a line-chart artifact; no host auto-renders `structuredContent` as a chart.
+- `predict_direction` — paywalled Oracle: up/down verdict + confidence score in `[0.5, 0.95]` for the same horizon. Same seeded model. Declares an `outputSchema`.
 
 Both charge 1 credit per call. When the customer runs out, `content[0].text`
-narrates the current limit, the reason, and "call the `upgrade` tool…" plus a
-https URL. **No iframe opens on a gate** — official MCP Apps / 2026-07-28 tools
-guidance is that `content` is the model and text-only-host lane, and
-`structuredContent` is often hidden from the model when `content` is present.
-The LLM reads that copy and, if the user agrees, calls `upgrade` /
-`topup` / `activate_plan`, which is the only time a UI host mounts the
-SolvaPay widget. Text-only hosts (Claude Code, CLI, n8n) stop at the
+narrates the current limit, the reason, and `account` with the right `view`
+plus a https URL. **No iframe opens on a gate.** Neither `content` nor
+`structuredContent` reaches the model on every host — emit both, each
+self-sufficient. The LLM reads the narration and, if the user agrees, calls
+`account` with `view: "checkout"` / `"topup"` (or `activate_plan` when a
+`planRef` is known), which is the only time a UI host mounts the SolvaPay
+widget. Text-only hosts (Claude Code, CLI, Grok, n8n) stop at the
 narration. See
 [`docs/contributing/mcp-apps-host-contract.md`](../../docs/contributing/mcp-apps-host-contract.md).
 

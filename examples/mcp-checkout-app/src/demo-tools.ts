@@ -11,33 +11,31 @@
  * the handlers for real ones in a few lines to turn this into a
  * production server.
  *
- * Single rendering strategy — host renders the data:
+ * Dual-lane responses — neither field reaches the model on every host:
  *
- * Silent successes put merchant data on `structuredContent` so capable
- * hosts (Claude artifacts, ChatGPT Apps, MCP Inspector) render it
- * natively — a chat bubble for `search_knowledge`, a line-chart
- * artifact for `predict_price_chart`, a verdict card for
- * `predict_direction`. Always also put a human summary on
- * `content[0].text`: official MCP Apps / 2026-07-28 tools guidance is
- * that `content` is the model and text-only-host lane, and
- * `structuredContent` is often hidden from the model when `content`
- * is present. The SolvaPay widget is reserved for the three intent
- * tools (`upgrade`, `manage_account`, `topup`) where the user
- * deliberately asked for a checkout / account / topup UX.
+ * Silent successes put a human summary on `content[0].text` and the
+ * same payload on `structuredContent` plus a trailing JSON text block
+ * (`dataInText`, default on). Claude Desktop chat reads `content` and
+ * ignores `structuredContent`; Claude Code does the reverse and drops
+ * text blocks; Grok Bot keeps only markdown in `content[].text`. No
+ * host auto-renders `structuredContent` as a chart without a declared
+ * `ui://` resource. The SolvaPay widget is reserved for the `account`
+ * viewer (slash prompts `/upgrade`, `/manage_account`, `/topup` remap
+ * onto it with `view`).
  *
  * Paywall responses on exhaustion are plain text narrations that state
- * the current limit, name the recovery intent tool (`upgrade` /
- * `topup` / `activate_plan`), and inline `gate.checkoutUrl` for
- * terminal-first hosts. No iframe opens on a paywall — the LLM reads
- * `content[0].text` and calls the recovery tool, which mounts the
- * widget on UI hosts.
+ * the current limit, name `` `account` `` with the right `view` (or
+ * `` `activate_plan` `` when a `planRef` is known), and inline
+ * `gate.checkoutUrl` for terminal-first hosts. No iframe opens on a
+ * paywall — the LLM reads `content[0].text` and calls the recovery
+ * tool, which mounts the widget on UI hosts.
  *
  * Gate with the `DEMO_TOOLS` env var (defaults to `true` in dev; set to
  * `"false"` when copying this example to your own repo as a template).
  */
 
 import { z } from 'zod'
-import type { AdditionalToolsContext } from '@solvapay/mcp'
+import { VIEWER_TOOL_NAME, type AdditionalToolsContext } from '@solvapay/mcp'
 import type { McpServer } from '@modelcontextprotocol/server'
 
 interface McpServerWithPrompts {
@@ -90,7 +88,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   registerPayable('get_market_quote', {
     title: 'Get market quote (demo)',
     description:
-      'Demo data tool — returns a deterministic fake quote for a ticker symbol. Same paywall semantics as `search_knowledge`: one unit of usage per call, and the gate response narrates the recovery intent tool (`topup` / `upgrade`) inline on `content[0].text`. Use `/get_market_quote` to try the paywall on a second tool.',
+      `Demo data tool — returns a deterministic fake quote for a ticker symbol. Same paywall semantics as \`search_knowledge\`: one unit of usage per call, and the gate response narrates the recovery viewer (\`${VIEWER_TOOL_NAME}\` with \`view\`) inline on \`content[0].text\`. Use \`/get_market_quote\` to try the paywall on a second tool.`,
     schema: { symbol: z.string().min(1).max(8) },
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ symbol }, ctx) => {
@@ -115,7 +113,7 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   registerPayable('query_sales_trends', {
     title: 'Query sales trends (demo)',
     description:
-      'Demo data tool that exercises the `ctx.respond()` API: returns deterministic sales rows for a date range. When the customer is low on credits, the response `content[0].text` carries a plain-text `low-balance` nudge pointing at the `topup` intent tool — hosts render it inline with the data, no widget iframe.',
+      `Demo data tool that exercises the \`ctx.respond()\` API: returns deterministic sales rows for a date range. When the customer is low on credits, the response \`content[0].text\` carries a plain-text \`low-balance\` nudge pointing at \`${VIEWER_TOOL_NAME}\` with view: "topup" — hosts render it inline with the data, no widget iframe.`,
     schema: { range: z.string().min(1) },
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ range }, ctx) => {
@@ -136,31 +134,53 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
           units: results.length,
           nudge: {
             kind: 'low-balance',
-            message:
-              'Running low on credits — call the `topup` tool to add more.',
+            message: `Low on credits. Call \`${VIEWER_TOOL_NAME}\` with view: "topup".`,
           },
         },
       )
     },
   })
 
-  // Oracle tools return pure numeric data via `ctx.respond(payload)`
-  // so capable MCP hosts (Claude artifacts) render a line chart /
-  // verdict card artifact straight off `structuredContent`. Paywall
-  // exhaustion ships a text-only narration via `content[0].text` —
-  // no iframe opens for a gate, the LLM reads the copy and calls the
-  // `upgrade` / `topup` intent tool which mounts the widget.
-  const USAGE_BILLING_SUFFIX =
-    'Usage-based billing: each call debits credits per your active plan. Call `manage_account` to see balance and cost per call; paywall opens when out of balance.'
+  // Oracle tools return numeric arrays via `ctx.respond(payload)` with
+  // a narrated `text` override. `dataInText` (default on) also appends
+  // the serialized payload so hosts that ignore `structuredContent`
+  // still hold the series. No host auto-renders `structuredContent`
+  // as a chart — the narration asks the model to draw the artifact.
+  // Paywall exhaustion ships a text-only narration; the LLM calls
+  // `${VIEWER_TOOL_NAME}` with the right `view` to mount the widget.
+  const USAGE_BILLING_SUFFIX = `Usage-based billing: each call debits credits per your active plan. Call \`${VIEWER_TOOL_NAME}\` with view: "account" to see balance and cost per call; paywall opens when out of balance.`
+
+  const priceChartOutputSchema = z.object({
+    symbol: z.string(),
+    currency: z.string(),
+    asOf: z.string(),
+    days: z.number(),
+    history: z.object({ t: z.array(z.number()), price: z.array(z.number()) }),
+    forecast: z.object({
+      t: z.array(z.number()),
+      price: z.array(z.number()),
+      lower: z.array(z.number()),
+      upper: z.array(z.number()),
+    }),
+  })
+
+  const directionOutputSchema = z.object({
+    symbol: z.string(),
+    days: z.number(),
+    direction: z.enum(['up', 'down']),
+    confidence: z.number(),
+    asOf: z.string(),
+  })
 
   registerPayable('predict_price_chart', {
     title: 'Predict price chart (Oracle demo)',
     description:
-      `Returns recent daily price history and a forecast over the requested \`days\` horizon with an 80% confidence band; always renders as an interactive line chart artifact in the host. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. ${USAGE_BILLING_SUFFIX}`,
+      `Returns recent daily price history and a forecast over the requested \`days\` horizon with an 80% confidence band. Parallel numeric arrays (history.t/price, forecast.t/price/lower/upper) so any chart library binds directly. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),
     },
+    outputSchema: priceChartOutputSchema,
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ symbol, days }, ctx) => {
       const upper = symbol.toUpperCase()
@@ -200,11 +220,12 @@ export function registerDemoTools(ctx: AdditionalToolsContext): void {
   registerPayable('predict_direction', {
     title: 'Predict direction (Oracle demo)',
     description:
-      `Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon; always renders as a compact verdict card artifact in the host. Same seeded model as \`predict_price_chart\`, so the verdict matches the chart for the same symbol. ${USAGE_BILLING_SUFFIX}`,
+      `Returns an up/down verdict with a confidence score in [0, 1] for a ticker over the requested horizon. Same seeded model as \`predict_price_chart\`, so the verdict matches the chart for the same symbol. ${USAGE_BILLING_SUFFIX}`,
     schema: {
       symbol: z.string().min(1).max(8),
       days: z.number().int().min(1).max(60).default(10),
     },
+    outputSchema: directionOutputSchema,
     annotations: { readOnlyHint: true, idempotentHint: true },
     handler: async ({ symbol, days }, ctx) => {
       const upper = symbol.toUpperCase()
@@ -424,7 +445,7 @@ function registerDemoPrompts(server: McpServer): void {
     {
       title: 'Search knowledge (demo)',
       description:
-        'Call the demo `search_knowledge` paywalled tool. Usage-based billing applies per call; call `manage_account` for balance and cost per call.',
+        `Call the demo \`search_knowledge\` paywalled tool. Usage-based billing applies per call; call \`${VIEWER_TOOL_NAME}\` with view: "account" for balance and cost per call.`,
       argsSchema: { query: z.string().optional() },
     },
     async ({ query }: { query?: string }) => ({
@@ -447,7 +468,7 @@ function registerDemoPrompts(server: McpServer): void {
     {
       title: 'Get market quote (demo)',
       description:
-        'Call the demo `get_market_quote` paywalled tool. Usage-based billing applies per call; call `manage_account` for balance and cost per call.',
+        `Call the demo \`get_market_quote\` paywalled tool. Usage-based billing applies per call; call \`${VIEWER_TOOL_NAME}\` with view: "account" for balance and cost per call.`,
       argsSchema: { symbol: z.string().optional() },
     },
     async ({ symbol }: { symbol?: string }) => ({

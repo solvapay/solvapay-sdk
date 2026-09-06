@@ -233,6 +233,7 @@ export function McpViewRouter({
           classNames={classNames}
           onTopup={goTopup}
           onChangePlan={goCheckout}
+          plans={bootstrap.plans}
           hideDetailCards={suppressDetailCards}
         />
       )

@@ -169,6 +169,28 @@ describe('<McpSellerDetailsCard>', () => {
     expect(screen.getByLabelText('Verified seller')).toBeTruthy()
   })
 
+  // DEV-651: mailto: and target=_blank anchors navigate the sandboxed
+  // widget iframe itself (sandbox omits allow-popups / allow-popups-to-escape-sandbox).
+  // Email and support URL must be plain DetailRow text — same treatment as
+  // the customer-card email — so a click cannot leave the checkout surface.
+  it('renders support email and URL as text rows, never as iframe-navigating links', () => {
+    const merchant: Merchant = {
+      displayName: 'Acme',
+      legalName: 'Acme Inc.',
+      supportEmail: 'support@acme.com',
+      supportUrl: 'https://acme.com/support',
+    }
+    const config = seedMerchant(merchant)
+    const ctx = buildCtx({}, [], 0, config)
+    const { container } = renderWith(ctx, <McpSellerDetailsCard />)
+
+    expect(screen.getByText('support@acme.com')).toBeTruthy()
+    expect(screen.getByText('https://acme.com/support')).toBeTruthy()
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(container.querySelector('a[href^="mailto:"]')).toBeNull()
+    expect(container.querySelector('a[target="_blank"]')).toBeNull()
+  })
+
   it('omits the verified badge when showVerifiedBadge={false}', () => {
     const merchant: Merchant = { displayName: 'Acme', legalName: 'Acme Inc.' }
     const config = seedMerchant(merchant)

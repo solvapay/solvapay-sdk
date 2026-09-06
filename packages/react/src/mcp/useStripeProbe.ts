@@ -1,10 +1,18 @@
 /**
  * Probe whether `@stripe/stripe-js` can mount inside the current MCP host
- * sandbox. Compliant hosts (basic-host, ChatGPT, MCPJam) honour the
- * declared `_meta.ui.csp.frameDomains` and Stripe loads normally;
- * non-compliant hosts (Claude today — see anthropics/claude-ai-mcp#40)
+ * sandbox. Hosts that deliver the declared `_meta.ui.csp.frameDomains` to
+ * the widget document (basic-host, ChatGPT) let Stripe load normally.
+ * Reading `frameDomains` is not the same as the emitted policy surviving
+ * to the guest document — MCPJam currently reports a runtime mismatch
+ * between its effective CSP model and the browser's enforced policy.
+ * Non-compliant hosts (Claude today — see anthropics/claude-ai-mcp#40)
  * hardcode `frame-src 'self' blob: data:` and the nested Stripe iframes
  * are refused even though the parent script loads fine.
+ *
+ * A second, harder constraint: sandbox flags are inherited by descendant
+ * frames. A chain missing `allow-same-origin` cannot host Stripe at all
+ * regardless of `frame-src` — Stripe's own inner iframe fails its
+ * `script-src 'self'` when the ancestor omits it.
  *
  * ## Why `ready` alone is a lie on Claude
  *
@@ -126,6 +134,9 @@ export function useStripeProbe(publishableKey: string | null): StripeProbeState 
     // unrelated third-party iframes) is out of scope — we don't want
     // to conflate other CSP noise with a Stripe block.
     const isStripeFrameViolation = (event: SecurityPolicyViolationEvent): boolean => {
+      // Report-only policies do not block the frame; ignore them so we
+      // do not force hosted checkout on a host that can embed Elements.
+      if (event.disposition === 'report') return false
       const directive = event.effectiveDirective || event.violatedDirective || ''
       const blockedURI = event.blockedURI || ''
       const isFrameSrc =
@@ -135,6 +146,16 @@ export function useStripeProbe(publishableKey: string | null): StripeProbeState 
     const onCspViolation = (event: SecurityPolicyViolationEvent) => {
       if (!isStripeFrameViolation(event)) return
       cspBlockedStripeFrame = true
+      const directive = event.effectiveDirective || event.violatedDirective || ''
+      console.warn(
+        '[solvapay-mcp] host CSP refused the Stripe iframe; falling back to hosted checkout.',
+        {
+          blockedURI: event.blockedURI,
+          effectiveDirective: directive,
+          originalPolicy: event.originalPolicy,
+          sourceFile: event.sourceFile,
+        },
+      )
       resolve('blocked')
     }
     // Safe no-op under SSR since the effect short-circuits earlier

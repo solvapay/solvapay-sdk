@@ -11,9 +11,10 @@
  *
  * The plan card has four shapes, picked by the customer's actual state:
  *
- *  - **Active paid purchase** — `<CurrentPlanCard>` with plan name, price,
- *    balance/usage, payment method, and a `<LaunchCustomerPortalButton>`
- *    ("Manage account") below.
+ *  - **Active purchase** — `<CurrentPlanCard>` with plan name, price or
+ *    usage rate, and an Upgrade / Change plan CTA when the catalog has
+ *    alternatives. Paid plans with `amount > 0` also get a
+ *    `<LaunchCustomerPortalButton>` ("Manage account") below.
  *  - **Cancelled-but-active purchase** — `<CancelledPlanNotice>` with
  *    its reactivate button.
  *  - **Pay-as-you-go credits, no plan** — compact balance card with
@@ -31,6 +32,13 @@ import { usePurchaseStatus } from '../../hooks/usePurchaseStatus'
 import { BalanceBadge } from '../../primitives/BalanceBadge'
 import { CancelledPlanNotice } from '../../primitives/CancelledPlanNotice'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
+import {
+  findCatalogPlan,
+  mergePlanSnapshot,
+  resolvePlanActions,
+  resolvePlanShape,
+  type PlanLike,
+} from '../plan-actions'
 import { McpCustomerDetailsCard, McpSellerDetailsCard } from './detail-cards'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
@@ -48,11 +56,17 @@ export interface McpAccountViewProps {
    */
   onTopup?: () => void
   /**
-   * Called when the user clicks "Pick a plan" from the empty state or
-   * "See plans" on the pay-as-you-go state. Wired by the shell to
-   * switch to the checkout surface.
+   * Called when the user clicks "Pick a plan" from the empty state,
+   * "See plans" on the credits-only state, or Upgrade / Change plan
+   * on an active plan. Wired by the shell to switch to checkout.
    */
   onChangePlan?: () => void
+  /**
+   * Product catalog used to decide Upgrade vs Change plan and to
+   * format a PAYG rate when the purchase snapshot is thin. The shell
+   * passes `bootstrap.plans`.
+   */
+  plans?: readonly PlanLike[]
   /**
    * Skip the Customer + Seller detail cards. `<McpAppShell>` sets this
    * when it mounts the persistent right-hand sidebar (whenever
@@ -65,6 +79,7 @@ export function McpAccountView({
   classNames,
   onTopup,
   onChangePlan,
+  plans,
   hideDetailCards,
 }: McpAccountViewProps) {
   const cx = resolveMcpClassNames(classNames)
@@ -81,7 +96,7 @@ export function McpAccountView({
     )
   }
 
-  const hasAnyPlan = hasPaidPurchase || shouldShowCancelledNotice
+  const hasAnyPlan = Boolean(activePurchase) || shouldShowCancelledNotice
   const hasCredits = (credits ?? 0) > 0
   // The portal only meaningfully serves paid plans with a non-zero
   // amount (free plans have nothing to manage in Stripe). The hint
@@ -91,11 +106,30 @@ export function McpAccountView({
     hasPaidPurchase && activePurchase && activePurchase.amount && activePurchase.amount > 0,
   )
 
+  const catalogPlan = findCatalogPlan(plans, activePurchase?.planSnapshot, activePurchase?.planRef)
+  const planForActions = mergePlanSnapshot(activePurchase?.planSnapshot, catalogPlan)
+  const paidPlanCount = (plans ?? []).filter(plan => resolvePlanShape(plan) !== 'free').length
+  const actions = resolvePlanActions({
+    purchase: {
+      planSnapshot: planForActions,
+      hasPaymentMethod: false,
+    },
+    planCount: plans?.length ?? 0,
+    paidPlanCount,
+  })
+  const showChangePlanCta = Boolean(onChangePlan && (actions.upgrade || actions.changePlan))
+
   return (
     <div className="solvapay-mcp-account">
       <div className={cx.card}>
-        {hasPaidPurchase ? (
+        {activePurchase ? (
           <>
+            {/* Surface title, mirroring `Choose a plan` on checkout and
+             *  `Add credits` on topup — every MCP surface names its job
+             *  in the same slot. Rendered here rather than through the
+             *  card's own `<h2>` so it inherits the shared step-heading
+             *  treatment as a direct child of `.solvapay-mcp-card`. */}
+            <h2 className={cx.heading}>{copy.currentPlan.heading}</h2>
             {/* TODO(mcp-host-cancel): inline `<CancelPlanButton>` doesn't fire
              *  reliably inside the MCP host iframe — likely a sandboxed
              *  `window.confirm()` or a `cancel_purchase` tool gap. Until
@@ -108,13 +142,15 @@ export function McpAccountView({
               hideUpdatePaymentButton
               hideCancelButton
               hideCancelledNotice
+              hidePaymentMethod
               showStartDate
-              showReference
+              showFieldLabels
+              plans={plans}
             />
-            {showPortalCta ? (
-              <p className={cx.muted} data-solvapay-mcp-portal-hint="">
-                {copy.currentPlan.portalHint}
-              </p>
+            {showChangePlanCta ? (
+              <button type="button" className={cx.button} onClick={onChangePlan}>
+                {actions.upgrade ? copy.account.upgradeButton : copy.account.changePlanButton}
+              </button>
             ) : null}
           </>
         ) : null}
@@ -157,12 +193,20 @@ export function McpAccountView({
           </div>
         )}
 
+        {/* The hint names the button by label ("Click Manage account
+         *  to …"), so it has to sit with it rather than under the plan
+         *  card with the Change plan CTA in between. */}
         {showPortalCta ? (
-          <LaunchCustomerPortalButton
-            className={cx.button}
-            loadingClassName={cx.button}
-            errorClassName={cx.button}
-          />
+          <>
+            <p className={cx.muted} data-solvapay-mcp-portal-hint="">
+              {copy.currentPlan.portalHint}
+            </p>
+            <LaunchCustomerPortalButton
+              className={cx.button}
+              loadingClassName={cx.button}
+              errorClassName={cx.button}
+            />
+          </>
         ) : null}
       </div>
 

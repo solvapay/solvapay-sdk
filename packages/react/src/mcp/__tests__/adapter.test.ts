@@ -37,8 +37,8 @@ describe('createMcpAppAdapter', () => {
     await transport.createCheckoutSession?.({ productRef: 'prd_api' })
 
     expect(app.callServerTool).toHaveBeenCalledWith({
-      name: MCP_TOOL_NAMES.createCheckoutSession,
-      arguments: { productRef: 'prd_api' },
+      name: MCP_TOOL_NAMES.createHostedSession,
+      arguments: { kind: 'checkout', productRef: 'prd_api' },
     })
   })
 
@@ -51,8 +51,8 @@ describe('createMcpAppAdapter', () => {
     const result = await transport.createCustomerSession?.()
 
     expect(app.callServerTool).toHaveBeenCalledWith({
-      name: MCP_TOOL_NAMES.createCustomerSession,
-      arguments: {},
+      name: MCP_TOOL_NAMES.createHostedSession,
+      arguments: { kind: 'portal' },
     })
     expect(result).toEqual({ customerUrl: 'https://portal.solvapay/test' })
   })

@@ -355,6 +355,41 @@ body {
 
 /* Account view */
 
+/* `<CurrentPlanCard>` ships its own card frame for standalone web
+ * surfaces. Inside the MCP account view the surrounding
+ * `.solvapay-mcp-card` already IS the frame, so the default chrome
+ * nested a second bordered box and doubled the inset (16px card
+ * padding + 16px card padding). Flatten it: the plan facts then align
+ * to the same left edge and 16px gutter as the heading, the CTA, and
+ * every other MCP surface (checkout, topup, success). */
+.solvapay-mcp-account [data-solvapay-current-plan-card] {
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 0;
+  gap: 10px;
+}
+
+/* Type scale inside the flattened plan card, descending from the
+ * surface title so each rank is legible at a glance:
+ * 18 title → 16 plan name → 14 captioned value → 13 muted date
+ * → 11 field label. Left at the sheet defaults the plan name and the
+ * price both land near 18px and compete with the title. */
+.solvapay-mcp-account [data-solvapay-current-plan-name] {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.solvapay-mcp-account [data-solvapay-current-plan-price],
+.solvapay-mcp-account [data-solvapay-current-plan-balance-line] {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.solvapay-mcp-account [data-solvapay-current-plan-field-label] {
+  color: var(--color-text-secondary, #475569);
+}
+
 .solvapay-mcp-account-credit-stack {
   flex: 1;
 }
@@ -498,9 +533,9 @@ body {
   cursor: pointer;
 }
 
-.solvapay-mcp-business-details:not(:has([data-solvapay-topup-form-business-details-toggle]:checked)):not(
-    :has([data-solvapay-payment-form-business-details-toggle]:checked)
-  )
+.solvapay-mcp-business-details:not(
+    :has([data-solvapay-topup-form-business-details-toggle]:checked)
+  ):not(:has([data-solvapay-payment-form-business-details-toggle]:checked))
   .solvapay-mcp-business-field {
   display: none;
 }
@@ -829,6 +864,7 @@ body {
 .solvapay-mcp-detail-value {
   font-size: 14px;
   color: var(--color-text-primary, #0f172a);
+  word-break: break-word;
 }
 
 .solvapay-mcp-detail-value-mono {
@@ -836,17 +872,6 @@ body {
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
   font-size: 12px;
-}
-
-.solvapay-mcp-detail-link {
-  color: var(--color-text-primary, #0f172a);
-  font-size: 14px;
-  text-decoration: none;
-  word-break: break-word;
-}
-
-.solvapay-mcp-detail-link:hover {
-  text-decoration: underline;
 }
 
 .solvapay-mcp-detail-heading-row {

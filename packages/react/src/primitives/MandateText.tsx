@@ -33,6 +33,7 @@ import { usePlan } from '../hooks/usePlan'
 import { useProduct } from '../hooks/useProduct'
 import { useMerchant } from '../hooks/useMerchant'
 import { useCopy, useLocale } from '../hooks/useCopy'
+import { useExternalLinkClick } from '../hooks/useExternalLink'
 import { formatPrice } from '../utils/format'
 import { deriveVariant, type CheckoutVariant } from '../utils/checkoutVariant'
 import { usePlanSelection } from '../components/PlanSelectionContext'
@@ -73,6 +74,7 @@ export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(
 
     const locale = useLocale()
     const copy = useCopy()
+    const handleExternalClick = useExternalLinkClick()
     const planSelection = usePlanSelection()
     const resolvedPlanRef = planRef ?? planSelection?.selectedPlanRef ?? undefined
     const resolvedProductRef = productRef ?? planSelection?.productRef
@@ -127,7 +129,7 @@ export const MandateText = forwardRef<HTMLParagraphElement, MandateTextProps>(
         data-variant={resolvedVariant}
         {...rest}
       >
-        {children ?? linkifyMandateText(text, ctx.merchant, copy)}
+        {children ?? linkifyMandateText(text, ctx.merchant, copy, handleExternalClick)}
       </Comp>
     )
   },
@@ -145,6 +147,7 @@ function linkifyMandateText(
   text: string,
   merchant: MandateContext['merchant'],
   copy: SolvaPayCopy,
+  onLinkClick: (event: React.MouseEvent<HTMLAnchorElement>) => void,
 ): React.ReactNode[] {
   const entries = [
     { url: merchant.termsUrl, label: copy.legalFooter.terms },
@@ -164,6 +167,7 @@ function linkifyMandateText(
         target="_blank"
         rel="noopener noreferrer"
         data-solvapay-mandate-link=""
+        onClick={onLinkClick}
       >
         {match.label || match.url}
       </a>

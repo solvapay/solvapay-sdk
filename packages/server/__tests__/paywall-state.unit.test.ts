@@ -244,30 +244,30 @@ describe('buildGateMessage', () => {
     expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
   })
 
-  it('topup_required names topup tool and inlines checkoutUrl', () => {
+  it('topup_required names account with view topup and inlines checkoutUrl', () => {
     const msg = buildGateMessage(
       { kind: 'topup_required' } satisfies PaywallState,
       gate({ checkoutUrl }),
     )
-    expect(msg).toMatch(/topup/)
+    expect(msg).toMatch(/`account` tool with view: 'topup'/)
     expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
     expect(msg).not.toMatch(/activate_plan/)
   })
 
-  it('upgrade_required names upgrade tool and inlines checkoutUrl with expiry', () => {
+  it('upgrade_required names account with view checkout and inlines checkoutUrl with expiry', () => {
     const msg = buildGateMessage(
       { kind: 'upgrade_required' } satisfies PaywallState,
       gate({ checkoutUrl }),
     )
-    expect(msg).toMatch(/upgrade/)
+    expect(msg).toMatch(/`account` tool with view: 'checkout'/)
     expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
     expect(msg).not.toContain(`Open ${checkoutUrl}`)
     expect(msg).toMatch(/expires in 15 minutes/)
     expect(msg).toContain('docs://solvapay/overview.md')
-    expect(msg).not.toMatch(/topup/)
+    expect(msg).not.toMatch(/view: 'topup'/)
   })
 
-  it('limit_reached states used/total, next-call price, URL, and upgrade', () => {
+  it('limit_reached states used/total, next-call price, URL, and checkout recovery', () => {
     const msg = buildGateMessage(
       { kind: 'limit_reached' } satisfies PaywallState,
       gate({
@@ -283,18 +283,18 @@ describe('buildGateMessage', () => {
     expect(msg).toMatch(/\$0\.02/)
     expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
     expect(msg).toMatch(/expires in 15 minutes/)
-    expect(msg).toMatch(/upgrade/)
+    expect(msg).toMatch(/`account` tool with view: 'checkout'/)
     expect(msg).not.toMatch(/don't have an active plan/)
     expect(msg).not.toMatch(/shown in the panel/)
   })
 
-  it('reactivation_required names manage_account and upgrade tools', () => {
+  it('reactivation_required names account and checkout views', () => {
     const msg = buildGateMessage(
       { kind: 'reactivation_required' } satisfies PaywallState,
       gate({ checkoutUrl }),
     )
-    expect(msg).toMatch(/manage_account/)
-    expect(msg).toMatch(/upgrade/)
+    expect(msg).toMatch(/`account` tool with view: 'account'/)
+    expect(msg).toMatch(/`account` tool with view: 'checkout'/)
   })
 
   it('omits "open {url}" clause when checkoutUrl is empty for non-reactivation states', () => {
@@ -302,7 +302,7 @@ describe('buildGateMessage', () => {
       { kind: 'upgrade_required' } satisfies PaywallState,
       gate({ checkoutUrl: '' }),
     )
-    expect(msg).toMatch(/upgrade/)
+    expect(msg).toMatch(/`account` tool with view: 'checkout'/)
     expect(msg).not.toContain('{checkoutUrl}')
   })
 })
@@ -310,7 +310,7 @@ describe('buildGateMessage', () => {
 describe('buildNudgeMessage', () => {
   const checkoutUrl = 'https://example.test/checkout'
 
-  it('names topup for usage-based low balance nudges', () => {
+  it('names account with view topup for usage-based low balance nudges', () => {
     const msg = buildNudgeMessage(
       { kind: 'topup_required' } satisfies PaywallState,
       limits({
@@ -318,16 +318,16 @@ describe('buildNudgeMessage', () => {
         checkoutUrl,
       }),
     )
-    expect(msg).toMatch(/topup/)
+    expect(msg).toMatch(/`account` tool with view: 'topup'/)
     expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
   })
 
-  it('names upgrade for recurring plans approaching the period cap', () => {
+  it('names account with view checkout for recurring plans approaching the period cap', () => {
     const msg = buildNudgeMessage(
       { kind: 'upgrade_required' } satisfies PaywallState,
       limits({ remaining: 1, checkoutUrl }),
     )
-    expect(msg).toMatch(/upgrade/)
+    expect(msg).toMatch(/`account` tool with view: 'checkout'/)
     expect(msg).toContain(`[Open checkout](${checkoutUrl})`)
   })
 })

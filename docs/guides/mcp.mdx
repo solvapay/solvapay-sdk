@@ -43,7 +43,7 @@ const solvaPay = createSolvaPay({
 
 ### 2. Create the MCP server
 
-`createSolvaPayMcpServer` returns a fully wired `McpServer`. It auto-registers the transport and intent tools (`upgrade`, `manage_account`, `topup`, `activate_plan`), the UI resource referenced by those tools, the slash-command prompts, the narrated `docs://solvapay/overview.md` resource, and the Stripe CSP baseline. You only supply your product and where the UI bundle lives.
+`createSolvaPayMcpServer` returns a fully wired `McpServer`. It auto-registers the transport and intent tools (`account`, `activate_plan`), the UI resource referenced by the `account` viewer, slash-command prompts (`/upgrade`, `/manage_account`, `/topup`, `/activate_plan`), the narrated `docs://solvapay/overview.md` resource, and the MCP Apps CSP baseline. You only supply your product and where the UI bundle lives.
 
 ```typescript
 import path from 'node:path'
@@ -179,7 +179,7 @@ Handlers return the `ctx.respond(data, options?)` envelope — never a raw objec
 
 - **Silent** — `ctx.respond(data)`. The merchant's data is the hero. No iframe, no upsell. This is the 90% path for a paying customer.
 - **Nudge** — `ctx.respond(data, { nudge })`. Data is returned *and* something is worth flagging (low balance, cycle ending). The nudge message is appended to `content[0].text` as a plain-text suffix that names the recovery intent tool. Never blocks.
-- **Gate** — fired automatically by the paywall pre-check when the customer can't be served. The transport emits a text-only narration naming the recovery intent tool (`upgrade` / `topup` / `activate_plan`) with the machine-readable gate on `structuredContent`. No iframe opens for a gate — the model reads the narration and calls the recovery tool, which mounts the UI.
+- **Gate** — fired automatically by the paywall pre-check when the customer can't be served. The transport emits a text-only narration naming `` `account` `` with the appropriate `view` (or `` `activate_plan` `` when a `planRef` is known) with the machine-readable gate on `structuredContent`. No iframe opens for a gate — the model reads the narration and calls the recovery tool, which mounts the UI.
 
 ```typescript
 registerPayable('query_sales_trends', {
@@ -201,7 +201,7 @@ registerPayable('query_sales_trends', {
         units: results.length,
         nudge: {
           kind: 'low-balance',
-          message: 'Running low on credits — call the `topup` tool to add more.',
+          message: 'Running low on credits — call the `account` tool with view: "topup" to add more.',
         },
       },
     )
@@ -219,10 +219,10 @@ The handler `ctx` also exposes `ctx.customer` (`balance`, `remaining`, `withinLi
 
 ## Plan Activation
 
-Plan activation and upgrades are handled by the built-in intent tools that `createSolvaPayMcpServer` registers — you rarely implement them by hand. `activate_plan`, `upgrade`, and `topup` already map to the underlying flows:
+Plan activation and upgrades are handled by the built-in intent tools that `createSolvaPayMcpServer` registers — you rarely implement them by hand. The `account` viewer (with optional `view: 'checkout' | 'account' | 'topup'`) and `activate_plan` already map to the underlying flows:
 
 - **Free plan** — activates immediately; the customer can start calling paid tools.
-- **Usage-based plan** — topup-first: a customer with credits activates immediately, while a zero-balance customer gets `topup_required` and is routed through the `topup` tool. The plan activates as part of the successful top-up.
+- **Usage-based plan** — topup-first: a customer with credits activates immediately, while a zero-balance customer gets `topup_required` and is routed through the `account` viewer with `view: "topup"`. The plan activates as part of the successful top-up.
 - **Recurring / hybrid plan** — returns a hosted `checkoutUrl` when the customer has no balance and no card on file, which the agent surfaces as a checkout link.
 
 Plans are managed on the product in the SolvaPay Console. Customers select a plan during activation and the SDK resolves the correct plan from their purchase automatically.
@@ -336,7 +336,7 @@ app.listen(3006, () => {
 ### Stateless and text-only deployments
 
 - **Stateless edge runtimes** — use `createSolvaPayMcpFetch({ ..., responseMode: 'json' })` from `@solvapay/mcp/fetch` so each request returns a single JSON body (required on Workers / Supabase Edge).
-- **Text-only hosts** — pass `hideToolsByAudience: ['ui']` to keep the LLM-facing `tools/list` narrow to the four intent tools plus your own data tools, while leaving the UI transport tools callable from the SolvaPay iframe. ChatGPT-originated `tools/list` requests are auto-detected and still receive the full catalog.
+- **Text-only hosts** — pass `hideToolsByAudience: ['ui']` to keep the LLM-facing `tools/list` narrow to the two intent tools (`account`, `activate_plan`) plus your own data tools, while leaving the UI transport tools callable from the SolvaPay iframe. ChatGPT-originated `tools/list` requests are auto-detected and still receive the full catalog.
 
 ## Low-level Adapter (escape hatch)
 

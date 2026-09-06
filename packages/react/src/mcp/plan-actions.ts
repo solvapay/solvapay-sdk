@@ -49,6 +49,8 @@ export type ActivationStrategy = 'activate' | 'topup-first' | 'paid-checkout'
  * a snapshot may not. Usage-counting and the rest come out of `options[]`.
  */
 export interface PlanLike {
+  /** Catalog / snapshot identifier used to match a purchase back to a live plan. */
+  reference?: string | null
   /** Composable pricing options: charges, billing cycle, limit, trial. */
   options?: PricingOptionLike[] | null
   /** `false` marks a free plan. Only present on a plan, not a snapshot. */
@@ -56,6 +58,8 @@ export interface PlanLike {
   /** Derived headline amount; only a fallback for snapshots frozen before `options[]`. */
   price?: number | null
   currency?: string | null
+  /** Frozen on snapshots; usage-based when `options[]` is missing. */
+  isMetered?: boolean | null
 }
 
 export interface PurchaseSnapshotLike {
@@ -148,6 +152,39 @@ export interface PlanActionsInput {
   planCount: number
   /** Number of paid plans (price > 0, not free) on the product. */
   paidPlanCount: number
+}
+
+/**
+ * Overlay a live catalog plan onto a (possibly thin) purchase snapshot.
+ * Snapshots frozen without `options[]` collapse PAYG to `{ price: 0 }`,
+ * which `resolvePlanShape` reads as `'free'`. Prefer the snapshot's
+ * `options[]` when present; otherwise take them from the catalog match.
+ */
+export function mergePlanSnapshot(
+  snapshot: PlanLike | null | undefined,
+  catalog: PlanLike | null | undefined,
+): PlanLike | null {
+  if (!snapshot && !catalog) return null
+  if (!catalog) return snapshot ?? null
+  if (!snapshot) return catalog
+  const snapshotHasOptions = Array.isArray(snapshot.options) && snapshot.options.length > 0
+  return {
+    ...catalog,
+    ...snapshot,
+    options: snapshotHasOptions ? snapshot.options : catalog.options,
+    requiresPayment: snapshot.requiresPayment ?? catalog.requiresPayment,
+    isMetered: snapshot.isMetered ?? catalog.isMetered,
+  }
+}
+
+export function findCatalogPlan(
+  plans: readonly PlanLike[] | undefined,
+  snapshot: PlanLike | null | undefined,
+  planRef?: string | null,
+): PlanLike | undefined {
+  const ref = snapshot?.reference ?? planRef
+  if (!ref || !plans) return undefined
+  return plans.find(p => p.reference === ref)
 }
 
 export function resolvePlanActions({

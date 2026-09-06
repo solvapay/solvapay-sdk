@@ -74,3 +74,9 @@ export type {
   ResponseOptions,
   ResponseResult,
 } from '@solvapay/mcp-core'
+export {
+  INTENT_TOOL_NAMES,
+  MCP_PROMPT_NAMES,
+  MCP_TOOL_NAMES,
+  VIEWER_TOOL_NAME,
+} from '@solvapay/mcp-core'

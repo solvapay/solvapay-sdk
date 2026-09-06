@@ -6,7 +6,13 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { createSolvaPay, type SolvaPayClient } from '@solvapay/server'
-import { buildSolvaPayDescriptors, MCP_TOOL_NAMES } from '../src'
+import {
+  buildSolvaPayDescriptors,
+  INTENT_TOOL_NAMES,
+  MCP_PROMPT_NAMES,
+  MCP_TOOL_NAMES,
+  VIEWER_TOOL_NAME,
+} from '../src'
 
 interface MakeSolvaPayOverrides {
   customer?: {
@@ -87,16 +93,11 @@ describe('buildSolvaPayDescriptors', () => {
       [
         MCP_TOOL_NAMES.activatePlan,
         MCP_TOOL_NAMES.attachBusinessDetails,
-        MCP_TOOL_NAMES.cancelRenewal,
-        MCP_TOOL_NAMES.createCheckoutSession,
-        MCP_TOOL_NAMES.createCustomerSession,
+        MCP_TOOL_NAMES.createHostedSession,
         MCP_TOOL_NAMES.createPayment,
-        MCP_TOOL_NAMES.createTopupPayment,
-        MCP_TOOL_NAMES.manageAccount,
+        VIEWER_TOOL_NAME,
         MCP_TOOL_NAMES.processPayment,
-        MCP_TOOL_NAMES.reactivateRenewal,
-        MCP_TOOL_NAMES.topup,
-        MCP_TOOL_NAMES.upgrade,
+        MCP_TOOL_NAMES.setRenewal,
       ].sort(),
     )
 
@@ -104,36 +105,38 @@ describe('buildSolvaPayDescriptors', () => {
       expect(tool.description).toBeTypeOf('string')
       expect(tool.description.length).toBeGreaterThan(10)
       expect(tool.handler).toBeTypeOf('function')
-      expect(tool.meta).toMatchObject({ ui: { resourceUri: 'ui://test/view.html' } })
+      if (tool.name !== MCP_TOOL_NAMES.activatePlan) {
+        expect(tool.meta).toMatchObject({ ui: { resourceUri: 'ui://test/view.html' } })
+      }
     }
 
     // Intent tools (LLM-callable, dual-audience) carry the plain
     // `{ ui: { resourceUri } }` meta with no audience tag.
-    const intentTools = [
-      MCP_TOOL_NAMES.upgrade,
-      MCP_TOOL_NAMES.manageAccount,
-      MCP_TOOL_NAMES.topup,
-      MCP_TOOL_NAMES.activatePlan,
-    ]
-    for (const name of intentTools) {
-      const tool = tools.find(t => t.name === name)
-      expect(tool).toBeTruthy()
-      expect((tool!.meta as Record<string, unknown>).audience).toBeUndefined()
-      const visibility = (tool!.meta as { ui?: { visibility?: readonly string[] } }).ui
-        ?.visibility
-      expect(visibility).not.toEqual(['app'])
-    }
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)
+    expect(viewer).toBeTruthy()
+    expect((viewer!.meta as Record<string, unknown>).audience).toBeUndefined()
+    const viewerVisibility = (viewer!.meta as { ui?: { visibility?: readonly string[] } }).ui
+      ?.visibility
+    expect(viewerVisibility).not.toEqual(['app'])
+    expect((viewer!.meta as { ui?: { resourceUri?: string } }).ui?.resourceUri).toBe(
+      'ui://test/view.html',
+    )
+
+    const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)
+    expect(activate).toBeTruthy()
+    expect((activate!.meta as { ui?: { resourceUri?: string } }).ui?.resourceUri).toBeUndefined()
+    expect((activate!.meta as Record<string, unknown>)['openai/widgetAccessible']).toBe(true)
+    expect((activate!.meta as { ui?: { visibility?: readonly string[] } }).ui?.visibility).not.toEqual(
+      ['app'],
+    )
 
     // UI-transport tools (state-change, no LLM use) all tag themselves.
     const uiOnlyTools = [
       MCP_TOOL_NAMES.attachBusinessDetails,
       MCP_TOOL_NAMES.createPayment,
       MCP_TOOL_NAMES.processPayment,
-      MCP_TOOL_NAMES.createTopupPayment,
-      MCP_TOOL_NAMES.cancelRenewal,
-      MCP_TOOL_NAMES.reactivateRenewal,
-      MCP_TOOL_NAMES.createCheckoutSession,
-      MCP_TOOL_NAMES.createCustomerSession,
+      MCP_TOOL_NAMES.createHostedSession,
+      MCP_TOOL_NAMES.setRenewal,
     ]
     for (const name of uiOnlyTools) {
       const tool = tools.find(t => t.name === name)
@@ -143,6 +146,10 @@ describe('buildSolvaPayDescriptors', () => {
         'app',
       ])
       expect((tool!.meta as Record<string, unknown>)['openai/widgetAccessible']).toBe(true)
+      // ChatGPT resolves model visibility from this legacy string, whose
+      // default is 'public' — without it every transport tool lands in the
+      // model's tool list regardless of `ui.visibility`.
+      expect((tool!.meta as Record<string, unknown>)['openai/visibility']).toBe('private')
       expect(tool!.description).toMatch(/UI-only/i)
     }
 
@@ -150,9 +157,10 @@ describe('buildSolvaPayDescriptors', () => {
     expect(resource.mimeType).toBe('text/html;profile=mcp-app')
     expect(resource.readHtml).toBeTypeOf('function')
     expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
+    expect(resource.csp.resourceDomains).toContain('https://assets.claude.ai')
   })
 
-  it('marks all intent tools as read-only view openers', () => {
+  it('marks the viewer intent tool as read-only', () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),
       productRef: 'prd_test',
@@ -161,15 +169,16 @@ describe('buildSolvaPayDescriptors', () => {
       publicBaseUrl: 'https://example.com',
     })
 
-    for (const name of [MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.topup, MCP_TOOL_NAMES.manageAccount]) {
-      const tool = tools.find(t => t.name === name)!
-      expect(tool.annotations).toMatchObject({
-        openWorldHint: true,
-        readOnlyHint: true,
-        idempotentHint: true,
-      })
-      expect(tool.annotations?.destructiveHint).toBeUndefined()
-    }
+    const tool = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    expect(tool.annotations).toMatchObject({
+      openWorldHint: true,
+      readOnlyHint: true,
+      idempotentHint: true,
+    })
+    expect(tool.annotations?.destructiveHint).toBeUndefined()
+
+    const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)!
+    expect(activate.annotations?.readOnlyHint).toBe(false)
   })
 
   it('does not register tools removed/renamed in the Phase 2 trim', () => {
@@ -208,7 +217,7 @@ describe('buildSolvaPayDescriptors', () => {
     }
   })
 
-  it('filters intent tools by views option', () => {
+  it('filters the viewer view enum by views option without dropping the tool', async () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),
       productRef: 'prd_test',
@@ -218,9 +227,14 @@ describe('buildSolvaPayDescriptors', () => {
       views: ['checkout'],
     })
     const names = tools.map(t => t.name)
-    expect(names).toContain(MCP_TOOL_NAMES.upgrade)
-    expect(names).not.toContain(MCP_TOOL_NAMES.manageAccount)
-    expect(names).not.toContain(MCP_TOOL_NAMES.topup)
+    expect(names).toContain(VIEWER_TOOL_NAME)
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const allowed = await viewer.handler({ view: 'checkout' }, {})
+    expect(allowed.isError).not.toBe(true)
+    const blocked = await viewer.handler({ view: 'account' }, {})
+    expect(blocked.isError).toBe(true)
+    const sc = blocked.structuredContent as Record<string, unknown>
+    expect(sc.status).toBe(400)
   })
 
   it('rejects non-http publicBaseUrl', () => {
@@ -284,6 +298,7 @@ describe('buildSolvaPayDescriptors', () => {
     expect(resource.csp.connectDomains).toContain('https://api-dev.solvapay.com')
     // Baseline Stripe origins stay intact.
     expect(resource.csp.resourceDomains).toContain('https://js.stripe.com')
+    expect(resource.csp.resourceDomains).toContain('https://assets.claude.ai')
     expect(resource.csp.connectDomains).toContain('https://api.stripe.com')
   })
 
@@ -335,6 +350,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     toolName: string,
     overrides: MakeSolvaPayOverrides = {},
     extra?: Parameters<ReturnType<typeof buildSolvaPayDescriptors>['tools'][number]['handler']>[1],
+    args: Record<string, unknown> = {},
   ) {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(overrides),
@@ -345,11 +361,11 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     })
     const tool = tools.find(t => t.name === toolName)
     if (!tool) throw new Error(`tool ${toolName} not registered`)
-    return tool.handler({}, extra)
+    return tool.handler(args, extra)
   }
 
   it('includes merchant, product, plans on every intent bootstrap', async () => {
-    const result = await invokeOpen(MCP_TOOL_NAMES.upgrade)
+    const result = await invokeOpen(VIEWER_TOOL_NAME, {}, undefined, { view: 'checkout' })
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.view).toBe('checkout')
     expect(sc.productRef).toBe('prd_test')
@@ -359,7 +375,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
   })
 
   it('omits customer snapshot when unauthenticated', async () => {
-    const result = await invokeOpen(MCP_TOOL_NAMES.upgrade)
+    const result = await invokeOpen(VIEWER_TOOL_NAME, {}, undefined, { view: 'checkout' })
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.customer).toBeNull()
     // Text hosts still need a pasteable checkout URL without a signed-in
@@ -370,7 +386,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
 
   it('includes customer snapshot when customer_ref is on authInfo', async () => {
     const result = await invokeOpen(
-      MCP_TOOL_NAMES.manageAccount,
+      VIEWER_TOOL_NAME,
       {
         customer: {
           customerRef: 'cus_42',
@@ -388,8 +404,10 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
         paymentMethod: { kind: 'card', brand: 'visa', last4: '4242' },
       },
       { authInfo: { extra: { customer_ref: 'cus_42' } } },
+      { view: 'account' },
     )
     const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.view).toBe('account')
     const customer = sc.customer as Record<string, unknown>
     expect(customer).not.toBeNull()
     expect(customer.ref).toBe('cus_42')
@@ -422,17 +440,24 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
       readHtml: async () => '<html></html>',
       publicBaseUrl: 'https://example.com',
     })
-    const open = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)!
-    const result = await open.handler({}, {})
+    const open = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const result = await open.handler({ view: 'checkout' }, {})
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.plans).toEqual([])
   })
 
-  it('activate_plan without planRef returns the picker bootstrap (view: checkout)', async () => {
-    const result = await invokeOpen(MCP_TOOL_NAMES.activatePlan, {}, undefined)
+  it('activate_plan without planRef returns 400', async () => {
+    const result = await invokeOpen(MCP_TOOL_NAMES.activatePlan, {}, undefined, {})
+    expect(result.isError).toBe(true)
+    const sc = result.structuredContent as Record<string, unknown>
+    expect(sc.status).toBe(400)
+    expect(String(sc.error)).toMatch(/planRef/)
+  })
+
+  it('account without view derives checkout for unauthenticated callers', async () => {
+    const result = await invokeOpen(VIEWER_TOOL_NAME)
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.view).toBe('checkout')
-    expect(sc.plans).toBeTruthy()
   })
 
   it('returns a recovery-oriented tool error when getMerchant 404s', async () => {
@@ -464,8 +489,8 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
       readHtml: async () => '<html></html>',
       publicBaseUrl: 'https://example.com',
     })
-    const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)!
-    const result = await upgrade.handler({}, {})
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const result = await viewer.handler({ view: 'checkout' }, {})
 
     expect(result.isError).toBe(true)
     const sc = result.structuredContent as Record<string, unknown>
@@ -478,7 +503,7 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
     expect(text.trim().startsWith('{')).toBe(false)
   })
 
-  it('activate_plan without planRef errors when checkout view is disabled', async () => {
+  it('account rejects a disabled view with 400', async () => {
     const { tools } = buildSolvaPayDescriptors({
       solvaPay: makeSolvaPay(),
       productRef: 'prd_test',
@@ -487,12 +512,12 @@ describe('buildSolvaPayDescriptors → bootstrap payload', () => {
       publicBaseUrl: 'https://example.com',
       views: ['account'],
     })
-    const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)!
-    const result = await activate.handler({}, {})
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const result = await viewer.handler({ view: 'checkout' }, {})
     expect(result.isError).toBe(true)
     const sc = result.structuredContent as Record<string, unknown>
     expect(sc.status).toBe(400)
-    expect(String(sc.error)).toMatch(/planRef/)
+    expect(String(sc.error)).toMatch(/checkout/)
   })
 })
 
@@ -519,37 +544,27 @@ describe('buildSolvaPayDescriptors → _meta["openai/widgetSessionId"] stamping'
     return typeof value === 'string' ? value : undefined
   }
 
-  it.each([MCP_TOOL_NAMES.topup, MCP_TOOL_NAMES.upgrade, MCP_TOOL_NAMES.manageAccount])(
-    '%s stamps a fresh UUID per invocation',
-    async toolName => {
+  it('account stamps a fresh UUID per invocation', async () => {
       const { tools } = buildBundle()
-      const tool = tools.find(t => t.name === toolName)!
+      const tool = tools.find(t => t.name === VIEWER_TOOL_NAME)!
 
-      const first = await tool.handler({}, {})
-      const second = await tool.handler({}, {})
+      const first = await tool.handler({ view: 'checkout' }, {})
+      const second = await tool.handler({ view: 'account' }, {})
 
       const firstId = metaKey(first)
       const secondId = metaKey(second)
       expect(firstId).toMatch(UUID_RE)
       expect(secondId).toMatch(UUID_RE)
       expect(firstId).not.toBe(secondId)
-    },
-  )
+  })
 
   it("preserves widgetSessionId when mode: 'text' strips _meta.ui", async () => {
     const { tools } = buildBundle()
-    const upgrade = tools.find(t => t.name === MCP_TOOL_NAMES.upgrade)!
-    const result = await upgrade.handler({ mode: 'text' }, {})
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)!
+    const result = await viewer.handler({ mode: 'text', view: 'checkout' }, {})
     expect(metaKey(result)).toMatch(UUID_RE)
     // ui ref must be stripped in text mode (existing contract).
     expect((result._meta as Record<string, unknown> | undefined)?.ui).toBeUndefined()
-  })
-
-  it('activate_plan picker bootstrap stamps widgetSessionId', async () => {
-    const { tools } = buildBundle()
-    const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)!
-    const result = await activate.handler({}, {})
-    expect(metaKey(result)).toMatch(UUID_RE)
   })
 })
 
@@ -573,7 +588,7 @@ describe('create_payment_intent descriptor', () => {
     expect(tool).toBeTruthy()
 
     await tool!.handler(
-      { planRef: 'pln_pro', productRef: 'prd_test', currency: 'EUR' },
+      { purpose: 'plan', planRef: 'pln_pro', productRef: 'prd_test', currency: 'EUR' },
       { authInfo: { extra: { customer_ref: 'cus_test' } } },
     )
 
@@ -588,5 +603,84 @@ describe('create_payment_intent descriptor', () => {
     )
 
     coreSpy.mockRestore()
+  })
+})
+
+describe('buildSolvaPayDescriptors → intent-tool description contract', () => {
+  function buildTools() {
+    return buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    }).tools
+  }
+
+  const VIEWER_TRIGGERS = [
+    'upgrade',
+    'change plan',
+    'buy',
+    'subscribe',
+    'my account',
+    'current plan',
+    'cancel',
+    'billing',
+    'top up',
+    'add credits',
+    'buy credits',
+  ]
+
+  it('leads each intent tool with trigger phrases and drops duplicated tails', () => {
+    const tools = buildTools()
+    for (const name of INTENT_TOOL_NAMES) {
+      const tool = tools.find(t => t.name === name)
+      expect(tool, name).toBeTruthy()
+      const description = tool!.description
+      expect(description).not.toMatch(/Also available/i)
+      expect(description).not.toMatch(/On UI hosts/i)
+      expect(description).not.toMatch(/Default `mode:/)
+      if (name === VIEWER_TOOL_NAME) {
+        for (const phrase of VIEWER_TRIGGERS) {
+          expect(description.toLowerCase()).toContain(phrase)
+        }
+      } else {
+        expect(description.toLowerCase()).toContain('activate')
+      }
+    }
+  })
+
+  it('puts MODE_HINT on the viewer mode param, not the tool description', () => {
+    const tools = buildTools()
+    const viewer = tools.find(t => t.name === VIEWER_TOOL_NAME)
+    const mode = viewer?.inputSchema.mode
+    expect(mode, 'account.inputSchema.mode').toBeTruthy()
+    expect(mode!.description).toMatch(/mode: 'auto'/)
+    expect(mode!.description).toMatch(/mode: 'text'/)
+    expect(mode!.description).toMatch(/mode: 'ui'/)
+    const activate = tools.find(t => t.name === MCP_TOOL_NAMES.activatePlan)
+    expect(activate?.inputSchema.mode).toBeUndefined()
+  })
+
+  it('steers UI-only tools at every intent tool, including topup', () => {
+    const tools = buildTools()
+    const payment = tools.find(t => t.name === MCP_TOOL_NAMES.createPayment)
+    expect(payment?.description).toMatch(/UI-only/)
+    for (const name of INTENT_TOOL_NAMES) {
+      expect(payment?.description).toContain(`\`${name}\``)
+    }
+  })
+
+  it('advertises two intent tools on the overview resource', () => {
+    const { docsResources } = buildSolvaPayDescriptors({
+      solvaPay: makeSolvaPay(),
+      productRef: 'prd_test',
+      resourceUri: 'ui://test/view.html',
+      readHtml: async () => '<html></html>',
+      publicBaseUrl: 'https://example.com',
+    })
+    const overview = docsResources?.find(r => r.uri === 'docs://solvapay/overview.md')
+    expect(overview?.description).toMatch(/two intent tools/)
+    expect(overview?.description).not.toMatch(/five intent tools/)
   })
 })

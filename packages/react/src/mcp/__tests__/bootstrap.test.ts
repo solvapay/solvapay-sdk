@@ -9,7 +9,7 @@ import {
   waitForInitialToolResult,
 } from '../bootstrap'
 import type { McpAppBootstrapLike, ToolResultNotificationParams } from '../bootstrap'
-import { SOLVAPAY_BOOTSTRAP_URI } from '@solvapay/mcp-core'
+import { SOLVAPAY_BOOTSTRAP_URI, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
 
 function mockApp(opts: {
   toolName?: string
@@ -29,7 +29,7 @@ function mockApp(opts: {
 }
 
 describe('fetchMcpBootstrap', () => {
-  it('routes to upgrade by default and returns the bootstrap payload', async () => {
+  it('routes to account by default and returns the bootstrap payload', async () => {
     const app = mockApp({
       structuredContent: {
         productRef: 'prod_123',
@@ -41,7 +41,7 @@ describe('fetchMcpBootstrap', () => {
     const result = await fetchMcpBootstrap(app)
 
     expect(app.callServerTool).toHaveBeenCalledWith({
-      name: 'upgrade',
+      name: VIEWER_TOOL_NAME,
       arguments: {},
     })
     expect(result).toEqual({
@@ -56,10 +56,11 @@ describe('fetchMcpBootstrap', () => {
     })
   })
 
-  it('infers view from host toolInfo.tool.name', async () => {
+  it('calls account for intent host entries and uses structuredContent.view', async () => {
     const app = mockApp({
-      toolName: 'topup',
+      toolName: VIEWER_TOOL_NAME,
       structuredContent: {
+        view: 'topup',
         productRef: 'prod_123',
         returnUrl: 'https://example.test/return',
       },
@@ -68,14 +69,14 @@ describe('fetchMcpBootstrap', () => {
     const result = await fetchMcpBootstrap(app)
 
     expect(app.callServerTool).toHaveBeenCalledWith({
-      name: 'topup',
+      name: VIEWER_TOOL_NAME,
       arguments: {},
     })
     expect(result.view).toBe('topup')
     expect(result.stripePublishableKey).toBeNull()
   })
 
-  it('falls back to checkout when the host invoked activate_plan (the picker now lives in checkout)', async () => {
+  it('falls back to checkout when the host invoked activate_plan (transport tool)', async () => {
     const app = mockApp({
       toolName: 'activate_plan',
       structuredContent: {
@@ -166,10 +167,10 @@ describe('fetchMcpBootstrapViaResource', () => {
   }
 
   it('parses bootstrap JSON and forces view from host context', async () => {
-    const app = mockResourceApp({ toolName: 'topup' })
+    const app = mockResourceApp({ toolName: VIEWER_TOOL_NAME })
     const result = await fetchMcpBootstrapViaResource(app)
     expect(app.readServerResource).toHaveBeenCalledWith({ uri: SOLVAPAY_BOOTSTRAP_URI })
-    expect(result.view).toBe('topup')
+    expect(result.view).toBe('account')
     expect(result.productRef).toBe('prod_123')
   })
 
@@ -231,22 +232,21 @@ describe('classifyHostEntry', () => {
     }
   }
 
-  it('classifies intent-tool entries with their matching view', () => {
-    expect(classifyHostEntry(mkApp('upgrade'))).toEqual({
+  it('classifies the viewer tool as intent', () => {
+    expect(classifyHostEntry(mkApp(VIEWER_TOOL_NAME))).toEqual({
       kind: 'intent',
-      toolName: 'upgrade',
-      view: 'checkout',
-    })
-    expect(classifyHostEntry(mkApp('manage_account'))).toEqual({
-      kind: 'intent',
-      toolName: 'manage_account',
+      toolName: VIEWER_TOOL_NAME,
       view: 'account',
     })
-    expect(classifyHostEntry(mkApp('topup'))).toEqual({
-      kind: 'intent',
-      toolName: 'topup',
-      view: 'topup',
-    })
+  })
+
+  it('classifies legacy intent tool names as other', () => {
+    for (const legacy of ['upgrade', 'manage_account', 'topup']) {
+      expect(classifyHostEntry(mkApp(legacy))).toEqual({
+        kind: 'other',
+        toolName: legacy,
+      })
+    }
   })
 
   it('classifies merchant-registered tools as `other` (data-tool entries no longer open the widget)', () => {
@@ -281,22 +281,17 @@ describe('isTransportToolName / SOLVAPAY_TRANSPORT_TOOL_NAMES', () => {
     for (const name of [
       'create_payment_intent',
       'process_payment',
-      'create_topup_payment_intent',
-      'cancel_renewal',
-      'reactivate_renewal',
+      'create_hosted_session',
+      'set_renewal',
       'activate_plan',
-      'create_checkout_session',
-      'create_customer_session',
     ]) {
       expect(isTransportToolName(name)).toBe(true)
       expect(SOLVAPAY_TRANSPORT_TOOL_NAMES.has(name)).toBe(true)
     }
   })
 
-  it('excludes intent tools and merchant-registered tools', () => {
-    for (const name of ['upgrade', 'manage_account', 'topup']) {
-      expect(isTransportToolName(name)).toBe(false)
-    }
+  it('excludes the viewer intent tool and merchant-registered tools', () => {
+    expect(isTransportToolName(VIEWER_TOOL_NAME)).toBe(false)
     for (const name of ['search_knowledge', 'query_sales_trends', 'some_other_tool']) {
       expect(isTransportToolName(name)).toBe(false)
     }
@@ -339,7 +334,6 @@ describe('waitForInitialToolResult', () => {
     const { app, fire } = mkEventfulApp('search_knowledge')
     const promise = waitForInitialToolResult(app, { timeoutMs: 1000 })
 
-    // Fire in the next microtask so the helper has registered.
     await Promise.resolve()
     fire({
       structuredContent: {
@@ -362,8 +356,6 @@ describe('waitForInitialToolResult', () => {
     const promise = waitForInitialToolResult(app, { timeoutMs: 1000 })
     await Promise.resolve()
 
-    // Swap the host context's tool name to a transport tool, fire
-    // there, then swap back and fire the real paywall.
     const hostContext: { toolInfo: { tool: { name: string } } } = {
       toolInfo: { tool: { name: 'create_payment_intent' } },
     }
@@ -430,4 +422,3 @@ describe('waitForInitialToolResult', () => {
     await expect(promise).rejects.toThrow(/productRef/)
   })
 })
-

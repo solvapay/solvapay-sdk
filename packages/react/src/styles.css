@@ -1869,6 +1869,26 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Captioned value pair (`showFieldLabels`). The label rides directly
+ * above its value, so the pair needs a tighter gap than the card's
+ * line-to-line rhythm — otherwise the caption reads as a sibling fact
+ * rather than as the value's label. */
+[data-solvapay-current-plan-field],
+.solvapay-current-plan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+[data-solvapay-current-plan-field-label],
+.solvapay-current-plan-field-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--solvapay-muted-foreground);
+}
+
 [data-solvapay-current-plan-next-billing],
 [data-solvapay-current-plan-expires],
 .solvapay-current-plan-date-line {
