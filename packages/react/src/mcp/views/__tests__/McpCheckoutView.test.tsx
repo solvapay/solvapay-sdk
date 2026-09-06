@@ -996,13 +996,13 @@ describe('<McpCheckoutView> — CSS hooks', () => {
     expect(popular).toHaveLength(1)
   })
 
-  it('PaygPaymentStep renders order-summary + save-card CSS hooks', async () => {
+  it('PaygPaymentStep renders order-summary CSS hooks', async () => {
     const { container } = await advanceToPaygPayment()
     expect(container.querySelector('.solvapay-mcp-checkout-order-summary')).toBeTruthy()
     expect(
       container.querySelectorAll('.solvapay-mcp-checkout-order-summary-row').length,
     ).toBeGreaterThan(0)
-    expect(container.querySelector('.solvapay-mcp-checkout-save-card')).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-checkout-save-card')).toBeNull()
   })
 
   it('PaygPaymentStep leads with a 340px summary rail before the action column', async () => {

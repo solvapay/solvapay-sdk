@@ -12,13 +12,60 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import React from 'react'
 
+vi.mock('../../../primitives/AutoRecharge', () => {
+  const Root: React.FC<{
+    deferCardSetup?: boolean
+    onPendingConfig?: (payload: {
+      enabled: boolean
+      triggerType: 'balance'
+      thresholdAmountMajor: number
+      topupAmountMajor: number
+      currency: string
+    }) => void
+    children?: React.ReactNode
+  }> = ({ deferCardSetup, onPendingConfig, children }) => (
+    <div data-testid="auto-recharge-root" data-defer-card-setup={String(!!deferCardSetup)}>
+      <button
+        type="button"
+        data-testid="auto-recharge-pending"
+        onClick={() =>
+          onPendingConfig?.({
+            enabled: true,
+            triggerType: 'balance',
+            thresholdAmountMajor: 5,
+            topupAmountMajor: 10,
+            currency: 'USD',
+          })
+        }
+      >
+        stage auto-recharge
+      </button>
+      {children}
+    </div>
+  )
+  return {
+    AutoRecharge: {
+      Root,
+      Loading: () => null,
+      Header: () => null,
+      Body: () => null,
+      Error: () => null,
+    },
+  }
+})
+
 vi.mock('../../../primitives/TopupForm', () => {
   const Root: React.FC<{
     currency?: string
+    autoRecharge?: unknown
     onSuccess?: () => void
     children?: React.ReactNode
-  }> = ({ currency, onSuccess, children }) => (
-    <section data-testid="topup-form-stub" data-currency={currency}>
+  }> = ({ currency, autoRecharge, onSuccess, children }) => (
+    <section
+      data-testid="topup-form-stub"
+      data-currency={currency}
+      data-auto-recharge={autoRecharge ? JSON.stringify(autoRecharge) : ''}
+    >
       <button type="button" data-testid="topup-form-submit" onClick={() => onSuccess?.()}>
         submit topup
       </button>
@@ -266,6 +313,29 @@ describe('<McpTopupView> — topup currency picker', () => {
     })
     await screen.findByTestId('topup-form-stub')
     expect(screen.getByText('Paying as demo@acme.test')).toBeTruthy()
+  })
+
+  it('defers card setup and forwards pending auto-recharge into TopupForm', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+    expect(screen.getByTestId('auto-recharge-root').getAttribute('data-defer-card-setup')).toBe(
+      'true',
+    )
+
+    fireEvent.click(screen.getByTestId('auto-recharge-pending'))
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    const form = await screen.findByTestId('topup-form-stub')
+    expect(JSON.parse(form.getAttribute('data-auto-recharge') ?? '')).toEqual({
+      enabled: true,
+      triggerType: 'balance',
+      thresholdAmountMajor: 5,
+      topupAmountMajor: 10,
+      currency: 'USD',
+    })
   })
 
   it('leads the payment step with a summary rail before the card form', async () => {

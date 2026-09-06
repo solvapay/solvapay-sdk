@@ -988,20 +988,6 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 
 /* Order-summary rows share `.solvapay-mcp-line-item`. */
 
-.solvapay-mcp-checkout-save-card {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
-.solvapay-mcp-checkout-save-card input[type='checkbox'] {
-  margin: 0;
-  cursor: pointer;
-}
-
 .solvapay-mcp-checkout-receipt {
   display: flex;
   flex-direction: column;

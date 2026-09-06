@@ -97,15 +97,6 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
           <TopupForm.Summary.Rows className={cx.taxSummary} />
           <TopupForm.Error className={cx.error} />
 
-          {/* Per brief §4: optional "Save card for future top-ups"
-            checkbox below the Stripe element. Purely informational
-            today — Stripe's default `setup_future_usage` from the
-            intent dictates whether the card actually gets saved. */}
-          <label className="solvapay-mcp-checkout-save-card">
-            <input type="checkbox" defaultChecked />
-            <span className={cx.muted}>Save card for future top-ups</span>
-          </label>
-
           <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
           <TopupForm.SubmitButton className={cx.button}>
             Pay {formatPrice(amountMinor, currency, { locale })}

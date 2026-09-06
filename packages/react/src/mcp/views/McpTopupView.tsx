@@ -28,6 +28,7 @@
  */
 
 import React, { useState } from 'react'
+import type { AutoRechargeInput } from '@solvapay/server'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
 import { useBalance } from '../../hooks/useBalance'
 import { useMerchant } from '../../hooks/useMerchant'
@@ -167,6 +168,7 @@ function EmbeddedTopup({
   cx: Cx
 }) {
   const [screen, setScreen] = useState<TopupScreen>({ step: 'amount' })
+  const [pendingAutoRecharge, setPendingAutoRecharge] = useState<AutoRechargeInput | null>(null)
   const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency)
   const currency = selectedCurrency
   const showCurrencySwitch = topupCurrencies.length > 1
@@ -245,6 +247,7 @@ function EmbeddedTopup({
         <TopupForm.Root
           amount={committedAmountMinor}
           currency={currency}
+          autoRecharge={pendingAutoRecharge ?? undefined}
           returnUrl={returnUrl}
           className={cx.topupForm}
           onSuccess={() => {
@@ -305,7 +308,11 @@ function EmbeddedTopup({
         rowClassName={cx.amountCustom}
         currencyDisplay={currencyDisplay}
       />
-      <AutoRecharge.Root currency={currency}>
+      <AutoRecharge.Root
+        currency={currency}
+        deferCardSetup
+        onPendingConfig={setPendingAutoRecharge}
+      >
         <AutoRecharge.Loading />
         <AutoRecharge.Header />
         <AutoRecharge.Body />
