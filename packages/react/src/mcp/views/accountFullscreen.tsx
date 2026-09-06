@@ -7,6 +7,7 @@
 
 import React from 'react'
 import type { CreditActivityResult, PurchaseInfo } from '@solvapay/server'
+import { ExternalLinkGlyph } from '../../components/ExternalLinkGlyph'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
 import { useCopy, useLocale } from '../../hooks/useCopy'
 import { useCustomer } from '../../hooks/useCustomer'
@@ -171,10 +172,12 @@ export function AccountIdentityFooter(): React.ReactElement {
             href={websiteUrl}
             target="_blank"
             rel="noopener noreferrer"
+            className="solvapay-mcp-history-link"
             aria-label={`${websiteLabel} (opens in a new tab)`}
             onClick={handleExternalClick}
           >
-            {websiteLabel} ↗
+            {websiteLabel}
+            <ExternalLinkGlyph />
           </a>
         ) : null}
       </div>

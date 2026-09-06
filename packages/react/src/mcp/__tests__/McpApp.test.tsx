@@ -404,8 +404,7 @@ describe('<McpApp>', () => {
     expect(container.querySelector('[data-display-mode="inline"]')).toBeTruthy()
   })
 
-  it('fullscreen chrome is close + footer only — no in-widget header', async () => {
-    const requestTeardown = vi.fn().mockResolvedValue(undefined)
+  it('fullscreen chrome is footer only — no in-widget header or Close', async () => {
     const app = makeApp({
       toolName: VIEWER_TOOL_NAME,
       structuredContent: {
@@ -418,17 +417,14 @@ describe('<McpApp>', () => {
         displayMode: 'fullscreen',
         availableDisplayModes: ['inline', 'fullscreen'],
       },
-      requestTeardown,
     })
     const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
     const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
     await screen.findByTestId('checkout-stub')
     expect(container.querySelector('[data-display-mode="fullscreen"]')).toBeTruthy()
     expect(container.querySelector('.solvapay-mcp-app-header')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
-    await waitFor(() => {
-      expect(requestTeardown).toHaveBeenCalledTimes(1)
-    })
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-close')).toBeNull()
     expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
   })
 

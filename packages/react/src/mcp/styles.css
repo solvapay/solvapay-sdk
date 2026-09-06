@@ -143,12 +143,6 @@ body {
   display: none;
 }
 
-.solvapay-mcp-chrome-row .solvapay-mcp-close {
-  margin-left: auto;
-  width: auto;
-  flex: 0 0 auto;
-}
-
 .solvapay-mcp-card {
   display: flex;
   flex-direction: column;
@@ -702,10 +696,10 @@ body {
  * owner on `main`, a centered 1000px column, payment rail 340,
  * management one column. Below 1000px of host width the container
  * query falls back to the inline single-column stack. Host chrome
- * (window close) stays outside the iframe; our Close control sits
- * in the chrome row. Host `safeAreaInsets` land as extra padding on
- * `.solvapay-mcp-main` from the display-mode hook — not
- * `env(safe-area-inset-*)`, which cannot see the host composer. */
+ * (window close) stays outside the iframe. Host `safeAreaInsets`
+ * land as extra padding on `.solvapay-mcp-main` from the
+ * display-mode hook — not `env(safe-area-inset-*)`, which cannot
+ * see the host composer. */
 .solvapay-mcp-main[data-display-mode='fullscreen'] {
   min-block-size: 100%;
   overflow: auto;
@@ -743,8 +737,10 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 .solvapay-mcp-main[data-display-mode='fullscreen'] .solvapay-mcp-shell {
   flex: 1;
   min-height: 0;
-  max-inline-size: none;
-  /* Gutters sit on the centering wrapper, outside the 1000px column. */
+  align-self: center;
+  inline-size: 100%;
+  /* 1000px column + the 72px gutter on each side. */
+  max-inline-size: 1144px;
   padding: 56px 72px 40px;
 }
 
@@ -1532,10 +1528,18 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 }
 
 .solvapay-mcp-history-link {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  border: none;
   font: 500 13px/1 var(--font-sans);
   color: var(--color-text-primary);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.solvapay-mcp-history-link[data-state='ready']:hover {
+  background: none;
 }
 
 .solvapay-mcp-history-table {

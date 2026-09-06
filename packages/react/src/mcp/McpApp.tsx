@@ -42,7 +42,6 @@ import type { McpCheckoutViewProps } from './views/McpCheckoutView'
 import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { AppHeader } from './views/AppHeader'
-import { CloseButton } from './views/CloseButton'
 import { McpHostInfoProvider } from './hooks/useHostInfo'
 import { McpDisplayModeProvider } from './hooks/useDisplayMode'
 import {
@@ -567,10 +566,12 @@ export function McpApp({
         >
           {/*
            * Chrome row sits above the conditional provider tree so the
-           * merchant mark and close control persist across loading / error
-           * / ready states. `<AppHeader>` takes `bootstrap.merchant`
-           * directly: the header's cache lookup would return `null` here
-           * because this slot is outside the `<SolvaPayProvider>` subtree.
+           * merchant mark persists across loading / error / ready states.
+           * `<AppHeader>` takes `bootstrap.merchant` directly: the
+           * header's cache lookup would return `null` here because this
+           * slot is outside the `<SolvaPayProvider>` subtree. Fullscreen
+           * suppresses the header, leaving the row empty so `:empty`
+           * collapses it.
            */}
           <div className="solvapay-mcp-chrome-row">
             {displayModeState.displayMode !== 'fullscreen' ? (
@@ -579,7 +580,6 @@ export function McpApp({
                 merchant={(effectiveBootstrap?.merchant as Merchant | undefined) ?? null}
               />
             ) : null}
-            <CloseButton classNames={classNames} onClose={effectiveOnClose} />
           </div>
           {initError ? (
             <div className={`${cx.card} ${cx.error}`.trim()}>

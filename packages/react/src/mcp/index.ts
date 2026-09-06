@@ -177,8 +177,6 @@ export type {
   McpSafeAreaInsets,
 } from './display-mode'
 
-export { CloseButton, type CloseButtonProps } from './views/CloseButton'
-
 export { McpCheckoutView } from './views/McpCheckoutView'
 export type { McpCheckoutViewProps } from './views/McpCheckoutView'
 

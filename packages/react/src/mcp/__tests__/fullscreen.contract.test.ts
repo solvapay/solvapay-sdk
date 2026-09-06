@@ -73,9 +73,25 @@ describe('MCP fullscreen hosted geometry', () => {
     )
   })
 
-  it('lifts the inline reading-measure cap so the hosted column can use 1000px', () => {
+  it('caps and centres the fullscreen shell at 1144px', () => {
     expect(STYLES).toMatch(
+      /\.solvapay-mcp-main\[data-display-mode='fullscreen'\][\s\S]*?\.solvapay-mcp-shell\s*\{[^}]*align-self:\s*center/,
+    )
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-main\[data-display-mode='fullscreen'\][\s\S]*?\.solvapay-mcp-shell\s*\{[^}]*max-inline-size:\s*1144px/,
+    )
+    expect(STYLES).not.toMatch(
       /\.solvapay-mcp-main\[data-display-mode='fullscreen'\][\s\S]*?\.solvapay-mcp-shell\s*\{[^}]*max-inline-size:\s*none/,
+    )
+  })
+
+  it('resets portal text-link chrome so history links are not filled pills', () => {
+    expect(STYLES).toMatch(/\.solvapay-mcp-history-link\s*\{[^}]*background:\s*none/)
+    expect(STYLES).toMatch(/\.solvapay-mcp-history-link\s*\{[^}]*padding:\s*0/)
+    expect(STYLES).toMatch(/\.solvapay-mcp-history-link\s*\{[^}]*border-radius:\s*0/)
+    expect(STYLES).toMatch(/\.solvapay-mcp-history-link\s*\{[^}]*border:\s*none/)
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-history-link\[data-state='ready'\]:hover\s*\{[^}]*background:\s*none/,
     )
   })
 })

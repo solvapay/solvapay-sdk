@@ -41,8 +41,8 @@ Both compound and primitive access are first-class:
   navigation; the in-session mutations are limited to `account →
   topup` (credits CTA) and `account → checkout` (via "Change plan").
   Inline stays a single-column stack. Fullscreen is the hosted page:
-  a centered 1000px column, payment rail 340 / management rail 300,
-  no in-widget header — close control and attribution footer only.
+  a centered 1000px column, payment rail 340, management one column,
+  no in-widget header — attribution footer only.
 - `<McpViewRouter>` — single `switch` on `McpViewKind` that resolves each
   view from `views?.*` overrides (falling back to the built-in primitive).
   Exported for integrators that own their own shell.
