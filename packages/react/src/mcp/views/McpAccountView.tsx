@@ -12,10 +12,7 @@ import { useLocale } from '../../hooks/useCopy'
 import { usePurchase } from '../../hooks/usePurchase'
 import { useLimits } from '../../hooks/useLimits'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
-import {
-  resolveAccountState,
-  type AccountLimitsLike,
-} from '../account-state'
+import { resolveAccountState, type AccountLimitsLike } from '../account-state'
 import { deriveActiveProducts } from '../derive-active-products'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 import {
@@ -53,7 +50,7 @@ export interface McpAccountViewProps {
    * Called when the user clicks "Pick a plan" or Change plan.
    * Wired by the shell to switch to checkout.
    */
-  onChangePlan?: () => void
+  onChangePlan?: (planRef?: string) => void
   /**
    * Product catalog used to decide Upgrade vs Change plan. The shell
    * passes `bootstrap.plans`.
@@ -79,10 +76,10 @@ export function McpAccountView({
   const products = deriveActiveProducts(purchases, productRef)
   const showPortalCta = Boolean(
     isFullscreen &&
-      hasPaidPurchase &&
-      activePurchase &&
-      activePurchase.amount &&
-      activePurchase.amount > 0,
+    hasPaidPurchase &&
+    activePurchase &&
+    activePurchase.amount &&
+    activePurchase.amount > 0,
   )
 
   const catalogPlan = findCatalogPlan(plans, activePurchase?.planSnapshot, activePurchase?.planRef)

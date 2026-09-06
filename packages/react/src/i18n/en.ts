@@ -268,13 +268,17 @@ export const enCopy: SolvaPayCopy = {
     plansEyebrow: 'Plans',
     carryOnEyebrow: 'Carry on with',
     plansStartCaption: 'Free and Pay as you go start immediately. Paid plans take payment first.',
+    activatePlanButton: 'Activate',
+    switchPlanButton: 'Switch',
+    activatingPlanButton: 'Activating…',
     usedUpTitle: 'Your {plan} {unit} are used up',
     usedUpBody:
       'Calls fail until the limit resets on {date}, in {days} days. Choose a paid plan to carry on now.',
     usedUpBodyNoDate: 'Calls fail until you choose a paid plan.',
     antiTrapCredits:
       'You have {credits} credits. {plan} does not spend them, so adding funds will not restore calls.',
-    waitUntilReset: 'Or wait until {date} and keep the {plan} plan. Nothing is charged automatically.',
+    waitUntilReset:
+      'Or wait until {date} and keep the {plan} plan. Nothing is charged automatically.',
     notStartedStatus: 'Not started',
     readyToClaim: '{total} free {unit} a {interval}, ready to claim',
     noCardCaption: 'No card, no charge. You can change plan later.',
@@ -285,8 +289,7 @@ export const enCopy: SolvaPayCopy = {
     activeUntil: 'Active until {date}',
     cancelledPlanLine: '{plan} · cancelled {date}',
     daysLeftTitle: '{days} days left on this plan',
-    cancelledBody:
-      'Calls keep working until {date}, then stop. You will not be charged again.',
+    cancelledBody: 'Calls keep working until {date}, then stop. You will not be charged again.',
     reactivatePlan: 'Reactivate {plan}',
     creditBalance: 'Credit balance',
     addFunds: 'Add funds',

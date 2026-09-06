@@ -67,9 +67,12 @@ describe('usage.* captions', () => {
     )
     expect(enCopy.account.plansEyebrow).toBe('Plans')
     expect(enCopy.account.carryOnEyebrow).toBe('Carry on with')
-    expect(
-      interpolate(enCopy.account.usedUpTitle, { plan: 'free', unit: 'calls' }),
-    ).toBe('Your free calls are used up')
+    expect(enCopy.account.activatePlanButton).toBe('Activate')
+    expect(enCopy.account.switchPlanButton).toBe('Switch')
+    expect(enCopy.account.activatingPlanButton).toBe('Activating…')
+    expect(interpolate(enCopy.account.usedUpTitle, { plan: 'free', unit: 'calls' })).toBe(
+      'Your free calls are used up',
+    )
     expect(
       interpolate(enCopy.account.antiTrapCredits, {
         credits: '599,800',
@@ -83,9 +86,7 @@ describe('usage.* captions', () => {
   it('adds H/I/J forced-state copy', () => {
     expect(enCopy.account.notStartedStatus).toBe('Not started')
     expect(enCopy.account.startFreePlan).toBe('Start free plan')
-    expect(enCopy.account.noCardCaption).toBe(
-      'No card, no charge. You can change plan later.',
-    )
+    expect(enCopy.account.noCardCaption).toBe('No card, no charge. You can change plan later.')
     expect(
       interpolate(enCopy.account.readyToClaim, {
         total: '3',
@@ -102,9 +103,7 @@ describe('usage.* captions', () => {
         unit: 'calls',
       }),
     ).toBe('11,240 of 10,000 calls')
-    expect(interpolate(enCopy.account.activeUntil, { date: 'Oct 12' })).toBe(
-      'Active until Oct 12',
-    )
+    expect(interpolate(enCopy.account.activeUntil, { date: 'Oct 12' })).toBe('Active until Oct 12')
     expect(
       interpolate(enCopy.account.cancelledPlanLine, {
         plan: 'Starter',

@@ -1,6 +1,6 @@
 /**
- * Fullscreen A ladder copy — what happens at the limit, and whether a
- * card is needed. Widget A keeps the shorter `planWhatItGives` rows.
+ * A/F ladder copy — what happens at the limit, and whether a card is
+ * needed. Used on every ladder row in both inline and fullscreen.
  */
 
 import {
@@ -58,9 +58,7 @@ function paygConsequence(
   merchantName?: string | null,
 ): string {
   const credits = creditsPerUnitFromBalance(plan, balance)
-  const across = merchantName
-    ? ` Credits work across every ${merchantName} product.`
-    : ''
+  const across = merchantName ? ` Credits work across every ${merchantName} product.` : ''
   if (credits == null) {
     return `Drawn from your credit balance.${across}`
   }

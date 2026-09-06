@@ -23,16 +23,8 @@ import { useUsage } from '../../hooks/useUsage'
 import { interpolate } from '../../i18n/interpolate'
 import { CancelledPlanNotice } from '../../primitives/CancelledPlanNotice'
 import { UsageMeter } from '../../primitives/UsageMeter'
-import {
-  allowanceMeterUnit,
-  daysUntil,
-  remainingCap,
-} from '../account-state'
-import {
-  formatShortDate,
-  formatSince,
-  type ActiveProduct,
-} from '../derive-active-products'
+import { allowanceMeterUnit, daysUntil, remainingCap } from '../account-state'
+import { formatShortDate, formatSince, type ActiveProduct } from '../derive-active-products'
 import { resolvePlanShape, type PlanLike } from '../plan-actions'
 import { LineItem } from '../primitives'
 import { McpUsageMeter } from '../primitives/UsageMeter'
@@ -59,7 +51,7 @@ export function ForcedAccountPanel({
   productRef?: string
   locale: string
   classNames?: McpViewClassNames
-  onChangePlan?: () => void
+  onChangePlan?: (planRef?: string) => void
   showPortalCta: boolean
 }): React.ReactElement {
   const cx = resolveMcpClassNames(classNames)
@@ -227,7 +219,7 @@ function OverageAccountPanel({
   planForActions: PlanLike | null
   locale: string
   classNames?: McpViewClassNames
-  onChangePlan?: () => void
+  onChangePlan?: (planRef?: string) => void
   showPortalCta: boolean
 }): React.ReactElement {
   const cx = resolveMcpClassNames(classNames)
@@ -281,7 +273,7 @@ function OverageAccountPanel({
         </div>
         <p className="solvapay-mcp-overage-copy">{copy.account.stillWorking}</p>
         {onChangePlan ? (
-          <button type="button" className={cx.linkButton} onClick={onChangePlan}>
+          <button type="button" className={cx.linkButton} onClick={() => onChangePlan()}>
             {copy.account.seeHigherLimit}
           </button>
         ) : null}
@@ -340,9 +332,7 @@ function CancelledAccountPanel({
       : (usage?.used ?? 0)
   const percent =
     usage?.percentUsed ??
-    (total != null && total > 0
-      ? Math.min(100, Math.round((used / total) * 10000) / 100)
-      : null)
+    (total != null && total > 0 ? Math.min(100, Math.round((used / total) * 10000) / 100) : null)
 
   return (
     <div className="solvapay-mcp-account">
@@ -360,9 +350,7 @@ function CancelledAccountPanel({
           }
           status="active"
           statusLabel={
-            untilDate
-              ? interpolate(copy.account.activeUntil, { date: untilDate })
-              : undefined
+            untilDate ? interpolate(copy.account.activeUntil, { date: untilDate }) : undefined
           }
           changePlanLabel={copy.account.changePlanButton}
           showChangePlan={false}

@@ -32,7 +32,7 @@ export function PlanIdentityHeader({
   pillState?: AccountState
   changePlanLabel: string
   showChangePlan: boolean
-  onChangePlan?: () => void
+  onChangePlan?: (planRef?: string) => void
 }): React.ReactElement {
   const kind = failing ? 'pill' : (status ?? 'active')
   const pillLabel = failing ? failingLabel : statusLabel
@@ -58,7 +58,7 @@ export function PlanIdentityHeader({
         {planLine ? <p className="solvapay-mcp-muted">{planLine}</p> : null}
       </div>
       {showChangePlan && onChangePlan ? (
-        <button type="button" className="solvapay-mcp-link-button" onClick={onChangePlan}>
+        <button type="button" className="solvapay-mcp-link-button" onClick={() => onChangePlan()}>
           {changePlanLabel}
         </button>
       ) : null}
@@ -90,7 +90,10 @@ export function BalanceStrip({
   })
   const caption = failingCaption
     ? failingCaption
-    : [fiat ? `About ${fiat}.` : null, merchantName ? interpolate(worksAcross, { merchant: merchantName }) : null]
+    : [
+        fiat ? `About ${fiat}.` : null,
+        merchantName ? interpolate(worksAcross, { merchant: merchantName }) : null,
+      ]
         .filter(Boolean)
         .join(' ')
 

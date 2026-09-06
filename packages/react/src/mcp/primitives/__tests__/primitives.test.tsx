@@ -8,6 +8,7 @@ import {
   Field,
   LedgerRow,
   Pill,
+  PlanActionRow,
   PlanRow,
   PresetTile,
   Section,
@@ -68,6 +69,26 @@ describe('MCP primitives', () => {
     expect(onClick).toHaveBeenCalledOnce()
   })
 
+  it('renders a PlanActionRow as a div with a trailing emphasis button', () => {
+    const onAction = vi.fn()
+    render(
+      <PlanActionRow
+        title="Starter · $30.00/mo"
+        description="10,000 calls per month. No credits used."
+        actionLabel="Activate"
+        emphasis="primary"
+        onAction={onAction}
+      />,
+    )
+    const row = screen.getByText('Starter · $30.00/mo').closest('.solvapay-mcp-plan-action-row')
+    expect(row?.tagName).toBe('DIV')
+    const button = screen.getByRole('button', { name: 'Activate' })
+    expect(button).toHaveAttribute('data-emphasis', 'primary')
+    expect(button.querySelector('[aria-hidden="true"]')?.textContent).toBe('➔')
+    fireEvent.click(button)
+    expect(onAction).toHaveBeenCalledOnce()
+  })
+
   it('keeps the PlanRow check slot mounted when unselected', () => {
     const { rerender } = render(
       <PlanRow name="Free" description="100 calls per month" price="$0" current />,
@@ -77,12 +98,11 @@ describe('MCP primitives', () => {
     expect(row).not.toHaveAttribute('data-state')
     expect(screen.getByText('Current').className).toContain('solvapay-mcp-status-dot')
 
-    rerender(
-      <PlanRow name="Pro" description="Unlimited calls" price="$90.00" selected />,
-    )
+    rerender(<PlanRow name="Pro" description="Unlimited calls" price="$90.00" selected />)
     expect(screen.getByRole('button', { name: /Pro/ })).toHaveAttribute('data-state', 'selected')
-    expect(screen.getByRole('button', { name: /Pro/ }).querySelector('.solvapay-mcp-plan-row-check'))
-      .toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: /Pro/ }).querySelector('.solvapay-mcp-plan-row-check'),
+    ).toBeTruthy()
   })
 
   it('renders StatusDot and Pill', () => {
@@ -121,7 +141,12 @@ describe('MCP primitives', () => {
     const { rerender } = render(
       <FactBand
         items={[
-          { key: 'remaining', label: 'Remaining', value: '3,800 calls', caption: 'Of 10,000 this period.' },
+          {
+            key: 'remaining',
+            label: 'Remaining',
+            value: '3,800 calls',
+            caption: 'Of 10,000 this period.',
+          },
           { key: 'renews', label: 'Renews', value: 'Sep 12, 2026', caption: 'In 6 days.' },
           { key: 'credits', label: 'Credits', value: 'Not used', caption: 'Balance is untouched.' },
         ]}

@@ -108,6 +108,47 @@ export function PresetTile({
   )
 }
 
+export function PlanActionRow({
+  title,
+  description,
+  actionLabel,
+  emphasis = 'secondary',
+  busy,
+  disabled,
+  onAction,
+  className,
+}: {
+  title: React.ReactNode
+  description?: React.ReactNode
+  actionLabel: React.ReactNode
+  emphasis?: 'primary' | 'secondary'
+  busy?: boolean
+  disabled?: boolean
+  onAction?: () => void
+  className?: string
+}): React.ReactElement {
+  return (
+    <div className={cx('solvapay-mcp-plan-action-row', className)}>
+      <div className="solvapay-mcp-plan-action-row-body">
+        <div className="solvapay-mcp-plan-action-row-title">{title}</div>
+        {description ? (
+          <div className="solvapay-mcp-plan-action-row-description">{description}</div>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        data-emphasis={emphasis}
+        data-busy={busy ? '' : undefined}
+        disabled={disabled || busy}
+        onClick={onAction}
+      >
+        {actionLabel}
+        {emphasis === 'primary' && !busy ? <span aria-hidden="true">➔</span> : null}
+      </button>
+    </div>
+  )
+}
+
 export function PlanRow({
   name,
   description,
@@ -129,7 +170,10 @@ export function PlanRow({
   state?: 'idle' | 'selected' | 'current' | 'disabled'
   onClick?: () => void
   className?: string
-} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'className'>): React.ReactElement {
+} & Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'onClick' | 'className'
+>): React.ReactElement {
   const dataState = state ?? (selected ? 'selected' : undefined)
   return (
     <button

@@ -25,7 +25,7 @@
  * into `account`.
  */
 
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
@@ -103,6 +103,12 @@ export function McpAppShell({
   // card, or "Back" on the topup view. The paywall / nudge CTA flips
   // were removed along with those surfaces.
   const [overrideView, setOverrideView] = useState<McpViewKind | null>(null)
+  const [overridePlanRef, setOverridePlanRef] = useState<string | undefined>()
+
+  const handleSurfaceChange = useCallback((next: McpViewKind, intent?: { planRef?: string }) => {
+    setOverrideView(next)
+    setOverridePlanRef(intent?.planRef)
+  }, [])
 
   const resolvedView = resolveSurface(bootstrap.view)
   const effectiveView: McpViewKind = overrideView ?? resolvedView
@@ -121,7 +127,8 @@ export function McpAppShell({
               bootstrap={bootstrap}
               views={views}
               classNames={classNames}
-              onSurfaceChange={setOverrideView}
+              onSurfaceChange={handleSurfaceChange}
+              overridePlanRef={overridePlanRef}
               onRefreshBootstrap={onRefreshBootstrap}
               onClose={onClose}
             />
@@ -155,7 +162,13 @@ export interface McpViewRouterProps {
    * "Change plan", topup → account via "Back"). The shell wires this
    * to its `overrideView` state.
    */
-  onSurfaceChange?: (next: McpViewKind) => void
+  onSurfaceChange?: (next: McpViewKind, intent?: { planRef?: string }) => void
+  /**
+   * Plan the account ladder asked checkout to open on. The shell
+   * forwards it as `initialPlanRef` + `autoAdvance` so the plan step
+   * is skipped.
+   */
+  overridePlanRef?: string
   /**
    * Optional bootstrap re-fetcher. The shell triggers it once on mount
    * so a customer who re-opens a backgrounded iframe sees fresh
@@ -181,6 +194,7 @@ export function McpViewRouter({
   views,
   classNames,
   onSurfaceChange,
+  overridePlanRef,
   onRefreshBootstrap,
   onClose,
 }: McpViewRouterProps): React.ReactNode {
@@ -192,7 +206,10 @@ export function McpViewRouter({
   const AutoRechargeView = (views?.autoRecharge ??
     McpAutoRechargeView) as React.ComponentType<McpAutoRechargeViewProps>
 
-  const goCheckout = onSurfaceChange ? () => onSurfaceChange('checkout') : undefined
+  const goCheckout = onSurfaceChange
+    ? (planRef?: string) =>
+        onSurfaceChange('checkout', typeof planRef === 'string' ? { planRef } : undefined)
+    : undefined
   const goTopup = onSurfaceChange ? () => onSurfaceChange('topup') : undefined
   const goAccount = onSurfaceChange ? () => onSurfaceChange('account') : undefined
   const goAutoRecharge = onSurfaceChange ? () => onSurfaceChange('auto-recharge') : undefined
@@ -210,6 +227,8 @@ export function McpViewRouter({
           onRefreshBootstrap={onRefreshBootstrap}
           onClose={onClose}
           onBack={goAccount}
+          initialPlanRef={overridePlanRef}
+          autoAdvance={Boolean(overridePlanRef)}
         />
       )
     case 'account':

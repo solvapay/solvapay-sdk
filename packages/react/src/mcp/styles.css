@@ -1218,6 +1218,86 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   gap: 10px;
 }
 
+.solvapay-mcp-plan-action-list {
+  gap: 0;
+}
+
+.solvapay-mcp-plan-action-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 14px 0;
+  border-top: 1px solid var(--color-border-secondary);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.solvapay-mcp-plan-action-row:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.solvapay-mcp-plan-action-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.solvapay-mcp-plan-action-row-title {
+  font: var(--solvapay-type-plan-row);
+  letter-spacing: -0.3px;
+}
+
+.solvapay-mcp-plan-action-row-description {
+  font: var(--solvapay-type-body);
+  color: var(--color-text-secondary);
+}
+
+.solvapay-mcp-plan-action-row button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--border-radius-md);
+  font: var(--solvapay-type-label);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.solvapay-mcp-plan-action-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.solvapay-mcp-plan-action-row button[data-emphasis='secondary'] {
+  border: 1px solid var(--color-border-primary);
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.solvapay-mcp-plan-action-row button[data-emphasis='secondary']:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+}
+
+.solvapay-mcp-plan-action-row button[data-emphasis='primary'] {
+  border: 1px solid var(--color-background-inverse);
+  background: var(--color-background-inverse);
+  color: var(--color-text-inverse);
+}
+
+.solvapay-mcp-plan-action-row button[data-emphasis='primary']:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
 .solvapay-mcp-used-up {
   display: flex;
   flex-direction: column;

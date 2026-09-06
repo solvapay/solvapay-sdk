@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { McpDisplayModeProvider } from '../../hooks/useDisplayMode'
@@ -79,6 +79,17 @@ function buildCtx(
     _config: { transport: makeTransport() },
     ...rest,
   }
+}
+
+function actionRow(name: string | RegExp): HTMLElement {
+  const titles = screen
+    .getAllByText(name)
+    .filter(node => node.classList.contains('solvapay-mcp-plan-action-row-title'))
+  const row = titles[0]?.closest('.solvapay-mcp-plan-action-row')
+  if (!(row instanceof HTMLElement)) {
+    throw new Error(`No ladder action row for ${String(name)}`)
+  }
+  return row
 }
 
 function renderAccount(
@@ -411,7 +422,7 @@ describe('McpAccountView', () => {
     ).toBeTruthy()
   })
 
-  it('renders a PlanRow ladder on state A and emphasizes PAYG', () => {
+  it('renders an action-button ladder on state A and emphasizes PAYG', () => {
     const onChangePlan = vi.fn()
     const activatePlan = vi.fn().mockResolvedValue({ status: 'activated' })
     const ctx = buildCtx({ activatePlan }, [], 599_800)
@@ -422,23 +433,143 @@ describe('McpAccountView', () => {
       onChangePlan,
     })
     expect(screen.getByText('Plans')).toBeTruthy()
-    const payg = screen.getByRole('button', { name: /Pay as you go/ })
-    expect(payg).toHaveAttribute('data-state', 'selected')
-    expect(screen.getByRole('button', { name: /^Free/ })).not.toHaveAttribute(
-      'data-state',
-      'selected',
+    const paygButton = within(actionRow('Pay as you go')).getByRole('button', { name: 'Activate' })
+    expect(paygButton).toHaveAttribute('data-emphasis', 'primary')
+    expect(within(actionRow('Free')).getByRole('button', { name: 'Activate' })).toHaveAttribute(
+      'data-emphasis',
+      'secondary',
     )
-    expect(screen.getByRole('button', { name: /Starter/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Pro/ })).toBeTruthy()
-    fireEvent.click(payg)
-    expect(onChangePlan).toHaveBeenCalledTimes(1)
-    fireEvent.click(screen.getByRole('button', { name: /^Free/ }))
-    expect(activatePlan).toHaveBeenCalledWith({
-      productRef: 'prd_widget',
-      planRef: 'pln_free',
-    })
+    expect(actionRow(/Starter/)).toBeTruthy()
+    expect(actionRow(/Pro/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Pick a plan' })).toBeNull()
+  })
+
+  it('activates a free plan in place on the A ladder', async () => {
+    const onChangePlan = vi.fn()
+    const activatePlan = vi.fn().mockResolvedValue({ status: 'activated' })
+    const ctx = buildCtx({ activatePlan }, [], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
+    fireEvent.click(within(actionRow('Free')).getByRole('button', { name: 'Activate' }))
+    await waitFor(() => {
+      expect(activatePlan).toHaveBeenCalledWith({
+        productRef: 'prd_widget',
+        planRef: 'pln_free',
+      })
+    })
+    expect(onChangePlan).not.toHaveBeenCalled()
+  })
+
+  it('activates a funded PAYG plan in place on the A ladder', async () => {
+    const onChangePlan = vi.fn()
+    const activatePlan = vi.fn().mockResolvedValue({ status: 'activated' })
+    const ctx = buildCtx({ activatePlan }, [], 599_800)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
+    fireEvent.click(within(actionRow('Pay as you go')).getByRole('button', { name: 'Activate' }))
+    await waitFor(() => {
+      expect(activatePlan).toHaveBeenCalledWith({
+        productRef: 'prd_widget',
+        planRef: 'pln_payg',
+      })
+    })
+    expect(onChangePlan).not.toHaveBeenCalled()
+  })
+
+  it('sends an empty-wallet PAYG plan to checkout with its ref', () => {
+    const onChangePlan = vi.fn()
+    const activatePlan = vi.fn()
+    const ctx = buildCtx({ activatePlan }, [], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
+    fireEvent.click(within(actionRow('Pay as you go')).getByRole('button', { name: 'Activate' }))
+    expect(onChangePlan).toHaveBeenCalledTimes(1)
+    expect(onChangePlan).toHaveBeenCalledWith('pln_payg')
+    expect(activatePlan).not.toHaveBeenCalled()
+  })
+
+  it('sends a recurring plan to checkout with its ref', () => {
+    const onChangePlan = vi.fn()
+    const activatePlan = vi.fn()
+    const ctx = buildCtx({ activatePlan }, [], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
+    fireEvent.click(within(actionRow(/Starter/)).getByRole('button', { name: 'Activate' }))
+    expect(onChangePlan).toHaveBeenCalledTimes(1)
+    expect(onChangePlan).toHaveBeenCalledWith('pln_starter')
+    expect(activatePlan).not.toHaveBeenCalled()
+  })
+
+  it('shows a busy label on the clicked ladder row only', async () => {
+    let resolveActivate: ((value: { status: string }) => void) | undefined
+    const activatePlan = vi.fn(
+      () =>
+        new Promise<{ status: string }>(resolve => {
+          resolveActivate = resolve
+        }),
+    )
+    const ctx = buildCtx({ activatePlan }, [], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      onChangePlan: vi.fn(),
+    })
+    fireEvent.click(within(actionRow('Free')).getByRole('button', { name: 'Activate' }))
+    expect(within(actionRow('Free')).getByRole('button', { name: 'Activating…' })).toBeTruthy()
+    expect(
+      within(actionRow('Pay as you go')).queryByRole('button', { name: 'Activating…' }),
+    ).toBeNull()
+    expect(
+      within(actionRow('Pay as you go')).getByRole('button', { name: 'Activate' }),
+    ).toBeDisabled()
+    await waitFor(() => expect(resolveActivate).toBeDefined())
+    resolveActivate?.({ status: 'activated' })
+    await waitFor(() => {
+      expect(within(actionRow('Free')).queryByRole('button', { name: 'Activating…' })).toBeNull()
+    })
+  })
+
+  it('escalates to checkout when in-place activate returns payment_required', async () => {
+    const onChangePlan = vi.fn()
+    const activatePlan = vi.fn().mockResolvedValue({ status: 'payment_required' })
+    const ctx = buildCtx({ activatePlan }, [], 0)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
+    fireEvent.click(within(actionRow('Free')).getByRole('button', { name: 'Activate' }))
+    await waitFor(() => {
+      expect(onChangePlan).toHaveBeenCalledWith('pln_free')
+    })
+  })
+
+  it('escalates to checkout when in-place activate returns topup_required', async () => {
+    const onChangePlan = vi.fn()
+    const activatePlan = vi.fn().mockResolvedValue({ status: 'topup_required' })
+    const ctx = buildCtx({ activatePlan }, [], 599_800)
+    renderAccount(ctx, {
+      plans: catalogPlans,
+      productRef: 'prd_widget',
+      onChangePlan,
+    })
+    fireEvent.click(within(actionRow('Pay as you go')).getByRole('button', { name: 'Activate' }))
+    await waitFor(() => {
+      expect(onChangePlan).toHaveBeenCalledWith('pln_payg')
+    })
   })
 
   it('does not render the fallback copy when there is a paid purchase', async () => {
@@ -530,7 +661,9 @@ describe('McpAccountView', () => {
       product: { name: 'Widget API', description: null },
       productRef: 'prd_widget',
     })
-    expect(screen.getByText('Pay as you go · 200 credits per call · since Jan 1, 2026')).toBeTruthy()
+    expect(
+      screen.getByText('Pay as you go · 200 credits per call · since Jan 1, 2026'),
+    ).toBeTruthy()
   })
 
   it('puts the plan line above the credit balance on a running PAYG plan', () => {
@@ -753,7 +886,9 @@ describe('McpAccountView', () => {
     expect(screen.getByText('Balance is untouched.')).toBeTruthy()
     expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'safe')
     expect(
-      screen.getByText('6,200 of 10,000 calls used, 62%. A warning shows at 80%, and calls stop at 100%.'),
+      screen.getByText(
+        '6,200 of 10,000 calls used, 62%. A warning shows at 80%, and calls stop at 100%.',
+      ),
     ).toBeTruthy()
     expect(screen.queryByText('Credit balance')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add funds' })).toBeNull()
@@ -818,10 +953,11 @@ describe('McpAccountView', () => {
     expect(screen.getByText('10,000 calls')).toBeTruthy()
   })
 
-  it('promotes the plan ladder on a free plan at cap and states the credit trap', () => {
+  it('promotes the plan ladder on a free plan at cap and states the credit trap', async () => {
     seedLimits({ remaining: 0, withinLimits: false })
     const onChangePlan = vi.fn()
-    const ctx = buildCtx({}, [freePurchase], 599_800)
+    const activatePlan = vi.fn().mockResolvedValue({ status: 'activated' })
+    const ctx = buildCtx({ activatePlan }, [freePurchase], 599_800)
     renderAccount(ctx, {
       plans: catalogPlans,
       product: { name: 'Widget API', description: 'Pro-tier API for Acme.' },
@@ -840,11 +976,19 @@ describe('McpAccountView', () => {
       ),
     ).toBeTruthy()
     expect(screen.getByText('Carry on with')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /^Free/ })).toBeNull()
-    const payg = screen.getByRole('button', { name: /Pay as you go/ })
-    expect(payg).toHaveAttribute('data-state', 'selected')
+    expect(
+      screen.queryByText('Free', { selector: '.solvapay-mcp-plan-action-row-title' }),
+    ).toBeNull()
+    const payg = within(actionRow('Pay as you go')).getByRole('button', { name: 'Switch' })
+    expect(payg).toHaveAttribute('data-emphasis', 'primary')
     fireEvent.click(payg)
-    expect(onChangePlan).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(activatePlan).toHaveBeenCalledWith({
+        productRef: 'prd_widget',
+        planRef: 'pln_payg',
+      })
+    })
+    expect(onChangePlan).not.toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: 'Change plan' })).toBeNull()
     expect(screen.queryByText('Credit balance')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add funds' })).toBeNull()
@@ -853,22 +997,25 @@ describe('McpAccountView', () => {
 
   it('uses the same at-cap ladder for a paid allowance and drops the current plan', () => {
     seedLimits({ remaining: 0, withinLimits: false })
+    const onChangePlan = vi.fn()
     const ctx = buildCtx({}, [starterPurchase], 0)
     renderAccount(ctx, {
       plans: catalogPlans,
       product: { name: 'Widget API', description: null },
       productRef: 'prd_widget',
-      onChangePlan: vi.fn(),
+      onChangePlan,
     })
     expect(screen.getByText('Starter limit reached')).toBeTruthy()
     expect(screen.getByText('Your Starter calls are used up')).toBeTruthy()
     expect(screen.queryByText(/does not spend them/)).toBeNull()
-    expect(screen.queryByRole('button', { name: /Starter/ })).toBeNull()
-    expect(screen.getByRole('button', { name: /Pay as you go/ })).toHaveAttribute(
-      'data-state',
-      'selected',
-    )
-    expect(screen.getByRole('button', { name: /Pro/ })).toBeTruthy()
+    expect(
+      screen.queryByText('Starter', { selector: '.solvapay-mcp-plan-action-row-title' }),
+    ).toBeNull()
+    expect(
+      within(actionRow('Pay as you go')).getByRole('button', { name: 'Switch' }),
+    ).toHaveAttribute('data-emphasis', 'primary')
+    fireEvent.click(within(actionRow(/Pro/)).getByRole('button', { name: 'Switch' }))
+    expect(onChangePlan).toHaveBeenCalledWith('pln_pro')
     expect(screen.queryByText('Credit balance')).toBeNull()
   })
 
@@ -945,7 +1092,9 @@ describe('McpAccountView', () => {
     expect(screen.getByText('Starter · cancelled Sep 4, 2026')).toBeTruthy()
     expect(screen.getByText(/days left on this plan/)).toBeTruthy()
     expect(
-      screen.getByText('Calls keep working until Oct 12, then stop. You will not be charged again.'),
+      screen.getByText(
+        'Calls keep working until Oct 12, then stop. You will not be charged again.',
+      ),
     ).toBeTruthy()
     expect(screen.getByText('3,800 of 10,000 calls')).toBeTruthy()
     expect(screen.getByRole('progressbar')).toHaveAttribute('data-state', 'safe')
@@ -1105,11 +1254,7 @@ describe('McpAccountView', () => {
       historyTransport(new Error('history unavailable')),
     )
     const failCtx = buildCtx({ _config: failConfig }, [paygPurchase], 500)
-    renderAccount(
-      failCtx,
-      { plans: catalogPlans, productRef: 'prd_widget' },
-      'fullscreen',
-    )
+    renderAccount(failCtx, { plans: catalogPlans, productRef: 'prd_widget' }, 'fullscreen')
     expect(await screen.findByText("Couldn't load credit activity.")).toBeTruthy()
     expect(screen.queryByText('No credit activity yet.')).toBeNull()
   })
@@ -1172,7 +1317,7 @@ describe('McpAccountView', () => {
     expect(screen.queryByText('No charges yet.')).toBeNull()
   })
 
-  it('uses fullscreen consequence lines on state A, not the shorter widget rows', () => {
+  it('uses consequence lines on the A ladder in both layouts', () => {
     const config = seedMerchant({ displayName: 'Test', legalName: 'Test Inc.' })
     const ctx = buildCtx({ _config: config }, [], 599_800)
     ctx.balance = mockBalanceStatus({
@@ -1185,8 +1330,15 @@ describe('McpAccountView', () => {
       plans: catalogPlans,
       productRef: 'prd_widget',
     })
-    expect(screen.queryByText(/No card needed/)).toBeNull()
-    expect(screen.queryByText(/Cancel any time/)).toBeNull()
+    expect(screen.getByText('3 calls per month, then calls fail. No card needed.')).toBeTruthy()
+    expect(
+      screen.getByText(
+        'From 200 credits per call, drawn from your credit balance. Credits work across every Test product.',
+      ),
+    ).toBeTruthy()
+    expect(
+      screen.getByText('10,000 calls per month. No credits used. Cancel any time.'),
+    ).toBeTruthy()
     unmount()
 
     renderAccount(
@@ -1198,9 +1350,7 @@ describe('McpAccountView', () => {
       },
       'fullscreen',
     )
-    expect(
-      screen.getByText('3 calls per month, then calls fail. No card needed.'),
-    ).toBeTruthy()
+    expect(screen.getByText('3 calls per month, then calls fail. No card needed.')).toBeTruthy()
     expect(
       screen.getByText(
         'From 200 credits per call, drawn from your credit balance. Credits work across every Test product.',
@@ -1209,9 +1359,7 @@ describe('McpAccountView', () => {
     expect(
       screen.getByText('10,000 calls per month. No credits used. Cancel any time.'),
     ).toBeTruthy()
-    expect(
-      screen.getByText('Unlimited calls, one time. No credits used, no renewal.'),
-    ).toBeTruthy()
+    expect(screen.getByText('Unlimited calls, one time. No credits used, no renewal.')).toBeTruthy()
   })
 
   it('prints merchant place and buyer identity on the fullscreen footer without verified or Stripe', async () => {
@@ -1237,11 +1385,7 @@ describe('McpAccountView', () => {
       [starterPurchase],
       0,
     )
-    renderAccount(
-      ctx,
-      { plans: catalogPlans, productRef: 'prd_widget' },
-      'fullscreen',
-    )
+    renderAccount(ctx, { plans: catalogPlans, productRef: 'prd_widget' }, 'fullscreen')
     expect(await screen.findByText('Sold by Test')).toBeTruthy()
     expect(screen.getByText('San Francisco, CA')).toBeTruthy()
     const website = screen.getByRole('link', { name: /aaa.com/ })

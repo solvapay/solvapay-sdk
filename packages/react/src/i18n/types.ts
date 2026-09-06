@@ -319,6 +319,12 @@ export interface SolvaPayCopy {
     carryOnEyebrow: string
     /** Caption under the A ladder. */
     plansStartCaption: string
+    /** Per-row CTA on state A. */
+    activatePlanButton: string
+    /** Per-row CTA on state F. */
+    switchPlanButton: string
+    /** Busy label on the clicked A/F ladder row. */
+    activatingPlanButton: string
     /** F headline. `{plan}` `{unit}`. */
     usedUpTitle: string
     /** F body when a reset date is known. `{date}` `{days}`. */

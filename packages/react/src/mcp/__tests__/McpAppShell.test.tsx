@@ -119,7 +119,14 @@ describe('<McpAppShell>', () => {
     renderShell(
       {
         view: 'account',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
+        customer: {
+          ref: 'cus_1',
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+          limits: null,
+        },
       },
       ctx,
     )
@@ -151,7 +158,14 @@ describe('<McpAppShell>', () => {
     renderShell(
       {
         view: 'account',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
+        customer: {
+          ref: 'cus_1',
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+          limits: null,
+        },
       },
       ctx,
       { views: { account: Account } },
@@ -216,7 +230,14 @@ describe('<McpAppShell>', () => {
     renderShell(
       {
         view: undefined,
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
+        customer: {
+          ref: 'cus_1',
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+          limits: null,
+        },
       },
       ctx,
       { views: { account: Account } },
@@ -298,7 +319,14 @@ describe('<McpAppShell>', () => {
           name: 'Acme Knowledge Base',
           description: 'Search Acme docs from anywhere.',
         } as never,
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
+        customer: {
+          ref: 'cus_1',
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+          limits: null,
+        },
       },
       ctx,
     )
@@ -344,7 +372,14 @@ describe('<McpAppShell>', () => {
     renderShell(
       {
         view: 'account',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
+        customer: {
+          ref: 'cus_1',
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+          limits: null,
+        },
       },
       ctx,
       { onRefreshBootstrap: onRefresh },
@@ -360,7 +395,14 @@ describe('<McpAppShell>', () => {
     const ctx = buildCtx(config, [], 0)
     const { container } = renderShell(
       {
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
+        customer: {
+          ref: 'cus_1',
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+          limits: null,
+        },
       },
       ctx,
     )
@@ -370,18 +412,35 @@ describe('<McpAppShell>', () => {
   it('change-plan from the account view routes to the checkout surface', () => {
     const config = seedMerchant({ displayName: 'Acme', legalName: 'Acme Inc.' })
     const ctx = buildCtx(config, [], 0)
-    const Account = vi.fn((props: { onChangePlan?: () => void }) => (
+    const Account = vi.fn((props: { onChangePlan?: (planRef?: string) => void }) => (
       <div>
-        <button type="button" data-testid="change-plan" onClick={props.onChangePlan}>
+        <button
+          type="button"
+          data-testid="change-plan"
+          onClick={() => props.onChangePlan?.('pln_pro')}
+        >
           See plans
         </button>
       </div>
     ))
-    const Checkout = vi.fn(() => <div data-testid="checkout-stub" />)
+    const Checkout = vi.fn((props: { initialPlanRef?: string; autoAdvance?: boolean }) => (
+      <div
+        data-testid="checkout-stub"
+        data-plan-ref={props.initialPlanRef ?? ''}
+        data-auto-advance={props.autoAdvance ? 'true' : 'false'}
+      />
+    ))
     renderShell(
       {
         view: 'account',
-        customer: { ref: 'cus_1', purchase: null, paymentMethod: null, balance: null, usage: null, limits: null },
+        customer: {
+          ref: 'cus_1',
+          purchase: null,
+          paymentMethod: null,
+          balance: null,
+          usage: null,
+          limits: null,
+        },
       },
       ctx,
       { views: { account: Account, checkout: Checkout } },
@@ -390,6 +449,8 @@ describe('<McpAppShell>', () => {
       fireEvent.click(screen.getByTestId('change-plan'))
     })
     expect(screen.getByTestId('checkout-stub')).toBeTruthy()
+    expect(screen.getByTestId('checkout-stub')).toHaveAttribute('data-plan-ref', 'pln_pro')
+    expect(screen.getByTestId('checkout-stub')).toHaveAttribute('data-auto-advance', 'true')
     expect(screen.queryByText(/Paying as/)).toBeNull()
   })
 
@@ -407,9 +468,7 @@ describe('<McpAppShell>', () => {
 
     rerender(
       <SolvaPayContext.Provider value={ctx}>
-        <McpAppShell
-          bootstrap={{ ...baseBootstrap, view: 'account', customer: authedCustomer }}
-        />
+        <McpAppShell bootstrap={{ ...baseBootstrap, view: 'account', customer: authedCustomer }} />
       </SolvaPayContext.Provider>,
     )
     expect(container.querySelector('.solvapay-mcp-hosted')).toHaveAttribute(

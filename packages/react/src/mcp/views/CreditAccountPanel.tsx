@@ -16,11 +16,7 @@ import { useDisplayMode } from '../hooks/useDisplayMode'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
 import { resolveRateDisplay } from '../account-state'
 import { formatProductTerms, type ActiveProduct } from '../derive-active-products'
-import {
-  resolvePlanActions,
-  resolvePlanShape,
-  type PlanLike,
-} from '../plan-actions'
+import { resolvePlanActions, resolvePlanShape, type PlanLike } from '../plan-actions'
 import { SplitRow } from '../primitives'
 import { AccountIdentityFooter, CreditActivitySection } from './accountFullscreen'
 import { BalanceStrip, PlanIdentityHeader } from './accountViewShared'
@@ -50,7 +46,7 @@ export function CreditAccountPanel({
   classNames?: McpViewClassNames
   onTopup?: () => void
   onAutoRecharge?: () => void
-  onChangePlan?: () => void
+  onChangePlan?: (planRef?: string) => void
   showPortalCta: boolean
 }): React.ReactElement {
   const cx = resolveMcpClassNames(classNames)

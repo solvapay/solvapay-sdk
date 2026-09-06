@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * Shared `PlanRow` binding for checkout step 1 and the A/F account ladder.
- * Selection only changes border and check fill. The parent decides
- * disabled / current / selected — checkout freezes Free, the account
- * ladder does not.
+ * Shared `PlanRow` binding for checkout step 1. Selection only changes
+ * border and check fill. The parent decides disabled / current /
+ * selected — checkout freezes Free. The A/F account ladder uses
+ * `LadderPlanRow` instead.
  */
 
 import React from 'react'

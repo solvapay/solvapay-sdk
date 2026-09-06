@@ -7,6 +7,7 @@ export {
   LedgerRow,
   LineItem,
   Pill,
+  PlanActionRow,
   PlanRow,
   PresetTile,
   Section,

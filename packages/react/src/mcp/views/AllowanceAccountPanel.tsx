@@ -67,7 +67,7 @@ export function AllowanceAccountPanel({
   plans?: readonly PlanLike[]
   locale: string
   classNames?: McpViewClassNames
-  onChangePlan?: () => void
+  onChangePlan?: (planRef?: string) => void
   showPortalCta: boolean
 }): React.ReactElement {
   const cx = resolveMcpClassNames(classNames)
@@ -86,7 +86,11 @@ export function AllowanceAccountPanel({
   const dropPrice = planShape === 'free' || planShape === 'trial'
   const planLine = allowanceProduct
     ? formatAllowanceTerms(allowanceProduct, locale, {
-        price: dropPrice ? null : planForActions ? formatPlanPriceLabel(planForActions, locale) : null,
+        price: dropPrice
+          ? null
+          : planForActions
+            ? formatPlanPriceLabel(planForActions, locale)
+            : null,
         renewsOn: !dropPrice && period.kind === 'date' ? period.periodEnd : null,
         started: dropPrice,
         qualifier: oneTime.planQualifier,
@@ -131,9 +135,7 @@ export function AllowanceAccountPanel({
       : (usage?.used ?? 0)
   const percent =
     usage?.percentUsed ??
-    (total != null && total > 0
-      ? Math.min(100, Math.round((used / total) * 10000) / 100)
-      : null)
+    (total != null && total > 0 ? Math.min(100, Math.round((used / total) * 10000) / 100) : null)
   const meterCaption = showMeter
     ? buildMeterCaption({
         used,
@@ -186,7 +188,7 @@ export function AllowanceAccountPanel({
               </p>
               <p className={cx.muted}>{copy.account.upgradePaygCaption}</p>
             </div>
-            <button type="button" className={cx.linkButton} onClick={onChangePlan}>
+            <button type="button" className={cx.linkButton} onClick={() => onChangePlan()}>
               {copy.account.seePlans}
             </button>
           </SplitRow>
@@ -205,11 +207,7 @@ export function AllowanceAccountPanel({
         ) : null}
       </div>
       {isFullscreen && productRef ? (
-        <ChargesSection
-          charges={history.charges}
-          loading={history.loading}
-          error={history.error}
-        />
+        <ChargesSection charges={history.charges} loading={history.loading} error={history.error} />
       ) : null}
       {isFullscreen ? <AccountIdentityFooter /> : null}
     </div>
@@ -279,8 +277,7 @@ function buildAllowanceFacts({
   }
 
   if (showPeriod) {
-    const label =
-      periodKind === 'resets' ? copy.usage.resetsEyebrow : copy.usage.renewsEyebrow
+    const label = periodKind === 'resets' ? copy.usage.resetsEyebrow : copy.usage.renewsEyebrow
     if (period.kind === 'none') {
       items.push({
         key: 'period',
@@ -300,7 +297,7 @@ function buildAllowanceFacts({
         compactValue:
           shortDate && days != null && days > 0
             ? `${shortDate}, in ${days} days`
-            : date ?? undefined,
+            : (date ?? undefined),
         caption: inDays ?? undefined,
       })
     }
@@ -311,9 +308,7 @@ function buildAllowanceFacts({
     label: copy.usage.creditsEyebrow,
     value: copy.usage.creditsNotUsed,
     compactValue: copy.usage.creditsNotUsed,
-    caption: fullscreenCredits
-      ? copy.usage.creditsDoNotSpend
-      : copy.usage.creditsUntouched,
+    caption: fullscreenCredits ? copy.usage.creditsDoNotSpend : copy.usage.creditsUntouched,
   })
 
   return items

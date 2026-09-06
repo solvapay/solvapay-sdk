@@ -3,14 +3,16 @@
 /**
  * Account states A (no plan) and F (allowance at cap).
  *
- * One family: a `PlanRow` ladder. A is the whole widget. F suppresses
- * the balance box, drops Change plan, and states the credit trap when
- * credits cannot restore calls. PAYG is emphasized when its activation
- * strategy is `topup-first`.
+ * One family: a `PlanActionRow` ladder. A is the whole widget. F
+ * suppresses the balance box, drops Change plan, and states the credit
+ * trap when credits cannot restore calls. PAYG is emphasized when its
+ * activation strategy is `topup-first`. Each row's button activates in
+ * place when no payment is needed, or swaps to checkout with that plan
+ * when it is.
  */
 
-import React from 'react'
-import { billingCycle, headlineCharges, includedUnits } from '@solvapay/core'
+import React, { useEffect, useState } from 'react'
+import { billingCycle, includedUnits } from '@solvapay/core'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
 import { useActivation } from '../../hooks/useActivation'
@@ -19,15 +21,9 @@ import { useCopy } from '../../hooks/useCopy'
 import { useMerchant } from '../../hooks/useMerchant'
 import { useUsage } from '../../hooks/useUsage'
 import { interpolate } from '../../i18n/interpolate'
-import {
-  allowanceMeterUnit,
-  daysUntil,
-  remainingCap,
-  resolvePeriodDisplay,
-} from '../account-state'
+import { allowanceMeterUnit, daysUntil, remainingCap, resolvePeriodDisplay } from '../account-state'
 import { formatShortDate, type ActiveProduct } from '../derive-active-products'
 import { useDisplayMode } from '../hooks/useDisplayMode'
-import { planConsequence } from '../plan-consequence'
 import {
   resolveActivationStrategy,
   resolvePlanShape,
@@ -37,7 +33,8 @@ import {
 import { Eyebrow, Section } from '../primitives'
 import { AccountIdentityFooter } from './accountFullscreen'
 import { PlanIdentityHeader } from './accountViewShared'
-import { CheckoutPlanRow, type LadderPlan } from './checkout/CheckoutPlanRow'
+import { LadderPlanRow } from './checkout/LadderPlanRow'
+import type { LadderPlan } from './checkout/CheckoutPlanRow'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
 
 export function LadderAccountPanel({
@@ -62,7 +59,7 @@ export function LadderAccountPanel({
   productRef?: string
   locale: string
   classNames?: McpViewClassNames
-  onChangePlan?: () => void
+  onChangePlan?: (planRef?: string) => void
   showPortalCta: boolean
 }): React.ReactElement {
   const cx = resolveMcpClassNames(classNames)
@@ -72,8 +69,9 @@ export function LadderAccountPanel({
   const { displayMode } = useDisplayMode()
   const isFullscreen = displayMode === 'fullscreen' && accountState === 'A'
   const { usage } = useUsage()
-  const { activate, error } = useActivation()
+  const { activate, state, error } = useActivation()
   const credits = balance.credits ?? 0
+  const [pendingRef, setPendingRef] = useState<string | null>(null)
 
   const ladderPlans = listLadderPlans(plans, {
     excludeRef: accountState === 'F' ? allowanceProduct?.planRef : null,
@@ -91,14 +89,28 @@ export function LadderAccountPanel({
   const planLabel =
     planShape === 'free' || planShape === 'trial' ? planName.toLowerCase() : planName
   const unit = allowanceMeterUnit(meter, cap && cap > 0 ? cap : 2)
+  const verb =
+    accountState === 'F' ? copy.account.switchPlanButton : copy.account.activatePlanButton
 
-  const handlePlanClick = (plan: LadderPlan) => {
-    const strategy = resolveActivationStrategy(plan)
-    if (strategy === 'activate' && productRef) {
-      void activate({ productRef, planRef: plan.reference })
+  useEffect(() => {
+    if (!pendingRef) return
+    if (state === 'payment_required' || state === 'topup_required') {
+      onChangePlan?.(pendingRef)
+      setPendingRef(null)
       return
     }
-    onChangePlan?.()
+    if (state === 'activated' || state === 'error') {
+      setPendingRef(null)
+    }
+  }, [state, pendingRef, onChangePlan])
+
+  const handlePlanAction = (plan: LadderPlan) => {
+    if (needsPayment(plan, credits) || !productRef) {
+      onChangePlan?.(plan.reference)
+      return
+    }
+    setPendingRef(plan.reference)
+    void activate({ productRef, planRef: plan.reference })
   }
 
   return (
@@ -151,26 +163,20 @@ export function LadderAccountPanel({
             <Eyebrow variant="rail">
               {accountState === 'F' ? copy.account.carryOnEyebrow : copy.account.plansEyebrow}
             </Eyebrow>
-            <div className="solvapay-mcp-plan-list">
+            <div className="solvapay-mcp-plan-list solvapay-mcp-plan-action-list">
               {ladderPlans.map(plan => (
-                <CheckoutPlanRow
+                <LadderPlanRow
                   key={plan.reference}
                   plan={plan}
                   locale={locale}
-                  selected={plan.reference === emphasizedRef}
-                  current={false}
-                  free={false}
-                  disabled={false}
-                  selectedOption={optionFromPlan(plan)}
-                  balance={balance}
-                  description={
-                    isFullscreen
-                      ? planConsequence(plan, locale, balance, {
-                          merchantName: merchant?.displayName,
-                        })
-                      : undefined
+                  emphasized={plan.reference === emphasizedRef}
+                  actionLabel={
+                    pendingRef === plan.reference ? copy.account.activatingPlanButton : verb
                   }
-                  onSelect={() => handlePlanClick(plan)}
+                  busy={pendingRef === plan.reference}
+                  disabled={pendingRef !== null && pendingRef !== plan.reference}
+                  merchantName={merchant?.displayName}
+                  onAction={() => handlePlanAction(plan)}
                 />
               ))}
             </div>
@@ -189,7 +195,7 @@ export function LadderAccountPanel({
         ) : accountState === 'A' && onChangePlan ? (
           <div className={cx.stack}>
             <p className={cx.muted}>{copy.account.noPlanBody}</p>
-            <button type="button" className={cx.button} onClick={onChangePlan}>
+            <button type="button" className={cx.button} onClick={() => onChangePlan()}>
               {copy.account.pickPlanButton}
             </button>
           </div>
@@ -219,6 +225,13 @@ export function LadderAccountPanel({
   )
 }
 
+function needsPayment(plan: PlanLike, credits: number): boolean {
+  const shape = resolvePlanShape(plan)
+  if (shape === 'free' || shape === 'trial') return false
+  if (shape === 'usage-based') return credits <= 0
+  return true
+}
+
 function listLadderPlans(
   plans: readonly PlanLike[] | undefined,
   {
@@ -239,14 +252,6 @@ function listLadderPlans(
     }
     return true
   })
-}
-
-function optionFromPlan(plan: PlanLike): { price: number; currency: string } {
-  const headline = headlineCharges(plan)[0]
-  return {
-    price: headline?.amountMinor ?? plan.price ?? 0,
-    currency: headline?.currency ?? plan.currency ?? 'usd',
-  }
 }
 
 function formatCapLine(
