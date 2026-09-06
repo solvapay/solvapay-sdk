@@ -11,7 +11,7 @@
  * when it is.
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { billingCycle, includedUnits } from '@solvapay/core'
 import type { BootstrapProduct } from '@solvapay/mcp-core'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
@@ -69,7 +69,7 @@ export function LadderAccountPanel({
   const { displayMode } = useDisplayMode()
   const isFullscreen = displayMode === 'fullscreen' && accountState === 'A'
   const { usage } = useUsage()
-  const { activate, state, error } = useActivation()
+  const { activate, error } = useActivation()
   const credits = balance.credits ?? 0
   const [pendingRef, setPendingRef] = useState<string | null>(null)
 
@@ -92,25 +92,18 @@ export function LadderAccountPanel({
   const verb =
     accountState === 'F' ? copy.account.switchPlanButton : copy.account.activatePlanButton
 
-  useEffect(() => {
-    if (!pendingRef) return
-    if (state === 'payment_required' || state === 'topup_required') {
-      onChangePlan?.(pendingRef)
-      setPendingRef(null)
-      return
-    }
-    if (state === 'activated' || state === 'error') {
-      setPendingRef(null)
-    }
-  }, [state, pendingRef, onChangePlan])
-
   const handlePlanAction = (plan: LadderPlan) => {
     if (needsPayment(plan, credits) || !productRef) {
       onChangePlan?.(plan.reference)
       return
     }
     setPendingRef(plan.reference)
-    void activate({ productRef, planRef: plan.reference })
+    void activate({ productRef, planRef: plan.reference }).then(next => {
+      if (next === 'payment_required' || next === 'topup_required') {
+        onChangePlan?.(plan.reference)
+      }
+      setPendingRef(null)
+    })
   }
 
   return (

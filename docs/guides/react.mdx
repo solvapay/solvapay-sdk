@@ -756,9 +756,10 @@ an explicit "currency not supported" error listing the available currencies.
 
 Credit top-ups use a **separate** currency list: the provider's `defaultCurrency` plus any
 additional `supportedTopupCurrencies` configured in the SolvaPay Console. Plan pricing currencies
-are never used for top-ups. `useCheckoutFlow` exposes `topupCurrencies`, `topupCurrency`, and
-`setTopupCurrency` for building a currency picker on the amount step; pass the chosen currency to
-`TopupForm.Root` / `useTopup`.
+are never used for top-ups. The provider's **minimum top-up** (`minTopUpMinor` in settings) is
+enforced on every top-up and auto-recharge — amounts below it are rejected. `useCheckoutFlow`
+exposes `topupCurrencies`, `topupCurrency`, and `setTopupCurrency` for building a currency picker
+on the amount step; pass the chosen currency to `TopupForm.Root` / `useTopup`.
 
 ## Credit Top-Ups & Auto-Recharge
 
@@ -936,10 +937,10 @@ function UsageAction() {
 **Configuration, limits, and pricing.** Auto-recharge uses a balance
 **threshold** plus a **fixed top-up amount**. When enabled, both must be greater
 than zero, the top-up must be at least the threshold, and both must be at most
-`10,000` major units. The top-up amount must also clear Stripe's per-currency
-minimum (for example `$0.50` for USD/EUR/CHF/CAD/AUD, `£0.30` for GBP,
-`30 kr` for SEK/NOK, `2.50 kr` for DKK), and the currency must be one of the
-provider's supported top-up currencies.
+`10,000` major units. The top-up amount must also clear the higher of Stripe's
+per-currency minimum (for example `$0.50` for USD/EUR/CHF/CAD/AUD, `£0.30` for GBP,
+`30 kr` for SEK/NOK, `2.50 kr` for DKK) and the provider's **minimum top-up**.
+The currency must be one of the provider's supported top-up currencies.
 
 An optional `maxMonthlySpendMajor` cap limits how much auto-recharge spend is
 allowed per UTC calendar month. Set it in the `<AutoRecharge>` form under

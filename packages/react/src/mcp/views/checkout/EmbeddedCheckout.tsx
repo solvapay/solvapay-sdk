@@ -238,12 +238,11 @@ function McpCheckoutBody({
   }, [autoAdvance, flow.selectedPlanRef, flow.step, initialPlanRef, onPlanContinue])
 
   if (flow.step === 'plan') {
-    const waitingForSelection =
-      Boolean(autoAdvance) && !autoAdvancedRef.current && !flow.selectedPlanRef
+    const waitingForSelection = Boolean(autoAdvance) && !flow.selectedPlanRef
     const matchingPending =
       Boolean(autoAdvance) &&
       flow.selectedPlanRef === initialPlanRef &&
-      (!autoAdvancedRef.current || flow.status === 'activating')
+      flow.status === 'activating'
     if (waitingForSelection || matchingPending) {
       return <p>Loading checkout…</p>
     }

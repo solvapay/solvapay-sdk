@@ -112,13 +112,13 @@ await fetch(`https://api.solvapay.com/v1/sdk/customers/${ref}`, {
 
 ## Data helpers
 
-Three read-only endpoints power customer-facing UI without bloating `check_purchase`:
+Three read-only endpoints power customer-facing UI without bloating `checkPurchase`:
 
 - **`GET /v1/sdk/platform-config`** — browser-safe platform values (today: the SolvaPay Stripe publishable key used to initialize the Stripe.js client). Resolves against the sandbox or live environment matching your secret key. Call it once on page load before mounting `<PaymentForm>`; additions will land here rather than in `/sdk/merchant`.
 - **`GET /v1/sdk/merchant`** — provider identity safe to render in checkout and mandate copy: `name`, `legalName`, `supportContact`, `termsUrl`, `privacyUrl`, `iconUrl` (square app icon), and `logoUrl` (absolute URL resolved against `ASSETS_BASE_URL`). Used by SDK components like `MandateText` and `CheckoutSummary`.
-- **`GET /v1/sdk/payment-method?customerRef=…`** — returns `{ kind: 'card', brand, last4, expMonth, expYear }` or `{ kind: 'none' }`. The card brand and last4 are mirrored onto the Customer by the `payment_intent.succeeded` webhook, so this endpoint reads from SolvaPay's database with no Stripe round-trip. Safe to poll alongside `check_purchase`.
+- **`GET /v1/sdk/payment-method?customerRef=…`** — returns `{ kind: 'card', brand, last4, expMonth, expYear, reusable }` or `{ kind: 'none' }`. The card brand and last4 are mirrored onto the Customer by the `payment_intent.succeeded` webhook, so this endpoint reads from SolvaPay's database with no Stripe round-trip. `reusable` distinguishes a chargeable saved card from a card that is only on file. Safe to poll alongside `checkPurchase`.
 
-All three are exposed as route-wrapper helpers in `@solvapay/next` (`getMerchant`, `getProduct`, `getPaymentMethod`), as fetch handlers in `@solvapay/server/fetch`, and as MCP tools in the default `createSolvaPayMcpServer` tool surface.
+All three are exposed as route-wrapper helpers in `@solvapay/next` (`getMerchant`, `getProduct`, `getPaymentMethod`) and as fetch handlers in `@solvapay/server/fetch`. In an MCP server they are not separate tools — `createSolvaPayMcpServer` delivers the same data on the `account` viewer's bootstrap payload, which seeds the client caches at mount.
 
 ## Paywall protection flow
 

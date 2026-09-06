@@ -8,7 +8,7 @@
  * constructs the `App`, and renders `<McpApp>`.
  *
  * All of these components (shell, views, plan-actions helpers,
- * narrator) live in the SDK so the hosted MCP Pay solution can mount
+ * narrator) live in the SDK so the Managed MCP surface can mount
  * the same surface on an HTTP page instead of inside the iframe.
  */
 
