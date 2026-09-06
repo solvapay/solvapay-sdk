@@ -1233,6 +1233,7 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
 
 .solvapay-mcp-plan-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
@@ -1243,6 +1244,7 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   background: transparent;
   color: var(--color-text-primary);
   text-align: left;
+  box-shadow: none;
   cursor: pointer;
 }
 
@@ -1254,6 +1256,7 @@ html:has(.solvapay-mcp-main[data-display-mode='fullscreen']) #root {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 

@@ -74,6 +74,9 @@ describe('MCP primitive vocabulary', () => {
     const row = firstRule(STYLES, /\.solvapay-mcp-plan-row\s*\{([^}]+)\}/)
     expect(row).toMatch(/border:\s*1px solid var\(--color-border-secondary\)/)
     expect(row).toMatch(/background:\s*transparent/)
+    expect(row).toMatch(/flex-direction:\s*row/)
+    expect(row).toMatch(/text-align:\s*left/)
+    expect(row).toMatch(/box-shadow:\s*none/)
     expect(row).not.toMatch(/--color-background-primary/)
 
     const selected = firstRule(
@@ -83,6 +86,7 @@ describe('MCP primitive vocabulary', () => {
     expect(selected).toMatch(/border-color:\s*var\(--color-background-inverse\)/)
     expect(selected).not.toMatch(/padding:/)
     expect(selected).not.toMatch(/min-height:/)
+    expect(selected).not.toMatch(/box-shadow:/)
 
     const check = firstRule(STYLES, /\.solvapay-mcp-plan-row-check\s*\{([^}]+)\}/)
     expect(check).toMatch(/width:\s*20px/)

@@ -429,7 +429,7 @@ describe('<McpCheckoutView> — plan step', () => {
     })
     const freeCard = screen
       .getByText('Current')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLButtonElement
+      .closest('.solvapay-mcp-plan-row') as HTMLButtonElement
     expect(freeCard).toBeTruthy()
     expect(freeCard.getAttribute('data-state')).toBe('current')
     expect(freeCard.getAttribute('aria-disabled')).toBe('true')
@@ -440,7 +440,7 @@ describe('<McpCheckoutView> — plan step', () => {
     // Free card.
     const paygCard = screen
       .getByText('Pay as you go')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLButtonElement
+      .closest('.solvapay-mcp-plan-row') as HTMLButtonElement
     expect(paygCard.getAttribute('data-state')).toBe('selected')
 
     // Clicking the Free card is a no-op — the continue CTA tracks PAYG.
@@ -457,7 +457,7 @@ describe('<McpCheckoutView> — plan step', () => {
       expect(screen.getByRole('button', { name: /Continue with Pay as you go/ })).toBeTruthy()
     })
     // Select Pro → CTA updates.
-    const proCard = screen.getByText('Pro').closest('[data-solvapay-plan-selector-card]')
+    const proCard = screen.getByText('Pro').closest('.solvapay-mcp-plan-row')
     expect(proCard).toBeTruthy()
     act(() => {
       fireEvent.click(proCard!)
@@ -744,7 +744,7 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+      .closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -766,7 +766,7 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+      .closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -784,7 +784,7 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+      .closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -804,7 +804,7 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+      .closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -826,7 +826,7 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+      .closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -846,7 +846,7 @@ describe('<McpCheckoutView> — Recurring branch', () => {
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+      .closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })
@@ -932,7 +932,7 @@ describe('<McpCheckoutView> — multi-currency plans', () => {
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+      .closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })

@@ -69,7 +69,6 @@ export function CheckoutPlanRow({
       disabled={disabled}
       state={state}
       onClick={onSelect}
-      data-solvapay-plan-selector-card=""
       data-free={free ? '' : undefined}
     />
   )
