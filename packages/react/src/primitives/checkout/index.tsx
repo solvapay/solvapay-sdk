@@ -678,11 +678,11 @@ function PaygPayment({ className }: { className?: string }) {
         </TopupForm.Summary.Root>
         <TopupForm.PaymentElement />
         <TopupForm.Error className="solvapay-checkout-error" />
-        <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
         <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
         <TopupForm.SubmitButton className="solvapay-checkout-pay-button">
           Pay {formatPrice(amountMinor, currency, { locale })}
         </TopupForm.SubmitButton>
+        <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
       </TopupForm.Root>
     </div>
   )
@@ -735,11 +735,11 @@ function RecurringPayment({ className }: { className?: string }) {
         </PaymentForm.TaxSummary.Root>
         <PaymentForm.PaymentElement />
         <PaymentForm.Error className="solvapay-checkout-error" />
-        <PaymentForm.MandateText />
         <span className="solvapay-secure-note">Secure payment processed by Stripe</span>
         <PaymentForm.SubmitButton className="solvapay-checkout-pay-button">
           {isRecurring ? `Subscribe — ${priceLine}` : `Pay ${formattedAmount}`}
         </PaymentForm.SubmitButton>
+        <PaymentForm.MandateText />
       </PaymentForm.Root>
     </div>
   )

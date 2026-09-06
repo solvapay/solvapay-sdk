@@ -104,11 +104,11 @@ export const RecurringPaymentStep = memo(function RecurringPaymentStep({
             <PaymentForm.BusinessDetails.Fields />
           </PaymentForm.BusinessDetails.Root>
           <PaymentForm.Error className={cx.error} />
-          <PaymentForm.MandateText />
 
           <PaymentForm.SubmitButton className={cx.button}>
             <RecurringChargeCta amountMinor={amountMinor} currency={currency} cycle={cycle} />
           </PaymentForm.SubmitButton>
+          <PaymentForm.MandateText />
         </McpHostedBody>
       </McpHostedLayout>
     </PaymentForm.Root>

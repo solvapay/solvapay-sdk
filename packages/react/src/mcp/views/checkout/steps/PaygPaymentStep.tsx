@@ -105,10 +105,10 @@ export const PaygPaymentStep = memo(function PaygPaymentStep({
             </TopupForm.BusinessDetails.Root>
             <TopupForm.Error className={cx.error} />
 
-            <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
             <TopupForm.SubmitButton className={cx.button}>
               <PaygChargeCta amountMinor={amountMinor} currency={currency} />
             </TopupForm.SubmitButton>
+            <MandateText mode="topup" amountMinor={amountMinor} currency={currency} />
           </div>
         </McpHostedBody>
       </McpHostedLayout>

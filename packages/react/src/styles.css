@@ -1827,6 +1827,13 @@
   line-height: 1.5;
 }
 
+/* Mandate now follows the CTA (Stripe pattern). Pull it back against the
+ * container's flex gap so it reads as a caption on the button. */
+[data-solvapay-payment-form-submit] + [data-solvapay-mandate-text],
+[data-solvapay-topup-form-submit] + [data-solvapay-mandate-text] {
+  margin-top: -0.5rem;
+}
+
 /*
  * Inline merchant terms / privacy links inside the mandate sentence.
  * Stays visually quiet (color: inherit, no underline by default) so
