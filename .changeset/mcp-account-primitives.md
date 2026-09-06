@@ -1,0 +1,5 @@
+---
+'@solvapay/react': minor
+---
+
+Add StatusPill, FactBand, and an MCP UsageMeter wrapper (warning at 80% or last remaining call, critical at 100%) plus v3 usage captions. Credit-plan account states B/D lead with the plan line and reframe auto-recharge when calls fail. Allowance states C/E share a Remaining-led FactBand and meter; free drops the price and upgrades via a See plans link. States A and F are a PlanRow ladder (PAYG emphasized when activation is topup-first); F drops the balance box and states the credit trap. `McpLimitReached` is removed — at-cap allowance is state F. G is a same-height skeleton (never a zero balance while limits resolve). H wires `activatePlan` (“Start free plan”). I is used-of-allowance + still-working + a 100% meter (pill “Over the allowance”; no overage money). J restyles `CancelledPlanNotice` (“Active until {date}”, Reactivate secondary). Management stays one column in both display modes. Fullscreen under 1000px of host width (`containerDimensions`) falls back to the stacked widget rail. `hostContext.safeAreaInsets` stay root padding.

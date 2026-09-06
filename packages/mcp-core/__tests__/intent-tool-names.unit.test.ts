@@ -51,6 +51,7 @@ describe('INTENT_TOOL_NAMES', () => {
       checkout: VIEWER_TOOL_NAME,
       account: VIEWER_TOOL_NAME,
       topup: VIEWER_TOOL_NAME,
+      'auto-recharge': VIEWER_TOOL_NAME,
     })
     expect(Object.values(TOOL_FOR_VIEW).every(name => name === VIEWER_TOOL_NAME)).toBe(true)
   })

@@ -77,6 +77,7 @@ describe('createSolvaPayMcpServer', () => {
       MCP_TOOL_NAMES.setRenewal,
       MCP_TOOL_NAMES.activatePlan,
       MCP_TOOL_NAMES.attachBusinessDetails,
+      MCP_TOOL_NAMES.getHistory,
       VIEWER_TOOL_NAME,
     ]
     for (const name of expected) {

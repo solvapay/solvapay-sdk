@@ -62,6 +62,8 @@ function setLimits(opts: SetLimitsOpts = {}) {
     error: null,
     refetch,
     adjustRemaining: vi.fn(),
+    used: null,
+    limit: null,
   })
   return refetch
 }
@@ -285,6 +287,8 @@ describe('useAutoActivateFreePlan', () => {
       error: null,
       refetch,
       adjustRemaining: vi.fn(),
+      used: null,
+      limit: null,
     }))
     setPlans([freePlan])
     const activate = setActivation()
@@ -326,6 +330,8 @@ describe('useAutoActivateFreePlan', () => {
       error: null,
       refetch,
       adjustRemaining: vi.fn(),
+      used: null,
+      limit: null,
     }))
     setPlans([freePlan])
     setActivation()

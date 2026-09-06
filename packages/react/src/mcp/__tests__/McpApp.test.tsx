@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { SOLVAPAY_BOOTSTRAP_URI, VIEWER_TOOL_NAME } from '@solvapay/mcp-core'
@@ -404,8 +404,7 @@ describe('<McpApp>', () => {
     expect(container.querySelector('[data-display-mode="inline"]')).toBeTruthy()
   })
 
-  it('fullscreen chrome is close + footer only — no in-widget header', async () => {
-    const requestTeardown = vi.fn().mockResolvedValue(undefined)
+  it('fullscreen chrome is footer only — no in-widget header or Close', async () => {
     const app = makeApp({
       toolName: VIEWER_TOOL_NAME,
       structuredContent: {
@@ -418,17 +417,14 @@ describe('<McpApp>', () => {
         displayMode: 'fullscreen',
         availableDisplayModes: ['inline', 'fullscreen'],
       },
-      requestTeardown,
     })
     const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
     const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
     await screen.findByTestId('checkout-stub')
     expect(container.querySelector('[data-display-mode="fullscreen"]')).toBeTruthy()
     expect(container.querySelector('.solvapay-mcp-app-header')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
-    await waitFor(() => {
-      expect(requestTeardown).toHaveBeenCalledTimes(1)
-    })
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
+    expect(container.querySelector('.solvapay-mcp-close')).toBeNull()
     expect(screen.getByRole('link', { name: 'Provided by SolvaPay' })).toBeTruthy()
   })
 
@@ -456,5 +452,54 @@ describe('<McpApp>', () => {
       paddingBottom: '8px',
       paddingLeft: '4px',
     })
+  })
+
+  it('applies hostContext.safeAreaInsets in fullscreen as well as inline', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'account',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'fullscreen',
+        availableDisplayModes: ['inline', 'fullscreen'],
+        safeAreaInsets: { top: 20, right: 8, bottom: 16, left: 8 },
+      },
+    })
+    const AccountStub = vi.fn(() => <div data-testid="account-stub">stubbed account</div>)
+    const { container } = render(<McpApp app={app} views={{ account: AccountStub }} />)
+    await screen.findByTestId('account-stub')
+    expect(container.querySelector('.solvapay-mcp-main')).toHaveStyle({
+      paddingTop: '20px',
+      paddingRight: '8px',
+      paddingBottom: '16px',
+      paddingLeft: '8px',
+    })
+  })
+
+  it('stamps the hosted rail in fullscreen even when the host reports a stale 720px width', async () => {
+    const app = makeApp({
+      toolName: VIEWER_TOOL_NAME,
+      structuredContent: {
+        view: 'checkout',
+        productRef: 'prod_1',
+        returnUrl: 'https://example.test/r',
+      },
+      hostContext: {
+        displayMode: 'fullscreen',
+        availableDisplayModes: ['inline', 'fullscreen'],
+        containerDimensions: { width: 720 },
+      },
+    })
+    const CheckoutStub = vi.fn(() => <div data-testid="checkout-stub">stubbed checkout</div>)
+    const { container } = render(<McpApp app={app} views={{ checkout: CheckoutStub }} />)
+    await screen.findByTestId('checkout-stub')
+    expect(container.querySelector('[data-display-mode="fullscreen"]')).toBeTruthy()
+    expect(container.querySelector('.solvapay-mcp-hosted-layout')).toHaveAttribute(
+      'data-rail',
+      'hosted',
+    )
   })
 })

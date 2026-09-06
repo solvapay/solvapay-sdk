@@ -24,6 +24,7 @@ vi.mock('../../src/helpers', () => ({
   createCustomerSessionCore: vi.fn(),
   getMerchantCore: vi.fn(),
   getProductCore: vi.fn(),
+  getHistoryCore: vi.fn(),
   isErrorResult: vi.fn(
     (r: unknown) => typeof r === 'object' && r !== null && 'error' in r && 'status' in r,
   ),
@@ -49,6 +50,7 @@ import {
   createCustomerSessionCore,
   getMerchantCore,
   getProductCore,
+  getHistoryCore,
 } from '../../src/helpers'
 import { verifyWebhook } from '../../src/edge'
 import {
@@ -67,6 +69,7 @@ import {
   createCustomerSession,
   getMerchant,
   getProduct,
+  getHistory,
   solvapayWebhook,
 } from '../../src/fetch/handlers'
 import { configureCors } from '../../src/fetch/cors'
@@ -86,6 +89,7 @@ const mockCreateCheckoutSessionCore = vi.mocked(createCheckoutSessionCore)
 const mockCreateCustomerSessionCore = vi.mocked(createCustomerSessionCore)
 const mockGetMerchantCore = vi.mocked(getMerchantCore)
 const mockGetProductCore = vi.mocked(getProductCore)
+const mockGetHistoryCore = vi.mocked(getHistoryCore)
 const mockVerifyWebhook = vi.mocked(verifyWebhook)
 
 function fakeGet(url = 'http://localhost/api/test') {
@@ -308,6 +312,28 @@ describe('getProduct', () => {
     const res = await getProduct(fakeGet('http://localhost/api/product?productRef=prd_1'))
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ reference: 'prd_1', name: 'Widget API' })
+  })
+})
+
+describe('getHistory', () => {
+  it('passes productRef and limit into getHistoryCore', async () => {
+    mockGetHistoryCore.mockResolvedValue({
+      charges: [],
+      creditActivity: { entries: [], hasMore: false },
+    })
+
+    const res = await getHistory(
+      fakeGet('http://localhost/api/history?productRef=prd_widget&limit=20'),
+    )
+    expect(res.status).toBe(200)
+    expect(mockGetHistoryCore).toHaveBeenCalledWith(expect.any(Request), {
+      productRef: 'prd_widget',
+      limit: 20,
+    })
+    expect(await res.json()).toEqual({
+      charges: [],
+      creditActivity: { entries: [], hasMore: false },
+    })
   })
 })
 

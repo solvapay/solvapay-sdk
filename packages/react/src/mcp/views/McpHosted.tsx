@@ -3,13 +3,16 @@
 /**
  * Hosted-page layout primitives for the MCP widget.
  *
- * Inline stays a single-column stack. Fullscreen at ≥1000px of host
- * width becomes the hosted page: payment leads with a 340px summary
- * rail; management stays one column. Same React tree — CSS container
- * queries flip the payment geometry.
+ * Inline stays a single-column stack. Fullscreen stamps
+ * `data-rail="hosted"`; the 340px payment split engages only when
+ * `@container mcp-hosted (min-width: 1000px)` matches the measured
+ * width. Management stays one column. Same React tree — CSS
+ * container queries flip the payment geometry. Host-reported
+ * `containerDimensions` are not trusted for this gate.
  */
 
 import React from 'react'
+import { resolveHostedRail } from '../display-mode'
 import { useDisplayMode } from '../hooks/useDisplayMode'
 
 export function McpHostedColumn({
@@ -27,8 +30,8 @@ export function McpHostedColumn({
 }
 
 export function McpHostedLayout({ children }: { children: React.ReactNode }) {
-  const { displayMode } = useDisplayMode()
-  const rail = displayMode === 'fullscreen' ? 'hosted' : 'inline'
+  const displayMode = useDisplayMode()
+  const rail = resolveHostedRail(displayMode)
   return (
     <div className="solvapay-mcp-hosted-layout" data-rail={rail}>
       {children}

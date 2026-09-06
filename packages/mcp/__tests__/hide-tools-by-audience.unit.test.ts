@@ -83,10 +83,11 @@ const UI_TOOLS = [
   MCP_TOOL_NAMES.processPayment,
   MCP_TOOL_NAMES.attachBusinessDetails,
   MCP_TOOL_NAMES.setRenewal,
+  MCP_TOOL_NAMES.getHistory,
 ]
 
 describe('createSolvaPayMcpServer — hideToolsByAudience', () => {
-  it('returns all 7 SolvaPay tools by default', async () => {
+  it('returns all 8 SolvaPay tools by default', async () => {
     const server = buildServer()
     const { tools } = await invokeToolsList(server)
     const names = tools.map(t => t.name).sort()

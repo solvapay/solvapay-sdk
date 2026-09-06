@@ -4,6 +4,8 @@ import { merchantCache } from '../../hooks/useMerchant'
 import { productCache } from '../../hooks/useProduct'
 import { plansCache } from '../../hooks/usePlans'
 import { paymentMethodCache } from '../../hooks/usePaymentMethod'
+import { limitsCache } from '../../hooks/useLimits'
+import { seedUsageSnapshot } from '../../hooks/useUsage'
 import type {
   Merchant,
   Plan,
@@ -48,6 +50,7 @@ function makeInitial(
     paymentMethod: null,
     balance: null,
     usage: null,
+    limits: null,
     merchant,
     product,
     plans,
@@ -61,6 +64,8 @@ describe('seedMcpCaches', () => {
     productCache.clear()
     plansCache.clear()
     paymentMethodCache.clear()
+    limitsCache.clear()
+    seedUsageSnapshot(null)
   })
 
   it('seeds merchant/product/plans cache so hooks can hit them synchronously', () => {
@@ -77,7 +82,14 @@ describe('seedMcpCaches', () => {
     const config: SolvaPayConfig = { transport: makeTransport() }
     seedMcpCaches(
       makeInitial({
-        paymentMethod: { kind: 'card', brand: 'visa', last4: '4242', expMonth: 1, expYear: 2030 },
+        paymentMethod: {
+          kind: 'card',
+          brand: 'visa',
+          last4: '4242',
+          expMonth: 1,
+          expYear: 2030,
+          reusable: true,
+        },
       }),
       config,
     )
@@ -93,10 +105,45 @@ describe('seedMcpCaches', () => {
     seedMcpCaches(
       makeInitial({
         customerRef: null,
-        paymentMethod: { kind: 'card', brand: 'visa', last4: '4242', expMonth: 1, expYear: 2030 },
+        paymentMethod: {
+          kind: 'card',
+          brand: 'visa',
+          last4: '4242',
+          expMonth: 1,
+          expYear: 2030,
+          reusable: true,
+        },
       }),
       config,
     )
     expect(paymentMethodCache.size).toBe(0)
+  })
+
+  it('seeds limitsCache at customerRef:productRef:meterName', () => {
+    const config: SolvaPayConfig = { transport: makeTransport() }
+    seedMcpCaches(
+      makeInitial({
+        limits: {
+          remaining: 3800,
+          withinLimits: true,
+          meterName: 'requests',
+          plan: 'pro',
+          activationRequired: false,
+          used: 6200,
+          limit: 10000,
+        },
+      }),
+      config,
+    )
+
+    const entry = limitsCache.get('cus_42:prd_test:requests')
+    expect(entry?.data).toMatchObject({
+      remaining: 3800,
+      withinLimits: true,
+      meterName: 'requests',
+      activationRequired: false,
+      used: 6200,
+      limit: 10000,
+    })
   })
 })

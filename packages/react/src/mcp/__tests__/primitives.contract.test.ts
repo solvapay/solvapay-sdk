@@ -37,6 +37,9 @@ const PRIMITIVE_CLASSES = [
   '.solvapay-mcp-toggle',
   '.solvapay-mcp-ledger-row',
   '.solvapay-mcp-attribution',
+  '.solvapay-mcp-status-pill',
+  '.solvapay-mcp-fact-band',
+  '.solvapay-mcp-usage-meter',
 ] as const
 
 describe('MCP primitive vocabulary', () => {
@@ -71,6 +74,9 @@ describe('MCP primitive vocabulary', () => {
     const row = firstRule(STYLES, /\.solvapay-mcp-plan-row\s*\{([^}]+)\}/)
     expect(row).toMatch(/border:\s*1px solid var\(--color-border-secondary\)/)
     expect(row).toMatch(/background:\s*transparent/)
+    expect(row).toMatch(/flex-direction:\s*row/)
+    expect(row).toMatch(/text-align:\s*left/)
+    expect(row).toMatch(/box-shadow:\s*none/)
     expect(row).not.toMatch(/--color-background-primary/)
 
     const selected = firstRule(
@@ -80,6 +86,7 @@ describe('MCP primitive vocabulary', () => {
     expect(selected).toMatch(/border-color:\s*var\(--color-background-inverse\)/)
     expect(selected).not.toMatch(/padding:/)
     expect(selected).not.toMatch(/min-height:/)
+    expect(selected).not.toMatch(/box-shadow:/)
 
     const check = firstRule(STYLES, /\.solvapay-mcp-plan-row-check\s*\{([^}]+)\}/)
     expect(check).toMatch(/width:\s*20px/)
@@ -105,6 +112,33 @@ describe('MCP primitive vocabulary', () => {
     expect(on).toMatch(/background:\s*var\(--color-background-inverse\)/)
   })
 
+  it('accents StatusPill with warning tokens and never invents an accent palette', () => {
+    const accent = firstRule(
+      STYLES,
+      /\.solvapay-mcp-status-pill\[data-tone='accent'\]\s*\{([^}]+)\}/,
+    )
+    expect(accent).toMatch(/--color-background-warning/)
+    expect(accent).toMatch(/--color-text-warning/)
+    expect(accent).not.toMatch(/#[0-9A-Fa-f]{3,8}/)
+  })
+
+  it('defaults FactBand to key-value rows and becomes fixed-width columns at 760px', () => {
+    const band = firstRule(STYLES, /\.solvapay-mcp-fact-band\s*\{([^}]+)\}/)
+    expect(band).toMatch(/flex-direction:\s*column/)
+    expect(band).not.toMatch(/grid-template-columns/)
+
+    expect(STYLES).toMatch(
+      /@container\s+mcp\s*\(min-width:\s*760px\)[\s\S]*?\.solvapay-mcp-fact-band\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*196px\)/,
+    )
+  })
+
+  it('pins MCP UsageMeter fill tokens to warning, not the shared 75/90 red critical', () => {
+    const main = firstRule(STYLES, /\.solvapay-mcp-main\s*\{([^}]+)\}/)
+    expect(main).toMatch(/--solvapay-usage-warning:\s*var\(--color-text-warning\)/)
+    expect(main).toMatch(/--solvapay-usage-critical:\s*var\(--color-text-warning\)/)
+    expect(main).toMatch(/--solvapay-usage-safe:\s*var\(--color-text-primary\)/)
+  })
+
   it('uses --color-ring-primary for primitive focus, not an invented ring token', () => {
     expect(STYLES).toMatch(
       /\.solvapay-mcp-preset-tile:focus-visible[\s\S]*?--color-ring-primary/,
@@ -127,6 +161,14 @@ describe('MCP primitive vocabulary', () => {
     expect(control).toMatch(/border:\s*1px solid var\(--color-border-primary\)/)
     expect(STYLES).toMatch(/--solvapay-control-height:\s*44px/)
   })
+
+  it('lays auto-recharge fields out as a 3-column grid at the 760px mcp breakpoint', () => {
+    const stacked = firstRule(STYLES, /\.solvapay-mcp-auto-recharge-fields\s*\{([^}]+)\}/)
+    expect(stacked).toMatch(/flex-direction:\s*column/)
+    expect(STYLES).toMatch(
+      /@container\s+mcp\s*\(min-width:\s*760px\)[\s\S]*?\.solvapay-mcp-auto-recharge-fields\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+    )
+  })
 })
 
 describe('MCP inline density contract', () => {
@@ -146,6 +188,9 @@ describe('MCP inline density contract', () => {
     expect(STYLES).toMatch(/@container\s+mcp\s*\(min-width:\s*760px\)/)
     expect(STYLES).toMatch(/@container\s+mcp-hosted\s*\(min-width:\s*1000px\)/)
     expect(STYLES).not.toMatch(/@container\s*\(min-width:\s*1000px\)/)
+    expect(STYLES).toMatch(
+      /@container\s+mcp-hosted\s*\(min-width:\s*1000px\)[\s\S]*?\[data-rail='hosted'\]:has\(>\s*\.solvapay-mcp-summary-rail\)/,
+    )
   })
 
   it('defaults to the 420px type scale and lifts it at 760px', () => {

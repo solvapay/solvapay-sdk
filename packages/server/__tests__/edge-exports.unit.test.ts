@@ -45,6 +45,7 @@ describe('fetch subpath surface', () => {
     'createPaymentIntent',
     'createTopupPaymentIntent',
     'customerBalance',
+    'getHistory',
     'getMerchant',
     'getPaymentMethod',
     'getProduct',

@@ -16,48 +16,6 @@ const taxState = vi.hoisted(() => ({
   topup: null as { total: number; currency: string } | null,
 }))
 
-vi.mock('../../../primitives/AutoRecharge', () => {
-  const Root: React.FC<{
-    deferCardSetup?: boolean
-    onPendingConfig?: (payload: {
-      enabled: boolean
-      triggerType: 'balance'
-      thresholdAmountMajor: number
-      topupAmountMajor: number
-      currency: string
-    }) => void
-    children?: React.ReactNode
-  }> = ({ deferCardSetup, onPendingConfig, children }) => (
-    <div data-testid="auto-recharge-root" data-defer-card-setup={String(!!deferCardSetup)}>
-      <button
-        type="button"
-        data-testid="auto-recharge-pending"
-        onClick={() =>
-          onPendingConfig?.({
-            enabled: true,
-            triggerType: 'balance',
-            thresholdAmountMajor: 5,
-            topupAmountMajor: 10,
-            currency: 'USD',
-          })
-        }
-      >
-        stage auto-recharge
-      </button>
-      {children}
-    </div>
-  )
-  return {
-    AutoRecharge: {
-      Root,
-      Loading: () => null,
-      Header: () => null,
-      Body: () => null,
-      Error: () => null,
-    },
-  }
-})
-
 vi.mock('../../../primitives/TopupForm', () => {
   const Root: React.FC<{
     currency?: string
@@ -336,14 +294,17 @@ describe('<McpTopupView> — topup currency picker', () => {
     expect(screen.getByText('Paying as demo@acme.test')).toBeTruthy()
   })
 
-  it('defers card setup and forwards pending auto-recharge into TopupForm', async () => {
+  it('forwards a validated auto-recharge payload into TopupForm on Continue', async () => {
     renderTopup(singleCurrencyUsdMerchant)
     await screen.findByText('Add credits')
-    expect(screen.getByTestId('auto-recharge-root').getAttribute('data-defer-card-setup')).toBe(
-      'true',
-    )
 
-    fireEvent.click(screen.getByTestId('auto-recharge-pending'))
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-recharge' }))
+    fireEvent.change(screen.getByLabelText('When balance falls below'), {
+      target: { value: '5' },
+    })
+    fireEvent.change(screen.getByLabelText('Add each time'), {
+      target: { value: '10' },
+    })
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
@@ -356,6 +317,68 @@ describe('<McpTopupView> — topup currency picker', () => {
       thresholdAmountMajor: 5,
       topupAmountMajor: 10,
       currency: 'USD',
+    })
+  })
+
+  it('keeps the amount step and shows an error when auto-recharge is invalid', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-recharge' }))
+    fireEvent.change(screen.getByLabelText('When balance falls below'), {
+      target: { value: '' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    expect(screen.queryByTestId('topup-form-stub')).toBeNull()
+    expect(screen.getByRole('alert').textContent).toMatch(/threshold/i)
+    expect(screen.getByRole('button', { name: /Continue/i })).toBeTruthy()
+  })
+
+  it('omits autoRecharge when the toggle is left off', async () => {
+    renderTopup(singleCurrencyUsdMerchant)
+    await screen.findByText('Add credits')
+
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    const form = await screen.findByTestId('topup-form-stub')
+    expect(form.getAttribute('data-auto-recharge')).toBe('')
+  })
+
+  it('re-derives the auto-recharge currency after a currency switch', async () => {
+    renderTopup(multiCurrencyMerchant)
+    await screen.findByLabelText('Topup currency')
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-recharge' }))
+    fireEvent.change(screen.getByLabelText('When balance falls below'), {
+      target: { value: '5' },
+    })
+    fireEvent.change(screen.getByLabelText('Add each time'), {
+      target: { value: '10' },
+    })
+    const select = screen.getByLabelText('Topup currency') as HTMLSelectElement
+    act(() => {
+      fireEvent.change(select, { target: { value: 'EUR' } })
+    })
+    await waitFor(() => expect(select.value).toBe('EUR'))
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Continue/i }))
+    })
+
+    const form = await screen.findByTestId('topup-form-stub')
+    expect(JSON.parse(form.getAttribute('data-auto-recharge') ?? '')).toEqual({
+      enabled: true,
+      triggerType: 'balance',
+      thresholdAmountMajor: 5,
+      topupAmountMajor: 10,
+      currency: 'EUR',
     })
   })
 

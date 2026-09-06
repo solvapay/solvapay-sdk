@@ -5,37 +5,26 @@
  * link sits top-left above the heading. Selection changes only the
  * row border and check fill — the 20px check slot never reflows.
  *
- * When `fromPaywall` is `payment_required` the step leads with the
- * reduced limit-reached handoff. `activation_required` still names
- * that a plan is needed. `hideUpgradeBanner` suppresses both.
+ * When `fromPaywall` is `activation_required` the step names that a
+ * plan is needed. `payment_required` is state F on the account
+ * surface — this step no longer prefixes a limit-reached handoff.
+ * `hideUpgradeBanner` suppresses the activation preface.
  */
 
 import React, { memo } from 'react'
 import { PlanSelector, usePlanSelector } from '../../../../primitives/PlanSelector'
 import { useCopy } from '../../../../hooks/useCopy'
 import { useBalance } from '../../../../hooks/useBalance'
-import { usePurchase } from '../../../../hooks/usePurchase'
 import { useHostLocale } from '../../../useHostLocale'
-import { formatPrice } from '../../../../utils/format'
-import { isPaygPlan } from '../../../../utils/isPayg'
-import { PlanRow } from '../../../primitives'
 import { BackLink } from '../../BackLink'
-import { McpLimitReached } from '../../McpLimitReached'
 import type { BootstrapPlanLike, Cx } from '../shared'
-import {
-  formatContinueLabel,
-  formatPaygRate,
-  inferIncludedUnits,
-  planBillingInterval,
-  planMeterName,
-  shortCycle,
-} from '../shared'
-import type { Plan } from '../../../../types'
+import { formatContinueLabel } from '../shared'
+import { CheckoutPlanRow } from '../CheckoutPlanRow'
 
 interface PlanStepProps {
   fromPaywall: boolean
   paywallKind?: 'payment_required' | 'activation_required'
-  /** Suppresses the inline limit / upgrade preface even when `fromPaywall` is true. */
+  /** Suppresses the inline upgrade preface even when `fromPaywall` is true. */
   hideUpgradeBanner?: boolean
   onContinue: () => void
   onStayOnFree?: () => void
@@ -66,22 +55,16 @@ export const PlanStep = memo(function PlanStep({
   const locale = useHostLocale()
   const copy = useCopy()
   const balance = useBalance()
-  const { purchases } = usePurchase()
   const selectedPlanShape = selectedPlan as unknown as BootstrapPlanLike | null
   const pricingOption = selectedPlan ? getSelectedOption(selectedPlan) : undefined
   const ctaLabel = formatContinueLabel(selectedPlanShape, locale, pricingOption)
-  const showPreface = fromPaywall && !hideUpgradeBanner
-  const productName = purchases.find(purchase => purchase.productName)?.productName
+  const showPreface = fromPaywall && !hideUpgradeBanner && paywallKind !== 'payment_required'
 
   return (
     <>
       {onBack ? <BackLink label={copy.checkout.backToAccount} onClick={onBack} /> : null}
 
-      {showPreface && paywallKind === 'payment_required' ? (
-        <McpLimitReached productName={productName} onOpenAccount={onBack} />
-      ) : null}
-
-      {showPreface && paywallKind !== 'payment_required' ? (
+      {showPreface ? (
         <p className={cx.muted} role="status">
           This tool needs a paid plan. Pick one to get started.
         </p>
@@ -139,91 +122,3 @@ export const PlanStep = memo(function PlanStep({
     </>
   )
 })
-
-function CheckoutPlanRow({
-  plan,
-  locale,
-  selected,
-  current,
-  free,
-  selectedOption,
-  balance,
-  onSelect,
-}: {
-  plan: Plan
-  locale: string
-  selected: boolean
-  current: boolean
-  free: boolean
-  selectedOption: { price: number; currency: string }
-  balance: ReturnType<typeof useBalance>
-  onSelect: () => void
-}) {
-  const isPaygCurrent = current && isPaygPlan(plan)
-  const disabled = free || (current && !isPaygCurrent)
-  const state = resolvePlanRowState({ current, selected, free, isPaygCurrent })
-  const interval = planBillingInterval(plan)
-  const priceLabel = formatPlanPrice(selectedOption, locale, interval, isPaygPlan(plan))
-  const description = planWhatItGives(plan, locale, balance)
-
-  return (
-    <PlanRow
-      name={plan.name ?? plan.reference}
-      description={description}
-      price={priceLabel}
-      selected={selected && !disabled}
-      current={current}
-      disabled={disabled}
-      state={state}
-      onClick={onSelect}
-      data-solvapay-plan-selector-card=""
-      data-free={free ? '' : undefined}
-    />
-  )
-}
-
-function resolvePlanRowState({
-  current,
-  selected,
-  free,
-  isPaygCurrent,
-}: {
-  current: boolean
-  selected: boolean
-  free: boolean
-  isPaygCurrent: boolean
-}): 'idle' | 'selected' | 'current' | 'disabled' {
-  if (current && !isPaygCurrent) return 'current'
-  if (selected) return 'selected'
-  if (current) return 'current'
-  if (free) return 'disabled'
-  return 'idle'
-}
-
-function formatPlanPrice(
-  option: { price: number; currency: string },
-  locale: string,
-  interval: string | null,
-  payg: boolean,
-): string {
-  const priceLabel = formatPrice(option.price ?? 0, option.currency.toUpperCase(), { locale })
-  if (payg || !interval) return priceLabel
-  return `${priceLabel}/${shortCycle(interval)}`
-}
-
-function planWhatItGives(
-  plan: Plan,
-  locale: string,
-  balance: ReturnType<typeof useBalance>,
-): string | undefined {
-  if (plan.description) return plan.description
-  const rate = formatPaygRate(plan, locale, balance)
-  if (rate) return rate
-  const included = inferIncludedUnits(plan)
-  const meter = planMeterName(plan)
-  if (included != null) {
-    const noun = meter ?? 'included'
-    return `${included.toLocaleString(locale)} ${noun}`
-  }
-  return undefined
-}

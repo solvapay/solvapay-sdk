@@ -43,18 +43,28 @@ describe('MCP fullscreen hosted geometry', () => {
 
   it('lays payment out as 340px rail + action and keeps management as one column', () => {
     expect(STYLES).toMatch(
-      /\.solvapay-mcp-hosted-layout:has\(>\s*\.solvapay-mcp-summary-rail\)\s*\{[^}]*grid-template-columns:\s*340px\s+minmax\(0,\s*1fr\)/,
+      /\[data-rail='hosted'\]:has\(>\s*\.solvapay-mcp-summary-rail\)\s*\{[^}]*grid-template-columns:\s*340px\s+minmax\(0,\s*1fr\)/,
     )
     expect(STYLES).toMatch(
-      /\.solvapay-mcp-hosted-layout:has\(>\s*\.solvapay-mcp-summary-rail\)\s*\{[^}]*gap:\s*56px/,
+      /\[data-rail='hosted'\]:has\(>\s*\.solvapay-mcp-summary-rail\)\s*\{[^}]*gap:\s*56px/,
     )
     expect(STYLES).toMatch(
-      /\.solvapay-mcp-hosted-layout:has\(>\s*\.solvapay-mcp-summary-rail\)\s*\{[^}]*align-items:\s*stretch/,
+      /\[data-rail='hosted'\]:has\(>\s*\.solvapay-mcp-summary-rail\)\s*\{[^}]*align-items:\s*stretch/,
     )
     expect(STYLES).not.toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)\s+300px/)
     expect(STYLES).toMatch(
+      /\.solvapay-mcp-hosted\[data-mcp-surface='management'\][\s\S]*?\.solvapay-mcp-hosted-layout\s*\{[^}]*flex-direction:\s*column/,
+    )
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-account\s*\{[^}]*flex-direction:\s*column/,
+    )
+    expect(STYLES).toMatch(
       /\.solvapay-mcp-main\[data-display-mode='fullscreen'\][\s\S]*?\.solvapay-mcp-shell\s*\{[^}]*padding:\s*56px 72px 40px/,
     )
+  })
+
+  it('never reads env(safe-area-inset) — hostContext.safeAreaInsets is the source', () => {
+    expect(STYLES).not.toMatch(/padding(?:-[a-z]+)?:\s*env\(\s*safe-area-inset/)
   })
 
   it('hides the in-widget AppHeader in fullscreen — the host owns chrome', () => {
@@ -63,9 +73,46 @@ describe('MCP fullscreen hosted geometry', () => {
     )
   })
 
-  it('lifts the inline reading-measure cap so the hosted column can use 1000px', () => {
+  it('fills the host canvas and centres the shell on main', () => {
     expect(STYLES).toMatch(
+      /html:has\(\.solvapay-mcp-main\[data-display-mode='fullscreen'\]\)[\s\S]*?#root\s*\{[^}]*height:\s*100%/,
+    )
+    expect(STYLES).toMatch(
+      /html:has\(\.solvapay-mcp-main\[data-display-mode='fullscreen'\]\)\s+#root\s*\{[^}]*padding:\s*0/,
+    )
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-main\[data-display-mode='fullscreen'\]\s*\{[^}]*align-items:\s*center/,
+    )
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-main\[data-display-mode='fullscreen'\]\s*\{[^}]*justify-content:\s*safe center/,
+    )
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-main\[data-display-mode='fullscreen'\][\s\S]*?\.solvapay-mcp-shell\s*\{[^}]*max-inline-size:\s*1144px/,
+    )
+    expect(STYLES).not.toMatch(
       /\.solvapay-mcp-main\[data-display-mode='fullscreen'\][\s\S]*?\.solvapay-mcp-shell\s*\{[^}]*max-inline-size:\s*none/,
+    )
+  })
+
+  it('hides the fullscreen chrome row', () => {
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-main\[data-display-mode='fullscreen'\]\s+\.solvapay-mcp-chrome-row\s*\{[^}]*display:\s*none/,
+    )
+  })
+
+  it('does not shrink rail-less payment cards below the 1000px hosted column', () => {
+    expect(STYLES).not.toMatch(
+      /\[data-mcp-surface='payment'\][\s\S]*?\.solvapay-mcp-card:not\(:has\(\.solvapay-mcp-summary-rail\)\)\s*\{[^}]*max-inline-size:\s*760px/,
+    )
+  })
+
+  it('resets portal text-link chrome so history links are not filled pills', () => {
+    expect(STYLES).toMatch(/\.solvapay-mcp-history-link\s*\{[^}]*background:\s*none/)
+    expect(STYLES).toMatch(/\.solvapay-mcp-history-link\s*\{[^}]*padding:\s*0/)
+    expect(STYLES).toMatch(/\.solvapay-mcp-history-link\s*\{[^}]*border-radius:\s*0/)
+    expect(STYLES).toMatch(/\.solvapay-mcp-history-link\s*\{[^}]*border:\s*none/)
+    expect(STYLES).toMatch(
+      /\.solvapay-mcp-history-link\[data-state='ready'\]:hover\s*\{[^}]*background:\s*none/,
     )
   })
 })

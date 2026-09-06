@@ -18,9 +18,16 @@ vi.mock('./error', () => ({
   })),
 }))
 
+vi.mock('./purchase', () => ({
+  checkPurchaseCore: vi.fn(),
+}))
+
 import { createSolvaPay } from '../factory'
 import { getAuthenticatedUserCore } from './auth'
-import { trackUsageCore } from './usage'
+import { checkPurchaseCore } from './purchase'
+import { deriveUsageSnapshot, getUsageCore, trackUsageCore } from './usage'
+
+const mockCheckPurchase = vi.mocked(checkPurchaseCore)
 
 const mockGetAuth = vi.mocked(getAuthenticatedUserCore)
 const mockCreateSolvaPay = vi.mocked(createSolvaPay)
@@ -168,5 +175,136 @@ describe('trackUsageCore', () => {
     await trackUsageCore(fakeRequest(), { units: 1 }, { solvaPay: customSolvaPay })
 
     expect(mockCreateSolvaPay).not.toHaveBeenCalled()
+  })
+})
+
+describe('deriveUsageSnapshot', () => {
+  it('takes total from limits.limit and used from limits.used when the cap is finite', () => {
+    expect(
+      deriveUsageSnapshot({
+        used: 0,
+        purchaseRef: 'pur_1',
+        periodStart: '2026-09-01T00:00:00.000Z',
+        limits: { remaining: 3800, meterName: 'requests', used: 6200, limit: 10000 },
+      }),
+    ).toEqual({
+      meterRef: 'requests',
+      total: 10000,
+      used: 6200,
+      remaining: 3800,
+      percentUsed: 62,
+      periodStart: '2026-09-01T00:00:00.000Z',
+      purchaseRef: 'pur_1',
+    })
+  })
+
+  it('derives used as limit - remaining when used is omitted', () => {
+    expect(
+      deriveUsageSnapshot({
+        used: 0,
+        limits: { remaining: 1, limit: 3 },
+      }),
+    ).toEqual({
+      meterRef: null,
+      total: 3,
+      used: 2,
+      remaining: 1,
+      percentUsed: 66.67,
+    })
+  })
+
+  it('leaves the cap unknown when the backend supplied neither used nor limit', () => {
+    expect(
+      deriveUsageSnapshot({
+        used: 6200,
+        limits: { remaining: 3800, meterName: 'requests' },
+      }),
+    ).toEqual({
+      meterRef: 'requests',
+      total: null,
+      used: 6200,
+      remaining: 3800,
+      percentUsed: null,
+    })
+  })
+
+  it('treats remaining -1 as uncapped rather than a real count', () => {
+    expect(deriveUsageSnapshot({ used: 10, limits: { remaining: -1 } })).toEqual({
+      meterRef: null,
+      total: null,
+      used: 10,
+      remaining: null,
+      percentUsed: null,
+    })
+  })
+
+  it('leaves the cap unknown when limits are null — never fakes unlimited', () => {
+    expect(deriveUsageSnapshot({ used: 4, limits: null })).toEqual({
+      meterRef: null,
+      total: null,
+      used: 4,
+      remaining: null,
+      percentUsed: null,
+    })
+  })
+})
+
+describe('getUsageCore', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('uses a pre-fetched LimitResponse and does not call checkLimits', async () => {
+    mockCheckPurchase.mockResolvedValue({
+      customerRef: 'cus_1',
+      purchases: [
+        {
+          status: 'active',
+          productRef: 'prd_1',
+          reference: 'pur_1',
+          planSnapshot: { isMetered: true },
+          usage: { used: 6200 },
+        },
+      ],
+    } as never)
+    const checkLimits = vi.fn()
+
+    const result = await getUsageCore(fakeRequest(), {
+      solvaPay: { apiClient: { checkLimits } } as never,
+      limits: { remaining: 3800, meterName: 'requests', used: 6200, limit: 10000 },
+    })
+
+    expect(checkLimits).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      used: 6200,
+      remaining: 3800,
+      total: 10000,
+      meterRef: 'requests',
+      purchaseRef: 'pur_1',
+    })
+  })
+
+  it('skips checkLimits on a metered plan when the caller already supplied null limits', async () => {
+    mockCheckPurchase.mockResolvedValue({
+      customerRef: 'cus_1',
+      purchases: [
+        {
+          status: 'active',
+          productRef: 'prd_1',
+          reference: 'pur_1',
+          planSnapshot: { isMetered: true },
+          usage: { used: 12 },
+        },
+      ],
+    } as never)
+    const checkLimits = vi.fn()
+
+    const result = await getUsageCore(fakeRequest(), {
+      solvaPay: { apiClient: { checkLimits } } as never,
+      limits: null,
+    })
+
+    expect(checkLimits).not.toHaveBeenCalled()
+    expect(result).toMatchObject({ used: 12, remaining: null, total: null })
   })
 })

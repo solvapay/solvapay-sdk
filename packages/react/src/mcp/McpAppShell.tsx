@@ -10,6 +10,7 @@
  *  - `checkout` — plan picker + activation dispatcher.
  *  - `account`  — current plan, balance, usage, payment method.
  *  - `topup`    — amount picker + Stripe.
+ *  - `auto-recharge` — dedicated setting, reached from the account panel.
  *
  * Identity (`Paying as {email}`) lives inside the payment form, not
  * the shell. Fullscreen wraps the surface in a 1000px hosted column.
@@ -24,11 +25,12 @@
  * into `account`.
  */
 
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import type { McpBootstrap } from './bootstrap'
 import type { McpAppViewOverrides } from './McpApp'
 import type { McpViewKind } from './view-kind'
 import { McpAccountView, type McpAccountViewProps } from './views/McpAccountView'
+import { McpAutoRechargeView, type McpAutoRechargeViewProps } from './views/McpAutoRechargeView'
 import { McpCheckoutView, type McpCheckoutViewProps } from './views/McpCheckoutView'
 import { McpHostedColumn, McpHostedLayout } from './views/McpHosted'
 import { McpTopupView, type McpTopupViewProps } from './views/McpTopupView'
@@ -79,6 +81,8 @@ function resolveSurface(bootstrapView: McpBootstrap['view'] | string | undefined
       return 'checkout'
     case 'topup':
       return 'topup'
+    case 'auto-recharge':
+      return 'auto-recharge'
     case 'usage': // Usage folds into the account surface.
     case 'account':
     default:
@@ -99,12 +103,19 @@ export function McpAppShell({
   // card, or "Back" on the topup view. The paywall / nudge CTA flips
   // were removed along with those surfaces.
   const [overrideView, setOverrideView] = useState<McpViewKind | null>(null)
+  const [overridePlanRef, setOverridePlanRef] = useState<string | undefined>()
+
+  const handleSurfaceChange = useCallback((next: McpViewKind, intent?: { planRef?: string }) => {
+    setOverrideView(next)
+    setOverridePlanRef(intent?.planRef)
+  }, [])
 
   const resolvedView = resolveSurface(bootstrap.view)
   const effectiveView: McpViewKind = overrideView ?? resolvedView
 
   const showFooter = footer ?? true
-  const surface = effectiveView === 'account' ? 'management' : 'payment'
+  const surface =
+    effectiveView === 'account' || effectiveView === 'auto-recharge' ? 'management' : 'payment'
 
   return (
     <div className="solvapay-mcp-shell">
@@ -116,7 +127,8 @@ export function McpAppShell({
               bootstrap={bootstrap}
               views={views}
               classNames={classNames}
-              onSurfaceChange={setOverrideView}
+              onSurfaceChange={handleSurfaceChange}
+              overridePlanRef={overridePlanRef}
               onRefreshBootstrap={onRefreshBootstrap}
               onClose={onClose}
             />
@@ -150,7 +162,13 @@ export interface McpViewRouterProps {
    * "Change plan", topup → account via "Back"). The shell wires this
    * to its `overrideView` state.
    */
-  onSurfaceChange?: (next: McpViewKind) => void
+  onSurfaceChange?: (next: McpViewKind, intent?: { planRef?: string }) => void
+  /**
+   * Plan the account ladder asked checkout to open on. The shell
+   * forwards it as `initialPlanRef` + `autoAdvance` so the plan step
+   * is skipped.
+   */
+  overridePlanRef?: string
   /**
    * Optional bootstrap re-fetcher. The shell triggers it once on mount
    * so a customer who re-opens a backgrounded iframe sees fresh
@@ -176,6 +194,7 @@ export function McpViewRouter({
   views,
   classNames,
   onSurfaceChange,
+  overridePlanRef,
   onRefreshBootstrap,
   onClose,
 }: McpViewRouterProps): React.ReactNode {
@@ -184,10 +203,16 @@ export function McpViewRouter({
     McpCheckoutView) as React.ComponentType<McpCheckoutViewProps>
   const AccountView = (views?.account ?? McpAccountView) as React.ComponentType<McpAccountViewProps>
   const TopupView = (views?.topup ?? McpTopupView) as React.ComponentType<McpTopupViewProps>
+  const AutoRechargeView = (views?.autoRecharge ??
+    McpAutoRechargeView) as React.ComponentType<McpAutoRechargeViewProps>
 
-  const goCheckout = onSurfaceChange ? () => onSurfaceChange('checkout') : undefined
+  const goCheckout = onSurfaceChange
+    ? (planRef?: string) =>
+        onSurfaceChange('checkout', typeof planRef === 'string' ? { planRef } : undefined)
+    : undefined
   const goTopup = onSurfaceChange ? () => onSurfaceChange('topup') : undefined
   const goAccount = onSurfaceChange ? () => onSurfaceChange('account') : undefined
+  const goAutoRecharge = onSurfaceChange ? () => onSurfaceChange('auto-recharge') : undefined
 
   switch (view) {
     case 'checkout':
@@ -202,17 +227,24 @@ export function McpViewRouter({
           onRefreshBootstrap={onRefreshBootstrap}
           onClose={onClose}
           onBack={goAccount}
+          initialPlanRef={overridePlanRef}
+          autoAdvance={Boolean(overridePlanRef)}
         />
       )
     case 'account':
       return (
         <AccountView
           classNames={classNames}
+          product={bootstrap.product}
+          productRef={productRef}
           onTopup={goTopup}
+          onAutoRecharge={goAutoRecharge}
           onChangePlan={goCheckout}
           plans={bootstrap.plans}
         />
       )
+    case 'auto-recharge':
+      return <AutoRechargeView classNames={classNames} onBack={goAccount} />
     case 'topup':
       return (
         <TopupView

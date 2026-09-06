@@ -141,6 +141,27 @@ const sharedCustomerLookupDeduplicator = createRequestDeduplicator<string>({
   cacheErrors: false, // Don't cache errors - retry on next request
 })
 
+/**
+ * Coalesce concurrent `checkLimits` fetches for the same
+ * customer/product/meter. `cacheTTL: 0` means in-flight only — the
+ * instance `limitsCache` still owns the TTL, and we skip the lazy
+ * `setInterval` (Workers-safe).
+ */
+const sharedLimitsFetchDeduplicator = createRequestDeduplicator<LimitResponseWithPlan>({
+  cacheTTL: 0,
+  maxCacheSize: 1000,
+  cacheErrors: false,
+})
+
+/**
+ * How many callers have already claimed a unit from the current
+ * in-flight `checkLimits` batch, keyed by the same
+ * `${customerRef}:${product}:${meter}` string as the cache. Reset
+ * inside the fetch callback so a later sequential miss starts at 0
+ * even when the client returns a reused result object.
+ */
+const sharedLimitsFetchClaims = new Map<string, number>()
+
 interface LimitsCacheEntry {
   remaining: number
   checkoutUrl?: string
@@ -299,41 +320,61 @@ export class SolvaPayPaywall {
       if (cachedLimits) {
         this.limitsCache.delete(limitsCacheKey)
       }
-      const limitsCheck = await this.apiClient.checkLimits({
-        customerRef: backendCustomerRef,
-        productRef: product,
-        meterName: usageType,
-        // `paywall.decide()` bakes `checkoutUrl` into the 402
-        // `PaywallStructuredContent` (consumed by
-        // `<PaywallNotice.HostedCheckoutLink>`), so we opt in. Other
-        // callers of `apiClient.checkLimits` (notably
-        // `checkLimitsCore`, which powers the React `useLimits` hook)
-        // leave this unset and the backend skips the session-creation
-        // side effect.
-        includeCheckoutSession: true,
-      })
+      const limitsCheck = await sharedLimitsFetchDeduplicator.deduplicate(
+        limitsCacheKey,
+        async () => {
+          sharedLimitsFetchClaims.set(limitsCacheKey, 0)
+          return this.apiClient.checkLimits({
+            customerRef: backendCustomerRef,
+            productRef: product,
+            meterName: usageType,
+            // `paywall.decide()` bakes `checkoutUrl` into the 402
+            // `PaywallStructuredContent` (consumed by
+            // `<PaywallNotice.HostedCheckoutLink>`), so we opt in. Other
+            // callers of `apiClient.checkLimits` (notably
+            // `checkLimitsCore`, which powers the React `useLimits` hook)
+            // leave this unset and the backend skips the session-creation
+            // side effect.
+            includeCheckoutSession: true,
+          })
+        },
+      )
 
       lastLimitsCheck = limitsCheck
-      withinLimits = limitsCheck.withinLimits
-      remaining = limitsCheck.remaining
       checkoutUrl = limitsCheck.checkoutUrl
       resolvedMeterName = limitsCheck.meterName
 
-      const consumedAllowance = withinLimits && remaining > 0
-      if (consumedAllowance) {
-        // checkLimits reflects pre-request allowance. Consume one unit for this in-flight request
-        // so cached follow-up requests don't get an extra free call.
-        remaining = Math.max(0, remaining - 1)
-      }
-
-      if (consumedAllowance) {
-        this.limitsCache.set(limitsCacheKey, {
-          remaining,
-          checkoutUrl,
-          meterName: resolvedMeterName,
-          timestamp: now,
-          limits: limitsCheck,
-        })
+      // N callers sharing one resolved fetch must each consume a
+      // distinct unit. Claim against the shared result, then project
+      // the leftover into `limitsCache` for sequential follow-ups.
+      if (!limitsCheck.withinLimits) {
+        withinLimits = false
+        remaining = limitsCheck.remaining
+      } else if (limitsCheck.remaining === -1) {
+        withinLimits = true
+        remaining = limitsCheck.remaining
+      } else if (limitsCheck.remaining > 0) {
+        const claimed = (sharedLimitsFetchClaims.get(limitsCacheKey) ?? 0) + 1
+        sharedLimitsFetchClaims.set(limitsCacheKey, claimed)
+        if (claimed <= limitsCheck.remaining) {
+          remaining = limitsCheck.remaining - claimed
+          withinLimits = true
+          this.limitsCache.set(limitsCacheKey, {
+            remaining,
+            checkoutUrl,
+            meterName: resolvedMeterName,
+            timestamp: Date.now(),
+            limits: limitsCheck,
+          })
+        } else {
+          withinLimits = false
+          remaining = 0
+        }
+      } else {
+        // `withinLimits: true` with `remaining: 0` is throttle / overage —
+        // the backend granted access past the included cap. Do not gate.
+        withinLimits = true
+        remaining = limitsCheck.remaining
       }
     }
 
@@ -354,6 +395,7 @@ export class SolvaPayPaywall {
         'paywall',
         requestId,
         latencyMs,
+        metadata.toolName,
       ).catch(() => undefined)
 
       // Delegate gate construction to `buildPaywallGate` so adapter
@@ -373,6 +415,7 @@ export class SolvaPayPaywall {
         gate,
         limits: lastLimitsCheck ?? null,
         customerRef: backendCustomerRef,
+        requestId,
       }
     }
 
@@ -392,6 +435,7 @@ export class SolvaPayPaywall {
       args,
       limits: lastLimitsCheck!,
       customerRef: backendCustomerRef,
+      requestId,
       ...(consequence ? { consequence } : {}),
     }
   }
@@ -420,7 +464,7 @@ export class SolvaPayPaywall {
   ): Promise<TResult> {
     const product = this.resolveProduct(metadata)
     const usageType = metadata.meterName || metadata.usageType || 'requests'
-    const requestId = this.generateRequestId()
+    const requestId = decision.requestId
     const startTime = Date.now()
 
     const forwardedExtra = (args as unknown as Record<string, unknown>)[EXTRA_FORWARD_KEY]
@@ -444,6 +488,7 @@ export class SolvaPayPaywall {
         'success',
         requestId,
         latencyMs,
+        metadata.toolName,
       ).catch(() => undefined)
       return result
     } catch (error) {
@@ -462,6 +507,7 @@ export class SolvaPayPaywall {
           'fail',
           requestId,
           latencyMs,
+          metadata.toolName,
         ).catch(() => undefined)
       }
       throw error
@@ -762,6 +808,7 @@ export class SolvaPayPaywall {
     outcome: 'success' | 'paywall' | 'fail',
     requestId: string,
     actionDuration: number,
+    toolName?: string,
   ): Promise<void> {
     await withRetry(
       () =>
@@ -772,7 +819,12 @@ export class SolvaPayPaywall {
           outcome,
           productRef,
           duration: actionDuration,
-          metadata: { action: action || 'api_requests', requestId },
+          idempotencyKey: `${requestId}:${outcome}`,
+          metadata: {
+            action: action || 'api_requests',
+            requestId,
+            ...(toolName ? { toolName } : {}),
+          },
           timestamp: new Date().toISOString(),
         }),
       {

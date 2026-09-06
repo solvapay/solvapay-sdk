@@ -24,9 +24,9 @@ a sibling if you need less:
 | `examples/mcp-time-app`        | Node + Express    | Virtual tools + minimal UI, showcases the gate response              | You want the smallest possible paywalled MCP server                                                |
 
 The MCP server holds `SOLVAPAY_SECRET_KEY` and exposes the trimmed
-7-tool surface: 2 intent tools (`account`, `activate_plan`) plus 5
-UI-only state-change tools (`create_hosted_session`, `create_payment_intent`,
-`process_payment`, `set_renewal`, `attach_business_details`).
+8-tool surface: 2 intent tools (`account`, `activate_plan`) plus 6
+UI-only tools (`create_hosted_session`, `create_payment_intent`,
+`process_payment`, `set_renewal`, `attach_business_details`, `get_history`).
 Product-scoped data (merchant, product, plans) and the customer
 snapshot (purchase, payment method, balance, usage) ride on the
 `BootstrapPayload` every intent tool returns, so the embedded form
@@ -274,6 +274,7 @@ sequenceDiagram
 | `create_payment_intent` | Creates the PaymentIntent for plan checkout (`purpose: "plan"`) or top-up (`purpose: "topup"`) |
 | `process_payment` | Records the Stripe-side confirmation after `confirmPayment` resolves |
 | `set_renewal` | Toggles auto-renewal (`enabled: false` to cancel, `enabled: true` to reactivate) |
+| `get_history` | Product charges + account-wide credit activity for the fullscreen history section |
 
 `returnUrl` on hosted checkout is intentionally unset — there
 is no meaningful URL to return to inside an MCP host iframe, so the

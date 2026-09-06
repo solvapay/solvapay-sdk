@@ -38,11 +38,11 @@ import { seedMcpCaches } from './cache-seed'
 import { McpAppShell } from './McpAppShell'
 import type { Merchant, Plan, Product, SolvaPayConfig, SolvaPayProviderInitial } from '../types'
 import type { McpAccountViewProps } from './views/McpAccountView'
+import type { McpAutoRechargeViewProps } from './views/McpAutoRechargeView'
 import type { McpCheckoutViewProps } from './views/McpCheckoutView'
 import type { McpTopupViewProps } from './views/McpTopupView'
 import { resolveMcpClassNames, type McpViewClassNames } from './views/types'
 import { AppHeader } from './views/AppHeader'
-import { CloseButton } from './views/CloseButton'
 import { McpHostInfoProvider } from './hooks/useHostInfo'
 import { McpDisplayModeProvider } from './hooks/useDisplayMode'
 import {
@@ -112,6 +112,7 @@ export interface McpAppViewOverrides {
   checkout?: React.ComponentType<McpCheckoutViewProps>
   account?: React.ComponentType<McpAccountViewProps>
   topup?: React.ComponentType<McpTopupViewProps>
+  autoRecharge?: React.ComponentType<McpAutoRechargeViewProps>
 }
 
 export interface McpAppProps {
@@ -174,6 +175,7 @@ function bootstrapToInitial(bs: McpBootstrap): SolvaPayProviderInitial {
     paymentMethod: bs.customer?.paymentMethod ?? null,
     balance: bs.customer?.balance ?? null,
     usage: bs.customer?.usage ?? null,
+    limits: bs.customer?.limits ?? null,
     merchant: bs.merchant as unknown as Merchant,
     product: bs.product as unknown as Product,
     plans: bs.plans as unknown as Plan[],
@@ -566,10 +568,12 @@ export function McpApp({
         >
           {/*
            * Chrome row sits above the conditional provider tree so the
-           * merchant mark and close control persist across loading / error
-           * / ready states. `<AppHeader>` takes `bootstrap.merchant`
-           * directly: the header's cache lookup would return `null` here
-           * because this slot is outside the `<SolvaPayProvider>` subtree.
+           * merchant mark persists across loading / error / ready states.
+           * `<AppHeader>` takes `bootstrap.merchant` directly: the
+           * header's cache lookup would return `null` here because this
+           * slot is outside the `<SolvaPayProvider>` subtree. Fullscreen
+           * suppresses the header, leaving the row empty so `:empty`
+           * collapses it.
            */}
           <div className="solvapay-mcp-chrome-row">
             {displayModeState.displayMode !== 'fullscreen' ? (
@@ -578,7 +582,6 @@ export function McpApp({
                 merchant={(effectiveBootstrap?.merchant as Merchant | undefined) ?? null}
               />
             ) : null}
-            <CloseButton classNames={classNames} onClose={effectiveOnClose} />
           </div>
           {initError ? (
             <div className={`${cx.card} ${cx.error}`.trim()}>

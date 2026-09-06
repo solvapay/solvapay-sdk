@@ -310,7 +310,7 @@ describe('Phase 1 — McpCheckoutView emits on successful payment', () => {
     await waitFor(() => screen.getByText('Pro'))
     const proCard = screen
       .getByText('Pro')
-      .closest('[data-solvapay-plan-selector-card]') as HTMLElement
+      .closest('.solvapay-mcp-plan-row') as HTMLElement
     act(() => {
       fireEvent.click(proCard)
     })

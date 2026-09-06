@@ -30,11 +30,16 @@
 import React, { useState } from 'react'
 import type { AutoRechargeInput } from '@solvapay/server'
 import { LaunchCustomerPortalButton } from '../../components/LaunchCustomerPortalButton'
+import {
+  createDefaultAutoRechargeForm,
+  validateAutoRechargeForm,
+  type AutoRechargeFormState,
+} from '../../helpers/auto-recharge-form'
 import { useBalance } from '../../hooks/useBalance'
+import { useCopy } from '../../hooks/useCopy'
 import { useMerchant } from '../../hooks/useMerchant'
 import { useTopupAmountSelector } from '../../hooks/useTopupAmountSelector'
 import { AmountPicker, useAmountPicker } from '../../primitives/AmountPicker'
-import { AutoRecharge } from '../../primitives/AutoRecharge'
 import { BalanceBadge } from '../../primitives/BalanceBadge'
 import { MandateText } from '../../primitives/MandateText'
 import { TopupForm, useTopupForm } from '../../primitives/TopupForm'
@@ -45,8 +50,9 @@ import { useMcpBridge } from '../bridge'
 import { useHostLocale } from '../useHostLocale'
 import { useStripeProbe } from '../useStripeProbe'
 import { chargeAmountMinor } from './chargeAmount'
-import { AmountLadder, Eyebrow } from '../primitives'
+import { AmountLadder, Eyebrow, SplitRow, Toggle } from '../primitives'
 import { BackLink } from './BackLink'
+import { McpAutoRechargeFields } from './autoRecharge/McpAutoRechargeFields'
 import { McpHostedBody, McpHostedLayout, McpSummaryRail } from './McpHosted'
 import { McpPaymentHeader } from './McpPaymentHeader'
 import { resolveMcpClassNames, type McpViewClassNames } from './types'
@@ -73,7 +79,7 @@ export interface McpTopupViewProps {
 
 type TopupScreen =
   | { step: 'amount' }
-  | { step: 'payment'; amountMinor: number }
+  | { step: 'payment'; amountMinor: number; autoRecharge?: AutoRechargeInput }
   | { step: 'success'; amountMinor: number }
 
 type CreditEstimate = { kind: 'available'; credits: number } | { kind: 'unavailable' }
@@ -169,12 +175,16 @@ function EmbeddedTopup({
   cx: Cx
 }) {
   const [screen, setScreen] = useState<TopupScreen>({ step: 'amount' })
-  const [pendingAutoRecharge, setPendingAutoRecharge] = useState<AutoRechargeInput | null>(null)
   const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency)
   const currency = selectedCurrency
   const showCurrencySwitch = topupCurrencies.length > 1
   const { adjustBalance, credits, creditsPerMinorUnit, displayCurrency, displayExchangeRate } =
     useBalance()
+  const copy = useCopy()
+  const [autoRechargeForm, setAutoRechargeForm] = useState<AutoRechargeFormState>(() =>
+    createDefaultAutoRechargeForm(currency),
+  )
+  const [autoRechargeError, setAutoRechargeError] = useState<string | null>(null)
   const locale = useHostLocale()
   const { notifyModelContext, notifySuccess } = useMcpBridge()
   const topupSelector = useTopupAmountSelector({ currency })
@@ -232,7 +242,7 @@ function EmbeddedTopup({
         <TopupForm.Root
           amount={committedAmountMinor}
           currency={currency}
-          autoRecharge={pendingAutoRecharge ?? undefined}
+          autoRecharge={screen.autoRecharge}
           returnUrl={returnUrl}
           onSuccess={() => {
             adjustBalance(committedAmountMinor * (creditsPerMinorUnit ?? 100))
@@ -280,11 +290,11 @@ function EmbeddedTopup({
                   <TopupForm.BusinessDetails.Fields />
                 </TopupForm.BusinessDetails.Root>
                 <TopupForm.Error className={cx.error} />
-                <MandateText mode="topup" amountMinor={committedAmountMinor} currency={currency} />
                 <TopupForm.SubmitButton className={cx.button}>
                   Top up{' '}
                   <TopupChargeAmount amountMinor={committedAmountMinor} currency={currency} />
                 </TopupForm.SubmitButton>
+                <MandateText mode="topup" amountMinor={committedAmountMinor} currency={currency} />
               </div>
             </McpHostedBody>
           </McpHostedLayout>
@@ -316,21 +326,52 @@ function EmbeddedTopup({
         rowClassName={cx.amountCustom}
         currencyDisplay={currencyDisplay}
       />
-      <AutoRecharge.Root
-        currency={currency}
-        deferCardSetup
-        onPendingConfig={setPendingAutoRecharge}
-      >
-        <AutoRecharge.Loading />
-        <AutoRecharge.Header />
-        <AutoRecharge.Body />
-        <AutoRecharge.Error />
-      </AutoRecharge.Root>
+      <div className="solvapay-mcp-auto-recharge-inline">
+        <SplitRow>
+          <p>{copy.autoRechargeView.heading}</p>
+          <Toggle
+            checked={autoRechargeForm.enabled}
+            label={copy.autoRechargeView.heading}
+            onChange={enabled => {
+              setAutoRechargeError(null)
+              setAutoRechargeForm(current => ({ ...current, enabled }))
+            }}
+          />
+        </SplitRow>
+        {autoRechargeForm.enabled ? (
+          <McpAutoRechargeFields
+            form={autoRechargeForm}
+            onChange={next => {
+              setAutoRechargeError(null)
+              setAutoRechargeForm(next)
+            }}
+            currency={currency}
+            validationError={autoRechargeError}
+            creditsPerMinorUnit={creditsPerMinorUnit}
+            displayExchangeRate={displayExchangeRate}
+          />
+        ) : null}
+      </div>
       <AmountDueSummary locale={locale} currency={currency} />
       <AmountPicker.Confirm
         className={cx.button}
         onConfirm={amountMinor => {
-          setScreen({ step: 'payment', amountMinor })
+          const result = validateAutoRechargeForm(
+            autoRechargeForm,
+            currency,
+            { creditsPerMinorUnit, displayExchangeRate },
+            copy.autoRecharge,
+          )
+          if (!result.ok) {
+            setAutoRechargeError(result.error)
+            return
+          }
+          setAutoRechargeError(null)
+          setScreen({
+            step: 'payment',
+            amountMinor,
+            autoRecharge: result.payload.enabled ? result.payload : undefined,
+          })
           void notifyModelContext({
             text: `User confirmed topup of ${formatPrice(amountMinor, currency, {
               locale,

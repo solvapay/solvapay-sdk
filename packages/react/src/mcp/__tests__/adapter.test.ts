@@ -94,6 +94,7 @@ describe('createMcpAppAdapter', () => {
       'activatePlan',
       'createCheckoutSession',
       'createCustomerSession',
+      'getHistory',
     ] as const
 
     for (const key of keys) {
@@ -114,5 +115,21 @@ describe('createMcpAppAdapter', () => {
     expect(transport.listPlans).toBeUndefined()
     expect(transport.getPaymentMethod).toBeUndefined()
     expect(transport.getUsage).toBeUndefined()
+    expect(transport.getLimits).toBeUndefined()
+  })
+
+  it('routes getHistory as the bootstrap-exception read tool', async () => {
+    const app = createMockApp(() => ({
+      structuredContent: { charges: [], creditActivity: { entries: [], hasMore: false } },
+    }))
+    const transport = createMcpAppAdapter(app)
+
+    const result = await transport.getHistory?.({ productRef: 'prd_widget', limit: 20 })
+
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: MCP_TOOL_NAMES.getHistory,
+      arguments: { productRef: 'prd_widget', limit: 20 },
+    })
+    expect(result).toEqual({ charges: [], creditActivity: { entries: [], hasMore: false } })
   })
 })

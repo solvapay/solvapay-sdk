@@ -13,6 +13,7 @@ import type { ZodTypeAny } from 'zod'
 import type {
   CustomerBalanceResult,
   GetUsageResult,
+  LimitResponseWithPlan,
   PaymentMethodInfo,
   PurchaseCheckResult,
   SdkMerchantResponse,
@@ -53,6 +54,13 @@ export interface BootstrapCustomer {
   paymentMethod: PaymentMethodInfo | null
   balance: CustomerBalanceResult | null
   usage: GetUsageResult | null
+  /**
+   * Runtime allowance from the same `checkLimits` call that feeds
+   * `usage`. Null when the customer is unauthenticated or the limits
+   * sub-read failed. Carries `withinLimits`, `activationRequired`,
+   * `overage`, `needsTopUp` — the flags usage math discards.
+   */
+  limits: LimitResponseWithPlan | null
 }
 
 /**
@@ -150,7 +158,8 @@ export interface PaywallToolResult {
  * Which view a SolvaPay MCP server knows how to bootstrap.
  *
  * Each kind is a landing screen on the single `account` viewer:
- * `checkout`, `account`, `topup`. There is no `paywall` or `nudge`
+ * `checkout`, `account`, `topup`, plus `auto-recharge` which is
+ * reached by intent only (never a default). There is no `paywall` or `nudge`
  * view — those
  * responses are plain text narrations per the text-only paywall
  * refactor (merchant paywall / nudge tool results ship
@@ -163,12 +172,13 @@ export interface PaywallToolResult {
  * `PlanActivationDispatcher`, and Usage folds inline into the account
  * view.
  */
-export type SolvaPayMcpViewKind = 'checkout' | 'account' | 'topup'
+export type SolvaPayMcpViewKind = 'checkout' | 'account' | 'topup' | 'auto-recharge'
 
 export const SOLVAPAY_MCP_VIEW_KINDS = [
   'checkout',
   'account',
   'topup',
+  'auto-recharge',
 ] as const satisfies readonly SolvaPayMcpViewKind[]
 
 /**
@@ -411,6 +421,7 @@ export const TOOL_FOR_VIEW = {
   checkout: VIEWER_TOOL_NAME,
   account: VIEWER_TOOL_NAME,
   topup: VIEWER_TOOL_NAME,
+  'auto-recharge': VIEWER_TOOL_NAME,
 } as const satisfies Record<SolvaPayMcpViewKind, typeof VIEWER_TOOL_NAME>
 
 /**

@@ -135,6 +135,7 @@ describe('<McpApp> — live tool-result subscription', () => {
       'create_hosted_session',
       'set_renewal',
       'activate_plan',
+      'get_history',
     ]
 
     for (const transportTool of TRANSPORT_TOOLS) {

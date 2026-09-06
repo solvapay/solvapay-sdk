@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import type { AccountState } from '../account-state'
 import { cx } from './cx'
 
 export function Section({
@@ -107,6 +108,47 @@ export function PresetTile({
   )
 }
 
+export function PlanActionRow({
+  title,
+  description,
+  actionLabel,
+  emphasis = 'secondary',
+  busy,
+  disabled,
+  onAction,
+  className,
+}: {
+  title: React.ReactNode
+  description?: React.ReactNode
+  actionLabel: React.ReactNode
+  emphasis?: 'primary' | 'secondary'
+  busy?: boolean
+  disabled?: boolean
+  onAction?: () => void
+  className?: string
+}): React.ReactElement {
+  return (
+    <div className={cx('solvapay-mcp-plan-action-row', className)}>
+      <div className="solvapay-mcp-plan-action-row-body">
+        <div className="solvapay-mcp-plan-action-row-title">{title}</div>
+        {description ? (
+          <div className="solvapay-mcp-plan-action-row-description">{description}</div>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        data-emphasis={emphasis}
+        data-busy={busy ? '' : undefined}
+        disabled={disabled || busy}
+        onClick={onAction}
+      >
+        {actionLabel}
+        {emphasis === 'primary' && !busy ? <span aria-hidden="true">➔</span> : null}
+      </button>
+    </div>
+  )
+}
+
 export function PlanRow({
   name,
   description,
@@ -128,7 +170,10 @@ export function PlanRow({
   state?: 'idle' | 'selected' | 'current' | 'disabled'
   onClick?: () => void
   className?: string
-} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'className'>): React.ReactElement {
+} & Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'onClick' | 'className'
+>): React.ReactElement {
   const dataState = state ?? (selected ? 'selected' : undefined)
   return (
     <button
@@ -162,12 +207,19 @@ export function PlanRow({
 
 export function StatusDot({
   label,
+  empty,
   className,
 }: {
   label?: string
+  /** Outline-only dot — state A "No plan". */
+  empty?: boolean
   className?: string
 }): React.ReactElement {
-  return <span className={cx('solvapay-mcp-status-dot', className)}>{label}</span>
+  return (
+    <span className={cx('solvapay-mcp-status-dot', className)} data-empty={empty ? '' : undefined}>
+      {label}
+    </span>
+  )
 }
 
 export function Pill({
@@ -178,6 +230,71 @@ export function Pill({
   className?: string
 }): React.ReactElement {
   return <span className={cx('solvapay-mcp-pill', className)}>{children}</span>
+}
+
+export type StatusPillTone = 'neutral' | 'accent'
+
+/** Accent is reserved for the one failing/warning pill: D, F, I. */
+export function statusPillTone(state: AccountState): StatusPillTone {
+  return state === 'D' || state === 'F' || state === 'I' ? 'accent' : 'neutral'
+}
+
+export function StatusPill({
+  children,
+  tone = 'neutral',
+  className,
+}: {
+  children: React.ReactNode
+  tone?: StatusPillTone
+  className?: string
+}): React.ReactElement {
+  return (
+    <span className={cx('solvapay-mcp-status-pill', className)} data-tone={tone}>
+      {children}
+    </span>
+  )
+}
+
+export interface FactBandItem {
+  key: string
+  label: React.ReactNode
+  value: React.ReactNode
+  /** Narrow-row value. Falls back to `value` when omitted. */
+  compactValue?: React.ReactNode
+  caption?: React.ReactNode
+}
+
+/**
+ * Remaining-led fact strip. Columns at the 760px sidebar breakpoint,
+ * key-value rows below it. Callers omit a fact entirely — never pass a
+ * placeholder column. Unmetered subscriptions still render Remaining as
+ * Unlimited; they omit the meter, not the fact.
+ */
+export function FactBand({
+  items,
+  className,
+}: {
+  items: readonly FactBandItem[]
+  className?: string
+}): React.ReactElement {
+  return (
+    <dl className={cx('solvapay-mcp-fact-band', className)}>
+      {items.map(item => (
+        <div key={item.key} className="solvapay-mcp-fact-band-item">
+          <dt className="solvapay-mcp-fact-band-label">{item.label}</dt>
+          <dd className="solvapay-mcp-fact-band-body">
+            <span className="solvapay-mcp-fact-band-value">{item.value}</span>
+            {item.compactValue != null ? (
+              <span className="solvapay-mcp-fact-band-compact">{item.compactValue}</span>
+            ) : null}
+            {item.caption != null ? (
+              <span className="solvapay-mcp-fact-band-caption">{item.caption}</span>
+            ) : null}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
 }
 
 export function sanitizeDecimalInput(raw: string): string {
