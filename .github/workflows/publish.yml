@@ -264,7 +264,7 @@ jobs:
       - name: Dry-run npm publish
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
-          git fetch --no-tags origin main
+          git fetch --no-tags origin +main:main
           pnpm changeset status
           pnpm -r publish --dry-run --no-git-checks
 
