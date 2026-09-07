@@ -10,7 +10,6 @@ from weakref import WeakKeyDictionary, WeakSet
 
 from mcp.server.lowlevel.server import Server
 from mcp.types import (
-    Annotations,
     CallToolRequestParams,
     CallToolResult,
     ContentBlock,
@@ -20,8 +19,6 @@ from mcp.types import (
     PaginatedRequestParams,
     Prompt,
     Resource,
-    ResourceLink,
-    TextContent,
     Tool,
 )
 from pydantic import TypeAdapter
