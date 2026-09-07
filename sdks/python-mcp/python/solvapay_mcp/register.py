@@ -14,6 +14,7 @@ from mcp.types import (
     CallToolRequestParams,
     CallToolResult,
     ContentBlock,
+    EmbeddedResource,
     ListPromptsResult,
     ListResourcesResult,
     ListToolsResult,
@@ -659,6 +660,8 @@ def _to_call_tool_result(payload: Mapping[str, object]) -> CallToolResult:
                         annotations=Annotations(**raw_ann) if isinstance(raw_ann, dict) else None,
                     )
                 )
+            elif isinstance(block, dict) and block.get("type") == "resource":
+                content.append(EmbeddedResource.model_validate(block))
     structured = payload.get("structuredContent")
     meta = payload.get("_meta")
     is_error = payload.get("isError")

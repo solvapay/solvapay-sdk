@@ -41,29 +41,25 @@ def _server():
     )
 
 
-async def test_tools_list_matches_twelve_solvapay_tools() -> None:
+async def test_tools_list_matches_solvapay_tools() -> None:
     names = native_call("MCP_TOOL_NAMES", {})
     assert isinstance(names, dict)
     expected = {
         names["createPayment"],
         names["processPayment"],
-        names["createTopupPayment"],
-        names["cancelRenewal"],
-        names["reactivateRenewal"],
+        names["createHostedSession"],
+        names["setRenewal"],
         names["activatePlan"],
-        names["createCheckoutSession"],
-        names["createCustomerSession"],
         names["attachBusinessDetails"],
-        names["upgrade"],
-        names["manageAccount"],
-        names["topup"],
+        names["getHistory"],
+        names["account"],
     }
     async with Client(_server()) as client:
         listed = await client.list_tools()
     got = {tool.name for tool in listed.tools}
     assert expected <= got
-    upgrade = next(tool for tool in listed.tools if tool.name == names["upgrade"])
-    meta = upgrade.meta or {}
+    account = next(tool for tool in listed.tools if tool.name == names["account"])
+    meta = account.meta or {}
     ui = meta.get("ui") if isinstance(meta, dict) else None
     assert isinstance(ui, dict)
     assert ui.get("resourceUri") == "ui://solvapay/mcp-app.html"
@@ -112,11 +108,11 @@ async def test_widget_resource_read_returns_mcp_app_html() -> None:
     assert "solvapay://bootstrap.json" in text
 
 
-async def test_upgrade_result_stamps_widget_resource_uri() -> None:
+async def test_account_result_stamps_widget_resource_uri() -> None:
     names = native_call("MCP_TOOL_NAMES", {})
     assert isinstance(names, dict)
     async with Client(_server()) as client:
-        result = await client.call_tool(str(names["upgrade"]), {})
+        result = await client.call_tool(str(names["account"]), {})
     meta = result.meta or {}
     ui = meta.get("ui") if isinstance(meta, dict) else None
     assert isinstance(ui, dict)

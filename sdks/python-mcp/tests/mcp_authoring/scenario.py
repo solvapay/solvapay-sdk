@@ -37,6 +37,7 @@ class ResponseOptions(StrictModel):
     text: str | None = None
     nudge: NudgeSpec | None = None
     units: float | None = None
+    dataInText: bool | None = None
 
 
 class HandlerRespond(StrictModel):

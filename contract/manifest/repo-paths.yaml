@@ -528,3 +528,7 @@ lookups:
   rubyMcpVersion: sdks/ruby-mcp/lib/solvapay/mcp/version.rb
   nodeNativePackage: sdks/node-native/package.json
   nodeNativeNpm: sdks/node-native/npm
+  wasmBrowserSymbols: sdks/wasm/browser-symbols.generated.json
+  coreNativeDispatch: sdks/typescript/core/src/native-dispatch.ts
+  wasmBrowserRuntime: sdks/wasm/runtime/browser-web.js
+  coreBrowserWasmInstall: sdks/typescript/core/src/browser-wasm-install.ts

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { joinRel, REPO_ROOT } from '../shared/paths.js'
+import { joinRel, lookupRel, REPO_ROOT } from '../shared/paths.js'
 import { mcpAppWidgetLayout } from '../shared/repo-paths.js'
 
 const MIN_BUNDLE_BYTES = 900 * 1024
@@ -14,16 +14,13 @@ function parseNativeCoreSyncMethods(source: string): Set<string> {
 
 export function checkWidgetCoreCoverage({ root }: { root: string }): string[] {
   const symbols = JSON.parse(
-    readFileSync(joinRel(root, 'sdks/wasm/browser-symbols.generated.json'), 'utf8'),
+    readFileSync(joinRel(root, lookupRel('wasmBrowserSymbols')), 'utf8'),
   ) as { browserSafe: string[] }
   const methods = parseNativeCoreSyncMethods(
-    readFileSync(joinRel(root, 'sdks/typescript/core/src/native-dispatch.ts'), 'utf8'),
+    readFileSync(joinRel(root, lookupRel('coreNativeDispatch')), 'utf8'),
   )
-  const runtime = readFileSync(joinRel(root, 'sdks/wasm/runtime/browser-web.js'), 'utf8')
-  const install = readFileSync(
-    joinRel(root, 'sdks/typescript/core/src/browser-wasm-install.ts'),
-    'utf8',
-  )
+  const runtime = readFileSync(joinRel(root, lookupRel('wasmBrowserRuntime')), 'utf8')
+  const install = readFileSync(joinRel(root, lookupRel('coreBrowserWasmInstall')), 'utf8')
   const problems: string[] = []
   if (!install.includes('installFromBinding') || !install.includes('readyFromBytes')) {
     problems.push(
