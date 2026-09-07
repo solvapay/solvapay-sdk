@@ -1,5 +1,11 @@
 # @solvapay/server changelog
 
+## 2.4.1
+
+### Patch Changes
+
+- 2205160: Re-export `PaywallStructuredContentSchema` from the edge bundle. `@solvapay/mcp` imports it on Cloudflare Workers, which resolve `@solvapay/server` to `dist/edge.js`; without this export `wrangler deploy` fails at bundle time.
+
 ## 2.4.0
 
 ### Minor Changes
