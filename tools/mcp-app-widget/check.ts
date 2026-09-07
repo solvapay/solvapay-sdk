@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { joinRel, lookupRel, REPO_ROOT } from '../shared/paths.js'
 import { mcpAppWidgetLayout } from '../shared/repo-paths.js'
 
-const MIN_BUNDLE_BYTES = 900 * 1024
+const MIN_BUNDLE_BYTES = 1_200 * 1024
 
 function parseNativeCoreSyncMethods(source: string): Set<string> {
   return new Set([...source.matchAll(/\|\s*'([A-Za-z0-9_]+)'/g)].map(match => match[1]))
@@ -22,9 +22,9 @@ export function checkWidgetCoreCoverage({ root }: { root: string }): string[] {
   const runtime = readFileSync(joinRel(root, lookupRel('wasmBrowserRuntime')), 'utf8')
   const install = readFileSync(joinRel(root, lookupRel('coreBrowserWasmInstall')), 'utf8')
   const problems: string[] = []
-  if (!install.includes('installFromBinding') || !install.includes('readyFromBytes')) {
+  if (!install.includes('installFromBinding') || !install.includes('installBrowserCoreJs')) {
     problems.push(
-      'Widget install must use the browser WASM binding (installFromBinding + readyFromBytes)',
+      'Widget install must use the wasm2js browser binding (installFromBinding + installBrowserCoreJs)',
     )
   }
   for (const name of symbols.browserSafe) {
@@ -72,8 +72,11 @@ export function checkVendoredWidget({ root }: { root: string }): string[] {
   if (html.includes('href="data:')) {
     problems.push('Canonical widget must not load data: URLs (host connect-src rejects them)')
   }
-  if (!html.includes('WebAssembly') && !html.includes('application/wasm')) {
-    problems.push('Canonical widget must embed the inlined browser WebAssembly core')
+  if (html.includes('WebAssembly') || html.includes('application/wasm')) {
+    problems.push('Canonical widget must not reference the WebAssembly API')
+  }
+  if (!html.includes('solvapay-browser-js-core')) {
+    problems.push('Canonical widget must embed the wasm2js browser core')
   }
   if (canonical.length < MIN_BUNDLE_BYTES) {
     problems.push(

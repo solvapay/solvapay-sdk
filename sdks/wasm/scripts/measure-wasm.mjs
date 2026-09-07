@@ -70,11 +70,31 @@ function measureBytes(profile) {
   return { rawBytes: raw.length, gzipBytes: gzip.length }
 }
 
+function measureJsBytes() {
+  const jsPath = join(pkgRoot, 'pkg/browser-js/solvapay_wasm2js.js')
+  const gluePath = join(pkgRoot, 'pkg/browser-js/solvapay_wasm_bg.js')
+  if (!existsSync(jsPath) || !existsSync(gluePath)) {
+    fail('missing pkg/browser-js wasm2js artifacts')
+  }
+  const raw = Buffer.concat([readFileSync(jsPath), readFileSync(gluePath)])
+  const gzip = gzipSync(raw, { level: 9 })
+  return { rawBytes: raw.length, gzipBytes: gzip.length }
+}
+
 function coldStartMs(profile, mode) {
   // Fresh child process per sample — discard warm reuse by design.
   const script =
-    mode === 'browser'
+    mode === 'browser-js'
       ? `
+import { pathToFileURL } from 'node:url';
+const start = performance.now();
+const mod = await import(${JSON.stringify(pathToFileURL(join(pkgRoot, 'runtime/browser-js.js')).href)});
+mod.wasmVersion();
+const ms = performance.now() - start;
+process.stdout.write(String(ms));
+`
+      : mode === 'browser'
+        ? `
 import { pathToFileURL } from 'node:url';
 const start = performance.now();
 const mod = await import(${JSON.stringify(pathToFileURL(join(pkgRoot, 'runtime/browser-node.js')).href)});
@@ -149,8 +169,10 @@ function wasmBindgenVersion() {
 
 const browserSize = measureBytes('browser')
 const edgeSize = measureBytes('edge')
+const browserJsSize = measureJsBytes()
 const browserCold = coldStartMs('browser', 'browser')
 const edgeCold = coldStartMs('edge', 'edge')
+const browserJsCold = coldStartMs('browser-js', 'browser-js')
 
 const observed = {
   version: 1,
@@ -158,6 +180,8 @@ const observed = {
     gzipLevel: 9,
     browserColdStart:
       'fresh Node process: import runtime/browser-node.js → ready() → wasmVersion()',
+    browserJsColdStart:
+      'fresh Node process: import runtime/browser-js.js → wasmVersion() (no ready)',
     edgeColdStart:
       'fresh Node process: import runtime/node.js → ready() → verifyWebhook(frozen accept fixture)',
     samplesPerMetric: SAMPLES,
@@ -191,6 +215,12 @@ const observed = {
       coldStartMs: edgeCold.coldStartMs,
       note: 'CI-enforced alongside browser; §7.8 headline metric remains browser',
     },
+    browserJs: {
+      rawBytes: browserJsSize.rawBytes,
+      gzipBytes: browserJsSize.gzipBytes,
+      coldStartMs: browserJsCold.coldStartMs,
+      note: 'wasm2js + glue; MCP App widget delivery. Byte metric is JS, not WASM.',
+    },
   },
   // Max allowed computed per-metric (bytes vs cold-start tolerances differ).
   maxAllowed: null,
@@ -206,6 +236,10 @@ function withMax(baselines) {
     edge: {
       gzipBytes: Math.floor(baselines.edge.gzipBytes * (1 + BYTE_REGRESSION_PCT / 100)),
       coldStartMs: baselines.edge.coldStartMs * (1 + COLD_START_REGRESSION_PCT / 100),
+    },
+    browserJs: {
+      gzipBytes: Math.floor(baselines.browserJs.gzipBytes * (1 + BYTE_REGRESSION_PCT / 100)),
+      coldStartMs: baselines.browserJs.coldStartMs * (1 + COLD_START_REGRESSION_PCT / 100),
     },
   }
 }
@@ -225,6 +259,12 @@ console.log(
   edgeCold.coldStartMs,
   edgeCold.medianMs,
   edgeCold.madMs,
+)
+console.log(
+  'Cold-start p20 / median / MAD (browser-js):',
+  browserJsCold.coldStartMs,
+  browserJsCold.medianMs,
+  browserJsCold.madMs,
 )
 
 if (record) {
@@ -256,6 +296,13 @@ if (check && !record) {
       coldStartMs:
         budget.baselines.edge.coldStartMs ?? budget.baselines.edge.coldStartMedianMs,
     },
+    browserJs: {
+      gzipBytes: budget.baselines.browserJs?.gzipBytes,
+      coldStartMs: budget.baselines.browserJs?.coldStartMs,
+    },
+  }
+  if (baselines.browserJs.gzipBytes === undefined || baselines.browserJs.coldStartMs === undefined) {
+    fail('budgets.json missing browserJs baselines — run with --record once to establish them')
   }
   const max = budget.maxAllowed
     ? {
@@ -269,6 +316,10 @@ if (check && !record) {
           gzipBytes: budget.maxAllowed.edge.gzipBytes,
           coldStartMs:
             budget.maxAllowed.edge.coldStartMs ?? budget.maxAllowed.edge.coldStartMedianMs,
+        },
+        browserJs: {
+          gzipBytes: budget.maxAllowed.browserJs.gzipBytes,
+          coldStartMs: budget.maxAllowed.browserJs.coldStartMs,
         },
       }
     : withMax(baselines)
@@ -299,6 +350,18 @@ if (check && !record) {
     'edge.coldStartMs',
     edgeCold.coldStartMs,
     max.edge.coldStartMs,
+    COLD_START_REGRESSION_PCT,
+  )
+  checkMetric(
+    'browserJs.gzipBytes',
+    browserJsSize.gzipBytes,
+    max.browserJs.gzipBytes,
+    BYTE_REGRESSION_PCT,
+  )
+  checkMetric(
+    'browserJs.coldStartMs',
+    browserJsCold.coldStartMs,
+    max.browserJs.coldStartMs,
     COLD_START_REGRESSION_PCT,
   )
 

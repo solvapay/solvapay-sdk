@@ -2,7 +2,6 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import react from '@vitejs/plugin-react'
-import { inlineBrowserWasmBase64 } from '@solvapay/server-wasm/vite'
 
 const packagesDir = fileURLToPath(new URL('../../../sdks/typescript', import.meta.url))
 
@@ -37,7 +36,7 @@ function stripZodEvalCheck(): Plugin {
 // Stripe forbids bundling it. We externalize it so the bundle pulls it from
 // the CDN via a `<script>` tag injected by `loadStripe`.
 export default defineConfig({
-  plugins: [stripZodEvalCheck(), inlineBrowserWasmBase64(), react(), viteSingleFile()],
+  plugins: [stripZodEvalCheck(), react(), viteSingleFile()],
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
   },
@@ -60,6 +59,10 @@ export default defineConfig({
       {
         find: /^@solvapay\/server-wasm\/browser$/,
         replacement: `${packagesDir}/../wasm/runtime/browser-web.js`,
+      },
+      {
+        find: /^@solvapay\/server-wasm\/browser-js$/,
+        replacement: `${packagesDir}/../wasm/runtime/browser-js.js`,
       },
       { find: /^@solvapay\/server$/, replacement: `${packagesDir}/server/src/edge.ts` },
       { find: /^@solvapay\/mcp-core$/, replacement: `${packagesDir}/mcp-core/src/index.ts` },

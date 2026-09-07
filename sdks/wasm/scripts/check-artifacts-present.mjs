@@ -10,6 +10,9 @@ const required = [
   'pkg/edge/solvapay_wasm.js',
   'pkg/browser/solvapay_wasm_bg.wasm',
   'pkg/browser/solvapay_wasm.js',
+  'pkg/browser-js/solvapay_wasm.js',
+  'pkg/browser-js/solvapay_wasm_bg.js',
+  'pkg/browser-js/solvapay_wasm2js.js',
 ]
 
 for (const rel of required) {

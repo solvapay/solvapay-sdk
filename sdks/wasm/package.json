@@ -40,10 +40,10 @@
       "import": "./runtime/browser-web.js",
       "default": "./runtime/browser-web.js"
     },
-    "./vite": {
-      "types": "./runtime/vite-inline-wasm.d.ts",
-      "import": "./runtime/vite-inline-wasm.js",
-      "default": "./runtime/vite-inline-wasm.js"
+    "./browser-js": {
+      "types": "./runtime/browser-js.d.ts",
+      "import": "./runtime/browser-js.js",
+      "default": "./runtime/browser-js.js"
     },
     "./package.json": "./package.json"
   },
@@ -63,7 +63,7 @@
     "build": "node scripts/check-artifacts-present.mjs",
     "build:wasm": "node scripts/build.mjs",
     "build:check-drift": "node scripts/build.mjs --check-drift",
-    "test": "node --test __test__/binding.spec.mjs",
+    "test": "node --test __test__/*.mjs",
     "symbols:check": "node scripts/check-browser-symbols.mjs",
     "measure": "node scripts/measure-wasm.mjs --check",
     "measure:record": "node scripts/measure-wasm.mjs --record"

@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { validateBusinessDetails } from './native-core'
 import {
-  installBrowserCoreFromBase64,
-  installBrowserCoreFromBytes,
+  installBrowserCoreJs,
   resetBrowserCoreWasmForTests,
   warmBrowserCoreWasm,
   whenBrowserCoreWasmReady,
@@ -132,28 +131,18 @@ describe('browser-wasm eager install (Step 52)', () => {
   })
 })
 
-describe('browser-wasm bytes install', () => {
-  beforeEach(() => {
-    vi.doMock('@solvapay/server-wasm/browser', () => ({
-      ready: (source?: BufferSource) => readyMock(source),
-      readyFromBytes: (bytes: BufferSource) => readyFromBytesMock(bytes),
-      ensureReadySync: () => ensureReadySyncMock(),
-      validateBusinessDetails: (argsJson: string) => validateBusinessDetailsMock(argsJson),
-    }))
-  })
-
+describe('browser-wasm js-core install', () => {
   afterEach(() => {
     resetBrowserCoreWasmForTests()
-    readyMock.mockClear()
-    readyFromBytesMock.mockClear()
     validateBusinessDetailsMock.mockClear()
   })
 
-  it('installs from inlined bytes without calling the URL ready() path', async () => {
+  it('installs from the wasm2js binding without calling the URL ready() path', () => {
     resetBrowserCoreWasmForTests()
-    const bytes = new Uint8Array([0, 97, 115, 109])
-    await installBrowserCoreFromBytes(bytes)
-    expect(readyFromBytesMock).toHaveBeenCalledWith(bytes)
+    installBrowserCoreJs({
+      resolveDisplayMode: () => JSON.stringify({ ok: true, value: { mode: 'inline' } }),
+      validateBusinessDetails: (argsJson: string) => validateBusinessDetailsMock(argsJson),
+    })
     expect(readyMock).not.toHaveBeenCalled()
     expect(
       validateBusinessDetails({
@@ -165,15 +154,25 @@ describe('browser-wasm bytes install', () => {
     ).toEqual({ valid: true, sentinel: 'from-wasm' })
   })
 
-  it('words a bytes init failure distinctly from an uninstalled binding', async () => {
+  it('words a js-core init failure distinctly from an uninstalled binding', () => {
     resetBrowserCoreWasmForTests()
-    readyFromBytesMock.mockRejectedValueOnce(new Error('instantiate blocked'))
-    await expect(installBrowserCoreFromBase64('AGFzbQ==')).rejects.toThrow(
-      /SolvaPay widget WASM failed to initialize: instantiate blocked/,
+    expect(() => installBrowserCoreJs({})).toThrow(
+      /SolvaPay widget core failed to initialize: missing browser-js core/,
     )
   })
 
-  it('rejects an empty base64 payload before instantiate', async () => {
-    await expect(installBrowserCoreFromBase64('')).rejects.toThrow(/missing inlined browser core/)
+  it('keeps a missing sync method distinctly worded after a successful install', () => {
+    resetBrowserCoreWasmForTests()
+    installBrowserCoreJs({
+      resolveDisplayMode: () => JSON.stringify({ ok: true, value: { mode: 'inline' } }),
+    })
+    expect(() =>
+      validateBusinessDetails({
+        isBusiness: true,
+        country: 'US',
+        businessName: 'Acme',
+        taxId: '12-3456789',
+      }),
+    ).toThrow(/SolvaPay browser WASM missing sync method: validateBusinessDetails/)
   })
 })

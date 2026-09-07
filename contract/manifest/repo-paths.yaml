@@ -371,6 +371,10 @@ externalGenerated:
       - sdks/wasm/pkg/browser/solvapay_wasm.d.ts
       - sdks/wasm/pkg/browser/solvapay_wasm_bg.wasm
       - sdks/wasm/pkg/browser/solvapay_wasm_bg.wasm.d.ts
+      - sdks/wasm/pkg/browser-js/solvapay_wasm.js
+      - sdks/wasm/pkg/browser-js/solvapay_wasm_bg.js
+      - sdks/wasm/pkg/browser-js/solvapay_wasm2js.js
+      - sdks/wasm/pkg/browser-js/solvapay_wasm.d.ts
     generator: pnpm build:wasm
     cwd: sdks/wasm
     # Only solvapay_wasm.js carries @generated; the two .d.ts files have lint pragmas; _bg.wasm is binary.

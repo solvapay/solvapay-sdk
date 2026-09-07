@@ -43,5 +43,5 @@ if (!rootEl) {
   throw new Error('#root element missing from mcp-app.html')
 }
 
-await installSolvaPayWidgetCore()
+installSolvaPayWidgetCore()
 createRoot(rootEl).render(<McpApp app={app} applyContext={applyContext} />)

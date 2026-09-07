@@ -13,7 +13,7 @@
  *
  * The MCP App widget must not use this eager URL fetch. It imports
  * `browser-wasm-install` (or aliases this specifier onto it) and calls
- * {@link installBrowserCoreFromBytes} with inlined bytes.
+ * {@link installBrowserCoreJs} with `@solvapay/server-wasm/browser-js`.
  */
 
 import { SolvaPayError } from './solvapay-error'
@@ -26,11 +26,7 @@ import {
   type BrowserBinding,
 } from './browser-wasm-install'
 
-export {
-  installBrowserCoreFromBase64,
-  installBrowserCoreFromBytes,
-  installFromBinding,
-} from './browser-wasm-install'
+export { installBrowserCoreJs, installFromBinding } from './browser-wasm-install'
 
 /**
  * Eagerly loads + instantiates the public-safe browser WASM and installs it as

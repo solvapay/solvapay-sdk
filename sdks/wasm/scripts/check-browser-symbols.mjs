@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Browser symbol audit (§7.1): declared allowlist, measured pkg/browser
- * exports, and runtime/browser-web.js re-exports must be the same set.
+ * and pkg/browser-js exports, and both runtime wrappers must be the same set.
  */
 import { spawnSync } from 'node:child_process'
 import { readFileSync, existsSync } from 'node:fs'
@@ -67,11 +67,11 @@ function parseDtsExports(source) {
   return names
 }
 
-function parseNamedExportBlock(source) {
+function parseNamedExportBlock(source, label) {
   const names = new Set()
   const match = source.match(/export \{([\s\S]*?)\}/)
   if (!match) {
-    fail('runtime/browser-web.js is missing an explicit export { … } block')
+    fail(`${label} is missing an explicit export { … } block`)
   }
   for (const part of match[1].split(',')) {
     const name = part.trim()
@@ -111,9 +111,31 @@ if (allowlist.size === 0) {
 const browserWasm = join(pkgRoot, 'pkg/browser/solvapay_wasm_bg.wasm')
 const browserGlue = join(pkgRoot, 'pkg/browser/solvapay_wasm.js')
 const browserDts = join(pkgRoot, 'pkg/browser/solvapay_wasm.d.ts')
+const browserJsGlue = join(pkgRoot, 'pkg/browser-js/solvapay_wasm_bg.js')
+const browserJsShim = join(pkgRoot, 'pkg/browser-js/solvapay_wasm.js')
+const browserJsConverted = join(pkgRoot, 'pkg/browser-js/solvapay_wasm2js.js')
+const browserJsDtsCandidates = [
+  join(pkgRoot, 'pkg/browser-js/solvapay_wasm.d.ts'),
+  join(pkgRoot, 'pkg/browser-js/solvapay_wasm_bg.d.ts'),
+]
 
 if (!existsSync(browserWasm) || !existsSync(browserGlue) || !existsSync(browserDts)) {
   fail('browser artifacts missing — run `pnpm build` in sdks/wasm first')
+}
+if (
+  !existsSync(browserJsGlue) ||
+  !existsSync(browserJsShim) ||
+  !existsSync(browserJsConverted)
+) {
+  fail('browser-js artifacts missing — run `pnpm build` in sdks/wasm first')
+}
+function resolveBrowserJsDts() {
+  for (const path of browserJsDtsCandidates) {
+    if (!existsSync(path)) continue
+    const names = parseDtsExports(readFileSync(path, 'utf8'))
+    if (names.size > 0) return { path, names }
+  }
+  return null
 }
 
 const bytes = readFileSync(browserWasm)
@@ -137,20 +159,37 @@ for (const forbidden of FORBIDDEN_SEMANTIC) {
 }
 
 const runtimeBrowser = readFileSync(join(pkgRoot, 'runtime/browser-web.js'), 'utf8')
-const runtimeCode = runtimeBrowser
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .replace(/\/\/.*$/gm, '')
-if (/\bverifyWebhook\b/.test(runtimeCode) || /\bverify_webhook\b/.test(runtimeCode)) {
-  fail('runtime/browser-web.js must not reference webhook verification exports')
+const runtimeBrowserJs = readFileSync(join(pkgRoot, 'runtime/browser-js.js'), 'utf8')
+for (const [label, source] of [
+  ['runtime/browser-web.js', runtimeBrowser],
+  ['runtime/browser-js.js', runtimeBrowserJs],
+]) {
+  const runtimeCode = source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '')
+  if (/\bverifyWebhook\b/.test(runtimeCode) || /\bverify_webhook\b/.test(runtimeCode)) {
+    fail(`${label} must not reference webhook verification exports`)
+  }
+  if (!runtimeCode.includes('wasmVersion')) {
+    fail(`${label} must export wasmVersion`)
+  }
 }
-if (!runtimeCode.includes('wasmVersion')) {
-  fail('runtime/browser-web.js must export wasmVersion')
+if (!runtimeBrowserJs.includes("SOLVAPAY_BROWSER_JS_CORE = 'solvapay-browser-js-core'")) {
+  fail('runtime/browser-js.js must export the wasm2js artifact marker')
 }
 
 const dtsExports = parseDtsExports(dts)
-const runtimeExports = parseNamedExportBlock(runtimeBrowser)
+const browserJsDtsResolved = resolveBrowserJsDts()
+if (!browserJsDtsResolved) {
+  fail('browser-js d.ts missing function exports — run `pnpm build` in sdks/wasm first')
+}
+const browserJsDtsExports = browserJsDtsResolved.names
+const runtimeExports = parseNamedExportBlock(runtimeBrowser, 'runtime/browser-web.js')
+const runtimeJsExports = parseNamedExportBlock(runtimeBrowserJs, 'runtime/browser-js.js')
 assertEqualSets(allowlist, dtsExports, 'declared allowlist', 'pkg/browser d.ts')
+assertEqualSets(allowlist, browserJsDtsExports, 'declared allowlist', 'pkg/browser-js d.ts')
 assertEqualSets(allowlist, runtimeExports, 'declared allowlist', 'runtime/browser-web.js')
+assertEqualSets(allowlist, runtimeJsExports, 'declared allowlist', 'runtime/browser-js.js')
 
 const tree = spawnSync(
   'cargo',

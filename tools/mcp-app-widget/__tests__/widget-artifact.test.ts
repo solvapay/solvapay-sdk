@@ -27,9 +27,11 @@ describe('canonical MCP App widget artifact', () => {
     expect(html).toContain('solvapay://bootstrap.json')
   })
 
-  it('embeds the inlined browser WebAssembly core', () => {
+  it('must not reference the WebAssembly API', () => {
     const html = readFileSync(canonicalPath, 'utf8')
-    expect(html.includes('WebAssembly') || html.includes('application/wasm')).toBe(true)
+    expect(html).not.toContain('WebAssembly')
+    expect(html).not.toContain('application/wasm')
+    expect(html).toContain('solvapay-browser-js-core')
   })
 
   it('does not fetch data: URLs (host connect-src rejects them)', () => {

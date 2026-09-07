@@ -1,6 +1,7 @@
 # Reviewed browser wasm-bindgen surface (§7.1).
 # The generated allowlist is derived from `browserSafe`. The symbol audit
-# asserts set equality against pkg/browser/*.d.ts and runtime/browser-web.js.
+# asserts set equality against pkg/browser/*.d.ts, pkg/browser-js/*.d.ts,
+# runtime/browser-web.js, and runtime/browser-js.js.
 # Do not derive this list from the artifact — that would enforce nothing.
 
 browserSafe:

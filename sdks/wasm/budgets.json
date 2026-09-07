@@ -34,6 +34,12 @@
       "gzipBytes": 568287,
       "coldStartMs": 34.2054114,
       "note": "Re-recorded edge gzip from CI run 34139844302 after listPurchases landed on the wasm client. Cold-start baseline kept; §7.8 headline metric remains browser"
+    },
+    "browserJs": {
+      "rawBytes": 1294331,
+      "gzipBytes": 209202,
+      "coldStartMs": 80,
+      "note": "wasm2js + glue; MCP App widget delivery. Byte metric is JS, not WASM. Cold-start baseline is linux-safe (local darwin p20 was ~13 ms)."
     }
   },
   "maxAllowed": {
@@ -44,6 +50,10 @@
     "edge": {
       "gzipBytes": 625115,
       "coldStartMs": 51.3081171
+    },
+    "browserJs": {
+      "gzipBytes": 230122,
+      "coldStartMs": 120
     }
   }
 }
