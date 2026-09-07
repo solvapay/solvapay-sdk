@@ -121,31 +121,6 @@ jobs:
       - name: Validate fetch-runtime — Deno gate (workspace source)
         run: pnpm --filter @example/supabase-edge-mcp validate:workspace
 
-      - name: Dry-run npm publish
-        if: ${{ inputs.dry_run }}
-        run: |
-          git fetch --no-tags origin +main:main
-          pnpm changeset status
-          pnpm -r publish --dry-run --no-git-checks
-
-      - name: Tier A — print rehearsal tags (no writes)
-        if: ${{ inputs.dry_run }}
-        shell: bash
-        env:
-          SENTINEL: ${{ steps.sentinel.outputs.sentinel }}
-        run: |
-          set -euo pipefail
-          REMOTE_TAGS="$(git ls-remote --tags origin | awk '{print $2}' | sed 's#refs/tags/##' | sed 's#^{}##')"
-          pnpm exec tsx tools/repo/resolve-release-channel.ts \
-            --ref refs/heads/main \
-            --channel rehearsal \
-            --version "${SENTINEL}" \
-            --run "${GITHUB_RUN_NUMBER}" \
-            --ecosystem npm \
-            --assert-tags \
-            --remote-tags "$(echo "${REMOTE_TAGS}" | tr '\n' ',')"
-          echo "Tier A: rehearsal tags for ${SENTINEL}"
-
       - name: Version snapshot
         if: ${{ !inputs.dry_run }}
         run: pnpm changeset version --snapshot preview
@@ -213,6 +188,31 @@ jobs:
       - name: Assert no local-path production deps
         if: ${{ !inputs.dry_run || inputs.force_native }}
         run: pnpm exec tsx tools/repo/check-release-dryrun.ts --assert-no-local-paths
+
+      - name: Dry-run npm publish
+        if: ${{ inputs.dry_run }}
+        run: |
+          git fetch --no-tags origin +main:main
+          pnpm changeset status
+          pnpm -r publish --dry-run --no-git-checks
+
+      - name: Tier A — print rehearsal tags (no writes)
+        if: ${{ inputs.dry_run }}
+        shell: bash
+        env:
+          SENTINEL: ${{ steps.sentinel.outputs.sentinel }}
+        run: |
+          set -euo pipefail
+          REMOTE_TAGS="$(git ls-remote --tags origin | awk '{print $2}' | sed 's#refs/tags/##' | sed 's#^{}##')"
+          pnpm exec tsx tools/repo/resolve-release-channel.ts \
+            --ref refs/heads/main \
+            --channel rehearsal \
+            --version "${SENTINEL}" \
+            --run "${GITHUB_RUN_NUMBER}" \
+            --ecosystem npm \
+            --assert-tags \
+            --remote-tags "$(echo "${REMOTE_TAGS}" | tr '\n' ',')"
+          echo "Tier A: rehearsal tags for ${SENTINEL}"
 
       - name: Publish snapshot to @preview
         id: publish
