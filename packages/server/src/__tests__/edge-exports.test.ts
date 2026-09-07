@@ -108,6 +108,11 @@ describe('@solvapay/server edge entrypoint surface', () => {
     expect(edgeEntry[name]).toBeInstanceOf(Function)
   })
 
+  it('exports PaywallStructuredContentSchema for @solvapay/mcp on Workers', () => {
+    expect(edgeEntry).toHaveProperty('PaywallStructuredContentSchema')
+    expect(typeof edgeEntry.PaywallStructuredContentSchema).toBe('object')
+  })
+
   it('keeps the edge + node surfaces in sync for every required symbol', async () => {
     const nodeEntry = await import('../index')
     const nodeExports = new Set(Object.keys(nodeEntry))

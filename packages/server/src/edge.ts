@@ -40,6 +40,7 @@ export { PaywallError, paywallErrorToClientPayload } from './paywall'
 // can pull the same narration + discrimination helpers the Node entry
 // point already ships. Pure modules — safe on every edge runtime.
 export { isPaywallStructuredContent } from './types/paywall'
+export { PaywallStructuredContentSchema } from './types/paywall-schema'
 export { buildGateMessage, buildNudgeMessage, classifyPaywallState } from './paywall-state'
 export { buildPaywallGate } from './paywall-gate'
 export type { PaywallState } from './paywall-state'
