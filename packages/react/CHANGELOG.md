@@ -1,5 +1,12 @@
 # @solvapay/react changelog
 
+## 2.1.1
+
+### Patch Changes
+
+- Updated dependencies [a98faa9]
+  - @solvapay/core@1.6.0
+
 ## 2.1.0
 
 ### Minor Changes
