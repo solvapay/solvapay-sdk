@@ -234,6 +234,13 @@ jobs:
         if: needs.detect.outputs.native_leg == 'true'
         run: pnpm exec tsx tools/repo/prepare-native-publish.ts
 
+      # prepare-native-publish rewrites file: pins to semver. pnpm exec / -r
+      # then refuse a frozen lockfile unless the workspace is reconciled.
+      # The lockfile change is CI-local and is not committed.
+      - name: Reconcile lockfile after native pins
+        if: needs.detect.outputs.native_leg == 'true'
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+
       - name: Publish native platform packages
         if: needs.detect.outputs.native_leg == 'true'
         env:
@@ -257,6 +264,7 @@ jobs:
       - name: Dry-run npm publish
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
+          git fetch --no-tags origin main
           pnpm changeset status
           pnpm -r publish --dry-run --no-git-checks
 

@@ -508,6 +508,10 @@ describe('release-dryrun live tree', () => {
     expect(publishYml).toContain("needs.detect.outputs.native_leg == 'true'")
     expect(previewYml).toContain('!inputs.dry_run || inputs.force_native')
     expect(previewYml).toContain('publish-native-platform-packages.ts --dry-run')
+    expect(publishYml).toContain('pnpm install --no-frozen-lockfile --ignore-scripts')
+    expect(previewYml).toContain('pnpm install --no-frozen-lockfile --ignore-scripts')
+    expect(publishYml).toContain('git fetch --no-tags origin main')
+    expect(previewYml).toContain('git fetch --no-tags origin main')
   })
 
   it('requires a dry-run default on all six publish workflows', async () => {
